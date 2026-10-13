@@ -211,7 +211,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-81 | ☐ | sans | L'Apparence du Compte est la Personnalisation C | [`06-compte-entree-admin.md`](backlog-v3.1/06-compte-entree-admin.md) |
 | V3.1-82 | ☐ | sans | Choix du personnage (C2) : le carrousel | [`06-compte-entree-admin.md`](backlog-v3.1/06-compte-entree-admin.md) |
 | V3.1-83 | ☐ | sans | Choix : PJ sans fiche et « Créer mon personnage » | [`06-compte-entree-admin.md`](backlog-v3.1/06-compte-entree-admin.md) |
-| V3.1-84 | ☐ | sans | Identité de l'application : où elle vit (ADR) | [`06-compte-entree-admin.md`](backlog-v3.1/06-compte-entree-admin.md) |
+| V3.1-84 | ☑ | sans | Identité de l'application : où elle vit (ADR) | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-85 | ☐ | sans | Écran-titre (C) : connexion, création, mot de passe oublié | [`06-compte-entree-admin.md`](backlog-v3.1/06-compte-entree-admin.md) |
 | V3.1-86 | ☐ | sans | La marque partout : rail, onglet, Rejoindre, Réinitialiser | [`06-compte-entree-admin.md`](backlog-v3.1/06-compte-entree-admin.md) |
 | V3.1-87 | ☐ | sans | Administration (B) : le tableau de bord | [`06-compte-entree-admin.md`](backlog-v3.1/06-compte-entree-admin.md) |

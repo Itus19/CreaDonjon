@@ -241,44 +241,6 @@ puis 85 → 86, 87 → 88.
 
 ---
 
-### ☐ V3.1-84 — Identité de l'application : où elle vit (ADR) · `M` · sans modèle IA — **prêt (Opus)**
-
-**Modèle conseillé : Opus** — changement de schéma, RLS lue avant
-connexion, téléversement.
-
-**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-**Ce qui est décidé (auteur, 9 octobre)** : la marque par défaut est
-**« Antre Nous »**, phrase **« Le repaire de ta table. »**, logo **d20**
-au trait ; le superadmin peut changer **nom** (32 caractères), **phrase**
-(80), **logo** (l'un des douze au trait, ou une image téléversée PNG ou
-WebP carrée de 512 px ; **jamais de SVG téléversé**, il peut porter du
-script).
-
-**À trancher, ADR à l'appui** (rien n'existe dans `docs/SCHEMA.md`) :
-- Proposé : une table à **ligne unique** `app_identity` (`name`, `tagline`,
-  `logo_key` parmi `d20`, `dungeon_door`, `dragon_eye`, `dice_cup`,
-  `quill_die`, `key`, `grimoire`, `tower`, `maze`, `scale`, `lair`, `map`,
-  `logo_asset_path` nullable via l'interface de stockage, `updated_at`,
-  `updated_by`). RLS : lecture pour tous **y compris anonyme** (l'écran-titre
-  la lit avant connexion), écriture réservée au superadmin
-  (`is_superadmin()`). Aucune ligne → valeurs par défaut de `messages/`.
-- Les douze logos sont des SVG **du code** (`components/brand/logos.tsx`),
-  jamais des données ; Zod valide `logo_key` contre cette liste.
-- Service `getAppIdentity()` (cache court, invalidé à l'écriture) et
-  action `updateAppIdentityAction` (Zod, superadmin vérifié côté serveur).
-- Contrôle du téléversement : type réel du fichier (signature), pas
-  l'extension ; taille bornée.
-
-**Critères d'acceptation**
-- [ ] ADR écrit ; migration nouvelle ; `docs/SCHEMA.md` à jour ; types
-  régénérés.
-- [ ] Un visiteur non connecté lit l'identité ; un compte non superadmin ne
-  peut pas l'écrire (test RLS).
-- [ ] Un SVG renommé en .png est refusé.
-
----
-
 ### ☐ V3.1-85 — Écran-titre (C) : connexion, création, mot de passe oublié · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet.**

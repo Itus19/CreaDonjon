@@ -1802,6 +1802,61 @@ Sortie de la base par ouverture de la fenêtre Initiative : 4,9 Mo → 65 ko. `r
 
 ---
 
+### ☑ V3.1-84 — Identité de l'application : où elle vit (ADR) · `M` · sans modèle IA — **fait le 13 octobre**
+
+**Modèle conseillé : Opus** — changement de schéma, RLS lue avant
+connexion, téléversement.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Ce qui est décidé (auteur, 9 octobre)** : la marque par défaut est
+**« Antre Nous »**, phrase **« Le repaire de ta table. »**, logo **d20**
+au trait ; le superadmin peut changer **nom** (32 caractères), **phrase**
+(80), **logo** (l'un des douze au trait, ou une image téléversée PNG ou
+WebP carrée de 512 px ; **jamais de SVG téléversé**, il peut porter du
+script).
+
+**À trancher, ADR à l'appui** (rien n'existe dans `docs/SCHEMA.md`) :
+- Proposé : une table à **ligne unique** `app_identity` (`name`, `tagline`,
+  `logo_key` parmi `d20`, `dungeon_door`, `dragon_eye`, `dice_cup`,
+  `quill_die`, `key`, `grimoire`, `tower`, `maze`, `scale`, `lair`, `map`,
+  `logo_asset_path` nullable via l'interface de stockage, `updated_at`,
+  `updated_by`). RLS : lecture pour tous **y compris anonyme** (l'écran-titre
+  la lit avant connexion), écriture réservée au superadmin
+  (`is_superadmin()`). Aucune ligne → valeurs par défaut de `messages/`.
+- Les douze logos sont des SVG **du code** (`components/brand/logos.tsx`),
+  jamais des données ; Zod valide `logo_key` contre cette liste.
+- Service `getAppIdentity()` (cache court, invalidé à l'écriture) et
+  action `updateAppIdentityAction` (Zod, superadmin vérifié côté serveur).
+- Contrôle du téléversement : type réel du fichier (signature), pas
+  l'extension ; taille bornée.
+
+**Critères d'acceptation**
+- [x] ADR écrit ; migration nouvelle ; `docs/SCHEMA.md` à jour ; types
+  régénérés.
+- [x] Un visiteur non connecté lit l'identité ; un compte non superadmin ne
+  peut pas l'écrire (test RLS).
+- [x] Un SVG renommé en .png est refusé.
+
+**Note de clôture (13 octobre, Opus).** [ADR 0061](../adr/0061-l-identite-de-l-application.md).
+- **Base.** Migration `20261013120000` : la table `app_identity` (une ligne au plus), le bucket privé `brand` et leurs règles. Appliquée par l'auteur le 13 octobre. `SCHEMA.md` §18.0 et les types sont à jour.
+- **Noyau** (`src/core/brand/identity.ts`, 7 tests) : les douze clés de logo, les valeurs par défaut, `zAppIdentityInput`, et `detectRasterImageType`, qui lit le type dans la signature du fichier.
+- **Serveur.**
+  - `getAppIdentity()` lit par un client anonyme (`lib/supabase/anon.ts`). La lecture est mise en cache une heure et invalidée par `updateTag("app-identity")`. Le fichier ne charge pas `sharp`.
+  - `updateAppIdentity` / `resetAppIdentity` (`appIdentityWrite.ts`) : superadmin vérifié par le service ; le logo doit être carré, d'au moins 512 px et de 900 Ko au plus, puis il est réencodé en WebP 512 px.
+  - Les actions `updateAppIdentityAction` et `resetAppIdentityAction` (`app/appIdentityActions.ts`) valident leur entrée par Zod.
+  - La route `GET /api/app-identity/logo?v=…` a un cache d'un an quand `v` est la version en cours, et le middleware l'ouvre aux visiteurs anonymes.
+- **Preuves.**
+  - `appIdentityWrite.test.ts`, 5 tests : SVG renommé refusé sans rien écrire, image non carrée ou trop petite refusée, réencodage, non-superadmin refusé.
+  - `middleware.test.ts`, 2 tests de plus.
+  - `appIdentityRls.integration.test.ts`, **5/5 sur la base le 13 octobre** : lecture anonyme ; écriture refusée à l'anonyme et au non-superadmin ; suppression et dépôt de logo refusés au non-superadmin.
+- **Écarts.**
+  - Le logo est plafonné à 900 Ko : la limite de 1 Mo des actions serveur n'a pas été relevée.
+  - Les valeurs par défaut vivent dans le code, en français pour toutes les langues (une marque, pas un libellé).
+  - Les douze logos sont dessinés par V3.1-86 et 88, qui les affichent ; ce ticket n'en pose que les clés.
+
+---
+
 ### ☑ V3.1-101 — Initiative : la base et les routes réservées au MJ · `S` · sans modèle IA — **terminé le 10 octobre**
 
 **Modèle conseillé : Opus** — RLS et sécurité. **ADR 0040.**
