@@ -1853,6 +1853,38 @@ Les autres arêtes du tableau du constat (`getCalendar`, `createCampaign`, `reso
 
 ---
 
+### ☑ V3.1-126 — Les `catch` muets restants · `M` · sans modèle IA — **fait le 13 octobre**
+
+**Modèle conseillé : Sonnet.** Sous-tâches Haiku : recenser les occurrences et les classer par fichier (`grep -rn "catch {\|\.catch(() => {})" app components lib src`, tests exclus).
+
+`CLAUDE.md` interdit le `catch` silencieux. Le 12 octobre, il en reste **55, dans 44 fichiers**. Ceux touchés par V3.1-62 ont été corrigés en passant (chargeurs de la fiche, pastille du chat, radio, dés, liste des règles, découverte d'une fiche joueuse). Les autres datent d'avant la règle.
+
+**Méthode**, fichier par fichier, sans changer le comportement visible :
+- un échec qui doit rester sans effet pour l'utilisateur (geste « au mieux ») garde son repli, mais **journalise** l'erreur (`console.error` avec ce qui a échoué) ;
+- un échec qui laisse un écran sur un état faux reçoit l'état d'erreur de la charte (`docs/CHARTE-UI.md`, états d'écran) ;
+- un `fetch` qui ne teste pas `res.ok` le teste (charte : « un `fetch` dont on ne teste pas `res.ok` est un bug »).
+
+**Garde-fou.** Ajouter le motif au cliquet `lib/cablage.test.ts`, plafond au compte du jour, abaissé à chaque lot.
+
+**Critères d'acceptation**
+- [x] Plus aucun `catch` sans traitement de l'erreur hors des tests.
+- [x] Le cliquet compte les `catch` muets et échoue s'ils augmentent.
+- [x] `npm run typecheck && npm run lint && npm run test` passent.
+
+**Note de clôture (13 octobre, `dev-sonnet`, relu par Opus).** Le grep du ticket comptait 55 lignes, mais beaucoup traitaient déjà l'erreur (réponse HTTP, erreur typée, état d'erreur). Il y avait environ 35 vrais muets, formes `.catch(() => setX(null))` comprises.
+- **Journalisés** (`console.error` avec ce qui a échoué), repli inchangé : stockage local, chargements « au mieux » du shell et des blocs, cartes, calendrier, narration et esquisses du solo, préchauffage de `publicShare.ts`, arguments d'outil illisibles de l'adaptateur d'IA.
+- **Marqués `catch-attendu`**, échec prévu par conception et justifié dans le commentaire : `wikiPath.ts`, `supabase/server.ts`, `embedUrl.ts`, `tables/roll.ts`, `CommandPalette.tsx` (requête annulée à chaque frappe ; un journal ferait du bruit), `srdMapping.ts`, `homebrewEdit.ts`.
+- **Aucun état d'erreur posé, aucun `res.ok` ajouté** : ceux vus le testaient déjà.
+
+**Cliquet** : clé `catchMuets` de `lib/cablage.test.ts`, **plafond 0**. `lib/` entre dans les racines comptées.
+
+**Laissé pour plus tard** (relevé par Sonnet, hors périmètre) :
+- `app/api/campaigns/[id]/invites/route.ts` transforme tout échec en 403 « seul le MJ peut inviter » ; le changer modifie le comportement visible.
+- La carte vide et le calendrier par défaut mériteraient l'état d'erreur de la charte, plutôt qu'un simple journal : c'est un ticket d'interface.
+
+
+---
+
 ### ☑ V3.1-127 — Mettre à jour Next et les dépendances vulnérables · `S` · sans modèle IA — **fait le 12 octobre**
 
 **Modèle conseillé : Opus**, car le changement de version de Next touche tout le rendu. Sous-tâches Haiku : lancer `npm audit --omit=dev`, typecheck, lint, tests et build, et résumer les échecs.
