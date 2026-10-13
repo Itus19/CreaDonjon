@@ -2242,3 +2242,45 @@ Chaque cas laisse ≈ 700 ko d'orphelins, sur 1 Go de stockage gratuit.
 - [x] Remplacer l'image d'une carte, puis supprimer son bloc, ne laisse aucun fichier ni aucune ligne `assets` orpheline (test d'intégration `mapAssetsCleanup.integration.test.ts`). *5/5 sur la vraie base le 12 octobre, après la migration et la correction de `deleteAsset`.*
 - [x] Une carte dupliquée garde son image quand on supprime l'original (même test, copie dans un bloc privé invisible au MJ).
 - [x] `npm run typecheck && npm run lint && npm run test` passent (1603 tests).
+
+---
+
+### ☑ V3.1-142 — Le mot de passe d'un lien de partage se contourne par un cookie forgé · `S` · sans modèle IA — **fait le 13 octobre (ADR 0062)**
+
+**Modèle conseillé : Opus** : sécurité.
+
+**Constat (13 octobre, en codant V3.1-59).** `verifySharePasswordAction` (`app/partage/[token]/passwordActions.ts`) pose un cookie dont la valeur est toujours `"1"`, et dont le nom dérive du jeton (`sv_` + début de `hashShareToken(token)`). Le visiteur a forcément le jeton, puisqu'il est dans le lien : il peut calculer ce nom et poser le cookie lui-même. `hasVerifiedSharePassword` le croit, et toutes les pages du lien s'ouvrent sans mot de passe. Inscrit au registre de `docs/SECURITE.md` §3.
+
+**À faire**
+1. Une valeur que seul le serveur sait produire. Par exemple une signature HMAC du jeton et d'une échéance, par un secret serveur (variable nouvelle : `.env.example` et `scripts/verifier-secrets-build.mjs`, SECURITE §2). Ou un jeton aléatoire gardé en base avec son échéance. Choisir en disant pourquoi.
+2. `hasVerifiedSharePassword` vérifie cette valeur et son échéance. Les trois appelants (layout, pages, `fond-du-wiki`) n'ont rien à changer.
+3. Changer le mot de passe d'un lien invalide les cookies déjà posés.
+
+**Critères d'acceptation**
+- [x] Test : un cookie au bon nom avec la valeur `"1"` est refusé ; un cookie posé par le serveur est accepté ; un cookie échu est refusé.
+- [x] Registre de `SECURITE.md` passé à « corrigée ».
+
+**Note de clôture (13 octobre, Opus).** [ADR 0062](../adr/0062-le-mot-de-passe-d-un-lien-reste-sur-le-serveur.md).
+
+*Plus large que prévu :*
+- les **invitations** avaient le même cookie forgeable, plus grave : on pouvait rejoindre une campagne avec le seul lien ;
+- en corrigeant, une seconde faille est apparue : `resolve_share_link` et `resolve_campaign_invite`, ouvertes à `anon`, renvoyaient le **hash** du mot de passe, qu'on pouvait essayer hors ligne.
+
+*Choix de l'auteur* : fermer la fuite du hash plutôt qu'ajouter un secret serveur.
+
+*Code :*
+- **Preuve** `<échéance>.<HMAC(hash, jeton.échéance)>`, dans `src/core/shareLinks/access.ts` (7 tests).
+- **Cookies** dans des modules serveur ordinaires : `lib/shareLinks/passwordCookie.ts` et `lib/campaignInvites/passwordCookie.ts`. Avant, un fichier `"use server"` en faisait une action appelable par tous.
+- **Migration `20261013150000`**, appliquée par l'auteur le 13 octobre :
+  - `resolve_share_link` est fermée aux visiteurs, et `publicShare.ts` résout par la clé service ;
+  - `resolve_campaign_invite` ne renvoie plus que `has_password` ;
+  - `campaign_invite_password_hash` est réservée à la clé service, et lue par `accountProvisioning.ts`.
+
+*Preuves (13 octobre) :*
+- `linkPasswordPrivacy.integration.test.ts` : 4/4.
+- Tests existants des invitations, des liens de partage et du wiki public toujours verts : 23/23 en tout.
+- **Vérifié en direct** sur un lien de test protégé, supprimé ensuite :
+  - sans cookie, la porte s'affiche ;
+  - avec le cookie forgé « 1 », elle reste affichée ;
+  - avec un mauvais mot de passe aussi ;
+  - avec le bon, elle s'ouvre, et le cookie posé vaut `<échéance>.<signature>`.
