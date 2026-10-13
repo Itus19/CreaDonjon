@@ -1,4 +1,5 @@
 import "server-only";
+import { SHARED_NOTE_KIND } from "@/src/core/notebook/share";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import type { EntitySummary } from "@/src/server/repos/entities";
@@ -84,7 +85,8 @@ async function getOrCreateNoteTreeBlock(supabase: TypedClient, entityId: string,
 async function listPinnableEntities(supabase: TypedClient, worldId: string, userId: string): Promise<OtherEntityOption[]> {
   const all = await listEntitiesForWorld(supabase, worldId);
   const admin = await isWorldAdmin(supabase, { worldId, userId });
-  let visible = all.filter((e) => e.entity_kind !== "notes");
+  // V3.1-41 : les pages partagées ne s'épinglent pas comme des fiches ; le cahier de l'autrice les désigne déjà.
+  let visible = all.filter((e) => e.entity_kind !== "notes" && e.entity_kind !== SHARED_NOTE_KIND);
   if (!admin) {
     const visibleIds = await listPlayerVisibleEntityIds(supabase, worldId, visible.map((e) => e.id), userId);
     visible = visible.filter((e) => visibleIds.has(e.id));
@@ -108,4 +110,14 @@ export async function getOrCreateNotebook(supabase: TypedClient, params: { world
     otherEntities,
     userId: params.userId,
   };
+}
+
+/** V3.1-41 : le bloc `note_tree` du cahier de l'appelant (créé au besoin), pour les services qui le modifient (`sharedNotes.ts`). */
+export async function loadNotebookTree(
+  supabase: TypedClient,
+  params: { worldId: string; userId: string }
+): Promise<{ block: BlockRow; items: NoteTreeItem[] }> {
+  const entity = await getOrCreateNotebookEntity(supabase, params);
+  const block = await getOrCreateNoteTreeBlock(supabase, entity.id, params.userId);
+  return { block, items: zNoteTreeBlockData.parse(block.data).items };
 }

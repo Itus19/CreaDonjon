@@ -47,6 +47,13 @@ export const zNoteTreeItem = z.discriminatedUnion("kind", [
     kind: z.literal("pinned_rule"),
     targetKey: z.string().min(1),
   }),
+  // V3.1-41 (ADR 0037) : une page partagée avec la table est devenue sa
+  // propre entité (`shared_note`) ; le cahier garde ce lien à sa place. Son
+  // titre et son texte vivent dans l'entité, jamais recopiés ici.
+  zNoteTreeBase.extend({
+    kind: z.literal("shared_page"),
+    targetId: z.string().min(1),
+  }),
 ]);
 export type NoteTreeItem = z.infer<typeof zNoteTreeItem>;
 export type NoteTreePage = Extract<NoteTreeItem, { kind: "page" }>;

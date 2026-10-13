@@ -1,6 +1,6 @@
 # ADR 0037 — Une page de notes partagée avec la table devient sa propre entité
 
-**Date** : 5 octobre 2026 · **Statut** : accepté le 5 octobre 2026 (principe validé par l'auteur, lot i de V3.1-19, bloc-notes A) ; les points « à trancher en codant » restent ouverts
+**Date** : 5 octobre 2026 · **Statut** : accepté le 5 octobre 2026 (principe validé par l'auteur, lot i de V3.1-19, bloc-notes A) ; les points « à trancher en codant » sont tranchés le 13 octobre (V3.1-41, voir en bas)
 
 ## Contexte
 
@@ -24,3 +24,13 @@ L'auteur veut qu'une page du bloc-notes puisse être partagée avec la table : l
 ## Conséquences
 
 Pas de nouvelle table. Une migration (fonction d'octroi, éventuel filtre de liste) et `docs/SCHEMA.md` mis à jour dans le ticket qui code le partage. Le cahier privé ne change pas : ce qui n'est pas partagé n'est jamais envoyé à personne, MJ compris.
+
+## Tranché en codant (V3.1-41, 13 octobre 2026)
+
+- **La « table »** est la visibilité `players` du monde : son propriétaire et tous les membres de sa campagne. Un monde n'a qu'une campagne (décision V2-G1), viser une campagne n'apporterait rien.
+- **« Ne plus partager »** repasse le bloc de texte en visibilité `user` de l'autrice. L'entité reste, son texte est intact, et la repartager rend la même entité à la table.
+- **Le titre ne vit pas dans le nom de l'entité.** La RLS d'`entities` laisse tout membre du monde lire le nom de toute entité : un titre de page repassée en privée y resterait lisible. L'entité s'appelle toujours « Page du cahier » (le slug, lui, est tiré au hasard) ; le titre est le libellé du bloc de texte, protégé par sa visibilité.
+- **L'octroi** se réclame par `public.claim_shared_note_grant(entity_id)`, et seulement tant que l'entité n'a aucun bloc, c'est-à-dire à la création. Un octroi que le MJ a retiré ne peut donc pas être repris par l'autrice.
+- **Dans le cahier**, la page laisse place à une ligne `shared_page` (`targetId`), à sa place. Son titre et son texte ne sont jamais recopiés dans le cahier.
+- **Les listes du wiki** (arborescence, recherche, sommaire et détail du wiki public, fiches à épingler) excluent `shared_note`.
+

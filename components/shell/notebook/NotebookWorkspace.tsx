@@ -222,7 +222,10 @@ export default function NotebookWorkspace({
         ? item.title
         : item.kind === "pinned_entity"
           ? (initial.otherEntities.find((e) => e.id === item.targetId)?.name ?? null)
-          : (ruleEntries.find((r) => r.key === item.targetKey)?.name ?? null);
+          : item.kind === "shared_page"
+            ? // V3.1-41 : la vue d'une page partagée vient avec V3.1-42 ; d'ici là, la ligne se montre sans s'ouvrir.
+              "Page partagée"
+            : (ruleEntries.find((r) => r.key === item.targetKey)?.name ?? null);
     const broken = !isPage && label === null;
     const isOpen =
       (isPage && (primaryPageId === item.id || (secondary?.kind === "page" && secondary.pageId === item.id))) ||
@@ -242,7 +245,7 @@ export default function NotebookWorkspace({
             onClick={() =>
               isPage
                 ? setPrimaryPageId(item.id)
-                : broken
+                : broken || item.kind === "shared_page"
                   ? undefined
                   : setSecondary({
                       kind: "companion",
