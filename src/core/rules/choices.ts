@@ -151,8 +151,8 @@ export function resolveChoices(input: ResolveChoicesInput): ResolvedChoices {
   }
 
   /** Une réponse sans effet (caractéristique, type de dégâts, langue) ne produit pas d'aptitude vide. */
-  function pushFeature(key: string, label: string, scope: Scope, modifiers: Modifier[], spells: FeatureSpell[]) {
-    if (modifiers.length === 0 && spells.length === 0) return;
+  function pushFeature(key: string, label: string, scope: Scope, modifiers: Modifier[], spells: FeatureSpell[], always = false) {
+    if (!always && modifiers.length === 0 && spells.length === 0) return;
     result.features.push({ key, label, source: scope.source.key, modifiers, ...(spells.length > 0 ? { spells } : {}) });
   }
 
@@ -244,7 +244,8 @@ export function resolveChoices(input: ResolveChoicesInput): ResolvedChoices {
           // Un don vit en couche 5, quelle que soit la fiche qui l'accorde.
           const featSource: ChoiceSource = { key: `${key}.${feat.key}`, label: feat.label, layer: 5, grants: feat.grants };
           const featScope: Scope = { prefix: `${key}.${feat.key}`, source: featSource };
-          pushFeature(`choice:${key}`, feat.label, featScope, resolveDeclaredModifiers(feat.modifiers, featSource.key, feat.label, 5), []);
+          // Un don choisi figure parmi les traits même sans effet chiffré (Vigilant).
+          pushFeature(`choice:${key}`, feat.label, featScope, resolveDeclaredModifiers(feat.modifiers, featSource.key, feat.label, 5), [], true);
           walk(feat.grants, featScope);
           break;
         }
@@ -254,4 +255,38 @@ export function resolveChoices(input: ResolveChoicesInput): ResolvedChoices {
 
   for (const source of input.sources) walk(source.grants, { prefix: source.key, source });
   return result;
+}
+
+/** Un choix de compétences ou de langues sous la forme qu'attendent les écrans existants (`RemainingChoice`). */
+export interface SimpleChoiceView {
+  id: string;
+  label: string;
+  count: number;
+  options: string[];
+  kind: "skill" | "language";
+}
+
+/**
+ * Les choix de compétences et de langues de PREMIER niveau (V3.1-116) : ceux
+ * que les écrans savaient déjà proposer (assistant, onglet Maîtrises), sous
+ * la même clé qu'avant (`skillful.skills`). Les choix imbriqués (sous une
+ * option ou un don choisi) attendent l'assistant de V3.1-118. Un choix qui
+ * permet aussi un outil n'y figure pas : ces écrans ne connaissent pas les outils.
+ */
+export function simpleGrantChoices(sources: readonly ChoiceSource[], characterLevel: number, allLanguages: readonly string[]): SimpleChoiceView[] {
+  const views: SimpleChoiceView[] = [];
+  for (const source of sources) {
+    for (const grant of source.grants) {
+      if ((grant.at_level ?? 1) > characterLevel) continue;
+      const from = grant.from;
+      const base = { id: `${source.key}.${grant.id}`, label: `${source.label} — ${localizedLabel(grant.label, grant.id)}`, count: grant.count ?? 1 };
+      if (from.kind === "skill" && !from.tools) {
+        const options = (from.options ?? SKILLS).map(skillKey).filter((s): s is string => s !== null);
+        views.push({ ...base, options, kind: "skill" });
+      } else if (from.kind === "language") {
+        views.push({ ...base, options: [...(from.options ?? allLanguages)], kind: "language" });
+      }
+    }
+  }
+  return views;
 }

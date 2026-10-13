@@ -216,6 +216,8 @@ describe("Polyvalent : un don au choix, et sa cascade", () => {
   it("le don choisi ouvre ses propres choix, sous une clé qui le nomme", () => {
     const r = resolveChoices({ sources: [versatile], choices: { "versatile.feat": ["skilled"] }, characterLevel: 1, feats });
     expect(r.open.map((c) => c.key)).toEqual(["versatile.feat", "versatile.feat.skilled.proficiencies"]);
+    // Le don choisi figure parmi les traits, même sans effet chiffré.
+    expect(r.features.map((f) => f.label)).toEqual(["Doué"]);
   });
 
   it("Doué : les compétences choisies sont maîtrisées, l'outil va aux maîtrises", () => {
@@ -296,5 +298,20 @@ describe("ce que la résolution n'invente pas", () => {
       { key: "elvish", source: "Sage" },
       { key: "dwarvish", source: "Sage" },
     ]);
+  });
+});
+
+describe("le pont vers les écrans existants", () => {
+  it("Compétent et Sens aiguisés gardent leur clé et leurs options", async () => {
+    const { simpleGrantChoices } = await import("./choices");
+    const sources: ChoiceSource[] = [
+      { key: "skillful", label: "Compétent", layer: 2, grants: [{ id: "skills", label: { fr: "Compétent" }, from: { kind: "skill" } }] },
+      { key: "keen-senses", label: "Sens aiguisés", layer: 2, grants: [{ id: "skills", label: { fr: "Sens aiguisés" }, from: { kind: "skill", options: ["insight", "animal-handling"] } }] },
+      { key: "versatile", label: "Polyvalent", layer: 2, grants: [{ id: "feat", label: { fr: "Don" }, from: { kind: "feat" } }] },
+    ];
+    const views = simpleGrantChoices(sources, 1, ["elvish"]);
+    expect(views.map((v) => v.id)).toEqual(["skillful.skills", "keen-senses.skills"]);
+    expect(views[0].options).toHaveLength(18);
+    expect(views[1].options).toEqual(["insight", "animal_handling"]);
   });
 });

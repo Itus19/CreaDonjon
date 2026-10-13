@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { ResolvedRuleset } from "@/src/core/rules/sheet";
+import type { ChoiceSource, FeatChoiceData } from "@/src/core/rules/choices";
 import type { ArmorData, ItemCost, WeaponData } from "@/src/core/rules/srdMapping";
 import { creerChargeurParLots } from "@/lib/chargement/chargeurParLots";
 import { selectionBody, selectionHasAnything, selectionKey, type RulesetSelection } from "@/lib/resolvedRuleset/selection";
@@ -48,6 +49,10 @@ export interface ResolvedRulesetView {
   asiGrantedLevels: Record<string, number[]>;
   /** Les trois caracteristiques de l'historique choisi (V2-G7, bonus +2/+1) — `null` si aucun historique choisi ou si sa fiche n'en porte aucune. */
   backgroundAbilityScores: string[] | null;
+  /** V3.1-116 : fiches qui portent des choix, réponses imposées, dons désignables — résolus dans le navigateur par `resolveChoices`. */
+  choiceSources: ChoiceSource[];
+  choicePresets: Record<string, string[]>;
+  featCatalog: Record<string, FeatChoiceData>;
 }
 
 export type { RulesetSelection };
@@ -64,6 +69,9 @@ const EMPTY: ResolvedRulesetView = {
   spellLevels: {},
   asiGrantedLevels: {},
   backgroundAbilityScores: null,
+  choiceSources: [],
+  choicePresets: {},
+  featCatalog: {},
 };
 
 

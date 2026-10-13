@@ -499,6 +499,8 @@ Blocs V1 : `description`, `spell_casting`, `effects`, `scaling`, `class_progress
 
 **Règles de personnage** (V3.1-115, ADR 0046). Chaque ruleset porte une fiche `character-rules` (type `rule`) avec un bloc `character_rules` : plafonds de niveau et de caractéristique, génération des caractéristiques, charge, revente, table du multiclassé, départ à haut niveau. Une variante la surcharge comme toute fiche. `assembleResolvedRuleset` la lit (`readCharacterRules`) et `characterSheet()` l'applique ; sans elle, rien n'est inventé, un avertissement le dit. Valeurs officielles : `data/srd/character-rules.json`, posées par l'import.
 
+**Choix accordés** (V3.1-116, ADR 0046). Une fiche (trait d'espèce, don, historique, aptitude) porte un bloc `choices` : des `zChoiceGrant` (compétence, langue, outil, don, sort, caractéristique, type de dégâts, ou option nommée avec ses modificateurs, ses sorts par niveau et ses propres choix), et des `presets` (réponse imposée à un choix d'une autre fiche, ex. Acolyte → liste du clerc). La réponse vit dans `character.choices[<source>.<choix>]`, sous `<clé>.<option>.<choix>` ou `<clé>.<don>.<choix>` quand elle est imbriquée. `resolveChoices` (noyau) en tire les effets ; aucun n'est stocké. Valeurs SRD : `data/srd/choices-2024.json`, posées par l'import (SRD 2024 seulement).
+
 ### 9.2 Traductions
 
 ```sql

@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
-import { assembleResolvedRuleset } from "./resolvedRuleset";
+import { assembleResolvedRuleset, resolveCharacterChoices } from "./resolvedRuleset";
 import { characterSheet, type CharacterBuild } from "../../core/rules/sheet";
 
 /**
@@ -96,5 +96,61 @@ describe.skipIf(!hasCreds)("assembleResolvedRuleset (integration, base reelle)",
       "fr"
     );
     expect(assembled.remainingChoices.map((c) => c.id)).toEqual(["fighter.skills", "fighter.weapon_mastery", "skillful.skills", "character.languages"]);
+  });
+});
+
+/**
+ * V3.1-116 : les choix accordés posés par l'import (`data/srd/choices-2024.json`)
+ * se résolvent bout en bout contre la base : catalogue des dons, réponse
+ * imposée par l'historique, sorts validés d'après leurs vraies fiches.
+ */
+describe.skipIf(!hasCreds)("choix accordés du SRD 2024 (integration, base reelle)", () => {
+  let admin: SupabaseClient;
+  let rulesetId: string;
+
+  beforeAll(async () => {
+    admin = createSupabaseClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
+    const { data, error } = await admin.from("rulesets").select("id").eq("base_system", "dnd_srd_52").eq("is_official_base", true).limit(1).single();
+    if (error || !data) throw new Error(error?.message ?? "aucun ruleset SRD 5.2.1 officiel en base");
+    rulesetId = data.id;
+  });
+
+  it("Humain Acolyte : Polyvalent ouvre les dons d'origine, l'Acolyte impose la liste du clerc, les sorts hors liste sont écartés", async () => {
+    const assembled = await assembleResolvedRuleset(admin, rulesetId, { species: "human", background: "acolyte", classes: [{ key: "fighter", level: 1 }] }, "fr");
+    expect(Object.keys(assembled.featCatalog).sort()).toEqual(["alert", "magic-initiate", "savage-attacker", "skilled"]);
+    expect(assembled.choicePresets).toEqual({ "magic-initiate.list": ["cleric"] });
+    expect(assembled.choiceSources.map((s) => s.key)).toEqual(expect.arrayContaining(["skillful", "versatile", "magic-initiate"]));
+
+    const resolved = await resolveCharacterChoices(
+      admin,
+      rulesetId,
+      assembled,
+      {
+        "magic-initiate.list.cleric.cantrips": ["guidance", "fire-bolt"],
+        "magic-initiate.list.cleric.spell": ["bless"],
+        "magic-initiate.ability": ["wis"],
+        "versatile.feat": ["alert"],
+      },
+      1
+    );
+    const spells = resolved.features.flatMap((f) => f.spells ?? []).map((s) => s.key);
+    // Trait de feu n'est pas sur la liste du clerc.
+    expect(spells).toEqual(["guidance", "bless"]);
+    expect(resolved.features.some((f) => f.key === "choice:versatile.feat")).toBe(true);
+  });
+
+  it("Elfe : le Drow apprend ses sorts aux niveaux 1, 3 et 5", async () => {
+    const assembled = await assembleResolvedRuleset(admin, rulesetId, { species: "elf", classes: [{ key: "wizard", level: 5 }] }, "fr");
+    const resolved = await resolveCharacterChoices(admin, rulesetId, assembled, { "elven-lineage.lineage": ["drow"], "elven-lineage.ability": ["int"] }, 5);
+    const build: CharacterBuild = {
+      species: "elf",
+      classes: [{ key: "wizard", level: 5 }],
+      abilities: { assigned: { str: 8, dex: 14, con: 12, int: 16, wis: 12, cha: 10 } },
+      featureKeys: resolved.features.map((f) => f.key),
+    };
+    const features = Object.fromEntries(resolved.features.map((f) => [f.key, f]));
+    const sheet = characterSheet(build, { ...assembled.ruleset, features: { ...assembled.ruleset.features, ...features } }, [], []);
+    expect(sheet.grantedSpells.map((s) => s.key)).toEqual(["dancing-lights", "faerie-fire", "darkness"]);
+    expect(assembled.remainingChoices.some((c) => c.id === "keen-senses.skills")).toBe(true);
   });
 });

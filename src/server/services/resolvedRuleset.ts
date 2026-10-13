@@ -1,6 +1,8 @@
 import "server-only";
 import { zCharacterRulesBlockData, type CharacterRules, type MulticlassPrerequisites } from "@/src/core/schemas/rule-blocks/characterRules";
 import { zClassBasicsBlockData, zModifiersBlockData } from "@/src/core/schemas/rule-blocks/blocks";
+import { zChoicesBlockData, type ChoiceGrant, type ChoicesBlockData } from "@/src/core/schemas/rule-blocks/choices";
+import { resolveChoices, simpleGrantChoices, type ChoiceSource, type FeatChoiceData, type ResolvedChoices, type SpellMeta } from "@/src/core/rules/choices";
 import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
@@ -38,6 +40,7 @@ import {
   parseCustomTableFields,
   parseItemCost,
   parseItemWeight,
+  parseSpellClasses,
   parseSpellLevel,
   parseWeaponData,
   SRD_LANGUAGES,
@@ -52,6 +55,7 @@ import {
 } from "@/src/core/rules/srdMapping";
 import type { ArmorBlockData, BackgroundBlockData, ItemPropertiesBlockData, WeaponBlockData } from "@/src/core/schemas/rule-blocks";
 import {
+  listFeatKeysByCategory,
   listBlocksForRulesetEntries,
   listEntryTranslationsWithBlocks,
   listRulesetEntries,
@@ -188,6 +192,12 @@ export interface AssembledRuleset {
   asiGrantedLevels: Record<string, number[]>;
   /** Les trois caracteristiques de l'historique choisi (V2-G7, bonus +2/+1) — `null` si aucun historique choisi ou si sa fiche n'en porte aucune (ex. historique SRD 2014). Les DEUX chemins de lecture du bloc historique (SRD `fields`/fiche dediee) l'alimentent, meme source que le don accorde/les competences juste au-dessus. */
   backgroundAbilityScores: Ability[] | null;
+  /** V3.1-116 (ADR 0046) : les fiches du personnage qui portent des choix (bloc `choices`), à résoudre avec ses réponses par `resolveChoices`. */
+  choiceSources: ChoiceSource[];
+  /** Réponses imposées par une fiche à un choix d'une autre (Acolyte → liste du clerc). */
+  choicePresets: Record<string, string[]>;
+  /** Les dons qu'un choix `feat` de ces fiches peut désigner. Vide s'il n'y en a aucun. */
+  featCatalog: Record<string, FeatChoiceData>;
 }
 
 interface BatchEntry {
@@ -203,6 +213,19 @@ interface BatchEntry {
   /** V3.1-115 : prérequis de multiclassage et caractéristiques suggérées (bloc `class_basics`) — absents pour toute autre fiche. */
   multiclassPrerequisites?: MulticlassPrerequisites;
   suggestedAbilities?: Ability[];
+  /** V3.1-116 : le bloc `choices` de la fiche, s'il en porte un. */
+  choices?: ChoicesBlockData;
+}
+
+/** Bloc `choices`, validé. Mal formé : ignoré mais journalisé, comme `declaredModifiers`. */
+function parseChoicesBlock(data: unknown): ChoicesBlockData | undefined {
+  if (data === undefined || data === null) return undefined;
+  const parsed = zChoicesBlockData.safeParse(data);
+  if (!parsed.success) {
+    console.error("Bloc choices mal forme, ignore", parsed.error.issues);
+    return undefined;
+  }
+  return parsed.data;
 }
 
 /**
@@ -306,6 +329,7 @@ async function fetchEntriesBatch(
       const speciesTraitsRow = rows.find((r) => r.block_type === "species_traits");
       const modifiersRow = rows.find((r) => r.block_type === "modifiers");
       const classBasicsRow = rows.find((r) => r.block_type === "class_basics");
+      const choicesRow = rows.find((r) => r.block_type === "choices");
 
       const customTableData = (overrideBlocks.custom_table ?? customTableRow?.data) as { rows: CustomTableRow[] } | undefined;
       const progressionData = (overrideBlocks.class_progression ?? progressionRow?.data) as
@@ -319,6 +343,7 @@ async function fetchEntriesBatch(
         traitKeys: speciesTraitKeys(overrideBlocks.species_traits ?? speciesTraitsRow?.data),
         modifiers: declaredModifiers(overrideBlocks.modifiers ?? modifiersRow?.data),
         ...classBasicsExtras(overrideBlocks.class_basics ?? classBasicsRow?.data),
+        choices: parseChoicesBlock(choicesRow?.data),
       });
       remaining.delete(entry.entry_key);
     }
@@ -338,6 +363,7 @@ async function fetchEntriesBatch(
         traitKeys: speciesTraitKeys(resolved.blocksByType.get("species_traits")),
         modifiers: declaredModifiers(resolved.blocksByType.get("modifiers")),
         ...classBasicsExtras(resolved.blocksByType.get("class_basics")),
+        choices: parseChoicesBlock(resolved.blocksByType.get("choices")),
       });
       remaining.delete(key);
     }
@@ -407,6 +433,72 @@ export async function readWorldCharacterRules(supabase: TypedClient, worldId: st
   return readCharacterRules(supabase, rulesetId);
 }
 
+/** Catégories de don qu'exigent des choix `feat`, sous-choix d'options compris. Un choix sans catégorie accepte tout don : `null`. */
+function featCategoriesOf(grants: readonly ChoiceGrant[], into: Set<string | null>): Set<string | null> {
+  for (const grant of grants) {
+    if (grant.from.kind === "feat") into.add(grant.from.category ?? null);
+    if (grant.from.kind === "option") for (const o of grant.from.options) featCategoriesOf(o.grants ?? [], into);
+  }
+  return into;
+}
+
+/** Les catégories de don du SRD (`source_raw.type`). */
+const FEAT_CATEGORIES = ["origin", "general", "fighting-style", "epic-boon"];
+
+/**
+ * V3.1-116 : les dons d'une ou plusieurs catégories, avec leurs choix et
+ * leurs modificateurs, pour qu'un choix `feat` (Polyvalent) se résolve sans
+ * nouvel aller-retour. Chargé seulement quand un tel choix existe : deux
+ * vagues de requêtes (clés par catégorie sur la chaîne, puis le lot).
+ */
+async function fetchFeatCatalog(
+  supabase: TypedClient,
+  rulesetId: string,
+  categories: Set<string | null>,
+  locale: Locale
+): Promise<Record<string, FeatChoiceData>> {
+  const wanted = categories.has(null) ? FEAT_CATEGORIES : [...categories].filter((c): c is string => c !== null);
+  const chain = await walkRulesetChain(supabase, rulesetId);
+  const lists = await Promise.all(
+    chain.flatMap((link) => wanted.map(async (category) => ({ category, keys: await listFeatKeysByCategory(supabase, link.rulesetId, category) })))
+  );
+  const categoryByKey = new Map<string, string>();
+  for (const { category, keys } of lists) for (const key of keys) if (!categoryByKey.has(key)) categoryByKey.set(key, category);
+  if (categoryByKey.size === 0) return {};
+  const batch = await fetchEntriesBatch(supabase, rulesetId, [...categoryByKey.keys()], locale);
+  const catalog: Record<string, FeatChoiceData> = {};
+  for (const [key, entry] of batch) {
+    catalog[key] = { key, label: entry.name, category: categoryByKey.get(key), grants: entry.choices?.grants ?? [], modifiers: entry.modifiers };
+  }
+  return catalog;
+}
+
+/**
+ * Les choix du personnage résolus avec SES réponses, là où ils font foi
+ * (moteur, montée de niveau). Deux passes : la première dit quels choix sont
+ * des sorts et ce qui y est répondu, la seconde valide ces sorts (niveau,
+ * liste) d'après leurs fiches — un lot de quelques clés, seulement s'il y en a.
+ */
+export async function resolveCharacterChoices(
+  supabase: TypedClient,
+  rulesetId: string,
+  assembled: Pick<AssembledRuleset, "choiceSources" | "choicePresets" | "featCatalog">,
+  choices: Record<string, unknown>,
+  characterLevel: number
+): Promise<ResolvedChoices> {
+  const input = { sources: assembled.choiceSources, choices, presets: assembled.choicePresets, characterLevel, feats: assembled.featCatalog };
+  const firstPass = resolveChoices(input);
+  const spellKeys = [...new Set(firstPass.open.filter((c) => c.from.kind === "spell").flatMap((c) => c.chosen))];
+  if (spellKeys.length === 0) return firstPass;
+  const batch = await fetchEntriesBatch(supabase, rulesetId, spellKeys, "en");
+  const spells: Record<string, SpellMeta> = {};
+  for (const [key, entry] of batch) {
+    const level = parseSpellLevel(entry.fields);
+    if (level !== null) spells[key] = { level, lists: parseSpellClasses(entry.fields) };
+  }
+  return resolveChoices({ ...input, spells });
+}
+
 /**
  * Assemble un `ResolvedRuleset` (V1-B1) reel a partir des entrees SRD deja
  * importees (V1-A1/A2) — pas de jeu de donnees de demonstration : espece,
@@ -431,7 +523,17 @@ export async function assembleResolvedRuleset(
   const languages: TraitGrant[] = [];
   const asiGrantedLevels: Record<string, number[]> = {};
   let backgroundAbilityScores: Ability[] | null = null;
+  // V3.1-116 : fiches qui portent des choix, et réponses imposées.
+  const choiceSources: ChoiceSource[] = [];
+  const choicePresets: Record<string, string[]> = {};
+  function addChoices(key: string, label: string, layer: ChoiceSource["layer"], block: ChoicesBlockData | undefined) {
+    if (!block) return;
+    if (block.grants.length > 0) choiceSources.push({ key, label, layer, grants: block.grants });
+    Object.assign(choicePresets, block.presets ?? {});
+  }
 
+  // Avant toute classe (assistant de création), le personnage est traité comme de niveau 1.
+  const characterLevel = Math.max(1, selection.classes.reduce((sum, c) => sum + c.level, 0));
   const topKeys = [
     ...(selection.species ? [selection.species] : []),
     ...(selection.background ? [selection.background] : []),
@@ -492,6 +594,7 @@ export async function assembleResolvedRuleset(
     if (found) {
       const label = found.name;
       const key = `background:${selection.background}`;
+      addChoices(key, label, 4, found.choices);
       // Fiche maison (bloc dedie `background`, jamais de `custom_table`) :
       // deux extracteurs distincts (`backgroundModifiersFromBlock`/
       // `backgroundFeatKeyFromBlock`, src/core/rules/srdMapping.ts) plutot
@@ -662,6 +765,13 @@ export async function assembleResolvedRuleset(
       if (speciesFeature && trait.modifiers.length > 0) {
         speciesFeature.modifiers.push(...resolveDeclaredModifiers(trait.modifiers, traitKey, trait.name, 2));
       }
+      // V3.1-116 : un trait qui porte un bloc `choices` (Compétent, Sens
+      // aiguisés, lignages) passe par le mécanisme générique ; le choix de
+      // compétence lu dans le SRD ne s'y ajoute pas, il serait en double.
+      if (trait.choices) {
+        addChoices(traitKey, trait.name, 2, trait.choices);
+        continue;
+      }
       for (const choice of extractSkillChoices(trait.fields)) {
         traitChoices.push({
           id: `${traitKey}.skills`,
@@ -672,6 +782,9 @@ export async function assembleResolvedRuleset(
         });
       }
     }
+    // Compétent, Sens aiguisés : à la même place et sous la même clé qu'avant le mécanisme générique.
+    const traitSources = choiceSources.filter((s) => speciesEntry.traitKeys.includes(s.key));
+    traitChoices.push(...simpleGrantChoices(traitSources, characterLevel, SRD_LANGUAGES));
     remainingChoices.splice(traitChoicesInsertAt, 0, ...traitChoices);
   }
   if (weaponPool) {
@@ -721,6 +834,7 @@ export async function assembleResolvedRuleset(
       // modificateurs, et ne coute aucune requete de plus.
       const label = chip ? (nameByChipEntryId.get(chip.id) ?? entryNameFrom(chip)) : (resolvedFeatureBlocks.get(fk)?.name ?? fk);
       const modifiers = resolveDeclaredModifiers(declaredModifiersByKey.get(fk) ?? [], fk, label, layerForFeatureSource(source));
+      addChoices(fk, label, layerForFeatureSource(source), parseChoicesBlock(resolvedFeatureBlocks.get(fk)?.blocksByType.get("choices")));
       features[fk] = chip
         ? { key: fk, label, source, modifiers, prerequisites: mapPrerequisites(chip.source_raw) }
         : // Aucune ligne `ruleset_entries` : fiche maison (label resolu
@@ -749,6 +863,11 @@ export async function assembleResolvedRuleset(
     for (const l of languages) l.name = LANGUAGE_LABELS_FR[l.key as LanguageKey] ?? l.name;
   }
 
+  // V3.1-116 : le catalogue des dons, seulement si un choix en désigne un.
+  const featCategories = new Set<string | null>();
+  for (const s of choiceSources) featCategoriesOf(s.grants, featCategories);
+  const featCatalog = featCategories.size > 0 ? await fetchFeatCatalog(supabase, rulesetId, featCategories, locale) : {};
+
   return {
     ruleset: { classes, features, ...(characterRules ? { characterRules } : {}) },
     remainingChoices,
@@ -756,6 +875,9 @@ export async function assembleResolvedRuleset(
     languages,
     asiGrantedLevels,
     backgroundAbilityScores,
+    choiceSources,
+    choicePresets,
+    featCatalog,
   };
 }
 
@@ -929,6 +1051,9 @@ const EMPTY_RULESET_VIEW = {
   languages: [],
   asiGrantedLevels: {},
   backgroundAbilityScores: null,
+  choiceSources: [],
+  choicePresets: {},
+  featCatalog: {},
   equipment: {},
   weaponByKey: {},
   weight: {},

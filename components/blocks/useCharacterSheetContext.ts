@@ -15,6 +15,7 @@ import {
   parseBackgroundAbilityBonusChoice,
 } from "@/src/core/rules/backgroundAbilityBonus";
 import { totalCarriedWeight } from "@/src/core/rules/encumbrance";
+import { resolveChoices } from "@/src/core/rules/choices";
 import { useResolvedRuleset, type RemainingChoiceView, type TraitGrantView } from "./useResolvedRuleset";
 import { useReferenceChips, type ResolvedChipView } from "./useReferenceChips";
 import { itemLabel, itemRef } from "./inventoryItem";
@@ -133,6 +134,9 @@ export function useCharacterSheetContext(
     spellLevels,
     asiGrantedLevels,
     backgroundAbilityScores: rawBackgroundAbilityScores,
+    choiceSources,
+    choicePresets,
+    featCatalog,
   } = useResolvedRuleset(worldSlug, selection);
   const backgroundAbilityScores = (rawBackgroundAbilityScores as Ability[] | null) ?? null;
 
@@ -157,9 +161,27 @@ export function useCharacterSheetContext(
     [inventory, equipment, dexMod]
   );
 
+  // V3.1-116 : les choix accordés, résolus ici avec les réponses du
+  // personnage (aucun aller-retour par réponse). Sans catalogue de sorts :
+  // l'aperçu prend un sort choisi tel quel, le serveur le valide.
+  const characterLevel = Math.max(1, characterClasses.reduce((sum, c) => sum + c.level, 0));
+  const grantedChoices = resolveChoices({
+    sources: choiceSources,
+    choices: character?.choices ?? {},
+    presets: choicePresets,
+    characterLevel,
+    feats: featCatalog,
+  });
+  const grantedChoiceKeys = new Set(grantedChoices.open.map((c) => c.key));
+
   const choiceFeatures: Record<string, ResolvedFeature> = {};
   const choiceFeatureKeys: string[] = [];
+  for (const feature of grantedChoices.features) {
+    choiceFeatures[feature.key] = feature;
+    choiceFeatureKeys.push(feature.key);
+  }
   for (const choice of remainingChoices) {
+    if (grantedChoiceKeys.has(choice.id)) continue;
     const chosen = (character?.choices[choice.id] as string[] | undefined) ?? [];
     const key = `choice:${choice.id}`;
     choiceFeatures[key] = { key, label: choice.label, source: "choice", modifiers: mapChosenSkillModifiers(chosen, choice.id, choice.label) };

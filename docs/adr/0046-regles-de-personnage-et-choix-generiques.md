@@ -35,3 +35,15 @@ V3.1-3, 6 et 7 sont conçus ici et fermés au profit des tickets d'implémentati
 - **Sans fiche** : avertissement `missing_character_rules`, et aucune charge calculée.
 - **`class_basics`** porte `multiclass_prerequisites` (`all` et `any`, Guerrier : FOR 13 ou DEX 13) et `suggested_abilities` (la caractéristique principale du SRD 2024). L'ordre complet « Répartir pour un clerc » reste à saisir.
 
+## Réalisé (V3.1-116, 13 octobre 2026)
+
+- **Le bloc** `choices` (`src/core/schemas/rule-blocks/choices.ts`) et **la résolution pure** `resolveChoices` (`src/core/rules/choices.ts`). Une option porte des modificateurs, des sorts par niveau (`at_level`, toujours préparé, lancer gratuit) et des sous-choix ; une caractéristique `spellcasting` vaut pour tous les sorts de sa fiche ou de son option.
+- **Clés** : `<source>.<choix>`, puis `<clé>.<option>.<choix>` ou `<clé>.<don>.<choix>`. Compétent et Sens aiguisés gardent leur ancienne clé (`skillful.skills`).
+- **`presets`** remplace le champ `note` du SRD : l'Acolyte et le Sage imposent la liste de leur Initié à la magie.
+- **Validation** : un sort choisi est vérifié contre son niveau et sa liste côté serveur (`resolveCharacterChoices`, deux passes). L'aperçu du navigateur le prend tel quel.
+- **Dons** : le catalogue des dons d'une catégorie se charge seulement si un choix `feat` existe (deux requêtes de plus). Un don maison qui ne vit que dans `ruleset_overrides` n'y figure pas encore.
+- **`characterSheet()`** rend `grantedSpells`, filtrés par le niveau atteint, avec leur DD et leur bonus d'attaque.
+- **Reporté** :
+  - les améliorations de caractéristiques restent sur leur mécanisme (`<classe>.l<n>.asi`) ; leur passage en choix `ability`/`feat` va avec l'assistant de V3.1-118 ;
+  - l'affichage des choix imbriqués et des sorts accordés à l'écran revient aussi à V3.1-118 ;
+  - restent en prose, faute de vocabulaire : la Vision dans le noir du Drow, les résistances des héritages fiélons, les usages de l'Ascendance gigante (ressources, ADR 0060), le sort mineur interchangeable du Haut-elfe.

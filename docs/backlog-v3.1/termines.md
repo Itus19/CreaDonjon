@@ -2331,3 +2331,47 @@ Chaque cas laisse ≈ 700 ko d'orphelins, sur 1 Go de stockage gratuit.
 - le départ à haut niveau reste à saisir par l'auteur ;
 - le test du MJ qui passe outre porte sur le noyau (`checkMulticlassEntry`) ; la condition serveur tient en une ligne, sans test d'intégration dédié ;
 - l'assistant de création lit le ruleset par défaut du monde, la fiche celui de la campagne : écart antérieur, à traiter avec V3.1-118.
+
+---
+
+### ☑ V3.1-116 — Le mécanisme générique des choix (noyau et résolution) · `L` · sans modèle IA — **fait le 13 octobre (ADR 0046)**
+
+**Modèle conseillé : Opus** — cœur du moteur. **ADR 0046.**
+**Dépend de** : 115.
+
+**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+- `zChoiceGrant` (champs de l'ADR), accepté dans la progression d'une
+  classe ou sous-classe, un trait d'espèce, un historique, un don.
+- `resolvedRuleset` collecte tous les choix accessibles et rend
+  `RemainingChoice` généralisé ; `characterSheet()` applique les effets des
+  options choisies (`character.choices`, clés qualifiées).
+- Les améliorations de caractéristiques et dons de progression deviennent
+  des choix `ability` / `feat`.
+- Import SRD : Compétent, Polyvalent, Sens aiguisés, lignages elfiques et
+  gnomiques, legs infernal, ascendance de géant, Initié à la magie.
+
+**Critères d'acceptation**
+- [x] Initié à la magie : le choix de liste, les sorts mineurs et le sort de
+  niveau 1 deviennent des sorts réels de la fiche (test).
+- [x] Lignage elfique Drow : le sort mineur au niveau 1, les sorts aux
+  niveaux 3 et 5, la caractéristique d'incantation choisie une fois (test).
+- [x] Un don ou un trait sans choix n'ajoute rien à faire.
+- [x] L'Humain ne liste plus « Polyvalente » (propriété d'arme) parmi ses traits (vu par la vérification du 11 octobre).
+
+**Note de clôture (13 octobre, Opus).** Détail dans l'[ADR 0046](../adr/0046-regles-de-personnage-et-choix-generiques.md), section « Réalisé (V3.1-116) ».
+
+*Fait :*
+- bloc `choices` et `resolveChoices`, 23 tests du noyau ;
+- `data/srd/choices-2024.json` (Compétent, Polyvalent, Sens aiguisés, Doué, Initié à la magie, lignages elfiques et gnomes, héritages fiélons, ascendance gigante ; listes imposées par l'Acolyte et le Sage), posé par l'import et gardé par un test ;
+- serveur (moteur) et fiche du navigateur appliquent la même résolution ; 2 tests d'intégration contre la base.
+
+*Critères :*
+- Initié à la magie et Drow : tests du noyau, rejoués contre la base ;
+- l'Humain : la table de traduction par nom anglais donnait « Polyvalente » (la propriété d'arme) au trait Polyvalent et « Polyvalent » à Compétent. Corrigé par clé (`scripts/write-human-trait-names-fr.ts`), vérifié après réimport.
+
+*Vérifié en vrai* (Testeur B) : la route du ruleset rend, pour un Humain Acolyte, Compétent à sa place, les 4 dons d'origine, la liste du clerc imposée ; la fiche de B se charge sans changement.
+
+*Reporté à V3.1-118* :
+- les améliorations de caractéristiques gardent leur mécanisme ;
+- les écrans des choix imbriqués et des sorts accordés.

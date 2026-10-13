@@ -49,7 +49,7 @@ import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
 import { insertDiceRoll } from "@/src/server/repos/diceRolls";
 import { listBlocksForRulesetEntry, type RulesetEntryRow } from "@/src/server/repos/rules";
 import { entryNameFrom, findEntryInRulesetChain } from "@/src/server/services/rules";
-import { assembleResolvedRuleset, resolveEquipmentData, type RemainingChoice } from "@/src/server/services/resolvedRuleset";
+import { assembleResolvedRuleset, resolveCharacterChoices, resolveEquipmentData, type RemainingChoice } from "@/src/server/services/resolvedRuleset";
 import { applyRuntimeStateChange, getEntityRuntimeState } from "@/src/server/services/runtimeState";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
 import { serverRng } from "@/src/server/services/rng";
@@ -203,9 +203,17 @@ export async function resolveCharacterActionContext(
     };
   });
 
+  // V3.1-116 : les choix accordés (lignages, dons, Compétent…), résolus avec
+  // les réponses du personnage et ses sorts validés. Leurs effets remplacent
+  // ceux de l'ancienne boucle pour les mêmes clés.
+  const characterLevel = Math.max(1, classSelections.reduce((sum, c) => sum + c.level, 0));
+  const grantedChoices = await resolveCharacterChoices(supabase, rulesetId, assembled, characterData.choices, characterLevel);
+  const grantedChoiceKeys = new Set(grantedChoices.open.map((c) => c.key));
+
   const choiceFeatures: Record<string, ResolvedFeature> = {};
   const choiceFeatureKeys: string[] = [];
   for (const choice of assembled.remainingChoices) {
+    if (grantedChoiceKeys.has(choice.id)) continue;
     const chosen = (characterData.choices[choice.id] as string[] | undefined) ?? [];
     const key = `choice:${choice.id}`;
     choiceFeatures[key] = {
@@ -215,6 +223,10 @@ export async function resolveCharacterActionContext(
       modifiers: mapChosenSkillModifiers(chosen, choice.id, choice.label),
     };
     choiceFeatureKeys.push(key);
+  }
+  for (const feature of grantedChoices.features) {
+    choiceFeatures[feature.key] = feature;
+    choiceFeatureKeys.push(feature.key);
   }
   const asiFeatures = buildAsiChoiceFeatures(characterData.choices, assembled.asiGrantedLevels, assembled.ruleset.classes);
   Object.assign(choiceFeatures, asiFeatures.features);

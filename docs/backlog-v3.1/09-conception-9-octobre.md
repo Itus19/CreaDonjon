@@ -279,33 +279,6 @@ Règles actives est V3.1-57.
 
 ---
 
-### ☐ V3.1-116 — Le mécanisme générique des choix (noyau et résolution) · `L` · sans modèle IA — **prêt (Opus)**
-
-**Modèle conseillé : Opus** — cœur du moteur. **ADR 0046.**
-**Dépend de** : 115.
-
-**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-- `zChoiceGrant` (champs de l'ADR), accepté dans la progression d'une
-  classe ou sous-classe, un trait d'espèce, un historique, un don.
-- `resolvedRuleset` collecte tous les choix accessibles et rend
-  `RemainingChoice` généralisé ; `characterSheet()` applique les effets des
-  options choisies (`character.choices`, clés qualifiées).
-- Les améliorations de caractéristiques et dons de progression deviennent
-  des choix `ability` / `feat`.
-- Import SRD : Compétent, Polyvalent, Sens aiguisés, lignages elfiques et
-  gnomiques, legs infernal, ascendance de géant, Initié à la magie.
-
-**Critères d'acceptation**
-- [ ] Initié à la magie : le choix de liste, les sorts mineurs et le sort de
-  niveau 1 deviennent des sorts réels de la fiche (test).
-- [ ] Lignage elfique Drow : le sort mineur au niveau 1, les sorts aux
-  niveaux 3 et 5, la caractéristique d'incantation choisie une fois (test).
-- [ ] Un don ou un trait sans choix n'ajoute rien à faire.
-- [ ] L'Humain ne liste plus « Polyvalente » (propriété d'arme) parmi ses traits (vu par la vérification du 11 octobre).
-
----
-
 ### ☐ V3.1-117 — La sous-classe résolue et ses choix · `M` · sans modèle IA — **prêt (Opus)**
 
 **Modèle conseillé : Opus.** **ADR 0046.** **Dépend de** : 116.
@@ -339,6 +312,11 @@ Règles actives est V3.1-57.
   **options nommées** (cartes, chacune avec ses effets).
 - La caractéristique d'incantation d'un lignage se choisit une fois, dans
   l'option.
+
+**Reçu de V3.1-116** (13 octobre) :
+- proposer les choix imbriqués que rend `resolveChoices` (`open`), au-delà des compétences et langues de premier niveau ;
+- afficher les sorts accordés (`sheet.grantedSpells`) dans l'onglet Magie ;
+- faire passer les améliorations de caractéristiques et les dons de progression en choix `ability` / `feat`.
 
 **Critères d'acceptation**
 - [ ] Les trois critères de V3.1-3 et de V3.1-6 passent dans l'assistant.
