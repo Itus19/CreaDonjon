@@ -1,4 +1,5 @@
 import "server-only";
+import { zModifiersBlockData } from "@/src/core/schemas/rule-blocks/blocks";
 import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
@@ -196,6 +197,19 @@ interface BatchEntry {
   backgroundBlock?: BackgroundBlockData;
   /** Cles des fiches de traits d'une espece (bloc `species_traits`, V3.1-4) — vide pour toute autre fiche. */
   traitKeys: string[];
+  /** Modificateurs declares par la fiche (bloc `modifiers`). Lus pour les traits d'espece (V3.1-121, Ténacité naine) ; vide si la fiche n'en porte pas. */
+  modifiers: DeclaredModifier[];
+}
+
+/** Modificateurs du bloc `modifiers`, valides par son schema. Absent : aucun. Mal forme : aucun, mais journalise (un effet ignore en silence fausserait la fiche sans qu'on sache pourquoi). */
+function declaredModifiers(data: unknown): DeclaredModifier[] {
+  if (data === undefined || data === null) return [];
+  const parsed = zModifiersBlockData.safeParse(data);
+  if (!parsed.success) {
+    console.error("Bloc modifiers mal forme, ignore", parsed.error.issues);
+    return [];
+  }
+  return parsed.data.modifiers;
 }
 
 /** Cles de regle du bloc `species_traits` ; tolere une donnee absente ou d'une autre forme. */
@@ -267,6 +281,7 @@ async function fetchEntriesBatch(
       const customTableRow = rows.find((r) => r.block_type === "custom_table");
       const progressionRow = rows.find((r) => r.block_type === "class_progression");
       const speciesTraitsRow = rows.find((r) => r.block_type === "species_traits");
+      const modifiersRow = rows.find((r) => r.block_type === "modifiers");
 
       const customTableData = (overrideBlocks.custom_table ?? customTableRow?.data) as { rows: CustomTableRow[] } | undefined;
       const progressionData = (overrideBlocks.class_progression ?? progressionRow?.data) as
@@ -278,6 +293,7 @@ async function fetchEntriesBatch(
         fields: customTableData ? parseCustomTableFields(customTableData.rows) : {},
         progressionRows: progressionData?.rows ?? [],
         traitKeys: speciesTraitKeys(overrideBlocks.species_traits ?? speciesTraitsRow?.data),
+        modifiers: declaredModifiers(overrideBlocks.modifiers ?? modifiersRow?.data),
       });
       remaining.delete(entry.entry_key);
     }
@@ -295,6 +311,7 @@ async function fetchEntriesBatch(
         progressionRows: [],
         backgroundBlock: resolved.blocksByType.get("background") as BackgroundBlockData | undefined,
         traitKeys: speciesTraitKeys(resolved.blocksByType.get("species_traits")),
+        modifiers: declaredModifiers(resolved.blocksByType.get("modifiers")),
       });
       remaining.delete(key);
     }
@@ -574,9 +591,17 @@ export async function assembleResolvedRuleset(
   // competences de sa classe.
   if (speciesEntry && traitBatch) {
     const traitChoices: RemainingChoice[] = [];
+    // V3.1-121 : les effets passifs d'un trait (bloc `modifiers`, ex.
+    // Ténacité naine) s'ajoutent a la feature de l'espece, en couche 2 comme
+    // ses bonus de caracteristique ; leur etiquette est le nom du trait, pour
+    // que la fiche affiche « Ténacité naine » dans les sources des PV.
+    const speciesFeature = selection.species ? features[`species:${selection.species}`] : undefined;
     for (const traitKey of speciesEntry.traitKeys) {
       const trait = traitBatch.get(traitKey);
       if (!trait) continue;
+      if (speciesFeature && trait.modifiers.length > 0) {
+        speciesFeature.modifiers.push(...resolveDeclaredModifiers(trait.modifiers, traitKey, trait.name, 2));
+      }
       for (const choice of extractSkillChoices(trait.fields)) {
         traitChoices.push({
           id: `${traitKey}.skills`,

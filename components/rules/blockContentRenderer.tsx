@@ -1016,7 +1016,8 @@ function Modifiers({ data }: { data: ModifiersBlockData }) {
   const items = data.modifiers.map((m) => ({
     label: modifierTargetLabel(m.target),
     value: modifierOpNeedsValue(m.op) ? (
-      <span className="mech">{`${m.op === "set" ? "= " : m.value !== undefined && m.value >= 0 ? "+" : ""}${m.value ?? 0}`}</span>
+      // V3.1-121 : « +1 par niveau » (Ténacité naine), jamais « +1 » seul, qui mentirait au-dela du niveau 1.
+      <span className="mech">{`${m.op === "set" ? "= " : m.value !== undefined && m.value >= 0 ? "+" : ""}${m.value ?? 0}${m.per_level ? " par niveau" : ""}`}</span>
     ) : (
       MODIFIER_OP_LABELS_FR[m.op]
     ),

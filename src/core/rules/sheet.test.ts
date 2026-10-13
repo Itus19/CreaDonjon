@@ -597,3 +597,54 @@ describe("layerForFeatureSource / resolveDeclaredModifiers — generalisation de
     expect(sheet.savingThrows.wis.proficient).toBe(true);
   });
 });
+
+describe("modificateur par niveau (V3.1-121, Ténacité naine)", () => {
+  // Nain Clerc, CON 14 : le cas constaté le 11 octobre (10 PV au lieu de 11).
+  const CLERIC = { key: "cleric", label: "Clerc", hitDie: 8, savingThrowProficiencies: ["wis", "cha"] as const };
+  const tenacite = resolveDeclaredModifiers(
+    [{ target: "hp.max", op: "add", value: 1, per_level: true }],
+    "dwarven-toughness",
+    "Ténacité naine",
+    2
+  );
+  const nainClerc = (level: number): CharacterBuild => ({
+    species: "dwarf",
+    classes: [{ key: "cleric", level }],
+    abilities: { assigned: { str: 10, dex: 10, con: 14, int: 10, wis: 15, cha: 10 } },
+    featureKeys: ["species:dwarf"],
+  });
+  const ruleset: ResolvedRuleset = {
+    classes: { cleric: CLERIC },
+    features: { "species:dwarf": { key: "species:dwarf", label: "Nain", source: "species:dwarf", modifiers: tenacite } },
+  };
+
+  it("resolveDeclaredModifiers garde l'echelle par niveau", () => {
+    expect(tenacite[0].perLevel).toBe(true);
+  });
+
+  it("un Nain niveau 1 gagne +1 PV max, avec la source « Ténacité naine »", () => {
+    const sheet = characterSheet(nainClerc(1), ruleset, [], []);
+    expect(sheet.hitPoints.max).toBe(8 + 2 + 1);
+    expect(sheet.hitPoints.sources).toContainEqual({ label: "Ténacité naine", value: 1 });
+  });
+
+  it("puis +1 par niveau : niveau 4, +4", () => {
+    const sheet = characterSheet(nainClerc(4), ruleset, [], []);
+    // 8 (niveau 1) + 3 x 5 (moyenne d8) + CON 2 x 4 + Ténacité 4.
+    expect(sheet.hitPoints.max).toBe(8 + 3 * averageHitDie(8) + 8 + 4);
+    expect(sheet.hitPoints.sources).toContainEqual({ label: "Ténacité naine", value: 4 });
+  });
+
+  it("multiclassage : le niveau compte est celui du personnage, toutes classes", () => {
+    const build: CharacterBuild = { ...nainClerc(2), classes: [{ key: "cleric", level: 2 }, { key: "fighter", level: 1 }] };
+    const sheet = characterSheet(build, { ...ruleset, classes: { cleric: CLERIC, fighter: FIGHTER } }, [], []);
+    expect(sheet.hitPoints.sources).toContainEqual({ label: "Ténacité naine", value: 3 });
+  });
+
+  it("sans echelle, un modificateur garde sa valeur fixe", () => {
+    const fixe = resolveDeclaredModifiers([{ target: "hp.max", op: "add", value: 1 }], "x", "Fixe", 2);
+    expect(fixe[0].perLevel).toBeUndefined();
+    const sheet = characterSheet(nainClerc(4), { ...ruleset, features: { "species:dwarf": { key: "species:dwarf", label: "Nain", source: "species:dwarf", modifiers: fixe } } }, [], []);
+    expect(sheet.hitPoints.sources).toContainEqual({ label: "Fixe", value: 1 });
+  });
+});

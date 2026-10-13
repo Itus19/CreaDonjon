@@ -51,6 +51,8 @@ export interface Modifier {
   layer: Layer;
   /** Defaut "stack" si absent. */
   stacking?: StackingRule;
+  /** V3.1-121 : `value` est par niveau de personnage (toutes classes), multipliee par `characterSheet()` (Ténacité naine : +1 PV max par niveau). */
+  perLevel?: boolean;
 }
 
 export interface Source {
@@ -63,6 +65,8 @@ export interface DeclaredModifier {
   target: string;
   op: ModifierOp;
   value?: number;
+  /** V3.1-121 : `value` est par niveau de personnage. Cle `snake_case` : c'est une donnee de fiche (bloc `modifiers`). */
+  per_level?: boolean;
 }
 
 /**
@@ -87,7 +91,7 @@ export function resolveDeclaredModifiers(
   label: string,
   layer: Layer
 ): Modifier[] {
-  return declared.map((d) => ({ target: d.target, op: d.op, value: d.value, source, label, layer }));
+  return declared.map((d) => ({ target: d.target, op: d.op, value: d.value, source, label, layer, ...(d.per_level ? { perLevel: true } : {}) }));
 }
 
 // --- Prerequis (§B5) ------------------------------------------------------
@@ -404,6 +408,11 @@ function checkPrerequisites(
 
 // --- Fonction principale ----------------------------------------------------
 
+/** V3.1-121 : un modificateur « par niveau » prend sa valeur finale ici, une seule fois, avant toute pile. Les sources affichent donc le total (« Ténacité naine 4 » au niveau 4). */
+function scaleByLevel(m: Modifier, totalLevel: number): Modifier {
+  return m.perLevel && m.value !== undefined ? { ...m, value: m.value * totalLevel } : m;
+}
+
 export function characterSheet(
   build: CharacterBuild,
   ruleset: ResolvedRuleset,
@@ -433,7 +442,7 @@ export function characterSheet(
     ...savingThrowProficiencyMods,
     ...equipment.filter((e) => e.equipped).flatMap((e) => e.modifiers),
     ...activeEffects.flatMap((e) => e.modifiers),
-  ];
+  ].map((m) => scaleByLevel(m, totalLevel));
 
   // Couche 1 : caracteristiques attribuees, plus couches 2/5 (espece, ASI/dons).
   const abilities = {} as Record<Ability, AbilityResult>;

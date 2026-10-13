@@ -1,0 +1,15 @@
+{
+  "_lisezmoi": [
+    "V3.1-121 — Effets passifs des regles SRD 2024, ecrits a la main.",
+    "Le JSON du SRD ne porte ces effets qu'en prose (« vos PV max augmentent de 1 a chaque niveau »).",
+    "Ce fichier les traduit, entree par entree, en modificateurs du bloc `modifiers` (src/core/schemas/rule-blocks/primitives.ts, zModifier).",
+    "Il est DONNEE, jamais code : ingest-srd.ts le lit, il n'y a rien a programmer pour en ajouter un.",
+    "Suivi par Git parce que le SRD est sous CC-BY-4.0 (voir NOTICE.md), comme triggers-2024.json.",
+    "La cle est l'`index` de l'entree SRD. Chaque bloc est valide a l'import."
+  ],
+
+  "dwarven-toughness": {
+    "_regle": "Tenacite naine (trait nain) : vos PV max augmentent de 1, puis de 1 a chaque niveau gagne.",
+    "modifiers": [{ "target": "hp.max", "op": "add", "value": 1, "per_level": true }]
+  }
+}

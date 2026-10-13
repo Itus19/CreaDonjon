@@ -1040,6 +1040,24 @@ function triggersBlock(entryKey: string): EntryBlock | null {
 }
 
 /**
+ * V3.1-121 — Effets passifs ecrits a la main (`data/srd/modifiers-2024.json`),
+ * meme raison et meme forme que les declencheurs ci-dessus : le SRD ne les
+ * dit qu'en prose, et un bloc pose hors import serait efface au prochain
+ * passage.
+ */
+const SRD_MODIFIERS: Record<string, { modifiers?: unknown[] }> = JSON.parse(
+  readFileSync(resolve(process.cwd(), "data/srd/modifiers-2024.json"), "utf-8")
+);
+
+function modifiersBlock(entryKey: string): EntryBlock | null {
+  const authored = SRD_MODIFIERS[entryKey];
+  if (!authored?.modifiers || authored.modifiers.length === 0) return null;
+  const data = { modifiers: authored.modifiers };
+  validateBlockData("modifiers", data);
+  return { block_type: "modifiers", display: { label: "Modificateurs", layout: "key_values" }, data, display_order: 190 };
+}
+
+/**
  * Tous les champs du schema sont optionnels (V1-D1) : `null` seulement si
  * aucun n'a pu etre rempli, pour eviter un bloc "present" mais vide de sens
  * (qui masquerait a tort le signal "regle incomplete").
@@ -1910,6 +1928,8 @@ function transformEntry(
   // decide, pas une liste de types ici.
   const triggers = triggersBlock(String(entry.index));
   if (triggers) blocks.push(triggers);
+  const modifiers = modifiersBlock(String(entry.index));
+  if (modifiers) blocks.push(modifiers);
 
   if (entryType === "subclass") {
     const features = subclassFeaturesBlock(entry);
