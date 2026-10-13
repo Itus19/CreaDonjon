@@ -215,6 +215,9 @@ interface BatchEntry {
   /** V3.1-115 : prérequis de multiclassage et caractéristiques suggérées (bloc `class_basics`) — absents pour toute autre fiche. */
   multiclassPrerequisites?: MulticlassPrerequisites;
   suggestedAbilities?: Ability[];
+  /** V3.1-113 : magie de pacte et poids dans la table du multiclassé (bloc `class_basics`). */
+  spellcastingKind?: "slots" | "pact";
+  casterWeight?: { fraction: "full" | "half"; rounding: "up" | "down" };
   /** V3.1-116 : le bloc `choices` de la fiche, s'il en porte un. */
   choices?: ChoicesBlockData;
   /** V3.1-117 : les aptitudes d'une fiche de sous-classe (bloc `subclass_features`). */
@@ -249,9 +252,11 @@ function parseChoicesBlock(data: unknown): ChoicesBlockData | undefined {
  * formée est ignorée mais journalisée (un prérequis perdu en silence
  * laisserait entrer dans une classe sans le dire).
  */
-function classBasicsExtras(data: unknown): Pick<BatchEntry, "multiclassPrerequisites" | "suggestedAbilities"> {
+function classBasicsExtras(data: unknown): Pick<BatchEntry, "multiclassPrerequisites" | "suggestedAbilities" | "spellcastingKind" | "casterWeight"> {
   if (data === undefined || data === null) return {};
-  const parsed = zClassBasicsBlockData.pick({ multiclass_prerequisites: true, suggested_abilities: true }).safeParse(data);
+  const parsed = zClassBasicsBlockData
+    .pick({ multiclass_prerequisites: true, suggested_abilities: true, spellcasting_kind: true, caster_weight: true })
+    .safeParse(data);
   if (!parsed.success) {
     console.error("Bloc class_basics : prérequis de multiclassage mal formés, ignorés", parsed.error.issues);
     return {};
@@ -259,6 +264,8 @@ function classBasicsExtras(data: unknown): Pick<BatchEntry, "multiclassPrerequis
   return {
     ...(parsed.data.multiclass_prerequisites ? { multiclassPrerequisites: parsed.data.multiclass_prerequisites } : {}),
     ...(parsed.data.suggested_abilities ? { suggestedAbilities: parsed.data.suggested_abilities } : {}),
+    ...(parsed.data.spellcasting_kind ? { spellcastingKind: parsed.data.spellcasting_kind } : {}),
+    ...(parsed.data.caster_weight ? { casterWeight: parsed.data.caster_weight } : {}),
   };
 }
 
@@ -695,7 +702,14 @@ export async function assembleResolvedRuleset(
       label,
       hitDie: core.hitDie,
       savingThrowProficiencies: core.savingThrowProficiencies,
-      spellcasting: spellAbility ? { ability: spellAbility, slotsByLevel } : undefined,
+      spellcasting: spellAbility
+        ? {
+            ability: spellAbility,
+            slotsByLevel,
+            ...(found.spellcastingKind ? { kind: found.spellcastingKind } : {}),
+            ...(found.casterWeight ? { casterWeight: found.casterWeight } : {}),
+          }
+        : undefined,
       ...(found.multiclassPrerequisites ? { multiclassPrerequisites: found.multiclassPrerequisites } : {}),
       ...(found.suggestedAbilities ? { suggestedAbilities: found.suggestedAbilities } : {}),
     };

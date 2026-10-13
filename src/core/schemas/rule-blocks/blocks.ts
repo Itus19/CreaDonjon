@@ -353,6 +353,10 @@ export const zClassBasicsBlockData = z.object({
   multiclass_prerequisites: zMulticlassPrerequisites.optional(),
   /** V3.1-115 : les caractéristiques à privilégier, dans l'ordre (« Répartir pour un clerc »). */
   suggested_abilities: z.array(z.enum(["str", "dex", "con", "int", "wis", "cha"])).optional(),
+  /** V3.1-113 (ADR 0045) : `pact` — magie de pacte, réserve séparée. Absent : emplacements ordinaires. */
+  spellcasting_kind: z.enum(["slots", "pact"]).optional(),
+  /** V3.1-113 : poids dans la table du multiclassé, et l'arrondi de la moitié (2024 : supérieur ; 2014 : inférieur). Absent : ne compte pas. */
+  caster_weight: z.object({ fraction: z.enum(["full", "half"]), rounding: z.enum(["up", "down"]) }).optional(),
 });
 export type ClassBasicsBlockData = z.infer<typeof zClassBasicsBlockData>;
 

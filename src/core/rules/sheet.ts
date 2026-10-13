@@ -17,6 +17,7 @@ import { computeEncumbrance, encumbranceModifiers, type EncumbranceResult } from
 import type { CharacterRules, MulticlassPrerequisites } from "../schemas/rule-blocks/characterRules";
 import type { FreeCast } from "../schemas/rule-blocks/choices";
 import { rollDice } from "../dice/roll";
+import { computeSpellSlots } from "./spellSlots";
 import type { Rng } from "../dice/rng";
 
 // --- Vocabulaire de base -------------------------------------------------
@@ -142,6 +143,8 @@ export interface GrantedSpell {
 
 export type Warning =
   | { kind: "unmet_prerequisite"; message: string; featureKey: string }
+  /** V3.1-113 : plusieurs classes à emplacements, mais pas de table du multiclassé dans le ruleset. */
+  | { kind: "missing_multiclass_table"; message: string }
   /** V3.1-115 : le ruleset n'a pas de fiche de règles de personnage ; plafond et charge ne sont pas appliqués. */
   | { kind: "missing_character_rules"; message: string };
 
@@ -149,6 +152,10 @@ export type Warning =
 
 export interface ClassSpellcasting {
   ability: Ability;
+  /** V3.1-113 (ADR 0045) : `pact` — magie de pacte, réserve séparée d'un seul niveau. Absent : emplacements ordinaires. */
+  kind?: "slots" | "pact";
+  /** V3.1-113 : poids dans le calcul du multiclassé. Absent : la classe ne compte pas (occultiste, non-lanceur). */
+  casterWeight?: { fraction: "full" | "half"; rounding: "up" | "down" };
   /** Niveau de classe -> niveau d'emplacement -> nombre d'emplacements. */
   slotsByLevel: Record<number, Record<number, number>>;
 }
@@ -251,7 +258,14 @@ export interface DerivedSheet {
   hitPoints: { max: number; hitDice: string; sources: Source[] };
   speed: { value: number; sources: Source[] };
   features: ResolvedFeature[];
-  spellcasting?: { ability: Ability; saveDc: number; attackBonus: number; slots: Record<number, number> };
+  spellcasting?: {
+    ability: Ability;
+    saveDc: number;
+    attackBonus: number;
+    slots: Record<number, number>;
+    /** V3.1-113 : réserve de pacte, séparée des emplacements ordinaires. */
+    pactSlots?: { count: number; slotLevel: number };
+  };
   /** V3.1-116 : sorts accordés par les aptitudes, au niveau atteint. */
   grantedSpells: GrantedSpell[];
   warnings: Warning[];
@@ -546,19 +560,26 @@ export function characterSheet(
     warnings.push({ kind: "missing_character_rules", message: "Ce ruleset n'a pas de règles de personnage : plafond de caractéristique et charge ne sont pas appliqués." });
   }
 
+  // V3.1-113 : emplacements de toutes les classes (multiclassé, pacte à part).
+  // La caractéristique reste celle de la première classe incantatrice.
   let spellcasting: DerivedSheet["spellcasting"];
-  for (const cl of build.classes) {
-    const klass = ruleset.classes[cl.key];
-    if (klass?.spellcasting) {
-      const ability = klass.spellcasting.ability;
-      spellcasting = {
-        ability,
-        saveDc: 8 + proficiencyBonus + abilities[ability].mod,
-        attackBonus: proficiencyBonus + abilities[ability].mod,
-        slots: klass.spellcasting.slotsByLevel[cl.level] ?? {},
-      };
-      break;
+  const firstCaster = build.classes.map((cl) => ruleset.classes[cl.key]).find((k) => k?.spellcasting);
+  if (firstCaster?.spellcasting) {
+    const ability = firstCaster.spellcasting.ability;
+    const computed = computeSpellSlots(
+      build.classes.map((cl) => ({ key: cl.key, level: cl.level, spellcasting: ruleset.classes[cl.key]?.spellcasting })),
+      ruleset.characterRules?.multiclass_spell_slots
+    );
+    if (computed.missingMulticlassTable) {
+      warnings.push({ kind: "missing_multiclass_table", message: "Plusieurs classes lancent des sorts, mais ce ruleset n'a pas de table du multiclassé : emplacements non calculés." });
     }
+    spellcasting = {
+      ability,
+      saveDc: 8 + proficiencyBonus + abilities[ability].mod,
+      attackBonus: proficiencyBonus + abilities[ability].mod,
+      slots: computed.slots,
+      ...(computed.pact ? { pactSlots: computed.pact } : {}),
+    };
   }
 
   const grantedSpells: GrantedSpell[] = features.flatMap((f) =>

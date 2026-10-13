@@ -238,30 +238,6 @@ Règles actives est V3.1-57.
 
 ---
 
-### ☐ V3.1-113 — Ressources : pacte, recharge partielle, multiclassage (noyau) · `M` · sans modèle IA — **prêt (Opus)**
-
-**Modèle conseillé : Opus** — moteur, tests d'abord. **ADR 0045.**
-**Dépend de** : 115 (pour la table du multiclassé dans `character_rules`).
-
-**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-- `recharge: "short_rest_one"` (bloc Ressources, version relevée) ;
-  `spellcasting.kind` `slots` | `pact` et `pactSlots` ; `casterWeight` ;
-  `pact_slots_used` dans l'état de jeu (défaut 0).
-- `characterSheet()` : emplacements du multiclassé (niveaux pondérés,
-  arrondi inférieur, table du ruleset) ; réserve de pacte séparée.
-- Import SRD : poids d'incantation, magie de pacte de l'occultiste, Arcanum
-  mystique (ressource `long_rest` par niveau 6 à 9), recharges partielles
-  (Rage, Conduit divin, Forme sauvage, Second souffle).
-
-**Critères d'acceptation**
-- [ ] Occultiste 20 : 4 emplacements de pacte de niveau 5 ; clerc 3 /
-  magicien 2 : emplacements d'un lanceur de niveau 5 ; un multiclassé
-  occultiste garde deux réserves (tests).
-- [ ] Repos court : une Rage rendue ; repos long : toutes (test).
-
----
-
 ### ☐ V3.1-114 — Ressources : repos et égaliseur · `S` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet.** **Dépend de** : 113, 24, 26.
@@ -273,6 +249,10 @@ Règles actives est V3.1-57.
 - L'égaliseur (planche « Décidé · emplacements et ressources de classe »)
   montre la réserve de pacte à part ; une ressource de plus de six
   utilisations en compteur.
+
+**Reçu de V3.1-113** (13 octobre) : les deux repos rendent déjà la réserve de pacte et une utilisation des `short_rest_one` (`rechargeTrackers`). Il reste l'écran :
+- montrer `sheet.spellcasting.pactSlots` et `pact_slots_used`, à part ;
+- d'ici là, un occultiste ne voit pas ses emplacements de pacte, mais `castSpell` les dépense déjà.
 
 **Critères d'acceptation**
 - [ ] Les trois cas de V3.1-40 se voient sur la fiche.

@@ -200,3 +200,44 @@ describe.skipIf(!hasCreds)("sous-classes du SRD 2024 (integration, base reelle)"
     expect(withThief.choiceSources).toEqual(without.choiceSources);
   });
 });
+
+/**
+ * V3.1-113 : emplacements du multiclassé et magie de pacte, lus dans les
+ * données importées (poids d'incantation, table du ruleset).
+ */
+describe.skipIf(!hasCreds)("emplacements de sort du SRD 2024 (integration, base reelle)", () => {
+  let admin: SupabaseClient;
+  let rulesetId: string;
+
+  beforeAll(async () => {
+    admin = createSupabaseClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
+    const { data, error } = await admin.from("rulesets").select("id").eq("base_system", "dnd_srd_52").eq("is_official_base", true).limit(1).single();
+    if (error || !data) throw new Error(error?.message ?? "aucun ruleset SRD 5.2.1 officiel en base");
+    rulesetId = data.id;
+  });
+
+  async function sheetOf(classes: { key: string; level: number }[]) {
+    const assembled = await assembleResolvedRuleset(admin, rulesetId, { classes }, "fr");
+    const build: CharacterBuild = {
+      species: "",
+      classes,
+      abilities: { assigned: { str: 10, dex: 10, con: 10, int: 14, wis: 14, cha: 16 } },
+      featureKeys: [],
+    };
+    return characterSheet(build, assembled.ruleset, [], []);
+  }
+
+  it("occultiste 20 : 4 emplacements de pacte de niveau 5", async () => {
+    const sheet = await sheetOf([{ key: "warlock", level: 20 }]);
+    expect(sheet.spellcasting?.pactSlots).toEqual({ count: 4, slotLevel: 5 });
+    expect(sheet.spellcasting?.slots).toEqual({});
+  });
+
+  it("clerc 3 / magicien 2 : les emplacements d'un lanceur de niveau 5", async () => {
+    const sheet = await sheetOf([
+      { key: "cleric", level: 3 },
+      { key: "wizard", level: 2 },
+    ]);
+    expect(sheet.spellcasting?.slots).toEqual({ 1: 4, 2: 3, 3: 2 });
+  });
+});

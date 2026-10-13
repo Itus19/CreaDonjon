@@ -1,0 +1,103 @@
+{
+  "_lisezmoi": [
+    "V3.1-113 (ADR 0045) — Incantation des classes pour le calcul des emplacements, ecrite a la main.",
+    "`caster_weight` : poids d'une classe dans la table du multiclasse. `spellcasting_kind: pact` : reserve separee (occultiste), qui ne compte pas dans la table.",
+    "SRD 5.2.1 : « la moitie de vos niveaux (arrondir au superieur) de Paladin et de Rodeur ». SRD 5.1 : arrondi a l'inferieur.",
+    "Une classe absente (barbare, guerrier, moine, roublard) ne lance pas de sort : elle ne compte pas.",
+    "DONNEE : ingest-srd.ts la pose dans le bloc `class_basics`. Suivi par Git (SRD sous CC-BY-4.0, NOTICE.md)."
+  ],
+  "dnd_srd_52": {
+    "bard": {
+      "caster_weight": {
+        "fraction": "full",
+        "rounding": "down"
+      }
+    },
+    "cleric": {
+      "caster_weight": {
+        "fraction": "full",
+        "rounding": "down"
+      }
+    },
+    "druid": {
+      "caster_weight": {
+        "fraction": "full",
+        "rounding": "down"
+      }
+    },
+    "sorcerer": {
+      "caster_weight": {
+        "fraction": "full",
+        "rounding": "down"
+      }
+    },
+    "wizard": {
+      "caster_weight": {
+        "fraction": "full",
+        "rounding": "down"
+      }
+    },
+    "paladin": {
+      "caster_weight": {
+        "fraction": "half",
+        "rounding": "up"
+      }
+    },
+    "ranger": {
+      "caster_weight": {
+        "fraction": "half",
+        "rounding": "up"
+      }
+    },
+    "warlock": {
+      "spellcasting_kind": "pact"
+    }
+  },
+  "dnd_srd_51": {
+    "bard": {
+      "caster_weight": {
+        "fraction": "full",
+        "rounding": "down"
+      }
+    },
+    "cleric": {
+      "caster_weight": {
+        "fraction": "full",
+        "rounding": "down"
+      }
+    },
+    "druid": {
+      "caster_weight": {
+        "fraction": "full",
+        "rounding": "down"
+      }
+    },
+    "sorcerer": {
+      "caster_weight": {
+        "fraction": "full",
+        "rounding": "down"
+      }
+    },
+    "wizard": {
+      "caster_weight": {
+        "fraction": "full",
+        "rounding": "down"
+      }
+    },
+    "paladin": {
+      "caster_weight": {
+        "fraction": "half",
+        "rounding": "down"
+      }
+    },
+    "ranger": {
+      "caster_weight": {
+        "fraction": "half",
+        "rounding": "down"
+      }
+    },
+    "warlock": {
+      "spellcasting_kind": "pact"
+    }
+  }
+}

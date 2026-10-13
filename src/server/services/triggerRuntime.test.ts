@@ -48,6 +48,7 @@ const runtime = {
   xp: 0,
   resources: {},
   spell_slots_used: {},
+  pact_slots_used: 0,
   conditions: ["concentrating", "prone"],
   death_saves: { success: 0, fail: 0 },
   attuned: [],

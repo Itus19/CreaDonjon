@@ -24,3 +24,21 @@ B.
 ## Conséquences
 
 Tests du noyau d'abord (occultiste 20 : 4 emplacements de niveau 5 ; clerc 3 / magicien 2 : emplacements d'un lanceur 5). Les valeurs viennent de l'import SRD (base officielle).
+
+## Réalisé (V3.1-113, 13 octobre 2026)
+
+- **Correction de l'arrondi.** Le SRD 5.2.1 compte « la moitié de vos niveaux (**arrondir au supérieur**) de Paladin et de Rôdeur » ; le SRD 5.1, la moitié arrondie à l'inférieur. L'arrondi est donc une donnée de chaque classe dans chaque ruleset (`caster_weight: { fraction, rounding }` du bloc `class_basics`), pas une constante.
+- **Noyau.**
+  - `computeSpellSlots` (`src/core/rules/spellSlots.ts`) : une seule classe à emplacements garde sa table ; plusieurs lisent la table du ruleset.
+  - Une classe sans emplacement à son niveau ne compte pas (paladin 1 de 2014).
+  - Sans table, aucun emplacement n'est inventé : l'avertissement `missing_multiclass_table` le dit.
+- **Pacte.**
+  - La progression du SRD porte déjà les emplacements de pacte de l'occultiste. `spellcasting_kind: "pact"` les sort de la table du multiclassé et les range dans `sheet.spellcasting.pactSlots`.
+  - `castSpell` prend un emplacement ordinaire d'abord, puis la réserve de pacte si elle est du niveau demandé.
+- **Recharge partielle.**
+  - `short_rest_one` s'ajoute à l'énumération du bloc `resources` du personnage. **Écart à cette décision : `__v` n'est pas relevé.** Les blocs existants restent valides, et relever la version aurait imposé de migrer chaque bloc sans aucun gain.
+  - `rechargeTrackers` (noyau) remplace la recharge du service. Les deux repos rendent la réserve de pacte (`pact_slots_used`, `.default(0)`, sans migration SQL).
+- **Données.** `data/srd/class-spellcasting.json`, par `base_system`, posé par l'import et gardé par un test.
+- **Reporté.**
+  - Les recharges de Rage, Conduit divin, Forme sauvage et Second souffle, ainsi que l'Arcanum mystique, sont des ressources que les règles **déclarent** (ADR 0060 §1) : V3.1-129. La recharge partielle qu'elles attendaient existe désormais.
+  - L'affichage de la réserve de pacte : V3.1-114.

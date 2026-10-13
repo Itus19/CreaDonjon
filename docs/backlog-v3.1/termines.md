@@ -2,37 +2,41 @@
 
 ---
 
-### ☑ V3.1-117 — La sous-classe résolue et ses choix · `M` · sans modèle IA — **fait le 13 octobre (ADR 0046)**
+### ☑ V3.1-113 — Ressources : pacte, recharge partielle, multiclassage (noyau) · `M` · sans modèle IA — **fait le 13 octobre (ADR 0045)**
 
-**Modèle conseillé : Opus.** **ADR 0046.** **Dépend de** : 116.
+**Modèle conseillé : Opus** — moteur, tests d'abord. **ADR 0045.**
+**Dépend de** : 115 (pour la table du multiclassé dans `character_rules`).
 
 **Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
-- `CreationSelection.classes[].subclass` ; la sous-classe rejoint le lot
-  résolu ; `zSubclassFeatureEntry` accepte modificateurs, sorts toujours
-  préparés et `zChoiceGrant`.
-- Import SRD : Affinité élémentaire (type de dégâts, une fois), Cercle de
-  la Terre (terrain, au repos long), Résilience fiélonne (au repos),
-  Proie du chasseur / Tactiques défensives (au repos), Découvertes
-  magiques, Savant en évocation (sorts).
+- `recharge: "short_rest_one"` (bloc Ressources, version relevée) ;
+  `spellcasting.kind` `slots` | `pact` et `pactSlots` ; `casterWeight` ;
+  `pact_slots_used` dans l'état de jeu (défaut 0).
+- `characterSheet()` : emplacements du multiclassé (niveaux pondérés,
+  arrondi inférieur, table du ruleset) ; réserve de pacte séparée.
+- Import SRD : poids d'incantation, magie de pacte de l'occultiste, Arcanum
+  mystique (ressource `long_rest` par niveau 6 à 9), recharges partielles
+  (Rage, Conduit divin, Forme sauvage, Second souffle).
 
 **Critères d'acceptation**
-- [ ] ~~Affinité élémentaire Feu : résistance et bonus de dégâts appliqués (test).~~ Reporté à V3.1-137 et V3.1-134 (décision de l'auteur, 13 octobre) : le type choisi est enregistré (test).
-- [x] Une sous-classe purement descriptive ne change rien.
+- [x] Occultiste 20 : 4 emplacements de pacte de niveau 5 ; clerc 3 /
+  magicien 2 : emplacements d'un lanceur de niveau 5 ; un multiclassé
+  occultiste garde deux réserves (tests).
+- [x] Repos court : une Rage rendue ; repos long : toutes (test).
 
-**Note de clôture (13 octobre, Opus).** Détail dans l'[ADR 0046](../adr/0046-regles-de-personnage-et-choix-generiques.md), section « Réalisé (V3.1-117) ».
+**Note de clôture (13 octobre, Opus).** Détail dans l'[ADR 0045](../adr/0045-pacte-recharge-partielle-multiclassage.md), section « Réalisé ».
 
 *Fait :*
-- sous-classe dans la sélection, dans le moteur et dans la fiche ;
-- `subclassFeatures` et le niveau de classe pour les choix et les sorts ; 9 tests du noyau ;
-- `data/srd/subclasses-2024.json`, posé par l'import et gardé par un test ;
-- 3 tests d'intégration contre la base : Cercle de la Terre, Savant en évocation, Voleur descriptif.
+- `computeSpellSlots` et `rechargeTrackers`, 12 tests du noyau ;
+- `pact_slots_used` dans l'état de jeu ;
+- poids d'incantation de chaque classe dans `data/srd/class-spellcasting.json` ;
+- `castSpell` et les repos branchés ;
+- 2 tests d'intégration contre la base (occultiste 20, clerc 3 / magicien 2), et ceux des repos rejoués.
 
-*Défaut trouvé en route et corrigé* : la validation des sorts côté serveur perdait un sort valide placé après des sorts refusés.
+*Corrigé en route* : l'arrondi de l'ADR 0045. En 2024, la moitié des niveaux de paladin ou de rôdeur s'arrondit au supérieur.
 
-*Vérifié en vrai* : la route du ruleset rend, pour un Druide 5 du Cercle de la Terre, le choix du terrain et ses quatre options ; la fiche de Testeur B se charge sans changement.
+*Vérifié en vrai* (Testeur B, Clerc 1) : « Niv. 1 — 2/2 » emplacements, inchangé.
 
-*Restes* :
-- la clé de la sous-classe Cercle de la Terre est `circle-of-the-land-subclass` (collision avec une aptitude 2014 à l'import) ; elle entre dans la clé des choix stockés ;
-- les sorts de domaine, de serment, de protecteur et draconiques (toujours préparés) ne sont pas encore saisis : le vocabulaire existe, c'est de la donnée ;
-- l'écran des choix revient à V3.1-118.
+*Reporté* :
+- les recharges de classe déclarées par les règles et l'Arcanum mystique vont à V3.1-129 ;
+- l'écran de la réserve de pacte va à V3.1-114. D'ici là, un occultiste ne voit pas ses emplacements de pacte à l'écran, mais il peut les dépenser.

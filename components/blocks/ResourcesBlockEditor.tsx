@@ -11,6 +11,7 @@ function trackerMax(t: Tracker): number {
 
 const RECHARGE_OPTIONS = [
   { value: "short_rest", label: "Repos court" },
+  { value: "short_rest_one", label: "Une au repos court, toutes au long" },
   { value: "long_rest", label: "Repos long" },
   { value: "dawn", label: "A l'aube" },
   { value: "never", label: "Jamais (usage unique)" },

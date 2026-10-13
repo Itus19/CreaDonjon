@@ -88,6 +88,8 @@ export const zRuntimeState = z.object({
   resources: z.record(z.string(), z.number().int().nonnegative()),
   // Cle = niveau d'emplacement ("1".."9") ; valeur = emplacements consommes.
   spell_slots_used: z.record(z.string(), z.number().int().nonnegative()),
+  /** V3.1-113 (ADR 0045) — emplacements de pacte consommés. `.default(0)` : les lignes déjà en base n'ont pas ce champ, aucune migration SQL. */
+  pact_slots_used: z.number().int().nonnegative().default(0),
   conditions: z.array(z.string()),
   death_saves: z.object({
     success: z.number().int().min(0).max(3),
@@ -111,6 +113,7 @@ export function defaultRuntimeState(): RuntimeState {
     xp: 0,
     resources: {},
     spell_slots_used: {},
+    pact_slots_used: 0,
     conditions: [],
     pending_request: null,
     concentration: null,

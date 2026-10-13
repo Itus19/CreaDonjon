@@ -31,6 +31,7 @@ function descriptionPreview(blocks: RuleEntryBlockData[] | undefined): string {
 
 const RECHARGE_LABELS: Record<string, string> = {
   short_rest: "repos court",
+  short_rest_one: "une au repos court",
   long_rest: "repos long",
   dawn: "à l'aube",
   never: "jamais",

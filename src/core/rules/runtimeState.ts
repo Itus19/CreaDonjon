@@ -16,6 +16,7 @@ export interface RuntimeStatePatch {
   xp?: number;
   resources?: Record<string, number>;
   spell_slots_used?: Record<string, number>;
+  pact_slots_used?: number;
   conditions?: string[];
   death_saves?: Partial<RuntimeState["death_saves"]>;
   attuned?: string[];
@@ -42,6 +43,7 @@ export function mergeRuntimeState(current: RuntimeState, patch: RuntimeStatePatc
     xp: patch.xp ?? current.xp,
     resources: { ...current.resources, ...patch.resources },
     spell_slots_used: { ...current.spell_slots_used, ...patch.spell_slots_used },
+    pact_slots_used: patch.pact_slots_used ?? current.pact_slots_used,
     conditions: patch.conditions ?? current.conditions,
     death_saves: { ...current.death_saves, ...patch.death_saves },
     attuned: patch.attuned ?? current.attuned,

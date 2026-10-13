@@ -240,7 +240,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-110 | ☐ | sans | Sauvegardes : la restriction de cible (noyau) | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
 | V3.1-111 | ☐ | sans | Sauvegardes : la demande et la réponse (données, serveur) | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
 | V3.1-112 | ☐ | sans | Sauvegardes : les écrans | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
-| V3.1-113 | ☐ | sans | Ressources : pacte, recharge partielle, multiclassage (noyau) | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
+| V3.1-113 | ☑ | sans | Ressources : pacte, recharge partielle, multiclassage (noyau) | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-114 | ☐ | sans | Ressources : repos et égaliseur | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
 | V3.1-115 | ☑ | sans | Règles de personnage : la fiche `character_rules` | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-116 | ☑ | sans | Le mécanisme générique des choix (noyau et résolution) | [`termines.md`](backlog-v3.1/termines.md) |

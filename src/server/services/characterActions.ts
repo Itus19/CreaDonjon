@@ -49,6 +49,7 @@ import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
 import { insertDiceRoll } from "@/src/server/repos/diceRolls";
 import { listBlocksForRulesetEntry, type RulesetEntryRow } from "@/src/server/repos/rules";
 import { entryNameFrom, findEntryInRulesetChain } from "@/src/server/services/rules";
+import { rechargeTrackers } from "@/src/core/rules/resourceRecharge";
 import { assembleResolvedRuleset, resolveCharacterChoices, resolveEquipmentData, type RemainingChoice } from "@/src/server/services/resolvedRuleset";
 import { applyRuntimeStateChange, getEntityRuntimeState } from "@/src/server/services/runtimeState";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
@@ -528,14 +529,18 @@ export async function castSpell(
   // verification de disponibilite, ni decompte d'etat d'execution, seul le
   // jet de degats eventuel (identique a un sort normal) s'applique plus bas.
   const isCantrip = params.slotLevel === 0;
-  let available = 0;
   let used = 0;
   let state: Awaited<ReturnType<typeof getEntityRuntimeState>> | null = null;
+  // V3.1-113 (ADR 0045) : un emplacement ordinaire d'abord ; sinon, la réserve
+  // de pacte si elle est de ce niveau. Les deux ne se mélangent jamais.
+  let pool: "slots" | "pact" = "slots";
   if (!isCantrip) {
-    available = availableSlotsAt(ctx, params.slotLevel);
     state = await getEntityRuntimeState(supabase, params.entityId, params.campaignId);
     used = state.spell_slots_used[String(params.slotLevel)] ?? 0;
-    if (used >= available) return { error: "no_slot_available" };
+    const pact = ctx.sheet.spellcasting?.pactSlots;
+    if (used < availableSlotsAt(ctx, params.slotLevel)) pool = "slots";
+    else if (pact && pact.slotLevel === params.slotLevel && state.pact_slots_used < pact.count) pool = "pact";
+    else return { error: "no_slot_available" };
   }
 
   let damage: DamageRollResult | undefined;
@@ -579,8 +584,11 @@ export async function castSpell(
     await applyRuntimeStateChange(supabase, {
       entityId: params.entityId,
       campaignId: params.campaignId,
-      patch: { spell_slots_used: { ...state.spell_slots_used, [String(params.slotLevel)]: used + 1 } },
-      note: `Sort ${params.spellKey} lance (emplacement niveau ${params.slotLevel})`,
+      patch:
+        pool === "pact"
+          ? { pact_slots_used: state.pact_slots_used + 1 }
+          : { spell_slots_used: { ...state.spell_slots_used, [String(params.slotLevel)]: used + 1 } },
+      note: `Sort ${params.spellKey} lance (${pool === "pact" ? "emplacement de pacte" : "emplacement"} niveau ${params.slotLevel})`,
       sessionId,
       actor: "player",
       actorUserId: params.actorUserId,
@@ -600,7 +608,12 @@ export async function castSpell(
     if (change.next) concentration = { current: change.next, broken: change.broken };
   }
 
-  return { slotLevelConsumed: params.slotLevel, remainingSlots: isCantrip ? 0 : available - used - 1, damage, concentration };
+  const remainingSlots = isCantrip || !state
+    ? 0
+    : pool === "pact"
+      ? (ctx.sheet.spellcasting?.pactSlots?.count ?? 0) - state.pact_slots_used - 1
+      : availableSlotsAt(ctx, params.slotLevel) - used - 1;
+  return { slotLevelConsumed: params.slotLevel, remainingSlots, damage, concentration };
 }
 
 /** `sheet.spellcasting.slots` est deja le resultat combine (characterSheet(), V1-B1) : rien a recombiner ici. */
@@ -730,7 +743,9 @@ export async function takeShortRest(
   const basePatch: RuntimeStatePatch = {
     hit_dice: nextHitDice,
     ...healedByRest(state, maxHp, Math.min(maxHp, state.hp.current + hpHealed)),
-    resources: rechargeResources(ctx.resourcesData, state.resources, ["short_rest"]),
+    // V3.1-113 : une utilisation des `short_rest_one`, et la réserve de pacte entière.
+    resources: rechargeTrackers(ctx.resourcesData?.trackers ?? [], state.resources, "short"),
+    pact_slots_used: 0,
   };
   const triggered = await restTriggersPatch(supabase, ctx, mergeRuntimeState(state, basePatch), "short_rest");
   await applyRuntimeStateChange(supabase, {
@@ -796,7 +811,8 @@ export async function takeLongRest(
     // Chaque niveau consomme remis a 0 : `{}` ne remettait rien, la fusion
     // se faisant cle par cle (`clearedSpellSlots`).
     spell_slots_used: clearedSpellSlots(state.spell_slots_used),
-    resources: rechargeResources(ctx.resourcesData, state.resources, ["short_rest", "long_rest"]),
+    resources: rechargeTrackers(ctx.resourcesData?.trackers ?? [], state.resources, "long"),
+    pact_slots_used: 0,
   };
   const triggered = await restTriggersPatch(supabase, ctx, mergeRuntimeState(state, basePatch), "long_rest");
   await applyRuntimeStateChange(supabase, {
@@ -1085,18 +1101,6 @@ export async function applyLevelUp(
   }
 
   return { character: updatedCharacter, spellcasting: updatedSpellcasting };
-}
-
-function rechargeResources(
-  resourcesData: ResourcesBlockData | undefined,
-  current: Record<string, number>,
-  recharges: readonly string[]
-): Record<string, number> {
-  const next = { ...current };
-  for (const tracker of resourcesData?.trackers ?? []) {
-    if (recharges.includes(tracker.recharge)) next[tracker.id] = 0;
-  }
-  return next;
 }
 
 /**

@@ -1107,6 +1107,26 @@ function choicesBlock(category: string, entryIndex: string, baseSystem: string):
 }
 
 /**
+ * V3.1-113 — Incantation des classes (`data/srd/class-spellcasting.json`,
+ * ADR 0045) : poids dans la table du multiclasse et magie de pacte, par
+ * `base_system` (l'arrondi des demi-lanceurs differe entre 2014 et 2024).
+ * Fusionnee dans le bloc `class_basics`.
+ */
+const SRD_CLASS_SPELLCASTING: Record<string, Record<string, Record<string, unknown>>> = JSON.parse(
+  readFileSync(resolve(process.cwd(), "data/srd/class-spellcasting.json"), "utf-8")
+);
+
+function mergeClassSpellcasting(category: string, entryIndex: string, baseSystem: string, blocks: EntryBlock[]): void {
+  if (category !== "Classes") return;
+  const authored = SRD_CLASS_SPELLCASTING[baseSystem]?.[entryIndex];
+  if (!authored) return;
+  const block = blocks.find((b) => b.block_type === "class_basics");
+  if (!block) throw new Error(`class-spellcasting.json : ${entryIndex} n'a pas de bloc class_basics`);
+  Object.assign(block.data as Record<string, unknown>, authored);
+  validateBlockData("class_basics", block.data);
+}
+
+/**
  * V3.1-117 — Mecanique des aptitudes de sous-classe ecrite a la main
  * (`data/srd/subclasses-2024.json`, ADR 0046) : modificateurs, sorts
  * toujours prepares, choix. Fusionnee dans le bloc `subclass_features` deja
@@ -2177,6 +2197,7 @@ async function importSrdVersion(config: SrdVersionConfig): Promise<ImportResult>
         const choices = choicesBlock(category, String(item.index), config.baseSystem);
         if (choices) t.blocks.push(choices);
         mergeSubclassMechanics(category, String(item.index), config.baseSystem, t.blocks);
+        mergeClassSpellcasting(category, String(item.index), config.baseSystem, t.blocks);
         transformed.push(t);
         blocksTotal += t.blocks.length;
         refsTotal += t.refs.length;
