@@ -21,3 +21,10 @@ Le bloc `character` stockait `age` (entier, V3-Z1). Un âge vieillit avec la cam
 - Les mentions pointent l'entité par `id` et suivent le renommage ; leur `label` écrit n'est jamais réécrit (spec §A1).
 - `applyLevelUp` refuse désormais un changement de naissance, de prénom ou de nom, plus d'`age`.
 - Le layout du monde lit une colonne de plus par rendu (QUOTAS Q1), dans la même vague que les campagnes.
+
+## Complément (V3.1-74, 13 octobre 2026) — la mort
+
+- **Mort** : `death` (`GameDate`, optionnel) dans le même bloc `character`. « Défunt » = `death` renseigné, sans booléen à part (règle 16).
+- **L'âge s'arrête à la mort** (`ageWithDeath`, `src/core/genealogy/lifeDates.ts`). Un défunt a un âge même sans date du jour réglée.
+- **Une fiche sans bloc `character`** n'a pas de dates : rien n'est inventé.
+- **Généalogie** : `getFamilyTree` lit les blocs `character` des seules fiches de l'arbre, en une requête, et les **filtre pour le lecteur avant l'envoi**. Le bloc a sa propre visibilité : une naissance réservée au MJ ne part jamais vers un joueur ni vers le wiki public (test d'intégration).

@@ -235,6 +235,25 @@ code{font-family:'Geist Mono',ui-monospace,monospace;font-size:0.92em}
 </div></div>
 
 </section>
+<section id="identite" class="flex scroll-mt-28 flex-col gap-4 rounded-2xl border border-edge bg-panel p-6">
+<div class="flex flex-wrap items-baseline justify-between gap-3">
+<h2 class="font-display text-2xl font-bold text-ink">Identité : prénom, nom, naissance</h2>
+<span class="text-xs text-ink-muted">CharacterSheetHeader.tsx (NameFields · BirthFields)</span>
+</div>
+<p class="max-w-3xl text-sm text-ink-soft">Prénom et nom sont deux champs libres ; le nom de l'entité est recomposé « Prénom Nom » côté serveur à l'enregistrement. La naissance s'écrit au calendrier du monde : l'âge est calculé à partir de la naissance et de la date du jour, sans jamais être stocké. Sans date du jour réglée, l'âge reste « — » et l'année de naissance se saisit à la main.</p>
+<div class="flex flex-wrap gap-x-6 gap-y-1 text-xs text-ink-muted"><span>Mouvement : <span class="text-ink">aucun (le bouton Mois : couleurs, 150 ms, <code>transition-colors</code>)</span></span></div>
+<div class="grid gap-3" style="grid-template-columns: repeat(3, minmax(0, 1fr))"><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Nom</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><div class="flex flex-wrap items-start gap-3"><label class="flex flex-col gap-1 text-xs uppercase tracking-wide text-ink-muted">Prénom<input value="Mira" class="rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none w-28" /></label><label class="flex flex-col gap-1 text-xs uppercase tracking-wide text-ink-muted">Nom<input value="Vance" class="rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none w-28" /></label></div></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Naissance · date du jour réglée</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><div class="flex flex-col gap-1"><div class="flex flex-wrap items-start gap-3"><label class="flex flex-col gap-1 text-xs uppercase tracking-wide text-ink-muted">Âge<input type="number" inputmode="numeric" min="0" step="1" value="121" placeholder="—" aria-label="Âge" class="rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none w-16" /></label><label class="flex flex-col gap-1 text-xs uppercase tracking-wide text-ink-muted">Jour<input type="number" min="1" step="1" value="3" aria-label="Jour de naissance" class="w-16 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none disabled:opacity-50" /></label><label class="flex flex-col gap-1 text-xs uppercase tracking-wide text-ink-muted">Mois<button type="button" aria-label="Mois de naissance" class="inline-flex items-center gap-1 rounded-md border border-edge bg-transparent text-left text-ink outline-none transition-colors hover:bg-panel-raised disabled:opacity-50 px-2 py-1 text-xs"><span class="min-w-0 flex-1 truncate">Messidor</span><span class="shrink-0 text-ink-muted">▾</span></button></label></div><p class="text-xs text-ink-muted">Née le 3 Messidor 1370 · 121 ans au 14 Germinal 1492</p></div></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Naissance · sans date du jour</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><div class="flex flex-wrap items-start gap-3"><label class="flex flex-col gap-1 text-xs uppercase tracking-wide text-ink-muted">Âge<input value="—" readonly="" aria-label="Âge" title="L'âge attend la date du jour du monde (Calendrier)" class="rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink-muted outline-none w-16" /></label><label class="flex flex-col gap-1 text-xs uppercase tracking-wide text-ink-muted">Année de naissance<input type="number" step="1" value="1370" class="rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none w-16" /></label><label class="flex flex-col gap-1 text-xs uppercase tracking-wide text-ink-muted">Jour<input type="number" min="1" step="1" value="3" aria-label="Jour de naissance" class="w-16 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none disabled:opacity-50" /></label><label class="flex flex-col gap-1 text-xs uppercase tracking-wide text-ink-muted">Mois<button type="button" aria-label="Mois de naissance" class="inline-flex items-center gap-1 rounded-md border border-edge bg-transparent text-left text-ink outline-none transition-colors hover:bg-panel-raised disabled:opacity-50 px-2 py-1 text-xs"><span class="min-w-0 flex-1 truncate">Messidor</span><span class="shrink-0 text-ink-muted">▾</span></button></label></div></div>
+</div></div>
+<p class="text-xs text-ink-muted">V3.1-48 — l'âge est dérivé de la naissance et de la date du jour du monde, jamais stocké (ADR 0063).</p>
+</section>
 </main>
 </div>
 </x-dc>

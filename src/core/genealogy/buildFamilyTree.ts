@@ -1,3 +1,4 @@
+import type { GameDate } from "../calendar/types";
 /**
  * Construction pure d'un arbre genealogique (V2-H3, specs/wiki-blocs.md §2)
  * a partir d'aretes `relations` deja filtrees par visibilite et deja
@@ -43,6 +44,9 @@ export interface FamilyTreeNode {
   name: string;
   slug: string;
   entityKind: string;
+  /** V3.1-74 : naissance et mort, seulement si le lecteur voit le bloc `character` qui les porte. */
+  birth?: GameDate;
+  death?: GameDate;
   generation: number;
   order: number;
 }

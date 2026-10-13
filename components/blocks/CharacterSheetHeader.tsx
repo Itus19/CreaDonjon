@@ -14,7 +14,8 @@ import Dropdown from "@/components/shared/Dropdown";
 import ActionsMenu from "@/components/shared/ActionsMenu";
 import Stepper from "@/components/shared/Stepper";
 import { useWorldCalendarContext } from "@/components/shared/WorldCalendarProvider";
-import { ageAt, birthYearFromAge } from "@/src/core/calendar/age";
+import { birthYearFromAge } from "@/src/core/calendar/age";
+import { ageWithDeath } from "@/src/core/genealogy/lifeDates";
 import { formatGameDate } from "@/src/core/calendar/formatDate";
 import type { GameDate } from "@/src/core/calendar/types";
 
@@ -128,7 +129,8 @@ export function BirthFields({
   const calendar = useWorldCalendarContext();
   const today = calendar.currentDate;
   const birth = character.birth;
-  const age = birth && today ? ageAt(birth, today) : character.age;
+  // V3.1-74 : l'âge s'arrête à la mort.
+  const age = birth ? ageWithDeath(birth, today, character.death) : character.age;
   const monthOptions = [
     { value: "", label: "—" },
     ...calendar.months.map((m, i) => ({ value: String(i + 1), label: m.name })),

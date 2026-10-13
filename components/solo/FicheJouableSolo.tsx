@@ -1,7 +1,7 @@
 "use client";
 
 import { useWorldCalendarContext } from "@/components/shared/WorldCalendarProvider";
-import { ageAt } from "@/src/core/calendar/age";
+import { ageWithDeath } from "@/src/core/genealogy/lifeDates";
 import { useEffect, useMemo, useState } from "react";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/blocks/inventory";
@@ -359,9 +359,11 @@ export default function FicheJouableSolo({
     .join(" / ");
   // Age DERIVE de la naissance et de la date du jour du monde (V3.1-48) ; l'ancien champ `age`, puis l'infobox, ne servent que de repli.
   const todayInGame = worldCalendar.currentDate;
+  // V3.1-74 : l'âge s'arrête à la mort.
+  const derivedAge = ageWithDeath(character.birth, todayInGame, character.death);
   const age =
-    character.birth && todayInGame
-      ? String(ageAt(character.birth, todayInGame))
+    derivedAge !== undefined
+      ? String(derivedAge)
       : character.age !== undefined
         ? String(character.age)
         : ageFromInfobox(infobox);

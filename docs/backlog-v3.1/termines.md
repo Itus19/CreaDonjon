@@ -2,58 +2,43 @@
 
 ---
 
-### ☑ V3.1-48 — Création : identité, prénom, nom, naissance au calendrier du monde · `M` · sans modèle IA — **fait le 13 octobre (ADR 0063)**
+### ☑ V3.1-74 — Dates de naissance et de mort (données) · `M` · sans modèle IA — **fait le 13 octobre (ADR 0063, complément)**
 
-**Modèle conseillé : Sonnet** — décision prise ; ADR à écrire d'après elle, noyau pur, tests d'abord.
+**Modèle conseillé : Opus** — donnée nouvelle, ADR, `SCHEMA.md`.
 
 **Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
-**Planche** : `Creation-Decide.dc.html` (étape Identité). **Départ** :
-`src/core/schemas/blocks/character.ts` (+ test),
-`components/blocks/characterCreatorSteps/IdentityStep.tsx`,
-`src/core/calendar/` (types, `formatDate.ts`).
+**Départ** : V3.1-48 (la naissance d'un personnage devient une `GameDate`
+dans le bloc `character`), `src/core/schemas/blocks/character.ts`,
+`src/core/calendar/`, `src/server/services/genealogy.ts`. **Dépend de** :
+48.
 
-**Ce qui est décidé (auteur, 5 octobre)**
-- Deux champs **Prénom** et **Nom** (`given_name`, `family_name` dans le bloc
-  `character`), puis genre et pronoms. Le nom de l'entité (wiki, mentions,
-  recherche) reste « Prénom Nom », composé à la création et **recomposé
-  automatiquement** quand on édite le prénom ou le nom.
-- **Naissance** : on saisit l'âge (± ou au clavier) et on choisit jour et
-  mois (les mois du calendrier du monde). L'année se calcule depuis
-  `calendar.currentDate` : année du jour − âge, moins un si l'anniversaire
-  n'est pas encore passé cette année (121 ans au 14 Germinal 1492, né un
-  3 Messidor → 1370). Une phrase résume : « Née le 3 Messidor 1370 ·
-  121 ans au 14 Germinal 1492 ». Sans date du jour réglée par le MJ,
-  l'année se saisit à la main et l'âge attend la date du jour.
-- **Règle 16** : la fiche stocke la **date de naissance** (`GameDate`), plus
-  l'âge ; l'âge est **dérivé** de la date du jour en jeu et vieillit avec la
-  campagne.
-- **Reprise** : un `age` existant devient une date de naissance au 1er du
-  premier mois, à corriger à la main (lecture tolérante dans Zod, test de
-  relecture d'une fiche ancienne).
+**La question (ouverte)** : la Généalogie B montre « 1420 – 1478 † » et
+« née en 1424 ». La naissance existera avec V3.1-48 (bloc `character`) ;
+**la mort n'existe nulle part**, et une fiche sans bloc `character` (un
+PNJ décrit en texte) n'a pas de naissance.
 
-**À faire** : écrire l'ADR (décision ci-dessus, dix lignes) ; fonctions
-pures `birthYearFromAge` et `ageAt` dans `src/core/calendar` (tests
-d'abord, mois de longueurs différentes, anniversaire le jour même) ;
-schéma Zod ; recomposition du nom côté serveur.
+**Décidé (auteur, 8 octobre) — la proposition ci-dessous est acceptée**
+- Naissance : celle de V3.1-48 (`character`).
+- Mort : un champ optionnel `death` (`GameDate`) dans le même bloc ;
+  « défunt » = `death` renseigné (pas de booléen à part, règle 16).
+- Une fiche sans bloc `character` : pas de dates dans l'arbre (rien
+  d'inventé).
+- L'âge affiché s'arrête à la mort.
 
-**Critères d'acceptation**
-- [x] Le cas « 121 ans au 14 Germinal 1492, né un 3 Messidor → 1370 », et le cas « anniversaire aujourd'hui », en tests.
-- [x] Une fiche enregistrée avec `age` se relit (test) ; l'âge affiché est calculé, jamais stocké.
-- [x] Éditer le prénom renomme l'entité ; ~~les mentions suivent~~ les mentions pointent toujours l'entité par `id`, leur libellé écrit n'est jamais réécrit (spec §A1 ; reformulé le 13 octobre) (test serveur).
-- [x] Les trois lecteurs actuels du champ `age` (V3-Z1) passent à l'âge dérivé : la rangée d'identité de `CharacterSheetHeader` (avec `AgeInput`), la colonne solo, et le refus de `applyLevelUp` (`forbidden_field_change`), qui porte désormais sur la date de naissance.
-- [ ] *Repris de V3-Z1 (12 octobre)* : vérifié à la main dans l'assistant, la barre d'étapes, Précédent / Suivant et l'Aperçu avec l'étape Identité (`docs/TESTS.md` §4, Fiche).
+**À faire** : ADR (décision ci-dessus, dix lignes), `SCHEMA.md`, schéma Zod (lecture
+tolérante), service de la généalogie qui lit naissance et mort en **une
+requête groupée**, remplissage de la ligne prévue en V3.1-73.
 
-**Note de clôture (13 octobre, Opus).** [ADR 0063](../adr/0063-naissance-en-date-de-jeu.md). Codé par Sonnet ; relu, et deux défauts locaux corrigés par Opus (précision « mois » d'une naissance sans jour ; import relatif dans le noyau).
+**Note de clôture (13 octobre, Opus).** [ADR 0063](../adr/0063-naissance-en-date-de-jeu.md), section « Complément ».
 
-*Décisions prises en route :*
-- **Mentions** : une mention garde le texte que l'auteur a écrit (« le tavernier » pour Bram), comme le veut la spec. Le renommage ne casse aucun lien, puisque tout passe par l'`id`.
-- **Calendrier** : le layout du monde le lit côté serveur, en même temps que le reste (une lecture d'une colonne par rendu, QUOTAS Q1), et le partage par un contexte (`WorldCalendarProvider`). Aucun écran ne le demande au montage.
+*Fait* :
+- `death` dans le bloc `character` ;
+- `lifeDatesFromCharacter` et `ageWithDeath` (7 tests) ; l'âge de la fiche et de la colonne solo s'arrête à la mort ;
+- la généalogie lit naissance et mort en une requête groupée et les filtre pour le lecteur (2 tests d'intégration : une date réservée au MJ ne part pas vers le wiki public).
 
-*Vérifié* :
-- 26 tests unitaires et 1 test d'intégration (renommage et mentions) ;
-- en vrai, sur la fiche de Testeur B : Prénom, Nom, Âge, Jour, Mois ; son monde n'a pas de date du jour, donc « Année de naissance » s'affiche.
+*Vu en route* : le bloc `character` a sa propre visibilité. Sans ce filtre, la date de naissance d'un PNJ secret serait partie dans l'arbre.
 
-*À voir par l'auteur* : l'assistant avec une date du jour réglée (121 ans, 3 Messidor → « Née le 3 Messidor 1370 · 121 ans au 14 Germinal 1492 »).
-
-*Reste* : une fiche ancienne qui n'a qu'un `age` devient une date de naissance à la première édition de l'âge, pas avant.
+*Restes* :
+- la ligne de dates de l'arbre attend V3.1-73 (Sonnet), qui reçoit la donnée ;
+- aucun écran ne permet encore de saisir une mort. Le champ existe, mais il faudra un ticket de saisie (avec 73, ou la fiche).

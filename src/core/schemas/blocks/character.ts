@@ -67,6 +67,8 @@ export const zCharacterBlockData = z
     family_name: z.string().optional(),
     /** Naissance au calendrier du monde (V3.1-48) : l'age est DERIVE de cette date et de la date du jour en jeu (`ageAt`). */
     birth: zGameDate.optional(),
+    /** Mort au calendrier du monde (V3.1-74, ADR 0063) : « défunt » = `death` renseigné, jamais un booléen à part (règle 16). */
+    death: zGameDate.optional(),
   })
   .strict();
 export type CharacterBlockData = z.infer<typeof zCharacterBlockData>;

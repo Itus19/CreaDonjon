@@ -622,41 +622,13 @@ et téléphone). **Départ** : `components/blocks/GenealogyBlockEditor.tsx`,
 - Inchangé : un lien caché n'est jamais envoyé à un lecteur qui n'y a pas
   droit (service existant).
 
+**Reçu de V3.1-74** (13 octobre) : chaque nœud de `getFamilyTree` porte `birth` et `death` (`GameDate`), seulement quand le lecteur voit le bloc `character`. La ligne de dates et le gris du défunt s'appuient dessus (`death` renseigné = défunt). Format : `formatGameDate` ; âge : `ageWithDeath`.
+
 **Critères d'acceptation**
 - [ ] Conforme à la planche à 920 px et 390 px.
 - [ ] « Centrer l'arbre ici » change la racine sans rien enregistrer.
 - [ ] Ajouter un lien depuis la barre crée la relation (test existant étendu).
 - [ ] Sans données de dates, aucune ligne vide sous les noms.
-
----
-
-### ☐ V3.1-74 — Dates de naissance et de mort (données) · `M` · sans modèle IA — **prêt (Opus) — proposition validée par l'auteur le 8 octobre**
-
-**Modèle conseillé : Opus** — donnée nouvelle, ADR, `SCHEMA.md`.
-
-**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-**Départ** : V3.1-48 (la naissance d'un personnage devient une `GameDate`
-dans le bloc `character`), `src/core/schemas/blocks/character.ts`,
-`src/core/calendar/`, `src/server/services/genealogy.ts`. **Dépend de** :
-48.
-
-**La question (ouverte)** : la Généalogie B montre « 1420 – 1478 † » et
-« née en 1424 ». La naissance existera avec V3.1-48 (bloc `character`) ;
-**la mort n'existe nulle part**, et une fiche sans bloc `character` (un
-PNJ décrit en texte) n'a pas de naissance.
-
-**Décidé (auteur, 8 octobre) — la proposition ci-dessous est acceptée**
-- Naissance : celle de V3.1-48 (`character`).
-- Mort : un champ optionnel `death` (`GameDate`) dans le même bloc ;
-  « défunt » = `death` renseigné (pas de booléen à part, règle 16).
-- Une fiche sans bloc `character` : pas de dates dans l'arbre (rien
-  d'inventé).
-- L'âge affiché s'arrête à la mort.
-
-**À faire** : ADR (décision ci-dessus, dix lignes), `SCHEMA.md`, schéma Zod (lecture
-tolérante), service de la généalogie qui lit naissance et mort en **une
-requête groupée**, remplissage de la ligne prévue en V3.1-73.
 
 ---
 

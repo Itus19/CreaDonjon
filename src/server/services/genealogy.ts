@@ -6,6 +6,8 @@ import { buildFamilyTree, type FamilyEdgeInput, type FamilyTree } from "@/src/co
 import { RELATION_LABELS_FR } from "@/src/i18n/fr";
 import { listFamilyRelationsForWorld } from "@/src/server/repos/relations";
 import { listEntitiesForWorld } from "@/src/server/repos/entities";
+import { listBlocksByTypeForEntities } from "@/src/server/repos/blocks";
+import { lifeDatesFromCharacter } from "@/src/core/genealogy/lifeDates";
 import { listPlayerVisibleEntityIds } from "@/src/server/services/entities";
 
 type TypedClient = SupabaseClient<Database>;
@@ -82,11 +84,25 @@ export async function getFamilyTree(
     visibilityLevel: r.visibility_level,
   }));
 
-  return buildFamilyTree({
+  const tree = buildFamilyTree({
     rootId: params.rootEntityId,
     depthUp: params.depthUp,
     depthDown: params.depthDown,
     edges,
     entities: entities.map((e) => ({ id: e.id, name: e.name, slug: e.slug, entityKind: e.entity_kind })),
   });
+
+  // V3.1-74 : naissance et mort, lues dans les blocs `character` des seules
+  // fiches de l'arbre, en UNE requête. Le bloc porte sa propre visibilité :
+  // filtré pour ce lecteur AVANT l'envoi, une date cachée ne quitte jamais le
+  // serveur (règle absolue 5). Une fiche sans bloc visible n'a pas de dates.
+  const characterBlocks = filterBlocks(
+    (await listBlocksByTypeForEntities(supabase, tree.nodes.map((n) => n.id), "character")).map((b) => ({
+      ...b,
+      visibility: { level: b.visibility_level as VisibilityLevel, scopeId: b.visibility_scope_id, createdBy: b.created_by },
+    })),
+    params.viewer
+  );
+  const datesByEntity = new Map(characterBlocks.map((b) => [b.entity_id, lifeDatesFromCharacter(b.data)]));
+  return { ...tree, nodes: tree.nodes.map((n) => ({ ...n, ...(datesByEntity.get(n.id) ?? {}) })) };
 }

@@ -87,7 +87,7 @@ valables ; celui-ci les relie.
 | Étape | Tickets | Pourquoi d'abord |
 |---|---|---|
 | **0 · Sécurité et mesure** — *faite* | ~~101~~, ~~108~~, ~~62~~ étapes 1-2 | Un défaut de sécurité passe avant tout ; la mesure dit où la rapidité se perd avant qu'on reconstruise les écrans. |
-| **1 · Les données que les écrans attendent** (Opus, en parallèle) | Fait : ~~120~~, ~~24~~, ~~84~~, ~~41~~, ~~59~~, ~~115 → 116 → 117~~, ~~113~~. ~~48~~ (remonté ici le 13 octobre : 74 en dépend). **Reste, dans cet ordre** : 74 (naissance et mort) → 96 (chronologie) ; 89 (attribuer chaque jet) ; 100 (rejoindre sans PJ) ; 102 → 103 (initiative des joueurs) ; 105 (cœur de résolution) → 110 → 111 (sauvegardes) | Les écrans de Sonnet lisent ces données ; les poser d'abord évite de reprendre les écrans. |
+| **1 · Les données que les écrans attendent** (Opus, en parallèle) | Fait : ~~120~~, ~~24~~, ~~84~~, ~~41~~, ~~59~~, ~~115 → 116 → 117~~, ~~113~~. ~~48~~ (remonté ici le 13 octobre : 74 en dépend). ~~74~~. **Reste, dans cet ordre** : 96 (chronologie) ; 89 (attribuer chaque jet) ; 100 (rejoindre sans PJ) ; 102 → 103 (initiative des joueurs) ; 105 (cœur de résolution) → 110 → 111 (sauvegardes) | Les écrans de Sonnet lisent ces données ; les poser d'abord évite de reprendre les écrans. |
 | **2 · La coquille** | 25 → 26 → 28 ; 27 → 29 → 30, 31, 32, 33 ; 20 (dès 25) ; 35 ; 34 ; 36 ; 62 étape 3 | Tout le reste vit dedans : pilule glissante, rail, fenêtres en deux volets, téléphone, accueil. |
 | **3 · Entrer et se reconnaître** | 85 → 86 ; 80 → 81 ; 82 → 83 (après 100) ; 87 → 88 | Le premier écran que voit un ami ; court, et tout est décidé. |
 | **4 · Les outils du MJ (lot i)** | 46, 55, 61, 54, 56, 44, 45, 43 ; 41 → 42 ; 59 → 60 ; 108 → 57, 109 ; 58 ; 102, 103 → 38 ; 105 → 106 ; 111 → 112 ; 113 → 114 | Les petits outils sans donnée nouvelle d'abord, puis ceux qui attendaient l'étape 1. |
@@ -203,7 +203,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-71 | ☐ | sans | Relation (A) : deux portraits, le résumé, les fils à perle | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
 | V3.1-72 | ☐ | sans | Réseau (B) : vignettes, filtres, survol qui allume | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
 | V3.1-73 | ☐ | sans | Généalogie (B) : les grands portraits | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
-| V3.1-74 | ☐ | sans | Dates de naissance et de mort (données) | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
+| V3.1-74 | ☑ | sans | Dates de naissance et de mort (données) | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-75 | ☐ | sans | Table aléatoire (A) et le dé animé | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
 | V3.1-76 | ☐ | sans | Quête (C) : une ligne, dépliable | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
 | V3.1-77 | ☐ | sans | Musique (A) : la platine, les bornes, la durée des fondus | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
