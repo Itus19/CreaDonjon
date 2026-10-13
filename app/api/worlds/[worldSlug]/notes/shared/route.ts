@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { notebookRouteParamsSchema } from "@/lib/notebook/schemas";
+import { worldRouteParamsSchema } from "@/lib/worlds/schemas";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { listSharedNotes } from "@/src/server/services/sharedNotes";
 
@@ -10,7 +10,7 @@ import { listSharedNotes } from "@/src/server/services/sharedNotes";
  * découverte arrive sans identifiant.
  */
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ worldSlug: string }> }) {
-  const route = notebookRouteParamsSchema.safeParse(await params);
+  const route = worldRouteParamsSchema.safeParse(await params);
   if (!route.success) return NextResponse.json({ error: "Adresse invalide." }, { status: 400 });
 
   const supabase = await createClient();

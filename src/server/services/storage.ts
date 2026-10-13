@@ -125,14 +125,15 @@ export async function copyAssetToWorld(
     alt_text: string | null;
     visibility_level: string;
   },
-  params: { worldId: string; uploadedBy: string }
+  params: { worldId: string; uploadedBy: string; /** V3.1-59 : visibilité imposée à la copie (fond par défaut du wiki : `players`). Absente : la règle ci-dessous. */ visibilityLevel?: string }
 ): Promise<string> {
   const id = crypto.randomUUID();
   const extension = asset.storage_path.includes(".") ? asset.storage_path.slice(asset.storage_path.lastIndexOf(".")) : "";
   const storagePath = `${params.worldId}/${id}${extension}`;
   const { error } = await supabase.storage.from(BUCKET).copy(asset.storage_path, storagePath);
   if (error) throw new Error(`Image ${asset.storage_path} non copiee : ${error.message}`);
-  const visibilityLevel = asset.visibility_level === "campaign" || asset.visibility_level === "user" ? "gm" : asset.visibility_level;
+  const visibilityLevel =
+    params.visibilityLevel ?? (asset.visibility_level === "campaign" || asset.visibility_level === "user" ? "gm" : asset.visibility_level);
   await insertAsset(supabase, {
     id,
     worldId: params.worldId,

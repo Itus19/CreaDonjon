@@ -5,8 +5,10 @@ import {
   getPublicEntityTree,
   getPublicCampaignName,
   getPublicWikiBackground,
+  getPublicWorldWikiBackground,
 } from "@/src/server/services/publicShare";
 import { EN_TETE_CHEMIN, entitySlugFromPathname } from "@/lib/wikiPath";
+import { chooseWikiBackground } from "@/src/core/theme/worldWikiBackground";
 import { hasVerifiedSharePassword } from "./passwordActions";
 import SharePasswordGate from "@/components/entities/public/SharePasswordGate";
 import BookSkin from "@/components/entities/public/BookSkin";
@@ -61,17 +63,19 @@ export default async function ShareLinkLayout({
   // sommaire, et `getPublicWikiBackground` rend alors `null` sans requete.
   const entitySlug = entitySlugFromPathname((await headers()).get(EN_TETE_CHEMIN), `/partage/${token}`);
 
-  const [tree, campaignName, initialBackground] = await Promise.all([
+  const [tree, campaignName, ficheBackground, worldBackground] = await Promise.all([
     getPublicEntityTree(resolved.worldId),
     getPublicCampaignName(resolved.worldId),
     // Memoise : la page demande le meme fond dans ce meme rendu, les deux
     // attendent une seule resolution. Sans ce partage, ces trois vagues
     // feraient du layout le chemin critique d'une fiche ordinaire.
     entitySlug ? getPublicWikiBackground(resolved.worldId, entitySlug) : Promise.resolve(null),
+    // V3.1-59 : le fond par défaut du monde. Une image copiée se lit par la route du lien.
+    getPublicWorldWikiBackground(resolved.worldId, `/partage/${token}/fond-du-wiki`),
   ]);
 
   return (
-    <WikiBackgroundProvider initialBackground={initialBackground}>
+    <WikiBackgroundProvider initialBackground={chooseWikiBackground(ficheBackground, worldBackground)} fallback={worldBackground}>
       <BookSkin
         title={campaignName ?? resolved.worldName}
         worldSlug={resolved.worldSlug}

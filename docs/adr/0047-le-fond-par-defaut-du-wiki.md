@@ -23,3 +23,21 @@ B.
 ## Conséquences
 
 Aucune image de la bibliothèque n'est jamais lue publiquement (test). V3.1-59 passe « prêt (Opus) ».
+
+## Précisé en codant (V3.1-59, 13 octobre 2026)
+
+- **Forme stockée** (`zWorldWikiBackground`, `src/core/theme/worldWikiBackground.ts`) :
+  - `{ source: "builtin", key, mode, blur }` ;
+  - `{ source: "world_asset", assetId, mode, blur, hue, chroma, availableModes }`.
+
+  Pour une copie, la teinte, la saturation et les modes permis sont relevés sur l'image de la bibliothèque au moment de la copie. La page publique ne peut pas lire la bibliothèque, et l'image copiée ne change plus.
+- **La copie** est un asset du monde en visibilité `players` (`copyAssetToWorld`, option `visibilityLevel`).
+  - Les membres la lisent par `/api/worlds/[slug]/wiki-background/image` (client de l'appelant, RLS).
+  - Les visiteurs du wiki public la lisent par `/partage/[token]/fond-du-wiki` : même porte que les pages du lien (jeton, mot de passe), et `publicShare.ts` ne signe que cette copie.
+  - L'identifiant de la copie versionne l'adresse.
+- **Comptée comme référence** (ADR 0057) : `app.asset_reference_count` et le recensement des orphelines lisent `worlds.wiki_background` (migration `20261013140000`). Sinon la copie, désignée par le seul monde, passerait pour abandonnée.
+- **Affichage** : le layout de chaque wiki (public, aperçu du MJ, onglet Wiki des joueuses) résout le fond du monde une fois, et le donne au `WikiBackgroundProvider` comme **fond de repli**.
+  - Une page qui déclare « pas de fond » (fiche sans fond propre, sommaire) retombe dessus.
+  - Une fiche qui a son propre fond le garde (`chooseWikiBackground`).
+- **Écriture** : `PUT /api/worlds/[slug]/wiki-background`, entrée `zWikiBackgroundInput` (`builtin`, `library` ou `none`), MJ seul (`isWorldAdmin`). Le mode doit être permis par le fond.
+

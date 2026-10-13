@@ -103,6 +103,7 @@ create table worlds (
   default_ruleset_id  uuid,                                -- FK en migration 004
   calendar            jsonb not null default '{}'::jsonb,  -- mois, jours, ères ; un seul par monde en V1
   wiki_welcome_message text,                               -- V2-G2 : remplace le titre par defaut du wiki public ; null = message calcule (nom de campagne), jamais stocke tant que non personnalise
+  wiki_background     jsonb,                               -- V3.1-59 (ADR 0047) : fond par défaut du wiki ; null = aucun. Validé par zWorldWikiBackground (fond fourni, ou copie d'une image de bibliothèque dans le monde)
   created_at          timestamptz not null default now(),
   updated_at          timestamptz not null default now(),
   deleted_at          timestamptz,
@@ -1262,6 +1263,7 @@ rulesets ── ruleset_entries ─┬── ruleset_entry_blocks
 | `20260921210000` | `scene_states` — la scène courante d'une campagne (§26) |
 | `20261013120000` | `app_identity` et le bucket `brand` — l'identité de l'application (§18.0, ADR 0061) |
 | `20261013130000` | `claim_shared_note_grant` — l'octroi de l'autrice d'une page partagée (§5, ADR 0037) |
+| `20261013140000` | `worlds.wiki_background` ; `asset_reference_count` compte la copie du fond (§3, ADR 0047) |
 
 **Règle absolue :** une migration appliquée n'est jamais modifiée. On en écrit une nouvelle. Y compris pendant le développement, y compris « juste pour corriger une faute de frappe ».
 

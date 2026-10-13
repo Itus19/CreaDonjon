@@ -35,6 +35,7 @@ const WikiBackgroundContext = createContext<WikiBackgroundContextValue | null>(n
 export default function WikiBackgroundProvider({
   children,
   initialBackground,
+  fallback,
 }: {
   children: React.ReactNode;
   /**
@@ -55,12 +56,24 @@ export default function WikiBackgroundProvider({
    * fait que l'avoir deja sous la main.
    */
   initialBackground?: WikiBackground | null;
+  /**
+   * V3.1-59 (ADR 0047) — le fond par défaut du wiki du monde, résolu par le
+   * `layout.tsx`. Une page qui déclare « pas de fond » (`null` : fiche sans
+   * fond propre, sommaire) retombe dessus ; une fiche qui a son propre fond
+   * le garde. `initialBackground` en tient déjà compte au premier rendu.
+   */
+  fallback?: WikiBackground | null;
 }) {
   const [displayed, setDisplayed] = useState<WikiBackground | null>(initialBackground ?? null);
   const [visible, setVisible] = useState(Boolean(initialBackground));
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fallbackRef = useRef<WikiBackground | null>(fallback ?? null);
+  useEffect(() => {
+    fallbackRef.current = fallback ?? null;
+  }, [fallback]);
 
-  const register = useCallback((next: WikiBackground | null) => {
+  const register = useCallback((declared: WikiBackground | null) => {
+    const next = declared ?? fallbackRef.current;
     setDisplayed((current) => {
       const unchanged = current?.imageUrl === next?.imageUrl && current?.hue === next?.hue;
       if (unchanged) return current;

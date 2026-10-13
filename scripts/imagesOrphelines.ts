@@ -2,6 +2,7 @@
 // `effacer-images-orphelines.ts` : les deux voient la meme liste, calculee
 // par `src/core/images/orphelins.ts`. Ce module ne fait que LIRE.
 
+import { parseWorldWikiBackground } from "../src/core/theme/worldWikiBackground";
 import { createHash } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../src/types/database";
@@ -60,17 +61,23 @@ export interface Recensement extends Orphelins {
  * (docs/QUOTAS.md T4). A lancer rarement.
  */
 export async function recenser(admin: SupabaseClient<Database>, mondeId: string | null = null): Promise<Recensement> {
-  const [assets, blocs, blockImages, entityAssets, fonds, fichiers] = await Promise.all([
+  const [assets, blocs, blockImages, entityAssets, fonds, fondsDuWiki, fichiers] = await Promise.all([
     toutLire<AssetLu>((de, a) => admin.from("assets").select("id, world_id, storage_path, byte_size, created_at").order("id").range(de, a)),
     toutLire((de, a) => admin.from("blocks").select("data").order("id").range(de, a)),
     toutLire((de, a) => admin.from("block_images").select("asset_id").range(de, a)),
     toutLire((de, a) => admin.from("entity_assets").select("asset_id").range(de, a)),
     toutLire((de, a) => admin.from("background_images").select("asset_id").range(de, a)),
+    // V3.1-59 (ADR 0047) : la copie du fond par défaut du wiki n'est désignée que par son monde.
+    toutLire((de, a) => admin.from("worlds").select("wiki_background").not("wiki_background", "is", null).range(de, a)),
     fichiersDuStockage(admin),
   ]);
 
   const idsDesignes = new Set<string>();
   for (const ligne of [...blockImages, ...entityAssets, ...fonds]) if (ligne.asset_id) idsDesignes.add(ligne.asset_id);
+  for (const monde of fondsDuWiki) {
+    const fond = parseWorldWikiBackground(monde.wiki_background);
+    if (fond?.source === "world_asset") idsDesignes.add(fond.assetId);
+  }
   // Un monde seulement : ses lignes et ses fichiers (dossier `<monde>/`). Les
   // references, elles, restent cherchees partout.
   const dansLeMonde = <T,>(liste: T[], monde: (x: T) => string) => (mondeId ? liste.filter((x) => monde(x) === mondeId) : liste);

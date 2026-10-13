@@ -266,3 +266,4 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-139 | ☐ | sans | L'inventaire et la couverture du SRD | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
 | V3.1-140 | ☐ | **avec** | La conversion assistée : du texte aux briques | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
 | V3.1-141 | ☐ | sans | Le système monétaire en données : pièces courantes, réserve, pièces maison | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
+| V3.1-142 | ☐ | sans | Le mot de passe d'un lien de partage se contourne par un cookie forgé | [`10-dette-technique.md`](backlog-v3.1/10-dette-technique.md) |

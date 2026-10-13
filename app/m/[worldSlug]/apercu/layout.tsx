@@ -3,7 +3,9 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { listCampaigns } from "@/src/server/services/campaigns";
-import { getPublicEntityTree, getPublicWikiBackground } from "@/src/server/services/publicShare";
+import { getPublicEntityTree, getPublicWikiBackground, getPublicWorldWikiBackground } from "@/src/server/services/publicShare";
+import { memberWorldBackgroundImageBase } from "@/src/server/services/worldWikiBackground";
+import { chooseWikiBackground } from "@/src/core/theme/worldWikiBackground";
 import { EN_TETE_CHEMIN, entitySlugFromPathname } from "@/lib/wikiPath";
 import WikiBackgroundProvider from "@/components/entities/public/WikiBackgroundProvider";
 import BookSkin from "@/components/entities/public/BookSkin";
@@ -39,15 +41,17 @@ export default async function ApercuLayout({
   // le monde est résolu ; le fond, lui, vient du même `getPublicWikiBackground`.
   const entitySlug = entitySlugFromPathname((await headers()).get(EN_TETE_CHEMIN), `/m/${worldSlug}/apercu`);
 
-  const [tree, campaigns, initialBackground] = await Promise.all([
+  const [tree, campaigns, ficheBackground, worldBackground] = await Promise.all([
     getPublicEntityTree(world.id),
     listCampaigns(supabase, world.id),
     entitySlug ? getPublicWikiBackground(world.id, entitySlug) : Promise.resolve(null),
+    // V3.1-59 : le fond par défaut du monde ; le MJ est membre, il lit la copie par la route des membres.
+    getPublicWorldWikiBackground(world.id, memberWorldBackgroundImageBase(worldSlug)),
   ]);
   const title = campaigns[0]?.name ?? world.name;
 
   return (
-    <WikiBackgroundProvider initialBackground={initialBackground}>
+    <WikiBackgroundProvider initialBackground={chooseWikiBackground(ficheBackground, worldBackground)} fallback={worldBackground}>
       <BookSkin title={title} worldSlug={world.slug} tree={tree} hrefBase={`/m/${world.slug}/apercu`}>
         {children}
       </BookSkin>

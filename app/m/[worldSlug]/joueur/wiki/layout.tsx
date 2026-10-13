@@ -5,6 +5,8 @@ import { getWorldBySlug } from "@/src/server/services/worlds";
 import { getEntityTree } from "@/src/server/services/entities";
 import { listCampaigns } from "@/src/server/services/campaigns";
 import { getPlayerWikiBackground } from "@/src/server/services/playerEntityDetail";
+import { getMemberWorldWikiBackground } from "@/src/server/services/worldWikiBackground";
+import { chooseWikiBackground } from "@/src/core/theme/worldWikiBackground";
 import { EN_TETE_CHEMIN, entitySlugFromPathname } from "@/lib/wikiPath";
 import WikiBackgroundProvider from "@/components/entities/public/WikiBackgroundProvider";
 import BookSkin from "@/components/entities/public/BookSkin";
@@ -48,17 +50,20 @@ export default async function JoueurWikiLayout({
   // `user`, pas de fond : cette route exige une session de toute façon.
   const entitySlug = entitySlugFromPathname((await headers()).get(EN_TETE_CHEMIN), `/m/${worldSlug}/joueur/wiki`);
 
-  const [tree, campaigns, initialBackground] = await Promise.all([
+  const [tree, campaigns, ficheBackground, worldBackground] = await Promise.all([
     getEntityTree(supabase, world.id, user?.id ?? null).then((groups) => groups.filter((g) => g.kind !== "notes")),
     listCampaigns(supabase, world.id),
     entitySlug && user
       ? getPlayerWikiBackground(supabase, world.id, entitySlug, user.id)
       : Promise.resolve(null),
+    // V3.1-59 : le fond par défaut du wiki du monde, le même qu'au wiki public.
+    getMemberWorldWikiBackground(supabase, { id: world.id, slug: worldSlug }),
   ]);
+  const initialBackground = chooseWikiBackground(ficheBackground, worldBackground);
   const title = campaigns[0]?.name ?? world.name;
 
   return (
-    <WikiBackgroundProvider initialBackground={initialBackground}>
+    <WikiBackgroundProvider initialBackground={initialBackground} fallback={worldBackground}>
       <BookSkin
         title={title}
         worldSlug={worldSlug}

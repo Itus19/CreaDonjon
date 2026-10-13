@@ -5,8 +5,9 @@
  *
  * Deux sortes d'orphelins :
  * - une ligne `assets` que rien ne designe : ni une table de liens
- *   (`block_images`, `entity_assets`, `background_images`), ni les donnees
- *   d'un bloc (meme regle que `app.asset_reference_count`) ;
+ *   (`block_images`, `entity_assets`, `background_images`), ni le fond par
+ *   defaut du wiki d'un monde (`worlds.wiki_background`, V3.1-59), ni les
+ *   donnees d'un bloc (meme regle que `app.asset_reference_count`) ;
  * - un fichier du stockage sans ligne `assets`.
  *
  * Ce qui a moins de `ageMinimumMs` est mis de cote : un envoi cree l'image

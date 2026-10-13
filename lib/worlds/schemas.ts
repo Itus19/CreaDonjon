@@ -54,3 +54,6 @@ export const duplicateWorldSchema = z.object({
   mode: z.enum(["campaign", "solo"]),
   rulesFollow: z.boolean(),
 });
+
+/** L'adresse d'une route de monde : son slug (V3.1-41, V3.1-59). Un paramètre d'URL est une entrée comme une autre (SECURITE.md §2). */
+export const worldRouteParamsSchema = z.object({ worldSlug: z.string().min(1).max(200) });

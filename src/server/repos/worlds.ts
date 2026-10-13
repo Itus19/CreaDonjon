@@ -499,3 +499,17 @@ export async function setWorldEntityKindOrder(
   if (error) throw new Error(error.message);
   return { updated: data.length > 0 };
 }
+
+/** V3.1-59 (ADR 0047) — le fond par défaut du wiki, brut (validé par l'appelant, `parseWorldWikiBackground`). `null` : aucun fond, ou monde hors de portée de la RLS. */
+export async function getWorldWikiBackground(supabase: TypedClient, worldId: string): Promise<Json | null> {
+  const { data, error } = await supabase.from("worlds").select("wiki_background").eq("id", worldId).maybeSingle();
+  if (error) throw new Error(error.message);
+  return data?.wiki_background ?? null;
+}
+
+/** Remplace le fond par défaut (déjà validé par l'appelant) ; `null` le retire. */
+export async function setWorldWikiBackground(supabase: TypedClient, worldId: string, background: Json | null): Promise<{ updated: boolean }> {
+  const { data, error } = await supabase.from("worlds").update({ wiki_background: background }).eq("id", worldId).select("id");
+  if (error) throw new Error(error.message);
+  return { updated: data.length > 0 };
+}

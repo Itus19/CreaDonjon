@@ -2625,6 +2625,7 @@ export type Database = {
           owner_id: string
           slug: string
           updated_at: string
+          wiki_background: Json | null
           wiki_welcome_message: string | null
         }
         Insert: {
@@ -2638,6 +2639,7 @@ export type Database = {
           owner_id: string
           slug: string
           updated_at?: string
+          wiki_background?: Json | null
           wiki_welcome_message?: string | null
         }
         Update: {
@@ -2651,6 +2653,7 @@ export type Database = {
           owner_id?: string
           slug?: string
           updated_at?: string
+          wiki_background?: Json | null
           wiki_welcome_message?: string | null
         }
         Relationships: [

@@ -29,7 +29,8 @@ import { type EntitySummary, getEntityById, getEntityBySlug, listEntitiesForWorl
 import { listPartOfRelationsForWorld, listRelationsForEntity, type OtherEntityRef } from "@/src/server/repos/relations";
 import { listCampaignsForWorld } from "@/src/server/repos/campaigns";
 import { resolveCampaignId } from "@/src/server/services/campaigns";
-import { getWorldById, getWorldEntityKindOrder } from "@/src/server/repos/worlds";
+import { getWorldById, getWorldEntityKindOrder, getWorldWikiBackground } from "@/src/server/repos/worlds";
+import { parseWorldWikiBackground, worldWikiBackgroundView } from "@/src/core/theme/worldWikiBackground";
 import { getSessionJournalTreeGroup, getLatestSessionJournalSlug } from "@/src/server/services/sessionJournal";
 import { getPortraitLayout } from "@/src/server/services/entityPortraits";
 import type { EntityPortraitLayout } from "@/src/server/repos/entityPortraits";
@@ -908,3 +909,37 @@ export async function getPublicBlockImageSignedUrl(blockId: string): Promise<str
   // ce fichier.
   return getSignedAssetUrl(createShareLinkServiceClient(), assetId);
 }
+
+/**
+ * V3.1-59 (ADR 0047) — le fond par défaut du wiki d'un monde, pour le wiki
+ * public (`/partage`) et l'aperçu du MJ (`/apercu`). `worldId` doit venir
+ * d'un `resolveShareLink` réussi, ou d'un monde déjà résolu pour son membre.
+ *
+ * `worldAssetImageBase` : l'adresse par laquelle CE lecteur obtient une image
+ * copiée dans le monde (`/partage/[token]/fond-du-wiki` pour un visiteur, la
+ * route des membres pour l'aperçu) ; l'identifiant de la copie la versionne.
+ * Un texte, pas une fonction : `cache()` compare ses arguments par identité.
+ */
+export const getPublicWorldWikiBackground = cache(async function getPublicWorldWikiBackground(
+  worldId: string,
+  worldAssetImageBase: string
+): Promise<WikiBackground | null> {
+  const raw = await getWorldWikiBackground(createShareLinkServiceClient(), worldId);
+  const setting = parseWorldWikiBackground(raw);
+  if (raw !== null && setting === null) console.error("Fond par défaut du wiki illisible, ignoré", worldId);
+  return worldWikiBackgroundView(setting, setting?.source === "world_asset" ? `${worldAssetImageBase}?v=${setting.assetId}` : null);
+});
+
+/**
+ * L'URL signée de la SEULE image que le wiki public peut montrer hors d'une
+ * fiche : la copie désignée par `worlds.wiki_background`. Aucune autre image
+ * du monde, et jamais une image de la bibliothèque d'un compte (elle n'est
+ * pas dans le monde). `null` si le monde n'a pas de copie pour fond.
+ */
+export async function getPublicWorldWikiBackgroundSignedUrl(worldId: string): Promise<string | null> {
+  const supabase = createShareLinkServiceClient();
+  const setting = parseWorldWikiBackground(await getWorldWikiBackground(supabase, worldId));
+  if (setting?.source !== "world_asset") return null;
+  return getSignedAssetUrl(supabase, setting.assetId);
+}
+

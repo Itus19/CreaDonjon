@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { notebookRouteParamsSchema, shareNotebookPageSchema } from "@/lib/notebook/schemas";
+import { shareNotebookPageSchema } from "@/lib/notebook/schemas";
+import { worldRouteParamsSchema } from "@/lib/worlds/schemas";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { unshareNotebookPage } from "@/src/server/services/sharedNotes";
 
@@ -12,7 +13,7 @@ const ERREURS = {
 
 /** V3.1-41 (ADR 0037) — « Ne plus partager » : la page de SON cahier redevient privée ; son texte reste intact. */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ worldSlug: string }> }) {
-  const route = notebookRouteParamsSchema.safeParse(await params);
+  const route = worldRouteParamsSchema.safeParse(await params);
   if (!route.success) return NextResponse.json({ error: "Adresse invalide." }, { status: 400 });
   const body = shareNotebookPageSchema.safeParse(await request.json().catch(() => null));
   if (!body.success) return NextResponse.json({ error: "Requête invalide." }, { status: 400 });
