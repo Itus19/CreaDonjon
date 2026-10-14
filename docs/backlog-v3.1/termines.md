@@ -2,6 +2,84 @@
 
 ---
 
+### ☑ V3.1-89 — Statistiques : attribuer chaque jet (données, ADR) · `M` · sans modèle IA — **fait le 14 octobre (ADR 0064)**
+
+**Modèle conseillé : Opus** — changement de schéma, quatre chemins
+d'écriture, RLS d'une table temps réel.
+
+**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Le problème** : `dice_rolls` ne dit pas **qui** a lancé (seulement
+`rolled_by` : player, gm, ai, system) ni **pour quel personnage** ; `who`
+est un nom affiché, instable (renommage, homonymes). Et avec avantage ou
+désavantage, la trace porte les deux d20 sans dire lequel est gardé.
+
+**Proposé (à trancher, ADR à l'appui)**
+- **Qui a lancé** : `dice_rolls.rolled_by_user_id`, **déjà décidé par
+  l'ADR 0038** (salon et jets secrets, V3.1-22) et posé par le serveur.
+  Ne pas créer de seconde colonne : si V3.1-22 n'est pas encore fait, ce
+  ticket ajoute cette colonne-là, sous ce nom, et V3.1-22 la réutilise.
+- Migration nouvelle : `dice_rolls.entity_id uuid null references
+  entities(id) on delete set null` ; index `(campaign_id, entity_id,
+  created_at desc)`. Rempli par les quatre chemins d'écriture : l'entité du
+  jet quand il y en a une — jet libre : l'entité réclamée par l'appelant
+  dans la campagne, sinon null.
+- `detail.naturalD20` (entier 1 à 20, ou absent sans d20) : **le d20
+  gardé**, écrit au moment du jet par le serveur (règle 8). `detail.kind` :
+  `attack`, `damage`, `check`, `save`, `spell`, `heal`, `free` — pour
+  regrouper « l'action la plus utilisée » sans analyser du texte.
+- **Jets anciens** (sans ces champs) : `entity_id` reste null ; on ne
+  devine pas par le nom (homonymes). Ils sont **exclus** des statistiques
+  personnelles (**confirmé par l'auteur le 9 octobre** : pas de rattrapage),
+  et le volet le dit (« Statistiques depuis le … », date de la migration).
+- **Les jets secrets ne comptent jamais** (décision de l'auteur, 9
+  octobre) : `listRollsForStats` ne lit que les jets `visibility_level =
+  'public'` — ni les jets cachés du MJ (`gm`), ni les jets secrets d'un
+  joueur (`roller`, ADR 0038), **pas même pour leur auteur**. Même règle pour
+  la moyenne de la table.
+- RLS : inchangée en lecture. Les nouvelles colonnes ne s'écrivent que côté
+  serveur.
+- **Monnaie** : vérifier que les mouvements de monnaie (services de jeu,
+  V3.1-24) créent encore une révision du bloc `inventory` ; si la monnaie a
+  migré vers `entity_runtime_state`, `campaignEconomy.ts` ne la voit plus et
+  il faut une autre source (journal de mouvements ou `session_events`).
+  Trancher, et documenter dans l'ADR.
+- **Les titres sont des données** (le superadmin les change, V3.1-92) :
+  proposé, une table `player_title_tiers` (`family` parmi `luck`, `bad_luck`,
+  `purse`, `favorite_action` ; `position` ; `range_from numeric`,
+  `range_to numeric null` (null = sans borne) pour les trois premières ;
+  `action_kind` pour la quatrième ; `name` ; `template` (petit texte à
+  variables) ; `icon_key` parmi douze icônes **du code** ; `color_token`
+  parmi `success`, `danger`, `accent`, `link_entity`, `link_rule`),
+  globale à la plateforme. RLS : lecture pour tout compte connecté,
+  écriture superadmin. Valeurs par défaut insérées par la migration
+  **comme réglages**, pas comme contenu de règles. Zod valide `icon_key`,
+  `color_token` et les variables du `template`.
+- Contrat pour V3.1-90/91 : `listRollsForStats(campaignId, entityId,
+  sinceSessionId?)` renvoie `{ naturalD20, kind, what, result, sessionId,
+  createdAt }[]` (repo) ; `getPlayerEconomy(entityId, sinceSessionId?)`.
+
+**Critères d'acceptation**
+- [x] ADR ; migration ; `docs/SCHEMA.md` ; types régénérés.
+- [x] Les quatre chemins écrivent `rolled_by_user_id`, `entity_id`,
+  `naturalD20`, `kind` (tests d'intégration).
+- [x] Avantage : `naturalD20` = le plus haut des deux ; désavantage : le
+  plus bas (test).
+- [x] Aucun jet `gm` ni `roller` n'apparaît dans `listRollsForStats`, même
+  lu par son auteur (test).
+
+**Réalisé**
+- Migration `20261014090000_dice_rolls_attribution.sql` (appliquée le 14 octobre) : `rolled_by_user_id` (posé par la base, `default auth.uid()`) et `entity_id` ; index `(campaign_id, entity_id, created_at desc)` ; `dice_rolls_insert` refuse un autre compte et un personnage que l'auteur ne peut pas modifier ; table `player_title_tiers` et ses quatorze paliers.
+- Noyau : `naturalD20FromTrace` et `DICE_ROLL_KINDS` (`src/core/dice/rollAttribution.ts`), `zPlayerTitleTier` et `DEFAULT_TITLE_TIERS` (`src/core/stats/titleTiers.ts`), tests d'abord.
+- `DiceRollAttribution` obligatoire dans `insertDiceRoll` : les quatre chemins la fournissent. Contrat pour 90 et 91 : `listRollsForStats` (jets publics seulement) et `listPlayerRolls`, `getPlayerEconomy` (`src/server/services/playerStats.ts`).
+- Monnaie : toujours dans le bloc `inventory`, donc dans ses révisions ; `campaignEconomy` reste la source.
+- Tests d'intégration : 30/30 sur les trois fichiers des jets.
+
+*Faille relevée en route, fermée* : l'usurpation du compte ou du personnage d'un jet. *Reste ouvert, antérieur* : un membre peut insérer lui-même un jet public au résultat inventé ; il ne fausse que ses propres statistiques. Les deux sont inscrits au registre de `SECURITE.md`.
+
+
+---
+
 ### ☑ V3.1-96 — Chronologie : portée, événements directs, naissances et morts (données, ADR) · `M` · sans modèle IA — **fait le 14 octobre (ADR 0048)**
 
 **Modèle conseillé : Opus** — forme d'une donnée de bloc, une fiche

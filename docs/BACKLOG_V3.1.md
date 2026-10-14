@@ -87,13 +87,13 @@ valables ; celui-ci les relie.
 | Étape | Tickets | Pourquoi d'abord |
 |---|---|---|
 | **0 · Sécurité et mesure** — *faite* | ~~101~~, ~~108~~, ~~62~~ étapes 1-2 | Un défaut de sécurité passe avant tout ; la mesure dit où la rapidité se perd avant qu'on reconstruise les écrans. |
-| **1 · Les données que les écrans attendent** (Opus, en parallèle) | Fait : ~~120~~, ~~24~~, ~~84~~, ~~41~~, ~~59~~, ~~115 → 116 → 117~~, ~~113~~. ~~48~~ (remonté ici le 13 octobre : 74 en dépend). ~~74~~. ~~96~~. **Reste, dans cet ordre** : 89 (attribuer chaque jet) ; 100 (rejoindre sans PJ) ; 102 → 103 (initiative des joueurs) ; 105 (cœur de résolution) → 110 → 111 (sauvegardes) | Les écrans de Sonnet lisent ces données ; les poser d'abord évite de reprendre les écrans. |
+| **1 · Les données que les écrans attendent** (Opus, en parallèle) | Fait : ~~120~~, ~~24~~, ~~84~~, ~~41~~, ~~59~~, ~~115 → 116 → 117~~, ~~113~~. ~~48~~ (remonté ici le 13 octobre : 74 en dépend). ~~74~~. ~~96~~. ~~89~~. **Reste, dans cet ordre** : 100 (rejoindre sans PJ) ; 102 → 103 (initiative des joueurs) ; 105 (cœur de résolution) → 110 → 111 (sauvegardes) | Les écrans de Sonnet lisent ces données ; les poser d'abord évite de reprendre les écrans. |
 | **2 · La coquille** | 25 → 26 → 28 ; 27 → 29 → 30, 31, 32, 33 ; 20 (dès 25) ; 35 ; 34 ; 36 ; 62 étape 3 | Tout le reste vit dedans : pilule glissante, rail, fenêtres en deux volets, téléphone, accueil. |
 | **3 · Entrer et se reconnaître** | 85 → 86 ; 80 → 81 ; 82 → 83 (après 100) ; 87 → 88 | Le premier écran que voit un ami ; court, et tout est décidé. |
 | **4 · Les outils du MJ (lot i)** | 46, 55, 61, 54, 56, 44, 45, 43 ; 41 → 42 ; 59 → 60 ; 108 → 57, 109 ; 58 ; 102, 103 → 38 ; 105 → 106 ; 111 → 112 ; 113 → 114 | Les petits outils sans donnée nouvelle d'abord, puis ceux qui attendaient l'étape 1. |
 | **5 · La fiche du wiki et ses blocs** | 63 → 64 → 65 à 68 → 69 → 70 à 73 → 75 à 78 ; 79 (après 26 et 33). 73 remplit la ligne de dates de la généalogie avec les données de 74 (étape 1) | La carte de verre et sa pastille portent tous les blocs. |
 | **6 · La création de personnage** | 49 → 50, 51, 52, 53 (48 et 115 faits à l'étape 1) ; 118, 119 (116 et 117 faits) | Le plus gros chantier ; il attend les règles en données (47). |
-| **7 · Les statistiques du joueur** | 89 → 90 → 91 → 92 | Il leur faut des jets attribués ; les jets d'avant 89 ne comptent pas. |
+| **7 · Les statistiques du joueur** | ~~89~~ → 90 → 91 → 92 | Il leur faut des jets attribués ; les jets d'avant 89 ne comptent pas. |
 | **8 · Règles et Chronologie** | 93 → 94 → 95 ; 96 → 97 → 98 → 99 | Les règles s'appuient sur les fenêtres à volets (20) ; la Chronologie sur la pastille (64) et les dates de naissance (74). |
 | **À côté, quand on veut** | 13 (attend le texte des manuels de l'auteur) ; vérifications en direct de 1, 2, 4, 5, 12, 17, 18 | Codés ; il ne reste que l'œil de l'auteur. | |
 | **Étape 4, avec 105** | 104 (ADR 0041, option B) → 107 | Le joueur qui cible : écritures signées par le serveur. | Après 105. |
@@ -218,7 +218,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-86 | ☐ | sans | La marque partout : rail, onglet, Rejoindre, Réinitialiser | [`06-compte-entree-admin.md`](backlog-v3.1/06-compte-entree-admin.md) |
 | V3.1-87 | ☐ | sans | Administration (B) : le tableau de bord | [`06-compte-entree-admin.md`](backlog-v3.1/06-compte-entree-admin.md) |
 | V3.1-88 | ☐ | sans | Administration › Identité de l'application | [`06-compte-entree-admin.md`](backlog-v3.1/06-compte-entree-admin.md) |
-| V3.1-89 | ☐ | sans | Statistiques : attribuer chaque jet (données, ADR) | [`07-statistiques.md`](backlog-v3.1/07-statistiques.md) |
+| V3.1-89 | ☑ | sans | Statistiques : attribuer chaque jet (données, ADR) | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-90 | ☐ | sans | Statistiques : le noyau pur | [`07-statistiques.md`](backlog-v3.1/07-statistiques.md) |
 | V3.1-91 | ☐ | sans | Statistiques : le service et le volet de l'accueil | [`07-statistiques.md`](backlog-v3.1/07-statistiques.md) |
 | V3.1-92 | ☐ | sans | Administration › Titres des joueurs : l'éditeur | [`07-statistiques.md`](backlog-v3.1/07-statistiques.md) |
