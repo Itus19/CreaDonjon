@@ -2,43 +2,54 @@
 
 ---
 
-### ☑ V3.1-74 — Dates de naissance et de mort (données) · `M` · sans modèle IA — **fait le 13 octobre (ADR 0063, complément)**
+### ☑ V3.1-96 — Chronologie : portée, événements directs, naissances et morts (données, ADR) · `M` · sans modèle IA — **fait le 14 octobre (ADR 0048)**
 
-**Modèle conseillé : Opus** — donnée nouvelle, ADR, `SCHEMA.md`.
+**Modèle conseillé : Opus** — forme d'une donnée de bloc, une fiche
+système, une agrégation filtrée côté serveur.
 
 **Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
-**Départ** : V3.1-48 (la naissance d'un personnage devient une `GameDate`
-dans le bloc `character`), `src/core/schemas/blocks/character.ts`,
-`src/core/calendar/`, `src/server/services/genealogy.ts`. **Dépend de** :
-48.
+**Départ** : `src/core/schemas/blocks/timeline.ts`,
+`src/server/services/timeline.ts` (`getWorldTimeline`), la route
+`timeline-promote`. **Dépend de** : V3.1-74 (dates de naissance et de mort).
 
-**La question (ouverte)** : la Généalogie B montre « 1420 – 1478 † » et
-« née en 1424 ». La naissance existera avec V3.1-48 (bloc `character`) ;
-**la mort n'existe nulle part**, et une fiche sans bloc `character` (un
-PNJ décrit en texte) n'a pas de naissance.
+**À trancher, ADR à l'appui** (les trois points de la décision du 9 octobre)
+1. **La portée** d'une entrée de chronologie : champ `scope` parmi `major`
+   (Monde), `notable` (Région), `detail` (Détail), **optionnel** — absent =
+   défaut selon le genre : guerre, catastrophe, fondation → `major` ;
+   bataille, découverte, serment, trahison → `notable` ; naissance, mort,
+   rencontre → `detail`. Naissances et morts des fiches personnage →
+   `detail`. Nouvelle version du schéma de bloc (`__v`), migration des
+   données lue par le schéma, pas de réécriture en base.
+2. **Où vit un événement ajouté directement** dans la frise générale.
+   Proposé : le bloc Chronologie d'une **fiche système « Chronologie du
+   monde »**, une par monde, hors des listes du wiki (comme le Livre de
+   sessions), plutôt qu'une table nouvelle. À confirmer ou remplacer.
+3. **L'agrégation** : `getWorldTimeline` lit aussi les naissances et morts
+   des blocs personnage (V3.1-74), **en une requête groupée** (pas de N+1),
+   et filtre chaque date par sa visibilité **côté serveur** (règle 5) : une
+   date MJ ou privée n'est jamais envoyée à une joueuse.
+- Chaque entrée renvoyée dit d'où elle vient (`source` : fiche et bloc, ou
+  frise générale, ou naissance / mort d'un personnage) pour « Depuis la
+  fiche de… ». Les séances n'y entrent pas.
+- Une action serveur pour **changer la portée** d'une entrée (MJ) et pour
+  **ajouter un événement** dans la frise générale ou dans une fiche ; Zod.
 
-**Décidé (auteur, 8 octobre) — la proposition ci-dessous est acceptée**
-- Naissance : celle de V3.1-48 (`character`).
-- Mort : un champ optionnel `death` (`GameDate`) dans le même bloc ;
-  « défunt » = `death` renseigné (pas de booléen à part, règle 16).
-- Une fiche sans bloc `character` : pas de dates dans l'arbre (rien
-  d'inventé).
-- L'âge affiché s'arrête à la mort.
+**Critères d'acceptation**
+- [x] ADR ; schéma de bloc versionné ; `docs/SCHEMA.md` à jour si une table
+  ou une fiche système naît.
+- [x] Une joueuse ne reçoit aucune date qu'elle ne peut pas voir (test).
+- [x] Une seule requête pour les naissances et morts d'un monde (test).
 
-**À faire** : ADR (décision ci-dessus, dix lignes), `SCHEMA.md`, schéma Zod (lecture
-tolérante), service de la généalogie qui lit naissance et mort en **une
-requête groupée**, remplissage de la ligne prévue en V3.1-73.
-
-**Note de clôture (13 octobre, Opus).** [ADR 0063](../adr/0063-naissance-en-date-de-jeu.md), section « Complément ».
+**Note de clôture (14 octobre, Opus).** Détail dans l'[ADR 0048](../adr/0048-les-donnees-de-la-chronologie.md), section « Réalisé ».
 
 *Fait* :
-- `death` dans le bloc `character` ;
-- `lifeDatesFromCharacter` et `ageWithDeath` (7 tests) ; l'âge de la fiche et de la colonne solo s'arrête à la mort ;
-- la généalogie lit naissance et mort en une requête groupée et les filtre pour le lecteur (2 tests d'intégration : une date réservée au MJ ne part pas vers le wiki public).
+- portée (`resolveScope`) et entrées de naissance et de mort (10 tests du noyau) ;
+- fiche système `world_timeline` (migration `20261013160000`, appliquée par l'auteur le 14 octobre) ;
+- `getWorldTimeline` en une requête, filtrée bloc puis entrée (3 tests) ;
+- deux actions serveur Zod : ajouter un événement, changer une portée ;
+- `WIKI_HIDDEN_KINDS` pour les fiches système.
 
-*Vu en route* : le bloc `character` a sa propre visibilité. Sans ce filtre, la date de naissance d'un PNJ secret serait partie dans l'arbre.
+*Faille relevée en route, fermée* : un joueur pouvait créer la fiche système avant le MJ. Inscrite au registre de `SECURITE.md`. Le test d'intégration échouait avant la migration et passe après (3/3).
 
-*Restes* :
-- la ligne de dates de l'arbre attend V3.1-73 (Sonnet), qui reçoit la donnée ;
-- aucun écran ne permet encore de saisir une mort. Le champ existe, mais il faudra un ticket de saisie (avec 73, ou la fiche).
+*Restes* : l'écran de la frise (portées, filtres, ajout d'un événement) vient avec V3.1-97 et 98, qui lisent `scope` et `source`.
