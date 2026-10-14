@@ -176,6 +176,12 @@ describe.skipIf(!hasCreds)("characterActions (integration, base reelle)", () => 
     expect(rolls![0].rolled_by).toBe("player");
     expect(rolls![0].session_id).not.toBeNull();
     expect(rolls![0].result).toBe(result.attack!.total);
+    // V3.1-89 : le PJ, la nature, et le d20 gardé (avantage : le plus haut des deux).
+    expect(rolls![0].entity_id).toBe(entityId);
+    expect(rolls![0].detail.kind).toBe("attack");
+    const traceD20 = (rolls![0].detail.trace as { text: string; value: number }[])[0];
+    expect(traceD20.text.startsWith("2d20kh1")).toBe(true);
+    expect(rolls![0].detail.naturalD20).toBe(traceD20.value);
 
     const { data: session, error: sessionError } = await admin
       .from("sessions")

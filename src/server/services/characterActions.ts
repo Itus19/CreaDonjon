@@ -46,10 +46,11 @@ import { defaultBlockDisplay } from "@/src/core/schemas/blocks/registry";
 import { getRuntimeState as getRuntimeStateRow } from "@/src/server/repos/runtimeState";
 import { getCampaignById } from "@/src/server/repos/campaigns";
 import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
-import { insertDiceRoll } from "@/src/server/repos/diceRolls";
+import { insertDiceRoll, type DiceRollAttribution } from "@/src/server/repos/diceRolls";
 import { listBlocksForRulesetEntry, type RulesetEntryRow } from "@/src/server/repos/rules";
 import { entryNameFrom, findEntryInRulesetChain } from "@/src/server/services/rules";
 import { rechargeTrackers } from "@/src/core/rules/resourceRecharge";
+import { naturalD20FromTrace } from "@/src/core/dice/rollAttribution";
 import { assembleResolvedRuleset, resolveCharacterChoices, resolveEquipmentData, type RemainingChoice } from "@/src/server/services/resolvedRuleset";
 import { applyRuntimeStateChange, getEntityRuntimeState } from "@/src/server/services/runtimeState";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
@@ -337,7 +338,7 @@ export async function getOrInitializeRuntimeState(
 async function recordRoll(
   supabase: TypedClient,
   campaignId: string | null,
-  roll: { expression: string; ast: unknown; context: Record<string, number>; result: number; detail: unknown }
+  roll: { expression: string; ast: unknown; context: Record<string, number>; result: number; detail: unknown; attribution: DiceRollAttribution }
 ): Promise<void> {
   if (!campaignId) return;
   const sessionId = await getOrOpenSessionForCampaign(supabase, campaignId);
@@ -354,6 +355,7 @@ async function recordRoll(
     // des, jamais depuis ce chemin plus ancien.
     visibilityLevel: "public",
     rolledBy: "player",
+    attribution: roll.attribution,
   });
 }
 
@@ -399,6 +401,7 @@ export async function rollWeaponAttack(
     ast: attack.ast,
     context: { mod: abilityMod + ctx.sheet.proficiencyBonus },
     result: attack.total,
+    attribution: { entityId: ctx.entityId, kind: "attack", naturalD20: naturalD20FromTrace(attack.trace) },
     detail: {
       who: ctx.entityName,
       what: `Attaque — ${itemLabel(item)}`,
@@ -441,6 +444,7 @@ export async function rollWeaponDamage(
     ast: damage.ast,
     context: { mod: abilityMod },
     result: damage.total,
+    attribution: { entityId: ctx.entityId, kind: "damage" },
     detail: {
       who: ctx.entityName,
       what: `Degats — ${itemLabel(item)}`,
@@ -483,6 +487,7 @@ export async function rollSpellAttack(
     ast: attack.ast,
     context: { mod: ctx.sheet.spellcasting.attackBonus },
     result: attack.total,
+    attribution: { entityId: ctx.entityId, kind: "spell", naturalD20: naturalD20FromTrace(attack.trace) },
     detail: {
       who: ctx.entityName,
       what: `Attaque de sort — ${params.spellKey}`,
@@ -568,6 +573,8 @@ export async function castSpell(
         ast: damage.ast,
         context: {},
         result: damage.total,
+        // Les dégâts d'un sort comptent comme des dégâts (record), l'attaque de sort comme un sort (ADR 0064).
+        attribution: { entityId: ctx.entityId, kind: "damage" },
         detail: {
           who: ctx.entityName,
           what: `Sort — ${params.spellKey}`,
@@ -734,6 +741,7 @@ export async function takeShortRest(
       ast: roll.ast,
       context: { mod: spend * conMod },
       result: roll.total,
+      attribution: { entityId: ctx.entityId, kind: "heal" },
       detail: { who: ctx.entityName, what: `Repos — de de vie (${dieKey})`, trace: roll.trace, hitDice: dieKey, spent: spend },
     });
   }

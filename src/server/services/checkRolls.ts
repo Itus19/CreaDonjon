@@ -1,3 +1,4 @@
+import { naturalD20FromTrace } from "@/src/core/dice/rollAttribution";
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
@@ -145,6 +146,9 @@ async function recordAndBuildOutcome(
   supabase: TypedClient,
   params: {
     campaignId: string | null;
+    /** V3.1-89 : le personnage du jet et sa nature, pour les statistiques. */
+    entityId: string;
+    kind: "check" | "save";
     who: string;
     what: string;
     chips: Source[];
@@ -185,6 +189,7 @@ async function recordAndBuildOutcome(
       detail: { who: params.who, what: params.what, chips: params.chips, dc: params.dc, verdict, trace, ...(fired ? { triggers: fired } : {}) } as unknown as Json,
       rolledBy: "player",
       visibilityLevel: params.hidden ? "gm" : "public",
+      attribution: { entityId: params.entityId, kind: params.kind, naturalD20: naturalD20FromTrace(trace) },
     });
   }
 
@@ -216,6 +221,8 @@ export async function rollAbilityCheck(
   const chips: Source[] = [{ label: ABILITY_LABELS[params.ability], value: ctx.sheet.abilities[params.ability].mod }];
   const roll = await recordAndBuildOutcome(supabase, {
     campaignId: params.campaignId,
+    entityId: check.entity.id,
+    kind: "check",
     who: check.entity.name,
     what: `Test de ${ABILITY_LABELS[params.ability]}`,
     chips,
@@ -246,6 +253,8 @@ export async function rollSkillCheck(
   const governingAbility = ABILITY_LABELS[SKILL_ABILITIES[params.skill]];
   const roll = await recordAndBuildOutcome(supabase, {
     campaignId: params.campaignId,
+    entityId: check.entity.id,
+    kind: "check",
     who: check.entity.name,
     what: `${SKILL_LABELS_FR[params.skill]} — test de ${governingAbility}`,
     chips: skillResult.sources,
@@ -283,6 +292,8 @@ export async function rollSavingThrow(
   const saveResult = ctx.sheet.savingThrows[params.ability];
   const roll = await recordAndBuildOutcome(supabase, {
     campaignId: params.campaignId,
+    entityId: check.entity.id,
+    kind: "save",
     who: check.entity.name,
     what: `Sauvegarde de ${ABILITY_LABELS[params.ability]}`,
     chips: saveResult.sources,
@@ -308,6 +319,8 @@ export async function rollInitiativeCheck(supabase: TypedClient, params: RollPar
   const chips: Source[] = [{ label: ABILITY_LABELS.dex, value: ctx.sheet.abilities.dex.mod }];
   const roll = await recordAndBuildOutcome(supabase, {
     campaignId: params.campaignId,
+    entityId: check.entity.id,
+    kind: "check",
     who: check.entity.name,
     what: "Initiative",
     chips,
@@ -355,7 +368,12 @@ export async function rollFreeformCheck(
   const { value: total, trace } = evaluate(ast, {}, serverRng, "roll");
   const expression = formatFormulaNode(ast);
 
-  const sessionId = await getOrOpenSessionForCampaign(supabase, params.campaignId);
+  // V3.1-89 : un jet libre va au personnage que le lanceur a réclamé dans
+  // cette campagne ; sans personnage (le MJ), il n'est attribué à personne.
+  const [sessionId, claimedEntityId] = await Promise.all([
+    getOrOpenSessionForCampaign(supabase, params.campaignId),
+    getClaimedCharacterEntityId(supabase, { campaignId: params.campaignId, userId: params.callerId }),
+  ]);
   const hidden = params.hidden && isAdmin;
   await insertDiceRoll(supabase, {
     sessionId,
@@ -367,6 +385,7 @@ export async function rollFreeformCheck(
     detail: { who: params.who, what: "Jet libre", chips: [], trace, dc: null, verdict: null } as unknown as Json,
     rolledBy: isAdmin ? "gm" : "player",
     visibilityLevel: hidden ? "gm" : "public",
+    attribution: { entityId: claimedEntityId, kind: "free", naturalD20: naturalD20FromTrace(trace) },
   });
 
   return {

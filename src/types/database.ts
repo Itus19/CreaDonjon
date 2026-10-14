@@ -1047,10 +1047,12 @@ export type Database = {
           context: Json
           created_at: string
           detail: Json
+          entity_id: string | null
           expression: string
           id: string
           result: number
           rolled_by: string
+          rolled_by_user_id: string | null
           seed_step: number | null
           session_id: string | null
           visibility_level: string
@@ -1061,10 +1063,12 @@ export type Database = {
           context?: Json
           created_at?: string
           detail: Json
+          entity_id?: string | null
           expression: string
           id?: string
           result: number
           rolled_by: string
+          rolled_by_user_id?: string | null
           seed_step?: number | null
           session_id?: string | null
           visibility_level?: string
@@ -1075,10 +1079,12 @@ export type Database = {
           context?: Json
           created_at?: string
           detail?: Json
+          entity_id?: string | null
           expression?: string
           id?: string
           result?: number
           rolled_by?: string
+          rolled_by_user_id?: string | null
           seed_step?: number | null
           session_id?: string | null
           visibility_level?: string
@@ -1089,6 +1095,13 @@ export type Database = {
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dice_rolls_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
             referencedColumns: ["id"]
           },
           {
@@ -1869,6 +1882,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      player_title_tiers: {
+        Row: {
+          action_kind: string | null
+          color_token: string
+          family: string
+          icon_key: string
+          id: string
+          name: string
+          position: number
+          range_from: number | null
+          range_to: number | null
+          template: string
+          updated_at: string
+        }
+        Insert: {
+          action_kind?: string | null
+          color_token: string
+          family: string
+          icon_key: string
+          id?: string
+          name: string
+          position?: number
+          range_from?: number | null
+          range_to?: number | null
+          template?: string
+          updated_at?: string
+        }
+        Update: {
+          action_kind?: string | null
+          color_token?: string
+          family?: string
+          icon_key?: string
+          id?: string
+          name?: string
+          position?: number
+          range_from?: number | null
+          range_to?: number | null
+          template?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {

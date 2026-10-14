@@ -162,6 +162,9 @@ describe.skipIf(!hasCreds)("V3-B5 — proposer puis encaisser (integration, base
     expect(rolls).toHaveLength(1);
     expect(rolls![0].result).toBe(14 + pending.modifier);
     expect(rolls![0].rolled_by).toBe("player");
+    // V3.1-89 : le PJ, la nature, et le naturel annoncé à la main comme d20 gardé.
+    expect(rolls![0].entity_id).toBe(entityId);
+    expect(rolls![0].detail).toMatchObject({ kind: "check", naturalD20: 14 });
   });
 
   it("sans demande en attente, encaisser est refuse — jamais un jet invente", async () => {

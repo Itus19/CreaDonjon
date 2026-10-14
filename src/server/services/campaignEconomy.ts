@@ -11,7 +11,7 @@ import { computeEconomyStats, type CurrencySnapshotDelta, type EconomyStats } fr
 type TypedClient = SupabaseClient<Database>;
 
 /** Valeur du porte-monnaie (bloc `inventory`) d'un instantane, `null` si l'entite n'avait pas encore ce bloc a cette revision (jamais traite comme un porte-monnaie vide : ca creerait un faux "gain" a l'apparition du bloc). */
-function inventoryValueCp(snapshotJson: unknown): number | null {
+export function inventoryValueCp(snapshotJson: unknown): number | null {
   const snapshot = normalizeStoredSnapshot(snapshotJson as never);
   const block = snapshot.blocks.find((b) => b.blockType === "inventory");
   if (!block) return null;

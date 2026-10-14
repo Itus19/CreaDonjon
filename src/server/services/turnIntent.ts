@@ -1,3 +1,4 @@
+import type { DiceRollKind } from "@/src/core/dice/rollAttribution";
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
@@ -780,6 +781,12 @@ async function finishResolution(
   const expression = `${natural} (${originLabel}) + ${pending.modifier}`;
   const sessionId = await getOrOpenSessionForCampaign(supabase, params.campaignId);
 
+  // V3.1-89 : nature du jet et d20 gardé. Un naturel annoncé à la main (vrai dé
+  // à table) compte, mais seulement s'il est un d20 plausible (1 à 20).
+  const attributionKind: DiceRollKind =
+    pending.kind === "weapon_attack" ? "attack" : pending.kind === "weapon_damage" ? "damage" : pending.kind === "saving_throw" ? "save" : "check";
+  const naturalD20 = attributionKind !== "damage" && Number.isInteger(natural) && natural >= 1 && natural <= 20 ? natural : undefined;
+
   async function recordDiceRoll(what: string, dc: number | null, verdict: "success" | "fail" | null, extra: Json) {
     await insertDiceRoll(supabase, {
       sessionId,
@@ -791,6 +798,7 @@ async function finishResolution(
       detail: { who: pending.actor_name, what, chips: pending.chips, dc, verdict, trace, origin, ...(typeof extra === "object" && extra ? extra : {}) } as unknown as Json,
       rolledBy: "player",
       visibilityLevel: "public",
+      attribution: { entityId: params.entityId, kind: attributionKind, ...(naturalD20 !== undefined ? { naturalD20 } : {}) },
     });
   }
 

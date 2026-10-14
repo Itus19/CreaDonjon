@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
+import type { DiceRollKind } from "@/src/core/dice/rollAttribution";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -14,9 +15,24 @@ export interface DiceRollRow {
   rolled_by: string;
   visibility_level: string;
   created_at: string;
+  /** V3.1-89 : le personnage du jet ; null pour un jet libre sans personnage et pour les jets antérieurs. */
+  entity_id: string | null;
 }
 
-const DICE_ROLL_COLUMNS = "id, session_id, campaign_id, expression, result, detail, rolled_by, visibility_level, created_at";
+const DICE_ROLL_COLUMNS = "id, session_id, campaign_id, expression, result, detail, rolled_by, visibility_level, created_at, entity_id";
+
+/**
+ * V3.1-89 (ADR 0064) : ce que chaque jet dit de lui-même pour les
+ * statistiques. OBLIGATOIRE à l'écriture : un chemin qui l'oublie ne compile
+ * pas. Le compte qui lance (`rolled_by_user_id`) n'y est pas : la base le
+ * pose elle-même (`default auth.uid()`) et refuse toute autre valeur.
+ */
+export interface DiceRollAttribution {
+  entityId: string | null;
+  kind: DiceRollKind;
+  /** Le d20 gardé (`naturalD20FromTrace`), absent sans d20. */
+  naturalD20?: number;
+}
 
 /** Un jet ecrit par un bouton de la fiche jouable (V1-B5) ou le volet de lancer de des (V2-M11) : jamais par un modele d'IA (SCHEMA.md §14). */
 export async function insertDiceRoll(
@@ -32,8 +48,15 @@ export async function insertDiceRoll(
     rolledBy: "player" | "gm" | "ai" | "system";
     /** 'gm' reserve au MJ (RLS `dice_rolls_write` le refuse sinon) — voir `visibility_level`, SCHEMA.md. */
     visibilityLevel: "public" | "gm";
+    attribution: DiceRollAttribution;
   }
 ): Promise<DiceRollRow> {
+  const base = params.detail && typeof params.detail === "object" && !Array.isArray(params.detail) ? params.detail : {};
+  const detail = {
+    ...base,
+    kind: params.attribution.kind,
+    ...(params.attribution.naturalD20 !== undefined ? { naturalD20: params.attribution.naturalD20 } : {}),
+  };
   const { data, error } = await supabase
     .from("dice_rolls")
     .insert({
@@ -43,9 +66,10 @@ export async function insertDiceRoll(
       ast: params.ast,
       context: params.context,
       result: params.result,
-      detail: params.detail,
+      detail,
       rolled_by: params.rolledBy,
       visibility_level: params.visibilityLevel,
+      entity_id: params.attribution.entityId,
     })
     .select(DICE_ROLL_COLUMNS)
     .single();
@@ -66,4 +90,48 @@ export async function listDiceRollsForCampaign(
     .limit(params.limit);
   if (error) throw new Error(error.message);
   return data;
+}
+
+/** Un jet tel que les statistiques le lisent (V3.1-89, contrat de V3.1-90). */
+export interface RollForStats {
+  naturalD20: number | null;
+  kind: DiceRollKind | null;
+  what: string;
+  result: number;
+  sessionId: string | null;
+  createdAt: string;
+}
+
+/**
+ * Les jets d'UN personnage pour ses statistiques (V3.1-89, ADR 0064) :
+ * seulement les jets PUBLICS. Ni les jets cachés du MJ, ni (V3.1-22) les jets
+ * secrets d'un joueur, même lus par leur auteur : un secret ne se déduit pas
+ * d'une moyenne. Les jets antérieurs (sans `entity_id`) n'y sont pas.
+ * `sinceCreatedAt` : depuis cet instant (le début d'une séance, résolu par le service).
+ */
+export async function listRollsForStats(
+  supabase: TypedClient,
+  params: { campaignId: string; entityId: string; sinceCreatedAt?: string }
+): Promise<RollForStats[]> {
+  let query = supabase
+    .from("dice_rolls")
+    .select("result, detail, session_id, created_at")
+    .eq("campaign_id", params.campaignId)
+    .eq("entity_id", params.entityId)
+    .eq("visibility_level", "public")
+    .order("created_at", { ascending: true });
+  if (params.sinceCreatedAt) query = query.gte("created_at", params.sinceCreatedAt);
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  return data.map((row) => {
+    const detail = (row.detail ?? {}) as { naturalD20?: unknown; kind?: unknown; what?: unknown };
+    return {
+      naturalD20: typeof detail.naturalD20 === "number" ? detail.naturalD20 : null,
+      kind: typeof detail.kind === "string" ? (detail.kind as DiceRollKind) : null,
+      what: typeof detail.what === "string" ? detail.what : "",
+      result: row.result,
+      sessionId: row.session_id,
+      createdAt: row.created_at,
+    };
+  });
 }

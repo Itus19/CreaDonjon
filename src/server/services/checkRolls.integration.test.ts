@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import { rollAbilityCheck, rollFreeformCheck, rollInitiativeCheck, rollSavingThrow, rollSkillCheck } from "./checkRolls";
 import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
+import { listRollsForStats } from "@/src/server/repos/diceRolls";
 
 /**
  * V2-M11 (Lot M, volet de lancer de des) : verifie contre la base reelle que
@@ -295,5 +296,96 @@ describe.skipIf(!hasCreds)("checkRolls (integration, base reelle)", () => {
       hidden: false,
     });
     expect(empty).toEqual({ ok: false, reason: "invalid_pool" });
+  });
+
+  // --- V3.1-89 (ADR 0064) : qui a lancé, pour quel personnage, quel d20 ---
+
+  async function lastRoll() {
+    const { data, error } = await admin
+      .from("dice_rolls")
+      .select("rolled_by_user_id, entity_id, detail, visibility_level")
+      .eq("campaign_id", campaignId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+    if (error || !data) throw new Error(error?.message ?? "aucun jet");
+    return data as { rolled_by_user_id: string | null; entity_id: string | null; detail: { kind?: string; naturalD20?: number }; visibility_level: string };
+  }
+
+  it("V3.1-89 — test et sauvegarde, lancés par la joueuse : son compte, son PJ, la nature, le d20 gardé", async () => {
+    const check = await rollAbilityCheck(clients.ownCharacterPlayer, {
+      entityId: ownCharacterEntityId,
+      campaignId,
+      callerId: userIds.ownCharacterPlayer,
+      ability: "str",
+      advantage: "advantage",
+      dc: null,
+      hidden: false,
+      locale: "fr",
+    });
+    if (!check.ok) throw new Error(`echec inattendu : ${check.reason}`);
+    const row = await lastRoll();
+    expect(row.rolled_by_user_id).toBe(userIds.ownCharacterPlayer);
+    expect(row.entity_id).toBe(ownCharacterEntityId);
+    expect(row.detail.kind).toBe("check");
+    expect(row.detail.naturalD20).toBe(check.roll.total - 3);
+
+    const save = await rollSavingThrow(clients.ownCharacterPlayer, {
+      entityId: ownCharacterEntityId,
+      campaignId,
+      callerId: userIds.ownCharacterPlayer,
+      ability: "con",
+      advantage: "normal",
+      dc: null,
+      hidden: false,
+      locale: "fr",
+    });
+    if (!save.ok) throw new Error(`echec inattendu : ${save.reason}`);
+    expect((await lastRoll()).detail.kind).toBe("save");
+  });
+
+  it("V3.1-89 — jet libre : au PJ réclamé par le lanceur ; sans PJ réclamé (MJ), à personne", async () => {
+    const player = await rollFreeformCheck(clients.ownCharacterPlayer, { campaignId, callerId: userIds.ownCharacterPlayer, pool: { d20: 1 }, who: "Brunhild", hidden: false });
+    if (!player.ok) throw new Error("jet libre refusé");
+    const row = await lastRoll();
+    expect(row).toMatchObject({ rolled_by_user_id: userIds.ownCharacterPlayer, entity_id: ownCharacterEntityId });
+    expect(row.detail).toMatchObject({ kind: "free", naturalD20: player.roll.total });
+
+    const gm = await rollFreeformCheck(clients.gm, { campaignId, callerId: userIds.gm, pool: { d6: 1 }, who: "MJ", hidden: false });
+    if (!gm.ok) throw new Error("jet libre refusé");
+    const gmRow = await lastRoll();
+    expect(gmRow).toMatchObject({ rolled_by_user_id: userIds.gm, entity_id: null });
+    expect(gmRow.detail.naturalD20).toBeUndefined();
+  });
+
+  it("V3.1-89 — la base refuse un jet au nom d'un autre compte, ou pour le PJ d'un autre", async () => {
+    const base = { campaign_id: campaignId, expression: "1d20", ast: {}, context: {}, result: 20, detail: { kind: "check", naturalD20: 20 }, rolled_by: "player" };
+    const asOther = await clients.plainPlayer.from("dice_rolls").insert({ ...base, rolled_by_user_id: userIds.ownCharacterPlayer });
+    expect(asOther.error).not.toBeNull();
+    const forOthersPc = await clients.plainPlayer.from("dice_rolls").insert({ ...base, entity_id: ownCharacterEntityId });
+    expect(forOthersPc.error).not.toBeNull();
+    // Sans entité, à son propre nom : accepté (un jet libre direct reste possible).
+    const own = await clients.plainPlayer.from("dice_rolls").insert({ ...base });
+    expect(own.error).toBeNull();
+  });
+
+  it("V3.1-89 — les statistiques ne lisent jamais un jet caché, même lues par son auteur", async () => {
+    const hidden = await rollAbilityCheck(clients.gm, {
+      entityId: npcEntityId,
+      campaignId,
+      callerId: userIds.gm,
+      ability: "dex",
+      advantage: "normal",
+      dc: null,
+      hidden: true,
+      locale: "fr",
+    });
+    if (!hidden.ok) throw new Error(`echec inattendu : ${hidden.reason}`);
+    expect((await lastRoll()).visibility_level).toBe("gm");
+    const gmStats = await listRollsForStats(clients.gm, { campaignId, entityId: npcEntityId });
+    expect(gmStats.every((r) => r.what !== "Test de Dextérité")).toBe(true);
+    const playerStats = await listRollsForStats(clients.ownCharacterPlayer, { campaignId, entityId: ownCharacterEntityId });
+    expect(playerStats.length).toBeGreaterThanOrEqual(3);
+    expect(playerStats.every((r) => r.kind !== null)).toBe(true);
   });
 });

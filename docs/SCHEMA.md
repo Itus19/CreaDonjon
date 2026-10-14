@@ -898,6 +898,26 @@ create table dice_rolls (
 
 **Aucun dé n'est jamais lancé par un modèle d'IA.** Un LLM ne produit pas de hasard uniforme ; il produit du texte qui y ressemble. Le serveur lance, l'IA raconte le résultat.
 
+**Attribution (V3.1-89, ADR 0064).** Deux colonnes ajoutées par `20261014090000_dice_rolls_attribution.sql` :
+
+```sql
+rolled_by_user_id uuid default auth.uid() references auth.users(id) on delete set null,  -- posé par la base
+entity_id         uuid references entities(id) on delete set null                        -- le personnage du jet
+```
+
+`detail` porte en plus `kind` (`attack`, `damage`, `check`, `save`, `spell`, `heal`, `free`) et, pour un jet de d20, `naturalD20` (le dé gardé, 1 à 20). La politique `dice_rolls_insert` refuse un `rolled_by_user_id` autre que `auth.uid()` et un `entity_id` hors du monde de la campagne ou que l'auteur ne peut pas modifier (`app.can_edit_entity`). Les jets antérieurs gardent les deux colonnes nulles et sont exclus des statistiques ; les jets non publics n'y entrent jamais.
+
+```sql
+create table player_title_tiers (            -- réglages de la plateforme, pas des règles
+  id, family ('luck','bad_luck','purse','favorite_action'), position,
+  range_from numeric, range_to numeric,      -- bornes du ratio, pour les familles à seuil
+  action_kind ('sneak_attack','attack','spell','heal','check'),  -- seulement pour favorite_action
+  name, template, icon_key, color_token, updated_at
+);
+```
+
+Lecture pour tout compte connecté, écriture superadmin. La forme d'une ligne est validée par `zPlayerTitleTier` (`src/core/stats/titleTiers.ts`).
+
 ---
 
 ## 15. Historique du wiki
