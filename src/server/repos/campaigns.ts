@@ -165,29 +165,32 @@ export async function isCampaignMember(supabase: TypedClient, params: { campaign
 }
 
 /** Ecran "Choisis ton personnage" (V3.1-10) : PJ ouverts (jamais reclames) de cette campagne. */
-export async function listUnclaimedPcEntityIds(supabase: TypedClient, campaignId: string): Promise<string[]> {
-  const { data, error } = await supabase
-    .from("campaign_characters")
-    .select("entity_id")
-    .eq("campaign_id", campaignId)
-    .eq("is_pc", true)
-    .is("user_id", null);
+/**
+ * V3.1-100 (ADR 0049) : les PJ que l'appelant peut réclamer, et ceux qu'un
+ * lien nominatif qu'il a utilisé lui réserve. Passe par
+ * `public.list_claimable_characters` : la joueuse ne lit pas les liens des
+ * autres, c'est la base qui sait qu'un PJ est réservé.
+ */
+export async function listClaimableCharacterRows(
+  supabase: TypedClient,
+  campaignId: string
+): Promise<{ entityId: string; reservedForMe: boolean }[]> {
+  const { data, error } = await supabase.rpc("list_claimable_characters", { p_campaign_id: campaignId });
   if (error) throw new Error(error.message);
-  return data.map((row) => row.entity_id);
+  return data.map((row) => ({ entityId: row.entity_id, reservedForMe: row.reserved_for_me }));
 }
 
-/** Reclame un PJ ouvert pour SOI (V3.1-10) — course-safe (`is("user_id", null)`), jamais un simple upsert qui ecraserait quelqu'un d'autre arrive une fraction de seconde plus tot. */
-export async function claimOpenCharacter(supabase: TypedClient, params: { campaignId: string; entityId: string; userId: string }): Promise<boolean> {
-  const { data, error } = await supabase
-    .from("campaign_characters")
-    .update({ user_id: params.userId })
-    .eq("campaign_id", params.campaignId)
-    .eq("entity_id", params.entityId)
-    .eq("is_pc", true)
-    .is("user_id", null)
-    .select("entity_id");
+/**
+ * Réclame un PJ pour SOI (V3.1-10, refait V3.1-100) : passe par
+ * `public.claim_campaign_character`, seule voie d'écriture d'un joueur dans
+ * `campaign_characters` (le MJ garde l'écriture directe). La fonction
+ * vérifie la réservation d'un lien nominatif, et reste course-safe
+ * (`user_id is null`) : `false` si quelqu'un est passé avant.
+ */
+export async function claimCampaignCharacter(supabase: TypedClient, params: { campaignId: string; entityId: string }): Promise<boolean> {
+  const { data, error } = await supabase.rpc("claim_campaign_character", { p_campaign_id: params.campaignId, p_entity_id: params.entityId });
   if (error) throw new Error(error.message);
-  return data.length > 0;
+  return data === true;
 }
 
 export interface RevokeCampaignMemberResult {

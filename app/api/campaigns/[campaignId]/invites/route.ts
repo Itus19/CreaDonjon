@@ -48,6 +48,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       intendedRole: parsed.data.intendedRole,
       password: parsed.data.password || undefined,
       createdBy: user.id,
+      entityId: parsed.data.entityId ?? null,
     });
     return NextResponse.json({ invite, url: `/rejoindre/${token}` }, { status: 201 });
   } catch {

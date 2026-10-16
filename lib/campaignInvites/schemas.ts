@@ -8,6 +8,11 @@ export const createCampaignInviteSchema = z.object({
   // desormais c'est le MJ qui le fait a la creation.
   intendedRole: z.enum(["gm", "player"]),
   password: z.string().trim().max(200).optional().or(z.literal("")),
+  // V3.1-100 : « pour : [PJ] » — un lien joueur nominatif. Jamais pour un lien MJ.
+  entityId: z.string().uuid().optional(),
+}).refine((value) => !value.entityId || value.intendedRole === "player", {
+  message: "Seul un lien joueur peut viser un personnage.",
+  path: ["entityId"],
 });
 
 export const setCampaignInvitePasswordSchema = z.object({
@@ -24,7 +29,6 @@ export const joinCampaignInviteSchema = z.object({
   token: z.string().min(1),
   role: z.enum(["gm", "player"]),
   name: z.string().trim().min(1, "Le nom est requis.").max(80, "80 caractères maximum."),
-  entityId: z.string().min(1).optional(),
   // Requis seulement pour un visiteur sans session deja ouverte (V3.1-10) :
   // un compte "tag" avec mot de passe se cree a cette occasion. Optionnel
   // ici, verifie cote action selon la presence d'une session.

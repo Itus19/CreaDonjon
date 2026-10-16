@@ -139,7 +139,8 @@ create table campaign_invites (
   claimed_name       text,
   revoked_at         timestamptz,
   created_by         uuid not null references auth.users(id),
-  created_at         timestamptz not null default now()
+  created_at         timestamptz not null default now(),
+  entity_id          uuid references entities(id) on delete set null  -- V3.1-100 : lien joueur nominatif, réserve ce PJ ; check : role player seulement
 );
 
 create table account_reset_tokens (       -- V3.1-10, ADR 0031 §5
@@ -153,6 +154,8 @@ create table account_reset_tokens (       -- V3.1-10, ADR 0031 §5
 ```
 
 Un lien MJ reste nominatif et à usage unique (`claimed_by_user_id` en fait foi). Un lien joueur est réutilisable depuis V3.1-10 : qui a rejoint un monde par ce lien se lit dans `campaign_members`, jamais dans `campaign_invites`. Toute mutation privilégiée (résoudre un jeton sans session, réclamer, réinitialiser un mot de passe de lien, révoquer) passe par une fonction `security definer` dans le schéma `app`, jamais par une écriture directe depuis le rôle `anon`/`authenticated` — RLS refuse tout le reste.
+
+**Lien joueur nominatif (V3.1-100, ADR 0049).** Un lien joueur avec `entity_id` est à usage unique : la personne qui l'utilise est retenue dans `claimed_by_user_id`. Tant qu'il n'est pas révoqué, il **réserve** son PJ : seule cette personne peut le réclamer, même s'il n'est pas encore ouvert dans la campagne ; un lien pas encore utilisé le réserve pour tout le monde. Rejoindre ne choisit plus de PJ : la joueuse le réclame ensuite par `public.claim_campaign_character`, et l'écran de choix lit `public.list_claimable_characters`.
 
 `account_reset_tokens` n'a aucune politique RLS (refus par défaut) : seul le client service-role confiné à `src/server/services/accountAuth.ts` y touche (ADR 0031 §6), même discipline que `accountProvisioning.ts` pour les comptes invités.
 
@@ -675,6 +678,9 @@ create table campaign_characters (
   is_pc       boolean not null default true,
   primary key (campaign_id, entity_id)
 );
+-- Écriture directe : MJ seulement (`campaign_characters_write`, migration 20261016090000).
+-- Une joueuse réclame par `public.claim_campaign_character` : un PJ ouvert non réservé,
+-- le PJ que lui réserve un lien nominatif, ou une fiche qu'elle vient de créer.
 
 create table campaign_entity_snapshots (
   campaign_id            uuid not null references campaigns(id) on delete cascade,

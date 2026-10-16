@@ -706,6 +706,7 @@ export type Database = {
           claimed_name: string | null
           created_at: string
           created_by: string
+          entity_id: string | null
           id: string
           intended_role: string | null
           password_attempts: number
@@ -721,6 +722,7 @@ export type Database = {
           claimed_name?: string | null
           created_at?: string
           created_by: string
+          entity_id?: string | null
           id?: string
           intended_role?: string | null
           password_attempts?: number
@@ -736,6 +738,7 @@ export type Database = {
           claimed_name?: string | null
           created_at?: string
           created_by?: string
+          entity_id?: string | null
           id?: string
           intended_role?: string | null
           password_attempts?: number
@@ -746,6 +749,13 @@ export type Database = {
           world_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "campaign_invites_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "campaign_invites_campaign_id_fkey"
             columns: ["campaign_id"]
@@ -2727,6 +2737,10 @@ export type Database = {
     }
     Functions: {
       asset_reference_count: { Args: { p_asset_id: string }; Returns: number }
+      claim_campaign_character: {
+        Args: { p_campaign_id: string; p_entity_id: string }
+        Returns: boolean
+      }
       claim_journal_entry_grant: {
         Args: { p_assignment_id: string; p_entity_id: string }
         Returns: boolean
@@ -2805,11 +2819,11 @@ export type Database = {
           slug: string
         }[]
       }
-      list_unclaimed_campaign_characters: {
-        Args: { p_token: string }
+      list_claimable_characters: {
+        Args: { p_campaign_id: string }
         Returns: {
           entity_id: string
-          entity_name: string
+          reserved_for_me: boolean
         }[]
       }
       publish_ruleset: { Args: { p_ruleset_id: string }; Returns: undefined }
@@ -2836,6 +2850,7 @@ export type Database = {
           has_password: boolean
           password_attempts: number
           world_id: string
+          entity_id: string | null
         }[]
       }
       resolve_login_emails: {

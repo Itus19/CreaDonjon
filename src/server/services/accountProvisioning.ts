@@ -21,7 +21,7 @@ import { isSyntheticAccountEmail } from "@/src/core/accounts/memberAccountAction
  */
 export type ProvisionInviteResult =
   | { ok: true; tokenHash: string | null }
-  | { ok: false; reason: "role_mismatch" | "missing_entity" | "character_already_taken" | "invite_already_claimed" };
+  | { ok: false; reason: "role_mismatch" | "invite_already_claimed" };
 
 /**
  * Attache (au premier passage) ou reconnecte (aux suivants, lien MJ
@@ -49,7 +49,7 @@ export type ProvisionInviteResult =
  */
 export async function provisionInviteSession(params: {
   invite: ResolvedCampaignInvite;
-  claim?: { role: "gm" | "player"; name: string; entityId?: string };
+  claim?: { role: "gm" | "player"; name: string };
   existingUserId?: string;
 }): Promise<ProvisionInviteResult> {
   const admin = createAccountProvisioningServiceClient();
@@ -80,9 +80,6 @@ export async function provisionInviteSession(params: {
   if (!claim) throw new Error("Un lien non reclame exige role/nom (invariant appelant).");
   if (params.invite.intendedRole && params.invite.intendedRole !== claim.role) {
     return { ok: false, reason: "role_mismatch" };
-  }
-  if (claim.role === "player" && !claim.entityId) {
-    return { ok: false, reason: "missing_entity" };
   }
   if (!params.existingUserId) {
     throw new Error("Le compte doit deja exister avant d'attacher un role (invariant appelant, V3.1-10).");
@@ -125,22 +122,35 @@ export async function provisionInviteSession(params: {
     return { ok: true, tokenHash: null };
   }
 
-  // Lien joueur (reutilisable, V3.1-10) : jamais de claimed_by_user_id —
-  // campaign_members fait foi de qui a rejoint (ADR 0031). Course-safe sur
-  // le PERSONNAGE seul (`is("user_id", null)`), jamais sur le lien.
-  if (claim.entityId && params.invite.campaignId) {
-    const { data: claimedRows, error: claimError } = await admin
-      .from("campaign_characters")
-      .update({ user_id: userId })
-      .eq("campaign_id", params.invite.campaignId)
-      .eq("entity_id", claim.entityId)
-      .eq("is_pc", true)
-      .is("user_id", null)
-      .select("entity_id");
-    if (claimError) throw new Error(claimError.message);
-    if (claimedRows.length === 0) {
-      return { ok: false, reason: "character_already_taken" };
+  // Lien joueur (V3.1-100, ADR 0049) : on rejoint SANS choisir de PJ — la
+  // joueuse le réclame ensuite sur l'écran de choix, par
+  // `claim_campaign_character`, qui fait respecter les réservations. Ce
+  // module n'écrit donc plus jamais dans `campaign_characters`.
+  //
+  // Lien nominatif (`entityId`) : usage unique. Il retient la personne qui
+  // l'utilise (`claimed_by_user_id`), course-safe sur le lien ; c'est ce qui
+  // lui réserve le PJ visé. Un lien réutilisable (sans PJ) n'écrit rien sur
+  // le lien : `campaign_members` fait foi de qui a rejoint (ADR 0031).
+  if (params.invite.entityId) {
+    const { data: claimedInviteRows, error: claimInviteError } = await admin
+      .from("campaign_invites")
+      .update({ claimed_by_user_id: userId, claimed_name: claim.name })
+      .eq("id", params.invite.id)
+      .is("claimed_by_user_id", null)
+      .select("id");
+    if (claimInviteError) throw new Error(claimInviteError.message);
+    if (claimedInviteRows.length === 0) {
+      const { data: current, error: currentError } = await admin
+        .from("campaign_invites")
+        .select("claimed_by_user_id")
+        .eq("id", params.invite.id)
+        .single();
+      if (currentError) throw new Error(currentError.message);
+      if (current.claimed_by_user_id !== userId) return { ok: false, reason: "invite_already_claimed" };
     }
+  }
+
+  if (params.invite.campaignId) {
     const { error: memberError } = await admin
       .from("campaign_members")
       .upsert({ campaign_id: params.invite.campaignId, user_id: userId, role: "player" }, { onConflict: "campaign_id,user_id" });

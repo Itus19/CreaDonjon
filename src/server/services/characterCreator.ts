@@ -10,6 +10,7 @@ import { getEntityById } from "@/src/server/repos/entities";
 import { insertBlock, listBlocksForEntity, updateBlockWithVersionCheck, type BlockRow } from "@/src/server/repos/blocks";
 import type { EntitySummary } from "@/src/server/repos/entities";
 import { canUserEditEntity } from "@/src/server/services/permissions";
+import { claimCampaignCharacter } from "@/src/server/repos/campaigns";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -34,6 +35,13 @@ export async function createCharacterFromWizard(
     character: CharacterBlockData;
     inventory: InventoryBlockData | undefined;
     spellcasting: SpellcastingBlockData | undefined;
+    /**
+     * V3.1-100 : une joueuse crée SON personnage. La fiche est réclamée dans
+     * cette campagne AVANT d'écrire les blocs : sans cela, la joueuse n'a pas
+     * encore le droit d'écrire sur une fiche qu'elle vient de créer
+     * (`app.can_edit_entity`). Absent : création par le MJ, rien à réclamer.
+     */
+    claimInCampaignId?: string;
   }
 ): Promise<EntitySummary> {
   const entity = await createEntity(supabase, {
@@ -43,6 +51,11 @@ export async function createCharacterFromWizard(
     entityKind: "character",
     aliases: [],
   });
+
+  if (params.claimInCampaignId) {
+    const claimed = await claimCampaignCharacter(supabase, { campaignId: params.claimInCampaignId, entityId: entity.id });
+    if (!claimed) throw new Error("Réclamation de la fiche tout juste créée refusée (invariant : elle n'est liée à personne).");
+  }
 
   await insertBlock(supabase, {
     entityId: entity.id,

@@ -24,7 +24,7 @@ export async function claimCharacterAction(worldSlug: string, entityId: string):
   const campaignId = await resolveCampaignId(supabase, world.id);
   if (!campaignId) return { error: "Aucune campagne pour ce monde." };
 
-  const result = await claimOwnOpenCharacter(supabase, { campaignId, entityId, userId: user.id });
+  const result = await claimOwnOpenCharacter(supabase, { campaignId, entityId });
   if (!result.ok) return { error: "Ce personnage vient d'être pris par quelqu'un d'autre — choisis-en un autre." };
 
   redirect(`/m/${worldSlug}/joueur`);

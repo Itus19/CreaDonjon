@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
-import { listCampaigns, listUnclaimedCharacters } from "@/src/server/services/campaigns";
+import { listCampaigns, listClaimableCharacters } from "@/src/server/services/campaigns";
 import { getClaimedCharacterEntityId } from "@/src/server/repos/campaigns";
 import { getEntityById } from "@/src/server/repos/entities";
 import ParticipantCharacterSheet from "@/components/shell/ParticipantCharacterSheet";
@@ -35,8 +35,9 @@ export default async function JoueurPersonnagePage({ params }: { params: Promise
     // Ecran "Choisis ton personnage" (V3.1-10) : membre du monde sans PJ
     // assigné (ajoutée par email, ou personnage réinitialisé par le MJ) —
     // jamais imposé à la création du compte.
-    const characters = await listUnclaimedCharacters(supabase, campaign.id);
-    return <ChooseCharacterScreen worldSlug={worldSlug} characters={characters} />;
+    // V3.1-100 : le serveur dit quoi montrer et sur quelle carte s'ouvrir.
+    const { characters, startOn } = await listClaimableCharacters(supabase, campaign.id);
+    return <ChooseCharacterScreen worldSlug={worldSlug} characters={characters} startOn={startOn} />;
   }
 
   // Nom/version necessaires seulement pour amorcer l'assistant de creation

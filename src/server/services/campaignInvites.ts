@@ -9,7 +9,6 @@ import {
   insertCampaignInvite,
   listAllCampaignInvites,
   listCampaignInvitesForCampaign,
-  listUnclaimedCampaignCharactersForToken,
   recordCampaignInvitePasswordAttempt,
   resetCampaignInviteToken,
   resolveCampaignInviteToken,
@@ -18,12 +17,11 @@ import {
   type CampaignInviteRow,
   type ResolvedCampaignInvite,
   type RevokeInviteAccessResult,
-  type UnclaimedCampaignCharacter,
 } from "@/src/server/repos/campaignInvites";
 import { provisionInviteSession, type ProvisionInviteResult } from "@/src/server/services/accountProvisioning";
 import { getCampaignById, getClaimedCharacterEntityId } from "@/src/server/repos/campaigns";
 import { getWorldById } from "@/src/server/repos/worlds";
-import { getEntityById } from "@/src/server/repos/entities";
+import { getEntityById, listEntitiesByIds } from "@/src/server/repos/entities";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -42,6 +40,9 @@ export interface CampaignInviteSummary {
   /** Personnage PJ que `claimedByUserId` a choisi dans cette campagne, s'il y en a un (retour utilisateur : bouton "reinitialiser" dans la gestion des liens) — `null` pour un MJ ou un joueur qui n'a pas encore choisi. */
   claimedEntityId: string | null;
   claimedCharacterName: string | null;
+  /** V3.1-100 : lien joueur nominatif, le PJ qu'il réserve (et son nom, résolu pour le MJ). */
+  targetEntityId: string | null;
+  targetEntityName: string | null;
 }
 
 function toSummary(row: CampaignInviteRow): CampaignInviteSummary {
@@ -58,6 +59,8 @@ function toSummary(row: CampaignInviteRow): CampaignInviteSummary {
     hasPassword: row.password_hash !== null,
     claimedEntityId: null,
     claimedCharacterName: null,
+    targetEntityId: row.entity_id,
+    targetEntityName: null,
   };
 }
 
@@ -76,8 +79,19 @@ export async function createCampaignInvite(
     intendedRole: "gm" | "player" | null;
     password?: string;
     createdBy: string;
+    /** V3.1-100 : « pour : [PJ] » — un lien joueur nominatif, à usage unique, qui réserve ce PJ. */
+    entityId?: string | null;
   }
 ): Promise<{ invite: CampaignInviteSummary; token: string }> {
+  // Le PJ visé doit être une fiche du monde de la campagne : la base ne le
+  // vérifie pas à l'écriture du lien (la réclamation, elle, le revérifie).
+  if (params.entityId) {
+    const campaign = params.campaignId ? await getCampaignById(supabase, params.campaignId) : null;
+    const entity = await getEntityById(supabase, params.entityId);
+    if (!campaign || !entity || entity.world_id !== campaign.world_id) {
+      throw new Error("Le personnage visé n'appartient pas au monde de cette campagne.");
+    }
+  }
   const token = generateCampaignInviteToken();
   const invite = await insertCampaignInvite(supabase, {
     campaignId: params.campaignId,
@@ -87,6 +101,7 @@ export async function createCampaignInvite(
     tokenHash: hashCampaignInviteToken(token),
     passwordHash: params.password ? hashSharePassword(params.password) : null,
     createdBy: params.createdBy,
+    entityId: params.entityId ?? null,
   });
   return { invite: toSummary(invite), token };
 }
@@ -100,9 +115,12 @@ export async function createCampaignInvite(
  */
 export async function listCampaignInvites(supabase: TypedClient, campaignId: string): Promise<CampaignInviteSummary[]> {
   const rows = await listCampaignInvitesForCampaign(supabase, campaignId);
+  // V3.1-100 : le nom du PJ visé par chaque lien nominatif, en une requête.
+  const targetIds = [...new Set(rows.flatMap((row) => (row.entity_id ? [row.entity_id] : [])))];
+  const targetNames = new Map((await listEntitiesByIds(supabase, targetIds)).map((e) => [e.id, e.name]));
   return Promise.all(
     rows.map(async (row) => {
-      const summary = toSummary(row);
+      const summary = { ...toSummary(row), targetEntityName: row.entity_id ? (targetNames.get(row.entity_id) ?? null) : null };
       if (!row.claimed_by_user_id) return summary;
       const entityId = await getClaimedCharacterEntityId(supabase, { campaignId, userId: row.claimed_by_user_id });
       if (!entityId) return summary;
@@ -217,14 +235,10 @@ export async function resolveInviteForJoin(supabase: TypedClient, token: string)
   return { ok: true, invite };
 }
 
-export async function listUnclaimedCharactersForToken(supabase: TypedClient, token: string): Promise<UnclaimedCampaignCharacter[]> {
-  return listUnclaimedCampaignCharactersForToken(supabase, token);
-}
-
 /** Simple relais vers le module confine — voir accountProvisioning.ts pour la logique reelle. */
 export async function claimInvite(params: {
   invite: ResolvedCampaignInvite;
-  claim?: { role: "gm" | "player"; name: string; entityId?: string };
+  claim?: { role: "gm" | "player"; name: string };
   existingUserId?: string;
 }): Promise<ProvisionInviteResult> {
   return provisionInviteSession(params);
@@ -253,6 +267,8 @@ export async function resolveDestinationForInvitedUser(
           const entity = await getEntityById(supabase, entityId);
           if (entity) return `/m/${world.slug}/f/${entity.slug}`;
         }
+        // V3.1-100 : une joueuse sans PJ arrive sur l'écran de choix du personnage.
+        if (invite.intendedRole === "player") return `/m/${world.slug}/joueur`;
         return `/m/${world.slug}`;
       }
     }

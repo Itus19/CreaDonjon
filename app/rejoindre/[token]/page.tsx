@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient, getAuthUser } from "@/lib/supabase/server";
-import { listUnclaimedCharactersForToken, resolveDestinationForInvitedUser, resolveInviteForJoin } from "@/src/server/services/campaignInvites";
+import { resolveDestinationForInvitedUser, resolveInviteForJoin } from "@/src/server/services/campaignInvites";
 import { getOwnProfile } from "@/src/server/repos/account";
 import { isCampaignMember } from "@/src/server/repos/campaigns";
 import { hasVerifiedInvitePassword } from "@/lib/campaignInvites/passwordCookie";
@@ -54,8 +54,20 @@ export default async function JoinInvitePage({ params }: { params: Promise<{ tok
     }
   }
 
-  const characters =
-    resolved.invite.intendedRole === "gm" ? [] : await listUnclaimedCharactersForToken(supabase, token);
+  // V3.1-100 : un lien nominatif sert une seule fois. Déjà utilisé par un
+  // autre compte : on le dit AVANT le formulaire, qui créerait sinon un
+  // compte pour rien. (La personne qui l'a utilisé, connectée, est déjà
+  // membre : redirigée plus haut.)
+  if (resolved.invite.entityId && resolved.invite.claimedByUserId && resolved.invite.claimedByUserId !== currentUser?.id) {
+    return (
+      <div className="flex flex-1 items-center justify-center font-sans">
+        <div className="w-full max-w-sm rounded-lg border border-edge bg-panel p-6 text-center">
+          <p className="text-sm text-ink">Ce lien a déjà servi.</p>
+          <p className="mt-2 text-xs text-ink-muted">Si c&apos;est toi, connecte-toi ; sinon, demande un nouveau lien à ton MJ.</p>
+        </div>
+      </div>
+    );
+  }
 
   // Retour utilisateur 30 aout ("Jeremy MJ dans un monde ET joueur dans un
   // autre") : ce nouveau role s'ajoutera au compte DEJA connecte, le cas
@@ -67,7 +79,6 @@ export default async function JoinInvitePage({ params }: { params: Promise<{ tok
       <JoinForm
         token={token}
         intendedRole={resolved.invite.intendedRole}
-        characters={characters}
         currentAccountName={currentAccountName}
       />
     </div>

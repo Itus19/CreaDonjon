@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createCharacterFromWizardSchema } from "@/lib/characterCreator/schemas";
 import { createCharacterFromWizard } from "@/src/server/services/characterCreator";
 import { getWorldBySlug } from "@/src/server/services/worlds";
-import { resolveCampaignId, assignCampaignCharacter } from "@/src/server/services/campaigns";
+import { resolveCampaignId } from "@/src/server/services/campaigns";
 import type { CreateCharacterFromWizardInput } from "@/app/m/[worldSlug]/mj/creation-personnage/actions";
 
 /**
@@ -43,19 +43,17 @@ export async function createAndClaimCharacterAction(
     return { error: "Aucune campagne pour ce monde." };
   }
 
-  const entity = await createCharacterFromWizard(supabase, {
+  await createCharacterFromWizard(supabase, {
     worldId: parsed.data.worldId,
     createdBy: user.id,
     name: parsed.data.name,
     character: parsed.data.character,
     inventory: parsed.data.inventory,
     spellcasting: parsed.data.spellcasting,
+    // V3.1-100 : réclamée par `claim_campaign_character` (la joueuse n'écrit
+    // plus directement dans `campaign_characters`), avant les blocs.
+    claimInCampaignId: campaignId,
   });
-
-  // Fiche tout juste créée par CET appel : aucune course possible avec un
-  // autre visiteur, un simple upsert suffit (contrairement a la reclamation
-  // d'un PJ deja existant, `claimOwnOpenCharacter`).
-  await assignCampaignCharacter(supabase, { campaignId, entityId: entity.id, userId: user.id, isPc: true });
 
   revalidatePath(`/m/${worldSlug}`, "layout");
   redirect(`/m/${worldSlug}/joueur`);

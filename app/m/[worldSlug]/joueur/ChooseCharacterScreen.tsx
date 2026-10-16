@@ -3,18 +3,25 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { claimCharacterAction } from "./actions";
+import type { ChooseStart } from "@/src/core/campaigns/claimable";
 
 /**
  * Ecran "Choisis ton personnage" (V3.1-10) : une joueuse membre d'un monde
  * sans PJ assigné choisit parmi les PJ ouverts, ou en crée un nouveau — le
  * MJ garde la main pour réassigner ensuite (`CampaignDetail.tsx`).
+ *
+ * V3.1-100 : la liste et la carte de départ viennent du serveur (lien
+ * nominatif : son PJ seul, mis en avant). Le carrousel de V3.1-82 les lira
+ * telles quelles ; ce composant ne filtre rien.
  */
 export default function ChooseCharacterScreen({
   worldSlug,
   characters,
+  startOn,
 }: {
   worldSlug: string;
   characters: { entityId: string; entityName: string }[];
+  startOn: ChooseStart;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [claimingId, setClaimingId] = useState<string | null>(null);
@@ -45,6 +52,7 @@ export default function ChooseCharacterScreen({
             <li key={c.entityId}>
               <button
                 type="button"
+                autoFocus={startOn.kind === "character" && startOn.entityId === c.entityId}
                 onClick={() => choose(c.entityId)}
                 disabled={pending}
                 className="w-full rounded-md border border-edge px-3 py-2 text-left text-sm text-ink transition-colors hover:bg-panel-raised disabled:opacity-50"

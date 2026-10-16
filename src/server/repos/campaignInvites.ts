@@ -16,10 +16,12 @@ export interface CampaignInviteRow {
   created_at: string;
   token: string | null;
   password_hash: string | null;
+  /** V3.1-100 : lien nominatif, le PJ qu'il réserve. */
+  entity_id: string | null;
 }
 
 const CAMPAIGN_INVITE_COLUMNS =
-  "id, campaign_id, world_id, intended_role, claimed_by_user_id, claimed_name, revoked_at, created_by, created_at, token, password_hash";
+  "id, campaign_id, world_id, intended_role, claimed_by_user_id, claimed_name, revoked_at, created_by, created_at, token, password_hash, entity_id";
 
 export async function insertCampaignInvite(
   supabase: TypedClient,
@@ -31,6 +33,8 @@ export async function insertCampaignInvite(
     tokenHash: string;
     passwordHash: string | null;
     createdBy: string;
+    /** V3.1-100 : lien joueur nominatif ; `null` pour un lien réutilisable. */
+    entityId: string | null;
   }
 ): Promise<CampaignInviteRow> {
   const { data, error } = await supabase
@@ -43,6 +47,7 @@ export async function insertCampaignInvite(
       token_hash: params.tokenHash,
       password_hash: params.passwordHash,
       created_by: params.createdBy,
+      entity_id: params.entityId,
     })
     .select(CAMPAIGN_INVITE_COLUMNS)
     .single();
@@ -180,6 +185,8 @@ export interface ResolvedCampaignInvite {
   /** V3.1-142 : seulement s'il y a un mot de passe. Le hash ne sort jamais vers un visiteur ; le serveur le lit par `getCampaignInvitePasswordHash`. */
   hasPassword: boolean;
   passwordAttempts: number;
+  /** V3.1-100 : non nul pour un lien joueur nominatif (usage unique, réserve ce PJ). */
+  entityId: string | null;
 }
 
 /**
@@ -206,6 +213,8 @@ export async function resolveCampaignInviteToken(supabase: TypedClient, token: s
     // `password_hash` et pas `has_password` : lire « pas de mot de passe » ouvrirait la porte.
     hasPassword: row.has_password ?? (row as { password_hash?: string | null }).password_hash != null,
     passwordAttempts: row.password_attempts,
+    // Avant la migration 20261016090000 la colonne n'existe pas : aucun lien n'est nominatif.
+    entityId: row.entity_id ?? null,
   };
 }
 
@@ -213,25 +222,6 @@ export async function resolveCampaignInviteToken(supabase: TypedClient, token: s
 export async function recordCampaignInvitePasswordAttempt(supabase: TypedClient, token: string, success: boolean): Promise<void> {
   const { error } = await supabase.rpc("record_campaign_invite_password_attempt", { p_token: token, p_success: success });
   if (error) throw new Error(error.message);
-}
-
-export interface UnclaimedCampaignCharacter {
-  entityId: string;
-  entityName: string;
-}
-
-/**
- * Passe par `public.list_unclaimed_campaign_characters` (migration
- * 20260830140001) : revalide le jeton lui-meme cote SQL avant de renvoyer
- * quoi que ce soit — jamais un `campaignId` fourni tel quel par l'appelant.
- */
-export async function listUnclaimedCampaignCharactersForToken(
-  supabase: TypedClient,
-  token: string
-): Promise<UnclaimedCampaignCharacter[]> {
-  const { data, error } = await supabase.rpc("list_unclaimed_campaign_characters", { p_token: token });
-  if (error) throw new Error(error.message);
-  return data.map((row) => ({ entityId: row.entity_id, entityName: row.entity_name }));
 }
 
 /**

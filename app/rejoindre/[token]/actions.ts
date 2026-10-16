@@ -24,7 +24,6 @@ export async function joinInviteAction(_prevState: JoinInviteState, formData: Fo
     token: formData.get("token"),
     role: formData.get("role"),
     name: formData.get("name"),
-    entityId: formData.get("entityId") || undefined,
     accountPassword: formData.get("accountPassword") || undefined,
   });
   if (!parsed.success) {
@@ -80,14 +79,12 @@ export async function joinInviteAction(_prevState: JoinInviteState, formData: Fo
 
   const result = await claimInvite({
     invite: resolved.invite,
-    claim: { role: parsed.data.role, name: parsed.data.name, entityId: parsed.data.entityId },
+    claim: { role: parsed.data.role, name: parsed.data.name },
     existingUserId,
   });
   if (!result.ok) {
     const messages = {
       role_mismatch: "Ce lien est réservé à un autre rôle.",
-      missing_entity: "Choisis un personnage.",
-      character_already_taken: "Ce personnage vient d'être pris par quelqu'un d'autre — choisis-en un autre.",
       invite_already_claimed: "Ce lien vient d'être utilisé par quelqu'un d'autre — demande-en un nouveau.",
     };
     return { error: messages[result.reason] };

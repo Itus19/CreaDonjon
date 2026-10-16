@@ -66,9 +66,12 @@ function InviteRow({
   // Un lien joueur (V3.1-10, ADR 0031) est reutilisable : claimedName ne
   // veut plus rien dire pour lui (campaign_members fait foi, jamais suivi
   // par invite) — ne JAMAIS le traiter comme "reclame par une personne".
-  const reusable = invite.intendedRole === "player";
+  // V3.1-100 : un lien joueur qui vise un PJ est nominatif, à usage unique.
+  const nominativePlayer = invite.intendedRole === "player" && invite.targetEntityId !== null;
+  const reusable = invite.intendedRole === "player" && !nominativePlayer;
   const claimed = !reusable && invite.claimedName !== null;
-  const roleLabel = invite.intendedRole ? ROLE_LABELS[invite.intendedRole] : "Au choix";
+  const baseRoleLabel = invite.intendedRole ? ROLE_LABELS[invite.intendedRole] : "Au choix";
+  const roleLabel = nominativePlayer ? `${baseRoleLabel} · pour ${invite.targetEntityName ?? "un personnage"}` : baseRoleLabel;
 
   /**
    * Reinitialise le choix de personnage (retour utilisateur : "je dois
@@ -154,7 +157,11 @@ function InviteRow({
 
   // Aucun pronom : les messages nomment la personne puis parlent du COMPTE,
   // ce qui evite de lui supposer un genre — la table en compte de plusieurs.
-  const revokeMessage = claimed
+  const revokeMessage = nominativePlayer
+    ? claimed
+      ? `Ce lien cesse de fonctionner. ${invite.claimedName} garde son accès ; ${invite.targetEntityName ?? "le personnage"} n'est plus réservé.`
+      : `Ce lien cesse de fonctionner. Personne ne l'avait encore utilisé ; ${invite.targetEntityName ?? "le personnage"} n'est plus réservé.`
+    : claimed
     ? `${invite.claimedName} perd l'accès à cette campagne${invite.claimedCharacterName ? `, et ${invite.claimedCharacterName} redevient libre` : ""}. Le compte et les fiches créées depuis ce compte sont conservés.`
     : reusable
       ? "Ce lien cesse de fonctionner pour de nouvelles personnes. Celles qui l'ont déjà utilisé gardent leur accès (révocable individuellement dans « Membres »)."
@@ -267,12 +274,15 @@ export default function InviteLinkPanel({
   campaignId,
   onEmailInvite,
   notice,
+  characters,
 }: {
   campaignId: string;
   /** Ajout d'un compte existant par courriel — renvoie un message d'erreur, ou `null` si c'est fait. Absent (accueil, Administration) : pas de champ courriel. */
   onEmailInvite?: (email: string, role: "gm" | "player") => Promise<string | null>;
   /** Rappel affiché au-dessus de la ligne d'invitation (cadre d'une référence personnelle). */
   notice?: React.ReactNode;
+  /** V3.1-100 : les personnages du monde, pour « pour : [PJ] » d'un lien joueur. Absent : pas de lien nominatif depuis cet écran. */
+  characters?: { id: string; name: string }[];
 }) {
   // `useCachedGet` (retour utilisateur : "elle a l'air de se recharger a
   // chaque changement d'onglet") — evite le flash "Chargement..." quand ce
@@ -287,6 +297,7 @@ export default function InviteLinkPanel({
   const [role, setRole] = useState<"gm" | "player">("player");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [targetEntityId, setTargetEntityId] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
@@ -294,9 +305,13 @@ export default function InviteLinkPanel({
   const notRevoked = invites?.filter((i) => i.revokedAt === null) ?? [];
   // Un lien joueur (V3.1-10) est reutilisable : jamais range parmi les liens
   // MJ, sa propre section tant qu'il n'est pas revoque.
-  const reusableLinks = notRevoked.filter((i) => i.intendedRole === "player");
-  const claimed = notRevoked.filter((i) => i.intendedRole !== "player" && i.claimedName !== null);
-  const pending = notRevoked.filter((i) => i.intendedRole !== "player" && i.claimedName === null);
+  // V3.1-100 : un lien joueur qui vise un PJ est nominatif — rangé avec les
+  // liens à usage unique, en attente puis utilisé.
+  const isReusable = (i: CampaignInviteSummary) => i.intendedRole === "player" && i.targetEntityId === null;
+  const reusableLinks = notRevoked.filter(isReusable);
+  const claimed = notRevoked.filter((i) => !isReusable(i) && i.claimedName !== null);
+  const pending = notRevoked.filter((i) => !isReusable(i) && i.claimedName === null);
+  const nominative = role === "player" && targetEntityId !== "";
   const byEmail = email.trim() !== "";
 
   async function submit(e: React.FormEvent) {
@@ -316,7 +331,7 @@ export default function InviteLinkPanel({
     const res = await fetch(`/api/campaigns/${campaignId}/invites`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ intendedRole: role, password: password || undefined }),
+      body: JSON.stringify({ intendedRole: role, password: password || undefined, entityId: nominative ? targetEntityId : undefined }),
     });
     setBusy(false);
     if (!res.ok) {
@@ -324,6 +339,7 @@ export default function InviteLinkPanel({
       return;
     }
     setPassword("");
+    setTargetEntityId("");
     load();
   }
 
@@ -335,7 +351,7 @@ export default function InviteLinkPanel({
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h3 className="font-display text-lg text-ink">Invitations</h3>
         <span className="text-xs text-ink-muted">
-          {reusableLinks.length} lien{reusableLinks.length !== 1 ? "s" : ""} joueur{reusableLinks.length !== 1 ? "s" : ""} actif{reusableLinks.length !== 1 ? "s" : ""} · {pending.length} lien{pending.length !== 1 ? "s" : ""} MJ en attente
+          {reusableLinks.length} lien{reusableLinks.length !== 1 ? "s" : ""} joueur{reusableLinks.length !== 1 ? "s" : ""} actif{reusableLinks.length !== 1 ? "s" : ""} · {pending.length} lien{pending.length !== 1 ? "s" : ""} nominatif{pending.length !== 1 ? "s" : ""} en attente
         </span>
       </div>
       {notice}
@@ -357,6 +373,16 @@ export default function InviteLinkPanel({
           aria-label="Rôle de l'invitation"
           triggerClassName="shrink-0 rounded-full border border-edge px-3 py-1.5 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
         />
+        {/* V3.1-100 : un lien joueur peut viser un PJ précis — sans objet pour un courriel. */}
+        {characters && role === "player" && (
+          <Dropdown
+            value={targetEntityId}
+            options={[{ value: "", label: "pour : tout le monde" }, ...characters.map((c) => ({ value: c.id, label: `pour : ${c.name}` }))]}
+            onChange={setTargetEntityId}
+            aria-label="Personnage visé par le lien"
+            triggerClassName="shrink-0 rounded-full border border-edge px-3 py-1.5 text-sm text-ink outline-none transition-colors hover:bg-panel-raised disabled:opacity-50"
+          />
+        )}
         {/* Un mot de passe protège un LIEN : sans objet pour un courriel. */}
         <input
           type="password"
@@ -386,7 +412,7 @@ export default function InviteLinkPanel({
       )}
       {pending.length > 0 && (
         <div className="flex flex-col gap-1">
-          <h4 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Liens MJ en attente — {pending.length}</h4>
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Liens nominatifs en attente — {pending.length}</h4>
           <ul className="flex flex-col">
             {pending.map((invite) => (
               <InviteRow key={invite.id} invite={invite} {...rowProps} />
@@ -396,7 +422,7 @@ export default function InviteLinkPanel({
       )}
       {claimed.length > 0 && (
         <div className="flex flex-col gap-1">
-          <h4 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Liens MJ utilisés — {claimed.length}</h4>
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Liens nominatifs utilisés — {claimed.length}</h4>
           <ul className="flex flex-col">
             {claimed.map((invite) => (
               <InviteRow key={invite.id} invite={invite} {...rowProps} />

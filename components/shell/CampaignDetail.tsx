@@ -318,7 +318,7 @@ export default function CampaignDetail({
 
   return (
     <div className="flex flex-col gap-5 border-t border-edge/60 pt-4 text-sm">
-      {canManage && <InviteLinkPanel campaignId={campaignId} onEmailInvite={inviteByEmail} notice={notice} />}
+      {canManage && <InviteLinkPanel campaignId={campaignId} onEmailInvite={inviteByEmail} notice={notice} characters={worldEntities} />}
       {error && <p className="text-xs text-danger">{error}</p>}
 
       {/* Les MJ sur une ligne : un MJ peut deja tout modifier. */}

@@ -3,7 +3,6 @@ import { createClient as createSupabaseClient, type SupabaseClient } from "@supa
 import {
   claimInvite,
   createCampaignInvite,
-  listUnclaimedCharactersForToken,
   resolveDestinationForInvitedUser,
   resolveInviteForJoin,
   revokeInvite,
@@ -11,13 +10,14 @@ import {
   verifyInvitePassword,
 } from "./campaignInvites";
 import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
+import { claimOwnOpenCharacter, listClaimableCharacters } from "./campaigns";
 
 /**
  * V2-M4 (Lot M), mis a jour pour V3.1-10 (ADR 0031) : verifie contre une
  * vraie base le mecanisme le plus sensible du lot. Couvre : resolution
- * anonyme du jeton, liste des personnages non reclames (elle aussi
- * anonyme), reclamation course-safe (deux visiteurs ne peuvent pas prendre
- * le meme personnage), et reouverture d'un lien MJ deja reclame qui
+ * anonyme du jeton, adhesion sans choisir de personnage (V3.1-100), lien
+ * nominatif a usage unique et reservation de son PJ, verifiee par la base,
+ * et reouverture d'un lien MJ deja reclame qui
  * reconnecte le MEME compte par lien magique.
  *
  * Depuis V3.1-10, `claimInvite` n'ouvre plus de compte : la personne en a
@@ -101,7 +101,7 @@ describe.skipIf(!hasCreds)("liens d'invitation (integration, base reelle)", () =
     expect(result.ok).toBe(false);
   });
 
-  it("cree un lien, le resout anonymement, liste les personnages non reclames, reclame un PJ et etablit une vraie session", async () => {
+  it("cree un lien, le resout anonymement, et rejoint SANS choisir de personnage (V3.1-100)", async () => {
     const { token } = await createCampaignInvite(ownerClient, {
       campaignId,
       worldId: null,
@@ -109,57 +109,56 @@ describe.skipIf(!hasCreds)("liens d'invitation (integration, base reelle)", () =
       createdBy: ownerId,
     });
 
-    // Un visiteur SANS SESSION doit pouvoir resoudre le jeton et voir la liste.
+    // Un visiteur SANS SESSION doit pouvoir resoudre le jeton.
     const anon = createSupabaseClient(SUPABASE_URL!, ANON_KEY!, { auth: { persistSession: false } });
     const resolved = await resolveInviteForJoin(anon, token);
     expect(resolved.ok).toBe(true);
     if (!resolved.ok) return;
     expect(resolved.invite.claimedByUserId).toBeNull();
     expect(resolved.invite.intendedRole).toBe("player");
-
-    const characters = await listUnclaimedCharactersForToken(anon, token);
-    expect(characters.map((c) => c.entityId).sort()).toEqual([entityAId, entityBId].sort());
+    expect(resolved.invite.entityId).toBeNull();
 
     // Le visiteur a deja son compte (V3.1-10) : il le passe, et garde sa session.
     const visitor = await getReusableTestAccount(admin, "playerB");
-    const claim = await claimInvite({
-      invite: resolved.invite,
-      claim: { role: "player", name: "Jérémy", entityId: entityAId },
-      existingUserId: visitor.id,
-    });
+    const claim = await claimInvite({ invite: resolved.invite, claim: { role: "player", name: "Jérémy" }, existingUserId: visitor.id });
     expect(claim).toEqual({ ok: true, tokenHash: null });
 
-    // La destination calculee doit pointer vers la fiche du personnage reclame.
-    const destination = await resolveDestinationForInvitedUser(visitor.client, resolved.invite, visitor.id);
-    expect(destination).toContain("/f/pj-a");
+    const { data: member } = await admin.from("campaign_members").select("role").eq("campaign_id", campaignId).eq("user_id", visitor.id).single();
+    expect(member?.role).toBe("player");
+    // Aucun personnage pris au passage : la joueuse choisit ensuite.
+    const { data: held } = await admin.from("campaign_characters").select("entity_id").eq("campaign_id", campaignId).eq("user_id", visitor.id);
+    expect(held).toEqual([]);
+    // Lien reutilisable : il ne retient personne.
+    const again = await resolveInviteForJoin(anon, token);
+    expect(again.ok && again.invite.claimedByUserId).toBeNull();
 
-    // La fiche revendiquee n'apparait plus dans la liste des personnages libres.
-    const anon2 = createSupabaseClient(SUPABASE_URL!, ANON_KEY!, { auth: { persistSession: false } });
-    const remaining = await listUnclaimedCharactersForToken(anon2, token);
-    expect(remaining.map((c) => c.entityId)).toEqual([entityBId]);
+    // Sans PJ, la destination est l'ecran de choix du personnage.
+    const destination = await resolveDestinationForInvitedUser(visitor.client, resolved.invite, visitor.id);
+    expect(destination).toMatch(/\/joueur$/);
   });
 
-  it("deux visiteurs ne peuvent pas reclamer le meme personnage (course-safe)", async () => {
-    const { token } = await createCampaignInvite(ownerClient, { campaignId, worldId: null, intendedRole: "player", createdBy: ownerId });
+  it("deux visiteurs ne peuvent pas utiliser le meme lien nominatif (course-safe, usage unique)", async () => {
+    const { token } = await createCampaignInvite(ownerClient, { campaignId, worldId: null, intendedRole: "player", createdBy: ownerId, entityId: entityBId });
     const anon = createSupabaseClient(SUPABASE_URL!, ANON_KEY!, { auth: { persistSession: false } });
     const resolved = await resolveInviteForJoin(anon, token);
     if (!resolved.ok) throw new Error("resolution echouee");
+    expect(resolved.invite.entityId).toBe(entityBId);
 
     const [antoine, concurrent] = await Promise.all([getReusableTestAccount(admin, "playerC"), getReusableTestAccount(admin, "viewer")]);
     const [first, second] = await Promise.all([
-      claimInvite({ invite: resolved.invite, claim: { role: "player", name: "Antoine", entityId: entityBId }, existingUserId: antoine.id }),
-      claimInvite({ invite: { ...resolved.invite }, claim: { role: "player", name: "Concurrent", entityId: entityBId }, existingUserId: concurrent.id }),
+      claimInvite({ invite: resolved.invite, claim: { role: "player", name: "Antoine" }, existingUserId: antoine.id }),
+      claimInvite({ invite: { ...resolved.invite }, claim: { role: "player", name: "Concurrent" }, existingUserId: concurrent.id }),
     ]);
     const results = [first, second];
-    const succeeded = results.filter((r) => r.ok);
-    const failed = results.filter((r) => !r.ok);
-    expect(succeeded).toHaveLength(1);
-    expect(failed).toHaveLength(1);
-    // Lien joueur reutilisable (V3.1-10) : la course se joue sur le
-    // PERSONNAGE (`is("user_id", null)`), jamais sur le lien.
-    if (failed[0] && !failed[0].ok) expect(failed[0].reason).toBe("character_already_taken");
-    const { data } = await admin.from("campaign_characters").select("user_id").eq("entity_id", entityBId).single();
-    expect([antoine.id, concurrent.id]).toContain(data?.user_id);
+    expect(results.filter((r) => r.ok)).toHaveLength(1);
+    const failed = results.find((r) => !r.ok);
+    if (failed && !failed.ok) expect(failed.reason).toBe("invite_already_claimed");
+    const { data } = await admin.from("campaign_invites").select("claimed_by_user_id").eq("id", resolved.invite.id).single();
+    expect([antoine.id, concurrent.id]).toContain(data?.claimed_by_user_id);
+
+    // La personne qui l'a utilise peut le rouvrir sans erreur.
+    const reopened = await claimInvite({ invite: resolved.invite, claim: { role: "player", name: "Encore" }, existingUserId: data!.claimed_by_user_id! });
+    expect(reopened.ok).toBe(true);
   });
 
   it("un lien deja reclame reconnecte le MEME compte a la reouverture, sans redemander de role", async () => {
@@ -256,19 +255,6 @@ describe.skipIf(!hasCreds)("liens d'invitation (integration, base reelle)", () =
       .single();
     if (secondCampaignError || !secondCampaign) throw new Error(secondCampaignError?.message ?? "creation seconde campagne echouee");
 
-    // Un troisieme personnage, dedie a ce test : `entityAId`/`entityBId`
-    // sont deja reclames par des tests precedents de ce meme fichier.
-    const { data: entityC, error: entityCError } = await admin
-      .from("entities")
-      .insert({ world_id: worldId, slug: `pj-c-${Date.now()}`, name: "PJ C", entity_kind: "character", created_by: ownerId })
-      .select("id")
-      .single();
-    if (entityCError || !entityC) throw new Error(entityCError?.message ?? "creation entite echouee");
-    const { error: entityCCharacterError } = await admin
-      .from("campaign_characters")
-      .insert({ campaign_id: campaignId, entity_id: entityC.id, is_pc: true, user_id: null });
-    if (entityCCharacterError) throw new Error(entityCCharacterError.message);
-
     try {
       // Premier lien : Jeremy rejoint comme JOUEUR sur la campagne de la fixture.
       const { token: firstToken } = await createCampaignInvite(ownerClient, {
@@ -283,7 +269,7 @@ describe.skipIf(!hasCreds)("liens d'invitation (integration, base reelle)", () =
       if (!firstResolved.ok) throw new Error("premiere resolution echouee");
       const firstClaim = await claimInvite({
         invite: firstResolved.invite,
-        claim: { role: "player", name: "Jérémy", entityId: entityC.id },
+        claim: { role: "player", name: "Jérémy" },
         existingUserId: jeremy.id,
       });
       if (!firstClaim.ok) throw new Error("premiere reclamation echouee");
@@ -324,6 +310,114 @@ describe.skipIf(!hasCreds)("liens d'invitation (integration, base reelle)", () =
     } finally {
       await admin.from("worlds").delete().eq("id", secondWorld.id);
     }
+  });
+
+  it("lien nominatif : son PJ est reserve a qui l'a utilise, et la base le fait respecter (V3.1-100)", async () => {
+    const suffix = Date.now();
+    const { data: created, error: createdError } = await admin
+      .from("entities")
+      .insert([
+        { world_id: worldId, slug: `naivara-${suffix}`, name: "Naivara", entity_kind: "character", created_by: ownerId },
+        { world_id: worldId, slug: `ouvert-${suffix}`, name: "Ouvert", entity_kind: "character", created_by: ownerId },
+        { world_id: worldId, slug: `pas-ouvert-${suffix}`, name: "Pas encore ouvert", entity_kind: "character", created_by: ownerId },
+        { world_id: worldId, slug: `pnj-libre-${suffix}`, name: "Fiche du MJ", entity_kind: "character", created_by: ownerId },
+      ])
+      .select("id, name");
+    if (createdError || !created) throw new Error(createdError?.message ?? "creation entites echouee");
+    const idOf = (name: string) => created.find((e) => e.name === name)!.id;
+    const reserved = idOf("Naivara");
+    const open = idOf("Ouvert");
+    const notOpen = idOf("Pas encore ouvert");
+    const gmSheet = idOf("Fiche du MJ");
+    const { error: rowsError } = await admin.from("campaign_characters").insert([
+      { campaign_id: campaignId, entity_id: reserved, is_pc: true, user_id: null },
+      { campaign_id: campaignId, entity_id: open, is_pc: true, user_id: null },
+    ]);
+    if (rowsError) throw new Error(rowsError.message);
+
+    const [holder, other, holderNotOpen] = await Promise.all([
+      getReusableTestAccount(admin, "player"),
+      getReusableTestAccount(admin, "playerB"),
+      getReusableTestAccount(admin, "playerC"),
+    ]);
+    await admin.from("campaign_members").upsert(
+      [holder, other, holderNotOpen].map((a) => ({ campaign_id: campaignId, user_id: a.id, role: "player" })),
+      { onConflict: "campaign_id,user_id" }
+    );
+
+    const { token } = await createCampaignInvite(ownerClient, { campaignId, worldId: null, intendedRole: "player", createdBy: ownerId, entityId: reserved });
+    const ids = (view: { characters: { entityId: string }[] }) => view.characters.map((c) => c.entityId);
+
+    // Lien pas encore utilise : le PJ est reserve pour tout le monde.
+    expect(ids(await listClaimableCharacters(other.client, campaignId))).not.toContain(reserved);
+    expect((await claimOwnOpenCharacter(other.client, { campaignId, entityId: reserved })).ok).toBe(false);
+
+    const anon = createSupabaseClient(SUPABASE_URL!, ANON_KEY!, { auth: { persistSession: false } });
+    const resolved = await resolveInviteForJoin(anon, token);
+    if (!resolved.ok) throw new Error("resolution echouee");
+    expect((await claimInvite({ invite: resolved.invite, claim: { role: "player", name: "Joueuse de Naivara" }, existingUserId: holder.id })).ok).toBe(true);
+
+    // La joueuse arrivee par le lien : ce PJ seul, l'ecran s'ouvre sur lui.
+    const holderView = await listClaimableCharacters(holder.client, campaignId);
+    expect(ids(holderView)).toEqual([reserved]);
+    expect(holderView.startOn).toEqual({ kind: "character", entityId: reserved });
+
+    // Une autre joueuse : les PJ ouverts, sans le PJ reserve, ouvert sur « Nouveau ».
+    const otherView = await listClaimableCharacters(other.client, campaignId);
+    expect(ids(otherView)).toContain(open);
+    expect(ids(otherView)).not.toContain(reserved);
+    expect(otherView.startOn).toEqual({ kind: "new" });
+
+    // Reclamer le PJ reserve avec un autre compte : refuse par le serveur.
+    expect(await claimOwnOpenCharacter(other.client, { campaignId, entityId: reserved })).toEqual({ ok: false, reason: "already_taken" });
+    // Ni par une ecriture directe : la politique est reservee au MJ.
+    const { data: bypassUpdate } = await other.client
+      .from("campaign_characters")
+      .update({ user_id: other.id })
+      .eq("campaign_id", campaignId)
+      .eq("entity_id", reserved)
+      .select("entity_id");
+    expect(bypassUpdate ?? []).toEqual([]);
+    const { error: bypassInsert } = await other.client.from("campaign_characters").insert({ campaign_id: campaignId, entity_id: gmSheet, user_id: other.id, is_pc: true });
+    expect(bypassInsert).not.toBeNull();
+    // Ni une fiche du MJ jamais ouverte, par la fonction.
+    expect((await claimOwnOpenCharacter(other.client, { campaignId, entityId: gmSheet })).ok).toBe(false);
+
+    // La titulaire du lien le reclame ; l'autre joueuse prend un PJ ouvert.
+    expect((await claimOwnOpenCharacter(holder.client, { campaignId, entityId: reserved })).ok).toBe(true);
+    expect((await claimOwnOpenCharacter(other.client, { campaignId, entityId: open })).ok).toBe(true);
+
+    // Un lien nominatif sur un PJ PAS ENCORE OUVERT dans la campagne : sa titulaire le reclame quand meme.
+    const { token: notOpenToken } = await createCampaignInvite(ownerClient, { campaignId, worldId: null, intendedRole: "player", createdBy: ownerId, entityId: notOpen });
+    const notOpenResolved = await resolveInviteForJoin(anon, notOpenToken);
+    if (!notOpenResolved.ok) throw new Error("resolution echouee");
+    expect((await claimInvite({ invite: notOpenResolved.invite, claim: { role: "player", name: "Autre" }, existingUserId: holderNotOpen.id })).ok).toBe(true);
+    expect(ids(await listClaimableCharacters(holderNotOpen.client, campaignId))).toEqual([notOpen]);
+    expect((await claimOwnOpenCharacter(holderNotOpen.client, { campaignId, entityId: notOpen })).ok).toBe(true);
+    const { data: notOpenRow } = await admin.from("campaign_characters").select("user_id, is_pc").eq("campaign_id", campaignId).eq("entity_id", notOpen).single();
+    expect(notOpenRow).toEqual({ user_id: holderNotOpen.id, is_pc: true });
+  });
+
+  it("une joueuse cree sa propre fiche et la reclame ; jamais une fiche creee par un autre (V3.1-100)", async () => {
+    const player = await getReusableTestAccount(admin, "playerB");
+    await admin.from("campaign_members").upsert({ campaign_id: campaignId, user_id: player.id, role: "player" }, { onConflict: "campaign_id,user_id" });
+    const { data: own, error: ownError } = await player.client
+      .from("entities")
+      .insert({ world_id: worldId, slug: `ma-fiche-${Date.now()}`, name: "Ma fiche", entity_kind: "character", created_by: player.id })
+      .select("id")
+      .single();
+    if (ownError || !own) throw new Error(ownError?.message ?? "creation de sa fiche echouee");
+    expect((await claimOwnOpenCharacter(player.client, { campaignId, entityId: own.id })).ok).toBe(true);
+    // Elle peut alors ecrire ses blocs (`app.can_edit_entity`).
+    const { error: blockError } = await player.client.from("blocks").insert({
+      entity_id: own.id,
+      block_type: "notes",
+      display: { label: "Notes" },
+      data: {},
+      visibility_level: "public",
+      created_by: player.id,
+    });
+    expect(blockError).toBeNull();
   });
 
   it("revoquer un lien JOUEUR herite de l'ancien regime n'expulse pas qui s'en est servi (bug V3.1-15, migration 20261001140000)", async () => {

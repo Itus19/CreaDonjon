@@ -2,7 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import {
-  claimOpenCharacter,
+  claimCampaignCharacter,
   findUserIdByEmail,
   getCampaignById,
   insertCampaign,
@@ -11,7 +11,7 @@ import {
   listCampaignCharacters,
   listCampaignMembers,
   listGmCampaignsForUser,
-  listUnclaimedPcEntityIds,
+  listClaimableCharacterRows,
   revokeCampaignMember,
   updateCampaignName,
   upsertCampaignCharacter,
@@ -20,6 +20,7 @@ import {
   type RevokeCampaignMemberResult,
 } from "@/src/server/repos/campaigns";
 import { getRulesetById } from "@/src/server/repos/rules";
+import { claimableView, type ChooseStart } from "@/src/core/campaigns/claimable";
 import { listCampaigns, toSummary, type CampaignSummary } from "@/src/server/services/campaignSummary";
 import { getWorldOwnerId } from "@/src/server/repos/worlds";
 import { createEntity, listEntities } from "@/src/server/services/entities";
@@ -269,24 +270,38 @@ export async function assignCampaignCharacter(
   return upsertCampaignCharacter(supabase, params);
 }
 
-/** Ecran "Choisis ton personnage" (V3.1-10) : PJ ouverts avec leur nom affichable — jamais imposé à la création du compte, la joueuse choisit après coup. */
-export async function listUnclaimedCharacters(
-  supabase: TypedClient,
-  campaignId: string
-): Promise<{ entityId: string; entityName: string }[]> {
-  const ids = await listUnclaimedPcEntityIds(supabase, campaignId);
-  if (ids.length === 0) return [];
-  const entities = await listEntitiesByIds(supabase, ids);
-  return entities.map((e) => ({ entityId: e.id, entityName: e.name }));
+export interface ClaimableCharacters {
+  characters: { entityId: string; entityName: string }[];
+  /** La carte sur laquelle l'écran s'ouvre (V3.1-100) : le PJ d'un lien nominatif, sinon « Nouveau personnage ». */
+  startOn: ChooseStart;
+}
+
+/**
+ * Ecran "Choisis ton personnage" (V3.1-10, refait V3.1-100, ADR 0049) : les
+ * PJ que la joueuse peut réclamer. Arrivée par un lien nominatif : ce PJ
+ * seul, et l'écran s'ouvre sur lui. Un PJ réservé à quelqu'un d'autre n'y
+ * est jamais (filtré par la base), ni une fiche que la joueuse ne peut pas
+ * lire (RLS de `entities`). Le composant ne filtre rien lui-même.
+ */
+export async function listClaimableCharacters(supabase: TypedClient, campaignId: string): Promise<ClaimableCharacters> {
+  const rows = await listClaimableCharacterRows(supabase, campaignId);
+  if (rows.length === 0) return { characters: [], startOn: { kind: "new" } };
+  const entities = await listEntitiesByIds(supabase, rows.map((row) => row.entityId));
+  const names = new Map(entities.map((e) => [e.id, e.name]));
+  const view = claimableView(rows, new Set(names.keys()));
+  return {
+    characters: view.entityIds.map((entityId) => ({ entityId, entityName: names.get(entityId) ?? "" })),
+    startOn: view.startOn,
+  };
 }
 
 export type ClaimOwnOpenCharacterResult = { ok: true } | { ok: false; reason: "already_taken" };
 
-/** Reclame un PJ ouvert pour l'appelant lui-meme (V3.1-10) — jamais pour un autre compte, contrairement a `assignCampaignCharacter` (reserve au MJ, verifie par RLS). */
+/** Reclame un PJ pour l'appelant lui-meme (V3.1-10, V3.1-100) — jamais pour un autre compte, contrairement a `assignCampaignCharacter` (reserve au MJ, verifie par RLS). La base refuse un PJ reserve a quelqu'un d'autre. */
 export async function claimOwnOpenCharacter(
   supabase: TypedClient,
-  params: { campaignId: string; entityId: string; userId: string }
+  params: { campaignId: string; entityId: string }
 ): Promise<ClaimOwnOpenCharacterResult> {
-  const claimed = await claimOpenCharacter(supabase, params);
+  const claimed = await claimCampaignCharacter(supabase, params);
   return claimed ? { ok: true } : { ok: false, reason: "already_taken" };
 }
