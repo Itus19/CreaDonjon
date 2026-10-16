@@ -193,3 +193,33 @@ export async function deleteCombat(supabase: TypedClient, id: string): Promise<v
   const { error } = await supabase.from("combats").delete().eq("id", id);
   if (error) throw new Error(error.message);
 }
+
+/** Une ligne de `public.combat_player_view` (V3.1-102, ADR 0040) : déjà filtrée par la base, telle quelle. */
+export interface PlayerCombatViewRow {
+  id: string;
+  label: string;
+  initiative: number | null;
+  display_order: number;
+  side: string;
+  entity_id: string | null;
+  conditions: Json;
+  hp_current: number | null;
+  hp_max: number | null;
+  temp_hp: number | null;
+  wound: string | null;
+}
+
+/**
+ * V3.1-102 — l'initiative telle qu'une joueuse a le droit de la voir. La
+ * fonction refuse (code 42501) tout appelant qui n'est pas membre du monde :
+ * renvoyé ici comme `null`, jamais comme une liste vide qui laisserait croire
+ * à un combat sans participant.
+ */
+export async function listPlayerCombatViewRows(supabase: TypedClient, combatId: string): Promise<PlayerCombatViewRow[] | null> {
+  const { data, error } = await supabase.rpc("combat_player_view", { p_combat: combatId });
+  if (error) {
+    if (error.code === "42501") return null;
+    throw new Error(error.message);
+  }
+  return data;
+}

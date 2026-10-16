@@ -25,3 +25,11 @@ B.
 ## Conséquences
 
 Une migration (politiques, `check`, deux fonctions), `docs/SCHEMA.md`, tests RLS. Le solo n'est pas touché (le joueur y est propriétaire du monde). Les écrans joueur (V3.1-38) ne lisent jamais `combat_participants` directement. Les écritures du moteur **au nom d'un joueur** sur un adversaire (cibler, V3.1-21) ne passent plus : voir l'ADR 0041.
+
+## Réalisation de la vue des joueurs (V3.1-102, 16 octobre 2026)
+
+- La fonction s'appelle `public.combat_player_view` (et non `app.`) : l'API n'appelle que le schéma `public`, comme `claim_campaign_character`. Elle refuse un non-membre par une erreur (`42501`), jamais par une liste vide.
+- Elle renvoie `display_order` plutôt qu'un rang : l'ordre et le tour en cours se calculent côté serveur par le même tri que l'écran du MJ (`sortByInitiative`, via `orderPlayerCombatView`). Un second tri écrit en SQL aurait pu désigner un autre participant que `turn_index`.
+- Un adversaire nommé (fiche de PNJ) n'envoie ni sa fiche ni le nom de sa fiche : seulement le `label` choisi par le MJ.
+- `combats.updated_at` est touché par trois déclencheurs par instruction sur `combat_participants` (insertion, modification, suppression) : « lancer toutes les initiatives » ne produit qu'un signal. L'ajout de `combats` à la publication temps réel viendra avec l'écran qui l'écoute (V3.1-38).
+- Service `getPlayerCombatView`, route `GET /api/campaigns/[campaignId]/combats/active/player`.

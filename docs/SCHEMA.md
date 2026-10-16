@@ -776,7 +776,9 @@ Un combat appartient à une campagne (`combats.campaign_id`). Il a un nom, un `s
 **RLS (ADR 0040, migration `20261010120000_combats_gm_only`).**
 - `combats` est **lisible de tout membre du monde** : statut, round et tour n'ont rien de secret, et c'est le signal temps réel des écrans joueurs.
 - `combats` ne **s'écrit que par un administrateur du monde** (`app.is_world_admin` : propriétaire, éditeur ou MJ d'une campagne du monde).
-- `combat_participants` se **lit et s'écrit par l'administrateur seulement** (`app.combat_world_id`). Les PV et la CA des adversaires n'arrivent jamais à un joueur ; sa vue filtrée passera par une fonction dédiée (V3.1-102).
+- `combat_participants` se **lit et s'écrit par l'administrateur seulement** (`app.combat_world_id`). Les PV et la CA des adversaires n'arrivent jamais à un joueur ; sa vue filtrée passe par `public.combat_player_view` (ci-dessous).
+
+**Vue des joueurs (V3.1-102, ADR 0040, migration `20261016120000_combat_player_view`).** `public.combat_player_view(p_combat)` (`security definer`, `row_security = off`) refuse tout non-membre du monde (code `42501`) et renvoie, par participant : `id`, `label`, `initiative`, `display_order`, `side` (`ally` : PJ de la campagne ou `is_ally` ; sinon `enemy`), `conditions` ; pour un allié seulement `entity_id`, `hp_current`, `hp_max`, `temp_hp` ; pour un adversaire seulement `wound` (`unhurt` PV ≥ max, `hurt` > ½, `bloodied` > 0, `down` 0 ; `null` sans PV saisis). Jamais `ac`, `rule_key`, ni la fiche d'un adversaire. L'ordre et le tour en cours se calculent côté serveur par le tri de l'écran du MJ (`orderPlayerCombatView`). Trois déclencheurs par instruction sur `combat_participants` touchent `combats.updated_at` : c'est le signal temps réel des joueurs.
 - Les routes `/api/campaigns/[id]/combats/**` vérifient la même chose avant toute lecture ou écriture (`guardCombatRoute`).
 - En solo, le joueur est propriétaire du monde, donc administrateur : rien ne change pour lui.
 

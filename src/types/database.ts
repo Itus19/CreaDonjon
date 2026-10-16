@@ -2746,6 +2746,22 @@ export type Database = {
         Returns: boolean
       }
       campaign_invite_password_hash: { Args: { p_token: string }; Returns: string }
+      combat_player_view: {
+        Args: { p_combat: string }
+        Returns: {
+          conditions: Json
+          display_order: number
+          entity_id: string | null
+          hp_current: number | null
+          hp_max: number | null
+          id: string
+          initiative: number | null
+          label: string
+          side: string
+          temp_hp: number | null
+          wound: string | null
+        }[]
+      }
       claim_shared_note_grant: { Args: { p_entity_id: string }; Returns: boolean }
       delete_own_account: { Args: never; Returns: undefined }
       entity_blocks_full: {
