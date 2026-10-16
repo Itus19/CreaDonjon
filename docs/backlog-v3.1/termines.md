@@ -2,6 +2,61 @@
 
 ---
 
+### ☑ V3.1-100 — Rejoindre sans choisir de PJ ; le lien qui vise un PJ précis · `M` · sans modèle IA — **fait le 16 octobre (ADR 0049)**
+
+**Modèle conseillé : Opus** — parcours d'adhésion, une colonne nouvelle,
+une réservation à faire respecter côté serveur.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Décision de l'auteur (9 octobre)**
+- **Rejoindre une table ne demande plus de choisir un PJ.** L'écran
+  Rejoindre (V3.1-86) garde rôle, nom et mot de passe ; la joueuse arrive
+  ensuite sur le **carrousel** (V3.1-82), ouvert sur « Nouveau personnage ».
+  Plus de blocage « Aucun personnage disponible » (V3.1-14).
+- **Un lien peut viser un PJ précis** (« ce lien est pour Naivara ») : la
+  joueuse qui l'ouvre voit un carrousel réduit à **ce PJ et « Nouveau
+  personnage »** (au cas où), **ouvert sur le PJ**.
+
+**Constat (lu le 9 octobre)** : `campaign_invites` n'a pas de colonne de
+personnage ; `accountProvisioning.ts` refuse un rôle joueur sans
+`entityId` (`missing_entity`) et réclame le PJ au moment de rejoindre.
+
+**À concevoir, ADR à l'appui**
+- `campaign_invites.entity_id uuid null` (lien nominatif) ; la génération
+  d'un lien joueur dans Gestion de campagne gagne « pour : [PJ ▾]
+  (facultatif) » (avec V3.1-54).
+- Adhésion sans réclamation : `accountProvisioning` accepte un joueur sans
+  `entityId` ; la réclamation se fait ensuite par le carrousel.
+- **Réservation** : tant que le lien nominatif est actif et non utilisé, son
+  PJ n'apparaît pas dans le carrousel des autres joueuses ; la joueuse
+  arrivée par ce lien peut le réclamer même s'il n'est pas « ouvert ». La
+  règle est vérifiée par le serveur à la réclamation, pas seulement à
+  l'affichage.
+- Le serveur dit au carrousel quoi montrer et sur quelle carte s'ouvrir
+  (V3.1-82).
+
+**Critères d'acceptation**
+- [x] Une joueuse rejoint par un lien ouvert sans aucun PJ disponible, puis
+  crée le sien depuis le carrousel.
+- [x] Par un lien nominatif : carrousel réduit au PJ visé et à « Nouveau
+  personnage », ouvert sur le PJ ; une autre joueuse ne voit pas ce PJ.
+- [x] Réclamer le PJ réservé avec un autre compte est refusé par le serveur
+  (test).
+
+**Réalisé**
+- Migration `20261016090000_nominative_player_invites.sql` (appliquée le 16 octobre) : `campaign_invites.entity_id`, `public.list_claimable_characters`, `public.claim_campaign_character`, `resolve_campaign_invite` renvoie `entity_id`, liste anonyme des PJ par jeton supprimée.
+- Rejoindre ne choisit plus de PJ ; une joueuse sans PJ arrive sur `/joueur`. Un lien nominatif sert une fois (`claimed_by_user_id`) ; déjà utilisé par un autre, la page le dit avant le formulaire.
+- Noyau : `claimableView` (`src/core/campaigns/claimable.ts`), tests d'abord. L'écran de choix reçoit `characters` et `startOn` du serveur ; le carrousel (V3.1-82) les lira.
+- « Nouveau PJ » d'une joueuse : la fiche est réclamée avant l'écriture de ses blocs (`createCharacterFromWizard`, `claimInCampaignId`).
+- Gestion de campagne : « pour : [PJ] » à la génération d'un lien joueur.
+- Tests d'intégration : 11/11 (`campaignInvites.integration.test.ts`).
+
+*Faille relevée en route, fermée* : `campaign_characters_write` laissait tout compte connecté s'attribuer une fiche, donc en devenir éditeur. Écriture directe réservée au MJ ; inscrite au registre de `SECURITE.md`.
+
+
+---
+
 ### ☑ V3.1-89 — Statistiques : attribuer chaque jet (données, ADR) · `M` · sans modèle IA — **fait le 14 octobre (ADR 0064)**
 
 **Modèle conseillé : Opus** — changement de schéma, quatre chemins
