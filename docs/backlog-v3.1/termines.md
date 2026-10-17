@@ -2,6 +2,37 @@
 
 ---
 
+### ☑ V3.1-27 — Rail repliable et dalle Outils (lots a, b) · `M` · sans modèle IA — **fait le 17 octobre**
+
+**Modèle conseillé : Sonnet** — mesures et comportements donnés par V3.1-19.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Planches** : MJ et joueur, ordinateur et tablette. **Départ** :
+`Sidebar.tsx`, `MjSidebar.tsx`, `PlayerShell.tsx`, `RadioWidget.tsx`,
+`ChromePill.tsx`, `DiceRollPanel.tsx`.
+
+- Rail flottant, coins arrondis : 204 px déployé ↔ 64 px replié
+  (`width 380ms cubic-bezier(.4,0,.2,1)`), libellés qui s'effacent ;
+  poignée en onglet 16 × 44 px sur le bord droit ; replié, l'arborescence
+  s'ouvre en menu flottant au survol et au clavier. Listes :
+  `overflow-y: auto` et `overflow-x: hidden`. État replié mémorisé dans le
+  navigateur (`localStorage` protégé).
+- Dalle « Outils » en bas du rail : le dé s'y encoche (48 px, anneau de 6 px
+  couleur du panneau) et ouvre le panneau de dés existant ; la radio y
+  passe, visible rail replié, point vert en lecture / rouge à l'arrêt.
+  L'horloge n'est pas reprise.
+- Au-dessous de 768 px, le rail n'existe pas (le téléphone est 29).
+
+**Critères d'acceptation**
+- [x] Déplier / replier à la souris et au clavier ; état gardé au rechargement.
+- [x] Radio et dé utilisables rail replié.
+- [x] Planches « Pastille chrome », « Bouton de dés », « Rail du joueur » mises à jour ; planche « Rail repliable » créée.
+
+**Clôture** : `components/shell/Rail.tsx` (rail, lignes, menu flottant en portail, dalle Outils) sert les quatre rails (Monde, Règles, MJ, joueur) ; un seul arbre DOM par barre, sous 768 px tiroir et barre du bas inchangés. État replié dans `localStorage` (`creadonjon:rail:replie`, `lib/ui/rail.ts`) lu par `useSyncExternalStore` : changer de section ne rejoue pas l'animation. Le dé de la dalle ouvre le volet existant (`ouvrirVolet`) ; le bouton flottant ne se cache que tant qu'une dalle est montée (une page sans rail garde son dé). Radio du rail : point vert en lecture, rouge à l'arrêt ; `ChromePill` retirée en vue ordinateur, horloge non reprise. Vérifié dans le navigateur (MJ Monde/MJ/Règles, joueur, 390 px). Écarts : les menus repliés lisent l'arbre du chargement de la page (un duplicata n'y paraît qu'à la navigation suivante) ; Règles repliées : une ligne pointillée regroupe « Ajouter une règle » et les bacs à sable.
+
+---
+
 ### ☑ V3.1-28 — Tablette : la fiche s'adapte à sa fenêtre (lot f) · `S` · sans modèle IA — **fait le 17 octobre**
 
 **Modèle conseillé : Sonnet** — règle simple, planche à trois largeurs.

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useTranslations } from "next-intl";
 import { detectProvider } from "@/src/core/music/embedUrl";
 import { useMusicPlayback } from "./MusicPlaybackContext";
 
@@ -56,7 +57,18 @@ interface PanelRect {
   right?: number;
 }
 
-export default function RadioWidget({ worldSlug }: { worldSlug: string }) {
+export default function RadioWidget({
+  worldSlug,
+  variante = "pastille",
+  replie = false,
+}: {
+  worldSlug: string;
+  /** `rail` (V3.1-27) : declencheur pleine largeur de la dalle « Outils », icone + libelle qui s'efface + point d'etat. */
+  variante?: "pastille" | "rail";
+  /** Rail replie : le libelle disparait, l'icone et son point restent. */
+  replie?: boolean;
+}) {
+  const t = useTranslations("shell");
   const [open, setOpen] = useState(false);
   const [rect, setRect] = useState<PanelRect | null>(null);
   const [stations, setStations] = useState<RadioStation[]>([]);
@@ -136,7 +148,11 @@ export default function RadioWidget({ worldSlug }: { worldSlug: string }) {
       } else {
         next.bottom = window.innerHeight - r.top + 6;
       }
-      if (window.innerWidth - r.left >= PANEL_WIDTH) {
+      if (variante === "rail") {
+        // Le declencheur du rail est colle au bord gauche : ouvrir le panneau
+        // dessus recouvrirait le rail lui-meme, on le pose a sa droite.
+        next.left = r.right + 16;
+      } else if (window.innerWidth - r.left >= PANEL_WIDTH) {
         next.left = r.left;
       } else {
         next.right = window.innerWidth - r.right;
@@ -192,19 +208,50 @@ export default function RadioWidget({ worldSlug }: { worldSlug: string }) {
 
   return (
     <>
-      <button
-        ref={triggerRef}
-        type="button"
-        onClick={toggleOpen}
-        aria-label="Radio"
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        className={`flex h-6 w-6 items-center justify-center rounded-md transition-colors hover:text-ink ${
-          isPlaying ? "text-accent" : "text-ink-muted"
-        }`}
-      >
-        <BroadcastIcon className="h-4 w-4" />
-      </button>
+      {variante === "rail" ? (
+        <button
+          ref={triggerRef}
+          type="button"
+          onClick={toggleOpen}
+          aria-label={isPlaying ? t("radioEnLecture") : t("radioArretee")}
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          className="flex w-full items-center rounded-xl px-2.5 py-[7px] text-ink-soft transition-colors hover:bg-panel-raised hover:text-ink"
+        >
+          <span className="relative inline-flex h-[18px] w-[18px] shrink-0">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" className="h-full w-full" aria-hidden="true">
+              <path d="M7.8 16.2a6 6 0 0 1 0-8.4M16.2 7.8a6 6 0 0 1 0 8.4M5 19a10 10 0 0 1 0-14M19 5a10 10 0 0 1 0 14" />
+            </svg>
+            {/* Point d'etat au centre : vert avec halo en lecture, rouge a l'arret. */}
+            <span
+              className={`absolute left-1/2 top-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full transition-colors ${
+                isPlaying ? "bg-success shadow-[0_0_6px_var(--success)]" : "bg-danger shadow-[0_0_6px_var(--danger)]"
+              }`}
+            />
+          </span>
+          <span
+            className={`min-w-0 overflow-hidden whitespace-nowrap text-[12.5px] [transition:opacity_200ms_ease,max-width_320ms_ease,margin-left_320ms_ease] motion-reduce:transition-none ${
+              replie ? "ml-0 max-w-0 opacity-0" : "ml-[13px] max-w-[160px] flex-1 text-left opacity-100"
+            }`}
+          >
+            {t("radio")}
+          </span>
+        </button>
+      ) : (
+        <button
+          ref={triggerRef}
+          type="button"
+          onClick={toggleOpen}
+          aria-label="Radio"
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          className={`flex h-6 w-6 items-center justify-center rounded-md transition-colors hover:text-ink ${
+            isPlaying ? "text-accent" : "text-ink-muted"
+          }`}
+        >
+          <BroadcastIcon className="h-4 w-4" />
+        </button>
+      )}
 
       {open &&
         rect &&

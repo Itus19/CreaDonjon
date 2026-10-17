@@ -38,7 +38,15 @@
       "event": "Event",
       "carte": "Map",
       "other": "Other"
-    }
+    },
+    "replierMenu": "Collapse the menu",
+    "deplierMenu": "Expand the menu",
+    "ouvrirVoletDes": "Open the dice roller panel",
+    "outils": "Tools",
+    "radio": "Radio",
+    "radioEnLecture": "Radio: playing",
+    "radioArretee": "Radio: stopped",
+    "nouvelleEntiteRail": "New entity"
   },
   "monde": {
     "nouvellesAventures": "New adventures",

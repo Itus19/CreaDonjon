@@ -127,6 +127,14 @@ interface DiceRollContextValue {
   rollSkill: (entityId: string, skill: Skill, advantage: AdvantageState) => Promise<void>;
   rollSave: (entityId: string, ability: Ability, advantage: AdvantageState) => Promise<void>;
   rollInitiative: (entityId: string, advantage: AdvantageState) => Promise<void>;
+  /** Ouvre le volet existant (V3.1-27) : le de de la dalle « Outils » du rail n'a pas de volet propre. */
+  ouvrirVolet: () => void;
+  /**
+   * Signale une dalle « Outils » montee ; renvoie de quoi la retirer. Tant
+   * qu'il y en a une, le bouton flottant se cache a partir de 768 px — une page
+   * de monde sans rail (apercu...) le garde, sinon elle n'aurait plus de de.
+   */
+  enregistrerDalle: () => () => void;
 }
 
 const DiceRollContext = createContext<DiceRollContextValue | null>(null);
@@ -333,9 +341,16 @@ export default function DiceRollProvider({
     [postCheck, campaignId, hasDc, dcValue, hidden]
   );
 
+  const ouvrirVolet = useCallback(() => setOpen(true), []);
+  const [dallesMontees, setDallesMontees] = useState(0);
+  const enregistrerDalle = useCallback(() => {
+    setDallesMontees((n) => n + 1);
+    return () => setDallesMontees((n) => n - 1);
+  }, []);
+
   const contextValue = useMemo<DiceRollContextValue>(
-    () => ({ isGm, rollAbility, rollSkill, rollSave, rollInitiative }),
-    [isGm, rollAbility, rollSkill, rollSave, rollInitiative]
+    () => ({ isGm, rollAbility, rollSkill, rollSave, rollInitiative, ouvrirVolet, enregistrerDalle }),
+    [isGm, rollAbility, rollSkill, rollSave, rollInitiative, ouvrirVolet, enregistrerDalle]
   );
 
   const poolEntries = useMemo(() => DIE_TYPES.flatMap((t) => (pool[t] > 0 ? Array(pool[t]).fill(Number(t.slice(1))) : [])), [pool]);
@@ -400,7 +415,10 @@ export default function DiceRollProvider({
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Ouvrir le volet de lancer de dés"
-        className={`fixed bottom-5 right-5 z-[60] flex h-14 w-14 items-center justify-center rounded-full border border-edge-strong bg-panel-raised text-accent shadow-lg transition-all duration-200 ${
+        // V3.1-27 : a partir de 768 px, le de vit dans la dalle « Outils » du
+        // rail ; ce bouton flottant ne sert plus que sous 768 px, ou sur une
+        // page sans rail.
+        className={`fixed bottom-5 right-5 z-[60] flex h-14 w-14 items-center justify-center rounded-full border border-edge-strong bg-panel-raised text-accent shadow-lg transition-all duration-200 ${dallesMontees > 0 ? "md:hidden" : ""} ${
           open ? "pointer-events-none scale-50 opacity-0" : "scale-100 opacity-100"
         }`}
       >

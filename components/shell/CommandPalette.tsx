@@ -27,10 +27,17 @@ export default function CommandPalette({
   worldId,
   worldSlug,
   entities,
+  declencheurRail,
 }: {
   worldId: string;
   worldSlug: string;
   entities: PaletteEntity[];
+  /**
+   * V3.1-27 : declencheur du rail (a partir de 768 px). La palette reste UNE
+   * seule instance — deux monteraient deux ecouteurs ⌘K qui s'annuleraient —,
+   * donc le rail lui emprunte son ouverture au lieu d'en monter une seconde.
+   */
+  declencheurRail?: (ouvrir: () => void) => React.ReactNode;
 }) {
   const t = useTranslations("shell");
   const kindLabels = t.raw("kindLabelsSingular") as Record<string, string>;
@@ -140,14 +147,23 @@ export default function CommandPalette({
   }
 
   if (!open) {
-    return (
+    const bouton = (
       <button
         type="button"
         onClick={openPalette}
-        className="flex items-center gap-2 rounded-md border border-edge bg-panel-sunken px-3 py-1.5 text-sm text-ink-muted transition-colors hover:bg-panel-raised"
+        className={`flex items-center gap-2 rounded-md border border-edge bg-panel-sunken px-3 py-1.5 text-sm text-ink-muted transition-colors hover:bg-panel-raised ${
+          declencheurRail ? "md:hidden" : ""
+        }`}
       >
         {t("rechercher")} <kbd className="font-mech text-xs">⌘K</kbd>
       </button>
+    );
+    if (!declencheurRail) return bouton;
+    return (
+      <>
+        {bouton}
+        <div className="hidden md:block">{declencheurRail(openPalette)}</div>
+      </>
     );
   }
 

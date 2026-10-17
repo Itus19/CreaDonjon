@@ -81,7 +81,9 @@ export default function WindowsDesktop({
           parent n'aurait rien borne du tout — une boite absolue se resout
           contre la boite de REMBOURRAGE de son ancetre, rembourrage inclus. */}
       <div ref={desktopRef} className="absolute inset-x-0 top-0" style={{ bottom: reserve }}>
-        <ChromePill worldSlug={worldSlug} />
+        {/* V3.1-27 : la radio est passee dans la dalle « Outils » du rail et
+            l'horloge n'est pas reprise — plus de pastille en vue ordinateur.
+            Celle de la vue telephone (`fixed`, plus haut) reste. */}
         {!state.primary && (
           <div className="h-full overflow-y-auto p-8">
             <Panel>{children}</Panel>

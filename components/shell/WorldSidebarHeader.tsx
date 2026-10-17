@@ -72,3 +72,40 @@ export default function WorldSidebarHeader({
     </div>
   );
 }
+
+/**
+ * En-tete des trois barres du MJ dans le rail (V3.1-27) : la marque du monde
+ * (carre de 26 px, initiale) puis, rail deplie, l'en-tete habituel. Rail
+ * replie, la marque reste seule. La marque est masquee sous 768 px, ou le
+ * tiroir garde son en-tete d'avant, sans rien de plus.
+ */
+export function EnTeteRail({
+  worldSlug,
+  worldName,
+  campaignName,
+  replie,
+}: {
+  worldSlug: string;
+  worldName: string;
+  campaignName?: string | null;
+  replie: boolean;
+}) {
+  const initiale = worldName.trim().charAt(0).toUpperCase() || "?";
+  return (
+    <div className="md:flex md:items-center md:gap-2.5 md:px-[5px] md:py-2">
+      <Link
+        href={`/m/${worldSlug}`}
+        title={worldName}
+        aria-label={worldName}
+        className="hidden h-[26px] w-[26px] shrink-0 items-center justify-center rounded-lg bg-accent text-xs font-bold text-accent-ink md:flex"
+      >
+        {initiale}
+      </Link>
+      {!replie && (
+        <div className="min-w-0 md:flex-1">
+          <WorldSidebarHeader worldSlug={worldSlug} worldName={worldName} campaignName={campaignName} />
+        </div>
+      )}
+    </div>
+  );
+}

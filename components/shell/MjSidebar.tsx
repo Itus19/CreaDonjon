@@ -4,8 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import SectionToggle from "./SectionToggle";
-import WorldSidebarHeader from "./WorldSidebarHeader";
+import { classeItemFlyout, IconeRail, OutilsDalle, Rail, RailFilet, RailPart, RailRow, useRailReplie } from "./Rail";
+import SectionToggle, { SectionRailRows } from "./SectionToggle";
+import { EnTeteRail } from "./WorldSidebarHeader";
 import { useOpenMjToolLink } from "./useOpenMjToolLink";
 import { mjToolHref, type MjToolKey } from "./windowRefs";
 import { useChatUnread } from "./useChatUnread";
@@ -39,6 +40,7 @@ function MjToolLink({
   active,
   badge,
   onNavigate,
+  dansMenu = false,
 }: {
   worldSlug: string;
   toolKey: MjToolKey;
@@ -46,18 +48,25 @@ function MjToolLink({
   active: boolean;
   badge?: number;
   onNavigate: () => void;
+  /** Rendu dans le menu flottant du rail replie (V3.1-27) : memes liens, habillage de menu. */
+  dansMenu?: boolean;
 }) {
   const link = useOpenMjToolLink(worldSlug, toolKey);
   return (
     <Link
       href={link.href}
+      role={dansMenu ? "menuitem" : undefined}
       onClick={(e) => {
         link.onClick(e);
         onNavigate();
       }}
-      className={`flex items-center justify-between rounded px-2 py-1.5 text-sm transition-colors hover:bg-panel-raised ${
-        active ? "bg-panel-raised text-accent" : "text-ink-soft"
-      }`}
+      className={
+        dansMenu
+          ? `flex items-center justify-between ${classeItemFlyout(active)}`
+          : `flex items-center justify-between rounded px-2 py-1.5 text-sm transition-colors hover:bg-panel-raised ${
+              active ? "bg-panel-raised text-accent" : "text-ink-soft"
+            }`
+      }
     >
       {label}
       {!!badge && (
@@ -82,6 +91,7 @@ export default function MjSidebar({
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const { unreadCount } = useChatUnread();
+  const { replie, basculer } = useRailReplie();
 
   const tools: { key: MjToolKey; label: string }[] = [
     { key: "notes", label: t("blocNotes") },
@@ -121,40 +131,69 @@ export default function MjSidebar({
         />
       )}
 
-      <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[280px] shrink-0 flex-col gap-1 border-r border-edge bg-panel-sunken p-4 transition-transform md:static md:z-auto md:translate-x-0 ${
-          open ? "translate-x-0" : "-translate-x-full"
-        }`}
-      >
-        {/* Les 6px de rembourrage haut d'un lien d'outil (`py-1.5`), rendus
-            ici a la main : sans eux, l'ecart VU sous le nom du monde (4px,
-            le `gap-1` seul) etait la moitie de celui vu sous la bascule
-            (4px + ces 6px). Meme espace des deux cotes de la bascule, comme
-            demande — mesure en navigateur, pas devine. */}
-        <div className="pb-1.5">
-          <WorldSidebarHeader worldSlug={worldSlug} worldName={worldName} campaignName={campaignName} />
-        </div>
-        <SectionToggle worldSlug={worldSlug} />
-        {/* V2.1-16 — la liste des outils defile dans son propre cadre. Elle
-            n'avait aucune zone defilante : les dix-sept outils tenaient par
-            chance sur l'ecran de l'auteur, et allongeaient la page partout
-            ailleurs. `min-h-0` est ce qui autorise cet enfant a descendre
-            sous la taille de son contenu — sans lui, `flex-1` ne borne rien
-            et l'imposerait a son parent. */}
-        <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
-          {tools.map((tool) => (
-            <MjToolLink
-              key={tool.key}
-              worldSlug={worldSlug}
-              toolKey={tool.key}
-              label={tool.label}
-              active={pathname === mjToolHref(worldSlug, tool.key)}
-              badge={tool.key === "chat" ? unreadCount : undefined}
-              onNavigate={() => setOpen(false)}
-            />
-          ))}
-        </div>
-      </aside>
+      <Rail ouvert={open} replie={replie} onBasculer={basculer} classeMobile="gap-1 p-4">
+        <RailPart className="md:min-h-0 md:flex-1">
+          {/* Les 6px de rembourrage haut d'un lien d'outil (`py-1.5`), rendus
+              ici a la main : sans eux, l'ecart VU sous le nom du monde (4px,
+              le `gap-1` seul) etait la moitie de celui vu sous la bascule
+              (4px + ces 6px). Meme espace des deux cotes de la bascule, comme
+              demande — mesure en navigateur, pas devine. Dans le rail
+              (V3.1-27), la barre de sections est faite de lignes de meme
+              hauteur : le correctif n'a plus d'objet. */}
+          <div className="pb-1.5 md:p-2 md:pb-0">
+            <EnTeteRail worldSlug={worldSlug} worldName={worldName} campaignName={campaignName} replie={replie} />
+          </div>
+          <div className="flex flex-col gap-1 md:gap-0.5 md:px-2">
+            <SectionToggle worldSlug={worldSlug} />
+            <SectionRailRows worldSlug={worldSlug} />
+            <RailFilet />
+          </div>
+          {/* V2.1-16 — la liste des outils defile dans son propre cadre. Elle
+              n'avait aucune zone defilante : les dix-sept outils tenaient par
+              chance sur l'ecran de l'auteur, et allongeaient la page partout
+              ailleurs. `min-h-0` est ce qui autorise cet enfant a descendre
+              sous la taille de son contenu — sans lui, `flex-1` ne borne rien
+              et l'imposerait a son parent. */}
+          <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto md:gap-0.5 md:overflow-x-hidden md:p-2">
+            {replie ? (
+              // Replie : une seule ligne « Outils », dont le menu flottant liste les outils.
+              <RailRow
+                icone={<IconeRail nom="outils" />}
+                libelle={tShell("outils")}
+                badge={unreadCount}
+                actif={tools.some((tool) => pathname === mjToolHref(worldSlug, tool.key))}
+                menu={(fermer) =>
+                  tools.map((tool) => (
+                    <MjToolLink
+                      key={tool.key}
+                      worldSlug={worldSlug}
+                      toolKey={tool.key}
+                      label={tool.label}
+                      active={pathname === mjToolHref(worldSlug, tool.key)}
+                      badge={tool.key === "chat" ? unreadCount : undefined}
+                      onNavigate={fermer}
+                      dansMenu
+                    />
+                  ))
+                }
+              />
+            ) : (
+              tools.map((tool) => (
+                <MjToolLink
+                  key={tool.key}
+                  worldSlug={worldSlug}
+                  toolKey={tool.key}
+                  label={tool.label}
+                  active={pathname === mjToolHref(worldSlug, tool.key)}
+                  badge={tool.key === "chat" ? unreadCount : undefined}
+                  onNavigate={() => setOpen(false)}
+                />
+              ))
+            )}
+          </div>
+        </RailPart>
+        <OutilsDalle worldSlug={worldSlug} />
+      </Rail>
     </>
   );
 }

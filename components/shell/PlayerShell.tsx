@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import RadioWidget from "./RadioWidget";
+import { OutilsDalle, Rail, RailPart, RailRow, TraitSvg, useRailReplie } from "./Rail";
 import { useChatUnread } from "./useChatUnread";
 import NextSessionBadge, { type ProchaineSession } from "./scheduling/NextSessionBadge";
 
@@ -60,6 +60,7 @@ export default function PlayerShell({
   const t = useTranslations("shell");
   const base = `/m/${worldSlug}/joueur`;
   const { unreadCount } = useChatUnread();
+  const { replie, basculer } = useRailReplie();
 
   const destinations: Destination[] = [
     { href: base, label: "Personnage", icon: "user", match: (p) => p === base },
@@ -87,55 +88,99 @@ export default function PlayerShell({
     // Les deux retours d'origine restent tenus ("la sidebar prend toute la
     // hauteur", "la partie centrale ne defile pas avec le sommaire").
     <div className="flex h-full min-h-0 w-full flex-col-reverse md:flex-row">
-      <nav className="flex shrink-0 justify-around border-t border-edge bg-panel md:w-20 md:flex-col md:justify-start md:border-t-0 md:border-r print:hidden">
-        <Link
-          href={`${base}/accueil`}
-          className="hidden shrink-0 truncate border-b border-edge px-2 py-3 text-center text-xs font-semibold text-ink transition-colors hover:text-accent md:block"
-        >
-          {worldName}
-        </Link>
-
-        {/* Retour utilisateur : "pas d'ascenseur ... plutot une adaptation de
-            la taille des boutons" — remplace `overflow-y-auto` par un
-            dimensionnement fluide (icone/marges/texte en `clamp(.., vh, ..)`)
-            qui retrecit avec la hauteur disponible plutot que de deborder.
-            `md:min-h-0` : necessaire pour qu'un enfant `flex-1` accepte de
-            descendre sous sa taille de contenu (sinon il l'impose au parent
-            malgre `flex-1`, memes causes que le commentaire de hauteur plus haut). */}
-        <div className="flex flex-1 justify-around md:min-h-0 md:flex-col md:items-center md:justify-start md:gap-[clamp(0px,0.8vh,4px)] md:p-2">
-          {destinations.map((d) => {
-            const active = d.match(pathname);
-            const badge = d.icon === "chat" ? unreadCount : 0;
-            return (
+      {/* V3.1-27 : a partir de 768 px la colonne de 80 px devient le rail
+          flottant commun (parties arrondies, repliable, dalle « Outils »).
+          Sous 768 px, la barre d'onglets du bas est exactement celle d'avant. */}
+      <Rail ouvert={false} replie={replie} onBasculer={basculer} barreBasse classeMobile="print:hidden">
+        <RailPart className="md:min-h-0 md:flex-1">
+          <div className="hidden shrink-0 items-center gap-2.5 px-[14px] py-3 md:flex">
+            <Link
+              href={`${base}/accueil`}
+              title={worldName}
+              aria-label={worldName}
+              className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-lg bg-accent text-xs font-bold text-accent-ink"
+            >
+              {worldName.trim().charAt(0).toUpperCase() || "?"}
+            </Link>
+            {!replie && (
               <Link
-                key={d.href}
-                href={d.href}
-                className={`relative flex flex-col items-center gap-[clamp(0px,0.5vh,4px)] rounded-md px-2 py-2 text-[11px] transition-colors md:py-[clamp(2px,1.1vh,12px)] md:text-[clamp(8px,1.3vh,11px)] ${
-                  active ? "text-accent" : "text-ink-muted hover:text-ink"
-                }`}
+                href={`${base}/accueil`}
+                className="min-w-0 flex-1 truncate font-chrome text-sm font-semibold text-ink transition-colors hover:text-accent"
               >
-                <span className="relative block h-5 w-5 shrink-0 md:h-[clamp(14px,2.6vh,20px)] md:w-[clamp(14px,2.6vh,20px)]">
-                  <Icon name={d.icon} />
-                  {badge > 0 && (
-                    <span className="absolute -right-1.5 -top-1.5 rounded-full bg-accent px-1 text-[9px] font-semibold leading-tight text-accent-ink">
-                      {badge}
-                    </span>
-                  )}
-                </span>
-                {d.label}
+                {worldName}
               </Link>
-            );
-          })}
-          <NextSessionBadge worldSlug={worldSlug} prochaineSession={prochaineSession} />
-        </div>
+            )}
+          </div>
 
-        <div className="hidden shrink-0 flex-col items-center gap-2 border-t border-edge p-3 md:flex">
-          <RadioWidget worldSlug={worldSlug} />
-          <Link href="/" className="text-center text-xs text-ink-muted hover:text-ink">
-            {t("mesMondes")}
-          </Link>
-        </div>
-      </nav>
+          {/* Retour utilisateur : "pas d'ascenseur ... plutot une adaptation de
+              la taille des boutons" — sous 768 px, dimensionnement fluide
+              (icone/marges/texte en `clamp(.., vh, ..)`) plutot que
+              `overflow-y-auto`. Dans le rail (V3.1-27), les lignes ont une
+              hauteur fixe et la liste defile (`overflow-y-auto` ET
+              `overflow-x-hidden`, sinon une barre horizontale apparait
+              pendant l'animation de largeur). `md:min-h-0` : necessaire pour
+              qu'un enfant `flex-1` accepte de descendre sous sa taille de
+              contenu (memes causes que le commentaire de hauteur plus haut). */}
+          <div className="flex flex-1 justify-around md:min-h-0 md:flex-col md:items-center md:justify-start md:gap-0.5 md:overflow-y-auto md:overflow-x-hidden md:p-2">
+            <div className="contents md:hidden">
+              {destinations.map((d) => {
+                const active = d.match(pathname);
+                const badge = d.icon === "chat" ? unreadCount : 0;
+                return (
+                  <Link
+                    key={d.href}
+                    href={d.href}
+                    className={`relative flex flex-col items-center gap-[clamp(0px,0.5vh,4px)] rounded-md px-2 py-2 text-[11px] transition-colors ${
+                      active ? "text-accent" : "text-ink-muted hover:text-ink"
+                    }`}
+                  >
+                    <span className="relative block h-5 w-5 shrink-0">
+                      <Icon name={d.icon} />
+                      {badge > 0 && (
+                        <span className="absolute -right-1.5 -top-1.5 rounded-full bg-accent px-1 text-[9px] font-semibold leading-tight text-accent-ink">
+                          {badge}
+                        </span>
+                      )}
+                    </span>
+                    {d.label}
+                  </Link>
+                );
+              })}
+            </div>
+            <div className="hidden w-full flex-col gap-0.5 md:flex">
+              {destinations.map((d) => (
+                <RailRow
+                  key={d.href}
+                  href={d.href}
+                  icone={<Icon name={d.icon} />}
+                  libelle={d.label}
+                  actif={d.match(pathname)}
+                  badge={d.icon === "chat" ? unreadCount : undefined}
+                />
+              ))}
+            </div>
+            {/* Une seule instance : le composant porte lui-meme ses deux
+                presentations (icone sous 768 px, banniere verticale au-dessus).
+                Replie, la banniere n'aurait pas la place : elle disparait. */}
+            {!replie && <NextSessionBadge worldSlug={worldSlug} prochaineSession={prochaineSession} />}
+          </div>
+
+          <div className="hidden shrink-0 border-t border-edge p-2 md:block">
+            <RailRow
+              href="/"
+              icone={
+                <TraitSvg>
+                  <path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4" />
+                  <path d="M10 8l-4 4 4 4" />
+                  <path d="M6 12h10" />
+                </TraitSvg>
+              }
+              libelle={t("mesMondes")}
+            />
+          </div>
+        </RailPart>
+        <OutilsDalle worldSlug={worldSlug} />
+      </Rail>
       {/* Chaque page choisit sa propre largeur (retour utilisateur, suite) :
           Personnage/Fiche se centrent (confort de lecture du wiki public,
           `BookSkin.tsx`), Wiki/Regles/Notes gerent eux-memes leur propre

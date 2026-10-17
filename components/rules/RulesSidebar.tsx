@@ -8,8 +8,9 @@ import type { RuleEntrySummary } from "@/src/server/services/rules";
 import { useOpenRuleLink } from "@/components/shell/useOpenRuleLink";
 import { useOpenRuleToolLink } from "@/components/shell/useOpenRuleToolLink";
 import { useCollapsedGroups } from "@/components/shell/useCollapsedGroups";
-import SectionToggle from "@/components/shell/SectionToggle";
-import WorldSidebarHeader from "@/components/shell/WorldSidebarHeader";
+import { classeItemFlyout, IconeRail, OutilsDalle, Rail, RailFilet, RailPart, RailRow, TraitSvg, useRailReplie } from "@/components/shell/Rail";
+import SectionToggle, { SectionRailRows } from "@/components/shell/SectionToggle";
+import { EnTeteRail } from "@/components/shell/WorldSidebarHeader";
 import { useWorldRuleEntries } from "@/components/blocks/useWorldRuleEntries";
 import AddRuleMenu from "@/components/rules/AddRuleMenu";
 
@@ -46,6 +47,73 @@ function RuleEntryLink({
       {disambiguation && <span className="ml-1 text-xs text-ink-muted">— {disambiguation}</span>}
     </Link>
   );
+}
+
+/** Entree d'un menu de categorie (rail replie) : meme lien et meme ouverture de fenetre que dans la liste. */
+function RuleMenuLink({
+  entry,
+  worldSlug,
+  currentKey,
+  fermer,
+  nested,
+}: {
+  entry: RuleEntrySummary;
+  worldSlug: string;
+  currentKey: string | null;
+  fermer: () => void;
+  nested?: boolean;
+}) {
+  const link = useOpenRuleLink(worldSlug, entry.key);
+  return (
+    <Link
+      role="menuitem"
+      href={link.href}
+      onClick={(e) => {
+        link.onClick(e);
+        fermer();
+      }}
+      className={classeItemFlyout(entry.key === currentKey)}
+      style={nested ? { paddingLeft: "20px" } : undefined}
+    >
+      {entry.name}
+    </Link>
+  );
+}
+
+/** Icone de la categorie, rail replie. Un type inconnu retombe sur les livres. */
+function IconeCategorie({ entryType }: { entryType: string }) {
+  switch (entryType) {
+    case "spell":
+      return (
+        <TraitSvg>
+          <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z" />
+        </TraitSvg>
+      );
+    case "class":
+    case "subclass":
+    case "feature":
+      return <IconeRail nom="bouclier" />;
+    case "monster":
+      return (
+        <TraitSvg>
+          <path d="M12 3c3 0 6 2.5 6 6 0 2-1 3-1 5 0 3-2 6-5 7-3-1-5-4-5-7 0-2-1-3-1-5 0-3.5 3-6 6-6Z" />
+          <path d="M9.5 10h.01M14.5 10h.01" />
+        </TraitSvg>
+      );
+    case "item":
+    case "weapon":
+    case "armor":
+    case "magic_item":
+    case "mount":
+      return (
+        <TraitSvg>
+          <path d="M5 8h14l-1 12H6L5 8Z" />
+          <path d="M9 8V6a3 3 0 0 1 6 0v2" />
+        </TraitSvg>
+      );
+    default:
+      return <IconeRail nom="livres" />;
+  }
 }
 
 /**
@@ -141,6 +209,8 @@ function RuleTypeGroup({
 export default function RulesSidebar({ worldSlug, worldName }: { worldSlug: string; worldName: string }) {
   const entries = useWorldRuleEntries(worldSlug);
   const t = useTranslations("regles");
+  const entryTypeLabels = t.raw("entryTypes") as Record<string, string>;
+  const { replie, basculer } = useRailReplie();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const { isCollapsed, toggle } = useCollapsedGroups(`creadonjon:collapsed:rules:${worldSlug}`);
@@ -244,74 +314,139 @@ export default function RulesSidebar({ worldSlug, worldName }: { worldSlug: stri
         />
       )}
 
-      <aside
-        // V2.1-16 — `md:h-screen` retire, meme raison que `Sidebar.tsx` : la
-        // hauteur vient de la rangee bornee par `AppShell`, pas du viewport.
-        className={`fixed inset-y-0 left-0 z-50 flex w-[280px] shrink-0 flex-col gap-3 border-r border-edge bg-panel-sunken p-4 transition-transform md:static md:z-auto md:translate-x-0 ${
-          open ? "translate-x-0" : "-translate-x-full"
-        }`}
-      >
-        <WorldSidebarHeader worldSlug={worldSlug} worldName={worldName} />
-        <SectionToggle worldSlug={worldSlug} />
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={t("rechercherRegle")}
-          className="rounded-md border border-edge bg-panel-raised px-3 py-1.5 text-sm text-ink outline-none placeholder:text-ink-muted"
-        />
+      <Rail ouvert={open} replie={replie} onBasculer={basculer} classeMobile="gap-3 p-4">
+        <RailPart className="md:min-h-0 md:flex-1">
+          {/* V2.1-16 — `md:h-screen` retire, meme raison que `Sidebar.tsx` : la
+              hauteur vient de la rangee bornee par `AppShell`, pas du viewport.
+              Ce bloc regroupe l'en-tete, les sections et le filtre ; sous 768 px
+              il reproduit l'espacement d'origine (`gap-3`). */}
+          <div className="flex flex-col gap-3 md:gap-0.5 md:p-2 md:pb-0">
+            <EnTeteRail worldSlug={worldSlug} worldName={worldName} replie={replie} />
+            <SectionToggle worldSlug={worldSlug} />
+            <SectionRailRows worldSlug={worldSlug} />
+            <RailFilet />
+            {!replie && (
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={t("rechercherRegle")}
+                className="rounded-md border border-edge bg-panel-raised px-3 py-1.5 text-sm text-ink outline-none placeholder:text-ink-muted md:mt-1"
+              />
+            )}
+          </div>
 
-        <nav aria-label={t("reglesDuMonde")} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
-          {groups.length === 0 && <p className="px-1 text-sm text-ink-muted">{t("aucuneRegleTrouvee")}</p>}
-          {groups.map(([entryType, items]) => (
-            <RuleTypeGroup
-              key={entryType}
-              entryType={entryType}
-              items={items}
-              worldSlug={worldSlug}
-              currentKey={currentKey}
-              onNavigate={() => setOpen(false)}
-              childrenByParent={entryType === "class" ? subclassesByParent : entryType === "species" ? subspeciesByParent : undefined}
-              classNameByKey={entryType === "feature" ? classNameByKey : undefined}
-              collapsed={isCollapsed(entryType)}
-              onToggle={() => toggle(entryType)}
-            />
-          ))}
-        </nav>
+          <nav aria-label={t("reglesDuMonde")} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto md:gap-0.5 md:overflow-x-hidden md:p-2">
+            {groups.length === 0 && <p className="px-1 text-sm text-ink-muted">{t("aucuneRegleTrouvee")}</p>}
+            {replie
+              ? // Replie : une ligne par categorie, dont le menu flottant liste ses regles.
+                groups.map(([entryType, items]) => {
+                  const enfants = entryType === "class" ? subclassesByParent : entryType === "species" ? subspeciesByParent : undefined;
+                  return (
+                    <RailRow
+                      key={entryType}
+                      icone={<IconeCategorie entryType={entryType} />}
+                      libelle={entryTypeLabels[entryType] ?? entryType}
+                      actif={items.some((e) => e.key === currentKey || enfants?.get(e.key)?.some((sub) => sub.key === currentKey))}
+                      menu={(fermer) =>
+                        items.flatMap((entry) => [
+                          <RuleMenuLink key={entry.key} entry={entry} worldSlug={worldSlug} currentKey={currentKey} fermer={fermer} />,
+                          ...(enfants?.get(entry.key) ?? []).map((sub) => (
+                            <RuleMenuLink key={sub.key} entry={sub} worldSlug={worldSlug} currentKey={currentKey} fermer={fermer} nested />
+                          )),
+                        ])
+                      }
+                    />
+                  );
+                })
+              : groups.map(([entryType, items]) => (
+                  <RuleTypeGroup
+                    key={entryType}
+                    entryType={entryType}
+                    items={items}
+                    worldSlug={worldSlug}
+                    currentKey={currentKey}
+                    onNavigate={() => setOpen(false)}
+                    childrenByParent={entryType === "class" ? subclassesByParent : entryType === "species" ? subspeciesByParent : undefined}
+                    classNameByKey={entryType === "feature" ? classNameByKey : undefined}
+                    collapsed={isCollapsed(entryType)}
+                    onToggle={() => toggle(entryType)}
+                  />
+                ))}
+          </nav>
 
-        <div className="flex flex-col gap-2 border-t border-edge pt-3">
-          <AddRuleMenu
-            label={t("ajouterUneRegle")}
-            onNavigate={() => setOpen(false)}
-            items={[
-              { href: openNouvelleArme.href, label: t("creerArmeMaison"), onClick: openNouvelleArme.onClick },
-              { href: openNouvelHistorique.href, label: t("creerHistoriqueMaison"), onClick: openNouvelHistorique.onClick },
-              { href: openNouveauDon.href, label: t("creerDonMaison"), onClick: openNouveauDon.onClick },
-              { href: openNouvelleSousClasse.href, label: t("creerSousClasseMaison"), onClick: openNouvelleSousClasse.onClick },
-              { href: openNouveauSort.href, label: t("creerSortMaison"), onClick: openNouveauSort.onClick },
-            ]}
-          />
-          <Link
-            href={openBacASable.href}
-            onClick={(e) => {
-              openBacASable.onClick(e);
-              setOpen(false);
-            }}
-            className="block w-full rounded-full border border-edge px-4 py-2 text-center text-sm font-medium text-ink transition-colors hover:bg-panel-raised"
-          >
-            {t("bacASable")}
-          </Link>
-          <Link
-            href={openBacASableDeclencheurs.href}
-            onClick={(e) => {
-              openBacASableDeclencheurs.onClick(e);
-              setOpen(false);
-            }}
-            className="block w-full rounded-full border border-edge px-4 py-2 text-center text-sm font-medium text-ink transition-colors hover:bg-panel-raised"
-          >
-            {t("bacASableDeclencheurs")}
-          </Link>
-        </div>
-      </aside>
+          <div className="flex flex-col gap-2 border-t border-edge pt-3 md:border-0 md:p-2 md:pt-0">
+            {replie ? (
+              // Replie, le menu deroulant et les deux boutons de bas de liste
+              // tiendraient mal dans 64 px : une ligne en pointilles, dont le menu
+              // reprend les memes sept liens.
+              <RailRow
+                pointille
+                icone={<IconeRail nom="plus" />}
+                libelle={t("ajouterUneRegle")}
+                menu={(fermer) =>
+                  [
+                    { cle: "arme", etiquette: t("creerArmeMaison"), lien: openNouvelleArme },
+                    { cle: "historique", etiquette: t("creerHistoriqueMaison"), lien: openNouvelHistorique },
+                    { cle: "don", etiquette: t("creerDonMaison"), lien: openNouveauDon },
+                    { cle: "sous-classe", etiquette: t("creerSousClasseMaison"), lien: openNouvelleSousClasse },
+                    { cle: "sort", etiquette: t("creerSortMaison"), lien: openNouveauSort },
+                    { cle: "bac", etiquette: t("bacASable"), lien: openBacASable },
+                    { cle: "declencheurs", etiquette: t("bacASableDeclencheurs"), lien: openBacASableDeclencheurs },
+                  ].map(({ cle, etiquette, lien }) => (
+                    <Link
+                      key={cle}
+                      role="menuitem"
+                      href={lien.href}
+                      onClick={(e) => {
+                        lien.onClick(e);
+                        fermer();
+                      }}
+                      className={classeItemFlyout(false)}
+                    >
+                      {etiquette}
+                    </Link>
+                  ))
+                }
+              />
+            ) : (
+              <>
+                <AddRuleMenu
+                  label={t("ajouterUneRegle")}
+                  onNavigate={() => setOpen(false)}
+                  items={[
+                    { href: openNouvelleArme.href, label: t("creerArmeMaison"), onClick: openNouvelleArme.onClick },
+                    { href: openNouvelHistorique.href, label: t("creerHistoriqueMaison"), onClick: openNouvelHistorique.onClick },
+                    { href: openNouveauDon.href, label: t("creerDonMaison"), onClick: openNouveauDon.onClick },
+                    { href: openNouvelleSousClasse.href, label: t("creerSousClasseMaison"), onClick: openNouvelleSousClasse.onClick },
+                    { href: openNouveauSort.href, label: t("creerSortMaison"), onClick: openNouveauSort.onClick },
+                  ]}
+                />
+                <Link
+                  href={openBacASable.href}
+                  onClick={(e) => {
+                    openBacASable.onClick(e);
+                    setOpen(false);
+                  }}
+                  className="block w-full rounded-full border border-edge px-4 py-2 text-center text-sm font-medium text-ink transition-colors hover:bg-panel-raised"
+                >
+                  {t("bacASable")}
+                </Link>
+                <Link
+                  href={openBacASableDeclencheurs.href}
+                  onClick={(e) => {
+                    openBacASableDeclencheurs.onClick(e);
+                    setOpen(false);
+                  }}
+                  className="block w-full rounded-full border border-edge px-4 py-2 text-center text-sm font-medium text-ink transition-colors hover:bg-panel-raised"
+                >
+                  {t("bacASableDeclencheurs")}
+                </Link>
+              </>
+            )}
+          </div>
+        </RailPart>
+        <OutilsDalle worldSlug={worldSlug} />
+      </Rail>
     </>
   );
 }

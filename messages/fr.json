@@ -39,7 +39,15 @@
       "event": "Événement",
       "carte": "Carte",
       "other": "Autre"
-    }
+    },
+    "replierMenu": "Replier le menu",
+    "deplierMenu": "Déplier le menu",
+    "ouvrirVoletDes": "Ouvrir le volet de lancer de dés",
+    "outils": "Outils",
+    "radio": "Radio",
+    "radioEnLecture": "Radio : en lecture",
+    "radioArretee": "Radio : à l'arrêt",
+    "nouvelleEntiteRail": "Nouvelle entité"
   },
   "monde": {
     "nouvellesAventures": "Nouvelles aventures",
