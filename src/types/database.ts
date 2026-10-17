@@ -2405,7 +2405,7 @@ export type Database = {
           effect: Json
           id: string
           label: string
-          natural: number | null
+          natural_roll: number | null
           origin_roll_id: string | null
           status: string
           target_entity_id: string | null
@@ -2426,7 +2426,7 @@ export type Database = {
           effect: Json
           id?: string
           label: string
-          natural?: number | null
+          natural_roll?: number | null
           origin_roll_id?: string | null
           status?: string
           target_entity_id?: string | null
@@ -2447,7 +2447,7 @@ export type Database = {
           effect?: Json
           id?: string
           label?: string
-          natural?: number | null
+          natural_roll?: number | null
           origin_roll_id?: string | null
           status?: string
           target_entity_id?: string | null

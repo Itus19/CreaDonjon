@@ -19,7 +19,7 @@ export interface SaveRequestRow {
   dc: number;
   effect: Json;
   status: string;
-  natural: number | null;
+  natural_roll: number | null;
   total: number | null;
   answered_by: string | null;
   created_at: string;
@@ -27,7 +27,7 @@ export interface SaveRequestRow {
 }
 
 const SAVE_REQUEST_COLUMNS =
-  "id, campaign_id, combat_id, origin_roll_id, author_user_id, target_kind, target_id, target_entity_id, target_user_id, label, ability, dc, effect, status, natural, total, answered_by, created_at, answered_at";
+  "id, campaign_id, combat_id, origin_roll_id, author_user_id, target_kind, target_id, target_entity_id, target_user_id, label, ability, dc, effect, status, natural_roll, total, answered_by, created_at, answered_at";
 
 /** V3.1-111 (ADR 0044) : la demande. `author_user_id` est posé par la base (`auth.uid()`), la RLS réserve la création au MJ. */
 export async function insertSaveRequest(

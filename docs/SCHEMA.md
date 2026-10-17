@@ -791,7 +791,7 @@ create table save_requests (
   target_entity_id null, target_user_id null (le joueur qui répond ; null : le MJ),
   label, ability ('str'..'cha'), dc (1-40),
   effect jsonb,            -- zSaveRequestEffect : { on_fail, on_success } { damage, damage_type?, conditions[] }, figé à la demande
-  status ('pending'|'answered'|'cancelled'), natural null (1-20), total null (-10-60),
+  status ('pending'|'answered'|'cancelled'), natural_roll null (1-20), total null (-10-60),
   answered_by null, created_at, answered_at null
 );
 ```

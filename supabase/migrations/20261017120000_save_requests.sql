@@ -21,7 +21,7 @@ create table save_requests (
   dc               int not null check (dc between 1 and 40),
   effect           jsonb not null,                                          -- zSaveRequestEffect, validé par le serveur
   status           text not null default 'pending' check (status in ('pending', 'answered', 'cancelled')),
-  natural          int check (natural between 1 and 20),
+  natural_roll     int check (natural_roll between 1 and 20),       -- le d20 de la réponse (« natural » est un mot réservé)
   total            int check (total between -10 and 60),
   answered_by      uuid references auth.users(id) on delete set null,
   created_at       timestamptz not null default now(),
@@ -85,7 +85,7 @@ begin
   end if;
 
   update save_requests
-     set natural = p_natural, total = p_total, status = 'answered', answered_by = v_uid, answered_at = now()
+     set natural_roll = p_natural, total = p_total, status = 'answered', answered_by = v_uid, answered_at = now()
    where id = p_request
    returning * into v_row;
   return to_jsonb(v_row);
