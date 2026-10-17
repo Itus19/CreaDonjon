@@ -2855,6 +2855,10 @@ export type Database = {
         Args: { p_handle_name: string }
         Returns: undefined
       }
+      set_own_initiative: {
+        Args: { p_participant: string; p_value: number }
+        Returns: Json
+      }
       resolve_campaign_invite: {
         Args: { p_token: string }
         Returns: {

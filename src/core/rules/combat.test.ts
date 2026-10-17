@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { EmptyCombatError, abilityModifier, advanceTurn, retreatTurn, rollInitiative, sortByInitiative, startCombat } from "./combat";
+import {
+  EmptyCombatError,
+  abilityModifier,
+  advanceTurn,
+  isOwnInitiativeInRange,
+  ownInitiativeFromDie,
+  retreatTurn,
+  rollInitiative,
+  sortByInitiative,
+  startCombat,
+} from "./combat";
 import { SeededRng } from "../dice/rng";
 
 describe("sortByInitiative", () => {
@@ -99,5 +109,23 @@ describe("rollInitiative", () => {
     expect(a).toBe(b);
     expect(a).toBeGreaterThanOrEqual(1 + 3);
     expect(a).toBeLessThanOrEqual(20 + 3);
+  });
+});
+
+describe("initiative annoncée par un joueur (V3.1-103, ADR 0040)", () => {
+  it("vrai dé, modificateur non compris : le serveur ajoute la Dextérité", () => {
+    expect(ownInitiativeFromDie({ natural: 14, modifierIncluded: false }, 3)).toBe(17);
+  });
+
+  it("vrai dé, total déjà annoncé : la valeur telle quelle", () => {
+    expect(ownInitiativeFromDie({ natural: 17, modifierIncluded: true }, 3)).toBe(17);
+  });
+
+  it("bornes de la base : −10 à 40", () => {
+    expect(isOwnInitiativeInRange(-10)).toBe(true);
+    expect(isOwnInitiativeInRange(40)).toBe(true);
+    expect(isOwnInitiativeInRange(-11)).toBe(false);
+    expect(isOwnInitiativeInRange(41)).toBe(false);
+    expect(isOwnInitiativeInRange(2.5)).toBe(false);
   });
 });

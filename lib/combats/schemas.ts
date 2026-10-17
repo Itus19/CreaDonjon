@@ -16,7 +16,7 @@ export const createCombatSchema = z.object({
 export const patchCombatSchema = z
   .object({
     name: z.string().trim().max(200).nullable().optional(),
-    status: z.enum(["draft", "running", "ended"]).optional(),
+    status: z.enum(["draft", "rolling", "running", "ended"]).optional(),
   })
   .refine((data) => data.name !== undefined || data.status !== undefined, { message: "Rien à modifier." });
 
@@ -49,3 +49,20 @@ export const patchParticipantSchema = z.object({
   concentration: z.object({ label: z.string().trim().min(1) }).nullable().optional(),
   note: z.string().trim().min(1).max(200),
 });
+
+/**
+ * V3.1-103 (ADR 0040) — une joueuse écrit l'initiative de son PJ pendant les
+ * jets. « roll » : le serveur tire (règle 8). « die » : le dé de la table ;
+ * `natural` est le d20 (1 à 20), ou le total déjà annoncé si
+ * `modifierIncluded` (borné comme en base, −10 à 40).
+ */
+export const myInitiativeSchema = z.discriminatedUnion("mode", [
+  z.object({ mode: z.literal("roll") }),
+  z
+    .object({ mode: z.literal("die"), natural: z.number().int().min(-10).max(40), modifierIncluded: z.boolean() })
+    .refine((v) => v.modifierIncluded || (v.natural >= 1 && v.natural <= 20), {
+      message: "Un d20 naturel va de 1 à 20.",
+      path: ["natural"],
+    }),
+]);
+export type MyInitiativeInput = z.infer<typeof myInitiativeSchema>;

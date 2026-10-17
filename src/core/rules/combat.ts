@@ -18,6 +18,24 @@ export function rollInitiative(dexModifier: number, rng: Rng): number {
   return rng.nextInt(20) + 1 + dexModifier;
 }
 
+/** Bornes d'une initiative écrite par un joueur (V3.1-103) — les mêmes que `public.set_own_initiative`, qui les revérifie. */
+export const OWN_INITIATIVE_MIN = -10;
+export const OWN_INITIATIVE_MAX = 40;
+
+export function isOwnInitiativeInRange(value: number): boolean {
+  return Number.isInteger(value) && value >= OWN_INITIATIVE_MIN && value <= OWN_INITIATIVE_MAX;
+}
+
+/**
+ * Initiative annoncée avec un vrai dé (V3.1-103, ADR 0040) : le joueur donne
+ * son d20 naturel et le serveur ajoute le modificateur de la fiche — ou il a
+ * déjà fait l'addition (`modifierIncluded`), et la valeur passe telle quelle.
+ * Le serveur ne tire rien : le dé a roulé sur la table (« annoncé à la main »).
+ */
+export function ownInitiativeFromDie(die: { natural: number; modifierIncluded: boolean }, dexModifier: number): number {
+  return die.modifierIncluded ? die.natural : die.natural + dexModifier;
+}
+
 export class EmptyCombatError extends Error {
   constructor() {
     super("Un combat sans participant n'a pas d'ordre du tour.");

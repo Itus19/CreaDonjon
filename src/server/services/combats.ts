@@ -152,11 +152,23 @@ interface CombatEventPayload {
   triggers?: unknown;
 }
 
-/** Journalise une modification de combat (specs/outils-mj.md §5.3) — rien a journaliser sans session ouverte (jamais le cas en pratique, une session s'ouvre au premier jet de la campagne). */
-async function journalCombatEvent(
+/**
+ * Journalise une modification de combat (specs/outils-mj.md §5.3) — rien a journaliser sans session ouverte (jamais le cas en pratique, une session s'ouvre au premier jet de la campagne).
+ * `actor` : `gm` par defaut ; `player` pour l'initiative qu'une joueuse ecrit elle-meme (V3.1-103).
+ */
+export async function journalCombatEvent(
   supabase: TypedClient,
   combat: CombatRow,
-  params: { target: "combat" | "participant"; targetId: string; before: unknown; after: unknown; note: string; actorUserId: string; triggers?: unknown }
+  params: {
+    target: "combat" | "participant";
+    targetId: string;
+    before: unknown;
+    after: unknown;
+    note: string;
+    actorUserId: string;
+    triggers?: unknown;
+    actor?: "gm" | "player";
+  }
 ): Promise<void> {
   if (!combat.session_id) return;
   const seq = await nextEventSeq(supabase, combat.session_id);
@@ -173,7 +185,7 @@ async function journalCombatEvent(
     sessionId: combat.session_id,
     seq,
     kind: "combat",
-    actor: "gm",
+    actor: params.actor ?? "gm",
     actorUserId: params.actorUserId,
     payload: payload as unknown as Json,
   });
@@ -347,7 +359,12 @@ export async function rollAllInitiatives(
   );
 }
 
-const COMBAT_STATUS_LABELS_FR: Record<string, string> = { draft: "Pas engagé", running: "Commencé", ended: "Terminé" };
+const COMBAT_STATUS_LABELS_FR: Record<string, string> = {
+  draft: "Pas engagé",
+  rolling: "Jets d'initiative",
+  running: "Commencé",
+  ended: "Terminé",
+};
 
 /**
  * Change le statut d'un combat — trois valeurs (`draft`/`running`/`ended`),
@@ -360,7 +377,7 @@ const COMBAT_STATUS_LABELS_FR: Record<string, string> = { draft: "Pas engagé", 
  */
 export async function setCombatStatus(
   supabase: TypedClient,
-  params: { combatId: string; status: "draft" | "running" | "ended"; actorUserId: string }
+  params: { combatId: string; status: "draft" | "rolling" | "running" | "ended"; actorUserId: string }
 ): Promise<CombatRow> {
   const combat = await getCombatById(supabase, params.combatId);
   if (!combat) throw new Error("Combat introuvable.");

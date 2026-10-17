@@ -33,3 +33,11 @@ Une migration (politiques, `check`, deux fonctions), `docs/SCHEMA.md`, tests RLS
 - Un adversaire nommé (fiche de PNJ) n'envoie ni sa fiche ni le nom de sa fiche : seulement le `label` choisi par le MJ.
 - `combats.updated_at` est touché par trois déclencheurs par instruction sur `combat_participants` (insertion, modification, suppression) : « lancer toutes les initiatives » ne produit qu'un signal. L'ajout de `combats` à la publication temps réel viendra avec l'écran qui l'écoute (V3.1-38).
 - Service `getPlayerCombatView`, route `GET /api/campaigns/[campaignId]/combats/active/player`.
+
+## Réalisation des jets des joueurs (V3.1-103, 17 octobre 2026)
+
+- `public.set_own_initiative` (et non `app.`, même raison que la vue) renvoie la ligne avant et après : l'écriture d'une joueuse est journalisée comme une saisie du MJ (acteur `player`) et s'annule de la même façon.
+- La joueuse ne lit pas `combat_participants` : le service trouve son participant dans sa vue filtrée (`combat_player_view`).
+- « Lancer » passe par le jet d'initiative de la fiche (`rollInitiativeCheck`) : le jet est enregistré dans `dice_rolls` et attribué (V3.1-89). « Vrai dé » : le d20 de la table, plus la Dextérité de la fiche — ou le total déjà annoncé (`modifierIncluded`).
+- Une joueuse peut réécrire son initiative tant que le MJ n'a pas commencé : relancer à volonté ne lui donne rien de plus qu'annoncer un dé.
+- Écran du MJ : statut « Jets d'initiative », bouton « Demander les jets », « ▶ Commencer » pendant les jets, « ■ Stop » confirmé. La demande, chaque jet, la saisie du MJ et la fin écrivent un `session_events` de genre `combat`.

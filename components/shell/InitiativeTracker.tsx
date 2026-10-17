@@ -11,9 +11,12 @@ import type { CombatDetail, ParticipantCharacteristics } from "@/src/server/serv
 import type { CombatParticipantRow, CombatRow } from "@/src/server/repos/combats";
 import type { EncounterMonsterSummary } from "@/src/server/services/encounters";
 
-const STATUS_LABELS: Record<string, string> = { draft: "Pas engagé", running: "Commencé", ended: "Terminé" };
+// V3.1-103 (ADR 0040) : « Jets d'initiative » entre « Pas engagé » et
+// « Commencé » — chaque joueuse écrit l'initiative de son PJ.
+const STATUS_LABELS: Record<string, string> = { draft: "Pas engagé", rolling: "Jets d'initiative", running: "Commencé", ended: "Terminé" };
 const STATUS_OPTIONS = [
   { value: "draft", label: "Pas engagé" },
+  { value: "rolling", label: "Jets d'initiative" },
   { value: "running", label: "Commencé" },
   { value: "ended", label: "Terminé" },
 ];
@@ -120,6 +123,7 @@ export default function InitiativeTracker({
   const [showAddForm, setShowAddForm] = useState(false);
   /** Suppression d'un combat enregistre : `ConfirmDialog` est asynchrone, il faut donc retenir la cible entre le clic et la confirmation (meme motif que `pendingDeleteId` dans EntityBlocks.tsx). */
   const [pendingDeleteCombatId, setPendingDeleteCombatId] = useState<string | null>(null);
+  const [confirmingEnd, setConfirmingEnd] = useState(false);
   const [addMode, setAddMode] = useState<AddParticipantMode>("statblock");
   const [monsterSearch, setMonsterSearch] = useState("");
   const [customLabel, setCustomLabel] = useState("");
@@ -503,6 +507,17 @@ export default function InitiativeTracker({
           >
             ↶ Annuler
           </button>
+          {combat.status === "draft" && (
+            <button
+              type="button"
+              onClick={() => void patchCombat({ status: "rolling" })}
+              disabled={busy || participants.length === 0}
+              className="rounded-full border border-accent px-3 py-1 text-xs text-accent transition-colors hover:bg-accent/10 disabled:opacity-50"
+              title="Chaque joueuse écrit l'initiative de son personnage"
+            >
+              Demander les jets
+            </button>
+          )}
           {!running ? (
             <button
               type="button"
@@ -510,12 +525,12 @@ export default function InitiativeTracker({
               disabled={busy || participants.length === 0}
               className="rounded-full bg-accent px-4 py-1.5 text-xs font-medium text-accent-ink transition-opacity hover:opacity-90 disabled:opacity-50"
             >
-              ▶ Go
+              {combat.status === "rolling" ? "▶ Commencer" : "▶ Go"}
             </button>
           ) : (
             <button
               type="button"
-              onClick={endCombat}
+              onClick={() => setConfirmingEnd(true)}
               disabled={busy}
               className="rounded-full bg-danger px-4 py-1.5 text-xs font-medium text-accent-ink transition-opacity hover:opacity-90 disabled:opacity-50"
             >
@@ -526,6 +541,19 @@ export default function InitiativeTracker({
       </div>
 
       {error && <p className="text-xs text-danger">{error}</p>}
+
+      <ConfirmDialog
+        open={confirmingEnd}
+        title="Terminer le combat ?"
+        message="Le combat passe à « Terminé » pour toute la table. Tu pourras le rouvrir depuis son statut."
+        confirmLabel="Terminer"
+        danger
+        onConfirm={() => {
+          setConfirmingEnd(false);
+          void endCombat();
+        }}
+        onCancel={() => setConfirmingEnd(false)}
+      />
 
       {running && (
         <div className="flex items-center justify-between rounded-md border border-edge/60 bg-panel-sunken px-4 py-2">
