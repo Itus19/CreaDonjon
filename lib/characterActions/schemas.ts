@@ -89,6 +89,12 @@ export const hpChangeSchema = z.object({
   delta: z.number().int(),
 });
 
+/** V3.1-32 — jet contre la mort : sans `natural`, le serveur lance ; avec, le joueur annonce son vrai d20. */
+export const deathSaveSchema = z.object({
+  campaignId: campaignIdField,
+  natural: z.number().int().min(1).max(20).nullable().default(null),
+});
+
 /** `delta` accepte les deltas negatifs depuis V1-C4 suite (correction manuelle d'une erreur de saisie) — le clampage a 0 minimum reste cote serveur (`changeXp`, characterActions.ts), jamais de XP negative persistee. */
 export const xpChangeSchema = z.object({
   campaignId: campaignIdField,

@@ -5,6 +5,7 @@ import {
   changeHp,
   getOrInitializeRuntimeState,
   resolveCharacterActionContext,
+  rollDeathSaveForCharacter,
   rollWeaponAttack,
   rollWeaponDamage,
   takeLongRest,
@@ -314,5 +315,37 @@ describe.skipIf(!hasCreds)("characterActions (integration, base reelle)", () => 
       locale: "fr",
     });
     expect(result).toEqual({ error: "item_not_found" });
+  });
+  it("V3.1-32 — jets contre la mort : refuses hors de 0 PV, 1 compte deux echecs, 20 relève a 1 PV", async () => {
+    const jet = (natural: number) =>
+      rollDeathSaveForCharacter(admin, { entityId, campaignId, natural, actorUserId: ownerId, locale: "fr" });
+    const etat = async () => {
+      const ctx = await resolveCharacterActionContext(admin, entityId, campaignId, "fr");
+      return (await getOrInitializeRuntimeState(admin, ctx!, { persist: true })).state;
+    };
+
+    await takeLongRest(admin, { entityId, campaignId, actorUserId: ownerId, locale: "fr" });
+    expect(await jet(15)).toEqual({ ok: false, reason: "not_dying" });
+
+    // A 0 PV (dégâts non massifs : 12 PV max, 12 dégâts).
+    await changeHp(admin, { entityId, campaignId, delta: -12, actorUserId: ownerId, locale: "fr" });
+    const un = await jet(1);
+    expect(un).toMatchObject({ ok: true, natural: 1, deathSaves: { success: 0, fail: 2 }, hpCurrent: 0, dead: false });
+
+    const vingt = await jet(20);
+    expect(vingt).toMatchObject({ ok: true, revived: true, hpCurrent: 1, deathSaves: { success: 0, fail: 0 } });
+    const apres = await etat();
+    expect(apres.hp.current).toBe(1);
+    expect(apres.conditions).not.toContain("unconscious");
+
+    // Jet lancé par le serveur : un d20 entre 1 et 20, jamais refusé à 0 PV.
+    await changeHp(admin, { entityId, campaignId, delta: -1, actorUserId: ownerId, locale: "fr" });
+    const serveur = await rollDeathSaveForCharacter(admin, { entityId, campaignId, natural: null, actorUserId: ownerId, locale: "fr" });
+    expect(serveur.ok).toBe(true);
+    if (serveur.ok) {
+      expect(serveur.natural).toBeGreaterThanOrEqual(1);
+      expect(serveur.natural).toBeLessThanOrEqual(20);
+    }
+    await takeLongRest(admin, { entityId, campaignId, actorUserId: ownerId, locale: "fr" });
   });
 });

@@ -20,6 +20,7 @@ import { checkMulticlassEntry, exceedsLevelCap, withinAbilityScoreCap } from "@/
 import { isWorldAdmin } from "@/src/server/services/permissions";
 import {
   resolveAttackRoll,
+  resolveCheckRoll,
   resolveDamageRoll,
   weaponAttackAbilityMod,
   type AdvantageState,
@@ -51,13 +52,14 @@ import { listBlocksForRulesetEntry, type RulesetEntryRow } from "@/src/server/re
 import { entryNameFrom, findEntryInRulesetChain } from "@/src/server/services/rules";
 import { rechargeTrackers } from "@/src/core/rules/resourceRecharge";
 import { naturalD20FromTrace } from "@/src/core/dice/rollAttribution";
+import { parseFormula } from "@/src/core/formula";
 import { assembleResolvedRuleset, resolveCharacterChoices, resolveEquipmentData, type RemainingChoice } from "@/src/server/services/resolvedRuleset";
 import { applyRuntimeStateChange, getEntityRuntimeState } from "@/src/server/services/runtimeState";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
 import { serverRng } from "@/src/server/services/rng";
 import { fireTriggersForCharacter } from "@/src/server/services/triggerRuntime";
 import { applyRestEffects, clearedSpellSlots } from "@/src/core/rules/restEffects";
-import { applyDamageWithDeath, applyHealing, type DeathState } from "@/src/core/rules/deathSaves";
+import { applyDamageWithDeath, applyHealing, isDead, isStabilized, rollDeathSave, type DeathState } from "@/src/core/rules/deathSaves";
 import { grantTempHp, type TempHpChoice } from "@/src/core/rules/tempHp";
 import { zSpellCastingBlockData } from "@/src/core/schemas/rule-blocks/blocks";
 import { setConcentration } from "@/src/server/services/concentration";
@@ -1183,6 +1185,103 @@ export async function changeHp(
     actor: "player",
     actorUserId: params.actorUserId,
   });
+}
+
+export type DeathSaveOutcome =
+  | {
+      ok: true;
+      /** Le d20 lu (lance par le serveur, ou annonce : le vrai de de la table). */
+      natural: number;
+      deathSaves: { success: number; fail: number };
+      hpCurrent: number;
+      /** 20 naturel : 1 PV, debout. */
+      revived: boolean;
+      stabilized: boolean;
+      dead: boolean;
+    }
+  | { ok: false; reason: "not_found" | "not_dying" };
+
+/**
+ * V3.1-32 — un jet contre la mort, depuis la fiche (ADR 0036 §8, regles
+ * 2024 de `rollDeathSave`). Le d20 est LANCE PAR LE SERVEUR (regle 8), sauf
+ * quand le joueur annonce son vrai de (`natural`, meme principe que la
+ * reponse a une sauvegarde demandee). Sans effet — et refuse — hors d'un
+ * personnage a 0 PV encore en jeu (ni stabilise, ni mort). Le jet s'inscrit
+ * dans l'historique des des comme une sauvegarde, puis l'etat de jeu change
+ * par le meme chemin que `changeHp` (journalise, annulable).
+ */
+export async function rollDeathSaveForCharacter(
+  supabase: TypedClient,
+  params: { entityId: string; campaignId: string | null; natural: number | null; actorUserId: string; locale: Locale }
+): Promise<DeathSaveOutcome> {
+  const ctx = await resolveCharacterActionContext(supabase, params.entityId, params.campaignId, params.locale);
+  if (!ctx) return { ok: false, reason: "not_found" };
+  const state = await getEntityRuntimeState(supabase, params.entityId, params.campaignId);
+  const before: DeathState = {
+    hp: { current: state.hp.current, max: ctx.sheet.hitPoints.max, temp: state.hp.temp },
+    conditions: state.conditions,
+    deathSaves: state.death_saves,
+  };
+  if (before.hp.current > 0 || isDead(before) || isStabilized(before)) return { ok: false, reason: "not_dying" };
+
+  let natural: number;
+  let expression: string;
+  let ast: unknown;
+  let trace: Json;
+  if (params.natural === null) {
+    const roll = resolveCheckRoll({ modifier: 0, advantage: "normal" }, serverRng);
+    natural = roll.total;
+    expression = roll.expression;
+    ast = roll.ast;
+    trace = roll.trace as unknown as Json;
+  } else {
+    natural = params.natural;
+    expression = `${natural} (annoncé)`;
+    ast = parseFormula(String(natural));
+    trace = [{ text: "annoncé", value: natural }] as unknown as Json;
+  }
+  const after = rollDeathSave(before, natural);
+  const reussi = natural >= 10;
+
+  const sessionId = params.campaignId ? await getOrOpenSessionForCampaign(supabase, params.campaignId) : null;
+  if (params.campaignId && sessionId) {
+    await insertDiceRoll(supabase, {
+      sessionId,
+      campaignId: params.campaignId,
+      expression,
+      ast: ast as Json,
+      context: { modifier: 0 } as unknown as Json,
+      result: natural,
+      detail: { who: ctx.entityName, what: "Jet contre la mort", dc: 10, verdict: reussi ? "success" : "fail", trace } as unknown as Json,
+      rolledBy: "player",
+      visibilityLevel: "public",
+      attribution: { entityId: params.entityId, kind: "save", naturalD20: natural },
+    });
+  }
+
+  await applyRuntimeStateChange(supabase, {
+    entityId: params.entityId,
+    campaignId: params.campaignId,
+    patch: {
+      hp: { current: after.hp.current, temp: after.hp.temp },
+      conditions: after.conditions,
+      death_saves: after.deathSaves,
+    },
+    note: `Jet contre la mort : ${natural}`,
+    sessionId,
+    actor: "player",
+    actorUserId: params.actorUserId,
+  });
+
+  return {
+    ok: true,
+    natural,
+    deathSaves: after.deathSaves,
+    hpCurrent: after.hp.current,
+    revived: after.hp.current > 0,
+    stabilized: isStabilized(after),
+    dead: isDead(after),
+  };
 }
 
 /**
