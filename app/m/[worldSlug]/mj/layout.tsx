@@ -58,7 +58,7 @@ export default async function MjLayout({
   return (
     <>
       <MjSidebar worldSlug={worldSlug} worldName={world.name} campaignName={campaignName} />
-      <WindowsDesktop worldSlug={worldSlug}>{children}</WindowsDesktop>
+      <WindowsDesktop>{children}</WindowsDesktop>
     </>
   );
 }

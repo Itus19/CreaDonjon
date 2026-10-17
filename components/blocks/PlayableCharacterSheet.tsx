@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/blocks/inventory";
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
@@ -9,6 +9,7 @@ import { SKILL_ABILITIES, type Ability } from "@/src/core/rules/sheet";
 import { XP_LEVEL_THRESHOLDS, hasReachedNextLevel } from "@/src/core/rules/experience";
 import { applyDamageToHp } from "@/src/core/rules/tempHp";
 import { pvSousUnTiers } from "@/lib/ui/commandeE";
+import { resumerCompetences } from "@/lib/ui/resumeCompetences";
 import type { RuntimeState } from "@/src/core/schemas/runtimeState";
 import type { AdvantageState } from "@/src/core/rules/action";
 import { useCharacterSheetContext } from "./useCharacterSheetContext";
@@ -120,6 +121,9 @@ export default function PlayableCharacterSheet({
   // les hooks de ce composant (react-hooks/rules-of-hooks) — il vit plus
   // bas, juste apres le dernier `useEffect`.
   const [levelUpOpen, setLevelUpOpen] = useState(false);
+  // V3.1-29 : sous 40rem de fiche, les competences sont une ligne repliable, fermee par defaut.
+  const [competencesOuvertes, setCompetencesOuvertes] = useState(false);
+  const idCompetences = useId();
 
   /** V2-M11 : jets de test/competence/sauvegarde/initiative depuis cette fiche — alimentent le volet, jamais un second affichage local (voir CLAUDE.md, "resultats de des uniquement dans ce volet"). */
   const { rollAbility, rollSkill, rollSave, rollInitiative } = useDiceRoll();
@@ -394,6 +398,9 @@ export default function PlayableCharacterSheet({
   const xpCurrent = runtimeState?.xp ?? 0;
   const xpPct = xpCeiling > xpFloor ? Math.min(100, Math.max(0, ((xpCurrent - xpFloor) / (xpCeiling - xpFloor)) * 100)) : 100;
   const canLevelUp = hasReachedNextLevel(totalLevel, xpCurrent);
+  const resume = resumerCompetences(
+    SORTED_SKILLS.map((skill) => ({ nom: SKILL_LABELS_FR[skill], mod: sheet.skills[skill].mod, proficiency: sheet.skills[skill].proficiency }))
+  );
 
   return (
     <div className="@container mb-4 flex flex-col gap-3 rounded-md border border-edge/60 bg-panel-raised p-3">
@@ -491,118 +498,146 @@ export default function PlayableCharacterSheet({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">
+            {/*
+              V3.1-29 — étroit (moins de 40rem de FICHE) : une ligne « Compétences »
+              repliable, fermée par défaut, avec son résumé à droite. Large : le
+              titre et la liste d'avant, toujours visibles, bouton masqué.
+            */}
+            <button
+              type="button"
+              onClick={() => setCompetencesOuvertes((v) => !v)}
+              aria-expanded={competencesOuvertes}
+              aria-controls={idCompetences}
+              className="flex w-full items-center justify-between gap-2 rounded-lg border border-edge/60 bg-panel-raised px-3 py-2.5 text-left @min-[40rem]:hidden"
+            >
+              <span className="text-sm font-semibold text-ink">Compétences</span>
+              <span className="min-w-0 truncate text-xs text-ink-muted">
+                {competencesOuvertes
+                  ? "replier ▴"
+                  : `${resume.maitrisees} ${resume.maitrisees > 1 ? "maîtrisées" : "maîtrisée"}${
+                      resume.meilleure ? ` · ${resume.meilleure.nom} ${resume.meilleure.mod >= 0 ? "+" : ""}${resume.meilleure.mod}` : ""
+                    } ▾`}
+              </span>
+            </button>
+            <span className="hidden text-[10px] font-bold uppercase tracking-widest text-ink-muted @min-[40rem]:block">
               Compétences · maîtrise {sheet.proficiencyBonus >= 0 ? "+" : ""}
               {sheet.proficiencyBonus}
             </span>
-            {remainingChoices.some((c) => c.kind === "skill") && (
-              <div className="flex flex-col gap-0.5">
-                {remainingChoices
-                  .filter((c) => c.kind === "skill")
-                  .map((choice) => {
-                    const chosen = (character.choices[choice.id] as string[] | undefined) ?? [];
-                    return (
-                      <p key={choice.id} className="text-xs text-ink-muted">
-                        {choice.label} : {chosen.length}/{choice.count} choisie(s) — cliquez les ronds clairs ci-dessous
-                      </p>
-                    );
-                  })}
-              </div>
-            )}
-            <div className="flex flex-col gap-1">
-              {SORTED_SKILLS.map((skill) => {
-                const result = sheet.skills[skill];
-                const choice = skillChoices.get(skill);
-                const chosenForChoice = choice ? ((character.choices[choice.id] as string[] | undefined) ?? []) : [];
-                const isChosen = choice ? chosenForChoice.includes(skill) : false;
-                // Deja maitrisee par une autre source (retour utilisateur,
-                // V2-G1) : voir le commentaire jumeau dans
-                // `RemainingChoicesStep.tsx` (assistant de creation), meme
-                // logique ici pour un choix de competence encore ouvert sur
-                // la fiche jouable (montee de niveau future).
-                const alreadyGrantedElsewhere = choice ? !isChosen && result.proficiency !== "none" : false;
-                const canPick = choice ? isChosen || (chosenForChoice.length < choice.count && !alreadyGrantedElsewhere) : false;
+            <div
+              id={idCompetences}
+              className={`flex-col gap-1.5 @min-[40rem]:flex ${competencesOuvertes ? "flex" : "hidden"}`}
+            >
+              {remainingChoices.some((c) => c.kind === "skill") && (
+                <div className="flex flex-col gap-0.5">
+                  {remainingChoices
+                    .filter((c) => c.kind === "skill")
+                    .map((choice) => {
+                      const chosen = (character.choices[choice.id] as string[] | undefined) ?? [];
+                      return (
+                        <p key={choice.id} className="text-xs text-ink-muted">
+                          {choice.label} : {chosen.length}/{choice.count} choisie(s) — cliquez les ronds clairs ci-dessous
+                        </p>
+                      );
+                    })}
+                </div>
+              )}
+              <div className="flex flex-col gap-1">
+                {SORTED_SKILLS.map((skill) => {
+                  const result = sheet.skills[skill];
+                  const choice = skillChoices.get(skill);
+                  const chosenForChoice = choice ? ((character.choices[choice.id] as string[] | undefined) ?? []) : [];
+                  const isChosen = choice ? chosenForChoice.includes(skill) : false;
+                  // Deja maitrisee par une autre source (retour utilisateur,
+                  // V2-G1) : voir le commentaire jumeau dans
+                  // `RemainingChoicesStep.tsx` (assistant de creation), meme
+                  // logique ici pour un choix de competence encore ouvert sur
+                  // la fiche jouable (montee de niveau future).
+                  const alreadyGrantedElsewhere = choice ? !isChosen && result.proficiency !== "none" : false;
+                  const canPick = choice ? isChosen || (chosenForChoice.length < choice.count && !alreadyGrantedElsewhere) : false;
 
-                function toggle() {
-                  if (!choice) return;
-                  patchCharacter({ choices: { ...character.choices, [choice.id]: toggleChoice(chosenForChoice, skill, choice.count) } });
-                }
+                  function toggle() {
+                    if (!choice) return;
+                    patchCharacter({ choices: { ...character.choices, [choice.id]: toggleChoice(chosenForChoice, skill, choice.count) } });
+                  }
 
-                const dotClass = choice
-                  ? isChosen
-                    ? "bg-accent"
-                    : alreadyGrantedElsewhere
-                      ? "border border-accent bg-accent/40"
-                      : canPick
-                        ? "border-2 border-ink bg-transparent"
-                        : "border border-edge bg-transparent opacity-40"
-                  : result.proficiency === "expertise"
-                    ? "bg-accent"
-                    : result.proficiency === "proficient"
-                      ? "border border-accent bg-accent/40"
-                      : "border border-edge bg-transparent";
+                  const dotClass = choice
+                    ? isChosen
+                      ? "bg-accent"
+                      : alreadyGrantedElsewhere
+                        ? "border border-accent bg-accent/40"
+                        : canPick
+                          ? "border-2 border-ink bg-transparent"
+                          : "border border-edge bg-transparent opacity-40"
+                    : result.proficiency === "expertise"
+                      ? "bg-accent"
+                      : result.proficiency === "proficient"
+                        ? "border border-accent bg-accent/40"
+                        : "border border-edge bg-transparent";
 
-                const dotTitle = choice
-                  ? isChosen
-                    ? `${choice.label} — choisie, cliquer pour retirer`
-                    : alreadyGrantedElsewhere
-                      ? "Déjà maîtrisée par une autre source — choisissez une compétence différente"
-                      : canPick
-                        ? `${choice.label} — cliquer pour choisir (${chosenForChoice.length}/${choice.count})`
-                        : `${choice.label} — choix déjà complet (${choice.count}/${choice.count})`
-                  : result.proficiency === "expertise"
-                    ? "Expertise"
-                    : result.proficiency === "proficient"
-                      ? "Maîtrisée"
-                      : "Non maîtrisée";
+                  const dotTitle = choice
+                    ? isChosen
+                      ? `${choice.label} — choisie, cliquer pour retirer`
+                      : alreadyGrantedElsewhere
+                        ? "Déjà maîtrisée par une autre source — choisissez une compétence différente"
+                        : canPick
+                          ? `${choice.label} — cliquer pour choisir (${chosenForChoice.length}/${choice.count})`
+                          : `${choice.label} — choix déjà complet (${choice.count}/${choice.count})`
+                    : result.proficiency === "expertise"
+                      ? "Expertise"
+                      : result.proficiency === "proficient"
+                        ? "Maîtrisée"
+                        : "Non maîtrisée";
 
-                return (
-                  <div key={skill} className="flex items-center gap-2 text-sm">
-                    {choice ? (
+                  return (
+                    <div key={skill} className="flex items-center gap-2 text-sm">
+                      {choice ? (
+                        <button
+                          type="button"
+                          onClick={toggle}
+                          disabled={!canPick}
+                          title={dotTitle}
+                          className="flex h-4 w-4 shrink-0 items-center justify-center disabled:cursor-not-allowed"
+                        >
+                          <span className={`h-2 w-2 rounded-full ${dotClass}`} />
+                        </button>
+                      ) : (
+                        <span className="flex h-4 w-4 shrink-0 items-center justify-center" title={dotTitle}>
+                          <span className={`h-2 w-2 rounded-full ${dotClass}`} />
+                        </span>
+                      )}
                       <button
                         type="button"
-                        onClick={toggle}
-                        disabled={!canPick}
-                        title={dotTitle}
-                        className="flex h-4 w-4 shrink-0 items-center justify-center disabled:cursor-not-allowed"
+                        title={`Lancer ${SKILL_LABELS_FR[skill]}`}
+                        onClick={() => rollSkill(entityId, skill, advantage)}
+                        className="flex flex-1 items-center gap-2 text-left hover:text-accent"
                       >
-                        <span className={`h-2 w-2 rounded-full ${dotClass}`} />
+                        <span className="flex-1 text-ink">{SKILL_LABELS_FR[skill]}</span>
+                        <span className="text-[10px] uppercase text-ink-muted">{ABILITY_LABELS[SKILL_ABILITIES[skill]]}</span>
+                        <span className="w-8 text-right font-medium text-ink">
+                          {result.mod >= 0 ? "+" : ""}
+                          {result.mod}
+                        </span>
                       </button>
-                    ) : (
-                      <span className="flex h-4 w-4 shrink-0 items-center justify-center" title={dotTitle}>
-                        <span className={`h-2 w-2 rounded-full ${dotClass}`} />
-                      </span>
-                    )}
-                    <button
-                      type="button"
-                      title={`Lancer ${SKILL_LABELS_FR[skill]}`}
-                      onClick={() => rollSkill(entityId, skill, advantage)}
-                      className="flex flex-1 items-center gap-2 text-left hover:text-accent"
-                    >
-                      <span className="flex-1 text-ink">{SKILL_LABELS_FR[skill]}</span>
-                      <span className="text-[10px] uppercase text-ink-muted">{ABILITY_LABELS[SKILL_ABILITIES[skill]]}</span>
-                      <span className="w-8 text-right font-medium text-ink">
-                        {result.mod >= 0 ? "+" : ""}
-                        {result.mod}
-                      </span>
-                    </button>
-                  </div>
-                );
-              })}
+                    </div>
+                  );
+                })}
+              </div>
+              {/* Légende de la liste : seulement dans le bloc replié du téléphone. */}
+              <p className="text-xs text-ink-muted @min-[40rem]:hidden">● expertise · ◐ maîtrise</p>
+              {/* Le sélecteur vit DANS ce bloc (choix de l'auteur) : replié avec lui sur fiche étroite, comme avant au-delà. */}
+              <div className="flex items-center gap-2 @min-[40rem]:mt-1.5">
+                <span className="text-xs text-ink-muted">Points de vie</span>
+                <Dropdown
+                  value={character.hp_method}
+                  options={[
+                    { value: "fixed", label: "Valeur fixe" },
+                    { value: "rolled", label: "Jetés" },
+                  ]}
+                  onChange={(v) => patchCharacter({ hp_method: v as CharacterBlockData["hp_method"] })}
+                  aria-label="Méthode de points de vie"
+                />
+              </div>
             </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-ink-muted">Points de vie</span>
-            <Dropdown
-              value={character.hp_method}
-              options={[
-                { value: "fixed", label: "Valeur fixe" },
-                { value: "rolled", label: "Jetés" },
-              ]}
-              onChange={(v) => patchCharacter({ hp_method: v as CharacterBlockData["hp_method"] })}
-              aria-label="Méthode de points de vie"
-            />
           </div>
         </aside>
 

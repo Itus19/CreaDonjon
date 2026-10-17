@@ -357,7 +357,7 @@ Neuf planches, en deux rangées sur le canevas : les briques (1 à 7), puis les 
 | 2 · Boutons et champs | boutons (principal, secondaire, fantôme, destructeur, lien de suppression, rond à icône), champ, date et heure natives, `Dropdown`, `Checkbox`, interrupteur |
 | 3 · Onglets, puces, menus | `Tabs` (pilule glissante), puces, puces d'entité et de relation, `ActionsMenu`, en-tête de bloc et visibilité (œil), arborescence, `rail repliable` (`Rail`), rail du joueur, palette de commandes, radio |
 | 4 · Surfaces et retours | `ConfirmDialog`, panneaux et `EmptyState`, ascenseur, info-bulle, aperçu de renvoi, bulles de chat, bandeaux et badges, fenêtre flottante, pastille chrome |
-| 5 · Éléments d'écran | grille de disponibilités, curseur horaire, curseur natif, `Stepper`, bouton de dés et volet, barres, tiroir, chargement, texte de fiche |
+| 5 · Éléments d'écran | grille de disponibilités, curseur horaire, curseur natif, `Stepper`, bouton de dés et volet, barres, feuille du bas (`FeuilleDuBas`), barre flottante, chargement, texte de fiche |
 | 6 · Fiche de personnage | bouclier de CA, `StatBadge`, caractéristiques et sauvegardes, compétences et pastilles de maîtrise, `ActionButton`, `DieIcon`, emplacements de sort, ressources, carte d'objet, états, bouton de jet de monstre, jauge à commandes (`CommandeE`) |
 | 7 · Mode solo | `JaugeCirculaire`, fiche compacte, fil |
 | 8 · Wiki visuel | épingles et calques de carte, arbre généalogique et graphe des relations, radars, frise |
@@ -383,7 +383,7 @@ Ce que l'esquisse a vérifié contre le code et qui fait donc foi. Les propositi
 - **Typographie** — trois familles chargées par `next/font` (`app/layout.tsx`), jamais Spectral/Inter/IBM Plex Mono malgré `specs/coquille-et-design.md` : **Geist** pour tout le texte (`--font-chrome` et `--font-narrative` pointent vers elle), **Outfit** pour les titres seulement (`.entity-title` 800, 30 px, `-0.02em` ; `.block-title` 700, 24 px), **Geist Mono** pour les valeurs du moteur (`.mech`, `1d6+3`, `CA 14`). Corps d'une fiche : 14 px, interligne 1,6.
 - **Fond** — l'image du monde floutée (`.app-backdrop`, flou `--bg-blur`, `scale(1.08)`) sous un voile `--scrim` fixe par mode. `--h`/`--c` sont calculés une fois par image, à l'import (`builtinBackgrounds.ts`).
 - **Fenêtre flottante** (`WindowFrame.tsx`) — coins 16 px, `bg-panel` + flou 20 px, `shadow-2xl`, barre de titre de 38 px en `bg-panel-sunken`, trois pastilles plates de 11 px (réduire `edge-strong`, agrandir `accent/75`, fermer `danger/75`). Le défilement appartient à la fenêtre, jamais au document (ADR 0025).
-- **Barre latérale MJ** (`Sidebar.tsx`) — panneau plein de 280 px, angles droits, collé au bord, `bg-panel-sunken`, sans flou propre. Sous 768 px : tiroir de 280 px sur voile, bouton ☰ fixe.
+- **Barre latérale MJ** (`Sidebar.tsx`) — panneau plein de 280 px, angles droits, collé au bord, `bg-panel-sunken`, sans flou propre. Sous 768 px : feuille du bas (`FeuilleDuBas`) ouverte par ☰ ; barre flottante en bas (V3.1-29).
 - **Pastille chrome** (`ChromePill.tsx`) — radio et horloge, verre `bg-panel/90`, en haut à droite, sous les fenêtres maximisées.
 - **Coquille joueur** (`PlayerShell.tsx`) — rail de 80 px, sept destinations, jamais l'onglet MJ ; sous 768 px, barre d'onglets en bas.
 - **Wiki public** (`BookSkin.tsx`) — coquille de lecture, aucune commande, aucune donnée MJ dans le HTML servi. Sommaire nu de 256 px + colonne de 70ch, centrés ensemble. Fond par fiche (`.wiki-bg-backdrop`).

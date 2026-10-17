@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
+import BarreFlottante, { RESERVE_BARRE, type EntreeBarre } from "./BarreFlottante";
 import { OutilsDalle, Rail, RailPart, RailRow, TraitSvg, useRailReplie } from "./Rail";
 import { useChatUnread } from "./useChatUnread";
 import NextSessionBadge, { type ProchaineSession } from "./scheduling/NextSessionBadge";
@@ -28,6 +29,12 @@ interface Destination {
  * utilisateur 1er sept.) : salon partage avec le MJ, pastille de messages
  * non lus (`useChatUnread`, mont sur `AppShell` — partage avec `MjSidebar`
  * cote MJ, un seul salon par campagne).
+ *
+ * V3.1-29 : sous 768 px la barre d'onglets du bas est la barre flottante a six
+ * entrees (`BarreFlottante`, de encoche au centre) : Perso., Edition, Notes |
+ * Wiki, Regles, Chat — « Solo » prend la place de « Chat » dans un monde sans
+ * MJ humain, seul moyen d'atteindre le solo sur telephone. Le badge
+ * « Prochaine session » n'est plus dans la barre : il ouvre la page Perso.
  *
  * En-tete/pied (retour utilisateur, suite) : "retirer cette barre en haut
  * et tout mettre sur la side bar" — `AppShell.tsx` ne rend plus son en-tete
@@ -77,6 +84,33 @@ export default function PlayerShell({
     { href: `${base}/chat`, label: "Chat", icon: "chat", match: (p) => p.startsWith(`${base}/chat`) },
   ];
 
+  // Barre flottante du telephone : six des destinations d'au-dessus, libelles courts.
+  const libellesBarre: Record<string, string> = {
+    user: t("perso"),
+    card: t("edition"),
+    notes: t("notes"),
+    map: t("wiki"),
+    books: t("regles"),
+    chat: t("chat"),
+    dice: t("solo"),
+  };
+  const ordreBarre = ["user", "card", "notes", "map", "books", hasHumanGm ? "chat" : "dice"];
+  const entreesBarre: EntreeBarre[] = ordreBarre.flatMap((icon) => {
+    const d = destinations.find((dest) => dest.icon === icon);
+    if (!d) return [];
+    // Un lien ordinaire : retoucher l'entree active ramene a son ecran d'accueil.
+    return [
+      {
+        cle: icon,
+        libelle: libellesBarre[icon] ?? d.label,
+        icone: <Icon name={icon} />,
+        actif: d.match(pathname),
+        badge: icon === "chat" ? unreadCount : undefined,
+        href: d.href,
+      },
+    ];
+  });
+
   return (
     // V2.1-16 — `h-full` a la place du `h-dvh` d'avant. Ce `h-dvh` etait un
     // contournement, et il le disait : `<body>` etant `min-h-full`, aucun
@@ -87,11 +121,11 @@ export default function PlayerShell({
     // ignore le bandeau "voir comme", qu'un pourcentage soustrait tout seul.
     // Les deux retours d'origine restent tenus ("la sidebar prend toute la
     // hauteur", "la partie centrale ne defile pas avec le sommaire").
-    <div className="flex h-full min-h-0 w-full flex-col-reverse md:flex-row">
+    <div className="flex h-full min-h-0 w-full flex-col md:flex-row">
       {/* V3.1-27 : a partir de 768 px la colonne de 80 px devient le rail
           flottant commun (parties arrondies, repliable, dalle « Outils »).
-          Sous 768 px, la barre d'onglets du bas est exactement celle d'avant. */}
-      <Rail ouvert={false} replie={replie} onBasculer={basculer} barreBasse classeMobile="print:hidden">
+          Sous 768 px, il disparait : la barre flottante (plus bas) le remplace. */}
+      <Rail ouvert={false} replie={replie} onBasculer={basculer} barreBasse>
         <RailPart className="md:min-h-0 md:flex-1">
           <div className="hidden shrink-0 items-center gap-2.5 px-[14px] py-3 md:flex">
             <Link
@@ -122,31 +156,6 @@ export default function PlayerShell({
               qu'un enfant `flex-1` accepte de descendre sous sa taille de
               contenu (memes causes que le commentaire de hauteur plus haut). */}
           <div className="flex flex-1 justify-around md:min-h-0 md:flex-col md:items-center md:justify-start md:gap-0.5 md:overflow-y-auto md:overflow-x-hidden md:p-2">
-            <div className="contents md:hidden">
-              {destinations.map((d) => {
-                const active = d.match(pathname);
-                const badge = d.icon === "chat" ? unreadCount : 0;
-                return (
-                  <Link
-                    key={d.href}
-                    href={d.href}
-                    className={`relative flex flex-col items-center gap-[clamp(0px,0.5vh,4px)] rounded-md px-2 py-2 text-[11px] transition-colors ${
-                      active ? "text-accent" : "text-ink-muted hover:text-ink"
-                    }`}
-                  >
-                    <span className="relative block h-5 w-5 shrink-0">
-                      <Icon name={d.icon} />
-                      {badge > 0 && (
-                        <span className="absolute -right-1.5 -top-1.5 rounded-full bg-accent px-1 text-[9px] font-semibold leading-tight text-accent-ink">
-                          {badge}
-                        </span>
-                      )}
-                    </span>
-                    {d.label}
-                  </Link>
-                );
-              })}
-            </div>
             <div className="hidden w-full flex-col gap-0.5 md:flex">
               {destinations.map((d) => (
                 <RailRow
@@ -159,9 +168,8 @@ export default function PlayerShell({
                 />
               ))}
             </div>
-            {/* Une seule instance : le composant porte lui-meme ses deux
-                presentations (icone sous 768 px, banniere verticale au-dessus).
-                Replie, la banniere n'aurait pas la place : elle disparait. */}
+            {/* Rail seulement : sous 768 px le badge vit en tete de la page Perso
+                (plus bas). Replie, la banniere n'aurait pas la place : elle disparait. */}
             {!replie && <NextSessionBadge worldSlug={worldSlug} prochaineSession={prochaineSession} />}
           </div>
 
@@ -187,7 +195,17 @@ export default function PlayerShell({
           disposition (respectivement sommaire etroit + fiche centrale, et
           arbre + page + compagnon pour le cahier, V2.1-2) et ont donc
           besoin de toute la largeur disponible ici. */}
-      <div className="min-h-0 flex-1 overflow-y-auto p-4 md:p-6">{children}</div>
+      <div className={`min-h-0 flex-1 overflow-y-auto p-4 md:p-6 ${RESERVE_BARRE}`}>
+        {/* Telephone : « Prochaine session » n'a plus sa place dans la barre ;
+            il se range en tete de la page Perso, l'ecran d'accueil du joueur. */}
+        {pathname === base && prochaineSession && (
+          <div className="mb-3 flex md:hidden">
+            <NextSessionBadge worldSlug={worldSlug} prochaineSession={prochaineSession} />
+          </div>
+        )}
+        {children}
+      </div>
+      <BarreFlottante entrees={entreesBarre} libelle={t("barreJoueur")} />
     </div>
   );
 }

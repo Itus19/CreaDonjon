@@ -64,7 +64,8 @@ export default function RadioWidget({
 }: {
   worldSlug: string;
   /** `rail` (V3.1-27) : declencheur pleine largeur de la dalle « Outils », icone + libelle qui s'efface + point d'etat. */
-  variante?: "pastille" | "rail";
+  /** `feuille` (V3.1-29) : meme declencheur, en tete de la feuille « Outils » du telephone ; le panneau reste dans l'ecran. */
+  variante?: "pastille" | "rail" | "feuille";
   /** Rail replie : le libelle disparait, l'icone et son point restent. */
   replie?: boolean;
 }) {
@@ -152,6 +153,10 @@ export default function RadioWidget({
         // Le declencheur du rail est colle au bord gauche : ouvrir le panneau
         // dessus recouvrirait le rail lui-meme, on le pose a sa droite.
         next.left = r.right + 16;
+      } else if (variante === "feuille") {
+        // Declencheur pleine largeur de la feuille « Outils » (V3.1-29) : a sa
+        // droite il n'y a plus de place, le panneau reste dans l'ecran.
+        next.left = Math.max(8, Math.min(r.left, window.innerWidth - PANEL_WIDTH - 8));
       } else if (window.innerWidth - r.left >= PANEL_WIDTH) {
         next.left = r.left;
       } else {
@@ -208,7 +213,7 @@ export default function RadioWidget({
 
   return (
     <>
-      {variante === "rail" ? (
+      {variante !== "pastille" ? (
         <button
           ref={triggerRef}
           type="button"
@@ -216,7 +221,9 @@ export default function RadioWidget({
           aria-label={isPlaying ? t("radioEnLecture") : t("radioArretee")}
           aria-haspopup="dialog"
           aria-expanded={open}
-          className="flex w-full items-center rounded-xl px-2.5 py-[7px] text-ink-soft transition-colors hover:bg-panel-raised hover:text-ink"
+          className={`flex w-full items-center rounded-xl px-2.5 text-ink-soft transition-colors hover:bg-panel-raised hover:text-ink ${
+            variante === "feuille" ? "border border-edge bg-panel py-3" : "py-[7px]"
+          }`}
         >
           <span className="relative inline-flex h-[18px] w-[18px] shrink-0">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" className="h-full w-full" aria-hidden="true">

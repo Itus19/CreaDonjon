@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { CLE_RAIL_REPLIE, ecrireRailReplie, lireRailReplie } from "@/lib/ui/rail";
+import FeuilleDuBas from "@/components/shared/FeuilleDuBas";
 import { useDiceRoll } from "./DiceRollPanel";
 import RadioWidget from "./RadioWidget";
 import { useMatchMedia, WINDOWS_MOBILE_QUERY } from "./useMatchMedia";
@@ -13,8 +14,9 @@ import { useMatchMedia, WINDOWS_MOBILE_QUERY } from "./useMatchMedia";
  * Rail flottant repliable (V3.1-27) : remplace, a partir de 768 px (`md`), les
  * barres laterales du MJ (Monde, Regles, MJ) et la colonne du joueur. Le meme
  * rail sert aux quatre ; chacune garde son propre contenu et son propre
- * comportement sous 768 px (tiroir ☰, barre du bas) — ce fichier ne fournit
- * que la coquille, les lignes, le menu flottant et la dalle « Outils ».
+ * comportement sous 768 px (feuille du bas ouverte par ☰, barre flottante) —
+ * ce fichier ne fournit que la coquille, les lignes, le menu flottant et la
+ * dalle « Outils ».
  *
  * Un seul arbre DOM par barre : les classes `md:` transforment le tiroir en
  * rail, et les morceaux propres a un seul des deux modes se masquent en CSS
@@ -181,9 +183,9 @@ export function IconeRail({ nom }: { nom: "maison" | "livres" | "bouclier" | "lo
 // ---- coquille --------------------------------------------------------------
 
 /**
- * Le rail lui-meme (l'`aside`). Sous 768 px : exactement le tiroir d'avant
- * (`classeMobile` reprend le rembourrage et l'espacement propres a chaque
- * barre). A partir de 768 px : un conteneur transparent, flottant (marge de
+ * Le rail lui-meme (l'`aside`). Sous 768 px (V3.1-29) : plus de tiroir de
+ * gauche, le MEME contenu s'ouvre dans une feuille du bas (`FeuilleDuBas`) tant
+ * que `ouvert` est vrai, et rien n'est rendu sinon. A partir de 768 px : un conteneur transparent, flottant (marge de
  * 20 px en haut, en bas et a gauche), dont la largeur s'anime entre 204 et 64 px
  * et qui porte des « parties » arrondies (`RailPart`) et la poignee.
  *
@@ -195,31 +197,42 @@ export function Rail({
   ouvert,
   replie,
   onBasculer,
-  classeMobile,
+  onFermer,
+  titreFeuille,
   barreBasse = false,
   children,
 }: {
-  /** Tiroir ouvert (sous 768 px seulement). Sans objet pour la barre du bas. */
+  /** Feuille ouverte (sous 768 px seulement). Sans objet pour la coquille joueur. */
   ouvert: boolean;
   replie: boolean;
   onBasculer: () => void;
-  /** Classes du tiroir sous 768 px : rembourrage, espacement, `print:hidden`... */
-  classeMobile: string;
-  /** Coquille joueur : sous 768 px le rail est une barre d'onglets en bas (et non un tiroir), a elle de dire sa mise en page. */
+  /** Ferme la feuille du bas (sous 768 px). Absent : la coquille n'a pas de feuille (MJ, ses outils sont dans la feuille « Outils »). */
+  onFermer?: () => void;
+  /** Nom de la feuille du bas pour les lecteurs d'ecran. */
+  titreFeuille?: string;
+  /** Coquille joueur : sous 768 px le rail est remplace par la barre flottante (`BarreFlottante`), il disparait donc. */
   barreBasse?: boolean;
   children: React.ReactNode;
 }) {
   const t = useTranslations("shell");
-  const baseMobile = barreBasse
-    ? "flex shrink-0 justify-around border-t border-edge bg-panel"
-    : `fixed inset-y-0 left-0 z-50 flex w-[280px] shrink-0 flex-col border-r border-edge bg-panel-sunken ${
-        ouvert ? "translate-x-0" : "-translate-x-full"
-      }`;
+  const estTelephone = useMatchMedia(WINDOWS_MOBILE_QUERY);
+  if (estTelephone && !barreBasse) {
+    if (!ouvert || !onFermer) return null;
+    return (
+      <FeuilleDuBas titre={titreFeuille ?? t("outils")} onFermer={onFermer}>
+        <RailContext.Provider value={{ replie: false }}>
+          {/* L'espacement du tiroir d'avant (`gap-3`) : les parties sont `contents`, leurs blocs s'empilent ici. */}
+          <div className="flex flex-col gap-3">{children}</div>
+        </RailContext.Provider>
+      </FeuilleDuBas>
+    );
+  }
+  const baseMobile = barreBasse ? "max-md:hidden" : "hidden";
   const Balise = barreBasse ? "nav" : "aside";
   return (
     <RailContext.Provider value={{ replie }}>
       <Balise
-        className={`${baseMobile} transition-[transform,width] md:relative md:inset-auto md:z-[60] md:my-5 md:ml-5 md:translate-x-0 md:flex-col md:justify-start md:gap-3 md:border-0 md:bg-transparent md:p-0 md:duration-[380ms] md:ease-[cubic-bezier(.4,0,.2,1)] motion-reduce:transition-none ${classeMobile} ${
+        className={`${baseMobile} shrink-0 transition-[width] md:relative md:z-[60] md:my-5 md:ml-5 md:flex md:flex-col md:justify-start md:gap-3 md:p-0 md:duration-[380ms] md:ease-[cubic-bezier(.4,0,.2,1)] motion-reduce:transition-none print:hidden ${
           replie ? LARGEUR_REPLIE : LARGEUR_DEPLIE
         }`}
       >
@@ -577,6 +590,30 @@ export function RailFlyout({
   );
 }
 
+// ---- de de l'accent --------------------------------------------------------
+
+/** Dessin du de encoche (rail et barre flottante) : meme degrade d'accent, meme ombre. */
+export const CLASSE_FOND_DE = "bg-[radial-gradient(circle_at_32%_28%,var(--accent-hover),var(--accent)_75%)] text-accent-ink shadow-lg";
+
+/** Icone du de, au trait. */
+export function IconeDe({ className = "h-5 w-5" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M12 3 4 7.5v9L12 21l8-4.5v-9L12 3Z" />
+      <path d="M4 7.5 12 12l8-4.5M12 12v9" />
+    </svg>
+  );
+}
+
 // ---- dalle Outils ----------------------------------------------------------
 
 /**
@@ -591,7 +628,7 @@ export function OutilsDalle({ worldSlug }: { worldSlug: string }) {
   const { ouvrirVolet, enregistrerDalle } = useDiceRoll();
   // Le bouton de des flottant se retire tant qu'une dalle est montee (et
   // seulement alors) : une page de monde sans rail garde son de.
-  useEffect(() => enregistrerDalle(), [enregistrerDalle]);
+  useEffect(() => enregistrerDalle("ordinateur"), [enregistrerDalle]);
   return (
     <RailPart visibleMobile={false} className="shrink-0 items-center px-2 pb-2.5 pt-8">
       {/* Anneau de 6 px couleur du panneau : le de parait decoupe dans le bord. */}
@@ -599,21 +636,9 @@ export function OutilsDalle({ worldSlug }: { worldSlug: string }) {
         type="button"
         onClick={ouvrirVolet}
         aria-label={t("ouvrirVoletDes")}
-        className="absolute left-1/2 top-0 z-[5] flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-[6px] border-panel bg-[radial-gradient(circle_at_32%_28%,var(--accent-hover),var(--accent)_75%)] text-accent-ink shadow-lg transition-transform hover:scale-105 motion-reduce:transition-none"
+        className={`absolute left-1/2 top-0 z-[5] flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-[6px] border-panel ${CLASSE_FOND_DE} transition-transform hover:scale-105 motion-reduce:transition-none`}
       >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={1.8}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="h-5 w-5"
-          aria-hidden="true"
-        >
-          <path d="M12 3 4 7.5v9L12 21l8-4.5v-9L12 3Z" />
-          <path d="M4 7.5 12 12l8-4.5M12 12v9" />
-        </svg>
+        <IconeDe />
       </button>
       <RadioWidget worldSlug={worldSlug} variante="rail" replie={replie} />
     </RailPart>

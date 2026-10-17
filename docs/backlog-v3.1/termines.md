@@ -2,6 +2,41 @@
 
 ---
 
+### ☑ V3.1-29 — Coquille téléphone : barre flottante et feuilles du bas (lot c) · `L` · sans modèle IA — **fait le 17 octobre**
+
+**Modèle conseillé : Sonnet** — entrées, gabarits et comportements fixés par les planches.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Planches** : « Décidé · téléphone du MJ — écrans » et « — feuilles
+ouvertes », mêmes planches côté joueur. **Départ** : `PlayerShell.tsx`,
+`AppShell.tsx`, `useMatchMedia.ts`. **Dépend de** : 27 (dalle Outils).
+
+- Sous 768 px : barre du bas flottante à six entrées, dé encoché au centre.
+  MJ : Monde, Règles, Fiches | Table, Chat, Outils. Joueur : Perso.,
+  Édition, Notes | Wiki, Règles, Chat. Toucher de nouveau une entrée active
+  ramène à son écran d'accueil.
+- Un composant « feuille du bas » unique (poignée, glisser pour fermer,
+  piège du focus, Échap) : tout ce qui s'ouvre vient du bas.
+- **Fiches** (MJ) : une fiche à la fois, pastille « N fiches » qui ouvre la
+  pile en feuille, même adresse `?avec=`.
+- **Outils** (MJ) : grille par moment (séance, préparation, campagne),
+  radio comprise ; le chat n'y est plus.
+- Écrans Table, Wiki, Règles, Édition, dés : des emplacements, remplis par
+  30, 31, 33 et 34.
+
+**Tranché le 17 octobre** (reporté de V3.1-28) : sous 640 px de fiche, les compétences deviennent une ligne repliable « Compétences » **fermée par défaut**, entre les caractéristiques et les onglets, comme l'esquisse « Fiche PJ — téléphone » (résumé fermé : « N maîtrisées · meilleure compétence +X ▾ », ouvert : « replier ▴ », la liste puis la légende ● expertise · ◐ maîtrise). Le sélecteur « Points de vie : valeur fixe / jetés » passe **dans ce bloc replié**, sous la liste (choix de l'auteur) ; au-delà de 640 px, rien ne change.
+
+**Critères d'acceptation**
+- [x] Les deux barres conformes aux planches à 390 px ; aucune page à défilement horizontal.
+- [x] Feuille du bas : clavier, lecteur d'écran, glisser pour fermer.
+- [x] Au-dessus de 768 px, rien ne change.
+- [x] Planche « Tiroir » remplacée par « Feuille du bas » ; planche « Barre flottante » créée.
+
+**Clôture** : `FeuilleDuBas` (`components/shared/`, portail, piège du focus, Échap, glisser ; seuil dans `lib/ui/feuilleDuBas.ts`) ; `BarreFlottante` commune, `BarreTelephoneMj` montée une fois dans `AppShell` (classement des pages : `lib/ui/barreMj.ts`) ; barre joueur dans `PlayerShell` (monde sans MJ : « Solo » remplace « Chat »). Fiches : pile lue dans l'état des fenêtres, même `?avec=`. Outils : grille par moment, radio en tête ; un outil s'ouvre en page (pas dans la feuille : `MjToolWindowContent` demanderait un chargement de plus). Table : feuille « bientôt » (V3.1-34). Le ☰ de Monde et Règles ouvre une feuille ; celui du MJ disparaît. Le dé flottant se retire là où une barre ou une dalle le remplace (`enregistrerDalle(portee)`). Fiche étroite : compétences repliables fermées par défaut, sélecteur de PV dedans (`lib/ui/resumeCompetences.ts`). Vérifié dans le navigateur à 390 px (MJ et joueur) et à 1 280 px (rien ne change). Reste au ticket 30 : le ☰ de la fiche qui chevauche son titre, le tiroir de `BookSkin`.
+
+---
+
 ### ☑ V3.1-27 — Rail repliable et dalle Outils (lots a, b) · `M` · sans modèle IA — **fait le 17 octobre**
 
 **Modèle conseillé : Sonnet** — mesures et comportements donnés par V3.1-19.

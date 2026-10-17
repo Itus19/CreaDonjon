@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -47,7 +46,7 @@ function MjToolLink({
   label: string;
   active: boolean;
   badge?: number;
-  onNavigate: () => void;
+  onNavigate?: () => void;
   /** Rendu dans le menu flottant du rail replie (V3.1-27) : memes liens, habillage de menu. */
   dansMenu?: boolean;
 }) {
@@ -58,7 +57,7 @@ function MjToolLink({
       role={dansMenu ? "menuitem" : undefined}
       onClick={(e) => {
         link.onClick(e);
-        onNavigate();
+        onNavigate?.();
       }}
       className={
         dansMenu
@@ -88,7 +87,6 @@ export default function MjSidebar({
 }) {
   const t = useTranslations("mj");
   const tShell = useTranslations("shell");
-  const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const { unreadCount } = useChatUnread();
   const { replie, basculer } = useRailReplie();
@@ -113,25 +111,10 @@ export default function MjSidebar({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-label={tShell("ouvrirArborescence")}
-        // V2.1-16 : plus d'en-tete au-dessus, donc plus de decalage de 68px.
-        className="fixed left-3 top-3 z-40 rounded-md border border-edge bg-panel-raised p-2 text-sm text-ink shadow-md md:hidden"
-      >
-        ☰
-      </button>
-
-      {open && (
-        <div
-          className="fixed inset-0 z-40 bg-scrim md:hidden"
-          onClick={() => setOpen(false)}
-          aria-hidden="true"
-        />
-      )}
-
-      <Rail ouvert={open} replie={replie} onBasculer={basculer} classeMobile="gap-1 p-4">
+      {/* V3.1-29 : plus de ☰ sous 768 px. Les outils vivent dans la feuille
+          « Outils » de la barre flottante (`BarreTelephoneMj`) ; ce rail n'existe
+          qu'a partir de 768 px (`Rail` ne rend rien sous ce seuil sans feuille). */}
+      <Rail ouvert={false} replie={replie} onBasculer={basculer}>
         <RailPart className="md:min-h-0 md:flex-1">
           {/* Les 6px de rembourrage haut d'un lien d'outil (`py-1.5`), rendus
               ici a la main : sans eux, l'ecart VU sous le nom du monde (4px,
@@ -186,7 +169,6 @@ export default function MjSidebar({
                   label={tool.label}
                   active={pathname === mjToolHref(worldSlug, tool.key)}
                   badge={tool.key === "chat" ? unreadCount : undefined}
-                  onNavigate={() => setOpen(false)}
                 />
               ))
             )}

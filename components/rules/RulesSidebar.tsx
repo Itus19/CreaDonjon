@@ -306,15 +306,7 @@ export default function RulesSidebar({ worldSlug, worldName }: { worldSlug: stri
         ☰
       </button>
 
-      {open && (
-        <div
-          className="fixed inset-0 z-40 bg-scrim md:hidden"
-          onClick={() => setOpen(false)}
-          aria-hidden="true"
-        />
-      )}
-
-      <Rail ouvert={open} replie={replie} onBasculer={basculer} classeMobile="gap-3 p-4">
+      <Rail ouvert={open} replie={replie} onBasculer={basculer} onFermer={() => setOpen(false)} titreFeuille={t("reglesDuMonde")}>
         <RailPart className="md:min-h-0 md:flex-1">
           {/* V2.1-16 — `md:h-screen` retire, meme raison que `Sidebar.tsx` : la
               hauteur vient de la rangee bornee par `AppShell`, pas du viewport.

@@ -28,7 +28,7 @@ export default function MondeShell({
   return (
     <>
       <Sidebar worldId={worldId} worldSlug={worldSlug} worldName={worldName} tree={tree} entities={entities} />
-      <WindowsDesktop worldSlug={worldSlug}>{children}</WindowsDesktop>
+      <WindowsDesktop>{children}</WindowsDesktop>
     </>
   );
 }

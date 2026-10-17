@@ -10,9 +10,10 @@ import { serializeAvecParam } from "./windowRefs";
 /**
  * Logique de lien partagee par la bascule (tiroir, sous 768 px) et par les
  * trois lignes du rail (a partir de 768 px) : une seule source pour le
- * `?avec=` conserve, jamais recopiee.
+ * `?avec=` conserve, jamais recopiee. Exportee (V3.1-29) pour la barre
+ * flottante du telephone et la pile des fiches, qui fabriquent leurs liens avec.
  */
-function useSectionLiens(worldSlug: string) {
+export function useSectionLiens(worldSlug: string) {
   const pathname = usePathname();
   const router = useRouter();
   const desktopState = useDesktopWindowsState();
@@ -38,7 +39,7 @@ function useSectionLiens(worldSlug: string) {
     router.push(hrefWithWindows(base));
   }
 
-  return { isMonde, isRegles, isMj, hrefWithWindows, navigate };
+  return { isMonde, isRegles, isMj, openRefs, hrefWithWindows, navigate };
 }
 
 /**

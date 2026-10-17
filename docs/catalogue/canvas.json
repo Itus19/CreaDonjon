@@ -13,7 +13,7 @@
     },
     "Ecrans.dc.html": {
       "expand": "fill",
-      "h": 4500,
+      "h": 6400,
       "is_interactive": true,
       "title": "5 · Éléments d'écran",
       "w": 1280,
@@ -22,7 +22,7 @@
     },
     "Fiche.dc.html": {
       "expand": "fill",
-      "h": 5400,
+      "h": 5800,
       "is_interactive": true,
       "title": "6 · Fiche de personnage",
       "w": 1280,

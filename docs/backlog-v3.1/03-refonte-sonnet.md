@@ -20,39 +20,6 @@ V3.1-20 (lot g) peut partir dès que 25 est fait.
 
 ---
 
-### ☐ V3.1-29 — Coquille téléphone : barre flottante et feuilles du bas (lot c) · `L` · sans modèle IA — **prêt**
-
-**Modèle conseillé : Sonnet** — entrées, gabarits et comportements fixés par les planches.
-
-**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-**Planches** : « Décidé · téléphone du MJ — écrans » et « — feuilles
-ouvertes », mêmes planches côté joueur. **Départ** : `PlayerShell.tsx`,
-`AppShell.tsx`, `useMatchMedia.ts`. **Dépend de** : 27 (dalle Outils).
-
-- Sous 768 px : barre du bas flottante à six entrées, dé encoché au centre.
-  MJ : Monde, Règles, Fiches | Table, Chat, Outils. Joueur : Perso.,
-  Édition, Notes | Wiki, Règles, Chat. Toucher de nouveau une entrée active
-  ramène à son écran d'accueil.
-- Un composant « feuille du bas » unique (poignée, glisser pour fermer,
-  piège du focus, Échap) : tout ce qui s'ouvre vient du bas.
-- **Fiches** (MJ) : une fiche à la fois, pastille « N fiches » qui ouvre la
-  pile en feuille, même adresse `?avec=`.
-- **Outils** (MJ) : grille par moment (séance, préparation, campagne),
-  radio comprise ; le chat n'y est plus.
-- Écrans Table, Wiki, Règles, Édition, dés : des emplacements, remplis par
-  30, 31, 33 et 34.
-
-**Tranché le 17 octobre** (reporté de V3.1-28) : sous 640 px de fiche, les compétences deviennent une ligne repliable « Compétences » **fermée par défaut**, entre les caractéristiques et les onglets, comme l'esquisse « Fiche PJ — téléphone » (résumé fermé : « N maîtrisées · meilleure compétence +X ▾ », ouvert : « replier ▴ », la liste puis la légende ● expertise · ◐ maîtrise). Le sélecteur « Points de vie : valeur fixe / jetés » passe **dans ce bloc replié**, sous la liste (choix de l'auteur) ; au-delà de 640 px, rien ne change.
-
-**Critères d'acceptation**
-- [ ] Les deux barres conformes aux planches à 390 px ; aucune page à défilement horizontal.
-- [ ] Feuille du bas : clavier, lecteur d'écran, glisser pour fermer.
-- [ ] Au-dessus de 768 px, rien ne change.
-- [ ] Planche « Tiroir » remplacée par « Feuille du bas » ; planche « Barre flottante » créée.
-
----
-
 ### ☐ V3.1-30 — Wiki et Règles sur téléphone : ☰ et consultées récemment · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — parcours esquissé ; stockage tranché (ADR 0036 §4).

@@ -3,15 +3,16 @@
 import { usePathname } from "next/navigation";
 import DiceRollProvider from "./DiceRollPanel";
 import ChatUnreadProvider from "./useChatUnread";
+import BarreTelephoneMj from "./BarreTelephoneMj";
 
 /**
  * Coquille commune aux trois sections (Monde/Règles/MJ). Elle n'a plus
  * d'en-tete depuis V2.1-16 (retour utilisateur : "je n'utilise pas trop la
  * barre d'en-tete") : le nom du monde et la sortie vivent en tete de chaque
  * barre laterale (`WorldSidebarHeader`), comme sur le wiki public et dans
- * la coquille joueur, et la radio et l'heure dans une pastille posee DANS
- * la zone de travail (`ChromePill`, rendue par `WindowsDesktop` — voir son
- * commentaire pour la raison). Le bandeau Monde/Règles/MJ (`SectionToggle`)
+ * la coquille joueur, et la radio dans la dalle « Outils » du rail (grand
+ * ecran) ou la feuille « Outils » de la barre flottante (telephone,
+ * `BarreTelephoneMj`, montee ici). Le bandeau Monde/Règles/MJ (`SectionToggle`)
  * etait parti dans les barres laterales des V2-K2.
  *
  * Ce qui reste ici : les deux contextes (des, messages non lus) et la borne
@@ -65,6 +66,11 @@ export default function AppShell({
         <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
           <div className="flex flex-1 overflow-hidden">{children}</div>
         </div>
+
+        {/* V3.1-29 : barre flottante du telephone, cote MJ. Montee ICI, une seule
+            fois pour Monde, Regles et MJ (elle se tait d'elle-meme sous `/joueur`
+            et `/apercu`, dont la coquille joueur porte sa propre barre). */}
+        <BarreTelephoneMj worldSlug={worldSlug} />
 
         {overlay}
       </ChatUnreadProvider>

@@ -146,19 +146,13 @@ export default function Sidebar({
         ☰
       </button>
 
-      {open && (
-        <div
-          className="fixed inset-0 z-40 bg-scrim md:hidden"
-          onClick={() => setOpen(false)}
-          aria-hidden="true"
-        />
-      )}
-
+      {/* V3.1-29 : sous 768 px le rail devient une feuille du bas, ouverte par ce
+          meme ☰ (le voile est celui de la feuille). */}
       {/* V2.1-16 — jamais de `md:h-screen` : la hauteur vient de la rangee
           bornee par `AppShell`, pas du viewport (100vh pose sous un en-tete
           faisait deborder la page). Le rail (V3.1-27) reste un item flex qui
           s'etire a la hauteur de sa rangee, marges comprises. */}
-      <Rail ouvert={open} replie={replie} onBasculer={basculer} classeMobile="print:hidden">
+      <Rail ouvert={open} replie={replie} onBasculer={basculer} onFermer={() => setOpen(false)} titreFeuille={t("entitesDuMonde")}>
         <RailPart className="md:min-h-0 md:flex-1">
           {/* `overflow-x-hidden` avec `overflow-y-auto` : sans lui, une barre
               horizontale apparait pendant l'animation de largeur du rail. */}

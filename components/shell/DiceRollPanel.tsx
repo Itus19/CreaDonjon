@@ -130,12 +130,17 @@ interface DiceRollContextValue {
   /** Ouvre le volet existant (V3.1-27) : le de de la dalle « Outils » du rail n'a pas de volet propre. */
   ouvrirVolet: () => void;
   /**
-   * Signale une dalle « Outils » montee ; renvoie de quoi la retirer. Tant
-   * qu'il y en a une, le bouton flottant se cache a partir de 768 px — une page
-   * de monde sans rail (apercu...) le garde, sinon elle n'aurait plus de de.
+   * Signale une dalle « Outils » (rail, `"ordinateur"`) ou une barre flottante
+   * (telephone, `"telephone"`) montee ; renvoie de quoi la retirer. Tant qu'il
+   * y en a une pour une portee, le bouton flottant se cache sur cette portee
+   * seulement (a partir de 768 px, ou en dessous) — une page de monde sans
+   * rail ni barre (apercu...) le garde, sinon elle n'aurait plus de de.
    */
-  enregistrerDalle: () => () => void;
+  enregistrerDalle: (portee: PorteeDalle) => () => void;
 }
+
+/** Ou le de de la coquille vit : le rail (a partir de 768 px) ou la barre flottante (en dessous). */
+export type PorteeDalle = "ordinateur" | "telephone";
 
 const DiceRollContext = createContext<DiceRollContextValue | null>(null);
 
@@ -342,11 +347,20 @@ export default function DiceRollProvider({
   );
 
   const ouvrirVolet = useCallback(() => setOpen(true), []);
-  const [dallesMontees, setDallesMontees] = useState(0);
-  const enregistrerDalle = useCallback(() => {
-    setDallesMontees((n) => n + 1);
-    return () => setDallesMontees((n) => n - 1);
+  const [dallesMontees, setDallesMontees] = useState<Record<PorteeDalle, number>>({ ordinateur: 0, telephone: 0 });
+  const enregistrerDalle = useCallback((portee: PorteeDalle) => {
+    setDallesMontees((n) => ({ ...n, [portee]: n[portee] + 1 }));
+    return () => setDallesMontees((n) => ({ ...n, [portee]: n[portee] - 1 }));
   }, []);
+  // Un seul des deux cas masque le bouton sur sa portee ; les deux, partout.
+  const classeMasqueDe =
+    dallesMontees.ordinateur > 0 && dallesMontees.telephone > 0
+      ? "hidden"
+      : dallesMontees.ordinateur > 0
+        ? "md:hidden"
+        : dallesMontees.telephone > 0
+          ? "max-md:hidden"
+          : "";
 
   const contextValue = useMemo<DiceRollContextValue>(
     () => ({ isGm, rollAbility, rollSkill, rollSave, rollInitiative, ouvrirVolet, enregistrerDalle }),
@@ -416,9 +430,9 @@ export default function DiceRollProvider({
         onClick={() => setOpen(true)}
         aria-label="Ouvrir le volet de lancer de dés"
         // V3.1-27 : a partir de 768 px, le de vit dans la dalle « Outils » du
-        // rail ; ce bouton flottant ne sert plus que sous 768 px, ou sur une
-        // page sans rail.
-        className={`fixed bottom-5 right-5 z-[60] flex h-14 w-14 items-center justify-center rounded-full border border-edge-strong bg-panel-raised text-accent shadow-lg transition-all duration-200 ${dallesMontees > 0 ? "md:hidden" : ""} ${
+        // rail ; V3.1-29 : sous 768 px, au centre de la barre flottante. Ce
+        // bouton ne sert plus que sur une page sans rail ni barre.
+        className={`fixed bottom-5 right-5 z-[60] flex h-14 w-14 items-center justify-center rounded-full border border-edge-strong bg-panel-raised text-accent shadow-lg transition-all duration-200 ${classeMasqueDe} ${
           open ? "pointer-events-none scale-50 opacity-0" : "scale-100 opacity-100"
         }`}
       >
