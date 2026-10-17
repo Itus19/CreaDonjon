@@ -26,6 +26,8 @@ import type { LanguageKey } from "@/src/core/rules/srdMapping";
 
 export interface CharacterSheetContext {
   ruleset: ResolvedRuleset;
+  /** Les regles resolues sont arrivees (V3.1-26). Tant que c'est faux, `sheet` est calcule sur des regles VIDES (CA 11, jamais la vraie) : a ne pas afficher. */
+  rulesetPret: boolean;
   remainingChoices: RemainingChoiceView[];
   proficiencies: TraitGrantView[];
   languages: TraitGrantView[];
@@ -137,6 +139,7 @@ export function useCharacterSheetContext(
     choiceSources,
     choicePresets,
     featCatalog,
+    pret: rulesetPret,
   } = useResolvedRuleset(worldSlug, selection);
   const backgroundAbilityScores = (rawBackgroundAbilityScores as Ability[] | null) ?? null;
 
@@ -352,6 +355,7 @@ export function useCharacterSheetContext(
 
   return {
     ruleset,
+    rulesetPret,
     remainingChoices,
     proficiencies,
     languages,

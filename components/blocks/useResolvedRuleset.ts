@@ -120,12 +120,16 @@ async function chargerRulesetResolu(worldSlug: string, dedupeKey: string, body: 
  * recalcule a chaque rendu a partir du dernier resultat en cache, sans
  * refetch (`characterSheet()` est pure et instantanee, §4.5).
  */
-export function useResolvedRuleset(worldSlug: string, selection: RulesetSelection): ResolvedRulesetView {
+export function useResolvedRuleset(worldSlug: string, selection: RulesetSelection): ResolvedRulesetView & { pret: boolean } {
   const dedupeKey = selectionKey(selection);
-  const [data, setData] = useState<ResolvedRulesetView>(() => {
-    const cle = JSON.stringify([worldSlug, dedupeKey]);
-    return chargeurRuleset.lireSiPret([cle])?.get(cle) ?? EMPTY;
-  });
+  // V3.1-26 : l'etat de depart est TOUJOURS `EMPTY`, jamais lu dans le cache.
+  // Il lisait `lireSiPret` ici : le serveur (sans cache) rendait la fiche avec
+  // des regles vides (CA 11), le navigateur (cache chaud) avec les vraies
+  // (CA 16) — erreur d'hydratation de React. Maintenant les deux premiers
+  // rendus sont identiques ; `pret` dit quand les regles sont arrivees (le
+  // cache les rend dans la foulee de l'effet, sans nouvelle requete).
+  const [data, setData] = useState<ResolvedRulesetView>(EMPTY);
+  const [pret, setPret] = useState(false);
   /**
    * L'equipement se resout independamment du personnage (V1-C18) : le poids
    * et le cout d'un objet SRD ne dependent pas de qui le porte — un bloc
@@ -141,12 +145,16 @@ export function useResolvedRuleset(worldSlug: string, selection: RulesetSelectio
 
     request
       .then((resultat) => {
-        if (!cancelled) setData(resultat);
+        if (cancelled) return;
+        setData(resultat);
+        setPret(true);
       })
       .catch((erreur: unknown) => {
         // Jamais muet : la fiche se calcule sans ruleset (valeurs de base), et l'erreur se voit.
         console.error("Ruleset resolu non charge", erreur);
-        if (!cancelled) setData(EMPTY);
+        if (cancelled) return;
+        setData(EMPTY);
+        setPret(true);
       });
     return () => {
       cancelled = true;
@@ -154,5 +162,5 @@ export function useResolvedRuleset(worldSlug: string, selection: RulesetSelectio
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [worldSlug, dedupeKey]);
 
-  return data;
+  return { ...data, pret };
 }

@@ -7,6 +7,8 @@ import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasti
 import type { ResourcesBlockData } from "@/src/core/schemas/blocks/resources";
 import { SKILL_ABILITIES, type Ability } from "@/src/core/rules/sheet";
 import { XP_LEVEL_THRESHOLDS, hasReachedNextLevel } from "@/src/core/rules/experience";
+import { applyDamageToHp } from "@/src/core/rules/tempHp";
+import { pvSousUnTiers } from "@/lib/ui/commandeE";
 import type { RuntimeState } from "@/src/core/schemas/runtimeState";
 import type { AdvantageState } from "@/src/core/rules/action";
 import { useCharacterSheetContext } from "./useCharacterSheetContext";
@@ -111,8 +113,6 @@ export default function PlayableCharacterSheet({
   const [pendingCrit, setPendingCrit] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [xpDelta, setXpDelta] = useState("");
-  const [hpDelta, setHpDelta] = useState("");
   // Montee de niveau (V2-G1) : le meme motif que "wizardOpen" dans
   // EditEntityForm.tsx — l'assistant remplace tout le rendu de cette fiche
   // tant qu'il est ouvert. L'etat vit ici (avec les autres), mais le
@@ -150,6 +150,7 @@ export default function PlayableCharacterSheet({
    * diverge tot ou tard).
    */
   const {
+    rulesetPret,
     remainingChoices,
     proficiencies,
     equipment,
@@ -220,8 +221,10 @@ export default function PlayableCharacterSheet({
         if (!cancelled && body) setRemote(body);
       })
       .catch((erreur: unknown) => {
-        // Jamais muet : la fiche reste sur son calcul local, et l'erreur se voit.
+        // Jamais muet : l'erreur se voit, dans la console et sur la fiche. L'en-tete
+        // reste en squelette (pas de chiffre faux), le reste se calcule en local.
         console.error("Fiche calculee non chargee", erreur);
+        if (!cancelled) setError("La fiche calculée n'a pas pu être chargée.");
       });
     return () => {
       cancelled = true;
@@ -324,7 +327,14 @@ export default function PlayableCharacterSheet({
   }
 
   async function changeHp(delta: number) {
-    patchRuntimeState((state) => ({ ...state, hp: { ...state.hp, current: Math.max(0, state.hp.current + delta) } }));
+    // Meme regle que le serveur (V3.1-24) : les degats entament les PV temporaires d'abord, un soin plafonne au maximum.
+    patchRuntimeState((state) => {
+      if (delta < 0) {
+        const { hp } = applyDamageToHp({ current: state.hp.current, max: hpMax, temp: state.hp.temp }, -delta);
+        return { ...state, hp: { ...state.hp, current: hp.current, temp: hp.temp } };
+      }
+      return { ...state, hp: { ...state.hp, current: Math.max(state.hp.current, Math.min(hpMax, state.hp.current + delta)) } };
+    });
     await postAction("hp", { campaignId, delta });
     reloadRemote();
   }
@@ -346,22 +356,6 @@ export default function PlayableCharacterSheet({
     patchRuntimeState((state) => ({ ...state, inspiration: Math.max(0, Math.min(5, state.inspiration + delta)) }));
     await postAction("inspiration", { campaignId, delta });
     reloadRemote();
-  }
-
-  /** Champ + boutons (V1-C4 suite, sur retour utilisateur) : remplace les anciens boutons a montant fixe (+100) — on tape le montant une fois, "+"/"-" l'appliquent puis vident le champ. Un champ laisse vide vaut 1 (sur retour utilisateur) plutot que de ne rien faire. */
-  function applyXpDelta(sign: 1 | -1) {
-    const amount = xpDelta.trim() === "" ? 1 : Math.abs(Math.trunc(Number(xpDelta)));
-    if (!amount) return;
-    changeXp(sign * amount);
-    setXpDelta("");
-  }
-
-  /** Meme motif que `applyXpDelta` (V1-C4 suite, sur retour utilisateur) : remplace les boutons +1/-1 par un champ + boutons, coherent avec l'XP. */
-  function applyHpDelta(sign: 1 | -1) {
-    const amount = hpDelta.trim() === "" ? 1 : Math.abs(Math.trunc(Number(hpDelta)));
-    if (!amount) return;
-    changeHp(sign * amount);
-    setHpDelta("");
   }
 
   function exportJson() {
@@ -387,8 +381,11 @@ export default function PlayableCharacterSheet({
   const inspiration = runtimeState?.inspiration ?? 0;
   const conditions = runtimeState?.conditions ?? [];
   const hpCurrent = runtimeState?.hp.current ?? hpMax;
-  const hpPct = hpMax > 0 ? Math.min(100, Math.max(0, (hpCurrent / hpMax) * 100)) : 0;
-  const hpLow = hpMax > 0 && hpCurrent / hpMax <= 0.25;
+  const hpTemp = runtimeState?.hp.temp ?? 0;
+  const hpLow = pvSousUnTiers(hpCurrent, hpMax);
+  // V3.1-26 : l'en-tete n'affiche un chiffre que quand tout ce qui le fonde est la — les regles
+  // resolues (CA, PV max, vitesse) ET l'etat de jeu. Avant, valeurs de depart fausses (CA 11, PV 0/0).
+  const pret = rulesetPret && remote !== null;
 
   const totalLevel = Math.max(1, character.classes.reduce((sum, c) => sum + c.level, 0));
   const levelIndex = Math.min(totalLevel, XP_LEVEL_THRESHOLDS.length) - 1;
@@ -416,21 +413,18 @@ export default function PlayableCharacterSheet({
         inspiration={inspiration}
         onChangeInspiration={changeInspiration}
         conditions={conditions}
+        pret={pret}
         hpCurrent={hpCurrent}
+        hpTemp={hpTemp}
         hpMax={hpMax}
         hpLow={hpLow}
-        hpPct={hpPct}
-        hpDelta={hpDelta}
-        setHpDelta={setHpDelta}
-        applyHpDelta={applyHpDelta}
+        onChangeHp={changeHp}
         xpCurrent={xpCurrent}
         xpCeiling={xpCeiling}
         xpPct={xpPct}
         totalLevel={totalLevel}
         xpLevelThresholdsLength={XP_LEVEL_THRESHOLDS.length}
-        xpDelta={xpDelta}
-        setXpDelta={setXpDelta}
-        applyXpDelta={applyXpDelta}
+        onChangeXp={changeXp}
         canLevelUp={canLevelUp}
         onLevelUp={() => setLevelUpOpen(true)}
         onRest={rest}

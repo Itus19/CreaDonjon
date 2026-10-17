@@ -20,36 +20,6 @@ V3.1-20 (lot g) peut partir dès que 25 est fait.
 
 ---
 
-### ☐ V3.1-26 — Fiche d'ordinateur à jauges et commande E · `M` · sans modèle IA — **prêt**
-
-**Modèle conseillé : Sonnet** — interface esquissée, services existants.
-
-**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-**Planches** (zone « Fiche de personnage ») : « Décidé · fiche sur
-ordinateur, vivante et déroulée partie par partie », « Décidé · jauge à
-commandes (option E) ». **Départ** :
-`CharacterSheetHeader.tsx`, `JaugeCirculaire` (`FicheJouableEnTete.tsx`).
-**Dépend de** : 25.
-
-- Bouclier de CA ; jauges circulaires PV (temporaires d'abord), niveau / XP,
-  épuisement (0 à 6), chacune avec la commande E : ▲, champ d'écart, ▼ —
-  champ vide = ±1, champ rempli = ce nombre puis le champ se vide.
-- Bornes : PV et épuisement plafonnés ; XP sans plafond.
-- Constantes en badges (initiative, vitesse, maîtrise) ; Inspiration au
-  gabarit exact d'un badge (72 × 56 px), même taille de chiffre, ▲▼ intégrés.
-- Les onglets de la fiche en pilule (25).
-- Les commandes appellent les services existants (`changeHp`, `changeXp`,
-  `changeExhaustion`, `changeInspiration`) ; aucune valeur posée par le client.
-
-**Critères d'acceptation**
-- [ ] Les quatre jauges et l'inspiration conformes à la planche, aux quatre modes.
-- [ ] Commande E : ±1 champ vide, ±N champ rempli, champ vidé après usage.
-- [ ] Un composant `CommandeE` réutilisable (il resservira en 32 et 34), avec sa planche au catalogue.
-- [ ] Jamais de valeur provisoire fausse (CA 11, PV 0/0) ni de clé technique d'objet pendant le chargement de la fiche ; vitesses au format français, arrondies au mètre (« 9 m ») (vu par la vérification du 11 octobre). Le 13 octobre, la même CA provisoire provoque une erreur d'hydratation de React : le serveur rend 11, le navigateur 16 quand les règles sont déjà en cache.
-
----
-
 ### ☐ V3.1-27 — Rail repliable et dalle Outils (lots a, b) · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — mesures et comportements donnés par V3.1-19.

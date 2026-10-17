@@ -12,7 +12,7 @@ import type { RuleEntrySummary } from "@/src/server/services/rules";
 import { useReferenceChips, type ResolvedChipView } from "./useReferenceChips";
 import Dropdown from "@/components/shared/Dropdown";
 import ActionsMenu from "@/components/shared/ActionsMenu";
-import Stepper from "@/components/shared/Stepper";
+import CommandeE, { CommandeESquelette } from "@/components/shared/CommandeE";
 import { useWorldCalendarContext } from "@/components/shared/WorldCalendarProvider";
 import { birthYearFromAge } from "@/src/core/calendar/age";
 import { ageWithDeath } from "@/src/core/genealogy/lifeDates";
@@ -313,6 +313,7 @@ export function StatBadge({
   value,
   sub,
   danger,
+  chargement,
   onClick,
 }: {
   label: string;
@@ -320,8 +321,18 @@ export function StatBadge({
   /** Seconde ligne, plus discrete, sous la valeur : une meme mesure dans une autre unite (la vitesse en cases de plateau), jamais une donnee sans rapport. */
   sub?: string;
   danger?: boolean;
+  /** V3.1-26 : la fiche calculee n'est pas prete — case creuse, SANS chiffre (jamais la valeur provisoire). */
+  chargement?: boolean;
   onClick?: () => void;
 }) {
+  if (chargement) {
+    return (
+      <div className="flex w-[4.5rem] shrink-0 flex-col items-center gap-1" aria-hidden="true">
+        <span className="flex h-8 items-end justify-center text-center text-xs font-bold uppercase leading-tight tracking-wide text-ink-muted">{label}</span>
+        <div className="h-14 w-full animate-pulse rounded-md border border-edge bg-panel-sunken" />
+      </div>
+    );
+  }
   const box = (
     <div
       className={`flex h-14 w-full flex-col items-center justify-center rounded-md border ${
@@ -353,6 +364,60 @@ export function StatBadge({
 }
 
 /**
+ * Inspiration (V3.1-26) : exactement le gabarit d'un `StatBadge` (72 x 56 px,
+ * meme chiffre `text-base`), avec ▲ et ▼ INTEGRES au badge. Accentuee quand on en
+ * a (un bien, la ou l'epuisement passe en `danger`). Ne transmet qu'un ecart.
+ * Les fleches font 16 px de haut ; leur zone de clic descend a 24 px vers le
+ * centre (le badge est `overflow-hidden`, une extension vers l'exterieur serait rognee).
+ */
+function InspirationBadge({
+  valeur,
+  chargement,
+  desactive,
+  onChange,
+}: {
+  valeur: number;
+  chargement: boolean;
+  desactive: boolean;
+  onChange: (delta: number) => void;
+}) {
+  if (chargement) return <StatBadge label="Inspiration" value="" chargement />;
+  const actif = valeur > 0;
+  const fleche =
+    "relative flex h-4 w-full shrink-0 items-center justify-center text-xs leading-none text-ink-muted transition-colors after:absolute after:inset-x-0 after:h-6 after:content-[''] hover:text-accent disabled:opacity-30 disabled:hover:text-ink-muted";
+  return (
+    <div className="flex w-[4.5rem] shrink-0 flex-col items-center gap-1">
+      <span className={`flex h-8 items-end justify-center text-center text-xs font-bold uppercase leading-tight tracking-wide ${actif ? "text-accent" : "text-ink-muted"}`}>
+        Inspiration
+      </span>
+      <div className={`flex h-14 w-full flex-col overflow-hidden rounded-md border ${actif ? "border-accent/60 bg-accent/10" : "border-edge bg-panel-raised"}`}>
+        <button
+          type="button"
+          disabled={desactive}
+          onClick={() => onChange(1)}
+          title="Ajouter une inspiration"
+          aria-label="Ajouter une inspiration"
+          className={`${fleche} after:top-0`}
+        >
+          ▲
+        </button>
+        <span className={`flex flex-1 items-center justify-center text-base font-semibold leading-none ${actif ? "text-accent" : "text-ink"}`}>{valeur}</span>
+        <button
+          type="button"
+          disabled={desactive || valeur <= 0}
+          onClick={() => onChange(-1)}
+          title="Retirer une inspiration"
+          aria-label="Retirer une inspiration"
+          className={`${fleche} after:bottom-0`}
+        >
+          ▼
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
  * En-tête de la fiche jouable (V1-B5, extrait de `PlayableCharacterSheet.tsx`
  * par V2-G5 — pur découpage, aucun changement de comportement) : identité
  * (espèce/historique/genre/pronoms/classes), badges dérivés (CA/Initiative/
@@ -375,21 +440,18 @@ export default function CharacterSheetHeader({
   inspiration,
   onChangeInspiration,
   conditions,
+  pret,
   hpCurrent,
+  hpTemp,
   hpMax,
   hpLow,
-  hpPct,
-  hpDelta,
-  setHpDelta,
-  applyHpDelta,
+  onChangeHp,
   xpCurrent,
   xpCeiling,
   xpPct,
   totalLevel,
   xpLevelThresholdsLength,
-  xpDelta,
-  setXpDelta,
-  applyXpDelta,
+  onChangeXp,
   canLevelUp,
   onLevelUp,
   onRest,
@@ -420,21 +482,22 @@ export default function CharacterSheetHeader({
    * tel quel. Rien a resoudre ici.
    */
   conditions: string[];
+  /** V3.1-26 : la fiche calculee est prete (regles resolues + etat de jeu). Faux : squelette, aucun chiffre. */
+  pret: boolean;
   hpCurrent: number;
+  /** PV temporaires : entames avant les courants (V3.1-24), montres sous la jauge. */
+  hpTemp: number;
   hpMax: number;
+  /** PV sous un tiers du maximum : l'anneau passe en `danger`. */
   hpLow: boolean;
-  hpPct: number;
-  hpDelta: string;
-  setHpDelta: (v: string) => void;
-  applyHpDelta: (sign: 1 | -1) => void;
+  /** Les trois commandes ne transmettent qu'un ECART (V3.1-26) : le serveur l'applique et le borne. */
+  onChangeHp: (delta: number) => void;
   xpCurrent: number;
   xpCeiling: number;
   xpPct: number;
   totalLevel: number;
   xpLevelThresholdsLength: number;
-  xpDelta: string;
-  setXpDelta: (v: string) => void;
-  applyXpDelta: (sign: 1 | -1) => void;
+  onChangeXp: (delta: number) => void;
   /** Seuil de PX du niveau suivant atteint (V2-G1, montee de niveau accompagnee) — voir `hasReachedNextLevel`, `src/core/rules/experience.ts`. */
   canLevelUp: boolean;
   onLevelUp: () => void;
@@ -468,9 +531,10 @@ export default function CharacterSheetHeader({
 
   // Cases comptees depuis les METRES affiches, pas depuis les pieds d'origine :
   // les deux lignes de la case Vitesse doivent pouvoir se verifier l'une par
-  // l'autre. `ftToM` arrondit au dixieme (30 pieds -> 9,1 m), et le compte
-  // reste celui du SRD pour chaque vitesse standard — verifie par test.
-  const speedMeters = ftToM(sheet.speed.value);
+  // l'autre. Metres arrondis AU METRE (30 pieds -> 9 m, V3.1-26) ; le compte
+  // en cases reste celui du SRD pour toute vitesse par pas de 5 pieds de 5 a 100
+  // (verifie a la main, voir `gridSquares.test.ts` pour les vitesses standard).
+  const speedMeters = Math.round(ftToM(sheet.speed.value));
   const speedSquares = squaresFromMeters(speedMeters);
 
   return (
@@ -624,7 +688,17 @@ export default function CharacterSheetHeader({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-start gap-2">
+      {/*
+        V3.1-26 — la rangée chiffrée de la fiche d'ordinateur : bouclier de CA,
+        trois jauges à commande E (PV, niveau/XP, épuisement), un filet, puis les
+        constantes en badges (Inspiration au même gabarit qu'un badge).
+
+        Tant que `pret` est faux (règles résolues ou état de jeu pas encore
+        arrivés), AUCUN chiffre : un squelette de même encombrement. Les valeurs
+        de départ d'avant (CA 11, PV 0/0) étaient fausses, et la CA provisoire
+        différait entre le rendu serveur et le navigateur (erreur d'hydratation).
+      */}
+      <div className="flex flex-wrap items-start gap-x-5 gap-y-3">
         <div className="flex w-12 shrink-0 flex-col items-center gap-1">
           <span className="flex h-8 items-end justify-center text-xs font-bold uppercase tracking-wide text-ink-muted">CA</span>
           <div
@@ -632,69 +706,67 @@ export default function CharacterSheetHeader({
             style={{ clipPath: "polygon(50% 0%, 100% 20%, 100% 55%, 50% 100%, 0% 55%, 0% 20%)" }}
             title="Classe d'armure — calculée automatiquement (10 + Dex + équipement)"
           >
-            <span className="text-xl font-bold text-ink">{sheet.ac.value}</span>
+            {pret && <span className="text-xl font-bold text-ink">{sheet.ac.value}</span>}
           </div>
         </div>
-        <StatBadge
-          label="Initiative"
-          value={`${sheet.abilities.dex.mod >= 0 ? "+" : ""}${sheet.abilities.dex.mod}`}
-          onClick={onRollInitiative}
-        />
-        {/* Vitesse en cases du plateau sous les metres (retour utilisateur) :
-            la meme mesure dans l'unite reellement utilisee a la table, arrondie
-            a la case inferieure — on ne franchit pas une case a moitie. */}
-        <StatBadge
-          label="Vitesse"
-          value={`${speedMeters} m`}
-          sub={`${speedSquares} case${speedSquares > 1 ? "s" : ""}`}
-        />
-        <StatBadge label="Perception passive" value={String(10 + sheet.skills.perception.mod)} />
-        <StatBadge label="Maîtrise" value={`+${sheet.proficiencyBonus}`} />
-        <StatBadge label="Dés de vie" value={sheet.hitPoints.hitDice} />
-        <div className="flex w-[6.5rem] shrink-0 flex-col items-center gap-1">
-          <span
-            className={`flex h-8 items-end justify-center text-center text-xs font-bold uppercase leading-tight tracking-wide ${
-              exhaustion > 0 ? "text-danger" : "text-ink-muted"
-            }`}
-          >
-            Épuisement
-          </span>
-          <Stepper
-            onIncrement={() => onChangeExhaustion(1)}
-            onDecrement={() => onChangeExhaustion(-1)}
-            incrementDisabled={busy || exhaustion >= 6}
-            decrementDisabled={busy || exhaustion <= 0}
-            incrementLabel="Augmenter l'épuisement"
-            decrementLabel="Diminuer l'épuisement"
-            className={`w-full ${exhaustion > 0 ? "border-danger/60 bg-danger/10" : ""}`}
-          >
-            <span className={`text-base font-semibold ${exhaustion > 0 ? "text-danger" : "text-ink"}`}>{exhaustion}</span>
-          </Stepper>
-        </div>
 
-        {/* V2.1-26 — l'inspiration, à la suite de l'épuisement : deux
-            compteurs de jeu qui se lisent ensemble. Accentuée quand on en a,
-            là où l'épuisement passe en `danger` — l'une est un bien, l'autre
-            un mal. */}
-        <div className="flex w-[6.5rem] shrink-0 flex-col items-center gap-1">
-          <span
-            className={`flex h-8 items-end justify-center text-center text-xs font-bold uppercase leading-tight tracking-wide ${
-              inspiration > 0 ? "text-accent" : "text-ink-muted"
-            }`}
-          >
-            Inspiration
-          </span>
-          <Stepper
-            onIncrement={() => onChangeInspiration(1)}
-            onDecrement={() => onChangeInspiration(-1)}
-            incrementDisabled={busy || inspiration >= 5}
-            decrementDisabled={busy || inspiration <= 0}
-            incrementLabel="Ajouter une inspiration"
-            decrementLabel="Retirer une inspiration"
-            className={`w-full ${inspiration > 0 ? "border-accent/60 bg-accent/10" : ""}`}
-          >
-            <span className={`text-base font-semibold ${inspiration > 0 ? "text-accent" : "text-ink"}`}>{inspiration}</span>
-          </Stepper>
+        {pret ? (
+          <>
+            <CommandeE
+              libelle="Points de vie"
+              valeur={hpCurrent}
+              maximum={hpMax}
+              danger={hpLow}
+              complement={hpTemp > 0 ? `+${hpTemp} temp.` : undefined}
+              desactive={busy}
+              onDelta={onChangeHp}
+            />
+            <CommandeE
+              libelle={`Niveau ${totalLevel}`}
+              valeur={xpCurrent}
+              progression={xpPct}
+              complement={totalLevel < xpLevelThresholdsLength ? `niveau ${totalLevel + 1} à ${xpCeiling}` : undefined}
+              desactive={busy}
+              onDelta={onChangeXp}
+            />
+            <CommandeE libelle="Épuisement" valeur={exhaustion} maximum={6} danger={exhaustion > 0} desactive={busy} onDelta={onChangeExhaustion} />
+          </>
+        ) : (
+          <>
+            <CommandeESquelette libelle="Points de vie" />
+            <CommandeESquelette libelle="Niveau" />
+            <CommandeESquelette libelle="Épuisement" />
+          </>
+        )}
+
+        <div className="hidden h-14 w-px self-end bg-edge/60 md:block" aria-hidden="true" />
+
+        <div className="flex flex-wrap items-start gap-2">
+          <StatBadge
+            label="Initiative"
+            value={`${sheet.abilities.dex.mod >= 0 ? "+" : ""}${sheet.abilities.dex.mod}`}
+            chargement={!pret}
+            onClick={onRollInitiative}
+          />
+          {/* Vitesse en cases du plateau sous les mètres (retour utilisateur) :
+              la même mesure dans l'unité réellement utilisée à la table. Mètres
+              arrondis au mètre (« 9 m », pas « 9.1 m »), cases comptées depuis ces
+              mètres : à la case inférieure, on ne franchit pas une case à moitié. */}
+          <StatBadge
+            label="Vitesse"
+            value={`${speedMeters} m`}
+            sub={`${speedSquares} case${speedSquares > 1 ? "s" : ""}`}
+            chargement={!pret}
+          />
+          <StatBadge label="Perception passive" value={String(10 + sheet.skills.perception.mod)} chargement={!pret} />
+          <StatBadge label="Maîtrise" value={`+${sheet.proficiencyBonus}`} chargement={!pret} />
+          <StatBadge label="Dés de vie" value={sheet.hitPoints.hitDice} chargement={!pret} />
+          <InspirationBadge
+            valeur={inspiration}
+            chargement={!pret}
+            desactive={busy}
+            onChange={onChangeInspiration}
+          />
         </div>
       </div>
 
@@ -712,76 +784,15 @@ export default function CharacterSheetHeader({
         </div>
       )}
 
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wide text-ink-muted">
-          <span>Points de vie</span>
-          <span className={hpLow ? "text-danger" : "text-ink-muted"}>
-            {hpCurrent}/{hpMax}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-panel-sunken">
-            <div className={`h-full rounded-full transition-[width] ${hpLow ? "bg-danger" : "bg-accent"}`} style={{ width: `${hpPct}%` }} />
-          </div>
-          <Stepper
-            onIncrement={() => applyHpDelta(1)}
-            onDecrement={() => applyHpDelta(-1)}
-            incrementDisabled={busy}
-            decrementDisabled={busy}
-            incrementLabel="Ajouter aux points de vie"
-            decrementLabel="Retirer des points de vie"
-            className="w-16"
-          >
-            <input
-              type="number"
-              value={hpDelta}
-              onChange={(e) => setHpDelta(e.target.value)}
-              placeholder="1"
-              className="w-full bg-transparent text-center text-sm text-ink outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-            />
-          </Stepper>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-1 border-b border-edge/60 pb-3">
-        <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wide text-ink-muted">
-          <span>Expérience</span>
-          <span>
-            {xpCurrent} XP{totalLevel < xpLevelThresholdsLength ? ` · niveau ${totalLevel + 1} à ${xpCeiling}` : ""}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-panel-sunken">
-            <div className="h-full rounded-full bg-accent transition-[width]" style={{ width: `${xpPct}%` }} />
-          </div>
-          <Stepper
-            onIncrement={() => applyXpDelta(1)}
-            onDecrement={() => applyXpDelta(-1)}
-            incrementDisabled={busy}
-            decrementDisabled={busy}
-            incrementLabel="Ajouter des points d'expérience"
-            decrementLabel="Retirer des points d'expérience"
-            className="w-16"
-          >
-            <input
-              type="number"
-              value={xpDelta}
-              onChange={(e) => setXpDelta(e.target.value)}
-              placeholder="1"
-              className="w-full bg-transparent text-center text-sm text-ink outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-            />
-          </Stepper>
-        </div>
-        {canLevelUp && (
-          <button
-            type="button"
-            onClick={onLevelUp}
-            className="w-full rounded-full bg-accent px-4 py-1.5 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover"
-          >
-            Monter de niveau
-          </button>
-        )}
-      </div>
+      {pret && canLevelUp && (
+        <button
+          type="button"
+          onClick={onLevelUp}
+          className="w-full rounded-full bg-accent px-4 py-1.5 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover"
+        >
+          Monter de niveau
+        </button>
+      )}
 
       {sheet.warnings.length > 0 && (
         <div className="rounded-md border border-danger/60 bg-danger/10 px-3 py-2 text-sm text-danger">

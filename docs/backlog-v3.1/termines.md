@@ -2,6 +2,38 @@
 
 ---
 
+### ☑ V3.1-26 — Fiche d'ordinateur à jauges et commande E · `M` · sans modèle IA — **fait le 17 octobre**
+
+**Modèle conseillé : Sonnet** — interface esquissée, services existants.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Planches** (zone « Fiche de personnage ») : « Décidé · fiche sur
+ordinateur, vivante et déroulée partie par partie », « Décidé · jauge à
+commandes (option E) ». **Départ** :
+`CharacterSheetHeader.tsx`, `JaugeCirculaire` (`FicheJouableEnTete.tsx`).
+**Dépend de** : 25.
+
+- Bouclier de CA ; jauges circulaires PV (temporaires d'abord), niveau / XP,
+  épuisement (0 à 6), chacune avec la commande E : ▲, champ d'écart, ▼ —
+  champ vide = ±1, champ rempli = ce nombre puis le champ se vide.
+- Bornes : PV et épuisement plafonnés ; XP sans plafond.
+- Constantes en badges (initiative, vitesse, maîtrise) ; Inspiration au
+  gabarit exact d'un badge (72 × 56 px), même taille de chiffre, ▲▼ intégrés.
+- Les onglets de la fiche en pilule (25).
+- Les commandes appellent les services existants (`changeHp`, `changeXp`,
+  `changeExhaustion`, `changeInspiration`) ; aucune valeur posée par le client.
+
+**Critères d'acceptation**
+- [x] Les quatre jauges et l'inspiration conformes à la planche, aux quatre modes.
+- [x] Commande E : ±1 champ vide, ±N champ rempli, champ vidé après usage.
+- [x] Un composant `CommandeE` réutilisable (il resservira en 32 et 34), avec sa planche au catalogue.
+- [x] Jamais de valeur provisoire fausse (CA 11, PV 0/0) ni de clé technique d'objet pendant le chargement de la fiche ; vitesses au format français, arrondies au mètre (« 9 m ») (vu par la vérification du 11 octobre). Le 13 octobre, la même CA provisoire provoque une erreur d'hydratation de React : le serveur rend 11, le navigateur 16 quand les règles sont déjà en cache.
+
+**Clôture** : `CommandeE` (`components/shared/CommandeE.tsx`, écart seul, règles dans `lib/ui/commandeE.ts`, testées) porte PV, niveau/XP et épuisement ; bouclier de CA, badges, Inspiration 72 × 56 ; squelette sans chiffre tant que les règles et l'état de jeu ne sont pas arrivés (`useResolvedRuleset` part toujours de vide : plus d'erreur d'hydratation) ; vitesse au mètre. Vérifié dans le navigateur (Banc d'essai, chargement froid et chaud, écart 2 puis ±1). Planche « Jauge à commandes » dans `Fiche.dc.html`.
+
+---
+
 ### ☑ V3.1-25 — La pilule glissante remplace `BinderTabs` · `S` · sans modèle IA — **fait le 17 octobre (ADR 0034)**
 
 **Modèle conseillé : Sonnet** — composant décidé (ADR 0034), usages listés.
