@@ -153,7 +153,10 @@ export default function DiceRollProvider({
     const ancre = ancreRef.current?.current;
     if (ancre && ancre.isConnected && !window.matchMedia(WINDOWS_MOBILE_QUERY).matches) {
       const r = ancre.getBoundingClientRect();
-      const left = Math.max(MARGE_ECRAN, Math.min(r.right + 12, window.innerWidth - LARGEUR_PANNEAU - MARGE_ECRAN));
+      // Le dé est centré dans sa partie du rail : le panneau s'ouvre à droite
+      // de cette partie, pas du dé, sinon il recouvrirait le rail.
+      const bordRail = ancre.parentElement?.getBoundingClientRect().right ?? r.right;
+      const left = Math.max(MARGE_ECRAN, Math.min(Math.max(r.right, bordRail) + 12, window.innerWidth - LARGEUR_PANNEAU - MARGE_ECRAN));
       const enHaut = r.top < window.innerHeight / 2;
       setPosition(
         enHaut
