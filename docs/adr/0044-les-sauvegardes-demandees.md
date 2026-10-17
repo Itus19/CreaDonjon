@@ -23,3 +23,11 @@ B.
 ## Conséquences
 
 Une table, une fonction, `docs/SCHEMA.md`, tests RLS. Les écrans : bandeau de la cible (lancer, vrai dé avec « modificateur inclus », laisser le MJ), Initiative en combat, Table hors combat (V3.1-38, 34).
+
+## Réalisation de la restriction de cible (V3.1-110, 17 octobre 2026)
+
+- `immune_conditions_block` est une **liste d'états**, pas un booléen : l'effet doit dire quel état il impose pour qu'une immunité le bloque (Charme-personne : `["charmed"]`). Types et états en minuscules.
+- `isValidTarget` (`src/core/rules/targetRestriction.ts`) lit un profil `{ creatureType, conditionImmunities }` : le type du bloc de stats (`creatureTypeOf`, premier mot), « humanoid » pour un PJ. Un type inconnu (saisie libre) n'est jamais refusé par une liste de types ; une immunité connue refuse toujours.
+- Les restrictions viennent de `data/srd/spell-targets.json`, **par édition** (en 2024, les soins ne disent plus « sans effet sur les morts-vivants »), posées sur le premier effet par l'import ; un sort sans bloc `effects` (Charme-personne) en reçoit un, avec sa sauvegarde. Un sort saisi mais introuvable arrête l'import.
+- La fiche d'un sort affiche la restriction sous l'effet (« Cible : Humanoïde seulement · Une immunité à Charmé protège »).
+- La demande de sauvegarde (V3.1-111) appellera `isValidTarget` avant de créer la demande.

@@ -2,6 +2,34 @@
 
 ---
 
+### ☑ V3.1-110 — Sauvegardes : la restriction de cible (noyau) · `S` · sans modèle IA — **fait le 17 octobre (ADR 0044)**
+
+**Modèle conseillé : Sonnet** — noyau pur, tests d'abord. **ADR 0044.**
+
+**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+- `zEffectData` gagne `target?: { creature_types?, exclude_creature_types?,
+  immune_conditions_block? }` (Zod) ; `isValidTarget(effect, target)` dans
+  `src/core/rules/` lit le type de créature (bloc de stats, espèce) et les
+  immunités d'état.
+- L'import SRD pose la restriction sur les sorts concernés (Charme-personne :
+  humanoïde, etc.) — liste à relever dans le SRD, le contenu reste l'import.
+
+**Critères d'acceptation**
+- [x] Charme-personne sur un mort-vivant : refusé (test) ; sur un humanoïde :
+  accepté ; un immunisé à Charmé : refusé.
+
+**Réalisé** (par Opus : noyau du moteur et contexte déjà chargé, skill `deleguer` §1)
+- `zEffectData.target` ; `isValidTarget`, `creatureTypeOf` (`src/core/rules/targetRestriction.ts`), tests d'abord.
+- `data/srd/spell-targets.json` par édition (15 sorts en 2014, 7 en 2024, relevés dans le texte du SRD), testé (`srdSpellTargetsData.test.ts`) ; `mergeSpellTargets` dans l'import, qui crée le bloc `effects` s'il manque. SRD réimporté le 17 octobre, scripts d'après import rejoués.
+- Fiche d'un sort : la restriction s'affiche sous l'effet.
+
+*Écart* : `immune_conditions_block` est une liste d'états, pas un booléen (ADR 0044, « Réalisation »).
+*Restes* : Amitié avec les animaux (Intelligence 4 ou plus) n'est pas modélisée ; Domination de bête est laissée sans restriction, son texte SRD dit « créature ».
+
+
+---
+
 ### ☑ V3.1-105 — Cibler : le cœur commun de résolution · `L` · sans modèle IA — **fait le 17 octobre (ADR 0042)**
 
 **Modèle conseillé : Opus** — extraction du tour solo, moteur. **ADR 0042.**

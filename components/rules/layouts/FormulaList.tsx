@@ -8,6 +8,8 @@ export default function FormulaList({
     damageType?: string;
     formulaText?: string;
     save?: { ability: string; effectOnSuccess?: string };
+    /** V3.1-110 : la restriction de cible, déjà mise en phrase (« Cible : humanoïde »). */
+    target?: string;
   }[];
 }) {
   return (
@@ -25,6 +27,7 @@ export default function FormulaList({
               {item.save.effectOnSuccess && ` — reussite : ${item.save.effectOnSuccess}`}
             </p>
           )}
+          {item.target && <p className="text-xs text-ink-muted">{item.target}</p>}
         </li>
       ))}
     </ul>

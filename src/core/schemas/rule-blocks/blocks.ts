@@ -94,6 +94,16 @@ export const zEffectData = z.object({
   // comme `WeaponData.isRanged`, meme motif que les armes : determine la
   // caracteristique employee jamais separement du sort lui-meme.
   attack: z.object({ range: z.enum(["melee", "ranged"]) }).optional(),
+  // V3.1-110 (ADR 0044) — qui l'effet peut viser. Les types de creature sont
+  // en minuscules (`humanoid`, `undead`) ; `immune_conditions_block` liste les
+  // etats que l'effet impose : une cible immunisee a l'un d'eux est refusee.
+  target: z
+    .object({
+      creature_types: z.array(z.string().min(1)).optional(),
+      exclude_creature_types: z.array(z.string().min(1)).optional(),
+      immune_conditions_block: z.array(z.string().min(1)).optional(),
+    })
+    .optional(),
 });
 export const zEffectsBlockData = z.object({
   effects: z.array(zEffectData),

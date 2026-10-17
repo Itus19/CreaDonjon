@@ -1,0 +1,29 @@
+{
+  "_regle": "V3.1-110 (ADR 0044) — restriction de cible des sorts SRD, posee sur le premier effet du sort a l'import (ingest-srd.ts, mergeSpellTargets). Relevee dans le texte du sort de chaque edition ; un sort absent n'a pas de restriction. Les types de creature et les etats sont en minuscules.",
+  "dnd_srd_51": {
+    "charm-person": { "creature_types": ["humanoid"], "immune_conditions_block": ["charmed"] },
+    "hold-person": { "creature_types": ["humanoid"], "immune_conditions_block": ["paralyzed"] },
+    "dominate-person": { "creature_types": ["humanoid"], "immune_conditions_block": ["charmed"] },
+    "animal-friendship": { "creature_types": ["beast"], "immune_conditions_block": ["charmed"] },
+    "hold-monster": { "exclude_creature_types": ["undead"], "immune_conditions_block": ["paralyzed"] },
+    "dominate-monster": { "immune_conditions_block": ["charmed"] },
+    "blight": { "exclude_creature_types": ["undead", "construct"] },
+    "cure-wounds": { "exclude_creature_types": ["undead", "construct"] },
+    "healing-word": { "exclude_creature_types": ["undead", "construct"] },
+    "mass-cure-wounds": { "exclude_creature_types": ["undead", "construct"] },
+    "mass-healing-word": { "exclude_creature_types": ["undead", "construct"] },
+    "prayer-of-healing": { "exclude_creature_types": ["undead", "construct"] },
+    "heal": { "exclude_creature_types": ["undead", "construct"] },
+    "mass-heal": { "exclude_creature_types": ["undead", "construct"] },
+    "spare-the-dying": { "exclude_creature_types": ["undead", "construct"] }
+  },
+  "dnd_srd_52": {
+    "charm-person": { "creature_types": ["humanoid"], "immune_conditions_block": ["charmed"] },
+    "hold-person": { "creature_types": ["humanoid"], "immune_conditions_block": ["paralyzed"] },
+    "dominate-person": { "creature_types": ["humanoid"], "immune_conditions_block": ["charmed"] },
+    "animal-friendship": { "creature_types": ["beast"], "immune_conditions_block": ["charmed"] },
+    "charm-monster": { "immune_conditions_block": ["charmed"] },
+    "dominate-monster": { "immune_conditions_block": ["charmed"] },
+    "hold-monster": { "immune_conditions_block": ["paralyzed"] }
+  }
+}

@@ -98,25 +98,6 @@ Règles actives est V3.1-57.
 
 ---
 
-### ☐ V3.1-110 — Sauvegardes : la restriction de cible (noyau) · `S` · sans modèle IA — **prêt**
-
-**Modèle conseillé : Sonnet** — noyau pur, tests d'abord. **ADR 0044.**
-
-**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-- `zEffectData` gagne `target?: { creature_types?, exclude_creature_types?,
-  immune_conditions_block? }` (Zod) ; `isValidTarget(effect, target)` dans
-  `src/core/rules/` lit le type de créature (bloc de stats, espèce) et les
-  immunités d'état.
-- L'import SRD pose la restriction sur les sorts concernés (Charme-personne :
-  humanoïde, etc.) — liste à relever dans le SRD, le contenu reste l'import.
-
-**Critères d'acceptation**
-- [ ] Charme-personne sur un mort-vivant : refusé (test) ; sur un humanoïde :
-  accepté ; un immunisé à Charmé : refusé.
-
----
-
 ### ☐ V3.1-111 — Sauvegardes : la demande et la réponse (données, serveur) · `M` · sans modèle IA — **prêt (Opus)**
 
 **Modèle conseillé : Opus** — table nouvelle, RLS. **ADR 0044.**

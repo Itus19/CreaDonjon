@@ -1127,6 +1127,51 @@ function mergeClassSpellcasting(category: string, entryIndex: string, baseSystem
 }
 
 /**
+ * V3.1-110 — Restriction de cible des sorts (`data/srd/spell-targets.json`,
+ * ADR 0044), par `base_system` : posee sur le premier effet du sort. Un sort
+ * sans bloc `effects` (Charme-personne n'a pas de degats) en recoit un, avec
+ * sa sauvegarde si le SRD la declare. Un sort saisi mais jamais rencontre
+ * arrete l'import (verifie a la fin de chaque edition) : il serait sinon
+ * ignore en silence.
+ */
+const SRD_SPELL_TARGETS: Record<string, Record<string, Record<string, unknown>>> = JSON.parse(
+  readFileSync(resolve(process.cwd(), "data/srd/spell-targets.json"), "utf-8")
+);
+const mergedSpellTargets = new Set<string>();
+
+function mergeSpellTargets(category: string, item: SrdRecord, baseSystem: string, blocks: EntryBlock[]): void {
+  if (category !== "Spells") return;
+  const entryIndex = String(item.index);
+  const target = SRD_SPELL_TARGETS[baseSystem]?.[entryIndex];
+  if (!target) return;
+  let block = blocks.find((b) => b.block_type === "effects");
+  if (!block) {
+    const dc = item.dc as SrdRecord | undefined;
+    const dcAbility = (dc?.dc_type as SrdRecord | undefined)?.index;
+    block = {
+      block_type: "effects",
+      display: { label: "Effets", layout: "formula_list" },
+      data: {
+        effects: [
+          { id: "e1", save: typeof dcAbility === "string" ? { ability: dcAbility, effect_on_success: String(dc?.dc_success ?? "") } : undefined },
+        ],
+      },
+      display_order: 300,
+    };
+    blocks.push(block);
+  }
+  const effects = (block.data as { effects: Record<string, unknown>[] }).effects;
+  effects[0] = { ...effects[0], target };
+  validateBlockData("effects", block.data);
+  mergedSpellTargets.add(`${baseSystem}/${entryIndex}`);
+}
+
+function assertSpellTargetsMerged(baseSystem: string): void {
+  const missing = Object.keys(SRD_SPELL_TARGETS[baseSystem] ?? {}).filter((key) => !mergedSpellTargets.has(`${baseSystem}/${key}`));
+  if (missing.length > 0) throw new Error(`spell-targets.json : sorts introuvables dans ${baseSystem} : ${missing.join(", ")}`);
+}
+
+/**
  * V3.1-117 — Mecanique des aptitudes de sous-classe ecrite a la main
  * (`data/srd/subclasses-2024.json`, ADR 0046) : modificateurs, sorts
  * toujours prepares, choix. Fusionnee dans le bloc `subclass_features` deja
@@ -2198,6 +2243,7 @@ async function importSrdVersion(config: SrdVersionConfig): Promise<ImportResult>
         if (choices) t.blocks.push(choices);
         mergeSubclassMechanics(category, String(item.index), config.baseSystem, t.blocks);
         mergeClassSpellcasting(category, String(item.index), config.baseSystem, t.blocks);
+        mergeSpellTargets(category, item, config.baseSystem, t.blocks);
         transformed.push(t);
         blocksTotal += t.blocks.length;
         refsTotal += t.refs.length;
@@ -2226,6 +2272,9 @@ async function importSrdVersion(config: SrdVersionConfig): Promise<ImportResult>
 
     byCategory.push({ category, entries: transformed });
   }
+
+  // V3.1-110 : toute restriction saisie a trouve son sort, avant d'ecrire quoi que ce soit.
+  assertSpellTargetsMerged(config.baseSystem);
 
   // V3.1-115 : la fiche des regles de personnage, absente du JSON du SRD.
   const characterRules = characterRulesEntry(config.baseSystem, config.sourceAttribution);

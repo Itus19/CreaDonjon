@@ -249,8 +249,22 @@ function SpellCasting({ data }: { data: SpellCastingBlockData }) {
   return <KeyValues items={items} />;
 }
 
+/** V3.1-110 (ADR 0044) : la restriction de cible d'un effet, en une phrase. */
+function targetRestrictionText(target: EffectsBlockData["effects"][number]["target"]): string | undefined {
+  if (!target) return undefined;
+  const typeLabel = (t: string) => CREATURE_TYPE_LABELS_FR[t] ?? t;
+  const parts: string[] = [];
+  if (target.creature_types?.length) parts.push(`Cible : ${target.creature_types.map(typeLabel).join(", ")} seulement`);
+  if (target.exclude_creature_types?.length) parts.push(`Sans effet sur : ${target.exclude_creature_types.map(typeLabel).join(", ")}`);
+  // Les états sont stockés en minuscules ; la table des libellés a leur nom SRD (« Charmed »).
+  const stateLabel = (c: string) => conditionLabel(c.charAt(0).toUpperCase() + c.slice(1));
+  if (target.immune_conditions_block?.length) parts.push(`Une immunité à ${target.immune_conditions_block.map(stateLabel).join(", ")} protège`);
+  return parts.length > 0 ? parts.join(" · ") : undefined;
+}
+
 function Effects({ data }: { data: EffectsBlockData }) {
   const items = data.effects.map((effect) => ({
+    target: targetRestrictionText(effect.target),
     id: effect.id,
     trigger: effect.trigger,
     damageType: effect.damage_type ? damageTypeLabel(effect.damage_type) : undefined,
