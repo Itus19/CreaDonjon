@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import BinderTabs from "@/components/shared/BinderTabs";
+import Tabs, { TabPanel } from "@/components/shared/Tabs";
 import Checkbox from "@/components/shared/Checkbox";
 import Dropdown from "@/components/shared/Dropdown";
 import DieIcon from "@/components/shared/DieIcon";
@@ -69,16 +69,15 @@ const BTN_GHOST =
 const BTN_RETRAIT =
   "rounded-full border border-edge px-4 py-2 text-sm text-ink-muted transition-colors hover:bg-panel-raised";
 /**
- * Le panneau d'un classeur. **Sans fond**, comme le haut de la fiche :
+ * Le panneau sous la pilule d'onglets. **Sans fond**, comme le haut de la fiche :
  * les deux colonnes latérales se posent sur le fond de page, et seuls de
  * fins encadrés découpent ce qu'elles contiennent. C'est ce que l'auteur
  * a retenu du premier jet — le bloc des caractéristiques, qui ne pèse
  * rien parce qu'il ne pose aucune surface.
  *
- * Bord fin (`border`, pas `border-2`), de la couleur de la ligne des
- * onglets pour que la jointure reste franche.
+ * Bord fin (`border`), séparé de la pilule d'onglets par une marge.
  */
-const CLASSEUR = "rounded-b-lg border border-t-0 border-edge-strong p-3";
+const PANNEAU = "mt-2 rounded-lg border border-edge p-3";
 const LIGNE_CLIQUABLE =
   "flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-panel-sunken";
 
@@ -173,7 +172,8 @@ function ColonneMonde() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <BinderTabs
+      <Tabs
+        idPrefix="esquisse-monde"
         aria-label="Colonne du monde"
         value={onglet}
         onChange={(v) => {
@@ -188,7 +188,7 @@ function ColonneMonde() {
         ]}
       />
 
-      <div className={`${CLASSEUR} min-h-0 flex-1 overflow-y-auto`}>
+      <TabPanel idPrefix="esquisse-monde" value={onglet} className={`${PANNEAU} min-h-0 flex-1 overflow-y-auto`}>
         {onglet === "wiki" &&
           (entry ? (
             <FicheWiki entry={entry} onRetour={() => setOuverte(null)} />
@@ -273,7 +273,7 @@ function ColonneMonde() {
             <p className="text-sm text-ink-muted">L&apos;écran de règles existant, en version étroite.</p>
           </div>
         )}
-      </div>
+      </TabPanel>
     </div>
   );
 }
@@ -1017,7 +1017,8 @@ function ColonneFiche({ onLancer }: { onLancer: (label: string, modificateur: nu
       </details>
 
       <div className="flex min-h-0 flex-1 flex-col">
-        <BinderTabs
+        <Tabs
+          idPrefix="esquisse-fiche"
           aria-label="Sections de la fiche"
           value={onglet}
           onChange={setOnglet}
@@ -1029,7 +1030,7 @@ function ColonneFiche({ onLancer }: { onLancer: (label: string, modificateur: nu
             { value: "maitrises", label: "Maîtrises" },
           ]}
         />
-        <div className={`${CLASSEUR} min-h-0 flex-1 overflow-y-auto`}>
+        <TabPanel idPrefix="esquisse-fiche" value={onglet} className={`${PANNEAU} min-h-0 flex-1 overflow-y-auto`}>
           {/* ACTIONS — la présentation de `ActionsTab` : les emplacements en
               tête, puis une carte par chose qu'on peut faire. L'onglet ne
               tient AUCUNE liste à lui : il dérive ce qu'il montre de ce qui
@@ -1306,7 +1307,7 @@ function ColonneFiche({ onLancer }: { onLancer: (label: string, modificateur: nu
               </div>
             </div>
           )}
-        </div>
+        </TabPanel>
       </div>
     </div>
   );
@@ -1539,7 +1540,7 @@ export default function EsquisseSolo() {
       </header>
 
       <div className="lg:hidden">
-        <BinderTabs
+        <Tabs
           aria-label="Colonne affichée"
           value={colonne}
           onChange={setColonne}

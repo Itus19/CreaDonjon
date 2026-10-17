@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import BinderTabs from "@/components/shared/BinderTabs";
+import Tabs from "@/components/shared/Tabs";
 
 /**
  * V3-D1 — La coquille a trois colonnes de l'ecran solo.
@@ -168,7 +168,7 @@ export default function SoloShell({
       {/* Sous 1024 px, les trois colonnes deviennent trois onglets, et
           « Jeu » s'ouvre par defaut : c'est la que se joue le tour. */}
       <div className="lg:hidden">
-        <BinderTabs
+        <Tabs
           aria-label="Colonne affichée"
           value={colonne}
           onChange={setColonne}

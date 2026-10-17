@@ -20,28 +20,6 @@ V3.1-20 (lot g) peut partir dès que 25 est fait.
 
 ---
 
-### ☐ V3.1-25 — La pilule glissante remplace `BinderTabs` · `S` · sans modèle IA — **prêt**
-
-**Modèle conseillé : Sonnet** — composant décidé (ADR 0034), usages listés.
-
-**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; recenser les usages à remplacer avant de coder, puis vérifier qu'il n'en reste aucun ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-**Planche** : « Décidé · accueil : tableau de bord, onglets en pilule
-glissante ». **Départ** : `components/shared/BinderTabs.tsx`.
-
-Un composant d'onglets unique : fond qui glisse sous l'onglet actif (260 ms,
-sauté sous mouvement réduit), clavier (flèches, Début, Fin), rôles ARIA
-`tablist` / `tab` / `tabpanel`. Il remplace `BinderTabs` partout : fiche
-jouable, fiche solo, colonne Monde et coquille du solo, aperçu du créateur.
-Sur téléphone, la pilule défile horizontalement si elle déborde.
-
-**Critères d'acceptation**
-- [ ] Plus aucun import de `BinderTabs` ; le fichier est supprimé.
-- [ ] Clavier et lecteur d'écran : un test de composant.
-- [ ] Charte §3 et planche 3 du catalogue mises à jour.
-
----
-
 ### ☐ V3.1-26 — Fiche d'ordinateur à jauges et commande E · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — interface esquissée, services existants.

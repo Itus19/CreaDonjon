@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { JournalEntry } from "@/src/server/services/activityJournal";
 import WorldCardActions from "@/app/WorldCardActions";
-import BinderTabs from "@/components/shared/BinderTabs";
+import Tabs, { TabPanel } from "@/components/shared/Tabs";
 import DiceStatsPanel from "./DiceStatsPanel";
 import InviteLinkPanel from "./InviteLinkPanel";
 
@@ -43,7 +43,7 @@ const DETAIL_TAB_LABELS: Record<DetailTab, string> = {
 
 /**
  * Detail du monde selectionne. Cote MJ, ses sections vivent depuis V2.1-24
- * (lot 3) dans un classeur (`BinderTabs`, ADR 0026) — demande de l'auteur :
+ * (lot 3) dans un classeur (`Tabs`, ADR 0034) — demande de l'auteur :
  * "des onglets comme des separateurs de classeur pour passer de la gestion
  * des permissions a l'historique des modifications". Le serveur adapte deja
  * le detail au role (`/journal/mine`), rien a filtrer ici.
@@ -109,7 +109,8 @@ function WorldDetail({ world, currentUserId, canUseSoloMode }: { world: HomeWorl
         </div>
       ) : (
         <div className="flex min-h-0 flex-1 flex-col">
-          <BinderTabs
+          <Tabs
+            idPrefix="accueil"
             value={tab}
             onChange={setTab}
             aria-label="Sections du monde"
@@ -118,7 +119,7 @@ function WorldDetail({ world, currentUserId, canUseSoloMode }: { world: HomeWorl
 
           {/* Seul le panneau defile : Rejoindre reste toujours visible,
               jamais au fond d'une zone qui defile. */}
-          <div className="min-h-0 flex-1 overflow-y-auto rounded-b-lg border-2 border-t-0 border-edge-strong bg-panel-raised p-3">
+          <TabPanel idPrefix="accueil" value={tab} className="mt-2 min-h-0 flex-1 overflow-y-auto rounded-lg border border-edge bg-panel p-3">
             {tab === "journal" && (
               <>
                 {loadError && <p className="text-xs text-danger">{loadError}</p>}
@@ -189,7 +190,7 @@ function WorldDetail({ world, currentUserId, canUseSoloMode }: { world: HomeWorl
                 canUseSoloMode={canUseSoloMode}
               />
             )}
-          </div>
+          </TabPanel>
         </div>
       )}
 

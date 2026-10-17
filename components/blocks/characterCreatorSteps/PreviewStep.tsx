@@ -18,7 +18,7 @@ import InventoryTab from "../InventoryTab";
 import TraitsTab from "../TraitsTab";
 import MasteriesTab from "../MasteriesTab";
 import { TAB_LABELS, type Tab } from "../PlayableCharacterSheet";
-import BinderTabs from "@/components/shared/BinderTabs";
+import Tabs, { TabPanel } from "@/components/shared/Tabs";
 
 function noop() {}
 
@@ -198,7 +198,8 @@ export default function PreviewStep({
         pas.
       */}
       <div className="min-w-0">
-        <BinderTabs
+        <Tabs
+          idPrefix="apercu"
           value={tab}
           onChange={setTab}
           aria-label="Sections de l'aperçu"
@@ -208,7 +209,7 @@ export default function PreviewStep({
             .map((t) => ({ value: t, label: TAB_LABELS[t] }))}
         />
 
-        <div className="rounded-b-lg border-2 border-t-0 border-edge-strong bg-panel-raised px-3 pb-3">
+        <TabPanel idPrefix="apercu" value={tab} className="mt-2 rounded-lg border border-edge bg-panel p-3">
           {tab === "actions" && (
             <ActionsTab
               worldSlug={worldSlug}
@@ -284,7 +285,7 @@ export default function PreviewStep({
               patchCharacter={patchCharacter}
             />
           )}
-        </div>
+        </TabPanel>
       </div>
     </div>
   );

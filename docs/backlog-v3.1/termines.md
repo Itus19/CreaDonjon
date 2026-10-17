@@ -2,6 +2,37 @@
 
 ---
 
+### ☑ V3.1-25 — La pilule glissante remplace `BinderTabs` · `S` · sans modèle IA — **fait le 17 octobre (ADR 0034)**
+
+**Modèle conseillé : Sonnet** — composant décidé (ADR 0034), usages listés.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; recenser les usages à remplacer avant de coder, puis vérifier qu'il n'en reste aucun ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Planche** : « Décidé · accueil : tableau de bord, onglets en pilule
+glissante ». **Départ** : `components/shared/BinderTabs.tsx`.
+
+Un composant d'onglets unique : fond qui glisse sous l'onglet actif (260 ms,
+sauté sous mouvement réduit), clavier (flèches, Début, Fin), rôles ARIA
+`tablist` / `tab` / `tabpanel`. Il remplace `BinderTabs` partout : fiche
+jouable, fiche solo, colonne Monde et coquille du solo, aperçu du créateur.
+Sur téléphone, la pilule défile horizontalement si elle déborde.
+
+**Critères d'acceptation**
+- [x] Plus aucun import de `BinderTabs` ; le fichier est supprimé.
+- [x] Clavier et lecteur d'écran : un test de composant.
+- [x] Charte §3 et planche 3 du catalogue mises à jour.
+
+**Réalisé** (délégué à `dev-sonnet`, planche à `aide-haiku`, relu par Opus)
+- `components/shared/Tabs.tsx` : pilule glissante, fond positionné d'après l'onglet actif mesuré (suit le défilement sur téléphone), 260 ms, sauté sous mouvement réduit ; `TabPanel` (`role="tabpanel"`, relié par `idPrefix`). Clavier sorti en fonction pure (`lib/ui/tabsKeyboard.ts`).
+- Les 7 usages convertis ; `BinderTabs.tsx` supprimé. Charte §3 et §9, planche `Navigation.dc.html`.
+- Tests : `lib/ui/tabsKeyboard.test.ts`, `lib/ui/tabs.test.ts` (balisage ARIA rendu côté serveur, sans dépendance ajoutée).
+- Vérifié dans le navigateur (Banc d'essai, Testeur MJ) : fiche de personnage sur ordinateur et téléphone — flèche et Fin changent l'onglet, le focus suit, un seul onglet tabulable, le fond reste aligné, la pilule défile sur téléphone.
+
+*À voir à l'œil* : accueil (onglets d'un monde ouvert), solo, aperçu du créateur.
+
+
+---
+
 ### ☑ V3.1-111 — Sauvegardes : la demande et la réponse (données, serveur) · `M` · sans modèle IA — **fait le 17 octobre (ADR 0044)**
 
 **Modèle conseillé : Opus** — table nouvelle, RLS. **ADR 0044.**

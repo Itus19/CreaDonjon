@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import BinderTabs from "@/components/shared/BinderTabs";
+import Tabs, { TabPanel } from "@/components/shared/Tabs";
 import PlayerRulesSidebar from "@/components/rules/PlayerRulesSidebar";
 import { ZONE_LABELS } from "@/components/solo/ScenePanel";
 import type { QuestColumnEntry, SceneView, WikiColumnGroup } from "@/lib/solo/types";
@@ -27,7 +27,7 @@ import type { QuestColumnEntry, SceneView, WikiColumnGroup } from "@/lib/solo/ty
  * (`buildWikiColumn`) — ni plus, ni moins.
  */
 
-const CLASSEUR = "rounded-b-lg border border-t-0 border-edge-strong p-3";
+const PANNEAU = "mt-2 rounded-lg border border-edge bg-panel p-3";
 const LIGNE_CLIQUABLE =
   "flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-panel-sunken";
 
@@ -189,7 +189,8 @@ export default function ColonneMonde({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <BinderTabs
+      <Tabs
+        idPrefix="colonne-monde"
         aria-label="Colonne du monde"
         value={onglet}
         onChange={setOnglet}
@@ -200,12 +201,12 @@ export default function ColonneMonde({
           { value: "regles", label: "Règles" },
         ]}
       />
-      <div className={`${CLASSEUR} min-h-0 flex-1 overflow-y-auto`}>
+      <TabPanel idPrefix="colonne-monde" value={onglet} className={`${PANNEAU} min-h-0 flex-1 overflow-y-auto`}>
         {onglet === "wiki" && <OngletWiki worldSlug={worldSlug} groups={wiki} />}
         {onglet === "quetes" && <OngletQuetes quests={quests} />}
         {onglet === "presents" && <OngletPresents present={present} sketches={sketches} worldSlug={worldSlug} campaignId={campaignId} />}
         {onglet === "regles" && <PlayerRulesSidebar worldSlug={worldSlug} />}
-      </div>
+      </TabPanel>
     </div>
   );
 }

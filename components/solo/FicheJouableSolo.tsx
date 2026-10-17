@@ -16,7 +16,7 @@ import { XP_LEVEL_THRESHOLDS } from "@/src/core/rules/experience";
 import { useCharacterSheetContext } from "@/components/blocks/useCharacterSheetContext";
 import { useReferenceChips, refIdentity } from "@/components/blocks/useReferenceChips";
 import { useDiceRoll } from "@/components/shell/DiceRollPanel";
-import BinderTabs from "@/components/shared/BinderTabs";
+import Tabs, { TabPanel } from "@/components/shared/Tabs";
 import ActionsTab, { type PreparedSpellView } from "@/components/blocks/ActionsTab";
 import MagicTab, { type KnownSpellView } from "@/components/blocks/MagicTab";
 import TraitsTab from "@/components/blocks/TraitsTab";
@@ -417,7 +417,8 @@ export default function FicheJouableSolo({
       />
 
       <div className="flex min-h-0 flex-1 flex-col">
-        <BinderTabs
+        <Tabs
+          idPrefix="fiche-solo"
           aria-label="Sections de la fiche"
           value={tab}
           onChange={setTab}
@@ -428,7 +429,7 @@ export default function FicheJouableSolo({
               label: { actions: "Actions", inventaire: "Sac", magie: "Magie", traits: "Traits", maitrise: "Maîtrises" }[t],
             }))}
         />
-        <div className="min-h-0 flex-1 overflow-y-auto rounded-b-lg border border-t-0 border-edge-strong p-3">
+        <TabPanel idPrefix="fiche-solo" value={tab} className="mt-2 min-h-0 flex-1 overflow-y-auto rounded-lg border border-edge bg-panel p-3">
           {tab === "actions" && (
             <ActionsTab
               worldSlug={worldSlug}
@@ -481,7 +482,7 @@ export default function FicheJouableSolo({
               patchCharacter={patchCharacter}
             />
           )}
-        </div>
+        </TabPanel>
       </div>
     </div>
   );

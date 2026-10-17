@@ -149,16 +149,15 @@ Si l'apparence par défaut ne convient pas, **c'est le composant qu'on corrige**
 
 ### Onglets
 
-**Deux présentations, et elles se choisissent sur ce qu'elles font** — jamais sur le goût de qui écrit l'écran. C'est [ADR 0026](./adr/0026-deux-presentations-d-onglets.md) ; cette ligne disait auparavant « toujours `Tabs.tsx` », alors que ce composant n'a **aucun importateur** depuis que les Réglages ont quitté l'application, et que la seule présentation d'onglets en service était celle qu'elle interdisait.
+**Une seule présentation : la pilule glissante** ([ADR 0034](./adr/0034-la-pilule-glissante-remplace-le-classeur.md), qui remplace en partie l'ADR 0026). Les onglets sont posés dans une gélule (`rounded-full border border-edge`, fond `panel-sunken`, 3 px de marge) ; un fond relevé (`panel-raised`, liseré `edge-strong`, ombre douce) glisse sous l'actif en 260 ms, et saute sous mouvement réduit.
 
 | Présentation | Quand | Composant |
 |---|---|---|
-| **Bascule segmentée** | l'onglet est un **filtre à l'intérieur** d'un panneau, d'une barre, d'une carte — deux à quatre entrées courtes, le contenu reste le même | `components/shared/Tabs.tsx` |
-| **Intercalaires de classeur** | les onglets **sont** la page — panneau pleine largeur, un contenu propre par onglet, et l'actif s'ouvre visiblement sur lui | `components/shared/BinderTabs.tsx` |
+| **Pilule glissante** | tout jeu d'onglets : filtre dans un panneau comme page à onglets | `components/shared/Tabs.tsx` (+ `TabPanel` pour le contenu) |
 
-Dans les deux cas, le contrat ARIA est le même et il n'est pas optionnel : `role="tablist"`, `aria-selected`, **un seul** onglet dans l'ordre de tabulation, flèches/`Home`/`End` pour circuler. `Tabs.tsx` l'implémente ; `BinderTabs` le lui emprunte.
+Le contrat ARIA n'est pas optionnel : `role="tablist"`, `aria-selected`, **un seul** onglet dans l'ordre de tabulation, flèches/`Home`/`End` pour circuler (`lib/ui/tabsKeyboard.ts`). Avec `idPrefix`, chaque onglet pointe vers son `TabPanel` (`role="tabpanel"`). Le panneau sous les onglets est un panneau ordinaire (ci-dessous), séparé de la pilule par une marge.
 
-**Ne pas dessiner une troisième présentation.** `SectionToggle.tsx` n'en est pas une : ce sont des `<Link>` de navigation qui empruntent le dessin de la bascule.
+**Ne pas dessiner une autre présentation.** `SectionToggle.tsx` n'en est pas une : ce sont des `<Link>` de navigation qui empruntent le dessin de la pilule.
 
 ### Panneau, carte
 
@@ -356,7 +355,7 @@ Neuf planches, en deux rangées sur le canevas : les briques (1 à 7), puis les 
 |---|---|
 | 1 · Fondations | jetons de couleur, typographie (Outfit, Geist, Geist Mono), rayons |
 | 2 · Boutons et champs | boutons (principal, secondaire, fantôme, destructeur, lien de suppression, rond à icône), champ, date et heure natives, `Dropdown`, `Checkbox`, interrupteur |
-| 3 · Onglets, puces, menus | `Tabs`, `BinderTabs`, puces, puces d'entité et de relation, `ActionsMenu`, en-tête de bloc et visibilité (œil), arborescence, rail du joueur, palette de commandes, radio |
+| 3 · Onglets, puces, menus | `Tabs` (pilule glissante), puces, puces d'entité et de relation, `ActionsMenu`, en-tête de bloc et visibilité (œil), arborescence, rail du joueur, palette de commandes, radio |
 | 4 · Surfaces et retours | `ConfirmDialog`, panneaux et `EmptyState`, ascenseur, info-bulle, aperçu de renvoi, bulles de chat, bandeaux et badges, fenêtre flottante, pastille chrome |
 | 5 · Éléments d'écran | grille de disponibilités, curseur horaire, curseur natif, `Stepper`, bouton de dés et volet, barres, tiroir, chargement, texte de fiche |
 | 6 · Fiche de personnage | bouclier de CA, `StatBadge`, caractéristiques et sauvegardes, compétences et pastilles de maîtrise, `ActionButton`, `DieIcon`, emplacements de sort, ressources, carte d'objet, états, bouton de jet de monstre |

@@ -12,7 +12,7 @@ import type { AdvantageState } from "@/src/core/rules/action";
 import { useCharacterSheetContext } from "./useCharacterSheetContext";
 import { useReferenceChips, refIdentity } from "./useReferenceChips";
 import Dropdown from "@/components/shared/Dropdown";
-import BinderTabs from "@/components/shared/BinderTabs";
+import Tabs, { TabPanel } from "@/components/shared/Tabs";
 import { SKILL_LABELS_FR } from "@/src/i18n/fr";
 import CharacterSheetHeader from "./CharacterSheetHeader";
 import ActionsTab, { type PreparedSpellView } from "./ActionsTab";
@@ -607,16 +607,16 @@ export default function PlayableCharacterSheet({
 
         <div className="min-w-0 flex-1">
           {/*
-            Onglets en intercalaire de classeur — le dessin et sa mecanique
-            vivent desormais dans `components/shared/BinderTabs.tsx`
-            (V2.1-24 lot 1, ADR 0026), avec le clavier que cette rangee
+            Onglets en pilule glissante — le dessin et sa mecanique
+            vivent dans `components/shared/Tabs.tsx` (ADR 0034), avec le clavier que cette rangee
             n'avait pas. Ne restent ici que la liste et son filtre.
 
             Plus de condition sur "maitrise" : l'onglet ne portait que les
             bottes d'arme et disparaissait sans elles ; il porte maintenant
             les maitrises et les langues, que tout personnage possede.
           */}
-          <BinderTabs
+          <Tabs
+            idPrefix="fiche"
             value={tab}
             onChange={setTab}
             aria-label="Sections de la fiche"
@@ -625,7 +625,7 @@ export default function PlayableCharacterSheet({
               .map((t) => ({ value: t, label: TAB_LABELS[t] }))}
           />
 
-          <div className="rounded-b-lg border-2 border-t-0 border-edge-strong bg-panel-raised px-3 pb-3">
+          <TabPanel idPrefix="fiche" value={tab} className="mt-2 rounded-lg border border-edge bg-panel p-3">
             {tab === "maitrise" && (
               <MasteriesTab
                 proficiencies={proficiencies}
@@ -700,7 +700,7 @@ export default function PlayableCharacterSheet({
             {tab === "traits" && (
               <TraitsTab traits={traits} traitChips={traitChips} traitSourceLabel={traitSourceLabel} />
             )}
-          </div>
+          </TabPanel>
         </div>
       </div>
     </div>
