@@ -19,32 +19,6 @@ V3.1-104 n'est plus bloqué : option B de l'ADR 0041, choisie le 10 octobre.
 | V3.1-96 données de la chronologie | 0048 | 96 lui-même, désormais prêt |
 | V3.1-100 rejoindre sans PJ, lien nominatif | 0049 | 100 lui-même, désormais prêt |
 
-### ☐ V3.1-103 — Initiative : les jets d'initiative des joueurs · `M` · sans modèle IA — **prêt (Opus)**
-
-**Modèle conseillé : Opus** — changement de schéma. **ADR 0040.**
-**Dépend de** : 101.
-
-**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-- Migration : `combats.status` accepte `rolling` (« jets d'initiative »)
-  entre `draft` et `running` ; `docs/SCHEMA.md`.
-- Fonction `app.set_own_initiative(p_participant uuid, p_value int)` : seul
-  le joueur dont le PJ (`campaign_characters.user_id`) est ce participant,
-  seulement en `rolling`, valeur −10 à 40.
-- Route `POST …/combats/[combatId]/my-initiative` (Zod) : `{ mode: "roll" }`
-  (le serveur tire le d20 et ajoute l'initiative de la fiche, règle 8) ou
-  `{ mode: "die", natural: 1..20, modifierIncluded: boolean }`.
-- Le MJ : « Demander les jets » (draft → rolling), saisir à la place d'un
-  joueur, « Commencer » (rolling → running), « Terminer » (confirmé).
-- Chaque étape écrit un `session_events` de genre `combat`.
-
-**Critères d'acceptation**
-- [ ] Un joueur ne peut écrire que l'initiative de son PJ, et seulement en
-  `rolling` (test).
-- [ ] Invitation, jet, saisie du MJ, fin : journalisés.
-
----
-
 ### ☐ V3.1-104 — Écritures du moteur au nom d'un joueur : changements signés · `M` · sans modèle IA — **prêt (Opus) — ADR 0041, option B**
 
 **Modèle conseillé : Opus** — sécurité, base, cryptographie. **Dépend de** : 105.

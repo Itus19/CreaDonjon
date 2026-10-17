@@ -2,6 +2,42 @@
 
 ---
 
+### ☑ V3.1-103 — Initiative : les jets d'initiative des joueurs · `M` · sans modèle IA — **fait le 17 octobre (ADR 0040)**
+
+**Modèle conseillé : Opus** — changement de schéma. **ADR 0040.**
+**Dépend de** : 101.
+
+**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+- Migration : `combats.status` accepte `rolling` (« jets d'initiative »)
+  entre `draft` et `running` ; `docs/SCHEMA.md`.
+- Fonction `app.set_own_initiative(p_participant uuid, p_value int)` : seul
+  le joueur dont le PJ (`campaign_characters.user_id`) est ce participant,
+  seulement en `rolling`, valeur −10 à 40.
+- Route `POST …/combats/[combatId]/my-initiative` (Zod) : `{ mode: "roll" }`
+  (le serveur tire le d20 et ajoute l'initiative de la fiche, règle 8) ou
+  `{ mode: "die", natural: 1..20, modifierIncluded: boolean }`.
+- Le MJ : « Demander les jets » (draft → rolling), saisir à la place d'un
+  joueur, « Commencer » (rolling → running), « Terminer » (confirmé).
+- Chaque étape écrit un `session_events` de genre `combat`.
+
+**Critères d'acceptation**
+- [x] Un joueur ne peut écrire que l'initiative de son PJ, et seulement en
+  `rolling` (test).
+- [x] Invitation, jet, saisie du MJ, fin : journalisés.
+
+**Réalisé**
+- Migration `20261017090000_combat_rolling_own_initiative.sql` (appliquée le 17 octobre) : statut `rolling`, `public.set_own_initiative` (renvoie avant/après, `null` si refus).
+- Noyau : `ownInitiativeFromDie`, `isOwnInitiativeInRange` (`src/core/rules/combat.ts`), tests d'abord ; schéma Zod `myInitiativeSchema` testé.
+- Service `setMyInitiative` (`src/server/services/ownInitiative.ts`) : « lancer » par `rollInitiativeCheck` (jet enregistré et attribué, V3.1-89), « vrai dé » plus la Dextérité de la fiche ; journal au nom de la joueuse (`actor: player`), annulable. Route `POST …/combats/[combatId]/my-initiative`.
+- Écran du MJ : statut « Jets d'initiative », « Demander les jets », « ▶ Commencer », « ■ Stop » confirmé ; planche `OutilsMJ.dc.html` complétée.
+- Tests d'intégration : 3/3 (`ownInitiative.integration.test.ts`).
+
+*Restes* : l'écran des joueuses qui appelle la route vient avec V3.1-38.
+
+
+---
+
 ### ☑ V3.1-102 — Initiative : la vue filtrée des joueurs · `M` · sans modèle IA — **fait le 17 octobre (ADR 0040)**
 
 **Modèle conseillé : Opus.** **ADR 0040.** **Dépend de** : 101.
