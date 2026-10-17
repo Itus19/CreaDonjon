@@ -32,3 +32,4 @@ Issue : **accepté** (tel quel) · **corrigé** (retouche locale par Opus) · **
 | 2026-10-17 | V3.1-20 (interface) | dev-sonnet | 123 295 | corrigé | Couche des volets, portail de la primaire, glisser et séparateur conformes ; Opus : onglets qui rétrécissent au lieu de déborder, volets décollés de 8 px du rail dans un cadre arrondi. |
 | 2026-10-17 | V3.1-20 (planche) | aide-haiku | 80 735 | accepté | Section « Volets à onglets » dans Surfaces.dc.html ; a relevé une double couleur de bordure dans la cible de dépôt, corrigée dans le code par Opus |
 | 2026-10-17 | V3.1-35 (interface) | dev-sonnet | 130 869 | corrigé | Accueil en tableau de bord conforme ; Opus : requête des séances (heure et date séparées), pilule du téléphone ouverte sur le premier onglet non vide, dé dans la barre du bas du téléphone. |
+| 2026-10-17 | V3.1-35 (planche) | aide-haiku | 107 231 | accepté | Partie accueil de OutilsMJ.dc.html ; hauteur portée à 3 400 par Opus |
