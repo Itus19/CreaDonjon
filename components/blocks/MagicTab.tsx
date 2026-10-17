@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import type { SpellCastingBlockData } from "@/src/core/schemas/rule-blocks";
 import { MAGIC_SCHOOL_LABELS_FR, MAGIC_SCHOOL_COLOR_VAR } from "@/src/i18n/fr";
 import { renderBlockData } from "@/components/rules/blockContentRenderer";
+import NomDeRegle from "./NomDeRegle";
 import { refIdentity, type ResolvedChipView } from "./useReferenceChips";
 import { useRuleEntryBlocks, type RuleEntryBlockData } from "./useRuleEntryBlocks";
 
@@ -101,14 +101,10 @@ function SpellCard({
         <div className={`flex min-w-0 flex-1 flex-col gap-1.5 px-2.5 pb-2.5 ${hasCollapsibleContent ? "pt-1.5" : "pt-2.5"}`}>
           <div className="flex items-center gap-2">
             <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
-              {chip?.found ? (
-                <Link
-                  href={chip.href}
-                  className="truncate text-sm font-semibold no-underline hover:underline"
-                  style={{ color: "var(--link-rule)" }}
-                >
+              {chip?.found && chip.kind === "rule" ? (
+                <NomDeRegle worldSlug={worldSlug} ruleKey={chip.key} className="truncate text-sm font-semibold">
                   {title}
-                </Link>
+                </NomDeRegle>
               ) : (
                 <span className="truncate text-sm font-semibold text-ink">{title}</span>
               )}

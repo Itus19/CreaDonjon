@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import type { ResolvedFeature } from "@/src/core/rules/sheet";
+import NomDeRegle from "./NomDeRegle";
 import { refIdentity, type ResolvedChipView } from "./useReferenceChips";
 
 /**
@@ -14,10 +14,12 @@ import { refIdentity, type ResolvedChipView } from "./useReferenceChips";
  * étaient réparties sur deux onglets.
  */
 export default function TraitsTab({
+  worldSlug,
   traits,
   traitChips,
   traitSourceLabel,
 }: {
+  worldSlug: string;
   traits: ResolvedFeature[];
   traitChips: Map<string, ResolvedChipView>;
   traitSourceLabel: (f: ResolvedFeature) => string;
@@ -37,13 +39,9 @@ export default function TraitsTab({
               <div key={f.key} className="rounded-md border border-edge/60 bg-panel-raised p-2.5">
                 <div className="flex items-baseline justify-between gap-2">
                   {chip?.found ? (
-                    <Link
-                      href={chip.href}
-                      className="text-sm font-semibold no-underline hover:underline"
-                      style={{ color: "var(--link-rule)" }}
-                    >
+                    <NomDeRegle worldSlug={worldSlug} ruleKey={chip.key} className="text-sm font-semibold">
                       {chip.name}
-                    </Link>
+                    </NomDeRegle>
                   ) : (
                     <span className="text-sm font-semibold italic text-ink-muted">{f.label}</span>
                   )}

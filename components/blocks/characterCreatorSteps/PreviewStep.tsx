@@ -265,7 +265,7 @@ export default function PreviewStep({
             />
           )}
 
-          {tab === "traits" && <TraitsTab traits={traits} traitChips={traitChips} traitSourceLabel={traitSourceLabel} />}
+          {tab === "traits" && <TraitsTab worldSlug={worldSlug} traits={traits} traitChips={traitChips} traitSourceLabel={traitSourceLabel} />}
 
           {/* Les bottes d'arme se choisissent a leur propre etape (`RemainingChoicesStep`),
               pas ici : `masteryChoices` vide, la section disparait et l'onglet ne garde

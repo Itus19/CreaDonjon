@@ -20,39 +20,6 @@ V3.1-20 (lot g) peut partir dès que 25 est fait.
 
 ---
 
-### ☐ V3.1-32 — Fiche sur téléphone : jets, infobulles de règles, sac · `L` · sans modèle IA — **prêt**
-
-**Modèle conseillé : Sonnet** — fiche entièrement esquissée ; services fournis par 24.
-
-**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-**Planches** : « Décidé · fiche sur téléphone, vivante et déroulée partie
-par partie », « Décidé · fiche en combat », téléphone du joueur (trois
-planches). **Dépend de** : 24, 26, 29.
-
-- Ordre de la sous-planche : en-tête, bouclier CA et jauges PV, niveau,
-  épuisement (commande E de 26), constantes, perception passive, dés de vie,
-  concentration, états, six caractéristiques, compétences repliables, puis
-  la pilule des cinq onglets collée en haut au défilement.
-- Boutons de jet : chaque case de caractéristique a deux boutons (haut :
-  test, bas : sauvegarde) ; une compétence se touche ; initiative, attaque
-  de sort, bonus de touche et dégâts sont des boutons. Tous ouvrent l'outil
-  de dés pré-rempli (33) — en attendant 33, ils appellent le chemin actuel.
-- Infobulles de règles : tout nom d'arme, sort, objet, aptitude, action,
-  état, la concentration et l'épuisement ouvrent leur règle en feuille du
-  bas (« Ouvrir dans Règles ») — partir de `useOpenRuleLink`. Même contenu
-  en fenêtre sur ordinateur.
-- Inventaire : « Équipé » / « Au sac » par objet (`setItemEquipped`, 24) ;
-  la charge se recalcule.
-- À 0 PV, les jauges cèdent la place aux jets contre la mort (24).
-
-**Critères d'acceptation**
-- [ ] La fiche de Candide de la sous-planche, reproduite à 390 px.
-- [ ] Chaque type de nom ouvre la bonne règle, joueur et MJ.
-- [ ] À 0 PV : jets contre la mort, puis stabilisé ou mort selon 24.
-
----
-
 ### ☐ V3.1-33 — L'outil de dés unique (feuille, panneau, scintillement) · `L` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — ADR 0035, ADR 0036 §6, planches précises ; la cible reste à V3.1-21.

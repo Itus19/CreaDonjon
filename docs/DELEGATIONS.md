@@ -25,3 +25,5 @@ Issue : **accepté** (tel quel) · **corrigé** (retouche locale par Opus) · **
 | 2026-10-17 | V3.1-30 (planche) | aide-haiku | 87 527 | accepté | Accueil du lecteur dans Ecrans.dc.html ; hauteur reportée (7 400) |
 | 2026-10-17 | V3.1-31 | dev-sonnet | 156 982 | corrigé | Éditeur en accordéon sur la route groupée écrite par Opus ; recensement des sous-écritures soigné. Opus : portail dans `<body>` (la couche restait sous la barre, z-index enfermé dans la zone de travail). Vérifié à 390 px |
 | 2026-10-17 | V3.1-31 (planche) | aide-haiku | 108 924 | corrigé | Section éditeur écrite, mais Ecrans dépassait 8 000 px : s'est arrêté comme demandé ; Opus a créé la planche « 10 · Téléphone » |
+| 2026-10-17 | V3.1-32 | dev-sonnet | 150 452 | corrigé | Fiche téléphone, noms de règles, bloc mourant ; s'est arrêté net sur le cliquet du câblage au lieu de le contourner (bien). Opus : lien « Ouvrir dans Règles » côté joueur, casse d'« Épuisement », plafond du cliquet justifié |
+| 2026-10-17 | V3.1-32 (planche) | aide-haiku | 79 107 | accepté | Jets contre la mort et nom de règle dans Fiche.dc.html ; hauteur reportée (7 200) |

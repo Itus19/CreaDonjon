@@ -219,11 +219,11 @@ Chaque appel refait la session, le monde et la chaîne de rulesets : d'où `rule
 
 `lib/cablage.test.ts` compte, dans `components/`, `app/` et `src/` :
 
-| Motif | Plafond au 11 octobre | Au 12 octobre |
-|---|---|---|
-| Fichiers qui chargent après affichage (`useEffect` et `fetch(` dans le même fichier) | 59 | 59 |
-| `router.refresh()` | 37 | **14** |
-| `window.location.reload()` | 2 | 2 |
+| Motif | Plafond au 11 octobre | Au 12 octobre | Au 17 octobre |
+|---|---|---|---|
+| Fichiers qui chargent après affichage (`useEffect` et `fetch(` dans le même fichier) | 59 | 59 | **60** |
+| `router.refresh()` | 37 | **14** | 14 |
+| `window.location.reload()` | 2 | 2 | 2 |
 
 Depuis le 12 octobre, le cliquet ne compte plus les lignes de commentaire : 17 des 37 `router.refresh()` n'étaient que des mentions dans des explications.
 
@@ -236,6 +236,8 @@ Depuis le 12 octobre, le cliquet ne compte plus les lignes de commentaire : 17 d
 - **Liens de partage** (`PublicationPanel`, 1), **scène et croquis du mode solo** (`SoloScreen`, `ColonneMonde`, 2) : rendus par le serveur.
 
 *Retirés le 12 octobre* : les cinq formulaires de règle maison et la suppression d'une règle enchaînaient `router.push` et `router.refresh()`. La page d'arrivée est dynamique : la navigation la demande déjà fraîche au serveur. La suppression vide aussi la liste latérale des règles, gardée dans un cache du navigateur que `router.refresh()` ne touchait pas : la règle supprimée y restait affichée.
+
+**Le 60ᵉ fichier, et pourquoi** (V3.1-32) : `components/blocks/NomDeRegle.tsx`. Sur téléphone, toucher un nom de règle sur la fiche (arme, sort, état…) ouvre la règle dans une feuille du bas ; la règle est demandée **au toucher**, quand la feuille monte — jamais au chargement de la fiche (C1 respectée). Le cliquet compte les fichiers, pas le moment : celui-ci est un vrai cas « à la demande ». `useCachedGet` ne convenait pas : il avale les erreurs, et une clé cassée resterait sur « Chargement… » au lieu de dire « introuvable ».
 
 Le test échoue si un compte augmente. Une correction qui le fait baisser **abaisse le plafond dans le même commit**. Un nouveau cas vraiment nécessaire se justifie dans son commit et ici.
 

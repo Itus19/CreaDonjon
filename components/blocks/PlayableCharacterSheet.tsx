@@ -5,10 +5,11 @@ import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/blocks/inventory";
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
 import type { ResourcesBlockData } from "@/src/core/schemas/blocks/resources";
-import { SKILL_ABILITIES, type Ability } from "@/src/core/rules/sheet";
+import { ABILITY_LABELS as ABILITY_NAMES, SKILL_ABILITIES, type Ability } from "@/src/core/rules/sheet";
 import { XP_LEVEL_THRESHOLDS, hasReachedNextLevel } from "@/src/core/rules/experience";
 import { applyDamageToHp } from "@/src/core/rules/tempHp";
 import { pvSousUnTiers } from "@/lib/ui/commandeE";
+import { etatMourant } from "@/lib/ui/etatMourant";
 import { resumerCompetences } from "@/lib/ui/resumeCompetences";
 import type { RuntimeState } from "@/src/core/schemas/runtimeState";
 import type { AdvantageState } from "@/src/core/rules/action";
@@ -123,6 +124,8 @@ export default function PlayableCharacterSheet({
   const [levelUpOpen, setLevelUpOpen] = useState(false);
   // V3.1-29 : sous 40rem de fiche, les competences sont une ligne repliable, fermee par defaut.
   const [competencesOuvertes, setCompetencesOuvertes] = useState(false);
+  // V3.1-32 : le d20 du dernier jet contre la mort lance depuis cette fiche (montre a cote du bouton).
+  const [dernierD20, setDernierD20] = useState<number | null>(null);
   const idCompetences = useId();
 
   /** V2-M11 : jets de test/competence/sauvegarde/initiative depuis cette fiche — alimentent le volet, jamais un second affichage local (voir CLAUDE.md, "resultats de des uniquement dans ce volet"). */
@@ -343,6 +346,23 @@ export default function PlayableCharacterSheet({
     reloadRemote();
   }
 
+  /**
+   * V3.1-32 — jet contre la mort : le SERVEUR lance le d20 (`natural: null`), la fiche
+   * n'envoie jamais de resultat. La reponse met l'etat de jeu a jour tout de suite
+   * (PV et jets), puis le rechargement habituel confirme.
+   */
+  async function jetDeMort() {
+    const result = await postAction<{
+      natural: number;
+      deathSaves: { success: number; fail: number };
+      hpCurrent: number;
+    }>("death-save", { campaignId, natural: null });
+    if (!result) return;
+    setDernierD20(result.natural);
+    patchRuntimeState((state) => ({ ...state, hp: { ...state.hp, current: result.hpCurrent }, death_saves: result.deathSaves }));
+    reloadRemote();
+  }
+
   async function changeXp(delta: number) {
     patchRuntimeState((state) => ({ ...state, xp: Math.max(0, state.xp + delta) }));
     await postAction("xp", { campaignId, delta });
@@ -387,6 +407,8 @@ export default function PlayableCharacterSheet({
   const hpCurrent = runtimeState?.hp.current ?? hpMax;
   const hpTemp = runtimeState?.hp.temp ?? 0;
   const hpLow = pvSousUnTiers(hpCurrent, hpMax);
+  const deathSaves = runtimeState?.death_saves ?? { success: 0, fail: 0 };
+  const etat = etatMourant({ current: hpCurrent }, deathSaves);
   // V3.1-26 : l'en-tete n'affiche un chiffre que quand tout ce qui le fonde est la — les regles
   // resolues (CA, PV max, vitesse) ET l'etat de jeu. Avant, valeurs de depart fausses (CA 11, PV 0/0).
   const pret = rulesetPret && remote !== null;
@@ -438,6 +460,11 @@ export default function PlayableCharacterSheet({
         onExportJson={exportJson}
         onRollInitiative={() => rollInitiative(entityId, advantage)}
         error={error}
+        etatMourant={etat}
+        deathSaves={deathSaves}
+        dernierD20={dernierD20}
+        onJetDeMort={jetDeMort}
+        concentration={runtimeState?.concentration ?? null}
       />
 
       {/*
@@ -451,7 +478,7 @@ export default function PlayableCharacterSheet({
         <aside className="flex flex-col gap-3 @min-[40rem]:w-48 @min-[40rem]:shrink-0">
           <div className="flex flex-col gap-2">
             <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Caractéristiques</span>
-            <div className="grid grid-cols-6 gap-1.5 @min-[40rem]:grid-cols-2 @min-[40rem]:gap-2">
+            <div className="grid grid-cols-3 gap-1.5 @min-[40rem]:grid-cols-2 @min-[40rem]:gap-2">
               {(Object.keys(ABILITY_LABELS) as Ability[]).map((ability) => {
                 const save = sheet.savingThrows[ability];
                 return (
@@ -459,9 +486,10 @@ export default function PlayableCharacterSheet({
                     <span className="text-[10px] font-bold uppercase tracking-widest text-accent">{ABILITY_LABELS[ability]}</span>
                     <button
                       type="button"
-                      title={`Lancer un test de ${ABILITY_LABELS[ability]}`}
+                      title={`Lancer un test de ${ABILITY_NAMES[ability]}`}
+                      aria-label={`Test de ${ABILITY_NAMES[ability]}`}
                       onClick={() => rollAbility(entityId, ability, advantage)}
-                      className="text-xl font-bold text-ink hover:text-accent"
+                      className="min-h-9 min-w-12 text-xl font-bold text-ink hover:text-accent @min-[40rem]:min-h-0 @min-[40rem]:min-w-0"
                     >
                       {sheet.abilities[ability].mod >= 0 ? "+" : ""}
                       {sheet.abilities[ability].mod}
@@ -481,9 +509,10 @@ export default function PlayableCharacterSheet({
                     />
                     <button
                       type="button"
-                      title={`Lancer une sauvegarde de ${ABILITY_LABELS[ability]}`}
+                      title={`Lancer une sauvegarde de ${ABILITY_NAMES[ability]}`}
+                      aria-label={`Sauvegarde de ${ABILITY_NAMES[ability]}`}
                       onClick={() => rollSave(entityId, ability, advantage)}
-                      className={`flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold hover:border-accent ${
+                      className={`flex min-h-9 items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] @min-[40rem]:min-h-0 font-semibold hover:border-accent ${
                         save.proficient ? "border-accent bg-accent/20 text-accent" : "border-edge text-ink-muted"
                       }`}
                     >
@@ -651,15 +680,19 @@ export default function PlayableCharacterSheet({
             bottes d'arme et disparaissait sans elles ; il porte maintenant
             les maitrises et les langues, que tout personnage possede.
           */}
-          <Tabs
-            idPrefix="fiche"
-            value={tab}
-            onChange={setTab}
-            aria-label="Sections de la fiche"
-            items={(["actions", "inventaire", "magie", "traits", "maitrise"] as Tab[])
-              .filter((t) => t !== "magie" || spellcasting)
-              .map((t) => ({ value: t, label: TAB_LABELS[t] }))}
-          />
+          {/* V3.1-32 : sous 40rem de fiche, la pilule reste collee en haut de la fenetre
+              qui defile (`sticky top-0`, fond opaque) ; au-dela, rien ne change. */}
+          <div className="sticky top-0 z-10 -mx-1 bg-panel-raised px-1 py-1 @min-[40rem]:static @min-[40rem]:mx-0 @min-[40rem]:bg-transparent @min-[40rem]:p-0">
+            <Tabs
+              idPrefix="fiche"
+              value={tab}
+              onChange={setTab}
+              aria-label="Sections de la fiche"
+              items={(["actions", "inventaire", "magie", "traits", "maitrise"] as Tab[])
+                .filter((t) => t !== "magie" || spellcasting)
+                .map((t) => ({ value: t, label: TAB_LABELS[t] }))}
+            />
+          </div>
 
           <TabPanel idPrefix="fiche" value={tab} className="mt-2 rounded-lg border border-edge bg-panel p-3">
             {tab === "maitrise" && (
@@ -734,7 +767,7 @@ export default function PlayableCharacterSheet({
             )}
 
             {tab === "traits" && (
-              <TraitsTab traits={traits} traitChips={traitChips} traitSourceLabel={traitSourceLabel} />
+              <TraitsTab worldSlug={worldSlug} traits={traits} traitChips={traitChips} traitSourceLabel={traitSourceLabel} />
             )}
           </TabPanel>
         </div>

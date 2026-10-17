@@ -19,7 +19,7 @@ import { describe, expect, it } from "vitest";
  * (rare) le justifie dans son commit et dans docs/CABLAGE.md.
  */
 const PLAFONDS = {
-  fichiersChargeantApresAffichage: 59,
+  fichiersChargeantApresAffichage: 60, // 17 oct. : NomDeRegle.tsx, charge au toucher (docs/CABLAGE.md §6)
   rafraichissementsComplets: 14,
   rechargementsNavigateur: 2,
   catchMuets: 0,

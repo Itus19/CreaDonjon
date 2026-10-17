@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import NomDeRegle from "./NomDeRegle";
 import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/blocks/inventory";
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import { weaponAttackAbilityMod } from "@/src/core/rules/action";
@@ -290,7 +291,7 @@ export function ItemCard({
             }`}
             style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
           >
-            {item.equipped ? "Équipé" : "Équiper"}
+            {item.equipped ? "Équipé" : "Au sac"}
           </button>
         )}
         <div
@@ -323,7 +324,12 @@ export function ItemCard({
                   place aux noms longs. */}
               <div className="flex items-center gap-2">
                 <div className="min-w-0 flex-1">
-                  {chip?.found ? (
+                  {chip?.found && chip.kind === "rule" ? (
+                    <NomDeRegle worldSlug={worldSlug} ruleKey={chip.key} className="block max-w-full truncate text-sm font-semibold">
+                      {title}
+                    </NomDeRegle>
+                  ) : chip?.found ? (
+                    // Objet du monde (entité) : pas une règle, le lien d'avant.
                     <Link href={chip.href} className="block truncate text-sm font-semibold no-underline hover:underline" style={{ color: "var(--link-rule)" }}>
                       {title}
                     </Link>

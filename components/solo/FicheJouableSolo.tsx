@@ -469,7 +469,7 @@ export default function FicheJouableSolo({
             <MagicTab worldSlug={worldSlug} sortedKnownSpells={sortedKnownSpells} spellChips={spellChips} spellcasting={spellcasting} onTogglePrepared={togglePrepared} />
           )}
 
-          {tab === "traits" && <TraitsTab traits={traits} traitChips={traitChips} traitSourceLabel={traitSourceLabel} />}
+          {tab === "traits" && <TraitsTab worldSlug={worldSlug} traits={traits} traitChips={traitChips} traitSourceLabel={traitSourceLabel} />}
 
           {tab === "maitrise" && (
             <MasteriesTab

@@ -13,6 +13,11 @@ import { useReferenceChips, type ResolvedChipView } from "./useReferenceChips";
 import Dropdown from "@/components/shared/Dropdown";
 import ActionsMenu from "@/components/shared/ActionsMenu";
 import CommandeE, { CommandeESquelette } from "@/components/shared/CommandeE";
+import BlocMourant from "./BlocMourant";
+import NomDeRegle from "./NomDeRegle";
+import type { DeathSaves } from "@/src/core/rules/deathSaves";
+import type { Concentration } from "@/src/core/schemas/runtimeState";
+import type { EtatMourant } from "@/lib/ui/etatMourant";
 import { useWorldCalendarContext } from "@/components/shared/WorldCalendarProvider";
 import { birthYearFromAge } from "@/src/core/calendar/age";
 import { ageWithDeath } from "@/src/core/genealogy/lifeDates";
@@ -466,6 +471,11 @@ export default function CharacterSheetHeader({
   onExportJson,
   onRollInitiative,
   error,
+  etatMourant = "vivant",
+  deathSaves = { success: 0, fail: 0 },
+  dernierD20 = null,
+  onJetDeMort = () => {},
+  concentration = null,
 }: {
   worldSlug: string;
   character: CharacterBlockData;
@@ -514,6 +524,14 @@ export default function CharacterSheetHeader({
   /** V2-M11 : jet d'initiative depuis ce badge — memes regles (fiche, permission, DD/secret) que les autres jets contextuels, jamais un second calcul cote client. */
   onRollInitiative: () => void;
   error: string | null;
+  /** V3.1-32 (les cinq props suivantes sont facultatives : l'apercu de l'assistant de creation n'a pas d'etat de jeu) : « vivant » = la jauge de PV ; sinon le bloc des jets contre la mort la remplace, à toutes les largeurs. */
+  etatMourant?: EtatMourant;
+  deathSaves?: DeathSaves;
+  /** Dernier d20 d'un jet de mort sur cette fiche (affiché à côté du bouton), `null` avant tout jet. */
+  dernierD20?: number | null;
+  onJetDeMort?: () => void;
+  /** V3.1-32 : la concentration en cours (`runtime_state.concentration`), affichage seul — aucune action serveur ne la rompt depuis la fiche. */
+  concentration?: Concentration | null;
 }) {
   // Lignee (retour utilisateur : "il manque la sous-espece") — meme mecanisme
   // que classe/sous-classe cote donnees, mais `character.species` ne porte
@@ -525,7 +543,13 @@ export default function CharacterSheetHeader({
   // et affiche toujours la cle de base meme si une lignee est choisie ; le
   // menu "Lignée" filtre par cette meme cle de base, memes deux dropdowns
   // cote a cote que classe/sous-classe.
-  const speciesEntries = useWorldRuleEntries(worldSlug).filter((e) => e.entryType === "species");
+  const regles = useWorldRuleEntries(worldSlug);
+  const speciesEntries = regles.filter((e) => e.entryType === "species");
+  // V3.1-32 : un état ou l'épuisement n'ouvre une règle que si la fiche existe dans le
+  // ruleset du monde (jamais une clé devinée). Les états sont stockés par NOM traduit.
+  const reglesEtats = regles.filter((e) => e.entryType === "condition");
+  const cleEtat = (nom: string) => reglesEtats.find((e) => e.name.toLowerCase() === nom.toLowerCase())?.key;
+  const cleEpuisement = reglesEtats.find((e) => e.key === "exhaustion")?.key;
   const currentSpeciesKey = character.species?.kind === "rule" ? character.species.key : "";
   const currentSpeciesEntry = speciesEntries.find((e) => e.key === currentSpeciesKey);
   const baseSpeciesKey = currentSpeciesEntry ? (currentSpeciesEntry.parentSpeciesKey ?? currentSpeciesEntry.key) : "";
@@ -720,15 +744,19 @@ export default function CharacterSheetHeader({
 
         {pret ? (
           <>
-            <CommandeE
-              libelle="Points de vie"
-              valeur={hpCurrent}
-              maximum={hpMax}
-              danger={hpLow}
-              complement={hpTemp > 0 ? `+${hpTemp} temp.` : undefined}
-              desactive={busy}
-              onDelta={onChangeHp}
-            />
+            {etatMourant === "vivant" ? (
+              <CommandeE
+                libelle="Points de vie"
+                valeur={hpCurrent}
+                maximum={hpMax}
+                danger={hpLow}
+                complement={hpTemp > 0 ? `+${hpTemp} temp.` : undefined}
+                desactive={busy}
+                onDelta={onChangeHp}
+              />
+            ) : (
+              <BlocMourant etat={etatMourant} deathSaves={deathSaves} desactive={busy} dernierD20={dernierD20} onJetDeMort={onJetDeMort} onSoigner={onChangeHp} />
+            )}
             <CommandeE
               libelle={`Niveau ${totalLevel}`}
               valeur={xpCurrent}
@@ -737,7 +765,19 @@ export default function CharacterSheetHeader({
               desactive={busy}
               onDelta={onChangeXp}
             />
-            <CommandeE libelle="Épuisement" valeur={exhaustion} maximum={6} danger={exhaustion > 0} desactive={busy} onDelta={onChangeExhaustion} />
+            <CommandeE
+              libelle="Épuisement"
+              nomVisible={
+                cleEpuisement ? (
+                  // Le reset de Tailwind remet `text-transform: none` sur un bouton :
+                  // sans ceci, « Épuisement » sortait en casse mixte au milieu des
+                  // libelles en capitales des autres jauges.
+                  <span className="[&_button]:uppercase">
+                    <NomDeRegle worldSlug={worldSlug} ruleKey={cleEpuisement}>Épuisement</NomDeRegle>
+                  </span>
+                ) : undefined
+              }
+              valeur={exhaustion} maximum={6} danger={exhaustion > 0} desactive={busy} onDelta={onChangeExhaustion} />
           </>
         ) : (
           <>
@@ -778,17 +818,36 @@ export default function CharacterSheetHeader({
         </div>
       </div>
 
+      {/* V3.1-32 — la concentration en cours, juste avant les états. Affichage seul :
+          aucune action serveur ne la rompt depuis la fiche. Le sort ouvre sa règle
+          (sa clé vient de l'état de jeu) ; sans clé, le libellé reste du texte. */}
+      {concentration && (
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-xs font-bold uppercase tracking-wide text-ink-muted">Concentration</span>
+          {concentration.spell_key ? (
+            <NomDeRegle worldSlug={worldSlug} ruleKey={concentration.spell_key}>
+              {concentration.label}
+            </NomDeRegle>
+          ) : (
+            <span className="text-ink">{concentration.label}</span>
+          )}
+        </div>
+      )}
+
       {/* V2.1-26 — les états en cours. Ils étaient déjà en base, écrits par
           l'écran Initiative, et la fiche ne les montrait nulle part : le MJ
           posait un état, le joueur ne le voyait pas. */}
       {conditions.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-bold uppercase tracking-wide text-ink-muted">États</span>
-          {conditions.map((condition) => (
-            <span key={condition} className="rounded-full border border-danger px-3 py-1 text-xs text-danger">
-              {condition}
-            </span>
-          ))}
+          {conditions.map((condition) => {
+            const cle = cleEtat(condition);
+            return (
+              <span key={condition} className="rounded-full border border-danger px-3 py-1 text-xs text-danger">
+                {cle ? <NomDeRegle worldSlug={worldSlug} ruleKey={cle}>{condition}</NomDeRegle> : condition}
+              </span>
+            );
+          })}
         </div>
       )}
 

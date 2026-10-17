@@ -12,6 +12,7 @@ import { resolveScaledFormulaText } from "@/src/core/rules/scaling";
 import type { DescriptionBlockData, EffectsBlockData, ScalingBlockData } from "@/src/core/schemas/rule-blocks";
 import { itemRef } from "./inventoryItem";
 import { ActionButton, ItemCard, withModifier } from "./InventoryPanel";
+import NomDeRegle from "./NomDeRegle";
 import { refIdentity, type ResolvedChipView } from "./useReferenceChips";
 import { useRuleEntryBlocks, type RuleEntryBlockData } from "./useRuleEntryBlocks";
 import Dropdown from "@/components/shared/Dropdown";
@@ -122,6 +123,7 @@ function SpellSlotsTracker({
  * bouton de lancer reste seul, sans ligne de degats — rien a adapter.
  */
 function PreparedSpellCard({
+  worldSlug,
   spell,
   blocks,
   spellSlots,
@@ -133,6 +135,7 @@ function PreparedSpellCard({
   onCast,
   onCastAttack,
 }: {
+  worldSlug: string;
   spell: PreparedSpellView;
   blocks: RuleEntryBlockData[] | undefined;
   spellSlots: Record<string, number>;
@@ -179,7 +182,13 @@ function PreparedSpellCard({
           colonne de droite ecrasait le nom du sort. Meme disposition que la
           carte d'arme (`ItemCard`), qui empile deja de cette facon. */}
       <div className="flex min-w-0 flex-col gap-1.5">
-        <span className="truncate text-sm font-semibold text-ink">{label}</span>
+        {ref.kind === "rule" ? (
+          <NomDeRegle worldSlug={worldSlug} ruleKey={ref.key} className="truncate text-sm font-semibold">
+            {label}
+          </NomDeRegle>
+        ) : (
+          <span className="truncate text-sm font-semibold text-ink">{label}</span>
+        )}
         <div className="flex flex-wrap gap-1">
           <span className="w-fit rounded-full border border-edge px-1.5 py-0 text-[10px] text-ink-muted">
             {isCantrip ? "Sort mineur" : `Niv. ${level}`}
@@ -362,6 +371,7 @@ export default function ActionsTab({
               {cantripSpells.map((spell) => (
                 <PreparedSpellCard
                   key={refIdentity(spell.ref)}
+                  worldSlug={worldSlug}
                   spell={spell}
                   blocks={spell.ref.kind === "rule" ? spellBlocksByKey[spell.ref.key] : undefined}
                   spellSlots={spellSlots}
@@ -383,6 +393,7 @@ export default function ActionsTab({
               {leveledSpells.map((spell) => (
                 <PreparedSpellCard
                   key={refIdentity(spell.ref)}
+                  worldSlug={worldSlug}
                   spell={spell}
                   blocks={spell.ref.kind === "rule" ? spellBlocksByKey[spell.ref.key] : undefined}
                   spellSlots={spellSlots}

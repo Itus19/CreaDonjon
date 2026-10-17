@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type KeyboardEvent } from "react";
+import { useState, type KeyboardEvent, type ReactNode } from "react";
 import { ecartCommandeE } from "@/lib/ui/commandeE";
 
 /**
@@ -26,6 +26,7 @@ import { ecartCommandeE } from "@/lib/ui/commandeE";
  */
 export default function CommandeE({
   libelle,
+  nomVisible,
   valeur,
   maximum,
   progression,
@@ -36,6 +37,8 @@ export default function CommandeE({
 }: {
   /** « Points de vie », « Niveau 2 », « Épuisement » : au-dessus de la jauge, et nom accessible du champ. */
   libelle: string;
+  /** Remplace le texte du libellé AFFICHÉ (V3.1-32 : le nom devient une infobulle de règle). Le nom accessible reste `libelle`. */
+  nomVisible?: ReactNode;
   valeur: number;
   /** Absent pour l'XP, qui n'en a pas : l'anneau montre alors `progression`. */
   maximum?: number;
@@ -86,7 +89,7 @@ export default function CommandeE({
 
   return (
     <div className="flex shrink-0 flex-col items-center gap-1">
-      <span className={`flex h-8 items-end justify-center text-center text-xs font-bold uppercase leading-tight tracking-wide ${danger ? "text-danger" : "text-ink-muted"}`}>{libelle}</span>
+      <span className={`flex h-8 items-end justify-center text-center text-xs font-bold uppercase leading-tight tracking-wide ${danger ? "text-danger" : "text-ink-muted"}`}>{nomVisible ?? libelle}</span>
       <div className="relative h-14 w-[86px]">
         <div
           role="spinbutton"
