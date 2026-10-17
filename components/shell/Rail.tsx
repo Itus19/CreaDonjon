@@ -647,3 +647,52 @@ export function OutilsDalle({ worldSlug }: { worldSlug: string }) {
     </RailPart>
   );
 }
+
+/**
+ * Dalle Outils de l'accueil (V3.1-35) : le de SEUL, sans la radio — la radio
+ * appartient a une campagne, et l'accueil n'en a pas. Meme de, meme ancrage
+ * du panneau (`enregistrerDalle("ordinateur", ref)`) que `OutilsDalle`.
+ */
+export function DeSeulDalle() {
+  const t = useTranslations("shell");
+  const ta = useTranslations("accueil");
+  const { replie } = useRail();
+  const { ouvrirVolet, enregistrerDalle } = useDiceRoll();
+  const deRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => enregistrerDalle("ordinateur", deRef), [enregistrerDalle]);
+  return (
+    <RailPart visibleMobile={false} className="shrink-0 items-center px-2 pb-3 pt-8">
+      <button
+        ref={deRef}
+        type="button"
+        onClick={ouvrirVolet}
+        aria-label={t("ouvrirVoletDes")}
+        className={`absolute left-1/2 top-0 z-[5] flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-[6px] border-panel ${CLASSE_FOND_DE} transition-transform hover:scale-105 motion-reduce:transition-none`}
+      >
+        <IconeDe />
+      </button>
+      {!replie && <span className="text-xs text-ink-muted">{ta("lancerDes")}</span>}
+    </RailPart>
+  );
+}
+
+/**
+ * V3.1-35 — le dé de la barre du bas de l'accueil, sur téléphone : il
+ * remplace le bouton flottant, qui recouvrait la barre. Même geste que le dé
+ * de la barre flottante d'un monde (`BarreFlottante`, `enregistrerDalle("telephone")`).
+ */
+export function DeBarreBas() {
+  const t = useTranslations("shell");
+  const { ouvrirVolet, enregistrerDalle } = useDiceRoll();
+  useEffect(() => enregistrerDalle("telephone"), [enregistrerDalle]);
+  return (
+    <button
+      type="button"
+      onClick={ouvrirVolet}
+      aria-label={t("ouvrirVoletDes")}
+      className={`-mt-5 flex h-12 w-12 shrink-0 items-center justify-center self-start rounded-full border-[6px] border-panel ${CLASSE_FOND_DE} transition-transform hover:scale-105 motion-reduce:transition-none`}
+    >
+      <IconeDe />
+    </button>
+  );
+}

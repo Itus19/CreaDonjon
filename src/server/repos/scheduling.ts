@@ -188,8 +188,9 @@ export async function closeAvailabilityRequest(supabase: TypedClient, id: string
 /**
  * V3.1-35 — l'accueil : la prochaine séance de chacune de ces campagnes, en
  * UNE requête pour tous les mondes de l'utilisateur. La RLS de
- * `real_sessions` ne rend que celles des campagnes dont il est membre.
- * Une séance en cours (commencée, pas finie) compte encore comme « prochaine ».
+ * `real_sessions` ne rend que celles des campagnes dont il est membre. Même
+ * règle que `getNextSession` (services/scheduling.ts) : le moment d'une séance
+ * est sa date et son heure de début, et la prochaine est la première à venir.
  */
 export async function listNextSessionsForCampaigns(
   supabase: TypedClient,
@@ -198,18 +199,19 @@ export async function listNextSessionsForCampaigns(
 ): Promise<Map<string, RealSessionRow>> {
   const prochaines = new Map<string, RealSessionRow>();
   if (campaignIds.length === 0) return prochaines;
-  // Une séance dure au plus une journée : on remonte de 24 h pour garder celle en cours.
-  const depuis = new Date(maintenant.getTime() - 24 * 60 * 60 * 1000).toISOString();
+  // La veille : une séance d'aujourd'hui, selon le fuseau, peut porter la date d'hier.
+  const veille = new Date(maintenant.getTime() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const { data, error } = await supabase
     .from("real_sessions")
     .select(REAL_SESSION_COLUMNS)
     .in("campaign_id", campaignIds)
-    .gte("starts_at", depuis)
+    .gte("scheduled_date", veille)
+    .order("scheduled_date", { ascending: true })
     .order("starts_at", { ascending: true });
   if (error) throw new Error(error.message);
   for (const session of data) {
-    const fin = new Date(session.starts_at).getTime() + session.duration_minutes * 60 * 1000;
-    if (fin < maintenant.getTime() || prochaines.has(session.campaign_id)) continue;
+    const moment = new Date(`${session.scheduled_date}T${session.starts_at}`).getTime();
+    if (moment < maintenant.getTime() || prochaines.has(session.campaign_id)) continue;
     prochaines.set(session.campaign_id, session);
   }
   return prochaines;

@@ -17,14 +17,17 @@ const initialState: ActionState = null;
 export default function CreateWorldForm({
   officialRulesets,
   canUseSoloMode,
+  modeInitial = "campaign",
 }: {
   officialRulesets: { id: string; name: string }[];
   /** V2-M2 (Lot M) : le mode solo est reserve au superadmin — verifie cote serveur (`createWorldAction`), cette prop ne fait qu'eviter d'afficher une option qui echouerait toujours. */
   canUseSoloMode: boolean;
+  /** Accueil (V3.1-35) : le chemin « Jouer en solo » ouvre le formulaire déjà réglé sur le solo. Ignoré si le compte ne peut pas créer de solo. */
+  modeInitial?: "campaign" | "solo";
 }) {
   const [state, formAction, pending] = useActionState(createWorldAction, initialState);
   const [rulesetId, setRulesetId] = useState("");
-  const [mode, setMode] = useState<"campaign" | "solo">("campaign");
+  const [mode, setMode] = useState<"campaign" | "solo">(canUseSoloMode ? modeInitial : "campaign");
   const modeOptions = canUseSoloMode
     ? [
         { value: "campaign", label: "Campagne (MJ humain)" },

@@ -83,7 +83,7 @@ export async function listWorldCards(supabase: TypedClient, locale: Locale, user
     gmNames: adminIds.map(nameFor),
     nextSession: (() => {
       const session = card.campaignId ? nextSessions.get(card.campaignId) : undefined;
-      return session ? { startsAt: session.starts_at, durationMinutes: session.duration_minutes } : null;
+      return session ? { startsAt: `${session.scheduled_date}T${session.starts_at}`, durationMinutes: session.duration_minutes } : null;
     })(),
   }));
 }

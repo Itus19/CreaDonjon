@@ -1,38 +1,36 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
+import { useTranslations } from "next-intl";
+import { logout } from "@/app/login/actions";
+import DiceRollProvider from "./DiceRollPanel";
+import {
+  DeBarreBas,
+  DeSeulDalle,
+  Rail,
+  RailPart,
+  RailRow,
+  TraitSvg,
+  useRailReplie,
+} from "./Rail";
 
 type Destination = "mondes" | "compte" | "admin";
 
-const LABELS: Record<Destination, string> = {
-  mondes: "Mondes",
-  compte: "Compte",
-  admin: "Admin",
-};
-
 /**
- * Coquille de l'ecran d'accueil (V2.1-24, lot 2) — rail de sections
- * emprunte a `PlayerShell.tsx` sur demande de l'auteur : "le rail de
- * sections qui me rappelle le menu des joueurs, a qui on pourrait
- * emprunter l'esthetique". Meme vocabulaire, aux memes valeurs : 80 px
- * (`md:w-20`), `bg-panel`, filet a droite ; le nom en haut detache par un
- * `border-b` ; une destination = icone + libelle empiles, `text-accent` si
- * active et `text-ink-muted` sinon, SANS pastille de fond ; un pied separe
- * par un `border-t` pour ce qui n'est pas une destination.
- *
- * Et la meme mecanique responsive, qui est la vraie raison de l'emprunt :
- * `flex-col-reverse md:flex-row` donne un rail lateral au-dessus de 768 px
- * et une barre d'onglets en bas en dessous (zone du pouce). L'accueil
- * herite de ce comportement telephone sans qu'on ecrive une ligne pour lui.
+ * Coquille de l'ecran d'accueil. A partir de 768 px (V3.1-35) : le rail du
+ * joueur V4 (`Rail.tsx`) — Mondes, Compte, Administration (superadmin
+ * seulement), Deconnexion en pied, et une dalle Outils avec le de SEUL (la
+ * radio appartient a une campagne). Sous 768 px : la barre d'onglets du bas
+ * d'avant (Mondes, Compte, Admin) ; la deconnexion y reste dans la
+ * destination Compte, ou la barre ne porte que des destinations.
  *
  * Les destinations sont un etat local, jamais des routes : l'accueil reste
  * une seule page, exactement comme la selection d'un monde l'est deja dans
  * `HomeScreen`. Rien a precharger, rien a remonter dans l'URL.
  *
- * La barre du haut de `app/page.tsx` (titre, e-mail, deconnexion) a disparu
- * au profit du haut et du pied de ce rail — meme geste que `AppShell.tsx`,
- * qui a cesse de rendre le sien pour la coquille joueur ("retirer cette
- * barre en haut et tout mettre sur la side bar").
+ * `DiceRollProvider` sans campagne : le de de la dalle ouvre l'outil de des en
+ * « jet libre », qui part vers `POST /api/dice-rolls` (le serveur lance, rien
+ * n'est enregistre).
  */
 export default function HomeShell({
   mondes,
@@ -44,71 +42,126 @@ export default function HomeShell({
   /** Section Administration — `null` pour tout compte non-superadmin, auquel cas la destination n'existe pas non plus. */
   admin: React.ReactNode;
 }) {
+  const t = useTranslations("accueil");
   const [destination, setDestination] = useState<Destination>("mondes");
-  const destinations: Destination[] = admin ? ["mondes", "compte", "admin"] : ["mondes", "compte"];
+  const { replie, basculer } = useRailReplie();
+  const destinations: Destination[] = admin
+    ? ["mondes", "compte", "admin"]
+    : ["mondes", "compte"];
+  const libelles: Record<Destination, string> = {
+    mondes: t("destMondes"),
+    compte: t("destCompte"),
+    admin: t("destAdmin"),
+  };
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-col-reverse md:flex-row">
-      <nav className="flex shrink-0 justify-around border-t border-edge bg-panel md:w-20 md:flex-col md:justify-start md:border-t-0 md:border-r print:hidden">
-        {/* `px-1` et non le `px-2` de la coquille joueur : "CreaDonjon" est
-            plus long qu'un nom de monde court et se faisait tronquer a
-            "CreaDonj…" dans les 80 px du rail. Le rembourrage cede, jamais
-            la taille de texte — le §4 de la charte pose `text-xs` comme
-            plancher. */}
-        <span className="hidden shrink-0 truncate border-b border-edge px-1 py-3 text-center text-xs font-semibold text-accent md:block">
-          CreaDonjon
-        </span>
+    <DiceRollProvider campaignId={null} isGm={false}>
+      <div className="flex h-full min-h-0 w-full flex-col-reverse md:flex-row">
+        {/* Grand ecran : le rail flottant commun. Il se masque de lui-meme sous 768 px (`barreBasse`). */}
+        <Rail ouvert={false} replie={replie} onBasculer={basculer} barreBasse>
+          <RailPart className="md:min-h-0 md:flex-1">
+            <div className="hidden shrink-0 items-center gap-2.5 px-[14px] py-3 md:flex">
+              <span
+                className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-lg bg-accent text-xs font-bold text-accent-ink"
+                aria-hidden="true"
+              >
+                C
+              </span>
+              {!replie && (
+                <span className="min-w-0 flex-1 truncate font-chrome text-sm font-semibold text-ink">
+                  CreaDonjon
+                </span>
+              )}
+            </div>
 
-        {/* Meme dimensionnement fluide que la coquille joueur : la taille
-            retrecit avec la hauteur disponible plutot que de deborder, parce
-            qu'un rail ne defile pas ("pas d'ascenseur... plutot une
-            adaptation de la taille des boutons"). */}
-        <div className="flex flex-1 justify-around md:min-h-0 md:flex-col md:items-center md:justify-start md:gap-[clamp(0px,0.8vh,4px)] md:p-2">
-          {destinations.map((d) => {
+            <nav
+              aria-label={t("navigation")}
+              className="hidden min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto overflow-x-hidden p-2 md:flex"
+            >
+              {destinations.map((d) => (
+                <RailRow
+                  key={d}
+                  icone={<Icon name={d} />}
+                  libelle={libelles[d]}
+                  actif={destination === d}
+                  onClick={() => setDestination(d)}
+                />
+              ))}
+            </nav>
+
+            <form
+              action={logout}
+              className="hidden shrink-0 border-t border-edge p-2 md:block"
+            >
+              <RailRow
+                soumettre
+                libelle={t("deconnexion")}
+                icone={
+                  <TraitSvg>
+                    <path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4" />
+                    <path d="M10 8l-4 4 4 4" />
+                    <path d="M6 12h10" />
+                  </TraitSvg>
+                }
+              />
+            </form>
+          </RailPart>
+          <DeSeulDalle />
+        </Rail>
+
+        {/* Telephone : la barre d'onglets du bas d'avant. */}
+        <nav
+          aria-label={t("navigation")}
+          className="flex shrink-0 justify-around border-t border-edge bg-panel md:hidden print:hidden"
+        >
+          {destinations.map((d, i) => {
             const active = destination === d;
             return (
-              <button
-                key={d}
-                type="button"
-                onClick={() => setDestination(d)}
-                aria-current={active ? "page" : undefined}
-                className={`relative flex flex-col items-center gap-[clamp(0px,0.5vh,4px)] rounded-md px-2 py-2 text-[11px] transition-colors md:py-[clamp(2px,1.1vh,12px)] md:text-[clamp(8px,1.3vh,11px)] ${
-                  active ? "text-accent" : "text-ink-muted hover:text-ink"
-                }`}
-              >
-                <span className="relative block h-5 w-5 shrink-0 md:h-[clamp(14px,2.6vh,20px)] md:w-[clamp(14px,2.6vh,20px)]">
-                  <Icon name={d} />
-                </span>
-                {LABELS[d]}
-              </button>
+              <Fragment key={d}>
+                {/* Le de au milieu de la barre (apres la premiere destination), comme dans un monde. */}
+                {i === 1 && <DeBarreBas />}
+                <button
+                  type="button"
+                  onClick={() => setDestination(d)}
+                  aria-current={active ? "page" : undefined}
+                  className={`relative flex flex-col items-center gap-1 rounded-md px-2 py-2 text-xs transition-colors ${
+                    active ? "text-accent" : "text-ink-muted hover:text-ink"
+                  }`}
+                >
+                  <span className="relative block h-5 w-5 shrink-0">
+                    <Icon name={d} />
+                  </span>
+                  {d === "admin" ? t("destAdminCourt") : libelles[d]}
+                </button>
+              </Fragment>
             );
           })}
+        </nav>
+
+        {/* Chaque destination borne son propre defilement, jamais la page
+            (ADR 0025). "Mondes" s'en charge lui-meme ; Compte et
+            Administration sont des panneaux ordinaires, qui defilent en bloc.
+            Compte est en outre bride en largeur : un formulaire de profil
+            etire sur 1600 px ne se lit pas. */}
+        <div className="min-h-0 flex-1 overflow-hidden p-4 md:p-6">
+          {destination === "mondes" && (
+            <div className="mx-auto h-full min-h-0 w-full max-w-[1600px]">
+              {mondes}
+            </div>
+          )}
+          {destination === "compte" && (
+            <div className="mx-auto h-full min-h-0 w-full max-w-2xl overflow-y-auto">
+              {compte}
+            </div>
+          )}
+          {destination === "admin" && (
+            <div className="mx-auto h-full min-h-0 w-full max-w-[1600px] overflow-y-auto">
+              {admin}
+            </div>
+          )}
         </div>
-
-        {/* Pas de pied ici, contrairement a la coquille joueur. L'e-mail ne
-            tient pas dans 80 px et n'y rendait qu'une bouillie tronquee ; la
-            deconnexion, elle, aurait ete en `md:` comme le pied du joueur,
-            et aurait donc DISPARU sous 768 px — ou la barre du bas ne porte
-            que des destinations. Les deux vivent dans la destination Compte,
-            qui est leur sujet et qui existe a toutes les largeurs. */}
-      </nav>
-
-      {/* Chaque destination borne son propre defilement, jamais la page
-          (ADR 0025). "Mondes" s'en charge lui-meme — ses deux colonnes
-          defilent separement — d'ou un cadre nu ici ; Compte et
-          Administration sont des panneaux ordinaires, qui defilent en bloc.
-          Compte est en outre bride en largeur : un formulaire de profil
-          etire sur 1600 px ne se lit pas. */}
-      <div className="min-h-0 flex-1 overflow-hidden p-4 md:p-6">
-        {destination === "mondes" && <div className="mx-auto h-full min-h-0 w-full max-w-[1600px]">{mondes}</div>}
-        {destination === "compte" && (
-          <div className="mx-auto h-full min-h-0 w-full max-w-2xl overflow-y-auto">{compte}</div>
-        )}
-        {destination === "admin" && (
-          <div className="mx-auto h-full min-h-0 w-full max-w-[1600px] overflow-y-auto">{admin}</div>
-        )}
       </div>
-    </div>
+    </DiceRollProvider>
   );
 }
 
@@ -124,7 +177,14 @@ export default function HomeShell({
  * reelle vient du conteneur `clamp(...)` pose par l'appelant.
  */
 function Icon({ name }: { name: Destination }) {
-  const common = { width: "100%", height: "100%", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8 } as const;
+  const common = {
+    width: "100%",
+    height: "100%",
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.8,
+  } as const;
   switch (name) {
     case "mondes":
       return (

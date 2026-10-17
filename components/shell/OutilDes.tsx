@@ -226,11 +226,12 @@ export default function OutilDes({
           dcPrivate: contexte.ddPrive,
         };
       } else {
-        if (!campaignId || !peutLancer(reserve)) return;
-        url = `/api/campaigns/${campaignId}/dice-rolls`;
+        if (!peutLancer(reserve)) return;
+        // Sans campagne (accueil, V3.1-35) : le serveur lance, rien n'est enregistré.
+        url = campaignId ? `/api/campaigns/${campaignId}/dice-rolls` : "/api/dice-rolls";
         corps = {
           pool: reserve,
-          hidden: secret,
+          hidden: campaignId !== null && secret,
           modifier: modificateur,
           advantage: avantageEff,
           label: actif?.label ?? null,
@@ -288,8 +289,7 @@ export default function OutilDes({
   });
 
   const titre = titreOutil(actif?.label, t("titreLibre"));
-  const sansCampagneLibre = !verrouille && campaignId === null;
-  const lancerDesactive = enCours || sansCampagneLibre || (!verrouille && !peutLancer(reserve));
+  const lancerDesactive = enCours || (!verrouille && !peutLancer(reserve));
 
   return (
     <div className="flex flex-col gap-3 text-ink">
@@ -298,7 +298,8 @@ export default function OutilDes({
         <h2 id={idTitre} className="min-w-0 flex-1 truncate font-chrome text-sm font-semibold text-ink">
           {titre}
         </h2>
-        <Interrupteur actif={secret} onChange={setSecret} libelle={t("secret")} aide={t("secretAide")} />
+        {/* Le secret est un jet caché aux joueurs de la campagne : sans campagne, il n'a pas de sens. */}
+        {campaignId !== null && <Interrupteur actif={secret} onChange={setSecret} libelle={t("secret")} aide={t("secretAide")} />}
         <button
           type="button"
           onClick={onFermer}
@@ -401,7 +402,6 @@ export default function OutilDes({
       {/* Détails sous la zone : contre DD, verdict, chips, erreur. */}
       <div className="flex min-h-[3.25rem] flex-col gap-1 text-xs text-ink-soft" aria-live="polite">
         {termine && jetAffiche && <DetailsJet jet={jetAffiche} ton={ton} />}
-        {sansCampagneLibre && <p className="text-ink-muted">{t("sansCampagne")}</p>}
         {erreur && (
           <p role="alert" className="text-danger">
             {erreur}

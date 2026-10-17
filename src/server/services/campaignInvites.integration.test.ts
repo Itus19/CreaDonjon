@@ -11,6 +11,7 @@ import {
 } from "./campaignInvites";
 import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
 import { claimOwnOpenCharacter, listClaimableCharacters } from "./campaigns";
+import { jetonDepuisLien } from "@/lib/campaignInvites/lienInvitation";
 
 /**
  * V2-M4 (Lot M), mis a jour pour V3.1-10 (ADR 0031) : verifie contre une
@@ -441,5 +442,29 @@ describe.skipIf(!hasCreds)("liens d'invitation (integration, base reelle)", () =
     } finally {
       await admin.from("campaign_members").delete().eq("campaign_id", campaignId).eq("user_id", player.id);
     }
+  });
+
+  it("V3.1-35 — « Rejoindre une table » : un lien collé valide est reconnu, un invalide refusé, et rien n'est créé", async () => {
+    const { token } = await createCampaignInvite(ownerClient, { campaignId, worldId: null, intendedRole: "player", createdBy: ownerId });
+    async function compter() {
+      const [invites, membres] = await Promise.all([
+        admin.from("campaign_invites").select("id", { count: "exact", head: true }).eq("campaign_id", campaignId),
+        admin.from("campaign_members").select("user_id", { count: "exact", head: true }).eq("campaign_id", campaignId),
+      ]);
+      return { invites: invites.count, membres: membres.count };
+    }
+    const avant = await compter();
+    const visiteur = (await getReusableTestAccount(admin, "player")).client;
+
+    const valide = jetonDepuisLien(`  https://creadonjon.example/rejoindre/${token}  `);
+    expect(valide).toBe(token);
+    expect((await resolveInviteForJoin(visiteur, valide!)).ok).toBe(true);
+
+    const faux = jetonDepuisLien("https://creadonjon.example/rejoindre/jetonQuiNExistePas123");
+    expect(faux).not.toBeNull();
+    expect((await resolveInviteForJoin(visiteur, faux!)).ok).toBe(false);
+    expect(jetonDepuisLien("https://creadonjon.example/m/faerun")).toBeNull();
+
+    expect(await compter()).toEqual(avant);
   });
 });
