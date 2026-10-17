@@ -28,3 +28,4 @@ Issue : **accepté** (tel quel) · **corrigé** (retouche locale par Opus) · **
 | 2026-10-17 | V3.1-32 | dev-sonnet | 150 452 | corrigé | Fiche téléphone, noms de règles, bloc mourant ; s'est arrêté net sur le cliquet du câblage au lieu de le contourner (bien). Opus : lien « Ouvrir dans Règles » côté joueur, casse d'« Épuisement », plafond du cliquet justifié |
 | 2026-10-17 | V3.1-32 (planche) | aide-haiku | 79 107 | accepté | Jets contre la mort et nom de règle dans Fiche.dc.html ; hauteur reportée (7 200) |
 | 2026-10-17 | V3.1-33 (interface) | dev-sonnet | 190 747 | accepté tel quel | Brief de 8 points ; relu par Opus ; appels du geste sortis dans `outilDesApi.ts` plutôt que monter le cliquet. |
+| 2026-10-17 | V3.1-33 (planche) | aide-haiku | 88 375 | corrigé | Outil de dés dans Ecrans.dc.html, interrupteur dans Controles.dc.html ; libellés de l'interrupteur alignés sur le code par Opus |
