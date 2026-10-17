@@ -159,6 +159,11 @@ describe.skipIf(!hasCreds)("liens d'invitation (integration, base reelle)", () =
     // La personne qui l'a utilise peut le rouvrir sans erreur.
     const reopened = await claimInvite({ invite: resolved.invite, claim: { role: "player", name: "Encore" }, existingUserId: data!.claimed_by_user_id! });
     expect(reopened.ok).toBe(true);
+
+    // Le lien revoque, sa reservation tombe : le gagnant de la course (au
+    // hasard) ne doit pas garder un PJ reserve dans les tests suivants, qui
+    // reutilisent ces comptes.
+    await admin.from("campaign_invites").update({ revoked_at: new Date().toISOString() }).eq("id", resolved.invite.id);
   });
 
   it("un lien deja reclame reconnecte le MEME compte a la reouverture, sans redemander de role", async () => {
