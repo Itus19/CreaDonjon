@@ -30,3 +30,4 @@ Issue : **accepté** (tel quel) · **corrigé** (retouche locale par Opus) · **
 | 2026-10-17 | V3.1-33 (interface) | dev-sonnet | 190 747 | accepté tel quel | Brief de 8 points ; relu par Opus ; appels du geste sortis dans `outilDesApi.ts` plutôt que monter le cliquet. |
 | 2026-10-17 | V3.1-33 (planche) | aide-haiku | 88 375 | corrigé | Outil de dés dans Ecrans.dc.html, interrupteur dans Controles.dc.html ; libellés de l'interrupteur alignés sur le code par Opus |
 | 2026-10-17 | V3.1-20 (interface) | dev-sonnet | 123 295 | corrigé | Couche des volets, portail de la primaire, glisser et séparateur conformes ; Opus : onglets qui rétrécissent au lieu de déborder, volets décollés de 8 px du rail dans un cadre arrondi. |
+| 2026-10-17 | V3.1-20 (planche) | aide-haiku | 80 735 | accepté | Section « Volets à onglets » dans Surfaces.dc.html ; a relevé une double couleur de bordure dans la cible de dépôt, corrigée dans le code par Opus |

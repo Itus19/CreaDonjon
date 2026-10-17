@@ -176,9 +176,11 @@ export default function VoletsLayer({ worldSlug }: { worldSlug: string }) {
     };
   }
 
-  const classeOverlay = (actif: boolean) =>
+  // `repos` : la bordure hors survol (transparente sur un volet, en pointilles
+  // sur la moitie vide) — une seule couleur de bordure a la fois.
+  const classeOverlay = (actif: boolean, repos = "border-transparent") =>
     `absolute z-10 flex items-center justify-center border-2 transition-colors motion-reduce:transition-none ${
-      actif ? "border-accent bg-accent/10" : "border-transparent"
+      actif ? "border-accent bg-accent/10" : repos
     }`;
 
   return (
@@ -370,7 +372,7 @@ export default function VoletsLayer({ worldSlug }: { worldSlug: string }) {
         })}
       {zoneSecondVolet && (
         <div
-          className={`${classeOverlay(cible === 1)} bottom-0 top-10 right-0 w-1/2 ${cible === 1 ? "" : "border-dashed border-edge-strong"}`}
+          className={`${classeOverlay(cible === 1, "border-dashed border-edge-strong")} bottom-0 top-10 right-0 w-1/2`}
           {...surOverlay(1)}
         >
           <span className="pointer-events-none px-4 text-center text-sm text-ink-soft">{t("volets.deposerSecondVolet")}</span>
