@@ -43,17 +43,7 @@ ouvertes », mêmes planches côté joueur. **Départ** : `PlayerShell.tsx`,
 - Écrans Table, Wiki, Règles, Édition, dés : des emplacements, remplis par
   30, 31, 33 et 34.
 
-**À trancher avec l'auteur avant de coder** (reporté de V3.1-28, le 17 octobre) :
-- **Les compétences de la fiche sous 640 px.** Depuis V3.1-28, une fiche de
-  moins de 640 px de large (téléphone, volet étroit) met ses six
-  caractéristiques en ligne au-dessus des onglets ; mais la liste des
-  18 compétences reste entre elles et les onglets, qui commencent ~700 px plus
-  bas. Options : (a) les laisser là ; (b) un onglet « Compétences » sous
-  640 px seulement ; (c) une ligne repliable « Compétences · maîtrise +N »
-  fermée par défaut ; (d) les compétences en deux colonnes pour réduire la
-  hauteur. Le choix touche `PlayableCharacterSheet.tsx` (colonne `aside`).
-- Même question, plus petite, pour le sélecteur « Points de vie : valeur
-  fixe / jetés » en bas de la même colonne.
+**Tranché le 17 octobre** (reporté de V3.1-28) : sous 640 px de fiche, les compétences deviennent une ligne repliable « Compétences » **fermée par défaut**, entre les caractéristiques et les onglets, comme l'esquisse « Fiche PJ — téléphone » (résumé fermé : « N maîtrisées · meilleure compétence +X ▾ », ouvert : « replier ▴ », la liste puis la légende ● expertise · ◐ maîtrise). Le sélecteur « Points de vie : valeur fixe / jetés » passe **dans ce bloc replié**, sous la liste (choix de l'auteur) ; au-delà de 640 px, rien ne change.
 
 **Critères d'acceptation**
 - [ ] Les deux barres conformes aux planches à 390 px ; aucune page à défilement horizontal.
