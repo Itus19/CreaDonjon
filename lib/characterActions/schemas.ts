@@ -132,6 +132,25 @@ export const exhaustionChangeSchema = z.object({
   delta: z.number().int(),
 });
 
+/** V3.1-34 : poser OU retirer un état (nom lisible), jamais les deux d'un coup. */
+export const conditionChangeSchema = z
+  .object({
+    campaignId: campaignIdField,
+    add: z.string().trim().min(1).max(80).optional(),
+    remove: z.string().trim().min(1).max(80).optional(),
+  })
+  .refine((v) => (v.add === undefined) !== (v.remove === undefined), { message: "Poser ou retirer un état." });
+
+/** V3.1-34 : rompre la concentration en cours. */
+export const breakConcentrationSchema = z.object({ campaignId: campaignIdField });
+
+/** V3.1-34 : dés de vie restants ▲▼ — un dé (« d8 ») et un écart, borné côté serveur. */
+export const hitDiceChangeSchema = z.object({
+  campaignId: campaignIdField,
+  die: z.enum(["d6", "d8", "d10", "d12"]),
+  delta: z.number().int().min(-20).max(20),
+});
+
 /** V2.1-26 : meme forme que l'epuisement, clampe a [0, 5] cote serveur (`changeInspiration`). */
 export const inspirationChangeSchema = z.object({
   campaignId: campaignIdField,

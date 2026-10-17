@@ -1347,6 +1347,65 @@ export async function changeExhaustion(
 }
 
 /**
+ * V3.1-34 (outil Table) — poser ou retirer un état. Les états sont stockés
+ * par NOM lisible (comme l'écran Initiative les pose) ; un état déjà présent
+ * n'est pas doublé, un état absent ne se retire pas : rien n'est écrit si
+ * rien ne change.
+ */
+export async function changeConditions(
+  supabase: TypedClient,
+  params: { entityId: string; campaignId: string | null; add?: string; remove?: string; actorUserId: string }
+): Promise<{ conditions: string[] }> {
+  const state = await getEntityRuntimeState(supabase, params.entityId, params.campaignId);
+  const meme = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+  let conditions = state.conditions;
+  if (params.add && !conditions.some((c) => meme(c, params.add!))) conditions = [...conditions, params.add.trim()];
+  if (params.remove) conditions = conditions.filter((c) => !meme(c, params.remove!));
+  if (conditions === state.conditions) return { conditions };
+  const sessionId = params.campaignId ? await getOrOpenSessionForCampaign(supabase, params.campaignId) : null;
+  await applyRuntimeStateChange(supabase, {
+    entityId: params.entityId,
+    campaignId: params.campaignId,
+    patch: { conditions },
+    note: params.add ? `État : ${params.add.trim()}` : `État retiré : ${params.remove?.trim() ?? ""}`,
+    sessionId,
+    actor: "player",
+    actorUserId: params.actorUserId,
+  });
+  return { conditions };
+}
+
+/**
+ * V3.1-34 (outil Table) — dés de vie restants ▲▼, à la main (repos court
+ * mis à part, `takeShortRest`). Borné de 0 au total de la classe : le
+ * serveur ne laisse jamais monter au-delà de ce que la fiche possède.
+ */
+export async function changeHitDice(
+  supabase: TypedClient,
+  params: { entityId: string; campaignId: string | null; die: string; delta: number; actorUserId: string; locale: Locale }
+): Promise<{ remaining: number } | { error: ActionErrorReason }> {
+  const ctx = await resolveCharacterActionContext(supabase, params.entityId, params.campaignId, params.locale);
+  if (!ctx) return { error: "not_found" };
+  const total = ctx.hitDiceTotals[params.die];
+  if (total === undefined) return { error: "not_found" };
+  const state = await getEntityRuntimeState(supabase, params.entityId, params.campaignId);
+  const current = { ...ctx.hitDiceTotals, ...state.hit_dice }[params.die] ?? total;
+  const remaining = Math.max(0, Math.min(total, current + params.delta));
+  if (remaining === current) return { remaining };
+  const sessionId = params.campaignId ? await getOrOpenSessionForCampaign(supabase, params.campaignId) : null;
+  await applyRuntimeStateChange(supabase, {
+    entityId: params.entityId,
+    campaignId: params.campaignId,
+    patch: { hit_dice: { ...ctx.hitDiceTotals, ...state.hit_dice, [params.die]: remaining } },
+    note: `Dés de vie ${params.die} : ${current} → ${remaining}`,
+    sessionId,
+    actor: "player",
+    actorUserId: params.actorUserId,
+  });
+  return { remaining };
+}
+
+/**
  * V2.1-26 — l'inspiration heroique. Meme geste que l'epuisement, a trois
  * lignes d'ici : un delta, borne cote SERVEUR, journalise comme toute
  * mutation de jeu. Le client propose un delta, il ne pose jamais la valeur.

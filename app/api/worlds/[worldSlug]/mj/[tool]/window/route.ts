@@ -10,6 +10,7 @@ import { listCampaigns, getCampaignCharacters, resolveCampaignId } from "@/src/s
 import { isSuperadmin } from "@/src/server/services/account";
 import { isWorldAdmin } from "@/src/server/services/permissions";
 import { getPartySkillProbabilities } from "@/src/server/services/partyProbabilities";
+import { getTableParty } from "@/src/server/services/tableParty";
 import { getEncounterBudgetTableForRuleset, listMonstersForRuleset, listSavedEncounters } from "@/src/server/services/encounters";
 import { getActiveCombatForCampaign, getCombatDetail, listCombatsForCampaign, listConditionNames } from "@/src/server/services/combats";
 import { listEntitiesByIds } from "@/src/server/repos/entities";
@@ -170,6 +171,20 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
         monsters,
         conditions,
       };
+      break;
+    }
+
+    case "table": {
+      // V3.1-34 : chaque PJ résolu comme sa fiche (`getTableParty`), plus les états du ruleset.
+      const campaigns = await listCampaigns(supabase, world.id);
+      const selected = campaigns[0] ?? null;
+      const [party, conditions] = selected
+        ? await Promise.all([
+            getTableParty(supabase, { worldId: world.id, campaignId: selected.id, locale }),
+            listConditionNames(supabase, selected.rulesetId, locale),
+          ])
+        : [[], []];
+      data = { tool, campaignId: selected?.id ?? null, party, conditions };
       break;
     }
 

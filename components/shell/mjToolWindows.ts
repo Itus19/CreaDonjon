@@ -9,6 +9,7 @@ import type { CalendarConfigInput } from "@/src/core/schemas/calendar";
 import type { ShareLinkSummary } from "@/src/server/services/shareLinks";
 import type { GeneratorToolWindowData } from "@/src/server/services/generators";
 import type { NotebookData } from "@/src/server/services/notebook";
+import type { TablePc } from "@/src/server/services/tableParty";
 
 /**
  * Forme JSON d'une fenetre d'outil MJ (retour utilisateur, V2-M7 suite) —
@@ -65,7 +66,9 @@ export type MjToolWindowData =
   | { tool: "generateurs"; entityId: string; tools: GeneratorToolWindowData[] }
   | ({ tool: "notes" } & NotebookData)
   | { tool: "calendrier-reel"; campaignId: string | null }
-  | { tool: "livre-de-sessions"; campaignId: string | null; calendar: CalendarConfigInput; currentUserId: string };
+  | { tool: "livre-de-sessions"; campaignId: string | null; calendar: CalendarConfigInput; currentUserId: string }
+  /** V3.1-34 : l'outil Table — les PJ de la campagne, et les noms d'états du ruleset pour « + état ». */
+  | { tool: "table"; campaignId: string | null; party: TablePc[]; conditions: string[] };
 
 export function isMjToolWindowData(data: unknown): data is MjToolWindowData {
   return !!data && typeof data === "object" && "tool" in data;

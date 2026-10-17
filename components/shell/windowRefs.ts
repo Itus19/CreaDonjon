@@ -20,6 +20,7 @@ export const MJ_TOOL_KEYS = [
   "notes",
   "calendrier-reel",
   "livre-de-sessions",
+  "table",
 ] as const;
 export type MjToolKey = (typeof MJ_TOOL_KEYS)[number];
 
@@ -39,6 +40,7 @@ export const MJ_TOOL_LABELS: Record<MjToolKey, string> = {
   notes: "Bloc-notes",
   "calendrier-reel": "Calendrier réel",
   "livre-de-sessions": "Livre de sessions",
+  table: "Table",
 };
 
 /**

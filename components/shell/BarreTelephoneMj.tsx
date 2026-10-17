@@ -297,6 +297,7 @@ function FeuilleOutils({
     rencontres: tMj("rencontres"),
     generateurs: tMj("generateurs"),
     probabilites: tMj("probabilites"),
+    table: t("table"),
     notes: tMj("blocNotes"),
     "livre-de-sessions": tMj("livreDeSessions"),
     calendrier: tMj("calendrier"),

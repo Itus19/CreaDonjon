@@ -12,6 +12,8 @@ import {
   takeShortRest,
 } from "./characterActions";
 import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
+import { changeConditions, changeHitDice } from "./characterActions";
+import { getTableParty } from "./tableParty";
 import { upsertRulesetOverride } from "../repos/rules";
 
 /**
@@ -346,6 +348,37 @@ describe.skipIf(!hasCreds)("characterActions (integration, base reelle)", () => 
       expect(serveur.natural).toBeGreaterThanOrEqual(1);
       expect(serveur.natural).toBeLessThanOrEqual(20);
     }
+    await takeLongRest(admin, { entityId, campaignId, actorUserId: ownerId, locale: "fr" });
+  });
+
+  it("V3.1-34 — outil Table : états posés et retirés sans doublon, dés de vie bornés, la table chargée comme la fiche", async () => {
+    const etat = async () => {
+      const ctx = await resolveCharacterActionContext(admin, entityId, campaignId, "fr");
+      return (await getOrInitializeRuntimeState(admin, ctx!, { persist: true })).state;
+    };
+    const base = { entityId, campaignId, actorUserId: ownerId };
+
+    expect(await changeConditions(admin, { ...base, add: "À terre" })).toEqual({ conditions: ["À terre"] });
+    expect(await changeConditions(admin, { ...base, add: "à terre" })).toEqual({ conditions: ["À terre"] });
+    expect(await changeConditions(admin, { ...base, remove: "À TERRE" })).toEqual({ conditions: [] });
+    expect((await etat()).conditions).toEqual([]);
+
+    // Guerrier niveau 1 : un d10. Jamais au-dessus du total, jamais sous zéro.
+    expect(await changeHitDice(admin, { ...base, die: "d10", delta: 5, locale: "fr" })).toEqual({ remaining: 1 });
+    expect(await changeHitDice(admin, { ...base, die: "d10", delta: -3, locale: "fr" })).toEqual({ remaining: 0 });
+    expect((await etat()).hit_dice.d10).toBe(0);
+    expect(await changeHitDice(admin, { ...base, die: "d12", delta: 1, locale: "fr" })).toEqual({ error: "not_found" });
+
+    // La table : le PJ de la campagne, résolu comme sa fiche.
+    await admin.from("campaign_characters").upsert({ campaign_id: campaignId, entity_id: entityId, is_pc: true, user_id: null }, { onConflict: "campaign_id,entity_id" });
+    const table = await getTableParty(admin, { worldId, campaignId, locale: "fr" });
+    const pc = table.find((p) => p.entityId === entityId);
+    expect(pc).toBeDefined();
+    expect(pc!.level).toBe(1);
+    expect(pc!.hitDiceTotals).toEqual({ d10: 1 });
+    expect(pc!.runtimeState.state.hit_dice.d10).toBe(0);
+    expect(pc!.sheet.ac.value).toBeGreaterThan(0);
+
     await takeLongRest(admin, { entityId, campaignId, actorUserId: ownerId, locale: "fr" });
   });
 });
