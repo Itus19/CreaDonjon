@@ -79,7 +79,19 @@ export function prechargerReglesDuMonde(worldSlug: string): void {
 
 /** Charge une fois la liste complete des regles du monde, reutilisee par tous les champs d'autocompletion de la page (V1-B2). */
 export function useWorldRuleEntries(worldSlug: string): RuleEntrySummary[] {
-  const [entries, setEntries] = useState<RuleEntrySummary[]>(() => cache.get(worldSlug) ?? []);
+  return useWorldRuleEntriesEtat(worldSlug).entries;
+}
+
+/**
+ * La meme liste, avec `chargee` : faux tant que la reponse n'est pas arrivee
+ * (ni en cache). Une liste vide ne dit pas « pas encore la » — un menu qui la
+ * lit pendant le chargement afficherait la cle brute de sa valeur (« human »).
+ */
+export function useWorldRuleEntriesEtat(worldSlug: string): { entries: RuleEntrySummary[]; chargee: boolean } {
+  const [etat, setEtat] = useState<{ entries: RuleEntrySummary[]; chargee: boolean }>(() => {
+    const enCache = cache.get(worldSlug);
+    return { entries: enCache ?? [], chargee: enCache !== undefined };
+  });
   const [reloadTick, setReloadTick] = useState(0);
 
   useEffect(() => {
@@ -96,7 +108,7 @@ export function useWorldRuleEntries(worldSlug: string): RuleEntrySummary[] {
     let cancelled = false;
     demanderReglesDuMonde(worldSlug)
       .then((entries) => {
-        if (!cancelled && entries) setEntries(entries);
+        if (!cancelled && entries) setEtat({ entries, chargee: true });
       })
       .catch((erreur: unknown) => {
         console.error("Liste des regles du monde non chargee", erreur);
@@ -106,5 +118,5 @@ export function useWorldRuleEntries(worldSlug: string): RuleEntrySummary[] {
     };
   }, [worldSlug, reloadTick]);
 
-  return entries;
+  return etat;
 }

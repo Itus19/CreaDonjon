@@ -7,7 +7,7 @@ import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import type { DerivedSheet } from "@/src/core/rules/sheet";
 import { ftToM } from "@/src/core/rules/encumbrance";
 import { squaresFromMeters } from "@/src/core/rules/gridSquares";
-import { useWorldRuleEntries } from "./useWorldRuleEntries";
+import { useWorldRuleEntries, useWorldRuleEntriesEtat } from "./useWorldRuleEntries";
 import type { RuleEntrySummary } from "@/src/server/services/rules";
 import { useReferenceChips, type ResolvedChipView } from "./useReferenceChips";
 import Dropdown from "@/components/shared/Dropdown";
@@ -271,7 +271,7 @@ export function RuleSelect({
   /** Filtre additionnel (V1-C4 suite) — ex. restreindre les sous-classes à celles de la classe choisie sur la même ligne. */
   filterFn?: (entry: RuleEntrySummary) => boolean;
 }) {
-  const entries = useWorldRuleEntries(worldSlug);
+  const { entries, chargee } = useWorldRuleEntriesEtat(worldSlug);
   const options = useMemo(() => {
     const filtered = entries
       .filter((e) => entryTypes.includes(e.entryType))
@@ -283,7 +283,15 @@ export function RuleSelect({
 
   return (
     <div className="flex items-center gap-1">
-      <Dropdown value={value} options={options} onChange={onChange} aria-label={ariaLabel} />
+      {/* Tant que la liste des regles n'est pas arrivee, la valeur n'a pas de
+          nom : le menu montrerait sa cle brute (« human », « soldier »). Une
+          attente neutre et inerte a la place, jamais une valeur provisoire
+          (meme regle que le squelette de la fiche, V3.1-26). */}
+      {chargee ? (
+        <Dropdown value={value} options={options} onChange={onChange} aria-label={ariaLabel} />
+      ) : (
+        <Dropdown value="" options={[{ value: "", label: "…" }]} onChange={onChange} aria-label={ariaLabel} disabled />
+      )}
       {chip?.found && (
         <Link
           href={chip.href}

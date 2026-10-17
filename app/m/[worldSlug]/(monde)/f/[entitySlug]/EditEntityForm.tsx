@@ -384,10 +384,15 @@ export default function EditEntityForm({
   }
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="grid grid-cols-[1fr_auto] gap-6">
+    <div className="@container flex flex-col gap-5">
+      {/* V3.1-30 (suite) — la fiche suit la largeur de SA fenetre (requete de
+          conteneur, comme la fiche de personnage en V3.1-28) : sous 36rem, le
+          portrait passe sous l'en-tete au lieu de lui disputer la largeur ;
+          sous 28rem, le titre prend toute sa ligne et les boutons passent
+          dessous. A 390 px, le titre etait reduit a « PJ d ». */}
+      <div className="grid grid-cols-1 gap-6 @min-[36rem]:grid-cols-[1fr_auto]">
         <div className="flex min-w-0 flex-col">
-          <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1 @min-[28rem]:flex-nowrap">
             <input
               ref={titleInputRef}
               value={name}
@@ -398,7 +403,7 @@ export default function EditEntityForm({
               // arrive directement ici — le focus automatique invite a
               // nommer la fiche tout de suite, sans action supplementaire.
               autoFocus={entity.name === DEFAULT_ENTITY_NAME}
-              className="entity-title min-w-0 flex-1 bg-transparent outline-none placeholder:text-ink-muted focus:border-b focus:border-accent"
+              className="entity-title min-w-0 flex-1 basis-full bg-transparent outline-none placeholder:text-ink-muted focus:border-b focus:border-accent @min-[28rem]:basis-0"
             />
             {/* Aligne avec le titre, comme dans l'ancienne application : le
                 type de fiche se choisit en haut a droite, pas sous le titre.
