@@ -101,7 +101,7 @@ export interface BlockItem {
   visibilityScopeId: string | null;
 }
 
-const BLOCK_TYPE_LABELS: Record<string, string> = {
+export const BLOCK_TYPE_LABELS: Record<string, string> = {
   text: "Texte",
   infobox: "Encadré",
   image: "Image",
@@ -125,7 +125,11 @@ const BLOCK_TYPE_LABELS: Record<string, string> = {
   session_journal_meta: "Séance",
 };
 
-function BlockDataEditor({
+/**
+ * V3.1-31 : exporte pour l'editeur plein ecran, qui montre CE meme aiguillage
+ * type -> editeur sur son brouillon (donnee / `onChange`), sans le recopier.
+ */
+export function BlockDataEditor({
   block,
   onChange,
   worldSlug,
@@ -339,9 +343,100 @@ function BlockDataEditor({
           isGm={!hideAiAssist}
         />
       );
+    case "statblock":
+      // Dans `EntityBlocks`, ce type est rendu avant l'aiguillage ; l'editeur
+      // plein ecran passe, lui, toujours par ici.
+      return <MonsterStatblockSheet data={block.data as StatblockBlockData} onChange={(d) => onChange(d)} />;
     default:
       return <p className="text-sm text-danger">Type de bloc inconnu : {block.blockType}</p>;
   }
+}
+
+/**
+ * Creation d'un bloc vide cote serveur (le titre par defaut est celui du type).
+ * Commune a la barre « Ajouter un bloc » de la fiche et a l'editeur plein
+ * ecran : `null` si le serveur refuse.
+ */
+export async function creerBloc(entityId: string, blockType: string): Promise<BlockItem | null> {
+  const res = await fetch(`/api/entities/${entityId}/blocks`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      entityId,
+      blockType,
+      label: BLOCK_TYPE_LABELS[blockType],
+      visibility: { level: "public", scopeId: null },
+    }),
+  });
+  if (!res.ok) return null;
+  return (await res.json()) as BlockItem;
+}
+
+/**
+ * La barre « Ajouter un bloc » (puces par type), extraite d'`EntityBlocks`
+ * pour que l'editeur plein ecran reutilise le meme menu, memes exclusions
+ * comprises (generateur, un seul personnalite / convictions par fiche, types
+ * permis au joueur).
+ */
+export function BarreAjoutBloc({
+  blocks,
+  onAdd,
+  restrictAddableTypes,
+  onLaunchWizard,
+  hasCharacterBlock,
+}: {
+  blocks: readonly { blockType: string }[];
+  onAdd: (blockType: string) => void;
+  restrictAddableTypes?: string[];
+  onLaunchWizard?: () => void;
+  hasCharacterBlock?: boolean;
+}) {
+  return (
+    <div className="flex flex-col gap-2 border-t border-edge pt-4">
+      <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">
+        Ajouter un bloc :
+      </span>
+      <div className="flex flex-wrap items-center gap-2">
+        {onLaunchWizard && (
+          <button
+            type="button"
+            onClick={onLaunchWizard}
+            title={hasCharacterBlock ? "Remplace le personnage actuel de cette fiche" : undefined}
+            className="rounded-full border border-accent px-3 py-1 text-xs text-accent transition-colors hover:bg-accent/10"
+          >
+            + Assistant de création
+          </button>
+        )}
+        {Object.entries(BLOCK_TYPE_LABELS)
+          // "generator" retire de "Ajouter un bloc" (retour utilisateur) : l'outil
+          // "Générateurs" vit desormais uniquement dans la sidebar MJ. Le libelle
+          // reste dans BLOCK_TYPE_LABELS pour les blocs generator deja existants.
+          // "session_journal_meta" redevient ajoutable a la main (V2.1-14) :
+          // il reste pose automatiquement par submitJournalEntry, mais rien ne
+          // justifie plus de le reserver au Livre de sessions — c'est un bloc
+          // de wiki comme un autre, avec quatre libelles fixes.
+          // personality/worldview retires des qu'un exemplaire existe deja sur
+          // cette fiche (V2.1-5, un seul de chaque pour eviter les confusions —
+          // meme garde-fou en base, index blocks_personality_worldview_uniq).
+          .filter(
+            ([type]) =>
+              type !== "generator" &&
+              (!restrictAddableTypes || restrictAddableTypes.includes(type)) &&
+              !((type === "personality" || type === "worldview") && blocks.some((b) => b.blockType === type))
+          )
+          .map(([type, label]) => (
+            <button
+              key={type}
+              type="button"
+              onClick={() => onAdd(type)}
+              className="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised"
+            >
+              + {label}
+            </button>
+          ))}
+      </div>
+    </div>
+  );
 }
 
 /**
@@ -364,6 +459,7 @@ export default function EntityBlocks({
   onRelationsChanged: onRelationsChangedFromParent,
   restrictAddableTypes,
   hideAiAssist,
+  onBlocksChange,
 }: {
   entityId: string;
   /** V2-H3 : necessaire pour "creer la carte «X»" depuis le bloc genealogie. */
@@ -383,6 +479,8 @@ export default function EntityBlocks({
   /** V2, retour utilisateur : compteur possede par le parent (EditEntityForm), partage avec RelationsChips — force genealogie/reseau a recharger quand une relation change ailleurs sur la page. Absent hors contexte de fiche complete (ex. fenetre isolee) : les deux blocs retombent alors sur leur seul rechargement interne. */
   relationsReloadSignal?: number;
   onRelationsChanged?: () => void;
+  /** V3.1-31 : prevenu a chaque changement de la liste, pour que l'editeur plein ecran (monte par le parent) parte de l'etat COURANT des blocs et de leurs versions, jamais de celui du chargement de la page. */
+  onBlocksChange?: (blocks: BlockItem[]) => void;
 }) {
   const [blocks, setBlocks] = useState<BlockItem[]>(initialBlocks);
   // Retour utilisateur : le pli/depli d'un bloc ne survivait pas a un
@@ -462,6 +560,7 @@ export default function EntityBlocks({
   function updateBlocks(updater: (prev: BlockItem[]) => BlockItem[]) {
     blocksRef.current = updater(blocksRef.current);
     setBlocks(blocksRef.current);
+    onBlocksChange?.(blocksRef.current);
   }
 
   const sortedBlocks = [...blocks].sort((a, b) => a.displayOrder - b.displayOrder);
@@ -559,18 +658,8 @@ export default function EntityBlocks({
   }
 
   async function addBlock(blockType: string) {
-    const res = await fetch(`/api/entities/${entityId}/blocks`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        entityId,
-        blockType,
-        label: BLOCK_TYPE_LABELS[blockType],
-        visibility: { level: "public", scopeId: null },
-      }),
-    });
-    if (!res.ok) return;
-    const block = (await res.json()) as BlockItem;
+    const block = await creerBloc(entityId, blockType);
+    if (!block) return;
     versionsRef.current[block.id] = block.version;
     updateBlocks((prev) => [...prev, block]);
   }
@@ -837,50 +926,13 @@ export default function EntityBlocks({
         </p>
       )}
 
-      <div className="flex flex-col gap-2 border-t border-edge pt-4">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">
-          Ajouter un bloc :
-        </span>
-        <div className="flex flex-wrap items-center gap-2">
-          {onLaunchWizard && (
-            <button
-              type="button"
-              onClick={onLaunchWizard}
-              title={characterBlock ? "Remplace le personnage actuel de cette fiche" : undefined}
-              className="rounded-full border border-accent px-3 py-1 text-xs text-accent transition-colors hover:bg-accent/10"
-            >
-              + Assistant de création
-            </button>
-          )}
-          {Object.entries(BLOCK_TYPE_LABELS)
-            // "generator" retire de "Ajouter un bloc" (retour utilisateur) : l'outil
-            // "Générateurs" vit desormais uniquement dans la sidebar MJ. Le libelle
-            // reste dans BLOCK_TYPE_LABELS pour les blocs generator deja existants.
-            // "session_journal_meta" redevient ajoutable a la main (V2.1-14) :
-            // il reste pose automatiquement par submitJournalEntry, mais rien ne
-            // justifie plus de le reserver au Livre de sessions — c'est un bloc
-            // de wiki comme un autre, avec quatre libelles fixes.
-            // personality/worldview retires des qu'un exemplaire existe deja sur
-            // cette fiche (V2.1-5, un seul de chaque pour eviter les confusions —
-            // meme garde-fou en base, index blocks_personality_worldview_uniq).
-            .filter(
-              ([type]) =>
-                type !== "generator" &&
-                (!restrictAddableTypes || restrictAddableTypes.includes(type)) &&
-                !((type === "personality" || type === "worldview") && blocks.some((b) => b.blockType === type))
-            )
-            .map(([type, label]) => (
-            <button
-              key={type}
-              type="button"
-              onClick={() => addBlock(type)}
-              className="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised"
-            >
-              + {label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <BarreAjoutBloc
+        blocks={blocks}
+        onAdd={addBlock}
+        restrictAddableTypes={restrictAddableTypes}
+        onLaunchWizard={onLaunchWizard}
+        hasCharacterBlock={Boolean(characterBlock)}
+      />
 
       <ConfirmDialog
         open={pendingDeleteId !== null}

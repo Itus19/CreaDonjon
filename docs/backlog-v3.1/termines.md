@@ -2,6 +2,30 @@
 
 ---
 
+### ☑ V3.1-31 — Éditeur plein écran en accordéon (téléphone) · `M` · sans modèle IA — **fait le 17 octobre (ADR 0065)**
+
+**Modèle conseillé : Sonnet** — option A tranchée et esquissée.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Planche** : « Décidé · téléphone du MJ — plein écran et infobulles ».
+**Dépend de** : 29.
+
+Plein écran, barre flottante masquée, « Annuler » / « Enregistrer » en
+haut. Tous les blocs dans la page, repliés en une ligne de résumé, un seul
+ouvert à la fois ; poignée ⠿ pour réordonner (aussi au clavier) ; « + bloc »
+en bas. Le joueur a le même éditeur, limité à ses droits (`canEditEntity`).
+Les éditeurs de blocs existants sont réutilisés tels quels à l'intérieur.
+
+**Critères d'acceptation**
+- [x] Ouvrir, modifier deux blocs, réordonner, enregistrer : une seule écriture, contrôle de version compris.
+- [x] Annuler avec des changements demande confirmation.
+- [x] Un joueur ne voit pas les blocs qu'il ne peut pas modifier.
+
+**Clôture** : serveur (Opus) — `public.save_entity_blocks` (migration `20261017150000`, `security invoker`, tout ou rien), `saveEntityBlocks` (droit, appartenance, Zod, une révision), `PATCH /api/entities/[id]/blocks` ; `saveEntityBlocks.integration.test.ts` 5/5. Interface (Sonnet) — `EditeurPleinEcran` (portail dans `<body>`, ajouté par Opus : la couche restait sous la barre flottante), crayon `md:hidden`, Identité puis blocs repliés, un seul ouvert, ⠿ au doigt et aux flèches (`aria-live`), « + bloc », confirmation d'« Annuler » ; logique pure `lib/ui/editeurPlein.ts`. Les éditeurs à sous-écriture reprennent la version renvoyée ; carte et fiche de personnage « se modifient sur la fiche ». Passages MJ teintés en lecture (reporté de V3.1-30). Vérifié dans le navigateur à 390 px : un seul `PATCH …/blocks` par enregistrement, ordre conservé au rechargement, confirmation, menus au-dessus de la couche. Catalogue : planche « 10 · Téléphone » créée (Ecrans dépassait 8 000 px).
+
+---
+
 ### ☑ V3.1-30 — Wiki et Règles sur téléphone : ☰ et consultées récemment · `M` · sans modèle IA — **fait le 17 octobre**
 
 **Modèle conseillé : Sonnet** — parcours esquissé ; stockage tranché (ADR 0036 §4).

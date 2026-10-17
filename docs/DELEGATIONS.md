@@ -23,3 +23,5 @@ Issue : **accepté** (tel quel) · **corrigé** (retouche locale par Opus) · **
 | 2026-10-17 | V3.1-29 (planches) | aide-haiku | 110 246 | accepté | Tiroir → Feuille du bas, Barre flottante créée, compétences repliables ; hauteurs reportées |
 | 2026-10-17 | V3.1-30 | dev-sonnet | 123 794 | relu | Accueil du lecteur, consultées récemment, ☰ en feuilles, `?accueil=1` ; vérifié par Opus à 390 et 1 280 px, aucune correction. N'avait pas relancé toute la suite après son dernier correctif (Opus l'a fait : vert) |
 | 2026-10-17 | V3.1-30 (planche) | aide-haiku | 87 527 | accepté | Accueil du lecteur dans Ecrans.dc.html ; hauteur reportée (7 400) |
+| 2026-10-17 | V3.1-31 | dev-sonnet | 156 982 | corrigé | Éditeur en accordéon sur la route groupée écrite par Opus ; recensement des sous-écritures soigné. Opus : portail dans `<body>` (la couche restait sous la barre, z-index enfermé dans la zone de travail). Vérifié à 390 px |
+| 2026-10-17 | V3.1-31 (planche) | aide-haiku | 108 924 | corrigé | Section éditeur écrite, mais Ecrans dépassait 8 000 px : s'est arrêté comme demandé ; Opus a créé la planche « 10 · Téléphone » |

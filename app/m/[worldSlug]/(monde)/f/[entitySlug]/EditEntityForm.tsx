@@ -7,36 +7,19 @@ import EntityHistoryPanel from "@/components/entities/EntityHistoryPanel";
 import PortraitUpload from "@/components/entities/PortraitUpload";
 import EntityBlocks, { type BlockItem } from "@/components/blocks/EntityBlocks";
 import CharacterCreatorWizard from "@/components/blocks/CharacterCreatorWizard";
+import EditeurPleinEcran, { type ResultatEditeur } from "@/components/blocks/EditeurPleinEcran";
 import CarteMapPanel from "@/components/entities/map/CarteMapPanel";
 import Dropdown from "@/components/shared/Dropdown";
 import EyeIcon from "@/components/shared/EyeIcon";
 import RequestEditButton from "@/components/entities/RequestEditButton";
-import { DEFAULT_ENTITY_NAME, ENTITY_KINDS } from "@/lib/entities/schemas";
-import { ENTITY_KIND_LABELS } from "@/components/shared/entityKindLabels";
+import { DEFAULT_ENTITY_NAME } from "@/lib/entities/schemas";
+import { CUSTOM_KIND_OPTION, PJ_VALUE, PNJ_VALUE, optionsTypeFiche } from "@/components/entities/optionsTypeFiche";
 import type { EntitySummary } from "@/src/server/repos/entities";
 import type { EntityPortraitLayout } from "@/src/server/repos/entityPortraits";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData } from "@/src/core/schemas/blocks/inventory";
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
 import { useAmorcerFicheAvecPage, type FicheAvecPage } from "@/components/blocks/useAmorcerFicheAvecPage";
-
-const ENTITY_KIND_DROPDOWN_OPTIONS = ENTITY_KINDS.map((kind) => ({
-  value: kind,
-  label: ENTITY_KIND_LABELS[kind],
-}));
-
-/** Sentinelle jamais persistee (V2-G7) : selectionner cette option ouvre un champ, ne sauvegarde rien tant qu'un nom n'est pas confirme. */
-const CUSTOM_KIND_OPTION = "__custom__";
-
-/**
- * PJ/PNJ (V2-G10, specs/arbitrage-modifications.md §3.1) : jamais un
- * `entity_kind` distinct — ces deux valeurs de selecteur persistent toutes
- * les deux `entityKind: "character"`, seul `campaign_characters.is_pc`
- * change. Sentinelles composees pour rester distinctes de "character" tout
- * en restant reconnaissables dans `kindOptions`.
- */
-const PJ_VALUE = "character:pj";
-const PNJ_VALUE = "character:pnj";
 
 /** L'en-tete tel qu'enregistre, en une chaine comparable (les alias gardent leur ordre). */
 function enTeteComparable(name: string, entityKind: string, aliases: readonly string[], isPublic: boolean): string {
@@ -117,6 +100,16 @@ export default function EditEntityForm({
   // chaque changement de relation, peu importe d'ou il vient.
   const [relationsReloadSignal, setRelationsReloadSignal] = useState(0);
   const bumpRelationsReloadSignal = () => setRelationsReloadSignal((n) => n + 1);
+  // V3.1-31 — editeur plein ecran (telephone). `blocsDeDepart` + `cleBlocs` :
+  // `EntityBlocks` garde son propre etat apres le premier rendu, donc apres un
+  // enregistrement groupe (ou une fermeture apres creation de bloc) on le
+  // REMONTE avec les blocs a jour plutot que de lui en passer de nouveaux.
+  // `blocsCourantsRef` suit l'etat courant d'`EntityBlocks` (versions comprises)
+  // pour que l'editeur parte de ce qui est en base, pas du chargement de la page.
+  const [ouvertureEditeur, setOuvertureEditeur] = useState<{ blocs: BlockItem[]; version: number } | null>(null);
+  const [blocsDeDepart, setBlocsDeDepart] = useState<BlockItem[]>(initialBlocks);
+  const [cleBlocs, setCleBlocs] = useState(0);
+  const blocsCourantsRef = useRef<BlockItem[]>(initialBlocks);
 
   useEffect(() => {
     // Fiche fraiche (V2-G8) : le nom par defaut est deja selectionne au
@@ -154,6 +147,35 @@ export default function EditEntityForm({
         }}
       />
     );
+  }
+
+  /**
+   * LE rafraichissement de la page pour tout changement d'identite (nom, type,
+   * alias, visibilite, role) : la liste laterale et les titres en dependent
+   * (docs/CABLAGE.md C5 ; le cliquet compte les appels).
+   */
+  function rafraichirPage() {
+    router.refresh();
+  }
+
+  /** Fermeture de l'editeur plein ecran : la fiche reprend l'identite et les blocs qu'il rend. */
+  function fermerEditeur(resultat: ResultatEditeur) {
+    setOuvertureEditeur(null);
+    setBlocsDeDepart(resultat.blocks);
+    blocsCourantsRef.current = resultat.blocks;
+    setCleBlocs((n) => n + 1);
+    const { identite, version } = resultat;
+    setName(identite.name);
+    setEntityKind(identite.entityKind);
+    setAliases([...identite.aliases]);
+    setIsPublic(identite.isPublic);
+    setIsPc(identite.isPc);
+    versionRef.current = version;
+    const avant = enregistreRef.current;
+    enregistreRef.current = enTeteComparable(identite.name, identite.entityKind, identite.aliases, identite.isPublic);
+    // Les blocs, eux, sont remis a jour sur place (remontage ci-dessus) : la
+    // page n'est rechargee que si l'identite a change (C5).
+    if (enregistreRef.current !== avant || identite.isPc !== isPc) rafraichirPage();
   }
 
   type SaveOverrides = {
@@ -211,7 +233,7 @@ export default function EditEntityForm({
     versionRef.current = updated.version;
     enregistreRef.current = comparable;
     setStatus("saved");
-    if (rafraichir) router.refresh();
+    if (rafraichir) rafraichirPage();
   }
 
   function addAlias() {
@@ -295,16 +317,7 @@ export default function EditEntityForm({
   // "Personnage" n'apparait jamais tel quel (V2-G10) : PJ/PNJ a la place,
   // deux entrees qui persistent toutes les deux entityKind "character" —
   // jamais un entity_kind distinct (specs/arbitrage-modifications.md §3.1).
-  const knownKinds = new Set([...ENTITY_KINDS, ...worldCustomKinds]);
-  const fixedOptions = ENTITY_KIND_DROPDOWN_OPTIONS.flatMap((opt) =>
-    opt.value === "character" ? [{ value: PJ_VALUE, label: "PJ" }, { value: PNJ_VALUE, label: "PNJ" }] : [opt]
-  );
-  const kindOptions = [
-    ...fixedOptions,
-    ...worldCustomKinds.map((kind) => ({ value: kind, label: kind })),
-    ...(knownKinds.has(entityKind) ? [] : [{ value: entityKind, label: entityKind }]),
-    { value: CUSTOM_KIND_OPTION, label: "+ Créer une catégorie…" },
-  ];
+  const kindOptions = optionsTypeFiche(worldCustomKinds, entityKind);
   const kindDropdownValue = entityKind === "character" ? (isPc ? PJ_VALUE : PNJ_VALUE) : entityKind;
 
   // Fiche `carte` (Lot I, retour utilisateur : "une catégorie 'Cartes'...
@@ -431,6 +444,18 @@ export default function EditEntityForm({
                   Imprimer
                 </button>
               )}
+              {/* V3.1-31 : sous 768 px, le crayon ouvre l'editeur plein ecran. */}
+              <button
+                type="button"
+                onClick={() => setOuvertureEditeur({ blocs: blocsCourantsRef.current, version: versionRef.current })}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-edge text-ink-muted transition-colors hover:bg-panel hover:text-ink md:hidden"
+                aria-label="Modifier la fiche"
+              >
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={1.5} className="h-4 w-4" aria-hidden>
+                  <path d="M3 17l1-4 9.5-9.5a1.4 1.4 0 0 1 2 0l1 1a1.4 1.4 0 0 1 0 2L7 16l-4 1Z" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M12 5l3 3" strokeLinecap="round" />
+                </svg>
+              </button>
               <EntityHistoryPanel entityId={entity.id} />
               <button
                 type="button"
@@ -539,9 +564,13 @@ export default function EditEntityForm({
 
       <div className="border-t border-edge pt-3">
         <EntityBlocks
+          key={cleBlocs}
           entityId={entity.id}
           worldId={entity.world_id}
-          initialBlocks={initialBlocks}
+          initialBlocks={blocsDeDepart}
+          onBlocksChange={(blocs) => {
+            blocsCourantsRef.current = blocs;
+          }}
           worldSlug={worldSlug}
           campaignId={campaignId}
           otherEntities={otherEntities}
@@ -563,6 +592,28 @@ export default function EditEntityForm({
           hideAiAssist={playerRestricted}
         />
       </div>
+
+      {ouvertureEditeur && (
+        <EditeurPleinEcran
+          entityId={entity.id}
+          entityVersion={ouvertureEditeur.version}
+          identiteInitiale={{ name, entityKind, aliases, isPublic, isPc }}
+          worldSlug={worldSlug}
+          worldId={entity.world_id}
+          campaignId={campaignId}
+          campaignCharacterUserId={campaignCharacterUserId}
+          worldCustomKinds={worldCustomKinds}
+          otherEntities={otherEntities}
+          blocsInitiaux={ouvertureEditeur.blocs}
+          restrictAddableTypes={
+            playerRestricted
+              ? ["timeline", "relations_graph", "relationship", "map", "genealogy", "text", "image", "music", "personality", "worldview"]
+              : undefined
+          }
+          hideAiAssist={playerRestricted}
+          onClose={fermerEditeur}
+        />
+      )}
     </div>
   );
 }

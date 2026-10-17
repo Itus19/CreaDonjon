@@ -20,28 +20,6 @@ V3.1-20 (lot g) peut partir dès que 25 est fait.
 
 ---
 
-### ☐ V3.1-31 — Éditeur plein écran en accordéon (téléphone) · `M` · sans modèle IA — **prêt**
-
-**Modèle conseillé : Sonnet** — option A tranchée et esquissée.
-
-**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-**Planche** : « Décidé · téléphone du MJ — plein écran et infobulles ».
-**Dépend de** : 29.
-
-Plein écran, barre flottante masquée, « Annuler » / « Enregistrer » en
-haut. Tous les blocs dans la page, repliés en une ligne de résumé, un seul
-ouvert à la fois ; poignée ⠿ pour réordonner (aussi au clavier) ; « + bloc »
-en bas. Le joueur a le même éditeur, limité à ses droits (`canEditEntity`).
-Les éditeurs de blocs existants sont réutilisés tels quels à l'intérieur.
-
-**Critères d'acceptation**
-- [ ] Ouvrir, modifier deux blocs, réordonner, enregistrer : une seule écriture, contrôle de version compris.
-- [ ] Annuler avec des changements demande confirmation.
-- [ ] Un joueur ne voit pas les blocs qu'il ne peut pas modifier.
-
----
-
 ### ☐ V3.1-32 — Fiche sur téléphone : jets, infobulles de règles, sac · `L` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — fiche entièrement esquissée ; services fournis par 24.

@@ -13,7 +13,7 @@
     },
     "Ecrans.dc.html": {
       "expand": "fill",
-      "h": 7400,
+      "h": 3800,
       "is_interactive": true,
       "title": "5 · Éléments d'écran",
       "w": 1280,
@@ -82,6 +82,15 @@
       "w": 1280,
       "x": 0,
       "y": 5500
+    },
+    "Telephone.dc.html": {
+      "expand": "fill",
+      "h": 5500,
+      "is_interactive": true,
+      "title": "10 · Téléphone",
+      "w": 1280,
+      "x": 2720,
+      "y": 5500
     }
   },
   "createdOnFiles": {
@@ -103,7 +112,7 @@
     },
     "rangee-ecrans": {
       "kind": "title1",
-      "maxW": 2640,
+      "maxW": 4000,
       "text": "Éléments d'écran riches",
       "w": 240,
       "x": 0,
@@ -119,7 +128,8 @@
     "Fiche.dc.html",
     "Solo.dc.html",
     "WikiVisuel.dc.html",
-    "OutilsMJ.dc.html"
+    "OutilsMJ.dc.html",
+    "Telephone.dc.html"
   ],
   "pages": [],
   "title": "Catalogue d'interface"

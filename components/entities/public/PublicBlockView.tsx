@@ -254,12 +254,18 @@ function PublicTextBlock({
       {(segmentsLeadWithRule(data) ? data.segments.slice(1) : data.segments).map((segment) => {
         const tag = TAG_BY_BLOCK_TYPE[segment.blockType] ?? "p";
         const slot = around.get(segment.id);
+        // V3.1-31 : en lecture cote MJ, un segment `gm` se teinte (filet et fond
+        // legers de `.rich-text-content [data-visibility]`, comme dans
+        // l'editeur). Le joueur ne recoit jamais ces segments (filtres cote
+        // serveur) : son rendu ne change pas. Seul `gm` est marque ici — les
+        // autres niveaux restent rendus comme avant.
+        const teinte = segment.visibility.level === "gm" ? { "data-visibility": "gm" } : {};
         const rendered =
           segment.blockType === "divider"
-            ? createElement(tag, { "data-align": segment.align })
+            ? createElement(tag, { "data-align": segment.align, ...teinte })
             : createElement(
                 tag,
-                { "data-align": segment.align },
+                { "data-align": segment.align, ...teinte },
                 segment.content.map((node, i) => renderNode(node, i, textRefs, hrefBase, ruleHrefBase, ruleRefs)),
               );
         if (!slot) return <Fragment key={segment.id}>{rendered}</Fragment>;

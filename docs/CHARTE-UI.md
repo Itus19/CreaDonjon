@@ -357,11 +357,12 @@ Neuf planches, en deux rangées sur le canevas : les briques (1 à 7), puis les 
 | 2 · Boutons et champs | boutons (principal, secondaire, fantôme, destructeur, lien de suppression, rond à icône), champ, date et heure natives, `Dropdown`, `Checkbox`, interrupteur |
 | 3 · Onglets, puces, menus | `Tabs` (pilule glissante), puces, puces d'entité et de relation, `ActionsMenu`, en-tête de bloc et visibilité (œil), arborescence, `rail repliable` (`Rail`), rail du joueur, palette de commandes, radio |
 | 4 · Surfaces et retours | `ConfirmDialog`, panneaux et `EmptyState`, ascenseur, info-bulle, aperçu de renvoi, bulles de chat, bandeaux et badges, fenêtre flottante, pastille chrome |
-| 5 · Éléments d'écran | grille de disponibilités, curseur horaire, curseur natif, `Stepper`, bouton de dés et volet, barres, feuille du bas (`FeuilleDuBas`), barre flottante, accueil du lecteur (`AccueilLecteur`), consultées récemment, chargement, texte de fiche |
+| 5 · Éléments d'écran | grille de disponibilités, curseur horaire, curseur natif, `Stepper`, bouton de dés et volet, barres, chargement, texte de fiche |
 | 6 · Fiche de personnage | bouclier de CA, `StatBadge`, caractéristiques et sauvegardes, compétences et pastilles de maîtrise, `ActionButton`, `DieIcon`, emplacements de sort, ressources, carte d'objet, états, bouton de jet de monstre, jauge à commandes (`CommandeE`) |
 | 7 · Mode solo | `JaugeCirculaire`, fiche compacte, fil |
 | 8 · Wiki visuel | épingles et calques de carte, arbre généalogique et graphe des relations, radars, frise |
 | 9 · Outils du MJ | suivi d'initiative, budget de rencontre, assistant de création, accueil et personnalisation |
+| 10 · Téléphone | feuille du bas (`FeuilleDuBas`), barre flottante, accueil du lecteur (`AccueilLecteur`) et consultées récemment, éditeur plein écran (`EditeurPleinEcran`) |
 
 **Écarts relevés en le construisant**, à corriger par tickets (jamais en passe globale) :
 - ~~émojis dans `InitiativeTracker.tsx` et `SpellSelectionStep.tsx`~~ — retirés par V3.1-18 ;
