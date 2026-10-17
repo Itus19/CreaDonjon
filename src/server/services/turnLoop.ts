@@ -188,9 +188,11 @@ async function applyResolvedTurn(
   // resolveIntentRequest). Corrige ici (defaut trouve en ecrivant V3-B5) :
   // l'ancien cast lisait `isCritical`, un champ absent du payload reel — un
   // critique n'a donc jamais declenche `eventsForAttack` correctement.
-  const attackDetail = record.detail.attack as { total: number; critical: boolean } | undefined;
-  const attack: Pick<AttackRollResult, "total" | "isCritical"> | undefined = attackDetail
-    ? { total: attackDetail.total, isCritical: attackDetail.critical }
+  // `critical_fail` (V3.1-105, verdict 2024) : un 1 naturel rate quelle que
+  // soit la CA ; absent des tours journalises avant, lu comme faux.
+  const attackDetail = record.detail.attack as { total: number; critical: boolean; critical_fail?: boolean } | undefined;
+  const attack: Pick<AttackRollResult, "total" | "isCritical" | "isCriticalFail"> | undefined = attackDetail
+    ? { total: attackDetail.total, isCritical: attackDetail.critical, isCriticalFail: attackDetail.critical_fail === true }
     : undefined;
   const targetId = (record.detail.intent as { target_id?: string | null } | undefined)?.target_id ?? null;
   const ac = record.detail.ac as number | null | undefined;
@@ -212,7 +214,7 @@ async function applyResolvedTurn(
     const fired = eventsForAttack({
       attacker: params.entityId,
       target: targetId,
-      // `eventsForAttack` ne lit que `total` et `isCritical` du jet ; le
+      // `eventsForAttack` ne lit que `total`, `isCritical` et `isCriticalFail` du jet ; le
       // reste (trace, AST) n'a pas traverse le journal, et n'a pas a l'etre.
       result: attack as AttackRollResult,
       ac,

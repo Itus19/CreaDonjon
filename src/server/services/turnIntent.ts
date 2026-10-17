@@ -2,6 +2,7 @@ import type { DiceRollKind } from "@/src/core/dice/rollAttribution";
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
+import { attackVerdict } from "@/src/core/rules/targeting";
 import type { Locale } from "@/src/i18n/request";
 import {
   ABILITIES,
@@ -393,7 +394,10 @@ export async function executeIntent(
     // jet reste un fait complet ; c'est la table qui tranche, comme sur un
     // vrai plateau.
     const ac = target?.ac ?? null;
-    const hit = ac === null ? null : attack.total >= ac;
+    // Regles 2024, meme verdict que la table (`attackVerdict`, ADR 0042) : un
+    // 20 naturel touche, un 1 naturel rate, quelle que soit la CA.
+    const verdictAttack = attackVerdict(attack, ac);
+    const hit = verdictAttack === null ? null : verdictAttack === "hit";
 
     const facts: string[] = [];
     const crit = attack.isCritical ? " — critique" : attack.isCriticalFail ? " — échec critique" : "";
@@ -428,7 +432,7 @@ export async function executeIntent(
     const payload = {
       intent,
       facts,
-      attack: { expression: attack.expression, total: attack.total, critical: attack.isCritical, trace: attack.trace },
+      attack: { expression: attack.expression, total: attack.total, critical: attack.isCritical, critical_fail: attack.isCriticalFail, trace: attack.trace },
       ac,
       verdict: hit === null ? null : hit ? "hit" : "miss",
       damage: damage ? { expression: damage.expression, total: damage.total, trace: damage.trace } : null,
@@ -805,7 +809,9 @@ async function finishResolution(
   if (pending.kind === "weapon_attack") {
     const isCritical = natural === 20;
     const isCriticalFail = natural === 1;
-    const hit = pending.dc === null ? null : total >= pending.dc;
+    // Regles 2024 (`attackVerdict`) : le naturel decide avant le total.
+    const verdictAttack = attackVerdict({ total, isCritical, isCriticalFail }, pending.dc);
+    const hit = verdictAttack === null ? null : verdictAttack === "hit";
     await recordDiceRoll(pending.what, pending.dc, hit === null ? null : hit ? "success" : "fail", { isCritical, isCriticalFail });
 
     const crit = isCritical ? " — critique" : isCriticalFail ? " — échec critique" : "";
@@ -826,7 +832,7 @@ async function finishResolution(
     const payload = {
       intent,
       facts,
-      attack: { expression, total, critical: isCritical, trace },
+      attack: { expression, total, critical: isCritical, critical_fail: isCriticalFail, trace },
       ac: pending.dc,
       verdict: hit === null ? null : hit ? "hit" : "miss",
       damage: null,

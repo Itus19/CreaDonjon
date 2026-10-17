@@ -1,5 +1,6 @@
 import type { AttackRollResult } from "./action";
 import type { FiredEvent } from "./triggers";
+import { attackVerdict } from "./targeting";
 
 /**
  * V3-A2 — Ce que la resolution mecanique EMET, en evenements du vocabulaire
@@ -32,7 +33,9 @@ export function eventsForAttack(params: {
   ac: number;
   damage?: number;
 }): FiredEvent[] {
-  const hit = params.result.total >= params.ac;
+  // Regles 2024 (`attackVerdict`) : un 20 naturel touche, un 1 naturel rate,
+  // quelle que soit la CA — le meme verdict que la table et le solo.
+  const hit = attackVerdict(params.result, params.ac) === "hit";
   const base = {
     "event.roll": params.result.total,
     "event.ac": params.ac,

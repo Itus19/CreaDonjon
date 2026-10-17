@@ -283,6 +283,39 @@ describe.skipIf(!hasCreds)("V3-B5 — proposer puis encaisser (integration, base
     expect(finalState.pending_request).toBeNull();
   });
 
+  it("regles 2024 : un 20 naturel touche une CA hors d'atteinte, un 1 naturel rate une CA de 1", async () => {
+    const combat = await insertCombat(admin, { campaignId, sessionId: null, name: "Combat de test (naturels)" });
+    await updateCombat(admin, combat.id, { status: "running" });
+    const target = (label: string, ac: number) =>
+      insertCombatParticipant(admin, { combatId: combat.id, sourceKind: "custom", entityId: null, ruleKey: null, label, ac, hpMax: 10, hpCurrent: 10, isAlly: false, displayOrder: 0 });
+    const pose = async (participantId: string) => {
+      const posed = await proposeIntentRequest(admin, {
+        ...common(),
+        text: "j'attaque",
+        corrected: false,
+        choice: { kind: "weapon_attack", actionId: weaponItemId, targetId: `participant:${participantId}`, advantage: "normal" },
+      });
+      if ("error" in posed) throw new Error(`echec inattendu : ${posed.error}`);
+    };
+
+    // 20 naturel + modificateur, tres en dessous de la CA 30 : touche quand meme.
+    await pose((await target("Mur de fer", 30)).id);
+    const twenty = await resolveIntentRequest(admin, { ...common(), natural: 20, origin: "a_la_main" });
+    if ("error" in twenty) throw new Error(`echec inattendu : ${twenty.error}`);
+    expect((twenty.record.detail as { verdict: string | null }).verdict).toBe("hit");
+    expect(twenty.chained).not.toBeNull();
+    const damage = await resolveIntentRequest(admin, { ...common(), natural: 1, origin: "a_la_main" });
+    if ("error" in damage) throw new Error(`echec inattendu : ${damage.error}`);
+
+    // 1 naturel + modificateur, au-dessus de la CA 1 : rate quand meme, rien n'est chaine.
+    await pose((await target("Mannequin de paille", 1)).id);
+    const one = await resolveIntentRequest(admin, { ...common(), natural: 1, origin: "a_la_main" });
+    if ("error" in one) throw new Error(`echec inattendu : ${one.error}`);
+    expect((one.record.detail as { verdict: string | null }).verdict).toBe("miss");
+    expect(one.chained).toBeNull();
+    expect((await getEntityRuntimeState(admin, entityId, campaignId)).pending_request).toBeNull();
+  });
+
   it("un coup CRITIQUE double le plafond des degats chaines — jamais le modificateur", async () => {
     const combat = await insertCombat(admin, { campaignId, sessionId: null, name: "Combat de test (critique)" });
     await updateCombat(admin, combat.id, { status: "running" });
@@ -381,7 +414,18 @@ describe.skipIf(!hasCreds)("V3-B5 — proposer puis encaisser (integration, base
 
       const attackOutcome = await resolveIntentRequestFromRoll(admin, common());
       if ("error" in attackOutcome) throw new Error(`echec inattendu : ${attackOutcome.error}`);
-      expect((attackOutcome.record.detail as { verdict: string | null }).verdict).toBe("hit"); // CA 1 : touche toujours
+      // Regles 2024 (V3.1-105) : contre CA 1, tout touche SAUF un 1 naturel,
+      // qui rate toujours. Le de est tire par le serveur : on verifie la
+      // branche tombee (choix de l'auteur, 17 octobre), jamais un resultat suppose.
+      const attackDetail = attackOutcome.record.detail as { verdict: string | null; attack: { trace: { value: number }[] } };
+      const natural = attackDetail.attack.trace[0].value;
+      if (natural === 1) {
+        expect(attackDetail.verdict).toBe("miss");
+        expect(attackOutcome.chained).toBeNull();
+        expect((await getEntityRuntimeState(admin, entityId, campaignId)).pending_request).toBeNull();
+        return;
+      }
+      expect(attackDetail.verdict).toBe("hit");
       expect(attackOutcome.chained).not.toBeNull();
       expect(attackOutcome.chained!.kind).toBe("weapon_damage");
       // 1d6, double a 12 seulement si le naturel de l'attaque etait 20 (1/20) — les deux valeurs sont correctes, un maximum uniforme (ex. 13) ne le serait pas.

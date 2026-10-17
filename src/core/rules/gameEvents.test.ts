@@ -38,6 +38,17 @@ describe("eventsForAttack", () => {
     expect(out[2].data).toMatchObject({ "event.damage": 4 });
   });
 
+  it("regles 2024 : un 20 naturel sous la CA touche, un 1 naturel au-dessus rate", () => {
+    const vingt = resolveAttackRoll({ abilityMod: 0, proficiencyBonus: 0, proficient: false, advantage: "normal" }, fixedRng([19]));
+    expect(vingt.isCritical).toBe(true);
+    expect(eventsForAttack({ attacker: "bandit", target: "bram", result: vingt, ac: 25 }).map((e) => e.event)).toEqual(["attack_hit"]);
+
+    const un = resolveAttackRoll({ abilityMod: 0, proficiencyBonus: 15, proficient: true, advantage: "normal" }, fixedRng([0]));
+    expect(un.isCriticalFail).toBe(true);
+    expect(un.total).toBe(16);
+    expect(eventsForAttack({ attacker: "bandit", target: "bram", result: un, ac: 10, damage: 4 }).map((e) => e.event)).toEqual(["attack_miss"]);
+  });
+
   it("porte le contexte du jet, lisible par un `ref` de condition", () => {
     const [hit] = eventsForAttack({ attacker: "bandit", target: "bram", result: attaque, ac: 11 });
     expect(hit.data).toMatchObject({ "event.roll": 18, "event.ac": 11, "event.critical": 0 });
