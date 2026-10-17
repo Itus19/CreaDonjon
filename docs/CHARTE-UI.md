@@ -355,7 +355,7 @@ Neuf planches, en deux rangées sur le canevas : les briques (1 à 7), puis les 
 |---|---|
 | 1 · Fondations | jetons de couleur, typographie (Outfit, Geist, Geist Mono), rayons |
 | 2 · Boutons et champs | boutons (principal, secondaire, fantôme, destructeur, lien de suppression, rond à icône), champ, date et heure natives, `Dropdown`, `Checkbox`, interrupteur |
-| 3 · Onglets, puces, menus | `Tabs` (pilule glissante), puces, puces d'entité et de relation, `ActionsMenu`, en-tête de bloc et visibilité (œil), arborescence, rail du joueur, palette de commandes, radio |
+| 3 · Onglets, puces, menus | `Tabs` (pilule glissante), puces, puces d'entité et de relation, `ActionsMenu`, en-tête de bloc et visibilité (œil), arborescence, `rail repliable` (`Rail`), rail du joueur, palette de commandes, radio |
 | 4 · Surfaces et retours | `ConfirmDialog`, panneaux et `EmptyState`, ascenseur, info-bulle, aperçu de renvoi, bulles de chat, bandeaux et badges, fenêtre flottante, pastille chrome |
 | 5 · Éléments d'écran | grille de disponibilités, curseur horaire, curseur natif, `Stepper`, bouton de dés et volet, barres, tiroir, chargement, texte de fiche |
 | 6 · Fiche de personnage | bouclier de CA, `StatBadge`, caractéristiques et sauvegardes, compétences et pastilles de maîtrise, `ActionButton`, `DieIcon`, emplacements de sort, ressources, carte d'objet, états, bouton de jet de monstre, jauge à commandes (`CommandeE`) |
