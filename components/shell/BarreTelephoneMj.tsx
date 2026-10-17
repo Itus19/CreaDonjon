@@ -16,7 +16,7 @@ import {
   RULE_TOOL_KEYS,
   mjToolHref,
   refsEqual,
-  serializeAvecParam,
+  requeteFenetres,
   windowContentLabel,
   windowHref,
   type MjToolKey,
@@ -119,7 +119,7 @@ export default function BarreTelephoneMj({ worldSlug }: { worldSlug: string }) {
   /** Affiche `ref` en page, les autres fenetres ouvertes rangees dans `?avec=` (meme format qu'en ordinateur). */
   function afficher(ref: WindowRef) {
     const autres = openRefs().filter((r) => !refsEqual(r, ref));
-    const requete = autres.length > 0 ? `?avec=${encodeURIComponent(serializeAvecParam(autres))}` : "";
+    const requete = requeteFenetres(autres, state?.disposition ?? null);
     aller(`${windowHref(worldSlug, ref)}${requete}`);
   }
 

@@ -5,7 +5,7 @@ import { useCallback, useSyncExternalStore } from "react";
 /**
  * Seuil sous lequel le bureau a fenetres n'existe pas (V3-R2) — `md` de
  * Tailwind. La valeur etait dupliquee en dur (`MOBILE_BREAKPOINT = 768`)
- * dans `WindowsDesktop.tsx` ET `AvecWindowsLayer.tsx`, deux fichiers qui
+ * dans `WindowsDesktop.tsx` ET `VoletsLayer.tsx`, deux fichiers qui
  * doivent imperativement basculer ensemble : une fenetre primaire repliee
  * en panneau pendant que la couche secondaire se croit encore sur grand
  * ecran donnait un ecran incoherent. Un seul endroit, donc.

@@ -101,8 +101,8 @@ body {
   background-size: cover;
   background-position: center;
   /* --bg-blur (reglable par la personne, V2-G4 reformule) est distinct de
-     --blur (flou verre depoli des fenetres/panneaux, WindowFrame.tsx,
-     Panel.tsx, WindowsDesktop.tsx) : les deux se valaient 20px par
+     --blur (flou verre depoli des fenetres/panneaux, Panel.tsx,
+     VoletsLayer.tsx) : les deux se valaient 20px par
      coincidence avant ce ticket, jamais la meme intention — regler l'un ne
      doit jamais changer l'autre. */
   filter: blur(var(--bg-blur, 20px));
@@ -419,32 +419,26 @@ body {
     border-color: #cccccc !important;
   }
 
-  /* La fenetre flottante (WindowFrame.tsx) porte sa position/taille en
-     `style` inline (glisser/redimensionner) : redevient un bloc normal en
-     flux plutot qu'une zone `overflow: auto` de taille d'ecran, sinon seul
-     ce qui etait visible a l'ecran au moment du clic s'imprime, le reste de
-     la fiche disparait silencieusement. */
-  .window-frame {
+  /* Les volets (VoletsLayer.tsx) posent la couche et la boite de chaque
+     fiche en `fixed`/`absolute` avec une taille d'ecran : ils redeviennent un
+     bloc normal en flux, sinon seul ce qui etait visible a l'ecran au moment
+     du clic s'imprime et le reste de la fiche disparait silencieusement. Seule
+     la fiche affichee s'imprime (les autres onglets sont `hidden`). */
+  .volets-couche,
+  .volet-fiche {
     position: static !important;
     left: auto !important;
     top: auto !important;
     width: 100% !important;
     height: auto !important;
     max-height: none !important;
-    /* V2.1-16 : la fenetre porte aussi un `max-width` deduit de sa position
-       (`WindowFrame.tsx`) — sans ceci, une fiche posee a droite s'imprimerait
-       dans une colonne etroite au lieu de la pleine largeur. */
-    max-width: none !important;
+    overflow: visible !important;
     box-shadow: none !important;
     border: none !important;
-    backdrop-filter: none !important;
   }
-  .window-titlebar,
-  .window-resize-handle {
+  section:has(> .volet-barre),
+  .volet-barre,
+  .volet-separateur {
     display: none !important;
-  }
-  .window-content {
-    overflow: visible !important;
-    height: auto !important;
   }
 }

@@ -35,7 +35,7 @@ export default function AppShell({
    * Emplacement pour un contenu monte une seule fois, HORS du flux flex de
    * `{children}` mais toujours a l'interieur de `DiceRollProvider`/
    * `ChatUnreadProvider` (audit de performance, retour utilisateur) —
-   * `AvecWindowsLayer.tsx` (fenetres secondaires, partagees entre les trois
+   * `VoletsLayer.tsx` (volets des fiches ouvertes, partages entre les trois
    * sections) en a besoin : montee comme simple sœur d'`AppShell` dans
    * `app/m/[worldSlug]/layout.tsx`, une fiche de personnage ouverte en
    * fenetre secondaire perdait `useDiceRoll`/`useChatUnread` ("doit etre

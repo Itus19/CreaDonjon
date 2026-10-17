@@ -2,7 +2,7 @@
  * Simple conteneur stylise. Le multi-panneau envisage ici a l'origine
  * (specs/coquille-et-design.md §4.2, V0) a ete devance et execute
  * autrement : ADR-0006 fait de `?avec=` une liste de fiches ouvertes en
- * fenetres flottantes (`WindowFrame`/`DesktopWindowsProvider`), jamais des
+ * volets a onglets (`VoletsLayer`/`DesktopWindowsProvider`, ADR 0066), jamais des
  * `<Panel>` cote a cote — ce composant ne sert plus qu'a l'affichage
  * mobile et au fond vide du bureau avant qu'une fiche ne s'ouvre
  * (`WindowsDesktop.tsx`).

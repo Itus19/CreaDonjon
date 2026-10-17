@@ -185,7 +185,7 @@ type TableBlock = Omit<VisibleBlock, "data"> & { data: RandomTableBlockData };
  * que de reconcilier deux versions.
  *
  * `createPortal` vers `document.body` (retour utilisateur — la modale
- * debordait en haut ET en bas) : le panneau MJ (`.window-frame`) a un
+ * debordait en haut ET en bas) : le panneau MJ (boite de fiche des volets, `VoletsLayer.tsx`) pouvait avoir un
  * `backdrop-filter: blur(...)` pour son effet de flou — une regle CSS peu
  * connue veut qu'un `backdrop-filter` (comme un `transform`) cree un
  * nouveau containing block pour tout descendant `position: fixed`. Sans

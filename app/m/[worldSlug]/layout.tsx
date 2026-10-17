@@ -6,7 +6,7 @@ import { getCalendar, getWorldBySlug } from "@/src/server/services/worlds";
 import { listCampaigns } from "@/src/server/services/campaigns";
 import AppShell from "@/components/shell/AppShell";
 import DesktopWindowsProvider from "@/components/shell/DesktopWindowsProvider";
-import AvecWindowsLayer from "@/components/shell/AvecWindowsLayer";
+import VoletsLayer from "@/components/shell/VoletsLayer";
 import WorldCalendarProvider from "@/components/shared/WorldCalendarProvider";
 
 export default async function WorldLayout({
@@ -42,7 +42,7 @@ export default async function WorldLayout({
     campaignId && user ? await countUnreadChatMessages(supabase, { campaignId, worldId: world.id, userId: user.id }) : null;
 
   return (
-    // Etat des fenetres flottantes (ADR-0011), partage par Monde et Regles
+    // Etat des fenetres du MJ (ADR-0011, ADR-0066), partage par Monde et Regles
     // — au-dessus d'AppShell (donc de SectionToggle aussi : basculer de
     // section doit pouvoir replier la fenetre primaire dans `avec` avant
     // de naviguer, sans quoi changer de section la ferme).
@@ -52,7 +52,7 @@ export default async function WorldLayout({
           worldSlug={world.slug}
           campaignId={campaignId}
           initialUnreadCount={initialUnreadCount}
-          overlay={<AvecWindowsLayer worldSlug={world.slug} />}
+          overlay={<VoletsLayer worldSlug={world.slug} />}
         >
           <WorldCalendarProvider calendar={calendar}>{children}</WorldCalendarProvider>
         </AppShell>

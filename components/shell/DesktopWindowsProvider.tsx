@@ -2,73 +2,30 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import type { WindowGeometry } from "./WindowFrame";
 import { DesktopContext, type PrimaryWindowInfo } from "./DesktopContext";
 import {
   parseAvecParam,
   refId,
   refsEqual,
+  requeteFenetres,
   sectionHomeHref,
   serializeAvecParam,
-  windowContentLabel,
   windowHref,
   type WindowRef,
 } from "./windowRefs";
+import {
+  activer,
+  deplacer,
+  ecrireDisposition,
+  fixerPartage as fixerPartageDisposition,
+  lireDisposition,
+  placer,
+  retirer,
+  type Disposition,
+} from "@/lib/ui/volets";
 import type { EntityWindowData } from "@/src/server/services/entityWindow";
 import type { RuleEntryDetail } from "@/src/server/services/rules";
 import type { MjToolWindowData } from "./mjToolWindows";
-
-const DEFAULT_WIDTH = 860;
-const MAX_DEFAULT_HEIGHT = 760;
-
-/**
- * Hauteur de la barre des fiches reduites (V2.1-16). Les deux zones de
- * travail — la primaire (`WindowsDesktop.tsx`) et celle des secondaires
- * (`AvecWindowsLayer.tsx`) — la reservent quand au moins une fiche est
- * reduite, pour qu'une fenetre maximisee s'arrete AU-DESSUS plutot que
- * dessous. Une constante, donc une rangee unique qui defile en largeur
- * plutot qu'un retour a la ligne : une barre de hauteur variable obligerait
- * les deux zones a la mesurer pour se borner.
- */
-export const MINIMIZED_BAR_HEIGHT_PX = 44;
-
-/**
- * V2.1-16 — la hauteur par defaut d'une fiche se derive de la place
- * disponible au lieu d'etre la constante 760, qui depassait de ~100px sur
- * l'ecran de l'auteur. 140 = l'en-tete (56) + le decalage d'ouverture (24) +
- * une marge basse.
- *
- * La GARANTIE de ne pas deborder n'est PAS ici : c'est la regle CSS de
- * `WindowFrame`. Mesure faite en navigateur, et elle corrige ce que ce
- * commentaire affirmait d'abord : une fiche deja presente dans `?avec=` au
- * chargement garde bel et bien la valeur calculee cote serveur (760 observe
- * sur un ecran de 520). Elle tient quand meme — le plafond CSS la ramene a
- * 440 — mais la derivation ci-dessous ne sert que les fiches ouvertes en
- * cours de session, celles qu'on ouvre d'un clic. La borne CSS couvre les
- * deux cas ; ceci evite seulement d'ouvrir une fiche systematiquement
- * plafonnee.
- */
-function defaultHeight(): number {
-  if (typeof window === "undefined") return MAX_DEFAULT_HEIGHT;
-  return Math.max(320, Math.min(MAX_DEFAULT_HEIGHT, window.innerHeight - 140));
-}
-
-/**
- * Le cahier de notes (V2.1-2 suite, retour utilisateur : "le visuel [...]
- * n'est [...] pas [...] satisfaisant" en comparaison de la coquille joueur,
- * qui a toute la largeur du viewport) s'ouvre maximisee par defaut — ses
- * deux panneaux cote a cote ont besoin de plus que du 860px par defaut.
- * Cas isole plutot qu'un changement du defaut global : les onze autres
- * outils MJ n'ont jamais demande plus de place, changer leur taille par
- * defaut serait une regression non sollicitee pour eux.
- */
-function defaultGeometry(index: number, ref: WindowRef): WindowGeometry {
-  if (ref.kind === "mj" && ref.key === "notes") {
-    return { x: 0, y: 0, width: DEFAULT_WIDTH, height: defaultHeight(), isMaximized: true };
-  }
-  const offset = (index % 6) * 28;
-  return { x: 40 + offset, y: 24 + offset, width: DEFAULT_WIDTH, height: defaultHeight(), isMaximized: false };
-}
 
 function windowDataUrl(worldSlug: string, ref: WindowRef): string {
   if (ref.kind === "entity") return `/api/worlds/${worldSlug}/entities/${ref.key}/window`;
@@ -78,58 +35,51 @@ function windowDataUrl(worldSlug: string, ref: WindowRef): string {
 
 export interface AvecWindowEntry {
   ref: WindowRef;
-  geometry: WindowGeometry;
-  isFocused: boolean;
-  isMinimized: boolean;
   data: EntityWindowData | RuleEntryDetail | MjToolWindowData | undefined;
-}
-
-/** Un onglet reduit en bas de l'espace de travail (V2-K4). */
-export interface MinimizedTab {
-  id: string;
-  ref: WindowRef;
-  name: string;
-  badge: string | null;
 }
 
 export interface DesktopWindowsState {
   primary: PrimaryWindowInfo | null;
-  primaryGeometry: WindowGeometry | undefined;
-  isPrimaryFocused: boolean;
-  isPrimaryMinimized: boolean;
+  /** Les fiches `?avec=` (hors primaire), avec leur donnée une fois chargée. */
   avecWindows: AvecWindowEntry[];
-  minimizedTabs: MinimizedTab[];
-  focusWindow: (id: string) => void;
+  /** La place des fiches ouvertes dans les volets (V3.1-20), dérivée de `?volets=` à chaque rendu. */
+  disposition: Disposition;
+  /** Le volet agrandi le temps de lire (état local, jamais dans l'adresse), sinon `null`. */
+  voletAgrandi: number | null;
+  /** La zone de travail que `WindowsDesktop` enregistre : la couche des volets s'y cale. */
+  zone: HTMLElement | null;
+  enregistrerZone: (el: HTMLElement | null) => void;
+  /** Où la couche attend le contenu de la fiche primaire (portail de `WindowsDesktop`). */
+  emplacementPrimaire: HTMLElement | null;
+  enregistrerEmplacementPrimaire: (el: HTMLElement | null) => void;
   closeWindow: (ref: WindowRef) => void;
-  updateGeometry: (ref: WindowRef, updates: Partial<WindowGeometry>) => void;
-  minimizeWindow: (ref: WindowRef) => void;
-  restoreWindow: (ref: WindowRef) => void;
+  activerOnglet: (id: string) => void;
+  deplacerOnglet: (id: string, vers: 0 | 1) => void;
+  fixerPartage: (pourcent: number) => void;
+  basculerAgrandi: (volet: number) => void;
 }
 
 /**
- * Etat des fenetres flottantes (ADR-0011), partage par Monde, Regles ET MJ
- * (retour utilisateur, V2-M7 suite : "les fenetres des outils MJ [...]
- * comme celles des regles ou du wiki") : monte une seule fois dans
- * `app/m/[worldSlug]/layout.tsx`, au-dessus des trois sections. Chaque
- * section ne monte que le RENDU (`WindowsDesktop`), jamais un second etat —
- * changer de section ne ferme donc jamais les fenetres ouvertes, quel que
- * soit leur type.
+ * Etat des fenetres du MJ (ADR-0011, ADR-0066), partage par Monde, Regles ET
+ * MJ : monte une seule fois dans `app/m/[worldSlug]/layout.tsx`, au-dessus
+ * des trois sections. Chaque section ne monte que sa zone de travail
+ * (`WindowsDesktop`), jamais un second etat — changer de section ne ferme donc
+ * jamais les fiches ouvertes, quel que soit leur type.
  *
- * `?avec=` melange desormais entites, entrees de regle et outils MJ (`windowRefs.ts`).
- * Position/taille/empilement restent un etat purement client — jamais dans
- * l'URL, pour ne pas polluer l'historique de navigation.
+ * Deux parametres d'adresse : `?avec=` (les fiches, entites, entrees de regle
+ * et outils MJ melanges, `windowRefs.ts`) et `?volets=` (leur place dans les
+ * volets, `lib/ui/volets.ts`). La disposition n'est JAMAIS stockee : elle se
+ * derive a chaque rendu de `volets` et des fiches ouvertes, ce qui garde un
+ * rechargement, un ancien lien ou une navigation coherents.
  *
- * Ouvrir/fermer une fenetre secondaire (`avec`) ne change JAMAIS le contenu
- * de la page courante : son contenu vient de `windowDataUrl` (fetch client
- * separe, ci-dessous), jamais du rendu serveur de la primaire. Faire passer
- * ce changement par `router.replace` forcerait donc un aller-retour serveur
- * (re-rendu RSC complet de la page courante) pour un parametre que ce rendu
- * n'utilise meme pas — mesure comme un cout reel a l'usage. `avecParam` est
- * donc synchronise directement via `history.replaceState` (URL/historique
- * a jour, aucune requete), avec un `popstate` pour suivre precedent/suivant
- * du navigateur. Une vraie navigation (fermer la primaire, changer de
- * section) reste un `router.push` normal : la page de destination a un
- * contenu different, un aller-retour serveur y est necessaire.
+ * Ouvrir/fermer/ranger une fiche ne change JAMAIS le contenu de la page
+ * courante : le contenu d'une fiche `avec` vient de `windowDataUrl` (fetch
+ * client separe), jamais du rendu serveur de la primaire. Passer par
+ * `router.replace` forcerait un aller-retour serveur pour des parametres que
+ * ce rendu n'utilise meme pas. Les deux parametres sont donc ecrits ENSEMBLE,
+ * dans une seule URL, par `history.replaceState` (aucune requete), avec un
+ * `popstate` pour suivre precedent/suivant. Une vraie navigation (fermer la
+ * primaire, changer de section) reste un `router.push` normal.
  */
 export default function DesktopWindowsProvider({
   worldSlug,
@@ -144,88 +94,64 @@ export default function DesktopWindowsProvider({
   const fetchedRef = useRef<Set<string>>(new Set());
 
   const [primary, setPrimary] = useState<PrimaryWindowInfo | null>(null);
-  const [geometries, setGeometries] = useState<Record<string, WindowGeometry>>({});
   const [avecData, setAvecData] = useState<Record<string, EntityWindowData | RuleEntryDetail | MjToolWindowData>>({});
-  const [focusedId, setFocusedId] = useState<string | null>(null);
-  // Etat d'affichage purement local (V2-K4) — jamais dans `?avec=` ni dans
-  // l'URL, meme logique que l'ordre d'empilement (docs/adr/0006).
-  const [minimizedIds, setMinimizedIds] = useState<Record<string, boolean>>({});
   const [avecParam, setAvecParam] = useState<string | null>(() => searchParams.get("avec"));
+  const [voletsParam, setVoletsParam] = useState<string | null>(() => searchParams.get("volets"));
+  const [voletAgrandi, setVoletAgrandi] = useState<number | null>(null);
+  const [zone, setZone] = useState<HTMLElement | null>(null);
+  const [emplacementPrimaire, setEmplacementPrimaire] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     function onPopState() {
-      setAvecParam(new URLSearchParams(window.location.search).get("avec"));
+      const params = new URLSearchParams(window.location.search);
+      setAvecParam(params.get("avec"));
+      setVoletsParam(params.get("volets"));
     }
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
 
-  // Resynchronise `avecParam` sur une VRAIE navigation (`router.push`, ex.
-  // `SectionToggle` repliant la primaire courante dans `avec` en changeant
-  // de section) — bug reel trouve en testant le repli MJ<->Monde<->Regles :
-  // `avecParam` ne suivait que son propre `history.replaceState` (ci-dessus
-  // et `updateAvecParam`) et le `popstate` manuel, jamais une navigation
-  // Next normale, qui ne declenche ni l'un ni l'autre. Sans cet effet, la
-  // fenetre primaire repliee dans `avec` par `hrefWithWindows` disparaissait
-  // purement et simplement au premier changement de section. `searchParams`
-  // (le hook Next, pas l'URL brute) ne change JAMAIS suite a un
-  // `history.replaceState` local — seulement sur une vraie navigation —
-  // donc cet effet ne rentre jamais en conflit avec les mises a jour
-  // locales d'`avecParam` ci-dessus.
+  // Resynchronise `avec` et `volets` sur une VRAIE navigation (`router.push`,
+  // ex. `SectionToggle` repliant la primaire courante dans `avec` en changeant
+  // de section) : l'etat local ne suivait que ses propres `replaceState` et le
+  // `popstate`, jamais une navigation Next normale. Sans cet effet, la fiche
+  // primaire repliee par `requeteFenetres` disparaissait au premier changement
+  // de section. Les gardes `prev === fresh` empechent toute boucle.
   useEffect(() => {
-    const fresh = searchParams.get("avec");
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- synchronise avec une source externe (l'URL via le routeur Next), exactement le cas documente comme legitime ; le garde `prev === fresh` empeche toute boucle
-    setAvecParam((prev) => (prev === fresh ? prev : fresh));
+    const freshAvec = searchParams.get("avec");
+    const freshVolets = searchParams.get("volets");
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- synchronise avec une source externe (l'URL via le routeur Next), cas documente comme legitime
+    setAvecParam((prev) => (prev === freshAvec ? prev : freshAvec));
+    setVoletsParam((prev) => (prev === freshVolets ? prev : freshVolets));
   }, [searchParams]);
 
   const avecRefs = parseAvecParam(avecParam).filter((ref) => !primary || !refsEqual(ref, primary.ref));
   const avecRefsKey = avecRefs.map(refId).join(",");
-  const activeRefs = primary ? [primary.ref, ...avecRefs] : avecRefs;
-  const activeIdsKey = activeRefs.map(refId).join(",");
+  const ids = [...(primary ? [refId(primary.ref)] : []), ...avecRefs.map(refId)];
+  const disposition = lireDisposition(voletsParam, ids);
+
+  // Un volet agrandi n'a de sens qu'a deux volets : le rendre quand il n'en
+  // reste qu'un (ajustement d'etat pendant le rendu, motif documente par React).
+  if (voletAgrandi !== null && disposition.volets.length < 2) setVoletAgrandi(null);
 
   // Pre-alimente `avecData`/`fetchedRef` avec la donnee que la fiche
-  // primaire a deja rendue cote serveur (audit de performance, retour
-  // utilisateur) : sans ceci, une fenetre repliee en secondaire par un
-  // changement de section (Monde/Regles/MJ) n'avait jamais vu cette donnee
-  // (le rendu de la primaire passe par le RSC de la page, jamais par
-  // `avecData`) et se refetchait a vide en affichant "Chargement..." pour
-  // une fiche pourtant deja affichee l'instant d'avant.
+  // primaire a deja rendue cote serveur (audit de performance) : sans ceci,
+  // une fiche repliee en `avec` par un changement de section se refetchait a
+  // vide en affichant "Chargement..." pour une fiche pourtant deja affichee.
   const registerPrimary = useCallback((info: PrimaryWindowInfo | null) => {
     setPrimary(info);
-    if (info) {
-      setFocusedId(refId(info.ref));
-      if (info.data !== undefined) {
-        const id = refId(info.ref);
-        fetchedRef.current.add(id);
-        setAvecData((prev) => (prev[id] === info.data ? prev : { ...prev, [id]: info.data! }));
-      }
+    if (info && info.data !== undefined) {
+      const id = refId(info.ref);
+      fetchedRef.current.add(id);
+      setAvecData((prev) => (prev[id] === info.data ? prev : { ...prev, [id]: info.data! }));
     }
   }, []);
 
-  // Assigne une position par defaut a toute fenetre nouvellement visible,
-  // sans jamais reinitialiser une fenetre deja ouverte. Ajustement d'etat
-  // pendant le rendu (motif documente par React), pas dans un effet.
-  const [lastIdsKey, setLastIdsKey] = useState<string | null>(null);
-  if (lastIdsKey !== activeIdsKey) {
-    setLastIdsKey(activeIdsKey);
-    const missing = activeRefs.filter((ref) => !geometries[refId(ref)]);
-    if (missing.length > 0) {
-      setGeometries((prev) => {
-        const next = { ...prev };
-        missing.forEach((ref, index) => {
-          next[refId(ref)] = defaultGeometry(Object.keys(prev).length + index, ref);
-        });
-        return next;
-      });
-    }
-  }
-
-  // Recupere les donnees de chaque fenetre `?avec=` pas encore chargee.
+  // Recupere les donnees de chaque fiche `?avec=` pas encore chargee.
   useEffect(() => {
     avecRefs.forEach((ref) => {
       // Un formulaire de creation de regle (`rule-tool`) n'a rien a lire en
-      // base — jamais de fetch pour ce type, `RuleToolWindowContent` se
-      // suffit du seul `worldSlug` deja connu.
+      // base — jamais de fetch pour ce type.
       if (ref.kind === "rule-tool") return;
       const id = refId(ref);
       if (fetchedRef.current.has(id)) return;
@@ -239,107 +165,84 @@ export default function DesktopWindowsProvider({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [avecRefsKey, worldSlug]);
 
-  function updateAvecParam(nextRefs: WindowRef[]) {
-    const params = new URLSearchParams(searchParams);
-    const next = nextRefs.length > 0 ? nextRefs.map(refId).join(",") : null;
-    if (next) {
-      params.set("avec", next);
-    } else {
-      params.delete("avec");
-    }
+  /** Ecrit `avec` ET `volets` dans une seule URL, sans aller-retour serveur. */
+  function ecrireFenetres(nextAvec: WindowRef[], nextDispo: Disposition) {
+    const params = new URLSearchParams(window.location.search);
+    const avec = nextAvec.length > 0 ? serializeAvecParam(nextAvec) : null;
+    const volets = ecrireDisposition(nextDispo);
+    if (avec) params.set("avec", avec);
+    else params.delete("avec");
+    if (volets) params.set("volets", volets);
+    else params.delete("volets");
     const query = params.toString();
     window.history.replaceState(null, "", query ? `${pathname}?${query}` : pathname);
-    setAvecParam(next);
+    setAvecParam(avec);
+    setVoletsParam(volets);
+  }
+
+  /** Une disposition qui ne change que la place des fiches : rien a ecrire si elle est deja celle de l'adresse. */
+  function ecrireDispo(next: Disposition) {
+    if (ecrireDisposition(next) === ecrireDisposition(disposition)) return;
+    ecrireFenetres(avecRefs, next);
   }
 
   const openRef = useCallback(
     (ref: WindowRef) => {
+      const id = refId(ref);
       if (!primary) {
-        // Aucune fenetre primaire, mais d'autres fenetres peuvent deja
-        // etre ouvertes (`?avec=`, ex. depuis l'accueil d'une section) —
-        // la nouvelle fenetre devient primaire SANS les fermer.
+        // Aucune fiche primaire, mais d'autres fiches peuvent deja etre
+        // ouvertes (`?avec=`, ex. depuis l'accueil d'une section) — la
+        // nouvelle devient primaire SANS les fermer, et prend sa place dans
+        // les volets.
         const remaining = avecRefs.filter((r) => !refsEqual(r, ref));
-        const query = remaining.length > 0 ? `?avec=${encodeURIComponent(serializeAvecParam(remaining))}` : "";
-        setAvecParam(remaining.length > 0 ? remaining.map(refId).join(",") : null);
-        router.push(`${windowHref(worldSlug, ref)}${query}`);
+        const next = placer(disposition, id);
+        setAvecParam(remaining.length > 0 ? serializeAvecParam(remaining) : null);
+        setVoletsParam(remaining.length > 0 ? ecrireDisposition(next) : null);
+        router.push(`${windowHref(worldSlug, ref)}${requeteFenetres(remaining, next)}`);
         return;
       }
       if (refsEqual(ref, primary.ref) || avecRefs.some((r) => refsEqual(r, ref))) {
-        setFocusedId(refId(ref));
+        // Deja ouverte : elle redevient l'onglet actif de son volet.
+        const next = activer(disposition, id);
+        if (ecrireDisposition(next) !== ecrireDisposition(disposition)) ecrireFenetres(avecRefs, next);
         return;
       }
-      updateAvecParam([...avecRefs, ref]);
-      setFocusedId(refId(ref));
+      ecrireFenetres([...avecRefs, ref], placer(disposition, id));
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [primary, avecRefsKey, worldSlug]
+    [primary, avecRefsKey, voletsParam, worldSlug]
   );
 
-  function clearMinimized(id: string) {
-    setMinimizedIds((prev) => {
-      if (!(id in prev)) return prev;
-      const next = { ...prev };
-      delete next[id];
-      return next;
-    });
-  }
-
   function closeWindow(ref: WindowRef) {
-    clearMinimized(refId(ref));
+    const next = retirer(disposition, refId(ref));
     if (primary && refsEqual(ref, primary.ref)) {
       // Fermer la primaire revient a l'accueil de sa section, sans perdre
-      // les autres fenetres deja ouvertes.
-      const query = avecRefs.length > 0 ? `?avec=${encodeURIComponent(serializeAvecParam(avecRefs))}` : "";
-      router.push(`${sectionHomeHref(worldSlug, ref.kind)}${query}`);
+      // les autres fiches deja ouvertes ni leur place.
+      router.push(`${sectionHomeHref(worldSlug, ref.kind)}${requeteFenetres(avecRefs, next)}`);
       return;
     }
-    updateAvecParam(avecRefs.filter((r) => !refsEqual(r, ref)));
+    ecrireFenetres(
+      avecRefs.filter((r) => !refsEqual(r, ref)),
+      next
+    );
   }
 
-  function updateGeometry(ref: WindowRef, updates: Partial<WindowGeometry>) {
-    const id = refId(ref);
-    setGeometries((prev) => ({ ...prev, [id]: { ...prev[id], ...updates } }));
-  }
-
-  function minimizeWindow(ref: WindowRef) {
-    setMinimizedIds((prev) => ({ ...prev, [refId(ref)]: true }));
-  }
-
-  function restoreWindow(ref: WindowRef) {
-    const id = refId(ref);
-    setMinimizedIds((prev) => (prev[id] ? { ...prev, [id]: false } : prev));
-    setFocusedId(id);
-  }
-
-  const avecWindows: AvecWindowEntry[] = [];
-  const minimizedTabs: MinimizedTab[] = [];
-  for (const ref of avecRefs) {
-    const id = refId(ref);
-    const geometry = geometries[id];
-    if (!geometry) continue;
-    const isMinimized = Boolean(minimizedIds[id]);
-    avecWindows.push({ ref, geometry, isFocused: focusedId === id, isMinimized, data: avecData[id] });
-    if (isMinimized) {
-      const { name, badge } = windowContentLabel(ref, avecData[id]);
-      minimizedTabs.push({ id, ref, name, badge });
-    }
-  }
-  if (primary && minimizedIds[refId(primary.ref)]) {
-    minimizedTabs.unshift({ id: refId(primary.ref), ref: primary.ref, name: primary.name, badge: primary.badge });
-  }
+  const avecWindows: AvecWindowEntry[] = avecRefs.map((ref) => ({ ref, data: avecData[refId(ref)] }));
 
   const state: DesktopWindowsState = {
     primary,
-    primaryGeometry: primary ? geometries[refId(primary.ref)] : undefined,
-    isPrimaryFocused: primary ? focusedId === refId(primary.ref) : false,
-    isPrimaryMinimized: primary ? Boolean(minimizedIds[refId(primary.ref)]) : false,
     avecWindows,
-    minimizedTabs,
-    focusWindow: setFocusedId,
+    disposition,
+    voletAgrandi,
+    zone,
+    enregistrerZone: setZone,
+    emplacementPrimaire,
+    enregistrerEmplacementPrimaire: setEmplacementPrimaire,
     closeWindow,
-    updateGeometry,
-    minimizeWindow,
-    restoreWindow,
+    activerOnglet: (id) => ecrireDispo(activer(disposition, id)),
+    deplacerOnglet: (id, vers) => ecrireDispo(deplacer(disposition, id, vers)),
+    fixerPartage: (pourcent) => ecrireDispo(fixerPartageDisposition(disposition, pourcent)),
+    basculerAgrandi: (volet) => setVoletAgrandi((prev) => (prev === volet ? null : volet)),
   };
 
   return (
@@ -350,8 +253,8 @@ export default function DesktopWindowsProvider({
 }
 
 // Contexte separe de `DesktopContext` (actions stables) : l'etat de rendu
-// change a chaque frappe/glissement, seuls les composants qui affichent
-// les fenetres (WindowsDesktop) doivent re-rendre quand il change.
+// change a chaque action, seuls les composants qui affichent les fenetres
+// (WindowsDesktop, la couche des volets) doivent re-rendre quand il change.
 const DesktopWindowsStateContext = createContext<DesktopWindowsState | null>(null);
 
 export function useDesktopWindowsState(): DesktopWindowsState | null {

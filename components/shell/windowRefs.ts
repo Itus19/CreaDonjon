@@ -1,3 +1,4 @@
+import { ecrireDisposition, type Disposition } from "@/lib/ui/volets";
 import type { EntityWindowData } from "@/src/server/services/entityWindow";
 import type { RuleEntryDetail } from "@/src/server/services/rules";
 import type { MjToolWindowData } from "./mjToolWindows";
@@ -112,6 +113,18 @@ export function parseAvecParam(value: string | null): WindowRef[] {
 
 export function serializeAvecParam(refs: WindowRef[]): string {
   return refs.map(refId).join(",");
+}
+
+/**
+ * La requête (`?avec=…&volets=…`, vide sans fiche) qui emporte les fiches
+ * `refs` et leur place dans les volets (V3.1-20) vers une autre page.
+ */
+export function requeteFenetres(refs: WindowRef[], disposition: Disposition | null): string {
+  if (refs.length === 0) return "";
+  const params = new URLSearchParams({ avec: serializeAvecParam(refs) });
+  const volets = disposition ? ecrireDisposition(disposition) : null;
+  if (volets) params.set("volets", volets);
+  return `?${params.toString()}`;
 }
 
 export function refsEqual(a: WindowRef, b: WindowRef): boolean {

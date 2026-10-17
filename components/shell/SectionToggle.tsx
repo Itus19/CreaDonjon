@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useDesktopWindowsState } from "./DesktopWindowsProvider";
 import { IconeRail, RailRow } from "./Rail";
-import { serializeAvecParam } from "./windowRefs";
+import { requeteFenetres } from "./windowRefs";
 
 /**
  * Logique de lien partagee par la bascule (tiroir, sous 768 px) et par les
@@ -28,9 +28,7 @@ export function useSectionLiens(worldSlug: string) {
   }
 
   function hrefWithWindows(base: string): string {
-    const refs = openRefs();
-    if (refs.length === 0) return base;
-    return `${base}?avec=${encodeURIComponent(serializeAvecParam(refs))}`;
+    return `${base}${requeteFenetres(openRefs(), desktopState?.disposition ?? null)}`;
   }
 
   function navigate(e: React.MouseEvent, base: string) {

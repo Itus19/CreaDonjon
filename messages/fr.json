@@ -15,6 +15,15 @@
     "aucunResultat": "Aucun résultat.",
     "rechercher": "Rechercher",
     "paletteDeCommandes": "Palette de commandes",
+    "volets": {
+      "listeOnglets": "Fiches du volet",
+      "fermerOnglet": "Fermer {nom}",
+      "agrandirVolet": "Agrandir le volet",
+      "retablirVolet": "Rétablir le volet",
+      "fermerFiche": "Fermer la fiche affichée",
+      "deposerSecondVolet": "Déposer ici pour ouvrir un second volet",
+      "separateur": "Largeur des volets"
+    },
     "kindLabels": {
       "session_journal": "Livre de sessions",
       "character": "Personnages",

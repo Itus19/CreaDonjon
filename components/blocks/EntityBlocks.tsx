@@ -34,7 +34,7 @@ import { EditCommitProvider } from "@/components/shared/EditCommitContext";
  * le 22e type de bloc ne s'ajoutera plus au paquet initial comme les 21
  * precedents.
  *
- * PAS de `ssr: false`, contrairement a `AvecWindowsLayer.tsx` : ces vues
+ * PAS de `ssr: false`, contrairement a `VoletsLayer.tsx` : ces vues
  * SONT rendues cote serveur et doivent le rester. Le balisage arrive donc
  * complet dans le HTML, la mise en page est juste des le premier pixel, et
  * seul le JS d'hydratation est differe — c'est ce qui evite le saut de mise

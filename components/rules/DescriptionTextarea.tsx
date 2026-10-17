@@ -19,8 +19,8 @@ import { createPortal } from "react-dom";
  * `renderInline`) sur un `<textarea>` ordinaire.
  *
  * `createPortal` vers `document.body` (meme motif que `AddRuleMenu.tsx`) :
- * ce champ vit typiquement dans une fenetre flottante (`WindowFrame.tsx`,
- * `.window-frame` porte un `backdrop-blur`), et un `backdrop-filter` sur un
+ * ce champ vit typiquement dans une fiche ouverte (volet de `VoletsLayer.tsx`,
+ * ou panneau a `backdrop-blur`), et un `backdrop-filter` sur un
  * ancetre cree un nouveau plan de reference pour tout descendant en
  * `position: fixed` (regle CSS) — en sortant le noeud du sous-arbre DOM de
  * la fenetre, `position: fixed` redevient relatif a la fenetre du navigateur.
