@@ -76,6 +76,18 @@
     "videDescription": "Create your first entity — a character, a location, a faction — to start populating it.",
     "choisirEntite": "Choose an entity in the sidebar, or create a new one from the button below."
   },
+  "lecteur": {
+    "titreMonde": "World",
+    "titreWiki": "Wiki",
+    "titreRegles": "Rules",
+    "ouvrirSommaire": "Open the contents",
+    "sommaire": "Contents",
+    "consulteesRecemment": "Recently viewed",
+    "recemment": "Recent",
+    "rienEncore": "Nothing yet — open an entry from ☰ or the search",
+    "resultats": "Search results",
+    "nouvelleEntiteCourt": "New entity"
+  },
   "regles": {
     "rechercherRegle": "Search a rule…",
     "aucuneRegleTrouvee": "No rule found.",

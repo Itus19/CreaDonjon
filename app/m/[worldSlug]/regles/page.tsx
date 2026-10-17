@@ -2,6 +2,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { listRuleEntriesForWorld } from "@/src/server/services/rules";
 import type { Locale } from "@/src/i18n/request";
+import AccueilLecteur from "@/components/shell/AccueilLecteur";
 
 export default async function ReglesHomePage({
   params,
@@ -18,5 +19,11 @@ export default async function ReglesHomePage({
     return <p className="text-sm text-ink-muted">{t("pasDeRuleset")}</p>;
   }
 
-  return <p className="text-sm text-ink-muted">{t("choisirRegle")}</p>;
+  return (
+    <>
+      {/* V3.1-30 : sous 768 px, l'accueil du telephone ; au-dessus, l'invite d'avant. */}
+      <AccueilLecteur worldSlug={worldSlug} espace="mj-regles" />
+      <p className="text-sm text-ink-muted max-md:hidden">{t("choisirRegle")}</p>
+    </>
+  );
 }

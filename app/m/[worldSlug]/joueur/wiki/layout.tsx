@@ -70,6 +70,7 @@ export default async function JoueurWikiLayout({
         tree={tree}
         hrefBase={`/m/${worldSlug}/joueur/wiki`}
         banner={<SessionJournalBanner worldSlug={worldSlug} />}
+        recents="joueur-wiki"
       >
         {children}
       </BookSkin>

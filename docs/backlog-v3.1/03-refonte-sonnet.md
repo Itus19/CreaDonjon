@@ -20,34 +20,6 @@ V3.1-20 (lot g) peut partir dès que 25 est fait.
 
 ---
 
-### ☐ V3.1-30 — Wiki et Règles sur téléphone : ☰ et consultées récemment · `M` · sans modèle IA — **prêt**
-
-**Modèle conseillé : Sonnet** — parcours esquissé ; stockage tranché (ADR 0036 §4).
-
-**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-**Planches** : téléphones MJ et joueur, écrans Monde / Wiki / Règles et
-leurs feuilles. **Départ** : `BookSkin.tsx`, `TwoPaneReaderLayout.tsx`,
-`PlayerRulesSidebar.tsx`. **Dépend de** : 29.
-
-- Toucher Monde / Wiki / Règles ouvre un écran d'accueil : recherche,
-  bouton ☰ (sommaire complet, types repliables, PJ déplié par défaut) et
-  la liste des fiches consultées récemment.
-- Une fiche choisie s'affiche dans la peau actuelle (`BookSkin`), ☰ en
-  haut à gauche ; le tiroir commence lui aussi par « Récemment ».
-- « Récemment » vit dans le navigateur (identifiants et titres seulement,
-  20 au plus, par monde) ; une fiche devenue invisible n'est pas affichée
-  (le serveur répond à l'ouverture).
-- Côté MJ : « + » nouvelle entité, passages MJ en orange, crayon vers
-  l'éditeur (31). Règles : même parcours, la règle en page.
-
-**Critères d'acceptation**
-- [ ] Le parcours accueil → fiche → retour, pour le MJ et le joueur.
-- [ ] Le joueur ne reçoit jamais un passage MJ (test serveur existant toujours vert).
-- [ ] Navigation privée ou stockage bloqué : la liste est vide, rien ne casse.
-
----
-
 ### ☐ V3.1-31 — Éditeur plein écran en accordéon (téléphone) · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — option A tranchée et esquissée.

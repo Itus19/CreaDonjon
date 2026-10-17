@@ -9,7 +9,8 @@ import type { PaletteEntity } from "./CommandPalette";
 import CommandPalette from "./CommandPalette";
 import EntityTree from "./EntityTree";
 import { classeItemFlyout, IconeRail, OutilsDalle, Rail, RailFilet, RailPart, RailRow, TraitSvg, useRailReplie } from "./Rail";
-import SectionToggle, { SectionRailRows } from "./SectionToggle";
+import { SectionRailRows } from "./SectionToggle";
+import { SectionRecemment } from "./ListeRecents";
 import { EnTeteRail } from "./WorldSidebarHeader";
 import { useOpenEntityLink } from "./useOpenEntityLink";
 import { createBlankEntityAction } from "@/app/m/[worldSlug]/actions";
@@ -158,7 +159,11 @@ export default function Sidebar({
               horizontale apparait pendant l'animation de largeur du rail. */}
           <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4 md:gap-0.5 md:overflow-x-hidden md:p-2">
             <EnTeteRail worldSlug={worldSlug} worldName={worldName} replie={replie} />
-            <SectionToggle worldSlug={worldSlug} />
+            {/* V3.1-30 : la bascule Monde/Regles/MJ n'est plus dans la feuille (la
+                barre du telephone la remplace) ; « Recemment » prend la tete. */}
+            <div className="md:hidden">
+              <SectionRecemment worldSlug={worldSlug} espace="mj-monde" onNavigate={() => setOpen(false)} />
+            </div>
             <SectionRailRows worldSlug={worldSlug} />
             <RailFilet />
             <CommandPalette

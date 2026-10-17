@@ -77,6 +77,18 @@
     "videDescription": "Créez votre première entité — un personnage, un lieu, une faction — pour commencer à le peupler.",
     "choisirEntite": "Choisissez une entité dans la barre latérale, ou créez-en une nouvelle depuis le bouton en bas."
   },
+  "lecteur": {
+    "titreMonde": "Monde",
+    "titreWiki": "Wiki",
+    "titreRegles": "Règles",
+    "ouvrirSommaire": "Ouvrir le sommaire",
+    "sommaire": "Sommaire",
+    "consulteesRecemment": "Consultées récemment",
+    "recemment": "Récemment",
+    "rienEncore": "Rien encore — ouvre une fiche depuis ☰ ou la recherche",
+    "resultats": "Résultats de la recherche",
+    "nouvelleEntiteCourt": "Nouvelle entité"
+  },
   "regles": {
     "rechercherRegle": "Rechercher une règle…",
     "aucuneRegleTrouvee": "Aucune règle trouvée.",

@@ -2,6 +2,7 @@ import type { EntityTreeGroup } from "@/src/core/entity-tree/build-tree";
 import type { PaletteEntity } from "./CommandPalette";
 import Sidebar from "./Sidebar";
 import WindowsDesktop from "./WindowsDesktop";
+import { ArbreLecteurProvider } from "./ArbreLecteurContext";
 
 /**
  * Contenu de la section Monde : barre laterale des entites + rendu des
@@ -26,9 +27,10 @@ export default function MondeShell({
   children: React.ReactNode;
 }) {
   return (
-    <>
+    // V3.1-30 : l'arbre deja charge sert aussi a la recherche locale de l'accueil du telephone.
+    <ArbreLecteurProvider tree={tree}>
       <Sidebar worldId={worldId} worldSlug={worldSlug} worldName={worldName} tree={tree} entities={entities} />
       <WindowsDesktop>{children}</WindowsDesktop>
-    </>
+    </ArbreLecteurProvider>
   );
 }

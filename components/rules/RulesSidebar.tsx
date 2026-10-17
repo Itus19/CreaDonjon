@@ -9,7 +9,8 @@ import { useOpenRuleLink } from "@/components/shell/useOpenRuleLink";
 import { useOpenRuleToolLink } from "@/components/shell/useOpenRuleToolLink";
 import { useCollapsedGroups } from "@/components/shell/useCollapsedGroups";
 import { classeItemFlyout, IconeRail, OutilsDalle, Rail, RailFilet, RailPart, RailRow, TraitSvg, useRailReplie } from "@/components/shell/Rail";
-import SectionToggle, { SectionRailRows } from "@/components/shell/SectionToggle";
+import { SectionRailRows } from "@/components/shell/SectionToggle";
+import { SectionRecemment } from "@/components/shell/ListeRecents";
 import { EnTeteRail } from "@/components/shell/WorldSidebarHeader";
 import { useWorldRuleEntries } from "@/components/blocks/useWorldRuleEntries";
 import AddRuleMenu from "@/components/rules/AddRuleMenu";
@@ -314,7 +315,11 @@ export default function RulesSidebar({ worldSlug, worldName }: { worldSlug: stri
               il reproduit l'espacement d'origine (`gap-3`). */}
           <div className="flex flex-col gap-3 md:gap-0.5 md:p-2 md:pb-0">
             <EnTeteRail worldSlug={worldSlug} worldName={worldName} replie={replie} />
-            <SectionToggle worldSlug={worldSlug} />
+            {/* V3.1-30 : la bascule Monde/Regles/MJ n'est plus dans la feuille (la
+                barre du telephone la remplace) ; « Recemment » prend la tete. */}
+            <div className="md:hidden">
+              <SectionRecemment worldSlug={worldSlug} espace="mj-regles" onNavigate={() => setOpen(false)} />
+            </div>
             <SectionRailRows worldSlug={worldSlug} />
             <RailFilet />
             {!replie && (

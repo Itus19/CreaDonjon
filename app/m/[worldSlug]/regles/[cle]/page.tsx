@@ -7,6 +7,7 @@ import { getWorldBySlug } from "@/src/server/services/worlds";
 import { isPlayerOnlyInWorld } from "@/src/server/services/permissions";
 import type { Locale } from "@/src/i18n/request";
 import RegisterPrimaryWindow from "@/components/shell/RegisterPrimaryWindow";
+import EnregistrerRecent from "@/components/shell/EnregistrerRecent";
 import RuleEntryView from "@/components/rules/RuleEntryView";
 import RefPathHighlighter from "@/components/rules/RefPathHighlighter";
 
@@ -35,6 +36,7 @@ export default async function RuleEntryPage({
 
   return (
     <>
+      <EnregistrerRecent worldSlug={worldSlug} espace="mj-regles" titre={entry.name} type={entry.entryType} />
       <RegisterPrimaryWindow
         windowRef={{ kind: "rule", key: entry.entryKey }}
         name={entry.name}

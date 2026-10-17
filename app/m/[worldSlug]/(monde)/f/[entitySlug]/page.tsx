@@ -3,6 +3,7 @@ import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { getEntityWindowData } from "@/src/server/services/entityWindow";
 import { isPlayerOnlyInWorld } from "@/src/server/services/permissions";
 import RegisterPrimaryWindow from "@/components/shell/RegisterPrimaryWindow";
+import EnregistrerRecent from "@/components/shell/EnregistrerRecent";
 import EditEntityForm from "./EditEntityForm";
 import { getLocale } from "next-intl/server";
 import { lancerFicheAvecPage } from "@/src/server/services/ficheAvecPage";
@@ -47,6 +48,7 @@ export default async function EntityPage({
 
   return (
     <>
+      <EnregistrerRecent worldSlug={worldSlug} espace="mj-monde" titre={data.entity.name} type={data.entity.entity_kind} />
       <RegisterPrimaryWindow
         windowRef={{ kind: "entity", key: data.entity.slug }}
         name={data.entity.name}

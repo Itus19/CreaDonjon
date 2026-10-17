@@ -3,7 +3,13 @@
 import { useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { filterEntityTree, type EntityTreeGroup } from "@/src/core/entity-tree/build-tree";
+import { useTranslations } from "next-intl";
 import EntityTree from "@/components/shell/EntityTree";
+import FeuilleDuBas from "@/components/shared/FeuilleDuBas";
+import { SectionRecemment } from "@/components/shell/ListeRecents";
+import { ArbreLecteurProvider } from "@/components/shell/ArbreLecteurContext";
+import { useMatchMedia, WINDOWS_MOBILE_QUERY } from "@/components/shell/useMatchMedia";
+import type { EspaceRecents } from "@/lib/ui/recents";
 import { useWikiBackgroundDisplay } from "./WikiBackgroundProvider";
 
 /** Proprietes CSS personnalisees (`--h`, `--c`, etc.) : React ne les type pas nativement, meme convention que app/layout.tsx pour `--bg-image`. */
@@ -50,6 +56,7 @@ export default function BookSkin({
   children,
   banner,
   showLogin,
+  recents,
 }: {
   title: string;
   worldSlug: string;
@@ -71,7 +78,18 @@ export default function BookSkin({
    * monté une seule fois pour toutes les fiches du monde, comme le sommaire.
    */
   banner?: React.ReactNode;
+  /**
+   * V3.1-30 : espace des fiches « consultees recemment » (`"joueur-wiki"`),
+   * donne seulement par le wiki du joueur. `/apercu` et `/partage` ne
+   * l'envoient pas : rien n'y est enregistre, la feuille n'a donc pas de
+   * « Recemment ».
+   */
+  recents?: EspaceRecents;
 }) {
+  const t = useTranslations("lecteur");
+  // V3.1-30 : sous 768 px le tiroir de gauche devient une feuille du bas ; a
+  // partir de 768 px l'`aside` est inchange.
+  const estTelephone = useMatchMedia(WINDOWS_MOBILE_QUERY);
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   // V2.1-12 : ce composant LIT le fond, il ne l'enregistre plus. Il vit
@@ -87,6 +105,45 @@ export default function BookSkin({
   const scopeStyle: CustomProperties | undefined = displayed
     ? { "--h": displayed.hue, "--c": displayed.chroma }
     : undefined;
+
+  // Les trois morceaux du sommaire, partages par l'`aside` (768 px et plus) et
+  // par la feuille du bas (telephone).
+  const entete = (
+    <>
+      {/* `prefetch={false}` (V2.1-20 lot 6) : le dernier des dix-huit. Sur
+          `/partage`, cette racine REDIRIGE de surcroit vers la derniere
+          entree du Livre de sessions — precharger une redirection est du
+          travail serveur dont il ne reste rien. */}
+      <Link href={hrefBase} prefetch={false} onClick={() => setOpen(false)} className="mb-3 block font-chrome text-base font-semibold text-ink hover:text-accent">
+        {title}
+      </Link>
+      {showLogin && (
+        <Link
+          href="/login"
+          className="mb-4 inline-block rounded-full border border-accent px-3 py-1 text-xs text-accent transition-colors hover:bg-accent/10"
+        >
+          Se connecter
+        </Link>
+      )}
+    </>
+  );
+  const champRecherche = (
+    <input
+      value={query}
+      onChange={(e) => setQuery(e.target.value)}
+      placeholder="Rechercher…"
+      className="mb-4 w-full rounded-md border border-edge bg-transparent px-2.5 py-1.5 text-sm text-ink outline-none placeholder:text-ink-muted"
+    />
+  );
+  const sommaire = (
+    <EntityTree
+      groups={filteredTree}
+      worldSlug={worldSlug}
+      hrefBase={hrefBase}
+      collapseStorageKey={`creadonjon:collapsed:wiki:${worldSlug}`}
+      defaultCollapsedKinds={defaultCollapsedKinds}
+    />
+  );
 
   return (
     <div
@@ -122,14 +179,26 @@ export default function BookSkin({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        aria-label="Ouvrir le sommaire"
+        aria-label={t("ouvrirSommaire")}
         className="fixed left-3 top-3 z-40 rounded-md border border-edge bg-panel-raised p-2 text-sm text-ink shadow-md print:hidden md:hidden"
       >
         ☰
       </button>
 
-      {open && (
-        <div className="fixed inset-0 z-40 bg-scrim md:hidden" onClick={() => setOpen(false)} aria-hidden="true" />
+      {/* V3.1-30 : sous 768 px, le sommaire s'ouvre en feuille du bas (le voile
+          et la fermeture sont ceux de `FeuilleDuBas`), et commence par
+          « Recemment » quand cet espace en tient une liste. L'`aside` n'est
+          alors pas rendu : l'arbre ne se monte qu'une fois. */}
+      {estTelephone && open && (
+        <FeuilleDuBas titre={t("sommaire")} onFermer={() => setOpen(false)}>
+          <div className="flex flex-col gap-4">
+            {recents && <SectionRecemment worldSlug={worldSlug} espace={recents} onNavigate={() => setOpen(false)} />}
+            {entete}
+            {champRecherche}
+            {/* Se ferme au choix d'un lien, pas au pli d'une categorie. */}
+            <div onClick={(e) => e.target instanceof Element && e.target.closest("a") && setOpen(false)}>{sommaire}</div>
+          </div>
+        </FeuilleDuBas>
       )}
 
       {/* `overflow-y-auto` sur l'aside ET le main (retour utilisateur, la
@@ -139,46 +208,18 @@ export default function BookSkin({
           parlait d'un `h-screen` qui n'a jamais existe la) : sans sa propre
           zone de defilement, un contenu plus long que l'ecran resterait
           simplement coupe, sans barre ni molette pour l'atteindre. */}
-      <aside
-        className={`fixed inset-y-0 left-0 z-50 w-[280px] shrink-0 overflow-y-auto bg-panel-sunken px-6 pb-10 pt-16 transition-transform print:hidden md:static md:z-auto md:w-64 md:translate-x-0 md:bg-transparent ${
-          open ? "translate-x-0" : "-translate-x-full"
-        }`}
-      >
-        {/* `prefetch={false}` (V2.1-20 lot 6) : le dernier des dix-huit. Sur
-            `/partage`, cette racine REDIRIGE de surcroit vers la derniere
-            entree du Livre de sessions — precharger une redirection est du
-            travail serveur dont il ne reste rien. */}
-        <Link href={hrefBase} prefetch={false} onClick={() => setOpen(false)} className="mb-3 block font-chrome text-base font-semibold text-ink hover:text-accent">
-          {title}
-        </Link>
-        {showLogin && (
-          <Link
-            href="/login"
-            className="mb-4 inline-block rounded-full border border-accent px-3 py-1 text-xs text-accent transition-colors hover:bg-accent/10"
-          >
-            Se connecter
-          </Link>
-        )}
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Rechercher…"
-          className="mb-4 w-full rounded-md border border-edge bg-transparent px-2.5 py-1.5 text-sm text-ink outline-none placeholder:text-ink-muted"
-        />
-        <div onClick={() => setOpen(false)}>
-          <EntityTree
-            groups={filteredTree}
-            worldSlug={worldSlug}
-            hrefBase={hrefBase}
-            collapseStorageKey={`creadonjon:collapsed:wiki:${worldSlug}`}
-            defaultCollapsedKinds={defaultCollapsedKinds}
-          />
-        </div>
-      </aside>
+      {!estTelephone && (
+        <aside className="w-64 shrink-0 overflow-y-auto px-6 pb-10 pt-16 max-md:hidden print:hidden">
+          {entete}
+          {champRecherche}
+          {sommaire}
+        </aside>
+      )}
       <main className="min-w-0 flex-1 overflow-y-auto px-4 py-10 pt-16 md:px-8 md:pt-10">
         <div className="mx-auto max-w-[70ch]">
           {banner}
-          {children}
+          {/* V3.1-30 : l'arbre sert aussi a la recherche locale de l'accueil du telephone. */}
+          <ArbreLecteurProvider tree={tree}>{children}</ArbreLecteurProvider>
         </div>
       </main>
       </div>

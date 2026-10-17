@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import WindowFrame from "./WindowFrame";
 import Panel from "./Panel";
@@ -21,6 +22,7 @@ import { useMatchMedia, WINDOWS_MOBILE_QUERY } from "./useMatchMedia";
  */
 export default function WindowsDesktop({ children }: { children: React.ReactNode }) {
   const desktop = useDesktop();
+  const pathname = usePathname();
   const state = useDesktopWindowsState();
   const desktopRef = useRef<HTMLDivElement>(null);
   const isMobile = useMatchMedia(WINDOWS_MOBILE_QUERY);
@@ -44,7 +46,9 @@ export default function WindowsDesktop({ children }: { children: React.ReactNode
     // flottante (`BarreTelephoneMj`, montee par `AppShell`) ; le bas du
     // contenu lui reserve sa place.
     return (
-      <div className={`flex-1 overflow-y-auto p-4 ${RESERVE_BARRE}`}>
+      // V3.1-30 : `pt-16` reserve la place du ☰ (fixe en haut a gauche), qui
+      // mangeait le titre de la fiche. La section MJ n'a pas de ☰ (V3.1-29).
+      <div className={`flex-1 overflow-y-auto px-4 pb-4 ${/^\/m\/[^/]+\/mj(\/|$)/.test(pathname) ? "pt-4" : "pt-16"} ${RESERVE_BARRE}`}>
         <Panel>{children}</Panel>
       </div>
     );

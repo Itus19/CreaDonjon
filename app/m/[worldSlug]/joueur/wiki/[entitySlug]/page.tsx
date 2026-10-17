@@ -13,6 +13,7 @@ import PublicEntityBody from "@/components/entities/public/PublicEntityBody";
 import { WikiBackgroundRegistrar } from "@/components/entities/public/WikiBackgroundProvider";
 import WikiBackgroundPreload from "@/components/entities/public/WikiBackgroundPreload";
 import EditEntityForm from "../../../(monde)/f/[entitySlug]/EditEntityForm";
+import EnregistrerRecent from "@/components/shell/EnregistrerRecent";
 import { lancerFicheAvecPage } from "@/src/server/services/ficheAvecPage";
 
 /**
@@ -75,6 +76,7 @@ export default async function JoueurWikiEntityPage({
     const background = await getPlayerWikiBackground(supabase, world.id, entitySlug, user.id);
     return (
       <>
+        <EnregistrerRecent worldSlug={worldSlug} espace="joueur-wiki" titre={entity.name} type={entity.entity_kind} />
         <WikiBackgroundPreload background={background} />
         <WikiBackgroundRegistrar background={background} />
         <EditEntityForm
@@ -100,6 +102,7 @@ export default async function JoueurWikiEntityPage({
 
   return (
     <>
+      <EnregistrerRecent worldSlug={worldSlug} espace="joueur-wiki" titre={entity.name} type={entity.entity_kind} />
       {/* V2.1-12 : la peau vient du layout ; cette page declare le fond de
           CETTE fiche, la seule chose qui change d'une fiche a l'autre. */}
       <WikiBackgroundPreload background={detail.wikiBackground} />

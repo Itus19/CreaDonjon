@@ -21,3 +21,5 @@ Issue : **accepté** (tel quel) · **corrigé** (retouche locale par Opus) · **
 | 2026-10-17 | V3.1-27 (planches) | aide-haiku | 147 016 | accepté | Rail repliable créé, Rail du joueur refait, dé encoché, radio du rail ; hauteurs mesurées et reportées (Navigation 6 000) |
 | 2026-10-17 | V3.1-29 | dev-sonnet | 210 365 | relu | Feuille du bas, deux barres, pile des fiches, outils, compétences repliables ; choix bien justifiés (outil en page plutôt qu'en feuille). Vérifié par Opus à 390 et 1 280 px, aucune correction |
 | 2026-10-17 | V3.1-29 (planches) | aide-haiku | 110 246 | accepté | Tiroir → Feuille du bas, Barre flottante créée, compétences repliables ; hauteurs reportées |
+| 2026-10-17 | V3.1-30 | dev-sonnet | 123 794 | relu | Accueil du lecteur, consultées récemment, ☰ en feuilles, `?accueil=1` ; vérifié par Opus à 390 et 1 280 px, aucune correction. N'avait pas relancé toute la suite après son dernier correctif (Opus l'a fait : vert) |
+| 2026-10-17 | V3.1-30 (planche) | aide-haiku | 87 527 | accepté | Accueil du lecteur dans Ecrans.dc.html ; hauteur reportée (7 400) |

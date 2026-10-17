@@ -106,7 +106,9 @@ export default function PlayerShell({
         icone: <Icon name={icon} />,
         actif: d.match(pathname),
         badge: icon === "chat" ? unreadCount : undefined,
-        href: d.href,
+        // V3.1-30 : Wiki ouvre son accueil du telephone (`?accueil=1` evite la
+        // redirection vers la derniere entree du Livre de sessions).
+        href: icon === "map" ? `${d.href}?accueil=1` : d.href,
       },
     ];
   });

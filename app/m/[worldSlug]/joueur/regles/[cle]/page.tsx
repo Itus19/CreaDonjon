@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getRuleEntryPageData } from "@/src/server/services/rules";
 import type { Locale } from "@/src/i18n/request";
 import RuleEntryView from "@/components/rules/RuleEntryView";
+import EnregistrerRecent from "@/components/shell/EnregistrerRecent";
 
 /** Reutilise `RuleEntryView` tel quel (deja en lecture seule — une regle officielle ne se modifie jamais) — jamais `RegisterPrimaryWindow`/fenetres flottantes, hors de propos ici. */
 export default async function JoueurRuleEntryPage({
@@ -17,5 +18,10 @@ export default async function JoueurRuleEntryPage({
   const entry = await getRuleEntryPageData(supabase, worldSlug, cle, locale);
   if (!entry) notFound();
 
-  return <RuleEntryView entry={entry} worldSlug={worldSlug} playerRestricted />;
+  return (
+    <>
+      <EnregistrerRecent worldSlug={worldSlug} espace="joueur-regles" titre={entry.name} type={entry.entryType} />
+      <RuleEntryView entry={entry} worldSlug={worldSlug} playerRestricted />
+    </>
+  );
 }
