@@ -18,6 +18,7 @@ import {
   InsertBlockError,
   listBlocksForEntity,
   maxDisplayOrder,
+  saveEntityBlocksBatch,
   updateBlockDisplayOrder,
   updateBlockWithVersionCheck,
 } from "@/src/server/repos/blocks";
@@ -290,9 +291,23 @@ export async function updateBlockContent(
   });
   if (!row) return { ok: false, reason: "conflict" };
   await recordBlockRevision(supabase, existing.entity_id, params.changedBy, params.changeSource ?? "user");
+  await apresEcritureBloc(supabase, { existing, row, validatedData, changedBy: params.changedBy });
 
+  return { ok: true, block: toVisibleBlock(row) };
+}
+
+/**
+ * Ce qu'une ecriture de contenu entraine pour UN bloc, une fois la ligne
+ * ecrite : commun a l'ecriture d'un bloc seul (`updateBlockContent`) et a
+ * l'enregistrement groupe de l'editeur plein ecran (`saveEntityBlocks`).
+ */
+async function apresEcritureBloc(
+  supabase: TypedClient,
+  params: { existing: BlockRow; row: BlockRow; validatedData: unknown; changedBy: string }
+): Promise<void> {
+  const { existing, row, validatedData } = params;
   if (existing.block_type === "image" && (validatedData as { useAsWikiBackground?: boolean }).useAsWikiBackground) {
-    await clearOtherWikiBackgrounds(supabase, existing.entity_id, params.id);
+    await clearOtherWikiBackgrounds(supabase, existing.entity_id, row.id);
   }
 
   if (existing.block_type === "character") {
@@ -305,14 +320,80 @@ export async function updateBlockContent(
   }
 
   if (existing.block_type === "map") {
-    await syncMapAssetVisibility(supabase, row.data, params.visibilityLevel, params.visibilityScopeId);
+    await syncMapAssetVisibility(supabase, row.data, row.visibility_level, row.visibility_scope_id);
     // V3.1-128 : une image remplacee ne reste pas dans le stockage.
     for (const assetId of imagesAbandonnees(existing.data, row.data)) {
       await deleteAssetIfUnreferenced(supabase, assetId);
     }
   }
+}
 
-  return { ok: true, block: toVisibleBlock(row) };
+export interface BlockChangeInput {
+  id: string;
+  version: number;
+  display: Json;
+  data: unknown;
+  visibilityLevel: string;
+  visibilityScopeId: string | null;
+  displayOrder: number;
+}
+
+export type SaveEntityBlocksResult =
+  | { ok: true; blocks: VisibleBlock[] }
+  | { ok: false; reason: "conflict" | "not_found" | "forbidden" };
+
+/**
+ * V3.1-31 — l'enregistrement de l'editeur plein ecran : plusieurs blocs d'une
+ * fiche, contenu et ordre, en UNE ecriture. Tout ou rien (`save_entity_blocks`,
+ * une transaction) : une version perimee annule l'ensemble.
+ *
+ * Memes barrieres que `updateBlockContent`, dans le meme ordre : le droit
+ * d'ecrire avant toute validation (un refus ne depend pas de la forme des
+ * donnees), puis chaque bloc doit appartenir a CETTE fiche, puis chaque
+ * `data` est validee par le schema de son type (`ZodError` remonte : 400).
+ * Une seule revision de l'entite pour tout l'enregistrement.
+ */
+export async function saveEntityBlocks(
+  supabase: TypedClient,
+  params: { entityId: string; changes: BlockChangeInput[]; changedBy: string }
+): Promise<SaveEntityBlocksResult> {
+  const allowed = await canUserEditEntityById(supabase, { entityId: params.entityId, userId: params.changedBy });
+  if (!allowed) return { ok: false, reason: "forbidden" };
+
+  // Lus sous la RLS du lecteur : un bloc qu'il ne voit pas est « introuvable ».
+  const existants = new Map((await listBlocksForEntity(supabase, params.entityId)).map((b) => [b.id, b]));
+  const valides: { existing: BlockRow; change: BlockChangeInput; validatedData: unknown }[] = [];
+  for (const change of params.changes) {
+    const existing = existants.get(change.id);
+    if (!existing) return { ok: false, reason: "not_found" };
+    if (!isBlockType(existing.block_type)) throw new Error(`Type de bloc inconnu en base : ${existing.block_type}`);
+    const schema = dataSchemaForBlockType(existing.block_type);
+    if (!schema) throw new Error(`Type de bloc inconnu : "${existing.block_type}".`);
+    valides.push({ existing, change, validatedData: schema.parse(change.data) });
+  }
+
+  const rows = await saveEntityBlocksBatch(
+    supabase,
+    params.entityId,
+    valides.map(({ change, validatedData }) => ({
+      id: change.id,
+      version: change.version,
+      display: change.display,
+      data: validatedData as Json,
+      visibilityLevel: change.visibilityLevel,
+      visibilityScopeId: change.visibilityScopeId,
+      displayOrder: change.displayOrder,
+    }))
+  );
+  if (!rows) return { ok: false, reason: "conflict" };
+
+  await recordBlockRevision(supabase, params.entityId, params.changedBy, "user");
+  const parId = new Map(rows.map((r) => [r.id, r]));
+  for (const { existing, validatedData } of valides) {
+    const row = parId.get(existing.id);
+    if (row) await apresEcritureBloc(supabase, { existing, row, validatedData, changedBy: params.changedBy });
+  }
+  return { ok: true, blocks: rows.map(toVisibleBlock) };
 }
 
 export async function reorderBlock(

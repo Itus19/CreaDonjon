@@ -25,6 +25,32 @@ export const reorderBlockSchema = z.object({
   displayOrder: z.number(),
 });
 
+/**
+ * V3.1-31 — enregistrement groupe de l'editeur plein ecran : l'etat COMPLET
+ * de chaque bloc modifie (contenu, visibilite, ordre), version attendue
+ * comprise. Au plus 100 blocs, chacun une seule fois ; `data` est validee
+ * ensuite par le schema de son type de bloc (service).
+ */
+export const saveEntityBlocksSchema = z.object({
+  changes: z
+    .array(
+      z.object({
+        id: z.guid(),
+        version: z.number().int().positive(),
+        display: zBlockDisplay,
+        data: z.unknown(),
+        visibility: zVisibilityInput,
+        displayOrder: z.number().finite(),
+      })
+    )
+    .min(1, "Aucun changement à enregistrer.")
+    .max(100, "100 blocs au plus.")
+    .refine((changes) => new Set(changes.map((c) => c.id)).size === changes.length, {
+      message: "Un même bloc apparaît deux fois.",
+    }),
+});
+export type SaveEntityBlocksInput = z.infer<typeof saveEntityBlocksSchema>;
+
 /** Tirage sur un bloc random_table (V1-E1) — un seul champ optionnel, jamais plus que le nombre d'entrees distinctes d'une table (verifie cote pur, src/core/tables/roll.ts). */
 export const drawTableSchema = z.object({
   count: z.number().int().min(1).max(20).default(1),

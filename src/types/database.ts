@@ -2925,6 +2925,10 @@ export type Database = {
         Args: { p_natural: number | null; p_request: string; p_total: number }
         Returns: Json
       }
+      save_entity_blocks: {
+        Args: { p_changes: Json; p_entity: string }
+        Returns: Json
+      }
       set_own_participant_vitals: {
         Args: { p_conditions: Json; p_hp_current: number; p_participant: string; p_temp_hp: number }
         Returns: Json

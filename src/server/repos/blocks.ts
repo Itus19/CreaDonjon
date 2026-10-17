@@ -245,6 +245,49 @@ export async function updateBlockDisplayOrder(
   return data as BlockRow | null;
 }
 
+/** Un changement de l'enregistrement groupe : l'etat COMPLET du bloc, version attendue comprise. */
+export interface BlockBatchChange {
+  id: string;
+  version: number;
+  display: Json;
+  data: Json;
+  visibilityLevel: string;
+  visibilityScopeId: string | null;
+  displayOrder: number;
+}
+
+/**
+ * V3.1-31 — ecrit plusieurs blocs d'une fiche en UNE transaction
+ * (`public.save_entity_blocks`, `security invoker` : la RLS s'applique). Tout
+ * ou rien : une version perimee (ou un bloc d'une autre fiche) annule
+ * l'ensemble et renvoie `null`, comme `updateBlockWithVersionCheck` pour un
+ * bloc seul.
+ */
+export async function saveEntityBlocksBatch(
+  supabase: TypedClient,
+  entityId: string,
+  changes: BlockBatchChange[]
+): Promise<BlockRow[] | null> {
+  const { data, error } = await supabase.rpc("save_entity_blocks", {
+    p_entity: entityId,
+    p_changes: changes.map((c) => ({
+      id: c.id,
+      version: c.version,
+      display: c.display,
+      data: c.data,
+      visibility_level: c.visibilityLevel,
+      visibility_scope_id: c.visibilityScopeId,
+      display_order: c.displayOrder,
+    })) as Json,
+  });
+  if (error) {
+    // `PT409` : levee par la fonction (version perimee, bloc hors de la fiche).
+    if (error.code === "PT409") return null;
+    throw new Error(error.message);
+  }
+  return (data ?? []) as unknown as BlockRow[];
+}
+
 export async function deleteBlock(supabase: TypedClient, id: string): Promise<void> {
   const { error } = await supabase.from("blocks").delete().eq("id", id);
   if (error) throw new Error(error.message);

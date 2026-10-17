@@ -331,6 +331,8 @@ create index blocks_type_idx   on blocks (block_type);
 
 Chaque type a un schéma Zod dans `src/core/schemas/blocks/<type>.ts` et une version stockée dans `data.__v`. Catalogue et spécification détaillée dans `Spec_Blocs_de_Wiki_v0_1.md`.
 
+**Enregistrement groupé (V3.1-31, ADR 0065).** L'éditeur plein écran du téléphone écrit plusieurs blocs d'une fiche d'un seul geste : `public.save_entity_blocks(p_entity uuid, p_changes jsonb) returns setof blocks`, `security invoker` (la RLS `blocks_update` s'applique, la fonction n'ouvre aucun droit). Chaque changement porte l'état complet du bloc et sa version attendue ; tout ou rien — une version périmée ou un bloc d'une autre fiche lève `PT409` (PostgREST : 409) et annule la transaction entière. 100 blocs au plus. Appelée seulement par `saveEntityBlocks` (`src/server/services/blocks.ts`), qui vérifie avant elle `canEditEntity`, l'appartenance de chaque bloc et chaque `data` (Zod), et n'enregistre qu'une révision d'entité. L'écriture d'un bloc seul (`PATCH /api/blocks/[id]`) ne change pas.
+
 ### 7.1 Modèles, images attachées
 
 > **`entity_mentions` a été supprimée le 16 septembre 2026**
