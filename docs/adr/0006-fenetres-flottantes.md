@@ -1,7 +1,7 @@
 # 0006 — Fenêtres flottantes avec URL, en remplacement du panneau unique
 
 **Date :** 2026-07-31
-**Statut :** acceptée
+**Statut :** acceptée — la partie « fenêtres flottantes » est remplacée par l'ADR 0066 (deux volets à onglets, 17 octobre 2026) ; l'adressage par fiche reste en vigueur.
 
 ## Contexte
 

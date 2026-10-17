@@ -2,6 +2,65 @@
 
 ---
 
+### ☑ V3.1-20 — Fenêtres du MJ en deux volets à onglets · `L` · sans modèle IA — **fait le 17 octobre (ADR 0066)**
+
+**Modèle conseillé : Sonnet** — interface décidée et esquissée, sans nouvelle donnée.
+
+Lot g du ticket parent V3.1-19 (refonte « verre minéral »).
+
+**Constat.** Les fenêtres du MJ se déplacent librement, s'aimantent à une
+moitié d'écran contre un bord, se réduisent en bas, mais **ne se
+redimensionnent pas** ; elles s'ouvrent à 860 px, décalées en cascade. L'auteur
+veut que la place se répartisse toute seule.
+
+**Décision** (sur quatre propositions esquissées et vivantes dans « verre
+minéral », rangée « Fenêtres du MJ » : 1 tuiles à deux, 2 une grande + une
+pile, 3 deux volets à onglets, 4 une fiche + des vignettes) : **la 3**, avec
+son évolution faite tout de suite.
+
+- **Une fiche** prend toute la zone de travail.
+- **Une deuxième** ouvre un second volet, moitié-moitié ; le séparateur se fait
+  glisser, un double-clic le ramène au milieu.
+- **Au-delà**, une fiche ne remplace rien : elle s'ajoute **en onglet** dans le
+  volet actif (le dernier cliqué). Les onglets vivent dans la barre de titre du
+  volet, chacun avec son ×.
+- **Glisser un onglet** :
+  - sur l'autre volet → il y passe (c'est ainsi qu'on choisit ce qui s'affiche
+    de chaque côté) ;
+  - hors de la barre d'onglets, sur la moitié vide quand il n'y a qu'un volet →
+    il crée le second volet.
+- Un volet dont on ferme le dernier onglet disparaît ; l'autre reprend toute la
+  place.
+- Les pastilles restent : agrandir un volet le temps de lire, fermer.
+
+**Ce qui ne change pas** : chaque fiche reste dans l'adresse (`?avec=`, ADR
+0006/0011) — l'URL devra porter aussi le volet et l'onglet actif de chaque
+fiche, pour qu'un rechargement rende la même disposition. Sur téléphone, rien
+ne change (plein écran, une fiche à la fois).
+
+**À trancher en le codant** : la barre des fiches réduites (V2-K4) devient
+inutile si plus rien ne se réduit — onglets à la place. Un ADR remplacera la
+partie « fenêtres flottantes » de l'ADR 0006.
+
+**Tranché le 4 octobre, pour que le ticket parte à Sonnet** : la barre des
+fiches réduites (V2-K4) disparaît, les onglets la remplacent ; l'ADR qui
+remplace la partie « fenêtres flottantes » de l'ADR 0006 s'écrit dans ce
+ticket. Sur téléphone, la pile « N fiches » en feuille est faite par
+V3.1-29. **Dépend de** : V3.1-25 (pilule).
+
+**Critères d'acceptation**
+- [x] Une, deux, trois fiches et plus : disposition conforme ci-dessus.
+- [x] Glisser un onglet d'un volet à l'autre, et hors de la barre pour créer le second volet.
+- [x] Séparateur glissable, double-clic au milieu.
+- [x] Rechargement : même disposition (URL).
+- [x] Catalogue mis à jour (planche « Fenêtre flottante » remplacée).
+
+**Clôture** : logique (Opus) — `lib/ui/volets.ts`, testée d'abord (placer, retirer, glisser, partage, adresse `?volets=` qui rend la même disposition, ancien lien et adresse abîmée tolérés) ; ADR 0066, qui remplace la partie « fenêtres flottantes » de l'ADR 0006. Interface (Sonnet) — `VoletsLayer.tsx` (une boîte stable par fiche, la primaire y entre par un portail : changer de volet ne remonte jamais une fiche), `DesktopWindowsProvider` réécrit (disposition dérivée de l'adresse), onglets glissables (HTML5), séparateur à capture de pointeur ; `WindowFrame` et la barre des fiches réduites retirés ; `?volets=` suit `?avec=` au changement de section. Corrigé par Opus : onglets qui débordaient d'un volet étroit, volets collés au rail (désormais un cadre arrondi à 8 px). Vérifié dans le navigateur à 1280 et 820 px (MJ) : une, deux, trois fiches ; glisser vers l'autre volet ; dépôt sur la moitié droite qui crée le second volet ; séparateur à 31 % puis rechargement identique ; aucun remontage d'une fiche déplacée ; téléphone inchangé (390 px, pile « 2 fiches »).
+
+*Restes* : navigation au clavier par flèches dans une barre d'onglets (chaque onglet reste atteignable à la tabulation) ; la couche suit la zone par sa taille, pas par un simple décalage sans changement de taille.
+
+---
+
 ### ☑ V3.1-33 — L'outil de dés unique (feuille, panneau, scintillement) · `L` · sans modèle IA — **fait le 17 octobre**
 
 **Modèle conseillé : Sonnet** — ADR 0035, ADR 0036 §6, planches précises ; la cible reste à V3.1-21.

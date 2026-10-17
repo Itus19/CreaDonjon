@@ -269,7 +269,7 @@ Presque tout ce que montre la référence est dérivable. PJ contre PNJ l'est. A
 | `<AppShell>` | barre supérieure, latérale, zone de travail, fond |
 | `<Sidebar>` · `<EntityTree>` | arborescence dérivée, repliable |
 | `<CommandPalette>` | ⌘K — recherche et navigation |
-| `<WindowFrame>` | fenêtre déplaçable/redimensionnable d'une fiche (ADR-0006, remplace `<Panel>`) |
+| `VoletsLayer` | deux volets à onglets des fiches ouvertes (ADR-0066, remplace les fenêtres flottantes de l'ADR-0006) |
 | `<EntityChip>` · `<RuleChip>` | renvois, violet et vert d'eau, avec résumé au survol |
 | `<PropertyRow>` | une ligne de relations en en-tête de fiche |
 | `<BlockShell>` | cadre commun d'un bloc : titre, visibilité, repli, menu |
