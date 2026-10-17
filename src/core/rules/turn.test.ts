@@ -41,6 +41,12 @@ describe("les points de vie d'un personnage joueur (jets contre la mort, V3.1-24
     expect(out.state.actors.bram.hp).toEqual({ current: 7, max: 12, temp: 0 });
   });
 
+  it("V3.1-105 : un coup critique sur un PJ deja a 0 PV coute deux echecs", () => {
+    const down: TurnActor = { ...actor(0), conditions: ["unconscious"], deathSaves: { success: 0, fail: 0 } };
+    const out = applyEffects(stateWith({ bram: down }), [{ action: "deal_damage", who: "bram", amount: 4, critical: true }]);
+    expect(out.state.actors.bram.deathSaves).toEqual({ success: 0, fail: 2 });
+  });
+
   it("un acteur sans jets contre la mort (monstre) tombe a 0 sans Inconscient", () => {
     const out = applyEffects(stateWith({ gob: actor(3) }), [{ action: "deal_damage", who: "gob", amount: 11 }]);
     expect(out.state.actors.gob.conditions).toEqual([]);

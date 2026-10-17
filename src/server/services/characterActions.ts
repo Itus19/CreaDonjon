@@ -521,6 +521,8 @@ export async function castSpell(
     critical: boolean;
     actorUserId: string;
     locale: Locale;
+    /** V3.1-105 : `false` pour une attaque de sort ratée — l'emplacement est dépensé, aucun dé de dégâts n'est lancé. Vrai par défaut. */
+    rollDamage?: boolean;
   }
 ): Promise<CastSpellOutcome | { error: ActionErrorReason | "no_slot_available" }> {
   const ctx = await resolveCharacterActionContext(supabase, params.entityId, params.campaignId, params.locale);
@@ -563,7 +565,7 @@ export async function castSpell(
     const scalingBlock = spellBlocks.find((b) => b.block_type === "scaling");
     const effectsData = effectsBlock?.data as unknown as EffectsBlockData | undefined;
     const baseFormula = effectsData?.effects[0]?.formula;
-    if (baseFormula) {
+    if (baseFormula && params.rollDamage !== false) {
       const formulaText = scalingBlock
         ? resolveScaledFormulaText(scalingBlock.data as unknown as ScalingBlockData, params.slotLevel, effectsData, baseFormula)
         : formatFormulaNode(baseFormula);
@@ -621,6 +623,27 @@ export async function castSpell(
       ? (ctx.sheet.spellcasting?.pactSlots?.count ?? 0) - state.pact_slots_used - 1
       : availableSlotsAt(ctx, params.slotLevel) - used - 1;
   return { slotLevelConsumed: params.slotLevel, remainingSlots, damage, concentration };
+}
+
+/**
+ * V3.1-105 — ce qu'un sort dit de lui-même avant d'être lancé : sa sauvegarde
+ * (caractéristique, effet d'une réussite) et s'il porte une formule. Lu avant
+ * `castSpell` pour refuser un « sort à sauvegarde » qui n'en déclare pas, sans
+ * dépenser d'emplacement.
+ */
+export async function readSpellMechanics(
+  supabase: TypedClient,
+  params: { rulesetId: string; spellKey: string }
+): Promise<{ save: { ability: string; effectOnSuccess?: string } | null; hasFormula: boolean } | null> {
+  const entry = await findEntryInRulesetChain(supabase, params.rulesetId, params.spellKey);
+  if (!entry) return null;
+  const blocks = await listBlocksForRulesetEntry(supabase, entry.id);
+  const effectsData = blocks.find((b) => b.block_type === "effects")?.data as unknown as EffectsBlockData | undefined;
+  const first = effectsData?.effects[0];
+  return {
+    save: first?.save ? { ability: first.save.ability, effectOnSuccess: first.save.effect_on_success } : null,
+    hasFormula: Boolean(first?.formula),
+  };
 }
 
 /** `sheet.spellcasting.slots` est deja le resultat combine (characterSheet(), V1-B1) : rien a recombiner ici. */

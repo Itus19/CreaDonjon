@@ -122,7 +122,7 @@ export type ResolvedEffect =
   | { action: "apply_modifier"; who: string; modifier: Modifier }
   | { action: "apply_condition"; who: string; key: string }
   | { action: "remove_condition"; who: string; key: string }
-  | { action: "deal_damage"; who: string; amount: number; damage_type?: string }
+  | { action: "deal_damage"; who: string; amount: number; damage_type?: string; /** V3.1-105 : un coup critique — deux échecs pour un PJ déjà à 0 PV. */ critical?: boolean }
   | { action: "heal"; who: string; amount: number }
   | { action: "spend_resource"; who: string; key: string; amount: number }
   | { action: "move"; who: string; zone: TriggerZone }

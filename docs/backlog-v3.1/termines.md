@@ -2,6 +2,45 @@
 
 ---
 
+### ☑ V3.1-105 — Cibler : le cœur commun de résolution · `L` · sans modèle IA — **fait le 17 octobre (ADR 0042)**
+
+**Modèle conseillé : Opus** — extraction du tour solo, moteur. **ADR 0042.**
+**Dépend de** : 101.
+
+**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+- `src/server/services/targetedRoll.ts` : `resolveTargetedRoll` (entrée
+  Zod de l'ADR) — lit la cible dans le combat `running`, lance (serveur),
+  résout (`resolveAttackRoll`, `resolveDamageRoll`, sauvegarde contre DD
+  pour un sort à jet du MJ, `eventsForAttack`, déclencheurs), calcule
+  (`applyEffects`) et écrit ; touche → demande de dégâts chaînée (dés
+  doublés au critique) ; PJ à 0 PV → jets contre la mort (ADR 0036 §8) ;
+  créature à 0 PV → hors de l'initiative ; journal ; « Annuler » = écriture
+  inverse journalisée.
+- `applyResolvedTurn` (solo) délègue sa partie « appliquer » à ce service ;
+  les tests du solo restent verts **sans modification**.
+- Autorisation : MJ → tout participant ; joueur → son PJ comme acteur, et
+  écriture refusée sur une cible qu'il ne contrôle pas (verdict seulement)
+  tant que V3.1-104 n'est pas fait.
+
+**Critères d'acceptation**
+- [x] Touche, dégâts, états, soins résolus par le moteur et appliqués,
+  journalisés (tests de service).
+- [x] Les tests du solo passent tels quels.
+- [x] « Annuler » rend l'état d'avant par une écriture inverse.
+
+**Réalisé** (détail dans l'ADR 0042, « Réalisation »)
+- Noyau, tests d'abord : `src/core/rules/targeting.ts` (`attackVerdict` 2024, `damageAfterSave`, `monsterSaveBonus`, `isOutOfFight`, `advanceTurnSkipping`/`retreatTurnSkipping`) ; `eventsForDamage` ; un critique sur un PJ à 0 PV coûte deux échecs (`turn.ts`).
+- `src/server/services/targetedRoll.ts` : `applyResolvedEffects` (extrait du solo, qui l'appelle) et `resolveTargetedRoll` (attaque, dégâts, sort à attaque, sort à sauvegarde, soin ; acteur personnage ou monstre). Route `POST …/combats/[combatId]/targeted-roll` (MJ).
+- `patchCombatParticipant` porte et annule les jets contre la mort ; le passage de tour saute une créature à 0 PV ; `castSpell` peut dépenser l'emplacement sans lancer de dégâts.
+- Tests : `targetedRoll.integration.test.ts` 9/9 (dont un tour solo de bout en bout), `targetedRoll.noAi.test.ts` ; tests du solo inchangés et verts (`turnIntent.noAi`, `turnIntent.pendingRequest`, `characterActions`, `ownInitiative`).
+
+*Écart* : un joueur n'a pas encore le « verdict seulement » prévu — il ne lit plus la CA adverse (ADR 0040) ; il viendra avec V3.1-104.
+*Restes* : « Cibler » dans l'outil de dés (écran) ; jets secrets d'une fiche (ADR 0038) ; données de sauvegarde et de soins des sorts SRD (rares).
+
+
+---
+
 ### ☑ V3.1-103 — Initiative : les jets d'initiative des joueurs · `M` · sans modèle IA — **fait le 17 octobre (ADR 0040)**
 
 **Modèle conseillé : Opus** — changement de schéma. **ADR 0040.**

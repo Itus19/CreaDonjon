@@ -51,35 +51,6 @@ V3.1-104 n'est plus bloqué : option B de l'ADR 0041, choisie le 10 octobre.
 
 ---
 
-### ☐ V3.1-105 — Cibler : le cœur commun de résolution · `L` · sans modèle IA — **prêt (Opus)**
-
-**Modèle conseillé : Opus** — extraction du tour solo, moteur. **ADR 0042.**
-**Dépend de** : 101.
-
-**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-- `src/server/services/targetedRoll.ts` : `resolveTargetedRoll` (entrée
-  Zod de l'ADR) — lit la cible dans le combat `running`, lance (serveur),
-  résout (`resolveAttackRoll`, `resolveDamageRoll`, sauvegarde contre DD
-  pour un sort à jet du MJ, `eventsForAttack`, déclencheurs), calcule
-  (`applyEffects`) et écrit ; touche → demande de dégâts chaînée (dés
-  doublés au critique) ; PJ à 0 PV → jets contre la mort (ADR 0036 §8) ;
-  créature à 0 PV → hors de l'initiative ; journal ; « Annuler » = écriture
-  inverse journalisée.
-- `applyResolvedTurn` (solo) délègue sa partie « appliquer » à ce service ;
-  les tests du solo restent verts **sans modification**.
-- Autorisation : MJ → tout participant ; joueur → son PJ comme acteur, et
-  écriture refusée sur une cible qu'il ne contrôle pas (verdict seulement)
-  tant que V3.1-104 n'est pas fait.
-
-**Critères d'acceptation**
-- [ ] Touche, dégâts, états, soins résolus par le moteur et appliqués,
-  journalisés (tests de service).
-- [ ] Les tests du solo passent tels quels.
-- [ ] « Annuler » rend l'état d'avant par une écriture inverse.
-
----
-
 ### ☐ V3.1-106 — Cibler côté MJ : outil de dés, Table, Initiative · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet.** **Dépend de** : 105, 33 (outil de dés), 34, 38.

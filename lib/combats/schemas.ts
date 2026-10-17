@@ -66,3 +66,29 @@ export const myInitiativeSchema = z.discriminatedUnion("mode", [
     }),
 ]);
 export type MyInitiativeInput = z.infer<typeof myInitiativeSchema>;
+
+/**
+ * V3.1-105 (ADR 0042) — un jet ciblé contre un participant du combat en cours.
+ * L'acteur : un personnage (sa fiche) ou un participant (un monstre et son
+ * bloc de stats). L'action : une arme de l'inventaire, un sort connu, ou une
+ * action du bloc de stats. Les combinaisons sont vérifiées par le service.
+ */
+export const targetedRollSchema = z.object({
+  kind: z.enum(["attack", "damage", "spell_attack", "spell_save", "heal"]),
+  actor: z.discriminatedUnion("kind", [
+    z.object({ kind: z.literal("character"), entityId: z.string().uuid() }),
+    z.object({ kind: z.literal("participant"), participantId: z.string().uuid() }),
+  ]),
+  action: z.discriminatedUnion("kind", [
+    z.object({ kind: z.literal("weapon"), itemId: z.string().min(1).max(200) }),
+    z.object({ kind: z.literal("spell"), spellKey: z.string().min(1).max(200), slotLevel: z.number().int().min(0).max(9) }),
+    z.object({ kind: z.literal("monster_action"), name: z.string().min(1).max(200) }),
+  ]),
+  targetId: z.string().uuid(),
+  advantage: z.enum(["normal", "advantage", "disadvantage"]).default("normal"),
+  /** Dégâts seulement : la demande chaînée d'une attaque critique double les dés. */
+  critical: z.boolean().default(false),
+  /** Les jets d'un monstre (MJ) restent cachés ; les jets d'une fiche restent publics (ADR 0038 pas encore fait). */
+  secret: z.boolean().default(false),
+});
+export type TargetedRollInput = z.infer<typeof targetedRollSchema>;

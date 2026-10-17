@@ -55,6 +55,20 @@ export function eventsForAttack(params: {
   return events;
 }
 
+/**
+ * V3.1-105 — des degats lances A PART de l'attaque (la table lance d'abord
+ * l'attaque, puis les degats si elle touche) : les deux faces de l'echange,
+ * comme `eventsForAttack` quand il les connait d'un coup. Zero degat : rien.
+ */
+export function eventsForDamage(params: { attacker: string; target: string; damage: number; critical: boolean }): FiredEvent[] {
+  if (params.damage <= 0) return [];
+  const data = { "event.damage": params.damage, "event.critical": params.critical ? 1 : 0 };
+  return [
+    { event: "damage_dealt", subject: params.attacker, data },
+    { event: "damage_taken", subject: params.target, data },
+  ];
+}
+
 /** Un jet de sauvegarde deja resolu. `save_passed` et `save_failed` sont deux evenements distincts du vocabulaire, pas un drapeau. */
 export function eventsForSave(params: {
   who: string;

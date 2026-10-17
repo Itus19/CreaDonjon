@@ -1,10 +1,9 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database, Json } from "@/src/types/database";
+import type { Database } from "@/src/types/database";
 import type { Locale } from "@/src/i18n/request";
-import { advanceSceneTime, budgetOf, rememberEvent, startTurn, type SceneState } from "@/src/core/rules/scene";
-import { spendFromBudget, type BudgetKind } from "@/src/core/rules/actionBudget";
-import { applyEffects, type TurnActor, type TurnChange } from "@/src/core/rules/turn";
+import { advanceSceneTime, rememberEvent, startTurn, type SceneState } from "@/src/core/rules/scene";
+import type { BudgetKind } from "@/src/core/rules/actionBudget";
 import { eventsForAttack } from "@/src/core/rules/gameEvents";
 import type { AttackRollResult } from "@/src/core/rules/action";
 import type { ResolvedEffect } from "@/src/core/rules/triggers";
@@ -19,14 +18,10 @@ import {
   type ResolveIntentErrorReason,
 } from "@/src/server/services/turnIntent";
 import type { PendingRequest, PendingRequestKind } from "@/src/core/schemas/runtimeState";
-import { fireTriggersForCharacter } from "@/src/server/services/triggerRuntime";
-import { getEntityRuntimeState, applyRuntimeStateChange } from "@/src/server/services/runtimeState";
-import { patchCombatParticipant } from "@/src/server/services/combats";
-import { getCombatParticipantById, listCombatParticipants, listCombatsForCampaign } from "@/src/server/repos/combats";
+import { listCombatsForCampaign } from "@/src/server/repos/combats";
 import { getSceneState, putSceneState } from "@/src/server/repos/sceneStates";
-import { insertSessionEvent, nextEventSeq } from "@/src/server/repos/sessions";
-import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
 import type { TurnOutcome } from "@/lib/solo/types";
+import { applyResolvedEffects, fireActorTriggers } from "@/src/server/services/targetedRoll";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -70,42 +65,6 @@ const BUDGET_COST: Record<IntentChoice["kind"], BudgetKind> = {
  */
 function minutesForTurn(scene: SceneState): number {
   return scene.activeCombatId ? 0 : 1;
-}
-
-/** Les PV d'un participant de combat, ou ceux de l'etat de jeu d'une entite. */
-async function loadActor(
-  supabase: TypedClient,
-  params: { campaignId: string; entityId: string; hpMax: number; budgetSpeed: number; scene: SceneState | null }
-): Promise<TurnActor> {
-  const state = await getEntityRuntimeState(supabase, params.entityId, params.campaignId);
-  return {
-    hp: { current: state.hp.current, max: params.hpMax, temp: state.hp.temp },
-    conditions: [...state.conditions],
-    deathSaves: { ...state.death_saves },
-    resources: { ...state.resources },
-    budget: params.scene ? budgetOf(params.scene, params.entityId, params.budgetSpeed) : { action: 1, bonus: 1, reaction: 1, movement: params.budgetSpeed, free: 1 },
-  };
-}
-
-/** Une phrase par changement — c'est ce que l'ecran affiche et ce que la narration recevra. */
-function describeChange(change: TurnChange, nameOf: (id: string) => string): string | null {
-  switch (change.kind) {
-    case "hp":
-      return `${nameOf(change.who)} : ${change.from.current} → ${change.to.current} PV (${change.note})`;
-    case "condition":
-      return `${nameOf(change.who)} ${change.added ? "subit" : "n'a plus"} : ${change.key}`;
-    case "zone":
-      return `${nameOf(change.who)} passe de ${change.from} à ${change.to}`;
-    case "budget":
-      return `${nameOf(change.who)} — ${change.budget} : ${change.from} → ${change.to}${change.overBudget ? " (hors budget)" : ""}`;
-    case "resource":
-      return `${nameOf(change.who)} — ${change.key} : ${change.from} → ${change.to}`;
-    case "roll":
-      return `${change.label} : ${change.value}${change.note ? ` — ${change.note}` : ""}`;
-    case "hint":
-    case "ignored":
-      return null;
-  }
 }
 
 export async function playTurn(
@@ -259,162 +218,30 @@ async function applyResolvedTurn(
       ac,
       damage: damage?.total,
     });
-    const runtime = await getEntityRuntimeState(supabase, params.entityId, params.campaignId);
-    for (const event of fired) {
-      try {
-        const out = await fireTriggersForCharacter(supabase, {
-          rulesetId: ctx.rulesetId,
-          subject: params.entityId,
-          sheet: ctx.sheet,
-          runtime,
-          event,
-          scene: scene ?? undefined,
-        });
-        effects.push(...out.effects);
-      } catch (err) {
-        // Une regle maison cassee n'emporte jamais un tour : le jet est
-        // acquis. L'echec est CONSIGNE, jamais tu (CLAUDE.md).
-        effects.push({
-          action: "narrate_hint",
-          text: `Règle non évaluée sur « ${event.event} » : ${err instanceof Error ? err.message : String(err)}`,
-        });
-      }
-    }
+    // V3.1-105 : le meme moteur que la table (`targetedRoll.ts`).
+    effects.push(...(await fireActorTriggers(supabase, { ctx, actorEntityId: params.entityId, campaignId: params.campaignId, events: fired, scene })));
   }
 
-  // 3. L'application. Le noyau pur decide, ce service persiste.
-  // Le combat de la scene s'il y en a un, sinon celui qui tourne dans la
-  // campagne — meme source que les cibles de la barre d'intention (B1),
-  // jamais une seconde definition de « qui est en face ».
+  // 3 a 5. L'application, la persistance et son journal : le coeur commun
+  // (V3.1-105, ADR 0042), partage avec la table. Le combat de la scene s'il
+  // y en a un, sinon celui qui tourne dans la campagne — meme source que les
+  // cibles de la barre d'intention (B1). Une resolution chainee
+  // (`choiceKind: null`) ne depense rien : l'action a deja ete payee.
   const combatId =
     scene?.activeCombatId ??
     (await listCombatsForCampaign(supabase, params.campaignId)).find((c) => c.status === "running")?.id ??
     null;
-  const participants = combatId ? await listCombatParticipants(supabase, combatId) : [];
-
-  const actors: Record<string, TurnActor> = {
-    [params.entityId]: await loadActor(supabase, {
-      campaignId: params.campaignId,
-      entityId: params.entityId,
-      hpMax: ctx.sheet.hitPoints.max,
-      budgetSpeed: ctx.sheet.speed.value,
-      scene,
-    }),
-  };
-  const names: Record<string, string> = { [params.entityId]: ctx.entityName };
-  for (const p of participants) {
-    const key = `participant:${p.id}`;
-    actors[key] = {
-      hp: { current: p.hp_current ?? 0, max: p.hp_max ?? p.hp_current ?? 0, temp: p.temp_hp },
-      conditions: Array.isArray(p.conditions) ? p.conditions.filter((c): c is string => typeof c === "string") : [],
-      resources: {},
-      budget: { action: 1, bonus: 1, reaction: 1, movement: 9, free: 1 },
-    };
-    names[key] = p.label;
-  }
-
-  // La depense du tour est un effet comme un autre : elle passe par le
-  // meme chemin, donc elle se lit dans le meme journal. Une resolution
-  // chainee (`choiceKind: null`) ne depense rien : l'action a deja ete
-  // payee par l'attaque qui l'a declenchee.
-  if (params.choiceKind !== null) {
-    const spend = spendFromBudget(actors[params.entityId].budget, BUDGET_COST[params.choiceKind]);
-    actors[params.entityId] = { ...actors[params.entityId], budget: spend.budget };
-  }
-
-  const applied = applyEffects({ scene: scene ?? emptySceneFor(sceneBefore), actors }, effects);
-
-  // 4. La persistance, cible par cible. Un participant de combat passe par
-  //    `patchCombatParticipant` — qui ecrit AUSSI l'etat de jeu quand la
-  //    ligne porte une entite, et journalise l'ensemble en un evenement
-  //    annulable d'un clic. Ne pas refaire ce travail a cote.
-  const persisted: string[] = [];
-  for (const [who, after] of Object.entries(applied.state.actors)) {
-    const before = actors[who];
-    const changedHp = before.hp.current !== after.hp.current || before.hp.temp !== after.hp.temp;
-    const changedConditions = before.conditions.join("|") !== after.conditions.join("|");
-    const changedDeath =
-      before.deathSaves !== undefined &&
-      after.deathSaves !== undefined &&
-      (before.deathSaves.success !== after.deathSaves.success || before.deathSaves.fail !== after.deathSaves.fail);
-    if (!changedHp && !changedConditions && !changedDeath) continue;
-
-    if (who.startsWith("participant:")) {
-      const participantId = who.slice("participant:".length);
-      const row = await getCombatParticipantById(supabase, participantId);
-      if (!row) continue;
-      await patchCombatParticipant(supabase, {
-        participantId,
-        patch: {
-          ...(changedHp ? { hpCurrent: after.hp.current, tempHp: after.hp.temp } : {}),
-          ...(changedConditions ? { conditions: after.conditions } : {}),
-        },
-        actorUserId: params.callerId,
-        note: `Tour solo — ${params.text}`,
-      });
-      persisted.push(names[who] ?? participantId);
-      continue;
-    }
-
-    await applyRuntimeStateChange(supabase, {
-      entityId: who,
-      campaignId: params.campaignId,
-      patch: {
-        ...(changedHp ? { hp: { current: after.hp.current, temp: after.hp.temp } } : {}),
-        ...(changedConditions ? { conditions: after.conditions } : {}),
-        ...(changedDeath && after.deathSaves ? { death_saves: after.deathSaves } : {}),
-      },
-      note: `Tour solo — ${params.text}`,
-      sessionId: await getOrOpenSessionForCampaign(supabase, params.campaignId),
-      actor: "player",
-      actorUserId: params.callerId,
-    });
-    persisted.push(names[who] ?? who);
-  }
-
-  // 5. Ce que le tour a change, en clair, dans son propre evenement.
-  const nameOf = (id: string) => names[id] ?? id;
-  const changes = applied.changes.map((c) => describeChange(c, nameOf)).filter((line): line is string => line !== null);
-  const ignored = applied.changes
-    .filter((c): c is Extract<TurnChange, { kind: "ignored" }> => c.kind === "ignored")
-    .map((c) => c.reason);
-  const hints = applied.changes
-    .filter((c): c is Extract<TurnChange, { kind: "hint" }> => c.kind === "hint")
-    .map((c) => c.text);
-
-  let applicationEventId: string | null = null;
-  if (applied.changes.length > 0) {
-    const sessionId = await getOrOpenSessionForCampaign(supabase, params.campaignId);
-    const seq = await nextEventSeq(supabase, sessionId);
-    const event = await insertSessionEvent(supabase, {
-      sessionId,
-      seq,
-      kind: "rule_application",
-      actor: "system",
-      actorUserId: params.callerId,
-      payload: {
-        __v: 1,
-        from_event: record.eventId,
-        effects,
-        changes: applied.changes,
-        persisted,
-        // V3-B4 — "raconter autrement" (reprendre un tour PASSE pour la
-        // narration) doit retrouver les memes phrases que celles deja
-        // montrees a l'ecran, sans re-resoudre `nameOf` : les noms
-        // viennent de `names`, construit une seule fois par tour et
-        // absent de ce payload — les recalculer depuis `changes`
-        // (TurnChange bruts) demanderait de refaire cette resolution.
-        // Ecrites une fois ici, elles se relisent telles quelles.
-        changes_text: changes,
-        hints_text: hints,
-        // V3-D4 — meme raison, pour le fil : `ignored` etait rendu par
-        // l'ecran mais jamais ecrit ici avant ce ticket, une regle non
-        // appliquee redevenait invisible des le rechargement.
-        ignored_text: ignored,
-      } as unknown as Json,
-    });
-    applicationEventId = event.id;
-  }
+  const { applied, changes, hints, ignored, applicationEventId } = await applyResolvedEffects(supabase, {
+    campaignId: params.campaignId,
+    callerId: params.callerId,
+    actor: { entityId: params.entityId, name: ctx.entityName, hpMax: ctx.sheet.hitPoints.max, speed: ctx.sheet.speed.value },
+    scene,
+    spend: params.choiceKind !== null ? BUDGET_COST[params.choiceKind] : null,
+    effects,
+    note: `Tour solo — ${params.text}`,
+    fromEventId: record.eventId,
+    combatId,
+  });
 
   // 6. La scene avance — l'heure, les zones que les effets ont changees,
   //    et les evenements recents. Ecrite en dernier : si tout ce qui
@@ -443,27 +270,4 @@ async function applyResolvedTurn(
     // l'appelant (app/api/solo/tour/route.ts), apres coup, jamais ici.
     narration: null,
   };
-}
-
-/**
- * Sans scene en base, le tour se joue quand meme : on en fabrique une, le
- * temps de l'appliquer, et on ne l'ecrit pas. Une regle qui deplace
- * quelqu'un n'aura alors rien a deplacer et le dira — c'est plus honnete
- * que de refuser de jouer parce que personne n'a encore choisi un lieu.
- */
-function emptySceneFor(existing: SceneState | null): SceneState {
-  return (
-    existing ?? {
-      __v: 4,
-      locationId: "hors-scene",
-      present: [],
-      time: { day: 1, hour: 8, minute: 0 },
-      lighting: "bright",
-      activeCombatId: null,
-      recentEvents: [],
-      budgets: {},
-      sketches: [],
-      weather: null,
-    }
-  );
 }

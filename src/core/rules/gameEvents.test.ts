@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Rng } from "../dice/rng";
 import { resolveAttackRoll } from "./action";
-import { eventsForAttack, eventsForCheck, eventsForSave, eventsForTurn } from "./gameEvents";
+import { eventsForAttack, eventsForCheck, eventsForDamage, eventsForSave, eventsForTurn } from "./gameEvents";
 import { runTriggers, type Trigger, type TriggerContext } from "./triggers";
 
 function fixedRng(values: number[]): Rng {
@@ -206,5 +206,19 @@ describe("de bout en bout : une attaque reelle reveille la concentration", () =>
     expect(out.effects).toContainEqual(
       expect.objectContaining({ action: "remove_condition", key: "concentrating" }),
     );
+  });
+});
+
+describe("eventsForDamage (V3.1-105 : des degats lances a part de l'attaque)", () => {
+  it("les deux faces de l'echange, avec le montant et le critique", () => {
+    const events = eventsForDamage({ attacker: "bram", target: "participant:gob", damage: 9, critical: true });
+    expect(events).toEqual([
+      { event: "damage_dealt", subject: "bram", data: { "event.damage": 9, "event.critical": 1 } },
+      { event: "damage_taken", subject: "participant:gob", data: { "event.damage": 9, "event.critical": 1 } },
+    ]);
+  });
+
+  it("aucun degat : aucun evenement", () => {
+    expect(eventsForDamage({ attacker: "bram", target: "participant:gob", damage: 0, critical: false })).toEqual([]);
   });
 });

@@ -3,8 +3,6 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
 import {
   abilityModifier,
-  advanceTurn,
-  retreatTurn,
   rollInitiative,
   sortByInitiative,
   startCombat as computeStartCombat,
@@ -37,7 +35,8 @@ import { getEntityById } from "@/src/server/repos/entities";
 import { putRuntimeState } from "@/src/server/repos/runtimeState";
 import { nextEventSeq, insertSessionEvent } from "@/src/server/repos/sessions";
 import { getCampaign } from "@/src/server/services/campaigns";
-import { getCampaignById } from "@/src/server/repos/campaigns";
+import { getCampaignById, listCampaignCharacters } from "@/src/server/repos/campaigns";
+import { advanceTurnSkipping, isOutOfFight, retreatTurnSkipping } from "@/src/core/rules/targeting";
 import { isWorldAdmin } from "@/src/server/services/permissions";
 import { decideCombatAccess, type CombatAccess } from "@/src/core/permissions/combatAccess";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
@@ -423,9 +422,18 @@ async function moveTurn(
 ): Promise<CombatRow> {
   const combat = await getCombatById(supabase, params.combatId);
   if (!combat) throw new Error("Combat introuvable.");
-  const participants = await listCombatParticipants(supabase, params.combatId);
+  const [participants, campaignCharacters] = await Promise.all([
+    listCombatParticipants(supabase, params.combatId),
+    listCampaignCharacters(supabase, combat.campaign_id),
+  ]);
   const current = { round: combat.round, turnIndex: combat.turn_index };
-  const next = params.direction === "next" ? advanceTurn(current, participants.length) : retreatTurn(current, participants.length);
+  // V3.1-105 (ADR 0042) : une créature à 0 PV est hors de l'initiative — le
+  // tour la saute. Rien n'est stocké : la soigner la remet dans l'ordre.
+  const pcEntityIds = new Set(campaignCharacters.filter((c) => c.is_pc).map((c) => c.entity_id));
+  const out = orderParticipants(participants).map((p) =>
+    isOutOfFight({ isPc: p.entity_id !== null && pcEntityIds.has(p.entity_id), hpCurrent: p.hp_current, hpMax: p.hp_max })
+  );
+  const next = params.direction === "next" ? advanceTurnSkipping(current, out) : retreatTurnSkipping(current, out);
   const updated = await updateCombat(supabase, params.combatId, { round: next.round, turnIndex: next.turnIndex });
 
   // V3-A2 — les declencheurs de la bascule, UNIQUEMENT en avant : revenir en
@@ -492,6 +500,8 @@ export interface ParticipantPatchInput {
   tempHp?: number;
   conditions?: string[];
   concentration?: { label: string } | null;
+  /** V3.1-105 : jets contre la mort d'un PJ (état de jeu seulement : la ligne de combat n'en porte pas). */
+  deathSaves?: { success: number; fail: number };
 }
 
 /**
@@ -511,16 +521,27 @@ export async function patchCombatParticipant(
   const combat = await getCombatById(supabase, participant.combat_id);
   if (!combat) return null;
 
-  const before = { ...participant };
+  // V3.1-105 : les jets contre la mort vivent dans l'état de jeu ; on les
+  // garde dans `before`/`after` pour que « Annuler » les rende aussi.
+  const deathBefore =
+    params.patch.deathSaves !== undefined && participant.source_kind === "entity" && participant.entity_id
+      ? (await getEntityRuntimeState(supabase, participant.entity_id, combat.campaign_id)).death_saves
+      : undefined;
+  const before = deathBefore ? { ...participant, death_saves: deathBefore } : { ...participant };
 
-  const updated = await updateCombatParticipant(supabase, participant.id, {
+  const rowPatch = {
     initiative: params.patch.initiative,
     ac: params.patch.ac,
     hpCurrent: params.patch.hpCurrent,
     tempHp: params.patch.tempHp,
     conditions: params.patch.conditions as unknown as Json | undefined,
     concentration: params.patch.concentration === undefined ? undefined : ((params.patch.concentration ?? null) as unknown as Json),
-  });
+  };
+  // V3.1-105 : un coup sur un PJ déjà à 0 PV ne change que ses jets contre la
+  // mort (état de jeu) — la ligne de combat n'a alors rien à écrire, et une
+  // mise à jour vide serait refusée par la base.
+  const touchesRow = Object.values(rowPatch).some((v) => v !== undefined);
+  const updated = touchesRow ? await updateCombatParticipant(supabase, participant.id, rowPatch) : participant;
 
   if (participant.source_kind === "entity" && participant.entity_id) {
     const state = await getEntityRuntimeState(supabase, participant.entity_id, combat.campaign_id);
@@ -529,6 +550,7 @@ export async function patchCombatParticipant(
       rtPatch.hp = { current: params.patch.hpCurrent ?? state.hp.current, temp: params.patch.tempHp ?? state.hp.temp };
     }
     if (params.patch.conditions !== undefined) rtPatch.conditions = params.patch.conditions;
+    if (params.patch.deathSaves !== undefined) rtPatch.death_saves = params.patch.deathSaves;
     // V3.1-24 : la concentration suit, comme les etats. Le participant ne porte
     // que le libelle ; on garde le sort de la fiche s'il s'agit du meme.
     if (params.patch.concentration !== undefined) {
@@ -545,7 +567,7 @@ export async function patchCombatParticipant(
     target: "participant",
     targetId: participant.id,
     before,
-    after: updated,
+    after: deathBefore && params.patch.deathSaves ? { ...updated, death_saves: params.patch.deathSaves } : updated,
     note: params.note,
     actorUserId: params.actorUserId,
   });
@@ -586,6 +608,7 @@ export async function undoLastCombatAction(supabase: TypedClient, combatId: stri
     await updateCombat(supabase, combatId, { round: before.round, turnIndex: before.turn_index, status: before.status });
   } else {
     const before = last.payload.before as unknown as CombatParticipantRow;
+    const beforeDeath = (last.payload.before as { death_saves?: { success: number; fail: number } }).death_saves;
     await updateCombatParticipant(supabase, last.payload.targetId, {
       initiative: before.initiative,
       hpCurrent: before.hp_current,
@@ -600,6 +623,8 @@ export async function undoLastCombatAction(supabase: TypedClient, combatId: stri
         hp: { current: before.hp_current ?? state.hp.current, temp: before.temp_hp ?? state.hp.temp },
         conditions: (before.conditions as unknown as string[] | undefined) ?? state.conditions,
         concentration: concentrationFromParticipant(before.concentration, state.concentration),
+        // V3.1-105 : un coup qui a changé les jets contre la mort les rend aussi.
+        ...(beforeDeath ? { death_saves: beforeDeath } : {}),
       });
       zRuntimeState.parse(next);
       await putRuntimeState(supabase, { entityId: participant.entity_id, campaignId: combat.campaign_id, state: next as unknown as Json });

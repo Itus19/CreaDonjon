@@ -97,9 +97,9 @@ function withActor(state: TurnState, who: string, next: TurnActor): TurnState {
  * un acteur qui porte des `deathSaves` (un PJ), le passage a zero suit les
  * regles 2024 de `deathSaves.ts` ; sinon c'est tout ce que ce module simule.
  */
-function damageActor(actor: TurnActor, amount: number): TurnActor {
+function damageActor(actor: TurnActor, amount: number, critical = false): TurnActor {
   if (actor.deathSaves) {
-    const out = applyDamageWithDeath({ hp: actor.hp, conditions: actor.conditions, deathSaves: actor.deathSaves }, amount);
+    const out = applyDamageWithDeath({ hp: actor.hp, conditions: actor.conditions, deathSaves: actor.deathSaves }, amount, { critical });
     return { ...actor, hp: out.hp, conditions: out.conditions, deathSaves: out.deathSaves };
   }
   return { ...actor, hp: applyDamageToHp(actor.hp, amount).hp };
@@ -136,7 +136,8 @@ export function applyEffects(state: TurnState, effects: readonly ResolvedEffect[
           break;
         }
         const from = actor.hp;
-        const updated = effect.action === "deal_damage" ? damageActor(actor, effect.amount) : healActor(actor, effect.amount);
+        const updated =
+          effect.action === "deal_damage" ? damageActor(actor, effect.amount, effect.critical === true) : healActor(actor, effect.amount);
         const to = updated.hp;
         const note =
           effect.action === "deal_damage"
