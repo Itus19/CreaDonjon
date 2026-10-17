@@ -12,6 +12,8 @@ const abilityField = z.enum(ABILITIES as [Ability, ...Ability[]]);
 const skillField = z.enum(SKILLS as [Skill, ...Skill[]]);
 const advantageField = z.enum(["normal", "advantage", "disadvantage"]);
 const dcField = z.number().int().min(1).max(50).nullable();
+/** V3.1-33 : DD que les joueurs ne lisent pas — honore pour le MJ seul (checkRolls.ts). */
+const dcPrivateField = z.boolean().default(false);
 
 export const abilityCheckSchema = z.object({
   campaignId: campaignIdField,
@@ -19,6 +21,7 @@ export const abilityCheckSchema = z.object({
   advantage: advantageField,
   dc: dcField,
   hidden: z.boolean(),
+  dcPrivate: dcPrivateField,
 });
 
 export const skillCheckSchema = z.object({
@@ -27,6 +30,7 @@ export const skillCheckSchema = z.object({
   advantage: advantageField,
   dc: dcField,
   hidden: z.boolean(),
+  dcPrivate: dcPrivateField,
 });
 
 export const savingThrowSchema = z.object({
@@ -35,6 +39,7 @@ export const savingThrowSchema = z.object({
   advantage: advantageField,
   dc: dcField,
   hidden: z.boolean(),
+  dcPrivate: dcPrivateField,
 });
 
 export const initiativeCheckSchema = z.object({
@@ -42,6 +47,26 @@ export const initiativeCheckSchema = z.object({
   advantage: advantageField,
   dc: dcField,
   hidden: z.boolean(),
+  dcPrivate: dcPrivateField,
+});
+
+/**
+ * V3.1-33 — bande d'apres-jet : relancer un test rate en depensant
+ * l'Inspiration heroique. Le serveur retire le point et lance le nouveau
+ * jet ; le client ne decrit que le test a refaire. Le DD est requis : une
+ * relance n'a de sens que contre un DD manque.
+ */
+export const heroicRerollSchema = z.object({
+  campaignId: z.string().uuid(),
+  check: z.discriminatedUnion("kind", [
+    z.object({ kind: z.literal("ability"), ability: abilityField }),
+    z.object({ kind: z.literal("skill"), skill: skillField }),
+    z.object({ kind: z.literal("save"), ability: abilityField }),
+  ]),
+  advantage: advantageField,
+  dc: z.number().int().min(1).max(50),
+  hidden: z.boolean(),
+  dcPrivate: dcPrivateField,
 });
 
 export const weaponAttackSchema = z.object({

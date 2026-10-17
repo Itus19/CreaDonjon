@@ -7,11 +7,13 @@ import { ABILITY_LABELS, SKILL_ABILITIES, type Ability, type Skill, type Source 
 import { SKILL_LABELS_FR } from "@/src/i18n/fr";
 import { resolveCheckRoll, type AdvantageState } from "@/src/core/rules/action";
 import type { TraceStep } from "@/src/core/formula/evaluate";
-import { DIE_TYPES, type DieType } from "@/src/core/dice/roll";
+import type { DieType } from "@/src/core/dice/roll";
+import { advantagePairFromTrace, buildToolFormula, toolVerdict, type AdvantagePair } from "@/src/core/dice/diceTool";
 import { parseFormula } from "@/src/core/formula/parser";
 import { evaluate } from "@/src/core/formula/evaluate";
 import { formatFormulaNode } from "@/src/core/formula/format";
-import { resolveCharacterActionContext, getOrInitializeRuntimeState } from "@/src/server/services/characterActions";
+import { resolveCharacterActionContext, getOrInitializeRuntimeState, changeInspiration } from "@/src/server/services/characterActions";
+import { getEntityRuntimeState } from "@/src/server/services/runtimeState";
 import { eventsForCheck, eventsForSave } from "@/src/core/rules/gameEvents";
 import { fireTriggersForCharacter } from "@/src/server/services/triggerRuntime";
 import type { DerivedSheet } from "@/src/core/rules/sheet";
@@ -20,7 +22,7 @@ import type { CharacterActionContext } from "@/src/server/services/characterActi
 import { canUserEditEntityById, isWorldAdmin } from "@/src/server/services/permissions";
 import { getEntityById, type EntitySummary } from "@/src/server/repos/entities";
 import { getCampaignById, getClaimedCharacterEntityId } from "@/src/server/repos/campaigns";
-import { insertDiceRoll } from "@/src/server/repos/diceRolls";
+import { insertDiceRoll, type DiceRollVisibility } from "@/src/server/repos/diceRolls";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
 import { serverRng } from "@/src/server/services/rng";
 
@@ -51,6 +53,12 @@ export interface RollOutcome {
   hidden: boolean;
   /** V2-M11 (volet) : affichage immediat cote client (forme des des, valeurs individuelles) sans attendre l'evenement Realtime — meme structure que `dice_rolls.detail.trace`, jamais recalculee. */
   trace: TraceStep[];
+  /** V3.1-33 : les deux d20 d'un jet avec avantage ou desavantage, et lequel est garde ; `null` sans avantage. */
+  pair: AdvantagePair | null;
+  /** V3.1-33 : le d20 garde (l'or d'une reussite au 20 naturel) ; `null` sans d20 unique. */
+  naturalD20: number | null;
+  /** V3.1-33 : DD prive du MJ — la valeur n'est rendue qu'a lui (cette reponse), jamais ecrite dans le jet que les joueurs lisent. */
+  dcPrivate: boolean;
   /** false si `campaignId` etait nul (fiche vue hors campagne, meme convention que `rollWeaponAttack` — characterActions.ts) : le jet a eu lieu mais n'est pas ecrit dans `dice_rolls`, donc absent du volet et de l'historique. */
   recorded: boolean;
   /**
@@ -69,10 +77,25 @@ interface RollParams {
   callerId: string;
   advantage: AdvantageState;
   dc: number | null;
-  /** Ignore si l'appelant n'est pas MJ (`isWorldAdmin`) — jamais fait confiance tel quel, cote serveur comme cote RLS. */
+  /**
+   * Jet secret. V3.1-33 (ADR 0038) : permis a tous — `gm` pour le MJ,
+   * `roller` (le lanceur et le MJ) pour un joueur ; la RLS le garantit.
+   */
   hidden: boolean;
+  /** V3.1-33 : DD que les joueurs ne lisent pas. Ignore si l'appelant n'est pas MJ. */
+  dcPrivate?: boolean;
+  /** V3.1-33 : relance payee par l'Inspiration heroique — le libelle le dit. */
+  reroll?: boolean;
   locale: Locale;
 }
+
+/** Qui lit un jet secret : le MJ seul s'il vient du MJ, sinon le lanceur et le MJ (V3.1-33, ADR 0038). */
+export function secretVisibility(hidden: boolean, isAdmin: boolean): DiceRollVisibility {
+  if (!hidden) return "public";
+  return isAdmin ? "gm" : "roller";
+}
+
+const REROLL_SUFFIX = " — relance (Inspiration héroïque)";
 
 /** "Cet appelant peut-il rouler pour cette fiche" — meme regle que l'editer (PJ revendique, MJ, ou fiche accordee), jamais une regle parallele. */
 async function requireCanRollForEntity(
@@ -155,6 +178,8 @@ async function recordAndBuildOutcome(
     advantage: AdvantageState;
     dc: number | null;
     hidden: boolean;
+    isAdmin: boolean;
+    dcPrivate: boolean;
     /**
      * V3-A2 : ce que ce jet EMET une fois resolu. Absent pour un jet libre
      * ou sans DD — sans verdict, il n'y a ni reussite ni echec a annoncer.
@@ -186,9 +211,19 @@ async function recordAndBuildOutcome(
       ast: ast as unknown as Json,
       context: { modifier } as unknown as Json,
       result: total,
-      detail: { who: params.who, what: params.what, chips: params.chips, dc: params.dc, verdict, trace, ...(fired ? { triggers: fired } : {}) } as unknown as Json,
+      detail: {
+        who: params.who,
+        what: params.what,
+        chips: params.chips,
+        // DD prive : les joueurs lisent « contre DD ? », jamais la valeur (regle 5).
+        dc: params.dcPrivate ? null : params.dc,
+        ...(params.dcPrivate ? { dcPrivate: true } : {}),
+        verdict,
+        trace,
+        ...(fired ? { triggers: fired } : {}),
+      } as unknown as Json,
       rolledBy: "player",
-      visibilityLevel: params.hidden ? "gm" : "public",
+      visibilityLevel: secretVisibility(params.hidden, params.isAdmin),
       attribution: { entityId: params.entityId, kind: params.kind, naturalD20: naturalD20FromTrace(trace) },
     });
   }
@@ -202,6 +237,9 @@ async function recordAndBuildOutcome(
     dc: params.dc,
     verdict,
     hidden: params.hidden,
+    pair: advantagePairFromTrace(trace),
+    naturalD20: naturalD20FromTrace(trace) ?? null,
+    dcPrivate: params.dcPrivate,
     recorded: params.campaignId !== null,
     trace,
     ...(fired ? { triggers: fired } : {}),
@@ -224,11 +262,13 @@ export async function rollAbilityCheck(
     entityId: check.entity.id,
     kind: "check",
     who: check.entity.name,
-    what: `Test de ${ABILITY_LABELS[params.ability]}`,
+    what: `Test de ${ABILITY_LABELS[params.ability]}` + (params.reroll ? REROLL_SUFFIX : ""),
     chips,
     advantage: params.advantage,
     dc: params.dc,
-    hidden: params.hidden && isAdmin,
+    hidden: params.hidden,
+    isAdmin,
+    dcPrivate: (params.dcPrivate ?? false) && isAdmin,
     emit: {
       ctx,
       sheet: ctx.sheet,
@@ -256,11 +296,13 @@ export async function rollSkillCheck(
     entityId: check.entity.id,
     kind: "check",
     who: check.entity.name,
-    what: `${SKILL_LABELS_FR[params.skill]} — test de ${governingAbility}`,
+    what: `${SKILL_LABELS_FR[params.skill]} — test de ${governingAbility}` + (params.reroll ? REROLL_SUFFIX : ""),
     chips: skillResult.sources,
     advantage: params.advantage,
     dc: params.dc,
-    hidden: params.hidden && isAdmin,
+    hidden: params.hidden,
+    isAdmin,
+    dcPrivate: (params.dcPrivate ?? false) && isAdmin,
     emit: {
       ctx,
       sheet: ctx.sheet,
@@ -295,11 +337,13 @@ export async function rollSavingThrow(
     entityId: check.entity.id,
     kind: "save",
     who: check.entity.name,
-    what: `Sauvegarde de ${ABILITY_LABELS[params.ability]}`,
+    what: `Sauvegarde de ${ABILITY_LABELS[params.ability]}` + (params.reroll ? REROLL_SUFFIX : ""),
     chips: saveResult.sources,
     advantage: params.advantage,
     dc: params.dc,
-    hidden: params.hidden && isAdmin,
+    hidden: params.hidden,
+    isAdmin,
+    dcPrivate: (params.dcPrivate ?? false) && isAdmin,
     emit: {
       ctx,
       sheet: ctx.sheet,
@@ -326,21 +370,51 @@ export async function rollInitiativeCheck(supabase: TypedClient, params: RollPar
     chips,
     advantage: params.advantage,
     dc: params.dc,
-    hidden: params.hidden && isAdmin,
+    hidden: params.hidden,
+    isAdmin,
+    dcPrivate: (params.dcPrivate ?? false) && isAdmin,
   });
   return { ok: true, roll };
 }
 
-export type FreeformRollErrorReason = "invalid_pool";
+export type HeroicRerollCheck = { kind: "ability"; ability: Ability } | { kind: "skill"; skill: Skill } | { kind: "save"; ability: Ability };
+export type HeroicRerollResult = CheckRollResult | { ok: false; reason: "no_inspiration" };
+
+/**
+ * V3.1-33 — bande d'apres-jet (decision A du 5 octobre) : un test rate se
+ * relance en depensant l'Inspiration heroique. Le serveur retire le point
+ * PUIS lance le nouveau jet (regle 8) ; le client ne fournit ni valeur ni
+ * resultat. Le point se depense meme quand l'interrupteur « inspiration »
+ * des joueurs est coupe : c'est la regle qui le consomme, pas une
+ * correction a la main (ADR 0043). « Une fois par jet » est tenu par
+ * l'ecran ; le serveur, lui, ne laisse jamais depenser un point absent.
+ */
+export async function rerollWithHeroicInspiration(
+  supabase: TypedClient,
+  params: Omit<RollParams, "campaignId" | "reroll"> & { campaignId: string; check: HeroicRerollCheck }
+): Promise<HeroicRerollResult> {
+  const access = await requireCanRollForEntity(supabase, params);
+  if (!access.ok) return access;
+  const state = await getEntityRuntimeState(supabase, params.entityId, params.campaignId);
+  if (state.inspiration < 1) return { ok: false, reason: "no_inspiration" };
+
+  await changeInspiration(supabase, { entityId: params.entityId, campaignId: params.campaignId, delta: -1, actorUserId: params.callerId });
+
+  const rollParams = { ...params, reroll: true };
+  if (params.check.kind === "skill") return rollSkillCheck(supabase, { ...rollParams, skill: params.check.skill });
+  if (params.check.kind === "save") return rollSavingThrow(supabase, { ...rollParams, ability: params.check.ability });
+  return rollAbilityCheck(supabase, { ...rollParams, ability: params.check.ability });
+}
+
+export type FreeformRollErrorReason = "invalid_pool" | "advantage_needs_one_d20";
 export type FreeformRollResult = { ok: true; roll: RollOutcome } | { ok: false; reason: FreeformRollErrorReason };
 
 /**
- * Jet libre depuis la reserve du volet (V2-M11) — aucune fiche, jamais de
- * modificateur (retour utilisateur : "les valeurs sont vides"). N'importe
- * quel membre de la campagne peut en faire un ; seul le MJ peut le
- * marquer cache (`hidden`, clampe ci-dessous, jamais fait confiance au
- * client). RLS `dice_rolls_write` refuse deja l'ecriture a qui n'est pas
- * membre — pas de second controle d'appartenance ici.
+ * Jet libre de l'outil de des (V2-M11, etendu par V3.1-33, ADR 0035) :
+ * des empiles, modificateur, avantage / desavantage sur le d20, libelle, DD
+ * et secret. Le serveur lance (regle 8) ; le client n'envoie jamais un
+ * resultat. N'importe quel membre de la campagne peut en faire un (RLS
+ * `dice_rolls_insert`) ; seul le MJ pose un DD prive.
  */
 export async function rollFreeformCheck(
   supabase: TypedClient,
@@ -350,23 +424,33 @@ export async function rollFreeformCheck(
     pool: Partial<Record<DieType, number>>;
     who: string;
     hidden: boolean;
+    modifier?: number;
+    advantage?: AdvantageState;
+    /** Le nom du bouton qui a pre-rempli l'outil (« Dague — touche ») ; « Jet libre » sinon. */
+    label?: string | null;
+    dc?: number | null;
+    dcPrivate?: boolean;
   }
 ): Promise<FreeformRollResult> {
-  const entries = DIE_TYPES.flatMap((type) => {
-    const count = params.pool[type] ?? 0;
-    return count > 0 ? [{ type, count }] : [];
-  });
-  if (entries.length === 0) return { ok: false, reason: "invalid_pool" };
+  const modifier = params.modifier ?? 0;
+  const built = buildToolFormula({ pool: params.pool, modifier, advantage: params.advantage ?? "normal" });
+  if (!built.ok) return { ok: false, reason: built.reason === "empty_pool" ? "invalid_pool" : built.reason };
 
   const campaign = await getCampaignById(supabase, params.campaignId);
   const isAdmin = campaign ? await isWorldAdmin(supabase, { worldId: campaign.world_id, userId: params.callerId }) : false;
 
   // meme moteur que les autres jets (formule -> AST -> evaluate), jamais un
-  // calcul manuel parallele — "2d20+1d8" se lit et se rejoue exactement
-  // comme "1d6+1d4" pour les degats (resolveDamageRoll).
-  const ast = parseFormula(entries.map((e) => `${e.count}${e.type}`).join("+"));
+  // calcul manuel parallele.
+  const ast = parseFormula(built.formula);
   const { value: total, trace } = evaluate(ast, {}, serverRng, "roll");
   const expression = formatFormulaNode(ast);
+
+  const dc = params.dc ?? null;
+  const verdict = toolVerdict({ total, dc, hasD20: (params.pool.d20 ?? 0) > 0 });
+  const dcPrivate = (params.dcPrivate ?? false) && isAdmin && dc !== null;
+  const what = params.label?.trim() || "Jet libre";
+  const chips: Source[] = modifier !== 0 ? [{ label: "Modificateur", value: modifier }] : [];
+  const naturalD20 = naturalD20FromTrace(trace);
 
   // V3.1-89 : un jet libre va au personnage que le lanceur a réclamé dans
   // cette campagne ; sans personnage (le MJ), il n'est attribué à personne.
@@ -374,23 +458,44 @@ export async function rollFreeformCheck(
     getOrOpenSessionForCampaign(supabase, params.campaignId),
     getClaimedCharacterEntityId(supabase, { campaignId: params.campaignId, userId: params.callerId }),
   ]);
-  const hidden = params.hidden && isAdmin;
   await insertDiceRoll(supabase, {
     sessionId,
     campaignId: params.campaignId,
     expression,
     ast: ast as unknown as Json,
-    context: {} as unknown as Json,
+    context: { modifier } as unknown as Json,
     result: total,
-    detail: { who: params.who, what: "Jet libre", chips: [], trace, dc: null, verdict: null } as unknown as Json,
+    detail: {
+      who: params.who,
+      what,
+      chips,
+      trace,
+      dc: dcPrivate ? null : dc,
+      ...(dcPrivate ? { dcPrivate: true } : {}),
+      verdict,
+    } as unknown as Json,
     rolledBy: isAdmin ? "gm" : "player",
-    visibilityLevel: hidden ? "gm" : "public",
-    attribution: { entityId: claimedEntityId, kind: "free", naturalD20: naturalD20FromTrace(trace) },
+    visibilityLevel: secretVisibility(params.hidden, isAdmin),
+    attribution: { entityId: claimedEntityId, kind: "free", naturalD20 },
   });
 
   return {
     ok: true,
-    roll: { who: params.who, what: "Jet libre", chips: [], total, expression, dc: null, verdict: null, hidden, recorded: true, trace },
+    roll: {
+      who: params.who,
+      what,
+      chips,
+      total,
+      expression,
+      dc,
+      verdict,
+      hidden: params.hidden,
+      pair: advantagePairFromTrace(trace),
+      naturalD20: naturalD20 ?? null,
+      dcPrivate,
+      recorded: true,
+      trace,
+    },
   };
 }
 

@@ -935,6 +935,8 @@ entity_id         uuid references entities(id) on delete set null               
 
 `detail` porte en plus `kind` (`attack`, `damage`, `check`, `save`, `spell`, `heal`, `free`) et, pour un jet de d20, `naturalD20` (le dé gardé, 1 à 20). La politique `dice_rolls_insert` refuse un `rolled_by_user_id` autre que `auth.uid()` et un `entity_id` hors du monde de la campagne ou que l'auteur ne peut pas modifier (`app.can_edit_entity`). Les jets antérieurs gardent les deux colonnes nulles et sont exclus des statistiques ; les jets non publics n'y entrent jamais.
 
+**Visibilité et outil de dés (V3.1-33, ADR 0035, 0038).** `visibility_level` vaut `public` (tout membre), `gm` (le MJ seul) ou `roller` (migration `20261017170000_dice_rolls_roller_visibility.sql` : le lanceur — `rolled_by_user_id` — et le MJ). Un jet secret du MJ s'écrit `gm`, celui d'un joueur `roller` ; `dice_rolls_select` et `dice_rolls_insert` le filtrent, Realtime compris. Le jet de l'outil (`POST /api/campaigns/[id]/dice-rolls`) porte en plus un modificateur, l'avantage (`2d20kh1` / `2d20kl1`, un seul d20 dans la réserve) et un libellé (`detail.what`). Un « DD privé » du MJ n'est jamais écrit : `detail.dc` est nul et `detail.dcPrivate` vaut `true` (les joueurs lisent « contre DD ? ») ; seule la réponse au MJ porte la valeur.
+
 ```sql
 create table player_title_tiers (            -- réglages de la plateforme, pas des règles
   id, family ('luck','bad_luck','purse','favorite_action'), position,

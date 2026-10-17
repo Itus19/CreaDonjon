@@ -37,6 +37,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     advantage: parsed.data.advantage,
     dc: parsed.data.dc,
     hidden: parsed.data.hidden,
+    dcPrivate: parsed.data.dcPrivate,
     locale,
   });
 

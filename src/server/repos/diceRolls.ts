@@ -5,6 +5,9 @@ import type { DiceRollKind } from "@/src/core/dice/rollAttribution";
 
 type TypedClient = SupabaseClient<Database>;
 
+/** Qui lit un jet : tout membre, le MJ seul, ou le lanceur et le MJ (V3.1-33, ADR 0038). */
+export type DiceRollVisibility = "public" | "gm" | "roller";
+
 export interface DiceRollRow {
   id: string;
   session_id: string | null;
@@ -46,8 +49,8 @@ export async function insertDiceRoll(
     result: number;
     detail: Json;
     rolledBy: "player" | "gm" | "ai" | "system";
-    /** 'gm' reserve au MJ (RLS `dice_rolls_write` le refuse sinon) — voir `visibility_level`, SCHEMA.md. */
-    visibilityLevel: "public" | "gm";
+    /** 'gm' reserve au MJ (RLS `dice_rolls_insert` le refuse sinon) ; 'roller' (V3.1-33) : le lanceur et le MJ — voir `visibility_level`, SCHEMA.md. */
+    visibilityLevel: DiceRollVisibility;
     attribution: DiceRollAttribution;
   }
 ): Promise<DiceRollRow> {

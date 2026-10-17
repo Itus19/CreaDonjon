@@ -1774,7 +1774,7 @@ de l'initiative ; un jet secret visible du seul joueur et du MJ).
 - [ ] Un salon commun MJ + joueurs, à côté des fils privés.
 - [ ] Les jets publics apparaissent dans le salon en cartes ; les secrets seulement pour leur auteur et le MJ.
 - [ ] RLS : un joueur ne lit jamais le fil privé d'un autre.
-- [ ] RLS : un joueur ne lit jamais le jet `roller` d'un autre ; il lit le sien.
+- [x] RLS : un joueur ne lit jamais le jet `roller` d'un autre ; il lit le sien. *(fait par V3.1-33 : migration `20261017170000`.)*
 - [ ] Fenêtre du MJ conforme à la planche B ; page pleine côté joueur ; tablette en panneau.
 - [ ] Plus aucune trace de la demande de modification (bouton, champ, route).
 - [ ] `docs/SCHEMA.md` à jour, migration nouvelle (aucune migration appliquée modifiée).

@@ -21,7 +21,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   return NextResponse.json({ rolls }, { status: 200 });
 }
 
-/** Jet libre depuis la reserve du volet (V2-M11) — aucune fiche, attribue au PJ revendique par l'appelant ou "MJ" (checkRolls.ts). */
+/** Jet de l'outil de des (V2-M11, V3.1-33) — aucune fiche, attribue au PJ revendique par l'appelant ou "MJ" (checkRolls.ts). Le client decrit le jet ; le serveur le lance. */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ campaignId: string }> }) {
   const { campaignId } = await params;
 
@@ -55,10 +55,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     pool: parsed.data.pool,
     who,
     hidden: parsed.data.hidden,
+    modifier: parsed.data.modifier,
+    advantage: parsed.data.advantage,
+    label: parsed.data.label,
+    dc: parsed.data.dc,
+    dcPrivate: parsed.data.dcPrivate,
   });
 
   if (!result.ok) {
-    return NextResponse.json({ error: "Choisissez au moins un dé." }, { status: 400 });
+    const message = result.reason === "invalid_pool" ? "Choisissez au moins un dé." : "L'avantage demande un seul d20.";
+    return NextResponse.json({ error: message }, { status: 400 });
   }
   return NextResponse.json(result.roll, { status: 200 });
 }

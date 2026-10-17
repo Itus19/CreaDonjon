@@ -21,3 +21,7 @@ Le chat n'a que des fils privés joueur ↔ MJ : `campaign_chat_messages.thread_
 ## Conséquences
 
 Une migration (nullable, politiques du salon, colonne et niveau de `dice_rolls`), `docs/SCHEMA.md` mis à jour, et des tests RLS : un joueur ne lit jamais le fil privé d'un autre ni le jet `roller` d'un autre. Les anciens messages gardent leur `thread_user_id` : rien à reprendre.
+
+## Réalisation partielle (17 octobre, V3.1-33)
+
+Le niveau `roller` est posé par V3.1-33, premier écran à en avoir besoin (l'interrupteur « Secret » de l'outil de dés) : migration `20261017170000_dice_rolls_roller_visibility.sql`, `rolled_by_user_id` existant depuis V3.1-89. Un jet secret du MJ reste `gm`. Le salon, les cartes de jets dans le fil et le retrait de la demande de modification restent à V3.1-22.

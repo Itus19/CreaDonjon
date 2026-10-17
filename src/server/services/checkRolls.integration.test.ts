@@ -1,6 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
-import { rollAbilityCheck, rollFreeformCheck, rollInitiativeCheck, rollSavingThrow, rollSkillCheck } from "./checkRolls";
+import { rerollWithHeroicInspiration, rollAbilityCheck, rollFreeformCheck, rollInitiativeCheck, rollSavingThrow, rollSkillCheck } from "./checkRolls";
+import { changeInspiration } from "./characterActions";
+import { getEntityRuntimeState } from "./runtimeState";
 import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
 import { listRollsForStats } from "@/src/server/repos/diceRolls";
 
@@ -225,8 +227,8 @@ describe.skipIf(!hasCreds)("checkRolls (integration, base reelle)", () => {
     expect(result).toEqual({ ok: false, reason: "forbidden" });
   });
 
-  it("le MJ peut rouler pour un PNJ, et 'hidden' n'est honore que pour lui (clampe pour un joueur)", async () => {
-    const gmRoll = await rollAbilityCheck(admin, {
+  it("V3.1-33 — jet secret : celui du MJ est 'gm', celui d'un joueur 'roller' (le lanceur et le MJ)", async () => {
+    const gmRoll = await rollAbilityCheck(clients.gm, {
       entityId: npcEntityId,
       campaignId,
       callerId: userIds.gm,
@@ -238,8 +240,10 @@ describe.skipIf(!hasCreds)("checkRolls (integration, base reelle)", () => {
     });
     if (!gmRoll.ok) throw new Error(`echec inattendu : ${gmRoll.reason}`);
     expect(gmRoll.roll.hidden).toBe(true);
+    const gmRow = await lastRoll();
+    expect(gmRow.visibility_level).toBe("gm");
 
-    const playerAttemptHidden = await rollAbilityCheck(admin, {
+    const playerRoll = await rollAbilityCheck(clients.ownCharacterPlayer, {
       entityId: ownCharacterEntityId,
       campaignId,
       callerId: userIds.ownCharacterPlayer,
@@ -249,29 +253,26 @@ describe.skipIf(!hasCreds)("checkRolls (integration, base reelle)", () => {
       hidden: true,
       locale: "fr",
     });
-    if (!playerAttemptHidden.ok) throw new Error(`echec inattendu : ${playerAttemptHidden.reason}`);
-    expect(playerAttemptHidden.roll.hidden).toBe(false); // jamais fait confiance au client, cote serveur
+    if (!playerRoll.ok) throw new Error(`echec inattendu : ${playerRoll.reason}`);
+    expect(playerRoll.roll.hidden).toBe(true);
+    const playerRow = await lastRoll();
+    expect(playerRow).toMatchObject({ visibility_level: "roller", rolled_by_user_id: userIds.ownCharacterPlayer });
 
-    // RLS dice_rolls_select : le jet cache du MJ existe reellement en base...
-    const { data: allRolls, error } = await admin.from("dice_rolls").select("id, visibility_level").eq("campaign_id", campaignId);
-    if (error) throw new Error(error.message);
-    expect(allRolls!.some((r) => r.visibility_level === "gm")).toBe(true);
-
-    // ...mais un simple joueur, avec sa propre session authentifiee, ne le voit pas.
-    const { data: playerVisibleRolls, error: playerError } = await clients.plainPlayer
-      .from("dice_rolls")
-      .select("id, visibility_level")
-      .eq("campaign_id", campaignId);
-    if (playerError) throw new Error(playerError.message);
-    expect(playerVisibleRolls!.every((r) => r.visibility_level === "public")).toBe(true);
-
-    // Le MJ, lui, voit son propre jet cache.
-    const { data: gmVisibleRolls, error: gmError } = await clients.gm
-      .from("dice_rolls")
-      .select("id, visibility_level")
-      .eq("campaign_id", campaignId);
-    if (gmError) throw new Error(gmError.message);
-    expect(gmVisibleRolls!.some((r) => r.visibility_level === "gm")).toBe(true);
+    async function voit(client: SupabaseClient) {
+      const { data, error } = await client.from("dice_rolls").select("id, visibility_level").eq("campaign_id", campaignId);
+      if (error) throw new Error(error.message);
+      return (data ?? []) as { id: string; visibility_level: string }[];
+    }
+    // Un autre joueur ne lit aucun des deux.
+    expect((await voit(clients.plainPlayer)).every((r) => r.visibility_level === "public")).toBe(true);
+    // Le lanceur lit le sien, jamais celui du MJ.
+    const lanceur = await voit(clients.ownCharacterPlayer);
+    expect(lanceur.some((r) => r.visibility_level === "roller")).toBe(true);
+    expect(lanceur.some((r) => r.visibility_level === "gm")).toBe(false);
+    // Le MJ lit les deux.
+    const mj = await voit(clients.gm);
+    expect(mj.some((r) => r.visibility_level === "gm")).toBe(true);
+    expect(mj.some((r) => r.visibility_level === "roller")).toBe(true);
   });
 
   it("jet libre : n'importe quel membre peut en faire un, un pool vide est rejete", async () => {
@@ -387,5 +388,81 @@ describe.skipIf(!hasCreds)("checkRolls (integration, base reelle)", () => {
     const playerStats = await listRollsForStats(clients.ownCharacterPlayer, { campaignId, entityId: ownCharacterEntityId });
     expect(playerStats.length).toBeGreaterThanOrEqual(3);
     expect(playerStats.every((r) => r.kind !== null)).toBe(true);
+  });
+
+  // --- V3.1-33 : l'outil de dés unique ---
+
+  it("V3.1-33 — jet de l'outil : avantage (deux d20, un gardé), modificateur, libellé, verdict contre le DD", async () => {
+    const result = await rollFreeformCheck(clients.ownCharacterPlayer, {
+      campaignId,
+      callerId: userIds.ownCharacterPlayer,
+      pool: { d20: 1 },
+      who: "Brunhild",
+      hidden: false,
+      modifier: 3,
+      advantage: "advantage",
+      label: "Dague — touche",
+      dc: 12,
+    });
+    if (!result.ok) throw new Error(`echec inattendu : ${result.reason}`);
+    const { pair, total, verdict, what, naturalD20 } = result.roll;
+    expect(pair).not.toBeNull();
+    const kept = pair!.rolls[pair!.keptIndex];
+    expect(kept).toBe(Math.max(...pair!.rolls));
+    expect(naturalD20).toBe(kept);
+    expect(total).toBe(kept + 3);
+    expect(verdict).toBe(total >= 12 ? "success" : "fail");
+    expect(what).toBe("Dague — touche");
+    const row = await lastRoll();
+    expect(row.detail).toMatchObject({ kind: "free", naturalD20: kept, dc: 12 });
+  });
+
+  it("V3.1-33 — DD privé : rendu au MJ seul, jamais écrit dans le jet ; ignoré pour un joueur", async () => {
+    const gm = await rollFreeformCheck(clients.gm, { campaignId, callerId: userIds.gm, pool: { d20: 1 }, who: "MJ", hidden: false, dc: 14, dcPrivate: true });
+    if (!gm.ok) throw new Error("jet refusé");
+    expect(gm.roll).toMatchObject({ dc: 14, dcPrivate: true });
+    expect(gm.roll.verdict).not.toBeNull();
+    expect((await lastRoll()).detail).toMatchObject({ dc: null, dcPrivate: true });
+
+    const player = await rollFreeformCheck(clients.ownCharacterPlayer, {
+      campaignId,
+      callerId: userIds.ownCharacterPlayer,
+      pool: { d20: 1 },
+      who: "Brunhild",
+      hidden: false,
+      dc: 14,
+      dcPrivate: true,
+    });
+    if (!player.ok) throw new Error("jet refusé");
+    expect(player.roll.dcPrivate).toBe(false);
+    expect((await lastRoll()).detail).toMatchObject({ dc: 14 });
+  });
+
+  it("V3.1-33 — relance par l'Inspiration héroïque : le point est retiré, le serveur relance ; sans point, refusé", async () => {
+    await changeInspiration(clients.gm, { entityId: ownCharacterEntityId, campaignId, delta: 1, actorUserId: userIds.gm, max: 1 });
+    expect((await getEntityRuntimeState(admin, ownCharacterEntityId, campaignId)).inspiration).toBe(1);
+
+    const params = {
+      entityId: ownCharacterEntityId,
+      campaignId,
+      callerId: userIds.ownCharacterPlayer,
+      check: { kind: "skill" as const, skill: "perception" as const },
+      advantage: "normal" as const,
+      dc: 30,
+      hidden: false,
+      locale: "fr" as const,
+    };
+    const relance = await rerollWithHeroicInspiration(clients.ownCharacterPlayer, params);
+    if (!relance.ok) throw new Error(`echec inattendu : ${relance.reason}`);
+    expect(relance.roll.what).toContain("relance (Inspiration héroïque)");
+    expect(relance.roll.dc).toBe(30);
+    expect((await getEntityRuntimeState(admin, ownCharacterEntityId, campaignId)).inspiration).toBe(0);
+
+    expect(await rerollWithHeroicInspiration(clients.ownCharacterPlayer, params)).toEqual({ ok: false, reason: "no_inspiration" });
+    // Le PNJ du MJ n'est pas à elle.
+    expect(await rerollWithHeroicInspiration(clients.plainPlayer, { ...params, entityId: npcEntityId, callerId: userIds.plainPlayer })).toEqual({
+      ok: false,
+      reason: "forbidden",
+    });
   });
 });
