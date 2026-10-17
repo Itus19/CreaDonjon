@@ -88,7 +88,7 @@ valables ; celui-ci les relie.
 |---|---|---|
 | **0 · Sécurité et mesure** — *faite* | ~~101~~, ~~108~~, ~~62~~ étapes 1-2 | Un défaut de sécurité passe avant tout ; la mesure dit où la rapidité se perd avant qu'on reconstruise les écrans. |
 | **1 · Les données que les écrans attendent** (Opus, en parallèle) | Fait : ~~120~~, ~~24~~, ~~84~~, ~~41~~, ~~59~~, ~~115 → 116 → 117~~, ~~113~~. ~~48~~ (remonté ici le 13 octobre : 74 en dépend). ~~74~~. ~~96~~. ~~89~~. ~~100~~. ~~102~~. ~~103~~. ~~105~~. ~~110~~. ~~111~~. **Étape terminée le 17 octobre.** | Les écrans de Sonnet lisent ces données ; les poser d'abord évite de reprendre les écrans. |
-| **2 · La coquille** | ~~25~~ → ~~26~~ → 28 ; 27 → 29 → 30, 31, 32, 33 ; 20 (dès 25) ; 35 ; 34 ; 36 ; 62 étape 3 | Tout le reste vit dedans : pilule glissante, rail, fenêtres en deux volets, téléphone, accueil. |
+| **2 · La coquille** | ~~25~~ → ~~26~~ → ~~28~~ ; 27 → 29 → 30, 31, 32, 33 ; 20 (dès 25) ; 35 ; 34 ; 36 ; 62 étape 3 | Tout le reste vit dedans : pilule glissante, rail, fenêtres en deux volets, téléphone, accueil. |
 | **3 · Entrer et se reconnaître** | 85 → 86 ; 80 → 81 ; 82 → 83 (après 100) ; 87 → 88 | Le premier écran que voit un ami ; court, et tout est décidé. |
 | **4 · Les outils du MJ (lot i)** | 46, 55, 61, 54, 56, 44, 45, 43 ; 41 → 42 ; 59 → 60 ; 108 → 57, 109 ; 58 ; 102, 103 → 38 ; 105 → 106 ; 111 → 112 ; 113 → 114 | Les petits outils sans donnée nouvelle d'abord, puis ceux qui attendaient l'étape 1. |
 | **5 · La fiche du wiki et ses blocs** | 63 → 64 → 65 à 68 → 69 → 70 à 73 → 75 à 78 ; 79 (après 26 et 33). 73 remplit la ligne de dates de la généalogie avec les données de 74 (étape 1) | La carte de verre et sa pastille portent tous les blocs. |
@@ -157,7 +157,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-25 | ☑ | sans | La pilule glissante remplace `BinderTabs` | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-26 | ☑ | sans | Fiche d'ordinateur à jauges et commande E | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-27 | ☐ | sans | Rail repliable et dalle Outils (lots a, b) | [`03-refonte-sonnet.md`](backlog-v3.1/03-refonte-sonnet.md) |
-| V3.1-28 | ☐ | sans | Tablette : la fiche s'adapte à sa fenêtre (lot f) | [`03-refonte-sonnet.md`](backlog-v3.1/03-refonte-sonnet.md) |
+| V3.1-28 | ☑ | sans | Tablette : la fiche s'adapte à sa fenêtre (lot f) | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-29 | ☐ | sans | Coquille téléphone : barre flottante et feuilles du bas (lot c) | [`03-refonte-sonnet.md`](backlog-v3.1/03-refonte-sonnet.md) |
 | V3.1-30 | ☐ | sans | Wiki et Règles sur téléphone : ☰ et consultées récemment | [`03-refonte-sonnet.md`](backlog-v3.1/03-refonte-sonnet.md) |
 | V3.1-31 | ☐ | sans | Éditeur plein écran en accordéon (téléphone) | [`03-refonte-sonnet.md`](backlog-v3.1/03-refonte-sonnet.md) |

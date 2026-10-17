@@ -396,7 +396,7 @@ export default function PlayableCharacterSheet({
   const canLevelUp = hasReachedNextLevel(totalLevel, xpCurrent);
 
   return (
-    <div className="mb-4 flex flex-col gap-3 rounded-md border border-edge/60 bg-panel-raised p-3">
+    <div className="@container mb-4 flex flex-col gap-3 rounded-md border border-edge/60 bg-panel-raised p-3">
       <CharacterSheetHeader
         worldSlug={worldSlug}
         character={character}
@@ -433,11 +433,18 @@ export default function PlayableCharacterSheet({
         error={error}
       />
 
-      <div className="flex flex-col gap-4 md:flex-row">
-        <aside className="flex flex-col gap-3 md:w-48 md:shrink-0">
+      {/*
+        V3.1-28 — la fiche suit la largeur de SA fenêtre, pas celle de l'écran :
+        une requête de conteneur (`@container`, posé sur la fiche entière), car la même fiche vit dans une
+        page pleine, un volet partagé ou une tablette. Sous 40rem (640 px) de
+        fenêtre, la disposition du téléphone : les six caractéristiques en ligne
+        au-dessus des onglets ; au-delà, la colonne de gauche.
+      */}
+      <div className="flex flex-col gap-4 @min-[40rem]:flex-row">
+        <aside className="flex flex-col gap-3 @min-[40rem]:w-48 @min-[40rem]:shrink-0">
           <div className="flex flex-col gap-2">
             <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Caractéristiques</span>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-6 gap-1.5 @min-[40rem]:grid-cols-2 @min-[40rem]:gap-2">
               {(Object.keys(ABILITY_LABELS) as Ability[]).map((ability) => {
                 const save = sheet.savingThrows[ability];
                 return (

@@ -739,7 +739,7 @@ export default function CharacterSheetHeader({
           </>
         )}
 
-        <div className="hidden h-14 w-px self-end bg-edge/60 md:block" aria-hidden="true" />
+        <div className="hidden h-14 w-px self-end bg-edge/60 @min-[40rem]:block" aria-hidden="true" />
 
         <div className="flex flex-wrap items-start gap-2">
           <StatBadge

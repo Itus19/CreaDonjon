@@ -2,6 +2,28 @@
 
 ---
 
+### ☑ V3.1-28 — Tablette : la fiche s'adapte à sa fenêtre (lot f) · `S` · sans modèle IA — **fait le 17 octobre**
+
+**Modèle conseillé : Sonnet** — règle simple, planche à trois largeurs.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Planche** : « Décidé · fiche sur tablette : elle suit la largeur de sa
+fenêtre (piste B) » (zone « Fiche de personnage » ; la fiche y prend, sous
+~640 px, la disposition du téléphone). **Dépend de** : 26.
+
+La fiche lit la largeur de **sa** fenêtre (requête de conteneur CSS, pas
+la largeur de l'écran) : sous ~640 px, les six caractéristiques passent en
+ligne au-dessus des onglets.
+
+**Critères d'acceptation**
+- [x] La même fiche à 960, 680 et 540 px de fenêtre, conforme à la planche.
+- [x] Aucune lecture de `window.innerWidth` pour cette règle.
+
+**Clôture** : `@container` sur la fiche entière (`PlayableCharacterSheet.tsx`), variantes `@min-[40rem]:` à la place de `md:` (y compris le filet de l'en-tête). Vérifié dans le navigateur à 960, 680 (colonne de gauche) et 540 px (six tuiles en ligne, aucun défilement horizontal). Fait par Opus, sans délégation : quatre classes.
+
+---
+
 ### ☑ V3.1-26 — Fiche d'ordinateur à jauges et commande E · `M` · sans modèle IA — **fait le 17 octobre**
 
 **Modèle conseillé : Sonnet** — interface esquissée, services existants.

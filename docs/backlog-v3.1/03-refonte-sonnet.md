@@ -49,26 +49,6 @@ V3.1-20 (lot g) peut partir dès que 25 est fait.
 
 ---
 
-### ☐ V3.1-28 — Tablette : la fiche s'adapte à sa fenêtre (lot f) · `S` · sans modèle IA — **prêt**
-
-**Modèle conseillé : Sonnet** — règle simple, planche à trois largeurs.
-
-**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-**Planche** : « Décidé · fiche sur tablette : elle suit la largeur de sa
-fenêtre (piste B) » (zone « Fiche de personnage » ; la fiche y prend, sous
-~640 px, la disposition du téléphone). **Dépend de** : 26.
-
-La fiche lit la largeur de **sa** fenêtre (requête de conteneur CSS, pas
-la largeur de l'écran) : sous ~640 px, les six caractéristiques passent en
-ligne au-dessus des onglets.
-
-**Critères d'acceptation**
-- [ ] La même fiche à 960, 680 et 540 px de fenêtre, conforme à la planche.
-- [ ] Aucune lecture de `window.innerWidth` pour cette règle.
-
----
-
 ### ☐ V3.1-29 — Coquille téléphone : barre flottante et feuilles du bas (lot c) · `L` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — entrées, gabarits et comportements fixés par les planches.
