@@ -69,34 +69,6 @@ feuilles ouvertes » (Toute la table). **Départ** : `mjToolWindows.ts`,
 
 ---
 
-### ☐ V3.1-35 — Accueil en tableau de bord (lot h) · `M` · sans modèle IA — **prêt**
-
-**Modèle conseillé : Sonnet** — proposition 3 tranchée ; « Reprendre » rangé dans le navigateur (ADR 0036 §4).
-
-**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-**Planche** : « Décidé · accueil : tableau de bord, onglets en pilule
-glissante ». **Départ** : `HomeShell.tsx`, `HomeScreen.tsx`,
-`CampaignsPanel.tsx`. **Dépend de** : 25, 27.
-
-- Rail du joueur : Mondes, Compte, Administration (superadmin seulement),
-  Déconnexion en pied ; dalle Outils avec les dés seuls.
-- En haut : prochaines séances de tous les mondes ; « Reprendre » sur la
-  dernière visite (mémorisée dans le navigateur).
-- Bouton « Nouveau monde » agrandi, à gauche : Mener une partie, Jouer en
-  solo, Rejoindre une table (coller un lien d'invitation).
-- Colonnes « Je mène » (+ « En solo ») et « Je joue » sur une même ligne de
-  titres ; panneau du monde choisi à droite, avec les outils du **rôle tenu
-  dans ce monde**.
-- Téléphone : pilule Je mène / Je joue / Solo, le monde en feuille,
-  « Nouveau monde » en grand bouton.
-
-**Critères d'acceptation**
-- [ ] Un compte MJ dans un monde et joueur dans un autre voit les bons outils pour chacun.
-- [ ] « Rejoindre une table » accepte un lien d'invitation valide et refuse un lien invalide, sans rien créer.
-- [ ] « Reprendre » absent si rien n'est mémorisé.
-
----
 
 ### ☐ V3.1-36 — Le solo : ailes d'ordinateur et téléphone modèle A (lot d) · `L` · sans modèle IA — **prêt**
 

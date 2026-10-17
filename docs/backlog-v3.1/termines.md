@@ -2,6 +2,39 @@
 
 ---
 
+### ☑ V3.1-35 — Accueil en tableau de bord (lot h) · `M` · sans modèle IA — **fait le 17 octobre**
+
+**Modèle conseillé : Sonnet** — proposition 3 tranchée ; « Reprendre » rangé dans le navigateur (ADR 0036 §4).
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Planche** : « Décidé · accueil : tableau de bord, onglets en pilule
+glissante ». **Départ** : `HomeShell.tsx`, `HomeScreen.tsx`,
+`CampaignsPanel.tsx`. **Dépend de** : 25, 27.
+
+- Rail du joueur : Mondes, Compte, Administration (superadmin seulement),
+  Déconnexion en pied ; dalle Outils avec les dés seuls.
+- En haut : prochaines séances de tous les mondes ; « Reprendre » sur la
+  dernière visite (mémorisée dans le navigateur).
+- Bouton « Nouveau monde » agrandi, à gauche : Mener une partie, Jouer en
+  solo, Rejoindre une table (coller un lien d'invitation).
+- Colonnes « Je mène » (+ « En solo ») et « Je joue » sur une même ligne de
+  titres ; panneau du monde choisi à droite, avec les outils du **rôle tenu
+  dans ce monde**.
+- Téléphone : pilule Je mène / Je joue / Solo, le monde en feuille,
+  « Nouveau monde » en grand bouton.
+
+**Critères d'acceptation**
+- [x] Un compte MJ dans un monde et joueur dans un autre voit les bons outils pour chacun.
+- [x] « Rejoindre une table » accepte un lien d'invitation valide et refuse un lien invalide, sans rien créer.
+- [x] « Reprendre » absent si rien n'est mémorisé.
+
+**Clôture** : serveur (Opus) — prochaine séance de chaque monde dans les cartes de l'accueil, en une requête (`listNextSessionsForCampaigns`, même règle que `getNextSession`) ; `POST /api/invitations/verifier` (lien collé → valide ou non, rien de créé ; `jetonDepuisLien` testé ; test d'intégration dans `campaignInvites.integration.test.ts`, 12/12) ; `POST /api/dice-rolls` (jet hors de tout monde, lancé par le serveur, jamais enregistré) ; « Reprendre » : la dernière fiche ouverte, gardée dans le navigateur avec les fiches récentes (`lib/ui/recents.ts`, testé). Interface (Sonnet) — `HomeShell` sur le rail du joueur (dé seul `DeSeulDalle`), `AccueilHaut`, `NouveauMonde`, `RejoindreTable`, colonnes et panneau par rôle, téléphone en pilule et feuille du bas ; logique dans `lib/ui/accueil.ts` (testée). Corrigé par Opus : la date et l'heure d'une séance sont deux colonnes (la requête plantait l'accueil), pilule du téléphone ouverte sur le premier onglet non vide, dé dans la barre du bas du téléphone (le bouton flottant la recouvrait). Vérifié dans le navigateur : Testeur MJ à 1280 px (« Je mène », classeur Journal / Joueurs / Accès / Réglages, lien invalide refusé sans quitter l'accueil, jet de dés hors campagne sans « Secret ») ; Testeuse A à 1280 et 390 px (« Je joue », Mon personnage, Prochaine séance, MJ, stats ; « Reprendre » après une fiche ouverte, absent dans un navigateur neuf).
+
+*Restes* : PV et XP du personnage dans le panneau joueur, et « Où tu en étais » d'un monde solo (planche) : ils demandent des lectures que l'accueil ne fait pas ; entre 768 et 1280 px, le panneau du monde passe sous les colonnes.
+
+---
+
 ### ☑ V3.1-20 — Fenêtres du MJ en deux volets à onglets · `L` · sans modèle IA — **fait le 17 octobre (ADR 0066)**
 
 **Modèle conseillé : Sonnet** — interface décidée et esquissée, sans nouvelle donnée.
