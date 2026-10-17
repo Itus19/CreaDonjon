@@ -255,16 +255,16 @@ describe.skipIf(!hasCreds)("cibler : le cœur commun de résolution (integration
     expect((await runtime(pc.brunhild))?.death_saves).toEqual({ success: 0, fail: 0 });
   });
 
-  it("sort à sauvegarde : la cible sauvegarde contre le DD du lanceur, dégâts pleins ou aucun", async () => {
+  it("sort à sauvegarde : la sauvegarde est DEMANDÉE à la cible (V3.1-111), rien n'est appliqué tant qu'elle n'a pas répondu", async () => {
     await setHp(p["Gobelin 2"], null, 7);
     const result = await roll({ kind: "spell_save", actor: { kind: "character", entityId: pc.mirelle }, action: { kind: "spell", spellKey: "sacred-flame", slotLevel: 0 }, targetId: p["Gobelin 2"] });
     if (!result.ok) throw new Error(result.reason);
-    expect(result.save?.ability).toBe("dex");
-    // Clerc niveau 1, Sagesse 16 : DD 8 + 2 + 3.
-    expect(result.save?.dc).toBe(13);
-    const expected = result.save!.passed ? 7 : Math.max(0, 7 - result.amount!);
-    if (result.save!.passed) expect(result.amount).toBe(0);
-    expect((await participant(p["Gobelin 2"])).hp_current).toBe(expected);
+    expect(result.saveRequestId).not.toBeNull();
+    expect(result.changes).toEqual([]);
+    expect((await participant(p["Gobelin 2"])).hp_current).toBe(7);
+    const { data: request } = await admin.from("save_requests").select("ability, dc, status, target_user_id, origin_roll_id").eq("id", result.saveRequestId!).single();
+    // Clerc niveau 1, Sagesse 16 : DD 8 + 2 + 3. Un monstre : c'est le MJ qui répond.
+    expect(request).toEqual({ ability: "dex", dc: 13, status: "pending", target_user_id: null, origin_roll_id: result.rollEventId });
   });
 
   it("attaque de sort : sur un échec, aucun dégât lancé ni appliqué", async () => {

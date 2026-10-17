@@ -6,9 +6,12 @@ import { budgetOf, type SceneState } from "@/src/core/rules/scene";
 import { spendFromBudget, type BudgetKind } from "@/src/core/rules/actionBudget";
 import { applyEffects, type ApplyResult, type TurnActor, type TurnChange } from "@/src/core/rules/turn";
 import { eventsForAttack, eventsForDamage } from "@/src/core/rules/gameEvents";
-import { resolveAttackRoll, resolveCheckRoll, resolveDamageRoll, type AttackRollResult } from "@/src/core/rules/action";
+import { resolveAttackRoll, resolveDamageRoll, type AttackRollResult } from "@/src/core/rules/action";
 import type { FiredEvent, ResolvedEffect } from "@/src/core/rules/triggers";
 import { attackVerdict, damageAfterSave, isOutOfFight, monsterSaveBonus, type AttackVerdict } from "@/src/core/rules/targeting";
+import { creatureTypeOf, isValidTarget, type TargetProfile, type TargetRefusal } from "@/src/core/rules/targetRestriction";
+import { zSaveRequestEffect, type SaveRequestEffect } from "@/src/core/rules/saveRequest";
+import { insertSaveRequest } from "@/src/server/repos/saveRequests";
 import { naturalD20FromTrace } from "@/src/core/dice/rollAttribution";
 import { formatFormulaNode } from "@/src/core/formula/format";
 import { zActionsBlockData, zLegendaryActionsBlockData, zStatBlockBlockData, type StatBlockBlockData } from "@/src/core/schemas/rule-blocks";
@@ -321,7 +324,8 @@ export type TargetedRollErrorReason =
   | "not_a_weapon"
   | "item_not_found"
   | "not_a_spellcaster"
-  | "not_found";
+  | "not_found"
+  | "invalid_target";
 
 /** La demande de dégâts posée par une attaque qui touche : même acteur, même action, même cible ; dés doublés au critique. */
 export interface ChainedDamage {
@@ -336,7 +340,6 @@ export type TargetedRollResult =
   | {
       ok: true;
       verdict: AttackVerdict | null;
-      save: { ability: string; dc: number; total: number; passed: boolean } | null;
       amount: number | null;
       facts: string[];
       changes: string[];
@@ -345,8 +348,10 @@ export type TargetedRollResult =
       targetOutOfFight: boolean;
       chained: ChainedDamage | null;
       rollEventId: string;
+      /** V3.1-111 : un sort à sauvegarde ne s'applique pas ici — la cible répond à cette demande. */
+      saveRequestId: string | null;
     }
-  | { ok: false; reason: TargetedRollErrorReason };
+  | { ok: false; reason: TargetedRollErrorReason; detail?: { refusal: TargetRefusal; value: string } };
 
 interface MonsterBlocks {
   statBlock: StatBlockBlockData | null;
@@ -399,7 +404,7 @@ async function recordMonsterRoll(
 }
 
 /** Le bonus de sauvegarde d'une cible : un PJ par sa fiche, un monstre par son bloc de stats, sinon 0 (et on le dit). */
-async function targetSaveBonus(
+export async function targetSaveBonus(
   supabase: TypedClient,
   params: { target: CombatParticipantRow; isPc: boolean; ability: string; campaignId: string; rulesetId: string; locale: Locale }
 ): Promise<{ bonus: number; hint: string | null }> {
@@ -414,6 +419,22 @@ async function targetSaveBonus(
     if (monster?.statBlock) return { bonus: monsterSaveBonus(monster.statBlock, ability), hint: null };
   }
   return { bonus: 0, hint: `Sauvegarde de ${params.target.label} sans fiche ni bloc de stats : bonus compté à 0.` };
+}
+
+/**
+ * V3.1-110 — le profil d'une cible pour `isValidTarget` : un PJ est humanoïde
+ * (toutes les espèces jouables le sont), un monstre a le type et les
+ * immunités de son bloc de stats, une saisie libre n'a pas de type connu.
+ */
+async function targetProfileFor(supabase: TypedClient, params: { target: CombatParticipantRow; isPc: boolean; rulesetId: string }): Promise<TargetProfile> {
+  if (params.isPc) return { creatureType: "humanoid", conditionImmunities: [] };
+  if (params.target.rule_key) {
+    const monster = await loadMonsterBlocks(supabase, params.rulesetId, params.target.rule_key);
+    if (monster?.statBlock) {
+      return { creatureType: creatureTypeOf(monster.statBlock.creature_type), conditionImmunities: monster.statBlock.condition_immunities ?? [] };
+    }
+  }
+  return { creatureType: null, conditionImmunities: [] };
 }
 
 /**
@@ -450,7 +471,8 @@ export async function resolveTargetedRoll(
   const sessionId = combat.session_id ?? (await getOrOpenSessionForCampaign(supabase, params.campaignId));
   if (!combat.session_id) await updateCombat(supabase, combat.id, { sessionId });
 
-  const pcEntityIds = new Set((await listCampaignCharacters(supabase, params.campaignId)).filter((c) => c.is_pc).map((c) => c.entity_id));
+  const campaignCharacters = (await listCampaignCharacters(supabase, params.campaignId)).filter((c) => c.is_pc);
+  const pcEntityIds = new Set(campaignCharacters.map((c) => c.entity_id));
   const targetKey = `participant:${target.id}`;
   const targetIsPc = target.entity_id !== null && pcEntityIds.has(target.entity_id);
 
@@ -473,10 +495,10 @@ export async function resolveTargetedRoll(
   const effects: ResolvedEffect[] = [];
   const hintsBefore: string[] = [];
   let verdict: AttackVerdict | null = null;
-  let save: { ability: string; dc: number; total: number; passed: boolean } | null = null;
   let amount: number | null = null;
   let chained: ChainedDamage | null = null;
   let events: FiredEvent[] = [];
+  let pendingSave: { ability: string; dc: number; effect: SaveRequestEffect; label: string } | null = null;
 
   const action = input.action;
   const monsterAction = action.kind === "monster_action" ? (monster?.actions.find((a) => a.name === action.name) ?? null) : null;
@@ -532,6 +554,13 @@ export async function resolveTargetedRoll(
   } else {
     // Les trois genres de sort : un personnage, un sort connu.
     if (action.kind !== "spell" || !ctx) return { ok: false, reason: "invalid_action" };
+    // V3.1-110 : la cible est vérifiée AVANT de lancer — un refus ne dépense pas d'emplacement.
+    const mechanics = await readSpellMechanics(supabase, { rulesetId: ctx.rulesetId, spellKey: action.spellKey });
+    if (mechanics?.target) {
+      const profile = await targetProfileFor(supabase, { target, isPc: targetIsPc, rulesetId: campaign.rulesetId });
+      const check = isValidTarget({ target: mechanics.target }, profile);
+      if (!check.ok) return { ok: false, reason: "invalid_target", detail: { refusal: check.reason, value: check.detail } };
+    }
     const castBase = { entityId: ctx.entityId, campaignId: params.campaignId, spellKey: action.spellKey, slotLevel: action.slotLevel, actorUserId: params.callerId, locale: params.locale };
 
     if (input.kind === "spell_attack") {
@@ -552,26 +581,32 @@ export async function resolveTargetedRoll(
       }
       if (target.ac !== null) events = eventsForAttack({ attacker: ctx.entityId, target: targetKey, result: rolled.attack, ac: target.ac, damage: amount ?? undefined });
     } else if (input.kind === "spell_save") {
-      const mechanics = await readSpellMechanics(supabase, { rulesetId: ctx.rulesetId, spellKey: action.spellKey });
+      // V3.1-111 (ADR 0044) : la cible RÉSISTE — on lance le sort et ses
+      // dégâts, on fige les deux issues, et on DEMANDE la sauvegarde au
+      // joueur de la cible (ou au MJ). Rien n'est appliqué ici.
       const dc = ctx.sheet.spellcasting?.saveDc;
       if (!mechanics?.save || dc === undefined) return { ok: false, reason: "no_save_data" };
       const cast = await castSpell(supabase, { ...castBase, critical: false });
       if ("error" in cast) return { ok: false, reason: cast.error };
-      const { bonus, hint } = await targetSaveBonus(supabase, { target, isPc: targetIsPc, ability: mechanics.save.ability, campaignId: params.campaignId, rulesetId: campaign.rulesetId, locale: params.locale });
-      if (hint) hintsBefore.push(hint);
-      const roll = resolveCheckRoll({ modifier: bonus, advantage: "normal" }, serverRng);
-      await recordMonsterRoll(supabase, { campaignId: params.campaignId, entityId: target.entity_id, kind: "save", secret: false, roll, who: target.label, what: `Sauvegarde ${mechanics.save.ability.toUpperCase()} — ${action.spellKey}` });
-      const passed = roll.total >= dc;
-      save = { ability: mechanics.save.ability, dc, total: roll.total, passed };
-      facts.push(`${target.label} sauvegarde (${mechanics.save.ability.toUpperCase()}) contre DD ${dc} : ${roll.total} — ${passed ? "réussie" : "ratée"}.`);
-      if (cast.damage) {
-        amount = damageAfterSave(cast.damage.total, passed, mechanics.save.effectOnSuccess);
-        facts.push(`Dégâts sur ${target.label} : ${amount}.`);
-        if (amount > 0) effects.push({ action: "deal_damage", who: targetKey, amount });
-      }
-      if (amount !== null && amount > 0) events = eventsForDamage({ attacker: ctx.entityId, target: targetKey, damage: amount, critical: false });
+      const rolledDamage = cast.damage?.total ?? 0;
+      const ability = mechanics.save.ability.toLowerCase();
+      const imposed = mechanics.target?.immune_conditions_block ?? [];
+      pendingSave = {
+        ability,
+        dc,
+        label: `${action.spellKey} — Sauvegarde ${ability.toUpperCase()} DD ${dc}`,
+        effect: zSaveRequestEffect.parse({
+          on_fail: { damage: rolledDamage, conditions: imposed },
+          on_success: { damage: damageAfterSave(rolledDamage, true, mechanics.save.effectOnSuccess), conditions: [] },
+        }),
+      };
+      amount = cast.damage ? rolledDamage : null;
+      facts.push(
+        `${actorName} lance ${action.spellKey} sur ${target.label} : sauvegarde ${ability.toUpperCase()} DD ${dc} demandée` +
+          (cast.damage ? ` (dégâts lancés : ${rolledDamage})` : "") +
+          "."
+      );
     } else {
-      const mechanics = await readSpellMechanics(supabase, { rulesetId: ctx.rulesetId, spellKey: action.spellKey });
       if (!mechanics?.hasFormula) return { ok: false, reason: "no_formula" };
       const cast = await castSpell(supabase, { ...castBase, critical: false });
       if ("error" in cast) return { ok: false, reason: cast.error };
@@ -592,10 +627,40 @@ export async function resolveTargetedRoll(
     actorUserId: params.callerId,
     payload: {
       __v: 1,
-      targeted: { kind: input.kind, actor: input.actor, action, target_id: target.id, target_label: target.label, verdict, save, amount, critical: input.critical },
+      targeted: { kind: input.kind, actor: input.actor, action, target_id: target.id, target_label: target.label, verdict, amount, critical: input.critical },
       facts,
     } as unknown as Json,
   });
+
+  if (pendingSave) {
+    const targetUserId = target.entity_id ? (campaignCharacters.find((c) => c.entity_id === target.entity_id)?.user_id ?? null) : null;
+    const request = await insertSaveRequest(supabase, {
+      campaignId: params.campaignId,
+      combatId: combat.id,
+      originRollId: rollEvent.id,
+      targetKind: "participant",
+      targetId: target.id,
+      targetEntityId: target.entity_id,
+      targetUserId,
+      label: pendingSave.label,
+      ability: pendingSave.ability,
+      dc: pendingSave.dc,
+      effect: pendingSave.effect as unknown as Json,
+    });
+    return {
+      ok: true,
+      verdict: null,
+      amount,
+      facts,
+      changes: [],
+      hints: hintsBefore,
+      ignored: [],
+      targetOutOfFight: false,
+      chained: null,
+      rollEventId: rollEvent.id,
+      saveRequestId: request.id,
+    };
+  }
 
   if (ctx && actorTriggerKey) {
     effects.push(...(await fireActorTriggers(supabase, { ctx, actorEntityId: actorTriggerKey, campaignId: params.campaignId, events, scene: null })));
@@ -621,7 +686,6 @@ export async function resolveTargetedRoll(
   return {
     ok: true,
     verdict,
-    save,
     amount,
     facts: targetOutOfFight ? [...facts, `${target.label} est hors de combat.`] : facts,
     changes: outcome.changes,
@@ -630,5 +694,6 @@ export async function resolveTargetedRoll(
     targetOutOfFight,
     chained,
     rollEventId: rollEvent.id,
+    saveRequestId: null,
   };
 }

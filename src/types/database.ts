@@ -2392,6 +2392,72 @@ export type Database = {
           },
         ]
       }
+      save_requests: {
+        Row: {
+          ability: string
+          answered_at: string | null
+          answered_by: string | null
+          author_user_id: string
+          campaign_id: string
+          combat_id: string | null
+          created_at: string
+          dc: number
+          effect: Json
+          id: string
+          label: string
+          natural: number | null
+          origin_roll_id: string | null
+          status: string
+          target_entity_id: string | null
+          target_id: string
+          target_kind: string
+          target_user_id: string | null
+          total: number | null
+        }
+        Insert: {
+          ability: string
+          answered_at?: string | null
+          answered_by?: string | null
+          author_user_id?: string
+          campaign_id: string
+          combat_id?: string | null
+          created_at?: string
+          dc: number
+          effect: Json
+          id?: string
+          label: string
+          natural?: number | null
+          origin_roll_id?: string | null
+          status?: string
+          target_entity_id?: string | null
+          target_id: string
+          target_kind: string
+          target_user_id?: string | null
+          total?: number | null
+        }
+        Update: {
+          ability?: string
+          answered_at?: string | null
+          answered_by?: string | null
+          author_user_id?: string
+          campaign_id?: string
+          combat_id?: string | null
+          created_at?: string
+          dc?: number
+          effect?: Json
+          id?: string
+          label?: string
+          natural?: number | null
+          origin_roll_id?: string | null
+          status?: string
+          target_entity_id?: string | null
+          target_id?: string
+          target_kind?: string
+          target_user_id?: string | null
+          total?: number | null
+        }
+        Relationships: []
+      }
       scene_states: {
         Row: {
           campaign_id: string
@@ -2854,6 +2920,14 @@ export type Database = {
       request_password_reset_by_name: {
         Args: { p_handle_name: string }
         Returns: undefined
+      }
+      answer_save_request: {
+        Args: { p_natural: number | null; p_request: string; p_total: number }
+        Returns: Json
+      }
+      set_own_participant_vitals: {
+        Args: { p_conditions: Json; p_hp_current: number; p_participant: string; p_temp_hp: number }
+        Returns: Json
       }
       set_own_initiative: {
         Args: { p_participant: string; p_value: number }

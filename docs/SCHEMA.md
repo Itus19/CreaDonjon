@@ -781,6 +781,22 @@ Un combat appartient à une campagne (`combats.campaign_id`). Il a un nom, un `s
 **Vue des joueurs (V3.1-102, ADR 0040, migration `20261016120000_combat_player_view`).** `public.combat_player_view(p_combat)` (`security definer`, `row_security = off`) refuse tout non-membre du monde (code `42501`) et renvoie, par participant : `id`, `label`, `initiative`, `display_order`, `side` (`ally` : PJ de la campagne ou `is_ally` ; sinon `enemy`), `conditions` ; pour un allié seulement `entity_id`, `hp_current`, `hp_max`, `temp_hp` ; pour un adversaire seulement `wound` (`unhurt` PV ≥ max, `hurt` > ½, `bloodied` > 0, `down` 0 ; `null` sans PV saisis). Jamais `ac`, `rule_key`, ni la fiche d'un adversaire. L'ordre et le tour en cours se calculent côté serveur par le tri de l'écran du MJ (`orderPlayerCombatView`). Trois déclencheurs par instruction sur `combat_participants` touchent `combats.updated_at` : c'est le signal temps réel des joueurs.
 
 **Initiative des joueurs (V3.1-103, migration `20261017090000_combat_rolling_own_initiative`).** `public.set_own_initiative(p_participant, p_value)` est la seule écriture d'une joueuse dans `combat_participants` : l'initiative du participant qui est SON PJ (`campaign_characters.user_id`), seulement en statut `rolling`, valeur −10 à 40. Elle renvoie `{ before, after }` (la ligne complète, pour le journal et l'annulation) ou `null` si elle refuse.
+
+**Sauvegardes demandées (V3.1-111, ADR 0044, migration `20261017120000_save_requests`).**
+
+```sql
+create table save_requests (
+  id, campaign_id, combat_id null, origin_roll_id null (session_events : le jet de l'auteur),
+  author_user_id default auth.uid(), target_kind ('entity'|'participant'), target_id,
+  target_entity_id null, target_user_id null (le joueur qui répond ; null : le MJ),
+  label, ability ('str'..'cha'), dc (1-40),
+  effect jsonb,            -- zSaveRequestEffect : { on_fail, on_success } { damage, damage_type?, conditions[] }, figé à la demande
+  status ('pending'|'answered'|'cancelled'), natural null (1-20), total null (-10-60),
+  answered_by null, created_at, answered_at null
+);
+```
+
+RLS : lecture par l'auteur, le joueur de la cible et le MJ ; création par le MJ seulement, à son nom (les joueurs ne ciblent pas avant V3.1-104) ; modification et suppression par le MJ. La réponse passe par `public.answer_save_request(p_request, p_natural, p_total)` : le joueur de la cible ou le MJ, une seule fois, n'écrit que le résultat. `public.set_own_participant_vitals(p_participant, p_hp_current, p_temp_hp, p_conditions)` laisse un joueur recopier sur la ligne de combat de SON PJ les PV, PV temporaires et états qu'il change déjà sur sa fiche ; elle renvoie avant/après pour le journal du combat.
 - Les routes `/api/campaigns/[id]/combats/**` vérifient la même chose avant toute lecture ou écriture (`guardCombatRoute`).
 - En solo, le joueur est propriétaire du monde, donc administrateur : rien ne change pour lui.
 

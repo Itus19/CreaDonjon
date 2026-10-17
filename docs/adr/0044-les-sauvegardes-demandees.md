@@ -31,3 +31,12 @@ Une table, une fonction, `docs/SCHEMA.md`, tests RLS. Les écrans : bandeau de l
 - Les restrictions viennent de `data/srd/spell-targets.json`, **par édition** (en 2024, les soins ne disent plus « sans effet sur les morts-vivants »), posées sur le premier effet par l'import ; un sort sans bloc `effects` (Charme-personne) en reçoit un, avec sa sauvegarde. Un sort saisi mais introuvable arrête l'import.
 - La fiche d'un sort affiche la restriction sous l'effet (« Cible : Humanoïde seulement · Une immunité à Charmé protège »).
 - La demande de sauvegarde (V3.1-111) appellera `isValidTarget` avant de créer la demande.
+
+## Réalisation de la demande et de la réponse (V3.1-111, 17 octobre 2026)
+
+- Migration `20261017120000_save_requests.sql` : la table de la décision, plus `target_entity_id` (la fiche de la cible, pour le bonus de sauvegarde de son joueur) et `label`.
+- **Création par le MJ seulement** tant que les joueurs ne ciblent pas (ADR 0041, V3.1-104) : l'effet figé dans la demande s'applique au PJ du répondant, et une joueuse qui pourrait créer une demande pourrait en fabriquer une fausse (« 100 dégâts ») contre le PJ d'une autre.
+- **« Cibler » avec un sort à sauvegarde** vérifie la cible (`isValidTarget`, avant de dépenser l'emplacement), lance le sort et ses dégâts, fige les deux issues (dégâts ; états imposés = `immune_conditions_block`) et crée la demande — le MJ répond pour un monstre, le joueur pour son PJ. Plus de jet de sauvegarde fait d'office par le serveur.
+- **Écart avec « aucun privilège nouveau »** : depuis V3.1-101 (ADR 0040), un joueur n'écrit plus la ligne de combat de son PJ. `set_own_participant_vitals` lui rend une écriture étroite — PV, PV temporaires et états de SON PJ, ce qu'il change déjà sur sa fiche — même patron que `set_own_initiative`. Le MJ peut l'annuler (journal du combat).
+- **La réponse** (`answerSaveRequest`) : lancer par le serveur ou vrai dé (« modificateur inclus ») ; la fonction de réponse d'abord, puis le jet (attribué, V3.1-89), un `roll` qui porte la demande et son jet d'origine, l'application et son `rule_application`. Rien n'est relancé : les dégâts sont ceux de la demande.
+- Routes : `GET /api/campaigns/[campaignId]/save-requests` (en attente, vues par l'appelant) et `POST …/save-requests/[requestId]/answer`. Le temps réel (publication de la table) viendra avec l'écran qui l'écoute.

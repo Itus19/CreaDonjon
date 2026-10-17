@@ -634,7 +634,7 @@ export async function castSpell(
 export async function readSpellMechanics(
   supabase: TypedClient,
   params: { rulesetId: string; spellKey: string }
-): Promise<{ save: { ability: string; effectOnSuccess?: string } | null; hasFormula: boolean } | null> {
+): Promise<{ save: { ability: string; effectOnSuccess?: string } | null; hasFormula: boolean; target: EffectTarget | null } | null> {
   const entry = await findEntryInRulesetChain(supabase, params.rulesetId, params.spellKey);
   if (!entry) return null;
   const blocks = await listBlocksForRulesetEntry(supabase, entry.id);
@@ -643,8 +643,12 @@ export async function readSpellMechanics(
   return {
     save: first?.save ? { ability: first.save.ability, effectOnSuccess: first.save.effect_on_success } : null,
     hasFormula: Boolean(first?.formula),
+    // V3.1-110/111 : qui l'effet peut viser (`isValidTarget`).
+    target: first?.target ?? null,
   };
 }
+
+type EffectTarget = NonNullable<EffectsBlockData["effects"][number]["target"]>;
 
 /** `sheet.spellcasting.slots` est deja le resultat combine (characterSheet(), V1-B1) : rien a recombiner ici. */
 function availableSlotsAt(ctx: CharacterActionContext, slotLevel: number): number {

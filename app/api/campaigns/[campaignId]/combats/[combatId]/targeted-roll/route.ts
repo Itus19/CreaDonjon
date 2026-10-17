@@ -20,6 +20,7 @@ const MESSAGES: Record<TargetedRollErrorReason, { status: number; error: string 
   item_not_found: { status: 404, error: "Objet ou sort introuvable sur la fiche." },
   not_a_spellcaster: { status: 400, error: "Ce personnage ne lance pas de sorts." },
   not_found: { status: 404, error: "Fiche introuvable." },
+  invalid_target: { status: 422, error: "Cet effet ne peut pas viser cette cible." },
 };
 
 /**
@@ -47,7 +48,7 @@ export async function POST(request: NextRequest, { params }: Params) {
   });
   if (!result.ok) {
     const { status, error } = MESSAGES[result.reason];
-    return NextResponse.json({ error }, { status });
+    return NextResponse.json({ error, ...(result.detail ? { detail: result.detail } : {}) }, { status });
   }
   return NextResponse.json(result, { status: 200 });
 }
