@@ -2,6 +2,39 @@
 
 ---
 
+### ☑ V3.1-111 — Sauvegardes : la demande et la réponse (données, serveur) · `M` · sans modèle IA — **fait le 17 octobre (ADR 0044)**
+
+**Modèle conseillé : Opus** — table nouvelle, RLS. **ADR 0044.**
+**Dépend de** : 105, 110.
+
+**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+- Migration : table `save_requests` (champs de l'ADR), RLS (lecture :
+  auteur, cible, MJ ; réponse par `app.answer_save_request`) ;
+  `docs/SCHEMA.md`.
+- `resolveTargetedRoll` (105) : un effet à sauvegarde vérifie la cible
+  (`isValidTarget`), puis crée la demande au lieu d'appliquer ; la réponse
+  (lancer côté serveur, vrai dé avec « modificateur inclus », ou saisie du
+  MJ) est traitée **au nom de celui qui répond** : verdict, puis dégâts ou
+  état appliqués, journal, et le résultat revient au jet de l'auteur.
+
+**Critères d'acceptation**
+- [x] Une sauvegarde imposée à un PJ n'est lisible que de l'auteur, du
+  joueur de la cible et du MJ (test RLS).
+- [x] Réponse → verdict → effet appliqué, journalisé (test de service).
+
+**Réalisé** (détail dans l'ADR 0044, « Réalisation de la demande et de la réponse »)
+- Migration `20261017120000_save_requests.sql` (appliquée le 17 octobre, après correction : `natural` est un mot réservé, la colonne s'appelle `natural_roll`) : table, RLS, `answer_save_request`, `set_own_participant_vitals`.
+- Noyau : `zSaveRequestEffect`, `saveTotal`, `effectsForSaveOutcome` (`src/core/rules/saveRequest.ts`), tests d'abord.
+- « Cibler » avec un sort à sauvegarde : `isValidTarget` avant de lancer (aucun emplacement dépensé sur un refus), puis la demande. Réponse `answerSaveRequest` au nom du répondant ; routes `GET …/save-requests` et `POST …/save-requests/[requestId]/answer`.
+- Tests d'intégration : 14/14 (`saveRequests.integration.test.ts`, `targetedRoll.integration.test.ts`) — RLS avec deux comptes joueurs, réponse → verdict → effet → journal, annulation par le MJ.
+
+*Écart* : `set_own_participant_vitals`, écriture étroite du joueur sur la ligne de combat de son PJ (ADR 0040 l'avait fermée).
+*Restes* : les écrans (bandeau de la cible, pastille du dé) et la publication temps réel de `save_requests` ; la création par un joueur (V3.1-104).
+
+
+---
+
 ### ☑ V3.1-110 — Sauvegardes : la restriction de cible (noyau) · `S` · sans modèle IA — **fait le 17 octobre (ADR 0044)**
 
 **Modèle conseillé : Sonnet** — noyau pur, tests d'abord. **ADR 0044.**

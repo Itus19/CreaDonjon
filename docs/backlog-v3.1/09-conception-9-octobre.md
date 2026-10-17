@@ -98,29 +98,6 @@ Règles actives est V3.1-57.
 
 ---
 
-### ☐ V3.1-111 — Sauvegardes : la demande et la réponse (données, serveur) · `M` · sans modèle IA — **prêt (Opus)**
-
-**Modèle conseillé : Opus** — table nouvelle, RLS. **ADR 0044.**
-**Dépend de** : 105, 110.
-
-**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-- Migration : table `save_requests` (champs de l'ADR), RLS (lecture :
-  auteur, cible, MJ ; réponse par `app.answer_save_request`) ;
-  `docs/SCHEMA.md`.
-- `resolveTargetedRoll` (105) : un effet à sauvegarde vérifie la cible
-  (`isValidTarget`), puis crée la demande au lieu d'appliquer ; la réponse
-  (lancer côté serveur, vrai dé avec « modificateur inclus », ou saisie du
-  MJ) est traitée **au nom de celui qui répond** : verdict, puis dégâts ou
-  état appliqués, journal, et le résultat revient au jet de l'auteur.
-
-**Critères d'acceptation**
-- [ ] Une sauvegarde imposée à un PJ n'est lisible que de l'auteur, du
-  joueur de la cible et du MJ (test RLS).
-- [ ] Réponse → verdict → effet appliqué, journalisé (test de service).
-
----
-
 ### ☐ V3.1-112 — Sauvegardes : les écrans · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet.** **Dépend de** : 111, 33, 34, 38.
