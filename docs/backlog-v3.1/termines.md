@@ -2,6 +2,39 @@
 
 ---
 
+### ☑ V3.1-102 — Initiative : la vue filtrée des joueurs · `M` · sans modèle IA — **fait le 17 octobre (ADR 0040)**
+
+**Modèle conseillé : Opus.** **ADR 0040.** **Dépend de** : 101.
+
+**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+- Fonction `app.combat_player_view(p_combat uuid)` (`security definer`,
+  `row_security = off`), vérifie que l'appelant est membre de la campagne ;
+  renvoie par participant : `id`, `label`, `initiative`, ordre, `is_current`,
+  `side`, états ; allié (PJ ou `is_ally`) : PV courants, max, temporaires ;
+  adversaire : `wound` parmi `unhurt` (≥ max), `hurt` (> ½), `bloodied`
+  (> 0), `down` (0). Jamais `ac`, `rule_key`, ni le nom d'entité d'un
+  adversaire. Plus la ligne `combats` (statut, round, tour).
+- Service `getPlayerCombatView`, route `GET
+  /api/campaigns/[campaignId]/combats/active/player` (Zod).
+- Le MJ touche `combats.updated_at` à chaque changement de participant
+  (signal temps réel des joueurs).
+
+**Critères d'acceptation**
+- [x] La vue ne contient ni PV, ni CA, ni nom d'origine d'un adversaire (test).
+- [x] Un non-membre reçoit un refus.
+
+**Réalisé**
+- Migration `20261016120000_combat_player_view.sql` (appliquée le 16 octobre) : `public.combat_player_view` (refus `42501` pour un non-membre) et trois déclencheurs par instruction qui touchent `combats.updated_at`.
+- Noyau : `orderPlayerCombatView` (`src/core/rules/combatPlayerView.ts`), tests d'abord — même tri que l'écran du MJ, d'où `display_order` plutôt qu'un rang calculé en SQL.
+- Service `getPlayerCombatView` (`src/server/services/playerCombatView.ts`), route `GET /api/campaigns/[campaignId]/combats/active/player`.
+- Tests d'intégration : 4/4 (`playerCombatView.integration.test.ts`) — ni PV, ni CA, ni bestiaire, ni fiche d'origine d'un adversaire ; même tour que le MJ ; refus d'un non-membre ; signal du combat.
+
+*Restes* : l'écran des joueuses (V3.1-38) lira cette route et ajoutera `combats` à la publication temps réel.
+
+
+---
+
 ### ☑ V3.1-100 — Rejoindre sans choisir de PJ ; le lien qui vise un PJ précis · `M` · sans modèle IA — **fait le 16 octobre (ADR 0049)**
 
 **Modèle conseillé : Opus** — parcours d'adhésion, une colonne nouvelle,

@@ -87,7 +87,7 @@ valables ; celui-ci les relie.
 | Étape | Tickets | Pourquoi d'abord |
 |---|---|---|
 | **0 · Sécurité et mesure** — *faite* | ~~101~~, ~~108~~, ~~62~~ étapes 1-2 | Un défaut de sécurité passe avant tout ; la mesure dit où la rapidité se perd avant qu'on reconstruise les écrans. |
-| **1 · Les données que les écrans attendent** (Opus, en parallèle) | Fait : ~~120~~, ~~24~~, ~~84~~, ~~41~~, ~~59~~, ~~115 → 116 → 117~~, ~~113~~. ~~48~~ (remonté ici le 13 octobre : 74 en dépend). ~~74~~. ~~96~~. ~~89~~. ~~100~~. **Reste, dans cet ordre** : 102 → 103 (initiative des joueurs) ; 105 (cœur de résolution) → 110 → 111 (sauvegardes) | Les écrans de Sonnet lisent ces données ; les poser d'abord évite de reprendre les écrans. |
+| **1 · Les données que les écrans attendent** (Opus, en parallèle) | Fait : ~~120~~, ~~24~~, ~~84~~, ~~41~~, ~~59~~, ~~115 → 116 → 117~~, ~~113~~. ~~48~~ (remonté ici le 13 octobre : 74 en dépend). ~~74~~. ~~96~~. ~~89~~. ~~100~~. ~~102~~. **Reste, dans cet ordre** : 103 (initiative des joueurs) ; 105 (cœur de résolution) → 110 → 111 (sauvegardes) | Les écrans de Sonnet lisent ces données ; les poser d'abord évite de reprendre les écrans. |
 | **2 · La coquille** | 25 → 26 → 28 ; 27 → 29 → 30, 31, 32, 33 ; 20 (dès 25) ; 35 ; 34 ; 36 ; 62 étape 3 | Tout le reste vit dedans : pilule glissante, rail, fenêtres en deux volets, téléphone, accueil. |
 | **3 · Entrer et se reconnaître** | 85 → 86 ; 80 → 81 ; 82 → 83 (après 100) ; 87 → 88 | Le premier écran que voit un ami ; court, et tout est décidé. |
 | **4 · Les outils du MJ (lot i)** | 46, 55, 61, 54, 56, 44, 45, 43 ; 41 → 42 ; 59 → 60 ; 108 → 57, 109 ; 58 ; 102, 103 → 38 ; 105 → 106 ; 111 → 112 ; 113 → 114 | Les petits outils sans donnée nouvelle d'abord, puis ceux qui attendaient l'étape 1. |
@@ -231,7 +231,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-99 | ☐ | sans | Chronologie : la page des joueurs | [`08-regles-chronologie.md`](backlog-v3.1/08-regles-chronologie.md) |
 | V3.1-100 | ☑ | sans | Rejoindre sans choisir de PJ ; le lien qui vise un PJ précis | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-101 | ☑ | sans | Initiative : la base et les routes réservées au MJ | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-102 | ☐ | sans | Initiative : la vue filtrée des joueurs | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
+| V3.1-102 | ☑ | sans | Initiative : la vue filtrée des joueurs | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-103 | ☐ | sans | Initiative : les jets d'initiative des joueurs | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
 | V3.1-104 | ☐ | sans | Écritures du moteur au nom d'un joueur : changements signés | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
 | V3.1-105 | ☐ | sans | Cibler : le cœur commun de résolution | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |

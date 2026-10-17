@@ -82,12 +82,13 @@ describe.skipIf(!hasCreds)("vue d'initiative des joueurs (integration, base reel
 
     const { data: participants, error: participantsError } = await admin
       .from("combat_participants")
+      // Toutes les colonnes sur chaque ligne : en insertion groupée, une colonne absente vaut null, pas sa valeur par défaut.
       .insert([
-        { combat_id: combatId, source_kind: "entity", entity_id: pcEntityId, label: "Naivara", initiative: 18, ac: 14, hp_max: 15, hp_current: 12, temp_hp: 3, display_order: 1000 },
-        { combat_id: combatId, source_kind: "statblock", rule_key: "goblin", label: "Gobelin 1", initiative: 12, ac: 15, hp_max: 7, hp_current: 3, display_order: 2000, conditions: ["Prone"] },
-        { combat_id: combatId, source_kind: "entity", entity_id: npcEntityId, label: "Silhouette encapuchonnée", initiative: 12, ac: 17, hp_max: 20, hp_current: 11, display_order: 1500 },
-        { combat_id: combatId, source_kind: "custom", label: "Garde allié", initiative: 5, ac: 13, hp_max: 10, hp_current: 0, is_ally: true, display_order: 3000 },
-        { combat_id: combatId, source_kind: "statblock", rule_key: "ogre", label: "Ogre", initiative: 3, ac: 11, hp_max: 59, hp_current: 59, display_order: 4000 },
+        { combat_id: combatId, source_kind: "entity", entity_id: pcEntityId, rule_key: null, label: "Naivara", initiative: 18, ac: 14, hp_max: 15, hp_current: 12, temp_hp: 3, is_ally: false, conditions: [], display_order: 1000 },
+        { combat_id: combatId, source_kind: "statblock", entity_id: null, rule_key: "goblin", label: "Gobelin 1", initiative: 12, ac: 15, hp_max: 7, hp_current: 3, temp_hp: 0, is_ally: false, conditions: ["Prone"], display_order: 2000 },
+        { combat_id: combatId, source_kind: "entity", entity_id: npcEntityId, rule_key: null, label: "Silhouette encapuchonnée", initiative: 12, ac: 17, hp_max: 20, hp_current: 11, temp_hp: 0, is_ally: false, conditions: [], display_order: 1500 },
+        { combat_id: combatId, source_kind: "custom", entity_id: null, rule_key: null, label: "Garde allié", initiative: 5, ac: 13, hp_max: 10, hp_current: 0, temp_hp: 0, is_ally: true, conditions: [], display_order: 3000 },
+        { combat_id: combatId, source_kind: "statblock", entity_id: null, rule_key: "ogre", label: "Ogre", initiative: 3, ac: 11, hp_max: 59, hp_current: 59, temp_hp: 0, is_ally: false, conditions: [], display_order: 4000 },
       ])
       .select("id, label");
     if (participantsError || !participants) throw new Error(participantsError?.message ?? "creation participants echouee");

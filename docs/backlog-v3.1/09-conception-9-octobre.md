@@ -19,30 +19,6 @@ V3.1-104 n'est plus bloqué : option B de l'ADR 0041, choisie le 10 octobre.
 | V3.1-96 données de la chronologie | 0048 | 96 lui-même, désormais prêt |
 | V3.1-100 rejoindre sans PJ, lien nominatif | 0049 | 100 lui-même, désormais prêt |
 
-### ☐ V3.1-102 — Initiative : la vue filtrée des joueurs · `M` · sans modèle IA — **prêt (Opus)**
-
-**Modèle conseillé : Opus.** **ADR 0040.** **Dépend de** : 101.
-
-**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-- Fonction `app.combat_player_view(p_combat uuid)` (`security definer`,
-  `row_security = off`), vérifie que l'appelant est membre de la campagne ;
-  renvoie par participant : `id`, `label`, `initiative`, ordre, `is_current`,
-  `side`, états ; allié (PJ ou `is_ally`) : PV courants, max, temporaires ;
-  adversaire : `wound` parmi `unhurt` (≥ max), `hurt` (> ½), `bloodied`
-  (> 0), `down` (0). Jamais `ac`, `rule_key`, ni le nom d'entité d'un
-  adversaire. Plus la ligne `combats` (statut, round, tour).
-- Service `getPlayerCombatView`, route `GET
-  /api/campaigns/[campaignId]/combats/active/player` (Zod).
-- Le MJ touche `combats.updated_at` à chaque changement de participant
-  (signal temps réel des joueurs).
-
-**Critères d'acceptation**
-- [ ] La vue ne contient ni PV, ni CA, ni nom d'origine d'un adversaire (test).
-- [ ] Un non-membre reçoit un refus.
-
----
-
 ### ☐ V3.1-103 — Initiative : les jets d'initiative des joueurs · `M` · sans modèle IA — **prêt (Opus)**
 
 **Modèle conseillé : Opus** — changement de schéma. **ADR 0040.**
