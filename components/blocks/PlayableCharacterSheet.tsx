@@ -458,7 +458,7 @@ export default function PlayableCharacterSheet({
         onLevelUp={() => setLevelUpOpen(true)}
         onRest={rest}
         onExportJson={exportJson}
-        onRollInitiative={() => rollInitiative(entityId, advantage)}
+        onRollInitiative={() => rollInitiative(entityId, advantage, { label: "Initiative", modifier: sheet.abilities.dex.mod })}
         error={error}
         etatMourant={etat}
         deathSaves={deathSaves}
@@ -488,7 +488,14 @@ export default function PlayableCharacterSheet({
                       type="button"
                       title={`Lancer un test de ${ABILITY_NAMES[ability]}`}
                       aria-label={`Test de ${ABILITY_NAMES[ability]}`}
-                      onClick={() => rollAbility(entityId, ability, advantage)}
+                      onClick={() =>
+                        rollAbility(entityId, ability, advantage, {
+                          label: `Test de ${ABILITY_NAMES[ability]}`,
+                          modifier: sheet.abilities[ability].mod,
+                          inspiration,
+                          apresRelance: reloadRemote,
+                        })
+                      }
                       className="min-h-9 min-w-12 text-xl font-bold text-ink hover:text-accent @min-[40rem]:min-h-0 @min-[40rem]:min-w-0"
                     >
                       {sheet.abilities[ability].mod >= 0 ? "+" : ""}
@@ -511,7 +518,14 @@ export default function PlayableCharacterSheet({
                       type="button"
                       title={`Lancer une sauvegarde de ${ABILITY_NAMES[ability]}`}
                       aria-label={`Sauvegarde de ${ABILITY_NAMES[ability]}`}
-                      onClick={() => rollSave(entityId, ability, advantage)}
+                      onClick={() =>
+                        rollSave(entityId, ability, advantage, {
+                          label: `Sauvegarde de ${ABILITY_NAMES[ability]}`,
+                          modifier: save.mod,
+                          inspiration,
+                          apresRelance: reloadRemote,
+                        })
+                      }
                       className={`flex min-h-9 items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] @min-[40rem]:min-h-0 font-semibold hover:border-accent ${
                         save.proficient ? "border-accent bg-accent/20 text-accent" : "border-edge text-ink-muted"
                       }`}
@@ -637,7 +651,14 @@ export default function PlayableCharacterSheet({
                       <button
                         type="button"
                         title={`Lancer ${SKILL_LABELS_FR[skill]}`}
-                        onClick={() => rollSkill(entityId, skill, advantage)}
+                        onClick={() =>
+                          rollSkill(entityId, skill, advantage, {
+                            label: `${SKILL_LABELS_FR[skill]} — test`,
+                            modifier: result.mod,
+                            inspiration,
+                            apresRelance: reloadRemote,
+                          })
+                        }
                         className="flex flex-1 items-center gap-2 text-left hover:text-accent"
                       >
                         <span className="flex-1 text-ink">{SKILL_LABELS_FR[skill]}</span>

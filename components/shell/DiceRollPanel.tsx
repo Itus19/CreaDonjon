@@ -1,40 +1,42 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { useTranslations } from "next-intl";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
-import { useMatchMedia } from "./useMatchMedia";
+import FeuilleDuBas from "@/components/shared/FeuilleDuBas";
+import { useMatchMedia, WINDOWS_MOBILE_QUERY } from "./useMatchMedia";
+import OutilDes, { PanneauFlottant, type PositionPanneau } from "./OutilDes";
 import type { AdvantageState } from "@/src/core/rules/action";
 import type { Ability, Skill } from "@/src/core/rules/sheet";
-import { DIE_TYPES, type DieType } from "@/src/core/dice/roll";
-import { extractDiceGroups, parseRollDetail, type DiceGroup, type RollChip } from "@/src/core/dice/parseRollDetail";
+import { advantagePairFromTrace } from "@/src/core/dice/diceTool";
+import { naturalD20FromTrace } from "@/src/core/dice/rollAttribution";
+import { extractDiceGroups, parseRollDetail } from "@/src/core/dice/parseRollDetail";
 import type { DiceRollRow } from "@/src/server/repos/diceRolls";
+import {
+  estSecret,
+  fusionnerJets,
+  lireDcPrive,
+  lireDiffusionDd,
+  preReglageDepuisFiche,
+  type ApercuFiche,
+  type JetAffiche,
+  type PreReglage,
+} from "@/lib/ui/outilDes";
 
 /**
- * V2-M11 (Lot M) : volet de lancer de des, esthetique BG3 validee par
- * esquisse (dice-panel-mockup.html, jamais commite). Toute la logique de
- * jeu (modificateur, verdict DD, visibilite) vit deja cote serveur
- * (checkRolls.ts) — ce fichier n'affiche que ce que le serveur renvoie,
- * jamais un second calcul. Un seul flux d'alimentation pour tout le monde :
- * Realtime sur `dice_rolls` (RLS deja filtree, cf. migration
- * 20260831091000) — la reponse HTTP du clic local sert seulement a un
- * retour immediat (`lastRoll`), jamais a construire l'historique.
+ * L'outil de dés unique (V3.1-33) : ce fichier est son FOURNISSEUR. Il garde
+ * ce qui doit vivre hors de l'outil — Realtime sur `dice_rolls` (RLS déjà
+ * filtrée, migration 20260831091000), historique chargé à la première
+ * ouverture (V3.1-62), DD diffusé par le MJ, dalle du rail, toast du
+ * téléphone — et ouvre le corps (`OutilDes.tsx`) dans le bon conteneur :
+ * feuille du bas sous 768 px, panneau ancré au dé du rail au-delà.
+ *
+ * Toute la logique de jeu (modificateur, verdict, visibilité) vit côté
+ * serveur (checkRolls.ts) : l'écran n'affiche que ce que le serveur renvoie.
  */
 
-interface DisplayRoll {
-  id: string;
-  who: string;
-  what: string;
-  chips: RollChip[];
-  total: number;
-  dc: number | null;
-  verdict: "success" | "fail" | null;
-  hidden: boolean;
-  diceGroups: DiceGroup[];
-  createdAt: string;
-}
-
-function rollFromRow(row: DiceRollRow): DisplayRoll {
+function jetDepuisLigne(row: DiceRollRow): JetAffiche {
   const detail = parseRollDetail(row.detail);
   return {
     id: row.id,
@@ -43,140 +45,62 @@ function rollFromRow(row: DiceRollRow): DisplayRoll {
     chips: detail.chips ?? [],
     total: row.result,
     dc: detail.dc ?? null,
+    dcPrivate: lireDcPrive(row.detail),
     verdict: detail.verdict ?? null,
-    hidden: row.visibility_level === "gm",
-    diceGroups: extractDiceGroups(detail.trace),
+    naturalD20: naturalD20FromTrace(detail.trace ?? []) ?? null,
+    secret: estSecret(row.visibility_level),
+    groups: extractDiceGroups(detail.trace),
+    pair: advantagePairFromTrace(detail.trace),
     createdAt: row.created_at,
   };
 }
 
-// `RollOutcome` (checkRolls.ts) : meme forme que `dice_rolls.detail`, plus
-// `trace` directement — sert au retour immediat du clic (avant meme que
-// Realtime ne livre la ligne persistee), jamais une seconde source de verite
-// pour l'historique (voir `rollAndDisplay` ci-dessous).
-interface RollOutcomeJson {
-  who: string;
-  what: string;
-  chips: RollChip[];
-  total: number;
-  dc: number | null;
-  verdict: "success" | "fail" | null;
-  hidden: boolean;
-  trace: { text: string; value: number }[];
-}
-
-function displayRollFromOutcome(o: RollOutcomeJson): DisplayRoll {
-  return {
-    id: crypto.randomUUID(),
-    who: o.who,
-    what: o.what,
-    chips: o.chips,
-    total: o.total,
-    dc: o.dc,
-    verdict: o.verdict,
-    hidden: o.hidden,
-    diceGroups: extractDiceGroups(o.trace),
-    createdAt: new Date().toISOString(),
-  };
-}
-
-const DIE_CLIP_PATH: Record<number, string> = {
-  4: "polygon(50% 4%, 96% 96%, 4% 96%)",
-  6: "polygon(14% 14%, 86% 14%, 86% 86%, 14% 86%)",
-  8: "polygon(50% 2%, 98% 50%, 50% 98%, 2% 50%)",
-  10: "polygon(50% 2%, 92% 36%, 76% 98%, 24% 98%, 8% 36%)",
-  12: "polygon(50% 2%, 95% 35%, 79% 92%, 21% 92%, 5% 35%)",
-  20: "polygon(50% 2%, 95% 27%, 95% 73%, 50% 98%, 5% 73%, 5% 27%)",
-  100: "polygon(50% 2%, 92% 36%, 76% 98%, 24% 98%, 8% 36%)",
-};
-
-/** Cote (px) d'une forme de de pour que N formes tiennent dans le carre de 90x90 inscrit dans le cadre circulaire (meme calcul que l'esquisse validee). */
-function sizeForCount(n: number): number {
-  if (n <= 0) return 86;
-  const box = 90;
-  const gap = 4;
-  const cols = Math.ceil(Math.sqrt(n));
-  const rows = Math.ceil(n / cols);
-  const sizeByCols = (box - gap * (cols - 1)) / cols;
-  const sizeByRows = (box - gap * (rows - 1)) / rows;
-  return Math.max(16, Math.floor(Math.min(sizeByCols, sizeByRows)));
-}
-
-function formatSigned(n: number): string {
-  return n >= 0 ? `+${n}` : String(n);
-}
-
-function DieShape({ faces, value, size }: { faces: number; value: number | string; size: number }) {
-  return (
-    <div
-      className="flex flex-shrink-0 items-center justify-center border border-edge-strong bg-panel-raised"
-      style={{ width: size, height: size, clipPath: DIE_CLIP_PATH[faces] ?? DIE_CLIP_PATH[20] }}
-    >
-      <span className="font-mech font-bold text-ink" style={{ fontSize: Math.max(11, size * 0.3) }}>
-        {value}
-      </span>
-    </div>
-  );
-}
-
-// ---- contexte : declenche un jet contextuel depuis n'importe quelle fiche ----
+// ---- contexte : ouvre l'outil depuis n'importe quelle fiche ----
 
 interface DiceRollContextValue {
   isGm: boolean;
-  rollAbility: (entityId: string, ability: Ability, advantage: AdvantageState) => Promise<void>;
-  rollSkill: (entityId: string, skill: Skill, advantage: AdvantageState) => Promise<void>;
-  rollSave: (entityId: string, ability: Ability, advantage: AdvantageState) => Promise<void>;
-  rollInitiative: (entityId: string, advantage: AdvantageState) => Promise<void>;
-  /** Ouvre le volet existant (V3.1-27) : le de de la dalle « Outils » du rail n'a pas de volet propre. */
+  /**
+   * Ouvre l'outil pré-rempli (V3.1-33) : titre, dés, modificateur, avantage,
+   * secret. Avec une `action`, « Lancer » appelle la route de la fiche.
+   */
+  openDiceTool: (preset: PreReglage) => void;
+  /** Les quatre ci-dessous OUVRENT l'outil sur le test de la fiche ; le jet part de « Lancer ». */
+  rollAbility: (entityId: string, ability: Ability, advantage: AdvantageState, apercu: ApercuFiche) => void;
+  rollSkill: (entityId: string, skill: Skill, advantage: AdvantageState, apercu: ApercuFiche) => void;
+  rollSave: (entityId: string, ability: Ability, advantage: AdvantageState, apercu: ApercuFiche) => void;
+  rollInitiative: (entityId: string, advantage: AdvantageState, apercu: ApercuFiche) => void;
+  /** Ouvre l'outil en « Jet libre » (1d20, 0) : le dé de la dalle « Outils » du rail n'a pas de volet propre. */
   ouvrirVolet: () => void;
   /**
    * Signale une dalle « Outils » (rail, `"ordinateur"`) ou une barre flottante
-   * (telephone, `"telephone"`) montee ; renvoie de quoi la retirer. Tant qu'il
-   * y en a une pour une portee, le bouton flottant se cache sur cette portee
-   * seulement (a partir de 768 px, ou en dessous) — une page de monde sans
-   * rail ni barre (apercu...) le garde, sinon elle n'aurait plus de de.
+   * (téléphone, `"telephone"`) montée ; renvoie de quoi la retirer. Tant qu'il
+   * y en a une pour une portée, le bouton flottant se cache sur cette portée
+   * seulement — une page de monde sans rail ni barre le garde, sinon elle
+   * n'aurait plus de dé. `ancre` : le dé du rail, auquel le panneau s'accroche.
    */
-  enregistrerDalle: (portee: PorteeDalle) => () => void;
+  enregistrerDalle: (portee: PorteeDalle, ancre?: RefObject<HTMLElement | null>) => () => void;
 }
 
-/** Ou le de de la coquille vit : le rail (a partir de 768 px) ou la barre flottante (en dessous). */
+/** Où le dé de la coquille vit : le rail (à partir de 768 px) ou la barre flottante (en dessous). */
 export type PorteeDalle = "ordinateur" | "telephone";
 
 const DiceRollContext = createContext<DiceRollContextValue | null>(null);
 
-/** Pour un clic sur une fiche (stat/competence/sauvegarde/initiative) — lance et alimente le volet, jamais un second affichage local. */
+/** Pour un clic sur une fiche (stat/compétence/sauvegarde/initiative) : ouvre l'outil, jamais un second affichage local. */
 export function useDiceRoll(): DiceRollContextValue {
   const ctx = useContext(DiceRollContext);
   if (!ctx) throw new Error("useDiceRoll doit etre appele sous DiceRollProvider (AppShell.tsx)");
   return ctx;
 }
 
-const HISTORY_LIMIT = 50;
+const HISTORY_LIMIT = 30;
 
-/** Etat de l'historique des jets, charge a la premiere ouverture du volet (V3.1-62). */
+/** État de l'historique des jets, chargé à la première ouverture de l'outil (V3.1-62). */
 type EtatHistorique = "sans-campagne" | "chargement" | "erreur" | "charge";
 
-/**
- * L'historique charge rejoint les jets recus en direct pendant que le volet
- * etait ferme : on garde ceux-ci s'ils sont plus recents que l'historique,
- * sans doublon.
- */
-function fusionnerJets(historique: DisplayRoll[], enDirect: DisplayRoll[]): DisplayRoll[] {
-  const ids = new Set(historique.map((r) => r.id));
-  const plusRecent = historique[0]?.createdAt ?? "";
-  const recus = enDirect.filter((r) => !ids.has(r.id) && r.createdAt > plusRecent);
-  return [...recus, ...historique].slice(0, HISTORY_LIMIT);
-}
-/**
- * Seuil PROPRE au volet de des (`sm` de Tailwind), deliberement different
- * du seuil du bureau a fenetres (`WINDOWS_MOBILE_QUERY`, 768 px) : les deux
- * repondent a deux questions differentes — "y a-t-il la place pour des
- * fenetres flottantes ?" ici "le volet s'ouvre-t-il sur le cote ou en
- * bulle ?". V3-R2 a unifie le MECANISME (`useMatchMedia`), pas les seuils :
- * les aligner aurait change le comportement du volet entre 640 et 767 px,
- * ce que ce lot s'interdit.
- */
-const MOBILE_QUERY = "(max-width: 639px)";
+/** Largeur du panneau (px) et marge au bord de l'écran, pour ne jamais le laisser sortir. */
+const LARGEUR_PANNEAU = 344;
+const MARGE_ECRAN = 8;
 
 export default function DiceRollProvider({
   campaignId,
@@ -187,57 +111,81 @@ export default function DiceRollProvider({
   isGm: boolean;
   children: React.ReactNode;
 }) {
+  const t = useTranslations("outilDes");
   const supabase = useMemo(() => createClient(), []);
+  const estTelephone = useMatchMedia(WINDOWS_MOBILE_QUERY);
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<"lancer" | "historique">("lancer");
-  const isMobile = useMatchMedia(MOBILE_QUERY);
-  const [rolls, setRolls] = useState<DisplayRoll[]>([]);
+  /** Le préréglage de l'ouverture en cours ; `cle` change à chaque ouverture, pour repartir d'un outil neuf. */
+  const [preset, setPreset] = useState<PreReglage | null>(null);
+  const [cle, setCle] = useState(0);
+  const [position, setPosition] = useState<PositionPanneau | null>(null);
+  const [rolls, setRolls] = useState<JetAffiche[]>([]);
   const [historique, setHistorique] = useState<{ pour: string; etat: "charge" | "erreur" } | null>(null);
   const etatHistorique: EtatHistorique = !campaignId ? "sans-campagne" : historique?.pour === campaignId ? historique.etat : "chargement";
-  const [lastRoll, setLastRoll] = useState<DisplayRoll | null>(null);
-  const [toast, setToast] = useState<DisplayRoll | null>(null);
-  const [pool, setPool] = useState<Record<DieType, number>>({ d4: 0, d6: 0, d8: 0, d10: 0, d12: 0, d20: 1, d100: 0 });
-  const [dc, setDc] = useState("");
-  /** V2-M11 suite (retour utilisateur 31 août) : "si le MJ le souhaite, ses joueurs voient le DD" — diffuse via Realtime broadcast (ephemere, jamais persiste : c'est une annonce du moment, pas un fait de campagne). Off par defaut : taper un DD reste un calcul prive tant que le MJ n'a pas explicitement partage. */
-  const [dcShared, setDcShared] = useState(false);
-  /** true si la valeur actuelle de `dc` vient d'une diffusion du MJ (chez le MJ comme chez un joueur) — retombe a false des que CE client tape lui-meme dans le champ, cf. `updateDc`. */
-  const [dcFromGm, setDcFromGm] = useState(false);
+  const [toast, setToast] = useState<JetAffiche | null>(null);
+  /**
+   * DD (V2-M11 suite, V3.1-33) : diffusé par le MJ aux joueurs via Realtime
+   * broadcast (éphémère, jamais persisté). `ddPrive` : côté MJ, l'interrupteur
+   * « DD privé » (diffusé comme `{ dc: null, private: true }`) ; côté joueur,
+   * la valeur reçue — il lit « contre DD ? » et lance sans DD.
+   */
+  const [dd, setDd] = useState<number | null>(null);
+  const [ddPrive, setDdPrive] = useState(false);
+  /** La valeur actuelle de `dd` vient d'une diffusion du MJ — retombe à false dès que CE client la change lui-même. */
+  const [ddDeMj, setDdDeMj] = useState(false);
   const channelRef = useRef<RealtimeChannel | null>(null);
-  const [hidden, setHidden] = useState(false);
-  const [rolling, setRolling] = useState(false);
-  const [rollingFaces, setRollingFaces] = useState<number[]>([]);
-  const [freeformBusy, setFreeformBusy] = useState(false);
+  const minuteurDdRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const ancreRef = useRef<RefObject<HTMLElement | null> | null>(null);
 
-  // `open` change frequemment (chaque ouverture/fermeture manuelle) — une
-  // ref plutot qu'une dependance evite de reabonner Realtime a chaque clic
-  // sur le bouton rond, `handleLiveRoll` restant stable (`useCallback`, deps
-  // `[isMobile]` seulement).
+  // `open` change à chaque ouverture/fermeture : une ref plutôt qu'une
+  // dépendance évite de réabonner Realtime à chaque clic.
   const openRef = useRef(open);
   useEffect(() => {
     openRef.current = open;
   }, [open]);
 
-  /** Un vrai jet EN DIRECT (Realtime ou reponse HTTP immediate) — jamais le chargement initial de l'historique (`setRolls` seul, plus bas), qui ne doit ni ouvrir le volet ni notifier. */
-  const handleLiveRoll = useCallback(
-    (display: DisplayRoll) => {
-      setLastRoll(display);
-      if (isMobile) {
-        if (!openRef.current) {
-          setToast(display);
-          setTimeout(() => setToast(null), 4500);
-        }
+  /**
+   * Ouvre l'outil. À partir de 768 px : le panneau s'ancre au dé de la dalle
+   * « Outils » du rail (même calcul que le menu flottant du rail), ou en bas
+   * à droite si aucun rail n'est monté. Sous 768 px : la feuille du bas.
+   */
+  const ouvrir = useCallback((nouveau: PreReglage | null) => {
+    const ancre = ancreRef.current?.current;
+    if (ancre && ancre.isConnected && !window.matchMedia(WINDOWS_MOBILE_QUERY).matches) {
+      const r = ancre.getBoundingClientRect();
+      const left = Math.max(MARGE_ECRAN, Math.min(r.right + 12, window.innerWidth - LARGEUR_PANNEAU - MARGE_ECRAN));
+      const enHaut = r.top < window.innerHeight / 2;
+      setPosition(
+        enHaut
+          ? { left, top: Math.max(MARGE_ECRAN, r.top - 6), bottom: MARGE_ECRAN }
+          : { left, bottom: Math.max(MARGE_ECRAN, window.innerHeight - r.bottom - 6) }
+      );
+    } else {
+      setPosition({ right: 20, bottom: 20 });
+    }
+    setPreset(nouveau);
+    setCle((c) => c + 1);
+    setOpen(true);
+  }, []);
+
+  /** Un vrai jet EN DIRECT (Realtime) — jamais le chargement initial de l'historique, qui ne doit ni ouvrir l'outil ni notifier. */
+  const surJetEnDirect = useCallback(
+    (jet: JetAffiche) => {
+      if (openRef.current) return;
+      if (estTelephone) {
+        setToast(jet);
+        setTimeout(() => setToast(null), 4500);
       } else {
-        setOpen(true);
+        ouvrir(null);
       }
     },
-    [isMobile]
+    [estTelephone, ouvrir]
   );
 
   // V3.1-62 (docs/CABLAGE.md, docs/QUOTAS.md Q1) : l'historique ne s'affiche
-  // que dans le volet, ferme la plupart du temps. Il se charge donc a la
-  // PREMIERE ouverture, plus a chaque page : un appel `/api` de moins par
-  // page affichee. Les jets en direct (Realtime, ci-dessous) arrivent, eux,
-  // des le montage, volet ferme compris.
+  // que dans l'outil, fermé la plupart du temps. Il se charge donc à la
+  // PREMIÈRE ouverture, plus à chaque page. Les jets en direct (Realtime,
+  // ci-dessous) arrivent, eux, dès le montage, outil fermé compris.
   useEffect(() => {
     if (!campaignId || !open || historique?.pour === campaignId) return;
     let cancelled = false;
@@ -248,7 +196,7 @@ export default function DiceRollProvider({
       })
       .then((body) => {
         if (cancelled) return;
-        setRolls((prev) => fusionnerJets(body.rolls.map(rollFromRow), prev));
+        setRolls((prev) => fusionnerJets(body.rolls.map(jetDepuisLigne), prev, HISTORY_LIMIT));
         setHistorique({ pour: campaignId, etat: "charge" });
       })
       .catch((erreur: unknown) => {
@@ -260,8 +208,7 @@ export default function DiceRollProvider({
     };
   }, [campaignId, open, historique]);
 
-  // Abonnement Realtime, inutile sans campagne (monde pas encore dote d'une
-  // campagne — meme cas que `recorded: false`).
+  // Abonnement Realtime, inutile sans campagne.
   useEffect(() => {
     if (!campaignId) return;
 
@@ -271,17 +218,18 @@ export default function DiceRollProvider({
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "dice_rolls", filter: `campaign_id=eq.${campaignId}` },
         (payload) => {
-          const display = rollFromRow(payload.new as DiceRollRow);
-          setRolls((prev) => [display, ...prev].slice(0, HISTORY_LIMIT));
-          handleLiveRoll(display);
+          const jet = jetDepuisLigne(payload.new as DiceRollRow);
+          setRolls((prev) => [jet, ...prev].slice(0, HISTORY_LIMIT));
+          surJetEnDirect(jet);
         }
       )
-      // DD partage par le MJ (retour utilisateur, V2-M11 suite) : diffusion
-      // Realtime sur le meme canal, jamais persistee — `self: false` par
-      // defaut sur ce channel, le MJ ne se reenvoie jamais sa propre valeur.
+      // DD annoncé par le MJ : diffusion éphémère sur le même canal, jamais
+      // persistée — `self: false` par défaut, le MJ ne se réenvoie pas sa valeur.
       .on("broadcast", { event: "dc" }, ({ payload }) => {
-        setDc(payload.dc === null || payload.dc === undefined ? "" : String(payload.dc));
-        setDcFromGm(true);
+        const annonce = lireDiffusionDd(payload);
+        setDd(annonce.dc);
+        setDdPrive(annonce.prive);
+        setDdDeMj(true);
       })
       .subscribe();
     channelRef.current = channel;
@@ -290,69 +238,86 @@ export default function DiceRollProvider({
       channelRef.current = null;
       supabase.removeChannel(channel);
     };
-  }, [campaignId, supabase, handleLiveRoll]);
+  }, [campaignId, supabase, surJetEnDirect]);
 
-  /** Cote MJ uniquement, quand `dcShared` est actif : chaque changement de DD (y compris le vider) est diffuse, debattu de 400ms pour ne pas spammer a chaque frappe. */
-  useEffect(() => {
-    if (!isGm || !dcShared) return;
-    const t = setTimeout(() => {
-      const value = dc.trim() === "" ? null : Number(dc);
-      channelRef.current?.send({ type: "broadcast", event: "dc", payload: { dc: Number.isFinite(value) ? value : null } });
-    }, 400);
-    return () => clearTimeout(t);
-  }, [dc, dcShared, isGm]);
-
-  /** Le MJ tape lui-meme (pas une diffusion recue) : redevient un calcul prive tant qu'il ne repartage pas. */
-  const updateDc = useCallback((v: string) => {
-    setDcFromGm(false);
-    setDc(v);
-  }, []);
-
-  const dcValue = dc.trim() === "" ? null : Number(dc);
-  const hasDc = dc.trim() !== "" && Number.isFinite(dcValue);
-
-  const postCheck = useCallback(
-    async (path: string, entityId: string, body: object): Promise<void> => {
-      const res = await fetch(`/api/entities/${entityId}/actions/${path}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) return;
-      const json = (await res.json()) as RollOutcomeJson;
-      handleLiveRoll(displayRollFromOutcome(json));
+  useEffect(
+    () => () => {
+      if (minuteurDdRef.current) clearTimeout(minuteurDdRef.current);
     },
-    [handleLiveRoll]
+    []
   );
 
+  /**
+   * MJ seulement : chaque changement de DD est diffusé, débattu de 400 ms. DD
+   * non privé : la valeur ; DD privé : `{ dc: null, private: true }`. Appelé
+   * par un geste du MJ, jamais au montage (sinon chaque page écraserait le DD
+   * que les joueurs viennent de recevoir).
+   */
+  const diffuserDd = useCallback(
+    (valeur: number | null, prive: boolean) => {
+      if (!isGm) return;
+      if (minuteurDdRef.current) clearTimeout(minuteurDdRef.current);
+      minuteurDdRef.current = setTimeout(() => {
+        channelRef.current?.send({
+          type: "broadcast",
+          event: "dc",
+          payload: prive ? { dc: null, private: true } : { dc: valeur, private: false },
+        });
+      }, 400);
+    },
+    [isGm]
+  );
+
+  const changerDd = useCallback(
+    (valeur: number | null) => {
+      setDd(valeur);
+      setDdDeMj(false);
+      diffuserDd(valeur, ddPrive);
+    },
+    [diffuserDd, ddPrive]
+  );
+
+  const changerDdPrive = useCallback(
+    (prive: boolean) => {
+      setDdPrive(prive);
+      diffuserDd(dd, prive);
+    },
+    [diffuserDd, dd]
+  );
+
+  const openDiceTool = useCallback((nouveau: PreReglage) => ouvrir(nouveau), [ouvrir]);
   const rollAbility = useCallback(
-    (entityId: string, ability: Ability, advantage: AdvantageState) =>
-      postCheck("ability-check", entityId, { campaignId, ability, advantage, dc: hasDc ? dcValue : null, hidden }),
-    [postCheck, campaignId, hasDc, dcValue, hidden]
+    (entityId: string, ability: Ability, advantage: AdvantageState, apercu: ApercuFiche) =>
+      ouvrir(preReglageDepuisFiche({ kind: "ability", entityId, ability }, advantage, apercu)),
+    [ouvrir]
   );
   const rollSkill = useCallback(
-    (entityId: string, skill: Skill, advantage: AdvantageState) =>
-      postCheck("skill-check", entityId, { campaignId, skill, advantage, dc: hasDc ? dcValue : null, hidden }),
-    [postCheck, campaignId, hasDc, dcValue, hidden]
+    (entityId: string, skill: Skill, advantage: AdvantageState, apercu: ApercuFiche) =>
+      ouvrir(preReglageDepuisFiche({ kind: "skill", entityId, skill }, advantage, apercu)),
+    [ouvrir]
   );
   const rollSave = useCallback(
-    (entityId: string, ability: Ability, advantage: AdvantageState) =>
-      postCheck("saving-throw", entityId, { campaignId, ability, advantage, dc: hasDc ? dcValue : null, hidden }),
-    [postCheck, campaignId, hasDc, dcValue, hidden]
+    (entityId: string, ability: Ability, advantage: AdvantageState, apercu: ApercuFiche) =>
+      ouvrir(preReglageDepuisFiche({ kind: "save", entityId, ability }, advantage, apercu)),
+    [ouvrir]
   );
   const rollInitiative = useCallback(
-    (entityId: string, advantage: AdvantageState) =>
-      postCheck("initiative-check", entityId, { campaignId, advantage, dc: hasDc ? dcValue : null, hidden }),
-    [postCheck, campaignId, hasDc, dcValue, hidden]
+    (entityId: string, advantage: AdvantageState, apercu: ApercuFiche) =>
+      ouvrir(preReglageDepuisFiche({ kind: "initiative", entityId }, advantage, apercu)),
+    [ouvrir]
   );
+  const ouvrirVolet = useCallback(() => ouvrir(null), [ouvrir]);
 
-  const ouvrirVolet = useCallback(() => setOpen(true), []);
   const [dallesMontees, setDallesMontees] = useState<Record<PorteeDalle, number>>({ ordinateur: 0, telephone: 0 });
-  const enregistrerDalle = useCallback((portee: PorteeDalle) => {
+  const enregistrerDalle = useCallback((portee: PorteeDalle, ancre?: RefObject<HTMLElement | null>) => {
     setDallesMontees((n) => ({ ...n, [portee]: n[portee] + 1 }));
-    return () => setDallesMontees((n) => ({ ...n, [portee]: n[portee] - 1 }));
+    if (portee === "ordinateur" && ancre) ancreRef.current = ancre;
+    return () => {
+      setDallesMontees((n) => ({ ...n, [portee]: n[portee] - 1 }));
+      if (ancre && ancreRef.current === ancre) ancreRef.current = null;
+    };
   }, []);
-  // Un seul des deux cas masque le bouton sur sa portee ; les deux, partout.
+  // Un seul des deux cas masque le bouton sur sa portée ; les deux, partout.
   const classeMasqueDe =
     dallesMontees.ordinateur > 0 && dallesMontees.telephone > 0
       ? "hidden"
@@ -363,46 +328,28 @@ export default function DiceRollProvider({
           : "";
 
   const contextValue = useMemo<DiceRollContextValue>(
-    () => ({ isGm, rollAbility, rollSkill, rollSave, rollInitiative, ouvrirVolet, enregistrerDalle }),
-    [isGm, rollAbility, rollSkill, rollSave, rollInitiative, ouvrirVolet, enregistrerDalle]
+    () => ({ isGm, openDiceTool, rollAbility, rollSkill, rollSave, rollInitiative, ouvrirVolet, enregistrerDalle }),
+    [isGm, openDiceTool, rollAbility, rollSkill, rollSave, rollInitiative, ouvrirVolet, enregistrerDalle]
   );
 
-  const poolEntries = useMemo(() => DIE_TYPES.flatMap((t) => (pool[t] > 0 ? Array(pool[t]).fill(Number(t.slice(1))) : [])), [pool]);
-
-  async function rollFreeform() {
-    if (!campaignId || poolEntries.length === 0 || freeformBusy) return;
-    setFreeformBusy(true);
-    setRolling(true);
-    setRollingFaces(poolEntries);
-    let ticks = 0;
-    const spin = setInterval(() => {
-      setRollingFaces(poolEntries.map((faces) => 1 + Math.floor(Math.random() * faces)));
-      ticks++;
-      if (ticks > 8) clearInterval(spin);
-    }, 60);
-
-    const minDelay = new Promise((resolve) => setTimeout(resolve, 500));
-    const fetchPromise = fetch(`/api/campaigns/${campaignId}/dice-rolls`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pool, hidden }),
-    });
-    const [res] = await Promise.all([fetchPromise, minDelay]);
-    clearInterval(spin);
-    setRolling(false);
-    setFreeformBusy(false);
-    if (!res.ok) return;
-    const json = (await res.json()) as RollOutcomeJson;
-    handleLiveRoll(displayRollFromOutcome(json));
-  }
-
-  function toggleDie(type: DieType) {
-    setPool((prev) => ({ ...prev, [type]: prev[type] + 1 }));
-  }
-
-  function resetPool() {
-    setPool({ d4: 0, d6: 0, d8: 0, d10: 0, d12: 0, d20: 0, d100: 0 });
-  }
+  const fermer = useCallback(() => setOpen(false), []);
+  const outil = (
+    <OutilDes
+      key={cle}
+      preset={preset}
+      campaignId={campaignId}
+      isGm={isGm}
+      dd={dd}
+      onDd={changerDd}
+      ddPrive={ddPrive}
+      onDdPrive={changerDdPrive}
+      ddDeMj={ddDeMj}
+      jets={rolls}
+      etatHistorique={etatHistorique}
+      onReessayer={() => setHistorique(null)}
+      onFermer={fermer}
+    />
+  );
 
   return (
     <DiceRollContext.Provider value={contextValue}>
@@ -413,7 +360,7 @@ export default function DiceRollProvider({
           type="button"
           onClick={() => {
             setToast(null);
-            setOpen(true);
+            ouvrir(null);
           }}
           className="fixed bottom-4 right-4 z-[70] flex max-w-[calc(100vw-2rem)] items-center gap-2 rounded-lg border border-edge-strong bg-panel-raised px-3 py-2 text-left text-xs shadow-lg"
         >
@@ -425,80 +372,33 @@ export default function DiceRollProvider({
         </button>
       )}
 
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-label="Ouvrir le volet de lancer de dés"
-        // V3.1-27 : a partir de 768 px, le de vit dans la dalle « Outils » du
-        // rail ; V3.1-29 : sous 768 px, au centre de la barre flottante. Ce
-        // bouton ne sert plus que sur une page sans rail ni barre.
-        className={`fixed bottom-5 right-5 z-[60] flex h-14 w-14 items-center justify-center rounded-full border border-edge-strong bg-panel-raised text-accent shadow-lg transition-all duration-200 ${classeMasqueDe} ${
-          open ? "pointer-events-none scale-50 opacity-0" : "scale-100 opacity-100"
-        }`}
-      >
-        <DiceIcon className="h-7 w-7" />
-      </button>
+      {!open && (
+        <button
+          type="button"
+          onClick={() => ouvrir(null)}
+          aria-label="Ouvrir le volet de lancer de dés"
+          // V3.1-27 : à partir de 768 px, le dé vit dans la dalle « Outils » du
+          // rail ; V3.1-29 : sous 768 px, au centre de la barre flottante. Ce
+          // bouton ne sert plus que sur une page sans rail ni barre.
+          className={`fixed bottom-5 right-5 z-[60] flex h-14 w-14 items-center justify-center rounded-full border border-edge-strong bg-panel-raised text-accent shadow-lg ${classeMasqueDe}`}
+        >
+          <DiceIcon className="h-7 w-7" />
+        </button>
+      )}
 
-      <div
-        className={`fixed bottom-5 right-5 z-[55] w-80 max-w-[calc(100vw-2rem)] origin-bottom-right overflow-hidden rounded-2xl border border-edge bg-panel shadow-2xl transition-all duration-200 ${
-          open ? "scale-100 opacity-100" : "pointer-events-none scale-[0.12] opacity-0"
-        }`}
-      >
-        <div className="flex items-center justify-between gap-2 border-b border-edge px-3.5 py-2">
-          <div className="flex gap-1">
-            <button
-              type="button"
-              onClick={() => setTab("lancer")}
-              className={`rounded-full border px-2.5 py-1 text-xs ${
-                tab === "lancer" ? "border-edge-strong bg-panel-raised text-accent" : "border-transparent text-ink-muted"
-              }`}
-            >
-              Lancer
-            </button>
-            <button
-              type="button"
-              onClick={() => setTab("historique")}
-              className={`rounded-full border px-2.5 py-1 text-xs ${
-                tab === "historique" ? "border-edge-strong bg-panel-raised text-accent" : "border-transparent text-ink-muted"
-              }`}
-            >
-              Historique
-            </button>
-          </div>
-          <button type="button" onClick={() => setOpen(false)} className="p-1 text-lg leading-none text-ink-muted hover:text-ink">
-            &times;
-          </button>
-        </div>
-
-        <div className="h-[70vh] max-h-[600px] overflow-y-auto px-3.5 py-2">
-          {tab === "lancer" ? (
-            <LancerTab
-              lastRoll={lastRoll}
-              rolling={rolling}
-              rollingFaces={rollingFaces}
-              rolls={rolls}
-              etatHistorique={etatHistorique}
-              onReessayer={() => setHistorique(null)}
-              pool={pool}
-              dc={dc}
-              setDc={updateDc}
-              dcShared={dcShared}
-              setDcShared={setDcShared}
-              dcFromGm={dcFromGm}
-              hidden={hidden}
-              setHidden={setHidden}
-              isGm={isGm}
-              canFreeform={campaignId !== null}
-              freeformBusy={freeformBusy}
-              onToggleDie={toggleDie}
-              onReset={resetPool}
-              onRoll={rollFreeform}
-            />
-          ) : (
-            <HistoriqueTab rolls={rolls} etat={etatHistorique} onReessayer={() => setHistorique(null)} />
-          )}
-        </div>
-      </div>
+      {open &&
+        (estTelephone ? (
+          <FeuilleDuBas titre={t("titreFeuille")} onFermer={fermer}>
+            {/* Plus haute que la feuille Outils : la zone de résultat a sa place. */}
+            <div className="min-h-[min(40rem,78dvh)]">{outil}</div>
+          </FeuilleDuBas>
+        ) : (
+          position && (
+            <PanneauFlottant position={position} titre={t("titreFeuille")} onFermer={fermer}>
+              {outil}
+            </PanneauFlottant>
+          )
+        ))}
     </DiceRollContext.Provider>
   );
 }
@@ -515,249 +415,5 @@ function DiceIcon({ className }: { className?: string }) {
       <path d="M12 2 L21 8 L21 16 L12 22 L3 16 L3 8 Z" />
       <path d="M12 2 L12 22 M3 8 L21 16 M21 8 L3 16" />
     </svg>
-  );
-}
-
-function LancerTab({
-  lastRoll,
-  rolling,
-  rollingFaces,
-  rolls,
-  etatHistorique,
-  onReessayer,
-  pool,
-  dc,
-  setDc,
-  dcShared,
-  setDcShared,
-  dcFromGm,
-  hidden,
-  setHidden,
-  isGm,
-  canFreeform,
-  freeformBusy,
-  onToggleDie,
-  onReset,
-  onRoll,
-}: {
-  lastRoll: DisplayRoll | null;
-  rolling: boolean;
-  rollingFaces: number[];
-  rolls: DisplayRoll[];
-  etatHistorique: EtatHistorique;
-  onReessayer: () => void;
-  pool: Record<DieType, number>;
-  dc: string;
-  setDc: (v: string) => void;
-  /** MJ uniquement : diffuse chaque changement de DD aux joueurs (retour utilisateur, V2-M11 suite). */
-  dcShared: boolean;
-  setDcShared: (v: boolean) => void;
-  /** La valeur actuelle de `dc` vient d'une diffusion du MJ, pas d'une frappe locale — pilote le texte d'indice ci-dessous. */
-  dcFromGm: boolean;
-  hidden: boolean;
-  setHidden: (v: boolean) => void;
-  isGm: boolean;
-  canFreeform: boolean;
-  freeformBusy: boolean;
-  onToggleDie: (type: DieType) => void;
-  onReset: () => void;
-  onRoll: () => void;
-}) {
-  const groups = rolling ? null : lastRoll?.diceGroups.length ? lastRoll.diceGroups : null;
-  const size = groups ? sizeForCount(groups.reduce((n, g) => n + g.rolls.length, 0)) : rolling ? sizeForCount(rollingFaces.length) : 86;
-
-  return (
-    <div className="flex flex-col">
-      <div className="mb-1 text-center">
-        <div className="text-[11px] uppercase tracking-wide text-ink-muted">{lastRoll?.who ?? "—"}</div>
-        <div className="text-[15px] font-semibold text-ink">{lastRoll?.what ?? "En attente d'un jet"}</div>
-      </div>
-
-      <div className="relative mx-auto mb-1.5 flex h-36 w-36 items-center justify-center rounded-[50%/55%] border border-edge-strong bg-panel-sunken">
-        <div className="flex h-[90px] w-[90px] flex-wrap items-center justify-center gap-1">
-          {rolling
-            ? rollingFaces.map((faces, i) => <DieShape key={i} faces={faces} value="?" size={size} />)
-            : groups
-              ? groups.flatMap((g, gi) => g.rolls.map((v, i) => <DieShape key={`${gi}-${i}`} faces={g.faces} value={v} size={size} />))
-              : <DieShape faces={20} value="?" size={size} />}
-        </div>
-      </div>
-
-      <div className="mb-1.5 min-h-[26px] text-center">
-        {lastRoll && !rolling ? (
-          <span className={`text-xl font-bold ${verdictColorClass(lastRoll.verdict)}`}>
-            Total {lastRoll.total}
-            {lastRoll.verdict && ` — ${lastRoll.verdict === "success" ? "Réussite" : "Échec"}`}
-          </span>
-        ) : (
-          <span className="text-lg font-bold text-ink-muted">—</span>
-        )}
-      </div>
-
-      {lastRoll && lastRoll.chips.length > 0 && !rolling && (
-        <div className="mb-1.5 flex flex-wrap justify-center gap-1.5">
-          {lastRoll.chips.map((c, i) => (
-            <div key={i} className="min-w-[44px] rounded-md border border-edge bg-panel-raised px-1.5 py-1 text-center">
-              <span className="block text-xs font-bold text-accent">{formatSigned(c.value)}</span>
-              <span className="block text-[9px] text-ink-muted">{c.label}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className="mb-1 flex items-center justify-center gap-2">
-        <label className="text-[11px] uppercase tracking-wide text-ink-muted" htmlFor="dice-dc-input">
-          DD
-        </label>
-        <input
-          id="dice-dc-input"
-          type="text"
-          inputMode="numeric"
-          autoComplete="off"
-          value={dc}
-          onChange={(e) => setDc(e.target.value.replace(/[^0-9]/g, "").slice(0, 2))}
-          placeholder="—"
-          className="w-16 rounded-md border border-edge bg-panel-raised px-1 py-1 text-center text-sm text-ink outline-none"
-        />
-        <span className="text-[10px] text-ink-muted">
-          {dcFromGm && dc.trim() !== "" ? "partagé par le MJ" : "vide = pas de DD"}
-        </span>
-      </div>
-
-      {/* Diffusion du DD aux joueurs (retour utilisateur, V2-M11 suite) : MJ
-          uniquement, jamais visible ni actionnable pour un joueur — memes
-          jetons de couleur que le reste (jamais de couleur en dur). */}
-      {isGm && (
-        <button type="button" onClick={() => setDcShared(!dcShared)} className="mb-1.5 flex items-center justify-center gap-1.5">
-          <span className={`relative h-4 w-7 rounded-full border ${dcShared ? "border-accent bg-accent" : "border-edge-strong bg-edge"}`}>
-            <span
-              className={`absolute top-0.5 h-3 w-3 rounded-full bg-panel transition-all ${dcShared ? "left-[13px]" : "left-0.5"}`}
-            />
-          </span>
-          <span className={`text-[10px] ${dcShared ? "font-semibold text-accent" : "text-ink-muted"}`}>
-            {dcShared ? "DD visible des joueurs" : "DD privé"}
-          </span>
-        </button>
-      )}
-
-      {canFreeform ? (
-        <>
-          <div className="mb-1.5 flex flex-wrap justify-center gap-1.5">
-            {DIE_TYPES.map((type) => {
-              const count = pool[type];
-              return (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => onToggleDie(type)}
-                  className={`relative flex w-[58px] flex-col items-center gap-0.5 rounded-md border px-1 py-1 ${
-                    count > 0 ? "border-accent bg-panel" : "border-edge bg-panel-raised"
-                  }`}
-                >
-                  {count > 0 && (
-                    <span className="absolute -right-1.5 -top-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-ink text-[9px] font-bold text-panel">
-                      {count}
-                    </span>
-                  )}
-                  <div
-                    className={`h-3.5 w-3.5 ${count > 0 ? "bg-accent" : "bg-ink-muted"}`}
-                    style={{ clipPath: DIE_CLIP_PATH[Number(type.slice(1))] }}
-                  />
-                  <span className={`text-[9px] ${count > 0 ? "text-ink" : "text-ink-muted"}`}>{type}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="mb-1.5 flex gap-2">
-            <button
-              type="button"
-              onClick={onReset}
-              className="flex-1 rounded-md border border-edge bg-panel-raised py-1.5 text-xs font-semibold text-ink-soft"
-            >
-              Reset
-            </button>
-            <button
-              type="button"
-              onClick={onRoll}
-              disabled={freeformBusy}
-              className="flex-1 rounded-md border border-accent bg-accent py-1.5 text-xs font-semibold text-accent-ink disabled:opacity-60"
-            >
-              Lancer
-            </button>
-          </div>
-
-          {isGm && (
-            <button type="button" onClick={() => setHidden(!hidden)} className="mb-1.5 flex items-center justify-center gap-2">
-              <span className={`relative h-[19px] w-[34px] rounded-full border ${hidden ? "border-danger bg-danger" : "border-edge-strong bg-edge"}`}>
-                <span
-                  className={`absolute top-0.5 h-3.5 w-3.5 rounded-full bg-ink transition-all ${hidden ? "left-[17px]" : "left-0.5"}`}
-                />
-              </span>
-              <span className={`text-xs ${hidden ? "font-semibold text-danger" : "text-ink-muted"}`}>
-                {hidden ? "Lancé secret" : "Lancé public"}
-              </span>
-            </button>
-          )}
-        </>
-      ) : (
-        <p className="mb-1.5 text-center text-xs text-ink-muted">Ce monde n&apos;a pas encore de campagne — jet non enregistré.</p>
-      )}
-
-      <div className="border-t border-edge pt-1">
-        <div className="mb-1 text-[10px] uppercase tracking-wide text-ink-muted">4 derniers jets</div>
-        {rolls.length === 0 && <EtatHistoriqueMessage etat={etatHistorique} onReessayer={onReessayer} />}
-        <div className="flex flex-col">
-          {rolls.slice(0, 4).map((r) => (
-            <div key={r.id} className="flex justify-between border-b border-edge/60 py-0.5 text-xs last:border-0">
-              <span className="truncate text-ink-muted">
-                {r.who} — {r.what}
-              </span>
-              {/* `hidden` : la RLS ne livre jamais cette ligne a un client autre que le MJ (migration 20260831091000) — masquer la valeur ici serait cacher au MJ ce qu'il a lui-meme le droit de voir, jamais une seconde barriere utile. */}
-              <span className={`whitespace-nowrap font-semibold ${r.hidden ? "text-ink-muted" : "text-accent"}`}>{r.total}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/** Chargement, erreur ou vide de l'historique (charte, etats d'ecran) ; rien quand il est charge et non vide. */
-function EtatHistoriqueMessage({ etat, onReessayer }: { etat: EtatHistorique; onReessayer: () => void }) {
-  if (etat === "chargement") return <p className="text-center text-xs text-ink-muted">Chargement…</p>;
-  if (etat === "erreur")
-    return (
-      <p className="text-center text-xs text-danger">
-        Historique indisponible.{" "}
-        <button type="button" onClick={onReessayer} className="underline hover:text-ink">
-          Réessayer
-        </button>
-      </p>
-    );
-  return null;
-}
-
-function HistoriqueTab({ rolls, etat, onReessayer }: { rolls: DisplayRoll[]; etat: EtatHistorique; onReessayer: () => void }) {
-  if (etat === "sans-campagne") return <p className="text-center text-xs text-ink-muted">Ce monde n&apos;a pas encore de campagne.</p>;
-  if (rolls.length === 0 && etat !== "charge") return <EtatHistoriqueMessage etat={etat} onReessayer={onReessayer} />;
-  if (rolls.length === 0) return <p className="text-center text-xs text-ink-muted">Aucun jet pour le moment.</p>;
-  return (
-    <div className="flex flex-col">
-      {rolls.map((r) => (
-        <div key={r.id} className="flex items-center justify-between border-b border-edge/60 py-2 last:border-0">
-          <div className="flex flex-col">
-            <span className={`text-xs ${r.hidden ? "italic text-ink-muted" : "text-ink"}`}>
-              {r.hidden ? `Jet caché — ${r.who}` : `${r.who} — ${r.what}`}
-            </span>
-            <span className="text-[10px] text-ink-muted">
-              {r.dc !== null && `DD ${r.dc} · ${r.verdict === "success" ? "réussite" : "échec"} · `}
-              {new Date(r.createdAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
-            </span>
-          </div>
-          <span className={`text-sm font-bold ${r.hidden ? "text-ink-muted" : "text-accent"}`}>{r.total}</span>
-        </div>
-      ))}
-    </div>
   );
 }

@@ -8,7 +8,8 @@ import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/block
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
 import type { ResourcesBlockData } from "@/src/core/schemas/blocks/resources";
 import type { InfoboxBlockData } from "@/src/core/schemas/blocks/infobox";
-import type { DerivedSheet } from "@/src/core/rules/sheet";
+import { ABILITY_LABELS as ABILITY_NAMES, type DerivedSheet } from "@/src/core/rules/sheet";
+import { SKILL_LABELS_FR } from "@/src/i18n/fr";
 import type { RuntimeState } from "@/src/core/schemas/runtimeState";
 import type { AdvantageState } from "@/src/core/rules/action";
 import type { BlockItem } from "@/components/blocks/EntityBlocks";
@@ -406,13 +407,34 @@ export default function FicheJouableSolo({
       <CaracteristiquesEtCompetences
         sheet={sheet}
         onRollAbility={(ability) =>
-          pending?.kind === "ability_check" && pending.action_id === ability ? resolveFromFiche() : rollAbility(entityId, ability, advantage)
+          pending?.kind === "ability_check" && pending.action_id === ability
+            ? resolveFromFiche()
+            : rollAbility(entityId, ability, advantage, {
+                label: `Test de ${ABILITY_NAMES[ability]}`,
+                modifier: sheet.abilities[ability].mod,
+                inspiration,
+                apresRelance: reloadRemote,
+              })
         }
         onRollSave={(ability) =>
-          pending?.kind === "saving_throw" && pending.action_id === ability ? resolveFromFiche() : rollSave(entityId, ability, advantage)
+          pending?.kind === "saving_throw" && pending.action_id === ability
+            ? resolveFromFiche()
+            : rollSave(entityId, ability, advantage, {
+                label: `Sauvegarde de ${ABILITY_NAMES[ability]}`,
+                modifier: sheet.savingThrows[ability].mod,
+                inspiration,
+                apresRelance: reloadRemote,
+              })
         }
         onRollSkill={(skill) =>
-          pending?.kind === "skill_check" && pending.action_id === skill ? resolveFromFiche() : rollSkill(entityId, skill, advantage)
+          pending?.kind === "skill_check" && pending.action_id === skill
+            ? resolveFromFiche()
+            : rollSkill(entityId, skill, advantage, {
+                label: `${SKILL_LABELS_FR[skill]} — test`,
+                modifier: sheet.skills[skill].mod,
+                inspiration,
+                apresRelance: reloadRemote,
+              })
         }
       />
 

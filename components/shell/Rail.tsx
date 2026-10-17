@@ -626,13 +626,16 @@ export function OutilsDalle({ worldSlug }: { worldSlug: string }) {
   const t = useTranslations("shell");
   const { replie } = useRail();
   const { ouvrirVolet, enregistrerDalle } = useDiceRoll();
+  // Le de est l'ancre du panneau de l'outil de des (V3.1-33).
+  const deRef = useRef<HTMLButtonElement>(null);
   // Le bouton de des flottant se retire tant qu'une dalle est montee (et
   // seulement alors) : une page de monde sans rail garde son de.
-  useEffect(() => enregistrerDalle("ordinateur"), [enregistrerDalle]);
+  useEffect(() => enregistrerDalle("ordinateur", deRef), [enregistrerDalle]);
   return (
     <RailPart visibleMobile={false} className="shrink-0 items-center px-2 pb-2.5 pt-8">
       {/* Anneau de 6 px couleur du panneau : le de parait decoupe dans le bord. */}
       <button
+        ref={deRef}
         type="button"
         onClick={ouvrirVolet}
         aria-label={t("ouvrirVoletDes")}
