@@ -63,6 +63,11 @@ V3.1-104 n'est plus bloqué : option B de l'ADR 0041, choisie le 10 octobre.
 - « Lancer » appelle `resolveTargetedRoll` ; une touche fait apparaître la
   bande « Lancer les dégâts » (même cible) ; verdict et changements affichés.
 - Même chemin depuis l'outil Table (action d'un PNJ) et l'outil Initiative.
+- *Repris de V3.1-33 (17 octobre)* : les boutons d'attaque, de sort et de
+  dégâts de la fiche ouvrent l'outil pré-rempli (`openDiceTool`) ; la bande
+  du pied (place déjà réservée dans `OutilDes.tsx`) devient « Lancer les
+  dégâts » sur une touche, et « Valider · dégâts » / « Faire échouer » quand
+  un monstre touche un joueur (critères de V3.1-33 restés ouverts).
 
 **Critères d'acceptation**
 - [ ] Au tour du Worg, « Morsure » sur un PJ : touche, dégâts, JS, À terre
