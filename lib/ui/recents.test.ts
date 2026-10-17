@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ajouterRecent, cleRecents, lireRecents, MAX_RECENTS, type ElementRecent } from "./recents";
+import { ajouterRecent, cleRecents, lireDerniereVisite, lireRecents, MAX_RECENTS, type ElementRecent } from "./recents";
 
 const el = (n: number): ElementRecent => ({ href: `/m/x/f/${n}`, titre: `Fiche ${n}` });
 
@@ -55,5 +55,18 @@ describe("cleRecents", () => {
     expect(cleRecents("a", "mj-monde")).not.toBe(cleRecents("b", "mj-monde"));
     expect(cleRecents("a", "mj-monde")).not.toBe(cleRecents("a", "joueur-wiki"));
     expect(cleRecents("a", "joueur-regles")).toContain("a");
+  });
+});
+
+describe("dernière visite (V3.1-35)", () => {
+  const visite = { worldSlug: "faerun", href: "/m/faerun/f/candide", titre: "Candide", type: "character", quand: "2026-10-17T10:00:00.000Z" };
+  it("relit une visite valide", () => {
+    expect(lireDerniereVisite(JSON.stringify(visite))).toEqual(visite);
+  });
+  it("rien de mémorisé, JSON cassé ou forme inconnue : null (pas de « Reprendre »)", () => {
+    expect(lireDerniereVisite(null)).toBeNull();
+    expect(lireDerniereVisite("{pas du json")).toBeNull();
+    expect(lireDerniereVisite(JSON.stringify({ href: "/m/x" }))).toBeNull();
+    expect(lireDerniereVisite(JSON.stringify({ ...visite, quand: "hier" }))).toBeNull();
   });
 });

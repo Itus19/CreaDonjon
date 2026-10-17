@@ -499,6 +499,43 @@ export async function rollFreeformCheck(
   };
 }
 
+/**
+ * V3.1-35 — les dés de l'accueil, hors de tout monde : le serveur lance
+ * (règle 8), mais rien n'est écrit (pas de campagne, donc ni journal ni
+ * statistiques). Même formule et même verdict que le jet de l'outil.
+ */
+export function rollFreeformUnrecorded(params: {
+  pool: Partial<Record<DieType, number>>;
+  modifier: number;
+  advantage: AdvantageState;
+  label: string | null;
+  dc: number | null;
+}): FreeformRollResult {
+  const built = buildToolFormula({ pool: params.pool, modifier: params.modifier, advantage: params.advantage });
+  if (!built.ok) return { ok: false, reason: built.reason === "empty_pool" ? "invalid_pool" : built.reason };
+  const ast = parseFormula(built.formula);
+  const { value: total, trace } = evaluate(ast, {}, serverRng, "roll");
+  const verdict = toolVerdict({ total, dc: params.dc, hasD20: (params.pool.d20 ?? 0) > 0 });
+  return {
+    ok: true,
+    roll: {
+      who: "Vous",
+      what: params.label?.trim() || "Jet libre",
+      chips: params.modifier !== 0 ? [{ label: "Modificateur", value: params.modifier }] : [],
+      total,
+      expression: formatFormulaNode(ast),
+      dc: params.dc,
+      verdict,
+      hidden: false,
+      pair: advantagePairFromTrace(trace),
+      naturalD20: naturalD20FromTrace(trace) ?? null,
+      dcPrivate: false,
+      recorded: false,
+      trace,
+    },
+  };
+}
+
 /** V2-M11 : nom du PJ revendique par ce compte dans cette campagne, pour attribuer un jet libre — "MJ" si aucun (voir l'appelant). */
 export async function getClaimedCharacterName(
   supabase: TypedClient,

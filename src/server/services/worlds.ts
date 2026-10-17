@@ -26,6 +26,7 @@ import {
 import { createCampaign, type CampaignSummary } from "@/src/server/services/campaigns";
 import { listWorldPlayerCharacters } from "@/src/server/services/worldPlayerCharacters";
 import { getDisplayNamesForUsers } from "@/src/server/repos/activityJournal";
+import { listNextSessionsForCampaigns } from "@/src/server/repos/scheduling";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -62,7 +63,11 @@ export async function listWorldCards(supabase: TypedClient, locale: Locale, user
     ...characters.map((c) => c.claimedByUserId).filter((id): id is string => id !== null),
     ...adminIds,
   ]);
-  const namesByAccount = await getDisplayNamesForUsers(supabase, allUserIds);
+  const campaignIds = cards.map((card) => card.campaignId).filter((id): id is string => id !== null);
+  const [namesByAccount, nextSessions] = await Promise.all([
+    getDisplayNamesForUsers(supabase, allUserIds),
+    listNextSessionsForCampaigns(supabase, campaignIds, new Date()),
+  ]);
   const nameFor = (id: string) => namesByAccount.get(id) || "Compte sans nom";
 
   return perCard.map(({ card, characters, adminIds }) => ({
@@ -76,6 +81,10 @@ export async function listWorldCards(supabase: TypedClient, locale: Locale, user
       claimedByDisplayName: c.claimedByUserId ? nameFor(c.claimedByUserId) : null,
     })),
     gmNames: adminIds.map(nameFor),
+    nextSession: (() => {
+      const session = card.campaignId ? nextSessions.get(card.campaignId) : undefined;
+      return session ? { startsAt: session.starts_at, durationMinutes: session.duration_minutes } : null;
+    })(),
   }));
 }
 

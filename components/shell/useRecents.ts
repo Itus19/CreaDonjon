@@ -1,7 +1,16 @@
 "use client";
 
 import { useCallback, useMemo, useSyncExternalStore } from "react";
-import { ajouterRecent, cleRecents, lireRecents, type ElementRecent, type EspaceRecents } from "@/lib/ui/recents";
+import {
+  ajouterRecent,
+  cleRecents,
+  CLE_DERNIERE_VISITE,
+  lireDerniereVisite,
+  lireRecents,
+  type DerniereVisite,
+  type ElementRecent,
+  type EspaceRecents,
+} from "@/lib/ui/recents";
 
 /**
  * Fiches consultées récemment (V3.1-30, ADR 0036 §4) : lecture et écriture de
@@ -47,6 +56,9 @@ export function enregistrerRecent(worldSlug: string, espace: EspaceRecents, elem
   try {
     const suivante = ajouterRecent(lireRecents(lireBrut(cle)), element);
     window.localStorage.setItem(cle, JSON.stringify(suivante));
+    // V3.1-35 : la même visite devient « Reprendre » sur l'accueil.
+    const visite: DerniereVisite = { ...element, worldSlug, quand: new Date().toISOString() };
+    window.localStorage.setItem(CLE_DERNIERE_VISITE, JSON.stringify(visite));
   } catch (erreur) {
     if (!avertiEcriture) console.warn("Enregistrement des fiches récentes impossible", erreur);
     avertiEcriture = true;
@@ -64,4 +76,14 @@ export function useRecents(worldSlug: string, espace: EspaceRecents): ElementRec
     () => null
   );
   return useMemo(() => lireRecents(brut), [brut]);
+}
+
+/** La dernière fiche ouverte, tous mondes confondus (V3.1-35, « Reprendre ») ; `null` si rien n'est mémorisé. */
+export function useDerniereVisite(): DerniereVisite | null {
+  const brut = useSyncExternalStore(
+    abonner,
+    useCallback(() => lireBrut(CLE_DERNIERE_VISITE), []),
+    () => null
+  );
+  return useMemo(() => lireDerniereVisite(brut), [brut]);
 }

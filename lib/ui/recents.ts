@@ -51,3 +51,30 @@ export function lireRecents(brut: string | null): ElementRecent[] {
   const resultat = zListeRecents.safeParse(json);
   return resultat.success ? resultat.data.slice(0, MAX_RECENTS) : [];
 }
+
+// ---- « Reprendre » : la dernière fiche ouverte, tous mondes confondus (V3.1-35) ----
+
+/** Clé `localStorage` de la dernière visite, une seule pour tout le navigateur. */
+export const CLE_DERNIERE_VISITE = "creadonjon:derniere-visite";
+
+const zDerniereVisite = zElementRecent.extend({
+  worldSlug: z.string().min(1),
+  /** Date de la visite (ISO), pour « il y a 1 h ». */
+  quand: z.string().datetime(),
+});
+
+export type DerniereVisite = z.infer<typeof zDerniereVisite>;
+
+/** Même tolérance que `lireRecents` : absence ou valeur abîmée donnent `null`, donc pas de « Reprendre ». */
+export function lireDerniereVisite(brut: string | null): DerniereVisite | null {
+  if (brut === null) return null;
+  let json: unknown;
+  try {
+    json = JSON.parse(brut);
+  } catch {
+    // catch-attendu : valeur corrompue. Pas de « Reprendre » plutôt qu'une erreur.
+    return null;
+  }
+  const resultat = zDerniereVisite.safeParse(json);
+  return resultat.success ? resultat.data : null;
+}

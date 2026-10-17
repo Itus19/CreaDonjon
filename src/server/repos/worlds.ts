@@ -230,6 +230,8 @@ export interface WorldCard {
   players: WorldCardPlayerCharacter[];
   /** Noms des comptes qui administrent ce monde (retour utilisateur) — proprietaire, editeurs, MJ humains des campagnes. Rempli par le service (`listWorldCards`), `listWorldAdminUserIds` ci-dessus ne resout que les id. */
   gmNames: string[];
+  /** V3.1-35 : la prochaine séance réelle de la campagne (« Prochaines séances » de l'accueil). Rempli par le service (`listWorldCards`), en une requête pour tous les mondes. */
+  nextSession: { startsAt: string; durationMinutes: number } | null;
   /** Le plus recent entre `worlds.updated_at` et l'edition la plus recente d'une entite du monde — calcule par l'appelant (`listWorldCardsForCurrentUser`), jamais en base. */
   lastModified: string;
   /**
@@ -309,6 +311,7 @@ export async function listWorldCardsForCurrentUser(supabase: TypedClient, userId
       rulesetName: campaign?.rulesets?.name ?? null,
       players: [],
       gmNames: [],
+      nextSession: null,
       lastModified,
       myRole,
       myCharacter,

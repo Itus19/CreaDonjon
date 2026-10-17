@@ -184,3 +184,33 @@ export async function closeAvailabilityRequest(supabase: TypedClient, id: string
   const { error } = await supabase.from("availability_requests").update({ status: "closed" }).eq("id", id).eq("status", "open");
   if (error) throw new Error(error.message);
 }
+
+/**
+ * V3.1-35 — l'accueil : la prochaine séance de chacune de ces campagnes, en
+ * UNE requête pour tous les mondes de l'utilisateur. La RLS de
+ * `real_sessions` ne rend que celles des campagnes dont il est membre.
+ * Une séance en cours (commencée, pas finie) compte encore comme « prochaine ».
+ */
+export async function listNextSessionsForCampaigns(
+  supabase: TypedClient,
+  campaignIds: string[],
+  maintenant: Date
+): Promise<Map<string, RealSessionRow>> {
+  const prochaines = new Map<string, RealSessionRow>();
+  if (campaignIds.length === 0) return prochaines;
+  // Une séance dure au plus une journée : on remonte de 24 h pour garder celle en cours.
+  const depuis = new Date(maintenant.getTime() - 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await supabase
+    .from("real_sessions")
+    .select(REAL_SESSION_COLUMNS)
+    .in("campaign_id", campaignIds)
+    .gte("starts_at", depuis)
+    .order("starts_at", { ascending: true });
+  if (error) throw new Error(error.message);
+  for (const session of data) {
+    const fin = new Date(session.starts_at).getTime() + session.duration_minutes * 60 * 1000;
+    if (fin < maintenant.getTime() || prochaines.has(session.campaign_id)) continue;
+    prochaines.set(session.campaign_id, session);
+  }
+  return prochaines;
+}
