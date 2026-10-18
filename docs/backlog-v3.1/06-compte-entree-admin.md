@@ -55,40 +55,6 @@ puis 85 → 86, 87 → 88.
 
 ---
 
-### ☐ V3.1-81 — L'Apparence du Compte est la Personnalisation C · `S` · sans modèle IA — **prêt**
-
-**Modèle conseillé : Sonnet.**
-
-**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-**Planche** : `Compte-Decide.dc.html`, section Apparence ;
-`Perso-Decide.dc.html` (la Personnalisation décidée). **Départ** :
-`components/shell/PersonnalisationPanel.tsx`. **Dépend de** : 80.
-
-**Ce qui est décidé**
-- La section Apparence **monte `PersonnalisationPanel` tel quel** (un code,
-  deux portes : la fenêtre Personnalisation des outils du MJ, et le
-  Compte, pour tout le monde). Pas de copie du composant.
-- La barre : la **pilule des quatre modes** et le **contraste élevé** sur
-  une ligne, le **flou du fond sur toute la largeur** en dessous ; puis la
-  galerie des fonds avec leurs points de modes lisibles, les images
-  personnelles (+, ×), et la note « Ces réglages sont les tiens, sur cet
-  appareil… ».
-- Tablette : galerie à deux vignettes. **Téléphone** : la barre en colonne
-  (modes, contraste, flou), galerie à deux colonnes. **Piège corrigé sur la
-  planche le 9 octobre** : en colonne, ne jamais donner au flou
-  `flex-basis: 100%` (cela devient toute la hauteur et pousse le réglage
-  hors de l'écran) ; libellés de la pilule en 11 px pour que
-  « Demi-sombre » tienne.
-
-**Critères d'acceptation**
-- [ ] Un compte joueur sans monde mené règle son mode et son fond depuis
-  Compte (critère déjà posé par V3.1-35).
-- [ ] Téléphone 390 px : le flou est entièrement visible et réglable.
-- [ ] Aucune duplication de `PersonnalisationPanel`.
-
----
-
 ### ☐ V3.1-82 — Choix du personnage (C2) : le carrousel · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet.**

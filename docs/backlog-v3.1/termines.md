@@ -2,6 +2,44 @@
 
 ---
 
+### ☑ V3.1-81 — L'Apparence du Compte est la Personnalisation C · `S` · sans modèle IA — **fait le 18 octobre**
+
+**Modèle conseillé : Sonnet.**
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Planche** : `Compte-Decide.dc.html`, section Apparence ;
+`Perso-Decide.dc.html` (la Personnalisation décidée). **Départ** :
+`components/shell/PersonnalisationPanel.tsx`. **Dépend de** : 80.
+
+**Ce qui est décidé**
+- La section Apparence **monte `PersonnalisationPanel` tel quel** (un code,
+  deux portes : la fenêtre Personnalisation des outils du MJ, et le
+  Compte, pour tout le monde). Pas de copie du composant.
+- La barre : la **pilule des quatre modes** et le **contraste élevé** sur
+  une ligne, le **flou du fond sur toute la largeur** en dessous ; puis la
+  galerie des fonds avec leurs points de modes lisibles, les images
+  personnelles (+, ×), et la note « Ces réglages sont les tiens, sur cet
+  appareil… ».
+- Tablette : galerie à deux vignettes. **Téléphone** : la barre en colonne
+  (modes, contraste, flou), galerie à deux colonnes. **Piège corrigé sur la
+  planche le 9 octobre** : en colonne, ne jamais donner au flou
+  `flex-basis: 100%` (cela devient toute la hauteur et pousse le réglage
+  hors de l'écran) ; libellés de la pilule en 11 px pour que
+  « Demi-sombre » tienne.
+
+**Critères d'acceptation**
+- [x] Un compte joueur sans monde mené règle son mode et son fond depuis
+  Compte (critère déjà posé par V3.1-35).
+- [x] Téléphone 390 px : le flou est entièrement visible et réglable.
+- [x] Aucune duplication de `PersonnalisationPanel`.
+
+**Clôture** : Opus — `lirePersonnalisation` (`src/server/services/personnalisation.ts`) lit les cookies de l'appareil pour les trois portes (page et fenêtre Personnalisation des outils du MJ, section Apparence du Compte : règle des trois, la lecture était recopiée deux fois) ; l'accueil monte `PersonnalisationPanel` dans l'emplacement `apparence` de `PageCompte`. Interface (Sonnet) — la barre de la planche : pilule `Tabs` des quatre modes et interrupteur « Contraste élevé » sur une ligne, flou sur toute la largeur (sans `basis-full`), galerie à points de modes lisibles, « + » et « × », note de la planche ; en colonne sur téléphone ; `Tabs` accepte des onglets désactivés (mode illisible sur ce fond, avec son explication). Corrigé par Opus : les flèches du clavier sautent désormais un onglet désactivé au lieu de s'y arrêter ; la rangée de pastilles du Compte, collante, est floutée (le texte passait au travers). Vérifié dans le navigateur (Testeuse A, compte sans monde mené) : Apparence dans le sommaire et la page ; mode Clair appliqué, flou réglé à 10 px ; 390 px : curseur du flou visible (144 px de large), pilule sans débordement, aucun défilement horizontal ; page Personnalisation du MJ (Testeur MJ) avec son curseur. Réglages limités aux cookies du navigateur de test.
+
+*Restes* : les libellés de la pilule restent en 12 px (la charte interdit 11 px, la règle de lint l'a refusé) — « Demi-sombre » tient à 390 px. Le « + » (envoi d'une image) et le « × » (retrait) ne sont pas rejoués : leur comportement n'a pas changé, seule la présentation.
+
+---
+
 ### ☑ V3.1-80 — Compte (A) : une page en sections · `M` · sans modèle IA — **fait le 18 octobre**
 
 **Modèle conseillé : Sonnet.**

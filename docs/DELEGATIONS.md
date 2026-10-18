@@ -41,3 +41,5 @@ Issue : **accepté** (tel quel) · **corrigé** (retouche locale par Opus) · **
 | 2026-10-18 | V3.1-85 (planche) | aide-haiku | 51 567 | accepté | Section « Écran-titre » dans OutilsMJ.dc.html ; hauteur portée à 4 600 par Opus |
 | 2026-10-18 | V3.1-80 (interface) | dev-sonnet | 83 590 | corrigé | Interrompu par une limite de session, relancé (repart de zéro) ; page Compte conforme ; Opus : largeur de la destination Compte élargie. |
 | 2026-10-18 | V3.1-80 (planche) | aide-haiku | 42 951 | accepté | Section « Compte » dans OutilsMJ.dc.html ; hauteur portée à 5 300 par Opus |
+| 2026-10-18 | V3.1-81 (interface) | dev-sonnet | 54 775 | corrigé | Barre de Personnalisation conforme, Tabs désactivables ; Opus : flèches qui sautent les onglets désactivés, rangée de pastilles du Compte floutée. |
+| 2026-10-18 | V3.1-81 (planche) | aide-haiku | 58 693 | corrigé | Vignette de fond et case Apparence ; Opus : passages obsolètes de l'accueil retirés, case Apparence en colonne, hauteur 5 700 |
