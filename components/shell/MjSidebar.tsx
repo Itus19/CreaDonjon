@@ -107,6 +107,7 @@ export default function MjSidebar({
     { key: "publication", label: t("publication") },
     { key: "regles-actives", label: t("reglesActives") },
     { key: "rencontres", label: t("rencontres") },
+    { key: "table", label: tShell("table") },
   ];
 
   return (

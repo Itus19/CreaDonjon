@@ -23,7 +23,7 @@ import {
   type WindowRef,
 } from "./windowRefs";
 
-type FeuilleMj = "outils" | "table" | "fiches" | "aucuneFiche";
+type FeuilleMj = "outils" | "fiches" | "aucuneFiche";
 
 /** Une fiche de la pile : entite ou regle ouverte, affichee ou rangee en `?avec=`. */
 interface FicheOuverte {
@@ -95,6 +95,7 @@ export default function BarreTelephoneMj({ worldSlug }: { worldSlug: string }) {
   const base = `/m/${worldSlug}`;
   const baseRegles = `${base}/regles`;
   const baseChat = mjToolHref(worldSlug, "chat");
+  const baseTable = mjToolHref(worldSlug, "table");
   const surRoute = feuille === null;
 
   // ---- pile des fiches : l'etat des fenetres, lu tel quel ----
@@ -171,9 +172,12 @@ export default function BarreTelephoneMj({ worldSlug }: { worldSlug: string }) {
       cle: "table",
       libelle: t("table"),
       icone: <IconeTable />,
-      actif: feuille === "table",
-      onClick: () => setFeuille("table"),
-      ouvreFeuille: true,
+      actif: surRoute && pathname === baseTable,
+      href: hrefWithWindows(baseTable),
+      onClick: (e) => {
+        setFeuille(null);
+        navigate(e, baseTable);
+      },
     },
     {
       cle: "chat",
@@ -192,7 +196,7 @@ export default function BarreTelephoneMj({ worldSlug }: { worldSlug: string }) {
       libelle: t("outils"),
       icone: <IconeRail nom="outils" />,
       // Un outil ouvert en page garde l'entree allumee : on y est arrive par la feuille.
-      actif: feuille === "outils" || (surRoute && emplacement.section === "mj" && emplacement.page === "outil"),
+      actif: feuille === "outils" || (surRoute && emplacement.section === "mj" && emplacement.page === "outil" && pathname !== baseTable),
       onClick: () => setFeuille("outils"),
       ouvreFeuille: true,
     },
@@ -222,12 +226,6 @@ export default function BarreTelephoneMj({ worldSlug }: { worldSlug: string }) {
           onAller={aller}
           onFermer={() => setFeuille(null)}
         />
-      )}
-
-      {feuille === "table" && (
-        <FeuilleDuBas titre={t("tableBientot")} titreVisible onFermer={() => setFeuille(null)}>
-          <p className="px-1 pb-2 text-sm text-ink-muted">{t("tableBientotTexte")}</p>
-        </FeuilleDuBas>
       )}
 
       {feuille === "aucuneFiche" && (
@@ -310,7 +308,7 @@ function FeuilleOutils({
     personnalisation: tMj("personnalisation"),
   };
   const groupes: { cle: string; titre: string; outils: OutilFeuille[] }[] = [
-    { cle: "seance", titre: t("outilsEnSeance"), outils: ["initiative", "rencontres", "generateurs", "probabilites"] },
+    { cle: "seance", titre: t("outilsEnSeance"), outils: ["initiative", "rencontres", "generateurs", "probabilites", "table"] },
     {
       cle: "preparation",
       titre: t("outilsPreparation"),

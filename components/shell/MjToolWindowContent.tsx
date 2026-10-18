@@ -7,6 +7,7 @@ import GmJournalPanel from "./GmJournalPanel";
 import PartyProbabilityTable from "./PartyProbabilityTable";
 import EncounterBuilder from "./EncounterBuilder";
 import InitiativeTracker from "./InitiativeTracker";
+import OutilTable from "./OutilTable";
 import CalendarSettingsPanel from "./CalendarSettingsPanel";
 import PersonnalisationPanel from "./PersonnalisationPanel";
 import PublicationPanel from "./PublicationPanel";
@@ -198,6 +199,9 @@ export default function MjToolWindowContent({ worldSlug, data }: { worldSlug: st
           {data.campaignId ? <SchedulingMjPanel campaignId={data.campaignId} /> : <p className="text-sm italic text-ink-muted">Ce monde n&apos;a pas encore de campagne.</p>}
         </div>
       );
+
+    case "table":
+      return <OutilTable worldSlug={worldSlug} campaignId={data.campaignId} party={data.party} conditions={data.conditions} />;
 
     case "livre-de-sessions":
       return (
