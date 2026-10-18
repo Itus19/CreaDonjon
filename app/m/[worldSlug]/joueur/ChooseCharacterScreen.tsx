@@ -210,7 +210,8 @@ export default function ChooseCharacterScreen({
                 <span className="block-title text-base">{nom}</span>
                 {item.carte?.identite && (
                   <span className="text-xs text-accent">
-                    {item.carte.identite.speciesLabel} · {item.carte.identite.classesLabel} {item.carte.identite.level}
+                    {/* `classesLabel` porte déjà les niveaux (« Rôdeuse 3 », « Guerrier 2 / Magicien 1 »). */}
+                    {[item.carte.identite.speciesLabel, item.carte.identite.classesLabel].filter(Boolean).join(" · ")}
                   </span>
                 )}
                 {item.carte && item.carte.identite === null && (

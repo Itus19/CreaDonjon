@@ -2,6 +2,46 @@
 
 ---
 
+### ☑ V3.1-83 — Choix : PJ sans fiche et « Créer mon personnage » · `S` · sans modèle IA — **fait le 18 octobre**
+
+**Modèle conseillé : Sonnet.**
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Planche** : `Choix-Decide.dc.html` (Mirelle Vantor, 3ᵉ carte).
+**Départ** : `components/shell/ParticipantCharacterSheet.tsx` (`wizardOpen`,
+« Aucune fiche de personnage pour cette entrée »),
+`components/blocks/CharacterCreatorWizard.tsx`. **Dépend de** : 82.
+
+**Ce qui est décidé**
+- **PJ ouvert sans fiche** (`hasSheet: false`) : la carte garde portrait et
+  phrase de la fiche de wiki ; à la place de l'espèce et de la classe,
+  l'étiquette pointillée en accent « Fiche de personnage à créer » ; le
+  bouton dit « Jouer Mirelle · créer sa fiche ». Réclamer **ouvre
+  directement l'assistant de création** (la Création décidée, A), déjà au
+  nom et au portrait de l'entité — plus besoin de toucher « Créer la
+  fiche » sous « Aucune fiche de personnage ».
+- **« + Créer mon personnage »** ouvre l'assistant sur une **entité
+  nouvelle** ; la joueuse la réclame à la fin de l'assistant (même chemin
+  serveur que la création depuis « Nouveau PJ » aujourd'hui). Annuler
+  l'assistant revient au carrousel, rien n'est créé.
+
+**Critères d'acceptation**
+- [x] Réclamer un PJ sans fiche ouvre l'assistant avec son nom pré-rempli.
+- [x] Créer un personnage de zéro le rend réclamé par la joueuse.
+- [x] Annuler ne laisse ni entité ni réclamation orpheline.
+
+**Clôture (18 octobre).**
+- Décision d'Opus, dans l'esprit du ticket : un PJ sans fiche se réclame **à la validation** de l'assistant, pas au clic sur la carte. Une joueuse ne peut pas rendre un PJ (seul le MJ écrit dans `campaign_characters`) : réclamer d'abord aurait laissé une réclamation orpheline à chaque annulation, contre le troisième critère. Rien n'a changé dans le schéma.
+- Serveur (Opus) : `reclamerEtCreerFiche` (`src/server/services/choixPersonnage.ts`, 4 tests) réclame puis écrit (la réclamation donne le droit d'écrire), n'écrit jamais un PJ pris par une autre, et reprend à l'écriture si le PJ est déjà à elle (seconde tentative). Action `reclamerEtCreerFicheAction`, schéma Zod de l'écrasement.
+- Page `/joueur/nouveau-personnage` : sans `pj`, la création de zéro (chemin existant, réclamée à la fin) avec un bouton Annuler ; avec `?pj=`, l'assistant au nom et au portrait de la fiche, après que le serveur a revérifié que ce PJ est réclamable et sans fiche (un lien recopié renvoie au carrousel). L'assistant accepte une action de remplacement et une note de bandeau (`entityMode.onSubmit`, `note`) et un `onCancel` hors `entityMode`.
+- Carte : étiquette pointillée « Fiche de personnage à créer », bouton « Jouer {prénom} · créer sa fiche ».
+- Restes du 82 vérifiés en vrai (trois PJ libres créés en Testeur MJ, puis supprimés) : portrait, phrase, identité, rotation par flèches, clavier, points et glissé, boucle, aucun débordement à 1280 et 390 px. Corrigé au passage : le niveau s'affichait deux fois (« Clerc 1 1 » : `classesLabel` porte déjà les niveaux).
+- Critères vérifiés au navigateur : réclamer Mirelle ouvre l'assistant prérempli et la rend sienne à la validation (message « Mirelle est à toi ») ; « Testine Essai » créée de zéro est réclamée ; annuler dans les deux cas laisse les réclamations et les lignes de campagne inchangées. Données du Banc d'essai rendues à leur état d'avant.
+- Restes : un PJ ouvert dont le bloc `character` est réservé au MJ passe pour « sans fiche » aux yeux de la joueuse, et l'assistant lui créerait un second bloc ; cas jugé improbable, non traité. Le message de validation de l'assistant reste en anglais quand aucune classe n'est choisie (« Too small… »), défaut antérieur.
+
+---
+
 ### ☑ V3.1-82 — Choix du personnage (C2) : le carrousel · `M` · sans modèle IA — **fait le 18 octobre**
 
 **Modèle conseillé : Sonnet.**

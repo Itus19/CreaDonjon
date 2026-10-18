@@ -55,37 +55,6 @@ puis 85 → 86, 87 → 88.
 
 ---
 
-### ☐ V3.1-83 — Choix : PJ sans fiche et « Créer mon personnage » · `S` · sans modèle IA — **prêt**
-
-**Modèle conseillé : Sonnet.**
-
-**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-**Planche** : `Choix-Decide.dc.html` (Mirelle Vantor, 3ᵉ carte).
-**Départ** : `components/shell/ParticipantCharacterSheet.tsx` (`wizardOpen`,
-« Aucune fiche de personnage pour cette entrée »),
-`components/blocks/CharacterCreatorWizard.tsx`. **Dépend de** : 82.
-
-**Ce qui est décidé**
-- **PJ ouvert sans fiche** (`hasSheet: false`) : la carte garde portrait et
-  phrase de la fiche de wiki ; à la place de l'espèce et de la classe,
-  l'étiquette pointillée en accent « Fiche de personnage à créer » ; le
-  bouton dit « Jouer Mirelle · créer sa fiche ». Réclamer **ouvre
-  directement l'assistant de création** (la Création décidée, A), déjà au
-  nom et au portrait de l'entité — plus besoin de toucher « Créer la
-  fiche » sous « Aucune fiche de personnage ».
-- **« + Créer mon personnage »** ouvre l'assistant sur une **entité
-  nouvelle** ; la joueuse la réclame à la fin de l'assistant (même chemin
-  serveur que la création depuis « Nouveau PJ » aujourd'hui). Annuler
-  l'assistant revient au carrousel, rien n'est créé.
-
-**Critères d'acceptation**
-- [ ] Réclamer un PJ sans fiche ouvre l'assistant avec son nom pré-rempli.
-- [ ] Créer un personnage de zéro le rend réclamé par la joueuse.
-- [ ] Annuler ne laisse ni entité ni réclamation orpheline.
-
----
-
 ### ☐ V3.1-87 — Administration (B) : le tableau de bord · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet.**

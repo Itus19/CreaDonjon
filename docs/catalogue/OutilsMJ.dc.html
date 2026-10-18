@@ -217,7 +217,7 @@ code{font-family:'Geist Mono',ui-monospace,monospace;font-size:0.92em}
 <h2 class="font-display text-2xl font-bold text-ink">Choix du personnage</h2>
 <span class="text-xs text-ink-muted">app/m/[worldSlug]/joueur/ChooseCharacterScreen.tsx</span>
 </div>
-<p class="max-w-3xl text-sm text-ink-soft">Une joueuse sans PJ choisit parmi les personnages que le MJ a laissés ouverts. Carrousel : la carte centrée en grand (portrait, nom, espèce · classes en accent, la première phrase de son texte visible), bordure d'accent et halo ; ses voisines en retrait, désaturées ; « Nouveau personnage » en dernière carte, et à l'ouverture. Flèches, points, ← → et Entrée, glisser au doigt ; la liste boucle. Un seul bouton : « Jouer {prénom} » ou « + Créer mon personnage ». Un lien nominatif ne montre que son PJ et « Nouveau ».</p>
+<p class="max-w-3xl text-sm text-ink-soft">Une joueuse sans PJ choisit parmi les personnages que le MJ a laissés ouverts. Carrousel : la carte centrée en grand (portrait, nom, espèce · classes en accent, la première phrase de son texte visible), bordure d'accent et halo ; ses voisines en retrait, désaturées ; « Nouveau personnage » en dernière carte, et à l'ouverture. Flèches, points, ← → et Entrée, glisser au doigt ; la liste boucle. Un seul bouton : « Jouer {prénom} » ou « + Créer mon personnage ». Un lien nominatif ne montre que son PJ et « Nouveau ». Un PJ sans fiche de personnage (V3.1-83) garde portrait et phrase ; l'étiquette pointillée « Fiche de personnage à créer » remplace espèce et classes, le bouton dit « Jouer {prénom} · créer sa fiche » et ouvre l'assistant à son nom : la réclamation se fait à la validation, et Annuler (comme pour « Nouveau ») revient au carrousel sans rien laisser.</p>
 <div class="flex flex-wrap gap-x-6 gap-y-1 text-xs text-ink-muted"><span>Mouvement : <span class="text-ink">carte : transformation, opacité et filtre, 300 ms (<code>transition-[transform,opacity,filter] duration-300</code>) ; voisines en retrait : échelle 0,8, opacité 0,45, <code>saturate(0.5)</code> ; points : toutes propriétés, 150 ms par défaut (<code>transition-all</code>) ; bouton : opacité au survol (<code>transition-opacity</code>) ; sous <code>motion-reduce</code>, transitions coupées (<code>motion-reduce:transition-none</code>)</span></span></div>
 <div class="grid gap-3" style="grid-template-columns: repeat(3, minmax(0, 1fr))"><div class="flex flex-col gap-1.5">
 <span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Carte centrée</span>
@@ -228,12 +228,15 @@ code{font-family:'Geist Mono',ui-monospace,monospace;font-size:0.92em}
 </div><div class="flex flex-col gap-1.5">
 <span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Points et bouton</span>
 <div class="flex rounded-lg bg-panel-sunken p-3"><div class="flex w-full flex-col gap-4"><div class="flex items-center justify-center gap-2"><span class="h-2 w-6 rounded-full bg-accent transition-all motion-reduce:transition-none"></span><span class="h-2 w-2 rounded-full bg-edge-strong transition-all motion-reduce:transition-none hover:bg-ink-muted"></span><span class="h-2 w-2 rounded-full bg-edge-strong transition-all motion-reduce:transition-none hover:bg-ink-muted"></span><span class="h-2 w-2 rounded-full bg-edge-strong transition-all motion-reduce:transition-none hover:bg-ink-muted"></span></div><button type="button" class="mx-auto w-full rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-ink transition-opacity hover:opacity-90 disabled:opacity-50 md:w-auto md:min-w-64">Jouer Naivara</button></div></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">PJ sans fiche</span>
+<div class="flex rounded-lg bg-panel-sunken p-3"><div class="flex flex-col gap-4"><div class="flex flex-col overflow-hidden rounded-2xl border bg-panel backdrop-blur-[var(--blur)] border-accent shadow-[0_0_32px_-6px_var(--accent)]" style="width: 250px"><div class="relative flex h-[250px] items-center justify-center overflow-hidden bg-panel-sunken"><span aria-hidden="true" class="font-display text-[96px] font-bold text-ink-muted">M</span></div><div class="flex flex-col gap-1 p-3"><span class="block-title text-base">Mirelle Vantor</span><span class="self-start rounded-full border border-dashed border-accent/60 px-2.5 py-0.5 text-xs text-accent">Fiche de personnage à créer</span><span class="text-xs leading-relaxed text-ink-soft">Archiviste renvoyée de Château-Suif pour une lecture interdite.</span></div></div><button type="button" class="w-full rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-ink transition-opacity hover:opacity-90">Jouer Mirelle · créer sa fiche</button></div></div>
 </div></div>
 </section>
 </main>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":6400}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":6900}}'>
 class Component extends DCLogic {
   constructor(props) {
     super(props);
