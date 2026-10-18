@@ -69,18 +69,30 @@ export async function getTableParty(
   params: { worldId: string; campaignId: string; locale: Locale }
 ): Promise<TablePc[]> {
   const pcs = await listWorldPlayerCharacters(supabase, params.worldId, params.locale);
-  const names = await getDisplayNamesForUsers(
-    supabase,
-    pcs.map((pc) => pc.claimedByUserId).filter((id): id is string => id !== null)
-  );
+
+  // V3.1-62, étape 3 (C3) : les PJ se résolvent ensemble, et les noms des
+  // joueuses partent avec eux. Un PJ après l'autre coûtait une quinzaine de
+  // vagues par PJ (33 pour deux PJ). La chaîne de rulesets, gardée en promesse
+  // sur le client de la requête (`walkRulesetChain`), est partagée.
+  const [names, resolus] = await Promise.all([
+    getDisplayNamesForUsers(
+      supabase,
+      pcs.map((pc) => pc.claimedByUserId).filter((id): id is string => id !== null)
+    ),
+    Promise.all(
+      pcs.map(async (pc) => {
+        const ctx = await resolveCharacterActionContext(supabase, pc.entityId, params.campaignId, params.locale);
+        if (!ctx) return null;
+        const runtimeState = await getOrInitializeRuntimeState(supabase, ctx, { persist: true });
+        return { pc, ctx, runtimeState };
+      })
+    ),
+  ]);
 
   const table: TablePc[] = [];
-  // Un PJ après l'autre, comme `getPartySkillProbabilities` : chaque résolution
-  // lit le ruleset de la campagne, mis en cache par requête.
-  for (const pc of pcs) {
-    const ctx = await resolveCharacterActionContext(supabase, pc.entityId, params.campaignId, params.locale);
-    if (!ctx) continue;
-    const runtimeState = await getOrInitializeRuntimeState(supabase, ctx, { persist: true });
+  for (const resolu of resolus) {
+    if (!resolu) continue;
+    const { pc, ctx, runtimeState } = resolu;
     const used = runtimeState.state.resources;
     table.push({
       entityId: pc.entityId,
