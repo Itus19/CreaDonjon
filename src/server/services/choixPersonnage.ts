@@ -9,7 +9,11 @@ import { premierePhrase } from "@/src/core/entities/premierePhrase";
 import type { ChooseStart } from "@/src/core/campaigns/claimable";
 import { listBlocksByTypesForEntities } from "@/src/server/repos/blocks";
 import { listEntityIdsWithPortrait } from "@/src/server/repos/entityPortraits";
-import { listClaimableCharacters } from "@/src/server/services/campaigns";
+import { getClaimedCharacterEntityId } from "@/src/server/repos/campaigns";
+import { claimOwnOpenCharacter, listClaimableCharacters } from "@/src/server/services/campaigns";
+import { overwriteCharacterFromWizard } from "@/src/server/services/characterCreator";
+import type { InventoryBlockData } from "@/src/core/schemas/blocks/inventory";
+import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
 import { filtrerBlocsVisibles } from "@/src/server/services/blocks";
 import { buildViewerForWorld } from "@/src/server/services/visibility";
 import { libellesIdentite, type IdentitePersonnage } from "@/src/server/services/worldPlayerCharacters";
@@ -90,4 +94,50 @@ export async function listCartesPersonnage(
     })),
     startOn,
   };
+}
+
+export type ReclamerAvecFicheResult =
+  | { ok: true }
+  | { ok: false; reason: "already_taken" | "conflict" | "forbidden" | "not_found" };
+
+/**
+ * V3.1-83 — un PJ ouvert SANS fiche de personnage : la joueuse le réclame à
+ * la fin de l'assistant de création, pas au clic sur la carte. Une joueuse
+ * ne peut pas rendre un PJ (seul le MJ écrit dans `campaign_characters`) :
+ * réclamer avant l'assistant laisserait une réclamation orpheline si elle
+ * annule. Ici, annuler ne coûte rien, rien n'a encore été écrit.
+ *
+ * Réclamer d'abord, écrire ensuite : c'est la réclamation qui donne le droit
+ * d'écrire la fiche (`canUserEditEntity`). Si l'écriture échoue après la
+ * réclamation, la joueuse peut renvoyer l'assistant : un PJ déjà à elle
+ * compte comme réclamé, la seconde tentative reprend à l'écriture.
+ */
+export async function reclamerEtCreerFiche(
+  supabase: TypedClient,
+  params: {
+    campaignId: string;
+    userId: string;
+    entityId: string;
+    expectedVersion: number;
+    name: string;
+    character: CharacterBlockData;
+    inventory: InventoryBlockData | undefined;
+    spellcasting: SpellcastingBlockData | undefined;
+  }
+): Promise<ReclamerAvecFicheResult> {
+  const reclame = await claimOwnOpenCharacter(supabase, { campaignId: params.campaignId, entityId: params.entityId });
+  if (!reclame.ok) {
+    const dejaAElle = await getClaimedCharacterEntityId(supabase, { campaignId: params.campaignId, userId: params.userId });
+    if (dejaAElle !== params.entityId) return { ok: false, reason: "already_taken" };
+  }
+  const ecrit = await overwriteCharacterFromWizard(supabase, {
+    entityId: params.entityId,
+    expectedVersion: params.expectedVersion,
+    changedBy: params.userId,
+    name: params.name,
+    character: params.character,
+    inventory: params.inventory,
+    spellcasting: params.spellcasting,
+  });
+  return ecrit.ok ? { ok: true } : { ok: false, reason: ecrit.reason };
 }

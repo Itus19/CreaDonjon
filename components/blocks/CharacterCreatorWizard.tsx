@@ -17,7 +17,7 @@ import BackgroundStep, { type BackgroundEquipmentChoice } from "./characterCreat
 import SpellSelectionStep from "./characterCreatorSteps/SpellSelectionStep";
 import PreviewStep from "./characterCreatorSteps/PreviewStep";
 import { createCharacterFromWizardAction, type CreateCharacterFromWizardInput } from "@/app/m/[worldSlug]/mj/creation-personnage/actions";
-import { overwriteCharacterFromWizardAction } from "@/app/m/[worldSlug]/(monde)/f/[entitySlug]/actions";
+import { overwriteCharacterFromWizardAction, type OverwriteCharacterFromWizardInput } from "@/app/m/[worldSlug]/(monde)/f/[entitySlug]/actions";
 import { useWorldRuleEntries } from "./useWorldRuleEntries";
 import { useRuleEntryBlocks } from "./useRuleEntryBlocks";
 
@@ -103,6 +103,17 @@ export interface CharacterWizardEntityMode {
   initialSpellcasting?: SpellcastingBlockData;
   onCancel: () => void;
   onDone: (result: { name: string; version: number }) => void;
+  /**
+   * Remplace `overwriteCharacterFromWizardAction` (V3.1-83 : un PJ ouvert
+   * sans fiche, réclamé à la validation puis écrit). Une action qui redirige
+   * ne rend rien : `onDone` n'est alors pas appelé.
+   */
+  onSubmit?: (
+    worldSlug: string,
+    input: OverwriteCharacterFromWizardInput
+  ) => Promise<{ error: string } | { ok: true; name: string; version: number } | void>;
+  /** Remplace la phrase d'avertissement du bandeau (« remplace le personnage actuel… »). */
+  note?: string;
 }
 
 export default function CharacterCreatorWizard({
@@ -111,6 +122,7 @@ export default function CharacterCreatorWizard({
   entityMode,
   playerRestricted,
   onCreate,
+  onCancel,
 }: {
   worldSlug: string;
   /** Requis seulement hors `entityMode` (creation d'une nouvelle entite). */
@@ -127,6 +139,8 @@ export default function CharacterCreatorWizard({
    * `entityMode` est fourni (reecriture, jamais une creation).
    */
   onCreate?: (worldSlug: string, input: CreateCharacterFromWizardInput) => Promise<{ error: string } | void>;
+  /** Hors `entityMode` : un bouton « Annuler » (V3.1-83, retour au carrousel, rien n'est créé). Absent côté MJ, rien ne change. */
+  onCancel?: () => void;
 }) {
   const [rawStep, setStep] = useState(0);
   const [name, setName] = useState(entityMode?.initialName ?? "");
@@ -227,7 +241,7 @@ export default function CharacterCreatorWizard({
     setError(null);
     try {
       if (entityMode) {
-        const result = await overwriteCharacterFromWizardAction(worldSlug, {
+        const result = await (entityMode.onSubmit ?? overwriteCharacterFromWizardAction)(worldSlug, {
           entityId: entityMode.entityId,
           expectedVersion: entityMode.expectedVersion,
           name: finalName,
@@ -235,6 +249,7 @@ export default function CharacterCreatorWizard({
           inventory: inventory.items.length > 0 ? inventory : undefined,
           spellcasting: spellcasting.known.length > 0 ? spellcasting : undefined,
         });
+        if (!result) return;
         if ("error" in result) {
           setError(result.error);
           return;
@@ -261,7 +276,7 @@ export default function CharacterCreatorWizard({
       {entityMode && (
         <div className="flex items-center justify-between">
           <p className="text-xs text-ink-muted">
-            Assistant de création — remplace le personnage actuel de cette fiche à la validation.
+            {entityMode.note ?? "Assistant de création — remplace le personnage actuel de cette fiche à la validation."}
           </p>
           <button
             type="button"
@@ -269,6 +284,17 @@ export default function CharacterCreatorWizard({
             className="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted transition-colors hover:bg-panel"
           >
             Fermer sans enregistrer
+          </button>
+        </div>
+      )}
+      {!entityMode && onCancel && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted transition-colors hover:bg-panel"
+          >
+            Annuler
           </button>
         </div>
       )}

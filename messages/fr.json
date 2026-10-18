@@ -739,6 +739,10 @@
     "jouer": "Jouer {prenom}",
     "creer": "+ Créer mon personnage",
     "reclamationEnCours": "Réclamation…",
-    "reclame": "{prenom} est à toi : l'onglet Personnage montre maintenant sa fiche. Ton MJ peut encore le réattribuer."
+    "reclame": "{prenom} est à toi : l'onglet Personnage montre maintenant sa fiche. Ton MJ peut encore le réattribuer.",
+    "aCreer": "Fiche de personnage à créer",
+    "jouerCreer": "Jouer {prenom} · créer sa fiche",
+    "assistantTitrePj": "La fiche de {nom}",
+    "assistantNote": "Assistant de création — {prenom} sera à toi quand tu valideras sa fiche. Annuler ne réclame rien."
   }
 }

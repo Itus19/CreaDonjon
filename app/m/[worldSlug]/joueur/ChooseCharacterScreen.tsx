@@ -21,6 +21,10 @@ import {
  * et la carte de départ viennent du serveur (V3.1-100 : lien nominatif → ce
  * PJ seul) ; ce composant ne filtre rien. « Nouveau personnage » est la
  * dernière carte. Un seul bouton : jouer le PJ centré, ou créer le sien.
+ *
+ * V3.1-83 : un PJ sans fiche (`identite: null`) ne se réclame pas au clic.
+ * Le bouton ouvre l'assistant sur lui, et la réclamation se fait à la
+ * validation : annuler ne laisse aucune réclamation orpheline.
  */
 export default function ChooseCharacterScreen({
   worldSlug,
@@ -64,6 +68,10 @@ export default function ChooseCharacterScreen({
     if (pending) return;
     if (!carteCourante) {
       router.push(`/m/${worldSlug}/joueur/nouveau-personnage`);
+      return;
+    }
+    if (carteCourante.identite === null) {
+      router.push(`/m/${worldSlug}/joueur/nouveau-personnage?pj=${carteCourante.entityId}`);
       return;
     }
     setError(null);
@@ -205,6 +213,11 @@ export default function ChooseCharacterScreen({
                     {item.carte.identite.speciesLabel} · {item.carte.identite.classesLabel} {item.carte.identite.level}
                   </span>
                 )}
+                {item.carte && item.carte.identite === null && (
+                  <span className="self-start rounded-full border border-dashed border-accent/60 px-2.5 py-0.5 text-xs text-accent">
+                    {t("aCreer")}
+                  </span>
+                )}
                 {item.carte ? (
                   item.carte.phrase && <span className="text-xs leading-relaxed text-ink-soft">{item.carte.phrase}</span>
                 ) : (
@@ -256,7 +269,13 @@ export default function ChooseCharacterScreen({
         disabled={pending}
         className="mx-auto mb-20 w-full rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-ink transition-opacity hover:opacity-90 disabled:opacity-50 md:mb-0 md:w-auto md:min-w-64"
       >
-        {pending ? t("reclamationEnCours") : carteCourante ? t("jouer", { prenom: prenom(carteCourante.entityName) }) : t("creer")}
+        {pending
+          ? t("reclamationEnCours")
+          : !carteCourante
+            ? t("creer")
+            : carteCourante.identite === null
+              ? t("jouerCreer", { prenom: prenom(carteCourante.entityName) })
+              : t("jouer", { prenom: prenom(carteCourante.entityName) })}
       </button>
     </div>
   );

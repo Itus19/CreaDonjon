@@ -738,6 +738,10 @@
     "jouer": "Play {prenom}",
     "creer": "+ Create my character",
     "reclamationEnCours": "Claiming…",
-    "reclame": "{prenom} is yours: the Character tab now shows their sheet. Your GM can still reassign them."
+    "reclame": "{prenom} is yours: the Character tab now shows their sheet. Your GM can still reassign them.",
+    "aCreer": "Character sheet to create",
+    "jouerCreer": "Play {prenom} · create their sheet",
+    "assistantTitrePj": "{nom}'s sheet",
+    "assistantNote": "Character creator — {prenom} becomes yours when you confirm the sheet. Cancelling claims nothing."
   }
 }
