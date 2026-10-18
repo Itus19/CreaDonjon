@@ -17,9 +17,18 @@ interface MyAssignment {
  * Ouvre un simple champ de titre : la rédaction du récit se fait ensuite
  * dans l'édition NORMALE de la fiche créée (mêmes blocs que partout).
  */
-export default function SessionJournalBanner({ worldSlug }: { worldSlug: string }) {
+export default function SessionJournalBanner({
+  worldSlug,
+  initialAssignment,
+}: {
+  worldSlug: string;
+  /** V3.1-62, étape 3 (C1) : lu par le layout avec la page (`null` : aucun devoir). Absent, la bannière le demande elle-même. */
+  initialAssignment?: MyAssignment | null;
+}) {
   const router = useRouter();
-  const [assignment, setAssignment] = useState<MyAssignment | null>(null);
+  const [assignment, setAssignment] = useState<MyAssignment | null>(initialAssignment ?? null);
+  /** Lu, jamais modifié : le mode strict rejoue l'effet, la condition doit rester vraie. */
+  const avecPage = useRef(initialAssignment !== undefined);
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -28,6 +37,7 @@ export default function SessionJournalBanner({ worldSlug }: { worldSlug: string 
   useModalKeyboard({ open, onClose: () => setOpen(false), panelRef });
 
   useEffect(() => {
+    if (avecPage.current) return;
     fetch(`/api/worlds/${worldSlug}/session-journal/my-assignment`)
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error())))
       .then((body: { assignment: MyAssignment | null }) => setAssignment(body.assignment))
