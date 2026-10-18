@@ -585,14 +585,15 @@ function buildPendingBasis(
   }
 
   if (choice.kind === "ability_check") {
-    const mod = ctx.sheet.abilities[choice.actionId].mod;
+    // V3.1-46 : le jet de caractéristique de la fiche (Touche-à-tout compris).
+    const result = ctx.sheet.abilityChecks[choice.actionId];
     return {
       kind: "ability_check",
       action_id: choice.actionId,
       dc: choice.dc,
       die_max: 20,
-      modifier: mod,
-      chips: [{ label: ABILITY_LABELS[choice.actionId], value: mod }],
+      modifier: result.mod,
+      chips: result.sources,
       what: `Test de ${ABILITY_LABELS[choice.actionId]}`,
     };
   }

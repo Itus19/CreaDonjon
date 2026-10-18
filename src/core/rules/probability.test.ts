@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { successProbability, skillProbabilityTable, DEFAULT_PROBABILITY_DCS } from "./probability";
-import type { DerivedSheet, SkillResult } from "./sheet";
-import { SKILLS } from "./sheet";
+import { bestIndices, checkLines, PROBABILITY_DC_MAX, PROBABILITY_DC_MIN, successProbability } from "./probability";
+import { ABILITIES, characterSheet, SKILL_ABILITIES, SKILLS, type ActiveEffect, type CharacterBuild, type ResolvedRuleset } from "./sheet";
 
 describe("successProbability", () => {
   it("calcule un jet normal : DD 10, mod 0 -> 11 resultats sur 20 (10 a 20)", () => {
@@ -40,35 +39,67 @@ describe("successProbability", () => {
   });
 });
 
-function fakeSkillResult(mod: number, rollState: SkillResult["rollState"]): SkillResult {
-  return { mod, proficiency: "none", rollState, sources: [] };
+// --- V3.1-46 : la matrice (6 jets de caractéristique + 18 compétences) ----
+
+const BARD = { key: "bard", label: "Barde", hitDie: 8, savingThrowProficiencies: ["dex", "cha"] as const };
+const touche = {
+  key: "jack",
+  label: "Touche-à-tout",
+  source: "class:bard",
+  modifiers: [{ target: "check", op: "half_proficiency" as const, layer: 3 as const, source: "class:bard", label: "Touche-à-tout" }],
+};
+const avantageForce: ActiveEffect = {
+  key: "bulls_strength",
+  label: "Force du taureau",
+  modifiers: [{ target: "check.str", op: "advantage", layer: 7, source: "effect:bulls", label: "Force du taureau" }],
+};
+const ruleset: ResolvedRuleset = { classes: { bard: BARD }, features: { jack: touche } };
+function barde(featureKeys: string[], effets: ActiveEffect[] = []) {
+  const build: CharacterBuild = {
+    species: "human",
+    classes: [{ key: "bard", level: 1 }],
+    abilities: { assigned: { str: 10, dex: 14, con: 12, int: 10, wis: 10, cha: 16 } },
+    featureKeys,
+  };
+  return characterSheet(build, ruleset, [], effets);
 }
 
-describe("skillProbabilityTable", () => {
-  it("produit une ligne par competence, avec les DD par defaut (10/15/20)", () => {
-    const skills = Object.fromEntries(SKILLS.map((s) => [s, fakeSkillResult(2, "normal")])) as DerivedSheet["skills"];
-    const table = skillProbabilityTable({ skills } as DerivedSheet);
-    expect(table).toHaveLength(SKILLS.length);
-    for (const row of table) {
-      expect(Object.keys(row.probabilities).map(Number)).toEqual([...DEFAULT_PROBABILITY_DCS]);
-    }
+describe("checkLines", () => {
+  it("donne les six caractéristiques, puis les dix-huit compétences, dans l'ordre", () => {
+    const lignes = checkLines(barde([]));
+    expect(lignes).toHaveLength(6 + 18);
+    expect(lignes.slice(0, 6).map((l) => l.key)).toEqual([...ABILITIES]);
+    expect(lignes.slice(6).map((l) => l.key)).toEqual([...SKILLS]);
+    expect(lignes[0]).toMatchObject({ kind: "ability", ability: "str" });
+    expect(lignes[6]).toMatchObject({ kind: "skill", ability: SKILL_ABILITIES[SKILLS[0]] });
   });
 
-  it("reprend le modificateur et l'etat du jet (avantage/desavantage) de chaque competence", () => {
-    const skills = {
-      ...Object.fromEntries(SKILLS.map((s) => [s, fakeSkillResult(0, "normal")])),
-      stealth: fakeSkillResult(3, "advantage"),
-    } as DerivedSheet["skills"];
-    const table = skillProbabilityTable({ skills } as DerivedSheet);
-    const stealthRow = table.find((r) => r.skill === "stealth")!;
-    expect(stealthRow.mod).toBe(3);
-    expect(stealthRow.rollState).toBe("advantage");
-    expect(stealthRow.probabilities[15]).toBeCloseTo(successProbability(3, 15, "advantage"));
+  it("jet de Force sans maîtrise avec touche-à-tout : +1 au niveau 1, donc 12 chances sur 20 à DD 10", () => {
+    const force = checkLines(barde(["jack"]))[0];
+    expect(force).toMatchObject({ key: "str", mod: 1, proficiency: "half", rollState: "normal" });
+    expect(force.sources).toContainEqual({ label: "Touche-à-tout", value: 1 });
+    expect(successProbability(force.mod, 10, force.rollState)).toBeCloseTo(12 / 20);
   });
 
-  it("accepte une liste de DD personnalisee", () => {
-    const skills = Object.fromEntries(SKILLS.map((s) => [s, fakeSkillResult(0, "normal")])) as DerivedSheet["skills"];
-    const table = skillProbabilityTable({ skills } as DerivedSheet, [12]);
-    expect(Object.keys(table[0].probabilities)).toEqual(["12"]);
+  it("jet de Force avec touche-à-tout et avantage : 1 − (8/20)² à DD 10", () => {
+    const force = checkLines(barde(["jack"], [avantageForce]))[0];
+    expect(force.rollState).toBe("advantage");
+    expect(successProbability(force.mod, 10, force.rollState)).toBeCloseTo(1 - (8 / 20) ** 2);
+  });
+
+  it("aux bornes du DD : DD 5 réussit sauf sur 1 à 3 avec +1 ; DD 30 est hors d'atteinte avec +1", () => {
+    const force = checkLines(barde(["jack"]))[0];
+    expect(successProbability(force.mod, PROBABILITY_DC_MIN, force.rollState)).toBeCloseTo(17 / 20);
+    expect(successProbability(force.mod, PROBABILITY_DC_MAX, force.rollState)).toBe(0);
+    expect([PROBABILITY_DC_MIN, PROBABILITY_DC_MAX]).toEqual([5, 30]);
+  });
+});
+
+describe("bestIndices", () => {
+  it("rend toutes les colonnes à égalité au meilleur", () => {
+    expect(bestIndices([0.5, 0.75, 0.75, 0.2])).toEqual([1, 2]);
+  });
+  it("rend une liste vide sans colonne", () => {
+    expect(bestIndices([])).toEqual([]);
   });
 });

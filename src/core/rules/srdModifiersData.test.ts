@@ -46,4 +46,8 @@ describe("les effets passifs SRD écrits à la main", () => {
   it("la Ténacité naine : +1 PV max par niveau", () => {
     expect(RAW["dwarven-toughness"].modifiers).toEqual([{ target: "hp.max", op: "add", value: 1, per_level: true }]);
   });
+
+  it("le Touche-à-tout du barde : la moitié de la maîtrise sur tout jet de caractéristique (V3.1-46)", () => {
+    expect(RAW["bard-jack-of-all-trades"].modifiers).toEqual([{ target: "check", op: "half_proficiency" }]);
+  });
 });

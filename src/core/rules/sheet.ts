@@ -38,7 +38,13 @@ export type ModifierOp =
   | "advantage"
   | "disadvantage"
   | "proficiency"
-  | "expertise";
+  | "expertise"
+  /**
+   * V3.1-46 : la moitié du bonus de maîtrise, arrondie vers le bas, sur un jet
+   * qui n'inclut pas déjà la maîtrise (Touche-à-tout du barde). Cible `check`
+   * (tout jet de caractéristique, compétences comprises) ou `check.<car>`.
+   */
+  | "half_proficiency";
 
 export type StackingRule = "stack" | "highest" | "unique";
 export type Layer = 1 | 2 | 3 | 4 | 5 | 6 | 7;
@@ -46,7 +52,7 @@ export type Layer = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 export interface Modifier {
   target: string;
   op: ModifierOp;
-  /** Absent pour advantage/disadvantage/proficiency/expertise — ce sont des drapeaux, pas des montants. */
+  /** Absent pour advantage/disadvantage/proficiency/expertise/half_proficiency — ce sont des drapeaux, pas des montants. */
   value?: number;
   /** Identifiant de provenance stable, ex. "item:ent_4c8a". Sert au regroupement "unique". */
   source: string;
@@ -242,9 +248,19 @@ export interface SavingThrowResult {
   sources: Source[];
 }
 
+/** V3.1-46 : un jet de caractéristique (Force, Dextérité…), hors compétence. */
+export interface AbilityCheckResult {
+  mod: number;
+  /** La moitié de la maîtrise s'y ajoute (Touche-à-tout). */
+  halfProficiency: boolean;
+  rollState: RollState;
+  sources: Source[];
+}
+
 export interface SkillResult {
   mod: number;
-  proficiency: "none" | "proficient" | "expertise";
+  /** `half` : sans maîtrise, mais la moitié de la maîtrise s'ajoute (Touche-à-tout, V3.1-46). */
+  proficiency: "none" | "half" | "proficient" | "expertise";
   rollState: RollState;
   sources: Source[];
 }
@@ -254,6 +270,8 @@ export interface DerivedSheet {
   proficiencyBonus: number;
   ac: { value: number; sources: Source[] };
   savingThrows: Record<Ability, SavingThrowResult>;
+  /** V3.1-46 : les six jets de caractéristique. */
+  abilityChecks: Record<Ability, AbilityCheckResult>;
   skills: Record<Skill, SkillResult>;
   hitPoints: { max: number; hitDice: string; sources: Source[] };
   speed: { value: number; sources: Source[] };
@@ -346,9 +364,11 @@ function resolveTargetStack(
  * Etat d'un jet (§B4 regle 6) : avantage et desavantage ne s'empilent jamais
  * et s'annulent mutuellement des qu'ils coexistent sur la meme cible.
  */
-function resolveRollState(target: string, modifiers: readonly Modifier[]): RollState {
-  const hasAdvantage = modifiers.some((m) => m.target === target && m.op === "advantage");
-  const hasDisadvantage = modifiers.some((m) => m.target === target && m.op === "disadvantage");
+/** Avantage et désavantage d'une ou plusieurs cibles (une compétence est aussi un jet de sa caractéristique). */
+function resolveRollState(target: string | readonly string[], modifiers: readonly Modifier[]): RollState {
+  const targets = typeof target === "string" ? [target] : target;
+  const hasAdvantage = modifiers.some((m) => targets.includes(m.target) && m.op === "advantage");
+  const hasDisadvantage = modifiers.some((m) => targets.includes(m.target) && m.op === "disadvantage");
   if (hasAdvantage && hasDisadvantage) return "normal";
   if (hasAdvantage) return "advantage";
   if (hasDisadvantage) return "disadvantage";
@@ -533,20 +553,43 @@ export function characterSheet(
     savingThrows[ability] = { mod, proficient, rollState: resolveRollState(target, allModifiers), sources };
   }
 
+  // V3.1-46 : la moitié de la maîtrise (Touche-à-tout) sur les jets de caractéristique sans maîtrise.
+  const halfProficiency = Math.floor(proficiencyBonus / 2);
+  const halfProficiencyApplies = (ability: Ability) =>
+    allModifiers.some((m) => m.op === "half_proficiency" && (m.target === "check" || m.target === `check.${ability}`));
+  const halfProficiencyLabel = (ability: Ability) =>
+    allModifiers.find((m) => m.op === "half_proficiency" && (m.target === "check" || m.target === `check.${ability}`))?.label ?? "Moitie de la maitrise";
+
+  const abilityChecks = {} as Record<Ability, AbilityCheckResult>;
+  for (const ability of ABILITIES) {
+    const half = halfProficiencyApplies(ability);
+    const sources: Source[] = [{ label: ABILITY_LABELS[ability], value: abilities[ability].mod }];
+    if (half) sources.push({ label: halfProficiencyLabel(ability), value: halfProficiency });
+    abilityChecks[ability] = {
+      mod: abilities[ability].mod + (half ? halfProficiency : 0),
+      halfProficiency: half,
+      rollState: resolveRollState(`check.${ability}`, allModifiers),
+      sources,
+    };
+  }
+
   const skills = {} as Record<Skill, SkillResult>;
   for (const skill of SKILLS) {
     const target = `skill.${skill}`;
     const governing = SKILL_ABILITIES[skill];
     const expertise = allModifiers.some((m) => m.target === target && m.op === "expertise");
     const proficient = expertise || allModifiers.some((m) => m.target === target && m.op === "proficiency");
+    const half = !proficient && halfProficiencyApplies(governing);
     const multiplier = expertise ? 2 : 1;
-    const mod = abilities[governing].mod + (proficient ? proficiencyBonus * multiplier : 0);
+    const mod = abilities[governing].mod + (proficient ? proficiencyBonus * multiplier : half ? halfProficiency : 0);
     const sources: Source[] = [{ label: ABILITY_LABELS[governing], value: abilities[governing].mod }];
     if (proficient) sources.push({ label: expertise ? "Expertise" : "Maitrise", value: proficiencyBonus * multiplier });
+    if (half) sources.push({ label: halfProficiencyLabel(governing), value: halfProficiency });
     skills[skill] = {
       mod,
-      proficiency: expertise ? "expertise" : proficient ? "proficient" : "none",
-      rollState: resolveRollState(target, allModifiers),
+      proficiency: expertise ? "expertise" : proficient ? "proficient" : half ? "half" : "none",
+      // Une compétence est un jet de sa caractéristique : un avantage sur la Force vaut pour l'Athlétisme.
+      rollState: resolveRollState([target, `check.${governing}`], allModifiers),
       sources,
     };
   }
@@ -597,5 +640,5 @@ export function characterSheet(
       }))
   );
 
-  return { abilities, proficiencyBonus, ac, savingThrows, skills, hitPoints, speed, features, spellcasting, grantedSpells, warnings, encumbrance };
+  return { abilities, proficiencyBonus, ac, savingThrows, abilityChecks, skills, hitPoints, speed, features, spellcasting, grantedSpells, warnings, encumbrance };
 }

@@ -100,7 +100,7 @@ export type Choice = z.infer<typeof zChoice>;
  */
 export const zModifier = z.object({
   target: z.string(),
-  op: z.enum(["add", "set", "min", "max", "advantage", "disadvantage", "proficiency", "expertise"]),
+  op: z.enum(["add", "set", "min", "max", "advantage", "disadvantage", "proficiency", "expertise", "half_proficiency"]),
   value: z.number().optional(),
   /** V3.1-121 : `value` est par niveau de personnage (Ténacité naine : +1 PV max par niveau). */
   per_level: z.boolean().optional(),

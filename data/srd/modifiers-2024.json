@@ -11,5 +11,10 @@
   "dwarven-toughness": {
     "_regle": "Tenacite naine (trait nain) : vos PV max augmentent de 1, puis de 1 a chaque niveau gagne.",
     "modifiers": [{ "target": "hp.max", "op": "add", "value": 1, "per_level": true }]
+  },
+
+  "bard-jack-of-all-trades": {
+    "_regle": "Touche-a-tout (barde, niveau 2) : la moitie du bonus de maitrise, arrondie vers le bas, s'ajoute a tout jet de caracteristique qui n'inclut pas deja la maitrise (V3.1-46).",
+    "modifiers": [{ "target": "check", "op": "half_proficiency" }]
   }
 }

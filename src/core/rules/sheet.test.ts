@@ -713,3 +713,68 @@ describe("règles de personnage du ruleset (V3.1-115)", () => {
     expect(sheet.encumbrance.tier).toBe("none");
   });
 });
+
+describe("characterSheet — jets de caractéristique et touche-à-tout (V3.1-46)", () => {
+  const BARD = { key: "bard", label: "Barde", hitDie: 8, savingThrowProficiencies: ["dex", "cha"] as const };
+  const touche = {
+    key: "jack",
+    label: "Touche-à-tout",
+    source: "class:bard",
+    modifiers: [{ target: "check", op: "half_proficiency" as const, layer: 3 as const, source: "class:bard", label: "Touche-à-tout" }],
+  };
+  const persuasion = {
+    key: "persuasion",
+    label: "Compétences de barde",
+    source: "class:bard",
+    modifiers: [{ target: "skill.persuasion", op: "proficiency" as const, layer: 3 as const, source: "class:bard", label: "Barde" }],
+  };
+  const expertise = {
+    key: "expertise",
+    label: "Expertise",
+    source: "class:bard",
+    modifiers: [{ target: "skill.performance", op: "expertise" as const, layer: 3 as const, source: "class:bard", label: "Barde" }],
+  };
+  const ruleset: ResolvedRuleset = { classes: { bard: BARD }, features: { jack: touche, persuasion, expertise } };
+  const build = (level: number, featureKeys: string[]): CharacterBuild => ({
+    species: "human",
+    classes: [{ key: "bard", level }],
+    abilities: { assigned: { str: 8, dex: 14, con: 12, int: 10, wis: 10, cha: 16 } },
+    featureKeys,
+  });
+
+  it("sans touche-à-tout, un jet de caractéristique est le seul modificateur de la caractéristique", () => {
+    const sheet = characterSheet(build(1, []), ruleset, [], []);
+    expect(sheet.abilityChecks.str).toMatchObject({ mod: -1, rollState: "normal", halfProficiency: false });
+    expect(sheet.abilityChecks.cha.mod).toBe(3);
+  });
+
+  it("touche-à-tout ajoute la moitié de la maîtrise (arrondie vers le bas) à tout jet sans maîtrise", () => {
+    const sheet = characterSheet(build(1, ["jack"]), ruleset, [], []); // maîtrise +2 -> +1
+    expect(sheet.abilityChecks.str).toMatchObject({ mod: 0, halfProficiency: true });
+    expect(sheet.skills.athletics).toMatchObject({ mod: 0, proficiency: "half" });
+    expect(sheet.abilityChecks.str.sources).toContainEqual({ label: "Touche-à-tout", value: 1 });
+  });
+
+  it("touche-à-tout ne s'ajoute jamais à une compétence maîtrisée ou experte", () => {
+    const sheet = characterSheet(build(1, ["jack", "persuasion", "expertise"]), ruleset, [], []);
+    expect(sheet.skills.persuasion).toMatchObject({ mod: 5, proficiency: "proficient" });
+    expect(sheet.skills.performance).toMatchObject({ mod: 7, proficiency: "expertise" });
+  });
+
+  it("la moitié suit le bonus de maîtrise : +1 au niveau 5 (maîtrise +3), +2 au niveau 9 (maîtrise +4)", () => {
+    expect(characterSheet(build(5, ["jack"]), ruleset, [], []).abilityChecks.str.mod).toBe(0);
+    expect(characterSheet(build(9, ["jack"]), ruleset, [], []).abilityChecks.str.mod).toBe(1);
+  });
+
+  it("un avantage sur les jets de Force vaut aussi pour les compétences de Force", () => {
+    const avantage: ActiveEffect = {
+      key: "bulls_strength",
+      label: "Force du taureau",
+      modifiers: [{ target: "check.str", op: "advantage", layer: 7, source: "effect:bulls", label: "Force du taureau" }],
+    };
+    const sheet = characterSheet(build(1, []), ruleset, [], [avantage]);
+    expect(sheet.abilityChecks.str.rollState).toBe("advantage");
+    expect(sheet.skills.athletics.rollState).toBe("advantage");
+    expect(sheet.skills.acrobatics.rollState).toBe("normal");
+  });
+});

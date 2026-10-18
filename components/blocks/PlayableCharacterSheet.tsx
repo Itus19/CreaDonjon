@@ -595,7 +595,8 @@ export default function PlayableCharacterSheet({
                   // `RemainingChoicesStep.tsx` (assistant de creation), meme
                   // logique ici pour un choix de competence encore ouvert sur
                   // la fiche jouable (montee de niveau future).
-                  const alreadyGrantedElsewhere = choice ? !isChosen && result.proficiency !== "none" : false;
+                  // `half` (Touche-à-tout, V3.1-46) n'est pas une maîtrise accordée ailleurs.
+                  const alreadyGrantedElsewhere = choice ? !isChosen && (result.proficiency === "proficient" || result.proficiency === "expertise") : false;
                   const canPick = choice ? isChosen || (chosenForChoice.length < choice.count && !alreadyGrantedElsewhere) : false;
 
                   function toggle() {

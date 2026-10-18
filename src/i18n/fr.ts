@@ -175,7 +175,7 @@ export const MODIFIER_TARGET_CATEGORY_LABELS_FR: Record<ModifierTargetCategory, 
   skill: "Compétence",
 };
 
-/** Etiquette d'effet pour un modificateur declare — les quatre derniers sont des drapeaux (`modifierOpNeedsValue`), jamais suivis d'un montant. */
+/** Etiquette d'effet pour un modificateur declare — les cinq derniers sont des drapeaux (`modifierOpNeedsValue`), jamais suivis d'un montant. */
 export const MODIFIER_OP_LABELS_FR: Record<ModifierOp, string> = {
   add: "Bonus (+)",
   set: "Valeur fixe (=)",
@@ -185,6 +185,7 @@ export const MODIFIER_OP_LABELS_FR: Record<ModifierOp, string> = {
   disadvantage: "Désavantage",
   proficiency: "Maîtrise",
   expertise: "Expertise",
+  half_proficiency: "Moitié de la maîtrise",
 };
 
 /** Cible composee "Categorie — Caracteristique/Competence" (ex. "Sauvegarde — Sagesse") ; sans partie variable pour ac/speed/hp_max. Partagee par le rendu de fiche (`blockContentRenderer.tsx`) et le formulaire de creation de don (`CreateHomebrewFeatureForm.tsx`) — une seule composition, jamais deux libelles qui divergent pour la meme cle technique. */

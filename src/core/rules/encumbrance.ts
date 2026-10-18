@@ -55,6 +55,8 @@ export function encumbranceModifiers(result: EncumbranceResult, source: string, 
   }
   for (const ability of result.disadvantageAbilities) {
     modifiers.push({ target: `save.${ability}`, op: "disadvantage", layer: 6, source, label });
+    // V3.1-46 : le jet de caractéristique lui-même (les compétences le lisent aussi).
+    modifiers.push({ target: `check.${ability}`, op: "disadvantage", layer: 6, source, label });
   }
   for (const skill of SKILLS) {
     if (result.disadvantageAbilities.includes(SKILL_ABILITIES[skill])) {

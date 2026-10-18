@@ -177,7 +177,8 @@ export default function RemainingChoicesStep({
             // non selectionnable plutot que de laisser gacher le choix — la
             // regle 2024 dit explicitement de choisir une competence
             // differente dans ce cas.
-            const alreadyGrantedElsewhere = choice ? !isChosen && result.proficiency !== "none" : false;
+            // `half` (Touche-à-tout, V3.1-46) n'est pas une maîtrise accordée ailleurs.
+            const alreadyGrantedElsewhere = choice ? !isChosen && (result.proficiency === "proficient" || result.proficiency === "expertise") : false;
             const canPick = choice ? isChosen || (chosenForChoice.length < choice.count && !alreadyGrantedElsewhere) : false;
 
             function toggle() {

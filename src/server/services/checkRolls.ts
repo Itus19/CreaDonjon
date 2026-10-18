@@ -256,7 +256,8 @@ export async function rollAbilityCheck(
   const ctx = await resolveCharacterActionContext(supabase, params.entityId, params.campaignId, params.locale);
   if (!ctx) return { ok: false, reason: "not_found" };
 
-  const chips: Source[] = [{ label: ABILITY_LABELS[params.ability], value: ctx.sheet.abilities[params.ability].mod }];
+  // V3.1-46 : le jet de caractéristique de la fiche (Touche-à-tout compris), pas le seul modificateur.
+  const chips: Source[] = ctx.sheet.abilityChecks[params.ability].sources;
   const roll = await recordAndBuildOutcome(supabase, {
     campaignId: params.campaignId,
     entityId: check.entity.id,

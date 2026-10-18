@@ -8,7 +8,7 @@ import { resolveGeneratorToolsForEntity } from "@/src/server/services/generators
 import { listCampaigns, getCampaignCharacters, resolveCampaignId } from "@/src/server/services/campaigns";
 import { isSuperadmin } from "@/src/server/services/account";
 import { isWorldAdmin } from "@/src/server/services/permissions";
-import { getPartySkillProbabilities } from "@/src/server/services/partyProbabilities";
+import { getPartyCheckLines } from "@/src/server/services/partyProbabilities";
 import { getTableParty } from "@/src/server/services/tableParty";
 import { getEncounterBudgetTableForRuleset, listMonstersForRuleset, listSavedEncounters } from "@/src/server/services/encounters";
 import { getActiveCombatForCampaign, getCombatDetail, listCombatsForCampaign, listConditionNames } from "@/src/server/services/combats";
@@ -99,7 +99,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     case "probabilites": {
       const campaigns = await listCampaigns(supabase, world.id);
       const selected = campaigns[0] ?? null;
-      const party = selected ? await getPartySkillProbabilities(supabase, selected.id, locale) : [];
+      const party = selected ? await getPartyCheckLines(supabase, selected.id, locale) : [];
       data = { tool, hasCampaign: selected !== null, party };
       break;
     }
