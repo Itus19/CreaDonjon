@@ -2,6 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import FeuilleDuBas from "@/components/shared/FeuilleDuBas";
+import BandeFiche from "@/components/solo/BandeFiche";
+import { useSoloContexte } from "@/components/solo/SoloContexte";
 import ScenePanel from "@/components/solo/ScenePanel";
 import IntentBar from "@/components/solo/IntentBar";
 import Fil from "@/components/solo/Fil";
@@ -70,6 +74,9 @@ export default function SoloScreen({
   candidates: { id: string; name: string }[];
 }) {
   const router = useRouter();
+  const t = useTranslations("solo");
+  const { jauges } = useSoloContexte();
+  const [feuilleConsequences, setFeuilleConsequences] = useState(false);
   const [sceneView, setSceneView] = useState(scene);
   const [filItems, setFilItems] = useState<FilItem[] | null>(null);
   const [pending, setPending] = useState<PendingRequest | null>(null);
@@ -136,8 +143,26 @@ export default function SoloScreen({
     autoScrollRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 48;
   }
 
+  const nombreConsequences = consequences ? consequences.pending.length + consequences.applied.length : 0;
+
   return (
     <div className="flex h-full min-h-0 flex-col gap-4">
+      {/* Téléphone (V3.1-36) : la bande de jauges en ligne, et ✦ qui ouvre les conséquences en feuille du bas. */}
+      <div className="flex shrink-0 items-stretch gap-2 md:hidden">
+        <BandeFiche jauges={jauges} variante="ligne" />
+        {nombreConsequences > 0 && (
+          <button
+            type="button"
+            onClick={() => setFeuilleConsequences(true)}
+            aria-haspopup="dialog"
+            aria-label={t("consequencesOuvrir", { nombre: nombreConsequences })}
+            className="flex shrink-0 flex-col items-center justify-center rounded-lg border border-edge bg-panel px-3 text-accent transition-colors hover:bg-panel-raised"
+          >
+            <span aria-hidden="true">✦</span>
+            <span className="text-xs tabular-nums text-ink-soft">{nombreConsequences}</span>
+          </button>
+        )}
+      </div>
       <div ref={scrollRef} onScroll={onScroll} className="min-h-0 flex-1 overflow-y-auto">
         <ScenePanel
           campaignId={campaignId}
@@ -152,7 +177,7 @@ export default function SoloScreen({
         <div className="mt-4">
           <Fil items={filItems} />
         </div>
-        <div className="mt-2">
+        <div className="mt-2 max-md:hidden">
           <ConsequencesDrawer data={consequences} onChanged={reloadCenter} />
         </div>
       </div>
@@ -175,6 +200,13 @@ export default function SoloScreen({
           onActed={reloadCenter}
         />
       </div>
+      {feuilleConsequences && (
+        <FeuilleDuBas titre={t("consequencesTitre")} titreVisible onFermer={() => setFeuilleConsequences(false)}>
+          <div className="pb-2">
+            <ConsequencesDrawer data={consequences} onChanged={reloadCenter} ouvertParDefaut />
+          </div>
+        </FeuilleDuBas>
+      )}
     </div>
   );
 }

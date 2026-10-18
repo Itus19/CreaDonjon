@@ -92,7 +92,7 @@ export function JaugeCirculaire({
  * dessinent pareil. Pas d'anneau : un anneau dit une proportion, une classe
  * d'armure n'a pas de maximum.
  */
-function Bouclier({ valeur }: { valeur: number }) {
+export function Bouclier({ valeur }: { valeur: number }) {
   return (
     <div className="flex flex-col items-center gap-0.5">
       <div

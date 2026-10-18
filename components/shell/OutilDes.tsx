@@ -5,8 +5,8 @@ import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import Tabs from "@/components/shared/Tabs";
 import { DIE_TYPES, type DieType } from "@/src/core/dice/roll";
-import { verdictTone, type AdvantagePair } from "@/src/core/dice/diceTool";
-import { extractDiceGroups, type RollChip } from "@/src/core/dice/parseRollDetail";
+import { verdictTone } from "@/src/core/dice/diceTool";
+import { extractDiceGroups } from "@/src/core/dice/parseRollDetail";
 import type { AdvantageState } from "@/src/core/rules/action";
 import {
   ajouterDe,
@@ -18,6 +18,7 @@ import {
   corpsAction,
   ddDepuisSaisie,
   emplacementsAttendus,
+  ErreurLancer,
   etatDe,
   formaterModificateur,
   pasDd,
@@ -30,6 +31,7 @@ import {
   type JetAffiche,
   type PreReglage,
   type Reserve,
+  type SortieJet,
 } from "@/lib/ui/outilDes";
 import { messageErreur, posterJet } from "@/lib/ui/outilDesApi";
 import { useMatchMedia } from "./useMatchMedia";
@@ -43,20 +45,7 @@ import { useMatchMedia } from "./useMatchMedia";
  * ils ne sont jamais présentés comme un résultat.
  */
 
-/** Réponse du serveur à un jet (`RollOutcome`, checkRolls.ts) — la partie que l'écran lit. */
-export interface SortieJet {
-  who: string;
-  what: string;
-  chips: RollChip[];
-  total: number;
-  dc: number | null;
-  verdict: "success" | "fail" | null;
-  hidden: boolean;
-  trace: { text: string; value: number }[];
-  pair: AdvantagePair | null;
-  naturalD20: number | null;
-  dcPrivate: boolean;
-}
+export type { SortieJet };
 
 const DIE_CLIP_PATH: Record<number, string> = {
   4: "polygon(50% 4%, 96% 96%, 4% 96%)",
@@ -185,7 +174,10 @@ export default function OutilDes({
   const [erreur, setErreur] = useState<string | null>(null);
 
   const action = actif?.action;
-  const verrouille = action !== undefined;
+  const lancerFourni = actif?.lancer;
+  /** Un tour solo : avantage et DD sont figés dans la demande, l'outil ne les change pas (V3.1-36). */
+  const fige = lancerFourni !== undefined;
+  const verrouille = action !== undefined || fige;
   const avantageEff = avantageEffectif(reserve, avantage);
   const peutDonnerAvantage = avantagePossible(reserve);
   const ddCache = !isGm && ddPrive;
@@ -215,6 +207,27 @@ export default function OutilDes({
       corps = { campaignId, check: test, advantage: base.avantage, dc: base.dc, hidden: base.secret, dcPrivate: base.ddPrive };
     } else {
       contexte = { dc: ddCache ? null : dd, avantage: avantageEff, secret, ddPrive: isGm && ddPrive };
+      if (lancerFourni) {
+        // Pas de route de jet : le serveur lance ET encaisse, on affiche ce qu'il rend.
+        setResultat(null);
+        setEnCours(true);
+        setErreur(null);
+        try {
+          const attente = new Promise<void>((resolve) => setTimeout(resolve, reduit ? 0 : ATTENTE_MIN_MS));
+          const [sortie] = await Promise.all([lancerFourni(), attente]);
+          if (sortie === null) {
+            setErreur(t("erreurJet"));
+            return;
+          }
+          setResultat({ jet: jetDepuisSortie(sortie), contexte: { dc: sortie.dc, avantage: avantageEff, secret: false, ddPrive: false }, relance: false });
+        } catch (e) {
+          console.error("Jet de dés non lancé", e);
+          setErreur(e instanceof ErreurLancer ? e.message : t("erreurJet"));
+        } finally {
+          setEnCours(false);
+        }
+        return;
+      }
       if (action) {
         url = `/api/entities/${action.entityId}/actions/${cheminAction(action)}`;
         corps = {
@@ -299,7 +312,7 @@ export default function OutilDes({
           {titre}
         </h2>
         {/* Le secret est un jet caché aux joueurs de la campagne : sans campagne, il n'a pas de sens. */}
-        {campaignId !== null && <Interrupteur actif={secret} onChange={setSecret} libelle={t("secret")} aide={t("secretAide")} />}
+        {campaignId !== null && !fige && <Interrupteur actif={secret} onChange={setSecret} libelle={t("secret")} aide={t("secretAide")} />}
         <button
           type="button"
           onClick={onFermer}
@@ -338,7 +351,11 @@ export default function OutilDes({
       </div>
 
       {/* Pilule Normal / Avantage / Désavantage (pilule glissante du catalogue). */}
-      <div className={peutDonnerAvantage ? "" : "opacity-40"} title={peutDonnerAvantage ? undefined : t("avantageIndisponible")}>
+      <div
+        className={peutDonnerAvantage && !fige ? "" : "opacity-40"}
+        title={fige ? t("figeDansLaDemande") : peutDonnerAvantage ? undefined : t("avantageIndisponible")}
+        inert={fige}
+      >
         <Tabs<AdvantageState>
           aria-label={t("avantageLibelle")}
           value={avantageEff}
@@ -354,9 +371,12 @@ export default function OutilDes({
       </div>
 
       {/* DD sous la grille ; « DD privé » pour le MJ seul. */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2" title={fige ? t("figeDansLaDemande") : undefined}>
         <span className="text-xs font-bold uppercase tracking-wide text-ink-muted">{t("dd")}</span>
-        {ddCache ? (
+        {fige ? (
+          // Le DD de la demande : lu, jamais réglé ici (le serveur l'a posé).
+          <span className="font-mech text-sm font-semibold text-ink">{actif?.dc ?? "—"}</span>
+        ) : ddCache ? (
           <span className="text-sm font-semibold text-ink-soft">{t("ddPriveJoueur")}</span>
         ) : (
           <>
@@ -380,7 +400,7 @@ export default function OutilDes({
           </>
         )}
         {ddDeMj && !isGm && !ddPrive && dd !== null && <span className="text-xs text-ink-muted">{t("ddPartage")}</span>}
-        {isGm && (
+        {isGm && !fige && (
           <span className="ml-auto">
             <Interrupteur actif={ddPrive} onChange={onDdPrive} libelle={t("ddPrive")} />
           </span>

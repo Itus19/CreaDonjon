@@ -25,6 +25,9 @@ import MasteriesTab from "@/components/blocks/MasteriesTab";
 import { ABILITY_LABELS } from "@/components/blocks/sheetLabels";
 import FicheJouableEnTete, { CaracteristiquesEtCompetences } from "./FicheJouableEnTete";
 import FicheJouableSac from "./FicheJouableSac";
+import BandeFiche from "./BandeFiche";
+import { useSoloContexte } from "./SoloContexte";
+import { jaugesBande } from "@/lib/ui/solo";
 
 /**
  * V3-D5 — La colonne droite de l'écran solo : la fiche jouable, au format
@@ -76,6 +79,11 @@ function ageFromInfobox(infobox: InfoboxBlockData | undefined): string | null {
   return entry?.value ?? null;
 }
 
+/** Niveau total du personnage : la somme des niveaux de ses classes, au moins 1. */
+function niveauTotal(character: CharacterBlockData): number {
+  return Math.max(1, character.classes.reduce((sum, c) => sum + c.level, 0));
+}
+
 export default function FicheJouableSolo({
   worldSlug,
   entityId,
@@ -97,6 +105,8 @@ export default function FicheJouableSolo({
 
   const worldCalendar = useWorldCalendarContext();
   const { rollAbility, rollSkill, rollSave } = useDiceRoll();
+  // V3.1-36 : repliée (ordinateur), la fiche devient une bande de jauges ; sur téléphone, le Jeu relit les mêmes jauges.
+  const { replie, publier } = useSoloContexte();
 
   useEffect(() => {
     let cancelled = false;
@@ -230,6 +240,23 @@ export default function FicheJouableSolo({
     .filter((s) => s.known.ref.kind === "rule" && (spellcasting?.prepared ?? []).includes(s.known.ref.key))
     .map((s) => ({ ref: s.known.ref, label: s.label, level: s.level }));
 
+  const jauges = useMemo(() => {
+    if (!character) return null;
+    const hpMaxBande = remote?.runtimeState.hpMax ?? sheet.hitPoints.max;
+    return jaugesBande({
+      ac: sheet.ac.value,
+      hpCurrent: remote?.runtimeState.state.hp.current ?? hpMaxBande,
+      hpMax: hpMaxBande,
+      level: niveauTotal(character),
+      exhaustion: remote?.runtimeState.state.exhaustion ?? 0,
+      carriedLb: sheet.encumbrance.carried,
+    });
+  }, [character, sheet, remote]);
+
+  useEffect(() => {
+    publier(jauges);
+  }, [jauges, publier]);
+
   function togglePrepared(key: string) {
     if (!spellcasting) return;
     const prepared = spellcasting.prepared.includes(key) ? spellcasting.prepared.filter((k) => k !== key) : [...spellcasting.prepared, key];
@@ -331,6 +358,7 @@ export default function FicheJouableSolo({
     reloadRemote();
   }
 
+  if (replie) return <BandeFiche jauges={jauges} variante="colonne" />;
   if (blocks === "loading") return <p className="text-sm text-ink-muted">Chargement…</p>;
   if (blocks === "error" || !character) {
     return <p className="text-sm text-ink-muted">Aucune fiche de personnage — ouvre l&apos;onglet Personnage pour la créer.</p>;
@@ -347,7 +375,7 @@ export default function FicheJouableSolo({
   const inspiration = runtimeState?.inspiration ?? 0;
   const conditions = runtimeState?.conditions ?? [];
 
-  const totalLevel = Math.max(1, character.classes.reduce((sum, c) => sum + c.level, 0));
+  const totalLevel = niveauTotal(character);
   const levelIndex = Math.min(totalLevel, XP_LEVEL_THRESHOLDS.length) - 1;
   const xpFloor = XP_LEVEL_THRESHOLDS[levelIndex] ?? 0;
   const xpCeiling = XP_LEVEL_THRESHOLDS[levelIndex + 1] ?? xpFloor;

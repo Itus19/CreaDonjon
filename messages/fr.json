@@ -86,6 +86,7 @@
     "ajouterDe": "Ajouter un {de}",
     "compteurDe": "{de} : {nombre}",
     "verrouille": "Ce test vient de la fiche : les dés sont verrouillés.",
+    "figeDansLaDemande": "Figé dans la demande du tour : on ne le change pas ici.",
     "modificateur": "Modificateur",
     "modificateurMoins": "Retirer 1 au modificateur",
     "modificateurPlus": "Ajouter 1 au modificateur",
@@ -589,5 +590,54 @@
     "enCours": "En cours…",
     "fait": "fait",
     "echec": "erreur — {message}"
+  },
+  "solo": {
+    "colonneAffichee": "Colonne affichée",
+    "onglets": {
+      "monde": "Monde",
+      "jeu": "Jeu",
+      "fiche": "Fiche"
+    },
+    "aria": {
+      "monde": "Le monde connu",
+      "quetes": "Les quêtes",
+      "fil": "Le fil de la partie",
+      "fiche": "La fiche jouable"
+    },
+    "replierMonde": "Replier le Monde",
+    "deplierMonde": "Déplier le Monde",
+    "replierFiche": "Replier la Fiche",
+    "deplierFiche": "Déplier la Fiche",
+    "barre": {
+      "jeu": "Jeu",
+      "monde": "Monde",
+      "fiche": "Fiche",
+      "quetes": "Quêtes",
+      "regles": "Règles",
+      "notes": "Notes"
+    },
+    "bandeTitre": "Jauges du personnage",
+    "bandeChargement": "Chargement…",
+    "bandeCa": "CA",
+    "bandePv": "PV",
+    "bandeNiveau": "Niv.",
+    "bandeCharge": "Charge",
+    "bandeEpuisement": "Épuis.",
+    "bandeKg": "{valeur} kg",
+    "consequencesOuvrir": "Changements dans le monde : {nombre}",
+    "consequencesTitre": "Changements dans le monde",
+    "presentsTitre": "Présents dans la scène",
+    "wikiTitre": "Wiki",
+    "wikiRecherche": "Chercher dans le wiki",
+    "wikiAucunResultat": "Aucune fiche ne correspond.",
+    "recentsTitre": "Consultées récemment",
+    "recentsVide": "Aucune fiche consultée pour l'instant.",
+    "quetesFiltre": "Quêtes affichées",
+    "quetesEnCours": "En cours",
+    "quetesTerminees": "Terminées",
+    "quetesAucuneEnCours": "Aucune quête en cours.",
+    "quetesAucuneTerminee": "Aucune quête terminée.",
+    "queteDonneePar": "donnée par {nom}",
+    "queteRecompense": "Récompense : {texte}"
   }
 }

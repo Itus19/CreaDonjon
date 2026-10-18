@@ -133,6 +133,24 @@ export type ActionFiche =
   | { kind: "save"; entityId: string; ability: Ability }
   | { kind: "initiative"; entityId: string };
 
+/** Réponse du serveur à un jet (`RollOutcome`, checkRolls.ts) — la partie que l'écran lit. */
+export interface SortieJet {
+  who: string;
+  what: string;
+  chips: RollChip[];
+  total: number;
+  dc: number | null;
+  verdict: "success" | "fail" | null;
+  hidden: boolean;
+  trace: { text: string; value: number }[];
+  pair: AdvantagePair | null;
+  naturalD20: number | null;
+  dcPrivate: boolean;
+}
+
+/** Un `lancer` qui échoue avec un message à AFFICHER dans l'outil (réponse du serveur, par exemple). */
+export class ErreurLancer extends Error {}
+
 export interface PreReglage {
   label: string;
   dice: Partial<Record<DieType, number>>;
@@ -144,6 +162,15 @@ export interface PreReglage {
   inspiration?: number;
   /** Appelé après une relance payée (la fiche se recharge). */
   apresRelance?: () => void;
+  /**
+   * V3.1-36 : un jet qui n'a pas de route de jet à lui (le tour solo). « Lancer »
+   * l'appelle à la place d'une route : le serveur lance et encaisse, la fonction
+   * rend de quoi afficher le jet. Grille, modificateur, avantage et DD sont alors
+   * figés (ils le sont dans la demande). Échec : `null`, ou une `ErreurLancer`.
+   */
+  lancer?: () => Promise<SortieJet | null>;
+  /** Avec `lancer` : le DD posé par la demande, affiché figé avant le lancer (`null` : aucun, ou une CA que le serveur lit). */
+  dc?: number | null;
 }
 
 /** Ce que la fiche montre de son test avant le lancer. */

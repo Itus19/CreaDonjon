@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import BarreFlottante, { RESERVE_BARRE, type EntreeBarre } from "./BarreFlottante";
 import { OutilsDalle, Rail, RailPart, RailRow, TraitSvg, useRailReplie } from "./Rail";
 import { useChatUnread } from "./useChatUnread";
 import NextSessionBadge, { type ProchaineSession } from "./scheduling/NextSessionBadge";
+import { adresseVue, vueDepuisAdresse, type VueSolo } from "@/lib/ui/solo";
 
 interface Destination {
   href: string;
@@ -35,6 +36,11 @@ interface Destination {
  * Wiki, Regles, Chat — « Solo » prend la place de « Chat » dans un monde sans
  * MJ humain, seul moyen d'atteindre le solo sur telephone. Le badge
  * « Prochaine session » n'est plus dans la barre : il ouvre la page Perso.
+ *
+ * V3.1-36 : sur la page solo, la barre flottante devient celle du solo — Jeu,
+ * Monde, Fiche | Quetes, Regles, Notes. Jeu, Monde, Fiche et Quetes sont des
+ * vues de la page (`?vue=`), changees par `history.replaceState` : l'adresse
+ * suit, aucun aller-retour serveur. Regles et Notes menent a leurs pages.
  *
  * En-tete/pied (retour utilisateur, suite) : "retirer cette barre en haut
  * et tout mettre sur la side bar" — `AppShell.tsx` ne rend plus son en-tete
@@ -65,6 +71,8 @@ export default function PlayerShell({
 }) {
   const pathname = usePathname();
   const t = useTranslations("shell");
+  const tSolo = useTranslations("solo");
+  const vueSolo = vueDepuisAdresse(useSearchParams().get("vue"));
   const base = `/m/${worldSlug}/joueur`;
   const { unreadCount } = useChatUnread();
   const { replie, basculer } = useRailReplie();
@@ -112,6 +120,28 @@ export default function PlayerShell({
       },
     ];
   });
+
+  // V3.1-36 : la barre du solo. Une vue ne recharge rien : on ecrit l'adresse, la page la relit.
+  const surSolo = pathname.startsWith(`${base}/solo`);
+  const entreeVue = (vue: VueSolo, icon: string, libelle: string): EntreeBarre => ({
+    cle: `solo-${vue}`,
+    libelle,
+    icone: <Icon name={icon} />,
+    actif: vueSolo === vue,
+    href: adresseVue(`${base}/solo`, "", vue),
+    onClick: (e) => {
+      e.preventDefault();
+      window.history.replaceState(null, "", adresseVue(pathname, window.location.search, vue));
+    },
+  });
+  const entreesSolo: EntreeBarre[] = [
+    entreeVue("jeu", "dice", tSolo("barre.jeu")),
+    entreeVue("monde", "map", tSolo("barre.monde")),
+    entreeVue("fiche", "user", tSolo("barre.fiche")),
+    entreeVue("quetes", "quest", tSolo("barre.quetes")),
+    { cle: "solo-regles", libelle: tSolo("barre.regles"), icone: <Icon name="books" />, actif: false, href: `${base}/regles` },
+    { cle: "solo-notes", libelle: tSolo("barre.notes"), icone: <Icon name="notes" />, actif: false, href: `${base}/notes` },
+  ];
 
   return (
     // V2.1-16 — `h-full` a la place du `h-dvh` d'avant. Ce `h-dvh` etait un
@@ -207,7 +237,7 @@ export default function PlayerShell({
         )}
         {children}
       </div>
-      <BarreFlottante entrees={entreesBarre} libelle={t("barreJoueur")} />
+      <BarreFlottante entrees={surSolo ? entreesSolo : entreesBarre} libelle={t("barreJoueur")} />
     </div>
   );
 }
@@ -263,6 +293,13 @@ function Icon({ name }: { name: string }) {
         <svg {...common}>
           <path d="M4 5h16v11H8l-4 4V5Z" />
           <path d="M8 9h8M8 12.5h5" />
+        </svg>
+      );
+    case "quest":
+      return (
+        <svg {...common}>
+          <path d="M6 21V4" />
+          <path d="M6 5h11l-2.5 4L17 13H6" />
         </svg>
       );
     case "dice":

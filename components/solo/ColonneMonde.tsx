@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
+import ListeRecents from "@/components/shell/ListeRecents";
+import { filtrerWiki } from "@/lib/ui/solo";
 import Tabs, { TabPanel } from "@/components/shared/Tabs";
 import PlayerRulesSidebar from "@/components/rules/PlayerRulesSidebar";
 import { ZONE_LABELS } from "@/components/solo/ScenePanel";
@@ -207,6 +210,61 @@ export default function ColonneMonde({
         {onglet === "presents" && <OngletPresents present={present} sketches={sketches} worldSlug={worldSlug} campaignId={campaignId} />}
         {onglet === "regles" && <PlayerRulesSidebar worldSlug={worldSlug} />}
       </TabPanel>
+    </div>
+  );
+}
+
+/**
+ * V3.1-36 — Le Monde du téléphone : « Présents dans la scène » en tête, puis le
+ * wiki (avec sa recherche) et les fiches consultées récemment. Les Quêtes ont
+ * leur propre vue (`QuetesTelephone`) et les Règles leur page : ils n'y sont plus.
+ */
+export function ColonneMondeTelephone({
+  worldSlug,
+  campaignId,
+  wiki,
+  present,
+  sketches,
+}: {
+  worldSlug: string;
+  campaignId: string;
+  wiki: WikiColumnGroup[];
+  present: SceneView["present"];
+  sketches: SceneView["sketches"];
+}) {
+  const t = useTranslations("solo");
+  const [recherche, setRecherche] = useState("");
+  const groupes = filtrerWiki(wiki, recherche);
+  const titre = "text-xs font-semibold uppercase tracking-wide text-ink-muted";
+
+  return (
+    <div className="flex flex-col gap-4">
+      <section aria-label={t("presentsTitre")} className="flex flex-col gap-2">
+        <h2 className={titre}>{t("presentsTitre")}</h2>
+        <OngletPresents present={present} sketches={sketches} worldSlug={worldSlug} campaignId={campaignId} />
+      </section>
+
+      <section aria-label={t("wikiTitre")} className="flex flex-col gap-2">
+        <h2 className={titre}>{t("wikiTitre")}</h2>
+        <input
+          type="search"
+          value={recherche}
+          onChange={(e) => setRecherche(e.target.value)}
+          placeholder={t("wikiRecherche")}
+          aria-label={t("wikiRecherche")}
+          className="rounded-full border border-edge bg-panel-sunken px-3 py-1.5 text-sm text-ink outline-none placeholder:text-ink-muted focus:border-accent"
+        />
+        {recherche.trim() !== "" && groupes.length === 0 ? (
+          <p className="text-sm text-ink-muted">{t("wikiAucunResultat")}</p>
+        ) : (
+          <OngletWiki worldSlug={worldSlug} groups={groupes} />
+        )}
+      </section>
+
+      <section aria-label={t("recentsTitre")} className="flex flex-col gap-1">
+        <h2 className={titre}>{t("recentsTitre")}</h2>
+        <ListeRecents worldSlug={worldSlug} espace="joueur-wiki" limite={5} messageVide={t("recentsVide")} />
+      </section>
     </div>
   );
 }

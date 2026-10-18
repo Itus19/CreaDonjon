@@ -6,6 +6,10 @@ import { interpretIntent, looksLikeQuestion, type IntentAction, type MechanicalI
 import { GM_QUESTION_MARKERS_FR } from "@/src/i18n/fr";
 import type { AdvantageState } from "@/src/core/rules/action";
 import type { EncashedTurnOutcome, IntentBarData, PendingRequest, PendingTurnResponse, TurnOutcome } from "@/lib/solo/types";
+import { useDiceRoll } from "@/components/shell/DiceRollPanel";
+import { ErreurLancer, type SortieJet } from "@/lib/ui/outilDes";
+import { preReglageDepuisDemande, sortieJetDepuisTour } from "@/lib/ui/solo";
+import { encaisserDepuisFiche } from "@/lib/ui/soloApi";
 
 /**
  * V3-B1 — La barre d'intention.
@@ -71,6 +75,8 @@ const CHIP = "rounded-full border border-edge px-3 py-1 text-xs text-ink";
 
 /** 1 à 8 lignes (critère du ticket) — mesuré sur `text-sm` (20px de ligne) plus le padding vertical du champ (2 × 6px). */
 const LINE_HEIGHT_PX = 20;
+/** V3.1-36 : le temps de lire une attaque dans l'outil de dés avant qu'il se rouvre sur les dégâts. */
+const DELAI_ENCHAINEMENT_MS = 2200;
 const FIELD_PADDING_PX = 12;
 const MAX_LINES = 8;
 
@@ -108,6 +114,7 @@ export default function IntentBar({
   /** V3-D4 — quel bouton retenter avec « Réessayer » : `submit` (Jouer/Annoncer, selon `pending`) ou `mj`. */
   const [lastAttempt, setLastAttempt] = useState<"submit" | "mj">("submit");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { openDiceTool } = useDiceRoll();
 
   const proposal = useMemo(() => interpretIntent(text, data.catalog), [text, data.catalog]);
 
@@ -165,6 +172,27 @@ export default function IntentBar({
   const corrected = overrideActionId !== null || overrideTargetId !== null;
   const needsDc = chosenAction !== null && chosenAction.kind !== "weapon_attack";
 
+  /**
+   * V3.1-36 — « Jouer » ouvre l'outil de dés (ADR 0035) sur la demande posée.
+   * « Lancer » y fait le même encaissement que les boutons de la fiche : le
+   * serveur tire le dé et encaisse. Une attaque qui touche chaîne la demande de
+   * dégâts : l'outil se rouvre dessus, après un instant pour lire l'attaque.
+   */
+  function ouvrirOutil(demande: PendingRequest) {
+    openDiceTool(preReglageDepuisDemande(demande, () => lancerDansOutil(demande)));
+  }
+
+  async function lancerDansOutil(demande: PendingRequest): Promise<SortieJet | null> {
+    if (campaignId === null) throw new ErreurLancer("Sans campagne, il n'y a pas de tour à jouer.");
+    const outcome = await encaisserDepuisFiche({ entityId, campaignId, worldSlug });
+    onPendingChange(outcome.chained);
+    if (outcome.chained === null) setDc("");
+    onActed?.();
+    const suite = outcome.chained;
+    if (suite !== null) setTimeout(() => ouvrirOutil(suite), DELAI_ENCHAINEMENT_MS);
+    return sortieJetDepuisTour(demande, outcome);
+  }
+
   async function play() {
     if (text.trim().length === 0) return;
     setLastAttempt("submit");
@@ -202,6 +230,7 @@ export default function IntentBar({
       // L'action libre, elle, garde son aller simple d'avant ce ticket.
       if ("pending" in body) {
         onPendingChange(body.pending);
+        ouvrirOutil(body.pending);
       } else {
         onPendingChange(null);
         setDc("");

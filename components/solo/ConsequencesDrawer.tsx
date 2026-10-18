@@ -95,8 +95,17 @@ function PendingEntry({ entry, onDone }: { entry: ConsequenceEntryView; onDone: 
   );
 }
 
-export default function ConsequencesDrawer({ data, onChanged }: { data: ConsequencesDrawerData | null; onChanged: () => void }) {
-  const [open, setOpen] = useState(false);
+export default function ConsequencesDrawer({
+  data,
+  onChanged,
+  ouvertParDefaut = false,
+}: {
+  data: ConsequencesDrawerData | null;
+  onChanged: () => void;
+  /** V3.1-36 : dans la feuille du bas du téléphone, la liste est déjà ouverte — la feuille EST le geste d'ouvrir. */
+  ouvertParDefaut?: boolean;
+}) {
+  const [open, setOpen] = useState(ouvertParDefaut);
   if (!data || (data.pending.length === 0 && data.applied.length === 0)) return null;
 
   const total = data.pending.length + data.applied.length;

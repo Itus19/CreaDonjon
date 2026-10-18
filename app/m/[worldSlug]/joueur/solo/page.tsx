@@ -9,7 +9,8 @@ import { listSceneChoices, loadSceneView, sceneDateLabel } from "@/src/server/se
 import { buildViewerForWorld } from "@/src/server/services/visibility";
 import { buildWikiColumn, buildQuestColumn } from "@/src/server/services/soloWorldColumn";
 import EmptyState from "@/components/shell/EmptyState";
-import ColonneMonde from "@/components/solo/ColonneMonde";
+import ColonneMonde, { ColonneMondeTelephone } from "@/components/solo/ColonneMonde";
+import QuetesTelephone from "@/components/solo/QuetesTelephone";
 import EnTeteEtat from "@/components/solo/EnTeteEtat";
 import FicheJouableSolo from "@/components/solo/FicheJouableSolo";
 import SoloScreen from "@/components/solo/SoloScreen";
@@ -101,6 +102,16 @@ export default async function JoueurSoloPage({ params }: { params: Promise<{ wor
             sketches={scene?.sketches ?? []}
           />
         }
+        mondeTelephone={
+          <ColonneMondeTelephone
+            worldSlug={worldSlug}
+            campaignId={campaign.id}
+            wiki={wiki}
+            present={scene?.present ?? []}
+            sketches={scene?.sketches ?? []}
+          />
+        }
+        quetes={<QuetesTelephone quests={quests} />}
         jeu={
           <SoloScreen
             worldSlug={worldSlug}

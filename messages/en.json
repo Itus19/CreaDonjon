@@ -85,6 +85,7 @@
     "ajouterDe": "Add a {de}",
     "compteurDe": "{de}: {nombre}",
     "verrouille": "This check comes from the sheet: the dice are locked.",
+    "figeDansLaDemande": "Fixed by the turn's request: it can't be changed here.",
     "modificateur": "Modifier",
     "modificateurMoins": "Lower the modifier by 1",
     "modificateurPlus": "Raise the modifier by 1",
@@ -588,5 +589,54 @@
     "enCours": "Working…",
     "fait": "done",
     "echec": "error — {message}"
+  },
+  "solo": {
+    "colonneAffichee": "Column shown",
+    "onglets": {
+      "monde": "World",
+      "jeu": "Game",
+      "fiche": "Sheet"
+    },
+    "aria": {
+      "monde": "The known world",
+      "quetes": "Quests",
+      "fil": "The game feed",
+      "fiche": "The playable sheet"
+    },
+    "replierMonde": "Collapse the World",
+    "deplierMonde": "Expand the World",
+    "replierFiche": "Collapse the Sheet",
+    "deplierFiche": "Expand the Sheet",
+    "barre": {
+      "jeu": "Game",
+      "monde": "World",
+      "fiche": "Sheet",
+      "quetes": "Quests",
+      "regles": "Rules",
+      "notes": "Notes"
+    },
+    "bandeTitre": "Character gauges",
+    "bandeChargement": "Loading…",
+    "bandeCa": "AC",
+    "bandePv": "HP",
+    "bandeNiveau": "Lvl",
+    "bandeCharge": "Load",
+    "bandeEpuisement": "Exh.",
+    "bandeKg": "{valeur} kg",
+    "consequencesOuvrir": "Changes in the world: {nombre}",
+    "consequencesTitre": "Changes in the world",
+    "presentsTitre": "Present in the scene",
+    "wikiTitre": "Wiki",
+    "wikiRecherche": "Search the wiki",
+    "wikiAucunResultat": "No page matches.",
+    "recentsTitre": "Recently viewed",
+    "recentsVide": "No page viewed yet.",
+    "quetesFiltre": "Quests shown",
+    "quetesEnCours": "Ongoing",
+    "quetesTerminees": "Completed",
+    "quetesAucuneEnCours": "No ongoing quest.",
+    "quetesAucuneTerminee": "No completed quest.",
+    "queteDonneePar": "given by {nom}",
+    "queteRecompense": "Reward: {texte}"
   }
 }
