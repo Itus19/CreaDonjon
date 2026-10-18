@@ -102,4 +102,8 @@ describe("bestIndices", () => {
   it("rend une liste vide sans colonne", () => {
     expect(bestIndices([])).toEqual([]);
   });
+  it("n'encadre rien quand toute la ligne est à égalité (un seul PJ compris) : personne n'y est meilleur", () => {
+    expect(bestIndices([0.05, 0.05])).toEqual([]);
+    expect(bestIndices([0.4])).toEqual([]);
+  });
 });

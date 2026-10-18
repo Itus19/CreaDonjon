@@ -806,5 +806,33 @@
       }
     },
     "titresBientot": "L'éditeur des titres arrive bientôt."
+  },
+  "probabilites": {
+    "titre": "Probabilités de réussite",
+    "intro": "La chance de réussir un jet de caractéristique ou de compétence, pour chaque PJ de la campagne.",
+    "aucunPj": "Aucun PJ avec une fiche exploitable dans cette campagne.",
+    "aucuneCampagne": "Aucune campagne dans ce monde — créez-en une dans l'onglet Campagnes.",
+    "campagne": "Campagne",
+    "dd": "DD",
+    "ddMoins": "Baisser le DD",
+    "ddPlus": "Monter le DD",
+    "ddPuce": "DD {dd}",
+    "grille": "Probabilités de réussite par PJ et par jet",
+    "jet": "Jet",
+    "caracteristiques": "Caractéristiques",
+    "competences": "Compétences",
+    "detailInvite": "Touchez une case pour voir le calcul.",
+    "detailTitre": "{pj} · {jet} · DD {dd} : {pct} %",
+    "avantage": "Avantage",
+    "desavantage": "Désavantage",
+    "jetNormal": "Jet normal",
+    "legendeDegrade": "Du rouge au vert selon la chance de réussir",
+    "legendeZero": "0 %",
+    "legendeCent": "100 %",
+    "legendeAvantage": "avantage",
+    "legendeDesavantage": "désavantage",
+    "legendeFiche": "déjà sur la fiche",
+    "legendeCadre": "cadre doré : le meilleur de la table",
+    "caracteristique": "Caractéristique"
   }
 }

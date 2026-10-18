@@ -65,9 +65,13 @@ export function checkLines(sheet: Pick<DerivedSheet, "abilityChecks" | "skills">
   return [...abilities, ...skills];
 }
 
-/** Les colonnes au meilleur d'une ligne (toutes, en cas d'égalité) : la case à encadrer. */
+/**
+ * Les colonnes au meilleur d'une ligne (toutes, en cas d'égalité) : la case à
+ * encadrer. Une ligne toute à égalité n'a pas de meilleur : rien à encadrer.
+ */
 export function bestIndices(values: readonly number[]): number[] {
   if (values.length === 0) return [];
   const best = Math.max(...values);
+  if (values.every((v) => v === best)) return [];
   return values.flatMap((v, i) => (v === best ? [i] : []));
 }

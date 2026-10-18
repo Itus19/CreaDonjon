@@ -7,8 +7,7 @@ import { couleursCase, PART_CHIFFRE, PART_FOND, teinte } from "./teinteProbabili
  * V3.1-46 — « contraste AA du chiffre dans les quatre modes ». Le contraste
  * se calcule ici comme le navigateur le ferait : jetons lus dans
  * `src/styles/tokens.css`, panneau translucide posé sur le fond du mode,
- * `color-mix(in oklch)` composante par composante (teinte par l'arc le plus
- * court), puis luminance WCAG. Approximation assumée : sous le panneau, on
+ * `color-mix(in oklab)` (composantes L, a, b linéaires), puis luminance WCAG. Approximation assumée : sous le panneau, on
  * compte le fond uni du mode, pas l'image floutée éventuelle.
  */
 
@@ -43,13 +42,15 @@ function rgbVersLch(rgb: Rgb): Lch {
   return { l: L, c: Math.hypot(A, B), h: ((Math.atan2(B, A) * 180) / Math.PI + 360) % 360 };
 }
 
-/** `color-mix(in oklch, x p%, y)` : clarté et chroma linéaires, teinte par l'arc le plus court. */
+/** `color-mix(in oklab, x p%, y)` : L, a et b linéaires. */
 function melange(x: Lch, part: number, y: Lch): Lch {
   const t = part / 100;
-  let dh = x.h - y.h;
-  if (dh > 180) dh -= 360;
-  if (dh < -180) dh += 360;
-  return { l: y.l + (x.l - y.l) * t, c: y.c + (x.c - y.c) * t, h: (y.h + dh * t + 360) % 360 };
+  const ab = (c: Lch) => [c.c * Math.cos((c.h * Math.PI) / 180), c.c * Math.sin((c.h * Math.PI) / 180)];
+  const [xa, xb] = ab(x);
+  const [ya, yb] = ab(y);
+  const a = ya + (xa - ya) * t;
+  const b = yb + (xb - yb) * t;
+  return { l: y.l + (x.l - y.l) * t, c: Math.hypot(a, b), h: ((Math.atan2(b, a) * 180) / Math.PI + 360) % 360 };
 }
 
 function luminance(rgb: Rgb): number {
@@ -63,12 +64,11 @@ function contraste(a: Rgb, b: Rgb): number {
 }
 
 /** Les jetons `--bg`, `--panel` (avec son alpha) et `--ink` de chaque mode, lus dans tokens.css. */
-function jetons(mode: string): { bg: Lch; panel: Lch; alpha: number; ink: Lch } {
+function jetons(mode: string, h: number): { bg: Lch; panel: Lch; alpha: number; ink: Lch } {
   const css = readFileSync(join(process.cwd(), "src/styles/tokens.css"), "utf8");
   const debut = css.indexOf(`:root[data-mode="${mode}"]`);
   const bloc = css.slice(debut, css.indexOf("}", debut));
   const c = 0.022;
-  const h = 152;
   const lire = (nom: string) => {
     const m = new RegExp(`--${nom}:\\s*oklch\\((.*)\\);`).exec(bloc);
     if (!m) throw new Error(`--${nom} absent du mode ${mode}`);
@@ -96,8 +96,9 @@ describe("teinte", () => {
 
 describe("contraste du chiffre (AA, 4,5:1)", () => {
   for (const mode of ["dark", "dim", "soft", "light"]) {
-    it(`mode ${mode} : tout pourcentage, de 0 à 100 %`, () => {
-      const { bg, panel, alpha, ink } = jetons(mode);
+    // La teinte `--h` suit l'image de fond du monde : on en essaie plusieurs, pas seulement la valeur par défaut (152).
+    it.each([30, 152, 280])(`mode ${mode}, teinte du fond %i : tout pourcentage, de 0 à 100 %%`, (h) => {
+      const { bg, panel, alpha, ink } = jetons(mode, h);
       const [pr, bgr] = [lchVersRgb(panel), lchVersRgb(bg)];
       const panneauPose = rgbVersLch(pr.map((v, i) => v * alpha + bgr[i] * (1 - alpha)) as Rgb);
       let pire = Infinity;

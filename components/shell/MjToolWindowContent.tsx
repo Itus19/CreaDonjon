@@ -57,22 +57,7 @@ export default function MjToolWindowContent({ worldSlug, data }: { worldSlug: st
       return data.isGm ? <GmJournalPanel worldSlug={worldSlug} /> : <p className="text-sm text-ink-muted">Réservé au MJ de ce monde.</p>;
 
     case "probabilites":
-      return (
-        <div className="flex flex-col gap-4">
-          <div>
-            <h1 className="block-title text-base">Probabilités de réussite</h1>
-            <p className="text-xs text-ink-muted">
-              Probabilité de réussir un jet de compétence à DD 10, 15 et 20, pour chaque personnage joueur de la
-              campagne.
-            </p>
-          </div>
-          {data.hasCampaign ? (
-            <PartyProbabilityTable party={data.party} />
-          ) : (
-            <p className="text-sm italic text-ink-muted">{NO_CAMPAIGN_MESSAGE}</p>
-          )}
-        </div>
-      );
+      return <PartyProbabilityTable party={data.party} hasCampaign={data.hasCampaign} />;
 
     case "rencontres":
       return (

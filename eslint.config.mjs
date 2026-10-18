@@ -210,7 +210,6 @@ const eslintConfig = defineConfig([
         "components/shell/HomeShell.tsx",
         "components/shell/InitiativeTracker.tsx",
         "components/shell/MjSidebar.tsx",
-        "components/shell/PartyProbabilityTable.tsx",
         "components/shell/PlayerShell.tsx",
         "components/shell/ShareLinkPanel.tsx",
         "components/shell/WorldTimelineView.tsx",

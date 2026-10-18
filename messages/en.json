@@ -805,5 +805,33 @@
       }
     },
     "titresBientot": "The titles editor is coming soon."
+  },
+  "probabilites": {
+    "titre": "Success probabilities",
+    "intro": "The chance of succeeding at an ability check or a skill check, for each PC in the campaign.",
+    "aucunPj": "No PC with a usable sheet in this campaign.",
+    "aucuneCampagne": "No campaign in this world — create one in the Campaigns tab.",
+    "campagne": "Campaign",
+    "dd": "DC",
+    "ddMoins": "Lower the DC",
+    "ddPlus": "Raise the DC",
+    "ddPuce": "DC {dd}",
+    "grille": "Success probabilities by PC and by check",
+    "jet": "Check",
+    "caracteristiques": "Abilities",
+    "competences": "Skills",
+    "detailInvite": "Touch a cell to see the calculation.",
+    "detailTitre": "{pj} · {jet} · DC {dd}: {pct}%",
+    "avantage": "Advantage",
+    "desavantage": "Disadvantage",
+    "jetNormal": "Normal roll",
+    "legendeDegrade": "From red to green by chance of success",
+    "legendeZero": "0%",
+    "legendeCent": "100%",
+    "legendeAvantage": "advantage",
+    "legendeDesavantage": "disadvantage",
+    "legendeFiche": "already on the sheet",
+    "legendeCadre": "gold frame: the best of the table",
+    "caracteristique": "Ability"
   }
 }
