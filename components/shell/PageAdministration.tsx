@@ -7,6 +7,7 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import ActionsMenu, { type ActionsMenuItem } from "@/components/shared/ActionsMenu";
 import Dropdown from "@/components/shared/Dropdown";
 import { LogoApp } from "@/components/brand/LogoApp";
+import PanneauIdentite from "@/components/shell/PanneauIdentite";
 import type { AppLogoKey } from "@/src/core/brand/identity";
 import type { CampaignInviteAdminSummary } from "@/src/server/services/campaignInvites";
 import type { AdminAccountRow } from "@/src/server/repos/account";
@@ -479,7 +480,7 @@ export default function PageAdministration({
 }: {
   comptesInitiaux: AdminAccountRow[];
   liensInitiaux: CampaignInviteAdminSummary[];
-  identite: { name: string; logoKey: AppLogoKey; logoUrl: string | null };
+  identite: { name: string; tagline: string; logoKey: AppLogoKey; logoUrl: string | null };
   nombreTitres: number;
 }) {
   const t = useTranslations("administration");
@@ -679,7 +680,7 @@ export default function PageAdministration({
       {tuile === "identite" && (
         <section aria-label={t("tuileIdentite")} className="flex flex-col gap-2">
           <h2 className="block-title text-sm text-ink">{t("tuileIdentite")}</h2>
-          <p className="text-sm text-ink-muted">{t("identiteBientot")}</p>
+          <PanneauIdentite identite={identite} />
         </section>
       )}
 

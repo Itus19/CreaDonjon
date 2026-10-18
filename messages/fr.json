@@ -773,7 +773,38 @@
     "colRole": "Rôle",
     "colReclamePar": "Réclamé par",
     "colEtat": "État",
-    "identiteBientot": "L'édition de l'identité arrive bientôt.",
+    "identite": {
+      "note": "Ce que voient tous les visiteurs : l'écran-titre, le rail, l'onglet du navigateur. Un changement s'applique à tous, aussitôt enregistré.",
+      "nom": "Nom",
+      "phrase": "Phrase d'accueil",
+      "logo": "Logo",
+      "logoGrilleAria": "Logo de l'application",
+      "noteLogo": "Un logo téléversé : PNG ou WebP carré (512 px), dessiné en clair sur transparent ; jamais de SVG téléversé (il peut contenir du script). Il remplace la tuile d'accent.",
+      "televerser": "+ Téléverser",
+      "televerse": "Logo téléversé",
+      "apercu": "Aperçu",
+      "enregistrer": "Enregistrer",
+      "enregistrement": "Enregistrement…",
+      "enregistre": "Enregistré ✓",
+      "retablir": "Rétablir « {nom} »",
+      "retablirTitre": "Rétablir l'identité par défaut ?",
+      "retablirMessage": "Le nom, la phrase d'accueil et le logo reviennent à ceux par défaut, pour tous les visiteurs. Un logo téléversé est supprimé.",
+      "retablirErreur": "Impossible de rétablir l'identité.",
+      "logos": {
+        "d20": "Le d20",
+        "dungeon_door": "La porte du donjon",
+        "dragon_eye": "L'œil du dragon",
+        "dice_cup": "Le gobelet",
+        "quill_die": "Plume et dé",
+        "key": "La clé du donjon",
+        "grimoire": "Le grimoire",
+        "tower": "La tour",
+        "maze": "Le dédale",
+        "scale": "L'écaille",
+        "lair": "L'antre",
+        "map": "La carte"
+      }
+    },
     "titresBientot": "L'éditeur des titres arrive bientôt."
   }
 }

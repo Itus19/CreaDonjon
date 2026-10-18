@@ -772,7 +772,38 @@
     "colRole": "Role",
     "colReclamePar": "Claimed by",
     "colEtat": "Status",
-    "identiteBientot": "Identity editing is coming soon.",
+    "identite": {
+      "note": "What every visitor sees: the title screen, the rail, the browser tab. A change applies to everyone, saved at once.",
+      "nom": "Name",
+      "phrase": "Welcome line",
+      "logo": "Logo",
+      "logoGrilleAria": "Application logo",
+      "noteLogo": "An uploaded logo: square PNG or WebP (512 px), drawn in light colour on transparent; never an uploaded SVG (it can contain script). It replaces the accent tile.",
+      "televerser": "+ Upload",
+      "televerse": "Uploaded logo",
+      "apercu": "Preview",
+      "enregistrer": "Save",
+      "enregistrement": "Saving…",
+      "enregistre": "Saved ✓",
+      "retablir": "Restore “{nom}”",
+      "retablirTitre": "Restore the default identity?",
+      "retablirMessage": "The name, welcome line and logo go back to the defaults for every visitor. An uploaded logo is deleted.",
+      "retablirErreur": "Could not restore the identity.",
+      "logos": {
+        "d20": "The d20",
+        "dungeon_door": "The dungeon door",
+        "dragon_eye": "The dragon's eye",
+        "dice_cup": "The dice cup",
+        "quill_die": "Quill and die",
+        "key": "The dungeon key",
+        "grimoire": "The grimoire",
+        "tower": "The tower",
+        "maze": "The maze",
+        "scale": "The scale",
+        "lair": "The lair",
+        "map": "The map"
+      }
+    },
     "titresBientot": "The titles editor is coming soon."
   }
 }
