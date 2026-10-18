@@ -1,5 +1,4 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { cookies } from "next/headers";
 import { getLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
@@ -15,14 +14,12 @@ import { getEncounterBudgetTableForRuleset, listMonstersForRuleset, listSavedEnc
 import { getActiveCombatForCampaign, getCombatDetail, listCombatsForCampaign, listConditionNames } from "@/src/server/services/combats";
 import { listEntitiesByIds } from "@/src/server/repos/entities";
 import { getCalendar } from "@/src/server/services/worlds";
-import { resolveBackgroundSelection } from "@/src/server/services/backgroundImages";
+import { lirePersonnalisation } from "@/src/server/services/personnalisation";
 import { listShareLinks } from "@/src/server/services/shareLinks";
 import { getOrCreateNotebook } from "@/src/server/services/notebook";
 import type { Locale } from "@/src/i18n/request";
 import type { MjToolWindowData } from "@/components/shell/mjToolWindows";
 import { MJ_TOOL_KEYS, type MjToolKey } from "@/components/shell/windowRefs";
-
-const VALID_MODES = ["dark", "dim", "soft", "light"];
 
 /**
  * Donnees d'une fenetre secondaire d'outil MJ (`?avec=outil:...`, retour
@@ -200,22 +197,8 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     }
 
     case "personnalisation": {
-      const cookieStore = await cookies();
-      const modeCookie = cookieStore.get("mode")?.value ?? "dark";
-      const mode = VALID_MODES.includes(modeCookie) ? modeCookie : "dark";
-      const contrast = cookieStore.get("contrast")?.value === "high" ? "high" : "off";
-      const backgroundRef = cookieStore.get("background")?.value;
-      const background = await resolveBackgroundSelection(supabase, backgroundRef);
-      const bgBlurCookie = Number(cookieStore.get("bgBlur")?.value);
-      const bgBlur = Number.isFinite(bgBlurCookie) && bgBlurCookie >= 0 && bgBlurCookie <= 40 ? bgBlurCookie : 20;
-      data = {
-        tool,
-        mode,
-        contrast,
-        backgroundRef: background.ref,
-        backgroundAvailableModes: background.availableModes,
-        bgBlur,
-      };
+      const reglages = await lirePersonnalisation(supabase);
+      data = { tool, ...reglages };
       break;
     }
 

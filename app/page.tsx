@@ -8,6 +8,8 @@ import { getMyInvite } from "@/src/server/services/campaignInvites";
 import { isSyntheticAccountEmail } from "@/src/core/accounts/memberAccountActions";
 import { compteDuContexte, type DonneesCompte } from "@/lib/ui/compte";
 import { getAppIdentity } from "@/src/server/services/appIdentity";
+import { lirePersonnalisation } from "@/src/server/services/personnalisation";
+import PersonnalisationPanel from "@/components/shell/PersonnalisationPanel";
 import type { Locale } from "@/src/i18n/request";
 import { logout } from "./login/actions";
 import CreateWorldForm from "./CreateWorldForm";
@@ -21,7 +23,7 @@ export default async function Home() {
   const supabase = await createClient();
   const user = await getAuthUser(supabase);
   const locale = (await getLocale()) as Locale;
-  const [worlds, selectableRulesets, canUseSoloMode, profile, identite, handle, invite] = await Promise.all([
+  const [worlds, selectableRulesets, canUseSoloMode, profile, identite, handle, invite, reglages] = await Promise.all([
     user ? listWorldCards(supabase, locale, user.id) : Promise.resolve([]),
     listSelectableRulesetsForCurrentUser(supabase),
     user ? isSuperadmin(supabase, user.id) : Promise.resolve(false),
@@ -29,6 +31,8 @@ export default async function Home() {
     getAppIdentity(),
     user ? getOwnHandle(supabase, user.id) : Promise.resolve(null),
     user ? getMyInvite(supabase, user.id) : Promise.resolve(null),
+    // V3.1-81 : la section Apparence du Compte monte le panneau Personnalisation, réglages lus avec la page.
+    lirePersonnalisation(supabase),
   ]);
   // V3.1-80 : la page Compte reçoit tout avec la page (C1). De l'invitation, seuls
   // l'id et la présence d'un mot de passe partent au client (règle 5).
@@ -57,7 +61,18 @@ export default async function Home() {
         identite={{ name: identite.name, logoKey: identite.logoKey, logoUrl: identite.logoUrl }}
         compte={
           <div className="flex flex-col gap-4">
-            <PageCompte compte={compte} />
+            <PageCompte
+              compte={compte}
+              apparence={
+                <PersonnalisationPanel
+                  currentMode={reglages.mode}
+                  currentContrast={reglages.contrast}
+                  currentBackgroundRef={reglages.backgroundRef}
+                  currentBackgroundAvailableModes={reglages.backgroundAvailableModes}
+                  currentBgBlur={reglages.bgBlur}
+                />
+              }
+            />
             {/* Telephone seulement : a partir de 768 px la deconnexion est en
                 pied de rail (HomeShell), la barre du bas n'ayant que des
                 destinations. */}
