@@ -2,6 +2,67 @@
 
 ---
 
+### ☑ V3.1-87 — Administration (B) : le tableau de bord · `M` · sans modèle IA — **fait le 18 octobre**
+
+**Modèle conseillé : Sonnet.**
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Planche** : `Admin-Decide.dc.html`. **Départ** :
+`components/shell/AdminPanel.tsx` (`InviteAdminRow`, `AccountAdminRow`),
+`app/page.tsx`, `/api/admin/invites`, `/api/admin/accounts`. **Dépend
+de** : V3.1-35 (« Administration » dans le rail, superadmin seulement).
+
+**Ce qui est décidé**
+- Une page « Administration » (« Superadmin seulement · toute la
+  plateforme »), vérifiée côté serveur (`isSuperadmin`) avant tout rendu.
+- **Cinq tuiles** en tête : **À traiter** (le nombre en accent),
+  **Comptes**, **Liens d'invitation actifs**, **Identité de
+  l'application** (tuile du logo + nom), **Titres des joueurs** (nombre de
+  titres ; panneau : V3.1-92). La tuile choisie (bordure
+  d'accent) ouvre sa liste dessous. **La page s'ouvre sur « À traiter »**,
+  ou sur Comptes s'il n'y a rien à traiter.
+- **À traiter** : une ligne par compte avec `password_reset_requested_at`
+  (« Tamara a demandé une réinitialisation de mot de passe · il y a 2 h ·
+  compte sans email »), bordure d'accent, bouton **« Forcer une
+  réinitialisation »** (geste existant ; le lien à usage unique s'affiche
+  comme aujourd'hui, « à transmettre hors application »). Puis, sans
+  geste, les comptes avec `must_change_password` (« doit changer son mot
+  de passe à sa prochaine connexion · rien à faire, pour mémoire »). Note :
+  « Les demandes de réinitialisation arrivent aussi chez le MJ de la
+  campagne ; ici, celles de tous les comptes. »
+- **Comptes** : recherche par nom (filtrage côté client) ; une ligne de
+  verre par compte : initiale, nom, « depuis le … », étiquettes
+  (**superadmin** violet, **Réinitialisation demandée · il y a …** accent,
+  **Doit changer son mot de passe** neutre), ⋮ avec les gestes
+  d'`AccountAdminRow` **inchangés** (forcer une réinitialisation,
+  transférer un ruleset…, supprimer le compte en rouge + `ConfirmDialog`).
+  Jamais le numéro.
+- **Liens d'invitation** : en-têtes Monde, Campagne, Rôle, Réclamé par,
+  État ; une ligne de verre par lien ; ⋮ avec les gestes d'`InviteAdminRow`
+  **inchangés** (copier le lien, voir comme, mot de passe, réinitialiser le
+  lien, révoquer, supprimer le compte ; destructeurs en rouge et
+  confirmés).
+- **Tablette** : tuiles en 2 × 2 ; ligne de lien sur deux lignes, en-têtes
+  masqués, ⋮ en haut à droite. **Téléphone** : Accueil › Administration,
+  « ‹ Accueil », tuiles en 2 × 2, nom de la tuile Identité sur une ligne
+  (15 px).
+- La section Administration de l'accueil disparaît (son contenu est ici).
+
+**Critères d'acceptation**
+- [~] Chaque geste d'`AdminPanel` est présent et fonctionne.
+- [x] Un compte non superadmin reçoit une 404 sur la page (pas un écran vide).
+- [x] Les compteurs des tuiles suivent les gestes sans rechargement.
+
+**Clôture (18 octobre).**
+- Décision d'Opus : Administration est une **route**, `/admin`, et non plus une destination locale de l'accueil. La 404 du critère n'existe que pour une page qui a une adresse. La coquille de l'accueil l'habille (`HomeShell page="admin"`) : ses lignes Mondes et Compte y mènent à `/` et `/?vue=compte`. La section Admin de l'accueil a disparu.
+- Serveur (Opus) : la page vérifie `isSuperadmin` avant tout rendu, puis lit comptes, liens, identité et nombre de titres ensemble, avec elle (C1, C3) ; `countPlayerTitleTiers` compte sans lire de ligne. **Changement de sens** : forcer une réinitialisation efface la demande en attente (`accountAuth.forcePasswordReset`), chez le MJ comme ici ; le compte passe de « à traiter » à « doit changer son mot de passe ». Sans cela, la ligne restait à traiter après le geste. `SCHEMA.md` le dit.
+- Interface (Sonnet) : `PageAdministration.tsx`, logique pure `lib/ui/administration.ts` (testée) ; les gestes d'`AdminPanel` repris avec les mêmes requêtes et les mêmes confirmations ; `AdminPanel.tsx` supprimé, cliquet du câblage 59 → 58. Correction d'Opus : le calcul « il y a … », écrit deux fois, en un seul hook.
+- Vérifié au navigateur : `/admin` répond 404 à Testeur MJ et Testeuse A, et leur rail n'a pas d'Administration ; `/?vue=compte` ouvre le Compte. Mise en page, recherche, menu ⋮ et tuile d'ouverture vérifiés à 1280, 820 et 390 px sur une page d'essai locale (données fictives, jamais commitée), aucun débordement.
+- Restes : aucun compte de test n'est superadmin. Les gestes eux-mêmes (forcer, transférer, supprimer, révoquer, mot de passe, voir comme) et les compteurs après un vrai geste sont **à vérifier par l'auteur**, avec son compte. La mention « compte sans email » de la planche manque : `AdminAccountRow` ne porte pas cette donnée. Les panneaux Identité et Titres arrivent avec V3.1-88 et V3.1-92.
+
+---
+
 ### ☑ V3.1-83 — Choix : PJ sans fiche et « Créer mon personnage » · `S` · sans modèle IA — **fait le 18 octobre**
 
 **Modèle conseillé : Sonnet.**
