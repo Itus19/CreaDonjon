@@ -38,7 +38,7 @@ export default async function AdministrationPage() {
           <PageAdministration
             comptesInitiaux={comptes}
             liensInitiaux={liens}
-            identite={{ name: identite.name, logoKey: identite.logoKey, logoUrl: identite.logoUrl }}
+            identite={identite}
             nombreTitres={nombreTitres}
           />
         }
