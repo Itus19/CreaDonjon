@@ -20,54 +20,6 @@ V3.1-20 (lot g) peut partir dès que 25 est fait.
 
 ---
 
-### ☐ V3.1-34 — L'outil Table du MJ · `L` · sans modèle IA — **prêt**
-
-**Modèle conseillé : Sonnet** — tout est esquissé ; données et règles fournies par 24.
-
-**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-**Planches** : « Décidé · téléphone du MJ — écrans » (Table) et « —
-feuilles ouvertes » (Toute la table). **Départ** : `mjToolWindows.ts`,
-`MjToolWindowContent.tsx` (un outil de plus dans la liste). **Dépend de** :
-24, 26 (commande E), 29, 33.
-
-- Une ligne par PJ de la campagne : nom + niveau ; dessous « joueur · CA ·
-  PV » puis la ligne des états ; à droite classe et sous-classe. Toucher
-  déplie.
-- Déplié — **revu le 5 octobre** (alignement sur la fiche et la carte de
-  l'ordinateur) : la ligne dépliée **est** le haut de la fiche du téléphone,
-  même composant que la carte de l'ordinateur — bouclier de CA ; PV
-  (temporaires par-dessus), niveau et XP, épuisement, chacun avec la
-  commande E ; initiative, vitesse, maîtrise, inspiration ▲▼ ; Perception
-  passive, dés de vie ▲▼, états · concentration (× retire ou rompt, « + »
-  ouvre les états du ruleset en feuille), repos court et long du PJ ; « Ce
-  qui se dépense » en groupes ; charge et pièces avec commande E
-  (`changeCurrency`, un message dit le change fait). Aucune commande sur
-  CA, initiative, vitesse, maîtrise, Perception passive. La ligne repliée ne
-  change pas.
-- À 0 PV, la ligne se transforme : fond rouge, « Contre la mort »,
-  trois réussites / trois échecs, « Soigner +1 PV » (règles de 24).
-- « Toute la table » : + XP, ± pièces, repos court, repos long — chacun en
-  feuille avec « Pour qui » ; XP et pièces à partager ou à chacun, aperçu par
-  PJ, qui monte de niveau est signalé ; les repos passent par
-  `takeShortRest` / `takeLongRest` pour chaque PJ coché.
-- Chaque geste passe par le même service que la fiche (même journal) ; le
-  MJ a toutes les commandes. Sur ordinateur : fenêtre d'outil MJ, ascenseur
-  fin ; sur téléphone : `no-scrollbar`.
-- **Ordinateur et tablette — décidé le 5 octobre** (planche « Décidé ·
-  outil Table ») : une carte par PJ, qui **est** le haut de la fiche
-  (composant partagé avec V3.1-26 / V3.1-32, en mode MJ), plus la charge et
-  les pièces ; ▲▼ sur les dés de vie ; aucune commande sur CA, initiative,
-  vitesse, maîtrise, Perception passive (valeurs dérivées). Deux cartes par
-  rangée, une seule dans un volet partagé ou sur tablette.
-
-**Critères d'acceptation**
-- [ ] Les gestes de la planche, chacun journalisé une fois.
-- [ ] Partage de 10 po entre trois PJ : 3 po chacun, le reste affiché.
-- [ ] Un repos long sur trois PJ : trois résultats, trois événements `long_rest`.
-- [ ] Ordinateur : la carte réutilise le composant du haut de fiche, sans le dupliquer.
-
----
 
 
 ### ☐ V3.1-36 — Le solo : ailes d'ordinateur et téléphone modèle A (lot d) · `L` · sans modèle IA — **prêt**

@@ -2,6 +2,59 @@
 
 ---
 
+### ☑ V3.1-34 — L'outil Table du MJ · `L` · sans modèle IA — **fait le 18 octobre**
+
+**Modèle conseillé : Sonnet** — tout est esquissé ; données et règles fournies par 24.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Planches** : « Décidé · téléphone du MJ — écrans » (Table) et « —
+feuilles ouvertes » (Toute la table). **Départ** : `mjToolWindows.ts`,
+`MjToolWindowContent.tsx` (un outil de plus dans la liste). **Dépend de** :
+24, 26 (commande E), 29, 33.
+
+- Une ligne par PJ de la campagne : nom + niveau ; dessous « joueur · CA ·
+  PV » puis la ligne des états ; à droite classe et sous-classe. Toucher
+  déplie.
+- Déplié — **revu le 5 octobre** (alignement sur la fiche et la carte de
+  l'ordinateur) : la ligne dépliée **est** le haut de la fiche du téléphone,
+  même composant que la carte de l'ordinateur — bouclier de CA ; PV
+  (temporaires par-dessus), niveau et XP, épuisement, chacun avec la
+  commande E ; initiative, vitesse, maîtrise, inspiration ▲▼ ; Perception
+  passive, dés de vie ▲▼, états · concentration (× retire ou rompt, « + »
+  ouvre les états du ruleset en feuille), repos court et long du PJ ; « Ce
+  qui se dépense » en groupes ; charge et pièces avec commande E
+  (`changeCurrency`, un message dit le change fait). Aucune commande sur
+  CA, initiative, vitesse, maîtrise, Perception passive. La ligne repliée ne
+  change pas.
+- À 0 PV, la ligne se transforme : fond rouge, « Contre la mort »,
+  trois réussites / trois échecs, « Soigner +1 PV » (règles de 24).
+- « Toute la table » : + XP, ± pièces, repos court, repos long — chacun en
+  feuille avec « Pour qui » ; XP et pièces à partager ou à chacun, aperçu par
+  PJ, qui monte de niveau est signalé ; les repos passent par
+  `takeShortRest` / `takeLongRest` pour chaque PJ coché.
+- Chaque geste passe par le même service que la fiche (même journal) ; le
+  MJ a toutes les commandes. Sur ordinateur : fenêtre d'outil MJ, ascenseur
+  fin ; sur téléphone : `no-scrollbar`.
+- **Ordinateur et tablette — décidé le 5 octobre** (planche « Décidé ·
+  outil Table ») : une carte par PJ, qui **est** le haut de la fiche
+  (composant partagé avec V3.1-26 / V3.1-32, en mode MJ), plus la charge et
+  les pièces ; ▲▼ sur les dés de vie ; aucune commande sur CA, initiative,
+  vitesse, maîtrise, Perception passive (valeurs dérivées). Deux cartes par
+  rangée, une seule dans un volet partagé ou sur tablette.
+
+**Critères d'acceptation**
+- [x] Les gestes de la planche, chacun journalisé une fois.
+- [x] Partage de 10 po entre trois PJ : 3 po chacun, le reste affiché.
+- [x] Un repos long sur trois PJ : trois résultats, trois événements `long_rest`.
+- [x] Ordinateur : la carte réutilise le composant du haut de fiche, sans le dupliquer.
+
+**Clôture** : serveur (Opus) — `partagerEgalement` (noyau, tests d'abord : 10 po entre trois PJ, 3 chacun et 1 de reste) ; trois gestes qui manquaient, derrière la porte commune et l'interrupteur de table : `actions/conditions` (poser ou retirer un état), `actions/concentration` (rompre, par `setConcentration`), `actions/hit-dice` (dés de vie ▲▼ bornés au total) ; `getTableParty` (chaque PJ résolu comme sa fiche) servi par la fenêtre d'outil MJ `table` ; `characterActions.integration.test.ts` 11/11. Interface (Sonnet) — `RangeeChiffree` extraite de `CharacterSheetHeader` et partagée (la fiche est inchangée, vérifié à l'écran), `OutilTable` (cartes, lignes, 0 PV en rouge, compteurs par recharge, charge et pièces), `FeuilleToutelaTable` (Pour qui, à partager ou à chacun, aperçu, un appel par PJ), page `/mj/table`, entrées MJ et téléphone. Corrigé par Opus : la charge sortait en livres sous l'unité kg (même défaut corrigé sur la fiche solo, `FicheJouableSac`). Vérifié dans le navigateur en MJ (Banc d'essai) : 1280 px — +10 po à partager (+5 par PJ, aperçu juste), puis rendus ; « À terre » posé puis retiré ; 390 px — lignes repliées et dépliées ; la fiche d'un PJ identique à avant. Les bourses de test sont revenues à 5 et 18 po.
+
+*Restes* : PV temporaires sans commande dans la carte (affichage « +N temp. » seul) ; les trois événements `long_rest` d'un repos sur trois PJ suivent du code testé ailleurs (`takeLongRest`, un appel par PJ), non revérifiés à l'écran.
+
+---
+
 ### ☑ V3.1-35 — Accueil en tableau de bord (lot h) · `M` · sans modèle IA — **fait le 17 octobre**
 
 **Modèle conseillé : Sonnet** — proposition 3 tranchée ; « Reprendre » rangé dans le navigateur (ADR 0036 §4).
