@@ -10,7 +10,8 @@ import type { AppLogoKey } from "@/src/core/brand/identity";
 
 const TRAIT = { fill: "none", stroke: "currentColor", strokeWidth: 2.6, strokeLinecap: "round", strokeLinejoin: "round" } as const;
 
-const DESSINS: Record<AppLogoKey, ReactNode> = {
+/** Les douze dessins, au trait `currentColor` sur une grille de 48 : partagés avec l'icône de l'onglet (`/api/app-identity/icone`). */
+export const DESSINS_LOGO: Record<AppLogoKey, ReactNode> = {
   d20: (
     <>
       <path {...TRAIT} d="M24 4 L41 14 L41 34 L24 44 L7 34 L7 14 Z M24 15 L35 32 L13 32 Z M24 15 L7 14 M24 15 L41 14 M24 15 L24 4 M35 32 L41 14 M35 32 L41 34 M35 32 L24 44 M13 32 L7 14 M13 32 L7 34 M13 32 L24 44"/>
@@ -106,7 +107,7 @@ export function LogoApp({ logoKey, logoUrl = null, taille = 40, className = "" }
         <img src={logoUrl} alt="" width={taille} height={taille} className="h-full w-full object-cover" />
       ) : (
         <svg width={Math.round(taille * 0.7)} height={Math.round(taille * 0.7)} viewBox="0 0 48 48">
-          {DESSINS[logoKey]}
+          {DESSINS_LOGO[logoKey]}
         </svg>
       )}
     </span>

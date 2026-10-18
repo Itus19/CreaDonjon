@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getAppIdentity } from "@/src/server/services/appIdentity";
 import { Geist, Geist_Mono, Outfit } from "next/font/google";
 import { cookies } from "next/headers";
 import { NextIntlClientProvider } from "next-intl";
@@ -31,10 +32,21 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "CreaDonjon",
-  description: "Plateforme de création et de simulation de mondes narratifs",
-};
+/**
+ * V3.1-86 — l'onglet du navigateur porte l'identité de l'application : son
+ * nom pour titre, son logo pour icône (l'image téléversée, sinon la tuile
+ * dessinée par `/api/app-identity/icone`). `getAppIdentity` est mis en cache
+ * et invalidé à l'enregistrement : un nom changé en administration apparaît
+ * au rechargement suivant.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const { name, tagline, logoKey, logoUrl } = await getAppIdentity();
+  return {
+    title: name,
+    description: tagline || "Plateforme de création et de simulation de mondes narratifs",
+    icons: { icon: logoUrl ?? `/api/app-identity/icone?cle=${logoKey}` },
+  };
+}
 
 const VALID_MODES = ["dark", "dim", "soft", "light"];
 
