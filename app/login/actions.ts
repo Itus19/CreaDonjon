@@ -3,6 +3,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { loginSchema, tagSignupSchema, forgotPasswordByNameSchema } from "@/lib/auth/schemas";
+import { requestResetSchema } from "@/lib/auth/reinitialisation";
+import { demanderReinitialisation } from "@/src/server/services/passwordReset";
 import { resolveLoginEmails, requestPasswordResetByName } from "@/src/server/repos/accountAuth";
 import { createTagAccount } from "@/src/server/services/accountAuth";
 
@@ -94,5 +96,23 @@ export async function requestResetByName(
 
   const supabase = await createClient();
   await requestPasswordResetByName(supabase, parsed.data.handleName);
+  return { success: true };
+}
+
+export type RequestResetState = { error: string } | { success: true } | null;
+
+/**
+ * « Mot de passe oublié » de l'écran-titre (V3.1-85), un seul champ « Ton nom
+ * ou ton email ». Le service choisit la voie et ne dit jamais si un compte
+ * existe (`demanderReinitialisation`) : la réponse est toujours la même. Seule
+ * une saisie vide ou trop longue répond autrement, avant toute demande.
+ */
+export async function requestResetAction(_prevState: RequestResetState, formData: FormData): Promise<RequestResetState> {
+  const parsed = requestResetSchema.safeParse({ identifier: formData.get("identifier") });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Ton nom ou ton email." };
+  }
+  const supabase = await createClient();
+  await demanderReinitialisation(supabase, parsed.data.identifier, process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000");
   return { success: true };
 }

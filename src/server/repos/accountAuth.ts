@@ -16,3 +16,14 @@ export async function requestPasswordResetByName(supabase: TypedClient, handleNa
   const { error } = await supabase.rpc("request_password_reset_by_name", { p_handle_name: handleName });
   if (error) throw new Error(error.message);
 }
+
+/**
+ * Envoie le lien de réinitialisation d'un compte à email (V3.1-85, même
+ * appel que `app/auth/forgot-password/actions.ts`). Supabase répond pareil
+ * que l'adresse existe ou non ; l'erreur éventuelle est rendue à l'appelant,
+ * qui ne doit jamais la montrer.
+ */
+export async function sendPasswordResetEmail(supabase: TypedClient, email: string, redirectTo: string): Promise<{ error: string | null }> {
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+  return { error: error?.message ?? null };
+}
