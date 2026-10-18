@@ -21,6 +21,18 @@ export async function getOwnProfile(supabase: TypedClient, userId: string): Prom
   return data;
 }
 
+/**
+ * Le nom de connexion et le numéro de SON propre compte (V3.1-80, section
+ * Identité de la page Compte). Le seul endroit où l'on montre son numéro à
+ * soi-même ; RLS (`profiles_select`) laisse toujours lire sa propre ligne.
+ */
+export async function getOwnHandle(supabase: TypedClient, userId: string): Promise<{ name: string; tag: string } | null> {
+  const { data, error } = await supabase.from("profiles").select("handle_name, handle_tag").eq("id", userId).maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data?.handle_name || !data.handle_tag) return null;
+  return { name: data.handle_name, tag: data.handle_tag };
+}
+
 export interface AdminAccountRow {
   id: string;
   handle_name: string;
