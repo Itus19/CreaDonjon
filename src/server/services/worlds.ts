@@ -51,23 +51,27 @@ export async function listWorlds(supabase: TypedClient): Promise<WorldSummary[]>
  */
 export async function listWorldCards(supabase: TypedClient, locale: Locale, userId: string): Promise<WorldCard[]> {
   const cards = await listWorldCardsForCurrentUser(supabase, userId);
-  const perCard = await Promise.all(
-    cards.map(async (card) => ({
-      card,
-      characters: await listWorldPlayerCharacters(supabase, card.id, locale),
-      adminIds: await listWorldAdminUserIds(supabase, { worldId: card.id, ownerId: card.ownerId }),
-    }))
-  );
+  // V3.1-62, étape 3 (C3) : les PJ et les MJ d'une carte, et les prochaines
+  // séances de toutes les cartes, ne s'attendent pas les uns les autres.
+  const campaignIds = cards.map((card) => card.campaignId).filter((id): id is string => id !== null);
+  const [perCard, nextSessions] = await Promise.all([
+    Promise.all(
+      cards.map(async (card) => {
+        const [characters, adminIds] = await Promise.all([
+          listWorldPlayerCharacters(supabase, card.id, locale),
+          listWorldAdminUserIds(supabase, { worldId: card.id, ownerId: card.ownerId }),
+        ]);
+        return { card, characters, adminIds };
+      })
+    ),
+    listNextSessionsForCampaigns(supabase, campaignIds, new Date()),
+  ]);
 
   const allUserIds = perCard.flatMap(({ characters, adminIds }) => [
     ...characters.map((c) => c.claimedByUserId).filter((id): id is string => id !== null),
     ...adminIds,
   ]);
-  const campaignIds = cards.map((card) => card.campaignId).filter((id): id is string => id !== null);
-  const [namesByAccount, nextSessions] = await Promise.all([
-    getDisplayNamesForUsers(supabase, allUserIds),
-    listNextSessionsForCampaigns(supabase, campaignIds, new Date()),
-  ]);
+  const namesByAccount = await getDisplayNamesForUsers(supabase, allUserIds);
   const nameFor = (id: string) => namesByAccount.get(id) || "Compte sans nom";
 
   return perCard.map(({ card, characters, adminIds }) => ({
