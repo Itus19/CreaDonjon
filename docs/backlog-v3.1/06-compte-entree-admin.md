@@ -52,33 +52,3 @@ rangée x = 5420, y ≈ 35 790 et dessous) :
 
 **Ordre conseillé** : 84 (Opus) d'abord, en parallèle 80 → 81 et 82 → 83 ;
 puis 85 → 86, 87 → 88.
-
----
-
-### ☐ V3.1-88 — Administration › Identité de l'application · `S` · sans modèle IA — **prêt**
-
-**Modèle conseillé : Sonnet.**
-
-**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-**Planches** : `Entree-Decide.dc.html` (panneau de droite),
-`Admin-Decide.dc.html` (tuile Identité). **Dépend de** : 84, 87.
-
-**Ce qui est décidé**
-- La tuile « Identité de l'application » ouvre le panneau : note « Ce que
-  voient tous les visiteurs : l'écran-titre, le rail, l'onglet du
-  navigateur. Un changement s'applique à tous, aussitôt enregistré. » ;
-  **Nom** (32), **Phrase d'accueil** (80) ; **Logo** : grille des douze
-  tuiles (7 par rangée ; 4 sur tablette et téléphone), le choisi bordé
-  d'accent, puis « + Téléverser » (PNG ou WebP carré, 512 px ; note
-  « jamais de SVG téléversé (il peut contenir du script) ») ; **Aperçu**
-  en direct (fond flouté, tuile, nom, phrase) ; **Enregistrer** (« Enregistré
-  ✓ ») et **« Rétablir « Antre Nous » »**.
-- Écriture par `updateAppIdentityAction` (V3.1-84).
-
-**Critères d'acceptation**
-- [ ] L'aperçu suit la saisie sans enregistrer.
-- [ ] Enregistrer change l'écran-titre et la tête du rail pour tous.
-- [ ] Rétablir revient au nom, à la phrase et au d20 par défaut.
-
----

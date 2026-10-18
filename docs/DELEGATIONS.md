@@ -46,3 +46,4 @@ Issue : **accepté** (tel quel) · **corrigé** (retouche locale par Opus) · **
 | 2026-10-18 | V3.1-82 (interface) | dev-sonnet | 79 422 | corrigé | Carrousel conforme ; Opus : message après réclamation par `?reclame=1`, clavier sans `autoFocus`. |
 | 2026-10-18 | V3.1-82 (planche) | aide-haiku | 52 669 | accepté | Section « Choix du personnage » dans OutilsMJ.dc.html ; hauteur portée à 6 400 par Opus |
 | 2026-10-18 | V3.1-87 (interface) | dev-sonnet | 87 494 | corrigé | Tableau de bord conforme, gestes repris tels quels ; Opus : le calcul « il y a … » dédoublé réuni en un hook. Planche faite par Opus en direct. |
+| 2026-10-18 | V3.1-88 (interface) | dev-sonnet | 60 273 | corrigé | Panneau conforme ; Opus : grille par `LogoApp`, champ fichier sans nom hors téléversement. Planche faite par Opus en direct. |

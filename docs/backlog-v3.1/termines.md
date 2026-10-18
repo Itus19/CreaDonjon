@@ -2,6 +2,40 @@
 
 ---
 
+### ☑ V3.1-88 — Administration › Identité de l'application · `S` · sans modèle IA — **fait le 18 octobre**
+
+**Modèle conseillé : Sonnet.**
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Planches** : `Entree-Decide.dc.html` (panneau de droite),
+`Admin-Decide.dc.html` (tuile Identité). **Dépend de** : 84, 87.
+
+**Ce qui est décidé**
+- La tuile « Identité de l'application » ouvre le panneau : note « Ce que
+  voient tous les visiteurs : l'écran-titre, le rail, l'onglet du
+  navigateur. Un changement s'applique à tous, aussitôt enregistré. » ;
+  **Nom** (32), **Phrase d'accueil** (80) ; **Logo** : grille des douze
+  tuiles (7 par rangée ; 4 sur tablette et téléphone), le choisi bordé
+  d'accent, puis « + Téléverser » (PNG ou WebP carré, 512 px ; note
+  « jamais de SVG téléversé (il peut contenir du script) ») ; **Aperçu**
+  en direct (fond flouté, tuile, nom, phrase) ; **Enregistrer** (« Enregistré
+  ✓ ») et **« Rétablir « Antre Nous » »**.
+- Écriture par `updateAppIdentityAction` (V3.1-84).
+
+**Critères d'acceptation**
+- [x] L'aperçu suit la saisie sans enregistrer.
+- [~] Enregistrer change l'écran-titre et la tête du rail pour tous.
+- [~] Rétablir revient au nom, à la phrase et au d20 par défaut.
+
+**Clôture (18 octobre).**
+- Serveur : rien de neuf, l'action et ses contrôles viennent de V3.1-84 (`updateAppIdentityAction`, `resetAppIdentityAction`, `updateTag`). La page `/admin` transmet en plus la phrase d'accueil.
+- Interface (Sonnet) : `PanneauIdentite.tsx`, règle d'envoi du logo en fonction pure testée (`lib/ui/identiteApp.ts` : téléverser, retirer ou garder), champs réalignés sur l'identité enregistrée sans effet de synchronisation, aperçu du fichier révoqué. Corrections d'Opus : la grille appelle `LogoApp` au lieu d'en recopier le balisage ; le champ fichier n'a de nom que pendant un vrai téléversement (un fichier abandonné pour un dessin ne part plus avec le formulaire).
+- Vérifié au navigateur sur une page d'essai locale (jamais commitée) à 1280 et 390 px : douze dessins plus « Téléverser » (7 puis 4 par rangée), l'aperçu suit nom, phrase et logo sans aucune requête, `logoAction` reste `keep` sur un dessin, le dialogue de Rétablir s'ouvre et s'annule. Aucun débordement.
+- Restes : Enregistrer et Rétablir n'ont pas été exécutés. Aucun compte de test n'est superadmin, et le faire changerait l'identité de l'application pour tous les visiteurs. **À vérifier par l'auteur** : un enregistrement (l'écran-titre et la tête du rail changent), un téléversement PNG ou WebP et un refus, le passage d'un logo téléversé à un dessin, Rétablir.
+
+---
+
 ### ☑ V3.1-87 — Administration (B) : le tableau de bord · `M` · sans modèle IA — **fait le 18 octobre**
 
 **Modèle conseillé : Sonnet.**
