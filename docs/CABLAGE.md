@@ -229,11 +229,11 @@ Chaque appel refait la session, le monde et la chaîne de rulesets : d'où `rule
 
 `lib/cablage.test.ts` compte, dans `components/`, `app/` et `src/` :
 
-| Motif | Plafond au 11 octobre | Au 12 octobre | Au 17 octobre |
-|---|---|---|---|
-| Fichiers qui chargent après affichage (`useEffect` et `fetch(` dans le même fichier) | 59 | 59 | **60** |
-| `router.refresh()` | 37 | **14** | 14 |
-| `window.location.reload()` | 2 | 2 | 2 |
+| Motif | Plafond au 11 octobre | Au 12 octobre | Au 17 octobre | Au 18 octobre |
+|---|---|---|---|---|
+| Fichiers qui chargent après affichage (`useEffect` et `fetch(` dans le même fichier) | 59 | 59 | **60** | **59** |
+| `router.refresh()` | 37 | **14** | 14 | 14 |
+| `window.location.reload()` | 2 | 2 | 2 | 2 |
 
 Depuis le 12 octobre, le cliquet ne compte plus les lignes de commentaire : 17 des 37 `router.refresh()` n'étaient que des mentions dans des explications.
 
