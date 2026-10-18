@@ -49,6 +49,8 @@ for (const [cle, email] of Object.entries(comptes)) {
   const p = await ctx.newPage();
   // Premier passage : le mode developpement compile la page, bien au-dela de 30 s.
   await p.goto(`${BASE}/login`, { timeout: 180000 });
+  // Ecran-titre (V3.1-85) : le formulaire s'ouvre par « Se connecter ».
+  await p.getByRole("button", { name: "Se connecter" }).first().click();
   await p.fill('input[name="identifier"]', email);
   await p.fill('input[name="password"]', process.env.MANUAL_TEST_PASSWORD);
   await Promise.all([p.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 60000 }), p.click('button[type="submit"]')]);
