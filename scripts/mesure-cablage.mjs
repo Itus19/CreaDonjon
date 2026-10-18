@@ -32,6 +32,12 @@ const pages = [
   { nom: "Joueuse accueil", compte: "a", url: `/m/${W}/joueur/accueil` },
   { nom: "Joueuse fiche (page joueur)", compte: "a", url: `/m/${W}/joueur` },
   { nom: "Joueuse fiche wiki (PJ A)", compte: "a", url: `/m/${W}/joueur/wiki/2` },
+  // Etape 3 (18 octobre) : les ecrans de la coquille refaite (V3.1-20 a 36).
+  { nom: "MJ accueil general", compte: "mj", url: `/` },
+  { nom: "MJ page Table", compte: "mj", url: `/m/${W}/mj/table` },
+  { nom: "MJ fenetre Table (API)", compte: "mj", api: `/api/worlds/${W}/mj/table/window`, depuis: `/m/${W}` },
+  { nom: "Joueuse accueil general", compte: "a", url: `/` },
+  { nom: "Joueuse prochaine session", compte: "a", url: `/m/${W}/joueur/prochaine-session` },
 ];
 const marque = (page) => appendFileSync(marqueurs, JSON.stringify({ page, t: Date.now() }) + "\n");
 const attendre = (ms) => new Promise((r) => setTimeout(r, ms));
