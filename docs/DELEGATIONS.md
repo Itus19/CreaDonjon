@@ -35,3 +35,5 @@ Issue : **accepté** (tel quel) · **corrigé** (retouche locale par Opus) · **
 | 2026-10-17 | V3.1-35 (planche) | aide-haiku | 107 231 | accepté | Partie accueil de OutilsMJ.dc.html ; hauteur portée à 3 400 par Opus |
 | 2026-10-18 | V3.1-34 (interface) | dev-sonnet | 183 702 | corrigé | Rangée chiffrée extraite sans changer la fiche, cartes, lignes, Toute la table ; Opus : charge convertie des livres en kg. |
 | 2026-10-18 | V3.1-34 (planche) | aide-haiku | 94 297 | accepté | Section « Outil Table » dans OutilsMJ.dc.html, renvoi dans Fiche.dc.html ; hauteur portée à 4 100 par Opus |
+| 2026-10-18 | V3.1-36 (interface) | dev-sonnet | 188 580 | corrigé | Ailes, téléphone, « Jouer » par l'outil de dés ; contexte au lieu d'une fonction passée par la page (justifié). Opus : DD figé affiché, poignées redessinées. |
+| 2026-10-18 | V3.1-36 (planche) | aide-haiku | 62 764 | corrigé | Sections « Ailes d'ordinateur » et « Solo sur téléphone » ; Opus : décalages absolus retirés de la poignée, hauteur portée à 3 000 |

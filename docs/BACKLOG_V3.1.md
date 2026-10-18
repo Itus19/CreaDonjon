@@ -165,7 +165,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-33 | ☑ | sans | L'outil de dés unique (feuille, panneau, scintillement) | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-34 | ☑ | sans | L'outil Table du MJ | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-35 | ☑ | sans | Accueil en tableau de bord (lot h) | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-36 | ☐ | sans | Le solo : ailes d'ordinateur et téléphone modèle A (lot d) | [`03-refonte-sonnet.md`](backlog-v3.1/03-refonte-sonnet.md) |
+| V3.1-36 | ☑ | sans | Le solo : ailes d'ordinateur et téléphone modèle A (lot d) | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-37 | ☑ | sans | L'initiative vue des joueurs : sécurité, invitation, temps réel | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-38 | ☐ | sans | L'outil Initiative refondu, MJ et joueur | [`03-refonte-sonnet.md`](backlog-v3.1/03-refonte-sonnet.md) |
 | V3.1-39 | ☑ | sans | Les sauvegardes demandées à la cible | [`termines.md`](backlog-v3.1/termines.md) |

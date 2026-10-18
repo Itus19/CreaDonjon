@@ -2,6 +2,39 @@
 
 ---
 
+### ☑ V3.1-36 — Le solo : ailes d'ordinateur et téléphone modèle A (lot d) · `L` · sans modèle IA — **fait le 18 octobre**
+
+**Modèle conseillé : Sonnet** — planches définitives ; le moteur solo ne change pas.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Planches** : « Solo-Desktop » ; « Décidé · solo sur téléphone (modèle A) »
+(trois planches). **Départ** : `SoloShell.tsx`, `IntentBar.tsx`,
+`ScenePanel`, `ConsequencesDrawer`. **Dépend de** : 29, 32, 33.
+
+- Ordinateur : poignées de repli sur les bords de la fenêtre du Jeu ; Monde
+  disparaît replié ; la Fiche repliée devient une bande de 96 px — bouclier
+  CA, PV, Niveau, Charge.
+- Téléphone : barre Jeu, Monde, Fiche | Quêtes, Règles, Notes, dé encoché.
+  Monde = wiki du joueur avec « Présents dans la scène » en tête, puis
+  récents (Quêtes et Règles n'y sont plus). Jeu : bandeau lieu / heure,
+  bande de jauges, fil, barre d'intention ; ✦ ouvre la feuille des
+  conséquences. Fiche : la fiche de 32. Quêtes : pilule En cours /
+  Terminées, une quête en feuille avec ses étapes. Notes : Les miennes /
+  Journal de partie.
+- « Jouer » ouvre l'outil de dés pré-rempli (33) ; « Lancer » confirme, le
+  tour suit le chemin actuel de V3-B5.
+
+**Critères d'acceptation**
+- [x] Un tour complet sur téléphone : intention, outil de dés, Lancer, le tour dans le fil.
+- [x] Aucun changement du moteur de tour (tests solo existants verts sans modification).
+
+**Clôture** : interface (Sonnet), relue par Opus. Ordinateur — deux poignées sur les bords du Jeu (`SoloShell`) ; le Monde disparaît replié, la Fiche devient une bande de 96 px (`BandeFiche` : CA, PV, Niveau, Charge en kg). La fiche publie ses jauges par `SoloContexte` (une page serveur ne peut pas passer de fonction à `SoloShell`) : elle reste le seul endroit qui charge la feuille. Téléphone — barre du solo dans `PlayerShell`, vues `?vue=` écrites par `history.replaceState` (aucune navigation de document, vérifié), Monde (présents, wiki avec recherche, récents), Quêtes (pilule, feuille avec étapes), bande de jauges et ✦ des conséquences en feuille du bas. « Jouer » ouvre l'outil de dés (`PreReglage.lancer`) ; « Lancer » appelle `encaisser-fiche`, le serveur tire le dé ; une attaque qui touche rouvre l'outil sur les dégâts. Logique pure dans `lib/ui/solo.ts` (23 tests). Aucun fichier du moteur, des routes ni de `lib/solo` touché ; tests solo existants verts sans modification. Corrigé par Opus : l'outil affiche le DD figé de la demande (il montrait « — ») ; poignées redessinées en languettes neutres (cerclées d'accent et ouvertes, elles encadraient une ligne du fil comme une sélection). Vérifié dans le navigateur (Testeuse A, Banc d'essai) : 390 px — cinq tours d'Investigation complets (intention, outil, Lancer, tour au fil), vues Monde, Quêtes, Fiche ; 1440 px — Fiche en bande, puis les deux repliées (Jeu centré). Les cinq tours restent au journal de la campagne de test.
+
+*Restes* : Notes sans « Les miennes / Journal de partie » (la page existante est liée telle quelle) ; « Terminées » = toutes les étapes faites, faute de quêtes closes chargées ; attaque, dégâts enchaînés et avantage non joués à l'écran (pas de cible dans la scène de test). En dev, le fil affiché prend jusqu'à 20 s de retard : l'écran sonde `/sheet` deux fois toutes les 4 s (fil et fiche), ce qui préexistait au ticket.
+
+---
+
 ### ☑ V3.1-34 — L'outil Table du MJ · `L` · sans modèle IA — **fait le 18 octobre**
 
 **Modèle conseillé : Sonnet** — tout est esquissé ; données et règles fournies par 24.

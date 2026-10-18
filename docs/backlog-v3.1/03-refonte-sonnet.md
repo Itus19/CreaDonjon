@@ -20,37 +20,6 @@ V3.1-20 (lot g) peut partir dès que 25 est fait.
 
 ---
 
-
-
-### ☐ V3.1-36 — Le solo : ailes d'ordinateur et téléphone modèle A (lot d) · `L` · sans modèle IA — **prêt**
-
-**Modèle conseillé : Sonnet** — planches définitives ; le moteur solo ne change pas.
-
-**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-**Planches** : « Solo-Desktop » ; « Décidé · solo sur téléphone (modèle A) »
-(trois planches). **Départ** : `SoloShell.tsx`, `IntentBar.tsx`,
-`ScenePanel`, `ConsequencesDrawer`. **Dépend de** : 29, 32, 33.
-
-- Ordinateur : poignées de repli sur les bords de la fenêtre du Jeu ; Monde
-  disparaît replié ; la Fiche repliée devient une bande de 96 px — bouclier
-  CA, PV, Niveau, Charge.
-- Téléphone : barre Jeu, Monde, Fiche | Quêtes, Règles, Notes, dé encoché.
-  Monde = wiki du joueur avec « Présents dans la scène » en tête, puis
-  récents (Quêtes et Règles n'y sont plus). Jeu : bandeau lieu / heure,
-  bande de jauges, fil, barre d'intention ; ✦ ouvre la feuille des
-  conséquences. Fiche : la fiche de 32. Quêtes : pilule En cours /
-  Terminées, une quête en feuille avec ses étapes. Notes : Les miennes /
-  Journal de partie.
-- « Jouer » ouvre l'outil de dés pré-rempli (33) ; « Lancer » confirme, le
-  tour suit le chemin actuel de V3-B5.
-
-**Critères d'acceptation**
-- [ ] Un tour complet sur téléphone : intention, outil de dés, Lancer, le tour dans le fil.
-- [ ] Aucun changement du moteur de tour (tests solo existants verts sans modification).
-
----
-
 ### ☐ V3.1-38 — L'outil Initiative refondu, MJ et joueur · `L` · sans modèle IA — **prêt après V3.1-37**
 
 **Modèle conseillé : Sonnet** — planche définitive, données fournies par V3.1-37.
