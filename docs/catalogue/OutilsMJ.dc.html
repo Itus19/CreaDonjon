@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <title>Catalogue — Outils du MJ</title>
 <script src="./support.js"></script>
-<link rel="stylesheet" href="/_blob/5046df0aab6e105f5c3c7110c28ae889">
+<link rel="stylesheet" href="/_blob/069f33d8d2f812226f1e347fa797fd3c">
 </head>
 <body>
 <x-dc>
@@ -29,7 +29,7 @@ code{font-family:'Geist Mono',ui-monospace,monospace;font-size:0.92em}
 </div>
 <div class="flex flex-wrap items-center gap-3">
 <nav class="flex flex-wrap items-center gap-1 rounded-full border border-edge p-0.5" aria-label="Planches du catalogue"><a href="Main.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Fondations</a><a href="Controles.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Boutons et champs</a><a href="Navigation.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Onglets, puces, menus</a><a href="Surfaces.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Surfaces et retours</a><a href="Ecrans.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Éléments d'écran</a><a href="Fiche.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Fiche de personnage</a><a href="Solo.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Mode solo</a><a href="WikiVisuel.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Wiki visuel</a><a href="OutilsMJ.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors bg-panel-raised text-ink">Outils du MJ</a><a href="Telephone.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Téléphone</a></nav>
-<nav class="flex flex-wrap gap-1.5" aria-label="Sections"><a href="#initiative" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Initiative</a><a href="#table" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Table</a><a href="#rencontres" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Rencontres</a><a href="#creation" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Création</a><a href="#accueil" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Accueil</a></nav>
+<nav class="flex flex-wrap gap-1.5" aria-label="Sections"><a href="#initiative" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Initiative</a><a href="#table" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Table</a><a href="#rencontres" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Rencontres</a><a href="#creation" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Création</a><a href="#ecran-titre" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Écran-titre</a><a href="#accueil" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Accueil</a></nav>
 </div>
 </div>
 </header>
@@ -131,6 +131,24 @@ code{font-family:'Geist Mono',ui-monospace,monospace;font-size:0.92em}
 <div class="flex flex-wrap gap-2"><sc-for list="{{speciesItems}}" as="s" hint-placeholder-count="3"><button type="button" onClick="{{s.pick}}" class="flex flex-col items-start gap-0.5 rounded-lg border px-2.5 py-2 text-left transition-colors {{s.cls}}" style="width: 160px"><span class="text-sm font-semibold text-ink">{{s.name}}</span><span class="text-[10px] text-ink-muted">{{s.info}}</span></button></sc-for></div>
 </div>
 </section>
+<section id="ecran-titre" class="flex scroll-mt-28 flex-col gap-4 rounded-2xl border border-edge bg-panel p-6">
+<div class="flex flex-wrap items-baseline justify-between gap-3">
+<h2 class="font-display text-2xl font-bold text-ink">Écran-titre</h2>
+<span class="text-xs text-ink-muted">app/login/EcranTitre.tsx · components/brand/LogoApp.tsx</span>
+</div>
+<p class="max-w-3xl text-sm text-ink-soft">La porte de l'application, avant toute session. Le nom, la phrase et le logo viennent de l'identité réglée par le superadmin. Trois pilules ; choisir en ouvre le panneau de verre à la place du menu, « ‹ Menu » en tête. Mot de passe oublié : un seul champ, et la même réponse quoi qu'on tape. Téléphone : titre 46 px, logo au-dessus du nom, menu 300 px, panneau 340 px.</p>
+<div class="flex flex-wrap gap-x-6 gap-y-1 text-xs text-ink-muted"><span>Mouvement : <span class="text-ink">pilule au survol : échelle 1,03 et bordure d'accent, 150 ms ; aucun sous motion-reduce</span></span></div>
+<div class="grid gap-3" style="grid-template-columns: repeat(3, minmax(0, 1fr))"><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Titre</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><div class="flex flex-col items-center gap-3 text-center"><span class="flex shrink-0 items-center justify-center overflow-hidden rounded-xl bg-accent text-accent-ink" style="width: 48px; height: 48px" aria-hidden="true"><svg width="34" height="34" viewBox="0 0 48 48"><path fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" d="M24 4 L41 14 L41 34 L24 44 L7 34 L7 14 Z M24 15 L35 32 L13 32 Z M24 15 L7 14 M24 15 L41 14 M24 15 L24 4 M35 32 L41 14 M35 32 L41 34 M35 32 L24 44 M13 32 L7 14 M13 32 L7 34 M13 32 L24 44"/></svg></span><p class="font-display text-3xl font-extrabold text-ink [text-shadow:0_10px_40px_rgba(0,0,0,.6)]">Antre Nous</p><p class="text-base text-ink-soft">Le repaire de ta table.</p></div></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Menu</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><div class="flex w-full flex-col gap-3"><button type="button" class="rounded-full border border-edge-strong bg-panel px-4 py-3.5 text-base font-semibold text-ink backdrop-blur-md transition-[transform,border-color] duration-150 hover:scale-[1.03] hover:border-accent motion-reduce:transition-none motion-reduce:hover:scale-100 !border-accent !bg-accent !text-accent-ink">Se connecter</button><button type="button" class="rounded-full border border-edge-strong bg-panel px-4 py-3.5 text-base font-semibold text-ink backdrop-blur-md transition-[transform,border-color] duration-150 hover:scale-[1.03] hover:border-accent motion-reduce:transition-none motion-reduce:hover:scale-100">Créer un compte</button><button type="button" class="rounded-full border border-edge-strong bg-panel px-4 py-3.5 text-base font-semibold text-ink backdrop-blur-md transition-[transform,border-color] duration-150 hover:scale-[1.03] hover:border-accent motion-reduce:transition-none motion-reduce:hover:scale-100">J'ai un lien d'invitation</button></div></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Panneau « Bon retour »</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><section class="flex w-[340px] max-w-full flex-col gap-3.5 rounded-3xl border border-edge bg-panel p-[18px] backdrop-blur-lg md:w-[380px] md:px-[22px] md:py-5"><button type="button" class="self-start text-sm text-accent hover:text-accent-hover">‹ Menu</button><h3 class="font-display text-[22px] font-extrabold text-ink">Bon retour</h3><form class="flex flex-col gap-3"><label class="flex flex-col gap-1.5 text-sm text-ink-soft">Ton nom ou ton email<input type="text" class="rounded-xl border border-edge bg-panel-sunken px-3 py-2.5 text-sm text-ink outline-none focus:border-accent" /></label><label class="flex flex-col gap-1.5 text-sm text-ink-soft">Mot de passe<input type="password" class="rounded-xl border border-edge bg-panel-sunken px-3 py-2.5 text-sm text-ink outline-none focus:border-accent" /></label><button type="button" class="rounded-full bg-accent px-4 py-2.5 text-sm font-bold text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50 motion-reduce:transition-none">Se connecter</button><button type="button" class="self-start text-sm text-ink-muted hover:text-ink">Mot de passe oublié ?</button></form></section></div>
+</div></div>
+</section>
 <section id="accueil" class="flex scroll-mt-28 flex-col gap-4 rounded-2xl border border-edge bg-panel p-6">
 <div class="flex flex-wrap items-baseline justify-between gap-3">
 <h2 class="font-display text-2xl font-bold text-ink">Accueil et personnalisation</h2>
@@ -179,7 +197,7 @@ code{font-family:'Geist Mono',ui-monospace,monospace;font-size:0.92em}
 </main>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":4100}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":4600}}'>
 class Component extends DCLogic {
   constructor(props) {
     super(props);

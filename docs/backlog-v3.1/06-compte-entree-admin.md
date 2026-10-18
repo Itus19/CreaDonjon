@@ -241,56 +241,6 @@ puis 85 → 86, 87 → 88.
 
 ---
 
-### ☐ V3.1-85 — Écran-titre (C) : connexion, création, mot de passe oublié · `M` · sans modèle IA — **prêt**
-
-**Modèle conseillé : Sonnet.**
-
-**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-**Planche** : `Entree-Decide.dc.html`. **Départ** : `app/login/page.tsx`,
-`app/login/actions.ts`, `app/auth/forgot-password/`. **Dépend de** : 84.
-
-**Ce qui est décidé**
-- **Le fond** de l'application (le fond par défaut), flouté et voilé ; au
-  tiers haut, **la tuile du logo** (84 px, accent) **et le nom en très
-  grand** (Outfit 800, ~72 px) sur une ligne, la **phrase d'accueil**
-  dessous — lus dans `getAppIdentity()`.
-- **Le menu** : trois gros boutons pilule de 340 px — **« Se connecter »**
-  (plein, accent), **« Créer un compte »**, **« J'ai un lien
-  d'invitation »** (verre). Survol : légère mise à l'échelle et bordure
-  d'accent.
-- Choisir **ouvre un panneau de verre (380 px) à la place du menu**,
-  « ‹ Menu » en tête, son titre (« Bon retour », « Bienvenue », « Mot de
-  passe oublié ») :
-  - **Se connecter** : « Ton nom ou ton email », « Mot de passe », bouton,
-    « Mot de passe oublié ? » en lien (action `login` inchangée).
-  - **Créer un compte** : « Ton nom », « Mot de passe » (8 caractères au
-    moins), la note « Pas d'email : tu te connectes avec ton nom et ce mot
-    de passe. Un numéro (#4821) distingue deux comptes du même nom ; seul
-    le MJ de tes campagnes le voit. Le compte n'ouvre aucun monde tant
-    qu'on ne t'y invite pas. », « Créer mon compte » (`createAccount`).
-  - **Mot de passe oublié — un seul champ** « Ton nom ou ton email » :
-    une action nouvelle `requestResetAction` (Zod) qui choisit la voie —
-    s'il y a un « @ », le chemin email (`requestPasswordReset`) ; sinon la
-    demande au MJ (`requestResetByName`). **Réponse identique dans tous
-    les cas** : « Demande envoyée. Si ce compte existe, un lien part vers
-    son email, ou ton MJ reçoit la demande dans son panneau. »
-    « ‹ Revenir à la connexion ».
-  - **J'ai un lien d'invitation** : un champ pour coller le lien, qui mène
-    à `/rejoindre/[token]` (le jeton est extrait côté client ; un lien
-    invalide donne le message actuel « Ce lien n'est plus valide »).
-- `/signup` (compte à email) ne change pas et n'est pas lié depuis ici.
-- **Téléphone** : titre 46 px, logo au-dessus du nom ; menu de 300 px ;
-  panneau de 340 px. Tablette : comme l'ordinateur.
-
-**Critères d'acceptation**
-- [ ] Les trois actions existantes fonctionnent depuis le nouvel écran.
-- [ ] Mot de passe oublié : même message pour un nom inconnu, un nom connu,
-  un email inconnu, un email connu (test).
-- [ ] Le nom, la phrase et le logo viennent de l'identité (V3.1-84).
-
----
-
 ### ☐ V3.1-86 — La marque partout : rail, onglet, Rejoindre, Réinitialiser · `S` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet.**

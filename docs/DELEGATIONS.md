@@ -37,3 +37,5 @@ Issue : **accepté** (tel quel) · **corrigé** (retouche locale par Opus) · **
 | 2026-10-18 | V3.1-34 (planche) | aide-haiku | 94 297 | accepté | Section « Outil Table » dans OutilsMJ.dc.html, renvoi dans Fiche.dc.html ; hauteur portée à 4 100 par Opus |
 | 2026-10-18 | V3.1-36 (interface) | dev-sonnet | 188 580 | corrigé | Ailes, téléphone, « Jouer » par l'outil de dés ; contexte au lieu d'une fonction passée par la page (justifié). Opus : DD figé affiché, poignées redessinées. |
 | 2026-10-18 | V3.1-36 (planche) | aide-haiku | 62 764 | corrigé | Sections « Ailes d'ordinateur » et « Solo sur téléphone » ; Opus : décalages absolus retirés de la poignée, hauteur portée à 3 000 |
+| 2026-10-18 | V3.1-85 (interface) | dev-sonnet | 75 588 | corrigé | Écran-titre, panneaux, LogoApp (douze logos) ; Opus : nom gardé après une erreur (React vide le formulaire). |
+| 2026-10-18 | V3.1-85 (planche) | aide-haiku | 51 567 | accepté | Section « Écran-titre » dans OutilsMJ.dc.html ; hauteur portée à 4 600 par Opus |

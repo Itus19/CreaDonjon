@@ -2,6 +2,60 @@
 
 ---
 
+### ☑ V3.1-85 — Écran-titre (C) : connexion, création, mot de passe oublié · `M` · sans modèle IA — **fait le 18 octobre**
+
+**Modèle conseillé : Sonnet.**
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Planche** : `Entree-Decide.dc.html`. **Départ** : `app/login/page.tsx`,
+`app/login/actions.ts`, `app/auth/forgot-password/`. **Dépend de** : 84.
+
+**Ce qui est décidé**
+- **Le fond** de l'application (le fond par défaut), flouté et voilé ; au
+  tiers haut, **la tuile du logo** (84 px, accent) **et le nom en très
+  grand** (Outfit 800, ~72 px) sur une ligne, la **phrase d'accueil**
+  dessous — lus dans `getAppIdentity()`.
+- **Le menu** : trois gros boutons pilule de 340 px — **« Se connecter »**
+  (plein, accent), **« Créer un compte »**, **« J'ai un lien
+  d'invitation »** (verre). Survol : légère mise à l'échelle et bordure
+  d'accent.
+- Choisir **ouvre un panneau de verre (380 px) à la place du menu**,
+  « ‹ Menu » en tête, son titre (« Bon retour », « Bienvenue », « Mot de
+  passe oublié ») :
+  - **Se connecter** : « Ton nom ou ton email », « Mot de passe », bouton,
+    « Mot de passe oublié ? » en lien (action `login` inchangée).
+  - **Créer un compte** : « Ton nom », « Mot de passe » (8 caractères au
+    moins), la note « Pas d'email : tu te connectes avec ton nom et ce mot
+    de passe. Un numéro (#4821) distingue deux comptes du même nom ; seul
+    le MJ de tes campagnes le voit. Le compte n'ouvre aucun monde tant
+    qu'on ne t'y invite pas. », « Créer mon compte » (`createAccount`).
+  - **Mot de passe oublié — un seul champ** « Ton nom ou ton email » :
+    une action nouvelle `requestResetAction` (Zod) qui choisit la voie —
+    s'il y a un « @ », le chemin email (`requestPasswordReset`) ; sinon la
+    demande au MJ (`requestResetByName`). **Réponse identique dans tous
+    les cas** : « Demande envoyée. Si ce compte existe, un lien part vers
+    son email, ou ton MJ reçoit la demande dans son panneau. »
+    « ‹ Revenir à la connexion ».
+  - **J'ai un lien d'invitation** : un champ pour coller le lien, qui mène
+    à `/rejoindre/[token]` (le jeton est extrait côté client ; un lien
+    invalide donne le message actuel « Ce lien n'est plus valide »).
+- `/signup` (compte à email) ne change pas et n'est pas lié depuis ici.
+- **Téléphone** : titre 46 px, logo au-dessus du nom ; menu de 300 px ;
+  panneau de 340 px. Tablette : comme l'ordinateur.
+
+**Critères d'acceptation**
+- [x] Les trois actions existantes fonctionnent depuis le nouvel écran.
+- [x] Mot de passe oublié : même message pour un nom inconnu, un nom connu,
+  un email inconnu, un email connu (test).
+- [x] Le nom, la phrase et le logo viennent de l'identité (V3.1-84).
+
+**Clôture** : serveur (Opus) — `voieReinitialisation` et `requestResetSchema` (`lib/auth/reinitialisation.ts`, tests d'abord : un email valide part par le lien, tout le reste est un nom, jamais un email deviné) ; `demanderReinitialisation` (`src/server/services/passwordReset.ts`) ne rend rien et ne lève jamais, l'envoi de l'email passe par `sendPasswordResetEmail` (repo) ; `requestResetAction` répond `{ success: true }` dans tous les cas, test des quatre cas (nom connu ou non, email connu ou non) avec la base simulée. Interface (Sonnet) — `app/login/page.tsx` devient serveur et lit `getAppIdentity()` ; `EcranTitre` (menu de trois pilules, quatre panneaux de verre, chacun son propre état) ; `components/brand/LogoApp.tsx` dessine les douze logos de la planche d'administration (réutilisé par 86) ; `cheminInvitation` (`lib/ui/ecranTitre.ts`) s'appuie sur `jetonDepuisLien`. Corrigé par Opus : React vidait le nom après une faute de mot de passe ; le nom (jamais le mot de passe) est désormais gardé, à la connexion comme à la création. Le pilote de mesure ouvre le formulaire par « Se connecter ». Vérifié dans le navigateur : 1280 et 390 px conformes à la planche (logo au-dessus du nom sur téléphone) ; un lien sans jeton dit « Ce lien n'est plus valide. » sans naviguer ; « Mot de passe oublié » sur un nom inexistant rend le message unique (rien déposé) ; mauvais mot de passe puis connexion de Testeuse A, arrivée sur l'accueil.
+
+*Restes* : la création de compte n'est pas essayée en direct (jamais de compte neuf, `docs/TESTS.md`) ; elle appelle l'action `createAccount` inchangée. `app/auth/forgot-password/` n'est plus lié d'ici, gardé tel quel. Le titre du panneau d'invitation (« Lien d'invitation ») n'était pas dessiné : choisi par Sonnet.
+
+---
+
 ### ☑ V3.1-36 — Le solo : ailes d'ordinateur et téléphone modèle A (lot d) · `L` · sans modèle IA — **fait le 18 octobre**
 
 **Modèle conseillé : Sonnet** — planches définitives ; le moteur solo ne change pas.
