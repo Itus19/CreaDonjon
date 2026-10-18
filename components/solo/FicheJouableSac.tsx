@@ -1,7 +1,7 @@
 "use client";
 
 import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/blocks/inventory";
-import type { EncumbranceResult } from "@/src/core/rules/encumbrance";
+import { lbToKg, type EncumbranceResult } from "@/src/core/rules/encumbrance";
 import { itemLabel, itemRef } from "@/components/blocks/inventoryItem";
 import { refIdentity, type ResolvedChipView } from "@/components/blocks/useReferenceChips";
 import { CURRENCY_ORDER } from "@/src/core/rules/currency";
@@ -54,6 +54,9 @@ export default function FicheJouableSac({
   }
 
   const pctCharge = encumbrance.capacity > 0 ? Math.round((encumbrance.carried / encumbrance.capacity) * 100) : 0;
+  // Le moteur compte en livres (unité du SRD) ; l'écran affiche des kg, comme l'onglet Inventaire.
+  const porteKg = lbToKg(encumbrance.carried);
+  const capaciteKg = lbToKg(encumbrance.capacity);
 
   return (
     <div className="flex flex-col gap-2">
@@ -75,14 +78,14 @@ export default function FicheJouableSac({
           petite
           valeur={
             <span className="flex flex-col items-center leading-none">
-              <span>{Math.round(encumbrance.carried)}</span>
+              <span>{Math.round(porteKg)}</span>
               <span className="w-3.5 border-t border-ink-muted" />
-              <span className="text-ink-muted">{encumbrance.capacity}</span>
+              <span className="text-ink-muted">{Math.round(capaciteKg)}</span>
             </span>
           }
           pct={pctCharge}
           ton={encumbrance.tier === "none" ? "accent" : "danger"}
-          titre={`Charge : ${encumbrance.carried.toLocaleString("fr-FR")} / ${encumbrance.capacity} kg${encumbrance.tier !== "none" ? " — encombré" : ""}`}
+          titre={`Charge : ${porteKg.toLocaleString("fr-FR")} / ${capaciteKg.toLocaleString("fr-FR")} kg${encumbrance.tier !== "none" ? " — encombré" : ""}`}
         />
       </div>
 
