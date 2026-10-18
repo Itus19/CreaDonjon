@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import Tabs from "@/components/shared/Tabs";
 import { SoloContexteProvider } from "@/components/solo/SoloContexte";
 import { useMatchMedia } from "@/components/shell/useMatchMedia";
-import { jaugesEgales, vueDepuisAdresse, type JaugesBande } from "@/lib/ui/solo";
+import type { PendingRequest } from "@/lib/solo/types";
+import { jaugesEgales, memeDemande, vueDepuisAdresse, type JaugesBande } from "@/lib/ui/solo";
 
 /**
  * V3-D1 — La coquille a trois colonnes de l'ecran solo.
@@ -138,7 +139,18 @@ export default function SoloShell({
 
   // Le pli de la Fiche (bande de 96 px) n'existe que sur ordinateur : un pli memorise sur grand ecran ne doit pas reduire la fiche d'un telephone.
   const ficheRepliee = droiteRepliee && ordinateur;
-  const contexte = useMemo(() => ({ replie: ficheRepliee, jauges, publier }), [ficheRepliee, jauges, publier]);
+  // La demande en cours : une seule source, la fiche (son sondage) et la barre d'intention (sa réponse), jamais un second sondage.
+  const [demande, setDemande] = useState<PendingRequest | null>(null);
+  const definirDemande = useCallback((suivante: PendingRequest | null) => setDemande((precedente) => (memeDemande(precedente, suivante) ? precedente : suivante)), []);
+  const rechargeRef = useRef<(() => void) | null>(null);
+  const inscrireRecharge = useCallback((recharger: (() => void) | null) => {
+    rechargeRef.current = recharger;
+  }, []);
+  const rechargerFiche = useCallback(() => rechargeRef.current?.(), []);
+  const contexte = useMemo(
+    () => ({ replie: ficheRepliee, jauges, publier, demande, definirDemande, rechargerFiche, inscrireRecharge }),
+    [ficheRepliee, jauges, publier, demande, definirDemande, rechargerFiche, inscrireRecharge]
+  );
 
   /**
    * **Piege verifie le 22 septembre en dessinant l'ecran :**

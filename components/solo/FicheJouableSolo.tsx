@@ -106,7 +106,7 @@ export default function FicheJouableSolo({
   const worldCalendar = useWorldCalendarContext();
   const { rollAbility, rollSkill, rollSave } = useDiceRoll();
   // V3.1-36 : repliée (ordinateur), la fiche devient une bande de jauges ; sur téléphone, le Jeu relit les mêmes jauges.
-  const { replie, publier } = useSoloContexte();
+  const { replie, publier, definirDemande, inscrireRecharge } = useSoloContexte();
 
   useEffect(() => {
     let cancelled = false;
@@ -151,6 +151,22 @@ export default function FicheJouableSolo({
       clearInterval(interval);
     };
   }, [entityId, campaignId]);
+
+  // Le Jeu ne sonde plus `/sheet` : il lit la demande en cours que CE sondage publie, et demande une recharge après un geste.
+  useEffect(() => {
+    if (remote) definirDemande(remote.runtimeState.state.pending_request ?? null);
+  }, [remote, definirDemande]);
+
+  useEffect(() => {
+    inscrireRecharge(() => {
+      fetch(`/api/entities/${entityId}/sheet?campaignId=${campaignId}`)
+        .then(async (res) => {
+          if (res.ok) setRemote(await res.json());
+        })
+        .catch((erreur: unknown) => console.error("Fiche non rechargée", erreur));
+    });
+    return () => inscrireRecharge(null);
+  }, [entityId, campaignId, inscrireRecharge]);
 
   function patchBlock(id: string, data: unknown) {
     setBlocks((prev) => (Array.isArray(prev) ? prev.map((b) => (b.id === id ? { ...b, data } : b)) : prev));

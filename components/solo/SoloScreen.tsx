@@ -10,7 +10,7 @@ import ScenePanel from "@/components/solo/ScenePanel";
 import IntentBar from "@/components/solo/IntentBar";
 import Fil from "@/components/solo/Fil";
 import ConsequencesDrawer, { type ConsequencesDrawerData } from "@/components/solo/ConsequencesDrawer";
-import type { FilItem, IntentBarData, PendingRequest, SceneView } from "@/lib/solo/types";
+import type { FilItem, IntentBarData, SceneView } from "@/lib/solo/types";
 
 /**
  * V3-B2 — Les deux moitiés de l'écran solo : la scène, puis le tour.
@@ -24,18 +24,15 @@ import type { FilItem, IntentBarData, PendingRequest, SceneView } from "@/lib/so
  * défilante — c'est ce composant-ci qui possède le défilement automatique
  * et l'annonce `aria-live`, puisqu'il possède déjà le conteneur.
  *
- * **V3-D4 Phase 2 — `pending` devient un état possédé ICI, pas par
- * `IntentBar`.** Une demande peut être honorée depuis la fiche (colonne
- * voisine, V3-B5 Phase 2) sans que `IntentBar` en soit jamais informé
- * autrement : le sonder au même endroit que le fil — un seul minuteur, un
- * seul aller-retour réseau par tick — plutôt que de dupliquer un second
- * sondage dans `IntentBar.tsx` pour la même donnée.
+ * **V3-D4 Phase 2 — `pending` n'est pas possédé par `IntentBar`.** Une
+ * demande peut être honorée depuis la fiche (colonne voisine, V3-B5 Phase 2)
+ * sans que `IntentBar` en soit jamais informé autrement. Elle vit dans
+ * `SoloContexte` : la fiche, qui sonde déjà `/sheet`, la publie ; ce
+ * composant ne sonde plus que le fil et les conséquences. Il sondait aussi
+ * `/sheet` pour la seule demande, soit deux fois la même route toutes les
+ * 4 s (docs/QUOTAS.md).
  */
 const POLL_MS = 4000;
-
-interface SheetPendingResponse {
-  runtimeState: { state: { pending_request: PendingRequest | null } };
-}
 
 function summarizeForAnnounce(item: FilItem): string {
   switch (item.kind) {
@@ -75,11 +72,10 @@ export default function SoloScreen({
 }) {
   const router = useRouter();
   const t = useTranslations("solo");
-  const { jauges } = useSoloContexte();
+  const { jauges, demande: pending, definirDemande: setPending, rechargerFiche } = useSoloContexte();
   const [feuilleConsequences, setFeuilleConsequences] = useState(false);
   const [sceneView, setSceneView] = useState(scene);
   const [filItems, setFilItems] = useState<FilItem[] | null>(null);
-  const [pending, setPending] = useState<PendingRequest | null>(null);
   const [consequences, setConsequences] = useState<ConsequencesDrawerData | null>(null);
   const [announce, setAnnounce] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -87,33 +83,33 @@ export default function SoloScreen({
   const lastSeqRef = useRef<number | null>(null);
 
   /**
-   * Rafraîchit le fil, la demande en cours ET le tiroir de conséquences —
-   * même tick, même raison : les trois peuvent changer sans passer par
-   * cette colonne (un jet résolu depuis la fiche, une proposition acceptée
-   * depuis le tiroir lui-même).
+   * Rafraîchit le fil et le tiroir de conséquences, chacun dès que SA
+   * réponse arrive : attendre les deux ensemble retardait le fil sur la plus
+   * lente. Tous deux changent sans passer par cette colonne (un jet résolu
+   * depuis la fiche, une proposition acceptée depuis le tiroir lui-même).
    */
   async function reloadCenter() {
-    const [filRes, sheetRes, consequencesRes] = await Promise.all([
-      fetch(`/api/campaigns/${campaignId}/fil`),
-      fetch(`/api/entities/${entityId}/sheet?campaignId=${campaignId}`),
-      fetch(`/api/campaigns/${campaignId}/consequences`),
+    await Promise.all([
+      fetch(`/api/campaigns/${campaignId}/fil`).then(async (filRes) => {
+        if (!filRes.ok) return;
+        const body = (await filRes.json()) as { items: FilItem[] };
+        const newest = body.items[body.items.length - 1];
+        if (newest && newest.seq !== lastSeqRef.current) {
+          lastSeqRef.current = newest.seq;
+          setAnnounce(summarizeForAnnounce(newest));
+        }
+        setFilItems(body.items);
+      }),
+      fetch(`/api/campaigns/${campaignId}/consequences`).then(async (consequencesRes) => {
+        if (consequencesRes.ok) setConsequences((await consequencesRes.json()) as ConsequencesDrawerData);
+      }),
     ]);
-    if (filRes.ok) {
-      const body = (await filRes.json()) as { items: FilItem[] };
-      const newest = body.items[body.items.length - 1];
-      if (newest && newest.seq !== lastSeqRef.current) {
-        lastSeqRef.current = newest.seq;
-        setAnnounce(summarizeForAnnounce(newest));
-      }
-      setFilItems(body.items);
-    }
-    if (sheetRes.ok) {
-      const body = (await sheetRes.json()) as SheetPendingResponse;
-      setPending(body.runtimeState.state.pending_request);
-    }
-    if (consequencesRes.ok) {
-      setConsequences((await consequencesRes.json()) as ConsequencesDrawerData);
-    }
+  }
+
+  /** Après un geste de cette colonne : le fil, les conséquences, ET la fiche (PV, demande) sans attendre son prochain tick. */
+  function apresGeste() {
+    rechargerFiche();
+    return reloadCenter();
   }
 
   useEffect(() => {
@@ -178,7 +174,7 @@ export default function SoloScreen({
           <Fil items={filItems} />
         </div>
         <div className="mt-2 max-md:hidden">
-          <ConsequencesDrawer data={consequences} onChanged={reloadCenter} />
+          <ConsequencesDrawer data={consequences} onChanged={apresGeste} />
         </div>
       </div>
       {/* Region discrete : annonce chaque nouveau tour sans deplacer le
@@ -197,13 +193,13 @@ export default function SoloScreen({
           data={data}
           pending={pending}
           onPendingChange={setPending}
-          onActed={reloadCenter}
+          onActed={apresGeste}
         />
       </div>
       {feuilleConsequences && (
         <FeuilleDuBas titre={t("consequencesTitre")} titreVisible onFermer={() => setFeuilleConsequences(false)}>
           <div className="pb-2">
-            <ConsequencesDrawer data={consequences} onChanged={reloadCenter} ouvertParDefaut />
+            <ConsequencesDrawer data={consequences} onChanged={apresGeste} ouvertParDefaut />
           </div>
         </FeuilleDuBas>
       )}

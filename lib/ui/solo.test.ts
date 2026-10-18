@@ -6,6 +6,7 @@ import {
   filtrerWiki,
   jaugesBande,
   jaugesEgales,
+  memeDemande,
   preReglageDepuisDemande,
   progressionQuete,
   queteTerminee,
@@ -209,5 +210,18 @@ describe("sortieJetDepuisTour", () => {
     expect(sortie.total).toBe(0);
     expect(sortie.trace).toEqual([]);
     expect(sortie.verdict).toBeNull();
+  });
+});
+
+describe("memeDemande", () => {
+  it("deux demandes identiques, même recopiées par une autre réponse du serveur", () => {
+    expect(memeDemande(demande(), structuredClone(demande()))).toBe(true);
+    expect(memeDemande(null, null)).toBe(true);
+  });
+  it("un champ qui change, ou une demande qui apparaît ou disparaît", () => {
+    expect(memeDemande(demande(), demande({ dc: 14 }))).toBe(false);
+    expect(memeDemande(demande(), demande({ chips: [{ label: "FOR", value: 4 }] }))).toBe(false);
+    expect(memeDemande(null, demande())).toBe(false);
+    expect(memeDemande(demande(), null)).toBe(false);
   });
 });

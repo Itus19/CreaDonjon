@@ -78,6 +78,18 @@ export function jaugesEgales(a: JaugesBande | null, b: JaugesBande | null): bool
   );
 }
 
+/**
+ * La même demande en cours, relue d'une autre réponse du serveur ? Chaque
+ * sondage de la fiche rend un objet neuf : sans cette comparaison, l'écran
+ * solo se redessinerait toutes les 4 s pour une demande qui n'a pas changé.
+ * Les deux viennent du même schéma (`zPendingRequest`), dans le même ordre de
+ * clés : la forme JSON suffit.
+ */
+export function memeDemande(a: PendingRequest | null, b: PendingRequest | null): boolean {
+  if (a === null || b === null) return a === b;
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
 // ---- les quêtes ------------------------------------------------------------------
 
 export type FiltreQuetes = "en_cours" | "terminees";
