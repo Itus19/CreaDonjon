@@ -2,6 +2,61 @@
 
 ---
 
+### ☑ V3.1-55 — Calendrier ingame : l'année d'un coup d'œil · `M` · sans modèle IA — **fait le 18 octobre**
+
+**Modèle conseillé : Sonnet** — planche définitive ; aucune donnée nouvelle.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Planche** : `Calendrier-Decide.dc.html`. **Départ** :
+`components/shell/CalendarSettingsPanel.tsx`, `src/core/calendar/*`
+(`weekday.ts`, `formatDate.ts`), cas `calendrier`. **Dépend de** : 20, 29.
+
+**Ce qui est décidé**
+- **En haut, la frise des ères** : une bande, chaque ère de largeur
+  proportionnelle à sa durée (la dernière court jusqu'à « an actuel +
+  300 »), le jour actuel marqué d'un trait accent et de son année. Toucher
+  une ère ouvre le réglage des ères.
+- **À côté, le jour actuel** : son jour de la semaine, la date, son ère et
+  « an N de l'ère », « jour 44 sur 360 ». Pas : « ‹ Veille »,
+  « Lendemain › », « + une semaine » (libellé « + une décade » pour une
+  semaine de 10 jours, sinon « + N jours ») ; « Changer la date » ouvre
+  jour, mois (‹ ›) et an.
+- **Dessous, les douze mois en vignettes** (nom, durée, mini-grille, le
+  jour actuel allumé ; le mois actuel bordé d'accent). **La semaine en
+  puces** : › décale d'un rang, × supprime, « + jour » ; « Le 1er jour de
+  l'an 0 était un ‹ Primidi › ».
+- **Réglage contextuel à droite** : toucher un mois ouvre nom, durée en − /
+  + (1 à 60), position ↑ ↓, la grille du mois (‹ › pour changer de mois),
+  « + Ajouter un mois après », « Supprimer ce mois » ; toucher un jour de
+  la grille le sélectionne (« samedi 30 Brumaire 1492 — dans 6 jours ») et
+  propose « En faire aujourd'hui ». Toucher une ère ouvre la liste des ères
+  (nom, « dès l'an », ×, « + Ajouter une ère »).
+- **Raccourcir un mois recale le jour actuel** sur le dernier jour du mois.
+- **Rien n'est enregistré avant « Enregistrer »** (le calendrier est
+  remplacé en entier, comme aujourd'hui) ; la barre du bas dit
+  « Modifications non enregistrées » ou « Tout est enregistré ».
+- **Tablette** : la frise puis le jour actuel l'un sous l'autre, trois
+  vignettes par rangée, le réglage sous l'année. **Téléphone** : le jour
+  actuel, la frise, trois vignettes par rangée, la semaine ; un mois ou une
+  ère touché s'ouvre en **feuille du bas** ; « Enregistrer » en haut.
+- Calculs (jour de la semaine, jour de l'année, décalage de N jours) dans
+  `src/core/calendar`, **tests d'abord** ; le composant n'en fait aucun.
+
+**Critères d'acceptation**
+- [x] Tests du noyau : lendemain du dernier jour de l'an, veille du 1er jour de l'an 0 (année négative), décalage de 10 jours sur deux mois.
+- [x] Raccourcir Brumaire à 10 jours quand on est le 14 : le jour actuel devient le 10.
+- [x] Changer le 1er jour de l'an 0 décale toutes les vignettes.
+- [x] Rien n'est écrit avant « Enregistrer » (test : aucune requête).
+
+**Clôture (18 octobre).**
+- Noyau (Opus, tests d'abord) : `src/core/calendar/navigation.ts` — `shiftDate`, `daysBetween`, `dayOfYearNumber`, `clampDayToCalendar`, `yearInEra`, `eraBand`, `monthGrid`. Les trois cas du ticket sont testés (lendemain du dernier jour de l'an, veille du 1er de l'an 0, dix jours sur deux mois), et le décalage des grilles par le 1er jour de l'an 0.
+- Interface (Sonnet) : `CalendarSettingsPanel.tsx` et `components/shell/calendrier/` ; un réducteur pur testé (`lib/ui/calendrierEdition.ts`), une seule requête, celle d'« Enregistrer ». Corrections d'Opus : le jour actuel suit SON mois quand on déplace, ajoute ou supprime un mois (le 14 Brumaire restait le 14 du mois qui prenait sa place), et le jour du 1er de l'an 0 suit son jour de semaine quand on décale ou supprime un jour (tests ajoutés).
+- Vérifié au navigateur en Testeur MJ (Banc d'essai) : régler le jour actuel, Lendemain, « + une décade » → « jour 12 sur 360 » ; choisir le 14 Brumaire dans la grille (« dans 43 jours »), « En faire aujourd'hui », raccourcir Brumaire à 10 jours → le 10 ; changer le 1er jour de l'an 0 décale la vignette ; **aucune requête avant « Enregistrer », une seule après** ; l'enregistrement tient après rechargement ; feuille du bas au téléphone ; aucun débordement à 820 et 390 px. Le calendrier du Banc d'essai a été remis à l'identique ensuite.
+- Restes : on ne peut plus repasser le jour actuel à « non réglé » (la case de l'ancien panneau n'est pas dans la planche) ; un nom vide grise « Enregistrer » (le schéma le refuse) ; saisir un an négatif passe par le clavier.
+
+---
+
 ### ☑ V3.1-46 — Probabilités : la matrice, caractéristiques et compétences · `M` · sans modèle IA — **fait le 18 octobre**
 
 **Modèle conseillé : Sonnet** — calcul pur à étendre, tests d'abord ; planche définitive.

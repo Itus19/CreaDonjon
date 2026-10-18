@@ -534,55 +534,6 @@ Copier et ⋮.
 
 ---
 
-### ☐ V3.1-55 — Calendrier ingame : l'année d'un coup d'œil · `M` · sans modèle IA — **prêt**
-
-**Modèle conseillé : Sonnet** — planche définitive ; aucune donnée nouvelle.
-
-**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-**Planche** : `Calendrier-Decide.dc.html`. **Départ** :
-`components/shell/CalendarSettingsPanel.tsx`, `src/core/calendar/*`
-(`weekday.ts`, `formatDate.ts`), cas `calendrier`. **Dépend de** : 20, 29.
-
-**Ce qui est décidé**
-- **En haut, la frise des ères** : une bande, chaque ère de largeur
-  proportionnelle à sa durée (la dernière court jusqu'à « an actuel +
-  300 »), le jour actuel marqué d'un trait accent et de son année. Toucher
-  une ère ouvre le réglage des ères.
-- **À côté, le jour actuel** : son jour de la semaine, la date, son ère et
-  « an N de l'ère », « jour 44 sur 360 ». Pas : « ‹ Veille »,
-  « Lendemain › », « + une semaine » (libellé « + une décade » pour une
-  semaine de 10 jours, sinon « + N jours ») ; « Changer la date » ouvre
-  jour, mois (‹ ›) et an.
-- **Dessous, les douze mois en vignettes** (nom, durée, mini-grille, le
-  jour actuel allumé ; le mois actuel bordé d'accent). **La semaine en
-  puces** : › décale d'un rang, × supprime, « + jour » ; « Le 1er jour de
-  l'an 0 était un ‹ Primidi › ».
-- **Réglage contextuel à droite** : toucher un mois ouvre nom, durée en − /
-  + (1 à 60), position ↑ ↓, la grille du mois (‹ › pour changer de mois),
-  « + Ajouter un mois après », « Supprimer ce mois » ; toucher un jour de
-  la grille le sélectionne (« samedi 30 Brumaire 1492 — dans 6 jours ») et
-  propose « En faire aujourd'hui ». Toucher une ère ouvre la liste des ères
-  (nom, « dès l'an », ×, « + Ajouter une ère »).
-- **Raccourcir un mois recale le jour actuel** sur le dernier jour du mois.
-- **Rien n'est enregistré avant « Enregistrer »** (le calendrier est
-  remplacé en entier, comme aujourd'hui) ; la barre du bas dit
-  « Modifications non enregistrées » ou « Tout est enregistré ».
-- **Tablette** : la frise puis le jour actuel l'un sous l'autre, trois
-  vignettes par rangée, le réglage sous l'année. **Téléphone** : le jour
-  actuel, la frise, trois vignettes par rangée, la semaine ; un mois ou une
-  ère touché s'ouvre en **feuille du bas** ; « Enregistrer » en haut.
-- Calculs (jour de la semaine, jour de l'année, décalage de N jours) dans
-  `src/core/calendar`, **tests d'abord** ; le composant n'en fait aucun.
-
-**Critères d'acceptation**
-- [ ] Tests du noyau : lendemain du dernier jour de l'an, veille du 1er jour de l'an 0 (année négative), décalage de 10 jours sur deux mois.
-- [ ] Raccourcir Brumaire à 10 jours quand on est le 14 : le jour actuel devient le 10.
-- [ ] Changer le 1er jour de l'an 0 décale toutes les vignettes.
-- [ ] Rien n'est écrit avant « Enregistrer » (test : aucune requête).
-
----
-
 ### ☐ V3.1-56 — Calendrier réel au verre minéral, côté MJ et côté joueuse · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — disposition déjà codée (V3.1-16) ; transposition seulement.

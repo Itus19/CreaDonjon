@@ -48,3 +48,4 @@ Issue : **accepté** (tel quel) · **corrigé** (retouche locale par Opus) · **
 | 2026-10-18 | V3.1-87 (interface) | dev-sonnet | 87 494 | corrigé | Tableau de bord conforme, gestes repris tels quels ; Opus : le calcul « il y a … » dédoublé réuni en un hook. Planche faite par Opus en direct. |
 | 2026-10-18 | V3.1-88 (interface) | dev-sonnet | 60 273 | corrigé | Panneau conforme ; Opus : grille par `LogoApp`, champ fichier sans nom hors téléversement. Planche faite par Opus en direct. |
 | 2026-10-18 | V3.1-46 (interface) | dev-sonnet | 63 742 | corrigé | Grille conforme ; Opus : noms de colonne distincts (`nomsCourts`), teinte plus franche et mêlée en OKLab, encadrement sans égalité, en-tête accessible. Moteur, teinte et réimport faits par Opus. |
+| 2026-10-18 | V3.1-55 (interface) | dev-sonnet | 89 272 | corrigé | Écran conforme, réducteur pur ; Opus : le jour actuel suit son mois et l'époque son jour de semaine (tests). Noyau et planche faits par Opus. |
