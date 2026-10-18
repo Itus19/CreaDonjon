@@ -2,6 +2,75 @@
 
 ---
 
+### ☑ V3.1-80 — Compte (A) : une page en sections · `M` · sans modèle IA — **fait le 18 octobre**
+
+**Modèle conseillé : Sonnet.**
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Planche** : `Compte-Decide.dc.html`. **Départ** :
+`components/shell/HomeProfilePanel.tsx` (et `DisplayNameForm`,
+`PasswordForm`, `MyInvitePanel.tsx`, `DeleteAccountSection.tsx`),
+`app/settings/actions.ts` (`setLocaleAction`), `app/page.tsx`.
+**Dépend de** : V3.1-35 (« Compte » dans le rail de l'accueil).
+
+**Ce qui est décidé**
+- Une page « Compte » ouverte par l'entrée « Compte » du rail de l'accueil
+  (au téléphone : Accueil › Compte, bouton « ‹ Accueil »). En-tête :
+  « Compte » et une ligne de contexte (« Léonie · MJ d'un monde, joueuse
+  dans trois », calculée).
+- **Six sections empilées en cartes de verre**, dans cet ordre :
+  1. **Identité** : nom affiché (champ + Enregistrer, `DisplayNameForm`) ;
+     « Ton identifiant » : le nom et le numéro (`handle_tag`, en accent,
+     chiffres tabulaires) avec la note « Le numéro distingue deux
+     « Léonie ». Tu ne le tapes jamais pour te connecter ; il n'est visible
+     qu'ici et par le MJ de tes campagnes. » ; l'email, seulement pour un
+     compte à email (« · seulement pour les comptes ouverts avec un email »).
+  2. **Connexion** : la note « Tu te connectes avec ton nom et ton mot de
+     passe. Mot de passe oublié : ton MJ ou l'administrateur peut le
+     réinitialiser — aucun email n'est envoyé. » (texte adapté pour un
+     compte à email), nouveau mot de passe, « Encore une fois »,
+     « Changer le mot de passe » (`PasswordForm`) ; « Les deux ne
+     correspondent pas. » en rouge sous le bouton tant qu'ils diffèrent.
+  3. **Mon lien d'invitation** (`MyInvitePanel`), **seulement si l'on a
+     rejoint par un lien** : mot de passe du lien (vide pour retirer) +
+     Enregistrer.
+  4. **Apparence** : V3.1-81.
+  5. **Langue** : deux pastilles Français / English (`setLocaleAction`,
+     cookie + profil) et la note « Enregistrée sur ton compte (elle te suit
+     d'un appareil à l'autre). Le contenu des mondes ne change pas de
+     langue. »
+  6. **Supprimer le compte**, bordure et titre en rouge
+     (`DeleteAccountSection`) : ce qui est supprimé (le compte et les mondes
+     dont on est propriétaire, nommés), « Tape SUPPRIMER », bouton
+     « Supprimer définitivement » désactivé tant que le texte ne
+     correspond pas.
+- **Sommaire à gauche** (200 px) : Identité, Connexion, Mon lien
+  d'invitation (absent si la section l'est), Apparence, Langue, Supprimer le
+  compte (en rouge). Toucher une entrée fait défiler jusqu'à la section et
+  l'allume (bordure d'accent) ; le défilement allume aussi l'entrée de la
+  section visible.
+- **Tablette** : le sommaire devient une rangée de pastilles en tête
+  (Identité, Connexion, Invitation, Apparence, Langue, Supprimer).
+  **Téléphone** : mêmes pastilles ; libellés au-dessus des champs ; un
+  bouton à côté d'un champ (« Enregistrer », « Supprimer définitivement »)
+  passe sous le champ plutôt que de se couper sur deux lignes.
+- La colonne « Profil » de l'accueil disparaît (son contenu est ici).
+
+**Critères d'acceptation**
+- [x] Chaque geste de `HomeProfilePanel` est présent et fonctionne.
+- [x] Le numéro n'apparaît qu'en Identité.
+- [x] « Mon lien d'invitation » est absent pour un compte qui n'a pas
+  rejoint par un lien.
+- [x] Changer la langue bascule l'interface sans rechargement manuel.
+- [x] Téléphone 390 px : aucun bouton coupé, aucun défilement horizontal.
+
+**Clôture** : données (Opus) — `getOwnHandle` (repo : le nom et le numéro de son propre compte) ; la page d'accueil assemble `DonneesCompte` avec elle (C1) : numéro, email seulement s'il n'est pas synthétique, invitation réduite à `{ id, hasPassword }` (l'ancienne route envoyait l'invitation entière, jeton compris), langue, mondes possédés nommés, contexte compté par `repartirMondes` ; `compteDuContexte` et `sectionsCompte` (`lib/ui/compte.ts`, tests d'abord). Interface (Sonnet, interrompu une fois par une limite de session puis relancé) — `PageCompte` : six cartes de verre, sommaire de 200 px suivi par `IntersectionObserver`, pastilles sur tablette et téléphone ; `PasswordForm` gagne « Encore une fois » (bouton désactivé et message rouge tant qu'ils diffèrent) ; `MyInvitePanel` reçoit l'invitation avec la page et ne charge plus rien au montage (cliquet 60 → 59) ; `DeleteAccountSection` nomme les mondes possédés, champ toujours visible ; `HomeProfilePanel` supprimé. Opus : la destination Compte de `HomeShell` passe de `max-w-2xl` à `max-w-4xl` (le sommaire n'y tenait pas). Vérifié dans le navigateur (Testeuse A) : 1280 et 390 px sans défilement horizontal ; le numéro une seule fois, en Identité ; « Mon lien d'invitation » absent (compte sans lien) ; mots de passe différents → message et bouton désactivé ; suppression désactivée tant que SUPPRIMER n'est pas tapé ; English bascule l'interface sans rechargement, puis retour au français (la langue de Testeuse A est revenue au français). Rien d'écrit sur le compte de test hors la langue, restaurée.
+
+*Restes* : la section Apparence attend V3.1-81 (emplacement prévu, absent tant qu'il est vide). Non rejoués ici : l'enregistrement du nom et du mot de passe (actions inchangées, comptes de test à préserver), un compte à email et un compte qui a rejoint par un lien (aucun sous la main). La ligne de contexte dit « joueur » au neutre (le genre n'est pas connu).
+
+---
+
 ### ☑ V3.1-86 — La marque partout : rail, onglet, Rejoindre, Réinitialiser · `S` · sans modèle IA — **fait le 18 octobre**
 
 **Modèle conseillé : Sonnet.**
