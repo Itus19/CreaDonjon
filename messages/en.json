@@ -725,5 +725,19 @@
     "ouvrirInvitation": "Open the invitation",
     "lienInvalide": "This link is no longer valid.",
     "lienInvalideRefaire": "This link is no longer valid. Make a new request."
+  },
+  "choixPersonnage": {
+    "titre": "Choose your character",
+    "intro": "{monde} · {campagne} — {n, plural, =0 {no open character right now. You can create your own.} one {your GM left # character open. You can also create your own.} other {your GM left # characters open. You can also create your own.}}",
+    "carrousel": "Characters to choose from",
+    "precedent": "Previous character",
+    "suivant": "Next character",
+    "aller": "Go to character {nom}",
+    "nouveauNom": "New character",
+    "nouveauTexte": "Your own, from scratch: the creation wizard, step by step.",
+    "jouer": "Play {prenom}",
+    "creer": "+ Create my character",
+    "reclamationEnCours": "Claiming…",
+    "reclame": "{prenom} is yours: the Character tab now shows their sheet. Your GM can still reassign them."
   }
 }

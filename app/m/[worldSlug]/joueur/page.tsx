@@ -1,8 +1,9 @@
-import { getLocale } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
-import { listCampaigns, listClaimableCharacters } from "@/src/server/services/campaigns";
+import { listCampaigns } from "@/src/server/services/campaigns";
+import { listCartesPersonnage } from "@/src/server/services/choixPersonnage";
 import { getClaimedCharacterEntityId } from "@/src/server/repos/campaigns";
 import { getEntityById } from "@/src/server/repos/entities";
 import { listVisibleBlocks } from "@/src/server/services/blocks";
@@ -20,8 +21,16 @@ import ChooseCharacterScreen from "./ChooseCharacterScreen";
  * transmet un `campaignId` reel — les jets et changements de PV comptent
  * pour de vrai, contrairement a `EntityBlocks.tsx` (`campaignId: null`).
  */
-export default async function JoueurPersonnagePage({ params }: { params: Promise<{ worldSlug: string }> }) {
+export default async function JoueurPersonnagePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ worldSlug: string }>;
+  searchParams: Promise<{ reclame?: string }>;
+}) {
   const { worldSlug } = await params;
+  // V3.1-82 : retour de la réclamation (`claimCharacterAction`) — un message, une fois.
+  const vientDeReclamer = (await searchParams).reclame === "1";
   const supabase = await createClient();
   const world = await getWorldBySlug(supabase, worldSlug);
   if (!world) notFound();
@@ -40,8 +49,23 @@ export default async function JoueurPersonnagePage({ params }: { params: Promise
     // assigné (ajoutée par email, ou personnage réinitialisé par le MJ) —
     // jamais imposé à la création du compte.
     // V3.1-100 : le serveur dit quoi montrer et sur quelle carte s'ouvrir.
-    const { characters, startOn } = await listClaimableCharacters(supabase, campaign.id);
-    return <ChooseCharacterScreen worldSlug={worldSlug} characters={characters} startOn={startOn} />;
+    // V3.1-82 : le carrousel reçoit des cartes complètes (portrait, phrase, identité).
+    const { cartes, startOn } = await listCartesPersonnage(supabase, {
+      campaignId: campaign.id,
+      rulesetId: campaign.rulesetId,
+      worldId: world.id,
+      userId: user.id,
+      locale: (await getLocale()) as Locale,
+    });
+    return (
+      <ChooseCharacterScreen
+        worldSlug={worldSlug}
+        worldName={world.name}
+        campaignName={campaign.name}
+        cartes={cartes}
+        startOn={startOn}
+      />
+    );
   }
 
   // Nom/version necessaires seulement pour amorcer l'assistant de creation
@@ -57,6 +81,7 @@ export default async function JoueurPersonnagePage({ params }: { params: Promise
     getLocale(),
   ]);
   if (!entity) notFound();
+  const t = await getTranslations("choixPersonnage");
   const ficheAvecPage = lancerFicheAvecPage(supabase, {
     worldId: world.id,
     entityId,
@@ -74,6 +99,11 @@ export default async function JoueurPersonnagePage({ params }: { params: Promise
     // une seule ligne, contrairement a `70ch` qui forcait la bascule mobile
     // (`md:flex-row`, PlayableCharacterSheet.tsx) meme sur grand ecran.
     <div className="mx-auto max-w-5xl">
+      {vientDeReclamer && (
+        <p role="status" className="mb-3 rounded-2xl border border-accent/50 bg-accent/10 px-3 py-2.5 text-sm text-ink">
+          {t("reclame", { prenom: entity.name.split(" ")[0] })}
+        </p>
+      )}
       <ParticipantCharacterSheet
         worldSlug={worldSlug}
         campaignId={campaign.id}

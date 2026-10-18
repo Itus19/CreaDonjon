@@ -726,5 +726,19 @@
     "ouvrirInvitation": "Ouvrir l'invitation",
     "lienInvalide": "Ce lien n'est plus valide.",
     "lienInvalideRefaire": "Ce lien n'est plus valide. Refaites une demande."
+  },
+  "choixPersonnage": {
+    "titre": "Choisis ton personnage",
+    "intro": "{monde} · {campagne} — {n, plural, =0 {aucun personnage ouvert pour l'instant. Tu peux créer le tien.} one {ton MJ a laissé # personnage ouvert. Tu peux aussi créer le tien.} other {ton MJ a laissé # personnages ouverts. Tu peux aussi créer le tien.}}",
+    "carrousel": "Personnages à choisir",
+    "precedent": "Personnage précédent",
+    "suivant": "Personnage suivant",
+    "aller": "Aller au personnage {nom}",
+    "nouveauNom": "Nouveau personnage",
+    "nouveauTexte": "Le tien, de zéro : l'assistant de création, pas à pas.",
+    "jouer": "Jouer {prenom}",
+    "creer": "+ Créer mon personnage",
+    "reclamationEnCours": "Réclamation…",
+    "reclame": "{prenom} est à toi : l'onglet Personnage montre maintenant sa fiche. Ton MJ peut encore le réattribuer."
   }
 }

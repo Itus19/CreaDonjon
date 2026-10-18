@@ -27,5 +27,6 @@ export async function claimCharacterAction(worldSlug: string, entityId: string):
   const result = await claimOwnOpenCharacter(supabase, { campaignId, entityId });
   if (!result.ok) return { error: "Ce personnage vient d'être pris par quelqu'un d'autre — choisis-en un autre." };
 
-  redirect(`/m/${worldSlug}/joueur`);
+  // V3.1-82 : la fiche dit « … est à toi » une fois, au retour de la réclamation.
+  redirect(`/m/${worldSlug}/joueur?reclame=1`);
 }
