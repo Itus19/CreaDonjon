@@ -63,49 +63,22 @@ export async function listWorldPlayerCharacters(
   const entityById = new Map(entities.map((e) => [e.id, e]));
   const characterDataByEntityId = new Map(characterBlocks.map((b) => [b.entity_id, b.data as CharacterBlockData]));
 
-  // V3.1-62 (docs/CABLAGE.md, C4) : seuls les NOMS de l'espece et des
-  // classes s'affichent ici. Une lecture de noms par ruleset (toutes les
-  // cles de tous ses PJ ensemble) au lieu d'un assemblage complet par PJ —
-  // memes noms, lus par la meme fonction que l'assembleur.
-  const selections = pcRows.map(({ campaign, row }) => {
-    const characterData = characterDataByEntityId.get(row.entity_id);
-    const speciesKey = characterData?.species?.kind === "rule" ? characterData.species.key : undefined;
-    const classSelections = (characterData?.classes ?? [])
-      .filter((c) => c.class.kind === "rule" && c.class.key)
-      .map((c) => ({ key: (c.class as { kind: "rule"; key: string }).key, level: c.level }));
-    return { campaign, row, hasCharacter: Boolean(characterData), speciesKey, classSelections };
-  });
-  const keysByRuleset = new Map<string, Set<string>>();
-  for (const sel of selections) {
-    if (!sel.hasCharacter) continue;
-    const keys = keysByRuleset.get(sel.campaign.rulesetId) ?? new Set<string>();
-    if (sel.speciesKey) keys.add(sel.speciesKey);
-    for (const c of sel.classSelections) keys.add(c.key);
-    keysByRuleset.set(sel.campaign.rulesetId, keys);
-  }
-  const namesByRuleset = new Map(
-    await Promise.all(
-      [...keysByRuleset.entries()].map(
-        async ([rulesetId, keys]) => [rulesetId, await resolveEntryNames(supabase, rulesetId, [...keys], locale)] as const
-      )
-    )
+  const identites = await libellesIdentite(
+    supabase,
+    pcRows.map(({ campaign, row }) => ({ entityId: row.entity_id, rulesetId: campaign.rulesetId, character: characterDataByEntityId.get(row.entity_id) })),
+    locale
   );
 
-  const results = selections.map(({ campaign, row, hasCharacter, speciesKey, classSelections }): WorldPlayerCharacter | null => {
+  const results = pcRows.map(({ row }): WorldPlayerCharacter | null => {
     const entity = entityById.get(row.entity_id);
     if (!entity) return null;
-    const names = namesByRuleset.get(campaign.rulesetId) ?? new Map<string, string>();
-    const speciesLabel = hasCharacter && speciesKey ? (names.get(speciesKey) ?? speciesKey) : null;
-    const classesLabel =
-      hasCharacter && classSelections.length > 0
-        ? classSelections.map((c) => `${names.get(c.key) ?? c.key} ${c.level}`).join(" / ")
-        : null;
+    const identite = identites.get(row.entity_id);
     return {
       entityId: entity.id,
       entitySlug: entity.slug,
       entityName: entity.name,
-      speciesLabel,
-      classesLabel,
+      speciesLabel: identite?.speciesLabel ?? null,
+      classesLabel: identite?.classesLabel ?? null,
       claimedByUserId: row.user_id,
     };
   });
@@ -132,4 +105,65 @@ export async function listPlayerCharacterEntityIds(supabase: TypedClient, worldI
     }
   }
   return ids;
+}
+
+/** Ce qu'une carte ou une ligne montre d'un personnage : espèce, classes avec leur niveau, niveau total. */
+export interface IdentitePersonnage {
+  speciesLabel: string | null;
+  /** « Rôdeuse 3 », « Guerrier 2 / Magicien 1 ». */
+  classesLabel: string | null;
+  /** Somme des niveaux de classe, au moins 1. */
+  level: number;
+}
+
+/**
+ * Les libellés d'identité de plusieurs personnages (V3.1-62, C4 ; partagé
+ * par V3.1-82). Seuls les NOMS de l'espèce et des classes s'affichent : une
+ * lecture de noms par ruleset (toutes les clés de tous ses PJ ensemble) au
+ * lieu d'un assemblage complet par PJ — mêmes noms, lus par la même fonction
+ * que l'assembleur. Un personnage sans bloc `character` n'a pas d'entrée.
+ */
+export async function libellesIdentite(
+  supabase: TypedClient,
+  items: readonly { entityId: string; rulesetId: string; character: CharacterBlockData | undefined }[],
+  locale: Locale
+): Promise<Map<string, IdentitePersonnage>> {
+  const selections = items
+    .filter((item): item is { entityId: string; rulesetId: string; character: CharacterBlockData } => item.character !== undefined)
+    .map(({ entityId, rulesetId, character }) => ({
+      entityId,
+      rulesetId,
+      speciesKey: character.species?.kind === "rule" ? character.species.key : undefined,
+      classSelections: (character.classes ?? [])
+        .filter((c) => c.class.kind === "rule" && c.class.key)
+        .map((c) => ({ key: (c.class as { kind: "rule"; key: string }).key, level: c.level })),
+      level: Math.max(1, (character.classes ?? []).reduce((sum, c) => sum + c.level, 0)),
+    }));
+  const keysByRuleset = new Map<string, Set<string>>();
+  for (const sel of selections) {
+    const keys = keysByRuleset.get(sel.rulesetId) ?? new Set<string>();
+    if (sel.speciesKey) keys.add(sel.speciesKey);
+    for (const c of sel.classSelections) keys.add(c.key);
+    keysByRuleset.set(sel.rulesetId, keys);
+  }
+  const namesByRuleset = new Map(
+    await Promise.all(
+      [...keysByRuleset.entries()].map(
+        async ([rulesetId, keys]) => [rulesetId, await resolveEntryNames(supabase, rulesetId, [...keys], locale)] as const
+      )
+    )
+  );
+  return new Map(
+    selections.map(({ entityId, rulesetId, speciesKey, classSelections, level }) => {
+      const names = namesByRuleset.get(rulesetId) ?? new Map<string, string>();
+      return [
+        entityId,
+        {
+          speciesLabel: speciesKey ? (names.get(speciesKey) ?? speciesKey) : null,
+          classesLabel: classSelections.length > 0 ? classSelections.map((c) => `${names.get(c.key) ?? c.key} ${c.level}`).join(" / ") : null,
+          level,
+        },
+      ] as const;
+    })
+  );
 }

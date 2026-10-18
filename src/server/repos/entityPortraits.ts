@@ -16,6 +16,14 @@ export async function getEntityPortraitAssetId(supabase: TypedClient, entityId: 
   return data?.asset_id ?? null;
 }
 
+/** Parmi ces fiches, celles qui ont un portrait (V3.1-82, cartes du choix du personnage) : une requête pour toutes, jamais une par fiche. */
+export async function listEntityIdsWithPortrait(supabase: TypedClient, entityIds: string[]): Promise<Set<string>> {
+  if (entityIds.length === 0) return new Set();
+  const { data, error } = await supabase.from("entity_assets").select("entity_id").in("entity_id", entityIds).eq("role", "portrait");
+  if (error) throw new Error(error.message);
+  return new Set(data.map((row) => row.entity_id));
+}
+
 /**
  * Remplace le pointeur portrait de cette fiche par `assetId` (supprime
  * l'ancien puis insere le nouveau — jamais un UPDATE en place, l'`asset_id`

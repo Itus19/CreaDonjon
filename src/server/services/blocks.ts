@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
-import { filterBlocks, type VisibilityLevel } from "@/src/core/visibility";
+import { filterBlocks, type Viewer, type VisibilityLevel } from "@/src/core/visibility";
 import type { BlockDisplay } from "@/src/core/schemas/blocks/envelope";
 import {
   BLOCK_TYPES,
@@ -72,6 +72,11 @@ function toVisibilityAware(row: BlockRow) {
       createdBy: row.created_by,
     },
   };
+}
+
+/** Le même filtre que `listVisibleBlocks`, sur des lignes déjà lues par lot (V3.1-82 : plusieurs fiches en une requête). */
+export function filtrerBlocsVisibles<R extends BlockRow>(rows: readonly R[], viewer: Viewer): R[] {
+  return filterBlocks(rows.map((row) => ({ ...toVisibilityAware(row), row })), viewer).map((aware) => aware.row);
 }
 
 /**
