@@ -163,6 +163,19 @@ Ce qui finit en dernier maintenant : la liste de toutes les règles (`/rule-entr
 
 « Écran stable » attend une seconde de calme réseau : il compte large. La chronologie de la fiche du MJ finit vers 4,4 s (puces) et 5 s (liste des règles, une fois par onglet). Les chargements après affichage qui restent sur une fiche : deux lots de puces, un lot de blocs de règles, la liste des règles ; ils attendent le ruleset résolu pour connaître leurs clés (décision du 12 octobre ci-dessus).
 
+**Étape 3, le 18 octobre (après la refonte de la coquille, V3.1-20 à 36)** : même protocole, un passage avant et un après. Le pilote couvre désormais l'accueil général, l'outil Table (page et fenêtre) et la page « Prochaine session » de la joueuse. Les écrans déjà mesurés le 12 octobre n'ont pas reculé (fiche du MJ : 143 → 111 requêtes, 30 → 27 vagues).
+
+| Écran | Requêtes à la base | Vagues | Chargements après affichage | Écran stable |
+|---|---|---|---|---|
+| Joueuse, sa fiche `/joueur` | 119 → **98** | 36 → **25** | 8 → **3** | 6,7 s → **5,0 s** |
+| Joueuse, prochaine session | 32 → **18** | 17 → **7** | 4 → **0** | 4,4 s → **2,6 s** |
+| MJ, page Table | 78 → 78 | 33 → **24** | 1 → 1 | 6,7 s → **5,6 s** |
+| MJ, fenêtre Table (route) | 65 → 65 | 29 → **21** | — | 4,3 s → **3,1 s** |
+| Accueil général (MJ ou joueuse) | 24 → 24 | 16 → **13** | 0 → 0 | 3,3 s → **2,9 s** |
+| Joueuse, fiche du wiki de son PJ | 135 → **126** | 32 → 34 | 4 → **3** | 5,3 s → 5,2 s |
+
+Ce qui avait reculé avec la refonte : la fiche de `/joueur` (refaite au V3.1-32) chargeait de nouveau ses blocs, `/sheet` et `/resolved-ruleset` après l'affichage ; elle les reçoit maintenant avec la page (ADR 0056), pour la campagne que la fiche demande. La Table (V3.1-34) résolvait ses PJ l'un après l'autre.
+
 Les routes les plus lentes, en temps serveur moyen (mesure avant) :
 
 | Route | Temps moyen | Appels par fiche de personnage |
@@ -193,12 +206,9 @@ Les routes les plus lentes, en temps serveur moyen (mesure avant) :
 
 Ce qui se charge, quand et où. Une carte à mettre à jour à chaque recâblage.
 
-**Fond commun de toutes les pages du monde.** Il charge après affichage, sur chaque page :
-- les jets de dés de la campagne (`dice-rolls`) ;
-- la radio (`radio-stations`) ;
-- les messages non lus (`chat/unread-count`).
+**Fond commun de toutes les pages du monde.** *Au 18 octobre* : rien ne part après l'affichage. Les jets de dés et la radio se chargent à la première ouverture de leur volet ; les messages non lus et la prochaine séance arrivent avec le layout. Côté joueuse, la page « Prochaine session » reçoit la demande ouverte, le tableau et les séances avec elle (`chargerProchaineSession`), et le wiki reçoit le devoir de journal avec son layout.
 
-Côté joueuse s'y ajoutent `scheduling/next-session` et `scheduling/open-request`. → C1 : ces données peuvent arriver avec le layout.
+**Outil Table du MJ** (page `/mj/table` et fenêtre) : tout arrive avec la page ou la route ; les PJ se résolvent ensemble (`getTableParty`). Reste la liste des règles du monde, demandée par la rangée chiffrée pour relier les états à leur règle (un appel par onglet, hors du chemin critique).
 
 **Fiche de personnage** (MJ `/m/[monde]/f/[pj]`, joueuse `/joueur` et `/joueur/wiki/[pj]`) :
 - avec la page : la coquille et les blocs ;
@@ -251,7 +261,8 @@ Dans l'ordre des gains mesurés, une correction par commit, sans changer aucun c
    - Les blocs de règles en un lot.
    - Cible : moins de 10 chargements après affichage, moins de 100 requêtes.
 2. **La route `sheet`** (6,7 s) : trouver où partent ses vagues (`resolveCharacterActionContext`, `assembleResolvedRuleset`) et les mettre en parallèle (C3). *Fait le 11 octobre : 26 → 15 vagues pour `sheet`, 18 → 11 pour `resolved-ruleset`. Reste la chaîne de rulesets relue dans les routes `/api`.*
-3. **Le fond commun** : dés, radio, messages non lus et calendrier arrivent avec le layout (C1). *Dés et radio chargés à la première ouverture de leur volet le 11 octobre. Restent les messages non lus et, côté joueuse, le calendrier (`next-session`, `open-request`).*
+3. **Le fond commun** : dés, radio, messages non lus et calendrier arrivent avec le layout (C1). *Dés et radio chargés à la première ouverture de leur volet le 11 octobre ; messages non lus avec le layout le 12 octobre ; page « Prochaine session » et devoir de journal de la joueuse avec la page le 18 octobre.*
 4. **L'accueil du MJ** : les layouts en parallèle (C3). *Fait le 11 octobre autrement : le vrai coût était l'assemblage complet du ruleset par PJ, remplacé par la lecture des noms seuls (68 → 30 requêtes).*
 5. **La fenêtre Initiative** : `ruleset_entries` en un lot (C4). *Fait le 11 octobre : listes réduites aux champs utiles, PJ en un lot (34 → 15 requêtes, 3,6 s → 1,6 s).*
 6. **Les `router.refresh()`** remplacés un par un par des mises à jour ciblées (C5). *Fait le 12 octobre : 20 appels réels → 14, les restants justifiés au §6.*
+7. **La coquille refaite** (V3.1-20 à 36), mesurée le 18 octobre (§3) : fiche de `/joueur` avec la page (C1, ADR 0056), PJ de la Table ensemble (C3), cartes de l'accueil général en parallèle (C3). *Fait le 18 octobre.* Reste, jugé hors du chemin critique : la liste des règles demandée par la Table pour ses états.
