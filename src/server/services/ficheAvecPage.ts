@@ -17,7 +17,8 @@ type TypedClient = SupabaseClient<Database>;
  * V3.1-62 (ADR 0056, docs/CABLAGE.md C1) — ce que la fiche de personnage
  * demandait apres l'affichage, calcule par la page en meme temps qu'elle :
  * - `remote` : la reponse de `GET /api/entities/[id]/sheet` (fiche derivee
- *   et etat de jeu, hors campagne comme sur la page de la fiche) ;
+ *   et etat de jeu ; hors campagne comme sur la page de la fiche, ou pour la
+ *   campagne `campaignId` quand la fiche la demande ainsi, page `/joueur`) ;
  * - `ruleset` : la reponse de `POST .../resolved-ruleset`, avec la cle de la
  *   selection pour que la fiche la reconnaisse (`selectionKey`).
  *
@@ -36,6 +37,8 @@ export async function chargerFicheAvecPage(
     worldId: string;
     entityId: string;
     userId: string;
+    /** La campagne pour laquelle la fiche demandera `/sheet` (`null` : hors campagne). */
+    campaignId?: string | null;
     locale: Locale;
     character: CharacterBlockData;
     inventory: InventoryBlockData | undefined;
@@ -45,7 +48,7 @@ export async function chargerFicheAvecPage(
   const selection = rulesetSelectionFromBlocks(params.character, params.inventory, params.spellcasting);
 
   const remotePromise = (async (): Promise<FicheAvecPage["remote"]> => {
-    const ctx = await resolveCharacterActionContext(supabase, params.entityId, null, params.locale);
+    const ctx = await resolveCharacterActionContext(supabase, params.entityId, params.campaignId ?? null, params.locale);
     if (!ctx) return null;
     const canEdit = await canUserEditEntityById(supabase, { entityId: params.entityId, userId: params.userId });
     const runtimeState = await getOrInitializeRuntimeState(supabase, ctx, { persist: canEdit });
@@ -74,6 +77,7 @@ export function lancerFicheAvecPage(
     worldId: string;
     entityId: string;
     userId: string | null;
+    campaignId?: string | null;
     locale: Locale;
     blocks: readonly { blockType: string; data: unknown }[];
   }
@@ -84,6 +88,7 @@ export function lancerFicheAvecPage(
     worldId: params.worldId,
     entityId: params.entityId,
     userId: params.userId,
+    campaignId: params.campaignId ?? null,
     locale: params.locale,
     character: character.data as CharacterBlockData,
     inventory: params.blocks.find((b) => b.blockType === "inventory")?.data as InventoryBlockData | undefined,

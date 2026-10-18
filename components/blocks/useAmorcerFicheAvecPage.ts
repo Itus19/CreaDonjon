@@ -33,6 +33,8 @@ const dejaAmorcees = new WeakSet<object>();
 export function useAmorcerFicheAvecPage(params: {
   worldSlug: string;
   entityId: string;
+  /** La campagne de la fiche, la même que celle donnée au serveur (`lancerFicheAvecPage`) ; `null` par défaut. */
+  campaignId?: string | null;
   blocks: readonly { blockType: string; data: unknown }[];
   promesse: Promise<FicheAvecPage> | null;
 }): void {
@@ -62,7 +64,7 @@ export function useAmorcerFicheAvecPage(params: {
 
     amorcerFicheCalculee(
       params.entityId,
-      null,
+      params.campaignId ?? null,
       promesse.then((fiche) => fiche.remote ?? undefined)
     );
     if (selectionHasAnything(selection)) {

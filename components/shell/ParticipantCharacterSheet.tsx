@@ -8,6 +8,7 @@ import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData } from "@/src/core/schemas/blocks/inventory";
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
 import type { ResourcesBlockData } from "@/src/core/schemas/blocks/resources";
+import { useAmorcerFicheAvecPage, type FicheAvecPage } from "@/components/blocks/useAmorcerFicheAvecPage";
 
 /**
  * Fiche de personnage complete d'un participant `entity` (PJ/PNJ), pour le
@@ -30,6 +31,8 @@ export default function ParticipantCharacterSheet({
   entityId,
   entityName,
   entityVersion,
+  initialBlocks = null,
+  ficheAvecPage = null,
 }: {
   worldSlug: string;
   campaignId: string;
@@ -37,9 +40,27 @@ export default function ParticipantCharacterSheet({
   /** Amorce l'assistant de creation (retour utilisateur : "si le PJ reclame n'a pas de fiche de personnage") — non lu tant qu'un bloc `character` existe deja. Absent depuis l'ecran Initiative (`InitiativeTracker.tsx`) : ouvrir l'assistant complet en pleine bagarre n'a pas de sens, le bouton reste alors absent, comportement inchange. */
   entityName?: string;
   entityVersion?: number;
+  /**
+   * V3.1-62, étape 3 (C1, ADR 0056) : les blocs lus par la page avec elle
+   * (page `/joueur`, même filtre que la route). Absents (écran Initiative),
+   * la fiche les demande elle-même, comme avant.
+   */
+  initialBlocks?: BlockItem[] | null;
+  /** La fiche calculée et le ruleset résolu, partis avec la page en promesse. */
+  ficheAvecPage?: Promise<FicheAvecPage> | null;
 }) {
-  const [blocks, setBlocks] = useState<BlockItem[] | "loading" | "error">("loading");
-  const versionsRef = useRef<Record<string, number>>({});
+  const [blocks, setBlocks] = useState<BlockItem[] | "loading" | "error">(initialBlocks ?? "loading");
+  useAmorcerFicheAvecPage({ worldSlug, entityId, campaignId, blocks: initialBlocks ?? [], promesse: ficheAvecPage });
+  const versionsRef = useRef<Record<string, number>>(
+    initialBlocks ? Object.fromEntries(initialBlocks.map((b) => [b.id, b.version])) : {}
+  );
+  /**
+   * Les blocs reçus avec la page valent pour CETTE entité tant qu'aucun
+   * rechargement n'est demandé. Une condition, pas un drapeau consommé : le
+   * mode strict rejoue l'effet, et un drapeau remis à faux au premier passage
+   * laisserait partir la requête au second.
+   */
+  const entiteAvecPage = useRef(initialBlocks !== null ? entityId : null);
   const saveChainsRef = useRef<Record<string, Promise<void>>>({});
   // Meme mecanisme que le `wizardOpen` de `EditEntityForm.tsx` (fiche MJ) —
   // ici amorce d'un PJ deja revendique mais sans bloc `character` encore
@@ -48,6 +69,7 @@ export default function ParticipantCharacterSheet({
   const [reloadSignal, setReloadSignal] = useState(0);
 
   useEffect(() => {
+    if (reloadSignal === 0 && entiteAvecPage.current === entityId) return;
     let cancelled = false;
     fetch(`/api/entities/${entityId}/blocks`)
       .then((res) => (res.ok ? res.json() : null))

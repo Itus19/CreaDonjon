@@ -1,9 +1,13 @@
+import { getLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { listCampaigns, listClaimableCharacters } from "@/src/server/services/campaigns";
 import { getClaimedCharacterEntityId } from "@/src/server/repos/campaigns";
 import { getEntityById } from "@/src/server/repos/entities";
+import { listVisibleBlocks } from "@/src/server/services/blocks";
+import { lancerFicheAvecPage } from "@/src/server/services/ficheAvecPage";
+import type { Locale } from "@/src/i18n/request";
 import ParticipantCharacterSheet from "@/components/shell/ParticipantCharacterSheet";
 import ChooseCharacterScreen from "./ChooseCharacterScreen";
 
@@ -44,8 +48,23 @@ export default async function JoueurPersonnagePage({ params }: { params: Promise
   // (retour utilisateur : "si le PJ reclame n'a pas de fiche de personnage")
   // — `ParticipantCharacterSheet` ne les connaissait pas jusqu'ici, il ne
   // charge que les BLOCS de l'entite, jamais l'entite elle-meme.
-  const entity = await getEntityById(supabase, entityId);
+  // V3.1-62, étape 3 (C1, ADR 0056) : les blocs arrivent avec la page (même
+  // filtre de visibilité que `GET /api/entities/[id]/blocks`), et la fiche
+  // calculée part en promesse, pour la campagne que la fiche demandera.
+  const [entity, blocks, locale] = await Promise.all([
+    getEntityById(supabase, entityId),
+    listVisibleBlocks(supabase, world.id, entityId, user.id),
+    getLocale(),
+  ]);
   if (!entity) notFound();
+  const ficheAvecPage = lancerFicheAvecPage(supabase, {
+    worldId: world.id,
+    entityId,
+    userId: user.id,
+    campaignId: campaign.id,
+    locale: locale as Locale,
+    blocks,
+  });
 
   return (
     // `max-w-5xl` (pas `70ch`, retour utilisateur : "les boutons des actions
@@ -61,6 +80,8 @@ export default async function JoueurPersonnagePage({ params }: { params: Promise
         entityId={entityId}
         entityName={entity.name}
         entityVersion={entity.version}
+        initialBlocks={blocks}
+        ficheAvecPage={ficheAvecPage}
       />
     </div>
   );
