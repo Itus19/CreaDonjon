@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { chargerProchaineSession } from "@/src/server/services/prochaineSession";
 import AvailabilityGrid, { type GridResponse } from "./AvailabilityGrid";
 import { NextSessionCard, PossibleDates, SessionsCard, type OpenRequestBoard, type RealSession } from "./SessionBoardParts";
 
@@ -25,12 +26,28 @@ interface OpenRequestResponse {
  * 3. les dates qui se dessinent, en lecture seule ;
  * 4. séances à venir et déjà jouées.
  */
-export default function NextSessionPanel({ worldSlug }: { worldSlug: string }) {
-  const [openData, setOpenData] = useState<OpenRequestResponse | null>(null);
-  const [board, setBoard] = useState<OpenRequestBoard | null>(null);
-  const [upcoming, setUpcoming] = useState<RealSession[] | null>(null);
-  const [past, setPast] = useState<RealSession[]>([]);
+export default function NextSessionPanel({
+  worldSlug,
+  initial,
+}: {
+  worldSlug: string;
+  /**
+   * V3.1-62, étape 3 (C1) : ce que la page a lu avec elle — `null` si le monde
+   * n'a pas de campagne. Absent, le panneau charge lui-même, comme avant.
+   * Les relectures après un geste (`onSaved`, « Réessayer ») passent toujours
+   * par les routes.
+   */
+  initial?: Awaited<ReturnType<typeof chargerProchaineSession>>;
+}) {
+  const [openData, setOpenData] = useState<OpenRequestResponse | null>(() =>
+    initial === undefined ? null : initial === null ? { campaignId: null, request: null, hasResponded: false, myResponses: [] } : initial.openData
+  );
+  const [board, setBoard] = useState<OpenRequestBoard | null>(initial?.board ?? null);
+  const [upcoming, setUpcoming] = useState<RealSession[] | null>(initial === undefined ? null : (initial?.upcoming ?? []));
+  const [past, setPast] = useState<RealSession[]>(initial?.past ?? []);
   const [error, setError] = useState(false);
+  /** Lu, jamais modifié : le mode strict rejoue les effets, la condition doit rester vraie. */
+  const avecPage = useRef(initial !== undefined);
 
   const loadOpenRequest = useCallback(() => {
     fetch(`/api/worlds/${worldSlug}/scheduling/open-request`)
@@ -42,7 +59,9 @@ export default function NextSessionPanel({ worldSlug }: { worldSlug: string }) {
       .catch(() => setError(true));
   }, [worldSlug]);
 
-  useEffect(loadOpenRequest, [loadOpenRequest]);
+  useEffect(() => {
+    if (!avecPage.current) loadOpenRequest();
+  }, [loadOpenRequest]);
 
   const campaignId = openData?.campaignId ?? null;
 
@@ -57,10 +76,12 @@ export default function NextSessionPanel({ worldSlug }: { worldSlug: string }) {
       });
   }, [campaignId]);
 
-  useEffect(loadBoard, [loadBoard]);
+  useEffect(() => {
+    if (!avecPage.current) loadBoard();
+  }, [loadBoard]);
 
   useEffect(() => {
-    if (!campaignId) return;
+    if (!campaignId || avecPage.current) return;
     fetch(`/api/campaigns/${campaignId}/scheduling/sessions`)
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error())))
       .then((body: { upcoming: RealSession[]; past: RealSession[] }) => {
