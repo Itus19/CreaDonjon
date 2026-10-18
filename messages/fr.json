@@ -467,6 +467,52 @@
       "erreur": "La suppression a échoué. Si le problème persiste, contactez le support."
     }
   },
+  "compte": {
+    "titre": "Compte",
+    "sommaireAria": "Sections du compte",
+    "sections": {
+      "identite": "Identité",
+      "connexion": "Connexion",
+      "invitation": "Mon lien d'invitation",
+      "apparence": "Apparence",
+      "langue": "Langue",
+      "suppression": "Supprimer le compte"
+    },
+    "sectionsCourt": {
+      "invitation": "Invitation",
+      "suppression": "Supprimer"
+    },
+    "contexteMene": "MJ {nombre, plural, one {d'un monde} other {de # mondes}}",
+    "contexteJoue": "joueur {nombre, plural, one {dans un monde} other {dans # mondes}}",
+    "contexteSolo": "{nombre, plural, one {un monde} other {# mondes}} en solo",
+    "nomAffiche": "Nom affiché",
+    "identifiant": "Ton identifiant",
+    "identifiantNote": "Le numéro distingue deux « {nom} ». Tu ne le tapes jamais pour te connecter ; il n'est visible qu'ici et par le MJ de tes campagnes.",
+    "email": "Email",
+    "emailMention": "seulement pour les comptes ouverts avec un email",
+    "connexionNoteNom": "Tu te connectes avec ton nom et ton mot de passe. Mot de passe oublié : ton MJ ou l'administrateur peut le réinitialiser — aucun email n'est envoyé.",
+    "connexionNoteEmail": "Tu te connectes avec ton email et ton mot de passe. Mot de passe oublié : un lien de réinitialisation est envoyé à ton adresse.",
+    "nouveauMotDePasse": "Nouveau mot de passe",
+    "encoreUneFois": "Encore une fois",
+    "changerMotDePasse": "Changer le mot de passe",
+    "motDePasseChange": "Mot de passe changé",
+    "motsDePasseDifferents": "Les deux ne correspondent pas.",
+    "enregistrer": "Enregistrer",
+    "enregistre": "Enregistré",
+    "invitationLabel": "Mot de passe du lien",
+    "invitationProtege": "Ce lien est protégé par un mot de passe.",
+    "invitationLibre": "Ce lien n'a pas de mot de passe.",
+    "invitationPlaceholderProtege": "Nouveau mot de passe (vide pour retirer)",
+    "invitationPlaceholderLibre": "Ajouter un mot de passe",
+    "invitationEchec": "Échec de la mise à jour.",
+    "langueAria": "Langue de l'interface",
+    "langueFr": "Français",
+    "langueEn": "English",
+    "langueNote": "Enregistrée sur ton compte (elle te suit d'un appareil à l'autre). Le contenu des mondes ne change pas de langue.",
+    "suppressionIntro": "Seront supprimés, sans retour possible : ton compte et les mondes dont tu es propriétaire.",
+    "suppressionAucunMonde": "Tu n'es propriétaire d'aucun monde : seul ton compte sera supprimé.",
+    "suppressionTape": "Tape SUPPRIMER pour confirmer"
+  },
   "accueil": {
     "navigation": "Navigation de l'accueil",
     "destMondes": "Mondes",

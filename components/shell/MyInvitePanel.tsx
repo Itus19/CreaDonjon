@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 interface MyInvite {
   id: string;
@@ -8,30 +9,18 @@ interface MyInvite {
 }
 
 /**
- * « Mon lien d'invitation » (V2-M4 suite, retour utilisateur 30 août :
- * « seul le superadmin et la personne concernée peut le changer »). Ne
- * s'affiche que pour un compte qui a rejoint par un lien (`/api/my-invite`
- * renvoie `null` pour tout autre compte, y compris le superadmin) — jamais
- * un encart vide.
+ * « Mon lien d'invitation » (V2-M4 suite). V3.1-80 : l'invitation arrive avec
+ * la page (`initialInvite`, docs/CABLAGE.md C1) — plus aucun chargement au
+ * montage. La page ne monte ce panneau que pour un compte qui a rejoint par un
+ * lien. Seul le PATCH de `/api/my-invite` reste.
  */
-export default function MyInvitePanel() {
-  const [invite, setInvite] = useState<MyInvite | null | undefined>(undefined);
+export default function MyInvitePanel({ initialInvite }: { initialInvite: MyInvite }) {
+  const t = useTranslations("compte");
+  const [invite, setInvite] = useState<MyInvite>(initialInvite);
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
-
-  useEffect(() => {
-    fetch("/api/my-invite")
-      .then((res) => (res.ok ? res.json() : { invite: null }))
-      .then((body: { invite: MyInvite | null }) => setInvite(body.invite))
-      .catch((erreur) => {
-        console.error("Chargement de mon invitation impossible", erreur);
-        setInvite(null);
-      });
-  }, []);
-
-  if (!invite) return null;
 
   async function save() {
     setBusy(true);
@@ -44,39 +33,38 @@ export default function MyInvitePanel() {
     });
     setBusy(false);
     if (!res.ok) {
-      setError("Échec de la mise à jour.");
+      setError(t("invitationEchec"));
       return;
     }
-    setInvite((prev) => (prev ? { ...prev, hasPassword: password.trim() !== "" } : prev));
+    setInvite((prev) => ({ ...prev, hasPassword: password.trim() !== "" }));
     setPassword("");
     setSaved(true);
   }
 
   return (
-    <section className="flex flex-col gap-2 border-t border-edge pt-4">
-      <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">Mon lien d&apos;invitation</h3>
-      <p className="text-sm text-ink-muted">
-        {invite.hasPassword ? "Ce lien est protégé par un mot de passe." : "Ce lien n'a pas de mot de passe."}
-      </p>
-      <div className="flex items-center gap-2">
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder={invite.hasPassword ? "Nouveau mot de passe (vide pour retirer)" : "Ajouter un mot de passe"}
-          className="flex-1 rounded-md border border-edge bg-transparent px-2.5 py-1.5 text-sm text-ink outline-none placeholder:text-ink-muted"
-        />
-        <button
-          type="button"
-          onClick={save}
-          disabled={busy}
-          className="shrink-0 rounded-md border border-edge px-3 py-1.5 text-sm text-ink transition-colors hover:bg-panel-raised disabled:opacity-50"
-        >
-          {busy ? "..." : "Enregistrer"}
-        </button>
-      </div>
-      {saved && <p className="text-xs text-accent">Enregistré.</p>}
+    <div className="flex flex-col gap-2">
+      <p className="text-sm text-ink-muted">{invite.hasPassword ? t("invitationProtege") : t("invitationLibre")}</p>
+      <label htmlFor="compte-invitation-mdp" className="text-xs text-ink-muted">
+        {t("invitationLabel")}
+      </label>
+      <input
+        id="compte-invitation-mdp"
+        type="password"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+        placeholder={invite.hasPassword ? t("invitationPlaceholderProtege") : t("invitationPlaceholderLibre")}
+        className="w-full rounded-md border border-edge bg-panel-raised px-2.5 py-1.5 text-sm text-ink outline-none placeholder:text-ink-muted"
+      />
+      <button
+        type="button"
+        onClick={save}
+        disabled={busy}
+        className="self-start rounded-md border border-edge px-3 py-1.5 text-sm text-ink transition-colors hover:bg-panel-raised disabled:opacity-50 motion-reduce:transition-none"
+      >
+        {busy ? "…" : t("enregistrer")}
+      </button>
+      {saved && <p className="text-xs text-accent">{t("enregistre")}</p>}
       {error && <p className="text-xs text-danger">{error}</p>}
-    </section>
+    </div>
   );
 }

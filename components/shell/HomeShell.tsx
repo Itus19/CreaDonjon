@@ -150,7 +150,8 @@ export default function HomeShell({
             </div>
           )}
           {destination === "compte" && (
-            <div className="mx-auto h-full min-h-0 w-full max-w-2xl overflow-y-auto">
+            // V3.1-80 : la page Compte a un sommaire de 200 px à gauche des cartes, d'où une borne plus large.
+            <div className="mx-auto h-full min-h-0 w-full max-w-4xl overflow-y-auto">
               {compte}
             </div>
           )}

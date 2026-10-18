@@ -15,7 +15,7 @@ import ImportWorldForm from "./ImportWorldForm";
 import AdminPanel from "@/components/shell/AdminPanel";
 import HomeScreen from "@/components/shell/HomeScreen";
 import HomeShell from "@/components/shell/HomeShell";
-import HomeProfilePanel from "@/components/shell/HomeProfilePanel";
+import PageCompte from "@/components/shell/PageCompte";
 
 export default async function Home() {
   const supabase = await createClient();
@@ -57,7 +57,7 @@ export default async function Home() {
         identite={{ name: identite.name, logoKey: identite.logoKey, logoUrl: identite.logoUrl }}
         compte={
           <div className="flex flex-col gap-4">
-            <HomeProfilePanel email={user?.email ?? ""} displayName={profile?.display_name ?? ""} />
+            <PageCompte compte={compte} />
             {/* Telephone seulement : a partir de 768 px la deconnexion est en
                 pied de rail (HomeShell), la barre du bas n'ayant que des
                 destinations. */}

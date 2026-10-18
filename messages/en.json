@@ -466,6 +466,52 @@
       "erreur": "Deletion failed. If the problem persists, contact support."
     }
   },
+  "compte": {
+    "titre": "Account",
+    "sommaireAria": "Account sections",
+    "sections": {
+      "identite": "Identity",
+      "connexion": "Sign-in",
+      "invitation": "My invitation link",
+      "apparence": "Appearance",
+      "langue": "Language",
+      "suppression": "Delete account"
+    },
+    "sectionsCourt": {
+      "invitation": "Invitation",
+      "suppression": "Delete"
+    },
+    "contexteMene": "GM of {nombre, plural, one {one world} other {# worlds}}",
+    "contexteJoue": "player in {nombre, plural, one {one world} other {# worlds}}",
+    "contexteSolo": "{nombre, plural, one {one world} other {# worlds}} in solo",
+    "nomAffiche": "Display name",
+    "identifiant": "Your identifier",
+    "identifiantNote": "The number tells two \"{nom}\" apart. You never type it to sign in; it is only visible here and to the GM of your campaigns.",
+    "email": "Email",
+    "emailMention": "only for accounts opened with an email",
+    "connexionNoteNom": "You sign in with your name and password. Forgot your password: your GM or the administrator can reset it — no email is sent.",
+    "connexionNoteEmail": "You sign in with your email and password. Forgot your password: a reset link is sent to your address.",
+    "nouveauMotDePasse": "New password",
+    "encoreUneFois": "Once more",
+    "changerMotDePasse": "Change password",
+    "motDePasseChange": "Password changed",
+    "motsDePasseDifferents": "The two do not match.",
+    "enregistrer": "Save",
+    "enregistre": "Saved",
+    "invitationLabel": "Link password",
+    "invitationProtege": "This link is protected by a password.",
+    "invitationLibre": "This link has no password.",
+    "invitationPlaceholderProtege": "New password (empty to remove)",
+    "invitationPlaceholderLibre": "Add a password",
+    "invitationEchec": "Update failed.",
+    "langueAria": "Interface language",
+    "langueFr": "Français",
+    "langueEn": "English",
+    "langueNote": "Saved on your account (it follows you from device to device). The content of worlds does not change language.",
+    "suppressionIntro": "These will be deleted, with no way back: your account and the worlds you own.",
+    "suppressionAucunMonde": "You do not own any world: only your account will be deleted.",
+    "suppressionTape": "Type DELETE to confirm"
+  },
   "accueil": {
     "navigation": "Home navigation",
     "destMondes": "Worlds",

@@ -4,9 +4,10 @@ import { useActionState } from "react";
 import { useTranslations } from "next-intl";
 import { updateDisplayNameAction, type UpdateDisplayNameState } from "@/app/settings/actions";
 
-/** Champ modifiable en place (V1-A1) — reutilise dans Reglages et sur l'ecran d'accueil (colonne profil, retour utilisateur). */
+/** Champ modifiable en place (V1-A1), section Identite de la page Compte (V3.1-80) : libelle au-dessus du champ, bouton dessous. */
 export default function DisplayNameForm({ initialDisplayName }: { initialDisplayName: string }) {
   const t = useTranslations("settings.compte");
+  const tc = useTranslations("compte");
   const [state, formAction, pending] = useActionState<UpdateDisplayNameState, FormData>(
     updateDisplayNameAction,
     null,
@@ -14,7 +15,11 @@ export default function DisplayNameForm({ initialDisplayName }: { initialDisplay
 
   return (
     <form action={formAction} className="flex flex-col gap-2">
+      <label htmlFor="compte-nom-affiche" className="text-xs text-ink-muted">
+        {tc("nomAffiche")}
+      </label>
       <input
+        id="compte-nom-affiche"
         name="displayName"
         defaultValue={initialDisplayName}
         placeholder={t("pseudoPlaceholder")}
