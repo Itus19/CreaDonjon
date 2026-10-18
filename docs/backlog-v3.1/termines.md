@@ -2,6 +2,54 @@
 
 ---
 
+### ☑ V3.1-46 — Probabilités : la matrice, caractéristiques et compétences · `M` · sans modèle IA — **fait le 18 octobre**
+
+**Modèle conseillé : Sonnet** — calcul pur à étendre, tests d'abord ; planche définitive.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Planche** : `Probabilites-Decide.dc.html`. **Départ** :
+`src/core/rules/probability.ts` (+ `probability.test.ts`),
+`components/shell/PartyProbabilityTable.tsx`, cas `probabilites`.
+**Dépend de** : 20, 29.
+
+**Ce qui est décidé**
+- **Noyau, tests d'abord** : `probability.ts` gagne les **jets de
+  caractéristique** (Force, Dextérité, Constitution, Intelligence, Sagesse,
+  Charisme) — même formule que les compétences, touche-à-tout compris,
+  avantage / désavantage de la fiche compris. Rien en base (règle 16).
+- **Ordinateur** : une seule grille ; les PJ de la campagne en colonnes ;
+  en lignes **les six caractéristiques**, puis les dix-huit compétences.
+  Le pourcentage au DD choisi (5 à 30, pas à pas ou puces 10 / 15 / 20 /
+  25). Le meilleur de chaque ligne est encadré ; une case touchée explique
+  son calcul (caractéristique, maîtrise ou expertise, touche-à-tout,
+  avantage ou désavantage). Campagne en sélecteur compact.
+- **Couleurs** : un **spectre continu** du rouge (peu de chances) au vert
+  (presque sûr), fond et chiffre teintés selon le pourcentage — pas trois
+  paliers. Interpolation dans l'espace OKLCH entre deux jetons de la charte
+  (`--danger` et `--success`), contraste du chiffre vérifié dans les quatre
+  modes.
+- **Tablette** : la même grille, qui défile. **Téléphone** : le DD (pas à pas
+  et puces), le détail de la case touchée, la grille compacte (noms
+  abrégés, sans la colonne de caractéristique).
+- Libellé : Insight = **Intuition** (`src/i18n/fr.ts`).
+
+**Critères d'acceptation**
+- [x] Tests du noyau : jet de Force sans maîtrise avec touche-à-tout ; avec avantage ; DD 5 et DD 30 aux bornes.
+- [x] La grille montre 6 + 18 lignes, le meilleur de chaque ligne encadré.
+- [x] Teinte continue : 50 % et 51 % ont deux teintes différentes ; contraste AA du chiffre dans les quatre modes.
+
+**Clôture (18 octobre).**
+- **Découverte** : le moteur de fiche ignorait le Touche-à-tout et n'avait pas de jet de caractéristique à part. Décision d'Opus, dans le sens du ticket (« touche-à-tout compris ») : un effet de règle `half_proficiency` (cible `check` ou `check.<car>`, la moitié de la maîtrise arrondie vers le bas sur un jet sans maîtrise), un résultat `abilityChecks` dans `characterSheet()`, une compétence qui lit aussi l'avantage de sa caractéristique (`check.<car>`), et l'encombrement qui pénalise aussi les jets de caractéristique. Tests d'abord (`sheet.test.ts`, `probability.test.ts`). Les jets réels (outil de dés, solo) lisent `abilityChecks` : le tableau et le dé disent le même chiffre. Deux endroits qui comptaient « tout sauf `none` » comme une maîtrise corrigés (résumé des compétences, choix déjà accordés).
+- Donnée : `bard-jack-of-all-trades` dans `data/srd/modifiers-2024.json` (testé) ; SRD réimporté le 18 octobre (1 905 fiches, 0 échec, aucune fiche retirée), les trois scripts d'après import rejoués, bloc vérifié en base.
+- Calcul : `checkLines` (6 + 18 lignes, sources pour le détail), `bestIndices` (une ligne toute à égalité n'est pas encadrée), DD 5 à 30. Service `getPartyCheckLines`, PJ résolus ensemble (C3).
+- Teinte (Opus) : `lib/ui/teinteProbabilite.ts`, interpolation OKLCH entre `--danger` et `--success`, mêlée au panneau et à l'encre **en OKLab** (en OKLCH, le rouge tournait au violet sur un fond de monde violacé) ; test de contraste AA calculé d'après `tokens.css` dans les quatre modes et sur trois teintes de fond.
+- Interface (Sonnet) : `PartyProbabilityTable.tsx` (page et fenêtre), DD réglable, détail de la case, légende. Corrections d'Opus : noms de colonne courts mais distincts (`nomsCourts` : « PJ Testeuse A » et « PJ Testeur B » donnaient deux « PJ »), teinte plus franche (45 % / 20 %), encadrement sans égalité, en-tête de colonne accessible.
+- Vérifié au navigateur en Testeur MJ (Banc d'essai, 2 PJ) à 1280, 820 et 390 px : 24 lignes, aucun débordement de page, Force 35 % → 10 % de DD 15 à 20, détail « Testeur · Force · DD 20 : 10 % · Force +1 », DD borné à 5.
+- Restes : le Touche-à-tout ne vaut que pour le SRD 2024 (comme la Ténacité naine) ; l'initiative ne le compte pas encore (en 2024, c'est un jet de Dextérité) ; aucun barde au Banc d'essai, le Touche-à-tout n'a été vu qu'en test.
+
+---
+
 ### ☑ V3.1-88 — Administration › Identité de l'application · `S` · sans modèle IA — **fait le 18 octobre**
 
 **Modèle conseillé : Sonnet.**

@@ -265,45 +265,6 @@ l'ajout (2) « Relancer » dépend de V3.1-22 (fils du chat).
 
 ---
 
-### ☐ V3.1-46 — Probabilités : la matrice, caractéristiques et compétences · `M` · sans modèle IA — **prêt**
-
-**Modèle conseillé : Sonnet** — calcul pur à étendre, tests d'abord ; planche définitive.
-
-**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-**Planche** : `Probabilites-Decide.dc.html`. **Départ** :
-`src/core/rules/probability.ts` (+ `probability.test.ts`),
-`components/shell/PartyProbabilityTable.tsx`, cas `probabilites`.
-**Dépend de** : 20, 29.
-
-**Ce qui est décidé**
-- **Noyau, tests d'abord** : `probability.ts` gagne les **jets de
-  caractéristique** (Force, Dextérité, Constitution, Intelligence, Sagesse,
-  Charisme) — même formule que les compétences, touche-à-tout compris,
-  avantage / désavantage de la fiche compris. Rien en base (règle 16).
-- **Ordinateur** : une seule grille ; les PJ de la campagne en colonnes ;
-  en lignes **les six caractéristiques**, puis les dix-huit compétences.
-  Le pourcentage au DD choisi (5 à 30, pas à pas ou puces 10 / 15 / 20 /
-  25). Le meilleur de chaque ligne est encadré ; une case touchée explique
-  son calcul (caractéristique, maîtrise ou expertise, touche-à-tout,
-  avantage ou désavantage). Campagne en sélecteur compact.
-- **Couleurs** : un **spectre continu** du rouge (peu de chances) au vert
-  (presque sûr), fond et chiffre teintés selon le pourcentage — pas trois
-  paliers. Interpolation dans l'espace OKLCH entre deux jetons de la charte
-  (`--danger` et `--success`), contraste du chiffre vérifié dans les quatre
-  modes.
-- **Tablette** : la même grille, qui défile. **Téléphone** : le DD (pas à pas
-  et puces), le détail de la case touchée, la grille compacte (noms
-  abrégés, sans la colonne de caractéristique).
-- Libellé : Insight = **Intuition** (`src/i18n/fr.ts`).
-
-**Critères d'acceptation**
-- [ ] Tests du noyau : jet de Force sans maîtrise avec touche-à-tout ; avec avantage ; DD 5 et DD 30 aux bornes.
-- [ ] La grille montre 6 + 18 lignes, le meilleur de chaque ligne encadré.
-- [ ] Teinte continue : 50 % et 51 % ont deux teintes différentes ; contraste AA du chiffre dans les quatre modes.
-
----
-
 ### ☐ V3.1-49 — Création : le chemin qui se ramifie (structure, aperçu, joueuse) · `L` · sans modèle IA — **prêt après 47 et 48**
 
 **Modèle conseillé : Opus** — l'écran est décidé, mais le cœur est un état de choix en cascade (un choix naît de sa source, disparaît si elle change, attend un autre choix) partagé par toutes les étapes, l'aperçu en direct et la création finale ; une erreur y casse les quatre tickets suivants. **Sonnet** pour 50 à 53, qui se branchent dessus.
