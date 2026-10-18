@@ -241,40 +241,6 @@ puis 85 → 86, 87 → 88.
 
 ---
 
-### ☐ V3.1-86 — La marque partout : rail, onglet, Rejoindre, Réinitialiser · `S` · sans modèle IA — **prêt**
-
-**Modèle conseillé : Sonnet.**
-
-**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-**Planches** : `Entree-Decide.dc.html`, `Admin-Decide.dc.html` (tête du
-rail). **Départ** : `app/layout.tsx` (`metadata.title`),
-`app/rejoindre/[token]/` (`InvitePasswordGate`, `JoinForm`),
-`app/reinitialiser/[token]/ResetPasswordForm.tsx`, le rail de l'accueil.
-**Dépend de** : 84, 85.
-
-**Ce qui est décidé**
-- **Tête du rail de l'accueil** (hors d'un monde) : la tuile du logo et le
-  nom de l'application (à la place du nom du monde). Dans un monde, rien
-  ne change.
-- **Onglet du navigateur** : titre = nom de l'application
-  (`generateMetadata` lisant `getAppIdentity()`), favicon = le logo choisi
-  (les douze sont dessinés en clair sur la tuile d'accent ; image
-  téléversée sinon).
-- **Rejoindre, sa porte à mot de passe, Réinitialiser** prennent le cadre
-  de l'écran-titre : même fond, même titre ; le panneau de verre à la
-  place du menu porte leur formulaire **actuel** (rôle, nom, mot de passe ;
-  nouveau mot de passe) — **sans le choix du personnage** : la joueuse le
-  fait ensuite dans le carrousel (V3.1-100).
-
-**Critères d'acceptation**
-- [ ] Changer le nom en administration change l'onglet du navigateur au
-  rechargement suivant.
-- [ ] Les trois formulaires gardent tous leurs champs et messages, sauf le
-  choix du personnage de Rejoindre (déplacé, V3.1-100).
-
----
-
 ### ☐ V3.1-87 — Administration (B) : le tableau de bord · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet.**

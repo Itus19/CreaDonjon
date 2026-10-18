@@ -2,6 +2,44 @@
 
 ---
 
+### ☑ V3.1-86 — La marque partout : rail, onglet, Rejoindre, Réinitialiser · `S` · sans modèle IA — **fait le 18 octobre**
+
+**Modèle conseillé : Sonnet.**
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Planches** : `Entree-Decide.dc.html`, `Admin-Decide.dc.html` (tête du
+rail). **Départ** : `app/layout.tsx` (`metadata.title`),
+`app/rejoindre/[token]/` (`InvitePasswordGate`, `JoinForm`),
+`app/reinitialiser/[token]/ResetPasswordForm.tsx`, le rail de l'accueil.
+**Dépend de** : 84, 85.
+
+**Ce qui est décidé**
+- **Tête du rail de l'accueil** (hors d'un monde) : la tuile du logo et le
+  nom de l'application (à la place du nom du monde). Dans un monde, rien
+  ne change.
+- **Onglet du navigateur** : titre = nom de l'application
+  (`generateMetadata` lisant `getAppIdentity()`), favicon = le logo choisi
+  (les douze sont dessinés en clair sur la tuile d'accent ; image
+  téléversée sinon).
+- **Rejoindre, sa porte à mot de passe, Réinitialiser** prennent le cadre
+  de l'écran-titre : même fond, même titre ; le panneau de verre à la
+  place du menu porte leur formulaire **actuel** (rôle, nom, mot de passe ;
+  nouveau mot de passe) — **sans le choix du personnage** : la joueuse le
+  fait ensuite dans le carrousel (V3.1-100).
+
+**Critères d'acceptation**
+- [x] Changer le nom en administration change l'onglet du navigateur au
+  rechargement suivant.
+- [x] Les trois formulaires gardent tous leurs champs et messages, sauf le
+  choix du personnage de Rejoindre (déplacé, V3.1-100).
+
+**Clôture** (Opus, sans délégation : quelques fichiers, contexte déjà chargé par 85) — onglet : `generateMetadata` (`app/layout.tsx`) lit `getAppIdentity()` (titre = nom, description = phrase) ; icône = l'image téléversée, sinon `/api/app-identity/icone?cle=…` qui dessine la tuile d'une des douze clés (Zod, `next/og`, publique dans le middleware, cache d'un an : une adresse donne toujours la même image ; les dessins de `LogoApp` partagés par `DESSINS_LOGO`) ; le favicon par défaut de Next (`app/favicon.ico`, celui de create-next-app) est retiré. Tête du rail de l'accueil : `LogoApp` de 26 px et le nom. `CadreTitre` (`components/brand/`) extrait de l'écran-titre, sans état : Rejoindre (lien invalide, porte à mot de passe, lien déjà servi, formulaire) et Réinitialiser (lien invalide, formulaire) y posent leur formulaire **actuel** dans le panneau de verre ; le choix du personnage était déjà sorti de Rejoindre (V3.1-100). Vérifié dans le navigateur : les douze icônes rendues, une clé inconnue refusée (400), titre « Antre Nous » sur /login, /rejoindre, /reinitialiser et l'accueil, lien `rel=icon` vers la tuile ; tête du rail ; les deux portes avec un lien invalide.
+
+*Restes* : le changement de nom en administration n'est pas rejoué ici (il toucherait l'identité réelle) ; il repose sur l'invalidation déjà en place de `getAppIdentity` (`updateTag`, V3.1-84). Les formulaires avec un jeton valide ne sont pas vus à l'écran (aucun jeton de test, jamais affiché) : seules leurs enveloppes ont changé.
+
+---
+
 ### ☑ V3.1-85 — Écran-titre (C) : connexion, création, mot de passe oublié · `M` · sans modèle IA — **fait le 18 octobre**
 
 **Modèle conseillé : Sonnet.**
