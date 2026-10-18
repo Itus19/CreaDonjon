@@ -89,7 +89,7 @@ create table profiles (
   handle_tag   text not null,   -- V3.1-10 : 4 chiffres genere, unique avec handle_name, jamais affiche hors reglages du compte
   account_role text not null default 'member' check (account_role in ('member', 'superadmin')),
   must_change_password boolean not null default false,        -- V3.1-10 : reinitialisation forcee
-  password_reset_requested_at timestamptz,                    -- V3.1-10 : demande "mot de passe oublie" en attente, jamais un jeton utilisable
+  password_reset_requested_at timestamptz,                    -- V3.1-10 : demande "mot de passe oublie" en attente, jamais un jeton utilisable ; effacee quand un MJ ou le superadmin force une reinitialisation (V3.1-87) ou quand le mot de passe change
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now(),
   unique (handle_name, handle_tag)

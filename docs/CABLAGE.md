@@ -221,6 +221,8 @@ Ce qui se charge, quand et où. Une carte à mettre à jour à chaque recâblage
 
 Chaque appel refait la session, le monde et la chaîne de rulesets : d'où `ruleset_entries` ×176, `worlds` ×88 et `rulesets` ×76 pour un seul affichage. → C2 d'abord, puis C1.
 
+**Administration** (`/admin`, superadmin, V3.1-87) : comptes, liens d'invitation, identité et nombre de titres arrivent avec la page, en une vague (C1, C3) ; rien ne part au montage. Les gestes relisent une liste seulement quand le résultat n'est pas connu d'avance (suppression d'un compte, mot de passe d'un lien). Les noms de monde et de campagne des liens se lisent encore un lien après l'autre (`listAllInvitesForAdmin`, N+1 assumé : quelques liens).
+
 **Accueil du MJ** (`/m/[monde]`) : tout arrive avec la page, mais en 28 vagues, avec `ruleset_entries` ×18. → C3.
 
 **Fenêtres d'outil du MJ** : la coquille est chargée par `/api/worlds/[monde]/mj/[outil]/window` après l'ouverture. Initiative : 34 requêtes en 10 vagues, `ruleset_entries` ×20. → C4.

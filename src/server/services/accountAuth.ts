@@ -73,7 +73,14 @@ export async function forcePasswordReset(params: { targetUserId: string; actingU
   });
   if (insertError) throw new Error(insertError.message);
 
-  const { error: flagError } = await admin.from("profiles").update({ must_change_password: true }).eq("id", params.targetUserId);
+  // V3.1-87 : forcer une réinitialisation TRAITE la demande « mot de passe
+  // oublié » en attente. Le compte passe de « à traiter » à « doit changer
+  // son mot de passe » ; sans cela, la demande restait affichée, au MJ comme
+  // au superadmin, jusqu'à ce que la joueuse ait changé son mot de passe.
+  const { error: flagError } = await admin
+    .from("profiles")
+    .update({ must_change_password: true, password_reset_requested_at: null })
+    .eq("id", params.targetUserId);
   if (flagError) throw new Error(flagError.message);
 
   return { ok: true, token };

@@ -14,12 +14,13 @@ import type { Locale } from "@/src/i18n/request";
 import { logout } from "./login/actions";
 import CreateWorldForm from "./CreateWorldForm";
 import ImportWorldForm from "./ImportWorldForm";
-import AdminPanel from "@/components/shell/AdminPanel";
 import HomeScreen from "@/components/shell/HomeScreen";
 import HomeShell from "@/components/shell/HomeShell";
 import PageCompte from "@/components/shell/PageCompte";
 
-export default async function Home() {
+export default async function Home({ searchParams }: { searchParams: Promise<{ vue?: string }> }) {
+  // V3.1-87 : `/admin` revient au Compte par `/?vue=compte`.
+  const vueInitiale = (await searchParams).vue === "compte" ? "compte" : "mondes";
   const supabase = await createClient();
   const user = await getAuthUser(supabase);
   const locale = (await getLocale()) as Locale;
@@ -50,7 +51,7 @@ export default async function Home() {
   return (
     // Accueil en tableau de bord (V3.1-35) : trois destinations — Mondes,
     // Compte, Administration — dans le rail du joueur (grand ecran) ou la
-    // barre du bas (telephone).
+    // barre du bas (telephone). Administration est la page `/admin` (V3.1-87).
     //
     // `h-dvh` est conserve tel quel : ADR 0025 l'a retire des coquilles DE
     // MONDE, ou un ancetre borne resout la hauteur. Cette page est hors
@@ -83,7 +84,8 @@ export default async function Home() {
             </form>
           </div>
         }
-        admin={canUseSoloMode ? <AdminPanel /> : null}
+        vueInitiale={vueInitiale}
+        avecAdmin={canUseSoloMode}
         mondes={
           <HomeScreen
             worlds={worlds}
