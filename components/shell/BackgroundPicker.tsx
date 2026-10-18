@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { BUILTIN_BACKGROUNDS } from "@/src/core/theme/builtinBackgrounds";
 
 interface PersonalImage {
@@ -42,6 +43,7 @@ export default function BackgroundPicker({
   currentRef: string;
   onSelectionChange: (selection: BackgroundSelection) => void;
 }) {
+  const t = useTranslations("settings");
   const [personalImages, setPersonalImages] = useState<PersonalImage[]>([]);
   const [selectedRef, setSelectedRef] = useState(currentRef);
   const [uploading, setUploading] = useState(false);
@@ -82,7 +84,7 @@ export default function BackgroundPicker({
     setUploading(false);
     if (!res.ok) {
       const body = await res.json().catch(() => null);
-      setError(body?.error ?? "Échec du téléversement.");
+      setError(body?.error ?? t("theme.echecEnvoi"));
       return;
     }
     const { image } = (await res.json()) as { image: ApiImage };
@@ -101,7 +103,7 @@ export default function BackgroundPicker({
     const res = await fetch(`/api/settings/background/${id}`, { method: "DELETE" });
     if (!res.ok) {
       const body = await res.json().catch(() => null);
-      setError(body?.error ?? "Échec de la suppression.");
+      setError(body?.error ?? t("theme.echecSuppression"));
       return;
     }
     setPersonalImages((prev) => prev.filter((img) => img.id !== id));
@@ -113,41 +115,39 @@ export default function BackgroundPicker({
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap gap-2">
+      <div className="flex items-center gap-2">
+        <span className="flex-1 text-xs font-bold uppercase tracking-wider text-ink-muted">{t("theme.fondsTitre")}</span>
+        <span className="text-xs text-ink-muted">{t("theme.fondsLegende")}</span>
+      </div>
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-3 lg:gap-2.5">
         {BUILTIN_BACKGROUNDS.map((bg) => {
           const ref = `builtin:${bg.slug}`;
           return (
-            <button
+            <Vignette
               key={bg.slug}
-              type="button"
+              libelle={bg.label}
+              image={bg.thumbDataUrl}
+              modes={bg.availableModes}
+              actif={selectedRef === ref}
               onClick={() => select(ref, bg.backdropUrl, bg.hue, bg.chroma, bg.availableModes)}
-              title={bg.label}
-              aria-label={bg.label}
-              style={{ backgroundImage: `url("${bg.thumbDataUrl}")` }}
-              className={`h-12 w-12 shrink-0 rounded-md bg-cover bg-center transition-all ${
-                selectedRef === ref ? "ring-2 ring-accent" : "ring-1 ring-edge hover:ring-edge-strong"
-              }`}
             />
           );
         })}
         {personalImages.map((img) => (
-          <div key={img.id} className="relative shrink-0">
-            <button
-              type="button"
+          <div key={img.id} className="relative flex">
+            <Vignette
+              libelle={t("theme.imagePerso")}
+              image={img.thumbDataUrl}
+              modes={img.availableModes}
+              actif={selectedRef === img.id}
               onClick={() => select(img.id, `/api/settings/background/${img.id}/image`, img.hue, img.chroma, img.availableModes)}
-              title="Image personnelle"
-              aria-label="Image personnelle"
-              style={{ backgroundImage: `url("${img.thumbDataUrl}")` }}
-              className={`h-12 w-12 rounded-md bg-cover bg-center transition-all ${
-                selectedRef === img.id ? "ring-2 ring-accent" : "ring-1 ring-edge hover:ring-edge-strong"
-              }`}
             />
             <button
               type="button"
               onClick={() => handleDelete(img.id)}
-              title="Supprimer cette image"
-              aria-label="Supprimer cette image"
-              className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-panel-raised text-sm text-danger ring-1 ring-edge transition-colors hover:bg-danger/10"
+              title={t("theme.retirer")}
+              aria-label={t("theme.retirer")}
+              className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-panel-raised text-sm leading-none text-danger ring-1 ring-edge-strong transition-colors hover:bg-danger/10 motion-reduce:transition-none"
             >
               ×
             </button>
@@ -157,15 +157,47 @@ export default function BackgroundPicker({
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
-          title="Téléverser une image"
-          aria-label="Téléverser une image"
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md border border-dashed border-edge text-lg text-ink-muted transition-colors hover:bg-panel-raised disabled:opacity-50"
+          className="flex min-h-[5.5rem] items-center justify-center rounded-2xl border border-dashed border-edge text-sm text-accent transition-colors hover:bg-panel-raised disabled:opacity-50 motion-reduce:transition-none"
         >
-          {uploading ? "…" : "+"}
+          {uploading ? "…" : `+ ${t("theme.ajouter")}`}
         </button>
         <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={handleUpload} className="hidden" />
       </div>
       {error && <p className="text-xs text-danger">{error}</p>}
     </div>
+  );
+}
+
+/** Vignette de fond : image, libellé et un point par mode lisible. */
+function Vignette({
+  libelle,
+  image,
+  modes,
+  actif,
+  onClick,
+}: {
+  libelle: string;
+  image: string;
+  modes: string[];
+  actif: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={actif}
+      className={`flex flex-1 flex-col overflow-hidden rounded-2xl border bg-panel-sunken text-left text-ink transition-colors motion-reduce:transition-none ${
+        actif ? "border-accent ring-1 ring-accent" : "border-edge hover:border-edge-strong"
+      }`}
+    >
+      <span className="h-[70px] bg-cover bg-center lg:h-24" style={{ backgroundImage: `url("${image}")` }} />
+      <span className="flex items-center gap-1.5 px-2 py-1.5 text-xs">
+        <span className="flex-1 truncate">{libelle}</span>
+        {modes.map((m) => (
+          <i key={m} className={`h-[7px] w-[7px] rounded-full border border-edge-strong mode-swatch-${m}`} />
+        ))}
+      </span>
+    </button>
   );
 }

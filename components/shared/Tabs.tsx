@@ -6,6 +6,10 @@ import { nextTabIndex } from "@/lib/ui/tabsKeyboard";
 export interface TabItem<T extends string = string> {
   value: T;
   label: string;
+  /** Onglet inactivable (ex. mode non permis par le fond) : grisé, ignoré au clavier. */
+  disabled?: boolean;
+  /** Explication au survol, typiquement de l'état désactivé. */
+  title?: string;
 }
 
 /**
@@ -122,13 +126,20 @@ export default function Tabs<T extends string>({
             id={idPrefix ? tabId(idPrefix, item.value) : undefined}
             aria-controls={idPrefix ? panelId(idPrefix, item.value) : undefined}
             aria-selected={active}
+            disabled={item.disabled}
+            title={item.title}
             // Roving tabindex : UN seul onglet dans l'ordre de tabulation,
             // les flèches circulent entre eux.
             tabIndex={active ? 0 : -1}
             onKeyDown={(e) => {
-              const next = nextTabIndex(e.key, index, items.length);
+              let next = nextTabIndex(e.key, index, items.length);
               if (next === null) return;
               e.preventDefault();
+              // Un onglet désactivé est sauté : on avance encore, au plus un tour complet.
+              for (let tour = 0; next !== null && items[next].disabled && tour < items.length; tour++) {
+                next = nextTabIndex(e.key, next, items.length);
+              }
+              if (next === null || items[next].disabled) return;
               onChange(items[next].value);
               // Le focus suit la sélection ; par refs, car la gélule porte
               // aussi le fond glissant parmi ses enfants.
@@ -137,7 +148,7 @@ export default function Tabs<T extends string>({
             onClick={() => onChange(item.value)}
             className={`relative flex-1 shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-center transition-colors ${
               active ? "font-semibold text-ink" : "text-ink-muted hover:text-ink"
-            }`}
+            } disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-ink-muted`}
           >
             {item.label}
           </button>

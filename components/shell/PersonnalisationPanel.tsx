@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import Tabs from "@/components/shared/Tabs";
 import BackgroundPicker, { type BackgroundSelection } from "./BackgroundPicker";
 
 const MODES = ["dark", "dim", "soft", "light"] as const;
@@ -77,35 +78,44 @@ export default function PersonnalisationPanel({
     setCookie("bgBlur", String(bgBlur));
   }, [bgBlur]);
 
+  const modeItems = MODES.map((m) => {
+    const permis = backgroundAvailableModes.includes(m);
+    return { value: m, label: t(`theme.${m}`), disabled: !permis, title: permis ? undefined : t("theme.modeIllisible") };
+  });
+  const contrasteActif = contrast === "high";
+
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="block-title text-lg">{t("theme.titre")}</h1>
-      <section className="flex flex-col gap-2">
-        <div className="flex flex-wrap gap-1.5">
-          {MODES.map((m) => {
-            const disabled = !backgroundAvailableModes.includes(m);
-            return (
-              <button
-                key={m}
-                type="button"
-                onClick={() => setMode(m)}
-                disabled={disabled}
-                title={disabled ? "Ce fond ne permet pas ce mode de façon lisible" : undefined}
-                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-ink transition-colors hover:bg-panel disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent ${
-                  mode === m ? "ring-1 ring-accent" : ""
-                }`}
-              >
-                <span className={`flex h-4 w-4 items-center justify-center rounded-full border border-edge mode-swatch-${m}`}>
-                  <span className={`h-1.5 w-1.5 rounded-full mode-swatch-${m}-accent`} />
-                </span>
-                {t(`theme.${m}`)}
-              </button>
-            );
-          })}
+    <div className="flex flex-col gap-3">
+      {/* La barre : jamais de `basis-full` sur le flou en colonne (il prendrait toute la hauteur). */}
+      <div className="flex flex-col gap-2.5 rounded-2xl border border-edge bg-panel px-3 py-2.5 md:px-3.5">
+        <div className="flex flex-col gap-2.5 md:flex-row md:flex-wrap md:items-center md:gap-4">
+          <div className="md:w-[420px] md:max-w-full">
+            <Tabs
+              value={mode as (typeof MODES)[number]}
+              items={modeItems}
+              onChange={setMode}
+              aria-label={t("theme.modes")}
+              className="w-full max-md:[&_button]:px-1"
+            />
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={contrasteActif}
+            onClick={toggleContrast}
+            className="flex min-w-0 flex-1 items-center gap-3 text-left"
+          >
+            <span className="flex min-w-0 flex-1 flex-col text-sm text-ink">
+              {t("theme.contrasteEleve")}
+              <small className="text-xs text-ink-muted">{t("theme.contrasteAide")}</small>
+            </span>
+            <span className={`relative h-[18px] w-[30px] shrink-0 rounded-full border transition-colors motion-reduce:transition-none ${contrasteActif ? "border-accent bg-accent" : "border-edge-strong bg-edge"}`}>
+              <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-panel transition-all motion-reduce:transition-none ${contrasteActif ? "left-[15px]" : "left-0.5"}`} />
+            </span>
+          </button>
         </div>
-        <BackgroundPicker currentRef={currentBackgroundRef} onSelectionChange={handleBackgroundSelection} />
-        <label className="flex flex-col gap-1 text-xs text-ink-muted">
-          Flou du fond ({bgBlur}px)
+        <label className="flex items-center gap-2.5 text-sm text-ink">
+          <span className="shrink-0">{t("theme.flou")}</span>
           <input
             type="range"
             min={0}
@@ -113,19 +123,16 @@ export default function PersonnalisationPanel({
             step={2}
             value={bgBlur}
             onChange={(e) => setBgBlur(Number(e.target.value))}
-            className="accent-accent"
+            className="min-w-0 flex-1 accent-accent"
           />
+          <b className="w-12 shrink-0 text-right font-medium tabular-nums">{t("theme.flouValeur", { valeur: bgBlur })}</b>
         </label>
-        <button
-          type="button"
-          onClick={toggleContrast}
-          className={`self-start rounded-md border border-edge px-2.5 py-1.5 text-left text-sm text-ink transition-colors hover:bg-panel ${
-            contrast === "high" ? "text-accent" : ""
-          }`}
-        >
-          {t("theme.contrasteEleve")} {contrast === "high" ? "✓" : ""}
-        </button>
-      </section>
+      </div>
+      <BackgroundPicker
+        currentRef={currentBackgroundRef}
+        onSelectionChange={handleBackgroundSelection}
+      />
+      <p className="border-t border-edge pt-2 text-xs leading-snug text-ink-muted">{t("theme.note")}</p>
     </div>
   );
 }

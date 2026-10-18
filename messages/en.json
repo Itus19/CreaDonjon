@@ -439,12 +439,24 @@
   },
   "settings": {
     "theme": {
-      "titre": "Theme",
       "dark": "Dark",
       "dim": "Dim",
       "soft": "Soft light",
       "light": "Light",
-      "contrasteEleve": "High contrast"
+      "contrasteEleve": "High contrast",
+      "modes": "Display mode",
+      "modeIllisible": "This background does not allow this mode legibly",
+      "contrasteAide": "Neutral dark palette and crisp lines, whatever the mode.",
+      "flou": "Background blur",
+      "flouValeur": "{valeur} px",
+      "fondsTitre": "Wallpaper",
+      "fondsLegende": "dots: legible modes",
+      "note": "These settings are yours, on this device: they apply at once, no saving needed. Your personal images follow you across all your devices.",
+      "imagePerso": "Personal image",
+      "ajouter": "Add an image",
+      "retirer": "Delete this image",
+      "echecEnvoi": "Upload failed.",
+      "echecSuppression": "Deletion failed."
     },
     "compte": {
       "titre": "Account",

@@ -440,12 +440,24 @@
   },
   "settings": {
     "theme": {
-      "titre": "Thème",
       "dark": "Sombre",
       "dim": "Demi-sombre",
       "soft": "Demi-clair",
       "light": "Clair",
-      "contrasteEleve": "Contraste élevé"
+      "contrasteEleve": "Contraste élevé",
+      "modes": "Mode d'affichage",
+      "modeIllisible": "Ce fond ne permet pas ce mode de façon lisible",
+      "contrasteAide": "Palette neutre sombre et traits nets, quel que soit le mode.",
+      "flou": "Flou du fond",
+      "flouValeur": "{valeur} px",
+      "fondsTitre": "Fond d'écran",
+      "fondsLegende": "points : modes lisibles",
+      "note": "Ces réglages sont les tiens, sur cet appareil : ils s'appliquent aussitôt, sans enregistrer. Tes images personnelles te suivent sur tous tes appareils.",
+      "imagePerso": "Image personnelle",
+      "ajouter": "Ajouter une image",
+      "retirer": "Supprimer cette image",
+      "echecEnvoi": "Échec du téléversement.",
+      "echecSuppression": "Échec de la suppression."
     },
     "compte": {
       "titre": "Compte",
