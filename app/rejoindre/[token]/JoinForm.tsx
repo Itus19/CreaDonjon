@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import Link from "next/link";
 import { joinInviteAction, type JoinInviteState } from "./actions";
+import { PANNEAU_VERRE, TITRE_PANNEAU } from "@/components/brand/CadreTitre";
 
 const initialState: JoinInviteState = null;
 
@@ -26,11 +27,11 @@ export default function JoinForm({
   const [role, setRole] = useState<"gm" | "player" | null>(intendedRole);
 
   return (
-    <form action={formAction} className="flex w-full max-w-sm flex-col gap-4 rounded-lg border border-edge bg-panel p-6">
+    <form action={formAction} className={PANNEAU_VERRE}>
       <input type="hidden" name="token" value={token} />
       <input type="hidden" name="role" value={role ?? ""} />
 
-      <h1 className="text-xl font-semibold text-accent">Bienvenue</h1>
+      <h2 className={TITRE_PANNEAU}>Bienvenue</h2>
 
       {currentAccountName !== null ? (
         <p className="text-xs text-ink-muted">

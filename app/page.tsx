@@ -4,6 +4,7 @@ import { listWorldCards } from "@/src/server/services/worlds";
 import { listSelectableRulesetsForCurrentUser } from "@/src/server/services/rules";
 import { isSuperadmin } from "@/src/server/services/account";
 import { getOwnProfile } from "@/src/server/repos/account";
+import { getAppIdentity } from "@/src/server/services/appIdentity";
 import type { Locale } from "@/src/i18n/request";
 import { logout } from "./login/actions";
 import CreateWorldForm from "./CreateWorldForm";
@@ -17,11 +18,12 @@ export default async function Home() {
   const supabase = await createClient();
   const user = await getAuthUser(supabase);
   const locale = (await getLocale()) as Locale;
-  const [worlds, selectableRulesets, canUseSoloMode, profile] = await Promise.all([
+  const [worlds, selectableRulesets, canUseSoloMode, profile, identite] = await Promise.all([
     user ? listWorldCards(supabase, locale, user.id) : Promise.resolve([]),
     listSelectableRulesetsForCurrentUser(supabase),
     user ? isSuperadmin(supabase, user.id) : Promise.resolve(false),
     user ? getOwnProfile(supabase, user.id) : Promise.resolve(null),
+    getAppIdentity(),
   ]);
   const officialRulesets = (selectableRulesets ?? []).filter((r) => r.is_official_base);
 
@@ -36,6 +38,7 @@ export default async function Home() {
     // traine de ce lot.
     <div className="h-dvh overflow-hidden font-sans">
       <HomeShell
+        identite={{ name: identite.name, logoKey: identite.logoKey, logoUrl: identite.logoUrl }}
         compte={
           <div className="flex flex-col gap-4">
             <HomeProfilePanel email={user?.email ?? ""} displayName={profile?.display_name ?? ""} />

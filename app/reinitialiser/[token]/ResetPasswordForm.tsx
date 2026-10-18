@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { submitNewPassword, type ActionState } from "./actions";
+import { PANNEAU_VERRE, TITRE_PANNEAU } from "@/components/brand/CadreTitre";
 
 const initialState: ActionState = null;
 
@@ -9,9 +10,9 @@ export default function ResetPasswordForm({ token }: { token: string }) {
   const [state, formAction, pending] = useActionState(submitNewPassword, initialState);
 
   return (
-    <form action={formAction} className="flex w-full max-w-sm flex-col gap-4 rounded-lg border border-edge bg-panel p-6">
+    <form action={formAction} className={PANNEAU_VERRE}>
       <input type="hidden" name="token" value={token} />
-      <h1 className="text-xl font-semibold text-accent">Choisis un nouveau mot de passe</h1>
+      <h2 className={TITRE_PANNEAU}>Choisis un nouveau mot de passe</h2>
 
       <label className="flex flex-col gap-1 text-sm">
         Mot de passe

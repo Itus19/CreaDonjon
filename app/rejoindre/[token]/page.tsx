@@ -6,6 +6,8 @@ import { isCampaignMember } from "@/src/server/repos/campaigns";
 import { hasVerifiedInvitePassword } from "@/lib/campaignInvites/passwordCookie";
 import InvitePasswordGate from "./InvitePasswordGate";
 import JoinForm from "./JoinForm";
+import { CadreTitre, PANNEAU_VERRE } from "@/components/brand/CadreTitre";
+import { getAppIdentity } from "@/src/server/services/appIdentity";
 
 /**
  * Point d'entrée d'un ami invité (V2-M4, Lot M) — jamais d'email ni de mot
@@ -16,15 +18,16 @@ import JoinForm from "./JoinForm";
 export default async function JoinInvitePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   const supabase = await createClient();
-  const resolved = await resolveInviteForJoin(supabase, token);
+  // V3.1-86 : la porte prend le cadre de l'écran-titre (même fond, même titre).
+  const [resolved, identite] = await Promise.all([resolveInviteForJoin(supabase, token), getAppIdentity()]);
 
   if (!resolved.ok) {
     return (
-      <div className="flex flex-1 items-center justify-center font-sans">
-        <div className="w-full max-w-sm rounded-lg border border-edge bg-panel p-6 text-center">
+      <CadreTitre identite={identite}>
+        <div className={PANNEAU_VERRE}>
           <p className="text-sm text-danger">Ce lien n&apos;est plus valide.</p>
         </div>
-      </div>
+      </CadreTitre>
     );
   }
 
@@ -32,7 +35,11 @@ export default async function JoinInvitePage({ params }: { params: Promise<{ tok
   // jamais l'ecran de choix ni la reconnexion avant validation — meme
   // discipline que le partage public (SharePasswordGate).
   if (resolved.invite.hasPassword && !(await hasVerifiedInvitePassword(token))) {
-    return <InvitePasswordGate token={token} />;
+    return (
+      <CadreTitre identite={identite}>
+        <InvitePasswordGate token={token} />
+      </CadreTitre>
+    );
   }
 
   // Lien MJ (ou heretes sans role fixe) : nominatif, usage unique — inchange.
@@ -60,12 +67,12 @@ export default async function JoinInvitePage({ params }: { params: Promise<{ tok
   // membre : redirigée plus haut.)
   if (resolved.invite.entityId && resolved.invite.claimedByUserId && resolved.invite.claimedByUserId !== currentUser?.id) {
     return (
-      <div className="flex flex-1 items-center justify-center font-sans">
-        <div className="w-full max-w-sm rounded-lg border border-edge bg-panel p-6 text-center">
+      <CadreTitre identite={identite}>
+        <div className={PANNEAU_VERRE}>
           <p className="text-sm text-ink">Ce lien a déjà servi.</p>
-          <p className="mt-2 text-xs text-ink-muted">Si c&apos;est toi, connecte-toi ; sinon, demande un nouveau lien à ton MJ.</p>
+          <p className="text-xs text-ink-muted">Si c&apos;est toi, connecte-toi ; sinon, demande un nouveau lien à ton MJ.</p>
         </div>
-      </div>
+      </CadreTitre>
     );
   }
 
@@ -75,12 +82,12 @@ export default async function JoinInvitePage({ params }: { params: Promise<{ tok
   const currentAccountName = currentUser ? (await getOwnProfile(supabase, currentUser.id))?.display_name || null : null;
 
   return (
-    <div className="flex flex-1 items-center justify-center font-sans">
+    <CadreTitre identite={identite}>
       <JoinForm
         token={token}
         intendedRole={resolved.invite.intendedRole}
         currentAccountName={currentAccountName}
       />
-    </div>
+    </CadreTitre>
   );
 }

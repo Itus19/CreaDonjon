@@ -3,6 +3,7 @@
 import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { verifyInvitePasswordAction, type VerifyInvitePasswordState } from "./passwordActions";
+import { PANNEAU_VERRE, TITRE_PANNEAU } from "@/components/brand/CadreTitre";
 
 const initialState: VerifyInvitePasswordState = null;
 
@@ -17,9 +18,9 @@ export default function InvitePasswordGate({ token }: { token: string }) {
   }, [state, router]);
 
   return (
-    <div className="flex flex-1 items-center justify-center font-sans">
-      <div className="flex w-full max-w-sm flex-col gap-4 rounded-lg border border-edge bg-panel p-6">
-        <h1 className="text-xl font-semibold text-accent">Bienvenue</h1>
+    <div className={PANNEAU_VERRE}>
+      <div className="contents">
+        <h2 className={TITRE_PANNEAU}>Bienvenue</h2>
         <p className="text-sm text-ink-muted">Ce lien est protégé par un mot de passe.</p>
         <form action={formAction} className="flex flex-col gap-2">
           <input

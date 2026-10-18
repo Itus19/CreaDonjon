@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { LogoApp } from "@/components/brand/LogoApp";
+import { CadreTitre, PANNEAU_VERRE, TITRE_PANNEAU } from "@/components/brand/CadreTitre";
 import { clearCachedGet } from "@/components/shell/useCachedGet";
 import { cheminInvitation, type PanneauTitre } from "@/lib/ui/ecranTitre";
 import type { AppLogoKey } from "@/src/core/brand/identity";
@@ -56,17 +56,10 @@ export function EcranTitre({ name, tagline, logoKey, logoUrl }: EcranTitreProps)
   };
 
   return (
-    <div className="flex flex-1 flex-col items-center px-4 pb-10 pt-[12vh] font-sans">
-      <div className="flex flex-col items-center gap-3 text-center md:flex-row md:gap-4">
-        <LogoApp logoKey={logoKey} logoUrl={logoUrl} taille={84} />
-        <h1 className="font-display text-[46px] font-extrabold leading-none tracking-tight text-ink [text-shadow:0_10px_40px_rgba(0,0,0,.6)] md:text-[72px]">
-          {name}
-        </h1>
-      </div>
-      {tagline && <p className="mt-3 text-center text-base text-ink-soft">{tagline}</p>}
-      {lienInvalide && <p className="mt-3 text-center text-sm text-danger">{t("lienInvalideRefaire")}</p>}
-
-      <div className="mt-10 flex w-full flex-col items-center">
+    <CadreTitre
+      identite={{ name, tagline, logoKey, logoUrl }}
+      message={lienInvalide && <p className="mt-3 text-center text-sm text-danger">{t("lienInvalideRefaire")}</p>}
+    >
         {panneau === "menu" ? (
           <nav aria-label={t("titreMenu")} className="flex w-[300px] max-w-full flex-col gap-3 md:w-[340px]">
             <button
@@ -84,19 +77,18 @@ export function EcranTitre({ name, tagline, logoKey, logoUrl }: EcranTitreProps)
             </button>
           </nav>
         ) : (
-          <section className="flex w-[340px] max-w-full flex-col gap-3.5 rounded-3xl border border-edge bg-panel p-[18px] backdrop-blur-lg md:w-[380px] md:px-[22px] md:py-5">
+          <section className={PANNEAU_VERRE}>
             <button type="button" onClick={() => setPanneau("menu")} className="self-start text-sm text-accent hover:text-accent-hover">
               {t("menu")}
             </button>
-            <h2 className="font-display text-[22px] font-extrabold text-ink">{titres[panneau]}</h2>
+            <h2 className={TITRE_PANNEAU}>{titres[panneau]}</h2>
             {panneau === "connexion" && <PanneauConnexion onOubli={() => setPanneau("oubli")} />}
             {panneau === "creation" && <PanneauCreation />}
             {panneau === "oubli" && <PanneauOubli onRetour={() => setPanneau("connexion")} />}
             {panneau === "invitation" && <PanneauInvitation />}
           </section>
         )}
-      </div>
-    </div>
+    </CadreTitre>
   );
 }
 

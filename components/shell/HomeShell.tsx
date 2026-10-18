@@ -4,6 +4,8 @@ import { Fragment, useState } from "react";
 import { useTranslations } from "next-intl";
 import { logout } from "@/app/login/actions";
 import DiceRollProvider from "./DiceRollPanel";
+import { LogoApp } from "@/components/brand/LogoApp";
+import type { AppLogoKey } from "@/src/core/brand/identity";
 import {
   DeBarreBas,
   DeSeulDalle,
@@ -33,10 +35,13 @@ type Destination = "mondes" | "compte" | "admin";
  * n'est enregistre).
  */
 export default function HomeShell({
+  identite,
   mondes,
   compte,
   admin,
 }: {
+  /** V3.1-86 : la tête du rail porte la marque de l'application (hors d'un monde). */
+  identite: { name: string; logoKey: AppLogoKey; logoUrl: string | null };
   mondes: React.ReactNode;
   compte: React.ReactNode;
   /** Section Administration — `null` pour tout compte non-superadmin, auquel cas la destination n'existe pas non plus. */
@@ -61,15 +66,10 @@ export default function HomeShell({
         <Rail ouvert={false} replie={replie} onBasculer={basculer} barreBasse>
           <RailPart className="md:min-h-0 md:flex-1">
             <div className="hidden shrink-0 items-center gap-2.5 px-[14px] py-3 md:flex">
-              <span
-                className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-lg bg-accent text-xs font-bold text-accent-ink"
-                aria-hidden="true"
-              >
-                C
-              </span>
+              <LogoApp logoKey={identite.logoKey} logoUrl={identite.logoUrl} taille={26} />
               {!replie && (
                 <span className="min-w-0 flex-1 truncate font-chrome text-sm font-semibold text-ink">
-                  CreaDonjon
+                  {identite.name}
                 </span>
               )}
             </div>

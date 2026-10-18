@@ -1,5 +1,7 @@
 import { resolveResetToken } from "@/src/server/services/accountAuth";
 import ResetPasswordForm from "./ResetPasswordForm";
+import { CadreTitre, PANNEAU_VERRE } from "@/components/brand/CadreTitre";
+import { getAppIdentity } from "@/src/server/services/appIdentity";
 
 /**
  * Ecran "choisis ton nouveau mot de passe" (V3.1-10, ADR 0031 §5) — atteint
@@ -8,21 +10,22 @@ import ResetPasswordForm from "./ResetPasswordForm";
  */
 export default async function ResetPasswordPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  const resolved = await resolveResetToken(token);
+  // V3.1-86 : la porte prend le cadre de l'écran-titre (même fond, même titre).
+  const [resolved, identite] = await Promise.all([resolveResetToken(token), getAppIdentity()]);
 
   if (!resolved.ok) {
     return (
-      <div className="flex flex-1 items-center justify-center font-sans">
-        <div className="w-full max-w-sm rounded-lg border border-edge bg-panel p-6 text-center">
+      <CadreTitre identite={identite}>
+        <div className={PANNEAU_VERRE}>
           <p className="text-sm text-danger">Ce lien n&apos;est plus valide.</p>
         </div>
-      </div>
+      </CadreTitre>
     );
   }
 
   return (
-    <div className="flex flex-1 items-center justify-center font-sans">
+    <CadreTitre identite={identite}>
       <ResetPasswordForm token={token} />
-    </div>
+    </CadreTitre>
   );
 }
