@@ -2,6 +2,69 @@
 
 ---
 
+### ☑ V3.1-82 — Choix du personnage (C2) : le carrousel · `M` · sans modèle IA — **fait le 18 octobre**
+
+**Modèle conseillé : Sonnet.**
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Planche** : `Choix-Decide.dc.html`. **Départ** :
+`app/m/[worldSlug]/joueur/ChooseCharacterScreen.tsx`,
+`app/m/[worldSlug]/joueur/page.tsx`, `listUnclaimedCharacters`
+(`src/server/services/campaigns.ts`), `claimCharacterAction`.
+
+**Ce qui est décidé**
+- **Données** : `listUnclaimedCharacters` renvoie en plus, pour chaque PJ
+  ouvert : le **portrait** (`entity_assets`, rôle `portrait`, URL signée
+  comme ailleurs), le **`summary`**, et l'**identité calculée** par
+  `characterSheet()` — espèce, classe(s) et niveau — ou `hasSheet: false`
+  quand l'entité n'a pas de bloc `character`. Une requête groupée (pas de
+  N+1). Rien n'est stocké (règle 16) ; seules les fiches visibles par la
+  joueuse (règle 5).
+- **Le carrousel** : la carte au centre en grand (portrait 330 px de haut,
+  nom, « Elfe · Rôdeuse 3 » en accent, la phrase), bordure d'accent et
+  halo ; ses voisines en retrait de part et d'autre (échelle 0,8, opacité
+  0,45, désaturées) ; au-delà, masquées. Flèches ‹ ›, points (le point
+  courant s'allonge), touches ← →, glisser au doigt ; le carrousel boucle.
+  Toucher une voisine la centre.
+- **« Nouveau personnage » est la dernière carte** : pointillés, grand +
+  en accent, « Le tien, de zéro : l'assistant de création, pas à pas. »
+- **La page s'ouvre sur « Nouveau personnage »** (à sa gauche le dernier
+  PJ ouvert, à sa droite le premier). Sans PJ ouvert : la carte est seule,
+  sans flèches ni points.
+- **Arrivée par un lien qui vise un PJ précis** (V3.1-100) : le carrousel
+  ne montre que **ce PJ et « Nouveau personnage »** (au cas où), et
+  **s'ouvre sur le PJ**. Le composant reçoit la liste et la carte de départ
+  du serveur ; il ne filtre rien lui-même.
+- **Un seul bouton** sous le carrousel : « Jouer Naivara » (prénom), ou
+  « + Créer mon personnage » quand la carte « Nouveau » est centrée.
+  « Jouer » réclame (`claimCharacterAction`) puis l'onglet Personnage
+  affiche la fiche jouable. Message après réclamation : « Naivara est à
+  toi : l'onglet Personnage montre maintenant sa fiche. Ton MJ peut encore
+  le réattribuer. » Échec (déjà pris) : message de l'action, le carrousel
+  se recharge.
+- En-tête : « Choisis ton personnage » et « {monde} · {campagne} — ton MJ
+  a laissé {n} personnages ouverts. Tu peux aussi créer le tien. »
+- **Tablette** : même carrousel, sans flèches, cartes de 280 px.
+  **Téléphone** (onglet Perso. de la barre du joueur) : carte de 250 px,
+  voisines qui dépassent des bords, bouton sur toute la largeur au-dessus
+  de la barre.
+
+**Critères d'acceptation**
+- [ ] À l'ouverture, « Nouveau personnage » est centrée.
+- [ ] Clavier : ← → font tourner ; Entrée déclenche le bouton.
+- [ ] Une seule requête pour la liste enrichie (vérifiée en test de service).
+- [ ] Un PJ caché à la joueuse n'apparaît pas.
+
+**Clôture (18 octobre).**
+- Serveur (Opus) : `listCartesPersonnage` lit tout par lot (blocs, portraits, lecteur, libellés), avec un test d'une requête par nature de donnée et un test qu'aucune donnée cachée ne sort ; `premierePhrase` (noyau, tests d'abord) saute le texte marqué `spoiler` ; `libellesIdentite` est partagé avec `listWorldPlayerCharacters`. Décision de l'auteur : la phrase est la première du premier texte visible (la colonne `summary` du ticket n'existe plus).
+- Interface (Sonnet) : le carrousel, `lib/ui/carrousel.ts` testé.
+- Corrections d'Opus : message « c'est réclamé » par `?reclame=1` après la redirection ; le clavier marche sans `autoFocus` (plus d'anneau au chargement).
+- Vérifié en Testeur MJ à 1280 et 390 px : carte « Nouveau » seule, aucun débordement, Entrée mène à la création.
+- Restes : les cartes de PJ et la rotation n'ont pas été vues en vrai (aucun PJ libre au Banc d'essai) ; le cas « PJ sans fiche » revient à V3.1-83.
+
+---
+
 ### ☑ V3.1-81 — L'Apparence du Compte est la Personnalisation C · `S` · sans modèle IA — **fait le 18 octobre**
 
 **Modèle conseillé : Sonnet.**

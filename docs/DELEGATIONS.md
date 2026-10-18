@@ -43,3 +43,5 @@ Issue : **accepté** (tel quel) · **corrigé** (retouche locale par Opus) · **
 | 2026-10-18 | V3.1-80 (planche) | aide-haiku | 42 951 | accepté | Section « Compte » dans OutilsMJ.dc.html ; hauteur portée à 5 300 par Opus |
 | 2026-10-18 | V3.1-81 (interface) | dev-sonnet | 54 775 | corrigé | Barre de Personnalisation conforme, Tabs désactivables ; Opus : flèches qui sautent les onglets désactivés, rangée de pastilles du Compte floutée. |
 | 2026-10-18 | V3.1-81 (planche) | aide-haiku | 58 693 | corrigé | Vignette de fond et case Apparence ; Opus : passages obsolètes de l'accueil retirés, case Apparence en colonne, hauteur 5 700 |
+| 2026-10-18 | V3.1-82 (interface) | dev-sonnet | 79 422 | corrigé | Carrousel conforme ; Opus : message après réclamation par `?reclame=1`, clavier sans `autoFocus`. |
+| 2026-10-18 | V3.1-82 (planche) | aide-haiku | 52 669 | accepté | Section « Choix du personnage » dans OutilsMJ.dc.html ; hauteur portée à 6 400 par Opus |
