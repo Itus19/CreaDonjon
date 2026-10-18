@@ -3,7 +3,10 @@ import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { listWorldCards } from "@/src/server/services/worlds";
 import { listSelectableRulesetsForCurrentUser } from "@/src/server/services/rules";
 import { isSuperadmin } from "@/src/server/services/account";
-import { getOwnProfile } from "@/src/server/repos/account";
+import { getOwnHandle, getOwnProfile } from "@/src/server/repos/account";
+import { getMyInvite } from "@/src/server/services/campaignInvites";
+import { isSyntheticAccountEmail } from "@/src/core/accounts/memberAccountActions";
+import { compteDuContexte, type DonneesCompte } from "@/lib/ui/compte";
 import { getAppIdentity } from "@/src/server/services/appIdentity";
 import type { Locale } from "@/src/i18n/request";
 import { logout } from "./login/actions";
@@ -18,13 +21,26 @@ export default async function Home() {
   const supabase = await createClient();
   const user = await getAuthUser(supabase);
   const locale = (await getLocale()) as Locale;
-  const [worlds, selectableRulesets, canUseSoloMode, profile, identite] = await Promise.all([
+  const [worlds, selectableRulesets, canUseSoloMode, profile, identite, handle, invite] = await Promise.all([
     user ? listWorldCards(supabase, locale, user.id) : Promise.resolve([]),
     listSelectableRulesetsForCurrentUser(supabase),
     user ? isSuperadmin(supabase, user.id) : Promise.resolve(false),
     user ? getOwnProfile(supabase, user.id) : Promise.resolve(null),
     getAppIdentity(),
+    user ? getOwnHandle(supabase, user.id) : Promise.resolve(null),
+    user ? getMyInvite(supabase, user.id) : Promise.resolve(null),
   ]);
+  // V3.1-80 : la page Compte reçoit tout avec la page (C1). De l'invitation, seuls
+  // l'id et la présence d'un mot de passe partent au client (règle 5).
+  const compte: DonneesCompte = {
+    displayName: profile?.display_name ?? "",
+    handle,
+    email: user?.email && !isSyntheticAccountEmail(user.email) ? user.email : null,
+    invite: invite ? { id: invite.id, hasPassword: invite.hasPassword } : null,
+    locale: locale === "en" ? "en" : "fr",
+    mondesPossedes: worlds.filter((w) => w.ownerId === user?.id).map((w) => w.name),
+    contexte: compteDuContexte(worlds),
+  };
   const officialRulesets = (selectableRulesets ?? []).filter((r) => r.is_official_base);
 
   return (
