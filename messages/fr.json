@@ -902,5 +902,69 @@
     "erreurEnregistrement": "Impossible d'enregistrer le calendrier.",
     "nomVide": "Un nom est vide : renseignez-le pour enregistrer.",
     "jourNonRegle": "Ne plus régler le jour actuel"
+  },
+  "journal": {
+    "titre": "Journal historique",
+    "chargement": "…",
+    "aucuneActivite": "Aucune activité pour l'instant.",
+    "aucunResultat": "Aucune modification ne correspond à ces filtres.",
+    "vues": {
+      "ariaLabel": "Présentation du journal",
+      "parFiche": "Par fiche",
+      "chronologique": "Chronologique"
+    },
+    "rechercheMarque": "Chercher une personne, une fiche, un mot…",
+    "rechercheAria": "Chercher dans le journal",
+    "qui": "Qui",
+    "element": "Élément",
+    "partie": "Partie modifiée",
+    "trier": "Trier",
+    "filtres": "Filtres",
+    "filtresActifs": "Filtres · {n}",
+    "feuilleTitre": "Filtres et tri",
+    "toutEffacer": "Tout effacer",
+    "retirerFiltre": "Retirer le filtre {nom}",
+    "voirResultats": "{n, plural, one {Voir # résultat} other {Voir # résultats}}",
+    "modifications": "{n, plural, one {# modification} other {# modifications}}",
+    "modificationsSur": "{n, plural, one {# modification} other {# modifications}} sur {total}",
+    "sansFiche": "Sans fiche (jeu)",
+    "ouvrirFicheSeule": "Ne voir que la fiche {nom}",
+    "aujourdhui": "Aujourd'hui",
+    "hier": "Hier",
+    "revision": "révision #{n}",
+    "sources": {
+      "wiki": "wiki",
+      "jeu": "jeu"
+    },
+    "elements": {
+      "pj": "Fiches de personnage",
+      "pnj": "PNJ",
+      "lieu": "Lieux",
+      "faction": "Factions",
+      "objet": "Objets",
+      "page": "Pages",
+      "jeu": "Jeu (jets, actions, narration)"
+    },
+    "tris": {
+      "recent": "Plus récent",
+      "ancien": "Plus ancien",
+      "personne": "Par personne",
+      "fiche": "Par fiche"
+    },
+    "verbes": {
+      "modifie": "a modifié",
+      "modifieDans": "a modifié {partie} de",
+      "joue": "a joué",
+      "joueAvec": "a joué avec"
+    },
+    "supprimees": {
+      "titre": "Fiches supprimées",
+      "aucune": "Aucune fiche supprimée pour l'instant.",
+      "supprimeeLe": "supprimée le {date}",
+      "retablir": "Rétablir",
+      "retablissement": "Rétablissement…",
+      "erreur": "Impossible de rétablir cette fiche.",
+      "sansNom": "(sans nom)"
+    }
   }
 }

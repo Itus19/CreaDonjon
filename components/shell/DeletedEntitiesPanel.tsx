@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
+import { restoreEntityAction } from "@/app/m/[worldSlug]/mj/journal-historique/actions";
+import { formaterJourCourt } from "./journal/format";
 import { useCachedGet } from "./useCachedGet";
 
 export interface DeletedEntitySummary {
@@ -11,54 +14,63 @@ export interface DeletedEntitySummary {
   deletedAt: string;
 }
 
-function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString("fr-FR", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
-}
-
 /**
- * Fiches supprimées, avec un "Rétablir" par ligne (retour utilisateur,
- * Journal d'historique) — même carte que `GmJournalPanel.tsx`, même
- * `useCachedGet` (pas de flash "Chargement…" en rebasculant d'onglet).
- * `router.refresh()` après un rétablissement reste acceptable ici (pas le
- * même anti-motif que RelationsChips.tsx/EntityTree.tsx) : c'est une
- * action rare et déliberée depuis une page à part, jamais répétée en
- * rafale — contrairement à ajouter des relations ou glisser-déposer des
- * catégories.
+ * Fiches supprimées, avec un « Rétablir » par ligne (V3.1-61). Même
+ * `useCachedGet` que le journal (pas de flash en rebasculant de section).
+ * « Rétablir » passe par une action serveur : elle revalide l'arborescence
+ * du monde, la fiche y revient sans rechargement de la page. Ici on ne
+ * rafraîchit que la liste des fiches supprimées. L'auteur de la suppression
+ * n'est pas conservé en base : il n'est donc pas affiché.
  */
 export default function DeletedEntitiesPanel({ worldSlug }: { worldSlug: string }) {
+  const t = useTranslations("journal.supprimees");
+  const tShell = useTranslations("shell");
+  const locale = useLocale();
   const { data, reload } = useCachedGet<DeletedEntitySummary[]>(`deleted-entities:${worldSlug}`, `/api/worlds/${worldSlug}/deleted-entities`);
   const entities = data ?? null;
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  function typeDe(kind: string): string {
+    const cle = `kindLabelsSingular.${kind}`;
+    return tShell.has(cle) ? tShell(cle) : tShell("kindLabelsSingular.other");
+  }
+
   async function restore(id: string) {
     setPendingId(id);
     setError(null);
-    const res = await fetch(`/api/entities/${id}/restore`, { method: "POST" });
-    setPendingId(null);
-    if (!res.ok) {
-      const body = (await res.json().catch(() => null)) as { error?: string } | null;
-      setError(body?.error ?? "Impossible de rétablir cette fiche.");
-      return;
+    try {
+      const result = await restoreEntityAction(worldSlug, id);
+      if ("error" in result) {
+        setError(result.error);
+        return;
+      }
+      reload();
+    } catch (erreur) {
+      console.error("Rétablissement impossible", erreur);
+      setError(t("erreur"));
+    } finally {
+      setPendingId(null);
     }
-    reload();
-    // La fiche rétablie doit réapparaître dans la barre latérale (arborescence
-    // rendue par le layout serveur, `app/m/[worldSlug]/(monde)/layout.tsx`) —
-    // seul un vrai rechargement de page l'atteint depuis cette page à part.
-    window.location.reload();
   }
 
   return (
     <div className="flex h-full flex-col gap-2 rounded-2xl border border-edge bg-panel-sunken p-4">
-      <h2 className="block-title text-base">Fiches supprimées</h2>
+      <div className="flex items-baseline gap-2">
+        <h2 className="block-title flex-1 text-base">{t("titre")}</h2>
+        {entities && entities.length > 0 && <span className="text-xs tabular-nums text-ink-muted">{entities.length}</span>}
+      </div>
       {entities === null && <p className="text-xs text-ink-muted">…</p>}
-      {entities && entities.length === 0 && <p className="text-xs text-ink-muted">Aucune fiche supprimée pour l&apos;instant.</p>}
+      {entities && entities.length === 0 && <p className="text-xs text-ink-muted">{t("aucune")}</p>}
       {entities && entities.length > 0 && (
-        <ul className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto text-xs">
+        <ul className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto text-sm">
           {entities.map((entity) => (
             <li key={entity.id} className="flex items-center justify-between gap-2 border-b border-edge/30 pb-1">
-              <span className="truncate text-ink-muted">
-                {entity.name || "(sans nom)"} <span className="text-ink-muted/70">· supprimée le {formatDateTime(entity.deletedAt)}</span>
+              <span className="min-w-0 text-ink">
+                {entity.name || t("sansNom")}{" "}
+                <span className="text-xs text-ink-muted">
+                  · {typeDe(entity.entityKind)} · {t("supprimeeLe", { date: formaterJourCourt(entity.deletedAt, locale) })}
+                </span>
               </span>
               <button
                 type="button"
@@ -66,13 +78,17 @@ export default function DeletedEntitiesPanel({ worldSlug }: { worldSlug: string 
                 disabled={pendingId === entity.id}
                 className="shrink-0 rounded-full border border-edge px-2.5 py-1 text-xs text-ink transition-colors hover:bg-panel-raised disabled:opacity-50"
               >
-                Rétablir
+                {pendingId === entity.id ? t("retablissement") : t("retablir")}
               </button>
             </li>
           ))}
         </ul>
       )}
-      {error && <p className="text-xs text-danger">{error}</p>}
+      {error && (
+        <p role="alert" className="text-xs text-danger">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

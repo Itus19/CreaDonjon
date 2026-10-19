@@ -35,11 +35,14 @@ export default async function MjJournalHistoriquePage({
         homeHref={`/m/${worldSlug}/mj/journal-historique`}
       />
       {gm ? (
-        <div className="flex min-h-0 flex-1 flex-col gap-4 md:flex-row">
-          <div className="min-h-0 flex-1">
+        // Ordinateur : le journal à gauche, les fiches supprimées à droite.
+        // Tablette et téléphone : une colonne, les fiches supprimées en bas
+        // (le journal garde une hauteur propre, il défile en dedans).
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto lg:flex-row lg:overflow-visible">
+          <div className="h-[75dvh] shrink-0 lg:h-auto lg:min-h-0 lg:flex-[2] lg:shrink">
             <GmJournalPanel worldSlug={worldSlug} />
           </div>
-          <div className="min-h-0 flex-1">
+          <div className="shrink-0 lg:min-h-0 lg:flex-1 lg:shrink">
             <DeletedEntitiesPanel worldSlug={worldSlug} />
           </div>
         </div>

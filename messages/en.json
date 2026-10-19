@@ -901,5 +901,69 @@
     "erreurEnregistrement": "Could not save the calendar.",
     "nomVide": "A name is empty: fill it in to save.",
     "jourNonRegle": "Stop setting the current day"
+  },
+  "journal": {
+    "titre": "History journal",
+    "chargement": "…",
+    "aucuneActivite": "No activity yet.",
+    "aucunResultat": "No change matches these filters.",
+    "vues": {
+      "ariaLabel": "Journal layout",
+      "parFiche": "By page",
+      "chronologique": "Chronological"
+    },
+    "rechercheMarque": "Search a person, a page, a word…",
+    "rechercheAria": "Search the journal",
+    "qui": "Who",
+    "element": "Element",
+    "partie": "Part changed",
+    "trier": "Sort",
+    "filtres": "Filters",
+    "filtresActifs": "Filters · {n}",
+    "feuilleTitre": "Filters and sort",
+    "toutEffacer": "Clear all",
+    "retirerFiltre": "Remove the {nom} filter",
+    "voirResultats": "{n, plural, one {See # result} other {See # results}}",
+    "modifications": "{n, plural, one {# change} other {# changes}}",
+    "modificationsSur": "{n, plural, one {# change} other {# changes}} of {total}",
+    "sansFiche": "No page (game)",
+    "ouvrirFicheSeule": "Show only the page {nom}",
+    "aujourdhui": "Today",
+    "hier": "Yesterday",
+    "revision": "revision #{n}",
+    "sources": {
+      "wiki": "wiki",
+      "jeu": "game"
+    },
+    "elements": {
+      "pj": "Character sheets",
+      "pnj": "NPCs",
+      "lieu": "Locations",
+      "faction": "Factions",
+      "objet": "Items",
+      "page": "Pages",
+      "jeu": "Game (rolls, actions, narration)"
+    },
+    "tris": {
+      "recent": "Most recent",
+      "ancien": "Oldest",
+      "personne": "By person",
+      "fiche": "By page"
+    },
+    "verbes": {
+      "modifie": "changed",
+      "modifieDans": "changed {partie} of",
+      "joue": "played",
+      "joueAvec": "played with"
+    },
+    "supprimees": {
+      "titre": "Deleted pages",
+      "aucune": "No deleted page yet.",
+      "supprimeeLe": "deleted on {date}",
+      "retablir": "Restore",
+      "retablissement": "Restoring…",
+      "erreur": "Could not restore this page.",
+      "sansNom": "(unnamed)"
+    }
   }
 }
