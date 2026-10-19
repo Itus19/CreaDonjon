@@ -59,6 +59,11 @@ export function elementDe(entree: JournalEntry): ElementJournal {
 }
 
 /** Minuscules sans accents, pour la recherche. */
+/** Les parties modifiées d'une entrée : le serveur joint celles d'une même révision par « , ». */
+export function partiesDe(entree: JournalEntry): string[] {
+  return entree.blockLabel === null ? [] : entree.blockLabel.split(", ").filter((p) => p.trim() !== "");
+}
+
 export function normaliser(texte: string): string {
   return texte.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
 }
@@ -76,7 +81,7 @@ export function correspond(entree: JournalEntry, filtres: FiltresJournal, libell
   if (filtres.fiche !== null && entree.entitySlug !== filtres.fiche) return false;
   if (ignorer !== "qui" && filtres.qui.length > 0 && !filtres.qui.includes(entree.accountName)) return false;
   if (ignorer !== "element" && filtres.elements.length > 0 && !filtres.elements.includes(elementDe(entree))) return false;
-  if (ignorer !== "partie" && filtres.parties.length > 0 && (entree.blockLabel === null || !filtres.parties.includes(entree.blockLabel))) return false;
+  if (ignorer !== "partie" && filtres.parties.length > 0 && !partiesDe(entree).some((p) => filtres.parties.includes(p))) return false;
   return true;
 }
 
@@ -108,7 +113,8 @@ export function compterParPartie(entrees: JournalEntry[], filtres: FiltresJourna
   const comptes = new Map<string, number>();
   for (const partie of listerParties(entrees)) comptes.set(partie, 0);
   for (const e of entrees) {
-    if (e.blockLabel !== null && correspond(e, filtres, libelles, "partie")) comptes.set(e.blockLabel, (comptes.get(e.blockLabel) ?? 0) + 1);
+    if (!correspond(e, filtres, libelles, "partie")) continue;
+    for (const partie of partiesDe(e)) comptes.set(partie, (comptes.get(partie) ?? 0) + 1);
   }
   return comptes;
 }
@@ -123,7 +129,7 @@ export function listerPersonnes(entrees: JournalEntry[]): string[] {
 /** Les parties modifiées présentes dans le journal, par ordre alphabétique. */
 export function listerParties(entrees: JournalEntry[]): string[] {
   const parties = new Set<string>();
-  for (const e of entrees) if (e.blockLabel !== null) parties.add(e.blockLabel);
+  for (const e of entrees) for (const partie of partiesDe(e)) parties.add(partie);
   return [...parties].sort((a, b) => a.localeCompare(b, "fr"));
 }
 

@@ -179,3 +179,20 @@ describe("groupesChronologiques", () => {
     expect(groupes.every((g) => g.genre === "fiche")).toBe(true);
   });
 });
+
+describe("parties modifiées d'une révision qui en touche plusieurs", () => {
+  // Le serveur joint les parties d'une même révision par « , » (`computeBlockLabels`).
+  const multiples = [entree({ blockLabel: "Personnage, Inventaire" }), entree({ blockLabel: "Inventaire" }), entree({ blockLabel: "Personnage, Inventaire, Incantation" })];
+  it("chaque partie est une case à part, jamais une combinaison", () => {
+    expect(listerParties(multiples)).toEqual(["Incantation", "Inventaire", "Personnage"]);
+  });
+  it("une révision compte dans chacune de ses parties", () => {
+    const comptes = compterParPartie(multiples, FILTRES_VIDES, LIBELLES);
+    expect(comptes.get("Inventaire")).toBe(3);
+    expect(comptes.get("Personnage")).toBe(2);
+    expect(comptes.get("Incantation")).toBe(1);
+  });
+  it("filtrer sur « Incantation » garde la révision qui la touche parmi d'autres parties", () => {
+    expect(filtrer(multiples, filtres({ parties: ["Incantation"] }), LIBELLES)).toHaveLength(1);
+  });
+});
