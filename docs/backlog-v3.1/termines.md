@@ -2,6 +2,41 @@
 
 ---
 
+### ☑ V3.1-143 — Journal : « supprimée … par X », et les fiches supprimées dans la fenêtre d'outil · `S` · sans modèle IA — **fait le 19 octobre**
+
+**Modèle conseillé : Opus** — une migration (une colonne et un déclencheur) ; l'affichage est court.
+
+**Demande de l'auteur (19 octobre)**, après V3.1-61 : la planche
+`Journal-Decide.dc.html` dit « supprimée le 6 oct. par Gabriel », mais la
+base ne garde pas l'auteur d'une suppression ; et la fenêtre d'outil du
+journal (`MjToolWindowContent`, cas `journal-historique`) ne montre pas les
+fiches supprimées, que la page montre.
+
+**Ce qui est décidé**
+- **Migration** : `entities.deleted_by uuid null references auth.users(id) on delete set null` (à la livraison, `auth.users` comme `created_by` plutôt que `profiles` : une suppression ne doit jamais échouer faute de ligne de profil). Rempli par la BASE, pas par l'application : un déclencheur `before update` met `deleted_by = auth.uid()` quand `deleted_at` passe de `null` à une date, et `deleted_by = null` quand la fiche est rétablie (`deleted_at` revient à `null`). Aucun chemin de suppression ne peut l'oublier, et un client ne peut pas l'écrire à la main (le déclencheur l'écrase). RLS inchangée ; `docs/SCHEMA.md` mis à jour. Les suppressions d'avant la migration restent sans auteur.
+- **Lecture** : la liste des fiches supprimées (`/api/worlds/[worldSlug]/deleted-entities`) renvoie aussi le nom de l'auteur (`getDisplayNamesForUsers`, une lecture groupée, jamais une par fiche) ; « supprimée le 6 oct. par Gabriel », ou sans « par … » quand l'auteur est inconnu.
+- **Fenêtre d'outil** : le cas `journal-historique` de `MjToolWindowContent` monte aussi `DeletedEntitiesPanel` (même disposition que la page : dessous sous 1024 px, à droite au-delà). « Rétablir » y passe par la même action serveur (`restoreEntityAction`).
+
+**Critères d'acceptation**
+- [x] Supprimer une fiche puis lire la corbeille : « supprimée le … par » le compte qui l'a supprimée (test d'intégration avec les comptes de test, `docs/TESTS.md`).
+- [x] Rétablir efface l'auteur ; une écriture directe de `deleted_by` par un client est écrasée par le déclencheur.
+- [x] La fenêtre d'outil du journal montre les fiches supprimées, et « Rétablir » y fonctionne sans rechargement.
+
+**Livré le 19 octobre.** Migration `20261019090000_entities_deleted_by`
+(colonne, déclencheur `stamp_entities_deleted_by`, `list_deleted_entities`
+recréée avec `deleted_by`), appliquée par l'auteur. Le service lit les noms
+des auteurs en une fois (`getDisplayNamesForUsers`). La page et la fenêtre
+d'outil partagent `journal/JournalEtCorbeille.tsx`, qui bascule sur la
+largeur du conteneur (64rem) et non plus de l'écran. Tests d'intégration
+`entitiesDeletedBy.integration.test.ts` (4 cas : écriture directe écrasée
+sur une fiche vivante comme supprimée, auteur posé et nommé, effacé au
+rétablissement). Vérifié en navigateur en Testeur MJ : « Essai Naissance »
+rétablie depuis la fenêtre d'outil sans rechargement, supprimée de nouveau,
+puis « supprimée le 19 oct. par Testeur MJ » ; elle reste dans la corbeille,
+comme avant, désormais avec un auteur.
+
+---
+
 ### ☑ V3.1-54 — Gestion de campagne au verre minéral, avec « Voir comme » · `S` · sans modèle IA — **fait le 19 octobre**
 
 **Modèle conseillé : Sonnet** — disposition déjà codée (V3.1-15) ; transposition seulement.
