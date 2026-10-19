@@ -2,6 +2,59 @@
 
 ---
 
+### ☑ V3.1-44 — Rencontres : l'atelier en trois colonnes · `M` · sans modèle IA — **fait le 19 octobre**
+
+**Modèle conseillé : Sonnet** — planche définitive ; budget et solveur inchangés.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Planche** : `Rencontres-Decide.dc.html`. **Départ** :
+`components/shell/EncounterBuilder.tsx`, cas `rencontres` de
+`MjToolWindowContent.tsx` et de la route
+`app/api/worlds/[worldSlug]/mj/[tool]/window/route.ts`. **Dépend de** : 20, 29.
+
+**Ce qui est décidé**
+- **Ordinateur, trois colonnes** : à gauche le groupe (PJ de la campagne
+  avec leurs vrais niveaux ; un absent se décoche et le budget suit), la
+  difficulté visée, « Mes rencontres » (une rencontre sauvegardée se
+  rouvre) ; au centre le catalogue du ruleset (recherche, filtres par type) ;
+  à droite la barre de budget (les trois paliers 2024 et la difficulté
+  visée), la rencontre en cours (± nombre, ×), « Génération aléatoire »,
+  « Sauvegarder », « Lancer le combat » (vers l'Initiative).
+- **Tablette** : les colonnes s'empilent. **Téléphone du MJ** : le groupe en
+  pastilles (prénom · niveau ; toucher un absent le retire, le budget
+  suit), la difficulté et la barre, la rencontre en cours, le catalogue en
+  feuille du bas, « Lancer le combat ».
+- **Inchangé** : le budget est une donnée du ruleset (`encounter_budget`),
+  le solveur reste celui du code, la table `campaign_encounters` reste.
+- Jauge : pendant un combat, la « menace restante » remplace le budget
+  (décidé avec l'Initiative, V3.1-38) — ce ticket n'affiche que le budget.
+
+**Critères d'acceptation**
+- [x] Décocher un PJ change le budget (même calcul que le serveur, aucun calcul de règle côté client : le budget vient de la réponse).
+- [x] Sauvegarder, rouvrir, lancer le combat : la rencontre arrive dans l'Initiative (lancement vérifié en direct ; sauvegarde et réouverture non exercées en direct : une rencontre sauvegardée ne s'efface pas, elle resterait en base).
+- [x] Le catalogue cherche dans le ruleset actif, sans requête par monstre.
+
+**Livré le 19 octobre.** Serveur (Opus) : `memberBudgetShares` dans
+`src/core/rules/encounter.ts` (la ligne d'un niveau ; la somme des parts
+redonne `encounterBudget`, testé) ; `src/server/services/encounterWorkshop.ts`
+(`listEncounterParty` : PJ, niveau total des classes, trois lectures
+groupées ; `withBudgetShares` ; `chargerAtelierRencontres`, chargeur commun
+de la page et de la fenêtre) ; la génération accepte `partyLevels` (Zod,
+1 à 20 niveaux de 1 à 20), l'ancien corps reste valide. Écran (Sonnet,
+retouché par Opus) : trois colonnes par requête de conteneur, empilées en
+fenêtre étroite, téléphone sous 28rem (pastilles, catalogue en feuille du
+bas) ; budget = somme des parts des présents, sans règle côté client ;
+repli « groupe hypothétique » si la campagne n'a aucun PJ ; types de
+créatures regroupés par base et traduits (`typeDeBase`,
+`CREATURE_TYPE_LABELS_FR`). Vérifié en navigateur (Testeur MJ) : deux PJ de
+niveau 1 → 100 / 150 / 200 PX, un absent → 50 / 75 / 100 ; génération avec
+`partyLevels: [1, 1]` ; lancement → Initiative (combat de test effacé) ;
+tablette en colonnes empilées ; téléphone en pastilles, feuille du bas
+(recherche, ajout, Échap).
+
+---
+
 ### ☑ V3.1-56 — Calendrier réel au verre minéral, côté MJ et côté joueuse · `M` · sans modèle IA — **fait le 19 octobre**
 
 **Modèle conseillé : Sonnet** — disposition déjà codée (V3.1-16) ; transposition seulement.

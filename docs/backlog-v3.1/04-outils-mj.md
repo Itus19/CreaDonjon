@@ -193,41 +193,6 @@ l'ajout (2) « Relancer » dépend de V3.1-22 (fils du chat).
 
 ---
 
-### ☐ V3.1-44 — Rencontres : l'atelier en trois colonnes · `M` · sans modèle IA — **prêt**
-
-**Modèle conseillé : Sonnet** — planche définitive ; budget et solveur inchangés.
-
-**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-**Planche** : `Rencontres-Decide.dc.html`. **Départ** :
-`components/shell/EncounterBuilder.tsx`, cas `rencontres` de
-`MjToolWindowContent.tsx` et de la route
-`app/api/worlds/[worldSlug]/mj/[tool]/window/route.ts`. **Dépend de** : 20, 29.
-
-**Ce qui est décidé**
-- **Ordinateur, trois colonnes** : à gauche le groupe (PJ de la campagne
-  avec leurs vrais niveaux ; un absent se décoche et le budget suit), la
-  difficulté visée, « Mes rencontres » (une rencontre sauvegardée se
-  rouvre) ; au centre le catalogue du ruleset (recherche, filtres par type) ;
-  à droite la barre de budget (les trois paliers 2024 et la difficulté
-  visée), la rencontre en cours (± nombre, ×), « Génération aléatoire »,
-  « Sauvegarder », « Lancer le combat » (vers l'Initiative).
-- **Tablette** : les colonnes s'empilent. **Téléphone du MJ** : le groupe en
-  pastilles (prénom · niveau ; toucher un absent le retire, le budget
-  suit), la difficulté et la barre, la rencontre en cours, le catalogue en
-  feuille du bas, « Lancer le combat ».
-- **Inchangé** : le budget est une donnée du ruleset (`encounter_budget`),
-  le solveur reste celui du code, la table `campaign_encounters` reste.
-- Jauge : pendant un combat, la « menace restante » remplace le budget
-  (décidé avec l'Initiative, V3.1-38) — ce ticket n'affiche que le budget.
-
-**Critères d'acceptation**
-- [ ] Décocher un PJ change le budget (même calcul que le serveur, aucun calcul de règle côté client : le budget vient de la réponse).
-- [ ] Sauvegarder, rouvrir, lancer le combat : la rencontre arrive dans l'Initiative.
-- [ ] Le catalogue cherche dans le ruleset actif, sans requête par monstre.
-
----
-
 ### ☐ V3.1-45 — Générateurs : les tirages à gauche, la fiche à droite · `M` · **avec modèle IA** — **prêt**
 
 **Modèle conseillé : Sonnet** — planche définitive ; tables et IA inchangées.
