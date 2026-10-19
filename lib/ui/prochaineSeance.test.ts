@@ -1,7 +1,7 @@
 import { createElement, type ComponentProps } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import NextSessionPanel from "./NextSessionPanel";
+import NextSessionPanel from "@/components/shell/scheduling/NextSessionPanel";
 
 type Initial = ComponentProps<typeof NextSessionPanel>["initial"];
 

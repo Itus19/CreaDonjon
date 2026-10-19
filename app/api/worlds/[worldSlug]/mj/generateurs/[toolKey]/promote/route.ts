@@ -112,7 +112,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       rest: {
         priority: priorityFromPoles(poles),
         aspirations: slots.aspiration
-          ? [{ id: crypto.randomUUID(), text: slots.aspiration, horizon: "arc", intensity: 2, visibility: { level: "public", scopeId: null } }]
+          ? [{ id: crypto.randomUUID(), text: slots.aspiration, horizon: "arc", intensity: 2, visibility: { level: "gm", scopeId: null } }]
           : [],
         lines: slots["ligne-rouge"] ? [slots["ligne-rouge"]] : [],
         limits: slots.limite ? [slots.limite] : [],
@@ -166,12 +166,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     ];
   });
 
+  // V3.1-45 : la fiche naît visible du MJ seul (tous ses blocs en `gm`) ; un
+  // joueur ne voit une entité que si l'un de ses blocs lui est visible. Le MJ
+  // dévoile ensuite ce qu'il veut.
   const promoted = await promoteToEntity(supabase, {
     worldId: world.id,
     createdBy: user.id,
     name: nameResult.text,
     entityKind: tool.promote.entityKind,
-    visibilityLevel: "public",
+    visibilityLevel: "gm",
     visibilityScopeId: null,
     blocks,
     statblock,

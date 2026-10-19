@@ -99,8 +99,9 @@ seul `PATCH …/scheduling/settings` 500 ms après le dernier clic ;
 « Confirmer » plein si `category === "full"` (créneau ≥ durée visée),
 contour accent sinon ; cartes et séances empilées par requête de conteneur.
 Joueuse : page « Prochaine séance », pavé de date agrandi. Test de rendu
-`NextSessionPanel.test.ts` (aucun outil MJ, avec une demande ouverte, un
-jour complet et des séances). Vérifié en navigateur sans demande ouverte :
+`lib/ui/prochaineSeance.test.ts` (aucun outil MJ, avec une demande ouverte,
+un jour complet et des séances ; d'abord posé sous `components/`, où Vitest
+ne cherche pas, et déplacé le 19 octobre avec V3.1-45 : il ne tournait pas). Vérifié en navigateur sans demande ouverte :
 MJ à 1280, 820 et 390 px, quatre clics − / + = une requête, durée inchangée
 (5 h) ; Testeuse A à 1280 et 390 px, aucun outil MJ. Non exercé en direct :
 la grille et l'en-tête d'une demande ouverte (en ouvrir une laisserait une
