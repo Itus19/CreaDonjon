@@ -67,7 +67,7 @@ export function PossibleDates({
   onConfirm?: (day: RankedDay) => void;
 }) {
   return (
-    <section className="flex flex-col rounded-[14px] border border-edge bg-panel pb-1.5 pt-4">
+    <section className="flex flex-col rounded-[18px] border border-edge bg-panel backdrop-blur-[var(--blur)] pb-1.5 pt-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2 px-4 pb-2.5">
         <h2 className="font-display text-lg text-ink">{title}</h2>
         <span className="text-xs text-ink-muted">{hint}</span>
@@ -100,7 +100,7 @@ export function PossibleDates({
               <button
                 type="button"
                 onClick={() => onConfirm(day)}
-                className={`shrink-0 rounded-full px-3 py-1.5 text-sm transition-colors ${full ? "bg-accent font-semibold text-accent-ink hover:bg-accent-hover" : "border border-edge text-ink hover:bg-panel-raised"}`}
+                className={`shrink-0 rounded-full px-3 py-1.5 text-sm transition-colors ${full ? "bg-accent font-medium text-accent-ink hover:bg-accent-hover" : "border border-accent text-accent hover:bg-accent/10"}`}
               >
                 Confirmer
               </button>
@@ -127,7 +127,7 @@ export function SessionsCard({
   onCancel?: (id: string) => void;
 }) {
   return (
-    <section className="rounded-[14px] border border-edge bg-panel p-4">
+    <section className="rounded-[18px] border border-edge bg-panel backdrop-blur-[var(--blur)] p-4">
       <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
         {title} · {sessions.length}
       </span>
@@ -139,7 +139,7 @@ export function SessionsCard({
               {formatDayShort(s.scheduled_date)} · {s.starts_at.slice(0, 5)} · {formatHours(s.duration_minutes)}
             </span>
             {onCancel && (
-              <button type="button" onClick={() => onCancel(s.id)} className="rounded-full border border-edge px-2.5 py-0.5 text-xs text-danger hover:bg-panel-raised">
+              <button type="button" onClick={() => onCancel(s.id)} className="rounded-full border border-danger px-2.5 py-0.5 text-xs text-danger transition-colors hover:bg-danger/10">
                 Annuler
               </button>
             )}
@@ -171,16 +171,16 @@ function formatDayMonth(date: string): { day: string; month: string } {
 /** La prochaine séance confirmée, en tête du Calendrier réel (MJ sans demande, et joueuse) — c'est ce qu'on vient chercher en premier. */
 export function NextSessionCard({ session, loading }: { session: RealSession | null; loading?: boolean }) {
   return (
-    <section className="flex items-center gap-5 rounded-[14px] border border-edge bg-panel p-5">
+    <section className="flex items-center gap-5 rounded-[18px] border border-edge bg-panel backdrop-blur-[var(--blur)] p-6">
       {session ? (
         <>
-          <div className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-[14px] border border-accent/60 bg-accent/15">
+          <div className="flex h-20 w-20 shrink-0 flex-col items-center justify-center rounded-[16px] border border-accent/60 bg-accent/15">
             <span className="text-xs text-accent">{formatDayMonth(session.scheduled_date).month}</span>
-            <span className="font-display text-2xl font-bold leading-none text-ink">{formatDayMonth(session.scheduled_date).day}</span>
+            <span className="font-display text-3xl font-bold leading-none text-ink">{formatDayMonth(session.scheduled_date).day}</span>
           </div>
           <div className="min-w-0 flex-1">
             <div className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Prochaine séance confirmée</div>
-            <div className="font-display text-xl font-semibold text-ink">
+            <div className="font-display text-2xl font-semibold text-ink">
               {formatDayLong(session.scheduled_date)} · {session.starts_at.slice(0, 5)}
             </div>
             <div className="text-xs text-ink-muted">

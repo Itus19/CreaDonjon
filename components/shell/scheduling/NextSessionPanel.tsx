@@ -104,7 +104,7 @@ export default function NextSessionPanel({
     return (
       <div className="flex items-center gap-3 text-sm text-danger">
         Impossible de charger la prochaine session.
-        <button type="button" onClick={loadOpenRequest} className="rounded-full border border-edge px-3 py-1 text-xs text-ink hover:bg-panel-raised">
+        <button type="button" onClick={loadOpenRequest} className="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised">
           Réessayer
         </button>
       </div>
@@ -119,7 +119,7 @@ export default function NextSessionPanel({
     <div className="flex flex-col gap-5">
       <NextSessionCard session={next} loading={upcoming === null} />
 
-      <section className="flex flex-col gap-3 rounded-[14px] border border-edge bg-panel p-4">
+      <section className="flex flex-col gap-3 rounded-[18px] border border-edge bg-panel backdrop-blur-[var(--blur)] p-4">
         {request ? (
           <>
             <div className="flex flex-wrap items-start justify-between gap-2">
@@ -154,9 +154,11 @@ export default function NextSessionPanel({
         <PossibleDates title="Les dates qui se dessinent" hint="c'est le MJ qui choisit · seuls les jours où quelqu'un est disponible" days={board.days} targetMinutes={board.targetMinutes} />
       )}
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <SessionsCard title="Séances à venir" sessions={upcoming ?? []} emptyLabel="Aucune séance confirmée." />
-        <SessionsCard title="Déjà jouées" sessions={past} emptyLabel="Aucune séance passée." muted />
+      <div className="@container">
+        <div className="grid grid-cols-1 gap-4 @2xl:grid-cols-2">
+          <SessionsCard title="Séances à venir" sessions={upcoming ?? []} emptyLabel="Aucune séance confirmée." />
+          <SessionsCard title="Déjà jouées" sessions={past} emptyLabel="Aucune séance passée." muted />
+        </div>
       </div>
     </div>
   );

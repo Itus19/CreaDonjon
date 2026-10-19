@@ -21,7 +21,7 @@ export default async function JoueurProchaineSessionPage({ params }: { params: P
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-3">
-      <h1 className="block-title text-base">Prochaine session</h1>
+      <h1 className="block-title text-base">Prochaine séance</h1>
       <NextSessionPanel worldSlug={worldSlug} initial={initial} />
     </div>
   );

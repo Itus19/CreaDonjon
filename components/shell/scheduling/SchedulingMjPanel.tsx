@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { minutesToTime, timeToMinutes } from "@/src/core/scheduling/overlap";
 import RequestAvailabilityForm from "./RequestAvailabilityForm";
 import AvailabilityGrid, { type GridResponse } from "./AvailabilityGrid";
@@ -18,6 +18,10 @@ import { NextSessionCard, PossibleDates, SessionsCard, formatHours, respondentCo
  * gestes d'avant restent : durée visée, annuler la demande, confirmer, régler
  * à la main, annuler une séance.
  */
+const DURATION_MIN = 60;
+const DURATION_MAX = 840;
+const DURATION_STEP = 30;
+
 export default function SchedulingMjPanel({ campaignId }: { campaignId: string }) {
   const [board, setBoard] = useState<OpenRequestBoard | "loading" | "error">("loading");
   // `null` tant que non chargé — la grille initialise son état peint UNE
@@ -32,6 +36,9 @@ export default function SchedulingMjPanel({ campaignId }: { campaignId: string }
   const [durationDraft, setDurationDraft] = useState(300);
   /** Sans demande en cours : l'écran vide (esquisse « MJ — sans demande »), puis le formulaire au clic. */
   const [showForm, setShowForm] = useState(false);
+
+  /** Délai avant l'envoi de la durée : plusieurs clics sur − / + ne font qu'une requête. */
+  const durationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const manualDuration = timeToMinutes(manualEndTime) - timeToMinutes(manualTime);
 
@@ -109,13 +116,29 @@ export default function SchedulingMjPanel({ campaignId }: { campaignId: string }
     fetch(`/api/campaigns/${campaignId}/scheduling/sessions/${id}`, { method: "DELETE" }).then(() => loadSessions());
   }
 
-  function saveDuration() {
+  function saveDuration(minutes: number) {
     fetch(`/api/campaigns/${campaignId}/scheduling/settings`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ minutes: durationDraft }),
+      body: JSON.stringify({ minutes }),
     }).then(loadBoard);
   }
+
+  /** − / + : pas de 30 min entre 1 h et 14 h, enregistré 500 ms après le dernier clic. */
+  function stepDuration(delta: number) {
+    const next = Math.min(DURATION_MAX, Math.max(DURATION_MIN, durationDraft + delta));
+    if (next === durationDraft) return;
+    setDurationDraft(next);
+    if (durationTimer.current) clearTimeout(durationTimer.current);
+    durationTimer.current = setTimeout(() => saveDuration(next), 500);
+  }
+
+  useEffect(
+    () => () => {
+      if (durationTimer.current) clearTimeout(durationTimer.current);
+    },
+    []
+  );
 
   if (board === "loading") return <p className="text-xs italic text-ink-muted">Chargement…</p>;
   if (board === "error")
@@ -132,29 +155,43 @@ export default function SchedulingMjPanel({ campaignId }: { campaignId: string }
   const inputClass = "rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none";
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="@container flex flex-col gap-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="font-display text-2xl text-ink">{request ? request.title : showForm ? "Demander les disponibilités" : "Prochaine séance"}</h2>
           {request && (
             <div className="mt-1 text-xs text-ink-muted">
-              Créneau proposé : {request.starts_at.slice(0, 5)} – {request.ends_at.slice(0, 5)} · {request.candidate_dates.length} jours · {respondentCount(board.heatmap)} réponses sur {board.expected}
+              Créneau proposé · {request.starts_at.slice(0, 5)} – {request.ends_at.slice(0, 5)} · {request.candidate_dates.length} jours · {respondentCount(board.heatmap)} réponses sur {board.expected}
             </div>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <label className="flex items-center gap-2 text-xs text-ink-muted">
+          <div className="flex items-center gap-2 text-xs text-ink-muted">
             Durée visée
-            <input type="number" min={30} step={30} value={durationDraft} onChange={(e) => setDurationDraft(Number(e.target.value))} className={`w-20 ${inputClass}`} />
-            min
-          </label>
-          {durationDraft !== board.targetMinutes && (
-            <button type="button" onClick={saveDuration} className="rounded-full border border-edge px-3 py-1 text-xs text-ink hover:bg-panel-raised">
-              Enregistrer
-            </button>
-          )}
+            <span className="inline-flex items-center gap-1 rounded-full border border-edge bg-panel-sunken p-[3px]">
+              <button
+                type="button"
+                onClick={() => stepDuration(-DURATION_STEP)}
+                disabled={durationDraft <= DURATION_MIN}
+                aria-label="Diminuer la durée visée"
+                className="grid h-6 w-6 place-items-center rounded-full text-sm text-ink transition-colors hover:bg-panel-raised disabled:opacity-50"
+              >
+                −
+              </button>
+              <b className="min-w-12 text-center font-mono text-sm font-medium text-ink">{formatHours(durationDraft)}</b>
+              <button
+                type="button"
+                onClick={() => stepDuration(DURATION_STEP)}
+                disabled={durationDraft >= DURATION_MAX}
+                aria-label="Augmenter la durée visée"
+                className="grid h-6 w-6 place-items-center rounded-full text-sm text-ink transition-colors hover:bg-panel-raised disabled:opacity-50"
+              >
+                +
+              </button>
+            </span>
+          </div>
           {request && (
-            <button type="button" onClick={cancelRequest} className="rounded-full border border-edge px-3 py-1.5 text-sm text-ink hover:bg-panel-raised">
+            <button type="button" onClick={cancelRequest} className="rounded-full border border-danger px-3 py-1.5 text-sm text-danger transition-colors hover:bg-danger/10">
               Annuler la demande
             </button>
           )}
@@ -163,7 +200,7 @@ export default function SchedulingMjPanel({ campaignId }: { campaignId: string }
 
       {request ? (
         <>
-          <section className="flex flex-col gap-3 rounded-[14px] border border-edge bg-panel p-4">
+          <section className="flex flex-col gap-3 rounded-[18px] border border-edge bg-panel backdrop-blur-[var(--blur)] p-4">
             {myAvailabilities === null ? (
               <p className="text-xs italic text-ink-muted">Chargement…</p>
             ) : (
@@ -199,7 +236,7 @@ export default function SchedulingMjPanel({ campaignId }: { campaignId: string }
       ) : (
         <>
           <NextSessionCard session={upcoming[0] ?? null} />
-          <section className="flex flex-col items-center gap-2.5 rounded-[14px] border border-edge bg-panel px-6 py-9 text-center">
+          <section className="flex flex-col items-center gap-2.5 rounded-[18px] border border-edge bg-panel backdrop-blur-[var(--blur)] px-6 py-9 text-center">
             <h3 className="font-display text-xl text-ink">Aucune demande de disponibilités en cours</h3>
             <p className="max-w-lg text-sm text-ink-muted">Propose des dates et une plage horaire : chaque joueuse coche ce qui lui va, et les meilleures dates se classent toutes seules.</p>
             <button type="button" onClick={() => setShowForm(true)} className="mt-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-ink hover:bg-accent-hover">
@@ -209,8 +246,8 @@ export default function SchedulingMjPanel({ campaignId }: { campaignId: string }
         </>
       )}
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <section className="flex flex-col gap-2.5 rounded-[14px] border border-edge bg-panel p-4">
+      <div className="grid grid-cols-1 gap-4 @3xl:grid-cols-3">
+        <section className="flex flex-col gap-2.5 rounded-[18px] border border-edge bg-panel backdrop-blur-[var(--blur)] p-4">
           <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Régler une date à la main</span>
           <div className="flex flex-wrap items-center gap-2">
             <input type="date" value={manualDate} onChange={(e) => setManualDate(e.target.value)} aria-label="Date de la séance" className={inputClass} />
