@@ -42,12 +42,15 @@ export default function FicheCompanion({
   worldSlug,
   target,
   isGm,
+  dansFeuille,
   onClose,
 }: {
   worldSlug: string;
   target: CompanionTarget;
   /** Pure préférence d'affichage (assistance IA, bouton "Demande de modif au MJ"...) — jamais une question de sécurité, déjà tranchée côté serveur par `canUserEditEntity`. */
   isGm?: boolean;
+  /** Au téléphone la fiche vit dans une feuille du bas, qui a déjà sa poignée et son titre : on retire l'en-tête et sa croix. */
+  dansFeuille?: boolean;
   onClose: () => void;
 }) {
   const [data, setData] = useState<CompanionData | RuleEntryDetail | null>(null);
@@ -70,13 +73,16 @@ export default function FicheCompanion({
   }, [worldSlug, target]);
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center justify-end border-b border-edge/60 px-2 py-1">
-        <button type="button" onClick={onClose} title="Fermer" aria-label="Fermer" className="rounded px-1.5 py-0.5 text-sm text-ink-muted hover:bg-panel-raised hover:text-ink">
-          ×
-        </button>
-      </div>
-      <div className="min-h-0 flex-1 overflow-y-auto p-4">
+    <div className="flex h-full min-h-0 flex-col">
+      {!dansFeuille && (
+        <div className="flex shrink-0 items-center justify-between border-b border-edge/60 px-3 py-2">
+          <span className="text-xs font-bold uppercase tracking-widest text-ink-muted">{target.kind === "rule" ? "Règle citée" : "Fiche citée"}</span>
+          <button type="button" onClick={onClose} title="Fermer" aria-label="Fermer la fiche" className="rounded-full px-2 py-0.5 text-sm text-ink-muted transition-colors hover:bg-panel-raised hover:text-ink">
+            ×
+          </button>
+        </div>
+      )}
+      <div className={`min-h-0 flex-1 overflow-y-auto ${dansFeuille ? "" : "p-4"}`}>
         {error ? (
           <p className="text-sm text-danger">Fiche introuvable ou plus visible.</p>
         ) : !data ? (

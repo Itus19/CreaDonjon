@@ -24,7 +24,7 @@ export default async function JoueurNotesPage({ params }: { params: Promise<{ wo
 
   return (
     <div className="flex h-full min-h-[480px] flex-col gap-2">
-      <p className="text-xs text-ink-muted">Privées — ni le MJ ni les autres joueurs ne les voient, sauf ce que vous épinglez et qui reste soumis à sa visibilité normale.</p>
+      <p className="text-xs text-ink-muted">Privées par défaut : seule une page que vous passez sur « La table » est lue par les autres, sans qu&apos;ils puissent l&apos;écrire.</p>
       <div className="min-h-0 flex-1">
         <NotebookWorkspace worldSlug={worldSlug} initial={notebook} />
       </div>

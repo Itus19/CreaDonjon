@@ -32,7 +32,7 @@ export default async function MjNotesPage({ params }: { params: Promise<{ worldS
       <RegisterPrimaryWindow windowRef={{ kind: "mj", key: "notes" }} name="Bloc-notes" badge="" homeHref={`/m/${worldSlug}/mj/notes`} />
       <div>
         <h1 className="block-title text-base">Bloc-notes</h1>
-        <p className="text-xs text-ink-muted">Vos notes, organisées en pages et sous-pages — privées, jamais visibles des joueuses.</p>
+        <p className="text-xs text-ink-muted">Vos notes, organisées en pages et sous-pages — privées, sauf les pages que vous partagez à la table.</p>
       </div>
       <div className="min-h-0 flex-1">
         <NotebookWorkspace worldSlug={worldSlug} initial={notebook} isGm sessionPrepTemplate />
