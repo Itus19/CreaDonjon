@@ -55,7 +55,7 @@ export default function ConfirmDialog({
         ref={panelRef}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-sm rounded-lg border border-edge-strong bg-panel-raised p-4 shadow-2xl outline-none"
+        className="w-full max-w-sm rounded-[18px] border border-edge-strong bg-panel-raised p-4 shadow-2xl outline-none backdrop-blur-[var(--blur)]"
       >
         <h2 className="text-sm font-semibold text-ink">{title}</h2>
         <p className="mt-1.5 text-sm text-ink-muted">{message}</p>

@@ -89,7 +89,7 @@ export default function CampaignsPanel({
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-edge bg-panel-sunken p-4">
+    <div className="flex flex-col gap-3 rounded-[18px] border border-edge bg-panel p-4 backdrop-blur-[var(--blur)]">
       <h2 className="block-title text-base">Campagne</h2>
 
       {campaigns.length === 0 && (

@@ -177,7 +177,7 @@ function InviteRow({
                 {invite.claimedName}
                 {invite.claimedCharacterName && <span className="text-ink-muted"> joue {invite.claimedCharacterName}</span>}
               </p>
-              <p className="text-xs text-ink-muted">
+              <p className="hidden text-xs text-ink-muted sm:block">
                 {roleLabel} · lien créé le {formatDate(invite.createdAt)}
                 {hasPassword && <span className="ml-1.5 text-accent">· protégé</span>}
               </p>
@@ -185,7 +185,7 @@ function InviteRow({
           ) : reusable ? (
             <>
               <p className="text-sm text-ink">Joueur — lien réutilisable</p>
-              <p className="text-xs text-ink-muted">
+              <p className="hidden text-xs text-ink-muted sm:block">
                 Créé le {formatDate(invite.createdAt)} · qui l&apos;a utilisé apparaît dans « Membres »
                 {hasPassword && <span className="ml-1.5 text-accent">· protégé</span>}
               </p>
@@ -193,7 +193,7 @@ function InviteRow({
           ) : (
             <>
               <p className="text-sm text-ink">{roleLabel}</p>
-              <p className="text-xs text-ink-muted">
+              <p className="hidden text-xs text-ink-muted sm:block">
                 Créé le {formatDate(invite.createdAt)} · jamais ouvert
                 {hasPassword && <span className="ml-1.5 text-accent">· protégé</span>}
               </p>
@@ -347,7 +347,7 @@ export default function InviteLinkPanel({
   const inputClass = "min-w-0 rounded-md border border-edge bg-transparent px-2.5 py-1.5 text-sm text-ink outline-none placeholder:text-ink-muted disabled:opacity-50";
 
   return (
-    <section className="flex flex-col gap-3 rounded-[14px] border border-edge bg-panel p-5">
+    <section className="flex flex-col gap-3 rounded-[18px] border border-edge bg-panel p-5 backdrop-blur-[var(--blur)]">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h3 className="font-display text-lg text-ink">Invitations</h3>
         <span className="text-xs text-ink-muted">

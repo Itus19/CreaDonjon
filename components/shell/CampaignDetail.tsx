@@ -353,7 +353,7 @@ export default function CampaignDetail({
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {people.players.map((player) => (
-            <div key={player.userId} className="flex flex-col gap-3 rounded-[14px] border border-edge bg-panel p-4">
+            <div key={player.userId} className="flex flex-col gap-3 rounded-[18px] border border-edge bg-panel p-4 backdrop-blur-[var(--blur)]">
               <div className="flex items-center gap-2.5">
                 <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-panel-raised font-semibold text-ink">{player.name.charAt(0).toUpperCase()}</span>
                 <div className="min-w-0 flex-1">
@@ -419,7 +419,7 @@ export default function CampaignDetail({
         </div>
       )}
 
-      <section className="flex flex-col gap-2.5 rounded-[10px] border border-edge bg-panel-sunken p-4">
+      <section className="flex flex-col gap-2.5 rounded-[18px] border border-edge bg-panel p-4 backdrop-blur-[var(--blur)]">
         <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Personnages sans joueur</span>
         <div className="flex flex-wrap gap-1.5">
           {people.unclaimed.length === 0 && <span className="text-xs text-ink-muted">Aucun.</span>}

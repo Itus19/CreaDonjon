@@ -42,7 +42,11 @@ export default function ActionsMenu({
       setOpen(false);
     }
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") {
+        setOpen(false);
+        // Le focus revient au déclencheur : le menu est en portail, ses entrées disparaissent à la fermeture.
+        triggerRef.current?.focus();
+      }
     }
     document.addEventListener("mousedown", onDocMouseDown);
     document.addEventListener("keydown", onKeyDown);
@@ -91,7 +95,7 @@ export default function ActionsMenu({
           <div
             ref={panelRef}
             role="menu"
-            className="fixed z-[1000] overflow-hidden rounded-md border border-edge-strong bg-panel-raised shadow-2xl"
+            className="fixed z-[1000] overflow-hidden rounded-[14px] border border-edge-strong bg-panel-raised shadow-2xl backdrop-blur-[var(--blur)]"
             style={{ top: rect.top, bottom: rect.bottom, left: rect.left, width: rect.width }}
           >
             {items.map((item) => (
