@@ -960,6 +960,7 @@
       "titre": "Deleted pages",
       "aucune": "No deleted page yet.",
       "supprimeeLe": "deleted on {date}",
+      "supprimeeLePar": "deleted on {date} by {nom}",
       "retablir": "Restore",
       "retablissement": "Restoring…",
       "erreur": "Could not restore this page.",

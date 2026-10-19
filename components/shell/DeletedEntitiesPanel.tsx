@@ -12,6 +12,8 @@ export interface DeletedEntitySummary {
   slug: string;
   entityKind: string;
   deletedAt: string;
+  /** V3.1-143 : nom de qui l'a supprimée ; `null` si inconnu (suppressions d'avant V3.1-143). */
+  deletedByName: string | null;
 }
 
 /**
@@ -20,7 +22,7 @@ export interface DeletedEntitySummary {
  * « Rétablir » passe par une action serveur : elle revalide l'arborescence
  * du monde, la fiche y revient sans rechargement de la page. Ici on ne
  * rafraîchit que la liste des fiches supprimées. L'auteur de la suppression
- * n'est pas conservé en base : il n'est donc pas affiché.
+ * (V3.1-143) est posé par la base ; inconnu, la ligne dit seulement la date.
  */
 export default function DeletedEntitiesPanel({ worldSlug }: { worldSlug: string }) {
   const t = useTranslations("journal.supprimees");
@@ -69,7 +71,9 @@ export default function DeletedEntitiesPanel({ worldSlug }: { worldSlug: string 
               <span className="min-w-0 text-ink">
                 {entity.name || t("sansNom")}{" "}
                 <span className="text-xs text-ink-muted">
-                  · {typeDe(entity.entityKind)} · {t("supprimeeLe", { date: formaterJourCourt(entity.deletedAt, locale) })}
+                  · {typeDe(entity.entityKind)} · {entity.deletedByName
+                    ? t("supprimeeLePar", { date: formaterJourCourt(entity.deletedAt, locale), nom: entity.deletedByName })
+                    : t("supprimeeLe", { date: formaterJourCourt(entity.deletedAt, locale) })}
                 </span>
               </span>
               <button

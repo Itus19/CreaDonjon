@@ -1162,6 +1162,7 @@ export type Database = {
           created_by: string | null
           current_mechanical_revision_id: string | null
           deleted_at: string | null
+          deleted_by: string | null
           display_order: number
           entity_kind: string
           id: string
@@ -1179,6 +1180,7 @@ export type Database = {
           created_by?: string | null
           current_mechanical_revision_id?: string | null
           deleted_at?: string | null
+          deleted_by?: string | null
           display_order?: number
           entity_kind?: string
           id?: string
@@ -1196,6 +1198,7 @@ export type Database = {
           created_by?: string | null
           current_mechanical_revision_id?: string | null
           deleted_at?: string | null
+          deleted_by?: string | null
           display_order?: number
           entity_kind?: string
           id?: string
@@ -2895,6 +2898,7 @@ export type Database = {
         Args: { p_world_id: string }
         Returns: {
           deleted_at: string
+          deleted_by: string | null
           entity_kind: string
           id: string
           name: string

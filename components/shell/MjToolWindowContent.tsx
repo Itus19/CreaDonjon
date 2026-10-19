@@ -3,7 +3,7 @@
 import type { MjToolWindowData } from "./mjToolWindows";
 import CampaignsPanel from "./CampaignsPanel";
 import ChatThreadsPanel from "./ChatThreadsPanel";
-import GmJournalPanel from "./GmJournalPanel";
+import JournalEtCorbeille from "./journal/JournalEtCorbeille";
 import PartyProbabilityTable from "./PartyProbabilityTable";
 import EncounterBuilder from "./EncounterBuilder";
 import InitiativeTracker from "./InitiativeTracker";
@@ -54,7 +54,7 @@ export default function MjToolWindowContent({ worldSlug, data }: { worldSlug: st
       );
 
     case "journal-historique":
-      return data.isGm ? <GmJournalPanel worldSlug={worldSlug} /> : <p className="text-sm text-ink-muted">Réservé au MJ de ce monde.</p>;
+      return data.isGm ? <JournalEtCorbeille worldSlug={worldSlug} /> : <p className="text-sm text-ink-muted">Réservé au MJ de ce monde.</p>;
 
     case "probabilites":
       return <PartyProbabilityTable party={data.party} hasCampaign={data.hasCampaign} />;

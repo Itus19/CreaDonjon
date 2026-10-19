@@ -961,6 +961,7 @@
       "titre": "Fiches supprimées",
       "aucune": "Aucune fiche supprimée pour l'instant.",
       "supprimeeLe": "supprimée le {date}",
+      "supprimeeLePar": "supprimée le {date} par {nom}",
       "retablir": "Rétablir",
       "retablissement": "Rétablissement…",
       "erreur": "Impossible de rétablir cette fiche.",

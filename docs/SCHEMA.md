@@ -228,6 +228,7 @@ create table entities (
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now(),
   deleted_at    timestamptz,
+  deleted_by    uuid references auth.users(id) on delete set null, -- V3.1-143, posé par la base
 
   search_fr tsvector generated always as (
     to_tsvector('french',
@@ -245,6 +246,8 @@ create index entities_aliases_idx   on entities using gin (aliases);
 create index entities_name_trgm_idx on entities using gin (name gin_trgm_ops);
 create index entities_kind_idx      on entities (world_id, entity_kind) where deleted_at is null;
 ```
+
+**Qui a supprimé (V3.1-143)** : `deleted_by` est rempli par le déclencheur `stamp_entities_deleted_by` (`before insert or update`), jamais par l'application : `auth.uid()` quand `deleted_at` passe de null à une date, `null` quand la fiche est vivante ou rétablie, l'ancienne valeur sinon. Une écriture directe par un client est toujours écrasée. `public.list_deleted_entities` le rend ; les suppressions d'avant V3.1-143 restent sans auteur.
 
 **Valeurs recommandées pour `entity_kind`** : `character`, `creature`, `location`, `faction`, `item`, `event`, `quest`, `concept`, `other`.
 

@@ -37,6 +37,7 @@ import { listPlayerCharacterEntityIds } from "@/src/server/services/worldPlayerC
 import { canUserEditEntity, isWorldAdmin } from "@/src/server/services/permissions";
 import { buildViewerForWorld } from "@/src/server/services/visibility";
 import { getSessionJournalTreeGroup } from "@/src/server/services/sessionJournalTree";
+import { getDisplayNamesForUsers } from "@/src/server/repos/activityJournal";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -368,9 +369,19 @@ export async function ensureGeneratorToolsEntity(supabase: TypedClient, worldId:
   return entityId;
 }
 
-/** Journal d'historique, "rétablir une fiche supprimée" — appelant deja verifie MJ de ce monde (meme garde que le reste du journal), simple passe-plat. */
-export async function listDeletedEntitiesForWorld(supabase: TypedClient, worldId: string): Promise<DeletedEntitySummary[]> {
-  return listDeletedEntities(supabase, worldId);
+/** Une fiche supprimée, avec le nom de qui l'a supprimée (V3.1-143) — `null` si inconnu. */
+export type DeletedEntityView = DeletedEntitySummary & { deletedByName: string | null };
+
+/**
+ * Journal d'historique, "rétablir une fiche supprimée" — appelant deja
+ * verifie MJ de ce monde (meme garde que le reste du journal). Les noms des
+ * auteurs se lisent en une fois pour toute la liste, jamais un par fiche.
+ */
+export async function listDeletedEntitiesForWorld(supabase: TypedClient, worldId: string): Promise<DeletedEntityView[]> {
+  const entities = await listDeletedEntities(supabase, worldId);
+  const authorIds = [...new Set(entities.flatMap((e) => (e.deletedBy ? [e.deletedBy] : [])))];
+  const names = authorIds.length > 0 ? await getDisplayNamesForUsers(supabase, authorIds) : new Map<string, string>();
+  return entities.map((e) => ({ ...e, deletedByName: (e.deletedBy && names.get(e.deletedBy)) || null }));
 }
 
 export async function restoreDeletedEntity(

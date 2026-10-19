@@ -293,13 +293,15 @@ export interface DeletedEntitySummary {
   slug: string;
   entityKind: string;
   deletedAt: string;
+  /** V3.1-143 : le compte qui l'a supprimée (posé par la base) ; `null` avant V3.1-143. */
+  deletedBy: string | null;
 }
 
 /** Retour utilisateur (Journal d'historique, "rétablir une fiche supprimée") — `public.list_deleted_entities` (RPC, row_security off) : `entities_select` masque justement les lignes `deleted_at is not null`, un `.from("entities")` normal n'en verrait jamais aucune. Reserve au MJ du monde (verifie a l'interieur de la fonction, `app.is_world_admin`). */
 export async function listDeletedEntities(supabase: TypedClient, worldId: string): Promise<DeletedEntitySummary[]> {
   const { data, error } = await supabase.rpc("list_deleted_entities", { p_world_id: worldId });
   if (error) throw new Error(error.message);
-  return data.map((row) => ({ id: row.id, name: row.name, slug: row.slug, entityKind: row.entity_kind, deletedAt: row.deleted_at }));
+  return data.map((row) => ({ id: row.id, name: row.name, slug: row.slug, entityKind: row.entity_kind, deletedAt: row.deleted_at, deletedBy: row.deleted_by }));
 }
 
 /**

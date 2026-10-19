@@ -2,8 +2,7 @@ import { notFound } from "next/navigation";
 import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { isWorldAdmin } from "@/src/server/services/permissions";
-import GmJournalPanel from "@/components/shell/GmJournalPanel";
-import DeletedEntitiesPanel from "@/components/shell/DeletedEntitiesPanel";
+import JournalEtCorbeille from "@/components/shell/journal/JournalEtCorbeille";
 import RegisterPrimaryWindow from "@/components/shell/RegisterPrimaryWindow";
 
 /**
@@ -35,17 +34,7 @@ export default async function MjJournalHistoriquePage({
         homeHref={`/m/${worldSlug}/mj/journal-historique`}
       />
       {gm ? (
-        // Ordinateur : le journal à gauche, les fiches supprimées à droite.
-        // Tablette et téléphone : une colonne, les fiches supprimées en bas
-        // (le journal garde une hauteur propre, il défile en dedans).
-        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto lg:flex-row lg:overflow-visible">
-          <div className="h-[75dvh] shrink-0 lg:h-auto lg:min-h-0 lg:flex-[2] lg:shrink">
-            <GmJournalPanel worldSlug={worldSlug} />
-          </div>
-          <div className="shrink-0 lg:min-h-0 lg:flex-1 lg:shrink">
-            <DeletedEntitiesPanel worldSlug={worldSlug} />
-          </div>
-        </div>
+        <JournalEtCorbeille worldSlug={worldSlug} />
       ) : (
         <p className="text-sm text-ink-muted">Réservé au MJ de ce monde.</p>
       )}
