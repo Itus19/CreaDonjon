@@ -66,14 +66,20 @@ export async function markWritten(supabase: TypedClient, params: { id: string; e
   return toRow(data);
 }
 
-export async function listAssignmentsForCampaign(supabase: TypedClient, campaignId: string): Promise<SessionJournalEntryRow[]> {
+/** Un devoir avec le nom et le slug de son entrée rédigée (V3.1-43 : registre du MJ) ; `null` tant qu'il est en attente, ou si la RLS cache l'entrée. */
+export interface SessionJournalAssignmentView extends SessionJournalEntryRow {
+  entity_name: string | null;
+  entity_slug: string | null;
+}
+
+export async function listAssignmentsForCampaign(supabase: TypedClient, campaignId: string): Promise<SessionJournalAssignmentView[]> {
   const { data, error } = await supabase
     .from("session_journal_entries")
-    .select(COLUMNS)
+    .select(`${COLUMNS}, entities(name, slug)`)
     .eq("campaign_id", campaignId)
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
-  return data.map(toRow);
+  return data.map(({ entities, ...row }) => ({ ...toRow(row), entity_name: entities?.name ?? null, entity_slug: entities?.slug ?? null }));
 }
 
 /** Devoirs en attente d'un compte, tous mondes/campagnes confondus ou une seule campagne selon l'appelant. */

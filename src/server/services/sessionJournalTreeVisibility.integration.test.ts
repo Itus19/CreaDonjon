@@ -3,6 +3,7 @@ import { createClient as createSupabaseClient, type SupabaseClient } from "@supa
 import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
 import type { Database, Json } from "@/src/types/database";
 import { getEntityTree } from "./entities";
+import { listJournalAssignments } from "./sessionJournal";
 
 /**
  * V3.1-43 — « La joueuse voit le Livre en tête de son sommaire, jamais une
@@ -23,6 +24,7 @@ describe.skipIf(!hasCreds)("le Livre de sessions dans le sommaire d'une joueuse 
   let gm: Account;
   let player: Account;
   let worldId: string;
+  let campaignId: string;
 
   beforeAll(async () => {
     admin = createSupabaseClient<Database>(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
@@ -42,6 +44,7 @@ describe.skipIf(!hasCreds)("le Livre de sessions dans le sommaire d'une joueuse 
       .select("id")
       .single();
     if (campaignError || !campaign) throw new Error(campaignError?.message ?? "creation campagne echouee");
+    campaignId = campaign.id;
     await admin.from("campaign_members").insert([
       { campaign_id: campaign.id, user_id: gm.id, role: "gm" },
       { campaign_id: campaign.id, user_id: player.id, role: "player" },
@@ -78,6 +81,14 @@ describe.skipIf(!hasCreds)("le Livre de sessions dans le sommaire d'une joueuse 
     const noms = arbre[0]?.items.map((i) => i.name);
     expect(noms).toContain("Séance publique");
     expect(noms).not.toContain("Séance secrète");
+  });
+
+  it("la liste des devoirs du MJ porte le nom et le slug de chaque entrée rédigée", async () => {
+    const devoirs = await listJournalAssignments(typed(gm), campaignId);
+    expect(devoirs.map((d) => [d.entity_name, d.entity_slug]).sort()).toEqual([
+      ["Séance publique", "seance-1"],
+      ["Séance secrète", "seance-2"],
+    ]);
   });
 
   it("le MJ voit les deux entrées", async () => {

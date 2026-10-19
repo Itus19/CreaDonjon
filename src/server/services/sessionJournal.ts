@@ -10,6 +10,7 @@ import {
   listPendingAssignmentsForUser,
   claimJournalEntryGrant,
   type SessionJournalEntryRow,
+  type SessionJournalAssignmentView,
   type WrittenJournalEntry,
 } from "@/src/server/repos/sessionJournal";
 import { createEntity } from "@/src/server/services/entities";
@@ -33,7 +34,7 @@ type TypedClient = SupabaseClient<Database>;
 export { SESSION_JOURNAL_KIND, getLatestSessionJournalSlug, getSessionJournalTreeGroup } from "@/src/server/services/sessionJournalTree";
 import { SESSION_JOURNAL_KIND } from "@/src/server/services/sessionJournalTree";
 
-export type { SessionJournalEntryRow, WrittenJournalEntry };
+export type { SessionJournalEntryRow, SessionJournalAssignmentView, WrittenJournalEntry };
 
 export interface JournalRosterEntry {
   userId: string;
@@ -98,7 +99,7 @@ export async function cancelJournalAssignment(supabase: TypedClient, params: { i
   await journaliserDevoir(supabase, { campaignId: deleted.campaign_id, action: "cancel", assignmentId: deleted.id, assignedTo: deleted.assigned_to, callerId: params.callerId });
 }
 
-export async function listJournalAssignments(supabase: TypedClient, campaignId: string): Promise<SessionJournalEntryRow[]> {
+export async function listJournalAssignments(supabase: TypedClient, campaignId: string): Promise<SessionJournalAssignmentView[]> {
   return listAssignmentsForCampaign(supabase, campaignId);
 }
 
