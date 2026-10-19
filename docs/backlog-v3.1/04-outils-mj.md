@@ -193,44 +193,6 @@ l'ajout (2) « Relancer » dépend de V3.1-22 (fils du chat).
 
 ---
 
-### ☐ V3.1-45 — Générateurs : les tirages à gauche, la fiche à droite · `M` · **avec modèle IA** — **prêt**
-
-**Modèle conseillé : Sonnet** — planche définitive ; tables et IA inchangées.
-
-**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-**Planche** : `Generateurs-Decide.dc.html`. **Départ** :
-`components/shell/GeneratorToolPanel.tsx`, cas `generateurs`. **Dépend de** :
-20, 25 (pilule), 29.
-
-**Ce qui est décidé**
-- **En haut** : la pilule des outils (Taverne, Échoppe, PNJ…) et les
-  variantes **en puces** (dont « Aléatoire ») — elles remplacent les listes
-  déroulantes.
-- **À gauche, les tirages** : chaque section et ses emplacements (dé,
-  résultat, ↻ par emplacement, ↻ par section). « Éditer les tables » prend
-  la place des tirages dans cette colonne (retour par ×).
-- **À droite, l'aperçu de la fiche assemblée** : chaque morceau tiré est
-  souligné en pointillé et se relance d'un toucher (↻) ; la prose écrite
-  par l'IA est marquée « IA », longueur 40 / 80 / 120 mots ; menu de taverne
-  en deux colonnes (plats par palier, boissons) ; « Tout relancer » ;
-  « Copier le texte » ; « Créer la fiche » promeut le résultat en entité
-  visible du MJ seul.
-- **Tablette** : l'aperçu d'abord, les tirages dessous. **Téléphone** :
-  pilule des outils, variantes et « Les tirages » en feuilles du bas,
-  aperçu (↻ par morceau, menu en une colonne), « Créer la fiche ».
-- **Inchangé** : les tables restent des fiches de règles pondérées du
-  ruleset ; la prose de l'IA reste de la donnée, revue avant création
-  (règle 10), passée par `src/server/ai/` ; aucun tirage côté client (le
-  serveur tire).
-
-**Critères d'acceptation**
-- [ ] Relancer un emplacement ne relance que lui (test de la route : un seul emplacement change).
-- [ ] « Créer la fiche » crée une entité visible du MJ seul (test).
-- [ ] Les variantes n'utilisent plus aucune liste déroulante.
-
----
-
 ### ☐ V3.1-49 — Création : le chemin qui se ramifie (structure, aperçu, joueuse) · `L` · sans modèle IA — **prêt après 47 et 48**
 
 **Modèle conseillé : Opus** — l'écran est décidé, mais le cœur est un état de choix en cascade (un choix naît de sa source, disparaît si elle change, attend un autre choix) partagé par toutes les étapes, l'aperçu en direct et la création finale ; une erreur y casse les quatre tickets suivants. **Sonnet** pour 50 à 53, qui se branchent dessus.

@@ -2,6 +2,63 @@
 
 ---
 
+### ☑ V3.1-45 — Générateurs : les tirages à gauche, la fiche à droite · `M` · **avec modèle IA** — **fait le 19 octobre**
+
+**Modèle conseillé : Sonnet** — planche définitive ; tables et IA inchangées.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Planche** : `Generateurs-Decide.dc.html`. **Départ** :
+`components/shell/GeneratorToolPanel.tsx`, cas `generateurs`. **Dépend de** :
+20, 25 (pilule), 29.
+
+**Ce qui est décidé**
+- **En haut** : la pilule des outils (Taverne, Échoppe, PNJ…) et les
+  variantes **en puces** (dont « Aléatoire ») — elles remplacent les listes
+  déroulantes.
+- **À gauche, les tirages** : chaque section et ses emplacements (dé,
+  résultat, ↻ par emplacement, ↻ par section). « Éditer les tables » prend
+  la place des tirages dans cette colonne (retour par ×).
+- **À droite, l'aperçu de la fiche assemblée** : chaque morceau tiré est
+  souligné en pointillé et se relance d'un toucher (↻) ; la prose écrite
+  par l'IA est marquée « IA », longueur 40 / 80 / 120 mots ; menu de taverne
+  en deux colonnes (plats par palier, boissons) ; « Tout relancer » ;
+  « Copier le texte » ; « Créer la fiche » promeut le résultat en entité
+  visible du MJ seul.
+- **Tablette** : l'aperçu d'abord, les tirages dessous. **Téléphone** :
+  pilule des outils, variantes et « Les tirages » en feuilles du bas,
+  aperçu (↻ par morceau, menu en une colonne), « Créer la fiche ».
+- **Inchangé** : les tables restent des fiches de règles pondérées du
+  ruleset ; la prose de l'IA reste de la donnée, revue avant création
+  (règle 10), passée par `src/server/ai/` ; aucun tirage côté client (le
+  serveur tire).
+
+**Critères d'acceptation**
+- [x] Relancer un emplacement ne relance que lui (test existant du service : `generators.integration.test.ts`, « onlySlotKey : ne tire que l'emplacement désigné » ; en direct, le corps envoie la seule clé visée).
+- [x] « Créer la fiche » crée une entité visible du MJ seul (test `lib/generators/promoteVisibility.test.ts` ; la route créait des blocs publics, corrigé).
+- [x] Les variantes n'utilisent plus aucune liste déroulante.
+
+**Livré le 19 octobre.** Opus : « Créer la fiche » naît en visibilité `gm`
+(elle naissait publique : un PNJ ou une taverne inventés apparaissaient aux
+joueurs). Sonnet : `GeneratorToolPanel.tsx` découpé dans
+`components/shell/generateurs/` (état unique `useTirages`, colonne des
+tirages, aperçu, menu de taverne, édition des tables en colonne, puces de
+variantes) ; logique pure `lib/ui/generateurs.ts` (12 tests). Vérifié en
+navigateur (Testeur MJ) : pilule des outils, puces, aucune liste
+déroulante ; « Tout relancer » = une requête par section, une après
+l'autre ; relancer un emplacement n'envoie que sa clé, les autres ne
+bougent pas ; édition des tables ouverte et refermée par × ; au téléphone,
+feuilles « Variantes » et « Les tirages » (Échap), pilule qui défile.
+Limites : les sections du banc d'essai n'ont aucune table (le serveur rend
+`slots: []`), donc ni contenu réel ni prose « IA » vus en direct ;
+« Créer la fiche » non cliqué (la fiche resterait en base). Longueurs de
+prose gardées à 30 / 100 / 250 mots (`PROSE_LENGTH_PRESETS`, aussi lues
+par le schéma des blocs générateurs) au lieu des 40 / 80 / 120 de la
+planche : à trancher par l'auteur. Planche OutilsMJ : section
+« Générateurs ».
+
+---
+
 ### ☑ V3.1-44 — Rencontres : l'atelier en trois colonnes · `M` · sans modèle IA — **fait le 19 octobre**
 
 **Modèle conseillé : Sonnet** — planche définitive ; budget et solveur inchangés.
