@@ -505,45 +505,6 @@ l'ajout (2) « Relancer » dépend de V3.1-22 (fils du chat).
 
 ---
 
-### ☐ V3.1-56 — Calendrier réel au verre minéral, côté MJ et côté joueuse · `M` · sans modèle IA — **prêt**
-
-**Modèle conseillé : Sonnet** — disposition déjà codée (V3.1-16) ; transposition seulement.
-
-**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-**Planche** : `Calendrier-Reel.dc.html`. **Départ** :
-`components/shell/scheduling/*` (`SchedulingMjPanel.tsx`,
-`NextSessionPanel.tsx`, `AvailabilityGrid.tsx`),
-`app/m/[worldSlug]/joueur/prochaine-session/page.tsx`. **Dépend de** : 20,
-27, 29.
-
-**Ce qui est décidé** : la disposition de V3.1-16 **ne change pas**
-(grille à bascule « Mes disponibilités / Toute la table », géométrie, ligne
-« 22:00 », colonne des heures fixe, croix au survol, info-bulle « (toi) »
-en tête, dates possibles classées par nombre puis par durée,
-enregistrement automatique de la joueuse). Le verre minéral :
-- **MJ** : fenêtre à volets ; en-tête — titre, « Créneau proposé · N jours ·
-  X réponses sur Y », **durée visée en − / +**, « Annuler la demande » en
-  danger fantôme ; la grille et les dates possibles dans des panneaux en
-  verre ; « Confirmer » **plein** pour une session complète, contour accent
-  sinon ; trois cartes (« Régler une date à la main », « Séances à venir »
-  avec « Annuler », « Déjà jouées »). Tablette : les cartes l'une sous
-  l'autre. Téléphone (Outils › Calendrier réel) : la même colonne, la
-  grille défile à l'horizontale.
-- **Joueuse** : page pleine « Prochaine séance » dans sa coquille, sans aucun
-  outil MJ — la prochaine séance en grand (pavé de date), la demande ouverte
-  et sa grille (« Toute la table » comprise), « Les dates qui se
-  dessinent » en lecture seule (« c'est le MJ qui choisit »), « Séances à
-  venir » et « Déjà jouées ». Ligne d'état « Enregistrement… » puis
-  « Enregistré ✓ ».
-
-**Critères d'acceptation**
-- [ ] Tests de V3.1-16 verts, sans modification.
-- [ ] Aucun outil MJ dans la page de la joueuse (test de rendu).
-- [ ] La grille défile à l'horizontale au téléphone, la colonne des heures reste visible.
-
----
-
 ### ☐ V3.1-57 — Règles actives : le ruleset à gauche, la table à droite · `M` · sans modèle IA — **prêt après V3.1-23**
 
 **Modèle conseillé : Sonnet** — planche définitive ; données et serveur de V3.1-23.

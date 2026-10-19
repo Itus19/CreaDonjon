@@ -51,3 +51,4 @@ Issue : **accepté** (tel quel) · **corrigé** (retouche locale par Opus) · **
 | 2026-10-18 | V3.1-55 (interface) | dev-sonnet | 89 272 | corrigé | Écran conforme, réducteur pur ; Opus : le jour actuel suit son mois et l'époque son jour de semaine (tests). Noyau et planche faits par Opus. |
 | 2026-10-19 | V3.1-61 (interface) | dev-sonnet | 95 082 | corrigé | Écran conforme, logique pure testée ; Opus : parties modifiées séparées (tests). Serveur, action Rétablir et planche faits par Opus. |
 | 2026-10-19 | V3.1-54 (interface) | dev-sonnet | 43 772 | accepté | Transposition conforme, entrée « Voir comme » existante signalée à juste titre. Vérification en direct (dont V3.1-12 en MJ) et planches faites par Opus. |
+| 2026-10-19 | V3.1-56 (interface) | dev-sonnet | 62 521 | corrigé | Transposition conforme, − / + avec délai ; Opus : test de rendu renforcé (un jour complet affiché), mise en forme. Vérification en direct et planche faites par Opus. |

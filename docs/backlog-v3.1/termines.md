@@ -2,6 +2,59 @@
 
 ---
 
+### ☑ V3.1-56 — Calendrier réel au verre minéral, côté MJ et côté joueuse · `M` · sans modèle IA — **fait le 19 octobre**
+
+**Modèle conseillé : Sonnet** — disposition déjà codée (V3.1-16) ; transposition seulement.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Planche** : `Calendrier-Reel.dc.html`. **Départ** :
+`components/shell/scheduling/*` (`SchedulingMjPanel.tsx`,
+`NextSessionPanel.tsx`, `AvailabilityGrid.tsx`),
+`app/m/[worldSlug]/joueur/prochaine-session/page.tsx`. **Dépend de** : 20,
+27, 29.
+
+**Ce qui est décidé** : la disposition de V3.1-16 **ne change pas**
+(grille à bascule « Mes disponibilités / Toute la table », géométrie, ligne
+« 22:00 », colonne des heures fixe, croix au survol, info-bulle « (toi) »
+en tête, dates possibles classées par nombre puis par durée,
+enregistrement automatique de la joueuse). Le verre minéral :
+- **MJ** : fenêtre à volets ; en-tête — titre, « Créneau proposé · N jours ·
+  X réponses sur Y », **durée visée en − / +**, « Annuler la demande » en
+  danger fantôme ; la grille et les dates possibles dans des panneaux en
+  verre ; « Confirmer » **plein** pour une session complète, contour accent
+  sinon ; trois cartes (« Régler une date à la main », « Séances à venir »
+  avec « Annuler », « Déjà jouées »). Tablette : les cartes l'une sous
+  l'autre. Téléphone (Outils › Calendrier réel) : la même colonne, la
+  grille défile à l'horizontale.
+- **Joueuse** : page pleine « Prochaine séance » dans sa coquille, sans aucun
+  outil MJ — la prochaine séance en grand (pavé de date), la demande ouverte
+  et sa grille (« Toute la table » comprise), « Les dates qui se
+  dessinent » en lecture seule (« c'est le MJ qui choisit »), « Séances à
+  venir » et « Déjà jouées ». Ligne d'état « Enregistrement… » puis
+  « Enregistré ✓ ».
+
+**Critères d'acceptation**
+- [x] Tests de V3.1-16 verts, sans modification.
+- [x] Aucun outil MJ dans la page de la joueuse (test de rendu).
+- [x] La grille défile à l'horizontale au téléphone, la colonne des heures reste visible (code de V3.1-16 inchangé : `overflow-x-auto`, colonne `sticky left-0` à fond opaque ; non revérifié en direct, aucune demande ouverte dans le banc d'essai).
+
+**Livré le 19 octobre.** Panneaux et cartes en verre (coins 18 px, flou
+`--blur`). MJ : durée visée en − / + (pas de 30 min, de 1 h à 14 h), un
+seul `PATCH …/scheduling/settings` 500 ms après le dernier clic ;
+« Annuler la demande » et « Annuler » d'une séance en danger fantôme ;
+« Confirmer » plein si `category === "full"` (créneau ≥ durée visée),
+contour accent sinon ; cartes et séances empilées par requête de conteneur.
+Joueuse : page « Prochaine séance », pavé de date agrandi. Test de rendu
+`NextSessionPanel.test.ts` (aucun outil MJ, avec une demande ouverte, un
+jour complet et des séances). Vérifié en navigateur sans demande ouverte :
+MJ à 1280, 820 et 390 px, quatre clics − / + = une requête, durée inchangée
+(5 h) ; Testeuse A à 1280 et 390 px, aucun outil MJ. Non exercé en direct :
+la grille et l'en-tête d'une demande ouverte (en ouvrir une laisserait une
+demande fermée en base). Planche OutilsMJ : section « Calendrier réel ».
+
+---
+
 ### ☑ V3.1-143 — Journal : « supprimée … par X », et les fiches supprimées dans la fenêtre d'outil · `S` · sans modèle IA — **fait le 19 octobre**
 
 **Modèle conseillé : Opus** — une migration (une colonne et un déclencheur) ; l'affichage est court.
