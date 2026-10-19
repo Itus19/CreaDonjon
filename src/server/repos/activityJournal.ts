@@ -10,6 +10,8 @@ export interface EntityRevisionJournalRow {
   entity_id: string;
   entity_name: string;
   entity_slug: string;
+  /** V3.1-61 : le type de la fiche, lu dans la même requête que son nom. */
+  entity_kind: string;
   revision_number: number;
   change_source: string;
   changed_by: string | null;
@@ -25,7 +27,7 @@ export interface EntityRevisionJournalRow {
 export async function listEntityRevisionsForWorld(supabase: TypedClient, worldId: string): Promise<EntityRevisionJournalRow[]> {
   const { data, error } = await supabase
     .from("entity_revisions")
-    .select("revision_number, change_source, changed_by, created_at, entities!inner(id, name, slug, world_id)")
+    .select("revision_number, change_source, changed_by, created_at, entities!inner(id, name, slug, entity_kind, world_id)")
     .eq("entities.world_id", worldId)
     .order("created_at", { ascending: false })
     .limit(JOURNAL_LIMIT);
@@ -34,6 +36,7 @@ export async function listEntityRevisionsForWorld(supabase: TypedClient, worldId
     entity_id: row.entities.id,
     entity_name: row.entities.name,
     entity_slug: row.entities.slug,
+    entity_kind: row.entities.entity_kind,
     revision_number: row.revision_number,
     change_source: row.change_source,
     changed_by: row.changed_by,
@@ -53,7 +56,7 @@ export async function listEntityRevisionsForEntities(supabase: TypedClient, enti
   if (entityIds.length === 0) return [];
   const { data, error } = await supabase
     .from("entity_revisions")
-    .select("revision_number, change_source, changed_by, created_at, entities!inner(id, name, slug)")
+    .select("revision_number, change_source, changed_by, created_at, entities!inner(id, name, slug, entity_kind)")
     .in("entity_id", entityIds)
     .order("created_at", { ascending: false })
     .limit(JOURNAL_LIMIT);
@@ -62,6 +65,7 @@ export async function listEntityRevisionsForEntities(supabase: TypedClient, enti
     entity_id: row.entities.id,
     entity_name: row.entities.name,
     entity_slug: row.entities.slug,
+    entity_kind: row.entities.entity_kind,
     revision_number: row.revision_number,
     change_source: row.change_source,
     changed_by: row.changed_by,

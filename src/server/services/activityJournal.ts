@@ -46,6 +46,12 @@ export interface JournalEntry {
   /** `null` si l'evenement ne reference aucune fiche (la plupart des `combat`/`narration`/`roll`) — sinon la fiche concernee. */
   entitySlug: string | null;
   entityName: string | null;
+  /** V3.1-61 : le type de la fiche (`character`, `location`…), `null` sans fiche — pour filtrer par élément côté client. */
+  entityKind: string | null;
+  /** V3.1-61 : la fiche est un PJ de la campagne (« Fiches de personnage » plutôt que « PNJ »). */
+  pc: boolean;
+  /** V3.1-61 : le numéro de la révision (« révision #14 »), `null` pour un événement de jeu. */
+  revisionNumber: number | null;
   /** V2 (retour utilisateur) : quel bloc (ou quel champ de la fiche) a change, pour une entree "wiki" — `null` pour la toute premiere revision (rien a comparer) ou pour une entree "jeu" (le detail vit dans `label` via `payload.note`, voir ci-dessous). */
   blockLabel: string | null;
   /** V2 (retour utilisateur : "si il y a des choses dans l'inventaire qui ont ete modifiees, ajout ou retrait, quel type et combien") — detail objet par objet pour un bloc `inventory` modifie, `null` sinon (aucun bloc inventaire touche, ou rien de plus precis a dire). */
@@ -287,7 +293,9 @@ async function mergeJournal(
   worldId: string,
   revisions: EntityRevisionJournalRow[],
   events: SessionEventJournalRow[],
-  allowedEventEntityIds: Set<string> | null
+  allowedEventEntityIds: Set<string> | null,
+  /** Les PJ de la campagne, lus UNE fois pour tout le journal (jamais par ligne). */
+  pcEntityIds: Set<string>
 ): Promise<JournalEntry[]> {
   const accountIds = [
     ...revisions.map((r) => r.changed_by).filter((id): id is string => id !== null),
@@ -306,6 +314,9 @@ async function mergeJournal(
     createdAt: r.created_at,
     entitySlug: r.entity_slug,
     entityName: r.entity_name,
+    entityKind: r.entity_kind,
+    pc: pcEntityIds.has(r.entity_id),
+    revisionNumber: r.revision_number,
     blockLabel: blockInfo.labels.get(`${r.entity_id}:${r.revision_number}`) ?? null,
     blockDetail: blockInfo.details.get(`${r.entity_id}:${r.revision_number}`) ?? null,
   }));
@@ -331,6 +342,9 @@ async function mergeJournal(
       createdAt: e.created_at,
       entitySlug: entity?.slug ?? null,
       entityName: entity?.name ?? null,
+      entityKind: entity?.entity_kind ?? null,
+      pc: entity ? pcEntityIds.has(entity.id) : false,
+      revisionNumber: null,
       blockLabel: null,
       blockDetail: null,
     };
@@ -348,11 +362,12 @@ async function mergeJournal(
  * par l'appelant), voir `getPlayerJournalForWorld` pour la vue joueur.
  */
 export async function getMergedJournalForWorld(supabase: TypedClient, worldId: string): Promise<JournalEntry[]> {
-  const [revisions, events] = await Promise.all([
+  const [revisions, events, pcEntityIds] = await Promise.all([
     listEntityRevisionsForWorld(supabase, worldId),
     listSessionEventsForWorld(supabase, worldId),
+    listPcEntityIdsForWorld(supabase, worldId),
   ]);
-  return mergeJournal(supabase, worldId, revisions, events, null);
+  return mergeJournal(supabase, worldId, revisions, events, null, new Set(pcEntityIds));
 }
 
 /**
@@ -372,5 +387,6 @@ export async function getPlayerJournalForWorld(supabase: TypedClient, worldId: s
     listEntityRevisionsForEntities(supabase, pcEntityIds),
     listSessionEventsForWorld(supabase, worldId),
   ]);
-  return mergeJournal(supabase, worldId, revisions, events, new Set(pcEntityIds));
+  const pcs = new Set(pcEntityIds);
+  return mergeJournal(supabase, worldId, revisions, events, pcs, pcs);
 }
