@@ -2,6 +2,63 @@
 
 ---
 
+### ☑ V3.1-42 — Bloc-notes : le cahier refait, MJ et joueuse · `L` · sans modèle IA — **fait le 19 octobre**
+
+**Modèle conseillé : Sonnet** — planche définitive ; données fournies par 41.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Planche** : `Notes-Decide.dc.html` (« Décidé · bloc-notes (A) avec le
+partage à la table »). **Départ** :
+`components/shell/notebook/NotebookWorkspace.tsx`,
+`components/shell/notebook/FicheCompanion.tsx`,
+`app/m/[worldSlug]/joueur/notes/page.tsx`, cas `notes` de
+`components/shell/MjToolWindowContent.tsx`. **Dépend de** : 41, 20, 25, 29.
+
+**Ce qui est décidé**
+- **Ordinateur** : sommaire arborescent à gauche — « Mon cahier » (pages,
+  fiches ◆ et règles § épinglées), puis « Partagées à la table » (chaque
+  page avec son autrice) ; la page au centre ; la fiche citée ou épinglée
+  dans le panneau de droite (`FicheCompanion`). En bas du sommaire :
+  « + Nouvelle page », « + Préparation de séance » (MJ seul), « ◆ Épingler
+  une fiche ou une règle ».
+- **Partage** : chaque page de **son** cahier porte un sélecteur « Privée |
+  La table » (services de 41). Partagée, elle reste à sa place, marquée
+  « partagée ». Une page partagée par quelqu'un d'autre s'ouvre en lecture
+  seule, « <autrice> · lecture seule ».
+- **MJ** : en fenêtre (V3.1-20), rail présent. **Joueuse** : « Notes » de
+  son rail, en page pleine, même disposition, sommaire « Mes notes » puis
+  « Partagées à la table » (pas de « Préparation de séance »).
+- **Tablette** (fenêtre ≈ 556 px) : sommaire en tiroir ☰, fiche en panneau
+  par-dessus la page ; au-dessus de ~640 px de fenêtre, la disposition
+  d'ordinateur.
+- **Téléphone du MJ** : Outils › Bloc-notes — épinglées en puces, « Mon
+  cahier » puis « Partagées à la table » en liste, page en plein écran,
+  fiche citée en feuille du bas. **Téléphone de la joueuse** : Notes, pilule
+  « Les miennes / Partagées à la table ».
+
+**Critères d'acceptation**
+- [x] Les quatre écrans de la planche (MJ fenêtre, joueuse page pleine, tablette, deux téléphones).
+- [x] Partager puis repasser en privée depuis la page ; l'autre compte voit la page apparaître puis disparaître.
+- [x] Une page partagée par une autre personne n'offre aucune commande d'écriture.
+- [x] Première vue sans écran « Chargement… » (données en props, règle commune 6).
+
+**Livré le 19 octobre.** Serveur (Opus) : `loadNotebookWorkspace` charge le
+cahier ET les pages partagées en un seul `Promise.all`, dans la fenêtre du
+MJ comme dans les deux pages pleines ; `SharedNoteView` porte `shared`,
+`blockId` et `version`. Interface (Sonnet) : `NotebookWorkspace` découpé en
+`SommaireCahier`, `PageCahier`, `LecturePage`, `SelecteurPartage`,
+`BoutonEpingler`, `TelephoneCahier` ; logique pure dans `lib/ui/cahier.ts`
+(19 cas). Vérifié en direct avec Testeuse A et Testeur B : partager (200),
+B lit « PJ de Testeuse A · lecture seule » sans aucune commande d'écriture,
+repasser en privée (204), B ne la voit plus ; aucun « Chargement… » ;
+captures MJ ordinateur, tablette (« ☰ Sommaire ») et téléphone joueuse.
+Planche : section « Cahier » de `OutilsMJ.dc.html`. Limite connue : une
+page partagée (ou qui l'a été) ne se supprime pas depuis le cahier, faute
+de route qui retire l'entité `shared_note`.
+
+---
+
 ### ☑ V3.1-43 — Livre de sessions : le registre et ses trois ajouts · `M` · sans modèle IA — **fait le 19 octobre (sauf « Relancer », qui attend V3.1-22)**
 
 **Modèle conseillé : Sonnet** — planche définitive ; aucune donnée nouvelle.

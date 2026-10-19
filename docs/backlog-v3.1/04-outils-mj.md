@@ -113,49 +113,6 @@ données (41 → 42, 59 → 60, 23 → 57, 58), enfin la Création (47 → 48 �
 
 ---
 
-### ☐ V3.1-42 — Bloc-notes : le cahier refait, MJ et joueuse · `L` · sans modèle IA — **prêt après V3.1-41**
-
-**Modèle conseillé : Sonnet** — planche définitive ; données fournies par 41.
-
-**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-**Planche** : `Notes-Decide.dc.html` (« Décidé · bloc-notes (A) avec le
-partage à la table »). **Départ** :
-`components/shell/notebook/NotebookWorkspace.tsx`,
-`components/shell/notebook/FicheCompanion.tsx`,
-`app/m/[worldSlug]/joueur/notes/page.tsx`, cas `notes` de
-`components/shell/MjToolWindowContent.tsx`. **Dépend de** : 41, 20, 25, 29.
-
-**Ce qui est décidé**
-- **Ordinateur** : sommaire arborescent à gauche — « Mon cahier » (pages,
-  fiches ◆ et règles § épinglées), puis « Partagées à la table » (chaque
-  page avec son autrice) ; la page au centre ; la fiche citée ou épinglée
-  dans le panneau de droite (`FicheCompanion`). En bas du sommaire :
-  « + Nouvelle page », « + Préparation de séance » (MJ seul), « ◆ Épingler
-  une fiche ou une règle ».
-- **Partage** : chaque page de **son** cahier porte un sélecteur « Privée |
-  La table » (services de 41). Partagée, elle reste à sa place, marquée
-  « partagée ». Une page partagée par quelqu'un d'autre s'ouvre en lecture
-  seule, « <autrice> · lecture seule ».
-- **MJ** : en fenêtre (V3.1-20), rail présent. **Joueuse** : « Notes » de
-  son rail, en page pleine, même disposition, sommaire « Mes notes » puis
-  « Partagées à la table » (pas de « Préparation de séance »).
-- **Tablette** (fenêtre ≈ 556 px) : sommaire en tiroir ☰, fiche en panneau
-  par-dessus la page ; au-dessus de ~640 px de fenêtre, la disposition
-  d'ordinateur.
-- **Téléphone du MJ** : Outils › Bloc-notes — épinglées en puces, « Mon
-  cahier » puis « Partagées à la table » en liste, page en plein écran,
-  fiche citée en feuille du bas. **Téléphone de la joueuse** : Notes, pilule
-  « Les miennes / Partagées à la table ».
-
-**Critères d'acceptation**
-- [ ] Les quatre écrans de la planche (MJ fenêtre, joueuse page pleine, tablette, deux téléphones).
-- [ ] Partager puis repasser en privée depuis la page ; l'autre compte voit la page apparaître puis disparaître.
-- [ ] Une page partagée par une autre personne n'offre aucune commande d'écriture.
-- [ ] Première vue sans écran « Chargement… » (données en props, règle commune 6).
-
----
-
 ### ☐ V3.1-49 — Création : le chemin qui se ramifie (structure, aperçu, joueuse) · `L` · sans modèle IA — **prêt après 47 et 48**
 
 **Modèle conseillé : Opus** — l'écran est décidé, mais le cœur est un état de choix en cascade (un choix naît de sa source, disparaît si elle change, attend un autre choix) partagé par toutes les étapes, l'aperçu en direct et la création finale ; une erreur y casse les quatre tickets suivants. **Sonnet** pour 50 à 53, qui se branchent dessus.
