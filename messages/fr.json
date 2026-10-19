@@ -900,6 +900,7 @@
     "enregistrer": "Enregistrer",
     "enregistrement": "Enregistrement…",
     "erreurEnregistrement": "Impossible d'enregistrer le calendrier.",
-    "nomVide": "Un nom est vide : renseignez-le pour enregistrer."
+    "nomVide": "Un nom est vide : renseignez-le pour enregistrer.",
+    "jourNonRegle": "Ne plus régler le jour actuel"
   }
 }

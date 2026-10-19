@@ -899,6 +899,7 @@
     "enregistrer": "Save",
     "enregistrement": "Saving…",
     "erreurEnregistrement": "Could not save the calendar.",
-    "nomVide": "A name is empty: fill it in to save."
+    "nomVide": "A name is empty: fill it in to save.",
+    "jourNonRegle": "Stop setting the current day"
   }
 }

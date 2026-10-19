@@ -32,7 +32,8 @@ export type ActionCalendrier =
   | { type: "ereSupprimer"; index: number }
   | { type: "jourDecaler"; n: number }
   | { type: "jourRegler"; date: DayDate }
-  | { type: "jourInitialiser" };
+  | { type: "jourInitialiser" }
+  | { type: "jourEffacer" };
 
 /** Point de depart du « jour actuel » : an 0, 1er jour du 1er mois, jamais suppose. */
 export function jourActuelVierge(): GameDate {
@@ -140,6 +141,9 @@ function appliquer(c: CalendarConfigInput, action: ActionCalendrier): CalendarCo
     }
     case "jourInitialiser":
       return { ...c, currentDate: c.currentDate ?? jourActuelVierge() };
+    case "jourEffacer":
+      // Retour à « non réglé » (demande de l'auteur, 19 octobre) : le monde n'a plus de jour actuel.
+      return c.currentDate === null ? c : { ...c, currentDate: null };
   }
 }
 

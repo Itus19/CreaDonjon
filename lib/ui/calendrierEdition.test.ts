@@ -133,6 +133,12 @@ describe("jour actuel", () => {
     expect(c.currentDate).toMatchObject({ year: 7, month: 3, day: 30 });
   });
 
+  it("repasse le jour actuel à « non réglé », et ne fait rien s'il ne l'est déjà", () => {
+    expect(reduireCalendrier(calendrier(), { type: "jourEffacer" }).currentDate).toBeNull();
+    const vide = calendrier({ currentDate: null });
+    expect(reduireCalendrier(vide, { type: "jourEffacer" })).toBe(vide);
+  });
+
   it("initialise le jour actuel à l'an 0, 1er jour du 1er mois", () => {
     const c = reduireCalendrier(calendrier({ currentDate: null }), { type: "jourInitialiser" });
     expect(c.currentDate).toMatchObject({ year: 0, month: 1, day: 1, precision: "day" });

@@ -53,7 +53,8 @@
 - Noyau (Opus, tests d'abord) : `src/core/calendar/navigation.ts` — `shiftDate`, `daysBetween`, `dayOfYearNumber`, `clampDayToCalendar`, `yearInEra`, `eraBand`, `monthGrid`. Les trois cas du ticket sont testés (lendemain du dernier jour de l'an, veille du 1er de l'an 0, dix jours sur deux mois), et le décalage des grilles par le 1er jour de l'an 0.
 - Interface (Sonnet) : `CalendarSettingsPanel.tsx` et `components/shell/calendrier/` ; un réducteur pur testé (`lib/ui/calendrierEdition.ts`), une seule requête, celle d'« Enregistrer ». Corrections d'Opus : le jour actuel suit SON mois quand on déplace, ajoute ou supprime un mois (le 14 Brumaire restait le 14 du mois qui prenait sa place), et le jour du 1er de l'an 0 suit son jour de semaine quand on décale ou supprime un jour (tests ajoutés).
 - Vérifié au navigateur en Testeur MJ (Banc d'essai) : régler le jour actuel, Lendemain, « + une décade » → « jour 12 sur 360 » ; choisir le 14 Brumaire dans la grille (« dans 43 jours »), « En faire aujourd'hui », raccourcir Brumaire à 10 jours → le 10 ; changer le 1er jour de l'an 0 décale la vignette ; **aucune requête avant « Enregistrer », une seule après** ; l'enregistrement tient après rechargement ; feuille du bas au téléphone ; aucun débordement à 820 et 390 px. Le calendrier du Banc d'essai a été remis à l'identique ensuite.
-- Restes : on ne peut plus repasser le jour actuel à « non réglé » (la case de l'ancien panneau n'est pas dans la planche) ; un nom vide grise « Enregistrer » (le schéma le refuse) ; saisir un an négatif passe par le clavier.
+- Le 19 octobre, à la demande de l'auteur : « Ne plus régler le jour actuel » rend le jour actuel « non réglé » (action `jourEffacer`, testée), comme la case de l'ancien panneau.
+- Restes : un nom vide grise « Enregistrer » (le schéma le refuse) ; saisir un an négatif passe par le clavier.
 
 ---
 

@@ -89,6 +89,9 @@ export default function JourActuel({
       >
         {saisie ? t("fermerDate") : t("changerDate")}
       </button>
+      <button type="button" onClick={() => dispatch({ type: "jourEffacer" })} className={`${BOUTON} self-start text-ink-muted`}>
+        {t("jourNonRegle")}
+      </button>
       {saisie && (
         <div className="flex flex-wrap items-end gap-3">
           <label className="flex flex-col gap-0.5 text-xs text-ink-muted">
