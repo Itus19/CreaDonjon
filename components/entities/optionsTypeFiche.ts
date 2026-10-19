@@ -1,5 +1,5 @@
 import { ENTITY_KINDS } from "@/lib/entities/schemas";
-import { ENTITY_KIND_LABELS } from "@/components/shared/entityKindLabels";
+import { ENTITY_KIND_LABELS, SYSTEM_KIND_LABELS } from "@/components/shared/entityKindLabels";
 
 /** Sentinelle jamais persistee (V2-G7) : selectionner cette option ouvre un champ, ne sauvegarde rien tant qu'un nom n'est pas confirme. */
 export const CUSTOM_KIND_OPTION = "__custom__";
@@ -17,7 +17,8 @@ export const PNJ_VALUE = "character:pnj";
 /**
  * Les categories proposees par le selecteur de type d'une fiche (V2-G7) :
  * fixes (avec PJ/PNJ a la place de « Personnage »), personnelles du monde,
- * la valeur courante si elle n'y figure pas, puis — en dernier choix — l'option
+ * la valeur courante si elle n'y figure pas (libellée en français si c'est un
+ * type système), puis — en dernier choix — l'option
  * qui ouvre le champ de creation. Partagee entre l'en-tete de la fiche et
  * l'editeur plein ecran (V3.1-31) : une seule liste, deux ecrans.
  */
@@ -29,7 +30,7 @@ export function optionsTypeFiche(worldCustomKinds: string[], entityKind: string)
   return [
     ...fixedOptions,
     ...worldCustomKinds.map((kind) => ({ value: kind, label: kind })),
-    ...(knownKinds.has(entityKind) ? [] : [{ value: entityKind, label: entityKind }]),
+    ...(knownKinds.has(entityKind) ? [] : [{ value: entityKind, label: Object.hasOwn(SYSTEM_KIND_LABELS, entityKind) ? SYSTEM_KIND_LABELS[entityKind] : entityKind }]),
     { value: CUSTOM_KIND_OPTION, label: "+ Créer une catégorie…" },
   ];
 }
