@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
+import { loadNotebookWorkspace } from "@/src/server/services/sharedNotes";
 import { createClient } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
-import { getOrCreateNotebook } from "@/src/server/services/notebook";
 import NotebookWorkspace from "@/components/shell/notebook/NotebookWorkspace";
 import RegisterPrimaryWindow from "@/components/shell/RegisterPrimaryWindow";
 
@@ -25,7 +25,7 @@ export default async function MjNotesPage({ params }: { params: Promise<{ worldS
   } = await supabase.auth.getUser();
   if (!user) notFound();
 
-  const notebook = await getOrCreateNotebook(supabase, { worldId: world.id, userId: user.id });
+  const notebook = await loadNotebookWorkspace(supabase, { worldId: world.id, userId: user.id });
 
   return (
     <div className="flex h-full flex-col gap-4">

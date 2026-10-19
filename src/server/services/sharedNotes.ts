@@ -11,7 +11,7 @@ import { claimSharedNoteGrant } from "@/src/server/repos/sharedNotes";
 import { updateBlockContent } from "@/src/server/services/blocks";
 import { resolveCampaignId } from "@/src/server/services/campaigns";
 import { createEntity, listPlayerVisibleEntityIds } from "@/src/server/services/entities";
-import { loadNotebookTree } from "@/src/server/services/notebook";
+import { loadNotebookTree, getOrCreateNotebook, type NotebookData } from "@/src/server/services/notebook";
 import { isWorldAdmin } from "@/src/server/services/permissions";
 import { listJournalRoster } from "@/src/server/services/sessionJournal";
 import { buildViewerForWorld } from "@/src/server/services/visibility";
@@ -148,6 +148,11 @@ export interface SharedNoteView {
   authorName: string | null;
   segments: NarrativeContent;
   updatedAt: string;
+  /** V3.1-42 : partagée à la table (`players`), ou repassée en privée (l'autrice seule la lit, et la retrouve ici). */
+  shared: boolean;
+  /** V3.1-42 : le bloc texte et sa version — l'autrice écrit sa page par la route des blocs ; la RLS refuse tout autre compte. */
+  blockId: string;
+  version: number;
 }
 
 /**
@@ -204,6 +209,17 @@ export async function listSharedNotes(supabase: TypedClient, params: { worldId: 
       authorName: block.created_by ? (names.get(block.created_by) ?? null) : null,
       segments: unlinkUnknownEntityRefs(segments, known),
       updatedAt: block.updated_at,
+      shared: block.visibility_level === "players",
+      blockId: block.id,
+      version: block.version,
     }))
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+}
+
+/** Le cahier et les pages partagées, en props de la première vue (V3.1-42, règle commune 6 : jamais d'écran « Chargement… »). */
+export type NotebookWorkspaceData = NotebookData & { sharedNotes: SharedNoteView[] };
+
+export async function loadNotebookWorkspace(supabase: TypedClient, params: { worldId: string; userId: string }): Promise<NotebookWorkspaceData> {
+  const [notebook, sharedNotes] = await Promise.all([getOrCreateNotebook(supabase, params), listSharedNotes(supabase, params)]);
+  return { ...notebook, sharedNotes };
 }

@@ -9,7 +9,7 @@ import type { CombatRow } from "@/src/server/repos/combats";
 import type { CalendarConfigInput } from "@/src/core/schemas/calendar";
 import type { ShareLinkSummary } from "@/src/server/services/shareLinks";
 import type { GeneratorToolWindowData } from "@/src/server/services/generators";
-import type { NotebookData } from "@/src/server/services/notebook";
+import type { NotebookWorkspaceData } from "@/src/server/services/sharedNotes";
 import type { TablePc } from "@/src/server/services/tableParty";
 
 /**
@@ -67,7 +67,7 @@ export type MjToolWindowData =
   | { tool: "regles-actives" }
   | { tool: "publication"; worldId: string; links: ShareLinkSummary[]; wikiWelcomeMessage: string }
   | { tool: "generateurs"; entityId: string; tools: GeneratorToolWindowData[] }
-  | ({ tool: "notes" } & NotebookData)
+  | ({ tool: "notes" } & NotebookWorkspaceData)
   | { tool: "calendrier-reel"; campaignId: string | null }
   | { tool: "livre-de-sessions"; campaignId: string | null; calendar: CalendarConfigInput; currentUserId: string }
   /** V3.1-34 : l'outil Table — les PJ de la campagne, et les noms d'états du ruleset pour « + état ». */

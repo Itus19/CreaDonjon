@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getLocale } from "next-intl/server";
+import { loadNotebookWorkspace } from "@/src/server/services/sharedNotes";
 import { createClient } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
@@ -17,7 +18,6 @@ import { listEntitiesByIds } from "@/src/server/repos/entities";
 import { getCalendar } from "@/src/server/services/worlds";
 import { lirePersonnalisation } from "@/src/server/services/personnalisation";
 import { listShareLinks } from "@/src/server/services/shareLinks";
-import { getOrCreateNotebook } from "@/src/server/services/notebook";
 import type { Locale } from "@/src/i18n/request";
 import type { MjToolWindowData } from "@/components/shell/mjToolWindows";
 import { MJ_TOOL_KEYS, type MjToolKey } from "@/components/shell/windowRefs";
@@ -217,7 +217,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     }
 
     case "notes": {
-      const notebook = await getOrCreateNotebook(supabase, { worldId: world.id, userId: user.id });
+      const notebook = await loadNotebookWorkspace(supabase, { worldId: world.id, userId: user.id });
       data = { tool, ...notebook };
       break;
     }

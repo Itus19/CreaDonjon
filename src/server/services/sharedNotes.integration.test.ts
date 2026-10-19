@@ -131,8 +131,12 @@ describe.skipIf(!hasCreds)("pages partagées du cahier (integration, base reelle
 
     for (const lecteur of [gm, other]) {
       const notes = await listSharedNotes(typed(lecteur), { worldId, userId: lecteur.id });
-      expect(notes.map((n) => [n.entityId, n.title, n.authorId])).toEqual([[sharedEntityId, "Soupçons", author.id]]);
+      expect(notes.map((n) => [n.entityId, n.title, n.authorId, n.shared])).toEqual([[sharedEntityId, "Soupçons", author.id, true]]);
     }
+    // V3.1-42 : l'autrice la retrouve aussi, avec de quoi l'écrire (bloc et version).
+    const [sienne] = await listSharedNotes(typed(author), { worldId, userId: author.id });
+    const [bloc] = await textBlockOf(author.client, sharedEntityId);
+    expect(sienne).toMatchObject({ entityId: sharedEntityId, shared: true, blockId: bloc.id, version: bloc.version });
     const cahier = await getOrCreateNotebook(typed(author), { worldId, userId: author.id });
     expect(cahier.items).toEqual([{ id: PAGE_ID, parentId: null, position: 1000, kind: "shared_page", targetId: sharedEntityId }]);
   });
@@ -164,6 +168,9 @@ describe.skipIf(!hasCreds)("pages partagées du cahier (integration, base reelle
     }
     const [bloc] = await textBlockOf(author.client, sharedEntityId);
     expect(JSON.stringify(bloc.data)).toContain("Roi caché");
+    // V3.1-42 : l'autrice la retrouve dans la liste, marquée privée — c'est elle seule qui la lit.
+    const siennes = await listSharedNotes(typed(author), { worldId, userId: author.id });
+    expect(siennes.map((n) => [n.entityId, n.shared])).toEqual([[sharedEntityId, false]]);
     // Le nom de l'entité, lisible de tout membre, ne dit rien du titre.
     const { data: ligne } = await other.client.from("entities").select("name").eq("id", sharedEntityId).single();
     expect(ligne?.name).toBe("Page du cahier");
