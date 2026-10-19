@@ -10,7 +10,8 @@ import { isSuperadmin } from "@/src/server/services/account";
 import { isWorldAdmin } from "@/src/server/services/permissions";
 import { getPartyCheckLines } from "@/src/server/services/partyProbabilities";
 import { getTableParty } from "@/src/server/services/tableParty";
-import { getEncounterBudgetTableForRuleset, listMonstersForRuleset, listSavedEncounters } from "@/src/server/services/encounters";
+import { listMonstersForRuleset } from "@/src/server/services/encounters";
+import { chargerAtelierRencontres } from "@/src/server/services/encounterWorkshop";
 import { getActiveCombatForCampaign, getCombatDetail, listCombatsForCampaign, listConditionNames } from "@/src/server/services/combats";
 import { listEntitiesByIds } from "@/src/server/repos/entities";
 import { getCalendar } from "@/src/server/services/worlds";
@@ -107,21 +108,16 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     case "rencontres": {
       const campaigns = await listCampaigns(supabase, world.id);
       const selected = campaigns[0] ?? null;
-      const [budgetResolution, monsters, savedEncounters] = selected
-        ? await Promise.all([
-            getEncounterBudgetTableForRuleset(supabase, selected.rulesetId),
-            listMonstersForRuleset(supabase, selected.rulesetId, locale),
-            listSavedEncounters(supabase, selected.id),
-          ])
-        : [null, [], []];
+      const atelier = selected ? await chargerAtelierRencontres(supabase, selected, locale) : null;
       data = {
         tool,
         hasCampaign: selected !== null,
         campaignId: selected?.id ?? null,
-        budgetTable: budgetResolution?.rows ?? null,
-        budgetIsFallback: budgetResolution?.isFallback ?? false,
-        monsters,
-        savedEncounters,
+        budgetTable: atelier?.budgetTable ?? null,
+        budgetIsFallback: atelier?.budgetIsFallback ?? false,
+        monsters: atelier?.monsters ?? [],
+        savedEncounters: atelier?.savedEncounters ?? [],
+        party: atelier?.party ?? [],
       };
       break;
     }

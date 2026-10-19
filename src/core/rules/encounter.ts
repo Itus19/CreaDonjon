@@ -51,6 +51,18 @@ export function encounterBudget(
   }, 0);
 }
 
+/**
+ * La part d'UN personnage dans le budget, aux trois paliers (V3.1-44) : la
+ * ligne de son niveau. `encounterBudget` est une somme de ces parts : le
+ * serveur envoie la part de chaque PJ, et l'écran retire celle d'un absent
+ * sans recalculer aucune règle. `null` si le niveau manque à la table (fiche
+ * vide, niveau 0) : ce PJ ne compte pas, sans faire échouer tout l'outil.
+ */
+export function memberBudgetShares(level: number, table: readonly EncounterBudgetRow[]): Record<EncounterBudgetBand, number> | null {
+  const row = table.find((r) => r.level === level);
+  return row ? { low: row.low, moderate: row.moderate, high: row.high } : null;
+}
+
 /** Cout en PX d'une composition de creatures : `xp` unitaire (deja fourni par le SRD) multiplie par le nombre de creatures, somme sur tous les participants. */
 export function encounterCost(participants: readonly { xp: number; count: number }[]): number {
   return participants.reduce((sum, p) => sum + p.xp * p.count, 0);

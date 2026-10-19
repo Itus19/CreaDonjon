@@ -3,6 +3,7 @@ import type { PartyMemberProbabilities } from "@/src/server/services/partyProbab
 import type { EncounterBudgetRow } from "@/src/core/rules/encounter";
 import type { EncounterMonsterSummary } from "@/src/server/services/encounters";
 import type { CampaignEncounterRow } from "@/src/server/repos/encounters";
+import type { EncounterPartyMember } from "@/src/server/services/encounterWorkshop";
 import type { CombatDetail } from "@/src/server/services/combats";
 import type { CombatRow } from "@/src/server/repos/combats";
 import type { CalendarConfigInput } from "@/src/core/schemas/calendar";
@@ -47,6 +48,8 @@ export type MjToolWindowData =
       budgetIsFallback: boolean;
       monsters: EncounterMonsterSummary[];
       savedEncounters: CampaignEncounterRow[];
+      /** V3.1-44 : les PJ de la campagne, leur niveau et leur part du budget. */
+      party: EncounterPartyMember[];
     }
   | {
       tool: "initiative";

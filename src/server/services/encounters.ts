@@ -190,7 +190,7 @@ export type GenerateEncounterResult =
 export async function generateEncounterForCampaign(
   supabase: TypedClient,
   campaignId: string,
-  params: { partySize: number; partyLevel: number; band: EncounterBudgetBand },
+  params: { partySize: number; partyLevel: number; band: EncounterBudgetBand; partyLevels?: number[] },
   locale: Locale,
   rng: Rng
 ): Promise<GenerateEncounterResult> {
@@ -200,7 +200,8 @@ export async function generateEncounterForCampaign(
   const resolution = await getEncounterBudgetTableForRuleset(supabase, campaign.rulesetId);
   if (!resolution) return { ok: false, reason: "budget_unavailable" };
 
-  const budget = encounterBudget(Array(params.partySize).fill(params.partyLevel), params.band, resolution.rows);
+  const levels = params.partyLevels ?? Array<number>(params.partySize).fill(params.partyLevel);
+  const budget = encounterBudget(levels, params.band, resolution.rows);
   const monsters = await listMonstersForRuleset(supabase, campaign.rulesetId, locale);
   const monsterByKey = new Map(monsters.map((m) => [m.key, m]));
 

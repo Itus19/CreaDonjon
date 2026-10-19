@@ -4,6 +4,7 @@ import {
   encounterCost,
   formatChallengeRating,
   generateRandomEncounter,
+  memberBudgetShares,
   parseEncounterBudgetRows,
   type EncounterBudgetRow,
   type EncounterMonsterOption,
@@ -44,6 +45,25 @@ describe("encounterBudget", () => {
 
   it("un niveau absent de la table leve une erreur explicite, jamais un budget invente", () => {
     expect(() => encounterBudget([2], "low", TABLE)).toThrow(/niveau/i);
+  });
+});
+
+describe("memberBudgetShares (V3.1-44)", () => {
+  it("donne la part d'un PJ aux trois paliers, d'après la ligne de son niveau", () => {
+    expect(memberBudgetShares(3, TABLE)).toEqual({ low: 150, moderate: 225, high: 400 });
+  });
+
+  it("la somme des parts redonne exactement le budget du groupe : décocher un absent, c'est retirer sa part", () => {
+    const niveaux = [1, 3, 3, 15];
+    for (const band of ["low", "moderate", "high"] as const) {
+      const somme = niveaux.reduce((s, n) => s + (memberBudgetShares(n, TABLE)?.[band] ?? 0), 0);
+      expect(somme).toBe(encounterBudget(niveaux, band, TABLE));
+    }
+  });
+
+  it("un niveau absent de la table (fiche vide, niveau 0) n'a pas de part, sans lever d'erreur", () => {
+    expect(memberBudgetShares(0, TABLE)).toBeNull();
+    expect(memberBudgetShares(7, TABLE)).toBeNull();
   });
 });
 

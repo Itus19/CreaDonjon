@@ -4,7 +4,7 @@ import { getLocale } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { listCampaigns } from "@/src/server/services/campaigns";
-import { getEncounterBudgetTableForRuleset, listMonstersForRuleset, listSavedEncounters } from "@/src/server/services/encounters";
+import { chargerAtelierRencontres } from "@/src/server/services/encounterWorkshop";
 import type { Locale } from "@/src/i18n/request";
 import EncounterBuilder from "@/components/shell/EncounterBuilder";
 import RegisterPrimaryWindow from "@/components/shell/RegisterPrimaryWindow";
@@ -33,13 +33,7 @@ export default async function MjRencontresPage({
   const selected = campaigns.find((c) => c.id === campagne) ?? campaigns[0] ?? null;
 
   const locale = (await getLocale()) as Locale;
-  const [budgetResolution, monsters, savedEncounters] = selected
-    ? await Promise.all([
-        getEncounterBudgetTableForRuleset(supabase, selected.rulesetId),
-        listMonstersForRuleset(supabase, selected.rulesetId, locale),
-        listSavedEncounters(supabase, selected.id),
-      ])
-    : [null, [], []];
+  const atelier = selected ? await chargerAtelierRencontres(supabase, selected, locale) : null;
 
   return (
     <div className="flex flex-col gap-4">
@@ -75,14 +69,15 @@ export default async function MjRencontresPage({
               ))}
             </div>
           )}
-          {selected && (
+          {selected && atelier && (
             <EncounterBuilder
               worldSlug={worldSlug}
               campaignId={selected.id}
-              budgetTable={budgetResolution?.rows ?? null}
-              budgetIsFallback={budgetResolution?.isFallback ?? false}
-              monsters={monsters}
-              initialSavedEncounters={savedEncounters}
+              budgetTable={atelier.budgetTable}
+              budgetIsFallback={atelier.budgetIsFallback}
+              monsters={atelier.monsters}
+              initialSavedEncounters={atelier.savedEncounters}
+              party={atelier.party}
             />
           )}
         </>

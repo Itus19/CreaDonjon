@@ -5,6 +5,8 @@ export const generateEncounterSchema = z.object({
   partySize: z.number().int().positive().max(20),
   partyLevel: z.number().int().min(1).max(20),
   band: z.enum(["low", "moderate", "high"]),
+  /** V3.1-44 : les niveaux réels des PJ présents ; prime sur `partySize` × `partyLevel` quand il est fourni. */
+  partyLevels: z.array(z.number().int().min(1).max(20)).min(1).max(20).optional(),
 });
 
 const encounterParticipantSchema = z.object({
