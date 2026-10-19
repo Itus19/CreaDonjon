@@ -203,7 +203,7 @@ lint et tests verts.
 
 ---
 
-### ☐ V3.1-12 — « Voir comme » accessible aux MJ de campagne, pas seulement au superadmin · `M` · sans modèle IA — **fait le 9 octobre (ADR 0051, 0052) ; reste une vérification en direct**
+### ☐ V3.1-12 — « Voir comme » accessible aux MJ de campagne, pas seulement au superadmin · `M` · sans modèle IA — **fait le 9 octobre (ADR 0051, 0052) ; vérifié en direct en MJ le 19 octobre, reste le superadmin**
 
 **Modèle conseillé : Opus** — « voir comme » : usurpation d'identité, portée de sécurité.
 
@@ -299,6 +299,19 @@ Ensuite :
 Tests : `memberAccountActions.test.ts` (9 cas). Non vérifié en navigateur
 dans cette session, faute de base. **À contrôler par l'auteur** : démarrer et
 revenir, en MJ puis en superadmin.
+
+**19 octobre, vérifié en direct en MJ** (avec V3.1-54) : Testeur MJ, depuis
+la carte de Testeuse A, démarre « Voir comme », confirme, voit le bandeau
+« Vous visualisez comme Testeuse A », revient à son compte (200) et retrouve
+la gestion de campagne. **Reste** : le même aller-retour en superadmin,
+depuis l'Administration (aucun compte superadmin de test).
+Deux constats, non corrigés ici :
+- abandonner sur la page « Confirmer » puis cliquer « Revenir à mon compte »
+  déconnecte : la session courante est encore celle du MJ, le retour la
+  ferme, ce qui révoque le jeton mis de côté (401, « Session d'origine
+  expirée ») ;
+- l'entrée apparaît aussi sur la ligne du MJ lui-même, et le serveur ne
+  refuse pas « Voir comme » sur soi (geste inutile, sans danger).
 
 ---
 

@@ -2,6 +2,51 @@
 
 ---
 
+### ☑ V3.1-54 — Gestion de campagne au verre minéral, avec « Voir comme » · `S` · sans modèle IA — **fait le 19 octobre**
+
+**Modèle conseillé : Sonnet** — disposition déjà codée (V3.1-15) ; transposition seulement.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Planche** : `Campagne-Gestion.dc.html`. **Départ** :
+`components/shell/CampaignsPanel.tsx`, `components/shell/CampaignDetail.tsx`,
+`InviteLinkPanel.tsx`. **Dépend de** : 20, 29 ; l'entrée « Voir comme »
+dépend de **V3.1-12** (autorisation et garde-fous).
+
+**Ce qui est décidé** : la disposition de V3.1-15 (piste A) **ne change
+pas** — invitations en haut, « À la table » avec les MJ sur une ligne, une
+carte par compte joueur, les PNJ sans joueur en bas. Le verre minéral :
+panneaux en verre (coins 18 px), carte en verre sombre avec le PJ en ambre,
+menus ⋮ et confirmations en **surfaces flottantes** (elles nomment
+`Nom#0000`), boutons de la charte. Tablette : deux cartes par rangée.
+Téléphone : cartes l'une sous l'autre, ligne de lien réduite au rôle,
+Copier et ⋮.
+- **« Voir comme Inès#4821 »** en tête du menu ⋮ de chaque carte, avant
+  « Forcer une réinitialisation » et « Retirer de la campagne ». Tant que
+  V3.1-12 n'est pas livré, l'entrée n'apparaît pas.
+
+**Critères d'acceptation**
+- [x] Les gestes existants inchangés (tests de V3.1-15 verts).
+- [x] Menus et confirmations en surfaces flottantes, au clavier (Échap ferme).
+- [x] « Voir comme » visible seulement si V3.1-12 l'autorise côté serveur.
+
+**Livré le 19 octobre.** Panneau de campagne, invitations, cartes joueurs
+et « Personnages sans joueur » en verre (coins 18 px, flou `--blur`) ;
+grille d'une, deux puis trois cartes (téléphone, `md`, `xl`). Menu ⋮
+(`ActionsMenu`, coins 14 px) et `ConfirmDialog` (coins 18 px) en surfaces
+flottantes en verre ; Échap ferme le menu **et rend le focus au bouton ⋮**
+(le menu vit en portail). Au téléphone, la sous-ligne d'un lien
+d'invitation est masquée (`hidden sm:block`) : la ligne se réduit au rôle,
+Copier et ⋮. « Voir comme » était déjà en tête du menu (V3.1-12) ; le
+serveur l'autorise au MJ de la campagne sur un compte « tag » membre,
+l'entrée reste donc. Vérifié en navigateur à 1280, 820 et 390 px (3, 2, 1
+colonnes), Échap et focus, et l'aller-retour « Voir comme » sur Testeuse A.
+Non exercé : la ligne réduite d'un lien, aucune invitation n'existant dans
+le banc d'essai. Planches Navigation (menu ⋮) et Surfaces (confirmation)
+mises à jour.
+
+---
+
 ### ☑ V3.1-61 — Journal historique : par fiche, ou chronologique · `M` · sans modèle IA — **fait le 19 octobre**
 
 **Modèle conseillé : Sonnet** — planche définitive ; un champ de plus côté serveur.

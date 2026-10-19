@@ -505,36 +505,6 @@ l'ajout (2) « Relancer » dépend de V3.1-22 (fils du chat).
 
 ---
 
-### ☐ V3.1-54 — Gestion de campagne au verre minéral, avec « Voir comme » · `S` · sans modèle IA — **prêt**
-
-**Modèle conseillé : Sonnet** — disposition déjà codée (V3.1-15) ; transposition seulement.
-
-**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-**Planche** : `Campagne-Gestion.dc.html`. **Départ** :
-`components/shell/CampaignsPanel.tsx`, `components/shell/CampaignDetail.tsx`,
-`InviteLinkPanel.tsx`. **Dépend de** : 20, 29 ; l'entrée « Voir comme »
-dépend de **V3.1-12** (autorisation et garde-fous).
-
-**Ce qui est décidé** : la disposition de V3.1-15 (piste A) **ne change
-pas** — invitations en haut, « À la table » avec les MJ sur une ligne, une
-carte par compte joueur, les PNJ sans joueur en bas. Le verre minéral :
-panneaux en verre (coins 18 px), carte en verre sombre avec le PJ en ambre,
-menus ⋮ et confirmations en **surfaces flottantes** (elles nomment
-`Nom#0000`), boutons de la charte. Tablette : deux cartes par rangée.
-Téléphone : cartes l'une sous l'autre, ligne de lien réduite au rôle,
-Copier et ⋮.
-- **« Voir comme Inès#4821 »** en tête du menu ⋮ de chaque carte, avant
-  « Forcer une réinitialisation » et « Retirer de la campagne ». Tant que
-  V3.1-12 n'est pas livré, l'entrée n'apparaît pas.
-
-**Critères d'acceptation**
-- [ ] Les gestes existants inchangés (tests de V3.1-15 verts).
-- [ ] Menus et confirmations en surfaces flottantes, au clavier (Échap ferme).
-- [ ] « Voir comme » visible seulement si V3.1-12 l'autorise côté serveur.
-
----
-
 ### ☐ V3.1-56 — Calendrier réel au verre minéral, côté MJ et côté joueuse · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — disposition déjà codée (V3.1-16) ; transposition seulement.
