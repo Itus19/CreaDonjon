@@ -77,6 +77,7 @@ export default function MjToolWindowContent({ worldSlug, data }: { worldSlug: st
               budgetIsFallback={data.budgetIsFallback}
               monsters={data.monsters}
               initialSavedEncounters={data.savedEncounters}
+              party={data.party}
             />
           ) : (
             <p className="text-sm italic text-ink-muted">{NO_CAMPAIGN_MESSAGE}</p>
