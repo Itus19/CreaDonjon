@@ -2,6 +2,72 @@
 
 ---
 
+### ☑ V3.1-61 — Journal historique : par fiche, ou chronologique · `M` · sans modèle IA — **fait le 19 octobre**
+
+**Modèle conseillé : Sonnet** — planche définitive ; un champ de plus côté serveur.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Planche** : `Journal-Decide.dc.html`. **Départ** :
+`components/shell/GmJournalPanel.tsx`, `DeletedEntitiesPanel.tsx`,
+`src/server/services/activityJournal.ts`,
+`app/m/[worldSlug]/mj/journal-historique/page.tsx`, cas
+`journal-historique`. **Dépend de** : 20, 29.
+
+**Demande de l'auteur (8 octobre)** : chercher par personne, trier,
+filtrer par objet modifié ou par élément (wiki, fiche de personnage…).
+
+**Ce qui est décidé**
+- **Serveur** : `JournalEntry` gagne `entityKind` (le type de la fiche,
+  déjà connu du serveur, lu dans la même requête — pas de requête par
+  ligne) et le nom du bloc modifié reste `blockLabel`. Accès réservé au MJ,
+  inchangé.
+- **Bascule en tête** (pilule) :
+  - « **Par fiche** » : une carte par objet modifié — nom (lien entité,
+    toucher = ne montrer que cette fiche), type en pastille, « n
+    modifications » ; dedans, une ligne par changement : quand (« 8 oct.
+    10:42 »), qui, et « partie modifiée — détail » (le détail d'inventaire
+    existant, ligne par ligne). Les événements de jeu sans fiche se
+    regroupent dans « Sans fiche (jeu) ».
+  - « **Chronologique** » : la liste groupée selon le tri — plus récent
+    (par jour : « Aujourd'hui · mercredi 8 octobre »), plus ancien, par
+    personne, par fiche ; chaque ligne : heure, avatar (initiale ; ✦ pour
+    « IA / système »), « Inès a modifié Inventaire de Sakaburin », type en
+    pastille, première ligne du détail et « révision #14 », pastille
+    « wiki » / « jeu » ; toucher la ligne **déplie** le détail complet.
+- **Filtres communs** : la recherche (« Chercher une personne, une fiche, un
+  mot… » — dans la personne, la fiche, la partie modifiée, le détail,
+  l'élément) ; « Qui » en puces (chaque personne avec son nombre, « IA /
+  système » compris) ; « Élément » en puces (Fiches de personnage, PNJ,
+  Lieux, Factions, Objets, Pages, Jeu (jets, actions, narration)) avec
+  leur nombre — **les nombres suivent les autres filtres** ; les filtres
+  actifs en étiquettes (× par étiquette, « Tout effacer ») et « n
+  modifications sur N ».
+- Filtres et tri **côté client**, sur les entrées déjà reçues (pas de
+  requête par filtre).
+- **Fiches supprimées** à droite (texte « … · PNJ · supprimée le 6 oct. par
+  Gabriel », « Rétablir »). Rétablir met à jour l'arborescence **sans
+  `window.location.reload()`** (règle commune 6).
+- **Tablette** : une colonne, les fiches supprimées en bas. **Téléphone** :
+  la bascule et la recherche en tête, « Filtres » (avec le nombre de
+  filtres actifs) ouvre une **feuille du bas** — tri, Qui, Élément, Partie
+  modifiée (cases à cocher avec nombres), « Voir n résultats » ; les cartes
+  l'une sous l'autre.
+
+**Critères d'acceptation**
+- [x] `entityKind` renvoyé sans requête supplémentaire par ligne (test du service).
+- [x] « Inès » + « Fiches de personnage » : seules ses modifications de fiches de PJ ; les nombres des autres puces suivent.
+- [x] Toucher « Sakaburin » ne montre que cette fiche ; l'étiquette se retire d'un ×.
+- [x] Rétablir une fiche : elle revient dans l'arborescence, sans rechargement de la page.
+
+**Clôture (19 octobre).**
+- Serveur (Opus) : `JournalEntry` gagne `entityKind` (lu dans la même requête que le nom de la fiche), `pc` (les PJ de la campagne lus une fois pour tout le journal) et `revisionNumber` ; test du service (une lecture des PJ, une des fiches d'événements, jamais par ligne). « Rétablir » devient une action serveur (`restoreEntityAction`, Zod, droit vérifié par `restoreDeletedEntity`) qui revalide la mise en page du monde : plus de `window.location.reload()`, aucun `router.refresh()` ajouté (C5).
+- Interface (Sonnet) : `GmJournalPanel`, `components/shell/journal/`, `DeletedEntitiesPanel` ; logique pure testée (`lib/ui/journalHistorique.ts` : éléments, filtres, comptes qui suivent les autres filtres, regroupements). Correction d'Opus : une révision qui touche plusieurs parties (« Personnage, Inventaire ») comptait comme une partie à part ; chaque partie a maintenant sa case (tests).
+- Vérifié au navigateur en Testeur MJ (Banc d'essai) : « Testeur MJ » + « Fiches de personnage » → 20 modifications sur 73, la puce « Fiches de personnage » passe de 42 à 20 ; toucher « PJ de Testeuse A » ne garde qu'elle (24 sur 74) et l'étiquette se retire d'un × ; bascule et quatre tris ; « Rétablir » sans aucun rechargement, la fiche est dans l'arborescence au passage suivant sur le wiki ; feuille « Filtres » au téléphone, aucun débordement. La fiche rétablie pour l'essai a été remise à la corbeille (sa date de suppression est maintenant le 19 octobre).
+- Restes : « supprimée … par X » n'est pas affiché, la base ne garde pas l'auteur d'une suppression (une migration, à décider) ; la fenêtre d'outil du journal ne montre pas les fiches supprimées (inchangé) ; « IA / système » n'est pas traduit (il vient du serveur).
+
+---
+
 ### ☑ V3.1-55 — Calendrier ingame : l'année d'un coup d'œil · `M` · sans modèle IA — **fait le 18 octobre**
 
 **Modèle conseillé : Sonnet** — planche définitive ; aucune donnée nouvelle.
