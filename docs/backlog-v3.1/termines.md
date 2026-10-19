@@ -2,6 +2,62 @@
 
 ---
 
+### ☑ V3.1-43 — Livre de sessions : le registre et ses trois ajouts · `M` · sans modèle IA — **fait le 19 octobre (sauf « Relancer », qui attend V3.1-22)**
+
+**Modèle conseillé : Sonnet** — planche définitive ; aucune donnée nouvelle.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Planche** : `Livre-Decide.dc.html`. **Départ** :
+`components/shell/sessionJournal/SessionJournalMjPanel.tsx`,
+`components/shell/sessionJournal/SessionJournalBanner.tsx`, cas
+`livre-de-sessions` de `MjToolWindowContent.tsx`. **Dépend de** : 20, 29 ;
+l'ajout (2) « Relancer » dépend de V3.1-22 (fils du chat).
+
+**Ce qui est décidé**
+- **MJ, ordinateur** : une ligne par séance — date en jeu, titre, autrice,
+  séance réelle, état (« Rédigée », « En attente », « Pas de devoir »). En
+  tête : la prochaine séance et « Assigner le devoir » (feuille : séance
+  réelle et date en jeu proposées d'office, « Qui l'écrit »). Une entrée —
+  ou un devoir en attente, avec « Relancer » et « Annuler le devoir » —
+  s'ouvre en lecture dans la colonne de droite.
+- **Tablette** : registre réduit (date · titre · état), lecture en panneau
+  par-dessus. **Téléphone du MJ** : Outils › Livre de sessions, prochaine
+  séance puis registre en liste, entrée en plein écran.
+- **Joueuse** (page pleine et téléphone) : le bandeau du devoir, puis le
+  Livre en **premier chapitre du sommaire** de son wiki.
+- **Ajouts** : (1) « à qui le tour » — la feuille propose la personne qui
+  n'a pas écrit depuis le plus longtemps (ou jamais) ; (2) « Relancer » —
+  un rappel posé dans le fil privé du chat de l'autrice (V3.1-22),
+  journalisé ; tant que 22 n'est pas livré, le bouton n'apparaît pas ;
+  (3) le Livre en chapitre de tête du sommaire du wiki de la joueuse.
+
+**Critères d'acceptation**
+- [x] Assigner, annuler un devoir ; chaque geste journalisé une fois (`sessionJournalGestes.test.ts`). « Relancer » : absent tant que V3.1-22 n'est pas livré, comme décidé.
+- [x] « À qui le tour » : test du choix (jamais écrit > plus ancien > égalité par nom).
+- [x] La joueuse voit le Livre en tête de son sommaire, jamais une entrée réservée au MJ.
+
+**Livré le 19 octobre.** Opus : `nextWriter` (src/core/sessionJournal,
+6 tests) ; assigner et annuler écrits une fois au journal de la campagne
+(événement `system` du MJ dans `session_events`), annuler ne journalise
+rien si aucun devoir n'a été effacé (`deleteAssignment` rend la ligne) ;
+**faille corrigée** : le groupe épinglé du Livre échappait au filtre de
+visibilité de la joueuse, le titre d'une entrée réservée au MJ lui
+apparaissait (test d'intégration, rouge sur l'ancien code) ; la route des
+devoirs renvoie les séances réelles et, par devoir, le nom et le slug de
+l'entrée rédigée ; `campaignId`/`assignmentId` validés par Zod ; le roster
+porte le rôle, et « à qui le tour » ne propose d'office qu'une joueuse.
+Sonnet : registre, lecture, feuille « Assigner le devoir », tablette et
+téléphone, bandeau au verre ; logique pure `lib/ui/livreDeSessions.ts`
+(12 tests, jour local de création vérifié en trois fuseaux). Vérifié en
+navigateur (Testeur MJ) : registre à 1280, 820 et 390 px, feuille avec la
+suggestion d'une joueuse. Non exercé en direct : un devoir réel (assigner
+puis annuler laisserait deux traces au journal), le bandeau et le chapitre
+du Livre côté joueuse (aucun devoir ni entrée dans le banc d'essai).
+Planche OutilsMJ : section « Livre de sessions ».
+
+---
+
 ### ☑ V3.1-45 — Générateurs : les tirages à gauche, la fiche à droite · `M` · **avec modèle IA** — **fait le 19 octobre**
 
 **Modèle conseillé : Sonnet** — planche définitive ; tables et IA inchangées.

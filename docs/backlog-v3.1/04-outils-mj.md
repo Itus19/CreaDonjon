@@ -156,43 +156,6 @@ partage à la table »). **Départ** :
 
 ---
 
-### ☐ V3.1-43 — Livre de sessions : le registre et ses trois ajouts · `M` · sans modèle IA — **prêt**
-
-**Modèle conseillé : Sonnet** — planche définitive ; aucune donnée nouvelle.
-
-**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-**Planche** : `Livre-Decide.dc.html`. **Départ** :
-`components/shell/sessionJournal/SessionJournalMjPanel.tsx`,
-`components/shell/sessionJournal/SessionJournalBanner.tsx`, cas
-`livre-de-sessions` de `MjToolWindowContent.tsx`. **Dépend de** : 20, 29 ;
-l'ajout (2) « Relancer » dépend de V3.1-22 (fils du chat).
-
-**Ce qui est décidé**
-- **MJ, ordinateur** : une ligne par séance — date en jeu, titre, autrice,
-  séance réelle, état (« Rédigée », « En attente », « Pas de devoir »). En
-  tête : la prochaine séance et « Assigner le devoir » (feuille : séance
-  réelle et date en jeu proposées d'office, « Qui l'écrit »). Une entrée —
-  ou un devoir en attente, avec « Relancer » et « Annuler le devoir » —
-  s'ouvre en lecture dans la colonne de droite.
-- **Tablette** : registre réduit (date · titre · état), lecture en panneau
-  par-dessus. **Téléphone du MJ** : Outils › Livre de sessions, prochaine
-  séance puis registre en liste, entrée en plein écran.
-- **Joueuse** (page pleine et téléphone) : le bandeau du devoir, puis le
-  Livre en **premier chapitre du sommaire** de son wiki.
-- **Ajouts** : (1) « à qui le tour » — la feuille propose la personne qui
-  n'a pas écrit depuis le plus longtemps (ou jamais) ; (2) « Relancer » —
-  un rappel posé dans le fil privé du chat de l'autrice (V3.1-22),
-  journalisé ; tant que 22 n'est pas livré, le bouton n'apparaît pas ;
-  (3) le Livre en chapitre de tête du sommaire du wiki de la joueuse.
-
-**Critères d'acceptation**
-- [ ] Assigner, relancer, annuler un devoir ; chaque geste journalisé une fois.
-- [ ] « À qui le tour » : test du choix (jamais écrit > plus ancien > égalité par nom).
-- [ ] La joueuse voit le Livre en tête de son sommaire, jamais une entrée réservée au MJ.
-
----
-
 ### ☐ V3.1-49 — Création : le chemin qui se ramifie (structure, aperçu, joueuse) · `L` · sans modèle IA — **prêt après 47 et 48**
 
 **Modèle conseillé : Opus** — l'écran est décidé, mais le cœur est un état de choix en cascade (un choix naît de sa source, disparaît si elle change, attend un autre choix) partagé par toutes les étapes, l'aperçu en direct et la création finale ; une erreur y casse les quatre tickets suivants. **Sonnet** pour 50 à 53, qui se branchent dessus.
