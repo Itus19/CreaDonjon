@@ -24,3 +24,7 @@ Au retour, `signOut({ scope: "local" })` révoque la session empruntée, puis `r
 ## Conséquences
 
 Le retour marche à l'identique pour un superadmin et pour un MJ, ce que demandait l'étape 3 de V3.1-12, sans élargir quoi que ce soit. Un « voir comme » en cours avec l'ancien cookie ne peut plus revenir : la personne se reconnecte. Si la session d'origine a été fermée entre-temps (déconnexion ailleurs), le retour échoue proprement et demande de se reconnecter.
+
+## Complément du 19 octobre
+
+Abandonner sur la page « Confirmer » puis cliquer « Revenir à mon compte » déconnectait : la session courante était encore celle d'origine, et `signOut` révoquait justement le jeton mis de côté. Au départ, l'identifiant de la session d'origine (`session_id` du jeton d'accès renouvelé) va aussi dans un cookie httpOnly `view_as_return_session`. Au retour, si la session courante porte cet identifiant (`getClaims`), rien n'est fermé ni repris. Ce cookie ne prouve rien : le forger ne fait qu'éviter de fermer sa propre session courante, le jeton reste la seule preuve. « Voir comme » sur son propre compte est refusé (`self`) avant tout autre contrôle.

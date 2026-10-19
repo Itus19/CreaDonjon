@@ -1,10 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { VIEW_AS_RETURN_COOKIE, captureReturnSession, startViewAs } from "@/src/server/services/viewAs";
+import { VIEW_AS_RETURN_COOKIE, VIEW_AS_RETURN_SESSION_COOKIE, captureReturnSession, startViewAs } from "@/src/server/services/viewAs";
 import { viewAsSchema } from "@/lib/auth/schemas";
 
-const REASON_STATUS = { not_authorized: 403, not_found: 404, not_a_member: 403, ordinary_account: 400 } as const;
+const REASON_STATUS = { self: 400, not_authorized: 403, not_found: 404, not_a_member: 403, ordinary_account: 400 } as const;
 const REASON_MESSAGE = {
+  self: "« Voir comme » ne s'utilise pas sur son propre compte.",
   not_authorized: "Action non autorisée.",
   not_found: "Compte introuvable.",
   not_a_member: "Ce compte n'est pas membre de cette campagne.",
@@ -40,18 +41,21 @@ export async function POST(request: NextRequest) {
   }
 
   // Sans session a reprendre, pas de depart : on resterait coince dans le compte cible.
-  const returnToken = await captureReturnSession(supabase);
-  if (!returnToken) {
+  const saved = await captureReturnSession(supabase);
+  if (!saved) {
     return NextResponse.json({ error: "Session à renouveler : reconnectez-vous avant « voir comme »." }, { status: 401 });
   }
 
   const response = NextResponse.json({ url: `/auth/confirm?token_hash=${result.tokenHash}&type=magiclink&next=/` }, { status: 200 });
-  response.cookies.set(VIEW_AS_RETURN_COOKIE, returnToken, {
+  const cookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
     path: "/",
     maxAge: 3600,
-  });
+  } as const;
+  response.cookies.set(VIEW_AS_RETURN_COOKIE, saved.refreshToken, cookieOptions);
+  if (saved.sessionId) response.cookies.set(VIEW_AS_RETURN_SESSION_COOKIE, saved.sessionId, cookieOptions);
+  else response.cookies.delete(VIEW_AS_RETURN_SESSION_COOKIE);
   return response;
 }

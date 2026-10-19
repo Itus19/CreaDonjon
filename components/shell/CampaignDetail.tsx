@@ -39,6 +39,8 @@ interface CampaignDetailData {
   handleTags?: Record<string, string>;
   /** V3.1-15 : créateur du monde — jamais retiré de la campagne. Renvoyé au seul MJ du monde, `null` sinon. */
   worldOwnerId?: string | null;
+  /** Le compte qui regarde : « Voir comme » n'a pas de sens sur soi-même (le serveur le refuse aussi). */
+  viewerId?: string | null;
 }
 
 /** V1-D5, specs/ruleset-personnel.md §3.1 : une table de jeu ordinaire (4-6 joueurs + MJ) reste bien en-deca — au-dela, un rappel plus explicite, jamais un refus. */
@@ -222,7 +224,7 @@ export default function CampaignDetail({
 
   function personActions(person: CampaignPerson): ActionsMenuItem[] {
     return [
-      { label: "Voir comme", onSelect: () => void viewAs(person.userId) },
+      ...(person.userId !== data?.viewerId ? [{ label: "Voir comme", onSelect: () => void viewAs(person.userId) }] : []),
       { label: "Forcer une réinitialisation", onSelect: () => void forceResetPassword(person.userId) },
       // Un compte joueur, ou un second MJ — jamais le créateur du monde
       // (ce serait un transfert de monde ; la base le refuse aussi).

@@ -305,13 +305,15 @@ la carte de Testeuse A, démarre « Voir comme », confirme, voit le bandeau
 « Vous visualisez comme Testeuse A », revient à son compte (200) et retrouve
 la gestion de campagne. **Reste** : le même aller-retour en superadmin,
 depuis l'Administration (aucun compte superadmin de test).
-Deux constats, non corrigés ici :
+Deux constats, **corrigés le jour même** (ADR 0051, complément) :
 - abandonner sur la page « Confirmer » puis cliquer « Revenir à mon compte »
-  déconnecte : la session courante est encore celle du MJ, le retour la
-  ferme, ce qui révoque le jeton mis de côté (401, « Session d'origine
-  expirée ») ;
-- l'entrée apparaît aussi sur la ligne du MJ lui-même, et le serveur ne
-  refuse pas « Voir comme » sur soi (geste inutile, sans danger).
+  déconnectait : la session courante était encore celle du MJ, le retour la
+  fermait, ce qui révoquait le jeton mis de côté. Le retour reconnaît
+  désormais la session d'origine (cookie `view_as_return_session`) et ne la
+  ferme pas ;
+- l'entrée apparaissait sur la ligne du MJ lui-même : le serveur refuse
+  « Voir comme » sur soi (`self`), l'écran ne la propose plus (`viewerId`).
+Les deux vérifiés en direct (`viewAs.test.ts`, 6 cas).
 
 ---
 

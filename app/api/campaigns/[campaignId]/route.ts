@@ -53,7 +53,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const worldOwnerId = canSeeTags ? await getWorldOwnerId(supabase, campaign.worldId) : null;
 
   return NextResponse.json(
-    { campaign, members, characters, rulesetContentOrigin, grants, displayNames, passwordResetRequests, handleTags, worldOwnerId },
+    { campaign, members, characters, rulesetContentOrigin, grants, displayNames, passwordResetRequests, handleTags, worldOwnerId, viewerId: user?.id ?? null },
     { status: 200 }
   );
 }
