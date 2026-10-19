@@ -272,6 +272,11 @@ export async function getPastSessions(supabase: TypedClient, campaignId: string)
   return sessions.filter((s) => sessionMoment(s) < now).sort((a, b) => sessionMoment(b) - sessionMoment(a));
 }
 
+/** Toutes les séances réelles, dans l'ordre (V3.1-43) : le Livre de sessions y retrouve la séance réelle de chaque devoir et propose la dernière jouée ; l'écran sépare passé et futur. */
+export async function listCampaignRealSessions(supabase: TypedClient, campaignId: string): Promise<RealSessionRow[]> {
+  return listRealSessions(supabase, campaignId);
+}
+
 export async function getUpcomingSessions(supabase: TypedClient, campaignId: string): Promise<RealSessionRow[]> {
   const sessions = await listRealSessions(supabase, campaignId);
   const now = Date.now();

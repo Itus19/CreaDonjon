@@ -47,9 +47,11 @@ export async function getAssignmentById(supabase: TypedClient, id: string): Prom
   return data ? toRow(data) : null;
 }
 
-export async function deleteAssignment(supabase: TypedClient, id: string): Promise<void> {
-  const { error } = await supabase.from("session_journal_entries").delete().eq("id", id);
+/** Efface un devoir et rend la ligne effacée — `null` si rien ne l'a été (déjà effacé, ou refusé par la RLS) : V3.1-43 ne journalise qu'un vrai geste. */
+export async function deleteAssignment(supabase: TypedClient, id: string): Promise<SessionJournalEntryRow | null> {
+  const { data, error } = await supabase.from("session_journal_entries").delete().eq("id", id).select(COLUMNS);
   if (error) throw new Error(error.message);
+  return data.length > 0 ? toRow(data[0]) : null;
 }
 
 /** Marque un devoir redige — pose `entity_id`/`written_at` en une seule ecriture, jamais deux (concurrence). */

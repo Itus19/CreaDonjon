@@ -20,6 +20,8 @@ import { getCalendar } from "@/src/server/services/worlds";
 import { formatGameDate } from "@/src/core/calendar/formatDate";
 import { resolvePlayerNames } from "@/src/server/services/scheduling";
 import { listCampaignMembers } from "@/src/server/repos/campaigns";
+import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
+import { insertSessionEvent, nextEventSeq } from "@/src/server/repos/sessions";
 import type { GameDate } from "@/src/core/calendar/types";
 
 type TypedClient = SupabaseClient<Database>;
@@ -56,15 +58,44 @@ export async function listJournalRoster(supabase: TypedClient, campaignId: strin
   return [...gms, ...players];
 }
 
+/**
+ * V3.1-43 : chaque geste sur un devoir s'écrit UNE fois dans le journal de
+ * la campagne (`session_events`, événement `system` du MJ), comme les
+ * demandes de sauvegarde. Le fait nomme l'autrice par son PJ (« MJ » pour un
+ * MJ, comme le sélecteur).
+ */
+async function journaliserDevoir(
+  supabase: TypedClient,
+  params: { campaignId: string; action: "assign" | "cancel"; assignmentId: string; assignedTo: string; callerId: string }
+): Promise<void> {
+  const [sessionId, noms] = await Promise.all([getOrOpenSessionForCampaign(supabase, params.campaignId), resolvePlayerNames(supabase, params.campaignId)]);
+  const autrice = noms.get(params.assignedTo) ?? "MJ";
+  const fait = params.action === "assign" ? `Livre de sessions : devoir assigné à ${autrice}.` : `Livre de sessions : devoir de ${autrice} annulé.`;
+  const seq = await nextEventSeq(supabase, sessionId);
+  await insertSessionEvent(supabase, {
+    sessionId,
+    seq,
+    kind: "system",
+    actor: "gm",
+    actorUserId: params.callerId,
+    payload: { __v: 1, journal_assignment: { action: params.action, assignmentId: params.assignmentId, assignedTo: params.assignedTo }, facts: [fait] } as unknown as Json,
+  });
+}
+
 export async function assignJournalEntry(
   supabase: TypedClient,
   params: { campaignId: string; ingameDate: GameDate; assignedTo: string; createdBy: string }
 ): Promise<SessionJournalEntryRow> {
-  return insertAssignment(supabase, params);
+  const row = await insertAssignment(supabase, params);
+  await journaliserDevoir(supabase, { campaignId: row.campaign_id, action: "assign", assignmentId: row.id, assignedTo: row.assigned_to, callerId: params.createdBy });
+  return row;
 }
 
-export async function cancelJournalAssignment(supabase: TypedClient, id: string): Promise<void> {
-  await deleteAssignment(supabase, id);
+/** Annule un devoir ; journalisé seulement s'il a vraiment été effacé. */
+export async function cancelJournalAssignment(supabase: TypedClient, params: { id: string; callerId: string }): Promise<void> {
+  const deleted = await deleteAssignment(supabase, params.id);
+  if (!deleted) return;
+  await journaliserDevoir(supabase, { campaignId: deleted.campaign_id, action: "cancel", assignmentId: deleted.id, assignedTo: deleted.assigned_to, callerId: params.callerId });
 }
 
 export async function listJournalAssignments(supabase: TypedClient, campaignId: string): Promise<SessionJournalEntryRow[]> {

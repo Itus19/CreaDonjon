@@ -155,23 +155,32 @@ export async function getEntityTree(
   // d'aucune des autres, et l'attendre a part coutait un aller-retour
   // complet — pour tout le monde, admin comme joueur. Elle ne part que
   // pour un visiteur identifie ; sinon la question ne se pose pas.
-  const [entities, partOfEdges, playerCharacterIds, kindOrder, admin] = await Promise.all([
+  const [entities, partOfEdges, playerCharacterIds, kindOrder, admin, journalGroup] = await Promise.all([
     listEntitiesForWorld(supabase, worldId),
     listPartOfRelationsForWorld(supabase, worldId),
     listPlayerCharacterEntityIds(supabase, worldId),
     getWorldEntityKindOrder(supabase, worldId),
     userId ? isWorldAdmin(supabase, { worldId, userId }) : Promise.resolve(false),
+    getSessionJournalTreeGroup(supabase, worldId),
   ]);
   let visibleEntities = excludeWikiHidden(excludeSessionJournalEntries(excludeOthersPrivateNotes(entities, userId)));
+  let journal = journalGroup;
   // Reste en seconde vague, et ne peut pas en sortir : la liste d'ids a
-  // filtrer n'existe qu'apres `excludeOthersPrivateNotes` ci-dessus.
+  // filtrer n'existe qu'apres `excludeOthersPrivateNotes` ci-dessus. Les
+  // entrees du Livre passent par le MEME filtre, dans la meme lecture
+  // (V3.1-43 : une joueuse ne voit jamais le titre d'une entree reservee au
+  // MJ — le groupe epingle n'y echappait pas avant).
   if (userId && !admin) {
-    const visibleIds = await listPlayerVisibleEntityIds(supabase, worldId, visibleEntities.map((e) => e.id), userId);
+    const journalIds = journalGroup?.items.map((item) => item.id) ?? [];
+    const visibleIds = await listPlayerVisibleEntityIds(supabase, worldId, [...visibleEntities.map((e) => e.id), ...journalIds], userId);
     visibleEntities = visibleEntities.filter((e) => visibleIds.has(e.id));
+    if (journalGroup) {
+      const items = journalGroup.items.filter((item) => visibleIds.has(item.id));
+      journal = items.length > 0 ? { ...journalGroup, items } : null;
+    }
   }
   const tree = buildEntityTree(withPlayerCharacterKinds(visibleEntities, playerCharacterIds), partOfEdges, kindOrder);
-  const journalGroup = await getSessionJournalTreeGroup(supabase, worldId);
-  return journalGroup ? [journalGroup, ...tree] : tree;
+  return journal ? [journal, ...tree] : tree;
 }
 
 /**
