@@ -48,7 +48,8 @@ describe("gestes du Livre de sessions journalisés (V3.1-43)", () => {
     await assignJournalEntry(supabase, { campaignId: "c1", ingameDate: { year: 1492, month: 2, day: 14, precision: "day", end: null, label: null }, assignedTo: "u-ines", createdBy: "u-mj" });
     expect(evenements).toHaveLength(1);
     expect(evenements[0]).toMatchObject({ kind: "system", actor: "gm", actorUserId: "u-mj" });
-    expect(JSON.stringify(evenements[0].payload)).toContain("Inès");
+    // `note` : le libellé que le journal historique affiche.
+    expect(evenements[0].payload).toMatchObject({ note: "Livre de sessions : devoir assigné à Inès." });
     expect(evenements[0].payload).toMatchObject({ journal_assignment: { action: "assign", assignmentId: "a1", assignedTo: "u-ines" } });
   });
 

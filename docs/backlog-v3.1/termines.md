@@ -51,9 +51,18 @@ Sonnet : registre, lecture, feuille « Assigner le devoir », tablette et
 téléphone, bandeau au verre ; logique pure `lib/ui/livreDeSessions.ts`
 (12 tests, jour local de création vérifié en trois fuseaux). Vérifié en
 navigateur (Testeur MJ) : registre à 1280, 820 et 390 px, feuille avec la
-suggestion d'une joueuse. Non exercé en direct : un devoir réel (assigner
-puis annuler laisserait deux traces au journal), le bandeau et le chapitre
-du Livre côté joueuse (aucun devoir ni entrée dans le banc d'essai).
+suggestion d'une joueuse. Puis, à la demande de l'auteur, le parcours
+complet : le MJ assigne un devoir à Testeuse A et un à Testeur B (201,
+deux « En attente »), annule celui de B (confirmation, 204) ; Testeuse A
+voit le bandeau, rédige « Essai du Livre (test) » (201), le bandeau
+disparaît et le Livre ouvre son sommaire avec l'entrée ; le MJ retrouve
+l'entrée, « Ouvrir la fiche » mène à sa page, et la suggestion passe à
+Testeur B. Chaque geste s'écrit une fois au journal ; il s'y affichait
+« Système » seul : le fait passe maintenant par `note`, et le journal dit
+« Système — Livre de sessions : devoir assigné à PJ de Testeur B ».
+Nettoyage : devoir et entrée de test retirés (l'entrée est dans la
+corbeille), aucun devoir restant. Constat hors ticket (tâche proposée) :
+l'éditeur d'une entrée du Livre affiche le type brut « session_journal ».
 Planche OutilsMJ : section « Livre de sessions ».
 
 ---

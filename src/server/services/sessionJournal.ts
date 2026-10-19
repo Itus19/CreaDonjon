@@ -81,7 +81,8 @@ async function journaliserDevoir(
     kind: "system",
     actor: "gm",
     actorUserId: params.callerId,
-    payload: { __v: 1, journal_assignment: { action: params.action, assignmentId: params.assignmentId, assignedTo: params.assignedTo }, facts: [fait] } as unknown as Json,
+    // `note` : ce que le journal historique affiche (« Système — Livre de sessions : … »).
+    payload: { __v: 1, journal_assignment: { action: params.action, assignmentId: params.assignmentId, assignedTo: params.assignedTo }, note: fait, facts: [fait] } as unknown as Json,
   });
 }
 
