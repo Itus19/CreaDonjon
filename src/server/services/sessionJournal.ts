@@ -38,6 +38,8 @@ export type { SessionJournalEntryRow, SessionJournalAssignmentView, WrittenJourn
 
 export interface JournalRosterEntry {
   userId: string;
+  /** V3.1-43 : « à qui le tour » ne propose d'office qu'une joueuse ; le MJ reste choisissable. */
+  role: "gm" | "player";
   /** Nom du PJ (`null` si ce compte n'a pas encore de PJ dans cette campagne) — même identité que partout ailleurs dans l'app, jamais un nom de compte. */
   name: string | null;
 }
@@ -54,8 +56,8 @@ export interface JournalRosterEntry {
  */
 export async function listJournalRoster(supabase: TypedClient, campaignId: string): Promise<JournalRosterEntry[]> {
   const [members, namesByUser] = await Promise.all([listCampaignMembers(supabase, campaignId), resolvePlayerNames(supabase, campaignId)]);
-  const players = members.filter((m) => m.role === "player").map((m) => ({ userId: m.user_id, name: namesByUser.get(m.user_id) ?? null }));
-  const gms = members.filter((m) => m.role === "gm").map((m) => ({ userId: m.user_id, name: "MJ" }));
+  const players = members.filter((m) => m.role === "player").map((m) => ({ userId: m.user_id, role: "player" as const, name: namesByUser.get(m.user_id) ?? null }));
+  const gms = members.filter((m) => m.role === "gm").map((m) => ({ userId: m.user_id, role: "gm" as const, name: "MJ" }));
   return [...gms, ...players];
 }
 

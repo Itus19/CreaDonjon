@@ -3,39 +3,61 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
-import Dropdown from "@/components/shared/Dropdown";
-import GameDateInput from "@/components/shared/GameDateInput";
+import ConfirmDialog from "@/components/shared/ConfirmDialog";
+import FeuilleDuBas from "@/components/shared/FeuilleDuBas";
 import { useModalKeyboard } from "@/components/shared/useModalKeyboard";
+import { derniereSeanceJouee, prochaineSeance, registre, type DevoirLivre, type LigneRegistre, type SeanceReelle } from "@/lib/ui/livreDeSessions";
+import { nextWriter } from "@/src/core/sessionJournal/nextWriter";
 import type { CalendarConfigInput } from "@/src/core/schemas/calendar";
 import type { GameDate } from "@/src/core/calendar/types";
 import { formatGameDate } from "@/src/core/calendar/formatDate";
+import FeuilleAssigner, { type Redactrice } from "./FeuilleAssigner";
+import LectureDevoir, { PastilleEtat, type DonneesLecture } from "./LectureDevoir";
 
-interface RosterEntry {
-  userId: string;
-  name: string | null;
-}
 interface Assignment {
   id: string;
   ingame_date: GameDate;
   assigned_to: string;
   status: string;
   entity_id: string | null;
+  entity_name: string | null;
+  entity_slug: string | null;
   created_at: string;
   written_at: string | null;
 }
+
+/** Un devoir dont l'état est rétréci : tout ce qui n'est pas « rédigé » est en attente. */
+type Devoir = DevoirLivre & { ingame_date: GameDate };
+
+/** Largeur du panneau (px) sous laquelle la lecture passe en panneau par-dessus (tablette, téléphone). */
+const LARGEUR_COLONNE_PX = 896;
+
+const VERRE = "rounded-[18px] border border-edge bg-panel backdrop-blur-[var(--blur)]";
 
 function blankDate(calendar: CalendarConfigInput): GameDate {
   return calendar.currentDate ?? { year: 0, month: 1, day: 1, precision: "day", end: null, label: null };
 }
 
+function jourCourt(date: string): string {
+  return new Date(`${date}T00:00:00`).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+}
+
+function libelleSeance(s: SeanceReelle | null): string {
+  return s ? `séance du ${jourCourt(s.scheduled_date)}` : "—";
+}
+
+function libelleProchaine(s: SeanceReelle): string {
+  return new Date(`${s.scheduled_date}T00:00:00`).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+}
+
 /**
- * Panneau MJ "Livre de sessions" (V2.1-3, retour utilisateur : "pouvoir
- * donner le devoir à un joueur") — assigne une entrée à une joueuse pour
- * une date ingame donnée ; la fiche elle-même (titre, blocs) n'est
- * normalement écrite que par l'autrice assignée (édition normale d'une
- * fiche, `submitJournalEntry`) — SAUF quand le MJ se l'attribue à
- * lui-même (retour utilisateur), auquel cas il rédige directement ici
- * avant de rejoindre l'édition normale de la fiche créée.
+ * Panneau MJ "Livre de sessions" (V3.1-43) : le registre des devoirs, une
+ * ligne par devoir et une par séance réelle passée sans devoir. En tête, la
+ * prochaine séance et « Assigner le devoir ». Une ligne s'ouvre en lecture
+ * (colonne de droite, ou panneau par-dessus quand le conteneur est étroit).
+ * La fiche elle-même n'est normalement écrite que par l'autrice assignée,
+ * SAUF quand le MJ se l'attribue (il rédige alors le titre ici, puis rejoint
+ * l'édition normale de la fiche créée).
  */
 export default function SessionJournalMjPanel({
   campaignId,
@@ -49,51 +71,110 @@ export default function SessionJournalMjPanel({
   initialCalendar: CalendarConfigInput;
 }) {
   const router = useRouter();
-  const [roster, setRoster] = useState<RosterEntry[]>([]);
+  const [roster, setRoster] = useState<Redactrice[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [seances, setSeances] = useState<SeanceReelle[]>([]);
+  const [maintenant] = useState(() => Date.now());
+  const [etroit, setEtroit] = useState(false);
+  const [ouverte, setOuverte] = useState<string | null>(null);
+  const [feuille, setFeuille] = useState(false);
   const [ingameDate, setIngameDate] = useState<GameDate>(() => blankDate(initialCalendar));
-  const [assignedTo, setAssignedTo] = useState("");
+  const [choix, setChoix] = useState<string | null>(null);
+  const [envoi, setEnvoi] = useState(false);
+  const [erreurFeuille, setErreurFeuille] = useState<string | null>(null);
+  const [aAnnuler, setAAnnuler] = useState<string | null>(null);
+  const [erreurListe, setErreurListe] = useState<string | null>(null);
   const [writing, setWriting] = useState<Assignment | null>(null);
   const [title, setTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const racineRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   useModalKeyboard({ open: writing !== null, onClose: () => setWriting(null), panelRef });
+
+  // Largeur du conteneur (pas de la fenêtre) : la fenêtre MJ peut être étroite sur un grand écran.
+  useEffect(() => {
+    const racine = racineRef.current;
+    if (!racine) return;
+    const observateur = new ResizeObserver(([e]) => setEtroit(e.contentRect.width < LARGEUR_COLONNE_PX));
+    observateur.observe(racine);
+    return () => observateur.disconnect();
+  }, []);
 
   function loadRoster() {
     fetch(`/api/campaigns/${campaignId}/session-journal/roster`)
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error())))
-      .then((body: { roster: RosterEntry[] }) => {
-        setRoster(body.roster);
-        setAssignedTo((current) => current || body.roster[0]?.userId || "");
-      })
+      .then((body: { roster: Redactrice[] }) => setRoster(body.roster))
       .catch((erreur) => console.error("Chargement du roster du journal impossible", erreur));
   }
 
   function loadAssignments() {
     fetch(`/api/campaigns/${campaignId}/session-journal/assignments`)
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error())))
-      .then((body: { assignments: Assignment[] }) => setAssignments(body.assignments))
+      .then((body: { assignments: Assignment[]; realSessions: SeanceReelle[] }) => {
+        setAssignments(body.assignments);
+        setSeances(body.realSessions);
+      })
       .catch((erreur) => console.error("Chargement des attributions du journal impossible", erreur));
   }
 
   useEffect(loadRoster, [campaignId]);
   useEffect(loadAssignments, [campaignId]);
 
+  const devoirs: Devoir[] = assignments.map((a) => ({ ...a, status: a.status === "written" ? "written" : "pending" }));
+  const lignes: LigneRegistre<Devoir>[] = registre(devoirs, seances, maintenant);
+  const nomDe = new Map(roster.map((r) => [r.userId, r.name]));
+  // « À qui le tour » ne propose d'office qu'une joueuse ; le MJ seulement s'il n'y en a aucune (il reste choisissable).
+  const joueuses = roster.filter((r) => r.role === "player");
+  const suggeree = nextWriter(
+    (joueuses.length > 0 ? joueuses : roster).map((r) => ({ userId: r.userId, name: r.name ?? "" })),
+    devoirs.map((d) => ({ assignedTo: d.assigned_to, status: d.status, writtenAt: d.written_at }))
+  );
+  const choisie = choix ?? suggeree ?? roster[0]?.userId ?? "";
+  const prochaine = prochaineSeance(seances, maintenant);
+  const derniere = derniereSeanceJouee(seances, maintenant);
+  const ligneOuverte = lignes.find((l) => l.cle === ouverte && l.devoir) ?? null;
+
+  function ouvrirFeuille() {
+    setIngameDate(blankDate(initialCalendar));
+    setChoix(null);
+    setErreurFeuille(null);
+    setFeuille(true);
+  }
+
   function assign() {
-    if (!assignedTo) return;
+    if (!choisie) return;
+    setEnvoi(true);
+    setErreurFeuille(null);
     fetch(`/api/campaigns/${campaignId}/session-journal/assignments`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ingameDate, assignedTo }),
-    }).then(() => {
-      setIngameDate(blankDate(initialCalendar));
-      loadAssignments();
-    });
+      body: JSON.stringify({ ingameDate, assignedTo: choisie }),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Impossible d'assigner le devoir.");
+        setFeuille(false);
+        loadAssignments();
+      })
+      .catch((err: Error) => setErreurFeuille(err.message))
+      .finally(() => setEnvoi(false));
   }
 
   function cancel(id: string) {
-    fetch(`/api/campaigns/${campaignId}/session-journal/assignments/${id}`, { method: "DELETE" }).then(() => loadAssignments());
+    setAAnnuler(null);
+    fetch(`/api/campaigns/${campaignId}/session-journal/assignments/${id}`, { method: "DELETE" })
+      .then((res) => {
+        if (!res.ok) throw new Error("Impossible d'annuler le devoir.");
+        setOuverte(null);
+        setErreurListe(null);
+        loadAssignments();
+      })
+      .catch((err: Error) => setErreurListe(err.message));
+  }
+
+  function clic(ligne: LigneRegistre<Devoir>) {
+    if (ligne.devoir) setOuverte(ligne.cle);
+    else ouvrirFeuille();
   }
 
   function openWriting(a: Assignment) {
@@ -125,63 +206,115 @@ export default function SessionJournalMjPanel({
       });
   }
 
-  const nameByUser = new Map(roster.map((r) => [r.userId, r.name]));
-  const pending = assignments.filter((a) => a.status === "pending");
-  const written = assignments.filter((a) => a.status === "written");
+  function donneesLecture(l: LigneRegistre<Devoir>): DonneesLecture {
+    const d = l.devoir as Devoir;
+    return {
+      titre: d.entity_name ?? formatGameDate(d.ingame_date, initialCalendar),
+      dateEnJeu: formatGameDate(d.ingame_date, initialCalendar),
+      autrice: nomDe.get(d.assigned_to) ?? "?",
+      seance: libelleSeance(l.seance),
+      etat: l.etat,
+      lien: d.entity_slug ? `/m/${worldSlug}/f/${d.entity_slug}` : null,
+      peutEcrire: d.assigned_to === currentUserId,
+    };
+  }
+
+  function lecture(l: LigneRegistre<Devoir>, surFeuille: boolean) {
+    const d = l.devoir as Devoir;
+    return (
+      <LectureDevoir
+        donnees={donneesLecture(l)}
+        onFermer={surFeuille ? undefined : () => setOuverte(null)}
+        onEcrire={() => openWriting(assignments.find((a) => a.id === d.id) as Assignment)}
+        onAnnuler={() => setAAnnuler(d.id)}
+      />
+    );
+  }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-2 rounded-md border border-edge/60 p-3">
-        <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Assigner le devoir</span>
-        <div className="flex flex-wrap items-start gap-3">
-          <GameDateInput calendar={initialCalendar} value={ingameDate} onChange={setIngameDate} hidePeriod />
-          <Dropdown
-            value={assignedTo}
-            options={roster.map((r) => ({ value: r.userId, label: r.name ?? "?" }))}
-            onChange={setAssignedTo}
-            aria-label="Rédactrice"
-          />
-          <button type="button" onClick={assign} disabled={!assignedTo} className="rounded-full bg-accent px-3 py-1.5 text-xs font-medium text-accent-ink hover:bg-accent-hover disabled:opacity-50">
-            Assigner
-          </button>
+    <div ref={racineRef} className="@container flex flex-col gap-4">
+      <div className={`${VERRE} flex flex-wrap items-center gap-3 px-4 py-3`}>
+        <span className="text-sm text-ink">
+          Prochaine séance : <span className="font-semibold">{prochaine ? libelleProchaine(prochaine) : "à définir"}</span>
+        </span>
+        <button type="button" onClick={ouvrirFeuille} className="ml-auto rounded-full bg-accent px-3 py-1 text-xs font-medium text-accent-ink transition-colors hover:bg-accent-hover">
+          Assigner le devoir
+        </button>
+      </div>
+      {erreurListe && <p className="text-xs text-danger">{erreurListe}</p>}
+
+      <div className={ligneOuverte && !etroit ? "grid grid-cols-[minmax(0,1fr)_22rem] gap-4" : "grid grid-cols-1 gap-4"}>
+        <div className={`${VERRE} @container flex min-w-0 flex-col p-2`}>
+          <div className="hidden grid-cols-[7rem_minmax(0,1fr)_auto] gap-3 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-ink-muted @xl:grid @2xl:grid-cols-[9rem_minmax(0,1fr)_10rem_8rem_7rem]">
+            <span>Date en jeu</span>
+            <span>Titre</span>
+            <span className="hidden @2xl:block">Rédigé par</span>
+            <span className="hidden @2xl:block">Séance</span>
+            <span>État</span>
+          </div>
+          {lignes.length === 0 && <p className="px-3 py-2 text-xs italic text-ink-muted">Aucun devoir pour l&apos;instant.</p>}
+          {lignes.map((l) => {
+            const d = l.devoir;
+            const date = d ? formatGameDate(d.ingame_date, initialCalendar) : "—";
+            const titre = d?.entity_name ?? "—";
+            const actif = ouverte === l.cle;
+            return (
+              <button
+                key={l.cle}
+                type="button"
+                onClick={() => clic(l)}
+                aria-current={actif ? "true" : undefined}
+                className={`grid grid-cols-[5.5rem_minmax(0,1fr)_auto] items-center gap-x-3 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-panel-raised @xl:grid-cols-[7rem_minmax(0,1fr)_auto] @2xl:grid-cols-[9rem_minmax(0,1fr)_10rem_8rem_7rem] ${actif ? "bg-panel-raised" : ""}`}
+              >
+                <span className="truncate text-ink">{date}</span>
+                <span className="truncate text-ink">{titre}</span>
+                <span className="hidden truncate text-ink-soft @2xl:block">{d ? (nomDe.get(d.assigned_to) ?? "?") : "—"}</span>
+                <span className="hidden truncate text-ink-muted @2xl:block">{libelleSeance(l.seance)}</span>
+                <span>
+                  <PastilleEtat etat={l.etat} />
+                </span>
+              </button>
+            );
+          })}
         </div>
+
+        {ligneOuverte && !etroit && <aside className={`${VERRE} p-4`}>{lecture(ligneOuverte, false)}</aside>}
       </div>
 
-      <div>
-        <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Devoirs en attente</span>
-        <div className="mt-1.5 flex flex-col gap-1">
-          {pending.length === 0 && <p className="text-xs italic text-ink-muted">Aucun devoir en attente.</p>}
-          {pending.map((a) => (
-            <div key={a.id} className="flex items-center justify-between rounded bg-panel-sunken px-2 py-1 text-xs text-ink-muted">
-              <span>
-                {formatGameDate(a.ingame_date, initialCalendar)} — {nameByUser.get(a.assigned_to) ?? "?"}
-              </span>
-              <span className="flex items-center gap-2">
-                {a.assigned_to === currentUserId && (
-                  <button type="button" onClick={() => openWriting(a)} className="rounded-full bg-accent px-2.5 py-0.5 text-[10px] font-medium text-accent-ink hover:bg-accent-hover">
-                    Commencer à écrire
-                  </button>
-                )}
-                <button type="button" onClick={() => cancel(a.id)} className="text-danger hover:underline">
-                  Annuler
-                </button>
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
+      {ligneOuverte && etroit && (
+        <FeuilleDuBas titre="Livre de sessions" onFermer={() => setOuverte(null)}>
+          <div className="p-4">{lecture(ligneOuverte, true)}</div>
+        </FeuilleDuBas>
+      )}
 
-      <div>
-        <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Entrées rédigées</span>
-        <div className="mt-1.5 flex flex-col gap-1">
-          {written.length === 0 && <p className="text-xs italic text-ink-muted">Aucune entrée rédigée pour l&apos;instant.</p>}
-          {written.map((a) => (
-            <span key={a.id} className="rounded bg-panel-sunken px-2 py-1 font-mono text-[10px] text-ink-muted">
-              {formatGameDate(a.ingame_date, initialCalendar)} — {nameByUser.get(a.assigned_to) ?? "?"}
-            </span>
-          ))}
-        </div>
-      </div>
+      {feuille && (
+        <FeuilleAssigner
+          etroit={etroit}
+          calendrier={initialCalendar}
+          libelleSeance={derniere ? libelleSeance(derniere) : null}
+          dateEnJeu={ingameDate}
+          onDateEnJeu={setIngameDate}
+          roster={roster}
+          choisie={choisie}
+          suggeree={suggeree}
+          onChoisir={setChoix}
+          envoi={envoi}
+          erreur={erreurFeuille}
+          onEnvoyer={assign}
+          onFermer={() => setFeuille(false)}
+        />
+      )}
+
+      <ConfirmDialog
+        open={aAnnuler !== null}
+        title="Annuler le devoir"
+        message="Le devoir en attente sera retiré. Cette action ne peut pas être défaite."
+        confirmLabel="Annuler le devoir"
+        cancelLabel="Garder"
+        danger
+        onConfirm={() => aAnnuler && cancel(aAnnuler)}
+        onCancel={() => setAAnnuler(null)}
+      />
 
       {writing &&
         createPortal(

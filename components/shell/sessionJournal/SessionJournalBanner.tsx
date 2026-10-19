@@ -71,18 +71,18 @@ export default function SessionJournalBanner({
   if (!assignment) return null;
 
   return (
-    <div className="mb-4 flex items-center justify-between gap-3 rounded-md border border-accent/50 bg-accent/10 px-3 py-2 text-sm">
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[18px] border border-edge bg-panel px-4 py-3 text-sm backdrop-blur-[var(--blur)]">
       <span className="text-ink">
         Devoir : rédiger le récit du <span className="font-medium">{assignment.ingameDateLabel}</span>
       </span>
-      <button type="button" onClick={() => setOpen(true)} className="shrink-0 rounded-full bg-accent px-3 py-1 text-xs font-medium text-accent-ink hover:bg-accent-hover">
+      <button type="button" onClick={() => setOpen(true)} className="shrink-0 rounded-full bg-accent px-3 py-1 text-xs font-medium text-accent-ink transition-colors hover:bg-accent-hover">
         Commencer à écrire
       </button>
 
       {open &&
         createPortal(
           <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-scrim" onClick={() => setOpen(false)} role="dialog" aria-modal="true" aria-label="Rédiger l'entrée">
-            <div ref={panelRef} tabIndex={-1} onClick={(e) => e.stopPropagation()} className="w-full max-w-sm rounded-lg border border-edge-strong bg-panel-raised p-4 shadow-2xl outline-none">
+            <div ref={panelRef} tabIndex={-1} onClick={(e) => e.stopPropagation()} className="w-full max-w-sm rounded-[18px] border border-edge-strong bg-panel-raised p-4 shadow-2xl outline-none backdrop-blur-[var(--blur)]">
               <h2 className="mb-2 text-sm font-semibold text-ink">Titre de l&apos;entrée</h2>
               <input
                 value={title}
