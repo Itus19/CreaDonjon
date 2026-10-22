@@ -1,175 +1,172 @@
 # Lot E — La boucle de vie
 
-*Partie du backlog V4. L'index : [`docs/BACKLOG_V4.md`](../BACKLOG_V4.md). Le cadre commun : [`00-cadre.md`](00-cadre.md).*
+*Partie du backlog V4. L'index : [`docs/BACKLOG_V4.md`](../BACKLOG_V4.md). Le cadre commun : [`00-cadre.md`](00-cadre.md). Spec : [`specs/simulation-monde.md`](../../specs/simulation-monde.md) §4, §6, §8.5, §10.*
 
-Le cœur de la V4 : ce qui fait qu'une personne **vit** au lieu d'être décrite.
+Ce qui fait qu'une personne **vit** : ressentir, avoir des besoins, agir, rêver, et se transformer. Conçu le 22 octobre 2026 (ADR 0076 à 0078).
 
 ```
-événement
-  → évaluation (pure) : événement × facettes × valeurs × relation à l'auteur
-  → émotion (type, intensité) et stress
-  → souvenir (lot C)
-  → effets : attitudes, besoins
-  → avec le temps : consolidation → glissement des facettes et des valeurs
-besoins + rêves + valeurs + relations
-  → choix d'une action par score d'utilité
-  → nouvel événement
+événement → évaluation → émotion → souvenir → attitudes, stress
+besoins + rêves + émotions + valeurs + relations → action → événement
 ```
 
-L'émergence ne vient pas de règles complexes, mais de **règles simples qui se répondent**. Deux conditions : des boucles qui **s'amortissent** (sinon le monde s'emballe ou s'endort), et une histoire **lisible** (la chronique, G5).
-
 ---
 
-### ☐ V4-E1 — Évaluer un événement · `L` · sans modèle IA — **à concevoir (ADR)**
+### ☐ V4-E1 — L'évaluation · `L` · sans modèle IA — **prêt après A4, B1**
 
-**Modèle conseillé : Opus** — règles d'évaluation, en données.
+**Modèle conseillé : Opus** — règles d'évaluation, en données. **ADR :** 0076. **Spec :** §6.1 à §6.3.
 
-**Sous-tâches Haiku** : aucune avant l'ADR.
+**Sous-tâches Haiku** : lancer `npm run test:core`.
 
-**À décider dans l'ADR**
-- La liste fermée des **émotions** (B1) et leur retombée.
-- **Les règles d'évaluation, en données** (comme les déclencheurs) : pour un genre d'événement du monde (A4), quelle émotion, de quelle intensité, selon quelles facettes et valeurs du témoin, et selon sa relation à l'auteur et à la victime. Une personne très empathique témoin d'une cruauté envers un inconnu ressent de l'horreur ; une personne dure, de l'indifférence.
-- **Le stress** : une jauge que les émotions négatives remplissent et que les besoins comblés vident. Ce qui se passe à ses seuils (crise, effondrement, colère) est un événement.
-- Ce qui reste hors du vocabulaire : jamais une règle écrite en code par l'utilisateur.
+**À faire** (tests d'abord)
+- `src/core/sim/appraisal.ts` : `rolesFor(event, figures)`, `appraise(event, figure, role, context): Emotion[]` selon les quatre questions OCC ; `emotionToDeltas(emotion, towardId)`.
+- `appraisal.rules.ts` : les règles propres à un genre (mort d'un partenaire, d'un enfant, d'un parent ; naissance ; union ; trahison).
 
 **Critères d'acceptation**
-- [ ] ADR écrit, découpage en tickets prêts.
+- [ ] Deux témoins aux facettes opposées ressentent des émotions différentes du même événement.
+- [ ] La mort d'un ennemi donne une joie mauvaise réduite par `compassion` ; celle d'un ami, de la compassion ou un deuil.
+- [ ] Un témoin pour qui l'acte est `unthinkable` ressent de l'horreur et perd le respect de l'acteur.
+- [ ] Intensités toujours dans 0…100.
 
 ---
 
-### ☐ V4-E2 — Émotions et stress, dans le noyau · `M` · sans modèle IA — **prêt après E1**
+### ☐ V4-E2 — Humeur, stress, crises et élan · `M` · sans modèle IA — **prêt après E1, C1, E3**
 
-**Modèle conseillé : Opus** — noyau, tests d'abord.
+**Modèle conseillé : Opus** — noyau. **Spec :** §6.4, §6.5.
 
-**Sous-tâches Haiku** : lancer `npm run test:core` et résumer les échecs.
+**Sous-tâches Haiku** : libellés des bandes d'humeur et des crises.
 
-`appraise(event, witness, context): Emotion[]` et la retombée dans le temps, dans `src/core/sim/appraisal.ts`.
+**À faire** (tests d'abord), `src/core/sim/mood.ts`
+- `mood(figure, now): { value, terms: { label, value, cause }[] }` : calculée, jamais stockée.
+- `stressStep(figure, mood, ethicsViolations)` ; `crisisCheck(figure, mood, rng)` (type selon la facette dominante) ; `elanCheck(figure, mood, rng)`.
 
 **Critères d'acceptation**
-- [ ] Deux témoins aux facettes opposées ressentent des émotions différentes du même événement (test).
-- [ ] Le stress d'une personne laissée en paix redescend (test sur un an simulé).
+- [ ] Une figure laissée en paix voit son stress redescendre en un an (banc).
+- [ ] Une crise exige stress haut **et** humeur basse (tests aux bornes).
+- [ ] Une crise de rage ne choisit jamais un acte `unthinkable`.
 
 ---
 
-### ☐ V4-E3 — Les besoins · `M` · sans modèle IA — **prêt après B2 et A3**
+### ☐ V4-E3 — Les besoins · `M` · sans modèle IA — **prêt après B6, A2**
 
-**Modèle conseillé : Opus** — noyau.
+**Modèle conseillé : Opus** — noyau. **Spec :** psyché §4.
 
-**Sous-tâches Haiku** : lancer `npm run test:core` et résumer les échecs.
+**Sous-tâches Haiku** : lancer `npm run test:core`.
 
-- Chaque besoin se creuse avec le temps, à une vitesse qui dépend des facettes.
-- Une action le comble (E4). Un besoin longtemps insatisfait produit du stress.
-- **Ce sont les besoins qui font bouger une personne sans scénario** : un PNJ seul cherche de la compagnie, un dévot va au temple.
+- `src/core/sim/needs.ts` : `decayNeeds(needs, weights, hours)`, `satisfy(needs, advertised)`, `bodyNeedHours(body, now)`.
 
 **Critères d'acceptation**
-- [ ] Un besoin non comblé atteint sa bande « pressant » en un temps conforme à la spec (test).
-- [ ] Rattraper un mois d'un coup donne le même état qu'avancer jour par jour (test : le rattrapage paresseux ne change pas le résultat, à la tolérance fixée en A3).
+- [ ] Un besoin de poids 3 passe de 100 à 0 en 7 jours ; poids 1 en 60 (tests).
+- [ ] Décroître 30 jours d'un coup = décroître jour par jour (test).
 
 ---
 
-### ☐ V4-E4 — Agir : les actions de vie et le choix par utilité · `L` · sans modèle IA — **à concevoir, puis prêt**
+### ☐ V4-E4 — Les actions et le score d'utilité · `L` · sans modèle IA — **prêt après E3, B4**
 
-**Modèle conseillé : Opus** — vocabulaire fermé, moteur de décision.
+**Modèle conseillé : Opus** — moteur de décision. **ADR :** 0077. **Spec :** §10.1 à §10.4, §10.6.
 
-**Sous-tâches Haiku** : libellés des actions.
+**Sous-tâches Haiku** : libellés des actions ; lancer les tests.
 
-- **Un vocabulaire fermé d'actions de vie**, en données, au niveau de détail des figures complètes : se lier, se disputer, séduire, rompre, aider, voler, prier, travailler, s'entraîner, voyager, chercher quelqu'un, comploter, se venger, fuir, fêter, pleurer…
-- Chaque action déclare ses **conditions** (qui, où, avec quoi), ses **effets** (événement du monde produit, besoins comblés) et ses **affinités** (quelles facettes, valeurs et émotions la favorisent).
-- **Le choix par score d'utilité** : besoins pressants, rêve actif, émotion du moment, valeurs, relations avec les personnes concernées. Puis un tirage dérivé (A2) parmi les meilleures, pour que la même personne ne fasse pas toujours la même chose.
-- **Lignes rouges** : une action contraire à une ligne n'est jamais choisie ; une action contraire à une limite l'est rarement, et laisse un souvenir de malaise.
-- **Bornes** comme les déclencheurs : actions par personne et par pas, profondeur des conséquences.
-- **Les PJ ne sont jamais acteurs de la simulation** : la simulation ne choisit jamais une action à la place d'un joueur.
+**À faire** (tests d'abord)
+- `src/core/sim/utility.ts` : entrées fermées, courbes (`linear`, `inverse_linear`, `power`, `logistic`, `step`), compensation IAUS, `scoreAction`, `chooseAction(figure, candidates, rng)` (trois meilleures au-dessus de 0,05, tirage pondéré).
+- `src/core/sim/actions.full.ts` : les 30 actions des figures complètes, en données, avec annonces de besoins, considérations, éthique, genre d'événement produit.
+- `src/core/sim/dreamPlans.ts` : les plans des rêves (trouver, rejoindre, agir).
+- Les exclusions : PJ jamais acteur ; figure figée jamais actrice ; classe `scene` jamais actrice ; `unthinkable` retirée.
 
 **Critères d'acceptation**
-- [ ] Une action contraire à une ligne rouge n'est jamais choisie, sur 10 000 tirages (test).
-- [ ] Deux personnes aux facettes opposées dans la même situation choisissent des actions différentes (test).
-- [ ] Aucun PJ n'est jamais acteur d'une action simulée (test).
+- [ ] Une action `unthinkable` n'est jamais choisie sur 10 000 tirages.
+- [ ] Deux personnes opposées dans la même situation choisissent différemment (test).
+- [ ] Aucun PJ n'est jamais acteur (test).
+- [ ] Le test « un filtre, jamais un trait » (B4) est étendu : identité et orientations ne changent le score d'aucune action hors `court`.
 
 ---
 
-### ☐ V4-E5 — Se transformer · `M` · sans modèle IA — **prêt après C2 et E2**
+### ☐ V4-E5 — Les rêves qui naissent et qui meurent · `M` · sans modèle IA — **prêt après E4, A4**
 
-**Modèle conseillé : Opus** — touche aux valeurs ; ce que la spec V2 protégeait.
+**Modèle conseillé : Opus** — noyau. **Spec :** psyché §5.
 
-**Sous-tâches Haiku** : vérifications et résumé des échecs.
+**Sous-tâches Haiku** : lancer les tests.
 
-- Un souvenir long, ravivé assez souvent, **déplace** des facettes ou des valeurs selon des règles en données : le deuil durcit, la trahison rend méfiant, la reconnaissance rend généreux.
-- Un rêve atteint, abandonné ou devenu impossible en fait naître un autre.
-- Chaque transformation s'écrit dans `personality_events`, avec le souvenir qui l'a causée.
-- **Pour un PJ**, la transformation suit le réglage de table (H1) : proposée au joueur (par défaut) ou appliquée.
-- **L'IA ne transforme jamais personne** (`specs/psyche-pnj.md` §5, inchangé).
+- `src/core/sim/dreams.ts` : `checkDream(dream, events, state)` → `achieved`, `impossible` ou inchangé, selon la table de la spec ; `dreamsFromEmotion(emotion, figure, rng)` (vengeance, service, rédemption, retrouver) ; un rêve clos en fait naître un autre (`initialDreams`, B6). Écrit `dream_born`, `dream_achieved`, `dream_abandoned`.
 
 **Critères d'acceptation**
-- [ ] Une transformation dit toujours pourquoi (le souvenir source).
-- [ ] Sur 200 ans simulés, les facettes d'une population ne convergent pas toutes vers les mêmes valeurs (le danger que la spec V2 décrivait, « ils finissent tous par se ressembler »).
+- [ ] Chaque type a ses tests d'atteinte et d'impossibilité.
+- [ ] Un rêve `custom` n'est jamais clos par le moteur.
 
 ---
 
-### ☐ V4-E6 — Figures légères et figures complètes · `L` · sans modèle IA — **à concevoir (ADR)**
+### ☐ V4-E6 — Figures légères et complètes · `L` · sans modèle IA — **prêt après A3, C1, D3**
 
-**Modèle conseillé : Opus** — volume en base, cohérence, passage d'un niveau à l'autre.
+**Modèle conseillé : Opus** — volume, cohérence, création de fiches. **ADR :** 0078. **Spec :** §4.
 
-**Sous-tâches Haiku** : aucune avant l'ADR.
+**Sous-tâches Haiku** : lancer les tests et résumer les échecs.
 
-Tout le monde ne peut pas avoir toutes les couches. Dwarf Fortress fait la même distinction.
-
-**À décider dans l'ADR**
-- **Figure légère** : facettes et valeurs résumées, un rêve, les liens majeurs, les actes notables (événements du monde où elle est actrice). Quelques centaines d'octets. Simulée au pas grossier.
-- **Figure complète** : toutes les couches, souvenirs compris. Simulée au pas fin.
-- **Promotion** : quand une figure se rapproche du joueur, est ouverte par le MJ ou devient actrice d'un événement important. Ses couches manquantes se **reconstituent de façon déterministe** à partir de sa graine (D5) et de ses actes : une figure qui a trahi son frère devient complète avec le souvenir long de cette trahison.
-- **Rétrogradation** : une figure complète que plus rien ne rend pertinente redevient légère. Ses souvenirs longs sont conservés en résumé ; elle ne disparaît jamais.
-- **La foule anonyme** reste hors simulation individuelle : elle appartient à l'échelle politique (lot P) ou aux générateurs.
-- La mesure : combien de figures complètes une partie supporte (A5).
+**À faire**
+- `src/core/sim/tiers.ts` (tests d'abord) : `shouldPromote`, `shouldDemote`, `promote(light, events, seed)` (reconstitution déterministe), `demote(full)` (trois souvenirs longs résumés dans `links`), le plafond et l'ordre de rétrogradation.
+- Service : la promotion crée la fiche par `promotion.ts` (visibilité `gm`) et les lignes `entity_attitudes`.
 
 **Critères d'acceptation**
-- [ ] ADR écrit, découpage en tickets prêts.
+- [ ] Promouvoir deux fois la même figure légère au même instant donne deux états identiques.
+- [ ] Le plafond n'est jamais dépassé ; la figure rétrogradée est la moins pertinente.
+- [ ] Une figure rétrogradée garde sa fiche et ses actes.
 
 ---
 
-### ☐ V4-E7 — L'intime : attirance, couples, et ce qu'on vit de l'exclusivité · `M` · sans modèle IA — **prêt après C3 et B4**
+### ☐ V4-E7 — L'intime · `M` · sans modèle IA — **prêt après C3, B4, H1**
 
-**Modèle conseillé : Opus** — données sensibles, réglages de table, règle « un filtre, jamais un trait ».
+**Modèle conseillé : Opus** — données sensibles, règle absolue des mineurs. **ADR :** 0073. **Spec :** §8.5.
 
-**Sous-tâches Haiku** : vérifications et résumé des échecs.
+**Sous-tâches Haiku** : lancer les tests.
 
-- **L'attirance** romantique ou sexuelle ne peut naître qu'entre personnes dont les orientations la permettent (filtre), puis selon les facettes, les valeurs et les souvenirs partagés.
-- **L'orientation relationnelle** décide de la réaction quand un partenaire a une autre relation : jalousie et rupture possible pour une personne monogame ; acceptation pour une personne polyacceptante ; négociation pour une personne en polyamour hiérarchique ; aucune attente d'exclusivité en anarchie relationnelle. Une réaction est une émotion et un souvenir, pas un dénouement écrit d'avance.
-- **Les personnes asexuelles et aromantiques** ne développent pas l'attirance correspondante ; elles peuvent former des liens profonds autrement (C3).
-- **Réglage de table** (H1) : simulation romantique désactivée → aucune attirance ne naît, aucune action intime n'est choisie. Les données d'identité restent affichées.
+- `src/core/sim/intimacy.ts` : croissance des attirances (filtre `canBeAttracted`, réglage `romance_simulation`, âge adulte), actions `court`, `romance_began`, union et accord d'exclusivité, réactions selon l'orientation relationnelle (table de la spec), stress d'incompatibilité.
 
 **Critères d'acceptation**
-- [ ] Aucune attirance n'apparaît contre une orientation, ni quand la table l'a désactivée (tests).
-- [ ] Le test « un filtre, jamais un trait » couvre aussi l'orientation relationnelle : elle ne change rien hors des situations de non-exclusivité.
+- [ ] **Aucune** attirance ni action intime ne concerne jamais une personne sous l'âge adulte, quels que soient les réglages (test exhaustif sur un banc de 1 000 figures).
+- [ ] Aucune attirance contre une orientation, ni quand la table l'a désactivée.
+- [ ] `infidelity` n'apparaît que si l'exclusivité a été convenue.
+- [ ] Chaque orientation relationnelle a son test de réaction.
 
 ---
 
-### ☐ V4-E8 — Le pas de simulation · `L` · sans modèle IA — **prêt après E2 à E6 et A3 à A5**
+### ☐ V4-E8 — La vie des figures légères · `M` · sans modèle IA — **prêt après E4, C4**
 
-**Modèle conseillé : Opus** — l'orchestration de tout le lot ; quotas.
+**Modèle conseillé : Opus** — noyau ; sert aussi la génération. **Spec :** §10.5.
+
+**Sous-tâches Haiku** : lancer les tests.
+
+- `src/core/sim/actions.light.ts` : les 13 actions mensuelles ; `mortality(age, culture, violence, rng)`.
+
+**Critères d'acceptation**
+- [ ] Sur 300 ans, une population de départ de 500 ne s'éteint ni n'explose sans cause (garde : entre ×0,3 et ×5, paramètres moyens).
+- [ ] Une succession suit chaque mort de chef.
+
+---
+
+### ☐ V4-E9 — Le pas de simulation · `L` · sans modèle IA — **prêt après E1 à E8, A6, C5, H1**
+
+**Modèle conseillé : Opus** — l'orchestration de tout ; quotas ; transactions.
 
 **Sous-tâches Haiku** : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
 
-- `advanceWorld` (A3) enchaîne, pour chaque figure à rattraper : besoins, choix d'action, événement du monde, évaluation par les témoins, souvenirs, transformation. Pur.
-- Un service (`src/server/services/simulation.ts`) lit l'état, appelle le noyau, et écrit le résultat **en une transaction**, par lots bornés.
-- En mode « proposer » (F1), il n'écrit que des propositions (F3).
+**À faire**
+- `src/core/sim/steps.ts` : les fonctions de pas branchées dans `advanceWorld` (A2). Pas horaire et quotidien : besoins, choix d'action, événements, évaluation des témoins, souvenirs, consolidation, revécus, fondateurs, interactions, croyances, liens, rêves, stress, crises. Pas mensuel : vie légère. Puis promotions et rétrogradations.
+- Sortie : un lot d'**éléments** (figure, relation, lieu) avec leurs dépendances et l'état `before` (ADR 0079).
+- `src/server/services/simulation.ts` : lit l'état (lectures groupées), ajoute les brouillons du pont (A6), appelle le noyau, écrit en **une transaction** en mode `auto` ; reprend au `cursor`. Branché sur `advanceSceneTime`, les repos et les voyages. Rafraîchit les projections des PJ (H1).
 
 **Critères d'acceptation**
-- [ ] Même état, même graine, même durée → même résultat (test d'intégration sur un monde factice).
-- [ ] Un tour solo ordinaire reste dans le budget de A5.
+- [ ] Même état, même graine, même durée → même lot (test d'intégration sur un monde factice).
 - [ ] Une erreur au milieu ne laisse aucun état à moitié écrit.
+- [ ] Simulation `off` : avancer le temps n'écrit rien.
 
 ---
 
-### ☐ V4-E9 — Raconter ce que le monde a fait · `M` · **avec modèle IA** — **prêt après E8**
+### ☐ V4-E10 — Raconter ce que le monde a fait · `M` · **avec modèle IA** — **prêt après E9, B9**
 
-**Modèle conseillé : Opus** — contexte du modèle, audience.
+**Modèle conseillé : Opus** — contexte du modèle, audience. **Spec :** §15.
 
 **Sous-tâches Haiku** : vérifications et résumé des échecs.
 
-- Le modèle reçoit des **faits** (« Bram a vendu la taverne pour payer ses dettes ; Aude l'a appris et en est blessée ») et les raconte. Il ne décide de rien (règle 8).
-- Seuls les événements que le PJ a vécus, vus ou appris entrent dans un récit lu par le joueur (règle 11, découvertes).
-- Une personne présente agit selon son état courant : son émotion et son rêve entrent dans le contexte (B6).
+- Le contexte du tour reçoit les événements que le PJ **croit** depuis le dernier récit (dans leur version crue) et les changements visibles chez les figures présentes. Encadrés comme donnée (règle 10).
 
 **Critères d'acceptation**
 - [ ] Un événement inconnu du PJ n'entre jamais dans un contexte lu par le joueur (test).
-- [ ] Vérifié en direct sur une séance : un PNJ revu après une semaine de jeu se comporte selon ce qui lui est arrivé entre-temps.
+- [ ] Vérifié en direct : un PNJ revu après une semaine de jeu se comporte selon ce qui lui est arrivé entre-temps.

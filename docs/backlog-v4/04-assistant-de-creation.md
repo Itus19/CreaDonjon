@@ -1,97 +1,94 @@
 # Lot D — L'assistant de création
 
-*Partie du backlog V4. L'index : [`docs/BACKLOG_V4.md`](../BACKLOG_V4.md). Le cadre commun : [`00-cadre.md`](00-cadre.md).*
+*Partie du backlog V4. L'index : [`docs/BACKLOG_V4.md`](../BACKLOG_V4.md). Le cadre commun : [`00-cadre.md`](00-cadre.md). ADR : [`0082`](../adr/0082-le-questionnaire.md).*
 
-Une psyché à la richesse de Dwarf Fortress ne se saisit pas curseur par curseur. Un **questionnaire** la remplit : des questions, des réponses possibles, et chaque réponse pousse quelques facettes, valeurs, besoins ou rêves. Son ancêtre est la diseuse de bonne aventure d'*Ultima IV*, qui déterminait la classe par des dilemmes moraux.
-
-**Un seul mécanisme, trois usagers** : le joueur pour son PJ, le MJ pour un PNJ, le moteur quand il crée une personne en solo ou pendant la génération du monde.
+Un **questionnaire** de dilemmes remplit la psyché, à la manière d'Ultima IV. Un seul mécanisme, trois usagers : le joueur pour son PJ, le MJ pour un PNJ, le moteur pour une personne qu'il crée. Conçu le 22 octobre 2026.
 
 ---
 
-### ☐ V4-D1 — Le questionnaire, en données · `M` · sans modèle IA — **à concevoir**
+### ☐ V4-D1 — Le format et le questionnaire par défaut · `L` · sans modèle IA — **prêt après B1**
 
-**Modèle conseillé : Opus** — format de données, et une question de règle (où vit le contenu).
+**Modèle conseillé : Opus** — écriture des dilemmes et de leurs effets ; c'est du contenu, il se relit avec l'auteur.
 
-**Sous-tâches Haiku** : aucune avant la conception.
+**Sous-tâches Haiku** : reporter les textes dans `messages/` ; vérifier que chaque clé d'effet existe.
 
-**À décider**
-- **Le format** : une question (texte, famille), ses réponses (texte, effets sur les couches, en deltas bornés), des conditions facultatives (ne poser cette question que si…), des **parcours** (court : une dizaine de questions ; long : plusieurs dizaines).
-- **Les effets** passent par le même amortissement que le reste : vingt réponses courageuses ne collent pas une facette à +100.
-- **Où vit le questionnaire par défaut** : il est écrit pour CreaDonjon, pas tiré d'un livre. Est-ce un contenu suivi par Git (comme les libellés) ou une donnée importée (comme les règles) ? À trancher au regard de `CLAUDE.md` (« le contenu de règles est de la donnée »). Les questionnaires propres à un monde vivent en base.
-- **Ce que le questionnaire ne touche pas** : l'identité et les orientations (B4) se choisissent directement, jamais par déduction.
+**À faire**
+- `src/core/psyche/questionnaire/schema.ts` : `zQuestion` (`id`, `family`, `answers`, `condition?`), `zAnswer` (`id`, `effects`: 2 à 4 deltas sur facettes ou valeurs, chacun de 5 à 30 en valeur absolue, ou une éthique déplacée d'un cran), `zPath` (`short` : 12 questions, `long` : 40).
+- `defaults.ts` : 40 dilemmes **sans bonne réponse**, 3 ou 4 réponses chacun. Le parcours court touche chaque famille de facettes au moins deux fois et au moins 8 valeurs. Textes dans `messages/`.
+- Relecture des 40 dilemmes avec l'auteur avant de clore.
 
 **Critères d'acceptation**
-- [ ] Décision écrite (ADR ou section de `specs/psyche-v4.md`), découpage confirmé.
+- [ ] Couverture du parcours court vérifiée par un test (familles, valeurs).
+- [ ] Aucun effet ne vise l'identité ou les orientations (test).
+- [ ] L'auteur a relu les dilemmes.
 
 ---
 
-### ☐ V4-D2 — Appliquer des réponses · `M` · sans modèle IA — **prêt après D1 et B2**
+### ☐ V4-D2 — Appliquer des réponses · `S` · sans modèle IA — **prêt après D1, B2**
 
-**Modèle conseillé : Opus** — noyau, tests d'abord.
+**Modèle conseillé : Opus** — noyau.
 
-**Sous-tâches Haiku** : lancer `npm run test:core` et résumer les échecs.
+**Sous-tâches Haiku** : lancer `npm run test:core`.
 
-`applyAnswers(seedPsyche, questionnaire, answers): seedPsyche` dans `src/core/psyche`, pur.
+- `applyAnswers(seed, questions, answers): Seed` (pur) ; chaque effet passe par `applyDelta`.
 
 **Critères d'acceptation**
 - [ ] Mêmes réponses → même psyché.
-- [ ] Aucune facette ne sort de ses bornes, quel que soit le parcours (test exhaustif sur un questionnaire factice).
-- [ ] Une réponse sans effet sur une couche ne la touche pas.
+- [ ] Aucune facette ne sort de ±80 au départ, quel que soit le parcours (test exhaustif sur le parcours court).
 
 ---
 
-### ☐ V4-D3 — Le questionnaire du joueur · `M` · sans modèle IA — **à esquisser, puis prêt (Sonnet)**
+### ☐ V4-D3 — Le moteur répond lui-même · `S` · sans modèle IA — **prêt après D2, A1, B6**
 
-**Modèle conseillé : Sonnet**, après esquisse. **Dépend de** : D2.
+**Modèle conseillé : Opus** — tirage déterministe ; sert la génération.
+
+**Sous-tâches Haiku** : lancer `npm run test:core`.
+
+- `fillSeed(partial, culture, archetype?, rng): Seed` : les facettes et valeurs non renseignées sont tirées en cloche autour des tendances de la culture (`bellInt`, écarts-types de la spec §1.2) ; éthiques de la culture ; rêves de départ (B6). **Aucun appel de modèle.**
+- `answerAtRandom(questions, culture, rng)` : pour le bouton « compléter au hasard » du questionnaire.
+
+**Critères d'acceptation**
+- [ ] Même graine → même personne.
+- [ ] Sur 1 000 personnes, environ 40 % des facettes et 55 % des valeurs dans la bande neutre (tolérance ±8 points).
+- [ ] Deux cultures aux valeurs opposées donnent des populations distinctes (test statistique).
+
+---
+
+### ☐ V4-D4 — Le questionnaire du joueur · `M` · sans modèle IA — **prêt après D2 (Sonnet)**
+
+**Modèle conseillé : Sonnet.** **Esquisse :** première sous-tâche.
 
 **Sous-tâches Haiku** : libellés ; planche du catalogue.
 
-- Proposé à la création d'un PJ (après l'identité, V3-Z1), et rejouable plus tard.
-- Une question par écran sur téléphone ; on peut revenir en arrière.
-- À la fin : la psyché obtenue, en bandes nommées, **réglable à la main** avant de valider. Le questionnaire donne un point de départ, pas un verdict.
+- Proposé à la création d'un PJ, après l'identité (V3-Z1), et rejouable depuis la fiche.
+- Une question par écran sur téléphone, retour arrière possible ; à la fin, la psyché obtenue en bandes nommées, **réglable à la main** avant de valider.
 
 **Critères d'acceptation**
-- [ ] Parcours court tenu en moins de cinq minutes, mesuré par l'auteur.
-- [ ] Utilisable à 375 px.
+- [ ] Parcours court en moins de cinq minutes (mesuré par l'auteur).
+- [ ] Tient à 375 px ; planche à jour.
 
 ---
 
-### ☐ V4-D4 — Le questionnaire du MJ · `M` · sans modèle IA — **à esquisser, puis prêt (Sonnet)**
+### ☐ V4-D5 — Le questionnaire du MJ · `M` · sans modèle IA — **prêt après D3 (Sonnet)**
 
-**Modèle conseillé : Sonnet**, après esquisse. **Dépend de** : D2, D5.
+**Modèle conseillé : Sonnet.** **Esquisse :** première sous-tâche.
 
 **Sous-tâches Haiku** : libellés ; planche du catalogue.
 
-- Depuis une fiche de PNJ : parcours court, parcours long, ou **« compléter au hasard »** (D5) pour ce qui n'a pas été répondu.
-- Le MJ peut partir d'un archétype (`archetype.ts`) puis affiner par questions.
+- Depuis une fiche de PNJ : un archétype de départ (`archetype.ts`), le parcours court ou long, puis « compléter au hasard » pour le reste.
 
 **Critères d'acceptation**
-- [ ] Un PNJ complet en moins de deux minutes avec le parcours court et le complément au hasard.
+- [ ] Un PNJ complet en moins de deux minutes (mesuré par l'auteur).
 
 ---
 
-### ☐ V4-D5 — Le moteur répond lui-même · `S` · sans modèle IA — **prêt après D2 et A2**
+### ☐ V4-D6 — Écrire ses propres questions · `M` · sans modèle IA — **après D4, si le besoin se confirme (Sonnet)**
 
-**Modèle conseillé : Opus** — tirage déterministe ; utilisé par la génération du monde.
-
-**Sous-tâches Haiku** : lancer `npm run test:core` et résumer les échecs.
-
-- Le moteur choisit les réponses à partir d'un archétype, d'une culture d'origine (facultative, lot G) et d'un tirage dérivé (A2). **Aucun appel de modèle.**
-- Sert au MJ (« compléter au hasard »), au solo (une personne promue, E6) et à la génération (lot G).
-
-**Critères d'acceptation**
-- [ ] Même graine et mêmes clés → même personne.
-- [ ] Sur 1 000 personnes tirées, la distribution des bandes de chaque facette n'est pas dégénérée (pas de facette toujours neutre, pas d'extrêmes majoritaires).
-
----
-
-### ☐ V4-D6 — Écrire ses propres questions · `M` · sans modèle IA — **après D3, si le besoin se confirme**
-
-**Modèle conseillé : Sonnet**, sur le formulaire engendré par les schémas Zod (comme l'éditeur de déclencheurs, V3-A5).
+**Modèle conseillé : Sonnet**, sur le formulaire engendré par les schémas Zod (comme V3-A5).
 
 **Sous-tâches Haiku** : libellés.
 
-Un MJ ajoute des questions à son monde, ou un questionnaire entier (une culture, un ordre religieux). À ne pas commencer avant que le questionnaire par défaut ait servi.
+- Un bloc `questionnaire` sur la fiche `world_lists` (A5) : questions d'un monde, mêlées aux parcours de ce monde seulement.
 
 **Critères d'acceptation**
-- [ ] Une question ajoutée par le MJ apparaît dans les parcours de son monde, et seulement de son monde.
+- [ ] Une question d'un monde n'apparaît jamais dans un autre.

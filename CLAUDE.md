@@ -44,6 +44,8 @@ L'auteur apprend à coder sur ce projet. Explique tes choix. Ne livre pas de cod
 | `specs/wiki-liens-et-personnages.md` | Liens, mentions, modèle de personnage, modificateurs | Tickets personnage |
 | `specs/fiche-personnage-interactive.md` | Fiche jouable, actions, onglets | Tickets fiche |
 | `specs/psyche-pnj.md` | Relations, personnalité, pôles | Tickets PNJ |
+| `specs/psyche-v4.md` | Psyché V4 : facettes, valeurs, éthiques, besoins, rêves, émotions, identité (remplace en partie la précédente) | Tickets V4 de psyché |
+| `specs/simulation-monde.md` | Moteur de simulation : temps, hasard, figures, journal du monde, souvenirs, croyances, actions, lots, génération | Tickets V4 |
 | `specs/outils-mj.md` | Tables, générateurs, rencontres, initiative | Tickets outils |
 | `specs/coquille-et-design.md` | Coquille, jetons de design, composants | Tickets interface |
 | `specs/cible-locale-et-ia.md` | Cible locale, fournisseurs d'IA | Avant toute dépendance d'infrastructure |

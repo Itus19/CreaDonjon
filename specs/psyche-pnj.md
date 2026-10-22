@@ -4,6 +4,8 @@
 **Cible :** V2 pour la saisie humaine, V3 pour la lecture et l'écriture par l'IA
 **Remplace :** `specs/wiki-blocs.md` partie D, dont ce document reprend et précise le contenu
 
+> **V4 (22 octobre 2026).** Les §1, §2 et §6 sont remplacés par `specs/psyche-v4.md` et `specs/simulation-monde.md` (ADR 0067, 0069, 0072). Les §3 à §5 restent valables, amendés par `specs/psyche-v4.md` §8.
+
 ---
 
 ## 0. Ce que ces blocs servent à faire

@@ -1,123 +1,109 @@
 # Lot H — Les PJ et les réglages de table
 
-*Partie du backlog V4. L'index : [`docs/BACKLOG_V4.md`](../BACKLOG_V4.md). Le cadre commun : [`00-cadre.md`](00-cadre.md).*
+*Partie du backlog V4. L'index : [`docs/BACKLOG_V4.md`](../BACKLOG_V4.md). Le cadre commun : [`00-cadre.md`](00-cadre.md). Spec : [`specs/simulation-monde.md`](../../specs/simulation-monde.md) §11, §14.*
 
-Dans Dwarf Fortress, l'esprit des nains échappe au joueur. Dans un jeu de rôle, **l'esprit d'un PJ appartient à son joueur**. Toutes les tables ne veulent pas non plus le même niveau de détail : certaines aiment voir leurs jauges, d'autres trouvent ça lourd, d'autres veulent que seul le MJ les voie pour s'en servir dans son récit. Ce lot donne **des choix complets**, décidés avec l'auteur le 22 octobre 2026.
+**L'esprit d'un PJ appartient à son joueur.** Chaque table choisit ce qu'elle voit de ses PJ : tout, rien, ou le MJ seul, couche par couche. Décidé avec l'auteur le 22 octobre 2026 ; conçu le même jour (ADR 0080, 0083, 0084).
 
 ---
 
-### ☐ V4-H1 — Les réglages de table · `M` · sans modèle IA — **prêt après A1**
+### ☐ V4-H1 — Les réglages et la projection du joueur · `L` · sans modèle IA — **prêt après A3, B1**
 
-**Modèle conseillé : Opus** — visibilité côté serveur (règle 5), schéma.
+**Modèle conseillé : Opus** — visibilité côté serveur (règle 5), RLS. **ADR :** 0080. **Spec :** §11.1, §14.
 
-**Sous-tâches Haiku** : libellés ; planche du catalogue.
+**Sous-tâches Haiku** : remplir la liste de contrôle de `docs/SECURITE.md` ; lancer les tests et résumer les échecs.
 
-Un réglage par campagne, modifiable par le MJ seul.
-
-**Par couche, pour les PJ** : besoins, fatigue, stress, émotions, souvenirs.
-
-| Position | Effet |
-|---|---|
-| **Visible du joueur** | le joueur voit la couche de son PJ, en bandes nommées ; le MJ aussi, nombres compris |
-| **MJ seul** | la couche est simulée ; seul le MJ la voit et choisit de la mentionner dans son récit. **Rien n'est envoyé au joueur** |
-| **Désactivée** | la couche n'est pas simulée pour les PJ, et n'a aucune conséquence |
-
-**L'évolution des traits et des valeurs d'un PJ** (E5) :
-
-| Position | Effet |
-|---|---|
-| **Le moteur propose** (défaut) | « cette trahison t'a endurci ? » : le joueur accepte ou refuse (H4) |
-| **Le moteur applique** | la transformation s'applique, comme pour un PNJ ; le joueur la voit selon le réglage ci-dessus |
-| **Jamais** | la psyché d'un PJ ne change que de la main du joueur |
-
-**Le récit et la simulation intimes** :
-
-- **Récit intime** : explicite, ou en ellipse (la scène est coupée). Transmis au modèle comme consigne (B6).
-- **Simulation romantique** : activée ou désactivée (E7).
-- Ces deux réglages **ne masquent jamais** les données d'identité et d'orientation : elles restent affichées sur les fiches, selon la visibilité de chaque champ (B4).
+**À faire**
+- `src/core/sim/settings.ts` : `zSimTableSettings` (la forme de la spec §11.1) et ses défauts par mode de campagne ; lu depuis `campaigns.table_settings.sim`.
+- Migration `sim_pc_views` (lecture : admin du monde et joueur du PJ ; écriture : admin).
+- `buildPcView(figure, beliefs, settings, pendingShifts): PcView` (pur) : couches `player` en bandes, traits, valeurs et rêves, propositions en attente, croyances (version crue, source et certitude en mots), réputation. Jamais `is_accurate`, jamais un nombre.
+- `refreshPcViews(campaignId)` : appelé en fin de lot et à chaque changement de réglage.
 
 **Critères d'acceptation**
-- [ ] « MJ seul » : un test vérifie que la couche n'apparaît dans **aucune** réponse envoyée au joueur (pages, routes, contexte du modèle lu par lui).
-- [ ] « Désactivée » : la couche n'évolue pas pour les PJ et ne produit aucune conséquence (test).
-- [ ] Seul le MJ change ces réglages (liste de contrôle de `docs/SECURITE.md`).
-- [ ] En solo, le joueur est son propre MJ : tous les réglages lui sont ouverts.
+- [ ] Couche `gm` : absente de la projection et de toute réponse envoyée au joueur, y compris par requête directe à la base (test d'intégration RLS).
+- [ ] Couche `off` : non simulée pour les PJ, aucune conséquence (test).
+- [ ] Un joueur ne lit que la projection de **son** PJ.
 
 ---
 
-### ☐ V4-H2 — La psyché du PJ, vue par son joueur · `M` · sans modèle IA — **à esquisser, puis prêt (Sonnet)**
-
-**Modèle conseillé : Sonnet**, après esquisse. **Dépend de** : H1, B5.
-
-**Sous-tâches Haiku** : planche du catalogue ; libellés.
-
-- Dans la fiche jouable (V3-D5) : ce que les réglages permettent, en bandes nommées (« affamé », « épuisé », « en colère »), jamais en nombres.
-- Les traits, valeurs et rêves du PJ sont toujours visibles de son joueur : ils lui appartiennent.
-- Les souvenirs visibles rejoignent le journal de personnage (V3-E3).
-- Ce que les PNJ pensent du PJ n'y figure que par les découvertes.
-
-**Critères d'acceptation**
-- [ ] L'esquisse est validée ; la fiche tient à 375 px.
-- [ ] Une couche « MJ seul » ou « désactivée » n'y laisse aucune trace, pas même un emplacement vide.
-
----
-
-### ☐ V4-H3 — Des besoins qui ont des conséquences de règles · `M` · sans modèle IA — **à concevoir, puis prêt**
-
-**Modèle conseillé : Opus** — moteur de règles, déclencheurs.
-
-**Sous-tâches Haiku** : vérifications et résumé des échecs.
-
-Le MJ ne devrait pas avoir à dire « ajoute un point de fatigue » : le moteur traduit l'état en règles.
-
-- Faim, soif, sommeil, fatigue : leurs seuils produisent des effets **par les règles du ruleset** (l'épuisement de D&D 2024, par exemple), au moyen des déclencheurs existants. Jamais une pénalité improvisée.
-- Une couche **désactivée** ne produit aucune conséquence.
-- Une couche **MJ seul** : **à décider**. Recommandation : la conséquence de règle (l'épuisement) est un état mécanique et reste visible du joueur, comme une condition ; seule la jauge qui l'a produite reste cachée. Le MJ peut aussi choisir de ne pas l'appliquer automatiquement.
-- Stress et émotions n'ont **pas** de conséquence mécanique par défaut : ils se jouent (H5). Un monde peut en ajouter par ses déclencheurs.
-
-**Critères d'acceptation**
-- [ ] Un PJ qui ne dort pas atteint l'épuisement selon la règle de son ruleset, appliquée par le moteur (test).
-- [ ] Le cas « MJ seul » est tranché avec l'auteur et noté.
-
----
-
-### ☐ V4-H4 — Proposer une transformation au joueur · `S` · sans modèle IA — **prêt après E5 et H1**
+### ☐ V4-H2 — L'écran des réglages · `S` · sans modèle IA — **prêt après H1 (Sonnet)**
 
 **Modèle conseillé : Sonnet.**
 
 **Sous-tâches Haiku** : libellés ; planche du catalogue.
 
-- Quand la simulation transformerait un PJ, et que le réglage est « le moteur propose » : une proposition au joueur, avec sa cause (« depuis la mort de ta sœur… »), le changement en bandes nommées, accepter ou refuser.
-- Refuser laisse le souvenir intact : le PJ a vécu la chose, il n'en a pas été changé.
+- Dans les réglages de table (V3.1-108) : une section « Simulation et psyché » : mode, une ligne par couche (joueur, MJ seul, désactivée), évolution des traits des PJ, conséquences du corps, récit intime, simulation romantique, délai de la mémoire longue, âge adulte. Chaque option dit son effet en une phrase.
+
+**Critères d'acceptation**
+- [ ] Tient à 375 px ; seul le MJ voit et modifie ; en solo, tout est ouvert au joueur.
+
+---
+
+### ☐ V4-H3 — La psyché du PJ vue par son joueur · `M` · sans modèle IA — **prêt après H1, B8 (Sonnet)**
+
+**Modèle conseillé : Sonnet.** **Esquisse :** première sous-tâche.
+
+**Sous-tâches Haiku** : planche du catalogue.
+
+- Dans la fiche jouable (V3-D5) : la projection, en bandes nommées (« affamé », « épuisé », « en colère »). Les souvenirs visibles rejoignent le journal de personnage (V3-E3). La réputation par lieu.
+- Une couche absente ne laisse **aucune** trace, pas même un emplacement vide.
+
+**Critères d'acceptation**
+- [ ] Esquisse validée ; tient à 375 px.
+
+---
+
+### ☐ V4-H4 — Les besoins du corps et les déclencheurs · `M` · sans modèle IA — **prêt après E3, H1**
+
+**Modèle conseillé : Opus** — vocabulaire fermé des déclencheurs. **ADR :** 0083.
+
+**Sous-tâches Haiku** : lancer les tests.
+
+- `need_threshold_crossed` ajouté à `TRIGGER_EVENTS`, avec `event.need` et `event.band` ; émis par le pas de simulation quand un besoin du corps d'un PJ change de bande.
+- `body_consequences: "auto"` applique les effets des déclencheurs ; `"gm"` les met dans le tiroir du MJ.
+- Un exemple de déclencheur (faim → épuisement) dans la documentation des déclencheurs ; **pas** dans un fichier suivi par Git qui contiendrait la règle d'un livre.
+
+**Critères d'acceptation**
+- [ ] Un PJ qui ne mange pas déclenche l'événement à chaque changement de bande, une seule fois (test).
+- [ ] Couche du corps `off` : aucun événement émis.
+
+---
+
+### ☐ V4-H5 — Proposer une transformation au joueur · `S` · sans modèle IA — **prêt après C2, H3 (Sonnet)**
+
+**Modèle conseillé : Sonnet.**
+
+**Sous-tâches Haiku** : libellés ; planche du catalogue.
+
+- Quand le réglage est « le moteur propose » : la proposition (cause, changement en bandes) dans la fiche du PJ ; accepter applique le déplacement (`personality_events` `core_memory`) ; refuser ne change rien et garde le souvenir.
 
 **Critères d'acceptation**
 - [ ] Refuser ne change aucune valeur et n'efface aucun souvenir (test).
 
 ---
 
-### ☐ V4-H5 — Jouer sa psyché rapporte l'Inspiration · `M` · sans modèle IA — **à concevoir**
+### ☐ V4-H6 — Le motif déclaré et l'Inspiration · `M` · sans modèle IA — **prêt après E2, H1**
 
-**Modèle conseillé : Opus** — qui juge qu'un joueur a « joué sa psyché » ?
+**Modèle conseillé : Opus** — moteur de tour, règle 8. **ADR :** 0084.
 
-**Sous-tâches Haiku** : aucune avant la conception.
+**Sous-tâches Haiku** : libellés ; planche du catalogue.
 
-Une **récompense plutôt qu'une contrainte**, à la manière de *Burning Wheel* ou *Fate* : céder à son émotion, honorer une valeur au prix d'un risque, poursuivre son rêve contre son intérêt donne l'Inspiration héroïque (effet `grant_inspiration`, ADR 0050).
-
-**À décider**
-- **Avec un MJ humain** : le MJ l'accorde ; l'écran lui suggère les occasions (le PJ en colère vient de choisir de frapper).
-- **En solo** : le moteur ne lit pas la prose. Il peut reconnaître une intention de la barre d'intention (V3-B1) qui correspond à une émotion, une valeur ou un rêve du PJ. Jamais un jugement du modèle (règle 8).
+- La barre d'intention (V3-B1) gagne une puce facultative « par… » : une liste fermée tirée de l'état du PJ (émotion forte, valeurs prioritaires, rêve actif).
+- `motiveGrantsInspiration(motive, pcState, intent)` (pur) : vrai si le motif existe dans l'état, si l'action demande un jet, et si l'Inspiration n'a pas été accordée par ce moyen dans la scène. Effet `grant_inspiration` (ADR 0050).
+- Avec un MJ humain : une suggestion dans ses outils, jamais automatique. L'élan (E2) propose aussi l'Inspiration.
 
 **Critères d'acceptation**
-- [ ] Conception écrite et découpée.
+- [ ] Un motif absent de l'état ne rapporte rien (test).
+- [ ] Au plus une fois par scène (test).
 
 ---
 
-### ☐ V4-H6 — Ce que le MJ voit pour raconter · `S` · sans modèle IA — **à esquisser, puis prêt (Sonnet)**
+### ☐ V4-H7 — Ce que le MJ voit pour raconter · `S` · sans modèle IA — **prêt après H1 (Sonnet)**
 
-**Modèle conseillé : Sonnet**, après esquisse. **Dépend de** : H1.
+**Modèle conseillé : Sonnet.** **Esquisse :** première sous-tâche.
 
 **Sous-tâches Haiku** : planche du catalogue.
 
-Quand une couche est « MJ seul », le MJ a besoin de la voir **sans ouvrir chaque fiche** : un panneau dans ses outils de table qui résume l'état des PJ (« Max : affamé, inquiet ; se souvient encore de la trahison d'Aude »), pour qu'il choisisse de le glisser dans son récit.
+- Un panneau dans les outils de table : l'état de chaque PJ en une ligne (« Max : affamé, inquiet ; se souvient de la trahison d'Aude »), pour les couches « MJ seul » comme pour les autres.
 
 **Critères d'acceptation**
-- [ ] L'esquisse est validée ; le panneau ne fait qu'un chargement (`docs/CABLAGE.md`).
+- [ ] Un seul chargement (`docs/CABLAGE.md`) ; tient à 375 px.

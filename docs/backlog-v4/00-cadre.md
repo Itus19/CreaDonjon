@@ -64,13 +64,13 @@ Un ticket V4 qui découvre qu'un de ces prérequis n'est pas réellement là **s
 
 Ces changements passent **chacun par un ADR** avant toute ligne de code. Ils ne se font jamais en passant.
 
-| Décision antérieure | Où | Ce qui change | Ticket |
+| Décision antérieure | Où | Ce qui change | ADR |
 |---|---|---|---|
-| « Les pôles ne bougent que sur événement explicite. Pas de dérive de fond, pas de tâche périodique. » | `specs/psyche-pnj.md` §1 | **Le temps qui passe devient un événement.** Toujours aucune tâche de fond : le monde est rattrapé quand le temps avance en jeu. | A3 |
-| « Bram est Bram partout » : la personnalité appartient à l'entité, tous mondes confondus | `specs/psyche-pnj.md` §6, bloc `personality` | Le bloc garde **la graine** (l'état de départ saisi). **L'état courant vit dans la partie**, comme les attitudes. | A1 |
-| Six pôles, sept convictions, aspirations en texte libre | `src/core/psyche/keys.ts` | Facettes et valeurs à la richesse de Dwarf Fortress, rêves typés, besoins, émotions | B1 |
-| Un axe `attraction_repulsion` | `RELATIONSHIP_AXIS_KEYS` | Deux axes : attirance **romantique** et attirance **sexuelle** | B4, C3 |
-| Une conviction ne change jamais sans revue | `specs/psyche-pnj.md` §5 | **Inchangé pour l'IA.** Le moteur, lui, peut transformer une personne selon des règles ; ce qu'il fait d'un PJ dépend des réglages de table (lot H) | E5, H1 |
+| « Les pôles ne bougent que sur événement explicite. Pas de dérive de fond, pas de tâche périodique. » | `specs/psyche-pnj.md` §1 | **Le temps qui passe devient un événement.** Toujours aucune tâche de fond : le monde est rattrapé quand le temps avance en jeu. | 0069 |
+| « Bram est Bram partout » : la personnalité appartient à l'entité, tous mondes confondus | `specs/psyche-pnj.md` §6, bloc `personality` | Le bloc garde **la graine** (l'état de départ saisi). **L'état courant vit dans la partie**, comme les attitudes. | 0067 |
+| Six pôles, sept convictions, aspirations en texte libre | `src/core/psyche/keys.ts` | Facettes et valeurs à la richesse de Dwarf Fortress, rêves typés, besoins, émotions | 0072 |
+| Un axe `attraction_repulsion` | `RELATIONSHIP_AXIS_KEYS` | Deux axes : attirance **romantique** et attirance **sexuelle** | 0073 |
+| Une conviction ne change jamais sans revue | `specs/psyche-pnj.md` §5 | **Inchangé pour l'IA.** Le moteur, lui, peut transformer une personne selon des règles ; ce qu'il fait d'un PJ dépend des réglages de table (lot H) | 0074, 0080 |
 
 Ce qui **ne change pas** : les règles absolues de `CLAUDE.md`. L'IA narre et le code arbitre (règle 8). L'IA n'écrit jamais en base (règle 9). Les valeurs dérivées ne sont jamais stockées (règle 16). Une migration appliquée n'est jamais modifiée (règle 14).
 
@@ -112,23 +112,27 @@ Ce qu'on **n'en retient pas** : l'esprit du personnage échappe au joueur dans D
 
 ---
 
-## 6. Ce qui reste ouvert
+## 6. Décisions prises le 22 octobre, et ce qui reste ouvert
 
-| Question | Recommandation |
+**La conception est faite** : `specs/psyche-v4.md`, `specs/simulation-monde.md`, ADR 0067 à 0084, recherche dans `docs/recherche/simulation-inspirations.md`. Tous les tickets des lots A à H sont **prêts** ; les tickets d'interface commencent par une esquisse à faire valider par l'auteur.
+
+| Question | Décision |
 |---|---|
-| L'état de simulation vit-il par **campagne** ou par **monde** ? | Par campagne, comme les attitudes : deux campagnes d'un même monde divergent. À trancher en A1 |
-| Où tourne la génération d'un monde ancien (temps limité d'une fonction Vercel) ? | Dans le navigateur de l'auteur (le noyau n'a aucune dépendance), résultat envoyé par lots et validé par Zod. À trancher en G1 |
-| Le questionnaire par défaut est-il un contenu suivi par Git ? | Il est écrit pour CreaDonjon, pas tiré d'un livre : probablement oui, comme les libellés. À trancher en D1 au regard de la règle « le contenu de règles est de la donnée » |
-| Les propositions du moteur réutilisent-elles `ai_proposals` ? | Non : une proposition du moteur n'est pas une sortie de modèle. Une table sœur, même cycle de vie. À trancher en F3 |
-| L'échelle politique (lot P) | Royaumes en jauges agrégées, territoires, flux entre lieux, caravanes et armées en jetons. **Pas un ticket** avant que les lots A à G tournent |
-| La génération de cartes | Hors V4. La génération d'histoire part des lieux existants ou générés en liste, sans géographie |
-| Combien de figures complètes une partie supporte-t-elle ? | À mesurer en E6, pas à décider maintenant |
+| L'état de simulation vit-il par campagne ou par monde ? | Par campagne (un monde n'a qu'une campagne vivante) : `sim_figures` — ADR 0067 |
+| Où tourne la génération d'un monde ancien ? | Dans le navigateur, envoi par morceaux validés — ADR 0081 |
+| Le questionnaire par défaut est-il suivi par Git ? | Oui : contenu original de l'application, textes dans `messages/` — ADR 0082 |
+| Les propositions du moteur réutilisent-elles `ai_proposals` ? | Non : `sim_batches` et `sim_batch_items` — ADR 0079 |
+| Comment cacher au joueur ce qui est « MJ seul » ? | Tables brutes réservées à l'admin ; une projection par PJ — ADR 0080 |
+
+**À valider par l'auteur** (choix faits pour avancer, réversibles) : `specs/simulation-monde.md` §17 — délai de la mémoire longue (90 jours), plafond de 150 figures complètes, conséquences du corps quand la couche est « MJ seul », défaire seulement le dernier lot, génération dans le navigateur, pas de faits marquants proposés par l'IA en V4.
+
+**Toujours hors V4** : l'échelle politique (lot P : royaumes en jauges, territoires, flux, caravanes et armées en jetons), et la génération de cartes.
 
 ---
 
 ## 7. Rappel de méthode
 
-- **Un ticket « à concevoir » ne se code pas.** Il produit un ADR et, au besoin, une spec. Puis il se découpe en tickets prêts, écrits dans le fichier de son lot.
+- **Un ticket d'interface commence par son esquisse**, montrée à l'auteur avant le code.
 - **Noyau d'abord, tests d'abord** (`src/core/sim`, `src/core/psyche`). La logique difficile de la V4 est presque entièrement pure.
-- **Une seule spec par sujet.** Le lot B produit `specs/psyche-v4.md`, qui **remplace** `specs/psyche-pnj.md` sur ce qu'il redéfinit. L'ancienne spec garde un bandeau qui pointe vers la nouvelle.
+- **Une seule spec par sujet.** `specs/psyche-v4.md` **remplace** `specs/psyche-pnj.md` sur ce qu'il redéfinit ; l'ancienne spec porte un bandeau qui pointe vers la nouvelle.
 - **Tester sobrement** (`docs/QUOTAS.md`, T1-T5) : les générations de monde se testent sur le noyau, jamais en boucle contre la vraie base.

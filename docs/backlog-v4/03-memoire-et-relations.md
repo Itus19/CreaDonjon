@@ -1,112 +1,138 @@
 # Lot C — La mémoire et les relations
 
-*Partie du backlog V4. L'index : [`docs/BACKLOG_V4.md`](../BACKLOG_V4.md). Le cadre commun : [`00-cadre.md`](00-cadre.md).*
+*Partie du backlog V4. L'index : [`docs/BACKLOG_V4.md`](../BACKLOG_V4.md). Le cadre commun : [`00-cadre.md`](00-cadre.md). Spec : [`specs/simulation-monde.md`](../../specs/simulation-monde.md) §7 à §9.*
 
-Chaque entité se souvient de ce qu'elle a vécu avec les autres, et surtout avec le joueur. Ses relations ne sont plus saisies : elles **naissent** de ces souvenirs. Ce qu'elle croit savoir peut différer de la vérité.
-
-Point de départ : `attitude_events` est déjà une mémoire par paire, en ajout seul et rejouable. Ce lot la généralise, sans la jeter.
+Se souvenir, être transformé par ses souvenirs, se lier, croire, colporter, mentir, avoir une réputation. Conçu le 22 octobre 2026 (ADR 0074, 0075).
 
 ---
 
-### ☐ V4-C1 — Le souvenir · `L` · sans modèle IA — **à concevoir (ADR)**
+### ☐ V4-C1 — Les souvenirs · `M` · sans modèle IA — **prêt après A1, B1**
 
-**Modèle conseillé : Opus** — schéma, volume, cœur de la mémoire.
+**Modèle conseillé : Opus** — noyau. **Spec :** §7.1 à §7.3.
 
-**Sous-tâches Haiku** : aucune avant l'ADR.
+**Sous-tâches Haiku** : lancer `npm run test:core`.
 
-**À décider dans l'ADR**
-- **Ce qu'est un souvenir** : son porteur, l'événement du monde dont il vient (A4), les autres entités en jeu, la date de jeu, l'émotion ressentie et son intensité, la **valence**, la **saillance**, et **ce que le porteur croit** s'être passé (qui peut différer de l'événement réel, C4).
-- **Deux mémoires** : un petit nombre d'emplacements à court terme ; un nombre limité d'emplacements à long terme. Le nombre exact est à fixer (Dwarf Fortress en a quelques-uns de chaque).
-- **Consolidation et oubli** : un souvenir court assez saillant passe en mémoire longue ; les autres s'effacent. Un souvenir long peut **se raviver** (revoir la personne, revenir au lieu) et provoquer de nouveau l'émotion.
-- **Un oubli qui ne perd rien** : un souvenir effacé quitte la mémoire de la personne, pas le journal du monde. On le retrouve pour l'audit.
-- **Le joueur pèse plus lourd** : les souvenirs qui impliquent un PJ ont une saillance majorée (C6).
-- **Le lien avec `attitude_events`** : un souvenir produit ses effets d'attitude, journalisés comme aujourd'hui. L'ancien chemin d'écriture (le MJ déplace un curseur) devient un souvenir d'origine `gm`.
-- **Le volume** : seules les figures complètes (E6) ont des souvenirs individuels ; les figures légères n'ont que leurs actes notables.
+**À faire** (tests d'abord), `src/core/sim/memory.ts`
+- `memoryGroup(emotion, subjectIds)`.
+- `remember(memories, memory)` : règles de la mémoire courte (un par groupe, le plus fort gardé ; sinon place vide ; sinon le plus faible remplacé).
+- `consolidate(memories, now, promotionDays)` : courte → longue (ou mémoire du joueur si `involves_pc`) après le délai, ou aussitôt au-dessus de 80 ; échoue si plus faible que le remplacé.
+- `revisitDue(memories, now, rng, encounters)` : les souvenirs revécus ce pas, avec l'émotion rendue à 60 %.
 
 **Critères d'acceptation**
-- [ ] ADR écrit, `docs/SCHEMA.md` mis à jour, découpage en tickets prêts.
+- [ ] Jamais plus de 8 / 8 / 4 (tests aux bornes, 10 000 souvenirs aléatoires).
+- [ ] Un deuil à 90 est toujours en mémoire longue au bout de 50 ans simulés ; une broutille à 10 est oubliée en quelques semaines.
+- [ ] Un souvenir impliquant un PJ ne quitte jamais la mémoire du joueur au profit d'un souvenir du quotidien.
+- [ ] Déterministe à graine égale.
 
 ---
 
-### ☐ V4-C2 — Consolider, oublier, raviver · `M` · sans modèle IA — **prêt après C1**
+### ☐ V4-C2 — Les souvenirs fondateurs · `M` · sans modèle IA — **prêt après C1, B3**
 
-**Modèle conseillé : Opus** — noyau, tests d'abord.
+**Modèle conseillé : Opus** — touche aux valeurs. **ADR :** 0074. **Spec :** §7.4.
 
-**Sous-tâches Haiku** : lancer `npm run test:core` et résumer les échecs.
+**Sous-tâches Haiku** : libellés des transformations (« est devenu méfiant, après… ») ; lancer les tests.
 
-Fonctions pures dans `src/core/sim/memory.ts` : ajouter un souvenir, consolider, oublier, raviver.
+**À faire** (tests d'abord)
+- `src/core/sim/formative.rules.ts` : la table de la spec, en données.
+- `formativeShift(memory, figure, rng): Shift | null` : chance d'un tiers, déplacements × intensité, sens choisi selon la règle, puis `applyDelta`.
+- Pour un PJ, la sortie est une **proposition** si `pc_trait_evolution = "propose"`, rien si `"never"` (le réglage vient de H1 ; ici, un paramètre).
+- Écriture : `personality_events` `kind = 'core_memory'`, avec `campaign_id` et `world_event_id`.
 
 **Critères d'acceptation**
-- [ ] Les emplacements ne débordent jamais (test aux bornes).
-- [ ] Un événement « bouleversement » reste en mémoire longue après 50 ans simulés ; une broutille est oubliée en quelques semaines.
-- [ ] Même graine, même suite d'événements → mêmes souvenirs (déterminisme).
+- [ ] Une transformation dit toujours sa cause.
+- [ ] Sur 200 ans simulés (banc factice), les facettes d'une population ne convergent pas toutes (écart-type de chaque facette > 15).
+- [ ] La culpabilité forte resserre l'éthique de l'acte d'un cran, jamais au-delà de `unthinkable`.
 
 ---
 
-### ☐ V4-C3 — Des relations qui naissent des souvenirs · `L` · sans modèle IA — **à concevoir, puis prêt**
+### ☐ V4-C3 — Familiarité, quotidien et compatibilité · `M` · sans modèle IA — **prêt après C1, B3**
 
-**Modèle conseillé : Opus** — redéfinit la relation existante.
+**Modèle conseillé : Opus** — journal rejouable. **Spec :** §8.1 à §8.3.
 
-**Sous-tâches Haiku** : libellés des liens nommés ; planche du catalogue.
+**Sous-tâches Haiku** : lancer les tests.
 
-- Les **axes** de la relation (`specs/psyche-pnj.md` §3) restent ; `attraction_repulsion` se scinde en **attirance romantique** et **attirance sexuelle** (B3). Leurs valeurs viennent de la somme des souvenirs partagés, amortie (`applyDelta`).
-- Des **liens nommés** apparaissent à des seuils et selon des souvenirs précis : ami, ami proche, rancune, rival, mentor, protégé, amant, partenaire, ex. La parenté reste le domaine du bloc `genealogy`.
-- L'attirance ne peut naître que si l'orientation des deux personnes le permet (B4, filtre) et si la table n'a pas désactivé la simulation romantique (H1).
-- Le MJ peut toujours imposer un lien ou une valeur : c'est un souvenir d'origine `gm`, visible comme tel.
+**À faire** (tests d'abord)
+- `src/core/sim/social.ts` : `compatibility(a, b)`, `pickInterlocutor(...)`, `dailyInteraction(a, b, rng)` (bavarder, se confier, se froisser, se disputer) et ses deltas ; `familiarityStep`.
+- `attitude_events.deltas` accepte une **suite** de deltas bruts par axe (`number | number[]`) ; le rejeu (`src/core/psyche/apply.ts`) les applique dans l'ordre. Le service regroupe les deltas d'une semaine par paire.
 
 **Critères d'acceptation**
-- [ ] Un lien nommé apparaît et disparaît selon les seuils (tests).
-- [ ] Aucune attirance ne naît entre deux personnes dont les orientations l'excluent (test).
-- [ ] Une relation saisie avant la V4 se lit inchangée (conversion B3).
+- [ ] Rejouer un événement à suite de deltas = appliquer les deltas un par un (test).
+- [ ] Deux personnes incompatibles finissent froides au bout de six mois de cohabitation ; deux compatibles, amies (banc, graine fixée).
+- [ ] Une semaine d'interactions d'une paire = une seule ligne `attitude_events`.
 
 ---
 
-### ☐ V4-C4 — Croyances et rumeurs · `L` · sans modèle IA — **à concevoir (ADR)**
+### ☐ V4-C4 — Les liens nommés · `S` · sans modèle IA — **prêt après C3, A4**
 
-**Modèle conseillé : Opus** — vérité et croyance, fuite par le contexte (`specs/psyche-pnj.md` §3, `known_as`).
+**Modèle conseillé : Opus** — noyau. **Spec :** §8.4.
 
-**Sous-tâches Haiku** : aucune avant l'ADR.
+**Sous-tâches Haiku** : libellés des liens (trois formes d'accord quand il le faut : « amant·e »).
 
-`known_as` (ce que A croit savoir de B) généralisé : chaque personne a des **croyances** sur les faits du monde, avec leur source et leur degré de certitude.
-
-**À décider dans l'ADR**
-- Ce qu'est une croyance : le fait (un événement du monde, l'identité d'une personne, un secret), ce que la personne en croit, d'où elle le tient, sa certitude.
-- **La rumeur** : un fait se propage le long des relations et des lieux, pas à pas, et **se déforme** (acteur confondu, ampleur exagérée) selon des règles fermées et un tirage dérivé (A2). Le joueur trahit quelqu'un à un endroit, et un autre lieu l'apprend des semaines plus tard, déformé.
-- **Les secrets** : un fait que son auteur veut cacher se propage moins, et le révéler est un événement.
-- **Le contexte du modèle** ne reçoit que ce que la personne croit, jamais la vérité qu'elle ignore (la fuite que `known_as` évitait déjà).
-- Le volume : les rumeurs ne circulent qu'entre figures complètes et lieux proches ; au loin, une rumeur est un fait agrégé (« la capitale sait »).
+- `computeLinks(attitudes, events, ages): Link[]` (pur), les seuils de la spec.
+- Le passage d'un seuil produit l'événement correspondant (`friendship_formed`, `grudge_formed`…) : `linkTransitions(before, after)`.
 
 **Critères d'acceptation**
-- [ ] ADR écrit, découpage en tickets prêts.
+- [ ] Chaque lien a son test d'apparition et de disparition.
+- [ ] Les liens d'une figure complète ne sont jamais stockés (règle 16) ; ceux d'une figure légère, oui (`state.links`).
 
 ---
 
-### ☐ V4-C5 — Souvenirs et croyances sur la fiche · `M` · sans modèle IA — **à esquisser, puis prêt (Sonnet)**
+### ☐ V4-C5 — Les croyances · `L` · sans modèle IA — **prêt après A3, C3**
 
-**Modèle conseillé : Sonnet**, après esquisse. **Dépend de** : C2, C3.
+**Modèle conseillé : Opus** — migration, RLS, vérité et croyance. **ADR :** 0075. **Spec :** §9.1 à §9.4, §9.6.
+
+**Sous-tâches Haiku** : régénérer les types ; lancer les tests et résumer les échecs.
+
+**À faire**
+- Migration `sim_beliefs` (RLS admin du monde) ; `src/server/repos/simBeliefs.ts` (lectures groupées par porteur et par lieu).
+- `src/core/sim/beliefs.ts` (tests d'abord) : `witnessBeliefs(event, presentFigures)`, `placeBelief(event)`, `transmit(belief, teller, listener, rng)` (certitude, sauts, mutation), `mutate(claim, rng, candidates)` (les quatre mutations), `lieVersion(event, liar, rival)`, `spreadBetweenPlaces(beliefs, tree, now)`, `decay(beliefs, now)`, plafonds 60 et 200.
+- `zBeliefClaim` : la version crue d'un événement (genre, acteurs, cible, lieu, ampleur) ou d'une personne (identité, rôle, lieu).
+
+**Critères d'acceptation**
+- [ ] Une croyance qui a sauté cinq fois a une certitude plus basse que la première (test).
+- [ ] Une figure à `sincerity` ≥ 34 ne ment jamais ; à ≤ −34 et avec un motif, ment selon le tirage (test sur graine).
+- [ ] `is_accurate` est faux dès la première mutation ou le premier mensonge.
+- [ ] Un mensonge découvert produit `lie_told` révélé et la perte de confiance.
+
+---
+
+### ☐ V4-C6 — La réputation · `S` · sans modèle IA — **prêt après C5**
+
+**Modèle conseillé : Opus** — noyau. **Spec :** §9.5.
+
+**Sous-tâches Haiku** : libellés des étiquettes.
+
+- `reputationIn(placeBeliefs, figureId): Record<ReputationTag, number>` et ses bandes.
+
+**Critères d'acceptation**
+- [ ] Un PJ qui vole deux fois dans un lieu y a la réputation `thief` ; un lieu à trois sauts ne la connaît qu'après la propagation (test sur graine).
+
+---
+
+### ☐ V4-C7 — Souvenirs, croyances et liens sur la fiche · `M` · sans modèle IA — **prêt après C2, C4, C5 (Sonnet)**
+
+**Modèle conseillé : Sonnet.** **Esquisse :** première sous-tâche.
 
 **Sous-tâches Haiku** : planche du catalogue.
 
-- Pour le MJ : la mémoire longue d'une personne, ses souvenirs courts récents, ses croyances (avec la vérité en regard, et l'écart signalé).
-- Le fil d'une paire (`attitude_events`, déjà à l'écran) s'enrichit des souvenirs qui l'ont fait bouger.
-- Ce que voit un joueur suit les réglages de table (lot H) et les découvertes.
+- Pour le MJ : mémoire longue, mémoire du joueur, souvenirs courts récents, souvenirs fondateurs (avec la transformation), liens nommés, croyances avec la vérité en regard (une croyance fausse est marquée).
+- Le fil d'une paire (V2) montre les souvenirs qui l'ont fait bouger.
 
 **Critères d'acceptation**
-- [ ] L'esquisse est validée par l'auteur.
-- [ ] Une croyance fausse est visiblement distinguée de la vérité, pour le MJ seul.
+- [ ] Esquisse validée ; tient à 375 px.
+- [ ] La marque « fausse » n'est jamais rendue pour un joueur (elle n'est pas dans sa projection, H1).
 
 ---
 
-### ☐ V4-C6 — La mémoire du joueur · `M` · sans modèle IA — **prêt après C2**
+### ☐ V4-C8 — La mémoire du joueur · `S` · sans modèle IA — **prêt après C1, E5**
 
-**Modèle conseillé : Opus** — c'est la promesse « les entités se souviennent du joueur ».
+**Modèle conseillé : Opus** — la promesse « les entités se souviennent du joueur ». **Spec :** §7.2.
 
-**Sous-tâches Haiku** : vérifications et résumé des échecs.
+**Sous-tâches Haiku** : lancer les tests.
 
-- Les souvenirs qui impliquent un PJ ont une saillance majorée, et ne s'oublient pas tant que la personne vit et que le PJ reste dans la partie.
-- **Le retour** : une personne marquée par un PJ (vaincue, humiliée, sauvée, trahie) peut en faire un rêve (`avenge`, `repay`, `follow`), et revenir. C'est l'esprit du système Nemesis, sans scénario écrit d'avance.
-- Le journal de personnage (V3-E3) reçoit, côté PJ, ce que le PJ sait de ce que les autres retiennent de lui, selon ses découvertes.
+- Un souvenir fort impliquant un PJ fait naître, selon les facettes, un rêve qui le vise : `avenge` (humilié, vaincu, trahi), `serve` ou `protect` (sauvé), `find` (perdu de vue après un lien fort), `redeem` (a fait du tort au PJ).
+- Le journal de personnage (V3-E3) reçoit, côté PJ, ce que le PJ **sait** de ce que les autres retiennent de lui (par ses croyances).
 
 **Critères d'acceptation**
-- [ ] Un PNJ vaincu par un PJ et laissé en vie peut développer un rêve qui le concerne (test sur graine fixée).
-- [ ] Ce rêve n'apparaît jamais si le PNJ n'a aucun souvenir du PJ.
+- [ ] Un PNJ vaincu par un PJ et laissé en vie, rancunier, développe `avenge(PJ)` (test sur graine).
+- [ ] Ce rêve n'apparaît jamais sans souvenir du PJ.
