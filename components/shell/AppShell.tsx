@@ -3,7 +3,12 @@
 import { usePathname } from "next/navigation";
 import DiceRollProvider from "./DiceRollPanel";
 import ChatUnreadProvider from "./useChatUnread";
+import SauvegardesProvider from "./SauvegardesProvider";
+import type { DemandeSauvegarde } from "@/lib/ui/sauvegardes";
 import BarreTelephoneMj from "./BarreTelephoneMj";
+
+/** Une seule référence : le fournisseur repart de la liste quand elle change. */
+const AUCUNE_SAUVEGARDE: DemandeSauvegarde[] = [];
 
 /**
  * Coquille commune aux trois sections (Monde/Règles/MJ). Elle n'a plus
@@ -22,6 +27,8 @@ export default function AppShell({
   worldSlug,
   campaignId,
   initialUnreadCount = null,
+  userId = null,
+  initialSaveRequests = AUCUNE_SAUVEGARDE,
   children,
   overlay,
 }: {
@@ -30,6 +37,10 @@ export default function AppShell({
   campaignId: string | null;
   /** Messages non lus, comptes par le layout avec la page (V3.1-62) ; `null` : la pastille les demande elle-meme. */
   initialUnreadCount?: number | null;
+  /** V3.1-112 : l'utilisateur, pour savoir quelles sauvegardes lui reviennent. */
+  userId?: string | null;
+  /** V3.1-112 : les sauvegardes en attente, lues par le layout avec la page. */
+  initialSaveRequests?: DemandeSauvegarde[];
   children: React.ReactNode;
   /**
    * Emplacement pour un contenu monte une seule fois, HORS du flux flex de
@@ -47,8 +58,18 @@ export default function AppShell({
   const isMj = pathname.startsWith(`/m/${worldSlug}/mj`);
   return (
     <DiceRollProvider campaignId={campaignId} isGm={isMj}>
-      <ChatUnreadProvider campaignId={campaignId} isMj={isMj} initialUnreadCount={initialUnreadCount}>
-        {/* `flex-1 min-h-0` plutot qu'une hauteur fixe (`h-dvh`) : ce conteneur
+      <ChatUnreadProvider
+        campaignId={campaignId}
+        isMj={isMj}
+        initialUnreadCount={initialUnreadCount}
+      >
+        <SauvegardesProvider
+          campaignId={campaignId}
+          userId={userId}
+          isMj={isMj}
+          initiales={initialSaveRequests}
+        >
+          {/* `flex-1 min-h-0` plutot qu'une hauteur fixe (`h-dvh`) : ce conteneur
             n'est pas toujours le seul enfant de `<body>` — le bandeau "voir comme"
             (`ViewAsBanner`, app/layout.tsx) s'empile au-dessus quand il est
             present, sur TOUTE route (pas seulement la coquille joueur). Une
@@ -63,16 +84,17 @@ export default function AppShell({
             et `overflow-hidden` interdit a quoi que ce soit d'en sortir. Le
             defilement appartient donc aux barres laterales et aux fenetres,
             jamais au document (ADR 0025). */}
-        <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
-          <div className="flex flex-1 overflow-hidden">{children}</div>
-        </div>
+          <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+            <div className="flex flex-1 overflow-hidden">{children}</div>
+          </div>
 
-        {/* V3.1-29 : barre flottante du telephone, cote MJ. Montee ICI, une seule
+          {/* V3.1-29 : barre flottante du telephone, cote MJ. Montee ICI, une seule
             fois pour Monde, Regles et MJ (elle se tait d'elle-meme sous `/joueur`
             et `/apercu`, dont la coquille joueur porte sa propre barre). */}
-        <BarreTelephoneMj worldSlug={worldSlug} />
+          <BarreTelephoneMj worldSlug={worldSlug} />
 
-        {overlay}
+          {overlay}
+        </SauvegardesProvider>
       </ChatUnreadProvider>
     </DiceRollProvider>
   );

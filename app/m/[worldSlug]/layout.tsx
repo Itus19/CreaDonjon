@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { countUnreadChatMessages } from "@/src/server/services/chat";
+import { listMyPendingSaveRequests } from "@/src/server/services/saveRequests";
 import { getCalendar, getWorldBySlug } from "@/src/server/services/worlds";
 import { listCampaigns } from "@/src/server/services/campaigns";
 import AppShell from "@/components/shell/AppShell";
@@ -38,8 +39,19 @@ export default async function WorldLayout({
   // V3.1-62 (docs/CABLAGE.md, C1) : la pastille du chat est visible sur
   // toutes les pages du monde ; son compte arrive avec la page plutot que
   // par un appel `/api` apres l'affichage.
-  const initialUnreadCount =
-    campaignId && user ? await countUnreadChatMessages(supabase, { campaignId, worldId: world.id, userId: user.id }) : null;
+  // V3.1-112 : les sauvegardes en attente (pastille du dé encoché, bandeau de
+  // la cible) arrivent de même, dans la même vague ; le temps réel suit.
+  const [initialUnreadCount, initialSaveRequests] =
+    campaignId && user
+      ? await Promise.all([
+          countUnreadChatMessages(supabase, {
+            campaignId,
+            worldId: world.id,
+            userId: user.id,
+          }),
+          listMyPendingSaveRequests(supabase, campaignId),
+        ])
+      : [null, []];
 
   return (
     // Etat des fenetres du MJ (ADR-0011, ADR-0066), partage par Monde et Regles
@@ -52,9 +64,13 @@ export default async function WorldLayout({
           worldSlug={world.slug}
           campaignId={campaignId}
           initialUnreadCount={initialUnreadCount}
+          userId={user?.id ?? null}
+          initialSaveRequests={initialSaveRequests}
           overlay={<VoletsLayer worldSlug={world.slug} />}
         >
-          <WorldCalendarProvider calendar={calendar}>{children}</WorldCalendarProvider>
+          <WorldCalendarProvider calendar={calendar}>
+            {children}
+          </WorldCalendarProvider>
         </AppShell>
       </DesktopWindowsProvider>
     </Suspense>

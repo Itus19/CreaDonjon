@@ -40,3 +40,10 @@ Une table, une fonction, `docs/SCHEMA.md`, tests RLS. Les écrans : bandeau de l
 - **Écart avec « aucun privilège nouveau »** : depuis V3.1-101 (ADR 0040), un joueur n'écrit plus la ligne de combat de son PJ. `set_own_participant_vitals` lui rend une écriture étroite — PV, PV temporaires et états de SON PJ, ce qu'il change déjà sur sa fiche — même patron que `set_own_initiative`. Le MJ peut l'annuler (journal du combat).
 - **La réponse** (`answerSaveRequest`) : lancer par le serveur ou vrai dé (« modificateur inclus ») ; la fonction de réponse d'abord, puis le jet (attribué, V3.1-89), un `roll` qui porte la demande et son jet d'origine, l'application et son `rule_application`. Rien n'est relancé : les dégâts sont ceux de la demande.
 - Routes : `GET /api/campaigns/[campaignId]/save-requests` (en attente, vues par l'appelant) et `POST …/save-requests/[requestId]/answer`. Le temps réel (publication de la table) viendra avec l'écran qui l'écoute.
+
+## Réalisation des écrans (V3.1-112, 24 octobre 2026)
+
+- Migration `20261024120000_save_requests_realtime.sql` : `save_requests` publiée en temps réel, RLS respectée.
+- Un seul canal par page (`SauvegardesProvider`, monté dans `AppShell`) ; la liste en attente arrive avec la page (le layout, docs/CABLAGE.md C1), puis suit les signaux sans relecture (`lib/ui/sauvegardes.ts`, pur et testé).
+- **« Laisser le MJ saisir » n'écrit rien** : le bandeau se replie chez la joueuse, le temps de la page. Le MJ voit toujours toutes les demandes en attente (la fonction de réponse l'y autorise déjà) ; à la table, la joueuse lui annonce son dé. Une colonne « laissée au MJ » n'apporterait rien que la pastille du MJ ne montre déjà.
+- La pastille du dé encoché compte, pour une joueuse, ses demandes non laissées au MJ ; pour le MJ, toutes celles de la campagne.

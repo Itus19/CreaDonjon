@@ -38,23 +38,44 @@ type TypedClient = SupabaseClient<Database>;
  * figés dans `effect`. La réponse ne choisit que l'issue.
  */
 
+/**
+ * Ce que l'écran reçoit d'une demande (V3.1-112) : la forme de
+ * `DemandeSauvegarde` (lib/ui/sauvegardes.ts), la même que la ligne du temps
+ * réel moins l'effet figé, qui ne regarde que le serveur.
+ */
 export type SaveRequestView = Pick<
   SaveRequestRow,
-  "id" | "label" | "ability" | "dc" | "status" | "target_id" | "target_entity_id" | "target_user_id" | "created_at"
+  | "id"
+  | "label"
+  | "ability"
+  | "dc"
+  | "status"
+  | "combat_id"
+  | "target_id"
+  | "target_entity_id"
+  | "target_user_id"
+  | "author_user_id"
+  | "natural_roll"
+  | "total"
+  | "created_at"
 >;
 
 export async function listMyPendingSaveRequests(supabase: TypedClient, campaignId: string): Promise<SaveRequestView[]> {
   const rows = await listPendingSaveRequests(supabase, campaignId);
-  return rows.map(({ id, label, ability, dc, status, target_id, target_entity_id, target_user_id, created_at }) => ({
-    id,
-    label,
-    ability,
-    dc,
-    status,
-    target_id,
-    target_entity_id,
-    target_user_id,
-    created_at,
+  return rows.map((row) => ({
+    id: row.id,
+    label: row.label,
+    ability: row.ability,
+    dc: row.dc,
+    status: row.status,
+    combat_id: row.combat_id,
+    target_id: row.target_id,
+    target_entity_id: row.target_entity_id,
+    target_user_id: row.target_user_id,
+    author_user_id: row.author_user_id,
+    natural_roll: row.natural_roll,
+    total: row.total,
+    created_at: row.created_at,
   }));
 }
 

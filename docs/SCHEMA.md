@@ -804,6 +804,8 @@ create table save_requests (
 ```
 
 RLS : lecture par l'auteur, le joueur de la cible et le MJ ; création par le MJ seulement, à son nom (les joueurs ne ciblent pas avant V3.1-104) ; modification et suppression par le MJ. La réponse passe par `public.answer_save_request(p_request, p_natural, p_total)` : le joueur de la cible ou le MJ, une seule fois, n'écrit que le résultat. `public.set_own_participant_vitals(p_participant, p_hp_current, p_temp_hp, p_conditions)` laisse un joueur recopier sur la ligne de combat de SON PJ les PV, PV temporaires et états qu'il change déjà sur sa fiche ; elle renvoie avant/après pour le journal du combat.
+
+**Temps réel (V3.1-112, migration `20261024120000_save_requests_realtime`).** `save_requests` est dans la publication `supabase_realtime`, RLS respectée : chacun reçoit les lignes qu'il peut lire (auteur, joueur de la cible, MJ). Un seul canal par page, filtré sur la campagne (`SauvegardesProvider`) : il tient la liste en attente (pastille du dé encoché, bandeau de la cible, listes du MJ) et l'issue revenue à l'auteur. « Laisser le MJ saisir » n'écrit rien : le bandeau se replie chez la joueuse ; le MJ voit toujours toutes les demandes en attente et peut répondre à chacune.
 - Les routes `/api/campaigns/[id]/combats/**` vérifient la même chose avant toute lecture ou écriture (`guardCombatRoute`).
 - En solo, le joueur est propriétaire du monde, donc administrateur : rien ne change pour lui.
 
