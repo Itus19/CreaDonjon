@@ -10,22 +10,10 @@ import { zSpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import type { CombatParticipantRow } from "@/src/server/repos/combats";
 import type { ParticipantCharacteristics } from "@/src/server/services/combats";
-import { ErreurLancer, type CibleDeJet, type PreReglage, type SortieJet } from "@/lib/ui/outilDes";
-import type { AdvantageState } from "@/src/core/rules/action";
-import {
-  actionsDeMonstre,
-  classerSort,
-  corpsJetCible,
-  demandeDegatsApres,
-  desDeLaFormule,
-  estUneArme,
-  libellePv,
-  sortieDepuisJetCible,
-  type ActionAffichee,
-  type DemandeJetCible,
-  type GenreJetCible,
-} from "@/lib/ui/initiative";
-import { ErreurInitiative, lancerJetCible, type BlocEntiteLu } from "@/lib/ui/initiativeApi";
+import { useTextesJetCible } from "@/components/shell/useTextesJetCible";
+import { actionsDeMonstre, classerSort, estUneArme, type ActionAffichee, type DemandeJetCible, type GenreJetCible } from "@/lib/ui/initiative";
+import type { BlocEntiteLu } from "@/lib/ui/initiativeApi";
+import { preReglageCible } from "@/lib/ui/jetCibleOutil";
 
 /** Ce qu'on a lu d'un participant en le dépliant : son bloc de monstre, ou les blocs de sa fiche. */
 export type DetailsParticipant =
@@ -41,6 +29,7 @@ const BOUTON_JET =
   "rounded-full border border-edge px-2.5 py-1 text-xs text-ink transition-colors hover:border-accent hover:text-accent disabled:opacity-40 disabled:hover:border-edge disabled:hover:text-ink";
 
 interface OuvrirJet {
+  nom: string;
   titre: string;
   kind: GenreJetCible;
   action: DemandeJetCible["action"];
@@ -58,6 +47,7 @@ function useOuvrirJet(params: {
   apresJet: () => void;
 }): (jet: OuvrirJet) => void {
   const t = useTranslations("initiative");
+  const textes = useTextesJetCible();
   const { openDiceTool } = useDiceRoll();
   const { acteur, participants, campaignId, combatId, apresJet } = params;
 
@@ -66,51 +56,24 @@ function useOuvrirJet(params: {
       acteur.source_kind === "entity" && acteur.entity_id
         ? { kind: "character", entityId: acteur.entity_id }
         : { kind: "participant", participantId: acteur.id };
-    const cibles: CibleDeJet[] = participants.map((p) => ({
-      id: p.id,
-      label: p.label,
-      info: [p.is_ally ? t("allie") : t("adversaire"), libellePv(p)].filter((x): x is string => x !== null).join(" · "),
-    }));
-    const grille = jet.touche ? { dice: { d20: 1 }, modifier: jet.modifier ?? 0 } : desDeLaFormule(jet.formule);
-    const preset: PreReglage = {
-      label: jet.titre,
-      dice: grille.dice,
-      modifier: grille.modifier,
-      cibles,
-      // V3.1-38 (suite) : un jet d'attaque garde l'avantage au choix dans l'outil.
-      avantageLibre: jet.kind === "attack" || jet.kind === "spell_attack",
-      lancer: async (cibleId, options) => {
-        if (!cibleId) return null;
-        const cible = participants.find((p) => p.id === cibleId)?.label ?? "";
-        const libelle = (cle: "touche" | "rate" | "attaque" | "degats" | "sauvegarde" | "soin", nom: string) =>
-          cle === "touche"
-            ? t("jetTouche", { cible: nom })
-            : cle === "rate"
-              ? t("jetRate", { cible: nom })
-              : cle === "attaque"
-                ? t("jetAttaque", { cible: nom })
-                : cle === "degats"
-                  ? t("jetDegats", { cible: nom })
-                  : cle === "sauvegarde"
-                    ? t("jetSauvegarde", { cible: nom })
-                    : t("jetSoin", { cible: nom });
-        /** Un jet ciblé : le serveur lance, tranche et applique ; on affiche ses dés, et la suite qu'il propose. */
-        const executer = async (demande: DemandeJetCible, options2: { avantage?: AdvantageState; critique?: boolean }): Promise<SortieJet> => {
-          try {
-            const reponse = await lancerJetCible(campaignId, combatId, corpsJetCible(demande, options2), t("erreurJet"));
-            apresJet();
-            const sortie = sortieDepuisJetCible(reponse, demande.kind, { acteur: acteur.label, cible, libelle });
-            const degats = demandeDegatsApres(reponse);
-            return degats ? { ...sortie, suite: { libelle: t("lancerDegats"), lancer: () => executer(degats.demande, { critique: degats.critique }) } } : sortie;
-          } catch (e) {
-            if (e instanceof ErreurInitiative) throw new ErreurLancer(e.message);
-            throw e;
-          }
-        };
-        return executer({ kind: jet.kind, acteur: acteurJet, action: jet.action, cibleId }, { avantage: options.avantage });
-      },
-    };
-    openDiceTool(preset);
+    openDiceTool(
+      preReglageCible({
+        titre: jet.titre,
+        titreDegats: `${jet.nom} · ${t("degats")}`,
+        kind: jet.kind,
+        action: jet.action,
+        acteur: acteurJet,
+        nomActeur: acteur.label,
+        formule: jet.formule,
+        modifier: jet.modifier,
+        touche: jet.touche,
+        participants,
+        campaignId,
+        combatId,
+        textes,
+        apresJet,
+      })
+    );
   };
 }
 
@@ -161,7 +124,7 @@ function ActionsMonstre({ actions, contexte }: { actions: ActionAffichee[]; cont
               type="button"
               disabled={!contexte.enCours}
               title={indice}
-              onClick={() => ouvrir({ titre: `${a.nom} · ${t("touche")}`, kind: "attack", action: { kind: "monster_action", name: a.nom }, formule: a.degats, modifier: a.touche ?? 0, touche: true })}
+              onClick={() => ouvrir({ nom: a.nom, titre: `${a.nom} · ${t("touche")}`, kind: "attack", action: { kind: "monster_action", name: a.nom }, formule: a.degats, modifier: a.touche ?? 0, touche: true })}
               className={BOUTON_JET}
             >
               {t("toucheBonus", { bonus: a.touche >= 0 ? `+${a.touche}` : String(a.touche) })} ▸
@@ -172,7 +135,7 @@ function ActionsMonstre({ actions, contexte }: { actions: ActionAffichee[]; cont
               type="button"
               disabled={!contexte.enCours}
               title={indice}
-              onClick={() => ouvrir({ titre: `${a.nom} · ${t("degats")}`, kind: "damage", action: { kind: "monster_action", name: a.nom }, formule: a.degats, touche: false })}
+              onClick={() => ouvrir({ nom: a.nom, titre: `${a.nom} · ${t("degats")}`, kind: "damage", action: { kind: "monster_action", name: a.nom }, formule: a.degats, touche: false })}
               className={BOUTON_JET}
             >
               {t("degats")} {a.degats} ▸
@@ -228,10 +191,10 @@ function ActionsPersonnage({ blocs, contexte }: { blocs: BlocEntiteLu[]; context
         const action = { kind: "weapon" as const, itemId: o.itemId };
         return (
           <Rangee key={o.itemId} nom={nom}>
-            <button type="button" disabled={!contexte.enCours} title={indice} onClick={() => ouvrir({ titre: `${nom} · ${t("touche")}`, kind: "attack", action, formule: null, touche: true })} className={BOUTON_JET}>
+            <button type="button" disabled={!contexte.enCours} title={indice} onClick={() => ouvrir({ nom: nom, titre: `${nom} · ${t("touche")}`, kind: "attack", action, formule: null, touche: true })} className={BOUTON_JET}>
               {t("touche")} ▸
             </button>
-            <button type="button" disabled={!contexte.enCours} title={indice} onClick={() => ouvrir({ titre: `${nom} · ${t("degats")}`, kind: "damage", action, formule: null, touche: false })} className={BOUTON_JET}>
+            <button type="button" disabled={!contexte.enCours} title={indice} onClick={() => ouvrir({ nom: nom, titre: `${nom} · ${t("degats")}`, kind: "damage", action, formule: null, touche: false })} className={BOUTON_JET}>
               {t("degats")} ▸
             </button>
           </Rangee>
@@ -245,17 +208,17 @@ function ActionsPersonnage({ blocs, contexte }: { blocs: BlocEntiteLu[]; context
         return (
           <Rangee key={s.cle} nom={nom} detail={detail}>
             {genre === "spell_attack" && (
-              <button type="button" disabled={!contexte.enCours} title={indice} onClick={() => ouvrir({ titre: `${nom} · ${t("touche")}`, kind: "spell_attack", action, formule: null, touche: true })} className={BOUTON_JET}>
+              <button type="button" disabled={!contexte.enCours} title={indice} onClick={() => ouvrir({ nom: nom, titre: `${nom} · ${t("touche")}`, kind: "spell_attack", action, formule: null, touche: true })} className={BOUTON_JET}>
                 {t("touche")} ▸
               </button>
             )}
             {genre === "spell_save" && (
-              <button type="button" disabled={!contexte.enCours} title={indice} onClick={() => ouvrir({ titre: `${nom} · ${t("sauvegarde")}`, kind: "spell_save", action, formule: null, touche: false })} className={BOUTON_JET}>
+              <button type="button" disabled={!contexte.enCours} title={indice} onClick={() => ouvrir({ nom: nom, titre: `${nom} · ${t("sauvegarde")}`, kind: "spell_save", action, formule: null, touche: false })} className={BOUTON_JET}>
                 {t("sauvegarde")} ▸
               </button>
             )}
             {genre === "heal" && (
-              <button type="button" disabled={!contexte.enCours} title={indice} onClick={() => ouvrir({ titre: `${nom} · ${t("soin")}`, kind: "heal", action, formule: null, touche: false })} className={BOUTON_JET}>
+              <button type="button" disabled={!contexte.enCours} title={indice} onClick={() => ouvrir({ nom: nom, titre: `${nom} · ${t("soin")}`, kind: "heal", action, formule: null, touche: false })} className={BOUTON_JET}>
                 {t("soin")} ▸
               </button>
             )}

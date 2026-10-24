@@ -301,7 +301,7 @@ export default function LigneParticipant({
           {fiche && (
             <div className="rounded-xl border border-edge bg-panel-sunken p-2.5">
               {p.source_kind === "entity" && p.entity_id ? (
-                <ParticipantCharacterSheet worldSlug={worldSlug} campaignId={campaignId} entityId={p.entity_id} />
+                <ParticipantCharacterSheet worldSlug={worldSlug} campaignId={campaignId} entityId={p.entity_id} isWorldAdmin />
               ) : details && details !== "chargement" && details !== "erreur" && details.kind === "monstre" && details.caracteristiques.kind === "monster" ? (
                 <MonsterCard
                   statBlock={details.caracteristiques.statBlock}

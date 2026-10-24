@@ -10,7 +10,9 @@ import { evaluate } from "@/src/core/formula/evaluate";
 import { formatFormulaNode } from "@/src/core/formula/format";
 import { resolveScaledFormulaText } from "@/src/core/rules/scaling";
 import type { DescriptionBlockData, EffectsBlockData, ScalingBlockData } from "@/src/core/schemas/rule-blocks";
-import { itemRef } from "./inventoryItem";
+import { itemLabel, itemRef } from "./inventoryItem";
+import { armeFiche, type ArmeFiche, type SortFiche } from "@/lib/ui/ficheDes";
+import { classerSort } from "@/lib/ui/initiative";
 import { ActionButton, ItemCard, withModifier } from "./InventoryPanel";
 import NomDeRegle from "./NomDeRegle";
 import { refIdentity, type ResolvedChipView } from "./useReferenceChips";
@@ -144,8 +146,8 @@ function PreparedSpellCard({
   spellSaveDc: number;
   spellAbilityLabel: string;
   busy: boolean;
-  onCast: (spellKey: string, slotLevel: number) => void;
-  onCastAttack: (spellKey: string) => void;
+  onCast: (spellKey: string, slotLevel: number, sort: SortFiche) => void;
+  onCastAttack: (spellKey: string, sort: SortFiche) => void;
 }) {
   const { ref, label, level } = spell;
   const isCantrip = level === 0;
@@ -174,6 +176,16 @@ function PreparedSpellCard({
   const preview = descriptionPreview(blocks);
 
   const available = !isCantrip ? Math.max(0, (spellSlots[String(castLevel)] ?? 0) - (spellSlotsUsed[String(castLevel)] ?? 0)) : Infinity;
+
+  /** V3.1-106 : ce que l'outil de dés doit savoir du sort pour s'ouvrir pré-rempli. */
+  const sortFiche = (spellKey: string): SortFiche => ({
+    spellKey,
+    nom: label,
+    niveauLance: castLevel,
+    formuleDegats: resolvedDamage,
+    genre: classerSort(blocks).genre,
+    modificateurAttaque: spellAttackBonus,
+  });
 
   return (
     <div className="flex flex-col gap-2 rounded-md border border-edge/60 bg-panel-raised px-2.5 py-2.5">
@@ -208,7 +220,7 @@ function PreparedSpellCard({
             detailFormula={attackDetail}
             busy={busy}
             primary
-            onClick={() => ref.kind === "rule" && onCastAttack(ref.key)}
+            onClick={() => ref.kind === "rule" && onCastAttack(ref.key, sortFiche(ref.key))}
           />
         )}
         {!isCantrip && validSlotLevels.length === 0 && <span className="text-xs text-ink-muted">Aucun emplacement de ce niveau.</span>}
@@ -228,7 +240,7 @@ function PreparedSpellCard({
               resolvedFormula={resolvedDamage ?? (isCantrip ? "Sort mineur" : `${available}/${spellSlots[String(castLevel)] ?? 0}`)}
               detailFormula={resolvedDamage ? "au niveau choisi" : isCantrip ? "sans emplacement" : "emplacements"}
               busy={busy || (!isCantrip && available === 0)}
-              onClick={() => ref.kind === "rule" && onCast(ref.key, castLevel)}
+              onClick={() => ref.kind === "rule" && onCast(ref.key, castLevel, sortFiche(ref.key))}
             />
           </div>
         )}
@@ -285,8 +297,9 @@ export default function ActionsTab({
   dexMod: number;
   proficiencyBonus: number;
   isMonk: boolean;
-  onAttack: (item: InventoryItem) => void;
-  onDamage: (item: InventoryItem, versatile: boolean) => void;
+  /** `arme` : la description pour l'outil de dés (V3.1-106) ; l'écran du solo, qui a son propre circuit, l'ignore. */
+  onAttack: (item: InventoryItem, arme: ArmeFiche) => void;
+  onDamage: (item: InventoryItem, versatile: boolean, arme: ArmeFiche) => void;
   spellcasting: SpellcastingBlockData | undefined;
   preparedSpells: PreparedSpellView[];
   spellSlots: Record<string, number>;
@@ -294,8 +307,8 @@ export default function ActionsTab({
   spellAttackBonus: number;
   spellSaveDc: number;
   spellAbilityLabel: string;
-  onCast: (spellKey: string, slotLevel: number) => void;
-  onCastAttack: (spellKey: string) => void;
+  onCast: (spellKey: string, slotLevel: number, sort: SortFiche) => void;
+  onCastAttack: (spellKey: string, sort: SortFiche) => void;
   resources: ResourcesBlockData | undefined;
   resourcesUsed: Record<string, number>;
   onChangeResource: (trackerId: string, delta: number) => void;
@@ -334,12 +347,15 @@ export default function ActionsTab({
         // explication, au meme titre que les proprietes de l'arme.
         const masteryKey =
           ref?.kind === "rule" && weapon?.masteryKey && masteredWeaponKeys.has(ref.key) ? weapon.masteryKey : null;
+        // V3.1-106 : l'outil de dés s'ouvre pré-rempli avec cette arme (nom, touche, formule de dégâts).
+        const chip = ref ? itemChips.get(refIdentity(ref)) : undefined;
+        const arme = weapon ? armeFiche({ itemId: item.id, nom: chip?.found ? chip.name : itemLabel(item), weapon, strMod, dexMod, proficiencyBonus }) : null;
         return (
           <div key={item.id} className="flex flex-col gap-1">
             <ItemCard
               worldSlug={worldSlug}
               item={item}
-              chip={ref ? itemChips.get(refIdentity(ref)) : undefined}
+              chip={chip}
               weapon={weapon}
               armor={null}
               weightLb={null}
@@ -352,8 +368,8 @@ export default function ActionsTab({
               showAttackInfo={true}
               collapsible={false}
               busy={busy}
-              onAttack={() => onAttack(item)}
-              onDamage={(versatile) => onDamage(item, versatile)}
+              onAttack={() => arme && onAttack(item, arme)}
+              onDamage={(versatile) => arme && onDamage(item, versatile, arme)}
             />
           </div>
         );

@@ -35,6 +35,7 @@ export default function ParticipantCharacterSheet({
   initialBlocks = null,
   ficheAvecPage = null,
   commandesImposees,
+  isWorldAdmin = false,
 }: {
   worldSlug: string;
   campaignId: string;
@@ -52,6 +53,8 @@ export default function ParticipantCharacterSheet({
   ficheAvecPage?: Promise<FicheAvecPage> | null;
   /** V3.1-57 : commandes imposées à la fiche (aperçu de l'écran Règles actives), à la place de celles du serveur. */
   commandesImposees?: CommandesFiche;
+  /** V3.1-106 : le MJ du monde (écran Initiative seulement) peut cibler un participant depuis les boutons d'attaque et de sort. Indication d'interface, le serveur le re-vérifie. */
+  isWorldAdmin?: boolean;
 }) {
   const [blocks, setBlocks] = useState<BlockItem[] | "loading" | "error">(initialBlocks ?? "loading");
   useAmorcerFicheAvecPage({ worldSlug, entityId, campaignId, blocks: initialBlocks ?? [], promesse: ficheAvecPage });
@@ -244,6 +247,7 @@ export default function ParticipantCharacterSheet({
       onUpdateSpellcasting={updateSpellcasting}
       onBlockRefreshed={handleBlockRefreshed}
       commandesImposees={commandesImposees}
+      isWorldAdmin={isWorldAdmin}
     />
   );
 }

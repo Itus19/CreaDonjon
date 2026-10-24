@@ -51,40 +51,6 @@ V3.1-104 n'est plus bloqué : option B de l'ADR 0041, choisie le 10 octobre.
 
 ---
 
-### ☐ V3.1-106 — Cibler côté MJ : outil de dés, Table, Initiative · `M` · sans modèle IA — **prêt**
-
-**Modèle conseillé : Sonnet.** **Dépend de** : 105, 33 (outil de dés), 34, 38.
-
-**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-- « Cibler » s'allume dans l'outil de dés **pour le MJ** quand une
-  initiative est `running` : liste des participants (alliés pour un soin),
-  cible retenue affichée ; grisé hors initiative ou pour un jet sans cible.
-- « Lancer » appelle `resolveTargetedRoll` ; une touche fait apparaître la
-  bande « Lancer les dégâts » (même cible) ; verdict et changements affichés.
-- Même chemin depuis l'outil Table (action d'un PNJ) et l'outil Initiative.
-- *Repris de V3.1-33 (17 octobre)* : les boutons d'attaque, de sort et de
-  dégâts de la fiche ouvrent l'outil pré-rempli (`openDiceTool`) ; la bande
-  du pied (place déjà réservée dans `OutilDes.tsx`) devient « Lancer les
-  dégâts » sur une touche, et « Valider · dégâts » / « Faire échouer » quand
-  un monstre touche un joueur (critères de V3.1-33 restés ouverts).
-
-*Déjà fait le 24 octobre, depuis l'outil Initiative (suite de V3.1-38)* :
-« Cibler » et la liste des participants, les dés du jet ciblé affichés,
-l'avantage au choix, la bande « Lancer les dégâts » après une touche (même
-cible, critique compris). Reste : l'outil de dés **ouvert seul** par le MJ
-pendant une initiative, l'outil Table, les boutons de la fiche, et
-« Valider · dégâts » / « Faire échouer ». *Relevé le 24 octobre* : après
-« Lancer les dégâts », la grille de l'outil garde le d20 de l'attaque (le
-préréglage n'est pas remplacé par celui des dégâts) — à régler ici.
-
-**Critères d'acceptation**
-- [ ] Au tour du Worg, « Morsure » sur un PJ : touche, dégâts, JS, À terre
-  appliqués (planche de la Table).
-- [ ] Hors initiative, les jets restent de simples jets.
-
----
-
 ### ☐ V3.1-107 — Cibler côté joueur · `M` · sans modèle IA — **dépend de V3.1-104**
 
 **Modèle conseillé : Sonnet.** Comme V3.1-106, pour le joueur avec son PJ,

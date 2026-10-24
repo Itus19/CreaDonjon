@@ -8,6 +8,7 @@ import {
   corpsJetCible,
   demandeDegatsApres,
   desDeLaFormule,
+  effetDesChanges,
   estUneArme,
   fractionsAnneau,
   joueusesEnAttente,
@@ -20,6 +21,7 @@ import {
   phaseDe,
   sortieDepuisJetCible,
   tousAdversairesVaincus,
+  validationMjRequise,
 } from "./initiative";
 
 function participant(extra: Partial<CombatParticipantRow> & { id: string }): CombatParticipantRow {
@@ -297,10 +299,45 @@ describe("jets ciblés : dés, avantage, suite (V3.1-38 suite)", () => {
   });
 });
 
+describe("effet d'un jet de dégâts (V3.1-106)", () => {
+  const libelle = (cle: string, cible: string) => `${cle} — ${cible}`;
+  const base = { ok: true as const, verdict: null, amount: 3, facts: [], changes: [], hints: [], ignored: [], targetOutOfFight: false, chained: null, rollEventId: "r", saveRequestId: null, dice: null };
+
+  it("retire la note entre parenthèses du journal et joint les lignes", () => {
+    expect(effetDesChanges(["Worg : 7 → 4 PV (Cibler — Naivara attaque)"])).toBe("Worg : 7 → 4 PV");
+    expect(effetDesChanges(["Worg : 7 → 4 PV (n)", "Worg subit : prone"])).toBe("Worg : 7 → 4 PV · Worg subit : prone");
+    expect(effetDesChanges([])).toBeNull();
+  });
+  it("des dégâts ciblés affichent l'effet à la place de « Dégâts — X », sans verdict", () => {
+    const sortie = sortieDepuisJetCible({ ...base, changes: ["Worg : 7 → 4 PV (note)"] }, "damage", { acteur: "Naivara", cible: "Worg", libelle });
+    expect(sortie).toMatchObject({ what: "Worg : 7 → 4 PV", verdict: null, total: 3 });
+  });
+  it("sans changement, le libellé du jet reste", () => {
+    expect(sortieDepuisJetCible(base, "damage", { acteur: "Naivara", cible: "Worg", libelle }).what).toBe("degats — Worg");
+  });
+  it("un soin affiche aussi son effet", () => {
+    expect(sortieDepuisJetCible({ ...base, changes: ["Tharnok : 3 → 10 PV (n)"] }, "heal", { acteur: "Naivara", cible: "Tharnok", libelle }).what).toBe("Tharnok : 3 → 10 PV");
+  });
+});
+
+describe("validationMjRequise (V3.1-106)", () => {
+  const monstre = { kind: "participant" as const, participantId: "p1" };
+  const pj = { kind: "character" as const, entityId: "e1" };
+  it("un monstre qui vise un allié attend la validation du MJ", () => {
+    expect(validationMjRequise(monstre, { is_ally: true })).toBe(true);
+  });
+  it("un monstre qui vise un adversaire, ou un personnage qui vise un allié, non", () => {
+    expect(validationMjRequise(monstre, { is_ally: false })).toBe(false);
+    expect(validationMjRequise(pj, { is_ally: true })).toBe(false);
+    expect(validationMjRequise(monstre, undefined)).toBe(false);
+  });
+});
+
 describe("desDeLaFormule", () => {
   it("lit les dés et le modificateur d'une formule", () => {
     expect(desDeLaFormule("2d6+3 perçant")).toEqual({ dice: { d6: 2 }, modifier: 3 });
     expect(desDeLaFormule("1d8")).toEqual({ dice: { d8: 1 }, modifier: 0 });
+    expect(desDeLaFormule("1d8-1")).toEqual({ dice: { d8: 1 }, modifier: -1 });
   });
   it("se replie sur un d6 quand la formule est illisible", () => {
     expect(desDeLaFormule(null)).toEqual({ dice: { d6: 1 }, modifier: 0 });

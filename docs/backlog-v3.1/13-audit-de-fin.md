@@ -31,6 +31,11 @@ Opus ; vérification au navigateur par Opus.
 - *V3.1-42, Cahier* : une page partagée, ou qui l'a été, ne se supprime pas
   depuis le cahier (aucune route ne retire l'entité `shared_note`).
 
+- *V3.1-106, création d'un combat* : `POST …/combats` accepte une clé de
+  monstre inconnue du ruleset (« goblin » dans un monde 2024) et crée un
+  participant sans CA, sans PV ni actions, au lieu de refuser ; l'écran ne
+  propose que des monstres valides, mais la route devrait dire non.
+
 **À rejouer en direct pendant l'audit** (codé, relu, jamais vu à l'écran) :
 la fin de combat confirmée (« Terminer » / « Continuer ») et la liste des
 combats qui suit l'état sans recharger (V3.1-38) ; les dés doublés au

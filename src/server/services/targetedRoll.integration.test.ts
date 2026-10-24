@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import { applyResolvedEffects, resolveTargetedRoll } from "./targetedRoll";
 import { advanceCombatTurn, undoLastCombatAction } from "./combats";
+import { getRuleEntryForWorld } from "./rules";
 import { getOrOpenSessionForCampaign } from "./sessions";
 import { playTurn } from "./turnLoop";
 import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
@@ -221,7 +222,12 @@ describe.skipIf(!hasCreds)("cibler : le cœur commun de résolution (integration
     // (dégâts massifs) — le test ne dépend pas des dés.
     await setHp(p.Brunhild, pc.brunhild, 1);
     const goblin = { kind: "participant", participantId: p["Gobelin 2"] } as const;
-    const scimitar = { kind: "monster_action", name: "Scimitar" } as const;
+    // Le nom d'action tel que l'écran du MJ le lit et l'envoie : traduit (V3.1-106).
+    const fiche = await getRuleEntryForWorld(gm.client, worldId, "goblin", "fr");
+    const actions = (fiche?.blocks.find((b) => b.blockType === "actions")?.data as { actions?: { name: string; damage?: unknown[] }[] } | undefined)?.actions ?? [];
+    const nomCimeterre = actions.find((a) => (a.damage?.length ?? 0) > 0)?.name;
+    if (!nomCimeterre) throw new Error("le gobelin n'a pas d'action à dégâts");
+    const scimitar = { kind: "monster_action", name: nomCimeterre } as const;
 
     const first = await roll({ kind: "damage", actor: goblin, action: scimitar, targetId: p.Brunhild });
     if (!first.ok) throw new Error(first.reason);

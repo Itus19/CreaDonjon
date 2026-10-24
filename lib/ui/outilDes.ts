@@ -148,12 +148,29 @@ export interface SortieJet {
   dcPrivate: boolean;
   /** V3.1-38 (suite) : le geste qui suit ce jet (« Lancer les dégâts » après une touche), proposé dans la bande. */
   suite?: SuiteDeJet;
+  /** V3.1-106 : aucun dé ni total à montrer (un refus du MJ, un sort sans dégâts) ; la zone garde « — » et le texte `what` parle seul. */
+  sansTotal?: boolean;
 }
 
 /** Un geste proposé après un jet : son libellé, et le jet qu'il lance (même forme qu'un `lancer`). */
 export interface SuiteDeJet {
   libelle: string;
   lancer: () => Promise<SortieJet | null>;
+  /** V3.1-106 : quand la suite est lancée, ce réglage remplace celui de l'outil (la grille montre les dés des dégâts, pas le d20 de l'attaque). */
+  preReglage?: PreReglage;
+  /** V3.1-106 : le second bouton de la bande (« Faire échouer ») ; sa sortie s'affiche telle quelle, sans rien lancer ni écrire. */
+  refus?: { libelle: string; sortie: SortieJet };
+}
+
+/** « Lancer les dégâts · 1d4 + 2 » : la formule de l'arme ou de l'action quand elle est connue, sinon le libellé seul. */
+export function libelleSuiteDegats(base: string, formule: string | null | undefined): string {
+  const propre = formule?.trim();
+  return propre ? `${base} · ${propre}` : base;
+}
+
+/** Une sortie sans dé ni total : un texte seul à la place du résultat. */
+export function sortieSansDes(who: string, what: string): SortieJet {
+  return { who, what, chips: [], total: 0, dc: null, verdict: null, hidden: false, trace: [], pair: null, naturalD20: null, dcPrivate: false, sansTotal: true };
 }
 
 /** Un `lancer` qui échoue avec un message à AFFICHER dans l'outil (réponse du serveur, par exemple). */
@@ -279,6 +296,8 @@ export interface JetAffiche {
   groups: DiceGroup[];
   pair: AdvantagePair | null;
   createdAt: string;
+  /** V3.1-106 : pas de total à montrer (voir `SortieJet.sansTotal`). */
+  sansTotal?: boolean;
 }
 
 /** `detail.dcPrivate` d'un jet Realtime (le détail est un JSON libre : on rétrécit, on ne suppose pas). */

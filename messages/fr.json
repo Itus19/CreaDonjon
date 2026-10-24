@@ -128,7 +128,12 @@
     "jetSecret": "secret",
     "ciblerChoisir": "Choisir la cible",
     "ciblerAucune": "Aucun participant à viser.",
-    "ciblerIndisponible": "Ce jet n'a pas de cible"
+    "ciblerIndisponible": "Ce jet n'a pas de cible",
+    "titreAttaque": "{nom} · Attaque",
+    "titreDegats": "{nom} · Dégâts",
+    "titreLancer": "{nom} · Lancer",
+    "sortLance": "Sort lancé, sans dégâts à montrer.",
+    "ouvertureImpossible": "L'outil de dés n'a pas pu s'ouvrir."
   },
   "monde": {
     "nouvellesAventures": "Nouvelles aventures",
@@ -1102,6 +1107,9 @@
     "jetAttaque": "Attaque — {cible}",
     "jetDegats": "Dégâts — {cible}",
     "lancerDegats": "Lancer les dégâts",
+    "validerDegats": "Valider · dégâts",
+    "faireEchouer": "Faire échouer",
+    "refusMj": "Raté (MJ) — Le MJ fait échouer la touche, aucun dégât",
     "jetRate": "Raté — {cible}",
     "jetSauvegarde": "Sauvegarde demandée — {cible}",
     "jetSoin": "Soin — {cible}",

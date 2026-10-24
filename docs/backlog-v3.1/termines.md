@@ -2,6 +2,76 @@
 
 ---
 
+### ☑ V3.1-106 — Cibler côté MJ : outil de dés, Table, Initiative · `M` · sans modèle IA — **fait le 24 octobre**
+
+**Modèle conseillé : Sonnet.** **Dépend de** : 105, 33 (outil de dés), 34, 38.
+
+**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+- « Cibler » s'allume dans l'outil de dés **pour le MJ** quand une
+  initiative est `running` : liste des participants (alliés pour un soin),
+  cible retenue affichée ; grisé hors initiative ou pour un jet sans cible.
+- « Lancer » appelle `resolveTargetedRoll` ; une touche fait apparaître la
+  bande « Lancer les dégâts » (même cible) ; verdict et changements affichés.
+- Même chemin depuis l'outil Table (action d'un PNJ) et l'outil Initiative.
+- *Repris de V3.1-33 (17 octobre)* : les boutons d'attaque, de sort et de
+  dégâts de la fiche ouvrent l'outil pré-rempli (`openDiceTool`) ; la bande
+  du pied (place déjà réservée dans `OutilDes.tsx`) devient « Lancer les
+  dégâts » sur une touche, et « Valider · dégâts » / « Faire échouer » quand
+  un monstre touche un joueur (critères de V3.1-33 restés ouverts).
+
+*Déjà fait le 24 octobre, depuis l'outil Initiative (suite de V3.1-38)* :
+« Cibler » et la liste des participants, les dés du jet ciblé affichés,
+l'avantage au choix, la bande « Lancer les dégâts » après une touche (même
+cible, critique compris). Reste : l'outil de dés **ouvert seul** par le MJ
+pendant une initiative, l'outil Table, les boutons de la fiche, et
+« Valider · dégâts » / « Faire échouer ». *Relevé le 24 octobre* : après
+« Lancer les dégâts », la grille de l'outil garde le d20 de l'attaque (le
+préréglage n'est pas remplacé par celui des dégâts) — à régler ici.
+
+**Critères d'acceptation**
+- [x] Au tour du Worg, « Morsure » sur un PJ : touche, dégâts, JS, À terre
+  appliqués (planche de la Table).
+- [x] Hors initiative, les jets restent de simples jets.
+
+**Livré le 24 octobre.** Interface (Sonnet) : les boutons Attaquer, Dégâts,
+attaque de sort et lancer de sort de la fiche ouvrent l'outil de dés
+pré-rempli (mêmes routes ; dés, paire et d20 gardé par `rollsForDisplay`) ;
+après une touche, « Lancer les dégâts · formule » (critique compris,
+`pendingCrit` retiré) ; pour le MJ pendant une initiative en cours, au
+toucher du bouton, « Cibler » et `targeted-roll` (`lib/ui/ficheDesApi.ts`,
+deux lectures) ; effet à la place du verdict (« Worg : 26 → 13 PV ») ;
+« Valider · dégâts » / « Faire échouer » quand un monstre touche un PJ
+(`lib/ui/jetCibleOutil.ts`, partagé avec l'initiative) ; la grille passe aux
+dés des dégâts. Corrections d'Opus : (1) depuis la fiche, l'attaque de sort
+n'est JAMAIS ciblée — `spell_attack` dépense l'emplacement et applique les
+dégâts d'un coup, et le bouton « Dégâts » du même sort l'aurait relancé
+(emplacement dépensé deux fois) ; un sort ciblé se lance depuis la ligne de
+l'initiative ; (2) **défaut de 105 trouvé en vérifiant** : le serveur
+cherchait l'action d'un monstre dans le bloc brut (« Bite ») alors que
+l'écran envoie le nom traduit (« Morsure ») — aucune attaque de monstre
+ciblée n'aboutissait en français, et une variante ne trouvait pas le
+monstre de sa base ; `loadMonsterBlocks` lit désormais par
+`getRuleEntryForWorld` (chaîne du ruleset, surcharges, langue), et le test
+d'intégration envoie le nom traduit comme l'écran. Vérifié en direct (MJ de
+test, combat avec un Worg du bestiaire et Testeuse A) : depuis la fiche de
+A ouverte dans l'initiative, Attaquer → Cibler le Worg → touché → « Lancer
+les dégâts · 2d6+3 » → Worg 26 → 13 PV, grille en 2d6+3 ; Morsure du Worg
+sur A → touché → « Valider · dégâts » / « Faire échouer » → les PV de A
+restent à 12. Combats d'essai supprimés, PV remis. Planche : section
+« Outil de dés unique » de `Ecrans.dc.html`. *Écarts* : l'outil Table ne
+liste que des PJ (aucune action de PNJ à brancher) ; les dégâts à deux
+mains restent un simple jet (`targeted-roll` ne les connaît pas) ; l'effet
+s'écrit « Worg : 26 → 13 PV » plutôt que « Worg −13 PV ».
+
+*Relevé par l'auteur le 24 octobre, corrigé* : ancré au dé du rail par le
+bas, le panneau de l'outil de dés grandissait vers le haut sans limite et
+son en-tête (titre, Secret, ×) sortait de l'écran. Sa hauteur se borne
+maintenant à l'espace au-dessus de son ancrage, et il défile au-delà
+(`PanneauFlottant`, `OutilDes.tsx`) ; vérifié à 1280×800 et 1280×640.
+
+---
+
 ### ☑ V3.1-38 — L'outil Initiative refondu, MJ et joueur · `L` · sans modèle IA — **fait le 24 octobre**
 
 **Modèle conseillé : Sonnet** — planche définitive, données fournies par V3.1-37.

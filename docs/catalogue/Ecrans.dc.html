@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <title>Catalogue — Éléments d'écran</title>
 <script src="./support.js"></script>
-<link rel="stylesheet" href="/_blob/c197cb60ca86d06d1f355eef49a658b5">
+<link rel="stylesheet" href="/_blob/de7f85f9db3524b7059c79868d4dc085">
 </head>
 <body>
 <x-dc>
@@ -118,7 +118,7 @@ code{font-family:'Geist Mono',ui-monospace,monospace;font-size:0.92em}
 <h2 class="font-display text-2xl font-bold text-ink">Outil de dés unique</h2>
 <span class="text-xs text-ink-muted">components/shell/OutilDes.tsx · DiceRollPanel.tsx</span>
 </div>
-<p class="max-w-3xl text-sm text-ink-soft">Le même gabarit partout : feuille du bas sous 768 px ; au-delà, panneau de 344 px ancré à droite de la partie « Outils » du rail (en bas à droite sans rail). Le titre est le nom du bouton touché (« Test de Sagesse ») ou « Jet libre ». Secret dans l'en-tête ; Cibler reste grisé jusqu'au ciblage (V3.1-106).</p>
+<p class="max-w-3xl text-sm text-ink-soft">Le même gabarit partout : feuille du bas sous 768 px ; au-delà, panneau de 344 px ancré à droite de la partie « Outils » du rail (en bas à droite sans rail). Le titre est le nom du bouton touché (« Test de Sagesse ») ou « Jet libre ». Secret dans l'en-tête. Cibler (V3.1-106) : pour le MJ pendant une initiative en cours, sur un jet qui a une action (fiche, ligne d'initiative) ; il liste les participants, la cible retenue s'affiche dans le bouton ; grisé hors initiative, pour une joueuse ou pour un jet libre. Après une touche, la bande devient « Lancer les dégâts · 2d6+3 » (même cible, critique compris) et la grille passe aux dés des dégâts ; un jet de dégâts montre l'effet (« Worg : 26 → 13 PV ») à la place du verdict, sans remplissage. Un monstre qui touche un PJ arrête l'outil du MJ sur « Valider · dégâts » / « Faire échouer ».</p>
 <div class="flex flex-wrap gap-x-6 gap-y-1 text-xs text-ink-muted"><span>Mouvement : <span class="text-ink">scintillement (chiffres flous rafraîchis toutes les 70 ms pendant l'attente du serveur, 450 ms au moins), dés figés un par un (110 ms), total qui compte (450 ms), remplissage du verdict de gauche à droite (450 ms) puis teinte posée à 18 % ; mouvement réduit : résultat immédiat, teinte sans mouvement</span></span></div>
 <div class="grid gap-3" style="grid-template-columns: repeat(4, minmax(0, 1fr))"><div class="flex flex-col gap-1.5">
 <span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Avant le jet</span>
@@ -134,7 +134,7 @@ code{font-family:'Geist Mono',ui-monospace,monospace;font-size:0.92em}
 <div class="relative h-[148px] overflow-hidden rounded-xl border border-edge bg-panel-sunken"><div aria-hidden="true" class="absolute inset-0 origin-left bg-accent-hover" style="transform: scaleX(1); opacity: 0.18"></div><div class="relative flex h-full flex-col items-center justify-between px-2 py-2"><div class="flex min-h-0 w-full flex-1 flex-wrap content-center items-center justify-center gap-x-3 gap-y-2 overflow-y-auto"><div class="flex flex-col items-center gap-1"><div class="flex gap-1.5"><div class="flex items-center justify-center rounded-md border bg-panel-raised font-mech font-bold h-10 w-10 text-base border-accent text-accent">20</div></div></div></div><div class="font-mech text-3xl font-bold leading-none text-ink">23</div></div></div>
 </div><div class="flex flex-col gap-1.5">
 <span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Bande d'après-jet</span>
-<div class="h-9"><button type="button" class="h-9 w-full rounded-lg border border-accent bg-panel text-xs font-semibold text-accent transition-colors hover:bg-accent hover:text-accent-ink disabled:opacity-60">Relancer · Inspiration héroïque</button></div>
+<div class="flex flex-col gap-2"><div class="h-9"><button type="button" class="h-9 w-full rounded-lg border border-accent bg-panel text-xs font-semibold text-accent transition-colors hover:bg-accent hover:text-accent-ink disabled:opacity-60">Relancer · Inspiration héroïque</button></div><div class="h-9"><button type="button" class="h-9 w-full rounded-lg border border-accent bg-panel text-xs font-semibold text-accent transition-colors hover:bg-accent hover:text-accent-ink disabled:opacity-60">Lancer les dégâts · 2d6+3</button></div><div class="flex h-9 gap-2"><button type="button" class="h-9 w-full rounded-lg border border-accent bg-panel text-xs font-semibold text-accent transition-colors hover:bg-accent hover:text-accent-ink disabled:opacity-60">Valider · dégâts</button><button type="button" class="h-9 w-full rounded-lg border border-accent bg-panel text-xs font-semibold text-accent transition-colors hover:bg-accent hover:text-accent-ink disabled:opacity-60">Faire échouer</button></div></div>
 </div></div>
 <div class="grid gap-3" style="grid-template-columns: repeat(3, minmax(0, 1fr))"><div class="flex flex-col gap-1.5">
 <span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Dé choisi (d20, 1)</span>
@@ -199,7 +199,7 @@ code{font-family:'Geist Mono',ui-monospace,monospace;font-size:0.92em}
 </main>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":3800}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":3900}}'>
 class Component extends DCLogic {
   constructor(props) {
     super(props);

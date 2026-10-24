@@ -35,7 +35,7 @@ import { getCombatById, getCombatParticipantById, listCombatParticipants, update
 import { listCampaignCharacters } from "@/src/server/repos/campaigns";
 import { insertSessionEvent, nextEventSeq } from "@/src/server/repos/sessions";
 import { insertDiceRoll } from "@/src/server/repos/diceRolls";
-import { getRulesetEntryByKey, listBlocksForRulesetEntry } from "@/src/server/repos/rules";
+import { getRuleEntryForWorld } from "@/src/server/services/rules";
 import { serverRng } from "@/src/server/services/rng";
 import type { TargetedRollInput } from "@/lib/combats/schemas";
 
@@ -362,13 +362,21 @@ interface MonsterBlocks {
   actions: { name: string; attack_bonus?: number; damage?: { dice: Parameters<typeof formatFormulaNode>[0]; type?: string }[] }[];
 }
 
-async function loadMonsterBlocks(supabase: TypedClient, rulesetId: string, ruleKey: string): Promise<MonsterBlocks | null> {
-  const entry = await getRulesetEntryByKey(supabase, rulesetId, ruleKey);
+/**
+ * Les blocs d'un monstre, lus comme l'écran du MJ les lit (V3.1-106, relu par
+ * Opus) : par la chaîne du ruleset du monde (une variante trouve le monstre de
+ * sa base, surcharges comprises) et dans la langue de l'appelant. Sans cela,
+ * le nom d'action envoyé par l'écran (« Morsure ») ne correspondait jamais au
+ * bloc brut (« Bite ») : aucune attaque de monstre ciblée n'aboutissait en
+ * français.
+ */
+async function loadMonsterBlocks(supabase: TypedClient, params: { worldId: string; ruleKey: string; locale: Locale }): Promise<MonsterBlocks | null> {
+  const entry = await getRuleEntryForWorld(supabase, params.worldId, params.ruleKey, params.locale);
   if (!entry) return null;
-  const blocks = await listBlocksForRulesetEntry(supabase, entry.id);
-  const stat = zStatBlockBlockData.safeParse(blocks.find((b) => b.block_type === "stat_block")?.data);
-  const actions = zActionsBlockData.safeParse(blocks.find((b) => b.block_type === "actions")?.data);
-  const legendary = zLegendaryActionsBlockData.safeParse(blocks.find((b) => b.block_type === "legendary_actions")?.data);
+  const bloc = (type: string) => entry.blocks.find((b) => b.blockType === type)?.data;
+  const stat = zStatBlockBlockData.safeParse(bloc("stat_block"));
+  const actions = zActionsBlockData.safeParse(bloc("actions"));
+  const legendary = zLegendaryActionsBlockData.safeParse(bloc("legendary_actions"));
   return {
     statBlock: stat.success ? stat.data : null,
     actions: [...(actions.success ? actions.data.actions : []), ...(legendary.success ? legendary.data.actions : [])],
@@ -410,7 +418,7 @@ async function recordMonsterRoll(
 /** Le bonus de sauvegarde d'une cible : un PJ par sa fiche, un monstre par son bloc de stats, sinon 0 (et on le dit). */
 export async function targetSaveBonus(
   supabase: TypedClient,
-  params: { target: CombatParticipantRow; isPc: boolean; ability: string; campaignId: string; rulesetId: string; locale: Locale }
+  params: { target: CombatParticipantRow; isPc: boolean; ability: string; campaignId: string; worldId: string; locale: Locale }
 ): Promise<{ bonus: number; hint: string | null }> {
   const ability = params.ability.toLowerCase();
   if (params.target.entity_id && params.isPc) {
@@ -419,7 +427,7 @@ export async function targetSaveBonus(
     if (save) return { bonus: save.mod, hint: null };
   }
   if (params.target.rule_key) {
-    const monster = await loadMonsterBlocks(supabase, params.rulesetId, params.target.rule_key);
+    const monster = await loadMonsterBlocks(supabase, { worldId: params.worldId, ruleKey: params.target.rule_key, locale: params.locale });
     if (monster?.statBlock) return { bonus: monsterSaveBonus(monster.statBlock, ability), hint: null };
   }
   return { bonus: 0, hint: `Sauvegarde de ${params.target.label} sans fiche ni bloc de stats : bonus compté à 0.` };
@@ -430,10 +438,10 @@ export async function targetSaveBonus(
  * (toutes les espèces jouables le sont), un monstre a le type et les
  * immunités de son bloc de stats, une saisie libre n'a pas de type connu.
  */
-async function targetProfileFor(supabase: TypedClient, params: { target: CombatParticipantRow; isPc: boolean; rulesetId: string }): Promise<TargetProfile> {
+async function targetProfileFor(supabase: TypedClient, params: { target: CombatParticipantRow; isPc: boolean; worldId: string; locale: Locale }): Promise<TargetProfile> {
   if (params.isPc) return { creatureType: "humanoid", conditionImmunities: [] };
   if (params.target.rule_key) {
-    const monster = await loadMonsterBlocks(supabase, params.rulesetId, params.target.rule_key);
+    const monster = await loadMonsterBlocks(supabase, { worldId: params.worldId, ruleKey: params.target.rule_key, locale: params.locale });
     if (monster?.statBlock) {
       return { creatureType: creatureTypeOf(monster.statBlock.creature_type), conditionImmunities: monster.statBlock.condition_immunities ?? [] };
     }
@@ -490,7 +498,7 @@ export async function resolveTargetedRoll(
   } else {
     actorParticipant = await getCombatParticipantById(supabase, input.actor.participantId);
     if (!actorParticipant || actorParticipant.combat_id !== combat.id) return { ok: false, reason: "actor_not_found" };
-    if (actorParticipant.rule_key) monster = await loadMonsterBlocks(supabase, campaign.rulesetId, actorParticipant.rule_key);
+    if (actorParticipant.rule_key) monster = await loadMonsterBlocks(supabase, { worldId: campaign.worldId, ruleKey: actorParticipant.rule_key, locale: params.locale });
   }
   const actorName = ctx?.entityName ?? actorParticipant?.label ?? "?";
   const actorTriggerKey = ctx ? ctx.entityId : null;
@@ -567,7 +575,7 @@ export async function resolveTargetedRoll(
     // V3.1-110 : la cible est vérifiée AVANT de lancer — un refus ne dépense pas d'emplacement.
     const mechanics = await readSpellMechanics(supabase, { rulesetId: ctx.rulesetId, spellKey: action.spellKey });
     if (mechanics?.target) {
-      const profile = await targetProfileFor(supabase, { target, isPc: targetIsPc, rulesetId: campaign.rulesetId });
+      const profile = await targetProfileFor(supabase, { target, isPc: targetIsPc, worldId: campaign.worldId, locale: params.locale });
       const check = isValidTarget({ target: mechanics.target }, profile);
       if (!check.ok) return { ok: false, reason: "invalid_target", detail: { refusal: check.reason, value: check.detail } };
     }

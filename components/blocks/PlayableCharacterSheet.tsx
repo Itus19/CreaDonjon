@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useMemo, useState } from "react";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
-import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/blocks/inventory";
+import type { InventoryBlockData } from "@/src/core/schemas/blocks/inventory";
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
 import type { ResourcesBlockData } from "@/src/core/schemas/blocks/resources";
 import { ABILITY_LABELS as ABILITY_NAMES, SKILL_ABILITIES, type Ability } from "@/src/core/rules/sheet";
@@ -30,6 +30,7 @@ import { useDiceRoll } from "@/components/shell/DiceRollPanel";
 import { chargerFicheCalculee, type SheetApiResponse } from "./ficheCalculee";
 import { ABILITY_LABELS, SORTED_SKILLS } from "./sheetLabels";
 import { commandesDeLaFiche, type CommandesFiche } from "@/lib/ui/commandesFiche";
+import { useJetsDeLaFiche } from "./useJetsDeLaFiche";
 
 export type Tab = "actions" | "magie" | "inventaire" | "traits" | "maitrise";
 
@@ -116,7 +117,6 @@ export default function PlayableCharacterSheet({
   const [tab, setTab] = useState<Tab>("actions");
   const [advantage, setAdvantage] = useState<AdvantageState>("normal");
   const [remote, setRemote] = useState<SheetApiResponse | null>(null);
-  const [pendingCrit, setPendingCrit] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Montee de niveau (V2-G1) : le meme motif que "wizardOpen" dans
@@ -242,6 +242,9 @@ export default function PlayableCharacterSheet({
     };
   }, [entityId, campaignId]);
 
+  // V3.1-106 : attaque, dégâts et sorts ouvrent l'outil de dés pré-rempli ; le MJ peut y cibler un participant du combat en cours.
+  const jets = useJetsDeLaFiche({ entityId, campaignId, estMj: isWorldAdmin, apresSort: reloadRemote });
+
   if (levelUpOpen) {
     return (
       <LevelUpWizard
@@ -288,39 +291,6 @@ export default function PlayableCharacterSheet({
     } finally {
       setBusy(false);
     }
-  }
-
-  async function attack(item: InventoryItem) {
-    const result = await postAction<{
-      weaponLabel: string;
-      attack?: { total: number; isCritical: boolean; isCriticalFail: boolean };
-    }>("attack", { campaignId, itemId: item.id, advantage });
-    if (!result?.attack) return;
-    setPendingCrit((prev) => ({ ...prev, [item.id]: result.attack!.isCritical }));
-  }
-
-  async function damage(item: InventoryItem, versatile: boolean) {
-    const critical = pendingCrit[item.id] ?? false;
-    await postAction("damage", { campaignId, itemId: item.id, critical, versatile });
-  }
-
-  /** Cle de `pendingCrit` pour un sort — prefixee (retour utilisateur, boutons d'action des sorts) pour ne jamais entrer en collision avec un id d'objet d'inventaire, meme etat partage que les armes. */
-  function spellCritKey(spellKey: string): string {
-    return `spell:${spellKey}`;
-  }
-
-  /** Jet d'attaque de sort (retour utilisateur, boutons d'action des sorts) — informatif, ne consomme jamais d'emplacement (comme "Attaquer" pour une arme), alimente `pendingCrit` pour que le bouton de degats double les des sur un coup critique. */
-  async function castSpellAttack(spellKey: string) {
-    const result = await postAction<{ attack?: { isCritical: boolean } }>("roll-spell-attack", { campaignId, spellKey, advantage });
-    if (!result?.attack) return;
-    setPendingCrit((prev) => ({ ...prev, [spellCritKey(spellKey)]: result.attack!.isCritical }));
-  }
-
-  async function cast(spellKey: string, slotLevel: number) {
-    const critical = pendingCrit[spellCritKey(spellKey)] ?? false;
-    const result = await postAction("cast-spell", { campaignId, spellKey, slotLevel, critical });
-    if (!result) return;
-    reloadRemote();
   }
 
   async function rest(kind: "short" | "long") {
@@ -750,8 +720,8 @@ export default function PlayableCharacterSheet({
                 dexMod={sheet.abilities.dex.mod}
                 proficiencyBonus={sheet.proficiencyBonus}
                 isMonk={isMonk}
-                onAttack={attack}
-                onDamage={damage}
+                onAttack={(_item, arme) => jets.attaquerArme(arme, advantage)}
+                onDamage={(_item, versatile, arme) => jets.degatsArme(arme, versatile)}
                 spellcasting={spellcasting}
                 preparedSpells={preparedSpells}
                 spellSlots={sheet.spellcasting?.slots ?? {}}
@@ -759,8 +729,8 @@ export default function PlayableCharacterSheet({
                 spellAttackBonus={sheet.spellcasting?.attackBonus ?? 0}
                 spellSaveDc={sheet.spellcasting?.saveDc ?? 0}
                 spellAbilityLabel={sheet.spellcasting ? ABILITY_LABELS[sheet.spellcasting.ability] : ""}
-                onCast={cast}
-                onCastAttack={castSpellAttack}
+                onCast={(_spellKey, _slotLevel, sort) => jets.lancerSort(sort)}
+                onCastAttack={(_spellKey, sort) => jets.attaquerSort(sort, advantage)}
                 resources={resources}
                 resourcesUsed={runtimeState?.resources ?? {}}
                 onChangeResource={changeResource}

@@ -38,6 +38,11 @@ export function lireCombat(campaignId: string, combatId: string, parDefaut: stri
   return appeler<CombatDetail>(`${base(campaignId)}/${combatId}`, {}, parDefaut);
 }
 
+/** Les combats de la campagne, du plus récent au plus ancien (MJ seulement). */
+export function listerCombats(campaignId: string, parDefaut: string): Promise<{ combats: CombatRow[] }> {
+  return appeler<{ combats: CombatRow[] }>(base(campaignId), {}, parDefaut);
+}
+
 export function creerCombat(campaignId: string, parDefaut: string): Promise<CombatRow> {
   return post<CombatRow>(base(campaignId), { name: null, monsters: [] }, parDefaut);
 }

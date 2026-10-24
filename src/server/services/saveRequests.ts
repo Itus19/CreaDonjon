@@ -95,7 +95,7 @@ export async function answerSaveRequest(
       isPc: request.target_user_id !== null,
       ability: request.ability,
       campaignId: request.campaign_id,
-      rulesetId: campaign.rulesetId,
+      worldId: campaign.worldId,
       locale: params.locale,
     });
     bonus = found.bonus;

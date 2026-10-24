@@ -127,7 +127,12 @@
     "jetSecret": "secret",
     "ciblerChoisir": "Choose the target",
     "ciblerAucune": "No participant to target.",
-    "ciblerIndisponible": "This roll has no target"
+    "ciblerIndisponible": "This roll has no target",
+    "titreAttaque": "{nom} · Attack",
+    "titreDegats": "{nom} · Damage",
+    "titreLancer": "{nom} · Cast",
+    "sortLance": "Spell cast, no damage to show.",
+    "ouvertureImpossible": "The dice tool could not open."
   },
   "monde": {
     "nouvellesAventures": "New adventures",
@@ -1101,6 +1106,9 @@
     "jetAttaque": "Attack — {cible}",
     "jetDegats": "Damage — {cible}",
     "lancerDegats": "Roll damage",
+    "validerDegats": "Validate · damage",
+    "faireEchouer": "Make it miss",
+    "refusMj": "Missed (GM) — The GM makes the hit fail, no damage",
     "jetRate": "Miss — {cible}",
     "jetSauvegarde": "Saving throw requested — {cible}",
     "jetSoin": "Healing — {cible}",

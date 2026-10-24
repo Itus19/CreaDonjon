@@ -293,6 +293,24 @@ export function demandeDegatsApres(reponse: ReponseJetCible): { demande: Demande
 }
 
 /**
+ * V3.1-106 : l'effet d'un jet de dégâts ou de soin, lu dans les `changes` de la
+ * réponse (« Worg : 7 → 4 PV »), sans la note entre parenthèses que le serveur
+ * ajoute au journal. `null` quand rien n'a changé : on garde alors le libellé du jet.
+ */
+export function effetDesChanges(changes: readonly string[]): string | null {
+  const lignes = changes.map((c) => c.replace(/\s*\([^)]*\)\s*$/, "").trim()).filter((c) => c !== "");
+  return lignes.length > 0 ? lignes.join(" · ") : null;
+}
+
+/**
+ * V3.1-106 : le MJ valide la touche d'un monstre ou d'un PNJ (acteur
+ * « participant ») sur un allié (un PJ) avant que les dégâts ne partent.
+ */
+export function validationMjRequise(acteur: TargetedRollInput["actor"], cible: { is_ally: boolean } | undefined): boolean {
+  return acteur.kind === "participant" && cible?.is_ally === true;
+}
+
+/**
  * Le jet ciblé, tel que l'outil de dés l'affiche : les dés que le serveur a
  * lancés (total de l'attaque ou des dégâts, paire d'avantage, d20 gardé) et le
  * verdict. Sans dés (un sort à sauvegarde, un soin), le montant seul. `libelle` donne le texte de la
@@ -308,11 +326,12 @@ export function sortieDepuisJetCible(
   if (kind === "attack" || kind === "spell_attack") {
     what = libelle(reponse.verdict === "hit" ? "touche" : reponse.verdict === "miss" ? "rate" : "attaque", cible);
   } else if (kind === "damage") {
-    what = libelle("degats", cible);
+    // V3.1-106 : l'effet (« Worg : 7 → 4 PV ») à la place de « Dégâts — Worg ».
+    what = effetDesChanges(reponse.changes) ?? libelle("degats", cible);
   } else if (kind === "spell_save") {
     what = libelle("sauvegarde", cible);
   } else {
-    what = libelle("soin", cible);
+    what = effetDesChanges(reponse.changes) ?? libelle("soin", cible);
   }
   return {
     who: acteur,
@@ -337,8 +356,8 @@ export function sortieDepuisJetCible(
  * (règle 8). Une formule illisible donne un d6, jamais un résultat.
  */
 export function desDeLaFormule(formule: string | null): { dice: { d4?: number; d6?: number; d8?: number; d10?: number; d12?: number; d20?: number; d100?: number }; modifier: number } {
-  const m = formule ? /(\d+)d(\d+)(?:\s*\+\s*(\d+))?/.exec(formule) : null;
+  const m = formule ? /(\d+)d(\d+)(?:\s*([+-])\s*(\d+))?/.exec(formule) : null;
   const faces = m ? Number(m[2]) : 6;
   if (!m || ![4, 6, 8, 10, 12, 20, 100].includes(faces)) return { dice: { d6: 1 }, modifier: 0 };
-  return { dice: { [`d${faces}`]: Math.min(20, Number(m[1])) }, modifier: m[3] ? Number(m[3]) : 0 };
+  return { dice: { [`d${faces}`]: Math.min(20, Number(m[1])) }, modifier: m[4] ? (m[3] === "-" ? -Number(m[4]) : Number(m[4])) : 0 };
 }

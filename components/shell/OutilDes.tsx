@@ -104,8 +104,17 @@ export function PanneauFlottant({
     <div
       role="dialog"
       aria-label={titre}
-      style={{ left: position.left, right: position.right, top: position.top, bottom: position.top === undefined ? position.bottom : undefined }}
-      className="fixed z-[95] max-h-[calc(100vh-16px)] w-[344px] max-w-[calc(100vw-16px)] overflow-y-auto overflow-x-hidden rounded-2xl border border-edge-strong bg-panel-raised p-3 shadow-2xl backdrop-blur-[var(--blur)] print:hidden"
+      style={{
+        left: position.left,
+        right: position.right,
+        top: position.top,
+        bottom: position.top === undefined ? position.bottom : undefined,
+        // Ancré par le bas, le panneau grandit vers le haut : sa hauteur se
+        // borne à l'espace AU-DESSUS de son ancrage (marge de 8 px), sinon
+        // l'en-tête (titre, Secret, ×) sortait de l'écran ; au-delà, il défile.
+        maxHeight: `calc(100dvh - ${position.top ?? position.bottom}px - 8px)`,
+      }}
+      className="fixed z-[95] w-[344px] max-w-[calc(100vw-16px)] overflow-y-auto overflow-x-hidden rounded-2xl border border-edge-strong bg-panel-raised p-3 shadow-2xl backdrop-blur-[var(--blur)] print:hidden"
     >
       {children}
     </div>,
@@ -207,6 +216,13 @@ export default function OutilDes({
   async function lancerSuite() {
     const suite = resultat?.suite;
     if (!suite || enCours) return;
+    // V3.1-106 : la grille passe aux dés des dégâts (et non plus le d20 de l'attaque) ; la cible reste.
+    if (suite.preReglage) {
+      setActif(suite.preReglage);
+      setReserve(reserveDepuis(suite.preReglage.dice));
+      setModificateur(suite.preReglage.modifier);
+      setAvantage("normal");
+    }
     setResultat(null);
     setEnCours(true);
     setErreur(null);
@@ -224,6 +240,14 @@ export default function OutilDes({
     } finally {
       setEnCours(false);
     }
+  }
+
+  /** V3.1-106 : « Faire échouer » — le MJ refuse la touche ; le texte prend la place du résultat, rien n'est lancé ni écrit. */
+  function refuserSuite() {
+    const refus = resultat?.suite?.refus;
+    if (!refus || enCours) return;
+    setErreur(null);
+    setResultat({ jet: jetDepuisSortie(refus.sortie), contexte: { dc: null, avantage: "normal", secret: false, ddPrive: false }, relance: false });
   }
 
   async function lancer(relance: boolean) {
@@ -477,14 +501,26 @@ export default function OutilDes({
           </button>
         )}
         {!afficheBande && termine && resultat?.suite && (
-          <button
-            type="button"
-            onClick={() => void lancerSuite()}
-            disabled={enCours}
-            className="h-9 w-full rounded-lg border border-accent bg-panel text-xs font-semibold text-accent transition-colors hover:bg-accent hover:text-accent-ink disabled:opacity-60"
-          >
-            {resultat.suite.libelle}
-          </button>
+          <div className={resultat.suite.refus ? "grid grid-cols-2 gap-2" : ""}>
+            <button
+              type="button"
+              onClick={() => void lancerSuite()}
+              disabled={enCours}
+              className="h-9 w-full rounded-lg border border-accent bg-panel text-xs font-semibold text-accent transition-colors hover:bg-accent hover:text-accent-ink disabled:opacity-60"
+            >
+              {resultat.suite.libelle}
+            </button>
+            {resultat.suite.refus && (
+              <button
+                type="button"
+                onClick={refuserSuite}
+                disabled={enCours}
+                className="h-9 w-full rounded-lg border border-accent bg-panel text-xs font-semibold text-accent transition-colors hover:bg-accent hover:text-accent-ink disabled:opacity-60"
+              >
+                {resultat.suite.refus.libelle}
+              </button>
+            )}
+          </div>
         )}
       </div>
 
@@ -591,6 +627,7 @@ function jetDepuisSortie(sortie: SortieJet): JetAffiche {
     groups: extractDiceGroups(sortie.trace),
     pair: sortie.pair,
     createdAt: new Date().toISOString(),
+    sansTotal: sortie.sansTotal,
   };
 }
 
@@ -834,9 +871,9 @@ function ZoneResultat({
             );
           })}
         </div>
-        <div className="font-mech text-3xl font-bold leading-none text-ink">{termine && jet ? revelation.total : "—"}</div>
+        <div className="font-mech text-3xl font-bold leading-none text-ink">{termine && jet && !jet.sansTotal ? revelation.total : "—"}</div>
         <span className="sr-only" role="status">
-          {termine && jet ? t("annonceTotal", { total: jet.total }) : ""}
+          {termine && jet && !jet.sansTotal ? t("annonceTotal", { total: jet.total }) : ""}
         </span>
       </div>
     </div>
@@ -890,7 +927,7 @@ function DetailsJet({ jet, ton }: { jet: JetAffiche; ton: "success" | "fail" | "
   const couleurVerdict = ton === "fail" ? "text-danger" : ton === "success" ? "text-success" : "text-accent";
   return (
     <>
-      <p className="truncate">
+      <p className="line-clamp-2">
         <span className="text-ink">{jet.what}</span>
         {contre && <span> · {contre}</span>}
         {verdict && <span className={`font-semibold ${couleurVerdict}`}> · {verdict}</span>}
