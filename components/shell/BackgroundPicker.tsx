@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { BUILTIN_BACKGROUNDS } from "@/src/core/theme/builtinBackgrounds";
+import { pointsDeModes } from "@/lib/ui/apparence";
 
 interface PersonalImage {
   id: string;
@@ -22,6 +23,8 @@ interface ApiImage {
 
 export interface BackgroundSelection {
   ref: string;
+  /** Le nom affiché sous la vignette, repris par l'annonce d'une bascule de mode (V3.1-58). */
+  libelle: string;
   backdropUrl: string;
   hue: number;
   chroma: number;
@@ -67,9 +70,9 @@ export default function BackgroundPicker({
       .catch((erreur) => console.error("Chargement des fonds d'écran impossible", erreur));
   }, []);
 
-  function select(ref: string, backdropUrl: string, hue: number, chroma: number, availableModes: string[]) {
+  function select(ref: string, libelle: string, backdropUrl: string, hue: number, chroma: number, availableModes: string[]) {
     setSelectedRef(ref);
-    onSelectionChange({ ref, backdropUrl, hue, chroma, availableModes });
+    onSelectionChange({ ref, libelle, backdropUrl, hue, chroma, availableModes });
   }
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -96,7 +99,7 @@ export default function BackgroundPicker({
       availableModes: image.available_modes,
     };
     setPersonalImages((prev) => [added, ...prev]);
-    select(added.id, `/api/settings/background/${added.id}/image`, added.hue, added.chroma, added.availableModes);
+    select(added.id, t("theme.imagePerso"), `/api/settings/background/${added.id}/image`, added.hue, added.chroma, added.availableModes);
   }
 
   async function handleDelete(id: string) {
@@ -109,7 +112,7 @@ export default function BackgroundPicker({
     setPersonalImages((prev) => prev.filter((img) => img.id !== id));
     if (selectedRef === id) {
       const fallback = BUILTIN_BACKGROUNDS.find((b) => b.slug === "artwork-c") ?? BUILTIN_BACKGROUNDS[0];
-      select(`builtin:${fallback.slug}`, fallback.backdropUrl, fallback.hue, fallback.chroma, fallback.availableModes);
+      select(`builtin:${fallback.slug}`, fallback.label, fallback.backdropUrl, fallback.hue, fallback.chroma, fallback.availableModes);
     }
   }
 
@@ -129,7 +132,7 @@ export default function BackgroundPicker({
               image={bg.thumbDataUrl}
               modes={bg.availableModes}
               actif={selectedRef === ref}
-              onClick={() => select(ref, bg.backdropUrl, bg.hue, bg.chroma, bg.availableModes)}
+              onClick={() => select(ref, bg.label, bg.backdropUrl, bg.hue, bg.chroma, bg.availableModes)}
             />
           );
         })}
@@ -140,7 +143,7 @@ export default function BackgroundPicker({
               image={img.thumbDataUrl}
               modes={img.availableModes}
               actif={selectedRef === img.id}
-              onClick={() => select(img.id, `/api/settings/background/${img.id}/image`, img.hue, img.chroma, img.availableModes)}
+              onClick={() => select(img.id, t("theme.imagePerso"), `/api/settings/background/${img.id}/image`, img.hue, img.chroma, img.availableModes)}
             />
             <button
               type="button"
@@ -168,7 +171,7 @@ export default function BackgroundPicker({
   );
 }
 
-/** Vignette de fond : image, libellé et un point par mode lisible. */
+/** Vignette de fond : image, libellé et quatre points, teinté si le mode est lisible, vide sinon (V3.1-58). */
 function Vignette({
   libelle,
   image,
@@ -194,8 +197,8 @@ function Vignette({
       <span className="h-[70px] bg-cover bg-center lg:h-24" style={{ backgroundImage: `url("${image}")` }} />
       <span className="flex items-center gap-1.5 px-2 py-1.5 text-xs">
         <span className="flex-1 truncate">{libelle}</span>
-        {modes.map((m) => (
-          <i key={m} className={`h-[7px] w-[7px] rounded-full border border-edge-strong mode-swatch-${m}`} />
+        {pointsDeModes(modes).map(({ mode, permis }) => (
+          <i key={mode} className={`h-[7px] w-[7px] rounded-full border border-edge-strong ${permis ? `mode-swatch-${mode}` : ""}`} />
         ))}
       </span>
     </button>

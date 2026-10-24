@@ -2,6 +2,61 @@
 
 ---
 
+### ☑ V3.1-58 — Personnalisation : le fond d'abord, et pour les joueuses · `M` · sans modèle IA — **fait le 24 octobre**
+
+**Modèle conseillé : Sonnet** — planche définitive ; aucune donnée nouvelle.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Planche** : `Perso-Decide.dc.html`. **Départ** :
+`components/shell/PersonnalisationPanel.tsx`, `BackgroundPicker.tsx`,
+`src/core/theme/builtinBackgrounds.ts`, `HomeProfilePanel.tsx`,
+`PlayerShell.tsx`. **Dépend de** : 27 (rail), 35 (Compte sur l'accueil).
+
+**Ce qui est décidé**
+- **Barre en tête** : le mode en **pilule à quatre** (Sombre, Demi-sombre,
+  Demi-clair, Clair) — un mode que le fond ne permet pas est grisé, raison
+  au survol (« Ce fond ne permet pas ce mode de façon lisible ») ; « Flou
+  du fond » (0 à 40 px, pas de 2) ; « Contraste élevé » en interrupteur
+  (« Palette neutre sombre et traits nets, quel que soit le mode »).
+- **Galerie des fonds** en grandes vignettes (les miniatures réelles,
+  `thumbDataUrl`), chacune avec **ses modes lisibles en points** (un point
+  teinté par mode permis, vide sinon) ; les images personnelles à la suite,
+  avec × ; « + Ajouter une image » en dernière vignette (téléversement
+  existant). Choisir un fond qui ne permet pas le mode en cours **bascule**
+  sur un mode permis et **le dit** (message court).
+- Sous la galerie : « Ces réglages sont les tiens, sur cet appareil : ils
+  s'appliquent aussitôt, sans enregistrer. Tes images personnelles te
+  suivent sur tous tes appareils. »
+- **Données** : rien de neuf — cookies `mode`, `contrast`, `background`,
+  `bgBlur` et la bibliothèque personnelle (`/api/settings/background`).
+- **Tablette** : deux vignettes par rangée. **Téléphone** : la barre en
+  colonne, puis la galerie en deux colonnes.
+- **Pour tout le monde (accord de l'auteur, 8 octobre)** : le même écran
+  dans **« Compte » de l'accueil** (V3.1-35), à côté du profil ; une entrée
+  **« Apparence »** en pied du rail du joueur, au-dessus de « Mes mondes »,
+  qui l'ouvre en page pleine ; au téléphone, par Accueil › Compte. Le MJ
+  garde son outil. Un seul composant pour les trois accès.
+
+**Critères d'acceptation**
+- [x] Un compte joueur sans aucun monde mené règle son mode et son fond depuis Compte.
+- [x] Choisir un fond à deux modes en mode clair bascule en sombre et l'annonce.
+- [x] Un seul composant monté aux trois endroits (aucun doublon).
+
+**Livré le 24 octobre.** L'essentiel était déjà en place depuis V3.1-80
+et 81 (barre à quatre modes grisés, flou, contraste, galerie, section
+Apparence du Compte). Reste fait par Opus, sans délégation : la bascule de
+mode imposée par un fond est annoncée sous la barre (`role="status"`) ;
+chaque vignette porte toujours quatre points, vides pour les modes non
+lisibles (logique pure `lib/ui/apparence.ts`, testée) ; « Apparence » en
+pied du rail du joueur, au-dessus de « Mes mondes », ouvre la page pleine
+`/m/[monde]/joueur/apparence`, qui monte le même `PersonnalisationPanel`.
+Vérifié en direct avec Testeuse A (ordinateur et téléphone). Les fonds
+fournis permettent tous les quatre modes : la bascule ne se produit qu'avec
+une image personnelle, d'où le test unitaire plutôt qu'un téléversement.
+
+---
+
 ### ☑ V3.1-42 — Bloc-notes : le cahier refait, MJ et joueuse · `L` · sans modèle IA — **fait le 19 octobre**
 
 **Modèle conseillé : Sonnet** — planche définitive ; données fournies par 41.

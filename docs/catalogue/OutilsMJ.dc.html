@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <title>Catalogue — Outils du MJ</title>
 <script src="./support.js"></script>
-<link rel="stylesheet" href="/_blob/356889249945a63eae897adc808ff9e2">
+<link rel="stylesheet" href="/_blob/338a3b53c8f2b55e318cc0f3398932a7">
 </head>
 <body>
 <x-dc>
@@ -154,7 +154,7 @@ code{font-family:'Geist Mono',ui-monospace,monospace;font-size:0.92em}
 <h2 class="font-display text-2xl font-bold text-ink">Accueil et personnalisation</h2>
 <span class="text-xs text-ink-muted">HomeShell.tsx · AccueilHaut.tsx · NouveauMonde.tsx · HomeScreen.tsx · BackgroundPicker.tsx · PersonnalisationPanel.tsx</span>
 </div>
-<p class="max-w-3xl text-sm text-ink-soft">Accueil en tableau de bord (V3.1-35). Rail du joueur : Mondes, Compte, Administration (superadmin seul), Déconnexion en pied ; la dalle du dé seul lance hors campagne, et rien n'est enregistré. En haut de « Mondes » : « Prochaines séances — tous mondes » et « Reprendre là où tu t'es arrêté » (absent si rien n'est mémorisé). « Nouveau monde » ouvre trois chemins : Mener une partie, Jouer en solo (superadmin seul), Rejoindre une table (on colle un lien, vérifié sans rien créer). Dessous, les colonnes « Je mène » (puis « En solo ») et « Je joue », et le panneau du monde choisi, avec les outils du rôle tenu dans ce monde. Sur téléphone, une pilule Je mène / Je joue / En solo, ouverte sur le premier onglet non vide ; le monde s'ouvre en feuille du bas, et le dé est au milieu de la barre du bas. Personnalisation (V3.1-81) : la barre des modes et du flou est décrite dans la section Compte, case Apparence ; ici, une vignette de fond avec ses points de modes lisibles (choisie : bordure d'accent). Un mode illisible sur ce fond est désactivé.</p>
+<p class="max-w-3xl text-sm text-ink-soft">Accueil en tableau de bord (V3.1-35). Rail du joueur : Mondes, Compte, Administration (superadmin seul), Déconnexion en pied ; la dalle du dé seul lance hors campagne, et rien n'est enregistré. En haut de « Mondes » : « Prochaines séances — tous mondes » et « Reprendre là où tu t'es arrêté » (absent si rien n'est mémorisé). « Nouveau monde » ouvre trois chemins : Mener une partie, Jouer en solo (superadmin seul), Rejoindre une table (on colle un lien, vérifié sans rien créer). Dessous, les colonnes « Je mène » (puis « En solo ») et « Je joue », et le panneau du monde choisi, avec les outils du rôle tenu dans ce monde. Sur téléphone, une pilule Je mène / Je joue / En solo, ouverte sur le premier onglet non vide ; le monde s'ouvre en feuille du bas, et le dé est au milieu de la barre du bas. Personnalisation (V3.1-81) : la barre des modes et du flou est décrite dans la section Compte, case Apparence ; ici, une vignette de fond avec ses points de modes lisibles (choisie : bordure d'accent). Un mode illisible sur ce fond est désactivé. V3.1-58 : chaque vignette porte toujours quatre points, teinté si le mode est lisible, vide sinon ; choisir un fond qui ne permet pas le mode en cours bascule sur le premier mode permis et l'annonce sous la barre (« « Carte de Phandalin » ne permet pas ce mode de façon lisible : passage en Sombre. »). Le même panneau sert à trois endroits : l'outil du MJ, la section Apparence du Compte, et « Apparence » en pied du rail du joueur, au-dessus de « Mes mondes » (page pleine <code>/joueur/apparence</code>).</p>
 <div class="flex flex-wrap gap-x-6 gap-y-1 text-xs text-ink-muted"><span>Mouvement : <span class="text-ink">boutons, cartes et choix : couleurs, 150 ms, cubic-bezier(0.4, 0, 0.2, 1) (<code>transition-colors</code>) ; dé : transformation, 150 ms (<code>transition-transform</code>) ; rail : largeur, 380 ms ; vignette : toutes propriétés, 150 ms</span></span></div>
 <div class="grid gap-3" style="grid-template-columns: repeat(3, minmax(0, 1fr))"><div class="flex flex-col gap-1.5">
 <span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Nouveau monde</span>
@@ -185,6 +185,9 @@ code{font-family:'Geist Mono',ui-monospace,monospace;font-size:0.92em}
 </div></div><div class="grid gap-3" style="grid-template-columns: repeat(2, minmax(0, 1fr))"><div class="flex flex-col gap-1.5">
 <span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Vignette de fond (choisie)</span>
 <div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><div class="flex" style="width: 180px"><button type="button" aria-pressed="true" class="flex flex-1 flex-col overflow-hidden rounded-2xl border bg-panel-sunken text-left text-ink transition-colors motion-reduce:transition-none border-accent ring-1 ring-accent"><span class="h-[70px] bg-panel-raised lg:h-24"></span><span class="flex items-center gap-1.5 px-2 py-1.5 text-xs"><span class="flex-1 truncate">Artwork C</span><i class="h-[7px] w-[7px] rounded-full border border-edge-strong mode-swatch-dark"></i><i class="h-[7px] w-[7px] rounded-full border border-edge-strong mode-swatch-dim"></i><i class="h-[7px] w-[7px] rounded-full border border-edge-strong mode-swatch-soft"></i><i class="h-[7px] w-[7px] rounded-full border border-edge-strong mode-swatch-light"></i></span></button></div></div>
+</div><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Deux modes lisibles, bascule annoncée</span>
+<div class="flex min-h-[64px] flex-col items-center justify-center gap-2 rounded-lg bg-panel-sunken px-3 py-4"><div class="flex" style="width: 180px"><button type="button" aria-pressed="false" class="flex flex-1 flex-col overflow-hidden rounded-2xl border bg-panel-sunken text-left text-ink transition-colors motion-reduce:transition-none border-edge hover:border-edge-strong"><span class="h-[70px] bg-panel-raised lg:h-24"></span><span class="flex items-center gap-1.5 px-2 py-1.5 text-xs"><span class="flex-1 truncate">Image personnelle</span><i class="h-[7px] w-[7px] rounded-full border border-edge-strong mode-swatch-dark"></i><i class="h-[7px] w-[7px] rounded-full border border-edge-strong mode-swatch-dim"></i><i class="h-[7px] w-[7px] rounded-full border border-edge-strong "></i><i class="h-[7px] w-[7px] rounded-full border border-edge-strong "></i></span></button></div><p role="status" class="text-xs text-accent">« Image personnelle » ne permet pas ce mode de façon lisible : passage en Sombre.</p></div>
 </div></div>
 <div class="flex flex-col gap-2 rounded-xl border border-dashed border-edge-strong p-4">
 <span class="text-xs font-semibold uppercase tracking-wider text-accent">À essayer</span>
@@ -384,7 +387,7 @@ code{font-family:'Geist Mono',ui-monospace,monospace;font-size:0.92em}
 </main>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":11600}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":11660}}'>
 class Component extends DCLogic {
   constructor(props) {
     super(props);

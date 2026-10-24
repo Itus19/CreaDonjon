@@ -3,9 +3,8 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import Tabs from "@/components/shared/Tabs";
+import { MODES_APPARENCE as MODES, modeApresChoixDeFond } from "@/lib/ui/apparence";
 import BackgroundPicker, { type BackgroundSelection } from "./BackgroundPicker";
-
-const MODES = ["dark", "dim", "soft", "light"] as const;
 
 function setCookie(name: string, value: string) {
   document.cookie = `${name}=${value}; path=/; max-age=31536000`;
@@ -36,6 +35,8 @@ export default function PersonnalisationPanel({
   const [contrast, setContrast] = useState(currentContrast);
   const [backgroundAvailableModes, setBackgroundAvailableModes] = useState(currentBackgroundAvailableModes);
   const [bgBlur, setBgBlur] = useState(currentBgBlur);
+  /** V3.1-58 : la bascule de mode imposée par un fond est dite, jamais muette. */
+  const [annonce, setAnnonce] = useState<string | null>(null);
 
   useEffect(() => {
     document.documentElement.dataset.mode = mode;
@@ -66,10 +67,9 @@ export default function PersonnalisationPanel({
     document.documentElement.style.setProperty("--c", String(selection.chroma));
     document.querySelector<HTMLElement>(".app-backdrop")?.style.setProperty("--bg-image", `url("${selection.backdropUrl}")`);
     setBackgroundAvailableModes(selection.availableModes);
-    if (!selection.availableModes.includes(mode)) {
-      const fallbackMode = selection.availableModes[0];
-      if (fallbackMode) setMode(fallbackMode);
-    }
+    const suite = modeApresChoixDeFond(mode, selection.availableModes);
+    setMode(suite.mode);
+    setAnnonce(suite.bascule ? t("theme.bascule", { fond: selection.libelle, apres: t(`theme.${suite.mode}`) }) : null);
     setCookie("background", selection.ref);
   }
 
@@ -93,7 +93,10 @@ export default function PersonnalisationPanel({
             <Tabs
               value={mode as (typeof MODES)[number]}
               items={modeItems}
-              onChange={setMode}
+              onChange={(m) => {
+                setMode(m);
+                setAnnonce(null);
+              }}
               aria-label={t("theme.modes")}
               className="w-full max-md:[&_button]:px-1"
             />
@@ -128,6 +131,9 @@ export default function PersonnalisationPanel({
           <b className="w-12 shrink-0 text-right font-medium tabular-nums">{t("theme.flouValeur", { valeur: bgBlur })}</b>
         </label>
       </div>
+      <p role="status" className="min-h-0 text-xs text-accent empty:hidden">
+        {annonce}
+      </p>
       <BackgroundPicker
         currentRef={currentBackgroundRef}
         onSelectionChange={handleBackgroundSelection}

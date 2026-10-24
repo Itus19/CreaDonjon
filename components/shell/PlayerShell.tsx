@@ -206,6 +206,19 @@ export default function PlayerShell({
           </div>
 
           <div className="hidden shrink-0 border-t border-edge p-2 md:block">
+            {/* V3.1-58 : l'apparence (mode, fond, flou) au-dessus de « Mes mondes » ;
+                au téléphone elle s'atteint par Accueil › Compte. */}
+            <RailRow
+              href={`${base}/apparence`}
+              icone={
+                <TraitSvg>
+                  <circle cx="12" cy="12" r="8" />
+                  <path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" />
+                </TraitSvg>
+              }
+              libelle={t("apparence")}
+              actif={pathname === `${base}/apparence`}
+            />
             <RailRow
               href="/"
               icone={
