@@ -146,14 +146,7 @@ export default function MjToolWindowContent({ worldSlug, data }: { worldSlug: st
       );
 
     case "publication":
-      return (
-        <PublicationPanel
-          worldId={data.worldId}
-          worldSlug={worldSlug}
-          initialLinks={data.links}
-          initialWikiWelcomeMessage={data.wikiWelcomeMessage}
-        />
-      );
+      return <PublicationPanel worldSlug={worldSlug} publication={data} />;
 
     case "generateurs":
       return (

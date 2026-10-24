@@ -969,5 +969,29 @@
       "erreur": "Impossible de rétablir cette fiche.",
       "sansNom": "(sans nom)"
     }
+  },
+  "publication": {
+    "titre": "Publication",
+    "previsualiser": "Prévisualiser ↗",
+    "message": {
+      "titre": "Message d'accueil du wiki",
+      "aide": "Remplace le grand titre de la page d'accueil. Vide : le nom de la campagne.",
+      "placeholder": "Bienvenue dans la campagne — … ! L'aventure commence ici !",
+      "compteur": "{n} / {max}",
+      "enregistrer": "Enregistrer",
+      "enregistre": "Enregistré"
+    },
+    "fond": {
+      "titre": "Fond par défaut du wiki public",
+      "aide": "Une fiche qui a son propre fond le garde.",
+      "modes": "Mode des pages :",
+      "flou": "Flou du fond",
+      "echec": "Impossible d'enregistrer le fond."
+    },
+    "apercu": {
+      "titre": "Ce que voit un visiteur",
+      "rechercher": "Rechercher…",
+      "legende": "Le message d'accueil, le fond, le mode et le flou, en direct. « Prévisualiser ↗ » ouvre le vrai wiki public."
+    }
   }
 }

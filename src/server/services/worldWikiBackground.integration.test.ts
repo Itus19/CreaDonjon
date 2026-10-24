@@ -132,6 +132,21 @@ describe.skipIf(!hasCreds)("fond par défaut du wiki (integration, base reelle)"
     }
   });
 
+  it("garder le fond (V3.1-60) : le mode et le flou changent, la même copie reste, sans recopie", async () => {
+    const out = await setWorldWikiBackgroundByGm(typed(gm), { worldId, userId: gm.id, input: { source: "keep", mode: "dark", blur: 6 } });
+    expect(out.ok).toBe(true);
+    if (!out.ok || out.setting?.source !== "world_asset") throw new Error("copie perdue");
+    expect(out.setting.assetId).toBe(copieId);
+    expect(out.setting).toMatchObject({ mode: "dark", blur: 6 });
+    const { data: copie } = await admin.from("assets").select("id").eq("id", copieId);
+    expect(copie ?? []).toHaveLength(1);
+    const { count } = await admin.from("assets").select("id", { count: "exact", head: true }).eq("world_id", worldId).eq("visibility_level", "players");
+    expect(count).toBe(1);
+
+    expect(await setWorldWikiBackgroundByGm(typed(gm), { worldId, userId: gm.id, input: { source: "keep", mode: "light", blur: 6 } })).toEqual({ ok: false, reason: "invalid_mode" });
+    expect(await setWorldWikiBackgroundByGm(typed(player), { worldId, userId: player.id, input: { source: "keep", mode: "dim", blur: 6 } })).toEqual({ ok: false, reason: "forbidden" });
+  });
+
   it("changer de fond supprime l'ancienne copie, jamais l'original de la bibliothèque", async () => {
     const out = await setWorldWikiBackgroundByGm(typed(gm), { worldId, userId: gm.id, input: { source: "none" } });
     expect(out).toEqual({ ok: true, setting: null });

@@ -7,6 +7,7 @@ import {
   checkWikiBackgroundMode,
   findBuiltinBackground,
   parseWorldWikiBackground,
+  retuneWorldWikiBackground,
   worldWikiBackgroundView,
   type WikiBackgroundInput,
   type WikiBackgroundView,
@@ -93,6 +94,11 @@ export async function setWorldWikiBackgroundByGm(
     if (!checkWikiBackgroundMode(input.mode, availableModes)) return { ok: false, reason: "invalid_mode" };
     newCopyId = await copyAssetToWorld(supabase, asset, { worldId: params.worldId, uploadedBy: params.userId, visibilityLevel: "players" });
     next = { source: "world_asset", assetId: newCopyId, mode: input.mode, blur: input.blur, hue: image.hue, chroma: image.chroma, availableModes };
+  } else if (input.source === "keep") {
+    // V3.1-60 : même fond, même copie ; seuls le mode et le flou changent.
+    const retuned = retuneWorldWikiBackground(current, input.mode, input.blur);
+    if (!retuned.ok) return { ok: false, reason: retuned.reason };
+    next = retuned.setting;
   }
 
   try {
@@ -104,6 +110,7 @@ export async function setWorldWikiBackgroundByGm(
     throw erreur;
   }
 
-  if (current?.source === "world_asset") await removeOldCopy(supabase, current.assetId);
+  // « keep » garde la même copie : la supprimer effacerait le fond qu'on vient de régler.
+  if (current?.source === "world_asset" && input.source !== "keep") await removeOldCopy(supabase, current.assetId);
   return { ok: true, setting: next };
 }

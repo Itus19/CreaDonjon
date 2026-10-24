@@ -17,6 +17,8 @@ export const zWikiBackgroundInput = z.discriminatedUnion("source", [
   z.object({ source: z.literal("builtin"), key: z.string().min(1).max(100), mode: zThemeMode, blur: zBlur }),
   z.object({ source: z.literal("library"), backgroundImageId: z.string().uuid(), mode: zThemeMode, blur: zBlur }),
   z.object({ source: z.literal("none") }),
+  /** V3.1-60 : le même fond, un autre mode ou un autre flou — sans recopier l'image. */
+  z.object({ source: z.literal("keep"), mode: zThemeMode, blur: zBlur }),
 ]);
 export type WikiBackgroundInput = z.infer<typeof zWikiBackgroundInput>;
 
@@ -88,4 +90,62 @@ export function parseWorldWikiBackground(raw: unknown): WorldWikiBackground | nu
 /** Le fond d'une page du wiki : celui de la fiche s'il existe, sinon celui du monde, sinon aucun (ADR 0047). */
 export function chooseWikiBackground<T>(ficheBackground: T | null, worldBackground: T | null): T | null {
   return ficheBackground ?? worldBackground;
+}
+
+/**
+ * Ce que l'écran Publication montre du réglage enregistré (V3.1-60) : la
+ * vignette choisie dans la galerie (`ref`, la même clé que la galerie de
+ * V3.1-58), et de quoi peindre l'aperçu. Une copie (`world_asset`) n'a pas de
+ * vignette — elle ne vient plus de la bibliothèque — mais garde son image.
+ */
+export interface PublicationBackgroundState {
+  ref: string | null;
+  imageUrl: string;
+  hue: number;
+  chroma: number;
+  availableModes: ThemeMode[];
+  mode: ThemeMode;
+  blur: number;
+}
+
+export function publicationBackgroundState(setting: WorldWikiBackground | null, worldAssetImageUrl: string | null): PublicationBackgroundState | null {
+  if (!setting) return null;
+  if (setting.source === "builtin") {
+    const builtin = findBuiltinBackground(setting.key);
+    if (!builtin) return null;
+    return {
+      ref: `builtin:${builtin.slug}`,
+      imageUrl: builtin.backdropUrl,
+      hue: builtin.hue,
+      chroma: builtin.chroma,
+      availableModes: builtin.availableModes,
+      mode: setting.mode,
+      blur: setting.blur,
+    };
+  }
+  if (!worldAssetImageUrl) return null;
+  return { ref: null, imageUrl: worldAssetImageUrl, hue: setting.hue, chroma: setting.chroma, availableModes: setting.availableModes, mode: setting.mode, blur: setting.blur };
+}
+
+/** La clé d'une vignette de la galerie (« builtin:… » ou l'id d'une image de la bibliothèque) devient la requête du MJ. */
+export function wikiBackgroundInputFromRef(ref: string, mode: ThemeMode, blur: number): WikiBackgroundInput {
+  if (ref.startsWith("builtin:")) return { source: "builtin", key: ref.slice("builtin:".length), mode, blur };
+  return { source: "library", backgroundImageId: ref, mode, blur };
+}
+
+/**
+ * V3.1-60 — garder le fond enregistré et n'en changer que le mode et le flou.
+ * Une copie garde la même image (aucune recopie) ; le mode reste contrôlé
+ * contre ceux que ce fond permet.
+ */
+export function retuneWorldWikiBackground(
+  current: WorldWikiBackground | null,
+  mode: ThemeMode,
+  blur: number
+): { ok: true; setting: WorldWikiBackground } | { ok: false; reason: "not_found" | "invalid_mode" } {
+  if (!current) return { ok: false, reason: "not_found" };
+  const availableModes = current.source === "builtin" ? findBuiltinBackground(current.key)?.availableModes : current.availableModes;
+  if (!availableModes) return { ok: false, reason: "not_found" };
+  if (!checkWikiBackgroundMode(mode, availableModes)) return { ok: false, reason: "invalid_mode" };
+  return { ok: true, setting: { ...current, mode, blur } };
 }

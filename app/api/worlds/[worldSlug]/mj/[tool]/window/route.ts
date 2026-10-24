@@ -17,7 +17,7 @@ import { getActiveCombatForCampaign, getCombatDetail, listCombatsForCampaign, li
 import { listEntitiesByIds } from "@/src/server/repos/entities";
 import { getCalendar } from "@/src/server/services/worlds";
 import { lirePersonnalisation } from "@/src/server/services/personnalisation";
-import { listShareLinks } from "@/src/server/services/shareLinks";
+import { chargerPublication } from "@/src/server/services/publication";
 import type { Locale } from "@/src/i18n/request";
 import type { MjToolWindowData } from "@/components/shell/mjToolWindows";
 import { MJ_TOOL_KEYS, type MjToolKey } from "@/components/shell/windowRefs";
@@ -204,8 +204,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     }
 
     case "publication": {
-      const links = await listShareLinks(supabase, world.id);
-      data = { tool, worldId: world.id, links, wikiWelcomeMessage: world.wiki_welcome_message ?? "" };
+      data = { tool, ...(await chargerPublication(supabase, world)) };
       break;
     }
 

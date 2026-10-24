@@ -102,7 +102,7 @@ export default function ShareLinkPanel({
   const freshUrl = state && "token" in state ? urlFor(state.slug ?? state.token) : null;
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-edge bg-panel-sunken p-4">
+    <div className="flex flex-col gap-3 rounded-[18px] border border-edge bg-panel p-4 backdrop-blur-[var(--blur)]">
       <h2 className="block-title text-base">Partage en lecture seule</h2>
       <p className="text-xs text-ink-muted">
         Un lien anonyme n&apos;affiche que le contenu public de ce monde — jamais le contenu réservé au MJ.
@@ -124,14 +124,14 @@ export default function ShareLinkPanel({
             />
           </span>
         </label>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <input
             type="password"
             name="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Mot de passe (optionnel)"
-            className="flex-1 rounded-md border border-edge bg-transparent px-2.5 py-1.5 text-sm text-ink outline-none placeholder:text-ink-muted"
+            className="min-w-0 flex-1 basis-40 rounded-md border border-edge bg-transparent px-2.5 py-1.5 text-sm text-ink outline-none placeholder:text-ink-muted"
           />
           <button
             type="submit"

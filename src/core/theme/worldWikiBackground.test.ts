@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { BUILTIN_BACKGROUNDS } from "./builtinBackgrounds";
-import { checkWikiBackgroundMode, chooseWikiBackground, worldWikiBackgroundView, zWikiBackgroundInput, zWorldWikiBackground } from "./worldWikiBackground";
+import {
+  checkWikiBackgroundMode,
+  chooseWikiBackground,
+  publicationBackgroundState,
+  retuneWorldWikiBackground,
+  wikiBackgroundInputFromRef,
+  worldWikiBackgroundView,
+  zWikiBackgroundInput,
+  zWorldWikiBackground,
+} from "./worldWikiBackground";
 
 const fourni = BUILTIN_BACKGROUNDS[0];
 
@@ -51,5 +60,70 @@ describe("chooseWikiBackground", () => {
     expect(chooseWikiBackground("fiche", "monde")).toBe("fiche");
     expect(chooseWikiBackground(null, "monde")).toBe("monde");
     expect(chooseWikiBackground(null, null)).toBeNull();
+  });
+});
+
+describe("réglage de Publication (V3.1-60)", () => {
+  const builtin = BUILTIN_BACKGROUNDS[0];
+
+  it("un fond fourni redevient sa vignette dans la galerie", () => {
+    expect(publicationBackgroundState({ source: "builtin", key: builtin.slug, mode: "dim", blur: 12 }, null)).toEqual({
+      ref: `builtin:${builtin.slug}`,
+      imageUrl: builtin.backdropUrl,
+      hue: builtin.hue,
+      chroma: builtin.chroma,
+      availableModes: builtin.availableModes,
+      mode: "dim",
+      blur: 12,
+    });
+  });
+
+  it("une copie n'a pas de vignette dans la bibliothèque, mais garde son image et ses modes", () => {
+    const copie = { source: "world_asset" as const, assetId: "a1", mode: "dark" as const, blur: 8, hue: 40, chroma: 0.04, availableModes: ["dark" as const, "dim" as const] };
+    expect(publicationBackgroundState(copie, "/image?v=a1")).toEqual({
+      ref: null,
+      imageUrl: "/image?v=a1",
+      hue: 40,
+      chroma: 0.04,
+      availableModes: ["dark", "dim"],
+      mode: "dark",
+      blur: 8,
+    });
+  });
+
+  it("aucun réglage, ou un fond fourni disparu : rien", () => {
+    expect(publicationBackgroundState(null, null)).toBeNull();
+    expect(publicationBackgroundState({ source: "builtin", key: "disparu", mode: "dark", blur: 0 }, null)).toBeNull();
+  });
+
+  it("une sélection de la galerie devient la requête du MJ", () => {
+    expect(wikiBackgroundInputFromRef("builtin:artwork-c", "soft", 10)).toEqual({ source: "builtin", key: "artwork-c", mode: "soft", blur: 10 });
+    const id = "6f1c1b5e-2d7a-4c1e-9b1a-0d2f3e4a5b6c";
+    expect(wikiBackgroundInputFromRef(id, "dark", 0)).toEqual({ source: "library", backgroundImageId: id, mode: "dark", blur: 0 });
+    expect(zWikiBackgroundInput.safeParse(wikiBackgroundInputFromRef(id, "dark", 0)).success).toBe(true);
+  });
+});
+
+describe("garder le fond, changer le mode et le flou (V3.1-60)", () => {
+  const copie = { source: "world_asset" as const, assetId: "a1", mode: "dark" as const, blur: 8, hue: 40, chroma: 0.04, availableModes: ["dark" as const, "dim" as const] };
+
+  it("l'entrée accepte « keep » avec un mode et un flou", () => {
+    expect(zWikiBackgroundInput.safeParse({ source: "keep", mode: "dim", blur: 10 }).success).toBe(true);
+    expect(zWikiBackgroundInput.safeParse({ source: "keep", mode: "dim", blur: 41 }).success).toBe(false);
+  });
+
+  it("une copie garde son image : seuls le mode et le flou changent", () => {
+    expect(retuneWorldWikiBackground(copie, "dim", 20)).toEqual({ ok: true, setting: { ...copie, mode: "dim", blur: 20 } });
+  });
+
+  it("un fond fourni aussi", () => {
+    const setting = { source: "builtin" as const, key: fourni.slug, mode: "dark" as const, blur: 0 };
+    expect(retuneWorldWikiBackground(setting, "light", 4)).toEqual({ ok: true, setting: { ...setting, mode: "light", blur: 4 } });
+  });
+
+  it("un mode que le fond ne permet pas est refusé ; sans fond, rien à garder", () => {
+    expect(retuneWorldWikiBackground(copie, "light", 8)).toEqual({ ok: false, reason: "invalid_mode" });
+    expect(retuneWorldWikiBackground(null, "dark", 8)).toEqual({ ok: false, reason: "not_found" });
+    expect(retuneWorldWikiBackground({ source: "builtin", key: "disparu", mode: "dark", blur: 0 }, "dark", 8)).toEqual({ ok: false, reason: "not_found" });
   });
 });

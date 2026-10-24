@@ -7,7 +7,7 @@ import type { EncounterPartyMember } from "@/src/server/services/encounterWorksh
 import type { CombatDetail } from "@/src/server/services/combats";
 import type { CombatRow } from "@/src/server/repos/combats";
 import type { CalendarConfigInput } from "@/src/core/schemas/calendar";
-import type { ShareLinkSummary } from "@/src/server/services/shareLinks";
+import type { PublicationData } from "@/src/server/services/publication";
 import type { GeneratorToolWindowData } from "@/src/server/services/generators";
 import type { NotebookWorkspaceData } from "@/src/server/services/sharedNotes";
 import type { TablePc } from "@/src/server/services/tableParty";
@@ -65,7 +65,7 @@ export type MjToolWindowData =
   | { tool: "calendrier"; calendar: CalendarConfigInput }
   | { tool: "personnalisation"; mode: string; contrast: string; backgroundRef: string; backgroundAvailableModes: string[]; bgBlur: number }
   | { tool: "regles-actives" }
-  | { tool: "publication"; worldId: string; links: ShareLinkSummary[]; wikiWelcomeMessage: string }
+  | ({ tool: "publication" } & PublicationData)
   | { tool: "generateurs"; entityId: string; tools: GeneratorToolWindowData[] }
   | ({ tool: "notes" } & NotebookWorkspaceData)
   | { tool: "calendrier-reel"; campaignId: string | null }

@@ -968,5 +968,29 @@
       "erreur": "Could not restore this page.",
       "sansNom": "(unnamed)"
     }
+  },
+  "publication": {
+    "titre": "Publishing",
+    "previsualiser": "Preview ↗",
+    "message": {
+      "titre": "Wiki welcome message",
+      "aide": "Replaces the big title of the home page. Empty: the campaign name.",
+      "placeholder": "Welcome to the campaign — … ! The adventure starts here!",
+      "compteur": "{n} / {max}",
+      "enregistrer": "Save",
+      "enregistre": "Saved"
+    },
+    "fond": {
+      "titre": "Default background of the public wiki",
+      "aide": "A page that has its own background keeps it.",
+      "modes": "Page mode:",
+      "flou": "Background blur",
+      "echec": "Could not save the background."
+    },
+    "apercu": {
+      "titre": "What a visitor sees",
+      "rechercher": "Search…",
+      "legende": "The welcome message, background, mode and blur, live. \u201cPreview ↗\u201d opens the real public wiki."
+    }
   }
 }
