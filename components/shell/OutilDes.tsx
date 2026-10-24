@@ -114,7 +114,7 @@ export function PanneauFlottant({
         // l'en-tête (titre, Secret, ×) sortait de l'écran ; au-delà, il défile.
         maxHeight: `calc(100dvh - ${position.top ?? position.bottom}px - 8px)`,
       }}
-      className="fixed z-[95] w-[344px] max-w-[calc(100vw-16px)] overflow-y-auto overflow-x-hidden rounded-2xl border border-edge-strong bg-panel-raised p-3 shadow-2xl backdrop-blur-[var(--blur)] print:hidden"
+      className="fixed z-[95] flex flex-col w-[344px] max-w-[calc(100vw-16px)] overflow-y-auto overflow-x-hidden rounded-2xl border border-edge-strong bg-panel-raised p-3 shadow-2xl backdrop-blur-[var(--blur)] print:hidden"
     >
       {children}
     </div>,
@@ -364,7 +364,10 @@ export default function OutilDes({
   const lancerDesactive = enCours || (!verrouille && !peutLancer(reserve)) || (cibles !== undefined && cibleChoisie === null);
 
   return (
-    <div className="flex flex-col gap-3 text-ink">
+    // Planche « Outil de dés — ordinateur » : les commandes ne se coupent jamais ;
+    // seul l'historique (« Derniers jets », DERNIER enfant) rétrécit quand la
+    // place manque ; la zone de résultat garde ses 148 px.
+    <div className="flex min-h-0 flex-col gap-3 text-ink [&>*:not(:last-child)]:shrink-0">
       {/* En-tête : titre, Secret, fermer. */}
       <div className="flex items-center gap-2">
         <h2 id={idTitre} className="min-w-0 flex-1 truncate font-chrome text-sm font-semibold text-ink">
@@ -478,8 +481,10 @@ export default function OutilDes({
         reduit={reduit}
       />
 
-      {/* Détails sous la zone : contre DD, verdict, chips, erreur. */}
-      <div className="flex min-h-[3.25rem] flex-col gap-1 text-xs text-ink-soft" aria-live="polite">
+      {/* Détails sous la zone : contre DD, verdict, chips, erreur. Leur place
+          est réservée (pas de saut au résultat), sauf sur un écran très bas où
+          la réserve vide coupait « Lancer » : là, mieux vaut un léger saut. */}
+      <div className="flex min-h-[3.25rem] flex-col gap-1 text-xs text-ink-soft [@media(max-height:700px)]:min-h-0" aria-live="polite">
         {termine && jetAffiche && <DetailsJet jet={jetAffiche} ton={ton} />}
         {erreur && (
           <p role="alert" className="text-danger">
@@ -488,8 +493,8 @@ export default function OutilDes({
         )}
       </div>
 
-      {/* Bande du pied : sa hauteur est toujours réservée. */}
-      <div className="h-9">
+      {/* Bande du pied : sa hauteur est réservée, sauf sur un écran très bas (voir les détails). */}
+      <div className="h-9 [@media(max-height:700px)]:h-auto">
         {afficheBande && (
           <button
             type="button"
@@ -967,7 +972,7 @@ function ListeJets({ jets, etat, onReessayer }: { jets: JetAffiche[]; etat: Etat
     corps = <p className="text-xs text-ink-muted">{t("aucunJet")}</p>;
   } else {
     corps = (
-      <ul className="flex max-h-36 flex-col overflow-y-auto pr-1">
+      <ul className="flex min-h-0 max-h-36 flex-col overflow-y-auto pr-1">
         {jets.map((jet) => (
           <li key={jet.id} className="flex items-center justify-between gap-2 border-b border-edge/60 py-1 text-xs last:border-0">
             <span className="min-w-0 truncate text-ink-soft">
@@ -983,8 +988,8 @@ function ListeJets({ jets, etat, onReessayer }: { jets: JetAffiche[]; etat: Etat
     );
   }
   return (
-    <div className="border-t border-edge pt-2">
-      <div className="mb-1 text-xs font-bold uppercase tracking-widest text-ink-muted">{t("derniersJets")}</div>
+    <div className="flex min-h-0 flex-col border-t border-edge pt-2">
+      <div className="mb-1 shrink-0 text-xs font-bold uppercase tracking-widest text-ink-muted">{t("derniersJets")}</div>
       {corps}
     </div>
   );
