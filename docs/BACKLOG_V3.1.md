@@ -98,6 +98,7 @@ valables ; celui-ci les relie.
 | **À côté, quand on veut** | 13 (attend le texte des manuels de l'auteur) ; vérifications en direct de 1, 2, 4, 5, 12, 17, 18 | Codés ; il ne reste que l'œil de l'auteur. | |
 | **Étape 4, avec 105** | 104 (ADR 0041, option B) → 107 | Le joueur qui cible : écritures signées par le serveur. | Après 105. |
 | **Étape 9 · Les règles jouables** | 129 → 130 → 131, 132 ; 133 (après 129) ; puis 134 à 138, un ADR chacun ; 139, 140 ; 141 (monnaie en données) quand on veut | La clé de voûte du solo : toute règle en jeu est jouable à 100 % par le moteur, sans qu'un modèle la lise (ADR 0059). 129 peut partir tout de suite (la recharge partielle de 113 est faite) ; 130 n’attend plus 24 (fait le 13 octobre : la concentration change en un seul point, `setConcentration`) ; 131 et 132 attendent que les planches « Esquisse · Règle jouable » passent en « Décidé ». |
+| **Fin de V3.1 · L'audit** | 144, en dernier | Les retouches d'affichage relevées en vérifiant les tickets, en une seule passe (une session au navigateur). Chaque défaut vu en chemin, qu'aucun ticket prévu ne couvre, s'ajoute au ticket 144. | Après tout le reste. |
 
 **Règle** : un ticket Opus « à concevoir » ne se code pas ; il se conçoit
 (ADR), puis il se découpe en tickets prêts. Si Sonnet bute sur une décision
@@ -126,6 +127,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 - [`10-dette-technique.md`](backlog-v3.1/10-dette-technique.md) — Dette technique (V3.1-120…)
 - [`11-verification-11-octobre.md`](backlog-v3.1/11-verification-11-octobre.md) — Ce qu'a montré la vérification du 11 octobre : tri, rattachements, V3.1-121 et 125
 - [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) — Les règles jouables : fondation et chantiers (V3.1-129 à 141, 13 octobre)
+- [`13-audit-de-fin.md`](backlog-v3.1/13-audit-de-fin.md) — L'audit de fin de V3.1 : les retouches d'affichage relevées en chemin, V3.1-144
 - [`termines.md`](backlog-v3.1/termines.md) — Tickets terminés (☑)
 
 | Ticket | État | Modèle IA | Titre | Fichier |
@@ -270,3 +272,4 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-141 | ☐ | sans | Le système monétaire en données : pièces courantes, réserve, pièces maison | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
 | V3.1-142 | ☑ | sans | Le mot de passe d'un lien de partage se contourne par un cookie forgé | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-143 | ☑ | sans | Journal : « supprimée … par X », et les fiches supprimées dans la fenêtre d'outil | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-144 | ☐ | sans | Audit de fin de V3.1 : les retouches d'affichage relevées en chemin | [`13-audit-de-fin.md`](backlog-v3.1/13-audit-de-fin.md) |
