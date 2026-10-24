@@ -22,6 +22,7 @@ describe.skipIf(!hasCreds)("suspendre, reprendre, recommencer un combat (V3.1-38
   let worldId: string;
   let campaignId: string;
   let combatId: string;
+  let pcEntityId: string;
 
   const typed = (a: ReusableAccount) => a.client as unknown as SupabaseClient<Database>;
   const lire = async () => {
@@ -60,6 +61,13 @@ describe.skipIf(!hasCreds)("suspendre, reprendre, recommencer un combat (V3.1-38
       { combat_id: combatId, source_kind: "custom", label: "Gobelin", initiative: 14, ac: 13, hp_max: 7, hp_current: 4, display_order: 0 },
       { combat_id: combatId, source_kind: "custom", label: "Loup", initiative: 9, ac: 12, hp_max: 11, hp_current: 11, display_order: 1 },
     ]);
+    const { data: pc } = await admin
+      .from("entities")
+      .insert({ world_id: worldId, slug: "naivara", name: "Naivara", entity_kind: "character", created_by: gm.id })
+      .select("id")
+      .single();
+    pcEntityId = pc!.id;
+    await admin.from("campaign_characters").insert({ campaign_id: campaignId, entity_id: pcEntityId, user_id: player.id, is_pc: true });
   });
 
   afterAll(async () => {
@@ -98,5 +106,35 @@ describe.skipIf(!hasCreds)("suspendre, reprendre, recommencer un combat (V3.1-38
       { hp_current: 4, initiative: null },
       { hp_current: 11, initiative: null },
     ]);
+  });
+
+  it("les PV et les états posés sur la fiche de la joueuse se voient dans l'initiative du MJ", async () => {
+    const { data: combat2 } = await admin
+      .from("combats")
+      .insert({ campaign_id: campaignId, name: "Second combat", status: "running", round: 1, turn_index: 0 })
+      .select("id")
+      .single();
+    const { data: termine } = await admin
+      .from("combats")
+      .insert({ campaign_id: campaignId, name: "Ancien combat", status: "ended", round: 4, turn_index: 0 })
+      .select("id")
+      .single();
+    await admin.from("combat_participants").insert([
+      { combat_id: combat2!.id, source_kind: "entity", entity_id: pcEntityId, label: "Naivara", initiative: 12, ac: 15, hp_max: 20, hp_current: 20, display_order: 0 },
+      { combat_id: termine!.id, source_kind: "entity", entity_id: pcEntityId, label: "Naivara", initiative: 12, ac: 15, hp_max: 20, hp_current: 20, display_order: 0 },
+    ]);
+
+    // La joueuse écrit l'état de jeu de SA fiche (RLS can_edit_entity), comme le font les routes de la fiche.
+    const state = { hp: { current: 13, temp: 5 }, hit_dice: {}, exhaustion: 0, conditions: ["prone"] };
+    const { error } = await typed(player).from("entity_runtime_state").insert({ entity_id: pcEntityId, campaign_id: campaignId, state });
+    expect(error).toBeNull();
+
+    const lignes = async (id: string) => {
+      const { data } = await admin.from("combat_participants").select("hp_current, temp_hp, conditions").eq("combat_id", id).single();
+      return data;
+    };
+    expect(await lignes(combat2!.id)).toEqual({ hp_current: 13, temp_hp: 5, conditions: ["prone"] });
+    // Un combat terminé garde son histoire.
+    expect(await lignes(termine!.id)).toEqual({ hp_current: 20, temp_hp: 0, conditions: [] });
   });
 });

@@ -46,3 +46,4 @@ Une migration (politiques, `check`, deux fonctions), `docs/SCHEMA.md`, tests RLS
 
 - « Quitter le combat » suspend : nouveau statut `paused` (choix de l'auteur, plutôt que réutiliser `ended` : une suspension et une fin voulue restent distinctes). Reprendre rend `running` ou `rolling` selon le round, sans recalculer round ni tour ; recommencer efface les initiatives et revient aux jets. Un combat suspendu n'est plus « en cours » pour les joueuses.
 - `combats` entre dans la publication temps réel (migration `20261024090000`) ; `combat_participants` n'y entre pas.
+- Les PV d'un PJ se répondent dans les deux sens : un déclencheur `security definer` sur `entity_runtime_state` recopie PV, PV temporaires et états vers ses lignes de combat non terminées. Il n'ouvre rien de plus que l'écriture de l'état de jeu de sa propre fiche (ADR 0043), et n'écrit que si une valeur change.
