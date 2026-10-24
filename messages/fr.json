@@ -1206,5 +1206,30 @@
     "action": "Action",
     "actionBonus": "Action bonus",
     "reaction": "Réaction"
+  },
+  "sauvegardes": {
+    "titreBandeau": "Sauvegarde demandée",
+    "resiste": "Résiste à {label}",
+    "lancer": "Lancer",
+    "vraiDe": "J'ai un vrai dé",
+    "laisserAuMj": "Laisser le MJ saisir",
+    "valeurDe": "Résultat du dé",
+    "modificateurInclus": "Modificateur inclus",
+    "saisieAideNu": "L'app ajoute votre modificateur de sauvegarde.",
+    "saisieAideTotal": "Saisissez le total, modificateur compris.",
+    "valider": "Valider",
+    "annuler": "Retour",
+    "erreurEnvoi": "La sauvegarde n'a pas pu être enregistrée.",
+    "reussie": "Sauvegarde réussie",
+    "ratee": "Sauvegarde ratée",
+    "verdict": "{verdict} : {total} contre DD {dd}",
+    "seReferme": "se referme dans {secondes} s…",
+    "listeTitre": "Sauvegardes demandées",
+    "attend": "attend {nom}",
+    "attendJoueuse": "attend la joueuse",
+    "aToi": "à toi",
+    "saisir": "Saisir",
+    "pastille": "{n, plural, one {# sauvegarde à répondre} other {# sauvegardes à répondre}}",
+    "enAttente": "En attente de la sauvegarde…"
   }
 }

@@ -96,3 +96,20 @@ export function demandesARepondre(liste: readonly DemandeSauvegarde[], qui: QuiR
 export function compteDuDe(liste: readonly DemandeSauvegarde[], qui: QuiRepond): number {
   return demandesARepondre(liste, qui).length;
 }
+
+/** L'outil Initiative ne montre que les demandes nées dans le combat ouvert. */
+export function demandesDuCombat(liste: readonly DemandeSauvegarde[], combatId: string): DemandeSauvegarde[] {
+  return liste.filter((d) => d.combat_id === combatId);
+}
+
+/** Qui doit répondre, pour la liste du MJ : la joueuse ciblée (nom connu ou non), sinon le MJ lui-même. */
+export type AttenteDeReponse = { qui: "joueuse"; nom: string | null } | { qui: "mj" };
+
+export function attenteDeReponse(demande: Pick<DemandeSauvegarde, "target_user_id">, nom: string | null): AttenteDeReponse {
+  return demande.target_user_id ? { qui: "joueuse", nom: nom && nom.trim() !== "" ? nom.trim() : null } : { qui: "mj" };
+}
+
+/** Le verdict revenu de la route de réponse, sous la forme que les écrans affichent (le serveur a tranché). */
+export function issueDepuisReponse(reponse: { passed: boolean; natural: number | null; total: number }, dc: number): IssueSauvegarde {
+  return { total: reponse.total, natural: reponse.natural, dc, reussie: reponse.passed };
+}

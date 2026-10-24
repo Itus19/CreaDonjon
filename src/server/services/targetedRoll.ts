@@ -36,6 +36,7 @@ import { listCampaignCharacters } from "@/src/server/repos/campaigns";
 import { insertSessionEvent, nextEventSeq } from "@/src/server/repos/sessions";
 import { insertDiceRoll } from "@/src/server/repos/diceRolls";
 import { getRuleEntryForWorld } from "@/src/server/services/rules";
+import { ABILITY_LABELS, type Ability } from "@/src/core/rules/abilities";
 import { serverRng } from "@/src/server/services/rng";
 import type { TargetedRollInput } from "@/lib/combats/schemas";
 
@@ -610,10 +611,14 @@ export async function resolveTargetedRoll(
       const rolledDamage = cast.damage?.total ?? 0;
       const ability = mechanics.save.ability.toLowerCase();
       const imposed = mechanics.target?.immune_conditions_block ?? [];
+      // V3.1-112 : le libellé se lit sur le bandeau de la cible (« Résiste à
+      // Moquerie cruelle · JS Sagesse DD 13 ») : le nom traduit du sort, pas sa clé.
+      const spellName = (await getRuleEntryForWorld(supabase, campaign.worldId, action.spellKey, params.locale))?.name ?? action.spellKey;
+      const abilityLabel = ABILITY_LABELS[ability as Ability] ?? ability.toUpperCase();
       pendingSave = {
         ability,
         dc,
-        label: `${action.spellKey} — Sauvegarde ${ability.toUpperCase()} DD ${dc}`,
+        label: `${spellName} · JS ${abilityLabel} DD ${dc}`,
         effect: zSaveRequestEffect.parse({
           on_fail: { damage: rolledDamage, conditions: imposed },
           on_success: { damage: damageAfterSave(rolledDamage, true, mechanics.save.effectOnSuccess), conditions: [] },

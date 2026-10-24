@@ -19,6 +19,9 @@ import {
 } from "@/lib/ui/outilTable";
 import { lireBourse, posterGeste, relirePj, type Resultat } from "@/lib/ui/tableApi";
 import type { TablePc } from "@/src/server/services/tableParty";
+import ListeSauvegardesMj from "./sauvegarde/ListeSauvegardesMj";
+import { useSauvegardes } from "./SauvegardesProvider";
+import type { DemandeSauvegarde } from "@/lib/ui/sauvegardes";
 import FeuilleToutelaTable, { type ModeToutelaTable } from "./FeuilleToutelaTable";
 import { useMatchMedia, WINDOWS_MOBILE_QUERY } from "./useMatchMedia";
 
@@ -55,6 +58,7 @@ export default function OutilTable({
   conditions: string[];
 }) {
   const t = useTranslations("table");
+  const { enAttente: sauvegardes } = useSauvegardes();
   const estTelephone = useMatchMedia(WINDOWS_MOBILE_QUERY);
   const [pcs, setPcs] = useState<TablePc[]>(party);
   const [occupes, setOccupes] = useState<Record<string, boolean>>({});
@@ -107,6 +111,18 @@ export default function OutilTable({
     setD20((prev) => ({ ...prev, [pc.entityId]: typeof natural === "number" ? natural : null }));
   }
 
+  /** Une sauvegarde répondue a pu changer les PV ou les états de sa cible : on relit ce seul PJ. */
+  async function relireCible(demande: DemandeSauvegarde) {
+    const id = demande.target_entity_id;
+    if (!id) return;
+    const etat = await relirePj(id, campaignId);
+    if (etat.ok) {
+      setPcs((prev) => prev.map((p) => (p.entityId === id ? fusionnerEtat(p, etat.donnees) : p)));
+    } else {
+      setErreurs((prev) => ({ ...prev, [id]: etat.erreur ?? t("erreurRelecture") }));
+    }
+  }
+
   if (!campaignId) {
     return <p className="text-sm italic text-ink-muted">{t("aucuneCampagne")}</p>;
   }
@@ -132,6 +148,17 @@ export default function OutilTable({
         <h1 className="block-title text-base">{t("titre")}</h1>
         <p className="text-xs text-ink-muted">{t("description")}</p>
       </div>
+
+      {/* V3.1-112 : toutes les sauvegardes en attente (hors combat ; celles d'un combat ouvert y figurent aussi). */}
+      <ListeSauvegardesMj
+        campaignId={campaignId}
+        demandes={sauvegardes}
+        nomDeLaCible={(d) => {
+          const pc = pcs.find((p) => p.entityId === d.target_entity_id);
+          return pc ? (pc.playerName ?? pc.name) : null;
+        }}
+        onRepondue={(d) => void relireCible(d)}
+      />
 
       {pcs.length === 0 ? (
         <p className="text-sm italic text-ink-muted">{t("aucunPj")}</p>

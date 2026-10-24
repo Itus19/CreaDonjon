@@ -333,7 +333,10 @@ export function sortieDepuisJetCible(
   } else {
     what = effetDesChanges(reponse.changes) ?? libelle("soin", cible);
   }
+  // V3.1-112 : un sort à sauvegarde laisse la réponse à la cible ; aucun total tant qu'elle n'a pas répondu.
+  const attendUneSauvegarde = kind === "spell_save" && reponse.saveRequestId !== null;
   return {
+    ...(attendUneSauvegarde ? { sauvegardeId: reponse.saveRequestId ?? undefined, sansTotal: true } : {}),
     who: acteur,
     what,
     chips: [],

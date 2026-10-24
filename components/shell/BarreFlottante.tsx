@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { CLASSE_FOND_DE, IconeDe } from "./Rail";
 import { useDiceRoll } from "./DiceRollPanel";
+import PastilleDe, { useLibelleDe } from "./PastilleDe";
 
 /**
  * Hauteur reservee en bas du contenu des pages, sous 768 px, pour que rien ne
@@ -83,6 +84,7 @@ function Entree({ entree }: { entree: EntreeBarre }) {
 export default function BarreFlottante({ entrees, libelle }: { entrees: EntreeBarre[]; libelle: string }) {
   const t = useTranslations("shell");
   const { ouvrirVolet, enregistrerDalle } = useDiceRoll();
+  const libelleDe = useLibelleDe(t("ouvrirVoletDes"));
   useEffect(() => enregistrerDalle("telephone"), [enregistrerDalle]);
 
   return (
@@ -94,10 +96,11 @@ export default function BarreFlottante({ entrees, libelle }: { entrees: EntreeBa
       <button
         type="button"
         onClick={ouvrirVolet}
-        aria-label={t("ouvrirVoletDes")}
+        aria-label={libelleDe}
         className={`absolute left-1/2 top-0 z-[5] flex h-[52px] w-[52px] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-[6px] border-panel ${CLASSE_FOND_DE} transition-transform active:scale-95 motion-reduce:transition-none`}
       >
         <IconeDe />
+        <PastilleDe className="-right-2 -top-2" />
       </button>
       <div className="grid grid-cols-[1fr_1fr_1fr_56px_1fr_1fr_1fr]">
         {entrees.slice(0, 3).map((e) => (

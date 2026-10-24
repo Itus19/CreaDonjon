@@ -263,6 +263,19 @@ describe("sortieDepuisJetCible", () => {
   });
 });
 
+describe("sortieDepuisJetCible : sauvegarde demandée (V3.1-112)", () => {
+  const libelle = (cle: string, cible: string) => `${cle} — ${cible}`;
+  const base = { ok: true as const, verdict: null, amount: null, facts: [], changes: [], hints: [], ignored: [], targetOutOfFight: false, chained: null, rollEventId: "r", saveRequestId: null, dice: null };
+  it("un sort à sauvegarde porte la demande, sans total", () => {
+    const sortie = sortieDepuisJetCible({ ...base, saveRequestId: "s1" }, "spell_save", { acteur: "Mira", cible: "Worg", libelle });
+    expect(sortie).toMatchObject({ sauvegardeId: "s1", sansTotal: true });
+  });
+  it("sans demande, ou pour un autre genre de jet, rien de tel", () => {
+    expect(sortieDepuisJetCible(base, "spell_save", { acteur: "Mira", cible: "Worg", libelle }).sauvegardeId).toBeUndefined();
+    expect(sortieDepuisJetCible({ ...base, saveRequestId: "s1" }, "damage", { acteur: "Mira", cible: "Worg", libelle }).sauvegardeId).toBeUndefined();
+  });
+});
+
 describe("jets ciblés : dés, avantage, suite (V3.1-38 suite)", () => {
   const libelle = (cle: string, cible: string) => `${cle} — ${cible}`;
   const base = { ok: true as const, verdict: null, amount: null, facts: [], changes: [], hints: [], ignored: [], targetOutOfFight: false, chained: null, rollEventId: "r", saveRequestId: null, dice: null };

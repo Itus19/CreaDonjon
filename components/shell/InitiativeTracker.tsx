@@ -21,6 +21,9 @@ import * as api from "@/lib/ui/initiativeApi";
 import BandeauCombat from "./initiative/BandeauCombat";
 import FormulaireAjout from "./initiative/FormulaireAjout";
 import ListeCombats from "./initiative/ListeCombats";
+import ListeSauvegardesMj from "./sauvegarde/ListeSauvegardesMj";
+import { useSauvegardes } from "./SauvegardesProvider";
+import { demandesDuCombat } from "@/lib/ui/sauvegardes";
 import LigneParticipant from "./initiative/LigneParticipant";
 import { detailsDepuisCaracteristiques, type DetailsParticipant } from "./initiative/ActionsParticipant";
 import { useCombatTempsReel } from "./initiative/useCombatTempsReel";
@@ -54,6 +57,7 @@ export default function InitiativeTracker({
   conditions: string[];
 }) {
   const t = useTranslations("initiative");
+  const { enAttente: enAttenteSauvegardes } = useSauvegardes();
   const [combat, setCombat] = useState<CombatRow | null>(initialCombat?.combat ?? null);
   const [participants, setParticipants] = useState<CombatParticipantRow[]>(initialCombat?.participants ?? []);
   const [combatsList, setCombatsList] = useState<CombatRow[]>(savedCombats);
@@ -395,6 +399,19 @@ export default function InitiativeTracker({
           onTour: (sens) => void changerTour(sens),
           onFinContinuer: () => setFinRefusee(true),
           onFinTerminer: () => void terminer(),
+        }}
+      />
+
+      {/* V3.1-112 : les sauvegardes demandées dans ce combat (rien tant qu'il n'y en a pas). */}
+      <ListeSauvegardesMj
+        campaignId={campaignId}
+        demandes={demandesDuCombat(enAttenteSauvegardes, combat.id)}
+        nomDeLaCible={(d) => participants.find((x) => x.id === d.target_id)?.label ?? null}
+        onRepondue={() => {
+          relire(combat.id).catch((e: unknown) => {
+            console.error("Relecture après une sauvegarde en échec", e);
+            setErreur(e instanceof Error ? e.message : t("erreurLecture"));
+          });
         }}
       />
 

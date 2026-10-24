@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   appliquerSignal,
   compteDuDe,
+  attenteDeReponse,
   demandesARepondre,
+  demandesDuCombat,
+  issueDepuisReponse,
   issueDeReponse,
   type DemandeSauvegarde,
   type EtatSauvegardes,
@@ -90,5 +93,23 @@ describe("demandesARepondre et compteDuDe", () => {
   it("la pastille compte les demandes à répondre ; une joueuse sans compte n'en voit aucune", () => {
     expect(compteDuDe(liste, { userId: "mj", isMj: true, laisseesAuMj: new Set() })).toBe(3);
     expect(compteDuDe(liste, { userId: null, isMj: false, laisseesAuMj: new Set() })).toBe(0);
+  });
+});
+
+describe("écrans des sauvegardes", () => {
+  it("demandesDuCombat ne garde que le combat ouvert", () => {
+    const liste = [demande({ id: "a", combat_id: "c1" }), demande({ id: "b", combat_id: "c2" }), demande({ id: "c", combat_id: null })];
+    expect(demandesDuCombat(liste, "c1").map((d) => d.id)).toEqual(["a"]);
+  });
+
+  it("attenteDeReponse : la joueuse ciblée, avec ou sans nom, sinon le MJ", () => {
+    expect(attenteDeReponse({ target_user_id: "u" }, " Mira ")).toEqual({ qui: "joueuse", nom: "Mira" });
+    expect(attenteDeReponse({ target_user_id: "u" }, null)).toEqual({ qui: "joueuse", nom: null });
+    expect(attenteDeReponse({ target_user_id: "u" }, "  ")).toEqual({ qui: "joueuse", nom: null });
+    expect(attenteDeReponse({ target_user_id: null }, "Mira")).toEqual({ qui: "mj" });
+  });
+
+  it("issueDepuisReponse reprend le verdict du serveur", () => {
+    expect(issueDepuisReponse({ passed: false, natural: 4, total: 9 }, 13)).toEqual({ total: 9, natural: 4, dc: 13, reussie: false });
   });
 });

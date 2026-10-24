@@ -1205,5 +1205,30 @@
     "action": "Action",
     "actionBonus": "Bonus action",
     "reaction": "Reaction"
+  },
+  "sauvegardes": {
+    "titreBandeau": "Saving throw requested",
+    "resiste": "Resist {label}",
+    "lancer": "Roll",
+    "vraiDe": "I have a real die",
+    "laisserAuMj": "Let the GM enter it",
+    "valeurDe": "Die result",
+    "modificateurInclus": "Modifier included",
+    "saisieAideNu": "The app adds your saving throw modifier.",
+    "saisieAideTotal": "Enter the total, modifier included.",
+    "valider": "Confirm",
+    "annuler": "Back",
+    "erreurEnvoi": "The saving throw could not be saved.",
+    "reussie": "Saving throw passed",
+    "ratee": "Saving throw failed",
+    "verdict": "{verdict}: {total} against DC {dd}",
+    "seReferme": "closing in {secondes}s…",
+    "listeTitre": "Requested saving throws",
+    "attend": "waiting for {nom}",
+    "attendJoueuse": "waiting for the player",
+    "aToi": "yours to answer",
+    "saisir": "Enter",
+    "pastille": "{n, plural, one {# saving throw to answer} other {# saving throws to answer}}",
+    "enAttente": "Waiting for the saving throw…"
   }
 }

@@ -150,6 +150,8 @@ export interface SortieJet {
   suite?: SuiteDeJet;
   /** V3.1-106 : aucun dé ni total à montrer (un refus du MJ, un sort sans dégâts) ; la zone garde « — » et le texte `what` parle seul. */
   sansTotal?: boolean;
+  /** V3.1-112 : la sauvegarde demandée par ce jet ; l'outil affiche « En attente… », puis le verdict quand il revient. */
+  sauvegardeId?: string;
 }
 
 /** Un geste proposé après un jet : son libellé, et le jet qu'il lance (même forme qu'un `lancer`). */

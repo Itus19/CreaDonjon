@@ -36,6 +36,7 @@ import {
 } from "@/lib/ui/outilDes";
 import { messageErreur, posterJet } from "@/lib/ui/outilDesApi";
 import { useMatchMedia } from "./useMatchMedia";
+import { useSauvegardes } from "./SauvegardesProvider";
 
 /**
  * L'outil de dés unique (V3.1-33, ADR 0035) : le même corps dans la feuille du
@@ -141,6 +142,8 @@ interface ResultatLocal {
   relance: boolean;
   /** V3.1-38 (suite) : le geste qui suit ce jet (« Lancer les dégâts »), tant qu'il n'est pas fait. */
   suite?: SuiteDeJet;
+  /** V3.1-112 : la sauvegarde que ce jet a demandée, dont le verdict s'affiche sous le jet. */
+  sauvegardeId?: string;
 }
 
 export default function OutilDes({
@@ -233,7 +236,7 @@ export default function OutilDes({
         setErreur(t("erreurJet"));
         return;
       }
-      setResultat({ jet: jetDepuisSortie(sortie), contexte: { dc: sortie.dc, avantage: "normal", secret: false, ddPrive: false }, relance: false, suite: sortie.suite });
+      setResultat({ jet: jetDepuisSortie(sortie), contexte: { dc: sortie.dc, avantage: "normal", secret: false, ddPrive: false }, relance: false, suite: sortie.suite, sauvegardeId: sortie.sauvegardeId });
     } catch (e) {
       console.error("Jet de dés non lancé", e);
       setErreur(e instanceof ErreurLancer ? e.message : t("erreurJet"));
@@ -276,7 +279,7 @@ export default function OutilDes({
             setErreur(t("erreurJet"));
             return;
           }
-          setResultat({ jet: jetDepuisSortie(sortie), contexte: { dc: sortie.dc, avantage: avantageEff, secret: false, ddPrive: false }, relance: false, suite: sortie.suite });
+          setResultat({ jet: jetDepuisSortie(sortie), contexte: { dc: sortie.dc, avantage: avantageEff, secret: false, ddPrive: false }, relance: false, suite: sortie.suite, sauvegardeId: sortie.sauvegardeId });
         } catch (e) {
           console.error("Jet de dés non lancé", e);
           setErreur(e instanceof ErreurLancer ? e.message : t("erreurJet"));
@@ -486,6 +489,7 @@ export default function OutilDes({
           la réserve vide coupait « Lancer » : là, mieux vaut un léger saut. */}
       <div className="flex min-h-[3.25rem] flex-col gap-1 text-xs text-ink-soft [@media(max-height:700px)]:min-h-0" aria-live="polite">
         {termine && jetAffiche && <DetailsJet jet={jetAffiche} ton={ton} />}
+        {termine && resultat?.sauvegardeId && <VerdictSauvegarde requestId={resultat.sauvegardeId} />}
         {erreur && (
           <p role="alert" className="text-danger">
             {erreur}
@@ -922,6 +926,22 @@ function Carre({
     >
       {valeur}
     </div>
+  );
+}
+
+/**
+ * V3.1-112 — la sauvegarde que le jet a demandée : « En attente… » tant que la
+ * cible n'a pas répondu, puis le verdict que le SERVEUR a tranché. Aucune
+ * requête : l'issue arrive par le canal de `SauvegardesProvider`.
+ */
+function VerdictSauvegarde({ requestId }: { requestId: string }) {
+  const t = useTranslations("sauvegardes");
+  const issue = useSauvegardes().issue(requestId);
+  if (!issue) return <p className="italic text-ink-muted">{t("enAttente")}</p>;
+  return (
+    <p className={`font-semibold ${issue.reussie ? "text-success" : "text-danger"}`}>
+      {t("verdict", { verdict: issue.reussie ? t("reussie") : t("ratee"), total: issue.total, dd: issue.dc })}
+    </p>
   );
 }
 

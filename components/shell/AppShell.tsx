@@ -5,6 +5,7 @@ import DiceRollProvider from "./DiceRollPanel";
 import ChatUnreadProvider from "./useChatUnread";
 import SauvegardesProvider from "./SauvegardesProvider";
 import type { DemandeSauvegarde } from "@/lib/ui/sauvegardes";
+import BandeauSauvegarde from "./sauvegarde/BandeauSauvegarde";
 import BarreTelephoneMj from "./BarreTelephoneMj";
 
 /** Une seule référence : le fournisseur repart de la liste quand elle change. */
@@ -57,17 +58,12 @@ export default function AppShell({
   const pathname = usePathname();
   const isMj = pathname.startsWith(`/m/${worldSlug}/mj`);
   return (
-    <DiceRollProvider campaignId={campaignId} isGm={isMj}>
-      <ChatUnreadProvider
-        campaignId={campaignId}
-        isMj={isMj}
-        initialUnreadCount={initialUnreadCount}
-      >
-        <SauvegardesProvider
+    <SauvegardesProvider campaignId={campaignId} userId={userId} isMj={isMj} initiales={initialSaveRequests}>
+      <DiceRollProvider campaignId={campaignId} isGm={isMj}>
+        <ChatUnreadProvider
           campaignId={campaignId}
-          userId={userId}
           isMj={isMj}
-          initiales={initialSaveRequests}
+          initialUnreadCount={initialUnreadCount}
         >
           {/* `flex-1 min-h-0` plutot qu'une hauteur fixe (`h-dvh`) : ce conteneur
             n'est pas toujours le seul enfant de `<body>` — le bandeau "voir comme"
@@ -93,9 +89,12 @@ export default function AppShell({
             et `/apercu`, dont la coquille joueur porte sa propre barre). */}
           <BarreTelephoneMj worldSlug={worldSlug} />
 
+          {/* V3.1-112 : le bandeau de la cible d'une sauvegarde demandée (hors section MJ). */}
+          <BandeauSauvegarde campaignId={campaignId} worldSlug={worldSlug} />
+
           {overlay}
-        </SauvegardesProvider>
-      </ChatUnreadProvider>
-    </DiceRollProvider>
+        </ChatUnreadProvider>
+      </DiceRollProvider>
+    </SauvegardesProvider>
   );
 }

@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { CLE_RAIL_REPLIE, ecrireRailReplie, lireRailReplie } from "@/lib/ui/rail";
 import FeuilleDuBas from "@/components/shared/FeuilleDuBas";
 import { useDiceRoll } from "./DiceRollPanel";
+import PastilleDe, { useLibelleDe } from "./PastilleDe";
 import RadioWidget from "./RadioWidget";
 import { useMatchMedia, WINDOWS_MOBILE_QUERY } from "./useMatchMedia";
 
@@ -628,6 +629,7 @@ export function OutilsDalle({ worldSlug }: { worldSlug: string }) {
   const { ouvrirVolet, enregistrerDalle } = useDiceRoll();
   // Le de est l'ancre du panneau de l'outil de des (V3.1-33).
   const deRef = useRef<HTMLButtonElement>(null);
+  const libelleDe = useLibelleDe(t("ouvrirVoletDes"));
   // Le bouton de des flottant se retire tant qu'une dalle est montee (et
   // seulement alors) : une page de monde sans rail garde son de.
   useEffect(() => enregistrerDalle("ordinateur", deRef), [enregistrerDalle]);
@@ -638,10 +640,11 @@ export function OutilsDalle({ worldSlug }: { worldSlug: string }) {
         ref={deRef}
         type="button"
         onClick={ouvrirVolet}
-        aria-label={t("ouvrirVoletDes")}
+        aria-label={libelleDe}
         className={`absolute left-1/2 top-0 z-[5] flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-[6px] border-panel ${CLASSE_FOND_DE} transition-transform hover:scale-105 motion-reduce:transition-none`}
       >
         <IconeDe />
+        <PastilleDe className="-right-2 -top-2" />
       </button>
       <RadioWidget worldSlug={worldSlug} variante="rail" replie={replie} />
     </RailPart>
