@@ -21,6 +21,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   const participant = await patchCombatParticipant(supabase, {
     participantId,
     patch: {
+      label: parsed.data.label,
       initiative: parsed.data.initiative,
       ac: parsed.data.ac,
       hpCurrent: parsed.data.hpCurrent,

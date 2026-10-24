@@ -48,6 +48,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json(participant, { status: 201 });
   }
 
-  const participant = await addCustomParticipant(supabase, { combatId, label: parsed.data.label, isAlly: parsed.data.isAlly });
+  const participant = await addCustomParticipant(supabase, {
+    combatId,
+    label: parsed.data.label,
+    isAlly: parsed.data.isAlly,
+    ac: parsed.data.ac,
+    hpMax: parsed.data.hpMax,
+  });
   return NextResponse.json(participant, { status: 201 });
 }

@@ -168,9 +168,22 @@ export interface PreReglage {
    * rend de quoi afficher le jet. Grille, modificateur, avantage et DD sont alors
    * figés (ils le sont dans la demande). Échec : `null`, ou une `ErreurLancer`.
    */
-  lancer?: () => Promise<SortieJet | null>;
+  lancer?: (cibleId: string | null) => Promise<SortieJet | null>;
   /** Avec `lancer` : le DD posé par la demande, affiché figé avant le lancer (`null` : aucun, ou une CA que le serveur lit). */
   dc?: number | null;
+  /**
+   * V3.1-38 : les participants qu'on peut viser. Avec elles, « Cibler » ouvre la
+   * liste et « Lancer » attend une cible : `lancer` reçoit son identifiant.
+   */
+  cibles?: CibleDeJet[];
+}
+
+/** Un participant du combat qu'un jet peut viser (V3.1-38). */
+export interface CibleDeJet {
+  id: string;
+  label: string;
+  /** Une ligne sous le nom (« Allié », « Adversaire »…), déjà traduite. */
+  info?: string;
 }
 
 /** Ce que la fiche montre de son test avant le lancer. */

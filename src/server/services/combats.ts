@@ -290,7 +290,7 @@ export async function addStatblockParticipant(
 /** Saisie libre (le piege qui agit a l'initiative 20, un PNJ sans fiche) — aucune CA/PV connus, le MJ les saisit a la main ensuite. */
 export async function addCustomParticipant(
   supabase: TypedClient,
-  params: { combatId: string; label: string; isAlly: boolean }
+  params: { combatId: string; label: string; isAlly: boolean; ac?: number; hpMax?: number }
 ): Promise<CombatParticipantRow> {
   return insertCombatParticipant(supabase, {
     combatId: params.combatId,
@@ -298,9 +298,9 @@ export async function addCustomParticipant(
     entityId: null,
     ruleKey: null,
     label: params.label,
-    ac: null,
-    hpMax: null,
-    hpCurrent: null,
+    ac: params.ac ?? null,
+    hpMax: params.hpMax ?? null,
+    hpCurrent: params.hpMax ?? null,
     isAlly: params.isAlly,
     displayOrder: await nextDisplayOrder(supabase, params.combatId),
   });
@@ -549,6 +549,7 @@ function concentrationFromParticipant(raw: unknown, current: Concentration | nul
 }
 
 export interface ParticipantPatchInput {
+  label?: string;
   initiative?: number;
   ac?: number;
   hpCurrent?: number;
@@ -585,6 +586,7 @@ export async function patchCombatParticipant(
   const before = deathBefore ? { ...participant, death_saves: deathBefore } : { ...participant };
 
   const rowPatch = {
+    label: params.patch.label,
     initiative: params.patch.initiative,
     ac: params.patch.ac,
     hpCurrent: params.patch.hpCurrent,
@@ -665,6 +667,7 @@ export async function undoLastCombatAction(supabase: TypedClient, combatId: stri
     const before = last.payload.before as unknown as CombatParticipantRow;
     const beforeDeath = (last.payload.before as { death_saves?: { success: number; fail: number } }).death_saves;
     await updateCombatParticipant(supabase, last.payload.targetId, {
+      label: before.label,
       initiative: before.initiative,
       hpCurrent: before.hp_current,
       tempHp: before.temp_hp,

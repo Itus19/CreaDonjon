@@ -37,10 +37,19 @@ export const addParticipantSchema = z.discriminatedUnion("sourceKind", [
     label: z.string().trim().min(1),
     isAlly: z.boolean().default(false),
   }),
-  z.object({ sourceKind: z.literal("custom"), label: z.string().trim().min(1), isAlly: z.boolean().default(false) }),
+  z.object({
+    sourceKind: z.literal("custom"),
+    label: z.string().trim().min(1),
+    isAlly: z.boolean().default(false),
+    // V3.1-38 : un adversaire saisi à la main reçoit CA et PV dès l'ajout.
+    ac: z.number().int().positive().max(99).optional(),
+    hpMax: z.number().int().positive().max(9999).optional(),
+  }),
 ]);
 
 export const patchParticipantSchema = z.object({
+  /** V3.1-38 : renommer (« Monstre non identifié ») ; le joueur ne reçoit que ce nom. */
+  label: z.string().trim().min(1).max(80).optional(),
   initiative: z.number().int().optional(),
   ac: z.number().int().positive().optional(),
   hpCurrent: z.number().int().nonnegative().optional(),

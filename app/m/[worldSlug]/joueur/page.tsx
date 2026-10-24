@@ -9,7 +9,10 @@ import { getEntityById } from "@/src/server/repos/entities";
 import { listVisibleBlocks } from "@/src/server/services/blocks";
 import { lancerFicheAvecPage } from "@/src/server/services/ficheAvecPage";
 import type { Locale } from "@/src/i18n/request";
+import { getPlayerCombatView } from "@/src/server/services/playerCombatView";
 import ParticipantCharacterSheet from "@/components/shell/ParticipantCharacterSheet";
+import CombatJoueur from "@/components/shell/combat/CombatJoueur";
+import { VUE_AUCUN_COMBAT, type VueCombatJoueur } from "@/lib/ui/combatJoueur";
 import ChooseCharacterScreen from "./ChooseCharacterScreen";
 
 /**
@@ -75,11 +78,14 @@ export default async function JoueurPersonnagePage({
   // V3.1-62, étape 3 (C1, ADR 0056) : les blocs arrivent avec la page (même
   // filtre de visibilité que `GET /api/entities/[id]/blocks`), et la fiche
   // calculée part en promesse, pour la campagne que la fiche demandera.
-  const [entity, blocks, locale] = await Promise.all([
+  // V3.1-38 (C1) : le combat en cours part avec la page, en parallèle.
+  const [entity, blocks, locale, vueCombat] = await Promise.all([
     getEntityById(supabase, entityId),
     listVisibleBlocks(supabase, world.id, entityId, user.id),
     getLocale(),
+    getPlayerCombatView(supabase, campaign.id),
   ]);
+  const vueInitiale: VueCombatJoueur = vueCombat.kind === "ok" ? vueCombat : VUE_AUCUN_COMBAT;
   if (!entity) notFound();
   const t = await getTranslations("choixPersonnage");
   const ficheAvecPage = lancerFicheAvecPage(supabase, {
@@ -104,15 +110,17 @@ export default async function JoueurPersonnagePage({
           {t("reclame", { prenom: entity.name.split(" ")[0] })}
         </p>
       )}
-      <ParticipantCharacterSheet
-        worldSlug={worldSlug}
-        campaignId={campaign.id}
-        entityId={entityId}
-        entityName={entity.name}
-        entityVersion={entity.version}
-        initialBlocks={blocks}
-        ficheAvecPage={ficheAvecPage}
-      />
+      <CombatJoueur campaignId={campaign.id} entityId={entityId} vueInitiale={vueInitiale}>
+        <ParticipantCharacterSheet
+          worldSlug={worldSlug}
+          campaignId={campaign.id}
+          entityId={entityId}
+          entityName={entity.name}
+          entityVersion={entity.version}
+          initialBlocks={blocks}
+          ficheAvecPage={ficheAvecPage}
+        />
+      </CombatJoueur>
     </div>
   );
 }

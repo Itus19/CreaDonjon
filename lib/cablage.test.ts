@@ -19,7 +19,7 @@ import { describe, expect, it } from "vitest";
  * (rare) le justifie dans son commit et dans docs/CABLAGE.md.
  */
 const PLAFONDS = {
-  fichiersChargeantApresAffichage: 58, // 18 oct. : AdminPanel.tsx supprimé, PageAdministration reçoit tout avec la page (V3.1-87) ; MyInvitePanel recoit son invitation avec la page (V3.1-80) ; 17 oct. : NomDeRegle.tsx, charge au toucher (docs/CABLAGE.md §6)
+  fichiersChargeantApresAffichage: 57, // 24 oct. : InitiativeTracker.tsx ne charge plus rien, ses appels vivent dans lib/ui/initiativeApi.ts (V3.1-38) ; 18 oct. : AdminPanel.tsx supprimé, PageAdministration reçoit tout avec la page (V3.1-87) ; MyInvitePanel recoit son invitation avec la page (V3.1-80) ; 17 oct. : NomDeRegle.tsx, charge au toucher (docs/CABLAGE.md §6)
   rafraichissementsComplets: 14,
   rechargementsNavigateur: 2,
   catchMuets: 0,

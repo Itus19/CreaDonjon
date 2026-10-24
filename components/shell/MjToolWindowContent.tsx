@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import type { MjToolWindowData } from "./mjToolWindows";
 import CampaignsPanel from "./CampaignsPanel";
 import ChatThreadsPanel from "./ChatThreadsPanel";
@@ -31,6 +32,7 @@ const NO_CAMPAIGN_MESSAGE = "Aucune campagne dans ce monde — créez-en une dan
  * une deuxieme implementation.
  */
 export default function MjToolWindowContent({ worldSlug, data }: { worldSlug: string; data: MjToolWindowData }) {
+  const tInitiative = useTranslations("initiative");
   switch (data.tool) {
     case "chat":
       return (
@@ -89,10 +91,8 @@ export default function MjToolWindowContent({ worldSlug, data }: { worldSlug: st
       return (
         <div className="flex flex-col gap-4">
           <div>
-            <h1 className="block-title text-base">Initiative</h1>
-            <p className="text-xs text-ink-muted">
-              Suivez l&apos;ordre du tour, les points de vie et les conditions d&apos;un combat.
-            </p>
+            <h1 className="block-title text-base">{tInitiative("titre")}</h1>
+            <p className="text-xs text-ink-muted">{tInitiative("description")}</p>
           </div>
           {data.hasCampaign && data.campaignId ? (
             <InitiativeTracker
@@ -105,7 +105,7 @@ export default function MjToolWindowContent({ worldSlug, data }: { worldSlug: st
               conditions={data.conditions}
             />
           ) : (
-            <p className="text-sm italic text-ink-muted">{NO_CAMPAIGN_MESSAGE}</p>
+            <p className="text-sm italic text-ink-muted">{tInitiative("aucuneCampagne")}</p>
           )}
         </div>
       );

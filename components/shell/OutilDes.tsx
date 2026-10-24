@@ -172,6 +172,9 @@ export default function OutilDes({
   const [resultat, setResultat] = useState<ResultatLocal | null>(null);
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
+  /** V3.1-38 : la cible choisie parmi `actif.cibles`, et la liste des cibles ouverte ou non. */
+  const [cibleId, setCibleId] = useState<string | null>(null);
+  const [listeCibles, setListeCibles] = useState(false);
 
   const action = actif?.action;
   const lancerFourni = actif?.lancer;
@@ -191,6 +194,8 @@ export default function OutilDes({
     setSecret(false);
     setResultat(null);
     setErreur(null);
+    setCibleId(null);
+    setListeCibles(false);
   }
 
   async function lancer(relance: boolean) {
@@ -214,7 +219,7 @@ export default function OutilDes({
         setErreur(null);
         try {
           const attente = new Promise<void>((resolve) => setTimeout(resolve, reduit ? 0 : ATTENTE_MIN_MS));
-          const [sortie] = await Promise.all([lancerFourni(), attente]);
+          const [sortie] = await Promise.all([lancerFourni(cibleId), attente]);
           if (sortie === null) {
             setErreur(t("erreurJet"));
             return;
@@ -302,7 +307,9 @@ export default function OutilDes({
   });
 
   const titre = titreOutil(actif?.label, t("titreLibre"));
-  const lancerDesactive = enCours || (!verrouille && !peutLancer(reserve));
+  const cibles = actif?.cibles;
+  const cibleChoisie = cibles?.find((c) => c.id === cibleId) ?? null;
+  const lancerDesactive = enCours || (!verrouille && !peutLancer(reserve)) || (cibles !== undefined && cibleChoisie === null);
 
   return (
     <div className="flex flex-col gap-3 text-ink">
@@ -443,15 +450,45 @@ export default function OutilDes({
         )}
       </div>
 
+      {/* V3.1-38 : la liste des participants qu'on peut viser (ouverte par « Cibler »). */}
+      {cibles !== undefined && listeCibles && (
+        <ul aria-label={t("ciblerChoisir")} className="flex max-h-40 flex-col gap-1 overflow-y-auto rounded-xl border border-edge bg-panel-sunken p-1">
+          {cibles.length === 0 && <li className="px-2 py-1 text-xs text-ink-muted">{t("ciblerAucune")}</li>}
+          {cibles.map((c) => (
+            <li key={c.id}>
+              <button
+                type="button"
+                onClick={() => {
+                  setCibleId(c.id);
+                  setListeCibles(false);
+                }}
+                aria-pressed={c.id === cibleId}
+                className={`flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition-colors hover:bg-panel-raised ${
+                  c.id === cibleId ? "border border-accent text-accent" : "border border-transparent text-ink"
+                }`}
+              >
+                <span className="min-w-0 truncate font-semibold">{c.label}</span>
+                {c.info && <span className="shrink-0 text-ink-muted">{c.info}</span>}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
       {/* Cibler · Lancer · Effacer. */}
       <div className="flex gap-2">
         <button
           type="button"
-          disabled
-          title={t("ciblerBientot")}
-          className="rounded-lg border border-edge bg-panel-raised px-3 py-2 text-xs font-semibold text-ink-muted opacity-50"
+          disabled={cibles === undefined}
+          aria-expanded={cibles !== undefined ? listeCibles : undefined}
+          onClick={() => setListeCibles((v) => !v)}
+          title={cibles === undefined ? t("ciblerIndisponible") : undefined}
+          className={`flex max-w-[45%] flex-col items-start rounded-lg border bg-panel-raised px-3 py-2 text-xs font-semibold transition-colors ${
+            cibles === undefined ? "border-edge text-ink-muted opacity-50" : cibleChoisie ? "border-accent text-accent" : "border-edge text-ink hover:border-edge-strong"
+          }`}
         >
-          {t("cibler")}
+          <span>{t("cibler")}</span>
+          {cibleChoisie && <span className="max-w-full truncate text-xs font-medium">{cibleChoisie.label}</span>}
         </button>
         <button
           type="button"
@@ -474,6 +511,29 @@ export default function OutilDes({
       <ListeJets jets={jets} etat={etatHistorique} onReessayer={onReessayer} />
     </div>
   );
+}
+
+/**
+ * V3.1-38 : la zone de résultat de l'outil, seule, pour l'invitation à
+ * l'initiative (même scintillement, même révélation que partout). `jet` est
+ * ce que le SERVEUR a rendu ; `enCours` fait défiler les chiffres décoratifs
+ * en attendant sa réponse.
+ */
+export function ZoneResultatDuJet({ jet, enCours }: { jet: JetAffiche | null; enCours: boolean }) {
+  const reduit = useMatchMedia(REDUIT_QUERY);
+  const items: ItemZone[] = jet
+    ? carresDuJet(jet.groups, jet.pair).map((c) =>
+        c.type === "paire"
+          ? { faces: [20, 20], mode: c.mode, valeurs: [...c.rolls], retenu: c.keptIndex }
+          : { faces: [c.faces], valeurs: [c.valeur] }
+      )
+    : [{ faces: [20] }];
+  const ton = jet ? verdictTone(jet.verdict, jet.naturalD20 ?? undefined) : null;
+  const revelation = useRevelation(jet, items.length, ton !== null, reduit);
+  const termine = jet !== null && revelation.revele >= items.length;
+  const bruitActif = !reduit && (enCours || (jet !== null && !termine));
+  const bruit = useBruit(items.flatMap((i) => i.faces), bruitActif);
+  return <ZoneResultat items={items} jet={jet} revelation={revelation} termine={termine} ton={ton} bruit={bruit} bruitActif={bruitActif} reduit={reduit} />;
 }
 
 // ---- pièces -------------------------------------------------------------

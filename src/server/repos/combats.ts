@@ -154,6 +154,7 @@ export async function insertCombatParticipant(
 }
 
 export interface CombatParticipantPatch {
+  label?: string;
   initiative?: number | null;
   ac?: number | null;
   hpCurrent?: number | null;
@@ -168,6 +169,7 @@ export async function updateCombatParticipant(
   patch: CombatParticipantPatch
 ): Promise<CombatParticipantRow> {
   const update: Database["public"]["Tables"]["combat_participants"]["Update"] = {};
+  if (patch.label !== undefined) update.label = patch.label;
   if (patch.initiative !== undefined) update.initiative = patch.initiative;
   if (patch.ac !== undefined) update.ac = patch.ac;
   if (patch.hpCurrent !== undefined) update.hp_current = patch.hpCurrent;

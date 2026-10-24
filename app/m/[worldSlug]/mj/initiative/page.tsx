@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getLocale } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { listCampaigns, getCampaignCharacters } from "@/src/server/services/campaigns";
@@ -42,6 +42,7 @@ export default async function MjInitiativePage({
   const selected = campaigns.find((c) => c.id === campagne) ?? campaigns[0] ?? null;
 
   const locale = (await getLocale()) as Locale;
+  const t = await getTranslations("initiative");
 
   let activeCombat = null;
   let combats: Awaited<ReturnType<typeof listCombatsForCampaign>> = [];
@@ -70,17 +71,17 @@ export default async function MjInitiativePage({
 
   return (
     <div className="flex flex-col gap-4">
-      <RegisterPrimaryWindow windowRef={{ kind: "mj", key: "initiative" }} name="Initiative" badge="" homeHref={`/m/${worldSlug}/mj/initiative`} />
+      <RegisterPrimaryWindow windowRef={{ kind: "mj", key: "initiative" }} name={t("titre")} badge="" homeHref={`/m/${worldSlug}/mj/initiative`} />
       <div>
-        <h1 className="block-title text-base">Initiative</h1>
+        <h1 className="block-title text-base">{t("titre")}</h1>
         <p className="text-xs text-ink-muted">
-          Suivez l&apos;ordre du tour, les points de vie et les conditions d&apos;un combat.
+          {t("description")}
         </p>
       </div>
 
       {campaigns.length === 0 ? (
         <p className="text-sm italic text-ink-muted">
-          Aucune campagne dans ce monde — créez-en une dans l&apos;onglet Campagnes.
+          {t("aucuneCampagne")}
         </p>
       ) : (
         <>
