@@ -2,6 +2,77 @@
 
 ---
 
+### ☑ V3.1-38 — L'outil Initiative refondu, MJ et joueur · `L` · sans modèle IA — **fait le 24 octobre**
+
+**Modèle conseillé : Sonnet** — planche définitive, données fournies par V3.1-37.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Planche** : « Décidé · initiative (A retouchée) ». **Départ** :
+`components/shell/InitiativeTracker.tsx`, `app/m/[worldSlug]/mj/initiative/page.tsx`.
+**Dépend de** : V3.1-37, V3.1-24 (PV temporaires), V3.1-26 (jauges),
+V3.1-29 (téléphone), V3.1-33 (outil de dés).
+
+- MJ, ordinateur et téléphone : tout le détail de la décision (V3.1-19,
+  lot i) — colonnes CA / PV alignées, score modifiable qui réordonne,
+  lignes dépliables avec toutes les actions en deux boutons (touche,
+  dégâts), PV temporaires, renommage avec le nom d'origine en petit,
+  menace restante, Commencer / Round 1 / fin confirmée.
+- Joueur : invitation au premier plan (lancer, ou vrai dé avec
+  l'interrupteur « modificateur inclus »), mode combat dans Perso. (ordre,
+  économie d'action, Actions · Sorts · Capacités), retour à la fiche
+  normale à la fin.
+
+**Critères d'acceptation**
+- [x] Le parcours de la planche, de « Commencer » à la fin confirmée, avec un MJ et deux joueurs (dont un sans l'application).
+- [x] « Quitter le combat » puis « Reprendre tel quel » : ordre, PV et états intacts ; « Recommencer » relance l'initiative et renvoie l'invitation.
+- [x] Côté joueur, le mode combat garde la fiche complète (même composant que hors combat), l'ordre du tour en tête.
+- [x] Un dégât porté depuis la fiche du joueur se voit aussitôt dans l'initiative du MJ, et inversement (même état de jeu).
+- [x] À 390 px et sur ordinateur, côté MJ et côté joueur.
+- [x] Planche du catalogue « Initiative » créée ou mise à jour.
+- [x] Un adversaire saisi à la main reçoit CA et PV dès l'ajout ; la liste des combats suit l'état (commencé, terminé) sans recharger (vu par la vérification du 11 octobre).
+
+**Livré le 24 octobre.** Serveur (Opus) : migration
+`20261024090000_combat_paused_realtime` (appliquée le 24 octobre) — statut
+`paused` (choix de l'auteur : suspendu ≠ terminé), `combats` publiée en temps
+réel, et un déclencheur qui recopie PV, PV temporaires et états d'un PJ vers
+ses combats non terminés (sans lui, un dégât porté depuis la fiche ne
+remontait jamais chez le MJ). Conséquence corrigée : une sauvegarde ratée par une
+joueuse lisait l'« avant » de sa ligne de combat après la recopie, et
+l'annulation du MJ ne rendait rien ; l'« avant » se lit désormais dans sa
+vue filtrée, avant d'écrire (`saveRequests.ts`). Noyau `canPauseCombat`, `resumedCombatStatus`
+(tests d'abord) ; services et routes `pause`, `resume`, `restart` ; un combat
+suspendu n'est plus « en cours » pour les joueuses ; renommer un participant
+(`label`, annulable) ; CA et PV d'un adversaire saisi à la main ; le jet
+d'initiative d'une joueuse renvoie son d20. Tests d'intégration
+(`combatPause.integration.test.ts`, 5 cas). ADR 0040 complétée, SCHEMA.md.
+Interface (Sonnet, deux agents en parallèle) : outil du MJ refait
+(`components/shell/initiative/`, `lib/ui/initiative.ts`, `initiativeApi.ts`,
+temps réel sur `combats`) ; côté joueuse, `components/shell/combat/`
+(invitation, ordre du tour, économie d'action au-dessus de la fiche
+inchangée), `lib/ui/combatJoueur.ts`. Vérifié en direct (MJ de test,
+Testeuse A, Testeur B joué « sans l'application ») : gobelin saisi à 13 CA
+et 7 PV ; « Commencer » lance les adversaires et l'invitation arrive chez A
+sans recharger ; jet, résultat, « validé dans 4 s… », fermeture ; saisie du
+MJ pour B ; Round 1 ; ordre du tour chez A ; PV fiche → MJ (12 → 11 par la
+route de la fiche) et MJ → fiche (9/12) ; Quitter (A revient à sa fiche),
+Reprendre tel quel (round, PV, initiatives intacts), Recommencer
+(invitation renvoyée) ; renommé « Monstre non identifié », A ne voit jamais
+« Gobelin » ; ordinateur et 390 px des deux côtés. Combats d'essai supprimés,
+PV de A (12/12) et B (10/11) remis. Planche : section « Initiative » de
+`OutilsMJ.dc.html` refaite.
+
+*Restes* : la fin confirmée et la liste des combats en temps réel n'ont pas
+été rejouées en direct (code relu) ; les jets ciblés ne renvoient ni total
+ni dés (l'outil affiche le verdict sans carrés), et la bande « Lancer les
+dégâts » après une touche, les dés doublés au critique et l'avantage sur un
+jet ciblé ne sont pas faits (tâche à part) ; au téléphone, les noms du MJ
+sont très tronqués ; le volet de dés s'ouvre après le jet d'initiative,
+par-dessus la fiche ; le bleu des PV temporaires est une constante locale,
+à promouvoir en jeton.
+
+---
+
 ### ☑ V3.1-57 — Règles actives : le ruleset à gauche, la table à droite · `M` · sans modèle IA — **fait le 24 octobre**
 
 **Modèle conseillé : Sonnet** — planche définitive ; données et serveur de V3.1-23.

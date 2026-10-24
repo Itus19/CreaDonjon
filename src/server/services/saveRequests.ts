@@ -12,7 +12,7 @@ import {
   setOwnParticipantVitals,
   type SaveRequestRow,
 } from "@/src/server/repos/saveRequests";
-import { getCombatById, getCombatParticipantById } from "@/src/server/repos/combats";
+import { getCombatById, getCombatParticipantById, listPlayerCombatViewRows } from "@/src/server/repos/combats";
 import { insertDiceRoll } from "@/src/server/repos/diceRolls";
 import { insertSessionEvent, nextEventSeq } from "@/src/server/repos/sessions";
 import { getCampaign } from "@/src/server/services/campaigns";
@@ -162,6 +162,15 @@ export async function answerSaveRequest(
 
   const note = `Sauvegarde — ${request.label}`;
   if (answeringAsTarget && ctx && request.target_entity_id) {
+    // V3.1-38 : l'état de jeu recopie lui-même PV et états vers la ligne de
+    // combat (déclencheur `sync_combat_participants_from_runtime_state`). Les
+    // valeurs d'AVANT se lisent donc ici, avant d'écrire, dans la vue de la
+    // joueuse (elle ne lit pas `combat_participants`) — sinon le journal
+    // noterait des PV déjà baissés et l'annulation du MJ ne rendrait rien.
+    const avant =
+      request.target_kind === "participant" && request.combat_id
+        ? ((await listPlayerCombatViewRows(supabase, request.combat_id)) ?? []).find((row) => row.id === request.target_id) ?? null
+        : null;
     // Le joueur, sur SON PJ : l'état de jeu par le cœur commun…
     const outcome = await applyResolvedEffects(supabase, {
       campaignId: request.campaign_id,
@@ -188,7 +197,9 @@ export async function answerSaveRequest(
         await journalCombatEvent(supabase, combat, {
           target: "participant",
           targetId: request.target_id,
-          before: written.before,
+          before: avant
+            ? { ...(written.before as Record<string, unknown>), hp_current: avant.hp_current, temp_hp: avant.temp_hp ?? 0, conditions: avant.conditions }
+            : written.before,
           after: written.after,
           note,
           actorUserId: params.callerId,

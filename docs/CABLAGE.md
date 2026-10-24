@@ -231,11 +231,13 @@ Chaque appel refait la session, le monde et la chaîne de rulesets : d'où `rule
 
 `lib/cablage.test.ts` compte, dans `components/`, `app/` et `src/` :
 
-| Motif | Plafond au 11 octobre | Au 12 octobre | Au 17 octobre | Au 18 octobre |
-|---|---|---|---|---|
-| Fichiers qui chargent après affichage (`useEffect` et `fetch(` dans le même fichier) | 59 | 59 | **60** | **59** |
-| `router.refresh()` | 37 | **14** | 14 | 14 |
-| `window.location.reload()` | 2 | 2 | 2 | 2 |
+| Motif | Plafond au 11 octobre | Au 12 octobre | Au 17 octobre | Au 18 octobre | Au 24 octobre |
+|---|---|---|---|---|---|
+| Fichiers qui chargent après affichage (`useEffect` et `fetch(` dans le même fichier) | 59 | 59 | **60** | **59** | **57** |
+| `router.refresh()` | 37 | **14** | 14 | 14 | 14 |
+| `window.location.reload()` | 2 | 2 | 2 | 2 | 2 |
+
+Le 24 octobre (57) : l'outil Initiative (V3.1-38) ne charge plus rien lui-même, ses appels vivent dans `lib/ui/initiativeApi.ts` ; il se relit sur le signal temps réel de `combats`. Le plafond est à 57 dans le test ; la cellule du 18 octobre (59) ne tenait pas compte des retraits de V3.1-80 et 87.
 
 Depuis le 12 octobre, le cliquet ne compte plus les lignes de commentaire : 17 des 37 `router.refresh()` n'étaient que des mentions dans des explications.
 
