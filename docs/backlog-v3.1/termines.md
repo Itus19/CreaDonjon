@@ -2,6 +2,36 @@
 
 ---
 
+### ☑ V3.1-112 — Sauvegardes : les écrans · `M` · sans modèle IA — **fait le 24 octobre (ADR 0044)**
+
+**Modèle conseillé : Sonnet.** **Dépend de** : 111, 33, 34, 38.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+- La cible reçoit un **bandeau au premier plan** : « Résiste à Moquerie
+  cruelle · JS Sagesse DD 13 » — « Lancer », « J'ai un vrai dé »
+  (interrupteur « modificateur inclus »), « Laisser le MJ saisir ».
+- Le MJ répond dans l'outil **Initiative** en combat (bandeau), dans
+  l'outil **Table** hors combat ; une **pastille sur le dé encoché** compte
+  les demandes en attente, où qu'on soit.
+- L'outil de dés de l'auteur affiche le verdict revenu, puis enchaîne.
+
+**Critères d'acceptation**
+- [x] Les trois façons de répondre fonctionnent, sur ordinateur et téléphone.
+
+**Réalisé** (détail dans l'ADR 0044, « Réalisation des écrans »)
+- Migration `20261024120000_save_requests_realtime.sql` (appliquée le 24 octobre) : `save_requests` en temps réel.
+- `SauvegardesProvider` (AppShell) : la liste arrive avec la page, un seul canal la suit ; `lib/ui/sauvegardes.ts` pur et testé.
+- Bandeau de la cible, liste du MJ (Initiative : le combat ouvert ; Table : toutes), pastille du dé encoché, verdict dans l'outil de l'auteur (Sonnet, relu).
+- Libellé de la demande : nom traduit du sort (« Flamme sacrée · JS Dextérité DD 13 »).
+- Vérifié au navigateur, MJ et Testeuse A, ordinateur et 390 px : lancer, vrai dé « modificateur inclus », laisser le MJ puis saisie du MJ ; bandeau et pastille en direct ; « En attente » puis verdict chez l'auteur. PV de A remis à 12/12.
+
+*Écart* : « Laisser le MJ saisir » n'écrit rien (le bandeau se replie, le temps de la page).
+*Restes* (audit V3.1-144) : sauvegardes laissées en attente par un combat supprimé ; clé du sort dans l'historique des jets.
+
+
+---
+
 ### ☑ V3.1-106 — Cibler côté MJ : outil de dés, Table, Initiative · `M` · sans modèle IA — **fait le 24 octobre**
 
 **Modèle conseillé : Sonnet.** **Dépend de** : 105, 33 (outil de dés), 34, 38.

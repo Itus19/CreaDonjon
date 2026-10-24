@@ -58,25 +58,6 @@ une fois l'écriture au nom du joueur tranchée et faite (V3.1-104). D'ici là,
 le joueur voit le verdict, sans application sur une cible qu'il ne contrôle
 pas.
 
-### ☐ V3.1-112 — Sauvegardes : les écrans · `M` · sans modèle IA — **prêt**
-
-**Modèle conseillé : Sonnet.** **Dépend de** : 111, 33, 34, 38.
-
-**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-- La cible reçoit un **bandeau au premier plan** : « Résiste à Moquerie
-  cruelle · JS Sagesse DD 13 » — « Lancer », « J'ai un vrai dé »
-  (interrupteur « modificateur inclus »), « Laisser le MJ saisir ».
-- Le MJ répond dans l'outil **Initiative** en combat (bandeau), dans
-  l'outil **Table** hors combat ; une **pastille sur le dé encoché** compte
-  les demandes en attente, où qu'on soit.
-- L'outil de dés de l'auteur affiche le verdict revenu, puis enchaîne.
-
-**Critères d'acceptation**
-- [ ] Les trois façons de répondre fonctionnent, sur ordinateur et téléphone.
-
----
-
 ### ☐ V3.1-114 — Ressources : repos et égaliseur · `S` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet.** **Dépend de** : 113, 24, 26.

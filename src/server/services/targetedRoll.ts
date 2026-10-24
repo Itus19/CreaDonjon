@@ -626,7 +626,7 @@ export async function resolveTargetedRoll(
       };
       amount = cast.damage ? rolledDamage : null;
       facts.push(
-        `${actorName} lance ${action.spellKey} sur ${target.label} : sauvegarde ${ability.toUpperCase()} DD ${dc} demandée` +
+        `${actorName} lance ${spellName} sur ${target.label} : sauvegarde ${ability.toUpperCase()} DD ${dc} demandée` +
           (cast.damage ? ` (dégâts lancés : ${rolledDamage})` : "") +
           "."
       );

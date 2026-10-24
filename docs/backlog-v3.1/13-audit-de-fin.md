@@ -36,6 +36,15 @@ Opus ; vérification au navigateur par Opus.
   participant sans CA, sans PV ni actions, au lieu de refuser ; l'écran ne
   propose que des monstres valides, mais la route devrait dire non.
 
+- *V3.1-112, sauvegardes* : supprimer ou terminer un combat laisse ses
+  sauvegardes en attente (`combat_id` remis à nul) ; la joueuse peut encore
+  y répondre, le MJ non (« Cible introuvable »). La fin d'un combat devrait
+  les annuler.
+- *V3.1-112, historique des jets* : le jet de dégâts d'un sort s'intitule
+  par la clé (« Sort — sacred-flame ») au lieu du nom traduit ; même chose
+  dans le fait d'une attaque de sort ciblée (`targetedRoll`, branche
+  `spell_attack`).
+
 **À rejouer en direct pendant l'audit** (codé, relu, jamais vu à l'écran) :
 la fin de combat confirmée (« Terminer » / « Continuer ») et la liste des
 combats qui suit l'état sans recharger (V3.1-38) ; les dés doublés au
