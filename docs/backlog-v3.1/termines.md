@@ -2,6 +2,41 @@
 
 ---
 
+### ☑ V3.1-109 — Droits des joueurs : la fiche obéit aux interrupteurs · `M` · sans modèle IA — **fait le 24 octobre**
+
+**Modèle conseillé : Sonnet.** **Dépend de** : 108, 26, 32. L'écran
+Règles actives est V3.1-57.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+- Partout où la joueuse voit sa fiche (ordinateur, tablette, téléphone) :
+  interrupteur coupé → la valeur se voit, sans commande (« + état » absent,
+  ▲▼ de l'inspiration, des PV, des pièces absents, colonnes « niv. » de
+  l'égaliseur inertes, « Le MJ dépense tes dés de vie » à la place de
+  « Dépenser un dé ») — planche « Décidé · fiche vue par le MJ et par le
+  joueur ». Le MJ garde toutes les commandes.
+
+**Critères d'acceptation**
+- [x] Les six interrupteurs pilotent la fiche de la joueuse sur les trois
+  écrans.
+
+**Livré le 24 octobre.** Noyau (Opus) : `sheetControls(settings, { callerIsGm })`
+(`src/core/campaigns/tableSettings.ts`, testé) — le MJ garde tout, hors
+campagne il n'y a pas de table. Serveur (Opus) : la réponse de la fiche
+calculée (`/sheet` et chargement avec la page) porte `controls`, calculés
+pour l'appelant et la campagne (`loadSheetControls`, deux lectures en
+parallèle, seulement dans une campagne ; test d'intégration). Interface
+(Sonnet) : aucune commande tant que la fiche calculée n'est pas arrivée
+(`lib/ui/commandesFiche.ts`, testé) ; PV (jauge et soins du bloc mourant),
+inspiration et pièces perdent leurs commandes quand leur interrupteur est
+coupé ; « Le MJ dépense tes dés de vie » sous la rangée de badges. Constat :
+la fiche de la joueuse n'a ni « + état », ni égaliseur d'emplacements, ni
+« Dépenser un dé » — ces commandes n'existent que dans l'outil Table du MJ ;
+rien à cacher pour ces champs. Vérifié en direct avec Testeuse A (réglages
+par défaut, puis PV et dés de vie coupés), réglages du banc d'essai remis.
+
+---
+
 ### ☑ V3.1-60 — Publication : les réglages, et ce que voit un visiteur · `M` · sans modèle IA — **fait le 24 octobre**
 
 **Modèle conseillé : Sonnet** — planche définitive ; galerie de 58, données de 59.

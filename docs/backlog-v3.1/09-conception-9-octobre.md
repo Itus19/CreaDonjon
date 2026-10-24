@@ -83,26 +83,6 @@ une fois l'écriture au nom du joueur tranchée et faite (V3.1-104). D'ici là,
 le joueur voit le verdict, sans application sur une cible qu'il ne contrôle
 pas.
 
-### ☐ V3.1-109 — Droits des joueurs : la fiche obéit aux interrupteurs · `M` · sans modèle IA — **prêt**
-
-**Modèle conseillé : Sonnet.** **Dépend de** : 108, 26, 32. L'écran
-Règles actives est V3.1-57.
-
-**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-- Partout où la joueuse voit sa fiche (ordinateur, tablette, téléphone) :
-  interrupteur coupé → la valeur se voit, sans commande (« + état » absent,
-  ▲▼ de l'inspiration, des PV, des pièces absents, colonnes « niv. » de
-  l'égaliseur inertes, « Le MJ dépense tes dés de vie » à la place de
-  « Dépenser un dé ») — planche « Décidé · fiche vue par le MJ et par le
-  joueur ». Le MJ garde toutes les commandes.
-
-**Critères d'acceptation**
-- [ ] Les six interrupteurs pilotent la fiche de la joueuse sur les trois
-  écrans.
-
----
-
 ### ☐ V3.1-112 — Sauvegardes : les écrans · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet.** **Dépend de** : 111, 33, 34, 38.
