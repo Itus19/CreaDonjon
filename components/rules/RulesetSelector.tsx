@@ -1,83 +1,116 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
-import Dropdown from "@/components/shared/Dropdown";
+import Interrupteur from "@/components/rules/Interrupteur";
 import RulesetImportMappingDialog from "@/components/rules/RulesetImportMappingDialog";
 import { clearWorldRuleEntriesCache } from "@/components/blocks/useWorldRuleEntries";
 import { clearRuleEntryBlocksCache } from "@/components/blocks/useRuleEntryBlocks";
+import { arbreRulesets, baseDeRetour, peutExporter } from "@/lib/ui/reglesActives";
+import type { SelectableRulesetRow } from "@/src/server/repos/rules";
 
-interface SelectableRuleset {
-  id: string;
-  name: string;
-  is_official_base: boolean;
-  base_system: string;
-  version: number;
-  published_at: string | null;
-  content_origin: string;
+const CARTE = "rounded-[18px] border border-edge bg-panel p-4 backdrop-blur-[var(--blur)]";
+const PUCE = "rounded-full border px-2.5 py-1 text-xs transition-colors motion-reduce:transition-none";
+
+interface BilanImport {
+  imported: number;
+  errors: { name: string; message: string }[];
+}
+
+/** Le résultat d'un import : le nombre de règles importées, puis les erreurs ligne à ligne. */
+function BilanDImport({ bilan }: { bilan: BilanImport }) {
+  const t = useTranslations("regles");
+  return (
+    <div className="text-xs">
+      <p className="text-ink">{t("importerResultat", { count: bilan.imported })}</p>
+      {bilan.errors.length > 0 && (
+        <>
+          <p className="mt-1 text-danger">{t("importerErreursTitre", { count: bilan.errors.length })}</p>
+          <ul className="list-disc pl-4 text-ink-muted">
+            {bilan.errors.map((e, i) => (
+              <li key={i}>
+                {e.name} — {e.message}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </div>
+  );
 }
 
 /**
- * Selecteur de ruleset actif (V1-C5, revu retour utilisateur : "supprime le
- * bouton intermediaire, rends l'affichage... comme les autres outils de
- * mj") — rendu directement par la page `/mj/regles-actives`, seule
- * consommatrice de ce composant : plus de bouton-declencheur ni de modal,
- * la liste des rulesets officiels/variantes et le formulaire de creation de
- * variante sont le contenu de la page elle-meme, chargee au montage plutot
- * qu'au clic.
+ * Le volet gauche de l'écran Règles actives (V3.1-57) : le ruleset de la
+ * campagne en arbre, puis l'atelier (créer une variante, importer des règles).
+ * Rend deux éléments de la grille du parent (`ReglesActivesPanel`), qui lui
+ * passe leurs classes de placement : le ruleset d'un côté, l'atelier de
+ * l'autre, séparés pour que la tablette et le téléphone les réordonnent.
  *
- * "Reflete immediatement... sans rechargement de page" : `router.refresh()`
- * re-execute les composants serveur de cette page (la liste de regles vient
- * de la, elle change donc sans reload navigateur). La fiche jouable, elle,
- * relit toujours `worlds.default_ruleset_id` a chaque appel API — elle n'a
- * besoin d'aucune plomberie supplementaire pour rester exacte au prochain
- * chargement/interaction, meme dans une autre fenetre.
+ * Les rulesets et le ruleset actif arrivent avec la page (docs/CABLAGE.md C1) :
+ * rien n'est chargé au montage. L'état local suit les gestes (choisir,
+ * créer, supprimer) sans attendre un rechargement ; il se recale quand la page
+ * renvoie de nouvelles données (`router.refresh()`).
  *
- * `clearWorldRuleEntriesCache` (bug reel trouve en verifiant l'assistant de
- * creation de personnage) : `useWorldRuleEntries.ts` garde son propre cache
- * module-level cote client, que `router.refresh()` ne touche jamais (il ne
- * revalide que les composants serveur) — sans cet appel, les listes
- * espece/classe/historique de l'assistant continuaient de montrer l'ancien
- * ruleset tant que la page n'etait pas rechargee entierement.
+ * `clearWorldRuleEntriesCache` / `clearRuleEntryBlocksCache` : l'assistant de
+ * création et les listes de règles gardent un cache côté client que
+ * `router.refresh()` ne touche jamais ; sans les vider, ils montreraient
+ * l'ancien ruleset jusqu'à un rechargement complet.
  */
-export default function RulesetSelector({ worldSlug }: { worldSlug: string }) {
+export default function RulesetSelector({
+  worldSlug,
+  options: optionsRecues,
+  current: courantRecu,
+  classeRuleset,
+  classeAtelier,
+}: {
+  worldSlug: string;
+  options: SelectableRulesetRow[];
+  current: string | null;
+  classeRuleset: string;
+  classeAtelier: string;
+}) {
   const t = useTranslations("regles");
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
+  const [options, setOptions] = useState(optionsRecues);
+  const [current, setCurrent] = useState(courantRecu);
+  // Recalage sur de nouvelles données de la page (motif « ajuster l'état pendant le rendu »).
+  const [recu, setRecu] = useState({ options: optionsRecues, current: courantRecu });
+  if (recu.options !== optionsRecues || recu.current !== courantRecu) {
+    setRecu({ options: optionsRecues, current: courantRecu });
+    setOptions(optionsRecues);
+    setCurrent(courantRecu);
+  }
+
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [options, setOptions] = useState<SelectableRuleset[]>([]);
-  const [current, setCurrent] = useState<string | null>(null);
   const [variantName, setVariantName] = useState("");
   const [variantParentId, setVariantParentId] = useState("");
   const [personalReference, setPersonalReference] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<SelectableRuleset | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<SelectableRulesetRow | null>(null);
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
-  const [importResult, setImportResult] = useState<{ imported: number; errors: { name: string; message: string }[] } | null>(null);
+  const [importResult, setImportResult] = useState<BilanImport | null>(null);
   const [exportingId, setExportingId] = useState<string | null>(null);
-  /** V2-J4 : "append" ajoute dans la variante active (comportement existant) ; "create" cree un nouveau ruleset personnel a partir du fichier. */
+  /** V2-J4 : "append" ajoute dans la variante active ; "create" crée un nouveau ruleset personnel à partir du fichier. */
   const [importMode, setImportMode] = useState<"append" | "create">("append");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
-  const [createResult, setCreateResult] = useState<{ imported: number; errors: { name: string; message: string }[] } | null>(null);
-  /** Fichier tiers (ne correspond pas a notre format) en attente de correspondance manuelle — voir RulesetImportMappingDialog. */
+  const [createResult, setCreateResult] = useState<BilanImport | null>(null);
+  /** Fichier tiers (ne correspond pas à notre format) en attente de correspondance manuelle — voir RulesetImportMappingDialog. */
   const [mappingRecords, setMappingRecords] = useState<Record<string, unknown>[] | null>(null);
 
-  useEffect(() => {
-    fetch(`/api/worlds/${worldSlug}/ruleset`)
-      .then((res) => (res.ok ? res.json() : Promise.reject(new Error())))
-      .then((body: { options: SelectableRuleset[]; current: string | null }) => {
-        setOptions(body.options);
-        setCurrent(body.current);
-        setVariantParentId((prev) => prev || body.options.find((o) => o.is_official_base)?.id || "");
-      })
-      .catch(() => setError(t("erreurChargementRulesets")))
-      .finally(() => setLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- une seule fois au montage, `worldSlug` ne change jamais sans remonter la page
-  }, []);
+  const officials = options.filter((o) => o.is_official_base);
+  const arbre = arbreRulesets(options);
+  const parentId = officials.some((o) => o.id === variantParentId) ? variantParentId : (officials[0]?.id ?? "");
+
+  /** Les fiches, la création et les règles suivent sans rechargement : caches clients vidés, page relue. */
+  function apresChangementDeRuleset() {
+    clearWorldRuleEntriesCache(worldSlug);
+    clearRuleEntryBlocksCache(worldSlug);
+    router.refresh();
+  }
 
   async function choose(rulesetId: string) {
     setBusy(true);
@@ -93,20 +126,19 @@ export default function RulesetSelector({ worldSlug }: { worldSlug: string }) {
       return;
     }
     setCurrent(rulesetId);
-    clearWorldRuleEntriesCache(worldSlug);
-    clearRuleEntryBlocksCache(worldSlug);
-    router.refresh();
+    apresChangementDeRuleset();
   }
 
   async function createVariant(e: React.FormEvent) {
     e.preventDefault();
-    if (!variantName.trim() || !variantParentId) return;
+    const parent = officials.find((o) => o.id === parentId);
+    if (!variantName.trim() || !parent) return;
     setBusy(true);
     setError(null);
     const res = await fetch(`/api/worlds/${worldSlug}/ruleset`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: variantName.trim(), parentRulesetId: variantParentId, personalReference }),
+      body: JSON.stringify({ name: variantName.trim(), parentRulesetId: parentId, personalReference }),
     });
     if (!res.ok) {
       setBusy(false);
@@ -114,36 +146,50 @@ export default function RulesetSelector({ worldSlug }: { worldSlug: string }) {
       return;
     }
     const created = (await res.json()) as { id: string };
+    // La nouvelle variante apparaît aussitôt dans l'arbre ; la page la relira avec `choose`.
+    setOptions((prev) => [
+      ...prev,
+      {
+        id: created.id,
+        name: variantName.trim(),
+        is_official_base: false,
+        base_system: parent.base_system,
+        version: 1,
+        published_at: null,
+        content_origin: personalReference ? "personal_reference" : "user_created",
+        parent_ruleset_id: parent.id,
+      },
+    ]);
     setVariantName("");
     setPersonalReference(false);
     await choose(created.id);
   }
 
   async function confirmDelete() {
-    if (!deleteTarget) return;
+    const cible = deleteTarget;
+    if (!cible) return;
+    const estActive = cible.id === current;
+    const base = baseDeRetour(options, cible.id);
     setBusy(true);
     setError(null);
-    const res = await fetch(`/api/rulesets/${deleteTarget.id}`, { method: "DELETE" });
+    const res = await fetch(`/api/rulesets/${cible.id}?worldSlug=${encodeURIComponent(worldSlug)}`, { method: "DELETE" });
     setBusy(false);
     setDeleteTarget(null);
     if (!res.ok) {
-      if (res.status === 409) {
-        setError(t("erreurSuppressionEnUtilisation"));
-      } else {
-        setError(t("erreurSuppressionVariante"));
-      }
+      setError(res.status === 409 ? t("erreurSuppressionEnUtilisation") : t("erreurSuppressionVariante"));
       return;
     }
-    setOptions((prev) => prev.filter((o) => o.id !== deleteTarget.id));
+    setOptions((prev) => prev.filter((o) => o.id !== cible.id));
+    if (estActive) {
+      // Le serveur a ramené le monde et sa campagne à la base : l'écran suit.
+      if (base) setCurrent(base.id);
+      apresChangementDeRuleset();
+    }
   }
 
   /**
-   * Import JSON (retour utilisateur : "importer des règles via des fichiers
-   * JSON") — cible TOUJOURS `current` (la variante active) : c'est deja le
-   * seul ruleset que "Choisir" peut selectionner, jamais un second champ a
-   * remplir. Une entree invalide est ecartee cote serveur, jamais toute
-   * l'importation (`importerResultat`/`importerErreursTitre` affichent les
-   * deux a la fois).
+   * Import JSON — cible TOUJOURS `current` (la variante active). Une entrée
+   * invalide est écartée côté serveur, jamais toute l'importation.
    */
   async function importFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -176,20 +222,16 @@ export default function RulesetSelector({ worldSlug }: { worldSlug: string }) {
     }
     const body = (await res.json()) as { imported: { name: string }[]; errors: { name: string; message: string }[] };
     setImportResult({ imported: body.imported.length, errors: body.errors });
-    if (body.imported.length > 0) {
-      clearWorldRuleEntriesCache(worldSlug);
-      clearRuleEntryBlocksCache(worldSlug);
-      router.refresh();
-    }
+    if (body.imported.length > 0) apresChangementDeRuleset();
   }
 
-  /** Export "notre format" (V2-J4) — telecharge directement le JSON, aucun apercu intermediaire necessaire pour un fichier destine a etre reimporte tel quel. */
+  /** Export « notre format » (V2-J4) — télécharge directement le JSON. */
   async function handleExport(rulesetId: string, name: string) {
     setExportingId(rulesetId);
     const res = await fetch(`/api/rulesets/${rulesetId}/export`);
     setExportingId(null);
     if (!res.ok) {
-      setError(t("erreurChargementRulesets"));
+      setError(t("erreurExport"));
       return;
     }
     const blob = await res.blob();
@@ -202,11 +244,9 @@ export default function RulesetSelector({ worldSlug }: { worldSlug: string }) {
   }
 
   /**
-   * Fichier choisi en mode "creer un nouveau ruleset personnel" (V2-J4) —
-   * "notre format" (`{name, baseSystem, entries}`) part directement vers
-   * `POST /api/rulesets/import` ; tout le reste (tableau nu de forme
-   * inconnue) ouvre l'assistant de correspondance plutot qu'un message
-   * d'erreur sec.
+   * Fichier choisi en mode « créer un nouveau ruleset personnel » (V2-J4) —
+   * « notre format » part vers `POST /api/rulesets/import` ; un tableau nu de
+   * forme inconnue ouvre l'assistant de correspondance.
    */
   async function handleCreateFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -249,69 +289,64 @@ export default function RulesetSelector({ worldSlug }: { worldSlug: string }) {
     }
 
     if (!Array.isArray(parsed)) {
-      setCreateError("Ce fichier n'est ni notre format, ni un tableau JSON — l'assistant de correspondance a besoin d'un tableau.");
+      setCreateError(t("importerErreurFormat"));
       return;
     }
     setMappingRecords(parsed as Record<string, unknown>[]);
   }
 
-  const officials = options.filter((o) => o.is_official_base);
-  const variants = options.filter((o) => !o.is_official_base);
+  const currentRuleset = options.find((o) => o.id === current);
+  const baseDeLaSuppression = deleteTarget ? baseDeRetour(options, deleteTarget.id) : null;
+  const suppressionActive = deleteTarget !== null && deleteTarget.id === current && baseDeLaSuppression !== null;
 
   return (
     <>
-      {loading && <p className="text-sm text-ink-muted">{t("chargementRulesets")}</p>}
-      {error && <p className="text-sm text-danger">{error}</p>}
-
-      {!loading && (
-        <div className="flex flex-col gap-3">
-          {[...officials, ...variants].map((ruleset) => (
-            <div
+      <section className={`flex flex-col gap-3 ${CARTE} ${classeRuleset}`}>
+        <h2 className="text-sm font-semibold text-ink">{t("rulesetCampagneTitre")}</h2>
+        {error && <p className="text-xs text-danger">{error}</p>}
+        <ul className="flex flex-col gap-1.5">
+          {arbre.map(({ ruleset, profondeur }) => (
+            <li
               key={ruleset.id}
-              className="flex items-center justify-between gap-2 rounded-md border border-edge/60 px-3 py-2"
+              style={{ marginLeft: `${profondeur * 1.25}rem` }}
+              className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-edge/60 px-3 py-2"
             >
-              <div className="flex items-center gap-2">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                {profondeur > 0 && <span aria-hidden="true" className="-ml-1 h-3 w-3 shrink-0 rounded-bl border-b border-l border-edge-strong" />}
                 <span
-                  className="rounded-full border px-2 py-0.5 text-[10px] font-medium"
-                  style={
-                    ruleset.is_official_base
-                      ? { borderColor: "var(--gm)", color: "var(--gm)" }
-                      : { borderColor: "var(--link-rule)", color: "var(--link-rule)" }
-                  }
+                  className="rounded-full border px-2 py-0.5 text-xs font-medium"
+                  style={ruleset.is_official_base ? { borderColor: "var(--gm)", color: "var(--gm)" } : { borderColor: "var(--link-rule)", color: "var(--link-rule)" }}
                 >
                   {ruleset.is_official_base ? t("rulesetOfficiel") : t("variante")}
                 </span>
                 {ruleset.content_origin === "personal_reference" && (
-                  <span
-                    className="rounded-full border px-2 py-0.5 text-[10px] font-medium"
-                    style={{ borderColor: "var(--danger)", color: "var(--danger)" }}
-                  >
+                  <span className="rounded-full border px-2 py-0.5 text-xs font-medium" style={{ borderColor: "var(--danger)", color: "var(--danger)" }}>
                     {t("referencePersonnelle")}
                   </span>
                 )}
-                <span className="text-sm text-ink">{ruleset.name}</span>
+                <span className="min-w-0 break-words text-sm text-ink">{ruleset.name}</span>
               </div>
               <div className="flex items-center gap-2">
                 {ruleset.id === current ? (
-                  <span className="text-xs font-medium text-accent">{t("rulesetActuel")}</span>
+                  <span className="text-xs font-medium text-accent">● {t("rulesetActuel")}</span>
                 ) : (
                   <button
                     type="button"
                     disabled={busy}
                     onClick={() => choose(ruleset.id)}
-                    className="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel disabled:opacity-50"
+                    className="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised disabled:opacity-50 motion-reduce:transition-none"
                   >
                     {t("choisir")}
                   </button>
                 )}
-                {!ruleset.is_official_base && (
+                {peutExporter(ruleset) && (
                   <button
                     type="button"
                     disabled={busy || exportingId === ruleset.id}
                     onClick={() => handleExport(ruleset.id, ruleset.name)}
-                    className="rounded-full border border-edge px-2.5 py-1 text-xs text-ink-muted transition-colors hover:bg-panel disabled:opacity-50"
+                    className="rounded-full border border-edge px-2.5 py-1 text-xs text-ink-muted transition-colors hover:bg-panel-raised disabled:opacity-50 motion-reduce:transition-none"
                   >
-                    {exportingId === ruleset.id ? "…" : "Exporter"}
+                    {exportingId === ruleset.id ? "…" : t("exporter")}
                   </button>
                 )}
                 {!ruleset.is_official_base && (
@@ -321,89 +356,99 @@ export default function RulesetSelector({ worldSlug }: { worldSlug: string }) {
                     onClick={() => setDeleteTarget(ruleset)}
                     aria-label={t("supprimerVariante")}
                     title={t("supprimerVariante")}
-                    className="text-sm text-danger hover:underline disabled:opacity-50"
+                    className="px-1 text-sm text-danger hover:underline disabled:opacity-50"
                   >
                     ×
                   </button>
                 )}
               </div>
-            </div>
+            </li>
           ))}
-        </div>
-      )}
+        </ul>
+      </section>
 
-      {!loading && officials.length > 0 && (
-        <form onSubmit={createVariant} className="flex flex-col gap-2 border-t border-edge/60 pt-3">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">
-            {t("creerVarianteTitre")}
-          </span>
-          <div className="flex flex-wrap items-center gap-2">
-            <Dropdown
-              value={variantParentId}
-              onChange={setVariantParentId}
-              options={officials.map((o) => ({ value: o.id, label: o.name }))}
-              aria-label={t("creerVarianteTitre")}
-            />
-            <input
-              value={variantName}
-              onChange={(e) => setVariantName(e.target.value)}
-              placeholder={t("nomDeLaVariante")}
-              className="flex-1 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
-            />
-            <button
-              type="submit"
-              disabled={busy || !variantName.trim()}
-              className="rounded-full bg-accent px-3 py-1 text-xs font-medium text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50"
-            >
-              {t("creer")}
-            </button>
-          </div>
-          <button
-            type="button"
-            onClick={() => setPersonalReference((v) => !v)}
-            className={`self-start rounded-md border border-edge px-2.5 py-1.5 text-left text-xs text-ink-muted transition-colors hover:bg-panel ${
-              personalReference ? "border-accent text-accent" : ""
-            }`}
-          >
-            {t("referencePersonnelleOption")} {personalReference ? "✓" : ""}
-          </button>
-          {personalReference && <p className="text-xs text-danger">{t("referencePersonnelleAvertissement")}</p>}
-        </form>
-      )}
+      <details
+        className={`${classeAtelier} @md:[&::details-content]:[content-visibility:visible] [&[open]>summary]:mb-3`}
+      >
+        <summary className={`cursor-pointer text-sm font-semibold text-ink @md:hidden ${CARTE}`}>{t("variantesEtImport")}</summary>
+        <div className="flex flex-col gap-4">
+          {officials.length > 0 && (
+            <form onSubmit={createVariant} className={`flex flex-col gap-3 ${CARTE}`}>
+              <div className="flex flex-col gap-0.5">
+                <h2 className="text-sm font-semibold text-ink">{t("creerVarianteSection")}</h2>
+                <p className="text-xs text-ink-muted">{t("creerVarianteAide")}</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs text-ink-muted">{t("creerVarianteDepuis")}</span>
+                {officials.map((o) => (
+                  <button
+                    key={o.id}
+                    type="button"
+                    aria-pressed={o.id === parentId}
+                    onClick={() => setVariantParentId(o.id)}
+                    className={`${PUCE} ${o.id === parentId ? "border-accent text-accent" : "border-edge text-ink-muted hover:bg-panel-raised"}`}
+                  >
+                    {o.name}
+                  </button>
+                ))}
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  value={variantName}
+                  onChange={(e) => setVariantName(e.target.value)}
+                  placeholder={t("nomDeLaVariante")}
+                  aria-label={t("nomDeLaVariante")}
+                  className="min-w-0 flex-1 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none placeholder:text-ink-muted"
+                />
+                <button
+                  type="submit"
+                  disabled={busy || !variantName.trim()}
+                  className="rounded-full bg-accent px-3 py-1 text-xs font-medium text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50 motion-reduce:transition-none"
+                >
+                  {t("creer")}
+                </button>
+              </div>
+              <Interrupteur
+                actif={personalReference}
+                onChange={() => setPersonalReference((v) => !v)}
+                titre={t("referencePersonnelle")}
+                aide={t("referencePersonnelleSous")}
+              />
+              {personalReference && <p className="text-xs text-danger">{t("referencePersonnelleAvertissement")}</p>}
+            </form>
+          )}
 
-      {!loading && (
-        <div className="flex flex-col gap-2 border-t border-edge/60 pt-3">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">{t("importerReglesTitre")}</span>
+          <section className={`flex flex-col gap-3 ${CARTE}`}>
+            <h2 className="text-sm font-semibold text-ink">{t("importerSection")}</h2>
 
-          <div className="flex gap-2 text-xs">
-            <button
-              type="button"
-              onClick={() => setImportMode("append")}
-              className={`rounded-full border px-2.5 py-1 transition-colors ${importMode === "append" ? "border-accent text-accent" : "border-edge text-ink-muted hover:bg-panel"}`}
-            >
-              Ajouter à la variante active
-            </button>
-            <button
-              type="button"
-              onClick={() => setImportMode("create")}
-              className={`rounded-full border px-2.5 py-1 transition-colors ${importMode === "create" ? "border-accent text-accent" : "border-edge text-ink-muted hover:bg-panel"}`}
-            >
-              Créer un nouveau ruleset personnel
-            </button>
-          </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                aria-pressed={importMode === "append"}
+                onClick={() => setImportMode("append")}
+                className={`${PUCE} ${importMode === "append" ? "border-accent text-accent" : "border-edge text-ink-muted hover:bg-panel-raised"}`}
+              >
+                {t("importerModeAjouter")}
+              </button>
+              <button
+                type="button"
+                aria-pressed={importMode === "create"}
+                onClick={() => setImportMode("create")}
+                className={`${PUCE} ${importMode === "create" ? "border-accent text-accent" : "border-edge text-ink-muted hover:bg-panel-raised"}`}
+              >
+                {t("importerModeCreer")}
+              </button>
+            </div>
 
-          {importMode === "append" && (
-            <>
-              {(() => {
-                const currentRuleset = options.find((o) => o.id === current);
-                if (!currentRuleset || currentRuleset.is_official_base) {
-                  return <p className="text-xs text-ink-muted">{t("importerReglesNeedsVariante")}</p>;
-                }
-                return (
+            {importMode === "append" && (
+              <>
+                {!currentRuleset || currentRuleset.is_official_base ? (
+                  <p className="text-xs text-ink-muted">{t("importerReglesNeedsVariante")}</p>
+                ) : (
                   <>
                     <p className="text-xs text-ink-muted">{t("importerReglesVariante", { name: currentRuleset.name })}</p>
                     <label
-                      className={`self-start rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel ${
+                      className={`self-start rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised motion-reduce:transition-none ${
                         busy ? "pointer-events-none opacity-50" : "cursor-pointer"
                       }`}
                     >
@@ -411,80 +456,56 @@ export default function RulesetSelector({ worldSlug }: { worldSlug: string }) {
                       <input type="file" accept="application/json,.json" onChange={importFile} disabled={busy} className="hidden" />
                     </label>
                   </>
-                );
-              })()}
-              {importError && <p className="text-xs text-danger">{importError}</p>}
-              {importResult && (
-                <div className="text-xs">
-                  <p className="text-ink">{t("importerResultat", { count: importResult.imported })}</p>
-                  {importResult.errors.length > 0 && (
-                    <>
-                      <p className="mt-1 text-danger">{t("importerErreursTitre", { count: importResult.errors.length })}</p>
-                      <ul className="list-disc pl-4 text-ink-muted">
-                        {importResult.errors.map((e, i) => (
-                          <li key={i}>
-                            {e.name} — {e.message}
-                          </li>
-                        ))}
-                      </ul>
-                    </>
-                  )}
-                </div>
-              )}
-            </>
-          )}
+                )}
+                {importError && <p className="text-xs text-danger">{importError}</p>}
+                {importResult && <BilanDImport bilan={importResult} />}
+              </>
+            )}
 
-          {importMode === "create" && (
-            <>
-              <p className="text-xs text-danger">{t("referencePersonnelleAvertissement")}</p>
-              {mappingRecords === null ? (
-                <label
-                  className={`self-start rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel ${
-                    creating ? "pointer-events-none opacity-50" : "cursor-pointer"
-                  }`}
-                >
-                  {creating ? t("importEnCours") : t("importerBouton")}
-                  <input type="file" accept="application/json,.json" onChange={handleCreateFile} disabled={creating} className="hidden" />
-                </label>
-              ) : (
-                <RulesetImportMappingDialog
-                  records={mappingRecords}
-                  officials={officials.map((o) => ({ baseSystem: o.base_system, label: o.name }))}
-                  onCancel={() => setMappingRecords(null)}
-                  onImported={(outcome) => {
-                    setMappingRecords(null);
-                    setCreateResult({ imported: outcome.imported.length, errors: outcome.errors });
-                    router.refresh();
-                  }}
-                />
-              )}
-              {createError && <p className="text-xs text-danger">{createError}</p>}
-              {createResult && (
-                <div className="text-xs">
-                  <p className="text-ink">{t("importerResultat", { count: createResult.imported })}</p>
-                  {createResult.errors.length > 0 && (
-                    <>
-                      <p className="mt-1 text-danger">{t("importerErreursTitre", { count: createResult.errors.length })}</p>
-                      <ul className="list-disc pl-4 text-ink-muted">
-                        {createResult.errors.map((e, i) => (
-                          <li key={i}>
-                            {e.name} — {e.message}
-                          </li>
-                        ))}
-                      </ul>
-                    </>
-                  )}
-                </div>
-              )}
-            </>
-          )}
+            {importMode === "create" && (
+              <>
+                <p className="text-xs text-danger">{t("referencePersonnelleAvertissement")}</p>
+                {mappingRecords === null ? (
+                  <label
+                    className={`self-start rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised motion-reduce:transition-none ${
+                      creating ? "pointer-events-none opacity-50" : "cursor-pointer"
+                    }`}
+                  >
+                    {creating ? t("importEnCours") : t("importerBouton")}
+                    <input type="file" accept="application/json,.json" onChange={handleCreateFile} disabled={creating} className="hidden" />
+                  </label>
+                ) : (
+                  <RulesetImportMappingDialog
+                    records={mappingRecords}
+                    officials={officials.map((o) => ({ baseSystem: o.base_system, label: o.name }))}
+                    onCancel={() => setMappingRecords(null)}
+                    onImported={(outcome) => {
+                      setMappingRecords(null);
+                      setCreateResult({ imported: outcome.imported.length, errors: outcome.errors });
+                      router.refresh();
+                    }}
+                  />
+                )}
+                {createError && <p className="text-xs text-danger">{createError}</p>}
+                {createResult && <BilanDImport bilan={createResult} />}
+              </>
+            )}
+          </section>
         </div>
-      )}
+      </details>
 
       <ConfirmDialog
         open={deleteTarget !== null}
         title={t("confirmerSuppressionTitre")}
-        message={deleteTarget ? t("confirmerSuppressionMessage", { name: deleteTarget.name }) : ""}
+        message={
+          deleteTarget
+            ? t("confirmerSuppressionVarianteMessage", {
+                name: deleteTarget.name,
+                actif: suppressionActive ? "oui" : "non",
+                base: baseDeLaSuppression?.name ?? "",
+              })
+            : ""
+        }
         confirmLabel={t("supprimer")}
         cancelLabel={t("annuler")}
         danger

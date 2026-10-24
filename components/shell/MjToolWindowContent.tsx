@@ -15,7 +15,7 @@ import GeneratorToolPanel from "./GeneratorToolPanel";
 import NotebookWorkspace from "./notebook/NotebookWorkspace";
 import SchedulingMjPanel from "./scheduling/SchedulingMjPanel";
 import SessionJournalMjPanel from "./sessionJournal/SessionJournalMjPanel";
-import RulesetSelector from "@/components/rules/RulesetSelector";
+import ReglesActivesPanel from "@/components/rules/ReglesActivesPanel";
 import CharacterCreatorWizard from "@/components/blocks/CharacterCreatorWizard";
 
 const NO_CAMPAIGN_MESSAGE = "Aucune campagne dans ce monde — créez-en une dans l'onglet Campagnes.";
@@ -138,12 +138,7 @@ export default function MjToolWindowContent({ worldSlug, data }: { worldSlug: st
       );
 
     case "regles-actives":
-      return (
-        <div className="flex flex-col gap-4">
-          <h1 className="block-title text-lg">Règles actives</h1>
-          <RulesetSelector worldSlug={worldSlug} />
-        </div>
-      );
+      return <ReglesActivesPanel worldSlug={worldSlug} data={data} />;
 
     case "publication":
       return <PublicationPanel worldSlug={worldSlug} publication={data} />;

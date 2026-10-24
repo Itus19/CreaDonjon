@@ -29,7 +29,7 @@ import LevelUpWizard from "./LevelUpWizard";
 import { useDiceRoll } from "@/components/shell/DiceRollPanel";
 import { chargerFicheCalculee, type SheetApiResponse } from "./ficheCalculee";
 import { ABILITY_LABELS, SORTED_SKILLS } from "./sheetLabels";
-import { commandesDeLaFiche } from "@/lib/ui/commandesFiche";
+import { commandesDeLaFiche, type CommandesFiche } from "@/lib/ui/commandesFiche";
 
 export type Tab = "actions" | "magie" | "inventaire" | "traits" | "maitrise";
 
@@ -91,6 +91,7 @@ export default function PlayableCharacterSheet({
   onUpdateSpellcasting,
   onBlockRefreshed,
   isWorldAdmin = false,
+  commandesImposees,
 }: {
   worldSlug: string;
   entityId: string;
@@ -109,6 +110,8 @@ export default function PlayableCharacterSheet({
   onBlockRefreshed: (fresh: { id: string; data: unknown; version: number }) => void;
   /** MJ du monde (V3.1-115) : peut passer outre un prerequis de multiclassage a la montee de niveau. Indication d'interface seulement, le serveur le re-verifie. */
   isWorldAdmin?: boolean;
+  /** V3.1-57 : l'aperçu de l'écran Règles actives impose les commandes que montrerait la fiche d'une joueuse ; remplace celles du serveur. */
+  commandesImposees?: CommandesFiche;
 }) {
   const [tab, setTab] = useState<Tab>("actions");
   const [advantage, setAdvantage] = useState<AdvantageState>("normal");
@@ -399,7 +402,7 @@ export default function PlayableCharacterSheet({
 
   const runtimeState = remote?.runtimeState.state;
   // V3.1-109 : tant que la fiche calculee n'est pas la, aucune commande (jamais un geste que le serveur refusera).
-  const commandes = commandesDeLaFiche(remote?.controls);
+  const commandes = commandesImposees ?? commandesDeLaFiche(remote?.controls);
   const hpMax = remote?.runtimeState.hpMax ?? sheet.hitPoints.max;
 
   const exhaustion = runtimeState?.exhaustion ?? 0;

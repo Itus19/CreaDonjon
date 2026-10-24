@@ -191,6 +191,59 @@
     "importerErreurReseau": "Import failed — try again.",
     "importerResultat": "{count, plural, one {# rule imported} other {# rules imported}}",
     "importerErreursTitre": "{count, plural, one {# error} other {# errors}}:",
+    "rulesetCampagneTitre": "Campaign ruleset",
+    "exporter": "Export",
+    "erreurExport": "Could not export this variant — try again.",
+    "creerVarianteSection": "Create a variant",
+    "creerVarianteAide": "An official base is never modified: it is copied into a variant, which you then edit.",
+    "creerVarianteDepuis": "From",
+    "referencePersonnelleSous": "Content entered from a book I own.",
+    "importerSection": "Import rules",
+    "importerModeAjouter": "Add to the active variant",
+    "importerModeCreer": "Create a new personal ruleset",
+    "importerErreurFormat": "This file is neither our format nor a JSON array — the column mapping assistant needs an array.",
+    "confirmerSuppressionVarianteMessage": "Delete the variant \"{name}\"? Its rule entries disappear.{actif, select, oui { The campaign goes back to \"{base}\".} other {}}",
+    "variantesEtImport": "Variants and import",
+    "table": {
+      "titre": "What players change themselves",
+      "aide": "Campaign setting, valid everywhere: sheet on computer, tablet and phone. Off: the value stays visible without a control, and the server refuses the write. The GM keeps every control; the engine (resolved damage, rests) does not depend on it.",
+      "parDefaut": "Default",
+      "joueuse": "the player",
+      "mj": "the GM",
+      "conditions": {
+        "titre": "Their conditions",
+        "aide": "Charmed, Prone…: \"+ condition\" on the sheet"
+      },
+      "inspiration": {
+        "titre": "Their inspiration",
+        "aide": "▲▼ of inspiration"
+      },
+      "hp": {
+        "titre": "Their HP",
+        "aide": "▲▼ of hit points"
+      },
+      "currency": {
+        "titre": "Their coins",
+        "aide": "▲▼ of coins"
+      },
+      "spell_slots": {
+        "titre": "Their spell slots",
+        "aide": "\"lvl\" columns of the equalizer"
+      },
+      "hit_dice": {
+        "titre": "Their hit dice",
+        "aide": "\"Spend a die\" on a short rest"
+      },
+      "inspirationMax": "Inspiration at most",
+      "inspirationMaxAide": "What a character can keep in reserve (1 in the 2024 rules).",
+      "diminuer": "Lower the inspiration maximum",
+      "augmenter": "Raise the inspiration maximum",
+      "erreur": "Could not save this setting — try again.",
+      "sansCampagne": "This world has no campaign yet: the table settings and the preview will appear with the first one.",
+      "apercuTitre": "Player side · sheet of {nom}",
+      "apercuAide": "What the player can touch, according to the switches — live.",
+      "apercuSansPersonnage": "No player character in the campaign: the preview will appear with the first one."
+    },
     "creerArmeMaison": "Create a homebrew weapon",
     "armeMaisonNeedsVariante": "Choose a variant first (\"Active rules\" button) — a created rule never touches an official base.",
     "creerArmeMaisonVariante": "This weapon will be added to your variant \"{name}\".",

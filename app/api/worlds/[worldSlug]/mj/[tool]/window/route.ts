@@ -18,6 +18,7 @@ import { listEntitiesByIds } from "@/src/server/repos/entities";
 import { getCalendar } from "@/src/server/services/worlds";
 import { lirePersonnalisation } from "@/src/server/services/personnalisation";
 import { chargerPublication } from "@/src/server/services/publication";
+import { chargerReglesActives } from "@/src/server/services/reglesActives";
 import type { Locale } from "@/src/i18n/request";
 import type { MjToolWindowData } from "@/components/shell/mjToolWindows";
 import { MJ_TOOL_KEYS, type MjToolKey } from "@/components/shell/windowRefs";
@@ -199,7 +200,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     }
 
     case "regles-actives": {
-      data = { tool };
+      data = { tool, ...(await chargerReglesActives(supabase, world, user.id)) };
       break;
     }
 

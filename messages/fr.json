@@ -192,6 +192,59 @@
     "importerErreurReseau": "Échec de l'import — réessayez.",
     "importerResultat": "{count, plural, one {# règle importée} other {# règles importées}}",
     "importerErreursTitre": "{count, plural, one {# erreur} other {# erreurs}} :",
+    "rulesetCampagneTitre": "Ruleset de la campagne",
+    "exporter": "Exporter",
+    "erreurExport": "Impossible d'exporter cette variante — réessayez.",
+    "creerVarianteSection": "Créer une variante",
+    "creerVarianteAide": "Une base officielle n'est jamais modifiée : on la copie en variante, qu'on modifie ensuite.",
+    "creerVarianteDepuis": "Depuis",
+    "referencePersonnelleSous": "Contenu saisi depuis un ouvrage que je possède.",
+    "importerSection": "Importer des règles",
+    "importerModeAjouter": "Ajouter à la variante active",
+    "importerModeCreer": "Créer un nouveau ruleset personnel",
+    "importerErreurFormat": "Ce fichier n'est ni notre format, ni un tableau JSON — l'assistant de correspondance a besoin d'un tableau.",
+    "confirmerSuppressionVarianteMessage": "Supprimer la variante « {name} » ? Ses fiches de règles disparaissent.{actif, select, oui { La campagne revient à « {base} ».} other {}}",
+    "variantesEtImport": "Variantes et import",
+    "table": {
+      "titre": "Ce que les joueurs modifient eux-mêmes",
+      "aide": "Réglage de la campagne, valable partout : fiche sur ordinateur, tablette et téléphone. Coupé : la valeur reste visible sans commande, et le serveur refuse l'écriture. Le MJ garde toutes les commandes ; le moteur (dégâts résolus, repos) n'en dépend pas.",
+      "parDefaut": "Par défaut",
+      "joueuse": "la joueuse",
+      "mj": "le MJ",
+      "conditions": {
+        "titre": "Leurs états",
+        "aide": "Charmé, À terre… : « + état » sur la fiche"
+      },
+      "inspiration": {
+        "titre": "Leur inspiration",
+        "aide": "▲▼ de l'inspiration"
+      },
+      "hp": {
+        "titre": "Leurs PV",
+        "aide": "▲▼ des points de vie"
+      },
+      "currency": {
+        "titre": "Leurs pièces",
+        "aide": "▲▼ des pièces"
+      },
+      "spell_slots": {
+        "titre": "Leurs emplacements de sorts",
+        "aide": "colonnes « niv. » de l'égaliseur"
+      },
+      "hit_dice": {
+        "titre": "Leurs dés de vie",
+        "aide": "« Dépenser un dé » au repos court"
+      },
+      "inspirationMax": "Inspiration au plus",
+      "inspirationMaxAide": "Ce qu'un personnage peut garder en réserve (1 dans les règles de 2024).",
+      "diminuer": "Diminuer l'inspiration au plus",
+      "augmenter": "Augmenter l'inspiration au plus",
+      "erreur": "Impossible d'enregistrer ce réglage — réessayez.",
+      "sansCampagne": "Ce monde n'a pas encore de campagne : les réglages de table et l'aperçu apparaîtront avec la première.",
+      "apercuTitre": "Côté joueuse · fiche de {nom}",
+      "apercuAide": "Ce que la joueuse peut toucher, d'après les interrupteurs — en direct.",
+      "apercuSansPersonnage": "Aucun personnage joueur dans la campagne : l'aperçu apparaîtra avec le premier."
+    },
     "creerArmeMaison": "Créer une arme maison",
     "armeMaisonNeedsVariante": "Choisis d'abord une variante (bouton « Règles actives ») — une règle créée ne touche jamais une base officielle.",
     "creerArmeMaisonVariante": "Cette arme sera ajoutée à ta variante « {name} ».",

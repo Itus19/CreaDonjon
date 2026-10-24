@@ -7,6 +7,7 @@ import type { EncounterPartyMember } from "@/src/server/services/encounterWorksh
 import type { CombatDetail } from "@/src/server/services/combats";
 import type { CombatRow } from "@/src/server/repos/combats";
 import type { CalendarConfigInput } from "@/src/core/schemas/calendar";
+import type { ReglesActivesData } from "@/src/server/services/reglesActives";
 import type { PublicationData } from "@/src/server/services/publication";
 import type { GeneratorToolWindowData } from "@/src/server/services/generators";
 import type { NotebookWorkspaceData } from "@/src/server/services/sharedNotes";
@@ -64,7 +65,7 @@ export type MjToolWindowData =
   | { tool: "creation-personnage"; worldId: string }
   | { tool: "calendrier"; calendar: CalendarConfigInput }
   | { tool: "personnalisation"; mode: string; contrast: string; backgroundRef: string; backgroundAvailableModes: string[]; bgBlur: number }
-  | { tool: "regles-actives" }
+  | ({ tool: "regles-actives" } & ReglesActivesData)
   | ({ tool: "publication" } & PublicationData)
   | { tool: "generateurs"; entityId: string; tools: GeneratorToolWindowData[] }
   | ({ tool: "notes" } & NotebookWorkspaceData)

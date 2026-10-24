@@ -8,6 +8,7 @@ import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData } from "@/src/core/schemas/blocks/inventory";
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
 import type { ResourcesBlockData } from "@/src/core/schemas/blocks/resources";
+import type { CommandesFiche } from "@/lib/ui/commandesFiche";
 import { useAmorcerFicheAvecPage, type FicheAvecPage } from "@/components/blocks/useAmorcerFicheAvecPage";
 
 /**
@@ -33,6 +34,7 @@ export default function ParticipantCharacterSheet({
   entityVersion,
   initialBlocks = null,
   ficheAvecPage = null,
+  commandesImposees,
 }: {
   worldSlug: string;
   campaignId: string;
@@ -48,6 +50,8 @@ export default function ParticipantCharacterSheet({
   initialBlocks?: BlockItem[] | null;
   /** La fiche calculée et le ruleset résolu, partis avec la page en promesse. */
   ficheAvecPage?: Promise<FicheAvecPage> | null;
+  /** V3.1-57 : commandes imposées à la fiche (aperçu de l'écran Règles actives), à la place de celles du serveur. */
+  commandesImposees?: CommandesFiche;
 }) {
   const [blocks, setBlocks] = useState<BlockItem[] | "loading" | "error">(initialBlocks ?? "loading");
   useAmorcerFicheAvecPage({ worldSlug, entityId, campaignId, blocks: initialBlocks ?? [], promesse: ficheAvecPage });
@@ -239,6 +243,7 @@ export default function ParticipantCharacterSheet({
       onUpdateInventory={updateInventory}
       onUpdateSpellcasting={updateSpellcasting}
       onBlockRefreshed={handleBlockRefreshed}
+      commandesImposees={commandesImposees}
     />
   );
 }
