@@ -44,6 +44,8 @@ export interface SelectableRulesetRow {
   version: number;
   published_at: string | null;
   content_origin: string;
+  /** V3.1-57 : pour ranger les variantes en arbre sous leur base. */
+  parent_ruleset_id: string | null;
 }
 
 /**
@@ -57,7 +59,7 @@ export interface SelectableRulesetRow {
 export async function listSelectableRulesets(supabase: TypedClient, userId: string): Promise<SelectableRulesetRow[]> {
   const { data, error } = await supabase
     .from("rulesets")
-    .select("id, name, is_official_base, base_system, version, published_at, content_origin")
+    .select("id, name, is_official_base, base_system, version, published_at, content_origin, parent_ruleset_id")
     .or(`is_official_base.eq.true,created_by.eq.${userId}`)
     .order("is_official_base", { ascending: false })
     .order("name", { ascending: true });

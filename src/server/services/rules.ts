@@ -1677,6 +1677,32 @@ export async function deleteRulesetVariant(supabase: TypedClient, rulesetId: str
   return deleteRuleset(supabase, rulesetId);
 }
 
+/**
+ * V3.1-57 — supprimer une variante depuis l'écran Règles actives d'un monde.
+ * Si c'est le ruleset ACTIF de ce monde, la campagne revient d'abord à la
+ * base de la variante (`setActiveRuleset`, qui suit aussi la campagne), puis
+ * la variante est supprimée. Si la suppression échoue (utilisée ailleurs,
+ * base d'une autre variante), le monde reprend la variante : on ne laisse
+ * jamais un changement de règles sans la suppression qui le motivait.
+ */
+export async function deleteRulesetVariantFromWorld(
+  supabase: TypedClient,
+  params: { worldSlug: string; rulesetId: string }
+): Promise<DeleteRulesetOutcome | "forbidden"> {
+  const ruleset = await getRulesetById(supabase, params.rulesetId);
+  if (!ruleset || ruleset.is_official_base) return "not_found";
+  const world = await getWorldBySlug(supabase, params.worldSlug);
+  if (!world) return "not_found";
+  const active = (await getWorldDefaultRulesetId(supabase, world.id)) === ruleset.id;
+  if (!active) return deleteRuleset(supabase, ruleset.id);
+
+  if (!ruleset.parent_ruleset_id) return "in_use";
+  if (!(await setActiveRuleset(supabase, params.worldSlug, ruleset.parent_ruleset_id))) return "forbidden";
+  const outcome = await deleteRuleset(supabase, ruleset.id);
+  if (outcome !== "deleted") await setActiveRuleset(supabase, params.worldSlug, ruleset.id);
+  return outcome;
+}
+
 const zCreateHomebrewWeaponInput = z.object({
   rulesetId: z.string().uuid(),
   name: z.string().min(1),
