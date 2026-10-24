@@ -40,4 +40,5 @@ Aucune image de la bibliothèque n'est jamais lue publiquement (test). V3.1-59 p
   - Une page qui déclare « pas de fond » (fiche sans fond propre, sommaire) retombe dessus.
   - Une fiche qui a son propre fond le garde (`chooseWikiBackground`).
 - **Écriture** : `PUT /api/worlds/[slug]/wiki-background`, entrée `zWikiBackgroundInput` (`builtin`, `library` ou `none`), MJ seul (`isWorldAdmin`). Le mode doit être permis par le fond.
+- **Complément du 24 octobre (V3.1-60)** : quatrième entrée `keep` — même fond, autre mode ou autre flou (`retuneWorldWikiBackground`). Sans elle, régler le mode d'une copie était impossible (l'entrée ne désigne pas une copie), et chaque geste sur le flou d'une image de la bibliothèque l'aurait recopiée. `keep` ne copie rien et ne supprime pas la copie en place ; le mode reste contrôlé contre ceux du fond. L'écran Publication l'envoie pour le mode et le flou, et réserve `builtin`/`library` au choix d'une vignette.
 

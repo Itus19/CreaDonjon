@@ -2,6 +2,63 @@
 
 ---
 
+### ☑ V3.1-60 — Publication : les réglages, et ce que voit un visiteur · `M` · sans modèle IA — **fait le 24 octobre**
+
+**Modèle conseillé : Sonnet** — planche définitive ; galerie de 58, données de 59.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Planche** : `Publication-Decide.dc.html`. **Départ** :
+`components/shell/PublicationPanel.tsx`, `ShareLinkPanel.tsx`,
+`BookSkin.tsx` (pour l'aperçu). **Dépend de** : 58 (galerie), 59.
+
+**Ce qui est décidé**
+- **À gauche** :
+  - « Partage en lecture seule » : texte d'aide inchangé ; alias
+    (« /partage/ » + champ), mot de passe, « Créer un lien » ; « Lien créé : »
+    avec « Copier » (« Copié ✓ ») ; la liste (adresse, « Créé le … »,
+    « protégé », Copier, Révoquer) ; textes existants de `ShareLinkPanel`.
+  - « Message d'accueil » : 500 caractères avec compteur, « Enregistrer »
+    (« Enregistré ») ; « Remplace le grand titre de la page d'accueil. Vide :
+    le nom de la campagne. »
+  - « Fond par défaut du wiki public » : **la galerie de V3.1-58** (même
+    composant), « une fiche qui a son propre fond le garde », « Mode des
+    pages » en puces (modes non permis grisés), « Flou du fond ».
+- **À droite, « Ce que voit un visiteur »** : la page d'accueil du wiki en
+  petit — le message en titre (ou le nom de la campagne), le sommaire, le
+  fond, le mode, le flou — qui **suit chaque changement** avant
+  enregistrement ; « Prévisualiser ↗ » ouvre le vrai (`/m/[slug]/apercu`).
+- **Tablette** : un volet — l'aperçu d'abord, puis le message, le fond, les
+  liens. **Téléphone** : les liens, le message, le fond, puis l'aperçu ;
+  « Prévisualiser ↗ » en haut.
+
+**Critères d'acceptation**
+- [x] L'aperçu suit message, fond, mode et flou sans requête au serveur.
+- [x] Choisir un fond qui ne permet pas le mode des pages bascule sur un mode permis et l'annonce.
+- [x] Liens : créer, copier, révoquer inchangés (tests existants verts).
+
+**Livré le 24 octobre.** Serveur (Opus) : `chargerPublication`
+(`src/server/services/publication.ts`) lit ensemble les liens, le message,
+le nom de la campagne, le sommaire public (même service que le wiki public,
+donc jamais plus que ce qu'un visiteur voit) et le fond enregistré, pour la
+page comme pour la fenêtre ; noyau `publicationBackgroundState` et
+`wikiBackgroundInputFromRef` (testés). Entrée `keep` ajoutée à la route du
+fond (ADR 0047, complément) : sans elle, le mode d'une copie ne se réglait
+pas, et chaque geste sur le flou aurait recopié l'image. Interface (Sonnet) :
+`PublicationPanel` en deux colonnes par requêtes de conteneur,
+`ApercuVisiteur` sans requête, `lib/ui/publication.ts` (testé). Corrections
+d'Opus : envois du fond mis en file (un `keep` n'arrive jamais avant le choix
+qui le précède) ; au téléphone, carte des liens doublée et « Créer un lien »
+hors de l'écran. Vérifié en direct avec le MJ de test : l'aperçu suit la
+frappe sans aucune requête ; un fond fourni, le mode, le flou : un envoi par
+geste, tout persiste au rechargement ; banc d'essai remis sans fond. Le
+deuxième critère (bascule annoncée) passe par le même `modeApresChoixDeFond`
+que V3.1-58 : les fonds fournis permettant tous les quatre modes, il ne se
+voit qu'avec une image personnelle limitée. Planche : section
+« Publication » de `OutilsMJ.dc.html`.
+
+---
+
 ### ☑ V3.1-58 — Personnalisation : le fond d'abord, et pour les joueuses · `M` · sans modèle IA — **fait le 24 octobre**
 
 **Modèle conseillé : Sonnet** — planche définitive ; aucune donnée nouvelle.
