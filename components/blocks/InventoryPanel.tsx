@@ -541,6 +541,7 @@ export default function InventoryPanel({
   cost,
   encumbrance,
   server,
+  monnaieLectureSeule = false,
 }: {
   worldSlug: string;
   inventory: InventoryBlockData | undefined;
@@ -562,6 +563,8 @@ export default function InventoryPanel({
   weight: Record<string, number | null>;
   cost: Record<string, ItemCost | null>;
   encumbrance?: { carried: number; capacity: number; tier: "none" | "encumbered" | "heavily_encumbered" };
+  /** V3.1-109 : l'interrupteur « pièces » du MJ est coupé — les pièces se voient, sans saisie ni ▲▼. */
+  monnaieLectureSeule?: boolean;
 }) {
   const [coinDelta, setCoinDelta] = useState("");
   const [coinType, setCoinType] = useState<CoinType>("gp");
@@ -706,7 +709,9 @@ export default function InventoryPanel({
             {(["pp", "gp", "ep", "sp", "cp"] as const).map((coin) => (
               <label key={coin} className="flex flex-col gap-1 text-xs text-ink-muted">
                 {CURRENCY_LABELS_FR[coin]}
-                {server && inventory ? (
+                {monnaieLectureSeule ? (
+                  <span className="rounded-md border border-edge px-1 py-1 text-center text-xs text-ink">{inventory?.currency[coin] ?? 0}</span>
+                ) : server && inventory ? (
                   // Mode serveur : on valide en quittant le champ (un delta par saisie
                   // finie, pas par frappe) ; la cle remet le champ a la valeur ecrite.
                   <input
@@ -733,6 +738,7 @@ export default function InventoryPanel({
               </label>
             ))}
           </div>
+          {!monnaieLectureSeule && (
           <div className="flex shrink-0 items-center gap-1">
             <Dropdown
               value={coinType}
@@ -757,6 +763,7 @@ export default function InventoryPanel({
               />
             </Stepper>
           </div>
+          )}
         </div>
         {coinError && <span className="text-xs text-danger">Fonds insuffisants, même en cassant des pièces plus grosses.</span>}
         {serverError && <span className="text-xs text-danger">{serverError}</span>}

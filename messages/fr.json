@@ -592,6 +592,7 @@
     "desDeVie": "Dés de vie {die}",
     "rendreDe": "Récupérer un dé de vie {die}",
     "depenserDe": "Dépenser un dé de vie {die}",
+    "leMjDepenseDes": "Le MJ dépense tes dés de vie",
     "retirerEtat": "Retirer l'état {nom}",
     "ajouterEtat": "Ajouter un état",
     "aucunEtatAPoser": "Tous les états du ruleset sont déjà posés.",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_TABLE_SETTINGS, mayPlayerChange, mergeTableSettings, parseTableSettings, zCampaignTableSettings } from "./tableSettings";
+import { DEFAULT_TABLE_SETTINGS, mayPlayerChange, mergeTableSettings, parseTableSettings, sheetControls, zCampaignTableSettings } from "./tableSettings";
 
 describe("réglages de table (V3.1-108, ADR 0036 §5 et 0043)", () => {
   it("donne les valeurs par défaut décidées à une colonne vide", () => {
@@ -55,5 +55,28 @@ describe("mergeTableSettings", () => {
   it("une valeur absente n'efface jamais un interrupteur", () => {
     const merged = mergeTableSettings(DEFAULT_TABLE_SETTINGS, { player_can_edit: { hp: undefined } });
     expect(merged.player_can_edit.hp).toBe(true);
+  });
+});
+
+describe("sheetControls (V3.1-109)", () => {
+  const tout = { conditions: true, inspiration: true, hp: true, currency: true, spell_slots: true, hit_dice: true };
+
+  it("la joueuse : les interrupteurs de la campagne, champ par champ", () => {
+    expect(sheetControls(DEFAULT_TABLE_SETTINGS, { callerIsGm: false })).toEqual(DEFAULT_TABLE_SETTINGS.player_can_edit);
+  });
+
+  it("le MJ garde toutes les commandes, quels que soient les interrupteurs", () => {
+    const fermes = { ...DEFAULT_TABLE_SETTINGS, player_can_edit: { ...tout, hp: false, currency: false } };
+    expect(sheetControls(fermes, { callerIsGm: true })).toEqual(tout);
+  });
+
+  it("hors campagne, pas de table, donc pas d'interrupteur", () => {
+    expect(sheetControls(null, { callerIsGm: false })).toEqual(tout);
+  });
+
+  it("rend une copie : la modifier ne touche pas aux réglages", () => {
+    const controles = sheetControls(DEFAULT_TABLE_SETTINGS, { callerIsGm: false });
+    controles.hp = false;
+    expect(DEFAULT_TABLE_SETTINGS.player_can_edit.hp).toBe(true);
   });
 });

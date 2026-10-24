@@ -2,7 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import { decideSheetActionAccess, type SheetActionAccess } from "@/src/core/permissions/sheetActionAccess";
-import { DEFAULT_TABLE_SETTINGS, parseTableSettings, type CampaignTableSettings, type PlayerEditableField } from "@/src/core/campaigns/tableSettings";
+import { DEFAULT_TABLE_SETTINGS, parseTableSettings, sheetControls, type CampaignTableSettings, type PlayerEditableField } from "@/src/core/campaigns/tableSettings";
 import { getEntityById } from "@/src/server/repos/entities";
 import { getCampaignById, getCampaignTableSettingsRaw } from "@/src/server/repos/campaigns";
 import { canUserEditEntity, isWorldAdmin } from "@/src/server/services/permissions";
@@ -38,4 +38,23 @@ export async function checkSheetActionAccess(
     settings,
   });
   return { access, settings };
+}
+
+/**
+ * V3.1-109 — les commandes que la fiche montre à son lecteur, pour la
+ * campagne qu'elle affiche (`sheetControls`). Hors campagne : tout. Une
+ * campagne introuvable ou illisible retombe sur les réglages par défaut,
+ * restrictifs pour ce qui compte. Deux lectures, en parallèle, seulement
+ * quand la fiche est dans une campagne (docs/QUOTAS.md).
+ */
+export async function loadSheetControls(
+  supabase: TypedClient,
+  params: { worldId: string; campaignId: string | null; userId: string }
+): Promise<Record<PlayerEditableField, boolean>> {
+  if (!params.campaignId) return sheetControls(null, { callerIsGm: false });
+  const [raw, callerIsGm] = await Promise.all([
+    getCampaignTableSettingsRaw(supabase, params.campaignId),
+    isWorldAdmin(supabase, { worldId: params.worldId, userId: params.userId }),
+  ]);
+  return sheetControls(raw === undefined ? DEFAULT_TABLE_SETTINGS : parseTableSettings(raw), { callerIsGm });
 }

@@ -29,6 +29,7 @@ import LevelUpWizard from "./LevelUpWizard";
 import { useDiceRoll } from "@/components/shell/DiceRollPanel";
 import { chargerFicheCalculee, type SheetApiResponse } from "./ficheCalculee";
 import { ABILITY_LABELS, SORTED_SKILLS } from "./sheetLabels";
+import { commandesDeLaFiche } from "@/lib/ui/commandesFiche";
 
 export type Tab = "actions" | "magie" | "inventaire" | "traits" | "maitrise";
 
@@ -397,6 +398,8 @@ export default function PlayableCharacterSheet({
   }
 
   const runtimeState = remote?.runtimeState.state;
+  // V3.1-109 : tant que la fiche calculee n'est pas la, aucune commande (jamais un geste que le serveur refusera).
+  const commandes = commandesDeLaFiche(remote?.controls);
   const hpMax = remote?.runtimeState.hpMax ?? sheet.hitPoints.max;
 
   const exhaustion = runtimeState?.exhaustion ?? 0;
@@ -465,6 +468,7 @@ export default function PlayableCharacterSheet({
         dernierD20={dernierD20}
         onJetDeMort={jetDeMort}
         concentration={runtimeState?.concentration ?? null}
+        commandes={commandes}
       />
 
       {/*
@@ -785,6 +789,7 @@ export default function PlayableCharacterSheet({
                 cost={cost}
                 encumbrance={sheet.encumbrance}
                 server={{ entityId, campaignId, onBlockRefreshed }}
+                monnaieLectureSeule={!commandes.currency}
               />
             )}
 

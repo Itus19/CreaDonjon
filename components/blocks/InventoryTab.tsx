@@ -25,6 +25,7 @@ export default function InventoryTab({
   cost,
   encumbrance,
   server,
+  monnaieLectureSeule,
 }: {
   worldSlug: string;
   inventory: InventoryBlockData | undefined;
@@ -40,6 +41,8 @@ export default function InventoryTab({
   encumbrance: EncumbranceResult;
   /** V3.1-24 : monnaie et equipement par les services serveur (voir `InventoryPanel`). */
   server?: { entityId: string; campaignId: string | null; onBlockRefreshed: (fresh: { id: string; data: unknown; version: number }) => void };
+  /** V3.1-109 : pièces en lecture seule (interrupteur du MJ coupé). */
+  monnaieLectureSeule?: boolean;
 }) {
   return (
     <div className="pt-3">
@@ -58,6 +61,7 @@ export default function InventoryTab({
         cost={cost}
         encumbrance={encumbrance}
         server={server}
+        monnaieLectureSeule={monnaieLectureSeule}
       />
     </div>
   );

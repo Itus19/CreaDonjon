@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
-import { checkSheetActionAccess } from "./sheetActionAccess";
+import { checkSheetActionAccess, loadSheetControls } from "./sheetActionAccess";
 import { writeTableSettings } from "./tableSettings";
 
 /**
@@ -122,5 +122,15 @@ describe.skipIf(!hasCreds)("etat de jeu ecrit par qui peut editer la fiche (inte
     expect(written).not.toBe("forbidden");
     expect(await check(player, "hp")).toBe("switch_off");
     expect(await check(gm, "hp")).toBe("ok");
+  });
+
+  it("la fiche montre les commandes que le serveur accepte (V3.1-109)", async () => {
+    // Suite du cas précédent : PV coupés, inspiration au MJ par défaut.
+    const pourJoueuse = await loadSheetControls(player.client, { worldId, campaignId, userId: player.id });
+    expect(pourJoueuse).toMatchObject({ hp: false, inspiration: false, conditions: false, currency: true });
+    const pourMj = await loadSheetControls(gm.client, { worldId, campaignId, userId: gm.id });
+    expect(Object.values(pourMj).every(Boolean)).toBe(true);
+    const horsCampagne = await loadSheetControls(player.client, { worldId, campaignId: null, userId: player.id });
+    expect(Object.values(horsCampagne).every(Boolean)).toBe(true);
   });
 });

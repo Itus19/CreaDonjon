@@ -11,6 +11,7 @@ import { useReferenceChips, type ResolvedChipView } from "./useReferenceChips";
 import Dropdown from "@/components/shared/Dropdown";
 import ActionsMenu from "@/components/shared/ActionsMenu";
 import RangeeChiffree from "./RangeeChiffree";
+import type { CommandesFiche } from "@/lib/ui/commandesFiche";
 import type { DeathSaves } from "@/src/core/rules/deathSaves";
 import type { Concentration } from "@/src/core/schemas/runtimeState";
 import type { EtatMourant } from "@/lib/ui/etatMourant";
@@ -356,6 +357,7 @@ export default function CharacterSheetHeader({
   dernierD20 = null,
   onJetDeMort = () => {},
   concentration = null,
+  commandes,
 }: {
   worldSlug: string;
   character: CharacterBlockData;
@@ -412,6 +414,8 @@ export default function CharacterSheetHeader({
   onJetDeMort?: () => void;
   /** V3.1-32 : la concentration en cours (`runtime_state.concentration`), affichage seul — aucune action serveur ne la rompt depuis la fiche. */
   concentration?: Concentration | null;
+  /** V3.1-109 : commandes montrées à la joueuse (interrupteurs du MJ). Absent : toutes (aperçu de l'assistant). */
+  commandes?: CommandesFiche;
 }) {
   // Lignee (retour utilisateur : "il manque la sous-espece") — meme mecanisme
   // que classe/sous-classe cote donnees, mais `character.species` ne porte
@@ -615,6 +619,7 @@ export default function CharacterSheetHeader({
         dernierD20={dernierD20}
         onJetDeMort={onJetDeMort}
         concentration={concentration}
+        commandes={commandes}
       />
 
       {pret && canLevelUp && (

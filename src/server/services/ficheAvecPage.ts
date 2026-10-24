@@ -10,6 +10,8 @@ import { rulesetSelectionFromBlocks, selectionBody, selectionHasAnything, select
 import { getOrInitializeRuntimeState, resolveCharacterActionContext, type RuntimeStateView } from "@/src/server/services/characterActions";
 import { buildResolvedRulesetView } from "@/src/server/services/resolvedRuleset";
 import { canUserEditEntityById } from "@/src/server/services/permissions";
+import { loadSheetControls } from "@/src/server/services/sheetActionAccess";
+import type { PlayerEditableField } from "@/src/core/campaigns/tableSettings";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -27,7 +29,8 @@ type TypedClient = SupabaseClient<Database>;
  * fiche (V3.1-108). `null` partout ou la route aurait repondu « introuvable ».
  */
 export interface FicheAvecPage {
-  remote: { sheet: DerivedSheet; hitDiceTotals: Record<string, number>; runtimeState: RuntimeStateView } | null;
+  /** `controls` (V3.1-109) : les commandes que la fiche montre à cet appelant pour cette campagne. */
+  remote: { sheet: DerivedSheet; hitDiceTotals: Record<string, number>; runtimeState: RuntimeStateView; controls: Record<PlayerEditableField, boolean> } | null;
   ruleset: { cleSelection: string; vue: Awaited<ReturnType<typeof buildResolvedRulesetView>> } | null;
 }
 
@@ -50,9 +53,12 @@ export async function chargerFicheAvecPage(
   const remotePromise = (async (): Promise<FicheAvecPage["remote"]> => {
     const ctx = await resolveCharacterActionContext(supabase, params.entityId, params.campaignId ?? null, params.locale);
     if (!ctx) return null;
-    const canEdit = await canUserEditEntityById(supabase, { entityId: params.entityId, userId: params.userId });
+    const [canEdit, controls] = await Promise.all([
+      canUserEditEntityById(supabase, { entityId: params.entityId, userId: params.userId }),
+      loadSheetControls(supabase, { worldId: ctx.worldId, campaignId: params.campaignId ?? null, userId: params.userId }),
+    ]);
     const runtimeState = await getOrInitializeRuntimeState(supabase, ctx, { persist: canEdit });
-    return { sheet: ctx.sheet, hitDiceTotals: ctx.hitDiceTotals, runtimeState };
+    return { sheet: ctx.sheet, hitDiceTotals: ctx.hitDiceTotals, runtimeState, controls };
   })();
 
   const rulesetPromise = selectionHasAnything(selection)

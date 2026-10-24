@@ -9,6 +9,7 @@ import type { DeathSaves } from "@/src/core/rules/deathSaves";
 import type { Concentration } from "@/src/core/schemas/runtimeState";
 import type { EtatMourant } from "@/lib/ui/etatMourant";
 import type { DeDeVie } from "@/lib/ui/outilTable";
+import { TOUTES_LES_COMMANDES, type CommandesFiche } from "@/lib/ui/commandesFiche";
 import ActionsMenu from "@/components/shared/ActionsMenu";
 import CommandeE, { CommandeESquelette } from "@/components/shared/CommandeE";
 import FeuilleDuBas from "@/components/shared/FeuilleDuBas";
@@ -98,6 +99,7 @@ function BadgeAFleches({
   retirerDesactive,
   titreAjouter,
   titreRetirer,
+  lectureSeule = false,
   onChange,
 }: {
   libelle: string;
@@ -108,9 +110,12 @@ function BadgeAFleches({
   retirerDesactive: boolean;
   titreAjouter: string;
   titreRetirer: string;
+  /** V3.1-109 : la valeur se voit, sans ▲▼. */
+  lectureSeule?: boolean;
   onChange: (delta: number) => void;
 }) {
   if (chargement) return <StatBadge label={libelle} value="" chargement />;
+  if (lectureSeule) return <StatBadge label={libelle} value={texte} danger={false} />;
   const fleche =
     "relative flex h-4 w-full shrink-0 items-center justify-center text-xs leading-none text-ink-muted transition-colors after:absolute after:inset-x-0 after:h-6 after:content-[''] hover:text-accent disabled:opacity-30 disabled:hover:text-ink-muted";
   return (
@@ -150,11 +155,13 @@ function InspirationBadge({
   valeur,
   chargement,
   desactive,
+  lectureSeule,
   onChange,
 }: {
   valeur: number;
   chargement: boolean;
   desactive: boolean;
+  lectureSeule: boolean;
   onChange: (delta: number) => void;
 }) {
   return (
@@ -167,6 +174,7 @@ function InspirationBadge({
       retirerDesactive={desactive || valeur <= 0}
       titreAjouter="Ajouter une inspiration"
       titreRetirer="Retirer une inspiration"
+      lectureSeule={lectureSeule}
       onChange={onChange}
     />
   );
@@ -232,6 +240,8 @@ export interface RangeeChiffreeProps {
   dernierD20?: number | null;
   onJetDeMort?: () => void;
   concentration?: Concentration | null;
+  /** V3.1-109 : les commandes que la joueuse a le droit de montrer (interrupteurs du MJ). Absent : toutes (le MJ, l'outil Table, l'aperçu). */
+  commandes?: CommandesFiche;
 
   // ---- V3.1-34, mode MJ : absentes côté fiche, qui ne change donc pas ----
   /** Dés de vie restants/total par type ; avec `onChangeHitDice`, ▲▼ intégrés au badge (un badge par dé). */
@@ -286,6 +296,7 @@ export default function RangeeChiffree({
   dernierD20 = null,
   onJetDeMort = () => {},
   concentration = null,
+  commandes = TOUTES_LES_COMMANDES,
   desDeVie,
   onChangeHitDice,
   onRetirerEtat,
@@ -339,10 +350,11 @@ export default function RangeeChiffree({
                 danger={hpLow}
                 complement={hpTemp > 0 ? `+${hpTemp} temp.` : undefined}
                 desactive={busy}
+                lectureSeule={!commandes.hp}
                 onDelta={onChangeHp}
               />
             ) : (
-              <BlocMourant etat={etatMourant} deathSaves={deathSaves} desactive={busy} dernierD20={dernierD20} onJetDeMort={onJetDeMort} onSoigner={onChangeHp} />
+              <BlocMourant etat={etatMourant} deathSaves={deathSaves} desactive={busy} dernierD20={dernierD20} onJetDeMort={onJetDeMort} onSoigner={commandes.hp ? onChangeHp : undefined} />
             )}
             <CommandeE
               libelle={`Niveau ${totalLevel}`}
@@ -406,10 +418,14 @@ export default function RangeeChiffree({
             valeur={inspiration}
             chargement={!pret}
             desactive={busy}
+            lectureSeule={!commandes.inspiration}
             onChange={onChangeInspiration}
           />
         </div>
       </div>
+
+      {/* V3.1-109 : la fiche montre ses dés de vie, mais le MJ les dépense (interrupteur coupé). */}
+      {pret && !commandes.hit_dice && <p className="text-xs text-ink-muted">{t("leMjDepenseDes")}</p>}
 
       {/* V3.1-32 — la concentration en cours, juste avant les états. Sur la fiche :
           affichage seul. Sur la Table (V3.1-34), le × la rompt. Le sort ouvre sa règle

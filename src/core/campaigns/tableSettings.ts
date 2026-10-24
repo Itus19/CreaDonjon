@@ -66,3 +66,16 @@ export function mergeTableSettings(current: CampaignTableSettings, patch: Campai
 export function mayPlayerChange(field: PlayerEditableField, settings: CampaignTableSettings, caller: { callerIsGm: boolean }): boolean {
   return caller.callerIsGm || settings.player_can_edit[field];
 }
+
+/**
+ * V3.1-109 — les commandes que la fiche montre à SON lecteur : un champ dont
+ * l'interrupteur est coupé se voit, sans commande. Le MJ garde tout. Hors
+ * campagne (`settings` null : fiche d'essai, état « hors partie »), il n'y a
+ * pas de table, donc rien à couper. Indication d'interface : le serveur
+ * refuse de toute façon le geste (`decideSheetActionAccess`).
+ */
+export function sheetControls(settings: CampaignTableSettings | null, caller: { callerIsGm: boolean }): Record<PlayerEditableField, boolean> {
+  return Object.fromEntries(
+    PLAYER_EDITABLE_FIELDS.map((f) => [f, settings === null || mayPlayerChange(f, settings, caller)])
+  ) as Record<PlayerEditableField, boolean>;
+}

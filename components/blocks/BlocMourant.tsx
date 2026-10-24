@@ -44,9 +44,10 @@ export default function BlocMourant({
   /** Dernier d20 obtenu par « Jet de mort » sur cette fiche, pour le montrer ; `null` avant tout jet. */
   dernierD20: number | null;
   onJetDeMort: () => void;
-  onSoigner: (delta: number) => void;
+  /** Absent : l'interrupteur « PV » du MJ est coupé (V3.1-109), les soins à la main disparaissent ; le jet de mort reste (geste du moteur). */
+  onSoigner?: (delta: number) => void;
 }) {
-  const soins = (
+  const soins = onSoigner && (
     <div className="flex flex-wrap gap-2">
       <button type="button" disabled={desactive} onClick={() => onSoigner(1)} className={BOUTON}>
         Soigner +1

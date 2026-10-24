@@ -6,6 +6,7 @@ import { getOrInitializeRuntimeState, resolveCharacterActionContext } from "@/sr
 import type { Locale } from "@/src/i18n/request";
 import { entityCampaignQuerySchema, searchParamsToObject } from "@/lib/queryParams/schemas";
 import { canUserEditEntityById } from "@/src/server/services/permissions";
+import { loadSheetControls } from "@/src/server/services/sheetActionAccess";
 
 const zEntityIdParams = z.object({ id: z.string().uuid() });
 
@@ -53,11 +54,15 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ error: "Fiche de personnage introuvable ou sans ruleset résolvable." }, { status: 404 });
   }
 
-  const canEdit = await canUserEditEntityById(supabase, { entityId, userId: user.id });
+  const [canEdit, controls] = await Promise.all([
+    canUserEditEntityById(supabase, { entityId, userId: user.id }),
+    loadSheetControls(supabase, { worldId: ctx.worldId, campaignId, userId: user.id }),
+  ]);
   const runtimeState = await getOrInitializeRuntimeState(supabase, ctx, { persist: canEdit });
 
+  // V3.1-109 : `controls` dit à la fiche quelles commandes montrer à CET appelant.
   return NextResponse.json(
-    { sheet: ctx.sheet, hitDiceTotals: ctx.hitDiceTotals, runtimeState },
+    { sheet: ctx.sheet, hitDiceTotals: ctx.hitDiceTotals, runtimeState, controls },
     { status: 200 }
   );
 }

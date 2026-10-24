@@ -2,6 +2,7 @@
 
 import type { DerivedSheet } from "@/src/core/rules/sheet";
 import type { RuntimeState } from "@/src/core/schemas/runtimeState";
+import type { PlayerEditableField } from "@/src/core/campaigns/tableSettings";
 import { creerChargeurParLots } from "@/lib/chargement/chargeurParLots";
 
 /** Reponse de `GET /api/entities/[id]/sheet` : fiche derivee et etat de jeu. */
@@ -9,6 +10,8 @@ export interface SheetApiResponse {
   sheet: DerivedSheet;
   hitDiceTotals: Record<string, number>;
   runtimeState: { state: RuntimeState; hpMax: number; hitDiceTotals: Record<string, number> };
+  /** V3.1-109 : les commandes à montrer à ce lecteur — `false` : la valeur se voit, sans commande (interrupteur coupé par le MJ). */
+  controls: Record<PlayerEditableField, boolean>;
 }
 
 /**

@@ -591,6 +591,7 @@
     "desDeVie": "Hit dice {die}",
     "rendreDe": "Recover a {die} hit die",
     "depenserDe": "Spend a {die} hit die",
+    "leMjDepenseDes": "The GM spends your hit dice",
     "retirerEtat": "Remove the {nom} condition",
     "ajouterEtat": "Add a condition",
     "aucunEtatAPoser": "Every condition of the ruleset is already applied.",

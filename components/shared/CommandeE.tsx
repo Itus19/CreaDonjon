@@ -33,6 +33,7 @@ export default function CommandeE({
   danger = false,
   complement,
   desactive = false,
+  lectureSeule = false,
   onDelta,
 }: {
   /** « Points de vie », « Niveau 2 », « Épuisement » : au-dessus de la jauge, et nom accessible du champ. */
@@ -50,6 +51,8 @@ export default function CommandeE({
   complement?: string;
   /** Pendant un envoi : la jauge ne reçoit plus de geste. */
   desactive?: boolean;
+  /** V3.1-109 : la valeur se voit, sans commande (▲, ▼ et champ absents) — l'interrupteur du MJ est coupé. */
+  lectureSeule?: boolean;
   /** L'écart à appliquer, jamais une valeur cible. */
   onDelta: (delta: number) => void;
 }) {
@@ -61,7 +64,7 @@ export default function CommandeE({
 
   /** Envoie l'écart du champ dans le sens demandé, puis vide le champ. Saisie invalide : rien ne part, le champ reste. */
   function appliquer(signe: 1 | -1) {
-    if (desactive) return;
+    if (desactive || lectureSeule) return;
     const ecart = ecartCommandeE(champ, signe);
     if (ecart === null) return;
     onDelta(ecart);
@@ -99,7 +102,7 @@ export default function CommandeE({
           aria-valuemin={0}
           aria-valuemax={maximum}
           aria-valuetext={maximum !== undefined ? `${valeur} sur ${maximum}` : String(valeur)}
-          aria-disabled={desactive}
+          aria-disabled={desactive || lectureSeule}
           onKeyDown={surToucheJauge}
           className="absolute left-0 top-0 flex h-14 w-14 items-center justify-center rounded-full"
         >
@@ -120,6 +123,8 @@ export default function CommandeE({
           </svg>
           <span className="relative text-xs font-medium text-ink">{texte}</span>
         </div>
+        {!lectureSeule && (
+          <>
         <button
           type="button"
           disabled={desactive}
@@ -151,6 +156,8 @@ export default function CommandeE({
         >
           ▼
         </button>
+          </>
+        )}
       </div>
       {complement && <span className="text-xs leading-tight text-ink-muted">{complement}</span>}
     </div>
