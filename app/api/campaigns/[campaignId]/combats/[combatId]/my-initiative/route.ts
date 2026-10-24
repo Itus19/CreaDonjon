@@ -52,5 +52,5 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const { status, error } = MESSAGES[result.reason];
     return NextResponse.json({ error }, { status });
   }
-  return NextResponse.json({ initiative: result.initiative, participantId: result.participantId }, { status: 200 });
+  return NextResponse.json({ initiative: result.initiative, participantId: result.participantId, natural: result.natural }, { status: 200 });
 }

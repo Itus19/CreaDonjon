@@ -13,7 +13,8 @@ import type { Locale } from "@/src/i18n/request";
 type TypedClient = SupabaseClient<Database>;
 
 export type SetMyInitiativeResult =
-  | { ok: true; initiative: number; participantId: string }
+  /** `natural` (V3.1-38) : le d20 tiré ou annoncé, pour la zone de résultat de l'outil de dés ; `null` si seul le total est connu. */
+  | { ok: true; initiative: number; participantId: string; natural: number | null }
   | { ok: false; reason: "not_found" | "not_rolling" | "no_character" | "not_in_combat" | "out_of_range" | "refused" };
 
 /**
@@ -45,6 +46,7 @@ export async function setMyInitiative(
   if (!mine) return { ok: false, reason: "not_in_combat" };
 
   let value: number;
+  let natural: number | null = null;
   if (params.input.mode === "roll") {
     const rolled = await rollInitiativeCheck(supabase, {
       entityId,
@@ -57,10 +59,12 @@ export async function setMyInitiative(
     });
     if (!rolled.ok) return { ok: false, reason: "refused" };
     value = rolled.roll.total;
+    natural = rolled.roll.naturalD20;
   } else {
     const ctx = await resolveCharacterActionContext(supabase, entityId, params.campaignId, params.locale);
     if (!ctx) return { ok: false, reason: "no_character" };
     value = ownInitiativeFromDie(params.input, ctx.sheet.abilities.dex.mod);
+    natural = params.input.modifierIncluded ? null : params.input.natural;
   }
   if (!isOwnInitiativeInRange(value)) return { ok: false, reason: "out_of_range" };
 
@@ -78,5 +82,5 @@ export async function setMyInitiative(
     actorUserId: params.userId,
     actor: "player",
   });
-  return { ok: true, initiative: value, participantId: mine.id };
+  return { ok: true, initiative: value, participantId: mine.id, natural };
 }
