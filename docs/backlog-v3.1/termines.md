@@ -2,6 +2,79 @@
 
 ---
 
+### ☑ V3.1-57 — Règles actives : le ruleset à gauche, la table à droite · `M` · sans modèle IA — **fait le 24 octobre**
+
+**Modèle conseillé : Sonnet** — planche définitive ; données et serveur de V3.1-23.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Planche** : `Regles-Decide.dc.html`. **Départ** :
+`components/rules/RulesetSelector.tsx`, `RulesetImportMappingDialog.tsx`,
+cas `regles-actives`. **Dépend de** : **23** (interrupteurs,
+`campaigns.table_settings`, refus serveur), 26 (fiche).
+
+**Ce qui est décidé**
+- **À gauche, le ruleset** :
+  - « Ruleset de la campagne » : les variantes **en arbre sous leur base**
+    (trait de rattachement) ; pastilles « officiel », « variante »,
+    « référence personnelle » ; « ● actif » ou « Choisir » ; « Exporter »
+    sur une variante **jamais sur une référence personnelle** ; × sur une
+    variante, confirmé en surface flottante (« Supprimer la variante « … » ?
+    Ses fiches de règles disparaissent ; la campagne revient à … » si elle
+    est active) ;
+  - « Créer une variante » : la base en puces, le nom, « Créer » (grisé sans
+    nom), l'interrupteur « Référence personnelle » (« Contenu saisi depuis
+    un ouvrage que je possède ») et son avertissement
+    (`referencePersonnelleAvertissement`, texte inchangé) ;
+  - « Importer des règles » : « Ajouter à la variante active » / « Créer un
+    nouveau ruleset personnel » en puces, l'aide (textes existants de
+    `messages/fr.json`), « Choisir un fichier JSON… », le résultat et les
+    erreurs ligne à ligne (correspondance des colonnes inchangée).
+- **À droite, la table** :
+  - « Ce que les joueurs modifient eux-mêmes » : les six interrupteurs de
+    V3.1-23 (états, inspiration, PV, pièces, emplacements, dés de vie), chacun
+    avec ce qu'il commande en petit et **qui tient la valeur** (« le MJ » /
+    « la joueuse ») ; « Par défaut » remet les six réglages ;
+  - « Inspiration au plus » en − / + ;
+  - **l'aperçu de la fiche de la joueuse** (une fiche de PJ de la campagne,
+    en lecture) qui suit les interrupteurs **en direct** : « + état »
+    apparaît, ▲▼ apparaissent, emplacements inertes, « Le MJ dépense tes dés
+    de vie ». C'est **la fiche réelle** (composant de V3.1-26) en mode
+    lecture, pas un dessin à part.
+- **Tablette** : un volet — la table et l'aperçu d'abord, puis le ruleset et
+  l'atelier. **Téléphone** : le ruleset, la table, l'aperçu, puis
+  « Variantes et import » replié.
+
+**Critères d'acceptation**
+- [x] Choisir un ruleset : fiches, création et règles le suivent sans rechargement (caches clients vidés comme aujourd'hui).
+- [x] « Exporter » absent d'une référence personnelle.
+- [x] Basculer un interrupteur change l'aperçu aussitôt et l'écrit (une requête).
+
+**Livré le 24 octobre.** Serveur (Opus) : `chargerReglesActives`
+(`src/server/services/reglesActives.ts`) lit ensemble les rulesets (avec leur
+parent, pour l'arbre), l'actif, les interrupteurs de la campagne et un PJ
+pour l'aperçu (une joueuse de préférence), page et fenêtre ; la page lance
+la fiche de l'aperçu avec elle (ADR 0056). `DELETE /api/rulesets/[id]?worldSlug=`
+(`deleteRulesetVariantFromWorld`) : la variante ACTIVE rend la campagne à sa
+base avant de disparaître, et le monde la reprend si elle ne peut pas
+disparaître (test d'intégration, trois cas) ; Zod ajouté sur cette route qui
+n'en avait pas. Interface (Sonnet) : `ReglesActivesPanel`, `RulesetSelector`
+refait sans chargement au montage, `Interrupteur`, logique pure
+`lib/ui/reglesActives.ts` (testée) ; l'aperçu est la vraie fiche
+(`ParticipantCharacterSheet`) en `inert`, avec `commandesImposees` calculées
+par `sheetControls` sur les interrupteurs locaux. Correction d'Opus : en
+grande fenêtre, l'atelier tombait sous la hauteur de l'aperçu (rangées de
+grille), corrigé par `auto auto 1fr`. Vérifié en direct avec le MJ de test :
+« Leur inspiration » allumé fait apparaître ▲▼ dans l'aperçu aussitôt, une
+requête, persiste au rechargement ; « Par défaut » remet tout en une
+requête (réglages du banc d'essai remis). Créer, importer et supprimer une
+variante n'ont pas été rejoués en direct (le test d'intégration couvre la
+suppression). Limite : « Variantes et import » s'ouvre de force dès `@md`
+par `::details-content` (Chromium 131+, Firefox 143+) ; plus ancien, il
+reste replié mais s'ouvre à la main.
+
+---
+
 ### ☑ V3.1-109 — Droits des joueurs : la fiche obéit aux interrupteurs · `M` · sans modèle IA — **fait le 24 octobre**
 
 **Modèle conseillé : Sonnet.** **Dépend de** : 108, 26, 32. L'écran
