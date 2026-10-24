@@ -15,7 +15,7 @@
 
 ## Décision
 
-**C.** 8 courts (un par groupe), 8 longs (après 90 jours, ou aussitôt au-dessus de 80), 4 du joueur. Revivre ravive l'émotion ; un souvenir formateur revécu a une chance sur trois de devenir fondateur et déplace des facettes ou des valeurs, avec sa cause affichée. Oublier n'efface rien du journal du monde. Détail : `specs/simulation-monde.md` §7.
+**C.** 8 courts (un par groupe), 8 longs (après un délai réglable de 30 à 365 jours au jour près, 90 par défaut et 365 pendant la génération, ou aussitôt au-dessus de 80), 4 du joueur. Revivre ravive l'émotion ; un souvenir formateur revécu a une chance sur trois de devenir fondateur et déplace des facettes ou des valeurs, avec sa cause affichée. Oublier n'efface rien du journal du monde. Détail : `specs/simulation-monde.md` §7.
 
 ## Conséquences
 

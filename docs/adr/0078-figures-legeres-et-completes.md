@@ -14,7 +14,7 @@ Un monde ancien compte des milliers de personnes. Toutes ne peuvent pas avoir 50
 
 ## Décision
 
-**B.** Légère : traits, valeurs, éthiques, un rêve, stress, liens ; pas mensuel ; jusqu'à 5 000. Complète : toutes les couches, une fiche du wiki obligatoire, pas horaire ou quotidien ; 150 au plus. Promotion quand la figure s'approche du groupe, se lie à un PJ ou est épinglée, avec une **reconstitution déterministe** de ce qui manque à partir de la graine et de ses actes. Rétrogradation après 90 jours sans pertinence. Détail : `specs/simulation-monde.md` §4.
+**B.** Légère : traits, valeurs, éthiques, un rêve, stress, liens ; pas mensuel ; jusqu'à 5 000. Complète : toutes les couches, une fiche du wiki obligatoire, pas horaire ou quotidien ; 150 au plus. Promotion quand la figure s'approche du groupe, se lie à un PJ ou est épinglée, avec une **reconstitution déterministe** de ce qui manque à partir de la graine du monde, de l'identifiant de la figure et de ses actes. Rétrogradation après 90 jours sans pertinence. Détail : `specs/simulation-monde.md` §4.
 
 ## Conséquences
 

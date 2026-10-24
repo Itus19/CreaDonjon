@@ -14,7 +14,7 @@ Un seul moteur, deux usages. En solo, il fait vivre le monde de lui-même. Pour 
 
 **À faire**
 - Le réglage `sim.mode` (`off`, `propose`, `auto`) dans les réglages de table (H1), réservé au MJ ; défaut `off` en campagne, `auto` en solo.
-- À la première activation : une figure pour chaque entité qui a un bloc `personality` ou `character` (complète si `near` ou liée à un PJ, légère sinon), état initial = graine (complétée par D3 pour ce qui manque, avec l'accord du MJ). Une case « garder mes PNJ tels quels » les crée **figées** (F2).
+- À la première activation : une figure pour chaque entité qui a un bloc `personality` ou `character` (complète si `near` ou liée à un PJ, légère sinon), état courant initial = état de départ (complété par D3 pour ce qui manque, avec l'accord du MJ). Une case « garder mes PNJ tels quels » les crée **figées** (F2).
 
 **Critères d'acceptation**
 - [ ] `off` : aucune écriture de simulation (test).
@@ -88,7 +88,7 @@ Un seul moteur, deux usages. En solo, il fait vivre le monde de lui-même. Pour 
 
 **Sous-tâches Haiku** : planche du catalogue.
 
-- Un tableau pour le MJ : rêves en cours et leur avancée, tensions (paires proches de la rupture, figures en désaccord de valeurs avec leur faction), stress et besoins critiques, figures qui se souviennent le plus des PJ, réputations des PJ par lieu. Utile même simulation désactivée (il lit les graines).
+- Un tableau pour le MJ : rêves en cours et leur avancée, tensions (paires proches de la rupture, figures en désaccord de valeurs avec leur faction), stress et besoins critiques, figures qui se souviennent le plus des PJ, réputations des PJ par lieu. Utile même simulation désactivée (il lit les états de départ).
 
 **Critères d'acceptation**
 - [ ] Esquisse validée ; chargement mesuré (`docs/CABLAGE.md`, `docs/QUOTAS.md`).

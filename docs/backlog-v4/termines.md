@@ -16,3 +16,16 @@ Les anciens tickets « à concevoir » (A1, A3, A4, A6, B1, C1, C4, D1, E1, E4, 
 - [x] ADR 0067 à 0084, au statut « proposée » jusqu'à ce que leur ticket soit codé.
 - [x] Bandeau de renvoi dans `specs/psyche-pnj.md` ; lignes ajoutées dans `CLAUDE.md`.
 
+
+### ☑ V4-0b — Compléter la conception · sans modèle IA — **fait le 24 octobre 2026**
+
+Décisions prises avec l'auteur les 22 et 24 octobre.
+
+- [x] « État de départ » pour le bloc d'une entité ; « graine » réservée au nombre qui régénère un monde (ADR 0067 amendé).
+- [x] Mémoire longue : curseur de 30 à 365 jours, 90 par défaut, 365 en génération (ADR 0074 amendé).
+- [x] Sexualité dans la psyché : attirance, libido et rapport au sexe séparés ; besoins `intimacy` et `tenderness` ; consentement et âge adulte comme règles absolues (ADR 0087).
+- [x] Accords et structures d'union : couple libre, libertin·e, polyamour solo, harem (ADR 0088).
+- [x] Identité perçue, normes, préjugés, vies cachées ; la règle d'identité reformulée (ADR 0086, amende 0073).
+- [x] Thèmes de table et détail du récit (ADR 0085).
+- [x] Tickets nouveaux : C9, C10, E11 ; tickets amendés : A4, A6, A7, B1, B4, B5, B6, B9, C1, E4, E7, E9, E10, G2, G3, H1, H2.
+- [ ] Reste à discuter : les faits marquants et la simulation générale.

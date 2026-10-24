@@ -13,7 +13,7 @@
 **Sous-tâches Haiku** : remplir la liste de contrôle de `docs/SECURITE.md` ; lancer les tests et résumer les échecs.
 
 **À faire**
-- `src/core/sim/settings.ts` : `zSimTableSettings` (la forme de la spec §11.1) et ses défauts par mode de campagne ; lu depuis `campaigns.table_settings.sim`.
+- `src/core/sim/settings.ts` : `zSimTableSettings` (la forme de la spec §11.1 : mode, couches des PJ dont l'intimité, évolution des traits, conséquences du corps, mémoire longue de 30 à 365 jours, âge adulte, romance et sexualité séparées, normes sur l'identité, PJ concernés, thèmes de table avec leurs plafonds, détail de la violence, ton) et ses défauts par mode de campagne ; lu depuis `campaigns.table_settings.sim`. Les plafonds des thèmes (`sexual_violence`, `violence_to_children` : `veiled_generated` au plus) sont imposés par le schéma.
 - Migration `sim_pc_views` (lecture : admin du monde et joueur du PJ ; écriture : admin).
 - `buildPcView(figure, beliefs, settings, pendingShifts): PcView` (pur) : couches `player` en bandes, traits, valeurs et rêves, propositions en attente, croyances (version crue, source et certitude en mots), réputation. Jamais `is_accurate`, jamais un nombre.
 - `refreshPcViews(campaignId)` : appelé en fin de lot et à chaque changement de réglage.
@@ -31,7 +31,8 @@
 
 **Sous-tâches Haiku** : libellés ; planche du catalogue.
 
-- Dans les réglages de table (V3.1-108) : une section « Simulation et psyché » : mode, une ligne par couche (joueur, MJ seul, désactivée), évolution des traits des PJ, conséquences du corps, récit intime, simulation romantique, délai de la mémoire longue, âge adulte. Chaque option dit son effet en une phrase.
+- Dans les réglages de table (V3.1-108) : une section « Simulation et psyché » : mode, une ligne par couche (joueur, MJ seul, désactivée), évolution des traits des PJ, conséquences du corps, simulation romantique et simulation sexuelle, récit intime, délai de la mémoire longue (**curseur de 30 à 365 jours**, repères à 30, 90 et 365), âge adulte, normes sur l'identité, PJ concernés.
+- Une section « Thèmes et récit » : les quatre thèmes et leurs positions (une position au-delà du plafond n'est pas proposée), le détail de la violence, le ton. Chaque option dit son effet en une phrase.
 
 **Critères d'acceptation**
 - [ ] Tient à 375 px ; seul le MJ voit et modifie ; en solo, tout est ouvert au joueur.

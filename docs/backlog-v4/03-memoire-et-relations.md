@@ -15,7 +15,7 @@ Se souvenir, être transformé par ses souvenirs, se lier, croire, colporter, me
 **À faire** (tests d'abord), `src/core/sim/memory.ts`
 - `memoryGroup(emotion, subjectIds)`.
 - `remember(memories, memory)` : règles de la mémoire courte (un par groupe, le plus fort gardé ; sinon place vide ; sinon le plus faible remplacé).
-- `consolidate(memories, now, promotionDays)` : courte → longue (ou mémoire du joueur si `involves_pc`) après le délai, ou aussitôt au-dessus de 80 ; échoue si plus faible que le remplacé.
+- `consolidate(memories, now, promotionDays)` (30 à 365, réglage `memory_promotion_days`) : courte → longue (ou mémoire du joueur si `involves_pc`) après le délai, ou aussitôt au-dessus de 80 ; échoue si plus faible que le remplacé.
 - `revisitDue(memories, now, rng, encounters)` : les souvenirs revécus ce pas, avec l'émotion rendue à 60 %.
 
 **Critères d'acceptation**
@@ -23,6 +23,7 @@ Se souvenir, être transformé par ses souvenirs, se lier, croire, colporter, me
 - [ ] Un deuil à 90 est toujours en mémoire longue au bout de 50 ans simulés ; une broutille à 10 est oubliée en quelques semaines.
 - [ ] Un souvenir impliquant un PJ ne quitte jamais la mémoire du joueur au profit d'un souvenir du quotidien.
 - [ ] Déterministe à graine égale.
+- [ ] Avec 30 jours, la mémoire longue se remplit plus vite qu'avec 365 sur la même suite d'événements (test comparatif).
 
 ---
 
@@ -136,3 +137,43 @@ Se souvenir, être transformé par ses souvenirs, se lier, croire, colporter, me
 **Critères d'acceptation**
 - [ ] Un PNJ vaincu par un PJ et laissé en vie, rancunier, développe `avenge(PJ)` (test sur graine).
 - [ ] Ce rêve n'apparaît jamais sans souvenir du PJ.
+
+---
+
+### ☐ V4-C9 — Ce qui se voit, les déguisements et les préjugés · `L` · sans modèle IA — **prêt après C5, B4**
+
+**Modèle conseillé : Opus** — règle d'identité, jets du moteur. **ADR :** 0086. **Spec :** §8.6.
+
+**Sous-tâches Haiku** : libellés des groupes ; lancer les tests.
+
+**À faire** (tests d'abord)
+- `src/core/sim/perception.ts` : `perceiveOnMeeting(observer, target)` (croyances `witnessed` sur les traits perceptibles, ou sur le déguisement), `doubtsDisguise(observer, target, context)`, et le jet de démasquage par le moteur de règles existant (compétence et difficulté selon le ruleset), qui écrit `disguise_pierced`.
+- `src/core/sim/groups.ts` : `GroupKey`, `groupAttitude(figure, group, culture)`, `experienceShift(attitude, memory, openMindedness)` (généralisation abusive), `contactShift` (Allport), `firstImpression(observer, perceivedGroups)`.
+- Actions `discriminate`, `denounce`, `don_disguise` (dans `actions.full.ts`, E4).
+- Le test de la règle d'identité (B4) est étendu : une figure n'agit jamais sur une appartenance qu'elle ne croit pas ; un déguisement non percé protège.
+
+**Critères d'acceptation**
+- [ ] Une figure hostile à un peuple discrimine un membre perçu, pas le même membre déguisé (test sur graine).
+- [ ] Un tort subi déplace l'attitude envers tout le groupe, moins chez une figure ouverte d'esprit ; de bons contacts répétés la remontent (tests).
+- [ ] `pcs_concerned.identity = false` : aucune figure ne discrimine un PJ (test).
+
+---
+
+### ☐ V4-C10 — Les normes, ce qu'on montre, et les vies cachées · `L` · sans modèle IA — **prêt après C9, B2**
+
+**Modèle conseillé : Opus** — règle d'identité, sujet sensible. **ADR :** 0086. **Spec :** §8.7.
+
+**Sous-tâches Haiku** : libellés des normes et des réponses ; lancer les tests.
+
+**À faire** (tests d'abord)
+- `culture.norms` (bloc `culture`, B2) et l'écart individuel ; `normResponse(figure, norm, culture)`.
+- `src/core/sim/disclosure.ts` : `chooseDisclosure(figure, trait, context)` (par utilité : risque local, besoins, `confidence`, `bravery`, `privacy`, valeur `truth`), le stress minoritaire, `outed` quand une croyance se répand dans un lieu qui réprime, puis les suites selon la norme.
+- Lieux sûrs : `safe_for` et le secret sur les entités de lieu (un champ de bloc de lieu), action `seek_safe_place`, croyances sur l'existence du lieu.
+- Unions de façade : `union_formed` `data.arranged` et son motif ; la vérité n'est connue que par les croyances.
+- Le réglage `identity_norms = false` neutralise les normes d'un monde.
+
+**Critères d'acceptation**
+- [ ] Dans un lieu qui réprime, une figure cache son orientation en public et l'ouvre dans un lieu sûr (test sur graine).
+- [ ] Une fausse accusation peut provoquer `outed` sans que la figure soit concernée ; la vérité reste visible du MJ (test).
+- [ ] Vivre caché contre un besoin pressant fait monter le stress (test).
+- [ ] Le test de la règle d'identité couvre les normes : elles jugent des conduites connues, jamais une appartenance non crue.

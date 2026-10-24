@@ -1,7 +1,7 @@
 # Spécification — La psyché V4
 
-**Version :** 1.0 — 22 octobre 2026
-**Ticket :** V4-B1 · **ADR :** 0072 (couches), 0073 (identité), 0067 (graine et état)
+**Version :** 1.1 — 22 octobre 2026 (sexualité, accords, identité perçue : ADR 0085 à 0088)
+**Ticket :** V4-B1 · **ADR :** 0072 (couches), 0073 et 0086 (identité), 0067 (état de départ et état courant), 0087 (sexualité), 0088 (accords et unions)
 **Remplace :** `specs/psyche-pnj.md` §1, §2 et §6 sur tout ce qui suit. Les §3 à §5 (relation, journal, prudence de l'IA) restent valables, amendés au §8.
 **Sources :** `docs/recherche/simulation-inspirations.md`
 
@@ -13,18 +13,22 @@ Ce document fixe **les listes, les échelles et la forme des blocs**. Le moteur 
 
 | Couche | Échelle | Stockée où | Bouge comment |
 |---|---|---|---|
-| **Facettes** (50) | −100…+100 | graine : bloc `personality` ; état : `sim_figures` | rarement : souvenir fondateur (simulation §7) |
-| **Valeurs** (35) | −100…+100 | graine : bloc `worldview` ; état : `sim_figures` | rarement : souvenir fondateur, persuasion |
-| **Éthiques** (15) | une réponse sur 7 | bloc `worldview` (personne ou culture) | presque jamais |
-| **Besoins** (3 du corps + 25 de l'esprit) | corps : heures écoulées ; esprit : 0…100 | `sim_figures` seulement | sans cesse |
-| **Rêves** (19 types) | statut, intensité 1…3 | graine : `personality` ; état : `sim_figures` | atteints, abandonnés, nés d'un événement |
-| **Émotions** (22 familles) | intensité 0…100 | dans les souvenirs, `sim_figures` | à chaque événement |
+| **Facettes** (52) | −100…+100 | départ : bloc `personality` ; courant : `sim_figures` | rarement : souvenir fondateur (simulation §7) |
+| **Valeurs** (37) | −100…+100 | départ : bloc `worldview` ; courant : `sim_figures` | rarement : souvenir fondateur, persuasion |
+| **Éthiques** (18) | une réponse sur 7 | bloc `worldview` (personne ou culture) | presque jamais |
+| **Besoins** (3 du corps + 27 de l'esprit) | corps : heures écoulées ; esprit : 0…100 | `sim_figures` seulement | sans cesse |
+| **Rêves** (22 types) | statut, intensité 1…3 | départ : `personality` ; courant : `sim_figures` | atteints, abandonnés, nés d'un événement |
+| **Émotions** (24 familles) | intensité 0…100 | dans les souvenirs, `sim_figures` | à chaque événement |
 | **Humeur** | −100…+100 | **jamais stockée** (règle 16) | calculée depuis émotions et besoins |
 | **Stress** | 0…100 | `sim_figures` | accumulé jour par jour |
 | **Préférences** | aime / déteste | bloc `personality` | jamais par la simulation |
 | **Identité et orientations** | listes du monde | bloc `character` | jamais par la simulation |
+| **Traits perceptibles** | espèce, âge apparent, expression, marques | bloc `character` | par un déguisement (§9.6) |
+| **Attitudes envers les groupes** | −100…+100 | `sim_figures` (héritées de la culture) | par l'expérience (simulation §8.6) |
 
-**Sans simulation active** (`simulation: off`, `specs/simulation-monde.md` §11), seules les graines existent : la fiche affiche facettes, valeurs, éthiques, rêves, préférences et identité ; besoins, émotions, humeur et stress n'apparaissent pas.
+**Vocabulaire.** La **graine** est le nombre (et les paramètres) qui régénère un monde (`specs/simulation-monde.md` §13). L'**état de départ** est ce que porte le bloc d'une entité : la personne telle qu'on l'a créée. L'**état courant** est ce qu'elle est devenue dans la partie (ADR 0067).
+
+**Sans simulation active** (`simulation: off`, `specs/simulation-monde.md` §11), seuls les états de départ existent : la fiche affiche facettes, valeurs, éthiques, rêves, préférences et identité ; besoins, émotions, humeur et stress n'apparaissent pas.
 
 ---
 
@@ -61,7 +65,7 @@ La loi en cloche se fait **sans dépendance** : somme de trois tirages uniformes
 
 ---
 
-## 2. Les facettes — 50, en six familles
+## 2. Les facettes — 52, en sept familles
 
 Clés anglaises (`snake_case`), libellés français des deux pôles (forme masculine ici ; les trois formes vivent dans `messages/`). Valeur positive = premier pôle.
 
@@ -76,7 +80,7 @@ Clés anglaises (`snake_case`), libellés français des deux pôles (forme mascu
 | `gloom_propensity` | enclin à la mélancolie | résilient |
 | `anger_propensity` | colérique | placide |
 | `anxiety_propensity` | anxieux | serein |
-| `lust_propensity` | sensuel | peu porté sur le désir |
+| `lust_propensity` | forte libido | faible libido |
 | `stress_vulnerability` | fragile sous la pression | imperturbable |
 | `emotional_attachment` | s'attache passionnément | détaché |
 | `emotionality` | guidé par ses émotions | maître de ses émotions |
@@ -147,6 +151,15 @@ Clés anglaises (`snake_case`), libellés français des deux pôles (forme mascu
 | `hopefulness` | optimiste | pessimiste |
 | `violence` | bagarreur | pacifique |
 
+### Sexualité (`sexuality`) — 2
+
+| Clé | + | − |
+|---|---|---|
+| `sexual_curiosity` | aventureux dans ses désirs | goûts classiques |
+| `body_modesty` | pudique | désinhibé |
+
+`lust_propensity` (la libido) reste dans l'Émotivité. **Attirance, libido et rapport au sexe sont trois choses** : qui m'attire (orientation, §9.4), combien j'ai envie (`lust_propensity`), et si je veux du sexe (`sex_attitude`, §9.5). Une personne asexuelle peut avoir une libido ; une personne allosexuelle peut ne pas vouloir de sexe.
+
 ### Facettes de compatibilité
 
 Huit facettes comptent quand deux personnes se fréquentent (simulation §8.3) : `friendliness`, `politeness`, `humor`, `harmony`, `orderliness`, `tolerance`, `cheerfulness`, `activity`. Un écart de plus de 60 points sur l'une d'elles rend la fréquentation irritante. C'est le mécanisme de Dwarf Fortress qui fait naître des rancunes sans raison dramatique.
@@ -159,7 +172,7 @@ Huit facettes comptent quand deux personnes se fréquentent (simulation §8.3) :
 
 ## 3. Les valeurs et les éthiques
 
-### 3.1 Les 35 valeurs
+### 3.1 Les 37 valeurs
 
 | Clé | Nom | Clé | Nom |
 |---|---|---|---|
@@ -179,8 +192,8 @@ Huit facettes comptent quand deux personnes se fréquentent (simulation §8.3) :
 | `piety` | la piété | `commerce` | le commerce |
 | `artwork` | l'art | `wealth` | la richesse |
 | `cooperation` | la coopération | `romance` | l'amour |
-| | | `nature` | la nature |
-| | | `peace` | la paix |
+| `sexual_freedom` | la liberté sexuelle (pôle négatif : la chasteté) | `nature` | la nature |
+| `fidelity` | la fidélité (distincte de la loyauté) | `peace` | la paix |
 | | | `knowledge` | le savoir |
 
 Les valeurs sont **communes aux personnes et aux factions** : une culture, une guilde, un ordre religieux ont des valeurs, pas de tempérament. Une personne s'écarte des valeurs de sa culture ; l'écart se voit sur la fiche (« chérit l'indépendance, contre la tradition de son peuple »).
@@ -191,7 +204,7 @@ Les valeurs sont **communes aux personnes et aux factions** : une culture, une g
 
 Une éthique dit **comment une personne ou une culture juge un acte**. C'est la forme mécanique des `lines` et `limits` de la V2, qui restent en texte libre à côté.
 
-**Actes (15)** : `kill_innocent` (tuer un innocent), `kill_in_fight` (tuer au combat), `kill_animal` (tuer un animal), `torture`, `treason` (trahir les siens), `oath_breaking` (rompre un serment), `lying` (mentir), `theft` (voler), `assault` (frapper), `vandalism` (détruire le bien d'autrui), `trespassing` (entrer sans droit), `slavery` (asservir), `desecration` (profaner), `cannibalism` (manger un être pensant), `infidelity` (rompre une exclusivité **convenue** entre partenaires ; une relation non exclusive acceptée n'est jamais une infidélité, §9.4).
+**Actes (18)** : `kill_innocent` (tuer un innocent), `kill_in_fight` (tuer au combat), `kill_animal` (tuer un animal), `torture`, `treason` (trahir les siens), `oath_breaking` (rompre un serment), `lying` (mentir), `theft` (voler), `assault` (frapper), `vandalism` (détruire le bien d'autrui), `trespassing` (entrer sans droit), `slavery` (asservir), `desecration` (profaner), `cannibalism` (manger un être pensant), `infidelity` (rompre **l'accord convenu** entre partenaires, quel qu'il soit, `specs/simulation-monde.md` §8.5 ; une relation non exclusive acceptée n'est jamais une infidélité), `sex_work` (acheter ou vendre du sexe), `seduction_for_gain` (séduire par intérêt), `sexual_violence` (imposer un acte sexuel ; presque toutes les cultures le jugent `unthinkable` ou `shameful` ; son existence dans un monde dépend du thème de table, simulation §11.3).
 
 **Réponses (7)**, de la plus permissive à la plus stricte :
 
@@ -221,7 +234,7 @@ Une éthique dit **comment une personne ou une culture juge un acte**. C'est la 
 
 Les seuils sont des **données du monde**, réglables. Leurs **conséquences de règles** (l'épuisement) ne sont pas ici : elles passent par les déclencheurs du ruleset (ADR 0083, ticket H3). Les besoins du corps ne comptent que pour les PJ et les figures en scène ou proches (simulation §4).
 
-### 4.2 Les besoins de l'esprit (25)
+### 4.2 Les besoins de l'esprit (27)
 
 Chaque besoin a un **poids** de 0 à 3, calculé depuis les facettes et valeurs sources (somme des sources, puis bande : < 12 → 0, < 34 → 1, < 67 → 2, sinon 3). Un poids 0 veut dire que la personne n'a pas ce besoin. Le MJ peut forcer un poids (`need_overrides`, §7.1).
 
@@ -252,6 +265,8 @@ Chaque besoin a un **poids** de 0 à 3, calculé depuis les facettes et valeurs 
 | `helping` | aider | `altruism` |
 | `abstract_thought` | réfléchir | `abstraction` |
 | `admire_art` | admirer l'art | valeur `artwork` |
+| `intimacy` | vie sexuelle | `lust_propensity`, valeur `sexual_freedom` ; **0 si `sex_attitude` = `averse`** ; plafonné à 1 si `indifferent` |
+| `tenderness` | tendresse, contact physique (non sexuel) | `love_propensity`, `gregariousness` ; ouvert à tout le monde, personnes ace et aro comprises |
 
 **Niveau** : satisfaction 0…100. Satisfaire un besoin le remet à 100 ; il redescend ensuite à 0 en **60 jours** (poids 1), **20 jours** (poids 2) ou **7 jours** (poids 3). Bandes : comblé ≥ 80 · satisfait ≥ 50 · ça manque ≥ 25 · en manque ≥ 10 · criant < 10.
 
@@ -283,6 +298,9 @@ Un rêve est un **but typé** avec des paramètres, un horizon, une intensité e
 | `find` | figure | la rencontre | la cible est morte |
 | `sow_chaos` | — | — (permanent) | — |
 | `immortality` | — | — (permanent) | — |
+| `be_desired` | — | gagne un lien `lover` ou `fling`, ou réputation `seducer` | — |
+| `explore_desires` | — | — (permanent) | — |
+| `win_over` | figure | gagne un lien `lover` ou `partner` avec elle | la cible est morte, ou l'a repoussé trois fois et le rêve tourne en rancune |
 | `custom` | texte | décidé par le MJ ou le joueur | idem |
 
 **Champs** : `id`, `type`, `params`, `horizon` (`life` | `arc`), `intensity` (1…3), `status` (`active` | `achieved` | `abandoned` | `impossible`), `text`, `visibility`, `origin` (`seed` | `simulation` | `gm` | `player`), `born_at` (date de jeu), `cause_event_id`.
@@ -295,7 +313,7 @@ Un rêve est un **but typé** avec des paramètres, un horizon, une intensité e
 
 ## 6. Les émotions
 
-22 familles. Chacune a une **valence** (qui pèse sur l'humeur) et trois libellés selon l'intensité (légère < 34, moyenne < 67, forte ≥ 67).
+24 familles. Chacune a une **valence** (qui pèse sur l'humeur) et trois libellés selon l'intensité (légère < 34, moyenne < 67, forte ≥ 67).
 
 | Clé | Valence | Légère | Moyenne | Forte |
 |---|---|---|---|---|
@@ -321,12 +339,14 @@ Un rêve est un **but typé** avec des paramètres, un horizon, une intensité e
 | `boredom` | −0,5 | lassitude | ennui | torpeur |
 | `contempt` | −0,5 | dédain | mépris | haine |
 | `vengefulness` | −0,5 | rancune | soif de vengeance | haine vengeresse |
+| `fulfillment` | +1 | bien-être | plénitude | extase |
+| `insecurity` | −1 | doute | insécurité | complexe |
 
-Dwarf Fortress en nomme environ 170 ; vingt-deux familles à trois intensités en donnent 66, assez pour que la narration varie, assez peu pour que les règles d'évaluation (simulation §6) restent écrivables. `desire` n'apparaît que si la simulation romantique est active (§9.5).
+Dwarf Fortress en nomme environ 170 ; vingt-quatre familles à trois intensités en donnent 72, assez pour que la narration varie, assez peu pour que les règles d'évaluation (simulation §6) restent écrivables. `desire` et `fulfillment` n'apparaissent que si la simulation romantique ou sexuelle est active (§9.7). `insecurity` sert aussi hors de la sexualité (image de soi, rejet).
 
 ---
 
-## 7. La forme des blocs de graine
+## 7. La forme des blocs d'état de départ
 
 ### 7.1 `personality`, version 2
 
@@ -364,7 +384,7 @@ Attachable à une personne ou à une faction, comme aujourd'hui. Une faction qui
 
 ### 7.3 Préférences
 
-`{ category, label, like: boolean }`, `category` ∈ `food`, `drink`, `material`, `creature`, `color`, `place`, `art_form`, `weather`. Descriptives : elles colorent le récit et pèsent faiblement dans l'évaluation (un cadeau aimé donne de la joie). Le libellé est libre ; aucune liste n'est imposée.
+`{ category, label, like: boolean }`, `category` ∈ `food`, `drink`, `material`, `creature`, `color`, `place`, `art_form`, `weather`, `attraction` (ce qui plaît chez quelqu'un : l'humour, l'assurance… ; accélère un peu la naissance de l'attirance), `intimate` (goûts intimes, texte libre ; visibilité `gm` ou privée imposée, transmis au modèle seulement si le récit intime est explicite). Descriptives : elles colorent le récit et pèsent faiblement dans l'évaluation (un cadeau aimé donne de la joie). Le libellé est libre ; aucune liste n'est imposée.
 
 ### 7.4 Lecture des versions 1
 
@@ -404,7 +424,7 @@ Le bloc `relationship` et `entity_attitudes` restent (`specs/psyche-pnj.md` §3-
 
 1. **Deux attirances.** La clé `attraction_repulsion` existante **devient l'attirance romantique** (libellé changé, aucune donnée réécrite). Une clé nouvelle, `sexual_attraction_repulsion`, porte l'attirance sexuelle. Les deux sont en visibilité `gm` par défaut, comme l'axe d'origine.
 2. **La familiarité** : `familiarity`, 0…100, à quel point A connaît B (inconnu < 10 · de vue < 30 · connaissance < 60 · familier < 85 · intime). Elle monte à chaque rencontre et redescend lentement sans contact.
-3. **Les liens nommés** (simulation §8.4) : ami, ami proche, rival, rancune, ennemi juré, mentor, protégé, amant·e, partenaire, ex, compagnon d'armes, ami d'enfance. La parenté reste le domaine du bloc `genealogy`.
+3. **Les liens nommés** (simulation §8.4) : ami, ami proche, rival, rancune, ennemi juré, mentor, protégé, amant·e, aventure (`fling`), partenaire, ex, compagnon d'armes, ami d'enfance. La parenté reste le domaine du bloc `genealogy`.
 
 ---
 
@@ -441,15 +461,26 @@ relational_orientation?: { key, label? }
 |---|---|
 | Sexuelle | `heterosexual`, `homosexual`, `bisexual`, `pansexual`, `asexual`, `demisexual`, `graysexual`, `questioning`, `custom` |
 | Romantique | `heteroromantic`, `homoromantic`, `biromantic`, `panromantic`, `aromantic`, `demiromantic`, `grayromantic`, `questioning`, `custom` |
-| Relationnelle | `monogamous`, `poly_hierarchical`, `poly_non_hierarchical`, `polyaccepting`, `relationship_anarchy`, `questioning`, `custom` |
+| Relationnelle | `monogamous`, `polyaccepting`, `open_relationship` (couple libre), `libertine` (libertin·e), `poly_hierarchical`, `poly_non_hierarchical`, `solo_poly` (polyamour solo), `relationship_anarchy`, `questioning`, `custom` |
 
 - **L'ensemble d'attirance se propose depuis l'étiquette et l'identité** (une femme hétérosexuelle : `men` ; bi ou pan : les trois ; ace ou aro : aucun) puis **se règle à la main**. C'est ce qui rend une étiquette personnalisée lisible par le moteur, et ce qui évite de deviner pour une personne non binaire.
 - Les nuances `demi` et `gray` ralentissent la naissance de l'attirance (elle exige une familiarité haute) sans fermer l'ensemble.
-- **Un filtre, jamais un trait** : ces champs ne modifient aucune facette, valeur ni besoin, à **une seule exception écrite** : le besoin `romance` vaut 0 pour une personne aromantique. L'orientation relationnelle ne joue qu'en situation de non-exclusivité (simulation §8.5). Un test le vérifie (critère transverse 12).
+- **La règle d'identité** (ADR 0086) : **l'identité ne change jamais la personne ; elle change ce que les autres perçoivent, ce qu'ils en pensent, et les risques qu'elle court.** Ces champs ne modifient aucune facette, valeur ni besoin, sauf les exceptions écrites : `romance` à 0 pour une personne aromantique, `intimacy` selon `sex_attitude`. Tout effet social passe par trois chemins seulement : les **croyances** des autres, les **normes** (culture et individus), et ce que la personne **choisit de montrer** (simulation §8.6, §8.7). Un test le vérifie (critère transverse 12).
+- L'orientation relationnelle décide de l'**accord** d'une union et des réactions (simulation §8.5).
 
-### 9.5 Ce que décide la table
+### 9.5 Rapport au sexe
 
-Deux réglages de campagne (`specs/simulation-monde.md` §11) : `intimate_narration` (`explicit` | `fade`) et `romance_simulation` (booléen). Ils touchent au récit et à la simulation, **jamais à l'affichage** des champs ci-dessus.
+`sex_attitude?: "averse" | "indifferent" | "favorable"` (réfractaire, indifférent·e, favorable : termes de la communauté ace). Proposé depuis l'orientation sexuelle (`asexual` → `indifferent`, sinon `favorable`), toujours réglable. Il peut changer avec un souvenir fondateur (un trauma, simulation §7.5), jamais par l'IA.
+
+### 9.6 Traits perceptibles
+
+Ce qui se voit sans qu'on le dise : `species` (l'entrée d'espèce du ruleset), `apparent_age`, `gender_expression` (comment la personne se présente), `visible_marks` (cicatrices, tatouages, handicap visible : texte et étiquettes), `cultural_markers` (vêtements, accent, rang apparent). Un **déguisement** (trousse, sort) masque tout ou partie de ces traits, pour un temps ; percer un déguisement se tranche par un jet du moteur selon les règles du ruleset (règle 8). Voir simulation §8.6.
+
+Ce qui ne se voit pas — orientation, identité de genre au-delà de l'expression, religion — ne s'apprend que par la conduite, la confidence ou la rumeur (simulation §8.7).
+
+### 9.7 Ce que décide la table
+
+Réglages de campagne (`specs/simulation-monde.md` §11) : `intimate_narration` (`explicit` | `fade`), `romance_simulation` et `sexuality_simulation` (deux booléens séparés : une table peut vouloir la romance sans la sexualité), `identity_norms` et `pcs_concerned`. Ils touchent au récit et à la simulation, **jamais à l'affichage** des champs ci-dessus.
 
 ---
 
@@ -478,4 +509,4 @@ Parle familièrement ; appelle tout le monde « petit ».
 
 - [ ] Chaque liste a ses clés, ses libellés et ses bandes ici ; le code les recopie dans `src/core/psyche/keys.ts` et `messages/`, sans en inventer.
 - [ ] La conversion V2 → V4 (§7.4) est une fonction pure, testée sur chaque ligne des deux tables.
-- [ ] Le test « un filtre, jamais un trait » (§9.4) existe.
+- [ ] Le test de la règle d'identité (§9.4) existe.

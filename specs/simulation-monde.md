@@ -1,8 +1,8 @@
 # Spécification — Le moteur de simulation
 
-**Version :** 1.0 — 22 octobre 2026
+**Version :** 1.1 — 24 octobre 2026 (sexualité, accords, identité perçue, thèmes de table, récit : ADR 0085 à 0088)
 **Tickets :** lots A, C, E, F, G, H de `docs/BACKLOG_V4.md`
-**ADR :** 0067 à 0084 · **Psyché :** `specs/psyche-v4.md` · **Sources :** `docs/recherche/simulation-inspirations.md`
+**ADR :** 0067 à 0088 · **Psyché :** `specs/psyche-v4.md` · **Sources :** `docs/recherche/simulation-inspirations.md`
 
 Ce document dit comment le monde vit : le temps, le hasard, les figures, ce qui arrive, comment on le ressent, s'en souvient, le raconte et agit. Les listes (facettes, valeurs, besoins, émotions, rêves) sont dans `specs/psyche-v4.md`.
 
@@ -161,7 +161,7 @@ alter table personality_events add column kind text not null default 'seed_edit'
 alter table attitude_events    add column world_event_id uuid references world_events(id) on delete set null;
 ```
 
-`personality_events.campaign_id` nul = une retouche de la **graine** (le MJ édite le bloc) ; renseigné = un changement **dans la partie**.
+`personality_events.campaign_id` nul = une retouche de l'**état de départ** (le MJ édite le bloc) ; renseigné = un changement **dans la partie**.
 
 **RLS** (ADR 0080) :
 
@@ -189,6 +189,10 @@ Un joueur ne lit **jamais** les tables brutes : elles contiennent la vérité, l
   stress: number,                                    // 0…100
   memories: { short: Memory[], long: Memory[], pc: Memory[] },   // 8, 8, 4 (§7)
   links: Link[],                                     // liens de la figure (§8.4), y compris partenaires
+  unions: UnionRef[],                                // unions et leur accord (§8.5)
+  group_attitudes: Partial<Record<GroupKey, number>>,// écarts à sa culture (§8.6)
+  disclosure: Partial<Record<HiddenTrait, { public: Disclosure, trusted: Disclosure }>>, // §8.7
+  disguise: Disguise | null,                         // §8.6
 }
 // Figure légère
 {
@@ -197,6 +201,8 @@ Un joueur ne lit **jamais** les tables brutes : elles contiennent la vérité, l
   dream: Dream | null,
   stress: number,
   links: Link[],
+  unions: UnionRef[],
+  group_attitudes: Partial<Record<GroupKey, number>>,
 }
 ```
 
@@ -289,7 +295,7 @@ Une figure complète de classe `far`, ni PJ, ni épinglée, sans contact avec un
 
 Seuls les genres du vocabulaire s'écrivent dans `world_events`. Les interactions du quotidien (bavarder, une remarque, un petit service) **ne s'y écrivent pas** : leurs effets vont dans `entity_attitudes`, résumés dans `attitude_events` une fois par semaine de jeu et par paire (§8.2), et dans les souvenirs avec une description en ligne. C'est ce qui tient le volume (§16).
 
-### 5.2 Le vocabulaire (49 genres)
+### 5.2 Le vocabulaire (62 genres)
 
 Chaque genre a un schéma Zod pour `data`, une portée par défaut, une **ampleur** (`harm` ou `benefit`, 0…100, pour l'évaluation §6), l'acte éthique qu'il constitue (psyché §3.2) et ses étiquettes de réputation (§9.5).
 
@@ -301,6 +307,9 @@ Chaque genre a un schéma Zod pour `data`, une portée par défaut, une **ampleu
 | Accomplissements | `masterwork_created`, `discovery_made`, `skill_mastered`, `position_gained`, `position_lost`, `site_founded` |
 | Conflits | `feud_started`, `raid`, `battle`, `duel`, `punished`, `exiled`, `imprisoned`, `freed` |
 | Vie intérieure | `dream_born`, `dream_achieved`, `dream_abandoned`, `crisis`, `elan`, `transformation` |
+| Intimité | `advance_rejected`, `affair_began`, `affair_discovered`, `scandal`, `vow_broken` |
+| Identité et société | `outed` (une appartenance cachée devient connue), `discriminated`, `persecuted`, `disguise_pierced` |
+| Thèmes de table (§11.3) | `sexual_assault`, `abducted`, `enslaved`, `tortured` |
 | Monde | `monster_attack`, `conversion`, `pilgrimage` |
 
 Ajouter un genre : un ADR, comme pour les événements des déclencheurs (ADR 0070).
@@ -403,7 +412,7 @@ agir contre une éthique (§10.3) : +4 (only_extreme), +8 (shameful)
 | Mémoire | Emplacements | Règle |
 |---|---|---|
 | **Courte** | 8 | un groupe par emplacement : le plus fort des deux est gardé. Sinon, une place vide, ou le plus faible est remplacé, même s'il est plus fort que le nouveau (Dwarf Fortress) |
-| **Longue** | 8 | un souvenir court y entre au bout de **90 jours** de jeu (réglable par monde), ou **aussitôt** si son intensité est ≥ 80. Il n'y entre que s'il est plus fort que celui qu'il remplacerait |
+| **Longue** | 8 | un souvenir court y entre au bout de **90 jours** de jeu (réglable de 30 à 365 jours au jour près, §11.1 ; 365 pendant la génération), ou **aussitôt** si son intensité est ≥ 80. Il n'y entre que s'il est plus fort que celui qu'il remplacerait |
 | **Du joueur** | 4 | les souvenirs qui impliquent un PJ, quand ils montent en mémoire longue, vont ici. Le quotidien ne les chasse pas (Nemesis) |
 
 Oublier n'efface rien du monde : l'événement reste dans `world_events`.
@@ -433,6 +442,12 @@ Quand un souvenir long est revécu et que son groupe est **formateur**, une chan
 - Pour un PJ, selon le réglage de table (§11) : proposé au joueur, appliqué, ou jamais.
 
 ---
+
+### 7.5 Le trauma, et la guérison
+
+Un souvenir d'intensité ≥ 80 dans les familles peur, honte, désespoir ou horreur est **traumatique** : il entre aussitôt en mémoire longue, revient à chaque rencontre de l'agresseur ou au retour sur le lieu, et ses groupes sont formateurs (confiance, `hopefulness`, `bravery`, et pour une violence sexuelle `sex_attitude` peut passer à `averse`).
+
+**La guérison**, absente de Dwarf Fortress : chaque fois qu'un souvenir traumatique revient pendant qu'une figure de confiance (confiance ≥ 34) est présente et réconforte (`comfort`, `deep_talk`), ou dans un lieu sûr (§8.7), son intensité baisse de 5. Il ne descend jamais sous 30 : le trauma s'apaise, il ne s'efface pas. Le besoin `tenderness` comblé accélère la baisse. Aider quelqu'un à se reconstruire devient une histoire.
 
 ## 8. Les relations
 
@@ -476,27 +491,70 @@ Les deltas d'une semaine s'écrivent **en un seul** `attitude_events` par paire,
 
 Le passage d'un seuil écrit l'événement correspondant (`friendship_formed`, `grudge_formed`…). Pour une figure légère, les liens sont stockés dans `state.links`, puisqu'elle n'a pas de lignes d'attitude.
 
-### 8.5 L'intime (E7)
+### 8.5 L'intime (E7, ADR 0087, 0088)
 
-**Règle absolue** : aucune attirance, aucune action intime, aucun récit intime ne concerne jamais une personne mineure, quels que soient les réglages. L'âge adulte est un paramètre du monde (18 par défaut), et le moteur le vérifie avant tout le reste.
+**Deux règles absolues**, au-dessus de tout réglage :
+- aucune attirance, aucune action intime, aucun récit intime, aucun contenu sexuel ne concerne jamais une personne mineure, sous aucune forme, même saisi à la main. L'âge adulte est un paramètre du monde (18 par défaut), vérifié avant tout le reste ;
+- **le consentement est une condition du moteur** : une action intime n'aboutit que si l'autre personne l'accepte, selon son propre état (attirance, `intimacy`, `sex_attitude`, accord de ses unions, éthiques). Un refus est un événement (`advance_rejected`). Le seul acte sans consentement du vocabulaire est `sexual_assault`, qui relève des thèmes de table (§11.3).
 
-- **Naissance de l'attirance** : seulement si `romance_simulation` est actif, si le groupe de genre de la cible est dans l'**ensemble d'attirance** de la personne (psyché §9.4), séparément pour le romantique et le sexuel. Croissance pendant les interactions selon `love_propensity` (romantique) ou `lust_propensity` (sexuelle), la compatibilité et l'amitié. Les nuances demi et gris exigent une familiarité ≥ 60.
-- **Romance** : attirance romantique ≥ 34 des deux côtés, puis une action `court` acceptée.
-- **Union** et **exclusivité** : à l'union, l'accord d'exclusivité se fixe selon les orientations relationnelles : exclusif si l'une des deux personnes est `monogamous` sans être `polyaccepting`. `infidelity` n'existe que si l'exclusivité a été convenue.
-- **Réaction quand un partenaire noue une autre relation** :
+**L'attirance** : seulement si `romance_simulation` (romantique) ou `sexuality_simulation` (sexuelle) est actif, et si le groupe de genre **perçu** de la cible (§8.6) est dans l'ensemble d'attirance de la personne, séparément pour le romantique et le sexuel. Croissance pendant les interactions selon `love_propensity` (romantique) ou `lust_propensity` (sexuelle), la compatibilité, l'amitié et les préférences `attraction`. Les nuances demi et gris exigent une familiarité ≥ 60.
 
-| Orientation relationnelle | Réaction |
+**La romance** : attirance romantique ≥ 34 des deux côtés, puis `court` accepté. **L'intimité** : attirance sexuelle ≥ 34 et `seduce` accepté, ou `share_intimacy` entre partenaires dont l'accord le permet ; elle comble `intimacy` (et `tenderness`) et donne `fulfillment`. Une intimité entre partenaires ne s'écrit pas au journal du monde : elle comble un besoin, comme un repas.
+
+**Les unions** ont une **structure** et un **accord** :
+
+| Structure | Forme |
 |---|---|
-| `monogamous` | jalousie 60 × (1 + `envy_propensity`/100), confiance −25 envers le partenaire, rupture possible |
-| `polyaccepting` | jalousie 10, aucune perte de confiance |
-| `poly_hierarchical` | jalousie 15 ; 50 si la nouvelle relation menace le lien principal (proposition d'union) |
-| `poly_non_hierarchical` | jalousie 5 × (1 + `envy_propensity`/100), et une petite joie (compersion) |
-| `relationship_anarchy` | aucune attente : seule `envy_propensity` joue, à 5 |
-| absente | la norme de sa culture (`culture.relationship_norm`), sinon `monogamous` |
+| `pair` | deux personnes |
+| `centered` | une personne au centre, plusieurs partenaires qui ne sont pas partenaires entre eux : polygynie, polyandrie, **harem** d'hommes ou de femmes |
+| `group` | plusieurs personnes toutes liées entre elles (trouple, polyfidélité) |
+
+Une structure non acceptée par la norme du lieu (`culture.norms`) est jugée (§8.7). Un membre **contraint** d'une union relève de la traite (§11.3) ; sa dimension sexuelle, des violences sexuelles, toujours voilées.
+
+```ts
+accord = { romantic_exclusive: boolean, sexual_exclusive: boolean, sexual_shared: boolean, primary_ids: uuid[] }
+```
+
+L'accord se fixe à l'union depuis les orientations relationnelles (la plus exigeante des deux l'emporte, sauf `polyaccepting`) et se renégocie par un événement :
+
+| Orientation | Accord par défaut | Rupture de l'accord (`infidelity`) | Réaction quand un partenaire noue une autre relation **dans** l'accord |
+|---|---|---|---|
+| `monogamous` | romantique et sexuel exclusifs | toute autre relation | — (hors accord : jalousie 60 × (1 + `envy_propensity`/100), confiance −25, rupture possible) |
+| `polyaccepting` | exclusif pour soi, libre pour l'autre | une relation cachée | jalousie 10 |
+| `open_relationship` | romantique exclusif, sexuel libre | tomber amoureux ailleurs ; enfreindre les règles convenues (secret, personnes exclues) | jalousie 10 si sexuelle ; 50 si elle devient romantique |
+| `libertine` | romantique exclusif, sexualité **partagée ensemble** | une relation sexuelle hors du cadre partagé, en cachette | aucune si partagée ; petite joie |
+| `poly_hierarchical` | non exclusif, `primary_ids` | ce qui menace le lien principal sans le dire | jalousie 15 ; 50 si le lien principal est menacé |
+| `poly_non_hierarchical` | non exclusif | une relation cachée | jalousie 5 × (1 + `envy_propensity`/100), et compersion |
+| `solo_poly` | non exclusif, ni foyer commun ni lien principal | une relation cachée | jalousie 5 ; refuse une union `pair` avec cohabitation |
+| `relationship_anarchy` | aucun accord par défaut | ce qui a été convenu explicitement, s'il y en a | seule `envy_propensity` joue, à 5 |
+| absente | la norme de sa culture, sinon `monogamous` | | |
 
 Une incompatibilité d'orientations entre partenaires ajoute un peu de stress chaque mois tant qu'elle n'est pas renégociée.
 
----
+### 8.6 Ce qui se voit, et les préjugés (ADR 0086)
+
+**Percevoir.** À la première rencontre, une figure reçoit des croyances `witnessed` (certitude 90) sur les **traits perceptibles** de l'autre (psyché §9.6) : espèce, âge apparent, expression de genre, marques visibles, marques culturelles. Un **déguisement** (`disguise`, d'une trousse ou d'un sort) remplace ces traits par d'autres, pour une durée. Le percer est un événement `disguise_pierced`, tranché par un jet du moteur selon le ruleset (règle 8), quand une figure a une raison de douter (proximité, familiarité, incohérence). Le **groupe de genre perçu** sert à l'attirance (§8.5) : on est attiré par ce qu'on perçoit.
+
+**Les attitudes envers les groupes.** Un groupe (`GroupKey`) est une espèce, un peuple, une faction, une religion, ou une appartenance cachée (une orientation, une identité de genre). Chaque figure a une attitude −100…+100 envers chaque groupe :
+- **héritée de sa culture** (`culture.group_attitudes`), elle-même nourrie par l'histoire : chaque guerre, raid ou persécution entre deux peuples pendant la génération déplace leurs attitudes mutuelles (§13.3). Deux peuples qui se sont battus un siècle se méfient l'un de l'autre au début de la partie, sans qu'on l'ait écrit ;
+- **modulée par l'individu** : × (1 − `tolerance`/200) × (1 − `open_mindedness`/200) ;
+- **nourrie par l'expérience** : un tort subi de la part d'un membre déplace l'attitude envers tout son groupe de −(intensité/10) × (1 − `open_mindedness`/100) (la généralisation abusive) ; un bon contact répété la remonte de +1 par semaine d'amitié (l'hypothèse du contact d'Allport).
+
+**Effets** : la première impression (confiance et amitié de départ + attitude/4), les actions `discriminate` (refuser de servir, exclure, insulter) et `denounce`, la façon dont les normes sont appliquées (§8.7). Une figure n'agit jamais sur une appartenance qu'elle **ne croit pas** : on ne discrimine que ce qu'on perçoit ou croit savoir.
+
+### 8.7 Les normes, ce qu'on montre, et les vies cachées (ADR 0086)
+
+**Les normes** (`culture.norms`, avec un écart individuel par les valeurs et `tolerance`) jugent des **conduites connues**, jamais des personnes : `same_sex_relations`, `gender_nonconformity`, `non_monogamy` (et les structures `centered` et `group`), `sex_outside_union`, `sex_work`, plus les groupes visibles (`foreign_species`, `foreign_people`). Réponse par norme : `accepted`, `tolerated`, `disapproved`, `repressed` (punition), `persecuted`. Le réglage `identity_norms` (§11.1) peut les désactiver pour tout un monde.
+
+**Ce qu'on montre.** Chaque appartenance cachée a un **degré d'ouverture** par contexte, public et cercle de confiance : `hidden`, `discreet`, `open`. La figure le choisit par utilité : risque local (la norme et les attitudes des présents), besoins (`romance`, `intimacy`), `confidence`, `bravery`, `privacy`, valeur `truth`. **Vivre caché coûte du stress** (le stress minoritaire) : +1 par semaine pour chaque appartenance `hidden` contre un besoin pressant qu'elle concerne.
+
+**Les croyances sur les appartenances cachées** naissent d'une conduite vue (une romance surprise), d'une confidence, d'une rumeur, ou d'une **fausse accusation** (§9.4). Quand une telle croyance se répand dans un lieu qui réprime : `outed`, puis `scandal`, `discriminated`, `punished`, `exiled` ou `persecuted` selon la norme ; et des alliés qui protègent (rêve `protect`).
+
+**Les lieux sûrs.** Un lieu peut être `safe_for: GroupKey[]` et **secret** : connu seulement de ceux qui en ont la croyance. On y est `open` sans risque, on s'y rencontre, on y guérit (§7.5). Une figure qui en a besoin le cherche (`seek_safe_place`), comme on cherche un temple ; la génération peut en faire naître dans les lieux répressifs.
+
+**L'union de façade.** `union_formed` avec `data.arranged = true` et un motif (`facade`, `politics`, `wealth`) : un vrai mariage pour tout le monde, sauf pour ceux qui savent.
+
+**Les PJ** suivent les mêmes règles si `pcs_concerned.identity` est vrai (défaut). Sinon, le monde reste le même pour les PNJ, mais aucune norme ni aucun préjugé ne vise un PJ.
 
 ## 9. Croire, colporter, mentir (ADR 0075)
 
@@ -521,7 +579,7 @@ Une figure dont `sincerity` ≤ −34, qui a un motif, peut raconter une version
 
 ### 9.5 La réputation
 
-Chaque genre d'événement porte des étiquettes : `hero`, `protector_of_weak`, `generous`, `murderer`, `thief`, `liar`, `oathbreaker`, `coward`, `brawler`, `monster_slayer`, `healer`, `traitor`. La réputation d'une figure dans un lieu = somme, sur les croyances de ce lieu dont elle est actrice, de (poids de l'étiquette × certitude). Elle s'affiche en bandes (« à Port-Gris, on te connaît comme voleur — fort »). **C'est la mémoire collective du joueur.**
+Chaque genre d'événement porte des étiquettes : `hero`, `protector_of_weak`, `generous`, `murderer`, `thief`, `liar`, `oathbreaker`, `coward`, `brawler`, `monster_slayer`, `healer`, `traitor`, `seducer`, `libertine`, `faithful`. Comment un lieu juge chaque étiquette dépend de ses valeurs et de ses normes. La réputation d'une figure dans un lieu = somme, sur les croyances de ce lieu dont elle est actrice, de (poids de l'étiquette × certitude). Elle s'affiche en bandes (« à Port-Gris, on te connaît comme voleur — fort »). **C'est la mémoire collective du joueur.**
 
 ### 9.6 Oublier
 
@@ -575,17 +633,24 @@ score = poids de base × Π c'_i × (1 + annonce des besoins pondérée par leur
 
 `rest`, `work`, `pray`, `train`, `create`, `study`, `wander`, `travel`, `revel`, `chat`, `deep_talk`, `court`, `argue`, `insult`, `help`, `gift`, `comfort`, `seek`, `confront`, `attack`, `steal`, `spread_rumor`, `lie_about`, `confess`, `scheme`, `visit_family`, `mourn`, `flee`, `celebrate`, `make_amends`.
 
+Intimité et société : `seduce`, `share_intimacy`, `seek_encounter` (taverne, maison close si l'éthique `sex_work` le permet), `refuse_advance`, `confide_desire`, `discriminate`, `denounce`, `seek_safe_place`, `don_disguise`.
+
+Thèmes de table, **seulement** si le thème est en position `veiled_generated` ou `shown` (§11.3) : `sexual_assault` (jamais au-delà de `veiled_generated`), `abduct`, `torture`. Comme toute action, elles sont retirées par une éthique `unthinkable` : seule une figure dont la psyché le rend possible (compassion très basse, violence haute, éthique personnelle qui ne l'exclut pas) les choisit.
+
 Un **rêve** a un petit plan en données : `avenge(X)` = trouver où est X (`seek`, ou demander : `deep_talk`) → s'y rendre (`travel`) → `confront` ou `attack`. L'étape courante reçoit la considération « rêve ».
 
 ### 10.5 Le vocabulaire des figures légères (pas mensuel)
 
-`seek_union`, `have_child`, `migrate`, `take_position`, `found_site`, `feud`, `raid`, `commit_crime`, `create_masterwork`, `make_discovery`, `convert`, `betray`, `reconcile`. La mort n'est pas une action : c'est un tirage de mortalité selon l'âge (courbe par espèce, du ruleset ou du monde) et la violence subie.
+`seek_union`, `arranged_union`, `have_child`, `migrate`, `take_position`, `found_site`, `feud`, `raid`, `persecute`, `commit_crime`, `create_masterwork`, `make_discovery`, `convert`, `betray`, `reconcile` ; et, selon les thèmes, `abduct` et `enslave`. La mort n'est pas une action : c'est un tirage de mortalité selon l'âge (courbe par espèce, du ruleset ou du monde) et la violence subie.
 
 ### 10.6 Ce que la simulation ne fait jamais
 
 - **Faire agir un PJ.** Un PJ est cible, témoin, sujet de rumeurs ; jamais acteur d'une action simulée.
 - Faire agir une figure **figée** (§11.2).
 - Faire agir une figure en classe `scene` : c'est le tour qui décide.
+- Générer un acte d'un thème absent, ou au-delà de sa position (§11.3).
+- Faire d'un PJ la victime d'un acte de thème de table **généré** : seul le MJ peut l'enregistrer, et seulement si `pcs_concerned` l'accepte pour ce thème.
+- Quoi que ce soit de sexuel impliquant un mineur.
 - Dépasser les bornes (§16).
 
 ---
@@ -610,8 +675,27 @@ Dans `campaigns.table_settings` (existant, ADR 0043), sous la clé `sim`, valid�
   body_consequences: "auto" | "gm",          // défaut : "auto" (ADR 0083)
   intimate_narration: "explicit" | "fade",   // défaut : "fade"
   romance_simulation: boolean,               // défaut : true
-  memory_promotion_days: number,             // défaut : 90
+  memory_promotion_days: number,             // 30 à 365, au jour près ; défaut : 90
   adult_age: number,                         // défaut : 18
+  sexuality_simulation: boolean,             // défaut : true
+  identity_norms: boolean,                   // défaut : true (normes et préjugés, §8.6-8.7)
+  pcs_concerned: {
+    identity: boolean,                       // défaut : true
+    sexual_violence: boolean,                // défaut : false
+    trafficking: boolean,                    // défaut : true
+    torture: boolean,                        // défaut : true
+  },
+  pc_layers_intimacy: "player" | "gm" | "off",   // la couche intimité des PJ ; défaut : "player"
+  themes: {
+    sexual_violence:      "absent" | "veiled" | "veiled_generated",            // défaut : "absent"
+    trafficking:          "absent" | "veiled" | "veiled_generated" | "shown",  // défaut : "veiled"
+    torture:              "absent" | "veiled" | "veiled_generated" | "shown",  // défaut : "veiled"
+    violence_to_children: "absent" | "veiled" | "veiled_generated",            // défaut : "absent"
+  },
+  narration: {
+    violence_detail: "sober" | "descriptive" | "graphic",   // défaut : "descriptive"
+    tone: "heroic" | "grim" | "horror" | "cosmic_horror" | "light",  // défaut : "heroic"
+  },
 }
 ```
 
@@ -621,6 +705,22 @@ Dans `campaigns.table_settings` (existant, ADR 0043), sous la clé `sim`, valid�
 ### 11.2 Figée par le MJ
 
 `sim_figures.frozen` : jamais actrice, jamais transformée. `frozen_can_remember` : elle peut encore être témoin et se souvenir. Par défaut, une figure créée à la main par le MJ **avant** l'activation de la simulation est figée si le MJ coche « garder mes PNJ tels quels » à l'activation.
+
+### 11.3 Les thèmes de table et le récit (ADR 0085)
+
+Les outils de sécurité du jeu de rôle, appliqués au moteur : une **ligne** n'existe jamais, un **voile** existe hors champ.
+
+| Position | Existe dans le monde | Qui le produit | Le récit |
+|---|---|---|---|
+| `absent` | non | personne : ni généré, ni saisissable | — |
+| `veiled` | oui | le MJ seul (fait marquant) | les conséquences seulement, jamais l'acte |
+| `veiled_generated` | oui | le MJ et la simulation | les conséquences seulement |
+| `shown` | oui | le MJ et la simulation | selon `violence_detail` |
+
+- **Violences sexuelles** et **violence envers les enfants** plafonnent à `veiled_generated` : jamais racontées, même avec un récit intime explicite ou une violence crue. Aucun contenu sexuel impliquant un mineur, sous aucune forme.
+- Ce qu'on en perçoit passe par les conséquences : souvenirs et trauma (§7.5), récits indirects, rumeurs, silences et mensonges (§9), réputation, justice ou impunité.
+- **La violence ordinaire** (un combat, la mort d'un adversaire) n'est pas un thème : elle se raconte selon `violence_detail` (`sober` : l'issue ; `descriptive` : le geste et ses effets ; `graphic` : sans détour). Le `tone` donne la couleur du récit ; `horror` et `cosmic_horror` s'appuient sur la psyché (terreur, stress, crises, souvenirs fondateurs : c'est déjà la santé mentale).
+- **Un fournisseur d'IA distant** peut refuser un récit cru que la table a choisi ; un modèle local, non. L'écran le dit quand c'est le cas, et le tour continue avec un récit plus sobre.
 
 ---
 
@@ -653,12 +753,12 @@ Préréglages : « monde jeune et paisible », « royaumes établis », « vieil
 
 ### 13.2 Les peuples et les lieux
 
-- Un **peuple** est une entité `faction` avec un bloc `worldview` (valeurs, éthiques de la culture) et un bloc nouveau `culture` : espèce (une entrée d'espèce du ruleset), tendances de facettes, norme relationnelle, table de noms (le générateur Noms existant), âge adulte et longévité.
+- Un **peuple** est une entité `faction` avec un bloc `worldview` (valeurs, éthiques de la culture) et un bloc nouveau `culture` : espèce (une entrée d'espèce du ruleset), tendances de facettes, norme relationnelle, structures d'union acceptées, normes (§8.7), attitudes envers les autres groupes (§8.6), table de noms (le générateur Noms existant), âge adulte et longévité.
 - Un **lieu** est une entité de lieu, rattachée à un peuple, avec une taille. Les détails (taverne, échoppe) se génèrent à la visite, avec les générateurs existants.
 
 ### 13.3 La boucle d'histoire
 
-Un pas par mois de jeu sur `history_years` : mortalité, unions et naissances, actions légères (§10.5), attaques de monstres, querelles entre chefs de lieux (querelle → raid → bataille), migrations quand un lieu va mal, fondations quand il déborde, successions à la mort d'un chef. Chaque événement s'écrit avec `origin = 'generation'`.
+Un pas par mois de jeu sur `history_years` : mortalité, unions et naissances, actions légères (§10.5), attaques de monstres, querelles entre chefs de lieux (querelle → raid → bataille), migrations quand un lieu va mal, fondations quand il déborde, successions à la mort d'un chef. Chaque événement s'écrit avec `origin = 'generation'`. Les guerres, raids et persécutions entre peuples déplacent leurs `group_attitudes` mutuelles ; les normes se durcissent ou s'adoucissent avec les crises et les conversions. La mémoire longue utilise un délai de 365 jours. Les thèmes de table s'appliquent aussi à la génération.
 
 À la fin : les figures vivantes qui comptent au départ (chefs des lieux de départ, auteurs d'actes notables des 30 dernières années, au plus 60) sont promues complètes (§4.1). En solo, le joueur choisit son lieu de départ parmi les lieux générés.
 
@@ -692,6 +792,8 @@ Estimation pour un monde établi, densité moyenne : environ 4 000 figures (0,6 
 
 - Depuis le dernier récit : les événements que le PJ **croit**, dans leur version crue, et les changements visibles chez les figures présentes. Le modèle les raconte en deux à quatre phrases, comme un tour (règle 8).
 - Les figures présentes entrent avec leur résumé (psyché §10).
+- Les consignes de récit : `violence_detail`, `tone`, `intimate_narration`, et pour chaque thème voilé, l'interdiction de décrire l'acte.
+- **Le modèle peut proposer le passé d'un méchant** (une esquisse de PNJ, V3-C2, relue comme toute proposition), y compris un passé lié à un thème en position `veiled_generated` ou `shown`, toujours voilé. Il ne décide jamais d'un tel acte dans la partie en cours.
 - Rien de ce que le joueur ne peut pas savoir (règle 11). Le MJ humain, lui, reçoit tout.
 
 ---
@@ -716,9 +818,9 @@ Prises ici pour avancer ; chacune se change sans toucher au reste.
 
 | Décision | Choix fait | Alternative |
 |---|---|---|
-| Mémoire courte → longue | 90 jours de jeu (réglable) | un an, comme Dwarf Fortress : trop lent pour une campagne |
+| Mémoire courte → longue | curseur de 30 à 365 jours, 90 par défaut ; 365 en génération | **validé le 22 octobre** |
 | Plafond de figures complètes | 150 | à mesurer (A5) |
 | Conséquences du corps quand la couche est « MJ seul » | appliquées, visibles comme une condition | laissées au MJ (`body_consequences: "gm"`) |
 | Défaire un lot | seulement le dernier | n'importe lequel, au prix d'une reconstruction complète |
 | Génération | dans le navigateur | script local, ou serveur par tranches |
-| L'IA propose des faits marquants | non en V4 | oui, par `ai_proposals` |
+| L'IA propose des faits marquants | à rediscuter : les faits marquants et la simulation générale feront l'objet d'une discussion dédiée | — |

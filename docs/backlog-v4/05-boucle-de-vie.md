@@ -68,7 +68,7 @@ besoins + rêves + émotions + valeurs + relations → action → événement
 
 **À faire** (tests d'abord)
 - `src/core/sim/utility.ts` : entrées fermées, courbes (`linear`, `inverse_linear`, `power`, `logistic`, `step`), compensation IAUS, `scoreAction`, `chooseAction(figure, candidates, rng)` (trois meilleures au-dessus de 0,05, tirage pondéré).
-- `src/core/sim/actions.full.ts` : les 30 actions des figures complètes, en données, avec annonces de besoins, considérations, éthique, genre d'événement produit.
+- `src/core/sim/actions.full.ts` : les actions des figures complètes de la spec §10.4 (vie courante, intimité et société, thèmes de table), en données, avec annonces de besoins, considérations, éthique, genre d'événement produit, et thème de table éventuel (filtré par `isKindAllowed`, A4).
 - `src/core/sim/dreamPlans.ts` : les plans des rêves (trouver, rejoindre, agir).
 - Les exclusions : PJ jamais acteur ; figure figée jamais actrice ; classe `scene` jamais actrice ; `unthinkable` retirée.
 
@@ -111,19 +111,22 @@ besoins + rêves + émotions + valeurs + relations → action → événement
 
 ---
 
-### ☐ V4-E7 — L'intime · `M` · sans modèle IA — **prêt après C3, B4, H1**
+### ☐ V4-E7 — L'intime : attirance, sexualité, unions et accords · `L` · sans modèle IA — **prêt après C3, C9, B4, H1**
 
-**Modèle conseillé : Opus** — données sensibles, règle absolue des mineurs. **ADR :** 0073. **Spec :** §8.5.
+**Modèle conseillé : Opus** — données sensibles, règles absolues (mineurs, consentement). **ADR :** 0073, 0087, 0088. **Spec :** §8.5.
 
 **Sous-tâches Haiku** : lancer les tests.
 
-- `src/core/sim/intimacy.ts` : croissance des attirances (filtre `canBeAttracted`, réglage `romance_simulation`, âge adulte), actions `court`, `romance_began`, union et accord d'exclusivité, réactions selon l'orientation relationnelle (table de la spec), stress d'incompatibilité.
+- `src/core/sim/intimacy.ts` : croissance des attirances (filtre `canBeAttracted` sur le genre **perçu**, réglages `romance_simulation` et `sexuality_simulation`, âge adulte, préférences `attraction`) ; le **consentement** (`accepts(target, proposal)` selon l'état de la cible) ; actions `court`, `seduce`, `share_intimacy`, `seek_encounter`, `refuse_advance`, `confide_desire` ; besoins `intimacy` et `tenderness` comblés, `fulfillment` ; événements `advance_rejected`, `affair_began`, `affair_discovered`, `scandal`, `vow_broken`.
+- Unions : structures `pair`, `centered`, `group` ; l'accord `{ romantic_exclusive, sexual_exclusive, sexual_shared, primary_ids }` fixé depuis les orientations ; la table des réactions par orientation (les dix orientations) ; `infidelity` = rompre l'accord ; stress d'incompatibilité.
 
 **Critères d'acceptation**
 - [ ] **Aucune** attirance ni action intime ne concerne jamais une personne sous l'âge adulte, quels que soient les réglages (test exhaustif sur un banc de 1 000 figures).
 - [ ] Aucune attirance contre une orientation, ni quand la table l'a désactivée.
-- [ ] `infidelity` n'apparaît que si l'exclusivité a été convenue.
-- [ ] Chaque orientation relationnelle a son test de réaction.
+- [ ] Aucune action intime n'aboutit sans l'acceptation de la cible ; un refus produit `advance_rejected` (test).
+- [ ] `infidelity` n'apparaît que si l'accord est rompu : jamais pour une relation sexuelle dans un couple libre, jamais pour une sexualité partagée chez des libertins (tests).
+- [ ] Chaque orientation relationnelle et chaque structure d'union ont leur test.
+- [ ] Une personne `averse` n'a pas de besoin `intimacy` ; tout le monde peut avoir `tenderness`.
 
 ---
 
@@ -141,7 +144,7 @@ besoins + rêves + émotions + valeurs + relations → action → événement
 
 ---
 
-### ☐ V4-E9 — Le pas de simulation · `L` · sans modèle IA — **prêt après E1 à E8, A6, C5, H1**
+### ☐ V4-E9 — Le pas de simulation · `L` · sans modèle IA — **prêt après E1 à E8, E11, A6, C5, C9, C10, H1**
 
 **Modèle conseillé : Opus** — l'orchestration de tout ; quotas ; transactions.
 
@@ -166,7 +169,29 @@ besoins + rêves + émotions + valeurs + relations → action → événement
 **Sous-tâches Haiku** : vérifications et résumé des échecs.
 
 - Le contexte du tour reçoit les événements que le PJ **croit** depuis le dernier récit (dans leur version crue) et les changements visibles chez les figures présentes. Encadrés comme donnée (règle 10).
+- Les consignes de récit (`violence_detail`, `tone`, thèmes voilés) s'appliquent ; un événement d'un thème voilé n'arrive au modèle que par ses conséquences.
+- L'esquisse d'un PNJ (V3-C2) peut proposer le **passé** d'un méchant, y compris lié à un thème `veiled_generated` ou `shown`, toujours voilé et relu comme toute proposition ; jamais un tel acte dans la partie en cours.
 
 **Critères d'acceptation**
 - [ ] Un événement inconnu du PJ n'entre jamais dans un contexte lu par le joueur (test).
 - [ ] Vérifié en direct : un PNJ revu après une semaine de jeu se comporte selon ce qui lui est arrivé entre-temps.
+
+---
+
+### ☐ V4-E11 — Les thèmes de table : générer voilé, le trauma et la guérison · `M` · sans modèle IA — **prêt après E4, C1, H1**
+
+**Modèle conseillé : Opus** — sujet sensible, garde-fous absolus. **ADR :** 0085. **Spec :** §7.5, §10.4, §10.6, §11.3.
+
+**Sous-tâches Haiku** : lancer les tests et résumer les échecs.
+
+**À faire** (tests d'abord)
+- Les actions de thème (`sexual_assault`, `abduct`, `torture`, `enslave`) : présentes dans le vocabulaire seulement si le thème est `veiled_generated` ou `shown` ; jamais `sexual_assault` au-delà de `veiled_generated` ; retirées par une éthique `unthinkable` ; choisies seulement par une figure dont la psyché le rend possible.
+- Les garde-fous : jamais une victime mineure pour un acte sexuel ; jamais un PJ victime d'un acte généré ; jamais un acte d'un thème absent.
+- `src/core/sim/trauma.ts` : souvenir traumatique (aussitôt en mémoire longue, revécu à la rencontre de l'agresseur ou au lieu, formateur), `sex_attitude` qui peut passer à `averse` ; la **guérison** : −5 d'intensité à chaque retour du souvenir en présence d'une figure de confiance qui réconforte ou dans un lieu sûr, plancher à 30, accéléré par `tenderness` comblé.
+- Les suites : rêves `avenge`, `protect`, `find` (disparus de la traite), justice ou impunité selon les éthiques du lieu, réputation selon les croyances.
+
+**Critères d'acceptation**
+- [ ] Thème `absent` ou `veiled` : la simulation ne produit jamais l'acte (test sur 10 000 pas d'un banc).
+- [ ] Une figure ordinaire (éthique `unthinkable`) ne commet jamais un acte de thème ; une figure à la psyché cohérente le peut (test sur graine).
+- [ ] Aucune victime mineure, aucun PJ victime d'un acte généré (test exhaustif sur un banc de 1 000 figures).
+- [ ] Un souvenir traumatique soutenu descend vers 30 sans jamais passer dessous ; sans soutien, il reste (tests).

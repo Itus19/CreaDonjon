@@ -43,8 +43,8 @@ Un ticket V4 qui découvre qu'un de ces prérequis n'est pas réellement là **s
 
 | Brique | Où | Devient |
 |---|---|---|
-| 6 pôles de tempérament, priorité, aspirations à trois horizons, lignes rouges | bloc `personality`, `src/core/psyche` | **graine** des facettes, rêves et lignes (lot B) |
-| 7 pôles de convictions, attachables à une faction | bloc `worldview` | **graine** des valeurs (lot B) |
+| 6 pôles de tempérament, priorité, aspirations à trois horizons, lignes rouges | bloc `personality`, `src/core/psyche` | **état de départ** des facettes, rêves et lignes (lot B) |
+| 7 pôles de convictions, attachables à une faction | bloc `worldview` | **état de départ** des valeurs (lot B) |
 | 7 axes de relation dirigée, `known_as` | bloc `relationship`, `entity_attitudes` | relations tirées des souvenirs ; `known_as` généralisé en croyances (lot C) |
 | Journal des attitudes en ajout seul, rejouable | `attitude_events`, `personality_events` | conservés ; les souvenirs les alimentent (lot C) |
 | Amortissement vers les extrêmes | `src/core/psyche/apply.ts` | principe étendu à toutes les jauges |
@@ -67,7 +67,7 @@ Ces changements passent **chacun par un ADR** avant toute ligne de code. Ils ne 
 | Décision antérieure | Où | Ce qui change | ADR |
 |---|---|---|---|
 | « Les pôles ne bougent que sur événement explicite. Pas de dérive de fond, pas de tâche périodique. » | `specs/psyche-pnj.md` §1 | **Le temps qui passe devient un événement.** Toujours aucune tâche de fond : le monde est rattrapé quand le temps avance en jeu. | 0069 |
-| « Bram est Bram partout » : la personnalité appartient à l'entité, tous mondes confondus | `specs/psyche-pnj.md` §6, bloc `personality` | Le bloc garde **la graine** (l'état de départ saisi). **L'état courant vit dans la partie**, comme les attitudes. | 0067 |
+| « Bram est Bram partout » : la personnalité appartient à l'entité, tous mondes confondus | `specs/psyche-pnj.md` §6, bloc `personality` | Le bloc garde **l'état de départ** (ce qui a été saisi). **L'état courant vit dans la partie**, comme les attitudes. | 0067 |
 | Six pôles, sept convictions, aspirations en texte libre | `src/core/psyche/keys.ts` | Facettes et valeurs à la richesse de Dwarf Fortress, rêves typés, besoins, émotions | 0072 |
 | Un axe `attraction_repulsion` | `RELATIONSHIP_AXIS_KEYS` | Deux axes : attirance **romantique** et attirance **sexuelle** | 0073 |
 | Une conviction ne change jamais sans revue | `specs/psyche-pnj.md` §5 | **Inchangé pour l'IA.** Le moteur, lui, peut transformer une personne selon des règles ; ce qu'il fait d'un PJ dépend des réglages de table (lot H) | 0074, 0080 |
@@ -89,7 +89,9 @@ Ce qui **ne change pas** : les règles absolues de `CLAUDE.md`. L'IA narre et le
 9. **Visibilité côté serveur.** Ce que les réglages de table cachent au joueur **n'est pas envoyé** au joueur (règle 5). Jamais un champ masqué par CSS.
 10. **Quotas.** Tout pas de simulation, toute génération et tout nouveau chargement dit ce qu'il consomme (`docs/QUOTAS.md`) : temps de fonction, lignes écrites, volume en base.
 11. **Hybride.** Toute fonctionnalité de simulation a son usage en mode MJ : désactivable, ou en mode « proposer ».
-12. **Identité : un filtre, jamais un trait.** Genre, orientation sexuelle, romantique et relationnelle ne modifient **aucune** facette, valeur, besoin ni probabilité d'action autre que celles qui les concernent directement (qui peut attirer qui ; comment on vit une relation non exclusive). Un test le vérifie.
+12. **L'identité ne change jamais la personne ; elle change ce que les autres perçoivent, ce qu'ils en pensent, et les risques qu'elle court** (ADR 0086, qui remplace « un filtre, jamais un trait »). Espèce, genre, orientations ne modifient aucune facette, valeur ni besoin, hors les exceptions écrites (`romance`, `intimacy`). Tout effet social passe par les croyances des autres, les normes, et ce que la personne choisit de montrer. On ne discrimine que ce qu'on perçoit ou croit savoir. Un test le vérifie.
+13. **Jamais de mineur, toujours le consentement.** Aucun contenu sexuel ne concerne jamais une personne mineure, sous aucune forme, même saisi à la main. Une action intime n'aboutit que si l'autre personne l'accepte ; le seul acte sans consentement (`sexual_assault`) relève des thèmes de table, toujours voilé (ADR 0085, 0087).
+14. **Les thèmes de table décident de ce qui existe.** Un thème `absent` n'est ni généré ni saisissable ; un thème voilé ne se raconte que par ses conséquences (`specs/simulation-monde.md` §11.3).
 
 ---
 
@@ -114,7 +116,7 @@ Ce qu'on **n'en retient pas** : l'esprit du personnage échappe au joueur dans D
 
 ## 6. Décisions prises le 22 octobre, et ce qui reste ouvert
 
-**La conception est faite** : `specs/psyche-v4.md`, `specs/simulation-monde.md`, ADR 0067 à 0084, recherche dans `docs/recherche/simulation-inspirations.md`. Tous les tickets des lots A à H sont **prêts** ; les tickets d'interface commencent par une esquisse à faire valider par l'auteur.
+**La conception est faite** : `specs/psyche-v4.md`, `specs/simulation-monde.md`, ADR 0067 à 0088, recherche dans `docs/recherche/simulation-inspirations.md`. Tous les tickets des lots A à H sont **prêts** ; les tickets d'interface commencent par une esquisse à faire valider par l'auteur.
 
 | Question | Décision |
 |---|---|

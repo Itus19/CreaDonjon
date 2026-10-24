@@ -75,13 +75,14 @@ Ce lot pose le hasard, l'horloge, les tables, le vocabulaire des événements, l
 **Sous-tâches Haiku** : reporter les 49 libellés de genres dans `messages/` ; lancer `npm run test:core`.
 
 **À faire**
-- `src/core/sim/events.ts` : `WORLD_EVENT_KINDS` (les 49 genres de la spec), et pour chacun une entrée de `WORLD_EVENT_DEFS` : schéma Zod de `data`, portée par défaut, `harm` et `benefit` (0…100), acte éthique (`EthicKey | null`), étiquettes de réputation avec leur poids, formateur ou non (pour C2).
+- `src/core/sim/events.ts` : `WORLD_EVENT_KINDS` (les 62 genres de la spec), chacun rattaché à un thème de table s'il en relève (`sexual_assault`, `abducted`, `enslaved`, `tortured`), et pour chacun une entrée de `WORLD_EVENT_DEFS` : schéma Zod de `data`, portée par défaut, `harm` et `benefit` (0…100), acte éthique (`EthicKey | null`), étiquettes de réputation avec leur poids, formateur ou non (pour C2).
 - `zWorldEvent` : un événement complet validé (genre connu, `data` conforme à son genre, au moins un acteur sauf pour `birth`, `death` et `monster_attack`).
 - Une phrase de résumé par genre, avec trous (`{actor} a insulté {target}`), dans `messages/`.
 
 **Critères d'acceptation**
 - [ ] Chaque genre a une définition complète (test qui parcourt la liste).
 - [ ] Un genre inconnu ou un `data` non conforme est refusé.
+- [ ] `isKindAllowed(kind, themes, origin)` : un genre d'un thème `absent` est refusé pour toute origine ; un genre d'un thème `veiled` est refusé pour l'origine `simulation` (test).
 
 ---
 
@@ -113,7 +114,7 @@ Ce lot pose le hasard, l'horloge, les tables, le vocabulaire des événements, l
 **À faire**
 - `src/core/sim/bridge.ts` : `translateSessionEvents(events, figuresByEntity, combatContext): WorldEventDraft[]` (pur) : attaque → `assault`, mort par un PJ → `kill_in_fight` ou `murder`, soin → `help_given`. Les PJ et les figures sont reconnus par leur entité.
 - `src/server/services/simBridge.ts` : lit les `session_events` depuis la fin du dernier lot (une requête), traduit, rend des brouillons au pas de simulation (E9).
-- Action serveur `recordWorldEvent` (fait marquant) : schéma Zod, réservée à l'admin du monde, écrit un `world_events` d'origine `gm` (campagne) ou `player` (solo).
+- Action serveur `recordWorldEvent` (fait marquant) : schéma Zod, réservée à l'admin du monde, écrit un `world_events` d'origine `gm` (campagne) ou `player` (solo). Refuse un genre d'un thème `absent`, tout contenu sexuel impliquant un mineur, et un acte de thème visant un PJ si `pcs_concerned` ne l'accepte pas.
 
 **Critères d'acceptation**
 - [ ] Une figure tuée par un PJ alors qu'elle n'était pas hostile donne `murder` ; au combat contre elle, `kill_in_fight` (tests).
@@ -128,7 +129,7 @@ Ce lot pose le hasard, l'horloge, les tables, le vocabulaire des événements, l
 
 **Sous-tâches Haiku** : libellés ; planche du catalogue.
 
-- Dans le tiroir de conséquences (solo) et dans les outils du MJ : « Enregistrer un fait marquant ». Champs : le genre (liste groupée par famille, recherche), qui agit, sur qui (parmi les figures présentes et connues), où, la portée, une phrase libre.
+- Dans le tiroir de conséquences (solo) et dans les outils du MJ : « Enregistrer un fait marquant ». Champs : le genre (liste groupée par famille, recherche ; les genres d'un thème `absent` n'y figurent pas), qui agit, sur qui (parmi les figures présentes et connues), où, la portée, une phrase libre.
 - Réutiliser les éléments du catalogue (champ de recherche, puces de personnes) ; aucun élément neuf sans planche.
 
 **Critères d'acceptation**

@@ -27,7 +27,7 @@ En solo, un monde **naît avec une histoire**. En mode MJ, c'est une option. On 
 
 **Sous-tâches Haiku** : lancer `npm run test:core`.
 
-- `src/core/sim/generation/peoples.ts` : un peuple par espèce jouable du ruleset (ou tirée parmi elles), avec culture (valeurs, éthiques, tendances de facettes, norme relationnelle, noms par le générateur Noms) ; lieux rattachés et dimensionnés ; figures fondatrices légères (D3) ; identifiants par `hash128`.
+- `src/core/sim/generation/peoples.ts` : un peuple par espèce jouable du ruleset (ou tirée parmi elles), avec culture (valeurs, éthiques, tendances de facettes, norme relationnelle, structures d'union acceptées, normes sur l'identité variées d'une culture à l'autre si `identity_norms`, attitudes de départ envers les autres peuples, noms par le générateur Noms) ; lieux rattachés et dimensionnés ; figures fondatrices légères (D3) ; identifiants par `hash128`.
 
 **Critères d'acceptation**
 - [ ] Même graine et mêmes paramètres → mêmes peuples, lieux et figures.
@@ -41,12 +41,13 @@ En solo, un monde **naît avec une histoire**. En mode MJ, c'est une option. On 
 
 **Sous-tâches Haiku** : lancer les tests ; reporter les temps mesurés.
 
-- `src/core/sim/generation/history.ts` : un pas par mois (vie légère E8, monstres, querelles et raids, migrations, fondations, successions), événements `origin = 'generation'`, puis promotion des figures qui comptent au départ (au plus 60).
+- `src/core/sim/generation/history.ts` : un pas par mois (vie légère E8, monstres, querelles et raids, migrations, fondations, successions, persécutions), événements `origin = 'generation'`, puis promotion des figures qui comptent au départ (au plus 60). Mémoire longue à 365 jours. Les guerres et persécutions déplacent les attitudes entre peuples ; des lieux sûrs secrets naissent dans les lieux qui répriment. Les thèmes de table s'appliquent.
 - Rend des **morceaux** de dix années (figures, événements, lieux) pour l'envoi (G4).
 
 **Critères d'acceptation**
 - [ ] Même graine → même histoire, octet pour octet.
 - [ ] Aucun peuple ne s'éteint ni n'explose sans cause lisible (gardes de E8).
+- [ ] Deux peuples qui se sont fait la guerre ont, à la fin, des attitudes mutuelles plus basses que deux peuples restés en paix (test sur graine).
 - [ ] Temps mesuré pour chaque âge de monde dans un navigateur de bureau et un téléphone récent.
 
 ---

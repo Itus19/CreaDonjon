@@ -1,7 +1,7 @@
 # 0073 — Identité et orientations : une étiquette pour l'écran, un ensemble pour le moteur
 
 **Date :** 2026-10-22
-**Statut :** proposée (V4-B4)
+**Statut :** proposée (V4-B4) · **amendée par** ADR 0086 (la règle « un filtre, jamais un trait » devient « l'identité ne change jamais la personne ; elle change ce que les autres perçoivent, ce qu'ils en pensent, et les risques qu'elle court ») et ADR 0088 (orientations relationnelles ajoutées)
 
 ## Contexte
 

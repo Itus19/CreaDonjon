@@ -13,7 +13,7 @@ Passer de « une fiche qui décrit une personne » à « une personne que le mot
 **Sous-tâches Haiku** : reporter les libellés (trois formes d'accord pour les facettes) dans `messages/` ; lancer `npm run test:core`.
 
 **À faire** (tests d'abord)
-- `src/core/psyche/keys.ts` : `FACET_KEYS` (50) et `FACET_FAMILIES`, `COMPAT_FACETS`, `VALUE_KEYS` (35), `ETHIC_KEYS` (15), `ETHIC_RESPONSES` (7, ordonnées), `BODY_NEED_KEYS`, `MIND_NEED_KEYS` (25) et leurs sources, `DREAM_TYPES` (19), `EMOTION_KEYS` (22) avec valence. Les clés V2 restent exportées sous `LEGACY_*` pour la conversion (B3).
+- `src/core/psyche/keys.ts` : `FACET_KEYS` (52) et `FACET_FAMILIES` (7, dont `sexuality`), `COMPAT_FACETS`, `VALUE_KEYS` (37), `ETHIC_KEYS` (18), `ETHIC_RESPONSES` (7, ordonnées), `BODY_NEED_KEYS`, `MIND_NEED_KEYS` (27, dont `intimacy` et `tenderness`) et leurs sources, `DREAM_TYPES` (22), `EMOTION_KEYS` (24) avec valence, `SEX_ATTITUDES`, `RELATIONAL_ORIENTATIONS` (10, dont `open_relationship`, `libertine`, `solo_poly`), `UNION_STRUCTURES`. Les clés V2 restent exportées sous `LEGACY_*` pour la conversion (B3).
 - `src/core/psyche/bands.ts` étendu : `facetBand`, `valueBand` (verbe de bande), `needBand`, `emotionBand`, `bodyNeedBand(hours, thresholds)`.
 - `facetLabel(key, value, agreement)` : la bande dite avec le bon accord.
 
@@ -24,7 +24,7 @@ Passer de « une fiche qui décrit une personne » à « une personne que le mot
 
 ---
 
-### ☐ V4-B2 — Les blocs de graine en version 2 · `M` · sans modèle IA — **prêt après B1**
+### ☐ V4-B2 — Les blocs d'état de départ en version 2 · `M` · sans modèle IA — **prêt après B1**
 
 **Modèle conseillé : Opus** — schémas versionnés. **Spec :** §7.
 
@@ -68,9 +68,9 @@ Passer de « une fiche qui décrit une personne » à « une personne que le mot
 **Sous-tâches Haiku** : libellés des listes dans `messages/`.
 
 **À faire** (tests d'abord)
-- Bloc `character` : `gender_identity`, `pronouns_v2`, `sexual_orientation`, `romantic_orientation`, `relational_orientation`, chacun facultatif avec une visibilité (par défaut celle du bloc). Le champ `gender` existant se lit comme `gender_identity` quand celui-ci est absent ; `pronouns` texte reste affiché s'il n'y a pas `pronouns_v2`.
-- `src/core/psyche/attraction.ts` : `proposeAttractedTo(orientationKey, identity): GenderGroup[]`, `genderGroupOf(identity): GenderGroup`, `canBeAttracted(subject, target, kind: "romantic" | "sexual"): boolean` (filtre seulement).
-- Le test « un filtre, jamais un trait » : pour une même graine, changer identité et orientations ne change ni facettes, ni valeurs, ni poids de besoins (sauf `romance` pour une personne aromantique), ni le score d'aucune action hors `court` (ce dernier point s'ajoute en E4).
+- Bloc `character` : `gender_identity`, `pronouns_v2`, `sexual_orientation`, `romantic_orientation`, `relational_orientation`, `sex_attitude` (psyché §9.5), et les **traits perceptibles** (psyché §9.6 : `species`, `apparent_age`, `gender_expression`, `visible_marks`, `cultural_markers`), chacun facultatif avec une visibilité (par défaut celle du bloc). Le champ `gender` existant se lit comme `gender_identity` quand celui-ci est absent ; `pronouns` texte reste affiché s'il n'y a pas `pronouns_v2`.
+- `src/core/psyche/attraction.ts` : `proposeAttractedTo(orientationKey, identity): GenderGroup[]`, `proposeSexAttitude(orientationKey)`, `perceivedGenderGroup(expression, disguise): GenderGroup`, `canBeAttracted(subject, perceivedTarget, kind: "romantic" | "sexual"): boolean` (on est attiré par ce qu'on perçoit).
+- Le test de la règle d'identité (ADR 0086) : pour un même état de départ, changer identité, orientations et espèce ne change ni facettes, ni valeurs, ni poids de besoins (sauf `romance` pour une personne aromantique et `intimacy` selon `sex_attitude`). Les effets sociaux, eux, passent par les croyances et les normes (C9, C10, qui étendent ce test).
 - La visibilité de chaque champ est résolue côté serveur (règle 5), comme celle des aspirations.
 
 **Critères d'acceptation**
@@ -86,7 +86,8 @@ Passer de « une fiche qui décrit une personne » à « une personne que le mot
 
 **Sous-tâches Haiku** : planche du catalogue.
 
-- Dans l'éditeur du bloc `character` : une section repliée « Identité », avec listes du monde et libellé libre, l'ensemble d'attirance proposé puis modifiable (trois cases), la visibilité de chaque champ.
+- Dans l'éditeur du bloc `character` : une section repliée « Identité », avec listes du monde et libellé libre, l'ensemble d'attirance proposé puis modifiable (trois cases), le rapport au sexe, la visibilité de chaque champ.
+- Une section « Ce qui se voit » : espèce, âge apparent, expression de genre, marques visibles, marques culturelles.
 - Les pronoms : sujet et accord, avec un exemple vivant (« Iel est arrivé·e »).
 
 **Critères d'acceptation**
@@ -102,8 +103,8 @@ Passer de « une fiche qui décrit une personne » à « une personne que le mot
 **Sous-tâches Haiku** : lancer `npm run test:core`.
 
 **À faire** (tests d'abord)
-- `needWeights(facets, values, overrides, romanticOrientation): Record<MindNeedKey, 0|1|2|3>`.
-- `initialDreams(facets, values, rng): Dream[]` : la table de naissance des rêves (valeur `power` et `ambition` → `rule` ou `rank` ; `craftsmanship` → `masterwork` ; `martial_prowess` → `legendary_warrior` ; `family` → `found_family` ; `romance` → `fall_in_love` sauf aromantique ; `knowledge` → `discovery` ; `nature` et `curiosity` → `explore` ; `peace` → `peace` ; `wealth` ou `greed` → `acquire`), un ou deux rêves.
+- `needWeights(facets, values, overrides, romanticOrientation, sexAttitude): Record<MindNeedKey, 0|1|2|3>` (`intimacy` à 0 si `averse`, plafonné à 1 si `indifferent`).
+- `initialDreams(facets, values, rng): Dream[]` : la table de naissance des rêves (valeur `power` et `ambition` → `rule` ou `rank` ; `craftsmanship` → `masterwork` ; `martial_prowess` → `legendary_warrior` ; `family` → `found_family` ; `romance` → `fall_in_love` sauf aromantique ; `knowledge` → `discovery` ; `nature` et `curiosity` → `explore` ; `peace` → `peace` ; `wealth` ou `greed` → `acquire` ; `lust_propensity` et `pride` hauts → `be_desired` ; `sexual_curiosity` haute → `explore_desires`), un ou deux rêves.
 
 **Critères d'acceptation**
 - [ ] Les poids suivent la table des sources (test par besoin).
@@ -111,7 +112,7 @@ Passer de « une fiche qui décrit une personne » à « une personne que le mot
 
 ---
 
-### ☐ V4-B7 — Éditer la graine à la main · `M` · sans modèle IA — **prêt après B2 (Sonnet)**
+### ☐ V4-B7 — Éditer l'état de départ à la main · `M` · sans modèle IA — **prêt après B2 (Sonnet)**
 
 **Modèle conseillé : Sonnet.** **Esquisse :** première sous-tâche.
 
@@ -121,7 +122,7 @@ Passer de « une fiche qui décrit une personne » à « une personne que le mot
 - En tête : « compléter avec le questionnaire » (lot D) et « compléter au hasard » (D3).
 
 **Critères d'acceptation**
-- [ ] Toute la graine se saisit sans quitter la fiche ; tient à 375 px.
+- [ ] Tout l'état de départ se saisit sans quitter la fiche ; tient à 375 px.
 - [ ] Une retouche écrit un `personality_events` `seed_edit` (journal V2 conservé).
 
 ---
@@ -133,14 +134,14 @@ Passer de « une fiche qui décrit une personne » à « une personne que le mot
 **Sous-tâches Haiku** : planche du catalogue.
 
 - **En tête** : « les cinq qui la définissent » (les facettes les plus marquées), les trois valeurs prioritaires, le rêve actif, l'humeur et sa bande.
-- **Deux temps** quand la simulation est active : « au départ » (graine) et « aujourd'hui » (état), l'écart signalé.
+- **Deux temps** quand la simulation est active : « au départ » (état de départ) et « aujourd'hui » (état courant), l'écart signalé.
 - **Pourquoi** : chaque facette ou valeur qui a bougé dit sa cause (le souvenir fondateur et sa date) ; l'humeur se déplie en ses termes (« −12 : en deuil »).
 - Besoins et stress en jauges à bandes ; le nombre au survol, pour le MJ seulement.
-- Lecture par un service qui fusionne graine et état côté serveur ; un seul chargement (`docs/CABLAGE.md`).
+- Lecture par un service qui fusionne état de départ et état courant côté serveur ; un seul chargement (`docs/CABLAGE.md`).
 
 **Critères d'acceptation**
 - [ ] Esquisse validée ; tient à 375 px ; planche à jour.
-- [ ] Simulation inactive : seule la graine s'affiche, sans emplacement vide.
+- [ ] Simulation inactive : seul l'état de départ s'affiche, sans emplacement vide.
 
 ---
 
@@ -152,9 +153,10 @@ Passer de « une fiche qui décrit une personne » à « une personne que le mot
 
 - `summarizeFigureForPrompt(figure, audience, settings): string` (pur) : le format de la spec §10, cinq facettes, trois valeurs, lignes rouges, rêve, émotion et besoins pressants, attitude envers le groupe, un souvenir marquant, pronoms et accord.
 - Branché dans le contexte du tour (V3-B3), encadré comme donnée (règle 10).
-- La consigne `intimate_narration` est transmise.
+- Les consignes de récit sont transmises : `intimate_narration`, `violence_detail`, `tone`, et pour chaque thème voilé l'interdiction de décrire l'acte (`specs/simulation-monde.md` §11.3).
 
 **Critères d'acceptation**
 - [ ] Une donnée « MJ seul » ou un rêve `gm` n'entre jamais dans un contexte lu par un joueur (test).
 - [ ] Plafond de tokens par figure fixé après mesure, et tenu (test sur la figure la plus chargée du jeu d'essai).
 - [ ] Vérifié en direct sur trois tours : pronoms et accords respectés.
+- [ ] Un événement d'un thème voilé n'est jamais décrit, seulement ses conséquences (vérifié en direct avec le modèle local).
