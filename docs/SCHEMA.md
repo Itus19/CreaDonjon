@@ -776,7 +776,7 @@ RLS sur les trois tables, même motif que `combats` : lecture ouverte à tout me
 
 ### Combats : `combats` et `combat_participants` (V1-E4, V3.1-101)
 
-Un combat appartient à une campagne (`combats.campaign_id`). Il a un nom, un `status` (`draft`, `rolling` — « jets d'initiative », V3.1-103 —, `running` ou `ended`), un `round` et un `turn_index`. Ses participants sont les lignes de `combat_participants` : un PJ ou un PNJ (`entity_id`), un monstre du ruleset (`rule_key`) ou une saisie libre. Chaque participant porte son initiative, sa CA, ses PV (`hp_current`, `hp_max`, `temp_hp`), ses états, sa concentration, et `is_ally`.
+Un combat appartient à une campagne (`combats.campaign_id`). Il a un nom, un `status` (`draft`, `rolling` — « jets d'initiative », V3.1-103 —, `running`, `paused` — « suspendu », V3.1-38 — ou `ended`), un `round` et un `turn_index`. Ses participants sont les lignes de `combat_participants` : un PJ ou un PNJ (`entity_id`), un monstre du ruleset (`rule_key`) ou une saisie libre. Chaque participant porte son initiative, sa CA, ses PV (`hp_current`, `hp_max`, `temp_hp`), ses états, sa concentration, et `is_ally`.
 
 **RLS (ADR 0040, migration `20261010120000_combats_gm_only`).**
 - `combats` est **lisible de tout membre du monde** : statut, round et tour n'ont rien de secret, et c'est le signal temps réel des écrans joueurs.
@@ -784,6 +784,8 @@ Un combat appartient à une campagne (`combats.campaign_id`). Il a un nom, un `s
 - `combat_participants` se **lit et s'écrit par l'administrateur seulement** (`app.combat_world_id`). Les PV et la CA des adversaires n'arrivent jamais à un joueur ; sa vue filtrée passe par `public.combat_player_view` (ci-dessous).
 
 **Vue des joueurs (V3.1-102, ADR 0040, migration `20261016120000_combat_player_view`).** `public.combat_player_view(p_combat)` (`security definer`, `row_security = off`) refuse tout non-membre du monde (code `42501`) et renvoie, par participant : `id`, `label`, `initiative`, `display_order`, `side` (`ally` : PJ de la campagne ou `is_ally` ; sinon `enemy`), `conditions` ; pour un allié seulement `entity_id`, `hp_current`, `hp_max`, `temp_hp` ; pour un adversaire seulement `wound` (`unhurt` PV ≥ max, `hurt` > ½, `bloodied` > 0, `down` 0 ; `null` sans PV saisis). Jamais `ac`, `rule_key`, ni la fiche d'un adversaire. L'ordre et le tour en cours se calculent côté serveur par le tri de l'écran du MJ (`orderPlayerCombatView`). Trois déclencheurs par instruction sur `combat_participants` touchent `combats.updated_at` : c'est le signal temps réel des joueurs.
+
+**Combat suspendu et temps réel (V3.1-38, migration `20261024090000_combat_paused_realtime`).** « Quitter le combat » met `status = 'paused'` sans rien toucher d'autre (ordre, round, tour, PV, états). « Reprendre tel quel » rend `running` si `round ≥ 1`, `rolling` sinon, sans recalculer round ni tour ; « Recommencer » efface toutes les initiatives et revient à `rolling`, round 0. Un combat suspendu n'est pas en cours pour les joueuses (`getPlayerCombatView` répond « aucun »). `combats` est dans la publication `supabase_realtime` (pas `combat_participants`, fermée au MJ) : les joueuses écoutent leur ligne et relisent leur vue filtrée.
 
 **Initiative des joueurs (V3.1-103, migration `20261017090000_combat_rolling_own_initiative`).** `public.set_own_initiative(p_participant, p_value)` est la seule écriture d'une joueuse dans `combat_participants` : l'initiative du participant qui est SON PJ (`campaign_characters.user_id`), seulement en statut `rolling`, valeur −10 à 40. Elle renvoie `{ before, after }` (la ligne complète, pour le journal et l'annulation) ou `null` si elle refuse.
 
@@ -1329,6 +1331,7 @@ rulesets ── ruleset_entries ─┬── ruleset_entry_blocks
 | `20261013120000` | `app_identity` et le bucket `brand` — l'identité de l'application (§18.0, ADR 0061) |
 | `20261013130000` | `claim_shared_note_grant` — l'octroi de l'autrice d'une page partagée (§5, ADR 0037) |
 | `20261013140000` | `worlds.wiki_background` ; `asset_reference_count` compte la copie du fond (§3, ADR 0047) |
+| `20261024090000` | `combats.status` accepte `paused` ; `combats` publiée en temps réel (ADR 0040, V3.1-38) |
 
 **Règle absolue :** une migration appliquée n'est jamais modifiée. On en écrit une nouvelle. Y compris pendant le développement, y compris « juste pour corriger une faute de frappe ».
 

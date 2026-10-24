@@ -59,7 +59,8 @@ export async function getPlayerCombatView(supabase: TypedClient, campaignId: str
   if (!campaign) return { kind: "forbidden" };
 
   const combat = await getActiveCombatForCampaign(supabase, campaignId);
-  if (!combat) return { kind: "none" };
+  // V3.1-38 : un combat suspendu n'est plus en cours pour les joueuses — elles retrouvent leur fiche.
+  if (!combat || combat.status === "paused") return { kind: "none" };
 
   const rows = await listPlayerCombatViewRows(supabase, combat.id);
   if (rows === null) return { kind: "forbidden" };

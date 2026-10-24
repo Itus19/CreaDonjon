@@ -41,3 +41,8 @@ Une migration (politiques, `check`, deux fonctions), `docs/SCHEMA.md`, tests RLS
 - « Lancer » passe par le jet d'initiative de la fiche (`rollInitiativeCheck`) : le jet est enregistré dans `dice_rolls` et attribué (V3.1-89). « Vrai dé » : le d20 de la table, plus la Dextérité de la fiche — ou le total déjà annoncé (`modifierIncluded`).
 - Une joueuse peut réécrire son initiative tant que le MJ n'a pas commencé : relancer à volonté ne lui donne rien de plus qu'annoncer un dé.
 - Écran du MJ : statut « Jets d'initiative », bouton « Demander les jets », « ▶ Commencer » pendant les jets, « ■ Stop » confirmé. La demande, chaque jet, la saisie du MJ et la fin écrivent un `session_events` de genre `combat`.
+
+## Suspension et temps réel (V3.1-38, 24 octobre 2026)
+
+- « Quitter le combat » suspend : nouveau statut `paused` (choix de l'auteur, plutôt que réutiliser `ended` : une suspension et une fin voulue restent distinctes). Reprendre rend `running` ou `rolling` selon le round, sans recalculer round ni tour ; recommencer efface les initiatives et revient aux jets. Un combat suspendu n'est plus « en cours » pour les joueuses.
+- `combats` entre dans la publication temps réel (migration `20261024090000`) ; `combat_participants` n'y entre pas.

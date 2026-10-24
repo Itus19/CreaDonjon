@@ -86,3 +86,21 @@ export function retreatTurn(state: CombatTurnState, participantCount: number): C
   if (state.round <= 1) return state;
   return { round: state.round - 1, turnIndex: participantCount - 1 };
 }
+
+/**
+ * V3.1-38 — « Quitter le combat » suspend (`paused`) sans rien perdre : ordre,
+ * round, tour, PV et états restent. Seuls un combat en cours ou en jets
+ * d'initiative se suspendent.
+ */
+export function canPauseCombat(status: string): boolean {
+  return status === "running" || status === "rolling";
+}
+
+/**
+ * « Reprendre tel quel » : le statut d'avant la suspension, déduit du round —
+ * un combat commencé a un round ≥ 1, un combat suspendu pendant les jets n'en
+ * a pas encore (0). Round et tour ne sont jamais recalculés à la reprise.
+ */
+export function resumedCombatStatus(combat: { round: number }): "running" | "rolling" {
+  return combat.round >= 1 ? "running" : "rolling";
+}

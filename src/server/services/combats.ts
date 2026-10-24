@@ -3,6 +3,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
 import {
   abilityModifier,
+  canPauseCombat,
+  resumedCombatStatus,
   rollInitiative,
   sortByInitiative,
   startCombat as computeStartCombat,
@@ -362,6 +364,7 @@ const COMBAT_STATUS_LABELS_FR: Record<string, string> = {
   draft: "Pas engagé",
   rolling: "Jets d'initiative",
   running: "Commencé",
+  paused: "Suspendu",
   ended: "Terminé",
 };
 
@@ -410,6 +413,58 @@ export const beginCombat = (supabase: TypedClient, params: { combatId: string; a
 
 export const endCombat = (supabase: TypedClient, params: { combatId: string; actorUserId: string }) =>
   setCombatStatus(supabase, { ...params, status: "ended" });
+
+/**
+ * V3.1-38 — les trois gestes de « Quitter le combat ». `null` : le combat
+ * n'est pas dans le statut qui permet ce geste (le MJ voit un écran périmé).
+ * Chacun écrit une ligne au journal de la séance, annulable comme les autres.
+ */
+async function changeCombatKeepingTurn(
+  supabase: TypedClient,
+  combat: CombatRow,
+  patch: { status: string; round?: number; turnIndex?: number },
+  actorUserId: string,
+  note: string
+): Promise<CombatRow> {
+  const updated = await updateCombat(supabase, combat.id, patch);
+  await journalCombatEvent(supabase, combat, {
+    target: "combat",
+    targetId: combat.id,
+    before: { round: combat.round, turn_index: combat.turn_index, status: combat.status },
+    after: { round: updated.round, turn_index: updated.turn_index, status: updated.status },
+    note,
+    actorUserId,
+  });
+  return updated;
+}
+
+/** « Quitter le combat » : suspendu, rien n'est perdu (ordre, round, tour, PV, états). */
+export async function pauseCombat(supabase: TypedClient, params: { combatId: string; actorUserId: string }): Promise<CombatRow | null> {
+  const combat = await getCombatById(supabase, params.combatId);
+  if (!combat || !canPauseCombat(combat.status)) return null;
+  return changeCombatKeepingTurn(supabase, combat, { status: "paused" }, params.actorUserId, "Combat suspendu");
+}
+
+/** « Reprendre tel quel » : même ordre, même round, même tour — jamais recalculés (contrairement à `setCombatStatus`). */
+export async function resumeCombat(supabase: TypedClient, params: { combatId: string; actorUserId: string }): Promise<CombatRow | null> {
+  const combat = await getCombatById(supabase, params.combatId);
+  if (!combat || combat.status !== "paused") return null;
+  return changeCombatKeepingTurn(supabase, combat, { status: resumedCombatStatus(combat) }, params.actorUserId, "Combat repris tel quel");
+}
+
+/**
+ * « Recommencer (relancer l'initiative) » : toutes les initiatives sont
+ * effacées et le combat revient aux jets (round 0) — l'invitation repart vers
+ * les joueuses dont le PJ combat. PV et états restent : on relance l'ordre,
+ * pas la bataille.
+ */
+export async function restartCombat(supabase: TypedClient, params: { combatId: string; actorUserId: string }): Promise<CombatRow | null> {
+  const combat = await getCombatById(supabase, params.combatId);
+  if (!combat || combat.status !== "paused") return null;
+  const participants = await listCombatParticipants(supabase, combat.id);
+  await Promise.all(participants.map((p) => updateCombatParticipant(supabase, p.id, { initiative: null })));
+  return changeCombatKeepingTurn(supabase, combat, { status: "rolling", round: 0, turnIndex: 0 }, params.actorUserId, "Combat recommencé : initiative relancée");
+}
 
 /** Renomme un combat ("Rencontre", "Embuscade au pont"...) — retour explicite de l'utilisateur, le nom par defaut ne suffit pas pour retrouver une bataille dans "Mes combats". */
 export async function renameCombat(supabase: TypedClient, params: { combatId: string; name: string | null }): Promise<CombatRow> {

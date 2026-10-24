@@ -3,7 +3,9 @@ import {
   EmptyCombatError,
   abilityModifier,
   advanceTurn,
+  canPauseCombat,
   isOwnInitiativeInRange,
+  resumedCombatStatus,
   ownInitiativeFromDie,
   retreatTurn,
   rollInitiative,
@@ -127,5 +129,19 @@ describe("initiative annoncée par un joueur (V3.1-103, ADR 0040)", () => {
     expect(isOwnInitiativeInRange(-11)).toBe(false);
     expect(isOwnInitiativeInRange(41)).toBe(false);
     expect(isOwnInitiativeInRange(2.5)).toBe(false);
+  });
+});
+
+describe("suspendre puis reprendre un combat (V3.1-38)", () => {
+  it("on suspend un combat en cours ou pendant les jets, jamais un brouillon, un terminé ou un suspendu", () => {
+    expect(canPauseCombat("running")).toBe(true);
+    expect(canPauseCombat("rolling")).toBe(true);
+    for (const s of ["draft", "ended", "paused"]) expect(canPauseCombat(s)).toBe(false);
+  });
+
+  it("« Reprendre tel quel » revient là où on en était : au round, ou aux jets s'il n'avait pas commencé", () => {
+    expect(resumedCombatStatus({ round: 3 })).toBe("running");
+    expect(resumedCombatStatus({ round: 1 })).toBe("running");
+    expect(resumedCombatStatus({ round: 0 })).toBe("rolling");
   });
 });
