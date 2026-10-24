@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { advantagePairFromTrace, buildToolFormula, toolVerdict, verdictTone } from "./diceTool";
+import { advantagePairFromTrace, buildToolFormula, rollsForDisplay, toolVerdict, verdictTone } from "./diceTool";
 import { evaluate } from "../formula/evaluate";
 import { parseFormula } from "../formula/parser";
 import type { Rng } from "./rng";
@@ -72,5 +72,27 @@ describe("verdict d'un jet de l'outil", () => {
     expect(verdictTone("fail", 20)).toBe("fail");
     expect(verdictTone("fail", 1)).toBe("fail");
     expect(verdictTone(null, 20)).toBeNull();
+  });
+});
+
+describe("rollsForDisplay (jets ciblés, V3.1-38 suite)", () => {
+  it("une attaque avec avantage : son total, sa trace, la paire et le d20 gardé", () => {
+    const trace = [{ text: "2d20kh1 (7, 17)", value: 17 }, { text: "+5", value: 5 }];
+    expect(rollsForDisplay([{ total: 22, trace }])).toEqual({
+      total: 22,
+      trace,
+      pair: { mode: "advantage", rolls: [7, 17], keptIndex: 1 },
+      naturalD20: 17,
+    });
+  });
+
+  it("des dégâts en plusieurs parties : totaux additionnés, traces mises bout à bout, pas de d20", () => {
+    const a = [{ text: "1d6 (4)", value: 4 }];
+    const b = [{ text: "2d8 (3, 6)", value: 9 }];
+    expect(rollsForDisplay([{ total: 4, trace: a }, { total: 9, trace: b }])).toEqual({ total: 13, trace: [...a, ...b], pair: null, naturalD20: null });
+  });
+
+  it("aucun jet : rien à montrer", () => {
+    expect(rollsForDisplay([])).toBeNull();
   });
 });

@@ -1101,6 +1101,7 @@
     "invitationEnvoyee": "Les joueurs reçoivent l'invitation à lancer leur initiative.",
     "jetAttaque": "Attaque — {cible}",
     "jetDegats": "Dégâts — {cible}",
+    "lancerDegats": "Lancer les dégâts",
     "jetRate": "Raté — {cible}",
     "jetSauvegarde": "Sauvegarde demandée — {cible}",
     "jetSoin": "Soin — {cible}",

@@ -1100,6 +1100,7 @@
     "invitationEnvoyee": "Players receive the invitation to roll their initiative.",
     "jetAttaque": "Attack — {cible}",
     "jetDegats": "Damage — {cible}",
+    "lancerDegats": "Roll damage",
     "jetRate": "Miss — {cible}",
     "jetSauvegarde": "Saving throw requested — {cible}",
     "jetSoin": "Healing — {cible}",

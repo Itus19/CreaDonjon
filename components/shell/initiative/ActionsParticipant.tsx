@@ -10,11 +10,13 @@ import { zSpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import type { CombatParticipantRow } from "@/src/server/repos/combats";
 import type { ParticipantCharacteristics } from "@/src/server/services/combats";
-import { ErreurLancer, type CibleDeJet, type PreReglage } from "@/lib/ui/outilDes";
+import { ErreurLancer, type CibleDeJet, type PreReglage, type SortieJet } from "@/lib/ui/outilDes";
+import type { AdvantageState } from "@/src/core/rules/action";
 import {
   actionsDeMonstre,
   classerSort,
   corpsJetCible,
+  demandeDegatsApres,
   desDeLaFormule,
   estUneArme,
   libellePv,
@@ -75,37 +77,37 @@ function useOuvrirJet(params: {
       dice: grille.dice,
       modifier: grille.modifier,
       cibles,
-      lancer: async (cibleId) => {
+      // V3.1-38 (suite) : un jet d'attaque garde l'avantage au choix dans l'outil.
+      avantageLibre: jet.kind === "attack" || jet.kind === "spell_attack",
+      lancer: async (cibleId, options) => {
         if (!cibleId) return null;
-        try {
-          const reponse = await lancerJetCible(
-            campaignId,
-            combatId,
-            corpsJetCible({ kind: jet.kind, acteur: acteurJet, action: jet.action, cibleId }),
-            t("erreurJet")
-          );
-          apresJet();
-          const cible = participants.find((p) => p.id === cibleId)?.label ?? "";
-          return sortieDepuisJetCible(reponse, jet.kind, {
-            acteur: acteur.label,
-            cible,
-            libelle: (cle, nom) =>
-              cle === "touche"
-                ? t("jetTouche", { cible: nom })
-                : cle === "rate"
-                  ? t("jetRate", { cible: nom })
-                  : cle === "attaque"
-                    ? t("jetAttaque", { cible: nom })
-                    : cle === "degats"
-                      ? t("jetDegats", { cible: nom })
-                      : cle === "sauvegarde"
-                        ? t("jetSauvegarde", { cible: nom })
-                        : t("jetSoin", { cible: nom }),
-          });
-        } catch (e) {
-          if (e instanceof ErreurInitiative) throw new ErreurLancer(e.message);
-          throw e;
-        }
+        const cible = participants.find((p) => p.id === cibleId)?.label ?? "";
+        const libelle = (cle: "touche" | "rate" | "attaque" | "degats" | "sauvegarde" | "soin", nom: string) =>
+          cle === "touche"
+            ? t("jetTouche", { cible: nom })
+            : cle === "rate"
+              ? t("jetRate", { cible: nom })
+              : cle === "attaque"
+                ? t("jetAttaque", { cible: nom })
+                : cle === "degats"
+                  ? t("jetDegats", { cible: nom })
+                  : cle === "sauvegarde"
+                    ? t("jetSauvegarde", { cible: nom })
+                    : t("jetSoin", { cible: nom });
+        /** Un jet ciblé : le serveur lance, tranche et applique ; on affiche ses dés, et la suite qu'il propose. */
+        const executer = async (demande: DemandeJetCible, options2: { avantage?: AdvantageState; critique?: boolean }): Promise<SortieJet> => {
+          try {
+            const reponse = await lancerJetCible(campaignId, combatId, corpsJetCible(demande, options2), t("erreurJet"));
+            apresJet();
+            const sortie = sortieDepuisJetCible(reponse, demande.kind, { acteur: acteur.label, cible, libelle });
+            const degats = demandeDegatsApres(reponse);
+            return degats ? { ...sortie, suite: { libelle: t("lancerDegats"), lancer: () => executer(degats.demande, { critique: degats.critique }) } } : sortie;
+          } catch (e) {
+            if (e instanceof ErreurInitiative) throw new ErreurLancer(e.message);
+            throw e;
+          }
+        };
+        return executer({ kind: jet.kind, acteur: acteurJet, action: jet.action, cibleId }, { avantage: options.avantage });
       },
     };
     openDiceTool(preset);

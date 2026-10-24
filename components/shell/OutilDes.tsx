@@ -32,6 +32,7 @@ import {
   type PreReglage,
   type Reserve,
   type SortieJet,
+  type SuiteDeJet,
 } from "@/lib/ui/outilDes";
 import { messageErreur, posterJet } from "@/lib/ui/outilDesApi";
 import { useMatchMedia } from "./useMatchMedia";
@@ -129,6 +130,8 @@ interface ResultatLocal {
   contexte: ContexteJet;
   /** Ce jet est déjà une relance payée : la bande ne se propose plus. */
   relance: boolean;
+  /** V3.1-38 (suite) : le geste qui suit ce jet (« Lancer les dégâts »), tant qu'il n'est pas fait. */
+  suite?: SuiteDeJet;
 }
 
 export default function OutilDes({
@@ -180,6 +183,8 @@ export default function OutilDes({
   const lancerFourni = actif?.lancer;
   /** Un tour solo : avantage et DD sont figés dans la demande, l'outil ne les change pas (V3.1-36). */
   const fige = lancerFourni !== undefined;
+  /** Un jet ciblé d'attaque garde l'avantage au choix (V3.1-38) ; le reste de la demande reste figé. */
+  const avantageFige = fige && !actif?.avantageLibre;
   const verrouille = action !== undefined || fige;
   const avantageEff = avantageEffectif(reserve, avantage);
   const peutDonnerAvantage = avantagePossible(reserve);
@@ -196,6 +201,29 @@ export default function OutilDes({
     setErreur(null);
     setCibleId(null);
     setListeCibles(false);
+  }
+
+  /** V3.1-38 (suite) : le geste proposé par le jet précédent (« Lancer les dégâts »), même cible. */
+  async function lancerSuite() {
+    const suite = resultat?.suite;
+    if (!suite || enCours) return;
+    setResultat(null);
+    setEnCours(true);
+    setErreur(null);
+    try {
+      const attente = new Promise<void>((resolve) => setTimeout(resolve, reduit ? 0 : ATTENTE_MIN_MS));
+      const [sortie] = await Promise.all([suite.lancer(), attente]);
+      if (sortie === null) {
+        setErreur(t("erreurJet"));
+        return;
+      }
+      setResultat({ jet: jetDepuisSortie(sortie), contexte: { dc: sortie.dc, avantage: "normal", secret: false, ddPrive: false }, relance: false, suite: sortie.suite });
+    } catch (e) {
+      console.error("Jet de dés non lancé", e);
+      setErreur(e instanceof ErreurLancer ? e.message : t("erreurJet"));
+    } finally {
+      setEnCours(false);
+    }
   }
 
   async function lancer(relance: boolean) {
@@ -219,12 +247,12 @@ export default function OutilDes({
         setErreur(null);
         try {
           const attente = new Promise<void>((resolve) => setTimeout(resolve, reduit ? 0 : ATTENTE_MIN_MS));
-          const [sortie] = await Promise.all([lancerFourni(cibleId), attente]);
+          const [sortie] = await Promise.all([lancerFourni(cibleId, { avantage: avantageEff }), attente]);
           if (sortie === null) {
             setErreur(t("erreurJet"));
             return;
           }
-          setResultat({ jet: jetDepuisSortie(sortie), contexte: { dc: sortie.dc, avantage: avantageEff, secret: false, ddPrive: false }, relance: false });
+          setResultat({ jet: jetDepuisSortie(sortie), contexte: { dc: sortie.dc, avantage: avantageEff, secret: false, ddPrive: false }, relance: false, suite: sortie.suite });
         } catch (e) {
           console.error("Jet de dés non lancé", e);
           setErreur(e instanceof ErreurLancer ? e.message : t("erreurJet"));
@@ -359,9 +387,9 @@ export default function OutilDes({
 
       {/* Pilule Normal / Avantage / Désavantage (pilule glissante du catalogue). */}
       <div
-        className={peutDonnerAvantage && !fige ? "" : "opacity-40"}
-        title={fige ? t("figeDansLaDemande") : peutDonnerAvantage ? undefined : t("avantageIndisponible")}
-        inert={fige}
+        className={peutDonnerAvantage && !avantageFige ? "" : "opacity-40"}
+        title={avantageFige ? t("figeDansLaDemande") : peutDonnerAvantage ? undefined : t("avantageIndisponible")}
+        inert={avantageFige}
       >
         <Tabs<AdvantageState>
           aria-label={t("avantageLibelle")}
@@ -446,6 +474,16 @@ export default function OutilDes({
             className="h-9 w-full rounded-lg border border-accent bg-panel text-xs font-semibold text-accent transition-colors hover:bg-accent hover:text-accent-ink disabled:opacity-60"
           >
             {t("relancer")}
+          </button>
+        )}
+        {!afficheBande && termine && resultat?.suite && (
+          <button
+            type="button"
+            onClick={() => void lancerSuite()}
+            disabled={enCours}
+            className="h-9 w-full rounded-lg border border-accent bg-panel text-xs font-semibold text-accent transition-colors hover:bg-accent hover:text-accent-ink disabled:opacity-60"
+          >
+            {resultat.suite.libelle}
           </button>
         )}
       </div>

@@ -5,6 +5,8 @@ import type { CombatParticipantRow } from "@/src/server/repos/combats";
 import type { ParticipantCharacteristics } from "@/src/server/services/combats";
 import type { SortieJet } from "@/lib/ui/outilDes";
 import type { TargetedRollInput } from "@/lib/combats/schemas";
+import type { RollDisplay } from "@/src/core/dice/diceTool";
+import type { AdvantageState } from "@/src/core/rules/action";
 
 /**
  * Logique pure de l'outil Initiative (V3.1-38) : la phase d'un combat, l'ordre,
@@ -253,14 +255,14 @@ export interface DemandeJetCible {
  * Le jet d'un monstre reste caché aux joueuses (le serveur le consigne en
  * secret) ; celui d'une fiche reste public.
  */
-export function corpsJetCible(demande: DemandeJetCible): TargetedRollInput {
+export function corpsJetCible(demande: DemandeJetCible, options: { avantage?: AdvantageState; critique?: boolean } = {}): TargetedRollInput {
   return {
     kind: demande.kind,
     actor: demande.acteur,
     action: demande.action,
     targetId: demande.cibleId,
-    advantage: "normal",
-    critical: false,
+    advantage: options.avantage ?? "normal",
+    critical: options.critique ?? false,
     secret: demande.acteur.kind === "participant",
   };
 }
@@ -275,15 +277,25 @@ export interface ReponseJetCible {
   hints: string[];
   ignored: string[];
   targetOutOfFight: boolean;
-  chained: unknown;
+  /** Après une touche : les dégâts à lancer sur la même cible (`ChainedDamage`, côté serveur). */
+  chained: { kind: "damage"; actor: TargetedRollInput["actor"]; action: TargetedRollInput["action"]; targetId: string; critical: boolean } | null;
   rollEventId: string;
   saveRequestId: string | null;
+  /** V3.1-38 (suite) : les dés du jet (`RollDisplay`, côté serveur) ; `null` sans dés à montrer. */
+  dice: RollDisplay | null;
+}
+
+/** Après une touche, les dégâts à lancer sur la même cible, critique compris ; `null` sinon. */
+export function demandeDegatsApres(reponse: ReponseJetCible): { demande: DemandeJetCible; critique: boolean } | null {
+  const suite = reponse.chained;
+  if (!suite || suite.kind !== "damage") return null;
+  return { demande: { kind: "damage", acteur: suite.actor, action: suite.action, cibleId: suite.targetId }, critique: suite.critical };
 }
 
 /**
- * Le jet ciblé, tel que l'outil de dés l'affiche. La route ne rend ni le total
- * de l'attaque ni les dés : on affiche ce qu'on a (le verdict, le montant des
- * dégâts) plutôt que d'inventer un résultat. `libelle` donne le texte de la
+ * Le jet ciblé, tel que l'outil de dés l'affiche : les dés que le serveur a
+ * lancés (total de l'attaque ou des dégâts, paire d'avantage, d20 gardé) et le
+ * verdict. Sans dés (un sort à sauvegarde, un soin), le montant seul. `libelle` donne le texte de la
  * ligne pour le genre de jet (traduit par l'appelant).
  */
 export function sortieDepuisJetCible(
@@ -306,13 +318,13 @@ export function sortieDepuisJetCible(
     who: acteur,
     what,
     chips: [],
-    total: reponse.amount ?? 0,
+    total: reponse.dice?.total ?? reponse.amount ?? 0,
     dc: null,
     verdict: reponse.verdict === "hit" ? "success" : reponse.verdict === "miss" ? "fail" : null,
     hidden: false,
-    trace: [],
-    pair: null,
-    naturalD20: null,
+    trace: reponse.dice?.trace ?? [],
+    pair: reponse.dice?.pair ?? null,
+    naturalD20: reponse.dice?.naturalD20 ?? null,
     dcPrivate: false,
   };
 }

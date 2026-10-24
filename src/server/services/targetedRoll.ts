@@ -14,6 +14,8 @@ import { zSaveRequestEffect, type SaveRequestEffect } from "@/src/core/rules/sav
 import { insertSaveRequest } from "@/src/server/repos/saveRequests";
 import { naturalD20FromTrace } from "@/src/core/dice/rollAttribution";
 import { formatFormulaNode } from "@/src/core/formula/format";
+import type { TraceStep } from "@/src/core/formula/evaluate";
+import { rollsForDisplay, type RollDisplay } from "@/src/core/dice/diceTool";
 import { zActionsBlockData, zLegendaryActionsBlockData, zStatBlockBlockData, type StatBlockBlockData } from "@/src/core/schemas/rule-blocks";
 import {
   castSpell,
@@ -350,6 +352,8 @@ export type TargetedRollResult =
       rollEventId: string;
       /** V3.1-111 : un sort à sauvegarde ne s'applique pas ici — la cible répond à cette demande. */
       saveRequestId: string | null;
+      /** V3.1-38 (suite) : le jet tel que l'outil de dés le montre (attaque, ou dégâts) ; `null` sans dés à montrer. */
+      dice: RollDisplay | null;
     }
   | { ok: false; reason: TargetedRollErrorReason; detail?: { refusal: TargetRefusal; value: string } };
 
@@ -499,6 +503,8 @@ export async function resolveTargetedRoll(
   let chained: ChainedDamage | null = null;
   let events: FiredEvent[] = [];
   let pendingSave: { ability: string; dc: number; effect: SaveRequestEffect; label: string } | null = null;
+  /** Les jets à montrer dans l'outil de dés (le serveur les a lancés, règle 8). */
+  const shown: { total: number; trace: TraceStep[] }[] = [];
 
   const action = input.action;
   const monsterAction = action.kind === "monster_action" ? (monster?.actions.find((a) => a.name === action.name) ?? null) : null;
@@ -512,9 +518,11 @@ export async function resolveTargetedRoll(
       if (!rolled.attack) return { ok: false, reason: "not_a_weapon" };
       attack = rolled.attack;
       label = rolled.weaponLabel;
+      shown.push(attack);
     } else if (action.kind === "monster_action" && monsterAction && monsterAction.attack_bonus !== undefined) {
       attack = resolveAttackRoll({ abilityMod: 0, proficiencyBonus: monsterAction.attack_bonus, proficient: true, advantage: input.advantage }, serverRng);
       label = monsterAction.name;
+      shown.push(attack);
       await recordMonsterRoll(supabase, { campaignId: params.campaignId, entityId: actorParticipant?.entity_id ?? null, kind: "attack", secret: input.secret, roll: attack, who: actorName, what: `Attaque — ${label}` });
     } else {
       return { ok: false, reason: action.kind === "monster_action" ? "no_attack" : "invalid_action" };
@@ -536,12 +544,14 @@ export async function resolveTargetedRoll(
       if ("error" in rolled) return { ok: false, reason: rolled.error };
       if (!rolled.damage) return { ok: false, reason: "not_a_weapon" };
       total = rolled.damage.total;
+      shown.push(rolled.damage);
     } else if (action.kind === "monster_action" && monsterAction?.damage && monsterAction.damage.length > 0) {
       total = 0;
       for (const part of monsterAction.damage) {
         const roll = resolveDamageRoll({ formula: formatFormulaNode(part.dice), critical: input.critical }, serverRng);
         await recordMonsterRoll(supabase, { campaignId: params.campaignId, entityId: actorParticipant?.entity_id ?? null, kind: "damage", secret: input.secret, roll, who: actorName, what: `Dégâts — ${monsterAction.name}` });
         total += roll.total;
+        shown.push(roll);
         damageType ??= part.type;
       }
     } else {
@@ -566,6 +576,7 @@ export async function resolveTargetedRoll(
     if (input.kind === "spell_attack") {
       const rolled = await rollSpellAttack(supabase, { entityId: ctx.entityId, campaignId: params.campaignId, spellKey: action.spellKey, advantage: input.advantage, locale: params.locale });
       if ("error" in rolled) return { ok: false, reason: rolled.error };
+      shown.push(rolled.attack);
       verdict = attackVerdict(rolled.attack, target.ac);
       const cast = await castSpell(supabase, { ...castBase, critical: rolled.attack.isCritical, rollDamage: verdict === "hit" });
       if ("error" in cast) return { ok: false, reason: cast.error };
@@ -659,6 +670,7 @@ export async function resolveTargetedRoll(
       chained: null,
       rollEventId: rollEvent.id,
       saveRequestId: request.id,
+      dice: rollsForDisplay(shown),
     };
   }
 
@@ -695,5 +707,6 @@ export async function resolveTargetedRoll(
     chained,
     rollEventId: rollEvent.id,
     saveRequestId: null,
+    dice: rollsForDisplay(shown),
   };
 }

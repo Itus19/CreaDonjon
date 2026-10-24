@@ -63,13 +63,23 @@ PV de A (12/12) et B (10/11) remis. Planche : section « Initiative » de
 `OutilsMJ.dc.html` refaite.
 
 *Restes* : la fin confirmée et la liste des combats en temps réel n'ont pas
-été rejouées en direct (code relu) ; les jets ciblés ne renvoient ni total
-ni dés (l'outil affiche le verdict sans carrés), et la bande « Lancer les
-dégâts » après une touche, les dés doublés au critique et l'avantage sur un
-jet ciblé ne sont pas faits (tâche à part) ; au téléphone, les noms du MJ
+été rejouées en direct (code relu) ; au téléphone, les noms du MJ
 sont très tronqués ; le volet de dés s'ouvre après le jet d'initiative,
 par-dessus la fiche ; le bleu des PV temporaires est une constante locale,
 à promouvoir en jeton.
+
+*Suite du 24 octobre — les dés des jets ciblés* : le serveur renvoie
+`dice` (total, étapes, paire d'avantage, d20 gardé) pour l'attaque, les
+dégâts et l'attaque de sort (`rollsForDisplay`, `src/core/dice/diceTool.ts`,
+testé) ; l'outil de dés laisse choisir l'avantage d'un jet ciblé d'attaque
+(`avantageLibre`) et propose, après une touche, « Lancer les dégâts » sur la
+même cible, critique compris (`SuiteDeJet`, d'après le `chained` du
+serveur). Vérifié en direct : attaque avec avantage (d20 1 et 8, 8 gardé,
+total 13, « Touché »), puis dégâts 2d6+3 = 15 sur le gobelin. Le
+doublement au critique passe par le chemin serveur déjà testé
+(`targetedRoll.integration.test.ts`) ; non rejoué en direct, faute de 20
+naturel. Après les dégâts, la grille de l'outil garde le d20 de l'attaque
+(le préréglage n'est pas remplacé) : cosmétique.
 
 ---
 

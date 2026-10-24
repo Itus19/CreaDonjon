@@ -184,6 +184,10 @@ describe.skipIf(!hasCreds)("cibler : le cœur commun de résolution (integration
     const result = await roll({ kind: "attack", actor: { kind: "character", entityId: pc.brunhild }, action: { kind: "weapon", itemId: "i1" }, targetId: p["Gobelin 1"] });
     if (!result.ok) throw new Error(result.reason);
     expect(["hit", "miss"]).toContain(result.verdict);
+    // V3.1-38 (suite) : les dés de l'attaque, pour l'outil de dés (un d20 gardé, entre 1 et 20).
+    expect(result.dice?.naturalD20).toBeGreaterThanOrEqual(1);
+    expect(result.dice?.naturalD20).toBeLessThanOrEqual(20);
+    expect(result.dice?.trace.length).toBeGreaterThan(0);
     if (result.verdict === "hit") {
       expect(result.chained).toMatchObject({ kind: "damage", targetId: p["Gobelin 1"], action: { kind: "weapon", itemId: "i1" } });
     } else {
@@ -199,6 +203,8 @@ describe.skipIf(!hasCreds)("cibler : le cœur commun de résolution (integration
     const result = await roll({ kind: "damage", actor: { kind: "character", entityId: pc.brunhild }, action: { kind: "weapon", itemId: "i1" }, targetId: p["Gobelin 1"] });
     if (!result.ok) throw new Error(result.reason);
     expect(result.amount).toBeGreaterThanOrEqual(1);
+    // Les dés des dégâts : leur total est le montant appliqué.
+    expect(result.dice?.total).toBe(result.amount);
     const after = Math.max(0, 7 - result.amount!);
     expect((await participant(p["Gobelin 1"])).hp_current).toBe(after);
     expect(result.targetOutOfFight).toBe(after === 0);

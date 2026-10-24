@@ -146,6 +146,14 @@ export interface SortieJet {
   pair: AdvantagePair | null;
   naturalD20: number | null;
   dcPrivate: boolean;
+  /** V3.1-38 (suite) : le geste qui suit ce jet (« Lancer les dégâts » après une touche), proposé dans la bande. */
+  suite?: SuiteDeJet;
+}
+
+/** Un geste proposé après un jet : son libellé, et le jet qu'il lance (même forme qu'un `lancer`). */
+export interface SuiteDeJet {
+  libelle: string;
+  lancer: () => Promise<SortieJet | null>;
 }
 
 /** Un `lancer` qui échoue avec un message à AFFICHER dans l'outil (réponse du serveur, par exemple). */
@@ -168,7 +176,9 @@ export interface PreReglage {
    * rend de quoi afficher le jet. Grille, modificateur, avantage et DD sont alors
    * figés (ils le sont dans la demande). Échec : `null`, ou une `ErreurLancer`.
    */
-  lancer?: (cibleId: string | null) => Promise<SortieJet | null>;
+  lancer?: (cibleId: string | null, options: { avantage: AdvantageState }) => Promise<SortieJet | null>;
+  /** Avec `lancer` : l'avantage reste au choix dans l'outil (un jet ciblé d'attaque, V3.1-38) et `lancer` le reçoit. */
+  avantageLibre?: boolean;
   /** Avec `lancer` : le DD posé par la demande, affiché figé avant le lancer (`null` : aucun, ou une CA que le serveur lit). */
   dc?: number | null;
   /**

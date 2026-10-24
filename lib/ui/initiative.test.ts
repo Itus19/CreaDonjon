@@ -6,6 +6,7 @@ import {
   appliquerPv,
   classerSort,
   corpsJetCible,
+  demandeDegatsApres,
   desDeLaFormule,
   estUneArme,
   fractionsAnneau,
@@ -247,7 +248,7 @@ describe("corpsJetCible", () => {
 
 describe("sortieDepuisJetCible", () => {
   const libelle = (cle: string, cible: string) => `${cle} — ${cible}`;
-  const base = { ok: true as const, verdict: null, amount: null, facts: [], changes: [], hints: [], ignored: [], targetOutOfFight: false, chained: null, rollEventId: "r", saveRequestId: null };
+  const base = { ok: true as const, verdict: null, amount: null, facts: [], changes: [], hints: [], ignored: [], targetOutOfFight: false, chained: null, rollEventId: "r", saveRequestId: null, dice: null };
   it("une touche se lit « touche » avec un verdict de réussite", () => {
     const sortie = sortieDepuisJetCible({ ...base, verdict: "hit" }, "attack", { acteur: "Worg", cible: "Léonie", libelle });
     expect(sortie).toMatchObject({ who: "Worg", what: "touche — Léonie", verdict: "success", total: 0, trace: [] });
@@ -257,6 +258,42 @@ describe("sortieDepuisJetCible", () => {
   });
   it("des dégâts portent le montant, sans verdict", () => {
     expect(sortieDepuisJetCible({ ...base, amount: 7 }, "damage", { acteur: "Worg", cible: "Léonie", libelle })).toMatchObject({ what: "degats — Léonie", total: 7, verdict: null });
+  });
+});
+
+describe("jets ciblés : dés, avantage, suite (V3.1-38 suite)", () => {
+  const libelle = (cle: string, cible: string) => `${cle} — ${cible}`;
+  const base = { ok: true as const, verdict: null, amount: null, facts: [], changes: [], hints: [], ignored: [], targetOutOfFight: false, chained: null, rollEventId: "r", saveRequestId: null, dice: null };
+  const demande = {
+    kind: "attack" as const,
+    acteur: { kind: "character" as const, entityId: "e1" },
+    action: { kind: "weapon" as const, itemId: "i1" },
+    cibleId: "c1",
+  };
+
+  it("une attaque montre ses dés : total de l'attaque, paire d'avantage, d20 gardé", () => {
+    const dice = { total: 22, trace: [{ text: "2d20kh1 (7, 17)", value: 17 }, { text: "+5", value: 5 }], pair: { mode: "advantage" as const, rolls: [7, 17] as [number, number], keptIndex: 1 as const }, naturalD20: 17 };
+    expect(sortieDepuisJetCible({ ...base, verdict: "hit", dice }, "attack", { acteur: "Naivara", cible: "Worg", libelle })).toMatchObject({
+      total: 22,
+      trace: dice.trace,
+      pair: dice.pair,
+      naturalD20: 17,
+      verdict: "success",
+    });
+  });
+
+  it("l'avantage et le critique choisis passent dans la demande", () => {
+    expect(corpsJetCible(demande, { avantage: "disadvantage" })).toMatchObject({ advantage: "disadvantage", critical: false, secret: false });
+    expect(corpsJetCible({ ...demande, kind: "damage" }, { critique: true })).toMatchObject({ kind: "damage", advantage: "normal", critical: true });
+  });
+
+  it("une touche propose les dégâts sur la même cible, critique compris ; un raté, rien", () => {
+    const chained = { kind: "damage" as const, actor: demande.acteur, action: demande.action, targetId: "c1", critical: true };
+    expect(demandeDegatsApres({ ...base, verdict: "hit", chained })).toEqual({
+      demande: { kind: "damage", acteur: demande.acteur, action: demande.action, cibleId: "c1" },
+      critique: true,
+    });
+    expect(demandeDegatsApres({ ...base, verdict: "miss" })).toBeNull();
   });
 });
 

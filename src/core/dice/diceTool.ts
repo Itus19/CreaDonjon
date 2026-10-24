@@ -1,6 +1,7 @@
 import { DIE_TYPES, type DieType } from "./roll";
 import type { TraceStep } from "../formula/evaluate";
 import type { AdvantageState } from "../rules/action";
+import { naturalD20FromTrace } from "./rollAttribution";
 
 /**
  * L'outil de dés unique (V3.1-33, ADR 0035) : ce que le serveur lance pour
@@ -71,4 +72,28 @@ export function verdictTone(verdict: "success" | "fail" | null, naturalD20: numb
   if (verdict === null) return null;
   if (verdict === "success" && naturalD20 === 20) return "critical";
   return verdict;
+}
+
+/** Un jet tel que l'outil de dés le montre : total, étapes, paire d'avantage, d20 gardé. */
+export interface RollDisplay {
+  total: number;
+  trace: TraceStep[];
+  pair: AdvantagePair | null;
+  naturalD20: number | null;
+}
+
+/**
+ * V3.1-38 (suite) — un ou plusieurs jets du serveur réunis pour l'affichage :
+ * une attaque, ou des dégâts en plusieurs parties (totaux additionnés, étapes
+ * mises bout à bout). `null` sans jet. Rien n'est lancé ici.
+ */
+export function rollsForDisplay(rolls: readonly { total: number; trace: readonly TraceStep[] }[]): RollDisplay | null {
+  if (rolls.length === 0) return null;
+  const trace = rolls.flatMap((r) => r.trace);
+  return {
+    total: rolls.reduce((sum, r) => sum + r.total, 0),
+    trace,
+    pair: advantagePairFromTrace(trace),
+    naturalD20: naturalD20FromTrace(trace) ?? null,
+  };
 }
