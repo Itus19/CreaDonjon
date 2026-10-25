@@ -1,14 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import Dropdown from "@/components/shared/Dropdown";
 import RelationsGraphCanvas from "@/components/entities/psyche/RelationsGraphCanvas";
 import { relationshipColor } from "@/src/core/psyche/relationshipColor";
 import { buildRelationsGraph, type RelationsGraphEdge } from "@/src/core/relationsGraph/buildRelationsGraph";
 import type { RelationsGraphData } from "@/src/server/services/relationsGraph";
 import type { RelationsGraphBlockData } from "@/src/core/schemas/blocks/relationsGraph";
-
-const DEGREE_OPTIONS = [1, 2, 3, 4].map((n) => ({ value: String(n), label: `${n} degré${n > 1 ? "s" : ""}` }));
 
 /**
  * Bloc `relations_graph` (V2-H1 phase 5) : graphe auto-organise des vraies
@@ -47,6 +46,8 @@ export default function RelationsGraphBlockEditor({
   /** V2, retour utilisateur : incremente par un ancetre quand une relation change ailleurs — force le rechargement du graphe, qui sinon ne rejoue jamais son effet (`entityId` seul en dependance sinon). */
   reloadSignal?: number;
 }) {
+  const t = useTranslations("fiche.reseau");
+  const degres = [1, 2, 3, 4].map((n) => ({ value: String(n), label: t("degre", { n }) }));
   const [rawData, setRawData] = useState<RelationsGraphData | null>(null);
   const [edgeColors, setEdgeColors] = useState<Record<string, string>>({});
 
@@ -125,18 +126,18 @@ export default function RelationsGraphBlockEditor({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-3">
-        <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Degré de liens visible</span>
+        <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">{t("degreLabel")}</span>
         <Dropdown
           value={String(data.degreesVisible)}
-          options={DEGREE_OPTIONS}
+          options={degres}
           onChange={(v) => onChange({ ...data, degreesVisible: Number(v) })}
-          aria-label="Degré de liens visible"
+          aria-label={t("degreLabel")}
         />
       </div>
 
-      {!graph && <p className="text-sm text-ink-muted">Chargement…</p>}
+      {!graph && <p className="text-sm text-ink-muted">{t("chargement")}</p>}
       {graph && graph.nodes.length <= 1 && (
-        <p className="text-sm italic text-ink-muted">Aucune relation visible pour l&apos;instant.</p>
+        <p className="text-sm italic text-ink-muted">{t("aucuneRelation")}</p>
       )}
       {graph && graph.nodes.length > 1 && (
         <RelationsGraphCanvas

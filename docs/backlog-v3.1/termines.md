@@ -2,6 +2,22 @@
 
 ---
 
+### ☑ V3.1-72 — Réseau (B) : vignettes, filtres, survol qui allume · `M` · sans modèle IA — **fait le 25 octobre**
+
+**Critères d'acceptation**
+- [x] Le survol allume exactement les liens et voisins de la vignette (test de la fonction de voisinage).
+- [x] Les portraits arrivent en une seule requête (test du service : nombre d'appels au dépôt).
+- [x] Filtrer un genre ne masque jamais la fiche du centre.
+- [x] Téléphone : premier toucher = sélection, second = ouverture.
+
+**Réalisé** (donnée par Opus ; interface par Sonnet, relue par Opus ; vérifié en direct, ordinateur et téléphone tactile)
+- Donnée : `hasPortrait` sur chaque nœud, lu par `listEntityIdsWithPortrait` en une requête pour tout le graphe (`relationsGraph.test.ts`).
+- Interface : vignettes (portrait ou icône du genre, liseré par genre : personnes `link-entity`, lieux `success`, factions `gm`, objets `players`, autres neutre), survol qui allume le voisinage (reste à 0,2) et écrit le type des liens, carte de la fiche au clic avec « Ouvrir la fiche », filtres par genre avec leur nombre, « Trouver… », « Tout montrer ». Logique pure dans `lib/ui/reseau.ts`.
+- Opus : le clic sur une vignette remontait au fond, qui désélectionnait — la carte ne paraissait jamais.
+- Changement de comportement : sur ordinateur, cliquer une vignette ouvre sa carte au lieu de la fiche ; « Ouvrir la fiche » est dans la carte.
+
+---
+
 ### ☑ V3.1-71 — Relation (A) : deux portraits, le résumé, les fils à perle · `L` · sans modèle IA — **fait le 25 octobre**
 
 **Critères d'acceptation**

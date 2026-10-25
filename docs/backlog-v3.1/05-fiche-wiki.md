@@ -95,51 +95,6 @@ V3.1-48.
 
 ---
 
-### ☐ V3.1-72 — Réseau (B) : vignettes, filtres, survol qui allume · `M` · sans modèle IA — **prêt**
-
-**Modèle conseillé : Sonnet** — planche définitive ; un champ ajouté côté service.
-
-**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-**Planche** : `Psy-Decide.dc.html`, section « Réseau — B » (ordinateur et
-téléphone). **Départ** : `components/entities/psyche/RelationsGraphCanvas.tsx`
-(d3-force, à garder), `RelationsGraphNodeCard.tsx`,
-`src/server/services/relationsGraph.ts`,
-`src/core/relationsGraph/buildRelationsGraph.ts`,
-`components/entities/public/PublicRelationsGraphBlock.tsx`. **Dépend de** : 63.
-
-**Ce qui est décidé**
-- Rappel : ce bloc montre les **liens du wiki** (table `relations` : membre
-  de, originaire de, porte…), pas les blocs Relation.
-- **Chaque fiche en vignette** (40 px, coins 11 px ; la fiche au centre
-  56 px, bord accent) : son portrait, sinon l'icône de son genre ; **le nom
-  dessous**. **Liseré de couleur par genre** (personnes, lieux, factions,
-  objets — quatre teintes de la charte, pas de nouvelles couleurs en dur).
-- **Survol d'une vignette** : ses liens et ses voisins s'allument, tout le
-  reste s'éteint (opacité 0,2), et **le type de chaque lien allumé s'écrit**
-  à mi-chemin en petite pastille (`RELATION_LABELS_FR`).
-- **Toucher** une vignette : la carte de la fiche (nom, genre, trois liens)
-  avec « Ouvrir la fiche » (`RelationsGraphNodeCard`).
-- Au-dessus : « Jusqu'à 1 degré / 2 degrés » (existant, recalcul local),
-  **filtres par genre avec leur nombre** (« Lieux · 4 », un toucher masque
-  ce genre — la fiche du centre ne se masque jamais) et **« Trouver… »**
-  qui fait briller les fiches dont le nom contient le texte.
-- **Téléphone** : pas de survol — **un toucher** allume la vignette et fait
-  paraître les noms de ses voisins, **un second** ouvre la fiche ; seuls
-  les noms utiles s'affichent (la fiche du centre, la sélection, ses
-  voisins) ; « Tout montrer » ; filtres en bande qui défile.
-- **Données** : ajouter l'adresse du portrait à `GraphEntityInput` côté
-  service, **en une requête groupée** pour toutes les entités du graphe
-  (pas de N+1) ; le genre y est déjà (`entityKind`).
-
-**Critères d'acceptation**
-- [ ] Le survol allume exactement les liens et voisins de la vignette (test de la fonction de voisinage).
-- [ ] Les portraits arrivent en une seule requête (test du service : nombre d'appels au dépôt).
-- [ ] Filtrer un genre ne masque jamais la fiche du centre.
-- [ ] Téléphone : premier toucher = sélection, second = ouverture.
-
----
-
 ### ☐ V3.1-73 — Généalogie (B) : les grands portraits · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — planche définitive ; les dates attendent V3.1-74.

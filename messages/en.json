@@ -1256,6 +1256,20 @@
     "enAttente": "Waiting for the saving throw…"
   },
   "fiche": {
+    "reseau": {
+      "aucuneRelation": "No visible relationship yet.",
+      "chargement": "Loading…",
+      "degreLabel": "Visible degrees of links",
+      "degre": "{n, plural, one {# degree} other {# degrees}}",
+      "groupes": { "character": "People", "location": "Places", "faction": "Factions", "item": "Items", "autre": "Others" },
+      "filtre": "{groupe} · {n}",
+      "trouver": "Find…",
+      "trouverLabel": "Find a page by its name",
+      "toutMontrer": "Show all",
+      "ouvrirFiche": "Open the page",
+      "rendreVisible": "Make visible to players",
+      "masquerAuxJoueurs": "Hide from players"
+    },
     "relation": {
       "titreBloc": "Relationship",
       "envers": "Towards",

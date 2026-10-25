@@ -1,14 +1,28 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { forceCenter, forceCollide, forceLink, forceManyBody, forceSimulation, type SimulationNodeDatum } from "d3-force";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useDesktop } from "@/components/shell/DesktopContext";
-import RelationsGraphNodeCard from "./RelationsGraphNodeCard";
+import RelationsGraphNodeCard, { TEINTE_FOND } from "./RelationsGraphNodeCard";
+import { ENTITY_KIND_LABELS } from "@/components/shared/entityKindLabels";
+import {
+  filtresParGenre,
+  idsVisibles,
+  lienVisible,
+  liensDeCarte,
+  nomsUtiles,
+  toucher,
+  trouver,
+  voisinage,
+  type GroupeReseau,
+} from "@/lib/ui/reseau";
 import type { RelationsGraph, RelationsGraphEdge, RelationsGraphNode } from "@/src/core/relationsGraph/buildRelationsGraph";
 
-const ICON_SIZE = 56;
-const ROOT_ICON_SIZE = 80;
+const ICON_SIZE = 40;
+const ROOT_ICON_SIZE = 56;
 /** Marge de securite autour de chaque nœud, pour que son etiquette de nom ne deborde jamais du cadre calcule. */
 const NODE_MARGIN = 70;
 const VIEWPORT_HEIGHT = 420;
@@ -39,6 +53,15 @@ function layout(graph: RelationsGraph): PositionedNode[] {
   return nodes;
 }
 
+/** Un écran sans survol (téléphone, tablette au doigt) : un toucher allume, un second ouvre. */
+function surveillerSansSurvol(rappel: () => void): () => void {
+  const requete = window.matchMedia("(hover: none)");
+  requete.addEventListener("change", rappel);
+  return () => requete.removeEventListener("change", rappel);
+}
+const sansSurvol = () => window.matchMedia("(hover: none)").matches;
+const sansSurvolServeur = () => false;
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
@@ -63,7 +86,14 @@ function clamp(value: number, min: number, max: number): number {
  * au-dessus (« membre de », « parent de »...) — sans action, juste
  * l'explication ; cliquer le lien l'EPINGLE (le libelle reste affiche
  * apres avoir bouge la souris) et revele en plus le bouton masquer/
- * afficher, si fourni. Clic sur un nœud ouvre sa fiche.
+ * afficher, si fourni.
+ *
+ * V3.1-72 : une vignette de 40 px (56 au centre) avec un liseré par genre ;
+ * cliquer la choisit (la carte de la fiche, « Ouvrir la fiche » est un vrai
+ * lien) au lieu de l'ouvrir. Filtres par genre avec leur nombre (la fiche du
+ * centre ne se masque jamais), « Trouver… », « Tout montrer ». Sans survol
+ * (téléphone) : un toucher allume et nomme les voisins, un second ouvre. Tout
+ * le calcul est dans `lib/ui/reseau.ts`.
  */
 export default function RelationsGraphCanvas({
   graph,
@@ -79,7 +109,14 @@ export default function RelationsGraphCanvas({
   onToggleEdgeVisibility?: (edge: RelationsGraphEdge) => void;
 }) {
   const desktop = useDesktop();
+  const router = useRouter();
+  const t = useTranslations("fiche.reseau");
+  const tactile = useSyncExternalStore(surveillerSansSurvol, sansSurvol, sansSurvolServeur);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  // La vignette choisie : au téléphone le premier toucher, sur ordinateur le clic (la carte de la fiche s'ouvre).
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [masques, setMasques] = useState<ReadonlySet<GroupeReseau>>(new Set());
+  const [recherche, setRecherche] = useState("");
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
   const [pinnedEdgeId, setPinnedEdgeId] = useState<string | null>(null);
   const [view, setView] = useState({ x: 0, y: 0, scale: 1 });
@@ -107,21 +144,25 @@ export default function RelationsGraphCanvas({
     return { minX, minY, width: maxX - minX, height: maxY - minY };
   }, [positioned]);
 
+  // La vignette qui s'allume : celle qu'on survole, à défaut celle qu'on a choisie.
+  const activeId = hoveredId ?? selectedId;
+  const lumiere = useMemo(() => (activeId ? voisinage(graph, activeId) : null), [activeId, graph]);
+
   const highlightedNodeIds = useMemo(() => {
-    if (hoveredId) {
-      const ids = new Set([hoveredId]);
-      for (const edge of graph.edges) {
-        if (edge.fromId === hoveredId) ids.add(edge.toId);
-        if (edge.toId === hoveredId) ids.add(edge.fromId);
-      }
-      return ids;
-    }
+    if (lumiere) return lumiere.noeuds;
     if (hoveredEdgeId) {
       const edge = graph.edges.find((e) => e.id === hoveredEdgeId);
       if (edge) return new Set([edge.fromId, edge.toId]);
     }
     return null;
-  }, [hoveredId, hoveredEdgeId, graph.edges]);
+  }, [lumiere, hoveredEdgeId, graph.edges]);
+
+  const visibles = useMemo(() => idsVisibles(graph.nodes, masques), [graph.nodes, masques]);
+  const filtres = useMemo(() => filtresParGenre(graph.nodes), [graph.nodes]);
+  const trouves = useMemo(() => trouver(graph.nodes, recherche), [graph.nodes, recherche]);
+  const noms = useMemo(() => nomsUtiles(graph, selectedId), [graph, selectedId]);
+  const selectedNode = selectedId ? byId.get(selectedId) : undefined;
+  const quelqueChoseDeFiltre = masques.size > 0 || recherche.trim() !== "" || selectedId !== null;
 
   // Etiquette(s) affichee(s) (retour utilisateur) : un lien EPINGLE reste
   // toujours visible (petit bug corrige : survoler un autre portrait le
@@ -133,9 +174,9 @@ export default function RelationsGraphCanvas({
     const result = new Map<string, RelationsGraphEdge>();
     const pinned = pinnedEdgeId ? byId.get(pinnedEdgeId) : undefined;
     if (pinned) result.set(pinned.id, pinned);
-    if (hoveredId) {
+    if (lumiere) {
       for (const e of graph.edges) {
-        if (e.fromId === hoveredId || e.toId === hoveredId) result.set(e.id, e);
+        if (lumiere.liens.has(e.id) && lienVisible(e, visibles)) result.set(e.id, e);
       }
     } else if (hoveredEdgeId) {
       const e = byId.get(hoveredEdgeId);
@@ -227,12 +268,80 @@ export default function RelationsGraphCanvas({
     desktop.openRef({ kind: "entity", key: node.slug });
   }
 
+  /** Toucher/cliquer une vignette : téléphone, premier toucher = sélection et second = ouverture ; ordinateur, la carte de la fiche. */
+  function choisir(node: RelationsGraphNode) {
+    if (!tactile) {
+      setSelectedId((courant) => (courant === node.id ? null : node.id));
+      return;
+    }
+    const suite = toucher({ selection: selectedId }, node.id);
+    setSelectedId(suite.etat.selection);
+    if (suite.ouvrir) {
+      if (desktop) desktop.openRef({ kind: "entity", key: node.slug });
+      else router.push(`${hrefBase}/${node.slug}`);
+    }
+  }
+
+  function toutMontrer() {
+    setMasques(new Set());
+    setRecherche("");
+    setSelectedId(null);
+    setHoveredId(null);
+  }
+
+  function basculerGenre(groupe: GroupeReseau) {
+    setMasques((courant) => {
+      const suite = new Set(courant);
+      if (suite.has(groupe)) suite.delete(groupe);
+      else suite.add(groupe);
+      return suite;
+    });
+  }
+
   if (positioned.length === 0) {
-    return <p className="text-sm text-ink-muted">Aucune relation visible pour l&apos;instant.</p>;
+    return <p className="text-sm text-ink-muted">{t("aucuneRelation")}</p>;
   }
 
   return (
     <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+        {/* Filtres par genre avec leur nombre ; en bande qui défile sur téléphone. */}
+        <div className="flex min-w-0 max-w-full gap-1 overflow-x-auto pb-0.5 @md/bloc:flex-wrap">
+          {filtres.map(({ groupe, n }) => {
+            const masque = masques.has(groupe);
+            return (
+              <button
+                key={groupe}
+                type="button"
+                aria-pressed={!masque}
+                onClick={() => basculerGenre(groupe)}
+                className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs transition-colors ${
+                  masque ? "border-edge text-ink-muted line-through opacity-60" : "border-edge-strong text-ink hover:bg-panel-raised"
+                }`}
+              >
+                <i aria-hidden className={`h-2 w-2 rounded-sm ${TEINTE_FOND[groupe]}`} />
+                {t("filtre", { groupe: t(`groupes.${groupe}`), n })}
+              </button>
+            );
+          })}
+        </div>
+        <input
+          value={recherche}
+          onChange={(e) => setRecherche(e.target.value)}
+          placeholder={t("trouver")}
+          aria-label={t("trouverLabel")}
+          className="ml-auto w-40 rounded-md border border-edge bg-transparent px-2 py-1 text-xs text-ink outline-none focus:border-accent"
+        />
+        {quelqueChoseDeFiltre && (
+          <button
+            type="button"
+            onClick={toutMontrer}
+            className="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised"
+          >
+            {t("toutMontrer")}
+          </button>
+        )}
+      </div>
       <div
         ref={containerRef}
         className={`relative overflow-hidden rounded-xl border border-edge/60 select-none ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
@@ -248,7 +357,10 @@ export default function RelationsGraphCanvas({
         onMouseUp={endDrag}
         onMouseLeave={endDrag}
         onClickCapture={handleClickCapture}
-        onClick={() => setPinnedEdgeId(null)}
+        onClick={() => {
+          setPinnedEdgeId(null);
+          if (!tactile) setSelectedId(null);
+        }}
       >
         <div
           className="absolute left-0 top-0"
@@ -263,7 +375,7 @@ export default function RelationsGraphCanvas({
             {graph.edges.map((edge) => {
               const from = byId.get(edge.fromId);
               const to = byId.get(edge.toId);
-              if (!from || !to) return null;
+              if (!from || !to || !lienVisible(edge, visibles)) return null;
               const dimmed = highlightedNodeIds ? !(highlightedNodeIds.has(edge.fromId) && highlightedNodeIds.has(edge.toId)) : false;
               // Retour utilisateur : un lien masque au wiki public (tout
               // sauf `public`) reste grise, meme survole/epingle — pour que
@@ -295,7 +407,7 @@ export default function RelationsGraphCanvas({
                     stroke={hiddenFromPublic ? "var(--ink-muted)" : edgeColor(edge)}
                     strokeWidth={edgesToLabel.some((e) => e.id === edge.id) ? 3 : 1.5}
                     strokeDasharray={hiddenFromPublic ? "4 3" : undefined}
-                    opacity={dimmed ? 0.15 : hiddenFromPublic ? 0.45 : 0.8}
+                    opacity={dimmed ? 0.2 : hiddenFromPublic ? 0.45 : 0.8}
                   />
                 </g>
               );
@@ -303,27 +415,46 @@ export default function RelationsGraphCanvas({
           </svg>
 
           {positioned.map((node) => {
+            if (!visibles.has(node.id)) return null;
             const dimmed = highlightedNodeIds ? !highlightedNodeIds.has(node.id) : false;
             const isRoot = node.degree === 0;
             const size = isRoot ? ROOT_ICON_SIZE : ICON_SIZE;
             return (
-              /* `prefetch={false}` (V2.1-20 lot 6) : voir `PublicBlockView` —
-                 une route dynamique prechargee n'est jamais reutilisee
-                 (`staleTimes.dynamic` vaut 0). Ici le gaspillage serait pire
-                 qu'ailleurs : un reseau de relations affiche des dizaines de
-                 nœuds d'un coup, donc autant de prechargements simultanes. */
-              <Link
+              /* Un bouton, pas un lien : toucher choisit la vignette (la carte
+                 de la fiche, ou au téléphone un premier toucher), et « Ouvrir
+                 la fiche » est un vrai lien dans la carte. Ici le lien d'avant
+                 préchargeait des dizaines de fiches d'un coup
+                 (`prefetch={false}`, V2.1-20 lot 6) : plus rien à précharger. */
+              <button
                 key={node.id}
-                href={`${hrefBase}/${node.slug}`}
-                prefetch={false}
-                onClick={(e) => openEntity(node, e)}
-                className="absolute -translate-x-1/2 -translate-y-1/2"
-                style={{ left: node.x, top: node.y, opacity: dimmed ? 0.3 : 1 }}
-                onMouseEnter={() => setHoveredId(node.id)}
-                onMouseLeave={() => setHoveredId(null)}
+                type="button"
+                aria-pressed={selectedId === node.id}
+                aria-label={node.name}
+                onClick={(e) => {
+                  // Sinon le clic remonte au fond, qui désélectionne : la carte ne paraîtrait jamais.
+                  e.stopPropagation();
+                  choisir(node);
+                }}
+                className="absolute -translate-x-1/2 -translate-y-1/2 transition-opacity"
+                style={{ left: node.x, top: node.y, opacity: dimmed ? 0.2 : 1 }}
+                onPointerEnter={(e) => {
+                  if (e.pointerType === "mouse") setHoveredId(node.id);
+                }}
+                onPointerLeave={(e) => {
+                  if (e.pointerType === "mouse") setHoveredId(null);
+                }}
               >
-                <RelationsGraphNodeCard id={node.id} name={node.name} size={size} isRoot={isRoot} />
-              </Link>
+                <RelationsGraphNodeCard
+                  id={node.id}
+                  name={node.name}
+                  entityKind={node.entityKind}
+                  hasPortrait={node.hasPortrait}
+                  size={size}
+                  isRoot={isRoot}
+                  nom={!tactile || noms.has(node.id)}
+                  brille={trouves.has(node.id)}
+                />
+              </button>
             );
           })}
 
@@ -348,13 +479,42 @@ export default function RelationsGraphCanvas({
                     onClick={() => onToggleEdgeVisibility(edge)}
                     className="rounded-full px-2 py-0.5 text-ink transition-colors hover:bg-panel"
                   >
-                    {edge.visibilityLevel === "gm" ? "Rendre visible aux joueurs" : "Masquer aux joueurs"}
+                    {edge.visibilityLevel === "gm" ? t("rendreVisible") : t("masquerAuxJoueurs")}
                   </button>
                 )}
               </div>
             );
           })}
         </div>
+
+        {/* La carte de la fiche choisie (ordinateur) : nom, genre, trois liens, « Ouvrir la fiche ». Hors de la couche zoomée : elle ne bouge ni ne grossit avec le graphe. */}
+        {!tactile && selectedNode && (
+          <div
+            className="absolute bottom-3 left-3 z-10 flex max-w-72 flex-col gap-1 rounded-xl border border-edge-strong bg-panel-raised p-2.5 text-xs shadow-2xl"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <b className="text-sm text-ink">{selectedNode.name}</b>
+            <span className="text-ink-muted">
+              {(ENTITY_KIND_LABELS as Record<string, string>)[selectedNode.entityKind] ?? selectedNode.entityKind}
+            </span>
+            <ul className="flex flex-col gap-0.5 text-ink-soft">
+              {liensDeCarte(graph, selectedNode.id).map((l) => (
+                <li key={l.id}>
+                  <span aria-hidden>{l.sortant ? "→" : "←"}</span> {l.label} · {l.autre}
+                </li>
+              ))}
+            </ul>
+            <Link
+              href={`${hrefBase}/${selectedNode.slug}`}
+              prefetch={false}
+              onClick={(e) => openEntity(selectedNode, e)}
+              className="mt-1 self-start rounded-full border border-edge px-3 py-1 text-ink transition-colors hover:bg-panel"
+            >
+              {t("ouvrirFiche")}
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );

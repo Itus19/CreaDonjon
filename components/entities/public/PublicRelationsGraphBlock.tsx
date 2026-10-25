@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import RelationsGraphCanvas from "@/components/entities/psyche/RelationsGraphCanvas";
 import type { RelationsGraph } from "@/src/core/relationsGraph/buildRelationsGraph";
 
@@ -13,8 +14,9 @@ import type { RelationsGraph } from "@/src/core/relationsGraph/buildRelationsGra
  * au-dela de "voir le schema") — tous les liens neutres.
  */
 export default function PublicRelationsGraphBlock({ graph, hrefBase }: { graph: RelationsGraph; hrefBase: string }) {
+  const t = useTranslations("fiche.reseau");
   if (graph.nodes.length <= 1) {
-    return <p className="text-sm italic text-ink-muted">Aucune relation visible pour l&apos;instant.</p>;
+    return <p className="text-sm italic text-ink-muted">{t("aucuneRelation")}</p>;
   }
   return <RelationsGraphCanvas graph={graph} hrefBase={hrefBase} edgeColor={() => "var(--edge)"} />;
 }

@@ -1257,6 +1257,20 @@
     "enAttente": "En attente de la sauvegarde…"
   },
   "fiche": {
+    "reseau": {
+      "aucuneRelation": "Aucune relation visible pour l'instant.",
+      "chargement": "Chargement…",
+      "degreLabel": "Degré de liens visible",
+      "degre": "{n, plural, one {# degré} other {# degrés}}",
+      "groupes": { "character": "Personnes", "location": "Lieux", "faction": "Factions", "item": "Objets", "autre": "Autres" },
+      "filtre": "{groupe} · {n}",
+      "trouver": "Trouver…",
+      "trouverLabel": "Trouver une fiche par son nom",
+      "toutMontrer": "Tout montrer",
+      "ouvrirFiche": "Ouvrir la fiche",
+      "rendreVisible": "Rendre visible aux joueurs",
+      "masquerAuxJoueurs": "Masquer aux joueurs"
+    },
     "relation": {
       "titreBloc": "Relation",
       "envers": "Envers",

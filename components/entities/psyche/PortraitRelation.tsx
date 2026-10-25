@@ -4,7 +4,7 @@ import { useCallback, useState } from "react";
 import { prenom } from "@/lib/ui/relationFace";
 
 /** Icône au trait du genre de la fiche, quand elle n'a pas de portrait : silhouette (personne), bouclier (faction), griffes (créature), montagne (lieu). */
-function IconeFiche({ genre }: { genre: string }) {
+export function IconeFiche({ genre }: { genre: string }) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -31,6 +31,11 @@ function IconeFiche({ genre }: { genre: string }) {
         </>
       ) : genre === "location" ? (
         <path d="M3 20l6-11 4 6 3-4 5 9H3Z" />
+      ) : genre === "item" ? (
+        <>
+          <path d="M5 8h14l-1 12H6L5 8Z" />
+          <path d="M9 8V6a3 3 0 0 1 6 0v2" />
+        </>
       ) : (
         <>
           <circle cx="12" cy="12" r="9" />
