@@ -210,6 +210,13 @@ export async function countAttitudeEvents(
   return { count: count ?? 0, last: data[0] ?? null };
 }
 
+/** La fiche d'un souvenir de personnalité ou de convictions — pour vérifier le droit d'écrire avant de le modifier. */
+export async function getPersonalityEventEntityId(supabase: TypedClient, id: string): Promise<string | null> {
+  const { data, error } = await supabase.from("personality_events").select("entity_id").eq("id", id).maybeSingle();
+  if (error) throw new Error(error.message);
+  return data?.entity_id ?? null;
+}
+
 /** V3.1-71 : la fiche qui ressent ce souvenir — pour vérifier le droit d'écrire avant de le modifier. */
 export async function getAttitudeEventSourceId(supabase: TypedClient, id: string): Promise<string | null> {
   const { data, error } = await supabase.from("attitude_events").select("source_entity_id").eq("id", id).maybeSingle();
