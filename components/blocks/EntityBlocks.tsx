@@ -337,6 +337,7 @@ export function BlockDataEditor({
           data={block.data as RelationshipBlockData}
           otherEntities={otherEntities}
           onChange={(d) => onChange(d)}
+          isGm={!hideAiAssist}
         />
       );
     case "worldview":

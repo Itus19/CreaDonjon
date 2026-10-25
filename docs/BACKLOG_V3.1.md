@@ -202,7 +202,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-68 | ☑ | sans | Bloc Chronologie : l'axe en bande et une ligne par événement | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-69 | ☑ | sans | Noyau psyché : libellés uniques, bandes des pôles, tension, résumé | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-70 | ☑ | sans | Personnalité (A) et Convictions (même dessin, comparer avec une faction) | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-71 | ☐ | sans | Relation (A) : deux portraits, le résumé, les fils à perle | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
+| V3.1-71 | ☑ | sans | Relation (A) : deux portraits, le résumé, les fils à perle | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-72 | ☐ | sans | Réseau (B) : vignettes, filtres, survol qui allume | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
 | V3.1-73 | ☐ | sans | Généalogie (B) : les grands portraits | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
 | V3.1-74 | ☑ | sans | Dates de naissance et de mort (données) | [`termines.md`](backlog-v3.1/termines.md) |

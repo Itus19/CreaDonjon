@@ -2,6 +2,24 @@
 
 ---
 
+### ☑ V3.1-71 — Relation (A) : deux portraits, le résumé, les fils à perle · `L` · sans modèle IA — **fait le 25 octobre**
+
+**Critères d'acceptation**
+- [x] Les noms longs tiennent dans le bloc (points de suspension, test visuel à 920 px et 390 px).
+- [x] Le résumé change pendant le glissé, avant même l'enregistrement.
+- [x] « Voir l'autre sens » ne montre jamais un bloc inverse invisible du lecteur (test serveur) ; « Créer ce bloc » absent sans droit d'écriture sur la cible.
+- [x] Une cible faction ne montre pas Attirance.
+- [x] Le nombre de souvenirs est calculé, jamais stocké.
+
+**Réalisé** (serveur par Opus ; interface par Sonnet, relue par Opus ; vérifié en direct à 1440, 920 et 390 px)
+- Serveur : route `GET /api/entities/[id]/relationship-face?targetId=` (`relationshipFace.ts`) — portraits, valeurs, nombre de souvenirs compté (`count: "exact"`), bloc de la paire seulement s'il est visible du lecteur ; appelée sens échangé pour « ⇄ Voir l'autre sens ». Le MJ lit les valeurs même avant l'enregistrement d'une nouvelle cible.
+- Faille vue en chemin et corrigée : tout membre du monde lisait et écrivait les relations des PNJ (`docs/SECURITE.md`, registre) — gardes `canReadRelationship` et `canWriteRelationship` sur les quatre routes des attitudes et souvenirs.
+- Interface : `VueRelation` (face-à-face, résumé en direct, prénoms), `PortraitRelation` (184 px, 70 × 92 au téléphone), `FilsPerles` (sept fils, « pourquoi » au survol ou au toucher, Attirance masquée hors personne), souvenirs par `SouvenirsPsyche` (troisième genre, confirmation au-delà de 40). Table unique `RELATIONSHIP_AXES_FR`. Logique pure dans `lib/ui/relationFace.ts`.
+- Le résumé d'un réglage manuel ne porte plus de nombre (« Réglage manuel, vers Confiance »).
+- Reste connu : une joueuse qui choisit une nouvelle cible pour la relation de son PJ voit les fils à zéro jusqu'au rechargement (le bloc n'est pas encore enregistré quand la face est relue).
+
+---
+
 ### ☑ V3.1-65 — Bloc Texte : lettrine, bulle du paragraphe, assistance IA en encart · `M` · **avec modèle IA** — **fait le 25 octobre**
 
 **Modèle conseillé : Sonnet** — tout existe ; c'est un rangement.

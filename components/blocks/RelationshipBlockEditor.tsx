@@ -1,33 +1,106 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Dropdown from "@/components/shared/Dropdown";
-import RelationshipRadar from "@/components/entities/psyche/RelationshipRadar";
-import RelationshipAxisSliders from "@/components/entities/psyche/RelationshipAxisSliders";
-import RelationshipEventTable from "@/components/entities/psyche/RelationshipEventTable";
-import type { RelationshipAxisKey } from "@/src/core/psyche/keys";
+import { useTranslations } from "next-intl";
+import VueRelation, { type FaceRelation } from "@/components/entities/psyche/VueRelation";
 import type { RelationshipBlockData } from "@/src/core/schemas/blocks/relationship";
 import type { OtherEntityOption } from "@/components/entities/RelationsChips";
+import { ENTITY_KIND_LABELS } from "@/components/shared/entityKindLabels";
 
-const NO_ENTITY = "";
-
-/** Meme libelles que RelationshipEventTable.tsx/RelationshipAxisSliders.tsx — jamais la cle brute ("trust_distrust") dans un resume genere. */
-const AXIS_LABELS_FR: Record<RelationshipAxisKey, string> = {
-  trust_distrust: "Confiance ↔ Méfiance",
-  friendship_hostility: "Amitié ↔ Hostilité",
-  respect_contempt: "Respect ↔ Mépris",
-  attraction_repulsion: "Attirance ↔ Répulsion",
-  debt_independence: "Dette ↔ Indépendance",
-  fear_assurance: "Peur ↔ Assurance",
-  interest_indifference: "Intérêt ↔ Indifférence",
-};
+/** Combien de fiches la liste de choix de la cible montre d'un coup (le filtre fait le reste). */
+const MAX_PROPOSEES = 8;
 
 /**
- * Bloc `relationship` (V2-H1) : radar + curseurs + tableau de souvenirs,
- * meme esthetique que `personality` mais sur des valeurs qui ne vivent PAS
- * dans le bloc — `entity_attitudes`/`attitude_events`, portee campagne
- * (docs/adr/0013-tables-psyche-pnj.md). Sans campagne active, la relation
- * reste structurelle (cible, `knownAs`) mais rien a regler.
+ * Choix de la cible : « Envers [cible ▾] ». Une liste avec filtre parmi les
+ * fiches visibles du lecteur (`otherEntities`, déjà filtrées côté serveur),
+ * quel que soit leur genre (personnage, faction, créature, lieu…).
+ */
+function ChoixCible({
+  cibleId,
+  autres,
+  onChoisir,
+}: {
+  cibleId: string | null;
+  autres: OtherEntityOption[];
+  onChoisir: (id: string | null) => void;
+}) {
+  const t = useTranslations("fiche.relation");
+  const [ouvert, setOuvert] = useState(false);
+  const [filtre, setFiltre] = useState("");
+  const courante = autres.find((e) => e.id === cibleId);
+  const f = filtre.trim().toLowerCase();
+  const trouvees = autres.filter((e) => f === "" || e.name.toLowerCase().includes(f)).slice(0, MAX_PROPOSEES);
+  const genres = ENTITY_KIND_LABELS as Record<string, string>;
+
+  return (
+    <div className="relative min-w-0">
+      <button
+        type="button"
+        aria-expanded={ouvert}
+        aria-label={t("cibleLabel")}
+        title={courante?.name}
+        onClick={() => setOuvert(!ouvert)}
+        className="flex max-w-[min(16rem,100%)] items-center gap-1 rounded-full border border-edge px-3 py-1 text-sm text-ink transition-colors hover:bg-panel-raised"
+      >
+        <span className="min-w-0 truncate">{courante ? courante.name : t("choisirCible")}</span> <span aria-hidden>▾</span>
+      </button>
+      {ouvert && (
+        <div className="absolute left-0 top-full z-20 mt-1 flex w-72 max-w-[80vw] flex-col gap-1 rounded-xl border border-edge-strong bg-panel-raised p-2 shadow-2xl">
+          <input
+            value={filtre}
+            onChange={(e) => setFiltre(e.target.value)}
+            placeholder={t("recherche")}
+            aria-label={t("rechercheLabel")}
+            className="rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none focus:border-accent"
+          />
+          {trouvees.map((e) => (
+            <button
+              key={e.id}
+              type="button"
+              onClick={() => {
+                onChoisir(e.id);
+                setOuvert(false);
+                setFiltre("");
+              }}
+              className="flex items-baseline gap-2 rounded-md px-2 py-1 text-left text-sm text-ink transition-colors hover:bg-panel"
+            >
+              <span className="min-w-0 flex-1 truncate">{e.name}</span>
+              <small className="text-xs text-ink-muted">{genres[e.entity_kind] ?? e.entity_kind}</small>
+            </button>
+          ))}
+          {trouvees.length === 0 && <p className="px-2 py-1 text-xs italic text-ink-muted">{t("aucuneFiche")}</p>}
+          {cibleId && (
+            <button
+              type="button"
+              onClick={() => {
+                onChoisir(null);
+                setOuvert(false);
+              }}
+              className="rounded-md px-2 py-1 text-left text-xs text-ink-muted transition-colors hover:bg-panel hover:text-ink"
+            >
+              {t("aucuneCible")}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+type Sens = "direct" | "inverse";
+
+/**
+ * Bloc `relationship` (V2-H1, refait en V3.1-71 « A ») : la ligne du haut
+ * (« Envers [cible ▾] », « Le connaît comme »), le face-à-face (deux
+ * portraits, au milieu le résumé qui suit la perle), un fil à perle par axe,
+ * les souvenirs repliables. « ⇄ Voir l'autre sens » montre le bloc de la cible
+ * envers la fiche, s'il existe et si le lecteur le voit ; sinon une case
+ * pointillée, et « Créer ce bloc » seulement si le lecteur peut écrire sur la
+ * cible. Les valeurs ne vivent PAS dans le bloc (`entity_attitudes`, portée
+ * campagne, ADR 0013) : le bloc ne porte que la cible et `knownAs`.
+ *
+ * Une seule lecture au chargement (`relationship-face`, C1) ; le sens inverse
+ * appelle la MÊME route, sens échangé, au premier clic seulement.
  */
 export default function RelationshipBlockEditor({
   entityId,
@@ -35,147 +108,192 @@ export default function RelationshipBlockEditor({
   data,
   otherEntities,
   onChange,
+  isGm = false,
 }: {
   entityId: string;
   worldSlug: string;
   data: RelationshipBlockData;
   otherEntities: OtherEntityOption[];
   onChange: (data: RelationshipBlockData) => void;
+  /** Le MJ voit un écart brut au survol d'une perle ; un joueur n'en voit jamais. */
+  isGm?: boolean;
 }) {
-  const [axes, setAxes] = useState<Partial<Record<RelationshipAxisKey, number>>>({});
-  const [campaignId, setCampaignId] = useState<string | null>(null);
-  const [loadedTargetId, setLoadedTargetId] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  // Bug reel trouve en verifiant ce bloc : deplacer un curseur cree bien
-  // le souvenir cote serveur (`commitAxis`), mais `RelationshipEventTable`
-  // ne le voyait jamais tant que sa propre liste n'etait pas rechargee par
-  // un autre moyen (changer de cible, recharger la page) — contrairement a
-  // `PersonalityBlockEditor`/`WorldviewBlockEditor`, qui font deja rejouer
-  // le tableau de souvenirs apres un reglage manuel via ce meme mecanisme.
-  const [reloadSignal, setReloadSignal] = useState(0);
-  // Position en cours de glissement, remontee par le curseur a chaque pixel
-  // (avant tout appel reseau) : sans ca, le radar n'a que la valeur
-  // enregistree en base et ne bouge qu'apres l'aller-retour du commit.
-  const [liveOverride, setLiveOverride] = useState<Partial<Record<RelationshipAxisKey, number>>>({});
+  const t = useTranslations("fiche.relation");
+  const targetId = data.target?.kind === "entity" ? data.target.id : null;
+  const [faceDirecte, setFaceDirecte] = useState<{ pour: string; face: FaceRelation | null } | null>(null);
+  const [faceInverse, setFaceInverse] = useState<{ pour: string; face: FaceRelation | null } | null>(null);
+  const [sens, setSens] = useState<Sens>("direct");
+  const [erreur, setErreur] = useState<string | null>(null);
+  const [creation, setCreation] = useState(false);
 
-  function handleLiveChange(key: RelationshipAxisKey, value: number | null) {
-    setLiveOverride((prev) => {
-      if (value === null) {
-        if (!(key in prev)) return prev;
-        const next = { ...prev };
-        delete next[key];
-        return next;
+  /** Lit la face ; ne touche à aucun état (elle sert aussi dans un effet) : l'appelant range le résultat. */
+  async function lireFace(sourceId: string, cibleId: string): Promise<{ face: FaceRelation | null; erreur: string | null }> {
+    try {
+      const res = await fetch(`/api/entities/${sourceId}/relationship-face?targetId=${cibleId}`);
+      if (!res.ok) {
+        const corps = (await res.json().catch(() => null)) as { error?: string } | null;
+        return { face: null, erreur: corps?.error ?? t("erreurChargement") };
       }
-      return { ...prev, [key]: value };
-    });
+      return { face: ((await res.json()) as { face: FaceRelation }).face, erreur: null };
+    } catch (e) {
+      console.error("Lecture du face-à-face impossible", e);
+      return { face: null, erreur: t("erreurChargement") };
+    }
   }
 
-  const targetId = data.target?.kind === "entity" ? data.target.id : null;
-  const loaded = !targetId || loadedTargetId === targetId;
-
+  // Une seule lecture au chargement (et au changement de cible) : le sens direct.
   useEffect(() => {
     if (!targetId) return;
-    // Garde d'annulation (petit bug trouve en verifiant ce bloc) : sans
-    // elle, changer de cible deux fois rapidement (A -> B -> A) pouvait
-    // laisser la reponse de B arriver APRES celle de A et ecraser les
-    // bons axes avec ceux de la mauvaise cible, tout en marquant `loaded`
-    // comme si tout etait a jour.
-    let cancelled = false;
-    fetch(`/api/entities/${entityId}/attitudes/${targetId}`)
-      .then((res) => (res.ok ? res.json() : { axes: {}, campaignId: null }))
-      .then((body: { axes: Partial<Record<RelationshipAxisKey, number>>; campaignId: string | null }) => {
-        if (cancelled) return;
-        setAxes(body.axes);
-        setCampaignId(body.campaignId);
-        setLoadedTargetId(targetId);
-      });
+    let annule = false;
+    void lireFace(entityId, targetId).then(({ face, erreur: e }) => {
+      if (annule) return;
+      setFaceDirecte({ pour: targetId, face });
+      setErreur(e);
+    });
     return () => {
-      cancelled = true;
+      annule = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entityId, targetId]);
 
-  async function commitAxis(key: RelationshipAxisKey, delta: number) {
-    if (!targetId) return;
-    setPending(true);
-    setError(null);
-    // Meme libelle francais que le tableau de souvenirs (bug trouve en
-    // verifiant ce bloc) : le resume auto-genere affichait la cle brute
-    // ("trust_distrust +38") au lieu du nom francais, contrairement aux
-    // blocs personality/worldview qui font deja cette traduction.
-    const summary = `Réglage manuel : ${AXIS_LABELS_FR[key].split(" ↔ ")[0]} ${delta > 0 ? "+" : ""}${delta}`;
-    const res = await fetch(`/api/entities/${entityId}/attitude-events`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ targetEntityId: targetId, summary, deltas: { [key]: delta }, occurredAtIngame: null }),
-    });
-    setPending(false);
-    if (!res.ok) {
-      const body = (await res.json().catch(() => null)) as { error?: string } | null;
-      setError(body?.error ?? "Impossible d'ajuster cet axe.");
-      return;
-    }
-    const body = (await res.json()) as { axes: Partial<Record<RelationshipAxisKey, number>> };
-    setAxes(body.axes);
-    setReloadSignal((n) => n + 1);
+  function choisirCible(id: string | null) {
+    setSens("direct");
+    setFaceInverse(null);
+    onChange({ ...data, target: id === null ? null : { kind: "entity", id } });
   }
+
+  async function rafraichir(quel: Sens) {
+    if (!targetId) return;
+    const lu = quel === "direct" ? await lireFace(entityId, targetId) : await lireFace(targetId, entityId);
+    (quel === "direct" ? setFaceDirecte : setFaceInverse)({ pour: targetId, face: lu.face });
+    setErreur(lu.erreur);
+  }
+
+  async function basculerSens() {
+    if (!targetId) return;
+    const suivant: Sens = sens === "direct" ? "inverse" : "direct";
+    setSens(suivant);
+    if (suivant === "inverse" && faceInverse?.pour !== targetId) await rafraichir("inverse");
+  }
+
+  async function creerBlocInverse() {
+    if (!targetId || creation) return;
+    setCreation(true);
+    setErreur(null);
+    try {
+      const creer = await fetch(`/api/entities/${targetId}/blocks`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          entityId: targetId,
+          blockType: "relationship",
+          label: t("titreBloc"),
+          visibility: { level: "public", scopeId: null },
+        }),
+      });
+      if (!creer.ok) {
+        const corps = (await creer.json().catch(() => null)) as { error?: string } | null;
+        setErreur(corps?.error ?? t("erreurCreation"));
+        return;
+      }
+      const bloc = (await creer.json()) as { id: string; version: number; display: unknown };
+      const remplir = await fetch(`/api/blocks/${bloc.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          version: bloc.version,
+          display: bloc.display,
+          data: { __v: 1, target: { kind: "entity", id: entityId }, knownAs: "", historyVisible: 20 },
+          visibility: { level: "public", scopeId: null },
+        }),
+      });
+      if (!remplir.ok) {
+        const corps = (await remplir.json().catch(() => null)) as { error?: string } | null;
+        setErreur(corps?.error ?? t("erreurCreation"));
+        return;
+      }
+      await rafraichir("inverse");
+    } finally {
+      setCreation(false);
+    }
+  }
+
+  const direct = faceDirecte && faceDirecte.pour === targetId ? faceDirecte.face : null;
+  const inverse = faceInverse && faceInverse.pour === targetId ? faceInverse.face : null;
+  const chargeDirect = faceDirecte !== null && faceDirecte.pour === targetId;
+  const chargeInverse = faceInverse !== null && faceInverse.pour === targetId;
+  const autres = otherEntities.filter((e) => e.id !== entityId);
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-3">
-        <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Envers</span>
-        <Dropdown
-          value={targetId ?? NO_ENTITY}
-          options={[{ value: NO_ENTITY, label: "— choisir une cible —" }, ...otherEntities.map((e) => ({ value: e.id, label: e.name }))]}
-          onChange={(v) => onChange({ ...data, target: v === NO_ENTITY ? null : { kind: "entity", id: v } })}
-          aria-label="Cible de la relation"
-        />
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <div className="flex min-w-0 max-w-full items-center gap-2">
+          <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">{t("envers")}</span>
+          <ChoixCible cibleId={targetId} autres={autres} onChoisir={choisirCible} />
+        </div>
+        <label className="flex min-w-48 flex-1 items-center gap-2">
+          <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">{t("connuComme")}</span>
+          <input
+            value={data.knownAs}
+            onChange={(e) => onChange({ ...data, knownAs: e.target.value })}
+            placeholder={t("connuCommePlaceholder")}
+            className="min-w-0 flex-1 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none focus:border-accent"
+          />
+        </label>
       </div>
 
-      <div className="flex flex-col gap-1">
-        <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
-          Connue comme (identité que l&apos;entité croit connaître)
-        </span>
-        <input
-          value={data.knownAs}
-          onChange={(e) => onChange({ ...data, knownAs: e.target.value })}
-          placeholder="un mercenaire de passage"
-          className="bg-transparent text-sm text-ink outline-none"
-        />
-      </div>
+      {!targetId && <p className="text-sm italic text-ink-muted">{t("choisirPourRegler")}</p>}
+      {targetId && sens === "direct" && !chargeDirect && !erreur && <p className="text-sm text-ink-muted">{t("chargement")}</p>}
+      {erreur && <p className="text-xs text-danger">{erreur}</p>}
 
-      {!targetId && <p className="text-sm italic text-ink-muted">Choisissez une cible pour régler la relation.</p>}
-
-      {targetId && !loaded && <p className="text-sm text-ink-muted">Chargement…</p>}
-
-      {targetId && loaded && !campaignId && (
-        <p className="text-sm italic text-ink-muted">
-          Ce monde n&apos;a pas de campagne active — la relation reste définie, mais ses valeurs ne peuvent pas encore évoluer.
-        </p>
+      {targetId && (
+        <div className="flex justify-center">
+          <button
+            type="button"
+            onClick={() => void basculerSens()}
+            className="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised"
+          >
+            {sens === "direct" ? t("voirAutreSens") : t("revenirSensDirect")}
+          </button>
+        </div>
       )}
 
-      {targetId && loaded && campaignId && (
-        <>
-          <div className="flex flex-wrap gap-6">
-            <RelationshipRadar axes={{ ...axes, ...liveOverride }} relationTypes={[]} />
-            <div className="min-w-[220px] flex-1">
-              <RelationshipAxisSliders
-                axes={axes}
-                onCommit={commitAxis}
-                onLiveChange={handleLiveChange}
-                disabled={pending}
-              />
-              {error && <p className="mt-1 text-xs text-danger">{error}</p>}
-            </div>
-          </div>
-          <RelationshipEventTable
-            sourceEntityId={entityId}
-            targetEntityId={targetId}
-            worldSlug={worldSlug}
-            onAxesChanged={setAxes}
-            reloadSignal={reloadSignal}
-          />
-        </>
+      {targetId && sens === "direct" && direct && (
+        <VueRelation
+          key={`${direct.source.id}>${direct.target?.id ?? ""}`}
+          face={direct}
+          worldSlug={worldSlug}
+          isGm={isGm}
+          onEcrit={() => void rafraichir("direct")}
+        />
+      )}
+
+      {targetId && sens === "inverse" && !chargeInverse && !erreur && <p className="text-sm text-ink-muted">{t("chargement")}</p>}
+      {targetId && sens === "inverse" && inverse && inverse.block && (
+        <VueRelation
+          key={`${inverse.source.id}>${inverse.target?.id ?? ""}`}
+          face={inverse}
+          worldSlug={worldSlug}
+          isGm={isGm}
+          onEcrit={() => void rafraichir("inverse")}
+        />
+      )}
+      {targetId && sens === "inverse" && inverse && !inverse.block && (
+        <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-edge-strong p-4 text-center">
+          <p className="text-sm text-ink-soft">
+            {t("inverseAbsent", { cible: inverse.source.name, fiche: inverse.target?.name ?? "" })}
+          </p>
+          {inverse.canEditSource && (
+            <button
+              type="button"
+              aria-busy={creation}
+              onClick={() => void creerBlocInverse()}
+              className="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised"
+            >
+              {t("creerBloc")}
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

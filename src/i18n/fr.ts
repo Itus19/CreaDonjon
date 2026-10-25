@@ -34,7 +34,7 @@ import { ABILITY_LABELS, type ModifierOp, type Skill } from "@/src/core/rules/sh
 import { modifierTargetOption, type ModifierTargetCategory } from "@/src/core/rules/modifierTargets";
 import type { LanguageKey } from "@/src/core/rules/srdMapping";
 import type { IntentVerb } from "@/src/core/rules/intent";
-import type { PersonalityPoleKey, WorldviewPoleKey } from "@/src/core/psyche/keys";
+import type { PersonalityPoleKey, RelationshipAxisKey, WorldviewPoleKey } from "@/src/core/psyche/keys";
 import type { PoleEnds } from "@/src/core/psyche/poles";
 
 /**
@@ -821,6 +821,29 @@ export const WORLDVIEW_POLES_FR: Record<WorldviewPoleKey, PoleDisplayFr> = {
     positive: { label: "Force", gender: "f" },
     negative: { label: "Paix", gender: "f" },
   },
+};
+
+/**
+ * V3.1-71 — LA source des libellés d'axes de relation (même rôle que
+ * `PERSONALITY_POLES_FR` pour les pôles) : `label` pour les titres,
+ * `short` pour les puces et les résumés, `positive` / `negative` pour les
+ * deux bouts du fil. Les clés ne changent jamais.
+ */
+export interface RelationshipAxisDisplayFr {
+  label: string;
+  short: string;
+  positive: string;
+  negative: string;
+}
+
+export const RELATIONSHIP_AXES_FR: Record<RelationshipAxisKey, RelationshipAxisDisplayFr> = {
+  trust_distrust: { label: "Confiance ↔ Méfiance", short: "Confiance", positive: "Confiance", negative: "Méfiance" },
+  friendship_hostility: { label: "Amitié ↔ Hostilité", short: "Amitié", positive: "Amitié", negative: "Hostilité" },
+  respect_contempt: { label: "Respect ↔ Mépris", short: "Respect", positive: "Respect", negative: "Mépris" },
+  attraction_repulsion: { label: "Attirance ↔ Répulsion", short: "Attirance", positive: "Attirance", negative: "Répulsion" },
+  debt_independence: { label: "Dette ↔ Indépendance", short: "Dette", positive: "Dette", negative: "Indépendance" },
+  fear_assurance: { label: "Peur ↔ Assurance", short: "Peur", positive: "Peur", negative: "Assurance" },
+  interest_indifference: { label: "Intérêt ↔ Indifférence", short: "Intérêt", positive: "Intérêt", negative: "Indifférence" },
 };
 
 export const QUEST_STATE_LABELS_FR: Record<string, string> = {

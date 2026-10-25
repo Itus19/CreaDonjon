@@ -8,8 +8,8 @@ import Checkbox from "@/components/shared/Checkbox";
 import { formatGameDate } from "@/src/core/calendar/formatDate";
 import { useWorldCalendar } from "@/components/shared/useWorldCalendar";
 import type { GameDate } from "@/src/core/calendar/types";
-import { PERSONALITY_POLE_KEYS, WORLDVIEW_POLE_KEYS } from "@/src/core/psyche/keys";
-import { PERSONALITY_POLES_FR, WORLDVIEW_POLES_FR, type PoleDisplayFr } from "@/src/i18n/fr";
+import { PERSONALITY_POLE_KEYS, RELATIONSHIP_AXIS_KEYS, WORLDVIEW_POLE_KEYS } from "@/src/core/psyche/keys";
+import { PERSONALITY_POLES_FR, RELATIONSHIP_AXES_FR, WORLDVIEW_POLES_FR } from "@/src/i18n/fr";
 import {
   appliquesParEvenement,
   avancerAjout,
@@ -38,26 +38,42 @@ interface SouvenirInfo {
 
 interface Genre {
   keys: readonly string[];
-  table: Record<string, PoleDisplayFr>;
-  lister: (entityId: string) => string;
-  ecrire: (blockId: string) => string;
+  /** Le mot court de chaque pôle ou axe, pour les pastilles et les lignes. */
+  mots: Record<string, string>;
 }
 
-/** Personnalité et Convictions partagent le même journal ; seules les routes et les pôles changent. */
-const GENRES: Record<"personality" | "worldview", Genre> = {
+const mots = (table: Record<string, string>) => table;
+
+/** Personnalité, Convictions et Relation partagent le même journal ; seuls les pôles et les routes changent. */
+const GENRES: Record<"personality" | "worldview" | "relation", Genre> = {
   personality: {
     keys: PERSONALITY_POLE_KEYS,
-    table: PERSONALITY_POLES_FR,
-    lister: (id) => `/api/entities/${id}/personality-events`,
-    ecrire: (id) => `/api/blocks/${id}/personality-event`,
+    mots: mots(Object.fromEntries(PERSONALITY_POLE_KEYS.map((k) => [k, PERSONALITY_POLES_FR[k].radar]))),
   },
   worldview: {
     keys: WORLDVIEW_POLE_KEYS,
-    table: WORLDVIEW_POLES_FR,
-    lister: (id) => `/api/entities/${id}/worldview-events`,
-    ecrire: (id) => `/api/blocks/${id}/worldview-event`,
+    mots: mots(Object.fromEntries(WORLDVIEW_POLE_KEYS.map((k) => [k, WORLDVIEW_POLES_FR[k].radar]))),
+  },
+  relation: {
+    keys: RELATIONSHIP_AXIS_KEYS,
+    mots: mots(Object.fromEntries(RELATIONSHIP_AXIS_KEYS.map((k) => [k, RELATIONSHIP_AXES_FR[k].short]))),
   },
 };
+
+/** Ce qui change selon que le journal est celui d'un bloc (Personnalité, Convictions) ou d'une paire (Relation). */
+type Propre =
+  | {
+      genre: "personality" | "worldview";
+      blockId: string;
+      version: number;
+      onBlockRefreshed: (fresh: { id: string; data: unknown; version: number }) => void;
+    }
+  | {
+      genre: "relation";
+      targetEntityId: string;
+      /** Les valeurs des axes après un souvenir ajouté (la route les rend). */
+      onAxesChanged: (axes: Partial<Record<string, number>>) => void;
+    };
 
 function signe(n: number): string {
   return `${n > 0 ? "+" : ""}${n}`;
@@ -71,34 +87,34 @@ function signe(n: number): string {
  * (« Prudence +20 (appliqué +14) »). Un écart de plus de 40 demande
  * confirmation ; refuser n'écrit rien (`avancerAjout`, testé).
  */
-export default function SouvenirsPsyche({
-  genre,
-  entityId,
-  blockId,
-  version,
-  worldSlug,
-  valeursActuelles,
-  onBlockRefreshed,
-  ref,
-}: {
-  genre: "personality" | "worldview";
+export default function SouvenirsPsyche(props: {
   entityId: string;
-  blockId: string;
-  version: number;
   worldSlug: string;
-  /** Les valeurs courantes des pôles, pour vérifier que le rejeu du journal retombe dessus. */
+  /** Les valeurs courantes des pôles ou axes, pour vérifier que le rejeu du journal retombe dessus. */
   valeursActuelles: Partial<Record<string, number>>;
-  onBlockRefreshed: (fresh: { id: string; data: unknown; version: number }) => void;
+  /** Restreint les pastilles (la Relation masque l'Attirance d'une cible qui n'est pas une personne). */
+  cles?: readonly string[];
+  /** Le lecteur ne peut pas écrire sur cette fiche : la liste se lit, mais ni saisie ni bascule du wiki. */
+  lecture?: boolean;
   /** Le parent appelle `recharger()` après une barre réglée à la main (même journal) : la liste se relit si elle est ouverte, sinon à sa prochaine ouverture. */
   ref?: React.Ref<SouvenirsPsycheHandle>;
-}) {
+} & Propre) {
+  const { genre, entityId, worldSlug, valeursActuelles, ref, lecture = false } = props;
   const t = useTranslations("fiche.psyche.souvenirs");
   const config = GENRES[genre];
+  const cles = props.cles ?? config.keys;
+  const urlListe =
+    props.genre === "relation"
+      ? `/api/entities/${entityId}/attitudes/${props.targetEntityId}/events`
+      : `/api/entities/${entityId}/${props.genre}-events`;
+  const urlEcrire =
+    props.genre === "relation" ? `/api/entities/${entityId}/attitude-events` : `/api/blocks/${props.blockId}/${props.genre}-event`;
+  const urlVisibilite = (id: string) => (props.genre === "relation" ? `/api/attitude-events/${id}` : `/api/personality-events/${id}`);
   const calendrier = useWorldCalendar(worldSlug);
   const [ouvert, setOuvert] = useState(false);
   const [souvenirs, setSouvenirs] = useState<SouvenirInfo[] | null>(null);
   const [resume, setResume] = useState("");
-  const [axe, setAxe] = useState<string>(config.keys[0]);
+  const [axe, setAxe] = useState<string>(cles[0]);
   const [ecart, setEcart] = useState(10);
   const [avecDate, setAvecDate] = useState(false);
   const [dateEnJeu, setDateEnJeu] = useState<GameDate>(BLANK_DATE);
@@ -107,7 +123,7 @@ export default function SouvenirsPsyche({
   const occupeRef = useRef(false);
 
   async function charger() {
-    const res = await fetch(config.lister(entityId));
+    const res = await fetch(urlListe);
     if (!res.ok) {
       setErreur(t("erreurChargement"));
       return;
@@ -131,14 +147,15 @@ export default function SouvenirsPsyche({
   async function basculerPublic(souvenir: SouvenirInfo) {
     const suivant = !souvenir.is_public;
     setSouvenirs((prev) => (prev ?? []).map((s) => (s.id === souvenir.id ? { ...s, is_public: suivant } : s)));
-    const res = await fetch(`/api/personality-events/${souvenir.id}`, {
+    const res = await fetch(urlVisibilite(souvenir.id), {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ isPublic: suivant }),
     });
     if (!res.ok) {
       setSouvenirs((prev) => (prev ?? []).map((s) => (s.id === souvenir.id ? { ...s, is_public: !suivant } : s)));
-      setErreur(t("erreurVisibilite"));
+      const corps = (await res.json().catch(() => null)) as { error?: string } | null;
+      setErreur(corps?.error ?? t("erreurVisibilite"));
     }
   }
 
@@ -147,23 +164,28 @@ export default function SouvenirsPsyche({
     occupeRef.current = true;
     setErreur(null);
     try {
-      const res = await fetch(config.ecrire(blockId), {
+      const commun = { summary: resume.trim(), deltas: { [axe]: delta }, occurredAtIngame: avecDate ? dateEnJeu : null };
+      const res = await fetch(urlEcrire, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          version,
-          summary: resume.trim(),
-          deltas: { [axe]: delta },
-          occurredAtIngame: avecDate ? dateEnJeu : null,
-        }),
+        body: JSON.stringify(
+          props.genre === "relation"
+            ? { targetEntityId: props.targetEntityId, ...commun }
+            : { version: props.version, ...commun },
+        ),
       });
       if (!res.ok) {
         const corps = (await res.json().catch(() => null)) as { error?: string } | null;
         setErreur(corps?.error ?? t("erreurAjout"));
         return;
       }
-      const corps = (await res.json()) as { block: { id: string; data: unknown; version: number } };
-      onBlockRefreshed(corps.block);
+      if (props.genre === "relation") {
+        const corps = (await res.json()) as { axes: Partial<Record<string, number>> };
+        props.onAxesChanged(corps.axes);
+      } else {
+        const corps = (await res.json()) as { block: { id: string; data: unknown; version: number } };
+        props.onBlockRefreshed(corps.block);
+      }
       setResume("");
       setAvecDate(false);
       setDateEnJeu(BLANK_DATE);
@@ -213,6 +235,7 @@ export default function SouvenirsPsyche({
             <div key={s.id} className="grid grid-cols-[1.25rem_auto_1fr] items-baseline gap-x-2 gap-y-0.5 border-t border-edge pt-1.5 text-xs @lg/bloc:grid-cols-[1.25rem_6rem_1fr_auto]">
               <button
                 type="button"
+                disabled={lecture}
                 onClick={() => void basculerPublic(s)}
                 className="self-center text-ink-muted hover:text-ink"
                 aria-label={s.is_public ? t("wikiMasquer") : t("wikiAfficher")}
@@ -229,11 +252,11 @@ export default function SouvenirsPsyche({
               <span className="col-start-3 text-accent @lg/bloc:col-start-auto">
                 {Object.entries(s.deltas).map(([cle, brut]) => {
                   if (brut === undefined) return null;
-                  const pole = config.table[cle];
+                  const mot = config.mots[cle];
                   const applique = appliques[s.id]?.[cle];
                   return (
                     <span key={cle} className="mr-2 whitespace-nowrap">
-                      {t("brut", { pole: pole ? pole.radar : cle, delta: signe(brut) })}
+                      {t("brut", { pole: mot ?? cle, delta: signe(brut) })}
                       {applique !== undefined && applique !== brut && (
                         <small className="ml-1 text-ink-muted">{t("applique", { delta: signe(applique) })}</small>
                       )}
@@ -244,6 +267,8 @@ export default function SouvenirsPsyche({
             </div>
           ))}
 
+          {!lecture && (
+          <>
           <div className="flex flex-wrap items-center gap-2 border-t border-edge pt-2">
             <input
               value={resume}
@@ -252,8 +277,8 @@ export default function SouvenirsPsyche({
               aria-label={t("texteLabel")}
               className="min-w-48 flex-1 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none focus:border-accent"
             />
-            <div role="group" aria-label={t("axe")} className="flex flex-wrap gap-1">
-              {config.keys.map((k) => (
+            <div role="group" aria-label={genre === "relation" ? t("axeRelation") : t("axe")} className="flex flex-wrap gap-1">
+              {cles.map((k) => (
                 <button
                   key={k}
                   type="button"
@@ -263,7 +288,7 @@ export default function SouvenirsPsyche({
                     axe === k ? "border-accent bg-accent/10 text-accent" : "border-edge text-ink-muted hover:bg-panel-raised hover:text-ink"
                   }`}
                 >
-                  {config.table[k].radar}
+                  {config.mots[k]}
                 </button>
               ))}
             </div>
@@ -288,6 +313,8 @@ export default function SouvenirsPsyche({
           </div>
           <Checkbox checked={avecDate} onChange={() => setAvecDate(!avecDate)} label={t("dateEnJeu")} className="text-xs text-ink-muted" />
           {avecDate && <GameDateInput calendar={calendrier} value={dateEnJeu} onChange={setDateEnJeu} />}
+          </>
+          )}
           {ajout.etape === "confirmation" && (
             <div role="alert" className="flex flex-wrap items-center gap-2 rounded-lg border border-gm/50 bg-gm/10 px-2.5 py-1.5 text-xs text-gm">
               <span className="flex-1">{t("confirmer")}</span>

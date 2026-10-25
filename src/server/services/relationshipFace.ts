@@ -96,7 +96,8 @@ export async function getRelationshipFace(
 
   const vide = { count: 0, last: null };
   // Sans bloc visible, la relation n'existe pas pour ce lecteur : ni valeurs ni souvenirs (règle 5).
-  if (!cibleVisible || !target || !block) {
+  // Le MJ, lui, voit tout : la cible qu'il vient de choisir montre ses valeurs avant même que la carte soit enregistrée.
+  if (!cibleVisible || !target || (!block && !admin)) {
     return { source: side(source), target: target && cibleVisible ? side(target) : null, campaignId, axes: {}, souvenirs: vide, block, canEditSource };
   }
 

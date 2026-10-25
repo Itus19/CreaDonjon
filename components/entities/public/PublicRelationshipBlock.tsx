@@ -4,20 +4,17 @@ import PublicSouvenirsTable, { type PublicSouvenirRow } from "./PublicSouvenirsT
 import { type RelationshipAxisKey } from "@/src/core/psyche/keys";
 import type { AttitudeEventRow } from "@/src/server/repos/psyche";
 import type { CalendarConfigInput } from "@/src/core/schemas/calendar";
+import { useTranslations } from "next-intl";
+import { RELATIONSHIP_AXES_FR } from "@/src/i18n/fr";
 
-const AXIS_LABELS_FR: Record<RelationshipAxisKey, string> = {
-  trust_distrust: "Confiance",
-  friendship_hostility: "Amitié",
-  respect_contempt: "Respect",
-  attraction_repulsion: "Attirance",
-  debt_independence: "Dette",
-  fear_assurance: "Peur",
-  interest_indifference: "Intérêt",
-};
-
-function formatDeltas(deltas: Partial<Record<RelationshipAxisKey, number>>): string {
+/** L'effet d'un souvenir pour le lecteur : le côté vers lequel il pousse, jamais un nombre. */
+function formatDeltas(deltas: Partial<Record<RelationshipAxisKey, number>>, vers: (axe: string) => string): string {
   return Object.entries(deltas)
-    .map(([key, delta]) => `${AXIS_LABELS_FR[key as RelationshipAxisKey] ?? key} ${delta! > 0 ? "+" : ""}${delta}`)
+    .filter(([key]) => key in RELATIONSHIP_AXES_FR)
+    .map(([key, delta]) => {
+      const axe = RELATIONSHIP_AXES_FR[key as RelationshipAxisKey];
+      return vers(delta! > 0 ? axe.positive : axe.negative);
+    })
     .join(", ");
 }
 
@@ -43,17 +40,18 @@ export default function PublicRelationshipBlock({
   events: AttitudeEventRow[];
   calendar: CalendarConfigInput | null;
 }) {
+  const t = useTranslations("fiche.relation");
   const rows: PublicSouvenirRow[] = events.map((event) => ({
     id: event.id,
     summary: event.summary,
-    effect: formatDeltas(event.deltas as Partial<Record<RelationshipAxisKey, number>>),
+    effect: formatDeltas(event.deltas as Partial<Record<RelationshipAxisKey, number>>, (axe) => t("versAxe", { axe })),
     occurredAtIngame: event.occurred_at_ingame as unknown as PublicSouvenirRow["occurredAtIngame"],
   }));
   return (
     <div className="flex flex-col items-center gap-2">
       {target && (
         <p className="text-xs text-ink-muted">
-          Envers{" "}
+          {t("envers")}{" "}
           {/* `prefetch={false}` (V2.1-20 lot 6) : voir `PublicBlockView` — une route dynamique prechargee n'est jamais reutilisee (`staleTimes.dynamic` vaut 0), le prechargement ne rapporte que du travail serveur. */}
           <Link href={`${hrefBase}/${target.slug}`} prefetch={false} className="rich-ref-mention">
             {target.name}

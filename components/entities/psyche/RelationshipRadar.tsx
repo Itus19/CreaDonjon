@@ -1,16 +1,6 @@
 import { RELATIONSHIP_AXIS_KEYS, type RelationshipAxisKey } from "@/src/core/psyche/keys";
 import { relationshipColor } from "@/src/core/psyche/relationshipColor";
-import { RELATIONSHIP_AXIS_DESCRIPTIONS_FR } from "@/src/i18n/fr";
-
-const AXIS_LABELS_FR: Record<RelationshipAxisKey, string> = {
-  trust_distrust: "Confiance",
-  friendship_hostility: "Amitié",
-  respect_contempt: "Respect",
-  attraction_repulsion: "Attirance",
-  debt_independence: "Dette",
-  fear_assurance: "Peur",
-  interest_indifference: "Intérêt",
-};
+import { RELATIONSHIP_AXES_FR, RELATIONSHIP_AXIS_DESCRIPTIONS_FR } from "@/src/i18n/fr";
 
 const SIZE = 240;
 const CENTER = SIZE / 2;
@@ -72,7 +62,7 @@ export default function RelationshipRadar({
             className="fill-[var(--ink-muted)] text-[9px]"
           >
             <title>{RELATIONSHIP_AXIS_DESCRIPTIONS_FR[key]}</title>
-            {AXIS_LABELS_FR[key]}
+            {RELATIONSHIP_AXES_FR[key].short}
           </text>
         );
       })}
