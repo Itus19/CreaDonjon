@@ -8,6 +8,7 @@ import { filterBlocks, filterSegments, type VisibilityLevel } from "@/src/core/v
 import { verifySharePassword } from "@/src/core/shareLinks/password";
 import type { BlockDisplay } from "@/src/core/schemas/blocks/envelope";
 import { zTextBlockData } from "@/src/core/schemas/blocks/text";
+import { infoboxEntityRefIds, zInfoboxBlockData } from "@/src/core/schemas/blocks/infobox";
 import { zNoteTreeBlockData } from "@/src/core/schemas/blocks/noteTree";
 import { collectRefTargetIds } from "@/src/core/linker/refTargets";
 import { relationLabel, type RelationType } from "@/src/core/relations/inverses";
@@ -788,6 +789,19 @@ export async function getPublicEntityDetail(
         if (found) ruleRefs[key] = found;
       }
       return { ...block, textRefs, ruleRefs };
+    }
+    // V3.1-66 : une valeur d'Encadré peut citer une fiche. Même résolution
+    // que le texte : seule une fiche visible de ce lecteur (`entityLookup`)
+    // devient un lien ; les autres restent leur libellé, en texte.
+    if (block.blockType === "infobox" && entityLookup) {
+      const infobox = zInfoboxBlockData.safeParse(block.data);
+      if (!infobox.success) return block;
+      const textRefs: Record<string, EntityRefPreview> = {};
+      for (const id of infoboxEntityRefIds(infobox.data)) {
+        const found = entityLookup.get(id);
+        if (found) textRefs[id] = { ...found, excerpt: null };
+      }
+      return { ...block, textRefs };
     }
     if (block.blockType === "timeline" && entityLookup) {
       const timeline = zTimelineBlockData.safeParse(block.data);

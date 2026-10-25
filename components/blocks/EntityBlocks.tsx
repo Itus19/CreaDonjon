@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import {
@@ -170,6 +170,7 @@ export function BlockDataEditor({
   onBlockRefreshed,
   hideAiAssist,
   siblings,
+  entityKind,
 }: {
   block: BlockItem;
   onChange: (data: unknown) => void;
@@ -196,6 +197,8 @@ export function BlockDataEditor({
   hideAiAssist?: boolean;
   /** V2.1-11 : tous les blocs de la fiche, dans l'ordre d'affichage — le bloc `image` y choisit son hôte d'ancrage. */
   siblings: BlockItem[];
+  /** V3.1-66 : genre de la fiche, pour les intitulés proposés par le bloc Encadré. */
+  entityKind?: string;
 }) {
   switch (block.blockType) {
     case "text":
@@ -217,6 +220,8 @@ export function BlockDataEditor({
         <InfoboxBlockEditor
           data={block.data as InfoboxBlockData}
           onChange={(d) => onChange(d)}
+          entityKind={entityKind}
+          otherEntities={otherEntities}
         />
       );
     case "image":
@@ -615,6 +620,7 @@ export default function EntityBlocks({
   restrictAddableTypes,
   hideAiAssist,
   onBlocksChange,
+  entityKind,
 }: {
   entityId: string;
   /** V2-H3 : necessaire pour "creer la carte «X»" depuis le bloc genealogie. */
@@ -636,6 +642,8 @@ export default function EntityBlocks({
   onRelationsChanged?: () => void;
   /** V3.1-31 : prevenu a chaque changement de la liste, pour que l'editeur plein ecran (monte par le parent) parte de l'etat COURANT des blocs et de leurs versions, jamais de celui du chargement de la page. */
   onBlocksChange?: (blocks: BlockItem[]) => void;
+  /** V3.1-66 : genre de la fiche (`entity_kind`), pour les intitulés proposés par le bloc Encadré. */
+  entityKind?: string;
 }) {
   const t = useTranslations("fiche");
   const [blocks, setBlocks] = useState<BlockItem[]>(initialBlocks);
@@ -1198,6 +1206,7 @@ export default function EntityBlocks({
                 onBlur={handleBlockBlur(block.id)}
                 hideAiAssist={hideAiAssist}
                 siblings={sortedBlocks}
+                entityKind={entityKind}
               />
             ))}
           </SortableContext>
@@ -1270,6 +1279,7 @@ function SortableBlockCard({
   onBlur,
   hideAiAssist,
   siblings,
+  entityKind,
 }: {
   block: BlockItem;
   index: number;
@@ -1317,6 +1327,7 @@ function SortableBlockCard({
   hideAiAssist?: boolean;
   /** V2.1-11 : tous les blocs de la fiche, dans l'ordre d'affichage — transmis au bloc `image`, qui y choisit son hôte d'ancrage. */
   siblings: BlockItem[];
+  entityKind?: string;
 }) {
   const {
     attributes,
@@ -1385,6 +1396,11 @@ function SortableBlockCard({
           de l'editeur, jamais l'en-tete : la liste de visibilite, elle,
           enregistre deja explicitement juste au-dessus, et le contexte lui
           ferait envoyer une seconde requete pour rien. */}
+      {/* Les éditeurs sont chargés à la demande (`dynamic`). Le premier bloc
+          d'un type ajouté pendant la session attend son code : sans frontière
+          ici, la carte entière restait absente jusqu'au rechargement. On
+          garde l'en-tête de la carte, seul le corps attend. */}
+      <Suspense fallback={null}>
       <EditCommitProvider commit={commit}>
         {block.blockType === "character" ? (
           !isCollapsed && (
@@ -1429,10 +1445,12 @@ function SortableBlockCard({
               onBlockRefreshed={onBlockRefreshed}
               hideAiAssist={hideAiAssist}
               siblings={siblings}
+              entityKind={entityKind}
             />
           )
         )}
       </EditCommitProvider>
+      </Suspense>
     </BlockCard>
   );
 }

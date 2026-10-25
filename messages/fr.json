@@ -1257,6 +1257,94 @@
     "enAttente": "En attente de la sauvegarde…"
   },
   "fiche": {
+    "encadre": {
+      "intitule": "Intitulé de la ligne",
+      "valeur": "Valeur de la ligne",
+      "intitulePlaceholder": "Population",
+      "valeurPlaceholder": "12 000",
+      "retirer": "Retirer la ligne {intitule}",
+      "retirerSansNom": "Retirer cette ligne",
+      "poignee": "Réordonner la ligne {intitule}",
+      "poigneeSansNom": "Réordonner cette ligne",
+      "poigneeTitre": "Glisser pour réordonner, ou Entrée puis flèches",
+      "instructions": "Pour réordonner cette ligne, appuyez sur Entrée, déplacez-la avec les flèches haut et bas, puis Entrée pour la poser ou Échap pour annuler.",
+      "prise": "Ligne « {ligne} » saisie, position {position} sur {total}.",
+      "deplace": "Ligne « {ligne} » : position {position} sur {total}.",
+      "posee": "Ligne « {ligne} » posée en position {position} sur {total}.",
+      "annulee": "Déplacement annulé.",
+      "ligneSansNom": "sans intitulé",
+      "vide": "Aucune ligne pour l'instant.",
+      "ajouter": "+ Ligne",
+      "suggestionsPour": "Intitulés proposés :",
+      "suggestions": {
+        "character": [
+          "Race",
+          "Âge",
+          "Rôle",
+          "Allégeance",
+          "Lieu de vie",
+          "Titre"
+        ],
+        "location": [
+          "Région",
+          "Population",
+          "Dirigeant",
+          "Climat",
+          "Fondation",
+          "Gouvernement"
+        ],
+        "faction": [
+          "Siège",
+          "Chef",
+          "Fondation",
+          "Devise",
+          "Alignement",
+          "Effectifs"
+        ],
+        "item": [
+          "Type",
+          "Rareté",
+          "Valeur",
+          "Poids",
+          "Propriétés"
+        ],
+        "creature": [
+          "Taille",
+          "Type",
+          "Environnement",
+          "Dangerosité",
+          "Alignement"
+        ],
+        "quest": [
+          "Commanditaire",
+          "Récompense",
+          "Lieu",
+          "Échéance"
+        ],
+        "event": [
+          "Date",
+          "Lieu",
+          "Participants",
+          "Conséquences"
+        ]
+      },
+      "mention": {
+        "titre": "Citer une fiche",
+        "aucune": "Aucune fiche ne correspond.",
+        "retirer": "Retirer la mention de « {nom} »",
+        "citee": "Fiche citée : {nom}",
+        "aide": "« @ » cite une fiche."
+      }
+    },
+    "tableau": {
+      "tableau": "Tableau personnalisé",
+      "colonne": "Nom de la colonne",
+      "cellule": "{colonne}, ligne {ligne}",
+      "retirerColonne": "Retirer la colonne {colonne}",
+      "retirerLigne": "Retirer la ligne {ligne}",
+      "ajouterColonne": "Ajouter une colonne",
+      "ajouterLigne": "+ Ligne"
+    },
     "poignee": "Réordonner ce bloc",
     "poigneeTitre": "Glisser pour réordonner, ou Entrée puis flèches",
     "replier": "Replier",

@@ -1256,6 +1256,94 @@
     "enAttente": "Waiting for the saving throw…"
   },
   "fiche": {
+    "encadre": {
+      "intitule": "Row label",
+      "valeur": "Row value",
+      "intitulePlaceholder": "Population",
+      "valeurPlaceholder": "12,000",
+      "retirer": "Remove the row {intitule}",
+      "retirerSansNom": "Remove this row",
+      "poignee": "Reorder the row {intitule}",
+      "poigneeSansNom": "Reorder this row",
+      "poigneeTitre": "Drag to reorder, or Enter then arrow keys",
+      "instructions": "To reorder this row, press Enter, move it with the up and down arrow keys, then Enter to drop it or Escape to cancel.",
+      "prise": "Row “{ligne}” picked up, position {position} of {total}.",
+      "deplace": "Row “{ligne}”: position {position} of {total}.",
+      "posee": "Row “{ligne}” dropped at position {position} of {total}.",
+      "annulee": "Move cancelled.",
+      "ligneSansNom": "untitled",
+      "vide": "No rows yet.",
+      "ajouter": "+ Row",
+      "suggestionsPour": "Suggested labels:",
+      "suggestions": {
+        "character": [
+          "Race",
+          "Age",
+          "Role",
+          "Allegiance",
+          "Home",
+          "Title"
+        ],
+        "location": [
+          "Region",
+          "Population",
+          "Ruler",
+          "Climate",
+          "Founded",
+          "Government"
+        ],
+        "faction": [
+          "Seat",
+          "Leader",
+          "Founded",
+          "Motto",
+          "Alignment",
+          "Members"
+        ],
+        "item": [
+          "Type",
+          "Rarity",
+          "Value",
+          "Weight",
+          "Properties"
+        ],
+        "creature": [
+          "Size",
+          "Type",
+          "Environment",
+          "Challenge",
+          "Alignment"
+        ],
+        "quest": [
+          "Patron",
+          "Reward",
+          "Location",
+          "Deadline"
+        ],
+        "event": [
+          "Date",
+          "Location",
+          "Participants",
+          "Consequences"
+        ]
+      },
+      "mention": {
+        "titre": "Cite an entry",
+        "aucune": "No entry matches.",
+        "retirer": "Remove the mention of “{nom}”",
+        "citee": "Cited entry: {nom}",
+        "aide": "“@” cites an entry."
+      }
+    },
+    "tableau": {
+      "tableau": "Custom table",
+      "colonne": "Column name",
+      "cellule": "{colonne}, row {ligne}",
+      "retirerColonne": "Remove the column {colonne}",
+      "retirerLigne": "Remove row {ligne}",
+      "ajouterColonne": "Add a column",
+      "ajouterLigne": "+ Row"
+    },
     "poignee": "Reorder this block",
     "poigneeTitre": "Drag to reorder, or Enter then arrow keys",
     "replier": "Collapse",

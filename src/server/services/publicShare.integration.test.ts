@@ -44,6 +44,8 @@ describe.skipIf(!hasCreds)("publicShare (integration, base reelle)", () => {
   let imageBlockGmId = "";
   let imageBlockOnHiddenEntityId = "";
   let assetId = "";
+  let mainEntityId = "";
+  let hiddenEntityIdForRefs = "";
 
   async function insertTestShareLink(): Promise<string> {
     const token = generateShareToken();
@@ -74,6 +76,7 @@ describe.skipIf(!hasCreds)("publicShare (integration, base reelle)", () => {
       .single();
     if (entityError || !entity) throw new Error(entityError?.message ?? "creation entite echouee");
     const entityId = entity.id;
+    mainEntityId = entityId;
 
     // Un bloc `text` public contenant un segment public ET un segment gm
     // (SCHEMA.md §7.1, exemple Bram) — teste que la visibilite du bloc ne
@@ -134,6 +137,7 @@ describe.skipIf(!hasCreds)("publicShare (integration, base reelle)", () => {
       .select("id")
       .single();
     if (hiddenError || !hiddenEntity) throw new Error(hiddenError?.message ?? "creation fiche masquee echouee");
+    hiddenEntityIdForRefs = hiddenEntity.id;
 
     const { data: asset, error: assetError } = await admin
       .from("assets")
@@ -271,5 +275,32 @@ describe.skipIf(!hasCreds)("publicShare (integration, base reelle)", () => {
     const resolved = await resolveShareLink(token);
     expect(resolved?.worldId).toBe(worldId);
     expect(resolved?.scope).toBe("public_only");
+  });
+
+  it("V3.1-66 — une mention d'Encadré ne devient un lien que vers une fiche visible du visiteur", async () => {
+    const { error } = await admin.from("blocks").insert({
+      entity_id: mainEntityId,
+      block_type: "infobox",
+      display: { label: "Encadré cité", layout: "key_values" },
+      visibility_level: "public",
+      display_order: 900,
+      created_by: userId,
+      data: {
+        __v: 1,
+        entries: [
+          { label: "Voisine", value: [{ t: "text", v: "Voir " }, { t: "ref", kind: "entity", id: mainEntityId, label: "Entite de test" }] },
+          { label: "Cachée", value: [{ t: "ref", kind: "entity", id: hiddenEntityIdForRefs, label: "Libellé écrit par l'auteur" }] },
+        ],
+      },
+    });
+    if (error) throw new Error(error.message);
+    const token = await insertTestShareLink();
+    const resolved = await resolveShareLink(token);
+    const detail = await getPublicEntityDetail(resolved!.worldId, entitySlug);
+    const bloc = detail!.blocks.find((b) => b.display.label === "Encadré cité") as { textRefs?: Record<string, unknown> } | undefined;
+    expect(bloc).toBeDefined();
+    // La fiche visible est résolue (lien) ; la fiche masquée ne l'est pas : son slug ne part jamais.
+    expect(Object.keys(bloc!.textRefs ?? {})).toEqual([mainEntityId]);
+    expect(JSON.stringify(detail)).not.toContain("fiche-masquee");
   });
 });

@@ -355,7 +355,7 @@ Neuf planches, en deux rangées sur le canevas : les briques (1 à 7), puis les 
 |---|---|
 | 1 · Fondations | jetons de couleur, typographie (Outfit, Geist, Geist Mono), rayons |
 | 2 · Boutons et champs | boutons (principal, secondaire, fantôme, destructeur, lien de suppression, rond à icône), champ, date et heure natives, `Dropdown`, `Checkbox`, interrupteur |
-| 3 · Onglets, puces, menus | `Tabs` (pilule glissante), puces, puces d'entité et de relation, `ActionsMenu`, en-tête de bloc (`BlockCard`), pastille de visibilité, palette en familles, œil, arborescence, `rail repliable` (`Rail`), rail du joueur, palette de commandes, radio |
+| 3 · Onglets, puces, menus | `Tabs` (pilule glissante), puces, puces d'entité et de relation, `ActionsMenu`, en-tête de bloc (`BlockCard`), pastille de visibilité, blocs Encadré et Tableau, palette en familles, œil, arborescence, `rail repliable` (`Rail`), rail du joueur, palette de commandes, radio |
 | 4 · Surfaces et retours | `ConfirmDialog`, panneaux et `EmptyState`, ascenseur, info-bulle, aperçu de renvoi, bulles de chat, bandeaux et badges, volets à onglets, pastille chrome |
 | 5 · Éléments d'écran | grille de disponibilités, curseur horaire, curseur natif, `Stepper`, bouton de dés et volet, barres, chargement, texte de fiche |
 | 6 · Fiche de personnage | bouclier de CA, `StatBadge`, caractéristiques et sauvegardes, compétences et pastilles de maîtrise, `ActionButton`, `DieIcon`, égaliseur (emplacements, pacte et ressources), carte d'objet, états, bouton de jet de monstre, jauge à commandes (`CommandeE`), jets contre la mort (`BlocMourant`), nom de règle (`NomDeRegle`) |

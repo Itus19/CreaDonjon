@@ -2,6 +2,51 @@
 
 ---
 
+### ☑ V3.1-66 — Blocs Encadré et Tableau · `M` · sans modèle IA — **fait le 25 octobre (ADR 0067)**
+
+**Modèle conseillé : Sonnet** — décisions prises ; une seule à trancher dans le ticket (tranchée ci-dessous).
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Planche** : `Blocs-Recit-Decide.dc.html`, cartes « Encadré » et
+« Tableau ». **Départ** : `components/blocks/InfoboxBlockEditor.tsx`,
+`components/blocks/CustomTableBlockEditor.tsx`,
+`src/core/schemas/blocks/infobox.ts`, `customTable.ts`. **Dépend de** : 63.
+
+**Encadré — ce qui est décidé**
+- Les lignes se **lisent comme dans le wiki** (intitulé à gauche, valeur à
+  droite) et **s'éditent sur place** (toucher l'intitulé ou la valeur) ;
+  ⠿ pour réordonner ; × au survol pour retirer ; « + ligne ».
+- **« @ » dans une valeur cite une fiche** (même mention que dans le texte).
+- **Intitulés suggérés selon le type de fiche** : en tapant un intitulé, une
+  liste propose ceux du type (PNJ : Race, Âge, Rôle, Allégeance… ; Lieu :
+  Région, Population, Dirigeant… ; Faction : Siège, Chef, Fondation…).
+  **Tranché ici : une constante dans le fichier de libellés**, clé = genre
+  d'entité (`entityKind`), pas une table en base (rien à migrer ; à revoir
+  au troisième besoin de personnalisation). Pour un genre sans liste : pas
+  de suggestion.
+
+**Tableau — ce qui est décidé**
+- Un **vrai tableau** (`<table>` accessible) éditable en cellules.
+- × de colonne (dans l'en-tête) et × de ligne (au bout) **au survol** ;
+  « + » au bout des en-têtes pour une colonne, « + Ligne » dessous.
+
+**Critères d'acceptation**
+- [x] Encadré : réordonner, éditer sur place, « @ » qui crée une vraie mention (même test que le texte).
+- [x] Les suggestions dépendent du genre de la fiche (test de la fonction de suggestion).
+- [x] Tableau : ajouter et retirer lignes et colonnes ; navigation au clavier entre cellules (Tab).
+
+**Réalisé** (Sonnet pour les éditeurs, Opus pour la mention et un défaut d'affichage)
+- Encadré : lecture comme au wiki, édition sur place, ⠿ souris et clavier, × au survol et au focus, « + Ligne », intitulés proposés selon le genre (`lib/ui/encadre.ts`, testé ; listes dans les libellés, en pastilles comme la planche).
+- **Mention « @ »** (ADR 0067, choix de l'auteur : des nœuds comme le texte) : `zInfoboxValue` = chaîne ou nœuds ; champ `ValeurAvecMentions` (liste des fiches, flèches, Entrée, Échap ; mention en pastille avec ×) ; saisie pure testée (`lib/ui/mentionValeur.ts`) ; résolution serveur comme le texte (wiki public et vue joueur) ; test d'intégration : une fiche masquée citée ne devient jamais un lien.
+- Tableau : vrai `<table>`, × de colonne et de ligne au survol et au focus, « + » et « + Ligne », Tab de cellule en cellule, noms de colonne en double suffixés (« Prix 2 ») (`lib/ui/tableauBloc.ts`, testé).
+- **Défaut ancien corrigé** (vu en vérifiant, présent avant V3.1-63 et en production) : un bloc Image, Encadré ou Tableau ajouté n'apparaissait qu'après rechargement — son éditeur, chargé à la demande, suspendait la carte sans frontière. Le corps de chaque carte est désormais dans un `Suspense`.
+- Vérifié au navigateur sur une fiche Lieu de test (supprimée) : suggestions, mention enregistrée en nœuds, colonnes et lignes ajoutées et retirées, Tab.
+
+*Écart* : les intitulés proposés sont des pastilles (planche) plutôt qu'une liste sous le champ (ticket).
+
+---
+
 ### ☑ V3.1-64 — La pastille de visibilité au toucher, avec « Annuler » · `S` · sans modèle IA — **fait le 25 octobre**
 
 **Modèle conseillé : Sonnet** — comportement entièrement décrit ; route existante.

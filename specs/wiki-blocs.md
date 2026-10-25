@@ -40,7 +40,7 @@ Même enveloppe que les blocs de règles (`block_type`, `schema_version`, `displ
 | Bloc | Layout | Contenu |
 |---|---|---|
 | `description` | `prose` | segments narratifs avec liens et visibilité par segment |
-| `infobox` | `key_values` | l'encadré classique : population, fondation, dirigeant, climat |
+| `infobox` | `key_values` | l'encadré classique : population, fondation, dirigeant, climat ; une valeur peut citer une fiche par « @ » (nœuds, ADR 0067) |
 | `gallery` | `gallery` | images avec légendes, une en portrait |
 | `custom_table` | `table` | l'échappatoire, dès le premier jour |
 
