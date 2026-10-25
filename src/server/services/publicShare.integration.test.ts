@@ -303,4 +303,30 @@ describe.skipIf(!hasCreds)("publicShare (integration, base reelle)", () => {
     expect(Object.keys(bloc!.textRefs ?? {})).toEqual([mainEntityId]);
     expect(JSON.stringify(detail)).not.toContain("fiche-masquee");
   });
+
+  it("V3.1-68 — un événement MJ de la Chronologie d'une fiche ne part jamais au visiteur ; l'événement public, si", async () => {
+    const date = { year: 1492, month: null, day: null, precision: "year", end: null, label: null };
+    const { error } = await admin.from("blocks").insert({
+      entity_id: mainEntityId,
+      block_type: "timeline",
+      display: { label: "Chronologie testée", layout: "timeline" },
+      visibility_level: "public",
+      display_order: 950,
+      created_by: userId,
+      data: {
+        __v: 1,
+        entries: [
+          { id: "pub", date, kind: "founding", title: "EVENEMENT_PUBLIC_68", summary: "", visibility: { level: "public", scopeId: null } },
+          { id: "mj", date, kind: "betrayal", title: "EVENEMENT_MJ_68", summary: "RESUME_MJ_68", visibility: { level: "gm", scopeId: null } },
+        ],
+      },
+    });
+    if (error) throw new Error(error.message);
+    const token = await insertTestShareLink();
+    const resolved = await resolveShareLink(token);
+    const raw = JSON.stringify(await getPublicEntityDetail(resolved!.worldId, entitySlug));
+    expect(raw).toContain("EVENEMENT_PUBLIC_68");
+    expect(raw).not.toContain("EVENEMENT_MJ_68");
+    expect(raw).not.toContain("RESUME_MJ_68");
+  });
 });

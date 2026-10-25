@@ -1257,6 +1257,42 @@
     "enAttente": "En attente de la sauvegarde…"
   },
   "fiche": {
+    "chronologie": {
+      "genres": {
+        "birth": "Naissance",
+        "death": "Mort",
+        "war": "Guerre",
+        "battle": "Bataille",
+        "founding": "Fondation",
+        "discovery": "Découverte",
+        "meeting": "Rencontre",
+        "oath": "Serment",
+        "betrayal": "Trahison",
+        "trauma": "Traumatisme",
+        "disaster": "Catastrophe",
+        "custom": "Autre"
+      },
+      "axe": "Axe du temps",
+      "axeAide": "Toucher l'axe pour ajouter un événement à cette date ; glisser pour une période. Le trait doré : aujourd'hui en jeu.",
+      "aujourdhui": "Aujourd'hui en jeu",
+      "periode": "{titre} (période)",
+      "sansTitre": "cet événement",
+      "aucun": "Aucun événement pour l'instant.",
+      "ajouter": "+ Événement",
+      "titrePlaceholder": "Titre de l'événement",
+      "titreLabel": "Titre de l'événement",
+      "resumePlaceholder": "Résumé (facultatif)",
+      "resumeLabel": "Résumé de « {titre} »",
+      "genre": "Genre de « {titre} »",
+      "supprimer": "Supprimer",
+      "supprimerLabel": "Supprimer « {titre} »",
+      "faireFiche": "→ en faire une fiche",
+      "faireFicheEnCours": "Création…",
+      "faireFicheLabel": "Faire une fiche de « {titre} »",
+      "voirFiche": "◆ {nom}",
+      "voirFicheLabel": "Voir la fiche « {nom} »",
+      "erreurFiche": "Impossible d'en faire une fiche."
+    },
     "image": {
       "url": "Adresse de l'image",
       "urlPlaceholder": "https://…",

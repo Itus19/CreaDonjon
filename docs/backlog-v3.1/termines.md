@@ -2,6 +2,44 @@
 
 ---
 
+### ☑ V3.1-68 — Bloc Chronologie : l'axe en bande et une ligne par événement · `M` · sans modèle IA — **fait le 25 octobre**
+
+**Modèle conseillé : Sonnet** — dessin décidé, schéma inchangé.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Planche** : `Blocs-Recit-Decide.dc.html`, carte « Chronologie ».
+**Départ** : `components/blocks/TimelineBlockEditor.tsx`,
+`components/entities/timeline/`, `src/core/schemas/blocks/timeline.ts`,
+`components/shared/useWorldCalendar.ts`. **Dépend de** : 63, 64.
+
+**Ce qui est décidé**
+- En tête, **l'axe en bande** : les périodes (ères) en segments nommés, les
+  événements en points, **le jour actuel en trait doré** (date du jour du
+  calendrier du monde ; pas de trait si le MJ ne l'a pas réglée).
+- Dessous, **une ligne par événement** : date, titre, **genre en pastille**
+  (`kind`), **visibilité en pastille** (`VisibilityPill` de V3.1-64, un
+  événement MJ n'est jamais envoyé à un joueur), et « → en faire une
+  fiche » (crée une entité liée, même service que « Créer une fiche » du
+  texte).
+
+**Critères d'acceptation**
+- [x] Le trait doré tombe sur la date du jour du monde ; absent sans date.
+- [x] La pastille d'un événement suit le cycle de V3.1-64 ; un événement MJ n'arrive pas au joueur (test serveur).
+- [x] « → en faire une fiche » crée l'entité et lie l'événement.
+
+**Réalisé** (Sonnet, relu et corrigé par Opus)
+- Axe en bande (`AxeBande`, positions pures testées dans `lib/ui/axeBande.ts`) : ères en segments, périodes en barres, événements en points, trait doré à la date du jour du monde (absent sans date) ; toucher l'axe ajoute un point, glisser une période.
+- Une ligne par événement : genre en pastille, date, titre, `VisibilityPill` (écriture optimiste, « Privé » sauté hors auteur), « → en faire une fiche » par la route de promotion existante, puis « ◆ nom ».
+- Test serveur ajouté (Opus) : un événement MJ de la Chronologie d'une fiche ne part jamais au visiteur du wiki public, l'événement public si (`publicShare.integration.test.ts`).
+- Défaut corrigé en vérifiant (Opus) : « → en faire une fiche » échouait (409). Le bouton se désactivait pendant l'envoi, perdait le focus, et la carte s'enregistrait « à la perte du focus » en même temps : la promotion arrivait avec une version périmée. Le bouton reste focusable, se dit occupé et ignore le second clic.
+- Colonne du genre de largeur fixe (les titres se décalaient).
+- Vérifié au navigateur (fiches de test supprimées) : pastille Public → Joueurs enregistrée, promotion qui crée la fiche et lie l'événement.
+
+*Écarts* : plus de zoom ni de panoramique dans l'éditeur (bande fixe de la planche) ; couleurs de genre regroupées en cinq jetons.
+
+---
+
 ### ☑ V3.1-67 — Bloc Image : la barre flottante et l'aperçu dans le texte (B) · `M` · sans modèle IA — **fait le 25 octobre**
 
 **Modèle conseillé : Sonnet** — tous les champs existent déjà ; c'est l'interface.

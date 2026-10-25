@@ -1256,6 +1256,42 @@
     "enAttente": "Waiting for the saving throw…"
   },
   "fiche": {
+    "chronologie": {
+      "genres": {
+        "birth": "Birth",
+        "death": "Death",
+        "war": "War",
+        "battle": "Battle",
+        "founding": "Founding",
+        "discovery": "Discovery",
+        "meeting": "Meeting",
+        "oath": "Oath",
+        "betrayal": "Betrayal",
+        "trauma": "Trauma",
+        "disaster": "Disaster",
+        "custom": "Other"
+      },
+      "axe": "Timeline axis",
+      "axeAide": "Tap the axis to add an event at that date; drag for a period. The golden line: today in the game.",
+      "aujourdhui": "Today in the game",
+      "periode": "{titre} (period)",
+      "sansTitre": "this event",
+      "aucun": "No events yet.",
+      "ajouter": "+ Event",
+      "titrePlaceholder": "Event title",
+      "titreLabel": "Event title",
+      "resumePlaceholder": "Summary (optional)",
+      "resumeLabel": "Summary of \u201c{titre}\u201d",
+      "genre": "Kind of \u201c{titre}\u201d",
+      "supprimer": "Delete",
+      "supprimerLabel": "Delete \u201c{titre}\u201d",
+      "faireFiche": "→ make it a page",
+      "faireFicheEnCours": "Creating…",
+      "faireFicheLabel": "Make a page of \u201c{titre}\u201d",
+      "voirFiche": "◆ {nom}",
+      "voirFicheLabel": "Open the page \u201c{nom}\u201d",
+      "erreurFiche": "Could not make a page of it."
+    },
     "image": {
       "url": "Image address",
       "urlPlaceholder": "https://…",

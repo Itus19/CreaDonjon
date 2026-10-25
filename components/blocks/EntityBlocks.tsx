@@ -171,6 +171,7 @@ export function BlockDataEditor({
   hideAiAssist,
   siblings,
   entityKind,
+  onEnregistrer,
 }: {
   block: BlockItem;
   onChange: (data: unknown) => void;
@@ -199,6 +200,8 @@ export function BlockDataEditor({
   siblings: BlockItem[];
   /** V3.1-66 : genre de la fiche, pour les intitulés proposés par le bloc Encadré. */
   entityKind?: string;
+  /** V3.1-68 : ecrit TOUT DE SUITE ce contenu par le chemin d'enregistrement du bloc, `true` si le serveur l'accepte (pastille de visibilite d'un evenement de la Chronologie). Absent dans l'editeur plein ecran. */
+  onEnregistrer?: (data: unknown) => Promise<boolean>;
 }) {
   switch (block.blockType) {
     case "text":
@@ -366,6 +369,8 @@ export function BlockDataEditor({
           otherEntities={otherEntities}
           onChange={(d) => onChange(d)}
           onBlockRefreshed={onBlockRefreshed}
+          onEnregistrer={onEnregistrer}
+          nonAuteur={block.nonAuteur}
         />
       );
     case "map":
@@ -1446,6 +1451,7 @@ function SortableBlockCard({
               hideAiAssist={hideAiAssist}
               siblings={siblings}
               entityKind={entityKind}
+              onEnregistrer={(data) => onSaveBlock(block.id, { data })}
             />
           )
         )}
