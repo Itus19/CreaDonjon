@@ -2,17 +2,7 @@
 
 import { useRef, useState } from "react";
 import { WORLDVIEW_POLE_KEYS, type WorldviewPoleKey } from "@/src/core/psyche/keys";
-import { WORLDVIEW_POLE_DESCRIPTIONS_FR } from "@/src/i18n/fr";
-
-const POLE_ENDS_FR: Record<WorldviewPoleKey, { positive: string; negative: string }> = {
-  order_freedom: { positive: "Liberté", negative: "Ordre" },
-  mercy_justice: { positive: "Justice", negative: "Miséricorde" },
-  sacred_profane: { positive: "Profane", negative: "Sacré" },
-  tradition_progress: { positive: "Progrès", negative: "Tradition" },
-  individual_collective: { positive: "Collectif", negative: "Individu" },
-  wealth_honor: { positive: "Honneur", negative: "Richesse" },
-  peace_force: { positive: "Force", negative: "Paix" },
-};
+import { WORLDVIEW_POLE_DESCRIPTIONS_FR, WORLDVIEW_POLES_FR } from "@/src/i18n/fr";
 
 /** Curseurs -100/+100 du bloc `worldview` (V2-H1) — meme discipline que `PersonalityPoleSliders` : commit au relachement seulement. */
 export default function WorldviewPoleSliders({
@@ -85,19 +75,19 @@ export default function WorldviewPoleSliders({
       {WORLDVIEW_POLE_KEYS.map((key) => {
         const stored = poles.find((p) => p.key === key)?.value ?? 0;
         const value = valueOf(key, stored);
-        const ends = POLE_ENDS_FR[key];
+        const ends = WORLDVIEW_POLES_FR[key];
         return (
           <div key={key} className="flex flex-col gap-0.5">
             <div
               className="grid grid-cols-[1fr_auto_1fr] items-center text-[10px] text-ink-muted"
               title={WORLDVIEW_POLE_DESCRIPTIONS_FR[key]}
             >
-              <span className="text-left">{ends.negative}</span>
+              <span className="text-left">{ends.negative.label}</span>
               {/* Retour utilisateur : valeur centree et alignee verticalement
                   d'un pole a l'autre — voir PersonalityPoleSliders.tsx pour
                   le detail (colonnes exterieures egales, largeur fixe). */}
               <span className="w-10 text-center font-mono text-ink">{value}</span>
-              <span className="text-right">{ends.positive}</span>
+              <span className="text-right">{ends.positive.label}</span>
             </div>
             <input
               type="range"

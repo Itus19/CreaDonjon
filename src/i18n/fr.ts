@@ -34,6 +34,8 @@ import { ABILITY_LABELS, type ModifierOp, type Skill } from "@/src/core/rules/sh
 import { modifierTargetOption, type ModifierTargetCategory } from "@/src/core/rules/modifierTargets";
 import type { LanguageKey } from "@/src/core/rules/srdMapping";
 import type { IntentVerb } from "@/src/core/rules/intent";
+import type { PersonalityPoleKey, WorldviewPoleKey } from "@/src/core/psyche/keys";
+import type { PoleEnds } from "@/src/core/psyche/poles";
 
 /**
  * V3-B1 — Les verbes que la barre d'intention reconnait.
@@ -659,7 +661,7 @@ export const RELATION_LABELS_FR: Record<string, string> = {
  */
 export const PERSONALITY_POLE_DESCRIPTIONS_FR: Record<string, string> = {
   curiosity_caution:
-    "Curiosite : cherche a explorer, questionner, ouvrir ce qui est ferme. Prudence : prefere le connu, evalue le risque avant d'agir.",
+    "Curiosité : cherche à explorer, questionner, ouvrir ce qui est fermé. Circonspection : préfère le connu, évalue le risque avant d'agir.",
   altruism_selfishness:
     "Altruisme : place le bien d'autrui avant le sien. Egoisme : priorise son propre interet, quitte a sacrifier celui des autres.",
   empathy_hardness:
@@ -710,9 +712,115 @@ export const WORLDVIEW_POLE_DESCRIPTIONS_FR: Record<string, string> = {
   individual_collective:
     "Individu : fait primer la liberte et les besoins de la personne. Collectif : fait primer l'interet et la cohesion du groupe.",
   wealth_honor:
-    "Richesse : mesure la reussite a l'accumulation de biens ou de pouvoir. Honneur : la mesure au respect de sa parole et de sa reputation.",
+    "Profit : mesure la réussite à l'accumulation de biens ou de pouvoir. Honneur : la mesure au respect de sa parole et de sa réputation.",
   peace_force:
     "Paix : privilegie le dialogue et la resolution non violente. Force : considere la violence comme un moyen legitime ou necessaire.",
+};
+
+/**
+ * V3.1-69 — LA source des libellés de pôles (personnalité, convictions). Les
+ * composants de `components/` la lisent et n'ont plus de table à eux.
+ *
+ * - `positive` / `negative` : les deux bouts (côté +100 / côté −100), chacun
+ *   avec son GENRE grammatical, qui accorde « léger / fort / extrême »
+ *   (`poleBandLabel`, `src/core/psyche/poles.ts`) — une donnée, jamais
+ *   devinée ;
+ * - `label` : le titre complet « A ↔ B » des curseurs et des tableaux ;
+ * - `radar` : le mot court posé au bout de l'axe du radar et dans les deltas
+ *   des souvenirs.
+ *
+ * Les clés (`curiosity_caution`, `wealth_honor`…) ne changent jamais : seuls
+ * les libellés ont été renommés (« Circonspection ↔ Curiosité » pour
+ * `curiosity_caution`, fin du doublon « Prudence » avec `impulse_prudence` ;
+ * « Profit ↔ Honneur » pour `wealth_honor`).
+ */
+export interface PoleDisplayFr extends PoleEnds {
+  label: string;
+  radar: string;
+}
+
+export const PERSONALITY_POLES_FR: Record<PersonalityPoleKey, PoleDisplayFr> = {
+  curiosity_caution: {
+    label: "Circonspection ↔ Curiosité",
+    radar: "Curiosité",
+    positive: { label: "Curiosité", gender: "f" },
+    negative: { label: "Circonspection", gender: "f" },
+  },
+  altruism_selfishness: {
+    label: "Altruisme ↔ Égoïsme",
+    radar: "Altruisme",
+    positive: { label: "Altruisme", gender: "m" },
+    negative: { label: "Égoïsme", gender: "m" },
+  },
+  empathy_hardness: {
+    label: "Empathie ↔ Dureté",
+    radar: "Empathie",
+    positive: { label: "Empathie", gender: "f" },
+    negative: { label: "Dureté", gender: "f" },
+  },
+  impulse_prudence: {
+    label: "Impulsivité ↔ Prudence",
+    radar: "Impulsivité",
+    positive: { label: "Impulsivité", gender: "f" },
+    negative: { label: "Prudence", gender: "f" },
+  },
+  extraversion_reserve: {
+    label: "Extraversion ↔ Réserve",
+    radar: "Extraversion",
+    positive: { label: "Extraversion", gender: "f" },
+    negative: { label: "Réserve", gender: "f" },
+  },
+  authority_independence: {
+    label: "Autorité ↔ Indépendance",
+    radar: "Autorité",
+    positive: { label: "Autorité", gender: "f" },
+    negative: { label: "Indépendance", gender: "f" },
+  },
+};
+
+export const WORLDVIEW_POLES_FR: Record<WorldviewPoleKey, PoleDisplayFr> = {
+  order_freedom: {
+    label: "Ordre ↔ Liberté",
+    radar: "Ordre",
+    positive: { label: "Liberté", gender: "f" },
+    negative: { label: "Ordre", gender: "m" },
+  },
+  mercy_justice: {
+    label: "Miséricorde ↔ Justice",
+    radar: "Miséricorde",
+    positive: { label: "Justice", gender: "f" },
+    negative: { label: "Miséricorde", gender: "f" },
+  },
+  sacred_profane: {
+    label: "Sacré ↔ Profane",
+    radar: "Sacré",
+    positive: { label: "Profane", gender: "m" },
+    negative: { label: "Sacré", gender: "m" },
+  },
+  tradition_progress: {
+    label: "Tradition ↔ Progrès",
+    radar: "Tradition",
+    positive: { label: "Progrès", gender: "m" },
+    negative: { label: "Tradition", gender: "f" },
+  },
+  individual_collective: {
+    label: "Individu ↔ Collectif",
+    radar: "Individu",
+    positive: { label: "Collectif", gender: "m" },
+    negative: { label: "Individu", gender: "m" },
+  },
+  wealth_honor: {
+    label: "Profit ↔ Honneur",
+    radar: "Profit",
+    positive: { label: "Honneur", gender: "m" },
+    negative: { label: "Profit", gender: "m" },
+  },
+  peace_force: {
+    label: "Paix ↔ Force",
+    radar: "Paix",
+    positive: { label: "Force", gender: "f" },
+    negative: { label: "Paix", gender: "f" },
+  },
 };
 
 export const QUEST_STATE_LABELS_FR: Record<string, string> = {

@@ -6,16 +6,7 @@ import WorldviewPoleSliders from "@/components/entities/psyche/WorldviewPoleSlid
 import WorldviewEventTable from "@/components/entities/psyche/WorldviewEventTable";
 import { WORLDVIEW_POLE_KEYS, type WorldviewPoleKey } from "@/src/core/psyche/keys";
 import type { WorldviewBlockData } from "@/src/core/schemas/blocks/worldview";
-
-const POLE_LABELS_FR: Record<WorldviewPoleKey, string> = {
-  order_freedom: "Ordre ↔ Liberté",
-  mercy_justice: "Miséricorde ↔ Justice",
-  sacred_profane: "Sacré ↔ Profane",
-  tradition_progress: "Tradition ↔ Progrès",
-  individual_collective: "Individu ↔ Collectif",
-  wealth_honor: "Richesse ↔ Honneur",
-  peace_force: "Paix ↔ Force",
-};
+import { WORLDVIEW_POLES_FR } from "@/src/i18n/fr";
 
 /**
  * Bloc `worldview` (V2-H1) : convictions morales/politiques, meme
@@ -67,7 +58,7 @@ export default function WorldviewBlockEditor({
   async function commitSlider(key: WorldviewPoleKey, delta: number) {
     setSliderPending(true);
     setSliderError(null);
-    const summary = `Réglage manuel : ${POLE_LABELS_FR[key].split(" ↔ ")[0]} ${delta > 0 ? "+" : ""}${delta}`;
+    const summary = `Réglage manuel : ${WORLDVIEW_POLES_FR[key].radar} ${delta > 0 ? "+" : ""}${delta}`;
     const res = await fetch(`/api/blocks/${blockId}/worldview-event`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -121,7 +112,7 @@ export default function WorldviewBlockEditor({
                 }`}
               >
                 {rank >= 0 ? `${rank + 1}. ` : ""}
-                {POLE_LABELS_FR[key].split(" ↔ ")[0]}
+                {WORLDVIEW_POLES_FR[key].radar}
               </button>
             );
           })}

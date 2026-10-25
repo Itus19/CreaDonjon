@@ -1,15 +1,6 @@
 import { PERSONALITY_POLE_KEYS, type PersonalityPoleKey } from "@/src/core/psyche/keys";
 import type { PersonalityArchetype } from "@/src/core/psyche/archetype";
-import { PERSONALITY_POLE_DESCRIPTIONS_FR } from "@/src/i18n/fr";
-
-const AXIS_LABELS_FR: Record<PersonalityPoleKey, string> = {
-  curiosity_caution: "Curiosité",
-  altruism_selfishness: "Altruisme",
-  empathy_hardness: "Empathie",
-  impulse_prudence: "Impulsivité",
-  extraversion_reserve: "Extraversion",
-  authority_independence: "Autorité",
-};
+import { PERSONALITY_POLE_DESCRIPTIONS_FR, PERSONALITY_POLES_FR } from "@/src/i18n/fr";
 
 const SIZE = 240;
 const CENTER = SIZE / 2;
@@ -77,7 +68,7 @@ export default function PersonalityRadar({
               className="fill-[var(--ink-muted)] text-[9px]"
             >
               <title>{PERSONALITY_POLE_DESCRIPTIONS_FR[key]}</title>
-              {AXIS_LABELS_FR[key]}
+              {PERSONALITY_POLES_FR[key].radar}
             </text>
           );
         })}

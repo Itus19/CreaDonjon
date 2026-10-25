@@ -2,16 +2,7 @@
 
 import { useRef, useState } from "react";
 import { PERSONALITY_POLE_KEYS, type PersonalityPoleKey } from "@/src/core/psyche/keys";
-import { PERSONALITY_POLE_DESCRIPTIONS_FR } from "@/src/i18n/fr";
-
-const POLE_ENDS_FR: Record<PersonalityPoleKey, { positive: string; negative: string }> = {
-  curiosity_caution: { positive: "Curiosité", negative: "Prudence" },
-  altruism_selfishness: { positive: "Altruisme", negative: "Égoïsme" },
-  empathy_hardness: { positive: "Empathie", negative: "Dureté" },
-  impulse_prudence: { positive: "Impulsivité", negative: "Prudence" },
-  extraversion_reserve: { positive: "Extraversion", negative: "Réserve" },
-  authority_independence: { positive: "Autorité", negative: "Indépendance" },
-};
+import { PERSONALITY_POLE_DESCRIPTIONS_FR, PERSONALITY_POLES_FR } from "@/src/i18n/fr";
 
 /**
  * Curseurs -100/+100 du bloc `personality` (V2-H1) — reglage manuel, mais
@@ -97,14 +88,14 @@ export default function PersonalityPoleSliders({
       {PERSONALITY_POLE_KEYS.map((key) => {
         const stored = poles.find((p) => p.key === key)?.value ?? 0;
         const value = valueOf(key, stored);
-        const ends = POLE_ENDS_FR[key];
+        const ends = PERSONALITY_POLES_FR[key];
         return (
           <div key={key} className="flex flex-col gap-0.5">
             <div
               className="grid grid-cols-[1fr_auto_1fr] items-center text-[10px] text-ink-muted"
               title={PERSONALITY_POLE_DESCRIPTIONS_FR[key]}
             >
-              <span className="text-left">{ends.negative}</span>
+              <span className="text-left">{ends.negative.label}</span>
               {/* Largeur fixe + centrage (retour utilisateur : les valeurs
                   n'etaient pas alignees verticalement) — avec `justify-
                   between`, la position de la valeur suivait la longueur des
@@ -113,7 +104,7 @@ export default function PersonalityPoleSliders({
                   du milieu reste au centre mathematique de la ligne, quelle
                   que soit la longueur de "Curiosite" ou "Autorite". */}
               <span className="w-10 text-center font-mono text-ink">{value}</span>
-              <span className="text-right">{ends.positive}</span>
+              <span className="text-right">{ends.positive.label}</span>
             </div>
             <input
               type="range"

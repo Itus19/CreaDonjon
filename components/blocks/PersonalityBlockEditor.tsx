@@ -9,15 +9,7 @@ import PersonalityEventTable from "@/components/entities/psyche/PersonalityEvent
 import { archetypeFor } from "@/src/core/psyche/archetype";
 import { PERSONALITY_POLE_KEYS, type PersonalityPoleKey } from "@/src/core/psyche/keys";
 import type { Aspiration, PersonalityBlockData } from "@/src/core/schemas/blocks/personality";
-
-const POLE_LABELS_FR: Record<PersonalityPoleKey, string> = {
-  curiosity_caution: "Curiosité ↔ Prudence",
-  altruism_selfishness: "Altruisme ↔ Égoïsme",
-  empathy_hardness: "Empathie ↔ Dureté",
-  impulse_prudence: "Impulsivité ↔ Prudence",
-  extraversion_reserve: "Extraversion ↔ Réserve",
-  authority_independence: "Autorité ↔ Indépendance",
-};
+import { PERSONALITY_POLES_FR } from "@/src/i18n/fr";
 
 const HORIZON_OPTIONS = [
   { value: "life", label: "Toute une vie" },
@@ -120,7 +112,7 @@ export default function PersonalityBlockEditor({
   async function commitSlider(key: PersonalityPoleKey, delta: number) {
     setSliderPending(true);
     setSliderError(null);
-    const summary = `Réglage manuel : ${POLE_LABELS_FR[key].split(" ↔ ")[0]} ${delta > 0 ? "+" : ""}${delta}`;
+    const summary = `Réglage manuel : ${PERSONALITY_POLES_FR[key].radar} ${delta > 0 ? "+" : ""}${delta}`;
     const res = await fetch(`/api/blocks/${blockId}/personality-event`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -191,7 +183,7 @@ export default function PersonalityBlockEditor({
                 }`}
               >
                 {rank >= 0 ? `${rank + 1}. ` : ""}
-                {POLE_LABELS_FR[key].split(" ↔ ")[0]}
+                {PERSONALITY_POLES_FR[key].radar}
               </button>
             );
           })}

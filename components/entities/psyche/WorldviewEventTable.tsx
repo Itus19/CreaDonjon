@@ -9,18 +9,9 @@ import { useWorldCalendar } from "@/components/shared/useWorldCalendar";
 import type { GameDate } from "@/src/core/calendar/types";
 import { WORLDVIEW_POLE_KEYS, type WorldviewPoleKey } from "@/src/core/psyche/keys";
 import Checkbox from "@/components/shared/Checkbox";
+import { WORLDVIEW_POLES_FR } from "@/src/i18n/fr";
 
 const BLANK_DATE: GameDate = { year: 0, month: null, day: null, precision: "year", end: null, label: null };
-
-const POLE_LABELS_FR: Record<WorldviewPoleKey, string> = {
-  order_freedom: "Ordre ↔ Liberté",
-  mercy_justice: "Miséricorde ↔ Justice",
-  sacred_profane: "Sacré ↔ Profane",
-  tradition_progress: "Tradition ↔ Progrès",
-  individual_collective: "Individu ↔ Collectif",
-  wealth_honor: "Richesse ↔ Honneur",
-  peace_force: "Paix ↔ Force",
-};
 
 interface WorldviewEventInfo {
   id: string;
@@ -33,7 +24,7 @@ interface WorldviewEventInfo {
 
 function formatDeltas(deltas: Partial<Record<WorldviewPoleKey, number>>): string {
   return Object.entries(deltas)
-    .map(([key, delta]) => `${POLE_LABELS_FR[key as WorldviewPoleKey].split(" ↔ ")[0]} ${delta! > 0 ? "+" : ""}${delta}`)
+    .map(([key, delta]) => `${WORLDVIEW_POLES_FR[key as WorldviewPoleKey].radar} ${delta! > 0 ? "+" : ""}${delta}`)
     .join(", ");
 }
 
@@ -198,7 +189,7 @@ export default function WorldviewEventTable({
           <div key={row.id} className="flex items-center gap-2">
             <Dropdown
               value={row.key}
-              options={WORLDVIEW_POLE_KEYS.map((k) => ({ value: k, label: POLE_LABELS_FR[k] }))}
+              options={WORLDVIEW_POLE_KEYS.map((k) => ({ value: k, label: WORLDVIEW_POLES_FR[k].label }))}
               onChange={(v) => updateRow(row.id, { key: v as WorldviewPoleKey })}
               aria-label={`Pôle touché, ligne ${index + 1}`}
             />

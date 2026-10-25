@@ -5,19 +5,11 @@ import type { PersonalityPoleKey } from "@/src/core/psyche/keys";
 import type { PersonalityBlockData } from "@/src/core/schemas/blocks/personality";
 import type { PersonalityEventRow } from "@/src/server/repos/psyche";
 import type { CalendarConfigInput } from "@/src/core/schemas/calendar";
-
-const POLE_LABELS_FR: Record<PersonalityPoleKey, string> = {
-  curiosity_caution: "Curiosité",
-  altruism_selfishness: "Altruisme",
-  empathy_hardness: "Empathie",
-  impulse_prudence: "Impulsivité",
-  extraversion_reserve: "Extraversion",
-  authority_independence: "Autorité",
-};
+import { PERSONALITY_POLES_FR } from "@/src/i18n/fr";
 
 function formatDeltas(deltas: Partial<Record<PersonalityPoleKey, number>>): string {
   return Object.entries(deltas)
-    .map(([key, delta]) => `${POLE_LABELS_FR[key as PersonalityPoleKey] ?? key} ${delta! > 0 ? "+" : ""}${delta}`)
+    .map(([key, delta]) => `${PERSONALITY_POLES_FR[key as PersonalityPoleKey]?.radar ?? key} ${delta! > 0 ? "+" : ""}${delta}`)
     .join(", ");
 }
 

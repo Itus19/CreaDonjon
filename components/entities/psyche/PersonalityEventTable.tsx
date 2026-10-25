@@ -9,17 +9,9 @@ import { useWorldCalendar } from "@/components/shared/useWorldCalendar";
 import type { GameDate } from "@/src/core/calendar/types";
 import { PERSONALITY_POLE_KEYS, type PersonalityPoleKey } from "@/src/core/psyche/keys";
 import Checkbox from "@/components/shared/Checkbox";
+import { PERSONALITY_POLES_FR } from "@/src/i18n/fr";
 
 const BLANK_DATE: GameDate = { year: 0, month: null, day: null, precision: "year", end: null, label: null };
-
-const POLE_LABELS_FR: Record<PersonalityPoleKey, string> = {
-  curiosity_caution: "Curiosité ↔ Prudence",
-  altruism_selfishness: "Altruisme ↔ Égoïsme",
-  empathy_hardness: "Empathie ↔ Dureté",
-  impulse_prudence: "Impulsivité ↔ Prudence",
-  extraversion_reserve: "Extraversion ↔ Réserve",
-  authority_independence: "Autorité ↔ Indépendance",
-};
 
 interface PersonalityEventInfo {
   id: string;
@@ -32,7 +24,7 @@ interface PersonalityEventInfo {
 
 function formatDeltas(deltas: Partial<Record<PersonalityPoleKey, number>>): string {
   return Object.entries(deltas)
-    .map(([key, delta]) => `${POLE_LABELS_FR[key as PersonalityPoleKey].split(" ↔ ")[0]} ${delta! > 0 ? "+" : ""}${delta}`)
+    .map(([key, delta]) => `${PERSONALITY_POLES_FR[key as PersonalityPoleKey].radar} ${delta! > 0 ? "+" : ""}${delta}`)
     .join(", ");
 }
 
@@ -203,7 +195,7 @@ export default function PersonalityEventTable({
           <div key={row.id} className="flex items-center gap-2">
             <Dropdown
               value={row.key}
-              options={PERSONALITY_POLE_KEYS.map((k) => ({ value: k, label: POLE_LABELS_FR[k] }))}
+              options={PERSONALITY_POLE_KEYS.map((k) => ({ value: k, label: PERSONALITY_POLES_FR[k].label }))}
               onChange={(v) => updateRow(row.id, { key: v as PersonalityPoleKey })}
               aria-label={`Pôle touché, ligne ${index + 1}`}
             />

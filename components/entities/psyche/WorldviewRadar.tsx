@@ -1,15 +1,5 @@
 import { WORLDVIEW_POLE_KEYS, type WorldviewPoleKey } from "@/src/core/psyche/keys";
-import { WORLDVIEW_POLE_DESCRIPTIONS_FR } from "@/src/i18n/fr";
-
-const AXIS_LABELS_FR: Record<WorldviewPoleKey, string> = {
-  order_freedom: "Ordre",
-  mercy_justice: "Miséricorde",
-  sacred_profane: "Sacré",
-  tradition_progress: "Tradition",
-  individual_collective: "Individu",
-  wealth_honor: "Richesse",
-  peace_force: "Paix",
-};
+import { WORLDVIEW_POLE_DESCRIPTIONS_FR, WORLDVIEW_POLES_FR } from "@/src/i18n/fr";
 
 const SIZE = 240;
 const CENTER = SIZE / 2;
@@ -66,7 +56,7 @@ export default function WorldviewRadar({ poles }: { poles: { key: WorldviewPoleK
             className="fill-[var(--ink-muted)] text-[9px]"
           >
             <title>{WORLDVIEW_POLE_DESCRIPTIONS_FR[key]}</title>
-            {AXIS_LABELS_FR[key]}
+            {WORLDVIEW_POLES_FR[key].radar}
           </text>
         );
       })}

@@ -4,20 +4,11 @@ import { type WorldviewPoleKey } from "@/src/core/psyche/keys";
 import type { WorldviewBlockData } from "@/src/core/schemas/blocks/worldview";
 import type { PersonalityEventRow } from "@/src/server/repos/psyche";
 import type { CalendarConfigInput } from "@/src/core/schemas/calendar";
-
-const POLE_LABELS_FR: Record<WorldviewPoleKey, string> = {
-  order_freedom: "Ordre",
-  mercy_justice: "Miséricorde",
-  sacred_profane: "Sacré",
-  tradition_progress: "Tradition",
-  individual_collective: "Individu",
-  wealth_honor: "Richesse",
-  peace_force: "Paix",
-};
+import { WORLDVIEW_POLES_FR } from "@/src/i18n/fr";
 
 function formatDeltas(deltas: Partial<Record<WorldviewPoleKey, number>>): string {
   return Object.entries(deltas)
-    .map(([key, delta]) => `${POLE_LABELS_FR[key as WorldviewPoleKey] ?? key} ${delta! > 0 ? "+" : ""}${delta}`)
+    .map(([key, delta]) => `${WORLDVIEW_POLES_FR[key as WorldviewPoleKey]?.radar ?? key} ${delta! > 0 ? "+" : ""}${delta}`)
     .join(", ");
 }
 

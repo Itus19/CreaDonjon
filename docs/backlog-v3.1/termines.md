@@ -2,6 +2,56 @@
 
 ---
 
+### ☑ V3.1-69 — Noyau psyché : libellés uniques, bandes des pôles, tension, résumé · `S` · sans modèle IA — **fait le 25 octobre**
+
+**Modèle conseillé : Sonnet** — fonctions pures, tests d'abord.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Départ** : `src/core/psyche/` (`keys.ts`, `bands.ts`), et les libellés
+aujourd'hui **dupliqués** dans `components/entities/psyche/`
+(`PersonalityPoleSliders.tsx`, `WorldviewPoleSliders.tsx`,
+`WorldviewRadar.tsx`, `WorldviewEventTable.tsx`, `PersonalityRadar.tsx`).
+**Dépend de** : —.
+
+**Ce qui est décidé**
+1. **Une seule source pour les libellés des pôles** (personnalité,
+   convictions) dans `src/i18n/fr.ts`, à côté des descriptions existantes
+   (`PERSONALITY_POLE_DESCRIPTIONS_FR`, `WORLDVIEW_POLE_DESCRIPTIONS_FR`).
+   Les composants ne gardent plus leurs propres tables.
+2. **Deux renommages, libellés seulement** (clés et valeurs inchangées,
+   aucune migration) :
+   - `curiosity_caution` : « Circonspection ↔ Curiosité » (fin du doublon
+     « Prudence » avec `impulse_prudence`) — mettre aussi à jour la
+     description (« Circonspection : préfère le connu… ») ;
+   - `wealth_honor` : « Profit ↔ Honneur » (description : « Profit : … »).
+3. **Bandes nommées des pôles** : `poleBandLabel(ends, value)` → « neutre —
+   ne s'en soucie pas » (bande 0) ou « <pôle> <léger|fort|extrême> », le pôle
+   étant celui du côté de la valeur, l'adjectif **accordé** au genre du
+   pôle (Altruisme fort, Dureté légère, Circonspection extrême). Seuils :
+   `bandTierFor` existant (≤ −67, −34, −12, 11, 33, 66).
+4. **Tension faction** : `worldviewTension(entity, faction)` → l'axe au plus
+   grand écart en **crans** (différence des bandes), et l'écart ; tension
+   quand l'écart ≥ 3 (specs/psyche-pnj.md §2).
+5. **Résumé d'une relation** : `relationshipSummary(axes)` → les mots des
+   axes dont la bande vaut ±2 ou ±3, dans l'ordre des axes
+   (« aveugle, amical, admiratif et obligé ») ; « rien de marquant » s'il
+   n'y en a aucun. Mots : `RELATIONSHIP_AXIS_BAND_LABELS_FR` existant.
+
+**Critères d'acceptation**
+- [x] Tests : les sept bandes de deux pôles (accord masculin et féminin), les bornes exactes des seuils.
+- [x] Tests : tension à 2 crans (non), à 3 (oui), choix de l'axe le plus écarté.
+- [x] Tests : résumé vide, un mot, plusieurs mots (« a, b et c »).
+- [x] `grep` : plus aucune table de libellés de pôles dans `components/`.
+
+**Réalisé** (Sonnet, tests d'abord ; relu par Opus)
+- Source unique : `PERSONALITY_POLES_FR` et `WORLDVIEW_POLES_FR` (`src/i18n/fr.ts`) — libellé, mot court du radar, et les deux bouts avec leur genre grammatical en donnée ; les dix composants qui avaient leur table la lisent.
+- Renommages (libellés seulement) : « Circonspection ↔ Curiosité », « Profit ↔ Honneur », descriptions comprises.
+- `poleBandLabel` (accord du genre, « extrême » invariable), `worldviewTension` (écart en crans, seuil 3, pôles saisis des deux côtés seulement), `relationshipSummary` (« a, b et c »). Pas encore branchées : 70 à 73.
+- Opus : identifiants du noyau remis en anglais (`gap`, `gender`…).
+
+---
+
 ### ☑ V3.1-68 — Bloc Chronologie : l'axe en bande et une ligne par événement · `M` · sans modèle IA — **fait le 25 octobre**
 
 **Modèle conseillé : Sonnet** — dessin décidé, schéma inchangé.
