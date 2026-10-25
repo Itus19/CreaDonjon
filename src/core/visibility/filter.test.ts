@@ -36,6 +36,27 @@ describe("filterSegments", () => {
     const result = filterSegments(segments, owner);
     expect(result).toHaveLength(2);
   });
+
+  /**
+   * V3.1-65 : un passage « Joueurs » se distingue maintenant d'un passage MJ
+   * a l'ecran (lisere bleu contre terracotta). C'est de la mise en forme ;
+   * le filtrage ne change pas, et ces deux cas le verifient — un visiteur
+   * anonyme n'en recoit AUCUN des deux, texte compris. Sans quoi la
+   * distinction visuelle pourrait laisser croire que « Joueurs » est plus
+   * ouvert qu'il ne l'est.
+   */
+  it("un visiteur anonyme ne recoit ni le passage MJ ni le passage Joueurs", () => {
+    const joueurs: Segment[] = [
+      ...segments,
+      { id: "s3", text: "La table sait que le pont est mine.", visibility: { level: "players", scopeId: null, createdBy: null } },
+    ];
+    const anonyme: Viewer = { kind: "anonymous" };
+    const result = filterSegments(joueurs, anonyme);
+    expect(result.map((s) => s.id)).toEqual(["s1"]);
+    const serialized = JSON.stringify(result);
+    expect(serialized).not.toContain("guilde des voleurs");
+    expect(serialized).not.toContain("pont est mine");
+  });
 });
 
 describe("filterBlocks", () => {

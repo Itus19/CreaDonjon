@@ -1256,6 +1256,24 @@
     "enAttente": "Waiting for the saving throw…"
   },
   "fiche": {
+    "lettrine": "Drop cap",
+    "lettrineTitre": "Drop cap on the first paragraph",
+    "assistance": {
+      "titre": "AI assistance",
+      "consigne": "e.g. Add a paragraph describing the mood of this place.",
+      "consigneLabel": "Instruction for the AI",
+      "proposer": "Propose",
+      "generation": "Generating…",
+      "budget": "{restant} proposals left this hour.",
+      "budgetEpuise": "Budget used up for this hour.",
+      "enAttente": "AI proposal — nothing is written until you accept.",
+      "accepter": "Accept",
+      "refuser": "Decline",
+      "erreur": "Could not reach the local AI provider.",
+      "erreurBudget": "Too many proposals requested, try again in a few minutes.",
+      "rejetee": "Proposal rejected.",
+      "rejeteeBudget": "Proposal rejected (per-turn proposal limit reached)."
+    },
     "psyche": {
       "radarLabel": "Personality radar",
       "radarLabelConvictions": "Convictions radar",

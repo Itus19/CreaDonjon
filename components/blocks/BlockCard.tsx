@@ -7,6 +7,7 @@ import type { useSortable } from "@dnd-kit/sortable";
 import ActionsMenu, {
   type ActionsMenuItem,
 } from "@/components/shared/ActionsMenu";
+import LettrineBouton from "@/components/blocks/LettrineBouton";
 import VisibilityPill from "@/components/shared/VisibilityPill";
 import { useChangerVisibilite } from "@/components/shared/useChangerVisibilite";
 import { VISIBILITY_PILL_STYLES } from "@/components/shared/visibilityOptions";
@@ -39,6 +40,7 @@ export default function BlockCard({
   typeLibelle,
   etatSauvegarde,
   niveauVisibilite,
+  lettrine,
   nonAuteur = false,
   onChoisirVisibilite,
   peutMonter,
@@ -75,6 +77,14 @@ export default function BlockCard({
   niveauVisibilite: string;
   /** Met l'écran à jour aussitôt, écrit, remet l'ancienne valeur si le serveur refuse ; `true` si l'écriture a réussi (V3.1-64). */
   onChoisirVisibilite: (niveau: string) => Promise<boolean>;
+  /**
+   * V3.1-65 — bloc `text` seulement : la lettrine est un interrupteur
+   * d'en-tete, pas un reglage du corps. Elle vaut pour le bloc entier (un
+   * seul paragraphe concerne, toujours le premier), donc elle n'a rien a
+   * faire dans la bulle de selection ni dans le corps. `undefined` pour
+   * tous les autres blocs, qui n'affichent alors pas le bouton.
+   */
+  lettrine?: { active: boolean; onBasculer: () => void };
   peutMonter: boolean;
   peutDescendre: boolean;
   onMonter: () => void;
@@ -145,6 +155,7 @@ export default function BlockCard({
           onChange={(e) => onTitreChange(e.target.value)}
           className="block-title block-title-carte min-w-0 flex-1 bg-transparent outline-none placeholder:font-sans placeholder:text-base placeholder:font-normal placeholder:italic placeholder:text-ink-muted focus:border-b focus:border-accent"
         />
+        {lettrine && <LettrineBouton active={lettrine.active} onBasculer={lettrine.onBasculer} />}
         <span className="hidden shrink-0 rounded-full border border-edge px-2 py-0.5 text-xs text-ink-muted @min-[40rem]:inline">
           {typeLibelle}
         </span>

@@ -15,6 +15,8 @@ import {
 import { CUSTOM_KIND_OPTION, PJ_VALUE, PNJ_VALUE, optionsTypeFiche } from "@/components/entities/optionsTypeFiche";
 import type { OtherEntityOption } from "@/components/entities/RelationsChips";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
+import type { TextBlockData } from "@/src/core/schemas/blocks/text";
+import LettrineBouton from "@/components/blocks/LettrineBouton";
 import {
   aDesChangements,
   changementsAEnvoyer,
@@ -524,6 +526,21 @@ export default function EditeurPleinEcran({
                         aria-label="Visibilité du bloc"
                         triggerClassName="rounded-full border border-edge bg-panel-raised px-2 py-1 text-xs text-ink transition-colors hover:bg-panel"
                       />
+                      {/* V3.1-65 : meme interrupteur que dans l'en-tete de la
+                          carte de l'ordinateur. Il est ici, et non dans
+                          `TextBlockEditor`, parce que la lettrine est une
+                          propriete du bloc — sans ca elle serait injoignable
+                          au telephone, qui n'a pas de carte de verre. */}
+                      {bloc.blockType === "text" && (
+                        <LettrineBouton
+                          active={(bloc.data as TextBlockData).dropCap}
+                          onBasculer={() =>
+                            patchBrouillon(bloc.id, {
+                              data: { ...(bloc.data as TextBlockData), dropCap: !(bloc.data as TextBlockData).dropCap },
+                            })
+                          }
+                        />
+                      )}
                     </div>
                     <BlockDataEditor
                       block={bloc}

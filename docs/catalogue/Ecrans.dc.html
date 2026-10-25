@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <title>Catalogue — Éléments d'écran</title>
 <script src="./support.js"></script>
-<link rel="stylesheet" href="/_blob/b9d6c0832d9f2dfc414169d6f2d19123">
+<link rel="stylesheet" href="/_blob/fecc8d63804d20e6644efd9a484fdf1c">
 </head>
 <body>
 <x-dc>
@@ -181,9 +181,9 @@ code{font-family:'Geist Mono',ui-monospace,monospace;font-size:0.92em}
 <section id="texte" class="flex scroll-mt-28 flex-col gap-4 rounded-2xl border border-edge bg-panel p-6">
 <div class="flex flex-wrap items-baseline justify-between gap-3">
 <h2 class="font-display text-2xl font-bold text-ink">Texte d'une fiche</h2>
-<span class="text-xs text-ink-muted">app/globals.css (.rich-text-content, .entity-title, .block-title, .mech)</span>
+<span class="text-xs text-ink-muted">app/globals.css (.rich-text-content, .entity-title, .block-title, .mech) · blocks/TextBlockEditor.tsx</span>
 </div>
-<p class="max-w-3xl text-sm text-ink-soft">Corps 14 px, interligne 1,6. Le liseré MJ (terracotta) marque un passage non public <strong>déjà filtré côté serveur</strong> ; le spoiler (neutre) n'est que de la mise en forme. Les deux ne doivent jamais se ressembler.</p>
+<p class="max-w-3xl text-sm text-ink-soft">Corps 14 px, interligne 1,6. V3.1-65 — le liseré dit le niveau : <strong>terracotta MJ</strong>, avec la mention « MJ » en plus (la couleur seule ne doit jamais porter l'information à elle seule), <strong>bleu Joueurs</strong>. Les deux marquent un passage <strong>déjà filtré côté serveur</strong> ; le spoiler (neutre) n'est que de la mise en forme. Les trois traitements ne doivent jamais se ressembler.</p>
 <div class="flex flex-wrap gap-x-6 gap-y-1 text-xs text-ink-muted"><span>Mouvement : <span class="text-ink">aucun</span></span></div>
 <div class="flex flex-col gap-4 rounded-lg bg-panel-sunken p-5">
 <h1 class="entity-title text-ink">Candide Fausset</h1>
@@ -191,15 +191,24 @@ code{font-family:'Geist Mono',ui-monospace,monospace;font-size:0.92em}
 <div class="rich-text-content text-ink">
 <p>Candide est une humaine de 18 ans, membre du <span class="rich-ref-mention">Cirque des Lanternes Crevées</span>. Elle lance <span class="mech">1d20+3</span> pour se cacher.</p>
 <p data-visibility="gm">Passage réservé au MJ : elle est la fille cachée de Godefroy Lââm.</p>
+<p data-visibility="players">Passage réservé à la table : le cirque quitte la ville dans trois jours.</p>
 <p>Un spoiler caché : <span data-spoiler="">le traître est au cirque</span> — et révélé : <span data-spoiler="" data-revealed="true">le traître est au cirque</span>.</p>
 <p>Un lien brisé : <span class="rich-ref-mention rich-ref-broken">Fiche supprimée</span>.</p>
 </div></div>
+<div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Proposition de l'IA en attente, à sa place</span>
+<div class="flex min-h-[64px] flex-col gap-2 rounded-xl border border-dashed border-link-entity/70 bg-link-entity/5 p-3"><p class="rich-text-content text-ink-soft">Les lanternes du chapiteau grincent au vent ; la piste sent la sciure mouillée.</p><p class="text-xs italic text-link-entity">Proposition de l'IA — rien n'est écrit avant « Accepter ».</p><div class="flex gap-2"><button type="button" class="rounded-full bg-accent px-2.5 py-1 text-xs font-medium text-accent-ink transition-colors hover:bg-accent-hover">Accepter</button><button type="button" class="rounded-full border border-edge px-2.5 py-1 text-xs text-ink transition-colors hover:bg-panel">Refuser</button></div></div>
+</div>
+<div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Encart d'assistance IA (MJ seulement)</span>
+<div class="flex min-h-[64px] flex-col gap-1.5 rounded-md border border-link-entity/40 bg-link-entity/5 p-2"><button type="button" class="self-start text-xs font-medium text-link-entity transition-opacity hover:opacity-80">▾ Assistance IA</button><textarea rows="2" placeholder="ex. Ajoute un paragraphe décrivant l'ambiance de ce lieu." class="rounded-md border border-edge bg-transparent px-2 py-1.5 text-xs text-ink outline-none"></textarea><div class="flex items-center gap-3"><button type="button" class="rounded-full border border-link-entity/60 px-3 py-1 text-xs font-medium text-link-entity transition-colors hover:bg-link-entity/10">Proposer</button><span class="text-xs text-ink-muted">Il reste 27 propositions cette heure.</span></div></div>
+</div>
 
 </section>
 </main>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":3900}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":4000}}'>
 class Component extends DCLogic {
   constructor(props) {
     super(props);

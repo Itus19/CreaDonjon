@@ -2,6 +2,13 @@ export interface RateLimitDecision {
   allowed: boolean;
   /** Present seulement quand `allowed` est faux. */
   retryAfterMs?: number;
+  /**
+   * Appels encore disponibles dans la fenetre, jamais negatif (V3.1-65) :
+   * l'encart d'assistance IA affiche « ce qu'il reste » avant de proposer.
+   * Calcule ici et nulle part ailleurs — une soustraction refaite dans
+   * l'interface divergerait le jour ou la limite changerait.
+   */
+  remaining: number;
 }
 
 export interface RateLimitInput {
@@ -20,8 +27,9 @@ export interface RateLimitInput {
  * millisecondes.
  */
 export function decideRateLimit(input: RateLimitInput): RateLimitDecision {
-  if (input.countInWindow < input.limit) return { allowed: true };
+  const remaining = Math.max(0, input.limit - input.countInWindow);
+  if (input.countInWindow < input.limit) return { allowed: true, remaining };
   const retryAfterMs =
     input.oldestCallAgeMs === undefined ? input.windowMs : Math.max(0, input.windowMs - input.oldestCallAgeMs);
-  return { allowed: false, retryAfterMs };
+  return { allowed: false, retryAfterMs, remaining };
 }

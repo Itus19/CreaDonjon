@@ -95,42 +95,6 @@ V3.1-48.
 
 ---
 
-### ☐ V3.1-65 — Bloc Texte : lettrine, bulle du paragraphe, assistance IA en encart · `M` · **avec modèle IA** — **prêt**
-
-**Modèle conseillé : Sonnet** — tout existe ; c'est un rangement.
-
-**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-**Planche** : `Blocs-Recit-Decide.dc.html`, carte « Texte ». **Départ** :
-`components/blocks/TextBlockEditor.tsx`,
-`components/entities/richtext/RichTextEditor.tsx`,
-`src/core/schemas/blocks/text.ts`, `src/server/services/aiProposals.ts`.
-**Dépend de** : 63.
-
-**Ce qui est décidé**
-- La **lettrine** devient un **interrupteur dans l'en-tête de la carte**
-  (passé par `BlockCard` en action d'en-tête), au lieu d'un réglage dans le
-  corps. Même champ qu'aujourd'hui.
-- Toucher un paragraphe ouvre **la bulle de l'éditeur riche** : niveau de
-  titre, G / I / S, Lier à une fiche, Créer une fiche, Spoiler, et la
-  **visibilité du paragraphe** (Public, Joueurs, MJ). Un passage MJ est
-  bordé à gauche d'orange (`--gm`) et marqué « MJ » ; un passage Joueurs
-  bordé de bleu. Rappel : Spoiler est de la mise en forme, jamais de la
-  sécurité (règle 6) ; le secret passe par la visibilité du paragraphe.
-- **L'assistance IA** (MJ seulement, jamais dans la coquille joueur) en
-  **encart violet sous le texte** : la consigne, le budget visible (ce
-  qu'il reste), « Proposer ». La proposition apparaît **en pointillé à sa
-  place** dans le texte ; **rien n'est écrit avant « Accepter »** (règle 9 :
-  `ai_proposals` → validation → application) ; « Refuser » l'efface.
-
-**Critères d'acceptation**
-- [ ] Lettrine activée depuis l'en-tête : le rendu public la montre.
-- [ ] Un paragraphe MJ n'est jamais envoyé à un joueur ni au wiki public (test serveur existant étendu au nouveau rendu).
-- [ ] Une proposition de l'IA ne modifie pas le bloc tant qu'elle n'est pas acceptée (test).
-- [ ] L'encart IA n'existe pas dans la coquille joueur.
-
----
-
 ### ☐ V3.1-71 — Relation (A) : deux portraits, le résumé, les fils à perle · `L` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — planche définitive ; lecture du sens inverse décrite.

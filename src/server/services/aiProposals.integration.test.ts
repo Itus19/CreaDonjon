@@ -88,6 +88,32 @@ describe.skipIf(!hasCreds)("applyAiProposal / rejectAiProposal (integration, bas
     expect(revisions.some((r) => r.change_source === "ai")).toBe(true);
   });
 
+  /**
+   * V3.1-65, critere d'acceptation : « une proposition de l'IA ne modifie pas
+   * le bloc tant qu'elle n'est pas acceptee ». Le test voisin couvrait le
+   * REFUS ; celui-ci couvre le cas qui dure le plus longtemps en pratique —
+   * une proposition simplement posee, que l'auteur laisse en attente le
+   * temps de la relire. C'est l'etat dans lequel l'encart l'affiche en
+   * pointille : visible a l'ecran, absente de la donnee.
+   */
+  it("une proposition laissee en attente ne touche pas le bloc", async () => {
+    const { data: avant } = await admin.from("blocks").select("data, version").eq("id", blockId).single();
+
+    await insertAiProposal(admin, {
+      worldId,
+      campaignId: null,
+      kind: "update_block",
+      targetEntityId: entityId,
+      payload: { blockId, text: "Un paragraphe propose, pas encore accepte." },
+      status: "pending",
+    });
+
+    const { data: apres } = await admin.from("blocks").select("data, version").eq("id", blockId).single();
+    expect(apres!.version).toBe(avant!.version);
+    expect(apres!.data).toEqual(avant!.data);
+    expect(JSON.stringify(apres!.data)).not.toContain("pas encore accepte");
+  });
+
   it("rejette une proposition pending sans jamais toucher au bloc", async () => {
     const { data: blockBefore } = await admin.from("blocks").select("data, version").eq("id", blockId).single();
 
