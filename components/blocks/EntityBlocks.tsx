@@ -324,6 +324,9 @@ export function BlockDataEditor({
           data={block.data as PersonalityBlockData}
           onChange={(d) => onChange(d)}
           onBlockRefreshed={onBlockRefreshed}
+          onEnregistrer={onEnregistrer}
+          isGm={!hideAiAssist}
+          nonAuteur={block.nonAuteur}
         />
       );
     case "relationship":
@@ -346,6 +349,7 @@ export function BlockDataEditor({
           data={block.data as WorldviewBlockData}
           onChange={(d) => onChange(d)}
           onBlockRefreshed={onBlockRefreshed}
+          isGm={!hideAiAssist}
         />
       );
     case "relations_graph":

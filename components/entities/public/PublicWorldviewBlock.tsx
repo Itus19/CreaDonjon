@@ -5,10 +5,14 @@ import type { WorldviewBlockData } from "@/src/core/schemas/blocks/worldview";
 import type { PersonalityEventRow } from "@/src/server/repos/psyche";
 import type { CalendarConfigInput } from "@/src/core/schemas/calendar";
 import { WORLDVIEW_POLES_FR } from "@/src/i18n/fr";
+import { useTranslations } from "next-intl";
+import { poleVise } from "@/lib/ui/psycheBloc";
 
-function formatDeltas(deltas: Partial<Record<WorldviewPoleKey, number>>): string {
+/** L'effet d'un souvenir pour le lecteur : le côté vers lequel il pousse, jamais un nombre. */
+function formatDeltas(deltas: Partial<Record<WorldviewPoleKey, number>>, vers: (pole: string) => string): string {
   return Object.entries(deltas)
-    .map(([key, delta]) => `${WORLDVIEW_POLES_FR[key as WorldviewPoleKey]?.radar ?? key} ${delta! > 0 ? "+" : ""}${delta}`)
+    .filter(([key]) => key in WORLDVIEW_POLES_FR)
+    .map(([key, delta]) => vers(poleVise(WORLDVIEW_POLES_FR[key as WorldviewPoleKey], delta!)))
     .join(", ");
 }
 
@@ -22,15 +26,16 @@ export default function PublicWorldviewBlock({
   events: PersonalityEventRow[];
   calendar: CalendarConfigInput | null;
 }) {
+  const t = useTranslations("fiche.psyche");
   const rows: PublicSouvenirRow[] = events.map((event) => ({
     id: event.id,
     summary: event.summary,
-    effect: formatDeltas(event.deltas as Partial<Record<WorldviewPoleKey, number>>),
+    effect: formatDeltas(event.deltas as Partial<Record<WorldviewPoleKey, number>>, (pole) => t("versPole", { pole })),
     occurredAtIngame: event.occurred_at_ingame as unknown as PublicSouvenirRow["occurredAtIngame"],
   }));
   return (
     <div>
-      <WorldviewRadar poles={data.poles} />
+      <WorldviewRadar poles={data.poles} label={t("radarLabelConvictions")} />
       <PublicSouvenirsTable rows={rows} calendar={calendar} />
     </div>
   );

@@ -18,6 +18,9 @@ export interface PoleEnds {
 
 export const NEUTRAL_POLE_LABEL = "neutre — ne s'en soucie pas";
 
+/** Le même état en un mot, pour un sommet de radar où la place manque. */
+export const NEUTRAL_POLE_SHORT = "neutre";
+
 /** Intensité de chaque bande non neutre, accordée selon le genre (« extrême » est invariable). */
 const INTENSITY: Record<Exclude<BandTier, "neutral">, { m: string; f: string }> = {
   extreme_neg: { m: "extrême", f: "extrême" },

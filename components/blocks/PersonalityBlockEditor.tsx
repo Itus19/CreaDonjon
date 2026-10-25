@@ -1,73 +1,28 @@
 "use client";
 
-import { useState } from "react";
-import Dropdown from "@/components/shared/Dropdown";
-import { VISIBILITY_OPTIONS } from "@/components/shared/visibilityOptions";
+import { useLayoutEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import PersonalityRadar from "@/components/entities/psyche/PersonalityRadar";
-import PersonalityPoleSliders from "@/components/entities/psyche/PersonalityPoleSliders";
-import PersonalityEventTable from "@/components/entities/psyche/PersonalityEventTable";
+import PoleBars from "@/components/entities/psyche/PoleBars";
+import SouvenirsPsyche, { type SouvenirsPsycheHandle } from "@/components/entities/psyche/SouvenirsPsyche";
+import { AspirationsColonnes, FaconDeParler, LignesEtLimites } from "@/components/entities/psyche/PersonnaliteChamps";
 import { archetypeFor } from "@/src/core/psyche/archetype";
 import { PERSONALITY_POLE_KEYS, type PersonalityPoleKey } from "@/src/core/psyche/keys";
-import type { Aspiration, PersonalityBlockData } from "@/src/core/schemas/blocks/personality";
-import { PERSONALITY_POLES_FR } from "@/src/i18n/fr";
-
-const HORIZON_OPTIONS = [
-  { value: "life", label: "Toute une vie" },
-  { value: "arc", label: "Cette intrigue" },
-  { value: "session", label: "Ce soir" },
-];
-
-function newId(): string {
-  return crypto.randomUUID();
-}
-
-function StringListEditor({
-  items,
-  onChange,
-  placeholder,
-  addLabel,
-}: {
-  items: string[];
-  onChange: (items: string[]) => void;
-  placeholder: string;
-  addLabel: string;
-}) {
-  return (
-    <div className="flex flex-col gap-1">
-      {items.map((item, i) => (
-        <div key={i} className="flex items-center gap-2">
-          <input
-            value={item}
-            onChange={(e) => onChange(items.map((it, j) => (j === i ? e.target.value : it)))}
-            placeholder={placeholder}
-            className="flex-1 bg-transparent text-sm text-ink outline-none"
-          />
-          <button
-            type="button"
-            onClick={() => onChange(items.filter((_, j) => j !== i))}
-            className="text-xs text-danger hover:underline"
-          >
-            ×
-          </button>
-        </div>
-      ))}
-      <button
-        type="button"
-        onClick={() => onChange([...items, ""])}
-        className="self-start rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised"
-      >
-        {addLabel}
-      </button>
-    </div>
-  );
-}
+import type { PersonalityBlockData } from "@/src/core/schemas/blocks/personality";
+import { PERSONALITY_POLE_DESCRIPTIONS_FR, PERSONALITY_POLES_FR } from "@/src/i18n/fr";
+import { annoncePrioritaires, basculerPrioritaire, poleVise } from "@/lib/ui/psycheBloc";
 
 /**
- * Bloc `personality` (V2-H1) : radar + curseurs a cote (esthetique fournie
- * par l'utilisateur), puis les champs de configuration simples, puis le
- * tableau de souvenirs en pleine largeur. Les poles ne changent JAMAIS par
- * `onChange` (sauvegarde generique silencieuse) — uniquement via la route
- * `personality-event`, curseur ou tableau, meme chemin d'ecriture.
+ * Bloc `personality` (V2-H1, refait en V3.1-70 « A ») : en tête, côte à côte,
+ * le radar (la bande nommée à chaque sommet) et les six barres bipolaires pour
+ * régler, avec la ★ des deux pôles prioritaires ; puis les aspirations en trois
+ * colonnes, ce qu'il ne fera jamais / fera à contrecœur, la façon de parler et
+ * les souvenirs repliables. Aucun nombre à l'écran : la valeur exacte n'est
+ * qu'au survol, pour le MJ.
+ *
+ * Les pôles ne changent JAMAIS par `onChange` (sauvegarde générique
+ * silencieuse) — uniquement par la route `personality-event`, barre ou
+ * souvenir, même chemin d'écriture.
  */
 export default function PersonalityBlockEditor({
   blockId,
@@ -77,6 +32,9 @@ export default function PersonalityBlockEditor({
   data,
   onChange,
   onBlockRefreshed,
+  onEnregistrer,
+  isGm = false,
+  nonAuteur = false,
 }: {
   blockId: string;
   version: number;
@@ -85,14 +43,26 @@ export default function PersonalityBlockEditor({
   data: PersonalityBlockData;
   onChange: (data: PersonalityBlockData) => void;
   onBlockRefreshed: (fresh: { id: string; data: unknown; version: number }) => void;
+  /** Écrit TOUT DE SUITE ce contenu (chemin d'enregistrement du bloc) et répond `true` si le serveur l'a accepté. Absent (éditeur plein écran) : la pastille ne change que le brouillon. */
+  onEnregistrer?: (data: PersonalityBlockData) => Promise<boolean>;
+  /** Le MJ voit la valeur exacte d'un pôle au survol ; un joueur n'en voit jamais. */
+  isGm?: boolean;
+  /** Le lecteur n'est pas l'auteur du bloc : « Privé » ne lui est pas proposé. */
+  nonAuteur?: boolean;
 }) {
+  const t = useTranslations("fiche.psyche");
   const [sliderPending, setSliderPending] = useState(false);
   const [sliderError, setSliderError] = useState<string | null>(null);
-  const [reloadSignal, setReloadSignal] = useState(0);
-  // Position en cours de glissement, remontee par le curseur a chaque pixel
-  // (avant tout appel reseau) : sans ca, le radar n'a que la valeur
-  // enregistree en base et ne bouge qu'apres l'aller-retour du commit.
+  const souvenirsRef = useRef<SouvenirsPsycheHandle>(null);
+  // Position en cours de glissement, remontée à chaque pixel (avant tout appel
+  // réseau) : sans cela, le radar n'a que la valeur enregistrée.
   const [liveOverride, setLiveOverride] = useState<Partial<Record<PersonalityPoleKey, number>>>({});
+  // La donnée la plus fraîche : une pastille qui attend le serveur ne doit pas
+  // écraser, en revenant en arrière, ce qui a été tapé pendant ce temps.
+  const dataRef = useRef(data);
+  useLayoutEffect(() => {
+    dataRef.current = data;
+  });
 
   function handleLiveChange(key: PersonalityPoleKey, value: number | null) {
     setLiveOverride((prev) => {
@@ -112,7 +82,7 @@ export default function PersonalityBlockEditor({
   async function commitSlider(key: PersonalityPoleKey, delta: number) {
     setSliderPending(true);
     setSliderError(null);
-    const summary = `Réglage manuel : ${PERSONALITY_POLES_FR[key].radar} ${delta > 0 ? "+" : ""}${delta}`;
+    const summary = t("reglageManuel", { pole: poleVise(PERSONALITY_POLES_FR[key], delta) });
     const res = await fetch(`/api/blocks/${blockId}/personality-event`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -121,165 +91,103 @@ export default function PersonalityBlockEditor({
     setSliderPending(false);
     if (!res.ok) {
       const body = (await res.json().catch(() => null)) as { error?: string } | null;
-      setSliderError(body?.error ?? "Impossible d'ajuster ce pôle.");
+      setSliderError(body?.error ?? t("erreurPole"));
       return;
     }
     const body = (await res.json()) as { block: { id: string; data: unknown; version: number } };
     onBlockRefreshed(body.block);
-    setReloadSignal((n) => n + 1);
+    souvenirsRef.current?.recharger();
   }
 
-  function addAspiration() {
-    const aspiration: Aspiration = {
-      id: newId(),
-      text: "",
-      horizon: "session",
-      intensity: 2,
-      visibility: { level: "public", scopeId: null },
+  /**
+   * Visibilité d'UNE aspiration : l'écran suit aussitôt, le bloc est écrit par
+   * le chemin d'enregistrement habituel, l'ancienne valeur revient si le
+   * serveur refuse. `true` si l'écriture a réussi (la pastille l'annonce).
+   */
+  async function changerVisibilite(id: string, niveau: string): Promise<boolean> {
+    const avant = dataRef.current.aspirations.find((a) => a.id === id)?.visibility;
+    if (!avant) return false;
+    const visibility = { level: niveau as typeof avant.level, scopeId: null };
+    const apres: PersonalityBlockData = {
+      ...dataRef.current,
+      aspirations: dataRef.current.aspirations.map((a) => (a.id === id ? { ...a, visibility } : a)),
     };
-    onChange({ ...data, aspirations: [...data.aspirations, aspiration] });
-  }
-  function updateAspiration(id: string, patch: Partial<Aspiration>) {
-    onChange({ ...data, aspirations: data.aspirations.map((a) => (a.id === id ? { ...a, ...patch } : a)) });
-  }
-  function removeAspiration(id: string) {
-    onChange({ ...data, aspirations: data.aspirations.filter((a) => a.id !== id) });
+    onChange(apres);
+    if (!onEnregistrer) return true;
+    const ok = await onEnregistrer(apres);
+    if (!ok) {
+      onChange({
+        ...dataRef.current,
+        aspirations: dataRef.current.aspirations.map((a) => (a.id === id ? { ...a, visibility: avant } : a)),
+      });
+    }
+    return ok;
   }
 
-  function togglePriority(key: PersonalityPoleKey) {
-    const already = data.priority.includes(key);
-    onChange({ ...data, priority: already ? data.priority.filter((k) => k !== key) : [...data.priority, key] });
-  }
+  const annonce = annoncePrioritaires(data.priority, (k) => PERSONALITY_POLES_FR[k].radar);
+  const texteAnnonce =
+    annonce.cle === "aucun"
+      ? t("annonce.aucun")
+      : annonce.cle === "un"
+        ? t("annonce.un", { premier: annonce.premier })
+        : t("annonce.deux", { premier: annonce.premier, second: annonce.second });
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap gap-6">
-        <PersonalityRadar poles={radarPoles} archetype={archetype} />
-        <div className="min-w-[220px] flex-1">
-          <PersonalityPoleSliders
+    <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-1 items-center gap-4 @2xl/bloc:grid-cols-[minmax(0,26rem)_1fr]">
+        <div className="flex justify-center">
+          <PersonalityRadar poles={radarPoles} archetype={archetype} label={t("radarLabel")} />
+        </div>
+        <div className="flex flex-col gap-2">
+          <PoleBars
+            keys={PERSONALITY_POLE_KEYS}
+            table={PERSONALITY_POLES_FR}
+            descriptions={PERSONALITY_POLE_DESCRIPTIONS_FR}
             poles={data.poles}
             onCommit={commitSlider}
             onLiveChange={handleLiveChange}
-            disabled={sliderPending}
+            occupe={sliderPending}
+            valeurExacte={isGm}
+            prioritaires={data.priority}
+            onEtoile={(key) => onChange({ ...data, priority: basculerPrioritaire(data.priority, key) })}
           />
-          {sliderError && <p className="mt-1 text-xs text-danger">{sliderError}</p>}
+          <p role="status" className="text-xs text-ink-muted">
+            {texteAnnonce}
+          </p>
+          {sliderError && <p className="text-xs text-danger">{sliderError}</p>}
         </div>
       </div>
 
-      <div className="flex flex-col gap-1">
-        <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
-          Priorité (par ordre, en cas de conflit entre pôles)
-        </span>
-        <div className="flex flex-wrap gap-1.5">
-          {PERSONALITY_POLE_KEYS.map((key) => {
-            const rank = data.priority.indexOf(key);
-            return (
-              <button
-                key={key}
-                type="button"
-                onClick={() => togglePriority(key)}
-                className={`rounded-full border px-2.5 py-1 text-xs transition-colors ${
-                  rank >= 0 ? "border-accent bg-panel-raised text-ink" : "border-edge text-ink-muted hover:bg-panel-raised"
-                }`}
-              >
-                {rank >= 0 ? `${rank + 1}. ` : ""}
-                {PERSONALITY_POLES_FR[key].radar}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      <AspirationsColonnes
+        aspirations={data.aspirations}
+        onChange={(aspirations) => onChange({ ...data, aspirations })}
+        onVisibilite={changerVisibilite}
+        nonAuteur={nonAuteur}
+      />
 
-      <div className="flex flex-col gap-1">
-        <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Aspirations</span>
-        {data.aspirations.map((aspiration) => (
-          <div key={aspiration.id} className="flex flex-wrap items-center gap-2">
-            <input
-              value={aspiration.text}
-              onChange={(e) => updateAspiration(aspiration.id, { text: e.target.value })}
-              placeholder="Devenir la plus grande magicienne de sa génération"
-              className="min-w-[220px] flex-1 bg-transparent text-sm text-ink outline-none"
-            />
-            <Dropdown
-              value={aspiration.horizon}
-              options={HORIZON_OPTIONS}
-              onChange={(v) => updateAspiration(aspiration.id, { horizon: v as Aspiration["horizon"] })}
-              aria-label={`Horizon de « ${aspiration.text || "cette aspiration"} »`}
-            />
-            <Dropdown
-              value={aspiration.visibility.level}
-              options={VISIBILITY_OPTIONS}
-              onChange={(v) =>
-                updateAspiration(aspiration.id, { visibility: { level: v as Aspiration["visibility"]["level"], scopeId: null } })
-              }
-              aria-label={`Visibilité de « ${aspiration.text || "cette aspiration"} »`}
-            />
-            <button
-              type="button"
-              onClick={() => removeAspiration(aspiration.id)}
-              className="text-xs text-danger hover:underline"
-            >
-              ×
-            </button>
-          </div>
-        ))}
-        <button
-          type="button"
-          onClick={addAspiration}
-          className="self-start rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised"
-        >
-          + Ajouter une aspiration
-        </button>
-      </div>
+      <LignesEtLimites
+        lines={data.lines}
+        limits={data.limits}
+        onLines={(lines) => onChange({ ...data, lines })}
+        onLimits={(limits) => onChange({ ...data, limits })}
+      />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
-            Lignes rouges (ne fera jamais)
-          </span>
-          <StringListEditor
-            items={data.lines}
-            onChange={(lines) => onChange({ ...data, lines })}
-            placeholder="Ne trahira jamais un serment prêté à voix haute"
-            addLabel="+ Ajouter une ligne rouge"
-          />
-        </div>
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
-            Limites (fera à contrecœur)
-          </span>
-          <StringListEditor
-            items={data.limits}
-            onChange={(limits) => onChange({ ...data, limits })}
-            placeholder="Mentira, mais mal et à contrecœur"
-            addLabel="+ Ajouter une limite"
-          />
-        </div>
-      </div>
+      <FaconDeParler
+        register={data.speech.register}
+        tics={data.speech.tics}
+        onRegister={(register) => onChange({ ...data, speech: { ...data.speech, register } })}
+        onTics={(tics) => onChange({ ...data, speech: { ...data.speech, tics } })}
+      />
 
-      <div className="flex flex-col gap-1">
-        <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">Façon de parler</span>
-        <input
-          value={data.speech.register}
-          onChange={(e) => onChange({ ...data, speech: { ...data.speech, register: e.target.value } })}
-          placeholder="Registre (ex. familier, soutenu…)"
-          className="bg-transparent text-sm text-ink outline-none"
-        />
-        <StringListEditor
-          items={data.speech.tics}
-          onChange={(tics) => onChange({ ...data, speech: { ...data.speech, tics } })}
-          placeholder="Appelle tout le monde « petit »"
-          addLabel="+ Ajouter un tic de langage"
-        />
-      </div>
-
-      <PersonalityEventTable
+      <SouvenirsPsyche
+        genre="personality"
         entityId={entityId}
         blockId={blockId}
         version={version}
         worldSlug={worldSlug}
+        valeursActuelles={Object.fromEntries(data.poles.map((p) => [p.key, p.value]))}
         onBlockRefreshed={onBlockRefreshed}
-        reloadSignal={reloadSignal}
+        ref={souvenirsRef}
       />
     </div>
   );

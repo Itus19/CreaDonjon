@@ -2,6 +2,24 @@
 
 ---
 
+### ☑ V3.1-70 — Personnalité (A) et Convictions (même dessin, comparer avec une faction) · `L` · sans modèle IA — **fait le 25 octobre**
+
+**Critères d'acceptation**
+- [x] Aucun nombre à l'écran pour un joueur (test de rendu public) ; le MJ voit la valeur au survol seulement.
+- [x] ★ : deux au plus, ordre conservé (test).
+- [x] Souvenir > 40 : confirmation demandée ; refuser n'écrit rien (test).
+- [x] « Comparer avec » ne propose que les factions liées, puis « Autre… » ; une faction au bloc Convictions MJ n'est pas proposée à un joueur (test serveur).
+- [x] La phrase de tension apparaît à 3 crans, pas à 2.
+
+**Réalisé** (serveur par Opus ; interface par Sonnet, relue par Opus ; vérifié en direct, MJ et joueuse)
+- Serveur : route `GET /api/entities/[id]/worldview-comparisons` (`worldviewComparisons.ts`) — factions liées par `member_of`, `serves`, `leads` (deux sens), ou recherche « Autre… » ; une fiche n'est proposée que si son bloc Convictions est visible du lecteur (règle 5, test d'intégration).
+- Faille vue en chemin et corrigée : une aspiration MJ d'un bloc Personnalité visible partait aux joueurs et au wiki public (`docs/SECURITE.md`, registre).
+- Interface : radar commun `PoleRadar` (bande nommée à chaque sommet, faction en pointillé bleu), barres `PoleBars` (★, mot de la bande, trait bleu, valeur exacte en `title` pour le MJ seulement), `PersonnaliteChamps` (aspirations en trois colonnes avec pastille de visibilité, lignes, façon de parler), `SouvenirsPsyche` (repliable, chargé à l'ouverture, saisie en une ligne, confirmation au-delà de 40, brut et appliqué). Logique pure dans `lib/ui/psycheBloc.ts`.
+- Le wiki public dit « vers Curiosité » au lieu d'un écart chiffré ; le résumé d'un réglage manuel aussi (« Réglage manuel, vers Curiosité »). Les anciens souvenirs gardent leur texte.
+- Reste à regarder : les mots des sommets du radar sont petits sur téléphone (le dessin est large et réduit).
+
+---
+
 ### ☑ V3.1-69 — Noyau psyché : libellés uniques, bandes des pôles, tension, résumé · `S` · sans modèle IA — **fait le 25 octobre**
 
 **Modèle conseillé : Sonnet** — fonctions pures, tests d'abord.
