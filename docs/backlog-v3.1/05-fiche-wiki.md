@@ -131,45 +131,6 @@ V3.1-48.
 
 ---
 
-### ☐ V3.1-67 — Bloc Image : la barre flottante et l'aperçu dans le texte (B) · `M` · sans modèle IA — **prêt**
-
-**Modèle conseillé : Sonnet** — tous les champs existent déjà ; c'est l'interface.
-
-**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-**Planche** : `Blocs-Recit-Decide.dc.html`, carte « Image ». **Départ** :
-`components/blocks/ImageBlockEditor.tsx`, `src/core/schemas/blocks/image.ts`
-(lire son commentaire en entier), `src/core/images/blockAnchor.ts`.
-**Dépend de** : 63.
-
-**Ce qui est décidé (B)**
-- Aujourd'hui : neuf réglages en liste sous l'image. Demain :
-- **Toucher l'image fait paraître une barre flottante** sur elle :
-  Gauche / Centre / Droite (`align`), « − taille + » (`sizePct`, 50–200 %,
-  pas de 10), « Le texte contourne » (interrupteur : `anchorFlow` `float`
-  quand activé, `break` sinon).
-- **L'aperçu** montre l'image **dans le texte**, telle qu'elle sera dans le
-  wiki, avec sa légende dessous (éditable sur place).
-- **À part, dans un encart sous l'aperçu** :
-  - Emplacement : « Bloc autonome » (`placement: "flow"`) ou « Dans un bloc
-    de texte » (`placement: "anchored"` + choix du bloc et du paragraphe,
-    curseur à N + 1 crans comme aujourd'hui) ;
-  - Parallaxe (`parallaxPct`, 0–40) ;
-  - Fond de la page du wiki, trois choix : « Non » (`useAsWikiBackground:
-    false`), « En fond et dans la fiche » (`true` + `alsoShowInFlow: true`),
-    « Seulement en fond » (`true` + `alsoShowInFlow: false`) ; avec flou
-    (`backgroundBlurPx`) et fondu (`fadeMs`) **seulement si** un fond est
-    choisi.
-- `wrapMode` n'apparaît pas (lu seulement, comme aujourd'hui).
-
-**Critères d'acceptation**
-- [ ] Chaque contrôle de la barre écrit le bon champ (test de la correspondance contrôle → champ).
-- [ ] Les trois choix de fond donnent les bonnes paires de valeurs (test).
-- [ ] Flou et fondu n'apparaissent qu'avec un fond.
-- [ ] Un bloc enregistré avant ce ticket s'affiche à l'identique (pas de réécriture en base).
-
----
-
 ### ☐ V3.1-68 — Bloc Chronologie : l'axe en bande et une ligne par événement · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — dessin décidé, schéma inchangé.

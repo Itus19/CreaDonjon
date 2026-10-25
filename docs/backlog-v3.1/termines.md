@@ -2,6 +2,53 @@
 
 ---
 
+### ☑ V3.1-67 — Bloc Image : la barre flottante et l'aperçu dans le texte (B) · `M` · sans modèle IA — **fait le 25 octobre**
+
+**Modèle conseillé : Sonnet** — tous les champs existent déjà ; c'est l'interface.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Planche** : `Blocs-Recit-Decide.dc.html`, carte « Image ». **Départ** :
+`components/blocks/ImageBlockEditor.tsx`, `src/core/schemas/blocks/image.ts`
+(lire son commentaire en entier), `src/core/images/blockAnchor.ts`.
+**Dépend de** : 63.
+
+**Ce qui est décidé (B)**
+- Aujourd'hui : neuf réglages en liste sous l'image. Demain :
+- **Toucher l'image fait paraître une barre flottante** sur elle :
+  Gauche / Centre / Droite (`align`), « − taille + » (`sizePct`, 50–200 %,
+  pas de 10), « Le texte contourne » (interrupteur : `anchorFlow` `float`
+  quand activé, `break` sinon).
+- **L'aperçu** montre l'image **dans le texte**, telle qu'elle sera dans le
+  wiki, avec sa légende dessous (éditable sur place).
+- **À part, dans un encart sous l'aperçu** :
+  - Emplacement : « Bloc autonome » (`placement: "flow"`) ou « Dans un bloc
+    de texte » (`placement: "anchored"` + choix du bloc et du paragraphe,
+    curseur à N + 1 crans comme aujourd'hui) ;
+  - Parallaxe (`parallaxPct`, 0–40) ;
+  - Fond de la page du wiki, trois choix : « Non » (`useAsWikiBackground:
+    false`), « En fond et dans la fiche » (`true` + `alsoShowInFlow: true`),
+    « Seulement en fond » (`true` + `alsoShowInFlow: false`) ; avec flou
+    (`backgroundBlurPx`) et fondu (`fadeMs`) **seulement si** un fond est
+    choisi.
+- `wrapMode` n'apparaît pas (lu seulement, comme aujourd'hui).
+
+**Critères d'acceptation**
+- [x] Chaque contrôle de la barre écrit le bon champ (test de la correspondance contrôle → champ).
+- [x] Les trois choix de fond donnent les bonnes paires de valeurs (test).
+- [x] Flou et fondu n'apparaissent qu'avec un fond.
+- [x] Un bloc enregistré avant ce ticket s'affiche à l'identique (pas de réécriture en base).
+
+**Réalisé** (Sonnet, relu par Opus)
+- `ImageBlockEditor` refait : toucher l'image ouvre la barre (Gauche / Centre / Droite, − taille +, « Le texte contourne »), Échap la ferme ; aperçu dans le vrai texte du bloc hôte, légende éditable dessous ; encart Emplacement, Parallaxe, Fond (trois choix), flou et fondu seulement avec un fond. Libellés de l'éditeur sortis du code vers `fiche.image`.
+- Correspondance contrôle → champ et choix de fond en fonctions pures (`lib/ui/imageBloc.ts`, testées) ; test qu'aucun `onChange` ne part au montage.
+- Vérifié au navigateur (fiche de test supprimée) : ouvrir la fiche n'écrit rien ; Droite, 110 %, ancrage dans le texte, fond « en fond et dans la fiche » enregistrés ; flou et fondu absents sans fond.
+- Catalogue : Encadré, Tableau et Image passent de la planche 3 (qui dépassait 8 000 px) à la planche 8 « Wiki visuel » ; la deuxième rangée du canevas descend sous la première.
+
+*Choix* : « Centre » coupe le contournement (un flottement centré n'existe pas en CSS) ; sans ancrage dans un texte, « Le texte contourne » est grisé avec la raison.
+
+---
+
 ### ☑ V3.1-66 — Blocs Encadré et Tableau · `M` · sans modèle IA — **fait le 25 octobre (ADR 0067)**
 
 **Modèle conseillé : Sonnet** — décisions prises ; une seule à trancher dans le ticket (tranchée ci-dessous).

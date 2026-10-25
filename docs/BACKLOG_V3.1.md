@@ -198,7 +198,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-64 | ☑ | sans | La pastille de visibilité au toucher, avec « Annuler » | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-65 | ☐ | **avec** | Bloc Texte : lettrine, bulle du paragraphe, assistance IA en encart | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
 | V3.1-66 | ☑ | sans | Blocs Encadré et Tableau | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-67 | ☐ | sans | Bloc Image : la barre flottante et l'aperçu dans le texte (B) | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
+| V3.1-67 | ☑ | sans | Bloc Image : la barre flottante et l'aperçu dans le texte (B) | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-68 | ☐ | sans | Bloc Chronologie : l'axe en bande et une ligne par événement | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
 | V3.1-69 | ☐ | sans | Noyau psyché : libellés uniques, bandes des pôles, tension, résumé | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
 | V3.1-70 | ☐ | sans | Personnalité (A) et Convictions (même dessin, comparer avec une faction) | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
