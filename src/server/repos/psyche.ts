@@ -190,6 +190,33 @@ export async function listAttitudeEvents(
   return data;
 }
 
+/**
+ * V3.1-71 — combien de souvenirs a cette paire, et le plus récent : compté
+ * à la lecture (`count: "exact"`), jamais stocké (règle 16).
+ */
+export async function countAttitudeEvents(
+  supabase: TypedClient,
+  params: { campaignId: string; sourceEntityId: string; targetEntityId: string }
+): Promise<{ count: number; last: { occurred_at_ingame: AttitudeEventRow["occurred_at_ingame"]; created_at: string } | null }> {
+  const { data, error, count } = await supabase
+    .from("attitude_events")
+    .select("occurred_at_ingame, created_at", { count: "exact" })
+    .eq("campaign_id", params.campaignId)
+    .eq("source_entity_id", params.sourceEntityId)
+    .eq("target_entity_id", params.targetEntityId)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  if (error) throw new Error(error.message);
+  return { count: count ?? 0, last: data[0] ?? null };
+}
+
+/** V3.1-71 : la fiche qui ressent ce souvenir — pour vérifier le droit d'écrire avant de le modifier. */
+export async function getAttitudeEventSourceId(supabase: TypedClient, id: string): Promise<string | null> {
+  const { data, error } = await supabase.from("attitude_events").select("source_entity_id").eq("id", id).maybeSingle();
+  if (error) throw new Error(error.message);
+  return data?.source_entity_id ?? null;
+}
+
 /** Meme discipline que `updatePersonalityEventVisibility` ci-dessus. */
 export async function updateAttitudeEventVisibility(
   supabase: TypedClient,

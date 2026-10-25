@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { addAttitudeEventSchema } from "@/lib/blocks/schemas";
 import { addAttitudeEvent } from "@/src/server/services/psyche";
+import { canWriteRelationship } from "@/src/server/services/relationshipFace";
 
 /**
  * Ajoute un souvenir a une relation (V2-H1) — journalise ET met a jour le
@@ -23,6 +24,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
+  }
+  // V3.1-71 : la RLS laissait tout membre du monde écrire la relation d'un PNJ.
+  if (!(await canWriteRelationship(supabase, { sourceEntityId: id, userId: user.id }))) {
+    return NextResponse.json({ error: "Vous ne pouvez pas modifier cette fiche." }, { status: 403 });
   }
 
   const result = await addAttitudeEvent(supabase, {
