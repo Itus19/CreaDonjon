@@ -7,7 +7,7 @@ import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/blocks/inventory";
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
 import type { ResourcesBlockData } from "@/src/core/schemas/blocks/resources";
-import type { InfoboxBlockData } from "@/src/core/schemas/blocks/infobox";
+import { infoboxValueText, type InfoboxBlockData } from "@/src/core/schemas/blocks/infobox";
 import { ABILITY_LABELS as ABILITY_NAMES, type DerivedSheet } from "@/src/core/rules/sheet";
 import { SKILL_LABELS_FR } from "@/src/i18n/fr";
 import type { RuntimeState } from "@/src/core/schemas/runtimeState";
@@ -76,7 +76,7 @@ interface SheetApiResponse {
  */
 function ageFromInfobox(infobox: InfoboxBlockData | undefined): string | null {
   const entry = infobox?.entries.find((e) => ["âge", "age"].includes(e.label.trim().toLowerCase()));
-  return entry?.value ?? null;
+  return entry ? infoboxValueText(entry.value) : null;
 }
 
 /** Niveau total du personnage : la somme des niveaux de ses classes, au moins 1. */

@@ -2,6 +2,155 @@
 
 ---
 
+### ☑ V3.1-67 — Bloc Image : la barre flottante et l'aperçu dans le texte (B) · `M` · sans modèle IA — **fait le 25 octobre**
+
+**Modèle conseillé : Sonnet** — tous les champs existent déjà ; c'est l'interface.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Planche** : `Blocs-Recit-Decide.dc.html`, carte « Image ». **Départ** :
+`components/blocks/ImageBlockEditor.tsx`, `src/core/schemas/blocks/image.ts`
+(lire son commentaire en entier), `src/core/images/blockAnchor.ts`.
+**Dépend de** : 63.
+
+**Ce qui est décidé (B)**
+- Aujourd'hui : neuf réglages en liste sous l'image. Demain :
+- **Toucher l'image fait paraître une barre flottante** sur elle :
+  Gauche / Centre / Droite (`align`), « − taille + » (`sizePct`, 50–200 %,
+  pas de 10), « Le texte contourne » (interrupteur : `anchorFlow` `float`
+  quand activé, `break` sinon).
+- **L'aperçu** montre l'image **dans le texte**, telle qu'elle sera dans le
+  wiki, avec sa légende dessous (éditable sur place).
+- **À part, dans un encart sous l'aperçu** :
+  - Emplacement : « Bloc autonome » (`placement: "flow"`) ou « Dans un bloc
+    de texte » (`placement: "anchored"` + choix du bloc et du paragraphe,
+    curseur à N + 1 crans comme aujourd'hui) ;
+  - Parallaxe (`parallaxPct`, 0–40) ;
+  - Fond de la page du wiki, trois choix : « Non » (`useAsWikiBackground:
+    false`), « En fond et dans la fiche » (`true` + `alsoShowInFlow: true`),
+    « Seulement en fond » (`true` + `alsoShowInFlow: false`) ; avec flou
+    (`backgroundBlurPx`) et fondu (`fadeMs`) **seulement si** un fond est
+    choisi.
+- `wrapMode` n'apparaît pas (lu seulement, comme aujourd'hui).
+
+**Critères d'acceptation**
+- [x] Chaque contrôle de la barre écrit le bon champ (test de la correspondance contrôle → champ).
+- [x] Les trois choix de fond donnent les bonnes paires de valeurs (test).
+- [x] Flou et fondu n'apparaissent qu'avec un fond.
+- [x] Un bloc enregistré avant ce ticket s'affiche à l'identique (pas de réécriture en base).
+
+**Réalisé** (Sonnet, relu par Opus)
+- `ImageBlockEditor` refait : toucher l'image ouvre la barre (Gauche / Centre / Droite, − taille +, « Le texte contourne »), Échap la ferme ; aperçu dans le vrai texte du bloc hôte, légende éditable dessous ; encart Emplacement, Parallaxe, Fond (trois choix), flou et fondu seulement avec un fond. Libellés de l'éditeur sortis du code vers `fiche.image`.
+- Correspondance contrôle → champ et choix de fond en fonctions pures (`lib/ui/imageBloc.ts`, testées) ; test qu'aucun `onChange` ne part au montage.
+- Vérifié au navigateur (fiche de test supprimée) : ouvrir la fiche n'écrit rien ; Droite, 110 %, ancrage dans le texte, fond « en fond et dans la fiche » enregistrés ; flou et fondu absents sans fond.
+- Catalogue : Encadré, Tableau et Image passent de la planche 3 (qui dépassait 8 000 px) à la planche 8 « Wiki visuel » ; la deuxième rangée du canevas descend sous la première.
+
+*Choix* : « Centre » coupe le contournement (un flottement centré n'existe pas en CSS) ; sans ancrage dans un texte, « Le texte contourne » est grisé avec la raison.
+
+---
+
+### ☑ V3.1-66 — Blocs Encadré et Tableau · `M` · sans modèle IA — **fait le 25 octobre (ADR 0067)**
+
+**Modèle conseillé : Sonnet** — décisions prises ; une seule à trancher dans le ticket (tranchée ci-dessous).
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Planche** : `Blocs-Recit-Decide.dc.html`, cartes « Encadré » et
+« Tableau ». **Départ** : `components/blocks/InfoboxBlockEditor.tsx`,
+`components/blocks/CustomTableBlockEditor.tsx`,
+`src/core/schemas/blocks/infobox.ts`, `customTable.ts`. **Dépend de** : 63.
+
+**Encadré — ce qui est décidé**
+- Les lignes se **lisent comme dans le wiki** (intitulé à gauche, valeur à
+  droite) et **s'éditent sur place** (toucher l'intitulé ou la valeur) ;
+  ⠿ pour réordonner ; × au survol pour retirer ; « + ligne ».
+- **« @ » dans une valeur cite une fiche** (même mention que dans le texte).
+- **Intitulés suggérés selon le type de fiche** : en tapant un intitulé, une
+  liste propose ceux du type (PNJ : Race, Âge, Rôle, Allégeance… ; Lieu :
+  Région, Population, Dirigeant… ; Faction : Siège, Chef, Fondation…).
+  **Tranché ici : une constante dans le fichier de libellés**, clé = genre
+  d'entité (`entityKind`), pas une table en base (rien à migrer ; à revoir
+  au troisième besoin de personnalisation). Pour un genre sans liste : pas
+  de suggestion.
+
+**Tableau — ce qui est décidé**
+- Un **vrai tableau** (`<table>` accessible) éditable en cellules.
+- × de colonne (dans l'en-tête) et × de ligne (au bout) **au survol** ;
+  « + » au bout des en-têtes pour une colonne, « + Ligne » dessous.
+
+**Critères d'acceptation**
+- [x] Encadré : réordonner, éditer sur place, « @ » qui crée une vraie mention (même test que le texte).
+- [x] Les suggestions dépendent du genre de la fiche (test de la fonction de suggestion).
+- [x] Tableau : ajouter et retirer lignes et colonnes ; navigation au clavier entre cellules (Tab).
+
+**Réalisé** (Sonnet pour les éditeurs, Opus pour la mention et un défaut d'affichage)
+- Encadré : lecture comme au wiki, édition sur place, ⠿ souris et clavier, × au survol et au focus, « + Ligne », intitulés proposés selon le genre (`lib/ui/encadre.ts`, testé ; listes dans les libellés, en pastilles comme la planche).
+- **Mention « @ »** (ADR 0067, choix de l'auteur : des nœuds comme le texte) : `zInfoboxValue` = chaîne ou nœuds ; champ `ValeurAvecMentions` (liste des fiches, flèches, Entrée, Échap ; mention en pastille avec ×) ; saisie pure testée (`lib/ui/mentionValeur.ts`) ; résolution serveur comme le texte (wiki public et vue joueur) ; test d'intégration : une fiche masquée citée ne devient jamais un lien.
+- Tableau : vrai `<table>`, × de colonne et de ligne au survol et au focus, « + » et « + Ligne », Tab de cellule en cellule, noms de colonne en double suffixés (« Prix 2 ») (`lib/ui/tableauBloc.ts`, testé).
+- **Défaut ancien corrigé** (vu en vérifiant, présent avant V3.1-63 et en production) : un bloc Image, Encadré ou Tableau ajouté n'apparaissait qu'après rechargement — son éditeur, chargé à la demande, suspendait la carte sans frontière. Le corps de chaque carte est désormais dans un `Suspense`.
+- Vérifié au navigateur sur une fiche Lieu de test (supprimée) : suggestions, mention enregistrée en nœuds, colonnes et lignes ajoutées et retirées, Tab.
+
+*Écart* : les intitulés proposés sont des pastilles (planche) plutôt qu'une liste sous le champ (ticket).
+
+---
+
+### ☑ V3.1-64 — La pastille de visibilité au toucher, avec « Annuler » · `S` · sans modèle IA — **fait le 25 octobre**
+
+**Modèle conseillé : Sonnet** — comportement entièrement décrit ; route existante.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Planche** : `Blocs-Recit-Decide.dc.html` (toutes les cartes ; essayer la
+pastille). **Départ** : `BlockCard` (V3.1-63),
+`components/shared/visibilityOptions.ts`, la route de mise à jour de
+visibilité d'un bloc utilisée aujourd'hui par `EntityBlocks.tsx`.
+**Dépend de** : 63.
+
+**Ce qui est décidé (demande de l'auteur)**
+- Un toucher sur la pastille fait passer à la visibilité **suivante** :
+  Public → Joueurs → MJ → Privé → Public. Couleur et libellé suivent
+  aussitôt (mise à jour optimiste, remise en place si le serveur refuse).
+- Chaque changement **s'annonce** dans une annonce discrète en bas de la
+  fiche : « « Rumeurs de Phandaline » : visible par le MJ seul. » avec un
+  bouton **« Annuler »** (remet la valeur précédente). Quand le bloc devient
+  **plus visible** qu'avant (MJ → Privé → Public…), l'annonce ajoute
+  « Attention : il redevient visible. ».
+- Phrases exactes : Public = « tout le monde, wiki public compris » ;
+  Joueurs = « la table, pas le wiki public » ; MJ = « le MJ seul » ; Privé =
+  « son auteur seul ».
+- Le choix direct reste dans ⋮ « Choisir la visibilité… » (tous les
+  niveaux, y compris campagne et utilisateur, qui **ne font pas partie du
+  cycle** : un bloc à l'un de ces niveaux passe à Public au premier
+  toucher, avec l'annonce).
+- Valable pour **tous les blocs**, et pour la pastille de chaque événement
+  de la Chronologie (V3.1-68), chaque aspiration (V3.1-70), chaque punaise
+  et couche de la Carte (V3.1-78) — un seul composant `VisibilityPill`.
+- **Limite assumée** : l'écriture est immédiate, d'où l'annonce et
+  « Annuler ». La visibilité reste filtrée côté serveur (règle 5).
+
+**À faire** : composant `VisibilityPill` (props : niveau, `onChange`,
+libellé de l'objet pour l'annonce) ; annonce avec « Annuler » (réutiliser le
+composant d'annonce existant s'il y en a un, sinon le créer une fois) ;
+planche du catalogue.
+
+**Critères d'acceptation**
+- [x] Quatre touchers ramènent à la visibilité de départ ; chaque étape est enregistrée (test de composant + route).
+- [x] « Annuler » rétablit la valeur précédente côté serveur.
+- [x] L'annonce dit « Attention : il redevient visible. » quand on va vers plus visible.
+- [x] Lecteur d'écran : la pastille annonce sa valeur et l'action (« Visibilité : MJ. Toucher pour passer à Privé »).
+- [x] Un refus du serveur remet l'ancienne pastille et l'annonce le dit.
+
+**Réalisé** (Sonnet, relu et corrigé par Opus)
+- `VisibilityPill` (composant partagé, pour 68, 70, 78) ; cycle, « plus visible que » et annonce en fonctions pures (`lib/ui/visibilitePastille.ts`, testées) ; annonce `AnnonceVisibilite` avec « Annuler », créée faute d'existante ; écriture optimiste par la route de bloc existante, ancienne valeur rendue sur refus.
+- Vérifié au navigateur : quatre touchers enregistrés (200), annonces et avertissement, « Annuler » rétablit côté serveur.
+- Opus :
+  - les libellés étaient rangés dans l'espace `outilDes` (pastille sans nom accessible) : déplacés dans `fiche` ;
+  - **« Privé » = son auteur seul** : la RLS refusait qu'un MJ y passe le bloc d'un autre, la route répondait 500 et le cycle restait bloqué. Désormais `updateBlockContent` refuse proprement (403), `listVisibleBlocks` marque `nonAuteur`, et la pastille comme le choix de ⋮ sautent Privé pour ces blocs (test d'intégration « V3.1-64 », `entityHistory.integration.test.ts`).
+
+*Écarts* : « plus visible » au sens strict (seul Privé → Public, ou campagne/utilisateur → Public, avertit ; MJ → Privé restreint). Le choix direct de ⋮ n'offre pas campagne et utilisateur (il faudrait un sélecteur de campagne ou de personne).
+
+---
+
 ### ☑ V3.1-63 — Fiche du wiki sur ordinateur : en-tête, cartes de verre, palette en familles · `L` · sans modèle IA — **fait le 25 octobre**
 
 **Modèle conseillé : Sonnet** — planche définitive, aucune donnée nouvelle.

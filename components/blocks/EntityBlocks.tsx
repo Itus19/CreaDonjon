@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import {
@@ -13,13 +13,22 @@ import {
   type Announcements,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { computeDroppedOrder } from "@/src/core/ordering/computeDroppedOrder";
 import { useCollapsedGroups } from "@/components/shell/useCollapsedGroups";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import BlockCard from "@/components/blocks/BlockCard";
-import { annonceReordonnancement, famillesAjoutables } from "@/lib/ui/ficheBlocs";
+import { AnnonceVisibiliteProvider } from "@/components/shared/AnnonceVisibilite";
+import {
+  annonceReordonnancement,
+  famillesAjoutables,
+} from "@/lib/ui/ficheBlocs";
 import { EditCommitProvider } from "@/components/shared/EditCommitContext";
 /**
  * V3-R3 — les 21 vues de bloc sont chargees a la demande, jamais dans le
@@ -48,24 +57,40 @@ import { EditCommitProvider } from "@/components/shared/EditCommitContext";
 const TextBlockEditor = dynamic(() => import("./TextBlockEditor"));
 const InfoboxBlockEditor = dynamic(() => import("./InfoboxBlockEditor"));
 const ImageBlockEditor = dynamic(() => import("./ImageBlockEditor"));
-const CustomTableBlockEditor = dynamic(() => import("./CustomTableBlockEditor"));
-const RandomTableBlockEditor = dynamic(() => import("./RandomTableBlockEditor"));
+const CustomTableBlockEditor = dynamic(
+  () => import("./CustomTableBlockEditor"),
+);
+const RandomTableBlockEditor = dynamic(
+  () => import("./RandomTableBlockEditor"),
+);
 const GeneratorBlockEditor = dynamic(() => import("./GeneratorBlockEditor"));
 const InventoryBlockEditor = dynamic(() => import("./InventoryBlockEditor"));
-const SpellcastingBlockEditor = dynamic(() => import("./SpellcastingBlockEditor"));
+const SpellcastingBlockEditor = dynamic(
+  () => import("./SpellcastingBlockEditor"),
+);
 const ResourcesBlockEditor = dynamic(() => import("./ResourcesBlockEditor"));
 const MusicBlockEditor = dynamic(() => import("./MusicBlockEditor"));
 const GenealogyBlockEditor = dynamic(() => import("./GenealogyBlockEditor"));
 const QuestBlockEditor = dynamic(() => import("./QuestBlockEditor"));
-const PersonalityBlockEditor = dynamic(() => import("./PersonalityBlockEditor"));
-const RelationshipBlockEditor = dynamic(() => import("./RelationshipBlockEditor"));
+const PersonalityBlockEditor = dynamic(
+  () => import("./PersonalityBlockEditor"),
+);
+const RelationshipBlockEditor = dynamic(
+  () => import("./RelationshipBlockEditor"),
+);
 const WorldviewBlockEditor = dynamic(() => import("./WorldviewBlockEditor"));
-const RelationsGraphBlockEditor = dynamic(() => import("./RelationsGraphBlockEditor"));
+const RelationsGraphBlockEditor = dynamic(
+  () => import("./RelationsGraphBlockEditor"),
+);
 const TimelineBlockEditor = dynamic(() => import("./TimelineBlockEditor"));
 const MapBlockEditor = dynamic(() => import("./MapBlockEditor"));
 const MonsterStatblockSheet = dynamic(() => import("./MonsterStatblockSheet"));
-const PlayableCharacterSheet = dynamic(() => import("./PlayableCharacterSheet"));
-const SessionJournalMetaBlockEditor = dynamic(() => import("./SessionJournalMetaBlockEditor"));
+const PlayableCharacterSheet = dynamic(
+  () => import("./PlayableCharacterSheet"),
+);
+const SessionJournalMetaBlockEditor = dynamic(
+  () => import("./SessionJournalMetaBlockEditor"),
+);
 import type { OtherEntityOption } from "@/components/entities/RelationsChips";
 import type { TextBlockData } from "@/src/core/schemas/blocks/text";
 import type { InfoboxBlockData } from "@/src/core/schemas/blocks/infobox";
@@ -100,6 +125,8 @@ export interface BlockItem {
   version: number;
   visibilityLevel: string;
   visibilityScopeId: string | null;
+  /** V3.1-64 : le lecteur n'est pas l'auteur (`VisibleBlock.nonAuteur`) ; « Privé » ne lui est pas proposé. */
+  nonAuteur?: boolean;
 }
 
 export const BLOCK_TYPE_LABELS: Record<string, string> = {
@@ -143,6 +170,7 @@ export function BlockDataEditor({
   onBlockRefreshed,
   hideAiAssist,
   siblings,
+  entityKind,
 }: {
   block: BlockItem;
   onChange: (data: unknown) => void;
@@ -160,11 +188,17 @@ export function BlockDataEditor({
   /** Bloc `character` de la meme entite, s'il existe (V1-C18) — permet au bloc `inventory` autonome d'afficher les memes lignes Attaquer/Degats et la meme barre de charge que l'onglet Inventaire de la fiche jouable, sans dupliquer le calcul. */
   characterData: CharacterBlockData | undefined;
   /** Assistance IA du bloc `text` (V1-F3) : une proposition appliquee ecrit cote serveur, ce callback resynchronise l'etat local (donnee + version). */
-  onBlockRefreshed: (fresh: { id: string; data: unknown; version: number }) => void;
+  onBlockRefreshed: (fresh: {
+    id: string;
+    data: unknown;
+    version: number;
+  }) => void;
   /** Coquille joueur (retour utilisateur) : "enlever les outils d'assistance IA" — jamais pour le MJ. */
   hideAiAssist?: boolean;
   /** V2.1-11 : tous les blocs de la fiche, dans l'ordre d'affichage — le bloc `image` y choisit son hôte d'ancrage. */
   siblings: BlockItem[];
+  /** V3.1-66 : genre de la fiche, pour les intitulés proposés par le bloc Encadré. */
+  entityKind?: string;
 }) {
   switch (block.blockType) {
     case "text":
@@ -183,7 +217,12 @@ export function BlockDataEditor({
       );
     case "infobox":
       return (
-        <InfoboxBlockEditor data={block.data as InfoboxBlockData} onChange={(d) => onChange(d)} />
+        <InfoboxBlockEditor
+          data={block.data as InfoboxBlockData}
+          onChange={(d) => onChange(d)}
+          entityKind={entityKind}
+          otherEntities={otherEntities}
+        />
       );
     case "image":
       return (
@@ -236,11 +275,18 @@ export function BlockDataEditor({
       );
     case "resources":
       return (
-        <ResourcesBlockEditor data={block.data as ResourcesBlockData} onChange={(d) => onChange(d)} />
+        <ResourcesBlockEditor
+          data={block.data as ResourcesBlockData}
+          onChange={(d) => onChange(d)}
+        />
       );
     case "music":
       return (
-        <MusicBlockEditor data={block.data as MusicBlockData} onChange={(d) => onChange(d)} blockId={block.id} />
+        <MusicBlockEditor
+          data={block.data as MusicBlockData}
+          onChange={(d) => onChange(d)}
+          blockId={block.id}
+        />
       );
     case "genealogy":
       return (
@@ -347,9 +393,18 @@ export function BlockDataEditor({
     case "statblock":
       // Dans `EntityBlocks`, ce type est rendu avant l'aiguillage ; l'editeur
       // plein ecran passe, lui, toujours par ici.
-      return <MonsterStatblockSheet data={block.data as StatblockBlockData} onChange={(d) => onChange(d)} />;
+      return (
+        <MonsterStatblockSheet
+          data={block.data as StatblockBlockData}
+          onChange={(d) => onChange(d)}
+        />
+      );
     default:
-      return <p className="text-sm text-danger">Type de bloc inconnu : {block.blockType}</p>;
+      return (
+        <p className="text-sm text-danger">
+          Type de bloc inconnu : {block.blockType}
+        </p>
+      );
   }
 }
 
@@ -358,7 +413,10 @@ export function BlockDataEditor({
  * Commune a la barre « Ajouter un bloc » de la fiche et a l'editeur plein
  * ecran : `null` si le serveur refuse.
  */
-export async function creerBloc(entityId: string, blockType: string): Promise<BlockItem | null> {
+export async function creerBloc(
+  entityId: string,
+  blockType: string,
+): Promise<BlockItem | null> {
   const res = await fetch(`/api/entities/${entityId}/blocks`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -402,7 +460,11 @@ export function BarreAjoutBloc({
           <button
             type="button"
             onClick={onLaunchWizard}
-            title={hasCharacterBlock ? "Remplace le personnage actuel de cette fiche" : undefined}
+            title={
+              hasCharacterBlock
+                ? "Remplace le personnage actuel de cette fiche"
+                : undefined
+            }
             className="rounded-full border border-accent px-3 py-1 text-xs text-accent transition-colors hover:bg-accent/10"
           >
             + Assistant de création
@@ -423,7 +485,10 @@ export function BarreAjoutBloc({
             ([type]) =>
               type !== "generator" &&
               (!restrictAddableTypes || restrictAddableTypes.includes(type)) &&
-              !((type === "personality" || type === "worldview") && blocks.some((b) => b.blockType === type))
+              !(
+                (type === "personality" || type === "worldview") &&
+                blocks.some((b) => b.blockType === type)
+              ),
           )
           .map(([type, label]) => (
             <button
@@ -491,7 +556,12 @@ function PaletteAjoutBloc({
             </button>
           </div>
           {familles.map((famille) => (
-            <div key={famille.cle} role="group" aria-label={t(`palette.familles.${famille.cle}`)} className="flex flex-wrap items-center gap-2">
+            <div
+              key={famille.cle}
+              role="group"
+              aria-label={t(`palette.familles.${famille.cle}`)}
+              className="flex flex-wrap items-center gap-2"
+            >
               <span className="w-28 shrink-0 text-xs uppercase tracking-wider text-ink-muted">
                 {t(`palette.familles.${famille.cle}`)}
               </span>
@@ -550,6 +620,7 @@ export default function EntityBlocks({
   restrictAddableTypes,
   hideAiAssist,
   onBlocksChange,
+  entityKind,
 }: {
   entityId: string;
   /** V2-H3 : necessaire pour "creer la carte «X»" depuis le bloc genealogie. */
@@ -571,6 +642,8 @@ export default function EntityBlocks({
   onRelationsChanged?: () => void;
   /** V3.1-31 : prevenu a chaque changement de la liste, pour que l'editeur plein ecran (monte par le parent) parte de l'etat COURANT des blocs et de leurs versions, jamais de celui du chargement de la page. */
   onBlocksChange?: (blocks: BlockItem[]) => void;
+  /** V3.1-66 : genre de la fiche (`entity_kind`), pour les intitulés proposés par le bloc Encadré. */
+  entityKind?: string;
 }) {
   const t = useTranslations("fiche");
   const [blocks, setBlocks] = useState<BlockItem[]>(initialBlocks);
@@ -578,7 +651,9 @@ export default function EntityBlocks({
   // rechargement (Set en memoire) — meme mecanisme de persistance que le
   // sommaire (`useCollapsedGroups`, deja teste), une cle par fiche pour ne
   // jamais melanger les plis d'une fiche avec ceux d'une autre.
-  const { isCollapsed, toggle: toggleCollapsed } = useCollapsedGroups(`creadonjon:collapsed:blocks:${entityId}`);
+  const { isCollapsed, toggle: toggleCollapsed } = useCollapsedGroups(
+    `creadonjon:collapsed:blocks:${entityId}`,
+  );
   const [conflictedIds, setConflictedIds] = useState<Set<string>>(new Set());
   /** Distinct de `conflictedIds` (409, "rechargez") : un 400/500 signifie que la donnee elle-meme est rejetee (ex. `label` vide sur un objet d'inventaire) — se recharger ne change rien tant que la donnee n'est pas corrigee. Avant ce complement, `doSaveBlock` avalait ces echecs sans rien afficher : le bouton semblait "ne rien faire". */
   const [saveErrorIds, setSaveErrorIds] = useState<Set<string>>(new Set());
@@ -598,7 +673,9 @@ export default function EntityBlocks({
    * l'arrivee. En cas d'echec l'etat est efface, et ce sont les bandeaux de
    * conflit/erreur qui parlent — jamais une reussite annoncee a tort.
    */
-  const [saveStateById, setSaveStateById] = useState<Record<string, "pending" | "saved">>({});
+  const [saveStateById, setSaveStateById] = useState<
+    Record<string, "pending" | "saved">
+  >({});
   const savedTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   useEffect(() => {
     const timers = savedTimers.current;
@@ -633,7 +710,7 @@ export default function EntityBlocks({
   const versionsRef = useRef<Record<string, number>>(
     Object.fromEntries(initialBlocks.map((b) => [b.id, b.version])),
   );
-  const saveChainsRef = useRef<Record<string, Promise<void>>>({});
+  const saveChainsRef = useRef<Record<string, Promise<boolean>>>({});
   /** ADR 0023 : blocs dont un enregistrement a deja ete demande dans le tour en cours — voir `saveBlock`. */
   const savePendingRef = useRef<Record<string, boolean>>({});
   /**
@@ -654,7 +731,9 @@ export default function EntityBlocks({
     onBlocksChange?.(blocksRef.current);
   }
 
-  const sortedBlocks = [...blocks].sort((a, b) => a.displayOrder - b.displayOrder);
+  const sortedBlocks = [...blocks].sort(
+    (a, b) => a.displayOrder - b.displayOrder,
+  );
   const characterBlock = blocks.find((b) => b.blockType === "character");
   const inventoryBlock = blocks.find((b) => b.blockType === "inventory");
   const spellcastingBlock = blocks.find((b) => b.blockType === "spellcasting");
@@ -698,7 +777,10 @@ export default function EntityBlocks({
   }
 
   /** Cree un bloc puis lui pose immediatement de vraies donnees — la creation seule ne prend que le defaut du registre. Aller-retour direct plutot que `saveBlock` : juste apres `setBlocks`, le bloc cree n'est pas encore dans le `blocks` capture par la fermeture de cet appel, et `doSaveBlock` (qui cherche le bloc par id dans `blocks`) le raterait silencieusement. */
-  async function createBlockWithData(blockType: string, data: unknown): Promise<BlockItem | null> {
+  async function createBlockWithData(
+    blockType: string,
+    data: unknown,
+  ): Promise<BlockItem | null> {
     const res = await fetch(`/api/entities/${entityId}/blocks`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -720,7 +802,10 @@ export default function EntityBlocks({
         version: block.version,
         display: block.display,
         data,
-        visibility: { level: block.visibilityLevel, scopeId: block.visibilityScopeId ?? null },
+        visibility: {
+          level: block.visibilityLevel,
+          scopeId: block.visibilityScopeId ?? null,
+        },
       }),
     });
     if (!patchRes.ok) {
@@ -733,7 +818,9 @@ export default function EntityBlocks({
   }
 
   function patchBlock(id: string, patch: Partial<BlockItem>) {
-    updateBlocks((prev) => prev.map((b) => (b.id === id ? { ...b, ...patch } : b)));
+    updateBlocks((prev) =>
+      prev.map((b) => (b.id === id ? { ...b, ...patch } : b)),
+    );
   }
 
   /**
@@ -743,7 +830,11 @@ export default function EntityBlocks({
    * perimee et echoue en 409 (conflit fantome, alors que rien n'est
    * reellement en conflit du point de vue de l'utilisateur).
    */
-  function handleBlockRefreshed(fresh: { id: string; data: unknown; version: number }) {
+  function handleBlockRefreshed(fresh: {
+    id: string;
+    data: unknown;
+    version: number;
+  }) {
     versionsRef.current[fresh.id] = fresh.version;
     patchBlock(fresh.id, { data: fresh.data, version: fresh.version });
   }
@@ -766,7 +857,11 @@ export default function EntityBlocks({
    */
   function saveBlock(
     id: string,
-    overrides?: { visibilityLevel?: string; visibilityScopeId?: string | null; data?: unknown },
+    overrides?: {
+      visibilityLevel?: string;
+      visibilityScopeId?: string | null;
+      data?: unknown;
+    },
   ) {
     // ADR 0023 — deux demandes dans le MEME tour ne produisent qu'une
     // requete. Le cas : un editeur qui enregistre deja explicitement (fiche de
@@ -777,14 +872,15 @@ export default function EntityBlocks({
     // mais elle pose le drapeau, donc c'est bien la plus complete des deux qui
     // part. Les autres peuvent l'etre sans risque : `doSaveBlock` lit de toute
     // facon la donnee la plus fraiche dans `blocksRef`.
-    if (!overrides && savePendingRef.current[id]) return saveChainsRef.current[id] ?? Promise.resolve();
+    if (!overrides && savePendingRef.current[id])
+      return saveChainsRef.current[id] ?? Promise.resolve(true);
     savePendingRef.current[id] = true;
     queueMicrotask(() => {
       delete savePendingRef.current[id];
     });
 
     const run = () => doSaveBlock(id, overrides);
-    const previous = saveChainsRef.current[id] ?? Promise.resolve();
+    const previous = saveChainsRef.current[id] ?? Promise.resolve(true);
     const next = previous.then(run, run);
     saveChainsRef.current[id] = next;
     return next;
@@ -792,10 +888,14 @@ export default function EntityBlocks({
 
   async function doSaveBlock(
     id: string,
-    overrides?: { visibilityLevel?: string; visibilityScopeId?: string | null; data?: unknown },
-  ) {
+    overrides?: {
+      visibilityLevel?: string;
+      visibilityScopeId?: string | null;
+      data?: unknown;
+    },
+  ): Promise<boolean> {
     const block = blocksRef.current.find((b) => b.id === id);
-    if (!block) return;
+    if (!block) return false;
 
     // Des le depart, pas au retour : c'est le geste qu'on accuse, pas le
     // reseau. Voir `saveStateById`.
@@ -815,7 +915,8 @@ export default function EntityBlocks({
         data: overrides && "data" in overrides ? overrides.data : block.data,
         visibility: {
           level: overrides?.visibilityLevel ?? block.visibilityLevel,
-          scopeId: overrides?.visibilityScopeId ?? block.visibilityScopeId ?? null,
+          scopeId:
+            overrides?.visibilityScopeId ?? block.visibilityScopeId ?? null,
         },
       }),
     });
@@ -826,12 +927,12 @@ export default function EntityBlocks({
       // de plus.
       setSaveState(id, null);
       setConflictedIds((prev) => new Set(prev).add(id));
-      return;
+      return false;
     }
     if (!res.ok) {
       setSaveState(id, null);
       setSaveErrorIds((prev) => new Set(prev).add(id));
-      return;
+      return false;
     }
 
     const updated = (await res.json()) as BlockItem;
@@ -850,6 +951,24 @@ export default function EntityBlocks({
       return next;
     });
     setSaveState(id, "saved");
+    return true;
+  }
+
+  /**
+   * V3.1-64 — change la visibilité d'UN bloc : l'écran suit aussitôt, la
+   * route d'enregistrement du bloc écrit, et l'ancienne valeur revient si le
+   * serveur refuse. `true` si l'écriture a réussi (la pastille l'annonce).
+   */
+  async function changerVisibiliteBloc(
+    id: string,
+    niveau: string,
+  ): Promise<boolean> {
+    const avant = blocksRef.current.find((b) => b.id === id)?.visibilityLevel;
+    if (avant === undefined) return false;
+    patchBlock(id, { visibilityLevel: niveau });
+    const ok = await saveBlock(id, { visibilityLevel: niveau });
+    if (!ok) patchBlock(id, { visibilityLevel: avant });
+    return ok;
   }
 
   function handleBlockBlur(id: string) {
@@ -884,7 +1003,10 @@ export default function EntityBlocks({
         entityId,
         blockType: original.blockType,
         label: original.display.label || BLOCK_TYPE_LABELS[original.blockType],
-        visibility: { level: original.visibilityLevel, scopeId: original.visibilityScopeId },
+        visibility: {
+          level: original.visibilityLevel,
+          scopeId: original.visibilityScopeId,
+        },
       }),
     });
     if (!createRes.ok) return;
@@ -897,7 +1019,10 @@ export default function EntityBlocks({
         version: created.version,
         display: original.display,
         data: original.data,
-        visibility: { level: original.visibilityLevel, scopeId: original.visibilityScopeId },
+        visibility: {
+          level: original.visibilityLevel,
+          scopeId: original.visibilityScopeId,
+        },
       }),
     });
     if (!fillRes.ok) {
@@ -917,12 +1042,18 @@ export default function EntityBlocks({
     const res = await fetch(`/api/blocks/${id}/order`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ version: current.version, displayOrder: newOrder }),
+      body: JSON.stringify({
+        version: current.version,
+        displayOrder: newOrder,
+      }),
     });
     if (!res.ok) return;
     const updated = (await res.json()) as BlockItem;
     versionsRef.current[id] = updated.version;
-    patchBlock(id, { displayOrder: updated.displayOrder, version: updated.version });
+    patchBlock(id, {
+      displayOrder: updated.displayOrder,
+      version: updated.version,
+    });
   }
 
   async function moveBlock(id: string, direction: "up" | "down") {
@@ -931,7 +1062,10 @@ export default function EntityBlocks({
     if (swapIndex < 0 || swapIndex >= sortedBlocks.length) return;
 
     const neighbor = sortedBlocks[swapIndex];
-    const beyond = direction === "up" ? sortedBlocks[swapIndex - 1] : sortedBlocks[swapIndex + 1];
+    const beyond =
+      direction === "up"
+        ? sortedBlocks[swapIndex - 1]
+        : sortedBlocks[swapIndex + 1];
     const newOrder = beyond
       ? (beyond.displayOrder + neighbor.displayOrder) / 2
       : neighbor.displayOrder + (direction === "up" ? -1000 : 1000);
@@ -949,7 +1083,9 @@ export default function EntityBlocks({
    */
   const dndSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
   );
 
   /**
@@ -960,16 +1096,37 @@ export default function EntityBlocks({
   const annonces: Announcements = (() => {
     const ids = sortedBlocks.map((b) => b.id);
     const libelles = Object.fromEntries(
-      sortedBlocks.map((b) => [b.id, b.display.label || BLOCK_TYPE_LABELS[b.blockType] || b.blockType]),
+      sortedBlocks.map((b) => [
+        b.id,
+        b.display.label || BLOCK_TYPE_LABELS[b.blockType] || b.blockType,
+      ]),
     );
-    const dire = (etape: "prise" | "deplace" | "posee" | "annulee", actif: string | number, cible: string | number | null) => {
-      const a = annonceReordonnancement(etape, ids, libelles, String(actif), cible === null ? null : String(cible));
-      return a ? t(`reordonner.${a.cle}`, { bloc: a.bloc, position: a.position, total: a.total }) : undefined;
+    const dire = (
+      etape: "prise" | "deplace" | "posee" | "annulee",
+      actif: string | number,
+      cible: string | number | null,
+    ) => {
+      const a = annonceReordonnancement(
+        etape,
+        ids,
+        libelles,
+        String(actif),
+        cible === null ? null : String(cible),
+      );
+      return a
+        ? t(`reordonner.${a.cle}`, {
+            bloc: a.bloc,
+            position: a.position,
+            total: a.total,
+          })
+        : undefined;
     };
     return {
       onDragStart: ({ active }) => dire("prise", active.id, active.id),
-      onDragOver: ({ active, over }) => dire("deplace", active.id, over ? over.id : active.id),
-      onDragEnd: ({ active, over }) => dire("posee", active.id, over ? over.id : active.id),
+      onDragOver: ({ active, over }) =>
+        dire("deplace", active.id, over ? over.id : active.id),
+      onDragEnd: ({ active, over }) =>
+        dire("posee", active.id, over ? over.id : active.id),
       onDragCancel: ({ active }) => dire("annulee", active.id, active.id),
     };
   })();
@@ -977,91 +1134,107 @@ export default function EntityBlocks({
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    const newOrder = computeDroppedOrder(sortedBlocks, String(active.id), String(over.id));
+    const newOrder = computeDroppedOrder(
+      sortedBlocks,
+      String(active.id),
+      String(over.id),
+    );
     if (newOrder === null) return;
     void moveBlockTo(String(active.id), newOrder);
   }
 
   return (
     <div className="flex flex-col">
-      {/* `id` fige (V2-G1) : sans lui, l'identifiant interne d'accessibilite
+      <AnnonceVisibiliteProvider>
+        {/* `id` fige (V2-G1) : sans lui, l'identifiant interne d'accessibilite
           de dnd-kit (`aria-describedby="DndDescribedBy-N"`) est un compteur
           incremente a chaque montage — different entre le rendu serveur et
           l'hydratation client des qu'une AUTRE instance de ce composant a
           deja incremente ce compteur ailleurs sur la page (ex. plusieurs
           fenetres d'entite ouvertes). Base sur `entityId`, deja stable et
           identique cote serveur/client. */}
-      <DndContext
-        id={`entity-blocks-${entityId}`}
-        sensors={dndSensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-        accessibility={{ announcements: annonces, screenReaderInstructions: { draggable: t("reordonner.instructions") } }}
-      >
-        <SortableContext items={sortedBlocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
-          {sortedBlocks.map((block, index) => (
-            <SortableBlockCard
-              key={block.id}
-              block={block}
-              index={index}
-              lastIndex={sortedBlocks.length - 1}
-              isCollapsed={isCollapsed(block.id)}
-              hasConflict={conflictedIds.has(block.id)}
-              hasSaveError={saveErrorIds.has(block.id)}
-              saveState={saveStateById[block.id] ?? null}
-              worldSlug={worldSlug}
-              worldId={worldId}
-              campaignId={campaignId ?? null}
-              otherEntities={otherEntities}
-              onRelationsChanged={() => {
-                onRelationsChangedFromParent?.();
-              }}
-              relationsReloadSignal={relationsReloadSignal ?? 0}
-              entityId={entityId}
-              characterBlock={characterBlock}
-              inventoryBlock={inventoryBlock}
-              spellcastingBlock={spellcastingBlock}
-              resourcesBlock={resourcesBlock}
-              onToggleCollapsed={toggleCollapsed}
-              onPatchBlock={patchBlock}
-              onSaveBlock={saveBlock}
-              onMoveBlock={moveBlock}
-              onDuplicateBlock={duplicateBlock}
-              onRequestDelete={setPendingDeleteId}
-              onUpdateCharacter={updateCharacter}
-              onUpdateInventory={updateInventory}
-              onUpdateSpellcasting={updateSpellcasting}
-              onBlockRefreshed={handleBlockRefreshed}
-              onBlur={handleBlockBlur(block.id)}
-              hideAiAssist={hideAiAssist}
-              siblings={sortedBlocks}
-            />
-          ))}
-        </SortableContext>
-      </DndContext>
-      {sortedBlocks.length === 0 && (
-        <p className="py-4 text-center text-xs italic text-ink-muted">
-          Aucun bloc. Utilisez la barre ci-dessous pour en ajouter.
-        </p>
-      )}
+        <DndContext
+          id={`entity-blocks-${entityId}`}
+          sensors={dndSensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+          accessibility={{
+            announcements: annonces,
+            screenReaderInstructions: {
+              draggable: t("reordonner.instructions"),
+            },
+          }}
+        >
+          <SortableContext
+            items={sortedBlocks.map((b) => b.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            {sortedBlocks.map((block, index) => (
+              <SortableBlockCard
+                key={block.id}
+                block={block}
+                index={index}
+                lastIndex={sortedBlocks.length - 1}
+                isCollapsed={isCollapsed(block.id)}
+                hasConflict={conflictedIds.has(block.id)}
+                hasSaveError={saveErrorIds.has(block.id)}
+                saveState={saveStateById[block.id] ?? null}
+                worldSlug={worldSlug}
+                worldId={worldId}
+                campaignId={campaignId ?? null}
+                otherEntities={otherEntities}
+                onRelationsChanged={() => {
+                  onRelationsChangedFromParent?.();
+                }}
+                relationsReloadSignal={relationsReloadSignal ?? 0}
+                entityId={entityId}
+                characterBlock={characterBlock}
+                inventoryBlock={inventoryBlock}
+                spellcastingBlock={spellcastingBlock}
+                resourcesBlock={resourcesBlock}
+                onToggleCollapsed={toggleCollapsed}
+                onPatchBlock={patchBlock}
+                onSaveBlock={saveBlock}
+                onChangerVisibilite={changerVisibiliteBloc}
+                onMoveBlock={moveBlock}
+                onDuplicateBlock={duplicateBlock}
+                onRequestDelete={setPendingDeleteId}
+                onUpdateCharacter={updateCharacter}
+                onUpdateInventory={updateInventory}
+                onUpdateSpellcasting={updateSpellcasting}
+                onBlockRefreshed={handleBlockRefreshed}
+                onBlur={handleBlockBlur(block.id)}
+                hideAiAssist={hideAiAssist}
+                siblings={sortedBlocks}
+                entityKind={entityKind}
+              />
+            ))}
+          </SortableContext>
+        </DndContext>
+        {sortedBlocks.length === 0 && (
+          <p className="py-4 text-center text-xs italic text-ink-muted">
+            Aucun bloc. Utilisez la barre ci-dessous pour en ajouter.
+          </p>
+        )}
 
-      <PaletteAjoutBloc
-        blocks={blocks}
-        onAdd={addBlock}
-        restrictAddableTypes={restrictAddableTypes}
-        onLaunchWizard={onLaunchWizard}
-        hasCharacterBlock={Boolean(characterBlock)}
-      />
+        <PaletteAjoutBloc
+          blocks={blocks}
+          onAdd={addBlock}
+          restrictAddableTypes={restrictAddableTypes}
+          onLaunchWizard={onLaunchWizard}
+          hasCharacterBlock={Boolean(characterBlock)}
+        />
 
-      <ConfirmDialog
-        open={pendingDeleteId !== null}
-        title={t("confirmerSuppressionTitre")}
-        message={t("confirmerSuppression")}
-        confirmLabel={t("confirmerSuppressionBouton")}
-        danger
-        onConfirm={confirmDeleteBlock}
-        onCancel={() => setPendingDeleteId(null)}
-      />
+        <ConfirmDialog
+          open={pendingDeleteId !== null}
+          title={t("confirmerSuppressionTitre")}
+          message={t("confirmerSuppression")}
+          confirmLabel={t("confirmerSuppressionBouton")}
+          danger
+          onConfirm={confirmDeleteBlock}
+          onCancel={() => setPendingDeleteId(null)}
+        />
+      </AnnonceVisibiliteProvider>
     </div>
   );
 }
@@ -1095,6 +1268,7 @@ function SortableBlockCard({
   onToggleCollapsed,
   onPatchBlock,
   onSaveBlock,
+  onChangerVisibilite,
   onMoveBlock,
   onDuplicateBlock,
   onRequestDelete,
@@ -1105,6 +1279,7 @@ function SortableBlockCard({
   onBlur,
   hideAiAssist,
   siblings,
+  entityKind,
 }: {
   block: BlockItem;
   index: number;
@@ -1127,23 +1302,47 @@ function SortableBlockCard({
   resourcesBlock: BlockItem | undefined;
   onToggleCollapsed: (id: string) => void;
   onPatchBlock: (id: string, patch: Partial<BlockItem>) => void;
-  onSaveBlock: (id: string, overrides?: { visibilityLevel?: string; visibilityScopeId?: string | null; data?: unknown }) => void;
+  onSaveBlock: (
+    id: string,
+    overrides?: {
+      visibilityLevel?: string;
+      visibilityScopeId?: string | null;
+      data?: unknown;
+    },
+  ) => Promise<boolean>;
+  /** V3.1-64 : écriture optimiste de la visibilité, `true` si le serveur l'a acceptée. */
+  onChangerVisibilite: (id: string, niveau: string) => Promise<boolean>;
   onMoveBlock: (id: string, direction: "up" | "down") => void;
   onDuplicateBlock: (id: string) => void;
   onRequestDelete: (id: string) => void;
   onUpdateCharacter: (data: CharacterBlockData) => void;
   onUpdateInventory: (data: InventoryBlockData) => void;
   onUpdateSpellcasting: (data: SpellcastingBlockData) => void;
-  onBlockRefreshed: (fresh: { id: string; data: unknown; version: number }) => void;
+  onBlockRefreshed: (fresh: {
+    id: string;
+    data: unknown;
+    version: number;
+  }) => void;
   onBlur: (e: React.FocusEvent<HTMLDivElement>) => void;
   hideAiAssist?: boolean;
   /** V2.1-11 : tous les blocs de la fiche, dans l'ordre d'affichage — transmis au bloc `image`, qui y choisit son hôte d'ancrage. */
   siblings: BlockItem[];
+  entityKind?: string;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: block.id });
   const style = { transform: CSS.Transform.toString(transform), transition };
   /** ADR 0023 — « cette valeur est engagee, enregistre CE bloc ». Lu par `Checkbox` et `Dropdown` via `useEditCommit()`, sans qu'aucun editeur ait a le transmettre. */
-  const commit = useCallback(() => onSaveBlock(block.id), [onSaveBlock, block.id]);
+  const commit = useCallback(
+    () => onSaveBlock(block.id),
+    [onSaveBlock, block.id],
+  );
 
   const pliable = block.blockType !== "statblock";
 
@@ -1159,19 +1358,18 @@ function SortableBlockCard({
       onBasculerPli={() => onToggleCollapsed(block.id)}
       titre={block.display.label}
       titrePlaceholder={BLOCK_TYPE_LABELS[block.blockType] ?? block.blockType}
-      onTitreChange={(label) => onPatchBlock(block.id, { display: { ...block.display, label } })}
+      onTitreChange={(label) =>
+        onPatchBlock(block.id, { display: { ...block.display, label } })
+      }
       typeLibelle={BLOCK_TYPE_LABELS[block.blockType] ?? block.blockType}
       etatSauvegarde={saveState}
       niveauVisibilite={block.visibilityLevel}
-      onChoisirVisibilite={(niveau) => {
-        onPatchBlock(block.id, { visibilityLevel: niveau });
-        onSaveBlock(block.id, { visibilityLevel: niveau });
-      }}
+      nonAuteur={block.nonAuteur ?? false}
+      onChoisirVisibilite={(niveau) => onChangerVisibilite(block.id, niveau)}
       /* V3.1-65 : la lettrine vaut pour le bloc entier, d'ou sa place dans
-         l'en-tete et non dans le corps. Meme patron que la visibilite
-         juste au-dessus : on patche l'etat local ET on enregistre avec la
-         donnee en surcharge, sinon la requete partirait avec l'ancienne
-         (`onSaveBlock` lit l'etat du rendu courant). */
+         l'en-tete et non dans le corps. On patche l'etat local ET on
+         enregistre avec la donnee en surcharge, sinon la requete partirait
+         avec l'ancienne (`onSaveBlock` lit l'etat du rendu courant). */
       lettrine={
         block.blockType === "text"
           ? {
@@ -1214,47 +1412,61 @@ function SortableBlockCard({
           de l'editeur, jamais l'en-tete : la liste de visibilite, elle,
           enregistre deja explicitement juste au-dessus, et le contexte lui
           ferait envoyer une seconde requete pour rien. */}
+      {/* Les éditeurs sont chargés à la demande (`dynamic`). Le premier bloc
+          d'un type ajouté pendant la session attend son code : sans frontière
+          ici, la carte entière restait absente jusqu'au rechargement. On
+          garde l'en-tête de la carte, seul le corps attend. */}
+      <Suspense fallback={null}>
       <EditCommitProvider commit={commit}>
-      {block.blockType === "character" ? (
-        !isCollapsed && (
-          <PlayableCharacterSheet
-            worldSlug={worldSlug}
-            entityId={entityId}
-            campaignId={null}
-            character={block.data as CharacterBlockData}
-            inventory={inventoryBlock?.data as InventoryBlockData | undefined}
-            spellcasting={spellcastingBlock?.data as SpellcastingBlockData | undefined}
-            resources={resourcesBlock?.data as ResourcesBlockData | undefined}
-            characterBlockId={block.id}
-            characterBlockVersion={block.version}
-            onUpdateCharacter={onUpdateCharacter}
-            onUpdateInventory={onUpdateInventory}
-            onUpdateSpellcasting={onUpdateSpellcasting}
-            onBlockRefreshed={onBlockRefreshed}
-            isWorldAdmin={!hideAiAssist}
-          />
-        )
-      ) : block.blockType === "statblock" ? (
-        <MonsterStatblockSheet data={block.data as StatblockBlockData} onChange={(data) => onPatchBlock(block.id, { data })} />
-      ) : (
-        !isCollapsed && (
-          <BlockDataEditor
-            block={block}
+        {block.blockType === "character" ? (
+          !isCollapsed && (
+            <PlayableCharacterSheet
+              worldSlug={worldSlug}
+              entityId={entityId}
+              campaignId={null}
+              character={block.data as CharacterBlockData}
+              inventory={inventoryBlock?.data as InventoryBlockData | undefined}
+              spellcasting={
+                spellcastingBlock?.data as SpellcastingBlockData | undefined
+              }
+              resources={resourcesBlock?.data as ResourcesBlockData | undefined}
+              characterBlockId={block.id}
+              characterBlockVersion={block.version}
+              onUpdateCharacter={onUpdateCharacter}
+              onUpdateInventory={onUpdateInventory}
+              onUpdateSpellcasting={onUpdateSpellcasting}
+              onBlockRefreshed={onBlockRefreshed}
+              isWorldAdmin={!hideAiAssist}
+            />
+          )
+        ) : block.blockType === "statblock" ? (
+          <MonsterStatblockSheet
+            data={block.data as StatblockBlockData}
             onChange={(data) => onPatchBlock(block.id, { data })}
-            worldSlug={worldSlug}
-            worldId={worldId}
-            campaignId={campaignId}
-            otherEntities={otherEntities}
-            onRelationsChanged={onRelationsChanged}
-            relationsReloadSignal={relationsReloadSignal}
-            characterData={characterBlock?.data as CharacterBlockData | undefined}
-            onBlockRefreshed={onBlockRefreshed}
-            hideAiAssist={hideAiAssist}
-            siblings={siblings}
           />
-        )
-      )}
+        ) : (
+          !isCollapsed && (
+            <BlockDataEditor
+              block={block}
+              onChange={(data) => onPatchBlock(block.id, { data })}
+              worldSlug={worldSlug}
+              worldId={worldId}
+              campaignId={campaignId}
+              otherEntities={otherEntities}
+              onRelationsChanged={onRelationsChanged}
+              relationsReloadSignal={relationsReloadSignal}
+              characterData={
+                characterBlock?.data as CharacterBlockData | undefined
+              }
+              onBlockRefreshed={onBlockRefreshed}
+              hideAiAssist={hideAiAssist}
+              siblings={siblings}
+              entityKind={entityKind}
+            />
+          )
+        )}
       </EditCommitProvider>
+      </Suspense>
     </BlockCard>
   );
 }

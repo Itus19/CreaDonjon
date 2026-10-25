@@ -4,13 +4,13 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import type { DraggableAttributes } from "@dnd-kit/core";
 import type { useSortable } from "@dnd-kit/sortable";
-import ActionsMenu, { type ActionsMenuItem } from "@/components/shared/ActionsMenu";
+import ActionsMenu, {
+  type ActionsMenuItem,
+} from "@/components/shared/ActionsMenu";
 import LettrineBouton from "@/components/blocks/LettrineBouton";
-import {
-  VISIBILITY_PILL_FALLBACK,
-  VISIBILITY_PILL_STYLES,
-  isVisibilityLevelKey,
-} from "@/components/shared/visibilityOptions";
+import VisibilityPill from "@/components/shared/VisibilityPill";
+import { useChangerVisibilite } from "@/components/shared/useChangerVisibilite";
+import { VISIBILITY_PILL_STYLES } from "@/components/shared/visibilityOptions";
 
 /** Les quatre niveaux du choix direct (« Choisir la visibilité… ») ; campagne et utilisateur demandent un identifiant et n'y figurent pas. */
 const NIVEAUX_CHOIX = ["public", "players", "gm", "private"] as const;
@@ -40,8 +40,9 @@ export default function BlockCard({
   typeLibelle,
   etatSauvegarde,
   niveauVisibilite,
-  onChoisirVisibilite,
   lettrine,
+  nonAuteur = false,
+  onChoisirVisibilite,
   peutMonter,
   peutDescendre,
   onMonter,
@@ -57,7 +58,10 @@ export default function BlockCard({
   onBlur: (e: React.FocusEvent<HTMLDivElement>) => void;
   estGlisse: boolean;
   /** Attributs et écouteurs de `useSortable`, posés sur ⠿ : souris, toucher et clavier. */
-  poignee: { attributes: DraggableAttributes; listeners: ReturnType<typeof useSortable>["listeners"] };
+  poignee: {
+    attributes: DraggableAttributes;
+    listeners: ReturnType<typeof useSortable>["listeners"];
+  };
   /** `false` pour la fiche de créature, qui n'a pas de ▾. */
   pliable: boolean;
   replie: boolean;
@@ -68,8 +72,11 @@ export default function BlockCard({
   typeLibelle: string;
   /** « pending » pendant la requête, « saved » les deux secondes qui suivent sa réussite (ADR 0023). */
   etatSauvegarde: "pending" | "saved" | null;
+  /** V3.1-64 : le lecteur n'est pas l'auteur du bloc ; « Privé » (son auteur seul) n'est pas proposé. */
+  nonAuteur?: boolean;
   niveauVisibilite: string;
-  onChoisirVisibilite: (niveau: string) => void;
+  /** Met l'écran à jour aussitôt, écrit, remet l'ancienne valeur si le serveur refuse ; `true` si l'écriture a réussi (V3.1-64). */
+  onChoisirVisibilite: (niveau: string) => Promise<boolean>;
   /**
    * V3.1-65 — bloc `text` seulement : la lettrine est un interrupteur
    * d'en-tete, pas un reglage du corps. Elle vaut pour le bloc entier (un
@@ -89,19 +96,21 @@ export default function BlockCard({
   children: React.ReactNode;
 }) {
   const t = useTranslations("fiche");
-  // Au plus un panneau sous l'en-tête : l'infobulle de la pastille, ou le choix direct du ⋮.
-  const [panneau, setPanneau] = useState<"info" | "choix" | null>(null);
-
-  const style_ = VISIBILITY_PILL_STYLES[niveauVisibilite] ?? VISIBILITY_PILL_FALLBACK;
-  const cleNiveau = isVisibilityLevelKey(niveauVisibilite) ? niveauVisibilite : null;
-  const libelleNiveau = cleNiveau ? t(`niveaux.${cleNiveau}`) : niveauVisibilite;
-  const quiLaVoit = cleNiveau ? t(`qui.${cleNiveau}`) : niveauVisibilite;
+  // Le choix direct du ⋮ (« Choisir la visibilité… ») s'ouvre sous l'en-tête ; le toucher sur la pastille, lui, passe au niveau suivant (V3.1-64).
+  const [choixOuvert, setChoixOuvert] = useState(false);
+  const changerVisibilite = useChangerVisibilite({
+    niveau: niveauVisibilite,
+    onChange: onChoisirVisibilite,
+    objet: titre || typeLibelle,
+  });
 
   const items: ActionsMenuItem[] = [
     ...(peutMonter ? [{ label: t("monter"), onSelect: onMonter }] : []),
-    ...(peutDescendre ? [{ label: t("descendre"), onSelect: onDescendre }] : []),
+    ...(peutDescendre
+      ? [{ label: t("descendre"), onSelect: onDescendre }]
+      : []),
     { label: t("dupliquer"), onSelect: onDupliquer },
-    { label: t("choisirVisibilite"), onSelect: () => setPanneau("choix") },
+    { label: t("choisirVisibilite"), onSelect: () => setChoixOuvert(true) },
     { label: t("supprimer"), onSelect: onSupprimer, danger: true },
   ];
 
@@ -114,7 +123,9 @@ export default function BlockCard({
         estGlisse ? "z-10 border-accent opacity-90" : "border-edge"
       }`}
     >
-      <div className={`flex items-center gap-2 px-2 py-2 ${replie ? "" : "border-b border-edge"}`}>
+      <div
+        className={`flex items-center gap-2 px-2 py-2 ${replie ? "" : "border-b border-edge"}`}
+      >
         <button
           type="button"
           {...poignee.attributes}
@@ -151,18 +162,16 @@ export default function BlockCard({
         {/* Annonce polie : la région existe toujours, seul son texte change, sinon un lecteur d'écran ne l'annonce pas. */}
         <span aria-live="polite" className="shrink-0 text-xs text-success">
           {etatSauvegarde === "saved" ? t("enregistre") : ""}
-          {etatSauvegarde === "pending" ? <span className="text-ink-muted">{t("enregistrement")}</span> : null}
+          {etatSauvegarde === "pending" ? (
+            <span className="text-ink-muted">{t("enregistrement")}</span>
+          ) : null}
         </span>
-        <button
-          type="button"
-          onClick={() => setPanneau((p) => (p === "info" ? null : "info"))}
-          aria-label={t("visibiliteBloc", { niveau: libelleNiveau })}
-          aria-expanded={panneau === "info"}
-          className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs transition-colors hover:bg-panel-raised ${style_.pill}`}
-        >
-          <span aria-hidden className={`h-1.5 w-1.5 rounded-full ${style_.dot}`} />
-          {libelleNiveau}
-        </button>
+        <VisibilityPill
+          niveau={niveauVisibilite}
+          onChange={onChoisirVisibilite}
+          objet={titre || typeLibelle}
+          sansPrive={nonAuteur}
+        />
         <ActionsMenu
           aria-label={t("actionsBloc")}
           items={items}
@@ -170,22 +179,13 @@ export default function BlockCard({
         />
       </div>
 
-      {panneau === "info" && (
-        <div className="flex items-center gap-2 border-b border-edge px-3 py-2 text-xs text-ink-soft">
-          <span className="flex-1">{t("visibiliteQui", { qui: quiLaVoit })}</span>
-          <button
-            type="button"
-            onClick={() => setPanneau(null)}
-            className="rounded-md px-1.5 text-ink-muted transition-colors hover:text-ink"
-            aria-label={t("fermer")}
-          >
-            ×
-          </button>
-        </div>
-      )}
-      {panneau === "choix" && (
-        <div role="group" aria-label={t("choisirVisibilite")} className="flex flex-wrap items-center gap-2 border-b border-edge px-3 py-2">
-          {NIVEAUX_CHOIX.map((niveau) => {
+      {choixOuvert && (
+        <div
+          role="group"
+          aria-label={t("choisirVisibilite")}
+          className="flex flex-wrap items-center gap-2 border-b border-edge px-3 py-2"
+        >
+          {NIVEAUX_CHOIX.filter((niveau) => !(nonAuteur && niveau === "private")).map((niveau) => {
             const s = VISIBILITY_PILL_STYLES[niveau];
             return (
               <button
@@ -194,21 +194,25 @@ export default function BlockCard({
                 aria-pressed={niveau === niveauVisibilite}
                 title={t(`qui.${niveau}`)}
                 onClick={() => {
-                  setPanneau(null);
-                  if (niveau !== niveauVisibilite) onChoisirVisibilite(niveau);
+                  setChoixOuvert(false);
+                  if (niveau !== niveauVisibilite)
+                    void changerVisibilite(niveau);
                 }}
                 className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs transition-colors hover:bg-panel-raised ${s.pill} ${
                   niveau === niveauVisibilite ? "bg-panel-raised" : ""
                 }`}
               >
-                <span aria-hidden className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
+                <span
+                  aria-hidden
+                  className={`h-1.5 w-1.5 rounded-full ${s.dot}`}
+                />
                 {t(`niveaux.${niveau}`)}
               </button>
             );
           })}
           <button
             type="button"
-            onClick={() => setPanneau(null)}
+            onClick={() => setChoixOuvert(false)}
             className="ml-auto rounded-md px-1.5 text-ink-muted transition-colors hover:text-ink"
             aria-label={t("fermer")}
           >
@@ -217,8 +221,12 @@ export default function BlockCard({
         </div>
       )}
 
-      {conflit && <p className="px-4 pt-2 text-xs text-danger">{t("conflit")}</p>}
-      {erreurSauvegarde && <p className="px-4 pt-2 text-xs text-danger">{t("erreurSauvegarde")}</p>}
+      {conflit && (
+        <p className="px-4 pt-2 text-xs text-danger">{t("conflit")}</p>
+      )}
+      {erreurSauvegarde && (
+        <p className="px-4 pt-2 text-xs text-danger">{t("erreurSauvegarde")}</p>
+      )}
 
       {!replie && <div className="px-4 py-3">{children}</div>}
     </div>

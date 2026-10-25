@@ -5,7 +5,7 @@ import type { AnchoredImage, AnchorFlow } from "@/src/core/images/blockAnchor";
 import { showsInPage } from "@/src/core/images/backgroundMode";
 import type { Segment, SegmentContentNode } from "@/src/core/schemas/entities/segments";
 import type { TextBlockData } from "@/src/core/schemas/blocks/text";
-import type { InfoboxBlockData } from "@/src/core/schemas/blocks/infobox";
+import { infoboxValueNodes, type InfoboxBlockData } from "@/src/core/schemas/blocks/infobox";
 import type { ImageBlockData } from "@/src/core/schemas/blocks/image";
 import type { CustomTableBlockData } from "@/src/core/schemas/blocks/customTable";
 import type { QuestBlockData, QuestNote, QuestObjective } from "@/src/core/schemas/blocks/quest";
@@ -305,7 +305,24 @@ function visiblesDansLaPage(images: AnchoredImage<PublicBlock>[]): AnchoredImage
   return images.filter((image) => showsInPage(image.block.data as unknown as ImageBlockData));
 }
 
-function PublicInfoboxBlock({ data }: { data: InfoboxBlockData }) {
+/**
+ * V3.1-66 : une valeur peut citer une fiche (« @ »). Même rendu que le bloc
+ * Texte (`renderNode`) : le lien n'existe que si le serveur a résolu la fiche
+ * pour ce lecteur (`textRefs`) ; sinon le libellé reste du texte ordinaire.
+ */
+function PublicInfoboxBlock({
+  data,
+  textRefs,
+  hrefBase,
+  ruleHrefBase,
+  ruleRefs,
+}: {
+  data: InfoboxBlockData;
+  textRefs: Record<string, EntityRefPreview> | undefined;
+  hrefBase: string;
+  ruleHrefBase: string | undefined;
+  ruleRefs: Record<string, RuleRefPreview> | undefined;
+}) {
   return (
     // `items-baseline` : meme correction qu'au bloc Seance ci-dessous (V2.1-17),
     // appliquee a l'original dont il etait copie. Le defaut dormait ici depuis
@@ -317,7 +334,7 @@ function PublicInfoboxBlock({ data }: { data: InfoboxBlockData }) {
       {data.entries.map((entry, i) => (
         <div key={i} className="contents">
           <dt className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">{entry.label}</dt>
-          <dd>{entry.value}</dd>
+          <dd>{infoboxValueNodes(entry.value).map((node, n) => renderNode(node, n, textRefs, hrefBase, ruleHrefBase, ruleRefs))}</dd>
         </div>
       ))}
     </dl>
@@ -575,7 +592,15 @@ export default function PublicBlockView({
           anchoredImages={imagesVisibles}
         />
       )}
-      {block.blockType === "infobox" && <PublicInfoboxBlock data={block.data as unknown as InfoboxBlockData} />}
+      {block.blockType === "infobox" && (
+        <PublicInfoboxBlock
+          data={block.data as unknown as InfoboxBlockData}
+          textRefs={block.textRefs}
+          hrefBase={hrefBase}
+          ruleHrefBase={ruleHrefBase}
+          ruleRefs={block.ruleRefs}
+        />
+      )}
       {block.blockType === "session_journal_meta" && (
         <PublicSessionJournalMetaBlock
           data={block.data as unknown as SessionJournalMetaBlockData}

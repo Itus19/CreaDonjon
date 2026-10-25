@@ -1275,6 +1275,145 @@
       "rejetee": "Proposition rejetée.",
       "rejeteeBudget": "Proposition rejetée (limite de propositions par tour atteinte)."
     },
+    "image": {
+      "url": "Adresse de l'image",
+      "urlPlaceholder": "https://…",
+      "televerser": "+ Téléverser un fichier",
+      "remplacer": "Remplacer par un fichier",
+      "erreurInattendue": "Erreur inattendue.",
+      "apercuTitre": "Aperçu dans le texte",
+      "apercuDansBloc": "Aperçu dans « {bloc} »",
+      "regler": "Régler l'image : taille, alignement, texte autour",
+      "barre": "Réglages de l'image",
+      "gauche": "Gauche",
+      "centre": "Centre",
+      "droite": "Droite",
+      "moins": "Réduire l'image",
+      "plus": "Agrandir l'image",
+      "taille": "{pct} %",
+      "contourne": "Le texte contourne",
+      "contourneIndispo": "Disponible pour une image placée dans un bloc de texte",
+      "legende": "Légende de l'image",
+      "legendePlaceholder": "Légende (optionnelle)",
+      "emplacement": "Emplacement",
+      "autonome": "Bloc autonome",
+      "dansTexte": "Dans un bloc de texte",
+      "aucunBlocTexte": "Aucun bloc de texte dans cette fiche",
+      "bloc": "Bloc de texte qui accueille l'image",
+      "blocOption": "Dans « {bloc} »",
+      "blocSupprime": "Bloc supprimé — l'image revient dans le fil",
+      "position": "Position dans le bloc",
+      "positionLabel": "Position de l'image dans le bloc",
+      "cran": {
+        "enTete": "en tête du bloc",
+        "avant": "avant « {texte} »",
+        "fin": "à la fin du bloc",
+        "trait": "trait de séparation",
+        "segmentVide": "(segment vide)"
+      },
+      "parallaxe": "Parallaxe",
+      "parallaxeLabel": "Intensité de la parallaxe au défilement",
+      "parallaxeZero": "Parallaxe à 0 % — aucun effet. Le curseur est l'interrupteur.",
+      "parallaxeRogne": "L'image sera rognée dans un cadre de hauteur fixe, pour pouvoir y glisser au défilement. Non montré dans l'aperçu.",
+      "fond": "Fond de la page du wiki",
+      "fondLabel": "Rôle de l'image comme fond de la page wiki",
+      "fondNone": "Non",
+      "fondAlso": "En fond et dans la fiche",
+      "fondOnly": "Seulement en fond",
+      "fondOnlyNote": "L'image ne paraît que derrière la page. Son emplacement dans la fiche est conservé, mais ne s'applique pas tant que ce mode est actif.",
+      "flou": "Flou du fond",
+      "flouLabel": "Flou du fond du wiki",
+      "fondu": "Durée du fondu",
+      "fonduLabel": "Durée du fondu d'entrée et de sortie"
+    },
+    "encadre": {
+      "intitule": "Intitulé de la ligne",
+      "valeur": "Valeur de la ligne",
+      "intitulePlaceholder": "Population",
+      "valeurPlaceholder": "12 000",
+      "retirer": "Retirer la ligne {intitule}",
+      "retirerSansNom": "Retirer cette ligne",
+      "poignee": "Réordonner la ligne {intitule}",
+      "poigneeSansNom": "Réordonner cette ligne",
+      "poigneeTitre": "Glisser pour réordonner, ou Entrée puis flèches",
+      "instructions": "Pour réordonner cette ligne, appuyez sur Entrée, déplacez-la avec les flèches haut et bas, puis Entrée pour la poser ou Échap pour annuler.",
+      "prise": "Ligne « {ligne} » saisie, position {position} sur {total}.",
+      "deplace": "Ligne « {ligne} » : position {position} sur {total}.",
+      "posee": "Ligne « {ligne} » posée en position {position} sur {total}.",
+      "annulee": "Déplacement annulé.",
+      "ligneSansNom": "sans intitulé",
+      "vide": "Aucune ligne pour l'instant.",
+      "ajouter": "+ Ligne",
+      "suggestionsPour": "Intitulés proposés :",
+      "suggestions": {
+        "character": [
+          "Race",
+          "Âge",
+          "Rôle",
+          "Allégeance",
+          "Lieu de vie",
+          "Titre"
+        ],
+        "location": [
+          "Région",
+          "Population",
+          "Dirigeant",
+          "Climat",
+          "Fondation",
+          "Gouvernement"
+        ],
+        "faction": [
+          "Siège",
+          "Chef",
+          "Fondation",
+          "Devise",
+          "Alignement",
+          "Effectifs"
+        ],
+        "item": [
+          "Type",
+          "Rareté",
+          "Valeur",
+          "Poids",
+          "Propriétés"
+        ],
+        "creature": [
+          "Taille",
+          "Type",
+          "Environnement",
+          "Dangerosité",
+          "Alignement"
+        ],
+        "quest": [
+          "Commanditaire",
+          "Récompense",
+          "Lieu",
+          "Échéance"
+        ],
+        "event": [
+          "Date",
+          "Lieu",
+          "Participants",
+          "Conséquences"
+        ]
+      },
+      "mention": {
+        "titre": "Citer une fiche",
+        "aucune": "Aucune fiche ne correspond.",
+        "retirer": "Retirer la mention de « {nom} »",
+        "citee": "Fiche citée : {nom}",
+        "aide": "« @ » cite une fiche."
+      }
+    },
+    "tableau": {
+      "tableau": "Tableau personnalisé",
+      "colonne": "Nom de la colonne",
+      "cellule": "{colonne}, ligne {ligne}",
+      "retirerColonne": "Retirer la colonne {colonne}",
+      "retirerLigne": "Retirer la ligne {ligne}",
+      "ajouterColonne": "Ajouter une colonne",
+      "ajouterLigne": "+ Ligne"
+    },
     "poignee": "Réordonner ce bloc",
     "poigneeTitre": "Glisser pour réordonner, ou Entrée puis flèches",
     "replier": "Replier",
@@ -1342,6 +1481,23 @@
       "publicMasque": "Masquée au wiki public — cliquer pour rendre visible",
       "publicMasquer": "Masquer cette fiche au wiki public",
       "publicRendre": "Rendre cette fiche visible au wiki public"
-    }
+    },
+    "annonce": {
+      "change": "« {objet} » : visible par {qui}.",
+      "attention": "Attention : il redevient visible.",
+      "annuler": "Annuler",
+      "echec": "« {objet} » : la visibilité n'a pas pu être modifiée.",
+      "retablie": "« {objet} » : visibilité rétablie, visible par {qui}.",
+      "fermer": "Fermer l'annonce",
+      "quiCourt": {
+        "public": "tout le monde, wiki public compris",
+        "players": "la table, pas le wiki public",
+        "gm": "le MJ seul",
+        "private": "son auteur seul",
+        "campaign": "une campagne précise",
+        "user": "un utilisateur précis"
+      }
+    },
+    "pastille": "Visibilité : {niveau}. Toucher pour passer à {suivant}."
   }
 }

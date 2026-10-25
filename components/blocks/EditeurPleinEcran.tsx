@@ -555,6 +555,7 @@ export default function EditeurPleinEcran({
                       onBlockRefreshed={blocRafraichi}
                       hideAiAssist={hideAiAssist}
                       siblings={brouillon}
+                      entityKind={identite.entityKind}
                     />
                     <div className="flex items-center justify-end gap-3 text-xs text-ink-muted">
                       <button

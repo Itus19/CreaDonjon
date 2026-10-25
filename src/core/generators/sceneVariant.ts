@@ -1,5 +1,5 @@
 import type { Rng } from "../dice/rng";
-import type { InfoboxEntry } from "../schemas/blocks/infobox";
+import { infoboxValueText, type InfoboxEntry } from "../schemas/blocks/infobox";
 import { orderedNeighbors, type GeneratorVariantAxis } from "./variants";
 import { renderGeneratorTemplate } from "./render";
 
@@ -68,7 +68,7 @@ export function resolveSceneVariant(
       for (let depth = 0; depth < places.length; depth++) {
         const entry = places[depth].find((e) => names.has(normalize(e.label)));
         if (!entry) continue;
-        const option = findOption(axis, entry.value);
+        const option = findOption(axis, infoboxValueText(entry.value));
         if (option) found = { key: option.key, label: option.label, source: depth === 0 ? "location" : "parent" };
         break;
       }

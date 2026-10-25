@@ -88,7 +88,7 @@ export default function CommandeE({
   }
 
   const pastille =
-    "relative flex h-5 w-5 items-center justify-center rounded-full border border-edge bg-panel-raised text-xs leading-none text-ink-muted transition-colors after:absolute after:-inset-1.5 after:content-[''] hover:border-accent hover:text-accent disabled:opacity-40 disabled:hover:border-edge disabled:hover:text-ink-muted";
+    "relative flex h-5 w-5 items-center justify-center rounded-full border border-edge-strong bg-panel-raised text-xs shadow-md leading-none text-ink-muted transition-colors after:absolute after:-inset-1.5 after:content-[''] hover:border-accent hover:text-accent disabled:opacity-40 disabled:hover:border-edge disabled:hover:text-ink-muted";
 
   return (
     <div className="flex shrink-0 flex-col items-center gap-1">
@@ -124,39 +124,43 @@ export default function CommandeE({
           <span className="relative text-xs font-medium text-ink">{texte}</span>
         </div>
         {!lectureSeule && (
-          <>
-        <button
-          type="button"
-          disabled={desactive}
-          onClick={() => appliquer(1)}
-          title={`Ajouter : ${libelle}`}
-          aria-label={`Ajouter : ${libelle}`}
-          className={`${pastille} absolute left-[44px] top-0`}
-        >
-          ▲
-        </button>
-        <input
-          type="text"
-          inputMode="numeric"
-          value={champ}
-          disabled={desactive}
-          onChange={(e) => setChamp(e.target.value)}
-          onKeyDown={surToucheChamp}
-          placeholder="—"
-          aria-label={`Écart : ${libelle}`}
-          className="absolute left-[50px] top-1/2 h-5 w-9 -translate-y-1/2 rounded-full border border-edge bg-panel-sunken px-1 text-center text-xs text-ink outline-none placeholder:text-ink-muted focus:border-accent disabled:opacity-40"
-        />
-        <button
-          type="button"
-          disabled={desactive}
-          onClick={() => appliquer(-1)}
-          title={`Retirer : ${libelle}`}
-          aria-label={`Retirer : ${libelle}`}
-          className={`${pastille} absolute bottom-0 left-[44px]`}
-        >
-          ▼
-        </button>
-          </>
+          // Planche « Jauge à commandes — option E » : une colonne ▲ / champ / ▼
+          // (2 px d'écart), centrée sur l'anneau et accrochée 10 px dans son bord
+          // droit (56 - 10 = 46 px). Placés un à un dans 56 px de haut, les trois
+          // éléments de 20 px se chevauchaient.
+          <div className="absolute left-[46px] top-1/2 flex -translate-y-1/2 flex-col items-start gap-0.5">
+            <button
+              type="button"
+              disabled={desactive}
+              onClick={() => appliquer(1)}
+              title={`Ajouter : ${libelle}`}
+              aria-label={`Ajouter : ${libelle}`}
+              className={pastille}
+            >
+              ▲
+            </button>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={champ}
+              disabled={desactive}
+              onChange={(e) => setChamp(e.target.value)}
+              onKeyDown={surToucheChamp}
+              placeholder="—"
+              aria-label={`Écart : ${libelle}`}
+              className="h-5 w-9 rounded-full border border-edge-strong bg-panel-sunken px-1 text-center text-xs text-ink shadow-md outline-none placeholder:text-ink-muted focus:border-accent disabled:opacity-40"
+            />
+            <button
+              type="button"
+              disabled={desactive}
+              onClick={() => appliquer(-1)}
+              title={`Retirer : ${libelle}`}
+              aria-label={`Retirer : ${libelle}`}
+              className={pastille}
+            >
+              ▼
+            </button>
+          </div>
         )}
       </div>
       {complement && <span className="text-xs leading-tight text-ink-muted">{complement}</span>}
