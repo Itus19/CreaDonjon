@@ -44,7 +44,7 @@ Toutes les couleurs viennent de `src/styles/tokens.css`, via les classes Tailwin
 | `accent-ink` | **le texte posé sur `accent` ou sur `danger`** | jamais `text-white` |
 | `danger` | destruction, erreur | — |
 | `success` | réussite d'un jet, confirmation | — |
-| `link-entity` · `link-rule` · `gm` | liens de fiche, de règle, contenu MJ | sémantiques, pas décoratifs |
+| `link-entity` · `link-rule` · `gm` · `players` | liens de fiche, de règle, contenu MJ, contenu des joueurs (V3.1-63) | sémantiques, pas décoratifs |
 | `scrim` | voile derrière une modale | — |
 
 **Interdits, sans exception :**

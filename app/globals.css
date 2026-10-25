@@ -19,6 +19,8 @@
   --color-link-entity: var(--link-entity);
   --color-link-rule: var(--link-rule);
   --color-gm: var(--gm);
+  /* V3.1-63 : la visibilité « Joueurs » (pastille bleue), même luminance que --gm. */
+  --color-players: var(--players);
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
   --color-accent-ink: var(--accent-ink);
@@ -403,6 +405,7 @@ body {
     --link-entity: #111111 !important;
     --link-rule: #111111 !important;
     --gm: #111111 !important;
+    --players: #111111 !important;
     --accent: #111111 !important;
     --accent-hover: #111111 !important;
     --accent-ink: #ffffff !important;
