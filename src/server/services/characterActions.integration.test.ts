@@ -12,7 +12,7 @@ import {
   takeShortRest,
 } from "./characterActions";
 import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
-import { changeConditions, changeHitDice } from "./characterActions";
+import { changeConditions, changeHitDice, changeSpellSlotUsage } from "./characterActions";
 import { getTableParty } from "./tableParty";
 import { upsertRulesetOverride } from "../repos/rules";
 
@@ -380,5 +380,64 @@ describe.skipIf(!hasCreds)("characterActions (integration, base reelle)", () => 
     expect(pc!.sheet.ac.value).toBeGreaterThan(0);
 
     await takeLongRest(admin, { entityId, campaignId, actorUserId: ownerId, locale: "fr" });
+  });
+
+  it("V3.1-114 — égaliseur : emplacements et réserve de pacte dépensés ou rendus à la main, bornés", async () => {
+    const lanceur = async (slug: string, classKey: string) => {
+      const { data, error } = await admin
+        .from("entities")
+        .insert({ world_id: worldId, slug, name: slug, entity_kind: "character", created_by: ownerId })
+        .select("id")
+        .single();
+      if (error || !data) throw new Error(error?.message ?? "creation entite echouee");
+      const { error: blockError } = await admin.from("blocks").insert({
+        entity_id: data.id,
+        block_type: "character",
+        display: { label: "Personnage", layout: "character" },
+        data: {
+          __v: 1,
+          species: { kind: "rule", key: "human" },
+          background: null,
+          classes: [{ class: { kind: "rule", key: classKey }, level: 1, subclass: null }],
+          abilities: { method: "manual", base: { str: 10, dex: 10, con: 12, int: 10, wis: 14, cha: 14 } },
+          choices: {},
+          hp_method: "fixed",
+          portrait_asset_id: null,
+        },
+        visibility_level: "players",
+        created_by: ownerId,
+      });
+      if (blockError) throw new Error(blockError.message);
+      return data.id as string;
+    };
+    const etat = async (id: string) => {
+      const ctx = await resolveCharacterActionContext(admin, id, campaignId, "fr");
+      return { sheet: ctx!.sheet, state: (await getOrInitializeRuntimeState(admin, ctx!, { persist: true })).state };
+    };
+
+    // Un guerrier n'a rien à dépenser.
+    const base = { campaignId, actorUserId: ownerId, locale: "fr" as const };
+    expect(await changeSpellSlotUsage(admin, { ...base, entityId, pool: "slots", level: 1, delta: 1 })).toEqual({ error: "no_slot_available" });
+    expect(await changeSpellSlotUsage(admin, { ...base, entityId, pool: "pact", level: null, delta: 1 })).toEqual({ error: "no_slot_available" });
+
+    // Clerc 1 : deux emplacements de niveau 1, jamais plus de deux dépensés, jamais moins de zéro.
+    const clerc = await lanceur("clerc-egaliseur", "cleric");
+    expect((await etat(clerc)).sheet.spellcasting?.slots[1]).toBe(2);
+    expect(await changeSpellSlotUsage(admin, { ...base, entityId: clerc, pool: "slots", level: 1, delta: 5 })).toEqual({ ok: true });
+    expect((await etat(clerc)).state.spell_slots_used["1"]).toBe(2);
+    expect(await changeSpellSlotUsage(admin, { ...base, entityId: clerc, pool: "slots", level: 1, delta: -9 })).toEqual({ ok: true });
+    expect((await etat(clerc)).state.spell_slots_used["1"]).toBe(0);
+    expect(await changeSpellSlotUsage(admin, { ...base, entityId: clerc, pool: "slots", level: 2, delta: 1 })).toEqual({ error: "no_slot_available" });
+
+    // Occultiste 1 : la réserve de pacte, séparée des emplacements ordinaires.
+    const occultiste = await lanceur("occultiste-egaliseur", "warlock");
+    const pacte = (await etat(occultiste)).sheet.spellcasting?.pactSlots;
+    expect(pacte?.count).toBeGreaterThan(0);
+    expect(await changeSpellSlotUsage(admin, { ...base, entityId: occultiste, pool: "pact", level: null, delta: 9 })).toEqual({ ok: true });
+    const apres = (await etat(occultiste)).state;
+    expect(apres.pact_slots_used).toBe(pacte!.count);
+    expect(apres.spell_slots_used).toEqual({});
+    await takeLongRest(admin, { entityId: occultiste, campaignId, actorUserId: ownerId, locale: "fr" });
+    expect((await etat(occultiste)).state.pact_slots_used).toBe(0);
   });
 });

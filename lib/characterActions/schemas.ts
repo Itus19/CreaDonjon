@@ -188,6 +188,16 @@ export const resourceUsageSchema = z.object({
   delta: z.number().int(),
 });
 
+/**
+ * V3.1-114 — dépenser (`delta` > 0) ou rendre (< 0) un emplacement à la main,
+ * depuis l'égaliseur : un sort lancé hors de l'application, une erreur à
+ * réparer. `slots` vise un niveau ; `pact`, la réserve de pacte (ADR 0045).
+ */
+export const spellSlotUsageSchema = z.discriminatedUnion("pool", [
+  z.object({ campaignId: campaignIdField, pool: z.literal("slots"), level: z.number().int().min(1).max(9), delta: z.number().int().min(-9).max(9) }),
+  z.object({ campaignId: campaignIdField, pool: z.literal("pact"), delta: z.number().int().min(-9).max(9) }),
+]);
+
 /** Montee de niveau accompagnee (V2-G1) — validation de forme seulement, les regles metier (niveaux qui ne peuvent que monter, plafond d'ASI, seuil de PX) vivent dans `applyLevelUp` (characterActions.ts), pas ici. */
 export const applyLevelUpSchema = z.object({
   campaignId: campaignIdField,

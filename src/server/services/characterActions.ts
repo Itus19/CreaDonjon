@@ -1447,4 +1447,48 @@ export async function changeResourceUsage(
   });
 }
 
+/**
+ * V3.1-114 — un emplacement dépensé ou rendu à la main (l'égaliseur). Borné
+ * entre 0 et le maximum que calcule la fiche : jamais plus d'emplacements
+ * dépensés qu'il n'en existe. La réserve de pacte reste séparée (ADR 0045).
+ */
+export async function changeSpellSlotUsage(
+  supabase: TypedClient,
+  params: {
+    entityId: string;
+    campaignId: string | null;
+    pool: "slots" | "pact";
+    /** Le niveau visé, pour `slots` ; ignoré pour `pact`. */
+    level: number | null;
+    delta: number;
+    actorUserId: string;
+    locale: Locale;
+  }
+): Promise<{ ok: true } | { error: "not_found" | "no_slot_available" }> {
+  const ctx = await resolveCharacterActionContext(supabase, params.entityId, params.campaignId, params.locale);
+  if (!ctx) return { error: "not_found" };
+  const total = params.pool === "pact" ? (ctx.sheet.spellcasting?.pactSlots?.count ?? 0) : availableSlotsAt(ctx, params.level ?? 0);
+  if (total <= 0) return { error: "no_slot_available" };
+
+  const state = await getEntityRuntimeState(supabase, params.entityId, params.campaignId);
+  const current = params.pool === "pact" ? state.pact_slots_used : (state.spell_slots_used[String(params.level)] ?? 0);
+  const next = Math.min(total, Math.max(0, current + params.delta));
+  if (next === current) return { ok: true };
+
+  const sessionId = params.campaignId ? await getOrOpenSessionForCampaign(supabase, params.campaignId) : null;
+  await applyRuntimeStateChange(supabase, {
+    entityId: params.entityId,
+    campaignId: params.campaignId,
+    patch:
+      params.pool === "pact"
+        ? { pact_slots_used: next }
+        : { spell_slots_used: { ...state.spell_slots_used, [String(params.level)]: next } },
+    note: `${params.pool === "pact" ? "Emplacement de pacte" : `Emplacement de niveau ${params.level}`} ${next > current ? "dépensé" : "rendu"} à la main`,
+    sessionId,
+    actor: "player",
+    actorUserId: params.actorUserId,
+  });
+  return { ok: true };
+}
+
 export type { RulesetEntryRow };
