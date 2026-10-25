@@ -329,4 +329,29 @@ describe.skipIf(!hasCreds)("publicShare (integration, base reelle)", () => {
     expect(raw).not.toContain("EVENEMENT_MJ_68");
     expect(raw).not.toContain("RESUME_MJ_68");
   });
+
+  it("V3.1-70 — une aspiration MJ d'un bloc Personnalité public ne part jamais au visiteur", async () => {
+    const { error } = await admin.from("blocks").insert({
+      entity_id: mainEntityId,
+      block_type: "personality",
+      display: { label: "Personnalité testée", layout: "personality" },
+      visibility_level: "public",
+      display_order: 960,
+      created_by: userId,
+      data: {
+        __v: 1,
+        poles: [],
+        aspirations: [
+          { id: "a1", text: "ASPIRATION_PUBLIQUE_70", horizon: "life", intensity: 2, visibility: { level: "public", scopeId: null } },
+          { id: "a2", text: "ASPIRATION_MJ_70", horizon: "arc", intensity: 3, visibility: { level: "gm", scopeId: null } },
+        ],
+      },
+    });
+    if (error) throw new Error(error.message);
+    const token = await insertTestShareLink();
+    const resolved = await resolveShareLink(token);
+    const raw = JSON.stringify(await getPublicEntityDetail(resolved!.worldId, entitySlug));
+    expect(raw).toContain("ASPIRATION_PUBLIQUE_70");
+    expect(raw).not.toContain("ASPIRATION_MJ_70");
+  });
 });

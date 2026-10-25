@@ -33,6 +33,7 @@ import { listVisibleMapRegions } from "@/src/server/services/mapRegions";
 import { resolveCampaignId } from "@/src/server/services/campaigns";
 import { zQuestBlockData } from "@/src/core/schemas/blocks/quest";
 import { zTimelineBlockData } from "@/src/core/schemas/blocks/timeline";
+import { zPersonalityBlockData } from "@/src/core/schemas/blocks/personality";
 import { zRelationshipBlockData } from "@/src/core/schemas/blocks/relationship";
 import { zRelationsGraphBlockData } from "@/src/core/schemas/blocks/relationsGraph";
 import { getAttitudeEvents, getCurrentAttitude, getPersonalityEvents, getWorldviewEvents } from "@/src/server/services/psyche";
@@ -85,6 +86,19 @@ function filterTimelineEntriesForViewer(blockType: string, data: Json, viewer: A
     visibility: { level: visibility.level, scopeId: visibility.scopeId },
   }));
   return { ...parsed.data, entries } as unknown as Json;
+}
+
+/** V3.1-70 — les aspirations d'un bloc `personality`, chacune à sa visibilité, comme les événements ci-dessus. */
+function filterPersonalityAspirationsForViewer(blockType: string, data: Json, viewer: Awaited<ReturnType<typeof buildViewerForWorld>>): Json {
+  if (blockType !== "personality") return data;
+  const parsed = zPersonalityBlockData.safeParse(data);
+  if (!parsed.success) return data;
+  const aware = parsed.data.aspirations.map((a) => ({ ...a, visibility: { ...a.visibility, createdBy: null } }));
+  const aspirations = filterSegments(aware, viewer).map(({ visibility, ...rest }) => ({
+    ...rest,
+    visibility: { level: visibility.level, scopeId: visibility.scopeId },
+  }));
+  return { ...parsed.data, aspirations } as unknown as Json;
 }
 
 /**
@@ -147,7 +161,11 @@ const getPlayerVisibleBlocks = cache(async function getPlayerVisibleBlocks(
       id: row.id,
       blockType: row.block_type,
       display: row.display as unknown as BlockDisplay,
-      data: filterTimelineEntriesForViewer(row.block_type, filterTextBlockSegmentsForViewer(row.block_type, row.data, viewer), viewer),
+      data: filterPersonalityAspirationsForViewer(
+        row.block_type,
+        filterTimelineEntriesForViewer(row.block_type, filterTextBlockSegmentsForViewer(row.block_type, row.data, viewer), viewer),
+        viewer
+      ),
       displayOrder: row.display_order,
     }))
     .sort((a, b) => a.displayOrder - b.displayOrder);

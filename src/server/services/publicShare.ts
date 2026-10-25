@@ -46,6 +46,7 @@ import { zQuestBlockData } from "@/src/core/schemas/blocks/quest";
 import { buildEntityTree, withPlayerCharacterKinds, type EntityTreeGroup } from "@/src/core/entity-tree/build-tree";
 import { listPlayerCharacterEntityIds } from "@/src/server/services/worldPlayerCharacters";
 import { zTimelineBlockData } from "@/src/core/schemas/blocks/timeline";
+import { zPersonalityBlockData } from "@/src/core/schemas/blocks/personality";
 import { zRelationshipBlockData } from "@/src/core/schemas/blocks/relationship";
 import { zRelationsGraphBlockData } from "@/src/core/schemas/blocks/relationsGraph";
 import {
@@ -423,6 +424,23 @@ function filterTimelineEntries(blockType: string, data: Json): Json {
   return { ...parsed.data, entries } as unknown as Json;
 }
 
+/**
+ * V3.1-70 — même motif que la Chronologie : chaque aspiration d'un bloc
+ * `personality` porte sa propre visibilité. Le bloc public ne suffit pas ; une
+ * aspiration `gm` ne part jamais au visiteur (règle 5).
+ */
+function filterPersonalityAspirations(blockType: string, data: Json): Json {
+  if (blockType !== "personality") return data;
+  const parsed = zPersonalityBlockData.safeParse(data);
+  if (!parsed.success) return data;
+  const aware = parsed.data.aspirations.map((a) => ({ ...a, visibility: { ...a.visibility, createdBy: null } }));
+  const aspirations = filterSegments(aware, { kind: "anonymous" }).map(({ visibility, ...rest }) => ({
+    ...rest,
+    visibility: { level: visibility.level, scopeId: visibility.scopeId },
+  }));
+  return { ...parsed.data, aspirations } as unknown as Json;
+}
+
 function toVisibilityAware(row: BlockRow) {
   return {
     ...row,
@@ -507,7 +525,7 @@ const getPublicVisibleBlocks = cache(async function getPublicVisibleBlocks(
       // ne suffit pas, chaque segment est filtre a son tour avant de
       // jamais quitter le serveur. Meme principe pour les entrees d'un
       // bloc `timeline` (V2-H2).
-      data: filterTimelineEntries(row.block_type, filterNoteTreeSegments(row.block_type, filterTextBlockSegments(row.block_type, row.data))),
+      data: filterPersonalityAspirations(row.block_type, filterTimelineEntries(row.block_type, filterNoteTreeSegments(row.block_type, filterTextBlockSegments(row.block_type, row.data)))),
       displayOrder: row.display_order,
     }))
     .sort((a, b) => a.displayOrder - b.displayOrder);
