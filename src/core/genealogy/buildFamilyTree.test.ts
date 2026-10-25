@@ -55,6 +55,28 @@ describe("buildFamilyTree", () => {
     expect(tree.edges).toContainEqual({ id: "e1", kind: "partner", fromId: "root", toId: "spouse", label: "marie(e) a", visibilityLevel: "public" });
   });
 
+  it("marque un ex-partenaire (pointille orange a l'ecran), et seulement lui", () => {
+    const edges: FamilyEdgeInput[] = [
+      { id: "e1", sourceId: "root", targetId: "ex", relationType: "ex_partner_of", label: "ancien(ne) partenaire de", visibilityLevel: "public" },
+      { id: "e2", sourceId: "root", targetId: "now", relationType: "partner_of", label: "partenaire de", visibilityLevel: "public" },
+    ];
+    const tree = buildFamilyTree({ rootId: "root", depthUp: 1, depthDown: 1, edges, entities: [entity("root"), entity("ex"), entity("now")] });
+    expect(tree.edges.find((e) => e.id === "e1")?.ex).toBe(true);
+    expect(tree.edges.find((e) => e.id === "e2")?.ex).toBeUndefined();
+  });
+
+  it("place l'ex-partenaire du cote oppose au conjoint actuel : jamais entre les deux (V3.1-73)", () => {
+    // L'ex est decouvert AVANT le conjoint : sans la regle, il se glisserait entre les deux.
+    const edges: FamilyEdgeInput[] = [
+      { id: "e1", sourceId: "root", targetId: "ex", relationType: "ex_partner_of", label: "ancien(ne) partenaire de", visibilityLevel: "public" },
+      { id: "e2", sourceId: "root", targetId: "now", relationType: "married_to", label: "marie(e) a", visibilityLevel: "public" },
+    ];
+    const tree = buildFamilyTree({ rootId: "root", depthUp: 1, depthDown: 1, edges, entities: [entity("root"), entity("ex"), entity("now")] });
+    const order = (id: string) => tree.nodes.find((n) => n.id === id)?.order ?? -1;
+    expect(order("ex")).toBeLessThan(order("root"));
+    expect(order("root")).toBeLessThan(order("now"));
+  });
+
   it("relie un enfant a ses deux parents maries", () => {
     const edges: FamilyEdgeInput[] = [
       { id: "e1", sourceId: "p1", targetId: "child", relationType: "parent_of", label: "parent de", visibilityLevel: "public" },

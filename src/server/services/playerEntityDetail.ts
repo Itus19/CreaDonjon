@@ -348,6 +348,8 @@ export async function getPlayerEntityDetail(
       (b.blockType === "personality" && (b.personalityEvents?.length ?? 0) > 0) ||
       (b.blockType === "worldview" && (b.personalityEvents?.length ?? 0) > 0) ||
       (b.blockType === "relationship" && (b.relationshipEvents?.length ?? 0) > 0) ||
+      // V3.1-73 : la ligne de dates de l'arbre, seulement s'il en porte une.
+      (b.blockType === "genealogy" && (b.genealogyTree?.nodes.some((n) => n.birth || n.death) ?? false)) ||
       b.blockType === "session_journal_meta"
   );
   const timelineCalendar = hasDateFormattingBlock ? await getCalendar(supabase, worldId) : null;
@@ -357,6 +359,7 @@ export async function getPlayerEntityDetail(
       block.blockType === "personality" ||
       block.blockType === "worldview" ||
       block.blockType === "relationship" ||
+      block.blockType === "genealogy" ||
       block.blockType === "session_journal_meta")
       ? { ...block, timelineCalendar }
       : block

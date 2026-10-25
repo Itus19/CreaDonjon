@@ -609,7 +609,7 @@ export default function PublicBlockView({
       )}
       {block.blockType === "image" && <PublicImageBlock data={block.data as unknown as ImageBlockData} />}
       {block.blockType === "genealogy" && block.genealogyTree && (
-        <PublicGenealogyBlock tree={block.genealogyTree} hrefBase={hrefBase} />
+        <PublicGenealogyBlock tree={block.genealogyTree} hrefBase={hrefBase} calendar={block.timelineCalendar ?? null} />
       )}
       {block.blockType === "custom_table" && (
         <PublicCustomTableBlock data={block.data as unknown as CustomTableBlockData} />

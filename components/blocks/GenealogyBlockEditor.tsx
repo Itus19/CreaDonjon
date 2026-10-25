@@ -2,24 +2,23 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import Link from "next/link";
+import { useTranslations } from "next-intl";
 import type { GenealogyBlockData } from "@/src/core/schemas/blocks/genealogy";
-import type { FamilyRelationType, FamilyTree, FamilyTreeEdge, FamilyTreeNode } from "@/src/core/genealogy/buildFamilyTree";
+import type { FamilyTree, FamilyTreeEdge, FamilyTreeNode } from "@/src/core/genealogy/buildFamilyTree";
 import type { OtherEntityOption } from "@/components/entities/RelationsChips";
 import FamilyTreeCanvas from "@/components/entities/genealogy/FamilyTreeCanvas";
-import FamilyTreeCard from "@/components/entities/genealogy/FamilyTreeCard";
-
-/** Menu rapide du "+" (V2-H3, esthetique de reference) : le role de l'ancre determine source/cible de la relation creee. */
-const RELATION_MENU_OPTIONS: { label: string; relationType: FamilyRelationType; anchorRole: "source" | "target" }[] = [
-  { label: "Parent", relationType: "parent_of", anchorRole: "target" },
-  { label: "Enfant", relationType: "parent_of", anchorRole: "source" },
-  { label: "Partenaire", relationType: "partner_of", anchorRole: "source" },
-  { label: "Ex-partenaire", relationType: "ex_partner_of", anchorRole: "source" },
-  { label: "Frère/sœur", relationType: "sibling_of", anchorRole: "source" },
-  { label: "Demi-frère/sœur", relationType: "half_sibling_of", anchorRole: "source" },
-  { label: "Beau-parent", relationType: "step_parent_of", anchorRole: "target" },
-  { label: "Beau-enfant", relationType: "step_parent_of", anchorRole: "source" },
-  { label: "Adopté(e)", relationType: "adopted_by", anchorRole: "source" },
-];
+import { useWorldCalendar } from "@/components/shared/useWorldCalendar";
+import { formatGameDate } from "@/src/core/calendar/formatDate";
+import { ligneDates, type CaseEnfant } from "@/lib/ui/arbre";
+import {
+  LIENS_FAMILLE,
+  lienFamille,
+  relationPourLien,
+  relationsPourEnfantDeCouple,
+  type LienFamille,
+  type RelationACreer,
+} from "@/lib/ui/liensFamille";
 
 const MENU_WIDTH = 256;
 
@@ -30,25 +29,32 @@ interface AnchorRect {
   bottom: number;
 }
 
-type MenuStep =
-  | { anchorId: string; rect: AnchorRect }
-  | { anchorId: string; rect: AnchorRect; option: (typeof RELATION_MENU_OPTIONS)[number] };
+/** L'étape de recherche : à quelle fiche on ajoute, par quel lien, et (case « + enfant ») sous quel couple. */
+interface MenuStep {
+  anchorId: string;
+  rect: AnchorRect;
+  lien: LienFamille;
+  couple?: { parentA: string; parentB: string };
+}
 
 /**
- * Editeur du bloc genealogie (V2-H3) : arbre derive de `relations`
- * (jamais stocke ici), rafraichi depuis `/api/entities/[id]/genealogy`
- * apres chaque ajout/suppression. Le "+" au survol d'une carte ouvre,
- * juste a cote de lui, un menu de type de lien puis une recherche/creation
- * de fiche — memes routes que `RelationsChips.tsx` (creer/retirer une
- * relation), aucune nouvelle mecanique d'ecriture, juste une autre porte
- * d'entree.
+ * Editeur du bloc genealogie (V2-H3, refait en V3.1-73) : arbre derive de
+ * `relations` (jamais stocke ici), rafraichi depuis
+ * `/api/entities/[id]/genealogy` apres chaque ajout/suppression.
+ *
+ * Toucher un portrait fait paraitre, SOUS l'arbre, une barre : nom, dates,
+ * « Ouvrir la fiche », « Centrer l'arbre ici » (change la racine affichee —
+ * un etat d'affichage, rien n'est enregistre : l'arbre est relu avec cette
+ * racine par la meme route) et « Ajouter » avec les neuf liens. Un lien choisi
+ * ouvre, juste a cote du bouton, la recherche/creation de fiche — memes routes
+ * que `RelationsChips.tsx` (creer/retirer une relation), aucune nouvelle
+ * mecanique d'ecriture. La case pointillee « + enfant » sous un couple sans
+ * enfant relie le nouvel enfant aux DEUX parents.
  *
  * Le menu est porte hors du canevas via un portail (`createPortal`), en
- * position `fixed` calculee depuis le rectangle reel du bouton "+" : le
- * canevas est dans un conteneur `overflow-x-auto`, et un menu ancre par
- * simple CSS relatif a la carte se faisait rogner des qu'elle etait sur le
- * bord gauche ou droit de l'arbre. Le portail evite tout rognage, quelle
- * que soit la position de la carte ou le defilement du canevas.
+ * position `fixed` calculee depuis le rectangle reel du bouton : le canevas est
+ * dans un conteneur `overflow-hidden`, un menu ancre par simple CSS se ferait
+ * rogner.
  */
 export default function GenealogyBlockEditor({
   entityId,
@@ -66,15 +72,21 @@ export default function GenealogyBlockEditor({
   otherEntities: OtherEntityOption[];
   /** Rafraichit la section "Relations" en tete de fiche — meme table, deux vues (V2-H3). */
   onRelationsChanged: () => void;
-  /** V2, retour utilisateur : incremente par un ancetre quand une relation change ailleurs (liste du haut, bloc reseau) — force le rechargement de l'arbre, qui sinon ne rejoue jamais son effet (`genealogyUrl` seul en dependance). */
+  /** V2, retour utilisateur : incremente par un ancetre quand une relation change ailleurs (liste du haut, bloc reseau) — force le rechargement de l'arbre. */
   reloadSignal?: number;
 }) {
+  const t = useTranslations("fiche.genealogie");
+  const calendrier = useWorldCalendar(worldSlug);
   const [tree, setTree] = useState<FamilyTree | null>(null);
   const [menu, setMenu] = useState<MenuStep | null>(null);
   const [query, setQuery] = useState("");
   const [pending, setPending] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // « Centrer l'arbre ici » : un etat d'affichage, jamais enregistre.
+  const [centreId, setCentreId] = useState<string | null>(null);
+  const [erreur, setErreur] = useState<string | null>(null);
 
-  const rootEntityId = data.rootEntityId ?? entityId;
+  const rootEntityId = centreId ?? data.rootEntityId ?? entityId;
   const genealogyUrl = `/api/entities/${entityId}/genealogy?${new URLSearchParams({
     rootEntityId,
     depthUp: String(data.depthUp),
@@ -88,7 +100,7 @@ export default function GenealogyBlockEditor({
       .then((body: FamilyTree | null) => {
         if (!cancelled && body) setTree(body);
       })
-      .catch((erreur) => console.error("Chargement de la généalogie impossible", erreur));
+      .catch((e) => console.error("Chargement de la généalogie impossible", e));
     return () => {
       cancelled = true;
     };
@@ -100,24 +112,58 @@ export default function GenealogyBlockEditor({
     if (res.ok) setTree(await res.json());
   }
 
-  function openMenu(anchorId: string, rect: AnchorRect) {
+  function choisirLien(anchorId: string, lien: LienFamille, rect: AnchorRect) {
     setQuery("");
-    setMenu({ anchorId, rect });
+    setErreur(null);
+    setMenu({ anchorId, rect, lien });
   }
 
-  function pickOption(option: (typeof RELATION_MENU_OPTIONS)[number]) {
+  function ajouterEnfantDeCouple(c: CaseEnfant, rect: DOMRect) {
+    const enfant = lienFamille("enfant");
+    if (!enfant) return;
+    setQuery("");
+    setErreur(null);
+    setMenu({ anchorId: c.parentA, rect, lien: enfant, couple: { parentA: c.parentA, parentB: c.parentB } });
+  }
+
+  /** Poste les relations, une par une ; la premiere qui echoue est dite, jamais silencieuse. */
+  async function creerRelations(relations: RelationACreer[]) {
+    for (const r of relations) {
+      const res = await fetch(`/api/entities/${r.sourceEntityId}/relations`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          targetEntityId: r.targetEntityId,
+          relationType: r.relationType,
+          visibility: { level: "public", scopeId: null },
+        }),
+      });
+      if (!res.ok) {
+        const corps = (await res.json().catch(() => null)) as { error?: string } | null;
+        setErreur(corps?.error ?? t("erreurLien"));
+        return false;
+      }
+    }
+    return true;
+  }
+
+  async function lierA(autreId: string) {
     if (!menu) return;
+    setPending(true);
+    const relations = menu.couple
+      ? relationsPourEnfantDeCouple(menu.couple.parentA, menu.couple.parentB, autreId)
+      : [relationPourLien(menu.anchorId, autreId, menu.lien)];
+    const ok = await creerRelations(relations);
+    setPending(false);
+    if (!ok) return;
+    setMenu(null);
     setQuery("");
-    setMenu({ anchorId: menu.anchorId, rect: menu.rect, option });
-  }
-
-  async function linkExisting(targetEntity: OtherEntityOption) {
-    if (!menu || !("option" in menu)) return;
-    await createFamilyRelation(menu.anchorId, targetEntity.id, menu.option);
+    await loadTree();
+    onRelationsChanged();
   }
 
   async function createAndLink(name: string) {
-    if (!menu || !("option" in menu) || !name.trim()) return;
+    if (!menu || !name.trim()) return;
     setPending(true);
     const res = await fetch("/api/entities", {
       method: "POST",
@@ -125,33 +171,13 @@ export default function GenealogyBlockEditor({
       body: JSON.stringify({ worldId, name: name.trim(), entityKind: "character" }),
     });
     setPending(false);
-    if (!res.ok) return;
+    if (!res.ok) {
+      const corps = (await res.json().catch(() => null)) as { error?: string } | null;
+      setErreur(corps?.error ?? t("erreurCreation"));
+      return;
+    }
     const created = (await res.json()) as { id: string };
-    await createFamilyRelation(menu.anchorId, created.id, menu.option);
-  }
-
-  async function createFamilyRelation(
-    anchorId: string,
-    otherId: string,
-    option: (typeof RELATION_MENU_OPTIONS)[number]
-  ) {
-    setPending(true);
-    const [sourceEntityId, targetEntityId] =
-      option.anchorRole === "source" ? [anchorId, otherId] : [otherId, anchorId];
-    await fetch(`/api/entities/${sourceEntityId}/relations`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        targetEntityId,
-        relationType: option.relationType,
-        visibility: { level: "public", scopeId: null },
-      }),
-    });
-    setPending(false);
-    setMenu(null);
-    setQuery("");
-    await loadTree();
-    onRelationsChanged();
+    await lierA(created.id);
   }
 
   async function deleteEdge(edge: FamilyTreeEdge) {
@@ -161,17 +187,10 @@ export default function GenealogyBlockEditor({
   }
 
   /**
-   * Bouton oeil sur le portrait (V2, retour utilisateur — remplace le
-   * bouton sur le trait epingle, retire a la demande explicite : un seul
-   * geste de masquage suffit) : bascule TOUTES les aretes qui touchent ce
-   * nœud dans l'arbre affiche, en un seul geste — un nœud relie par
-   * plusieurs liens (ex. un partenaire ET des enfants) apparait/disparait
-   * en bloc plutot que de devoir epingler chaque trait un par un. Public
-   * si au moins une arete l'est deja (coherent avec `FamilyTreeCanvas` :
-   * une seule arete publique suffit a garder le nœud atteignable) -> tout
-   * masquer ; sinon tout rendre public. Meme route que RelationsChips.tsx
-   * et RelationsGraphBlockEditor.tsx : les vues d'une meme relation
-   * restent synchronisees.
+   * Bouton oeil sur le portrait : bascule TOUTES les aretes qui touchent ce
+   * nœud dans l'arbre affiche. Public si au moins une arete l'est deja ->
+   * tout masquer ; sinon tout rendre public. Meme route que RelationsChips.tsx
+   * et RelationsGraphBlockEditor.tsx.
    */
   async function toggleNodeVisibility(_node: FamilyTreeNode, edges: FamilyTreeEdge[]) {
     const anyPublic = edges.some((e) => e.visibilityLevel === "public");
@@ -189,15 +208,14 @@ export default function GenealogyBlockEditor({
     onRelationsChanged();
   }
 
-  if (!tree) return <p className="text-sm text-ink-muted">Chargement de l&apos;arbre…</p>;
+  if (!tree) return <p className="text-sm text-ink-muted">{t("chargement")}</p>;
 
   const matches =
-    menu && "option" in menu && query.trim().length > 0
+    menu && query.trim().length > 0
       ? otherEntities.filter((e) => e.name.toLowerCase().includes(query.trim().toLowerCase())).slice(0, 6)
       : [];
 
-  // Ouvre a droite du bouton par defaut, bascule a gauche si ca deborderait
-  // du viewport — jamais rogne, quelle que soit la colonne de la carte.
+  // Ouvre a droite du bouton par defaut, bascule a gauche si ca deborderait du viewport.
   const menuStyle = menu
     ? (() => {
         const openLeft = menu.rect.right + MENU_WIDTH + 8 > window.innerWidth;
@@ -207,100 +225,131 @@ export default function GenealogyBlockEditor({
       })()
     : null;
 
+  const choisi = selectedId ? tree.nodes.find((n) => n.id === selectedId) : undefined;
+  const dates = choisi ? ligneDates(choisi, (d) => formatGameDate(d, calendrier), calendrier.currentDate ?? null) : null;
+  const racineInitiale = data.rootEntityId ?? entityId;
+
   return (
     <>
+      {centreId && centreId !== racineInitiale && (
+        <button
+          type="button"
+          onClick={() => {
+            setCentreId(null);
+            setSelectedId(null);
+          }}
+          className="mb-2 rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised"
+        >
+          {t("revenir")}
+        </button>
+      )}
       <FamilyTreeCanvas
         tree={tree}
         rootId={rootEntityId}
+        hrefBase={`/m/${worldSlug}/f`}
+        calendrier={calendrier}
+        selectedId={selectedId}
+        onSelectNode={setSelectedId}
+        onAddChild={ajouterEnfantDeCouple}
         onDeleteEdge={deleteEdge}
         onToggleNodeVisibility={toggleNodeVisibility}
-        renderCard={(node: FamilyTreeNode) => <FamilyTreeCard node={node} href={`/m/${worldSlug}/f/${node.slug}`} />}
-        renderNodeOverlay={(node, scale) => (
+      />
+
+      {choisi && (
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-edge bg-panel-sunken px-3 py-2 text-xs">
+          <b className="text-sm text-ink">{choisi.name}</b>
+          {dates && (
+            <span className="text-ink-muted">
+              {[dates.naissance, dates.mort].filter(Boolean).join(" – ")}
+              {dates.age !== undefined && ` · ${t("age", { n: dates.age })}`}
+            </span>
+          )}
+          <Link
+            href={`/m/${worldSlug}/f/${choisi.slug}`}
+            prefetch={false}
+            className="rounded-full border border-edge px-3 py-1 text-ink transition-colors hover:bg-panel-raised"
+          >
+            {t("ouvrirFiche")}
+          </Link>
           <button
             type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              openMenu(node.id, e.currentTarget.getBoundingClientRect());
+            onClick={() => {
+              setCentreId(choisi.id);
+              setSelectedId(null);
             }}
-            aria-label={`Ajouter un proche de ${node.name}`}
-            // Contre-echelle (retour utilisateur) : garde un bouton de 24px
-            // a l'ecran quel que soit le zoom du canevas — sans ca, un
-            // arbre dezoome (MIN_ZOOM 0.3) le retrecit a ~7px, quasi
-            // impossible a viser a la souris.
-            style={{ transform: `scale(${1 / scale})`, transformOrigin: "top right" }}
-            className="absolute -right-2 -top-2 hidden h-6 w-6 items-center justify-center rounded-full border border-edge-strong bg-panel-raised text-sm text-ink shadow-md hover:bg-panel group-hover:flex"
+            className="rounded-full border border-edge px-3 py-1 text-ink transition-colors hover:bg-panel-raised"
           >
-            +
+            {t("centrerIci")}
           </button>
-        )}
-      />
+          <span className="ml-1 text-xs font-semibold uppercase tracking-wider text-ink-muted">{t("ajouter")}</span>
+          <div className="flex flex-wrap gap-1">
+            {LIENS_FAMILLE.map((lien) => (
+              <button
+                key={lien.cle}
+                type="button"
+                onClick={(e) => choisirLien(choisi.id, lien, e.currentTarget.getBoundingClientRect())}
+                className="rounded-full border border-edge px-2.5 py-0.5 text-ink-soft transition-colors hover:bg-panel-raised hover:text-ink"
+              >
+                {t(`liens.${lien.cle}`)}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {erreur && <p className="mt-1 text-xs text-danger">{erreur}</p>}
 
       {menu &&
         menuStyle &&
         createPortal(
           <>
-            {/* Fond invisible plein ecran : ferme le menu au clic en dehors, sans intercepter le reste de la page tant qu'il n'est pas ouvert. */}
+            {/* Fond invisible plein ecran : ferme le menu au clic en dehors. */}
             <div className="fixed inset-0 z-30" onClick={() => setMenu(null)} />
             <div
               onClick={(e) => e.stopPropagation()}
               className="fixed z-40 rounded-lg border border-edge-strong bg-panel-raised p-2 shadow-2xl"
               style={{ left: menuStyle.left, top: menuStyle.top, width: MENU_WIDTH }}
             >
-              {!("option" in menu) ? (
-                <div className="grid grid-cols-2 gap-1">
-                  {RELATION_MENU_OPTIONS.map((option) => (
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs text-ink-muted">{t(`liens.${menu.lien.cle}`)}</span>
+                <input
+                  autoFocus
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder={t("recherchePlaceholder")}
+                  aria-label={t("rechercheLabel")}
+                  className="rounded-md border border-edge bg-transparent px-2 py-1 text-sm"
+                />
+                <div className="flex max-h-40 flex-col overflow-y-auto">
+                  {matches.map((entity) => (
                     <button
-                      key={option.label}
+                      key={entity.id}
                       type="button"
-                      onClick={() => pickOption(option)}
+                      aria-busy={pending}
+                      onClick={() => {
+                        if (!pending) void lierA(entity.id);
+                      }}
                       className="rounded px-2 py-1.5 text-left text-xs text-ink hover:bg-panel"
                     >
-                      {option.label}
+                      {entity.name}
                     </button>
                   ))}
+                  {query.trim().length > 0 && (
+                    <button
+                      type="button"
+                      aria-busy={pending}
+                      onClick={() => {
+                        if (!pending) void createAndLink(query);
+                      }}
+                      className="rounded px-2 py-1.5 text-left text-xs text-accent hover:bg-panel"
+                    >
+                      {t("creer", { nom: query.trim() })}
+                    </button>
+                  )}
                 </div>
-              ) : (
-                <div className="flex flex-col gap-1.5">
-                  <input
-                    autoFocus
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Rechercher ou créer une fiche…"
-                    className="rounded-md border border-edge bg-transparent px-2 py-1 text-sm"
-                  />
-                  <div className="flex max-h-40 flex-col overflow-y-auto">
-                    {matches.map((entity) => (
-                      <button
-                        key={entity.id}
-                        type="button"
-                        disabled={pending}
-                        onClick={() => linkExisting(entity)}
-                        className="rounded px-2 py-1.5 text-left text-xs text-ink hover:bg-panel disabled:opacity-50"
-                      >
-                        {entity.name}
-                      </button>
-                    ))}
-                    {query.trim().length > 0 && (
-                      <button
-                        type="button"
-                        disabled={pending}
-                        onClick={() => createAndLink(query)}
-                        className="rounded px-2 py-1.5 text-left text-xs text-accent hover:bg-panel disabled:opacity-50"
-                      >
-                        + Créer « {query.trim()} »
-                      </button>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setMenu(null)}
-                    className="mt-1 text-left text-xs text-ink-muted hover:text-ink"
-                  >
-                    Passer pour l&apos;instant
-                  </button>
-                </div>
-              )}
+                <button type="button" onClick={() => setMenu(null)} className="mt-1 text-left text-xs text-ink-muted hover:text-ink">
+                  {t("passer")}
+                </button>
+              </div>
             </div>
           </>,
           document.body

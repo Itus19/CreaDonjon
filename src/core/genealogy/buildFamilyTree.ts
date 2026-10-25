@@ -60,6 +60,8 @@ export interface FamilyTreeEdge {
   toId: string;
   label: string;
   visibilityLevel: string;
+  /** V3.1-73 : lien d'ex-partenaire (`ex_partner_of`). Absent pour tout autre lien. */
+  ex?: true;
 }
 
 export interface FamilyTree {
@@ -83,6 +85,8 @@ interface PairLink {
   bId: string;
   label: string;
   visibilityLevel: string;
+  /** Vrai pour `ex_partner_of` : le trait se dessine en pointillé orange (V3.1-73). */
+  ex?: true;
 }
 
 function normalizeParentChild(edge: FamilyEdgeInput): ParentChildLink | null {
@@ -136,7 +140,14 @@ export function buildFamilyTree(params: {
       continue;
     }
     if (isPartnerType(edge.relationType)) {
-      partnerLinks.push({ id: edge.id, aId: edge.sourceId, bId: edge.targetId, label: edge.label, visibilityLevel: edge.visibilityLevel });
+      partnerLinks.push({
+        id: edge.id,
+        aId: edge.sourceId,
+        bId: edge.targetId,
+        label: edge.label,
+        visibilityLevel: edge.visibilityLevel,
+        ...(edge.relationType === "ex_partner_of" ? { ex: true as const } : {}),
+      });
       continue;
     }
     if (isSiblingType(edge.relationType)) {
@@ -196,7 +207,10 @@ export function buildFamilyTree(params: {
   }
 
   // Ordonnancement par generation : les partenaires restent adjacents ;
-  // sinon l'ordre de decouverte (BFS) donne un resultat stable.
+  // sinon l'ordre de decouverte (BFS) donne un resultat stable. V3.1-73 :
+  // les ex-partenaires se placent A GAUCHE de la fiche, les partenaires
+  // actuels a droite — un ex ne se glisse jamais entre un couple, d'ou
+  // descendent ses enfants.
   const idsByGeneration = new Map<number, string[]>();
   for (const id of visitOrder) {
     pushTo(idsByGeneration, generationOf.get(id) as number, id);
@@ -205,16 +219,20 @@ export function buildFamilyTree(params: {
   for (const ids of idsByGeneration.values()) {
     const placed = new Set<string>();
     let cursor = 0;
-    for (const id of ids) {
-      if (placed.has(id)) continue;
+    const partnersToPlace = (id: string, ex: boolean): string[] =>
+      (partnersOf.get(id) ?? [])
+        .filter((link) => (link.ex === true) === ex)
+        .map((link) => (link.aId === id ? link.bId : link.aId))
+        .filter((otherId) => !placed.has(otherId) && generationOf.get(otherId) === generationOf.get(id));
+    const place = (id: string) => {
       orderById.set(id, cursor++);
       placed.add(id);
-      for (const link of partnersOf.get(id) ?? []) {
-        const otherId = link.aId === id ? link.bId : link.aId;
-        if (placed.has(otherId) || generationOf.get(otherId) !== generationOf.get(id)) continue;
-        orderById.set(otherId, cursor++);
-        placed.add(otherId);
-      }
+    };
+    for (const id of ids) {
+      if (placed.has(id)) continue;
+      for (const otherId of partnersToPlace(id, true)) place(otherId);
+      place(id);
+      for (const otherId of partnersToPlace(id, false)) place(otherId);
     }
   }
 
@@ -242,7 +260,15 @@ export function buildFamilyTree(params: {
   }
   for (const link of partnerLinks) {
     if (!generationOf.has(link.aId) || !generationOf.has(link.bId)) continue;
-    treeEdges.push({ id: link.id, kind: "partner", fromId: link.aId, toId: link.bId, label: link.label, visibilityLevel: link.visibilityLevel });
+    treeEdges.push({
+      id: link.id,
+      kind: "partner",
+      fromId: link.aId,
+      toId: link.bId,
+      label: link.label,
+      visibilityLevel: link.visibilityLevel,
+      ...(link.ex ? { ex: true as const } : {}),
+    });
   }
   for (const link of siblingLinks) {
     if (!generationOf.has(link.aId) || !generationOf.has(link.bId)) continue;

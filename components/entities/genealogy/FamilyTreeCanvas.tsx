@@ -1,143 +1,141 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import EyeIcon from "@/components/shared/EyeIcon";
+import FamilyTreeCard from "@/components/entities/genealogy/FamilyTreeCard";
+import { formatGameDate } from "@/src/core/calendar/formatDate";
+import type { CalendarConfigInput } from "@/src/core/schemas/calendar";
 import type { FamilyTree, FamilyTreeEdge, FamilyTreeNode } from "@/src/core/genealogy/buildFamilyTree";
+import {
+  casesEnfant,
+  dimensions,
+  estDefunt,
+  gabaritPour,
+  ligneDates,
+  position,
+  traits,
+  vueAjustee,
+  vueCentree,
+  zoomerAutour,
+  type CaseEnfant,
+  type Vue,
+} from "@/lib/ui/arbre";
 
-const CARD_WIDTH = 120;
-const CARD_HEIGHT = 150;
-// Retour utilisateur : plus d'ecart entre les portraits (44/84 -> 80/120)
-// pour que les traits (surtout une fratrie qui se separe en deux) restent
-// lisibles sans se chevaucher.
-const COL_GAP = 80;
-const ROW_GAP = 120;
-const COL_WIDTH = CARD_WIDTH + COL_GAP;
-const ROW_HEIGHT = CARD_HEIGHT + ROW_GAP;
 const VIEWPORT_HEIGHT = 440;
-const MIN_ZOOM = 0.3;
-const MAX_ZOOM = 2.5;
+const LIMITES = { min: 0.3, max: 2.5 };
 /** En dessous de ce deplacement (px), un clic-relache reste un clic — pas un panoramique qui devrait avaler le clic suivant. */
 const DRAG_THRESHOLD = 4;
-
-function nodeX(node: FamilyTreeNode): number {
-  return node.order * COL_WIDTH;
-}
-function nodeY(node: FamilyTreeNode, minGeneration: number): number {
-  return (node.generation - minGeneration) * ROW_HEIGHT;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
-}
+const MARGE = 16;
 
 /**
- * Canevas de rendu partage entre l'editeur (avec ses "+" au survol) et le
- * wiki public (lecture seule) — V2-H3. Esthetique de reference fournie par
- * l'utilisateur : cartes portrait a etiquette arrondie, traits fins en
- * angle droit, fond a pointilles subtil. Connecteurs traces par arete
- * plutot que regroupes par fratrie (un couple qui a deux enfants produit
- * deux traits paralleles a la meme hauteur de "bus" plutot qu'un seul
- * trait fusionne) : bien plus simple a calculer et a etiqueter
- * individuellement au survol, visuellement quasi identique a la fusion.
+ * Canevas de rendu partage entre l'editeur et le wiki public (V2-H3, refait en
+ * V3.1-73) : de GRANDS portraits (100 × 130 ; 66 × 88 et prenoms seuls au
+ * telephone), le nom en pastille a cheval sur le bas, les dates dessous, des
+ * traits ARRONDIS (le couple relie a l'horizontale, les enfants descendent du
+ * milieu du couple par des coudes), l'ex-partenaire en pointille orange
+ * (`--gm`), le defunt en gris, un fond pointe et le zoom en bas a droite
+ * (+, −, recadrer). Tout le calcul — gabarit, traits, case « + enfant », dates,
+ * vue — vit dans `lib/ui/arbre.ts`.
  *
- * Navigation (retour utilisateur) : ctrl+molette pour zoomer (une simple
- * molette laisse la page defiler normalement — le bloc est souvent en
- * plein milieu d'une fiche plus longue), centree sur le curseur (le point
- * du monde sous la souris reste sous la souris apres zoom, comme
- * Figma/Miro) ; clic-glisse pour deplacer. L'arbre s'ouvre
- * centre et ajuste a la fenetre (jamais zoome au-dela de 100% par
- * defaut, seulement dezoome si l'arbre est plus grand que la zone
- * visible) — recalcule quand le nombre de nœuds change (nouvelle
- * relation), jamais sur un simple re-rendu.
+ * Navigation : ctrl+molette pour zoomer (une simple molette laisse la page
+ * defiler), clic-glisse pour deplacer ; au doigt, glisser et pincer. L'arbre
+ * s'ouvre ajuste a la fenetre sur ordinateur, CENTRE sur la fiche au telephone.
  *
- * Survol d'un TRAIT = apercu ephemere de son libelle (hoveredEdgeId) ;
- * clic = "epingle" (pinnedEdgeId), qui seul fait apparaitre le bouton de
- * suppression — sans cette distinction, deplacer la souris du trait vers
- * le bouton declenche un mouseleave qui referme tout avant d'avoir pu
- * cliquer. Le masquage au wiki public, lui, ne passe plus par le trait
- * (retire a la demande de l'utilisateur) : voir le bouton oeil sur chaque
- * portrait, plus bas. Survol d'un PORTRAIT (retour utilisateur) = met en
- * surbrillance ses liens directs et estompe le reste, ET affiche le
- * libelle de CHACUN de ces liens a la fois (pas un seul) — meme principe
- * que le bloc reseau (`RelationsGraphCanvas.tsx`), duplique plutot que
- * partage (mises en page trop differentes, meme raisonnement deja pose
- * pour ce couple de blocs).
+ * Choisir un portrait passe par `onSelectNode` (la barre de l'editeur) ; sans
+ * lui (wiki public), la carte est un lien. Survol d'un TRAIT = apercu de son
+ * libelle ; clic = « epingle » (bouton de suppression). Tout clic dans un
+ * element pose sur le fond (cartes, etiquettes, case « + enfant », zoom) arrete
+ * sa remontee : le fond deselectionne.
  */
 export default function FamilyTreeCanvas({
   tree,
   rootId,
-  renderCard,
-  renderNodeOverlay,
+  hrefBase,
+  calendrier,
+  selectedId,
+  onSelectNode,
+  onAddChild,
   onDeleteEdge,
   onToggleNodeVisibility,
 }: {
   tree: FamilyTree;
-  /** L'entite dont c'est la fiche/l'arbre — jamais de bouton oeil sur son propre portrait (retour utilisateur : "seul le portrait de l'entite centrale n'aurait pas ce bouton, car c'est SON arbre"). Optionnel : sans effet en lecture seule (wiki public), ou `onToggleNodeVisibility` n'est de toute facon jamais fourni. */
+  /** L'entite dont c'est l'arbre — jamais de bouton oeil sur son propre portrait, bord accent. */
   rootId?: string;
-  renderCard: (node: FamilyTreeNode) => ReactNode;
-  /**
-   * Controles d'edition (bouton "+") positionnes sur chaque carte — omis
-   * en lecture seule. `scale` (retour utilisateur) : le zoom courant du
-   * canevas, pour que l'appelant puisse contre-appliquer une echelle
-   * inverse et garder un bouton de taille constante a l'ecran — sinon un
-   * arbre dezoome (beaucoup de nœuds, `MIN_ZOOM` 0.3) retrecit le "+"
-   * jusqu'a le rendre quasi impossible a viser.
-   */
-  renderNodeOverlay?: (node: FamilyTreeNode, scale: number) => ReactNode;
+  /** Base des liens vers une fiche (carte-lien du wiki public). */
+  hrefBase: string;
+  /** Calendrier du monde : sans lui, aucune date n'est ecrite (le defunt reste gris). */
+  calendrier?: CalendarConfigInput | null;
+  selectedId?: string | null;
+  /** Fourni : une carte est un bouton qui choisit la fiche ; `null` quand on clique le fond. */
+  onSelectNode?: (id: string | null) => void;
+  /** Fourni : la case pointillee « + enfant » paraît sous un couple sans enfant. */
+  onAddChild?: (c: CaseEnfant, rect: DOMRect) => void;
   /** Bouton de suppression sur le trait epingle (clic) — omis en lecture seule (wiki public). */
   onDeleteEdge?: (edge: FamilyTreeEdge) => void;
-  /**
-   * V2, retour utilisateur : bouton oeil directement sur le portrait
-   * (jamais sur le trait — l'utilisateur a prefere n'avoir qu'un seul
-   * geste) — bascule TOUTES les aretes qui touchent ce nœud dans l'arbre
-   * affiche (un nœud avec plusieurs liens, ex. un partenaire ET des
-   * enfants, disparait ou reapparait en bloc). Omis en lecture seule.
-   */
+  /** Bouton oeil sur le portrait : bascule TOUTES les aretes qui touchent ce nœud. Omis en lecture seule. */
   onToggleNodeVisibility?: (node: FamilyTreeNode, edges: FamilyTreeEdge[]) => void;
 }) {
+  const t = useTranslations("fiche.genealogie");
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
   const [pinnedEdgeId, setPinnedEdgeId] = useState<string | null>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
-  const [view, setView] = useState({ x: 0, y: 0, scale: 1 });
+  const [view, setView] = useState<Vue>({ x: 0, y: 0, scale: 1 });
   const [isDragging, setIsDragging] = useState(false);
+  const [largeur, setLargeur] = useState(0);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ startX: number; startY: number; startPanX: number; startPanY: number; moved: boolean } | null>(null);
+  const pinceRef = useRef<{ distance: number; vue: Vue } | null>(null);
   const suppressClickRef = useRef(false);
   const fittedForRef = useRef<string | null>(null);
 
-  const slotById = new Map(tree.nodes.map((node) => [node.id, { node, x: nodeX(node), y: nodeY(node, tree.minGeneration) }]));
-  const treeWidth = tree.nodes.length === 0 ? 0 : Math.max(...[...slotById.values()].map((s) => s.x)) + CARD_WIDTH;
-  const treeHeight = tree.nodes.length === 0 ? 0 : Math.max(...[...slotById.values()].map((s) => s.y)) + CARD_HEIGHT;
+  const g = gabaritPour(largeur);
+  const places = new Map(tree.nodes.map((node) => [node.id, { node, ...position(node, tree.minGeneration, g) }]));
+  const { largeur: treeWidth, hauteur: treeHeight } = dimensions(tree, g);
+  const lesTraits = traits(tree, g);
+  const cases = onAddChild ? casesEnfant(tree, g) : [];
+  const aujourdhui = calendrier?.currentDate ?? null;
 
-  // Centre et ajuste a la fenetre au premier affichage et a chaque
-  // changement structurel (nœuds ajoutes/retires) — jamais a chaque
-  // re-rendu, ce qui effacerait un panoramique/zoom manuel en cours.
-  const nodesSignature = tree.nodes
-    .map((n) => n.id)
-    .sort()
-    .join(",");
+  /** L'arbre ajuste a la fenetre (ordinateur) ou ouvert centre sur la fiche (telephone). */
+  function vueInitiale(container: HTMLElement): Vue {
+    const fenetre = { largeur: container.clientWidth, hauteur: container.clientHeight };
+    const racine = rootId ? places.get(rootId) : undefined;
+    if (g.largeur < 100 && racine) {
+      return vueCentree({ x: racine.x + g.largeur / 2 + MARGE, y: racine.y + g.hauteur / 2 + MARGE }, fenetre, 1);
+    }
+    return vueAjustee({ largeur: treeWidth + 2 * MARGE, hauteur: treeHeight + 2 * MARGE }, fenetre, LIMITES, 0);
+  }
+
+  // Largeur du bloc suivie (le gabarit en depend) ; mesuree avant le premier affichage.
   useLayoutEffect(() => {
-    if (fittedForRef.current === nodesSignature) return;
-    fittedForRef.current = nodesSignature;
     const container = containerRef.current;
-    if (!container || treeWidth === 0 || treeHeight === 0) return;
-    const containerWidth = container.clientWidth;
-    const containerHeight = container.clientHeight;
-    const fitScale = clamp(Math.min(containerWidth / (treeWidth + 32), containerHeight / (treeHeight + 32), 1), MIN_ZOOM, MAX_ZOOM);
-    setView({
-      scale: fitScale,
-      x: (containerWidth - treeWidth * fitScale) / 2,
-      y: (containerHeight - treeHeight * fitScale) / 2,
+    if (!container) return;
+    setLargeur(container.clientWidth);
+    const observer = new ResizeObserver((entrees) => {
+      const w = entrees[0]?.contentRect.width;
+      if (w) setLargeur(w);
     });
-  }, [nodesSignature, treeWidth, treeHeight]);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
 
-  // Molette non-passive (React attache onWheel en passif par defaut) :
-  // sans ceci, preventDefault() n'empeche pas la page de defiler en plus
-  // du zoom du canevas. Ctrl+molette seulement (retour utilisateur) : une
-  // simple molette laisse la page defiler normalement — sans ce garde, un
-  // bloc de genealogie en plein milieu d'une fiche capturait TOUT geste de
-  // molette au survol, rendant la page impossible a faire defiler par-dessus.
+  // Cadre l'arbre a l'ouverture et a chaque changement structurel (noeuds, gabarit) — jamais a chaque re-rendu, ce qui effacerait un panoramique/zoom manuel en cours.
+  const signature =
+    tree.nodes
+      .map((n) => n.id)
+      .sort()
+      .join(",") + `|${g.largeur}|${rootId ?? ""}`;
+  useLayoutEffect(() => {
+    if (fittedForRef.current === signature) return;
+    const container = containerRef.current;
+    if (!container || treeWidth === 0 || treeHeight === 0 || largeur === 0) return;
+    fittedForRef.current = signature;
+    setView(vueInitiale(container));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [signature, treeWidth, treeHeight, largeur]);
+
+  // Molette non-passive : sans cela preventDefault() n'empeche pas la page de defiler. Ctrl+molette seulement : une simple molette laisse la page defiler.
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -145,14 +143,8 @@ export default function FamilyTreeCanvas({
       if (!e.ctrlKey) return;
       e.preventDefault();
       const rect = container!.getBoundingClientRect();
-      const cursorX = e.clientX - rect.left;
-      const cursorY = e.clientY - rect.top;
-      setView((current) => {
-        const nextScale = clamp(current.scale * (1 - e.deltaY * 0.001), MIN_ZOOM, MAX_ZOOM);
-        const worldX = (cursorX - current.x) / current.scale;
-        const worldY = (cursorY - current.y) / current.scale;
-        return { scale: nextScale, x: cursorX - worldX * nextScale, y: cursorY - worldY * nextScale };
-      });
+      const point = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+      setView((courante) => zoomerAutour(courante, 1 - e.deltaY * 0.001, point, LIMITES));
     }
     container.addEventListener("wheel", onWheel, { passive: false });
     return () => container.removeEventListener("wheel", onWheel);
@@ -163,22 +155,19 @@ export default function FamilyTreeCanvas({
     dragRef.current = { startX: e.clientX, startY: e.clientY, startPanX: view.x, startPanY: view.y, moved: false };
     setIsDragging(true);
   }
-
   function handleMouseMove(e: React.MouseEvent) {
     const drag = dragRef.current;
     if (!drag) return;
     const dx = e.clientX - drag.startX;
     const dy = e.clientY - drag.startY;
     if (!drag.moved && Math.hypot(dx, dy) > DRAG_THRESHOLD) drag.moved = true;
-    if (drag.moved) setView((current) => ({ ...current, x: drag.startPanX + dx, y: drag.startPanY + dy }));
+    if (drag.moved) setView((courante) => ({ ...courante, x: drag.startPanX + dx, y: drag.startPanY + dy }));
   }
-
   function endDrag() {
     if (dragRef.current?.moved) suppressClickRef.current = true;
     dragRef.current = null;
     setIsDragging(false);
   }
-
   function handleClickCapture(e: React.MouseEvent) {
     if (suppressClickRef.current) {
       e.preventDefault();
@@ -187,38 +176,80 @@ export default function FamilyTreeCanvas({
     }
   }
 
-  if (tree.nodes.length === 0) {
-    return <p className="text-sm text-ink-muted">Aucune parenté visible pour l&apos;instant.</p>;
+  // Au doigt : un doigt deplace, deux doigts pincent.
+  function ecart(touches: React.TouchList): number {
+    return Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY);
+  }
+  function handleTouchStart(e: React.TouchEvent) {
+    if (e.touches.length === 2) {
+      pinceRef.current = { distance: ecart(e.touches), vue: view };
+      dragRef.current = null;
+    } else if (e.touches.length === 1) {
+      const doigt = e.touches[0];
+      dragRef.current = { startX: doigt.clientX, startY: doigt.clientY, startPanX: view.x, startPanY: view.y, moved: false };
+    }
+  }
+  function handleTouchMove(e: React.TouchEvent) {
+    const pince = pinceRef.current;
+    if (pince && e.touches.length === 2) {
+      const rect = containerRef.current?.getBoundingClientRect();
+      const milieu = {
+        x: (e.touches[0].clientX + e.touches[1].clientX) / 2 - (rect?.left ?? 0),
+        y: (e.touches[0].clientY + e.touches[1].clientY) / 2 - (rect?.top ?? 0),
+      };
+      setView(zoomerAutour(pince.vue, ecart(e.touches) / pince.distance, milieu, LIMITES));
+      suppressClickRef.current = true;
+      return;
+    }
+    const drag = dragRef.current;
+    if (!drag || e.touches.length !== 1) return;
+    const dx = e.touches[0].clientX - drag.startX;
+    const dy = e.touches[0].clientY - drag.startY;
+    if (!drag.moved && Math.hypot(dx, dy) > DRAG_THRESHOLD) drag.moved = true;
+    if (drag.moved) setView((courante) => ({ ...courante, x: drag.startPanX + dx, y: drag.startPanY + dy }));
+  }
+  function handleTouchEnd(e: React.TouchEvent) {
+    if (e.touches.length < 2) pinceRef.current = null;
+    if (e.touches.length === 0) {
+      if (dragRef.current?.moved) suppressClickRef.current = true;
+      dragRef.current = null;
+    }
   }
 
-  // Survol d'un portrait : lui + ses voisins directs restent nets, le
-  // reste s'estompe (retour utilisateur, meme principe que le bloc reseau).
+  function zoomerBouton(facteur: number) {
+    const container = containerRef.current;
+    if (!container) return;
+    setView((courante) => zoomerAutour(courante, facteur, { x: container.clientWidth / 2, y: container.clientHeight / 2 }, LIMITES));
+  }
+  function recadrer() {
+    const container = containerRef.current;
+    if (container) setView(vueInitiale(container));
+  }
+
+  if (tree.nodes.length === 0) {
+    return <p className="text-sm text-ink-muted">{t("aucuneParente")}</p>;
+  }
+
+  // Survol d'un portrait : lui + ses voisins directs restent nets, le reste s'estompe.
   const highlightedNodeIds = hoveredNodeId
-    ? new Set(
-        [hoveredNodeId, ...tree.edges.flatMap((e) => (e.fromId === hoveredNodeId ? [e.toId] : e.toId === hoveredNodeId ? [e.fromId] : []))]
-      )
+    ? new Set([hoveredNodeId, ...tree.edges.flatMap((e) => (e.fromId === hoveredNodeId ? [e.toId] : e.toId === hoveredNodeId ? [e.fromId] : []))])
     : null;
 
-  // Etiquette(s) affichee(s) : un trait EPINGLE reste toujours visible
-  // (petit bug corrige : survoler un autre portrait le faisait disparaitre
-  // avant), auquel s'ajoutent tous les liens directs du portrait survole
-  // (retour utilisateur : "les etiquettes s'affichent", au pluriel) ou, a
-  // defaut, le seul lien directement survole.
+  // Etiquette(s) : un trait EPINGLE reste visible, plus tous les liens directs du portrait survole ou, a defaut, le seul lien survole.
   const edgesToLabel = (() => {
-    const byId = new Map(tree.edges.map((e) => [e.id, e] as const));
-    const result = new Map<string, FamilyTreeEdge>();
-    const pinned = pinnedEdgeId ? byId.get(pinnedEdgeId) : undefined;
-    if (pinned) result.set(pinned.id, pinned);
+    const parId = new Map(tree.edges.map((e) => [e.id, e] as const));
+    const resultat = new Map<string, FamilyTreeEdge>();
+    const pinned = pinnedEdgeId ? parId.get(pinnedEdgeId) : undefined;
+    if (pinned) resultat.set(pinned.id, pinned);
     if (hoveredNodeId) {
-      for (const e of tree.edges) {
-        if (e.fromId === hoveredNodeId || e.toId === hoveredNodeId) result.set(e.id, e);
-      }
+      for (const e of tree.edges) if (e.fromId === hoveredNodeId || e.toId === hoveredNodeId) resultat.set(e.id, e);
     } else if (hoveredEdgeId) {
-      const e = byId.get(hoveredEdgeId);
-      if (e) result.set(e.id, e);
+      const e = parId.get(hoveredEdgeId);
+      if (e) resultat.set(e.id, e);
     }
-    return [...result.values()];
+    return [...resultat.values()];
   })();
+  const traitDe = new Map(lesTraits.map((x) => [x.edgeId, x]));
 
   return (
     <div
@@ -226,6 +257,7 @@ export default function FamilyTreeCanvas({
       className={`relative overflow-hidden rounded-xl border border-edge/60 select-none ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
       style={{
         height: VIEWPORT_HEIGHT,
+        touchAction: "none",
         backgroundImage: "radial-gradient(var(--edge) 1px, transparent 1px)",
         backgroundSize: `${18 * view.scale}px ${18 * view.scale}px`,
         backgroundPosition: `${view.x}px ${view.y}px`,
@@ -235,85 +267,75 @@ export default function FamilyTreeCanvas({
       onMouseMove={handleMouseMove}
       onMouseUp={endDrag}
       onMouseLeave={endDrag}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
       onClickCapture={handleClickCapture}
-      onClick={() => setPinnedEdgeId(null)}
+      onClick={() => {
+        setPinnedEdgeId(null);
+        onSelectNode?.(null);
+      }}
     >
       <div
         className="absolute left-0 top-0"
-        style={{ width: treeWidth + 32, height: treeHeight + 32, padding: 16, transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})`, transformOrigin: "0 0" }}
+        style={{ width: treeWidth + 2 * MARGE, height: treeHeight + 2 * MARGE, padding: MARGE, transform: `translate(${view.x}px, ${view.y}px) scale(${view.scale})`, transformOrigin: "0 0" }}
       >
-        <svg className="pointer-events-none absolute left-4 top-4" width={treeWidth} height={treeHeight}>
+        <svg className="pointer-events-none absolute overflow-visible" style={{ left: MARGE, top: MARGE }} width={treeWidth} height={treeHeight}>
           {tree.edges.map((edge) => {
-            const from = slotById.get(edge.fromId);
-            const to = slotById.get(edge.toId);
-            if (!from || !to) return null;
+            const trait = traitDe.get(edge.id);
+            if (!trait) return null;
             const isActive = edge.id === pinnedEdgeId || edge.id === hoveredEdgeId || edgesToLabel.some((e) => e.id === edge.id);
             const dimmed = highlightedNodeIds ? !(highlightedNodeIds.has(edge.fromId) && highlightedNodeIds.has(edge.toId)) : false;
-            // Retour utilisateur : un lien masque au wiki public (tout
-            // sauf `public`) reste grise et pointille — meme traitement
-            // que le bloc reseau (RelationsGraphCanvas.tsx).
+            // Un lien masque au wiki public (tout sauf `public`) reste grise et pointille ; l'ex-partenaire est en pointille orange (`--gm`).
             const hiddenFromPublic = edge.visibilityLevel !== "public";
-            const stroke = isActive ? "var(--accent)" : hiddenFromPublic ? "var(--ink-muted)" : "var(--edge-strong)";
-            const dash = !isActive && hiddenFromPublic ? "4 3" : undefined;
-            const opacity = dimmed ? 0.15 : 1;
-
-            const handlers = {
-              onMouseEnter: () => setHoveredEdgeId(edge.id),
-              onMouseLeave: () => setHoveredEdgeId((current: string | null) => (current === edge.id ? null : current)),
-              onClick: (e: React.MouseEvent) => {
-                e.stopPropagation();
-                setPinnedEdgeId((current) => (current === edge.id ? null : edge.id));
-              },
-            };
-
-            if (edge.kind === "parent-child") {
-              const x1 = from.x + CARD_WIDTH / 2;
-              const y1 = from.y + CARD_HEIGHT;
-              const x2 = to.x + CARD_WIDTH / 2;
-              const y2 = to.y;
-              const busY = y1 + (y2 - y1) / 2;
-              const points = `${x1},${y1} ${x1},${busY} ${x2},${busY} ${x2},${y2}`;
-              return (
-                <g key={edge.id} className="pointer-events-auto cursor-pointer" style={{ opacity }} {...handlers}>
-                  {/* Trait large invisible : la ligne visible (1.5px) est trop fine pour un survol/clic fiable — meme technique que les cibles tactiles agrandies ailleurs dans l'app. */}
-                  <polyline points={points} fill="none" stroke="transparent" strokeWidth={16} />
-                  <polyline points={points} fill="none" stroke={stroke} strokeWidth={isActive ? 2 : 1.5} strokeDasharray={dash} />
-                </g>
-              );
-            }
-
-            // partner / sibling : simple trait horizontal entre les deux centres.
-            const y = from.y + CARD_HEIGHT / 2;
-            const x1 = from.x + CARD_WIDTH / 2;
-            const x2 = to.x + CARD_WIDTH / 2;
+            const stroke = isActive ? "var(--accent)" : trait.ex ? "var(--gm)" : hiddenFromPublic ? "var(--ink-muted)" : "var(--edge-strong)";
+            const dash = trait.ex ? "6 4" : !isActive && hiddenFromPublic ? "4 3" : undefined;
             return (
-              <g key={edge.id} className="pointer-events-auto cursor-pointer" style={{ opacity }} {...handlers}>
-                <line x1={x1} y1={y} x2={x2} y2={y} stroke="transparent" strokeWidth={16} />
-                <line x1={x1} y1={y} x2={x2} y2={y} stroke={stroke} strokeWidth={isActive ? 2 : 1.5} strokeDasharray={dash} />
+              <g
+                key={edge.id}
+                className="pointer-events-auto cursor-pointer"
+                style={{ opacity: dimmed ? 0.15 : 1 }}
+                onMouseEnter={() => setHoveredEdgeId(edge.id)}
+                onMouseLeave={() => setHoveredEdgeId((courant) => (courant === edge.id ? null : courant))}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setPinnedEdgeId((courant) => (courant === edge.id ? null : edge.id));
+                }}
+              >
+                {/* Trait large invisible : la ligne visible est trop fine pour un survol/clic fiable. */}
+                <path d={trait.d} fill="none" stroke="transparent" strokeWidth={16} />
+                <path d={trait.d} fill="none" stroke={stroke} strokeWidth={isActive ? 2 : 1.5} strokeDasharray={dash} strokeLinecap="round" />
               </g>
             );
           })}
         </svg>
 
         {tree.nodes.map((node) => {
-          const slot = slotById.get(node.id)!;
+          const slot = places.get(node.id);
+          if (!slot) return null;
           const dimmed = highlightedNodeIds ? !highlightedNodeIds.has(node.id) : false;
           const touchingEdges = tree.edges.filter((e) => e.fromId === node.id || e.toId === node.id);
-          // Etat affiche par l'oeil : visible tant qu'AU MOINS une des
-          // aretes qui touchent ce nœud est publique — cohérent avec le
-          // fait qu'une seule arete encore publique suffit a garder le
-          // nœud atteignable depuis la racine sur le wiki public.
+          // Etat de l'oeil : visible tant qu'AU MOINS une arete qui touche ce nœud est publique.
           const nodeIsPublic = touchingEdges.length === 0 || touchingEdges.some((e) => e.visibilityLevel === "public");
+          const dates = calendrier ? ligneDates(node, (d) => formatGameDate(d, calendrier), aujourdhui) : null;
           return (
             <div
               key={node.id}
               className="group absolute"
-              style={{ left: slot.x + 16, top: slot.y + 16, width: CARD_WIDTH, height: CARD_HEIGHT, opacity: dimmed ? 0.3 : 1 }}
+              style={{ left: slot.x + MARGE, top: slot.y + MARGE, width: g.largeur, height: g.hauteur, opacity: dimmed ? 0.3 : 1 }}
               onMouseEnter={() => setHoveredNodeId(node.id)}
-              onMouseLeave={() => setHoveredNodeId((current) => (current === node.id ? null : current))}
+              onMouseLeave={() => setHoveredNodeId((courant) => (courant === node.id ? null : courant))}
             >
-              {renderCard(node)}
-              {renderNodeOverlay?.(node, view.scale)}
+              <FamilyTreeCard
+                node={node}
+                href={`${hrefBase}/${node.slug}`}
+                gabarit={g}
+                dates={dates}
+                defunt={estDefunt(node)}
+                choisie={selectedId === node.id}
+                centre={node.id === rootId}
+                onSelect={onSelectNode ? () => onSelectNode(node.id) : undefined}
+              />
               {onToggleNodeVisibility && node.id !== rootId && touchingEdges.length > 0 && (
                 <button
                   type="button"
@@ -322,8 +344,8 @@ export default function FamilyTreeCanvas({
                     e.stopPropagation();
                     onToggleNodeVisibility(node, touchingEdges);
                   }}
-                  aria-label={nodeIsPublic ? `Masquer ${node.name} au wiki public` : `Rendre ${node.name} visible au wiki public`}
-                  title={nodeIsPublic ? "Visible au wiki public — cliquer pour masquer" : "Masqué au wiki public — cliquer pour afficher"}
+                  aria-label={nodeIsPublic ? t("masquerWiki", { nom: node.name }) : t("rendreVisibleWiki", { nom: node.name })}
+                  title={nodeIsPublic ? t("visibleWiki") : t("masqueWiki")}
                   style={{ transform: `scale(${1 / view.scale})`, transformOrigin: "top left" }}
                   className="absolute -left-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full border border-edge-strong bg-panel-raised text-ink shadow-md hover:bg-panel"
                 >
@@ -334,33 +356,43 @@ export default function FamilyTreeCanvas({
           );
         })}
 
+        {cases.map((c) => (
+          <button
+            key={c.edgeId}
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onAddChild?.(c, e.currentTarget.getBoundingClientRect());
+            }}
+            className="absolute flex items-center justify-center rounded-xl border-[1.5px] border-dashed border-edge-strong text-xs text-ink-muted transition-colors hover:border-accent hover:text-accent"
+            style={{ left: c.x + MARGE, top: c.y + MARGE, width: g.largeur, height: g.hauteur }}
+          >
+            {t("plusEnfant")}
+          </button>
+        ))}
+
         {edgesToLabel.map((edge) => {
-          const from = slotById.get(edge.fromId);
-          const to = slotById.get(edge.toId);
-          if (!from || !to) return null;
-          const midX = (from.x + to.x) / 2 + CARD_WIDTH / 2 + 16;
-          const midY =
-            edge.kind === "parent-child"
-              ? from.y + CARD_HEIGHT + (to.y - (from.y + CARD_HEIGHT)) / 2 + 16
-              : from.y + CARD_HEIGHT / 2 + 16;
+          const trait = traitDe.get(edge.id);
+          if (!trait) return null;
           const isPinned = edge.id === pinnedEdgeId;
           return (
             <div
               key={edge.id}
               className={`absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border border-edge-strong bg-panel-raised py-1 text-xs text-ink shadow-lg ${isPinned ? "pl-2.5 pr-1" : "pointer-events-none px-2.5"} flex items-center gap-1.5`}
-              style={{ left: midX, top: midY }}
+              style={{ left: trait.milieu.x + MARGE, top: trait.milieu.y + MARGE }}
               onClick={(e) => e.stopPropagation()}
             >
               {edge.label}
               {isPinned && onDeleteEdge && (
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     onDeleteEdge(edge);
                     setPinnedEdgeId(null);
                   }}
-                  aria-label={`Supprimer le lien ${edge.label}`}
-                  title="Supprimer ce lien"
+                  aria-label={t("supprimerLien", { lien: edge.label })}
+                  title={t("supprimerLienTitre")}
                   className="rounded-full px-1.5 text-danger hover:bg-panel"
                 >
                   ×
@@ -369,6 +401,18 @@ export default function FamilyTreeCanvas({
             </div>
           );
         })}
+      </div>
+
+      <div className="absolute bottom-2 right-2 flex gap-1" onMouseDown={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
+        <button type="button" onClick={() => zoomerBouton(1.25)} aria-label={t("zoomer")} className="rounded-md border border-edge-strong bg-panel-raised px-2 py-1 text-xs text-ink transition-colors hover:bg-panel">
+          +
+        </button>
+        <button type="button" onClick={() => zoomerBouton(0.8)} aria-label={t("dezoomer")} className="rounded-md border border-edge-strong bg-panel-raised px-2 py-1 text-xs text-ink transition-colors hover:bg-panel">
+          −
+        </button>
+        <button type="button" onClick={recadrer} aria-label={t("recadrer")} title={t("recadrer")} className="rounded-md border border-edge-strong bg-panel-raised px-2 py-1 text-xs text-ink transition-colors hover:bg-panel">
+          ⤢
+        </button>
       </div>
     </div>
   );

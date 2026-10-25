@@ -1,20 +1,23 @@
 "use client";
 
 import type { FamilyTree } from "@/src/core/genealogy/buildFamilyTree";
+import type { CalendarConfigInput } from "@/src/core/schemas/calendar";
 import FamilyTreeCanvas from "@/components/entities/genealogy/FamilyTreeCanvas";
-import FamilyTreeCard from "@/components/entities/genealogy/FamilyTreeCard";
 
 /**
- * Rendu public du bloc genealogie (V2-H3) : lecture seule, jamais de "+" —
- * l'arbre est deja filtre par visibilite cote serveur (getFamilyTree,
- * viewer anonyme). Survoler ou cliquer un trait revele son libelle
- * (FamilyTreeCanvas), aucune autre interaction.
+ * Rendu public du bloc genealogie (V2-H3) : lecture seule, jamais de barre ni
+ * de « + » — l'arbre est deja filtre par visibilite cote serveur
+ * (getFamilyTree, viewer anonyme). Les dates ne s'ecrivent que si le calendrier
+ * du monde est fourni ; le defunt reste gris sans lui.
  */
-export default function PublicGenealogyBlock({ tree, hrefBase }: { tree: FamilyTree; hrefBase: string }) {
-  return (
-    <FamilyTreeCanvas
-      tree={tree}
-      renderCard={(node) => <FamilyTreeCard node={node} href={`${hrefBase}/${node.slug}`} />}
-    />
-  );
+export default function PublicGenealogyBlock({
+  tree,
+  hrefBase,
+  calendar,
+}: {
+  tree: FamilyTree;
+  hrefBase: string;
+  calendar?: CalendarConfigInput | null;
+}) {
+  return <FamilyTreeCanvas tree={tree} hrefBase={hrefBase} calendrier={calendar ?? null} />;
 }
