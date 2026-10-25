@@ -204,7 +204,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-70 | ☑ | sans | Personnalité (A) et Convictions (même dessin, comparer avec une faction) | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-71 | ☑ | sans | Relation (A) : deux portraits, le résumé, les fils à perle | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-72 | ☑ | sans | Réseau (B) : vignettes, filtres, survol qui allume | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-73 | ☐ | sans | Généalogie (B) : les grands portraits | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
+| V3.1-73 | ☑ | sans | Généalogie (B) : les grands portraits | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-74 | ☑ | sans | Dates de naissance et de mort (données) | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-75 | ☐ | sans | Table aléatoire (A) et le dé animé | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
 | V3.1-76 | ☐ | sans | Quête (C) : une ligne, dépliable | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |

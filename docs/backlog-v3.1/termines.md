@@ -2,6 +2,22 @@
 
 ---
 
+### ☑ V3.1-73 — Généalogie (B) : les grands portraits · `M` · sans modèle IA — **fait le 25 octobre**
+
+**Critères d'acceptation**
+- [x] Conforme à la planche à 920 px et 390 px.
+- [x] « Centrer l'arbre ici » change la racine sans rien enregistrer.
+- [x] Ajouter un lien depuis la barre crée la relation (choix source/cible extrait et testé : `lib/ui/liensFamille.ts` ; route inchangée).
+- [x] Sans données de dates, aucune ligne vide sous les noms.
+
+**Réalisé** (donnée et cœur par Opus ; interface par Sonnet, relue par Opus ; vérifié en direct à 920 et 390 px)
+- Donnée : `hasPortrait` sur chaque nœud, lu en une requête avec les dates — une carte sans portrait ne demande plus d'image vouée au 404. Le wiki public reçoit le calendrier quand l'arbre porte une date.
+- Cœur : `FamilyTreeEdge.ex` (ex-partenaire) ; les ex se placent à gauche de la fiche, les partenaires actuels à droite — un ex ne se glisse plus entre un couple (test d'abord).
+- Interface : cartes 100 × 130 (66 × 88 et prénoms au téléphone), nom en pastille, dates, défunt en gris, traits arrondis, ex en pointillé `--gm`, case « + enfant », zoom en bas à droite, barre sous l'arbre (ouvrir, centrer ici, ajouter et les neuf liens), glisser et pincer au doigt. Logique pure dans `lib/ui/arbre.ts` et `lib/ui/liensFamille.ts`.
+- « Centrer l'arbre ici » relit l'arbre par la même route avec une autre racine (l'arbre chargé est borné en profondeur, un recalcul local ne suffisait pas) ; la donnée du bloc ne change pas (vérifié en direct).
+
+---
+
 ### ☑ V3.1-72 — Réseau (B) : vignettes, filtres, survol qui allume · `M` · sans modèle IA — **fait le 25 octobre**
 
 **Critères d'acceptation**

@@ -95,52 +95,6 @@ V3.1-48.
 
 ---
 
-### ☐ V3.1-73 — Généalogie (B) : les grands portraits · `M` · sans modèle IA — **prêt**
-
-**Modèle conseillé : Sonnet** — planche définitive ; les dates attendent V3.1-74.
-
-**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-**Planche** : `Psy-Decide.dc.html`, section « Généalogie — B » (ordinateur
-et téléphone). **Départ** : `components/blocks/GenealogyBlockEditor.tsx`,
-`components/entities/genealogy/FamilyTreeCanvas.tsx`, `FamilyTreeCard.tsx`,
-`components/entities/public/PublicGenealogyBlock.tsx`,
-`src/server/services/genealogy.ts`. **Dépend de** : 63 ; dates : 74.
-
-**Ce qui est décidé**
-- **Grands portraits** (100 × 130 sur ordinateur) : le portrait de la fiche,
-  sinon une silhouette ; **le nom en pastille à cheval sur le bas** ; **les
-  dates dessous** (voir plus bas).
-- **Traits arrondis** : le couple relié à l'horizontale, les enfants
-  descendent du milieu du couple par des coudes arrondis.
-  **Ex-partenaire en pointillé orange**, **défunt en gris** (portrait
-  désaturé).
-- Fond pointé ; **zoom en bas à droite** (+, −, recadrer).
-- **Toucher un portrait** : une barre sous l'arbre — nom, dates, « Ouvrir
-  la fiche », « Centrer l'arbre ici » (change la racine affichée, état
-  d'affichage), « Ajouter » et les neuf liens (Parent, Enfant, Partenaire,
-  Ex-partenaire, Frère/sœur, Demi-frère/sœur, Beau-parent, Beau-enfant,
-  Adopté(e)) — même route qu'aujourd'hui (création de relation). Une case
-  pointillée « + enfant » attend sous un couple sans enfant.
-- **Téléphone** : cartes plus petites (66 × 88), **prénoms seuls**, l'arbre
-  se parcourt du doigt (glisser, pincer) et **s'ouvre centré sur la
-  fiche**.
-- **Dates** : **tant que V3.1-74 n'est pas livré**, la ligne de dates
-  n'apparaît pas et « défunt » n'existe pas ; le composant prévoit déjà la
-  ligne (prop optionnelle), pour que 74 n'ait qu'à la remplir.
-- Inchangé : un lien caché n'est jamais envoyé à un lecteur qui n'y a pas
-  droit (service existant).
-
-**Reçu de V3.1-74** (13 octobre) : chaque nœud de `getFamilyTree` porte `birth` et `death` (`GameDate`), seulement quand le lecteur voit le bloc `character`. La ligne de dates et le gris du défunt s'appuient dessus (`death` renseigné = défunt). Format : `formatGameDate` ; âge : `ageWithDeath`.
-
-**Critères d'acceptation**
-- [ ] Conforme à la planche à 920 px et 390 px.
-- [ ] « Centrer l'arbre ici » change la racine sans rien enregistrer.
-- [ ] Ajouter un lien depuis la barre crée la relation (test existant étendu).
-- [ ] Sans données de dates, aucune ligne vide sous les noms.
-
----
-
 ### ☐ V3.1-75 — Table aléatoire (A) et le dé animé · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — planche définitive ; route de tirage existante.
