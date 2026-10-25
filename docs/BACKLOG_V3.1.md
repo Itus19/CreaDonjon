@@ -196,7 +196,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-62 | ☑ | sans | Rapidité : mesurer, puis recâbler | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-63 | ☑ | sans | Fiche du wiki sur ordinateur : en-tête, cartes de verre, palette en familles | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-64 | ☑ | sans | La pastille de visibilité au toucher, avec « Annuler » | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-65 | ☐ | **avec** | Bloc Texte : lettrine, bulle du paragraphe, assistance IA en encart | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
+| V3.1-65 | ☑ | **avec** | Bloc Texte : lettrine, bulle du paragraphe, assistance IA en encart | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-66 | ☑ | sans | Blocs Encadré et Tableau | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-67 | ☑ | sans | Bloc Image : la barre flottante et l'aperçu dans le texte (B) | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-68 | ☐ | sans | Bloc Chronologie : l'axe en bande et une ligne par événement | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
@@ -273,3 +273,4 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-142 | ☑ | sans | Le mot de passe d'un lien de partage se contourne par un cookie forgé | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-143 | ☑ | sans | Journal : « supprimée … par X », et les fiches supprimées dans la fenêtre d'outil | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-144 | ☐ | sans | Audit de fin de V3.1 : les retouches d'affichage relevées en chemin | [`13-audit-de-fin.md`](backlog-v3.1/13-audit-de-fin.md) |
+| V3.1-145 | ☐ | sans | Les tests d'intégration se suppriment les mondes entre eux | [`10-dette-technique.md`](backlog-v3.1/10-dette-technique.md) |

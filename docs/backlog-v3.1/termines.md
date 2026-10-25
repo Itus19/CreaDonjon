@@ -2,6 +2,53 @@
 
 ---
 
+### ☑ V3.1-65 — Bloc Texte : lettrine, bulle du paragraphe, assistance IA en encart · `M` · **avec modèle IA** — **fait le 25 octobre**
+
+**Modèle conseillé : Sonnet** — tout existe ; c'est un rangement.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Planche** : `Blocs-Recit-Decide.dc.html`, carte « Texte ». **Départ** :
+`components/blocks/TextBlockEditor.tsx`,
+`components/entities/richtext/RichTextEditor.tsx`,
+`src/core/schemas/blocks/text.ts`, `src/server/services/aiProposals.ts`.
+**Dépend de** : 63.
+
+**Ce qui est décidé**
+- La **lettrine** devient un **interrupteur dans l'en-tête de la carte**
+  (passé par `BlockCard` en action d'en-tête), au lieu d'un réglage dans le
+  corps. Même champ qu'aujourd'hui.
+- Toucher un paragraphe ouvre **la bulle de l'éditeur riche** : niveau de
+  titre, G / I / S, Lier à une fiche, Créer une fiche, Spoiler, et la
+  **visibilité du paragraphe** (Public, Joueurs, MJ). Un passage MJ est
+  bordé à gauche d'orange (`--gm`) et marqué « MJ » ; un passage Joueurs
+  bordé de bleu. Rappel : Spoiler est de la mise en forme, jamais de la
+  sécurité (règle 6) ; le secret passe par la visibilité du paragraphe.
+- **L'assistance IA** (MJ seulement, jamais dans la coquille joueur) en
+  **encart violet sous le texte** : la consigne, le budget visible (ce
+  qu'il reste), « Proposer ». La proposition apparaît **en pointillé à sa
+  place** dans le texte ; **rien n'est écrit avant « Accepter »** (règle 9 :
+  `ai_proposals` → validation → application) ; « Refuser » l'efface.
+
+**Critères d'acceptation**
+- [x] Lettrine activée depuis l'en-tête : le rendu public la montre.
+- [x] Un paragraphe MJ n'est jamais envoyé à un joueur ni au wiki public (test serveur existant étendu au nouveau rendu).
+- [x] Une proposition de l'IA ne modifie pas le bloc tant qu'elle n'est pas acceptée (test).
+- [x] L'encart IA n'existe pas dans la coquille joueur.
+
+**Réalisé** (Opus — ticket « avec modèle IA », vérifié contre le modèle local)
+- La lettrine quitte le corps du bloc pour l'en-tête de la carte (`LettrineBouton`, emplacement `lettrine` de `BlockCard`). Elle est **aussi** dans l'en-tête de l'éditeur plein écran du téléphone : sans ça elle y devenait injoignable, faute de carte de verre.
+- La bulle du paragraphe avait déjà tout ce que le ticket demande (niveau de titre, G/I/S/U, Lier à la Fiche, Créer comme Fiche, Spoiler, visibilité) : rien à coder.
+- Le liseré dit désormais le niveau — bleu Joueurs (`--players`), terracotta MJ **plus la mention « MJ »**, parce que la couleur seule ne doit jamais porter l'information (impression en noir et blanc, mode fort contraste où les deux jetons deviennent le même noir).
+- Encart violet (`--link-entity`, le violet du projet ; aucun jeton violet propre, même décision qu'aux emplacements de pacte) et **budget restant affiché** : `decideRateLimit` rend `remaining`, exposé par `GET /api/ai/budget`. La limite horaire existait côté serveur et n'était jamais annoncée — « Proposer » tombait en 429 sans prévenir. La proposition s'affiche en pointillé à sa place sous le texte ; rien n'est écrit avant « Accepter ».
+- Tout ce qui s'affiche se décide dans `lib/ui/assistanceTexte.ts` (pur, testé) : `masquee` vide l'encart **et** les propositions en attente — une proposition d'IA ne passe jamais sous les yeux d'un joueur.
+
+*Défaut trouvé à l'écran, invisible aux tests* : le `:not([data-visibility="public"])` de la règle existante pesait (0,3,0) et battait les règles par niveau en (0,2,0) — le bleu Joueurs ne sortait jamais. Corrigé en `:not(:where(…))`, revérifié sur les styles calculés.
+
+*Réserve* : « l'encart n'existe pas dans la coquille joueur » est couvert par le test pur seulement, faute de compte joueur sous la main ; le câblage `hideAiAssist={playerRestricted}` n'a pas été touché.
+
+---
+
 ### ☑ V3.1-67 — Bloc Image : la barre flottante et l'aperçu dans le texte (B) · `M` · sans modèle IA — **fait le 25 octobre**
 
 **Modèle conseillé : Sonnet** — tous les champs existent déjà ; c'est l'interface.
