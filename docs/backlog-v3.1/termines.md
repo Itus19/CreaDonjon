@@ -2,6 +2,63 @@
 
 ---
 
+### ☑ V3.1-64 — La pastille de visibilité au toucher, avec « Annuler » · `S` · sans modèle IA — **fait le 25 octobre**
+
+**Modèle conseillé : Sonnet** — comportement entièrement décrit ; route existante.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Planche** : `Blocs-Recit-Decide.dc.html` (toutes les cartes ; essayer la
+pastille). **Départ** : `BlockCard` (V3.1-63),
+`components/shared/visibilityOptions.ts`, la route de mise à jour de
+visibilité d'un bloc utilisée aujourd'hui par `EntityBlocks.tsx`.
+**Dépend de** : 63.
+
+**Ce qui est décidé (demande de l'auteur)**
+- Un toucher sur la pastille fait passer à la visibilité **suivante** :
+  Public → Joueurs → MJ → Privé → Public. Couleur et libellé suivent
+  aussitôt (mise à jour optimiste, remise en place si le serveur refuse).
+- Chaque changement **s'annonce** dans une annonce discrète en bas de la
+  fiche : « « Rumeurs de Phandaline » : visible par le MJ seul. » avec un
+  bouton **« Annuler »** (remet la valeur précédente). Quand le bloc devient
+  **plus visible** qu'avant (MJ → Privé → Public…), l'annonce ajoute
+  « Attention : il redevient visible. ».
+- Phrases exactes : Public = « tout le monde, wiki public compris » ;
+  Joueurs = « la table, pas le wiki public » ; MJ = « le MJ seul » ; Privé =
+  « son auteur seul ».
+- Le choix direct reste dans ⋮ « Choisir la visibilité… » (tous les
+  niveaux, y compris campagne et utilisateur, qui **ne font pas partie du
+  cycle** : un bloc à l'un de ces niveaux passe à Public au premier
+  toucher, avec l'annonce).
+- Valable pour **tous les blocs**, et pour la pastille de chaque événement
+  de la Chronologie (V3.1-68), chaque aspiration (V3.1-70), chaque punaise
+  et couche de la Carte (V3.1-78) — un seul composant `VisibilityPill`.
+- **Limite assumée** : l'écriture est immédiate, d'où l'annonce et
+  « Annuler ». La visibilité reste filtrée côté serveur (règle 5).
+
+**À faire** : composant `VisibilityPill` (props : niveau, `onChange`,
+libellé de l'objet pour l'annonce) ; annonce avec « Annuler » (réutiliser le
+composant d'annonce existant s'il y en a un, sinon le créer une fois) ;
+planche du catalogue.
+
+**Critères d'acceptation**
+- [x] Quatre touchers ramènent à la visibilité de départ ; chaque étape est enregistrée (test de composant + route).
+- [x] « Annuler » rétablit la valeur précédente côté serveur.
+- [x] L'annonce dit « Attention : il redevient visible. » quand on va vers plus visible.
+- [x] Lecteur d'écran : la pastille annonce sa valeur et l'action (« Visibilité : MJ. Toucher pour passer à Privé »).
+- [x] Un refus du serveur remet l'ancienne pastille et l'annonce le dit.
+
+**Réalisé** (Sonnet, relu et corrigé par Opus)
+- `VisibilityPill` (composant partagé, pour 68, 70, 78) ; cycle, « plus visible que » et annonce en fonctions pures (`lib/ui/visibilitePastille.ts`, testées) ; annonce `AnnonceVisibilite` avec « Annuler », créée faute d'existante ; écriture optimiste par la route de bloc existante, ancienne valeur rendue sur refus.
+- Vérifié au navigateur : quatre touchers enregistrés (200), annonces et avertissement, « Annuler » rétablit côté serveur.
+- Opus :
+  - les libellés étaient rangés dans l'espace `outilDes` (pastille sans nom accessible) : déplacés dans `fiche` ;
+  - **« Privé » = son auteur seul** : la RLS refusait qu'un MJ y passe le bloc d'un autre, la route répondait 500 et le cycle restait bloqué. Désormais `updateBlockContent` refuse proprement (403), `listVisibleBlocks` marque `nonAuteur`, et la pastille comme le choix de ⋮ sautent Privé pour ces blocs (test d'intégration « V3.1-64 », `entityHistory.integration.test.ts`).
+
+*Écarts* : « plus visible » au sens strict (seul Privé → Public, ou campagne/utilisateur → Public, avertit ; MJ → Privé restreint). Le choix direct de ⋮ n'offre pas campagne et utilisateur (il faudrait un sélecteur de campagne ou de personne).
+
+---
+
 ### ☑ V3.1-63 — Fiche du wiki sur ordinateur : en-tête, cartes de verre, palette en familles · `L` · sans modèle IA — **fait le 25 octobre**
 
 **Modèle conseillé : Sonnet** — planche définitive, aucune donnée nouvelle.

@@ -1324,6 +1324,23 @@
       "publicMasque": "Masquée au wiki public — cliquer pour rendre visible",
       "publicMasquer": "Masquer cette fiche au wiki public",
       "publicRendre": "Rendre cette fiche visible au wiki public"
-    }
+    },
+    "annonce": {
+      "change": "« {objet} » : visible par {qui}.",
+      "attention": "Attention : il redevient visible.",
+      "annuler": "Annuler",
+      "echec": "« {objet} » : la visibilité n'a pas pu être modifiée.",
+      "retablie": "« {objet} » : visibilité rétablie, visible par {qui}.",
+      "fermer": "Fermer l'annonce",
+      "quiCourt": {
+        "public": "tout le monde, wiki public compris",
+        "players": "la table, pas le wiki public",
+        "gm": "le MJ seul",
+        "private": "son auteur seul",
+        "campaign": "une campagne précise",
+        "user": "un utilisateur précis"
+      }
+    },
+    "pastille": "Visibilité : {niveau}. Toucher pour passer à {suivant}."
   }
 }

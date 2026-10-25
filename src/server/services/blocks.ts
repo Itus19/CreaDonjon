@@ -46,6 +46,12 @@ export interface VisibleBlock {
   version: number;
   visibilityLevel: string;
   visibilityScopeId: string | null;
+  /**
+   * V3.1-64 : `true` quand le lecteur n'est pas l'auteur du bloc. « Privé »
+   * veut dire « son auteur seul » : la RLS refuse qu'un autre y passe le bloc,
+   * la pastille le saute donc. Absent = auteur (un bloc qu'on vient de créer).
+   */
+  nonAuteur?: boolean;
 }
 
 /** Exportee pour reutilisation par `generators.ts` (V2-J9bis) : le panneau MJ Generateurs a besoin de la forme complete d'un bloc (version/visibilite comprises) pour editer une table en place, pas seulement ses donnees. */
@@ -95,7 +101,7 @@ export async function listVisibleBlocks(
     buildViewerForWorld(supabase, worldId, userId),
   ]);
   const visible = filterBlocks(rows.map(toVisibilityAware), viewer);
-  return visible.map(toVisibleBlock);
+  return visible.map((row) => ({ ...toVisibleBlock(row), ...(row.created_by !== userId ? { nonAuteur: true } : {}) }));
 }
 
 function isBlockType(value: string): value is BlockType {
@@ -277,6 +283,11 @@ export async function updateBlockContent(
   // dependre de la forme des donnees envoyees.
   const allowed = await canUserEditEntityById(supabase, { entityId: existing.entity_id, userId: params.changedBy });
   if (!allowed) return { ok: false, reason: "forbidden" };
+  // V3.1-64 : « Privé » = son auteur seul. La RLS refuserait l'écriture d'un
+  // autre ; on le dit proprement (403) au lieu d'une erreur de base (500).
+  if (params.visibilityLevel === "private" && existing.visibility_level !== "private" && existing.created_by !== params.changedBy) {
+    return { ok: false, reason: "forbidden" };
+  }
 
   // Ici l'inconnu est une FAUTE, pas un cas a tolerer : on edite un bloc
   // precis, et ne pas savoir le valider doit refuser l'ecriture plutot que

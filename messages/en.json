@@ -1075,7 +1075,7 @@
     "apercu": {
       "titre": "What a visitor sees",
       "rechercher": "Search…",
-      "legende": "The welcome message, background, mode and blur, live. \u201cPreview ↗\u201d opens the real public wiki."
+      "legende": "The welcome message, background, mode and blur, live. “Preview ↗” opens the real public wiki."
     }
   },
   "initiative": {
@@ -1323,6 +1323,23 @@
       "publicMasque": "Hidden from the public wiki — click to show",
       "publicMasquer": "Hide this sheet from the public wiki",
       "publicRendre": "Show this sheet on the public wiki"
-    }
+    },
+    "annonce": {
+      "change": "“{objet}”: visible to {qui}.",
+      "attention": "Warning: it becomes visible again.",
+      "annuler": "Undo",
+      "echec": "“{objet}”: the visibility could not be changed.",
+      "retablie": "“{objet}”: visibility restored, visible to {qui}.",
+      "fermer": "Dismiss the notice",
+      "quiCourt": {
+        "public": "everyone, public wiki included",
+        "players": "the table, not the public wiki",
+        "gm": "the GM only",
+        "private": "its author only",
+        "campaign": "one specific campaign",
+        "user": "one specific user"
+      }
+    },
+    "pastille": "Visibility: {niveau}. Tap to switch to {suivant}."
   }
 }

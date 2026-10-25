@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Json } from "@/src/types/database";
 import { createEntity } from "./entities";
-import { createBlock, updateBlockContent } from "./blocks";
+import { createBlock, listVisibleBlocks, updateBlockContent } from "./blocks";
 import {
   compareRevisionsForViewer,
   getRevisionForViewer,
@@ -278,5 +278,29 @@ describe.skipIf(!hasCreds)("historique du wiki (integration, base reelle)", () =
     // toutes distinctes : aucune collision malgre les deux ecritures paralleles.
     expect(revisions).toHaveLength(5);
     expect(new Set(revisions.map((r) => r.revision_number)).size).toBe(5);
+  });
+
+  it("V3.1-64 — « Privé » est réservé à l'auteur du bloc : refus propre pour un autre, et la fiche le signale", async () => {
+    const entity = await createEntity(ownerClient, { worldId, createdBy: ownerId, name: "Cible de test privé", entityKind: "character", aliases: [] });
+    // Un bloc écrit par la joueuse sur la fiche du MJ.
+    const { data: deJoueuse, error } = await admin
+      .from("blocks")
+      .insert({ entity_id: entity.id, block_type: "text", display: { label: "Note de la joueuse" }, data: { __v: 1, segments: [] }, visibility_level: "public", created_by: playerId })
+      .select("id, version, display, data")
+      .single();
+    if (error || !deJoueuse) throw new Error(error?.message ?? "creation bloc echouee");
+    const created = await createBlock(ownerClient, { entityId: entity.id, blockType: "text", label: "Note du MJ", visibilityLevel: "public", visibilityScopeId: null, createdBy: ownerId });
+    if (!created.ok) throw new Error("creation bloc refusee");
+
+    const vers = (id: string, version: number, display: unknown, data: unknown) =>
+      updateBlockContent(ownerClient, { id, expectedVersion: version, display: display as Json, data, visibilityLevel: "private", visibilityScopeId: null, changedBy: ownerId });
+
+    expect(await vers(deJoueuse.id, deJoueuse.version, deJoueuse.display, deJoueuse.data)).toEqual({ ok: false, reason: "forbidden" });
+    const mien = await vers(created.block.id, created.block.version, created.block.display, created.block.data);
+    expect(mien.ok).toBe(true);
+
+    const vus = await listVisibleBlocks(ownerClient, worldId, entity.id, ownerId);
+    expect(vus.find((b) => b.id === deJoueuse.id)?.nonAuteur).toBe(true);
+    expect(vus.find((b) => b.id === created.block.id)?.nonAuteur).toBeUndefined();
   });
 });
