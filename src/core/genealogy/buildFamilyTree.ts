@@ -47,6 +47,8 @@ export interface FamilyTreeNode {
   /** V3.1-74 : naissance et mort, seulement si le lecteur voit le bloc `character` qui les porte. */
   birth?: GameDate;
   death?: GameDate;
+  /** V3.1-73 : la fiche a un portrait ; rempli par le service (une requête pour tout l'arbre), absent = pas de portrait. */
+  hasPortrait?: boolean;
   generation: number;
   order: number;
 }

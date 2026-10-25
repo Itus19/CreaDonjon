@@ -6,6 +6,7 @@ import { buildFamilyTree, type FamilyEdgeInput, type FamilyTree } from "@/src/co
 import { RELATION_LABELS_FR } from "@/src/i18n/fr";
 import { listFamilyRelationsForWorld } from "@/src/server/repos/relations";
 import { listEntitiesForWorld } from "@/src/server/repos/entities";
+import { listEntityIdsWithPortrait } from "@/src/server/repos/entityPortraits";
 import { listBlocksByTypeForEntities } from "@/src/server/repos/blocks";
 import { lifeDatesFromCharacter } from "@/src/core/genealogy/lifeDates";
 import { listPlayerVisibleEntityIds } from "@/src/server/services/entities";
@@ -96,13 +97,19 @@ export async function getFamilyTree(
   // fiches de l'arbre, en UNE requête. Le bloc porte sa propre visibilité :
   // filtré pour ce lecteur AVANT l'envoi, une date cachée ne quitte jamais le
   // serveur (règle absolue 5). Une fiche sans bloc visible n'a pas de dates.
+  // V3.1-73 : les portraits des cartes, dans le même aller-retour (une requête pour tout l'arbre, jamais une par fiche).
+  const nodeIds = tree.nodes.map((n) => n.id);
+  const [characterRows, portraits] = await Promise.all([
+    listBlocksByTypeForEntities(supabase, nodeIds, "character"),
+    listEntityIdsWithPortrait(supabase, nodeIds),
+  ]);
   const characterBlocks = filterBlocks(
-    (await listBlocksByTypeForEntities(supabase, tree.nodes.map((n) => n.id), "character")).map((b) => ({
+    characterRows.map((b) => ({
       ...b,
       visibility: { level: b.visibility_level as VisibilityLevel, scopeId: b.visibility_scope_id, createdBy: b.created_by },
     })),
     params.viewer
   );
   const datesByEntity = new Map(characterBlocks.map((b) => [b.entity_id, lifeDatesFromCharacter(b.data)]));
-  return { ...tree, nodes: tree.nodes.map((n) => ({ ...n, ...(datesByEntity.get(n.id) ?? {}) })) };
+  return { ...tree, nodes: tree.nodes.map((n) => ({ ...n, ...(datesByEntity.get(n.id) ?? {}), hasPortrait: portraits.has(n.id) })) };
 }

@@ -82,6 +82,8 @@ describe.skipIf(!hasCreds)("généalogie : dates de vie et visibilité (integrat
     expect(parent).toMatchObject({ birth: { year: 1420 }, death: { year: 1478 } });
     expect(child).toBeDefined();
     expect(child).not.toHaveProperty("birth");
+    // V3.1-73 : sans portrait, la carte le sait d'avance (pas de requête d'image vouée au 404).
+    expect(tree.nodes.every((n) => n.hasPortrait === false)).toBe(true);
   });
 
   it("le MJ voit toutes les dates", async () => {
