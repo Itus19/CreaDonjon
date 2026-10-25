@@ -11,6 +11,7 @@ import {
 import { RELATION_LABELS_FR } from "@/src/i18n/fr";
 import { listAllRelationsForWorld } from "@/src/server/repos/relations";
 import { listEntitiesForWorld } from "@/src/server/repos/entities";
+import { listEntityIdsWithPortrait } from "@/src/server/repos/entityPortraits";
 import { listPlayerVisibleEntityIds } from "@/src/server/services/entities";
 
 type TypedClient = SupabaseClient<Database>;
@@ -84,7 +85,13 @@ export async function getRelationsGraphData(
     visibilityLevel: r.visibility_level,
   }));
 
-  return { edges, entities: entities.map((e) => ({ id: e.id, name: e.name, slug: e.slug, entityKind: e.entity_kind })) };
+  // V3.1-72 : les portraits des vignettes, en UNE requête pour tout le graphe (jamais une par fiche).
+  const portraits = await listEntityIdsWithPortrait(supabase, entities.map((e) => e.id));
+
+  return {
+    edges,
+    entities: entities.map((e) => ({ id: e.id, name: e.name, slug: e.slug, entityKind: e.entity_kind, hasPortrait: portraits.has(e.id) })),
+  };
 }
 
 /**

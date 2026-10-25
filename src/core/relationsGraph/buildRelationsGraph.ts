@@ -23,6 +23,8 @@ export interface GraphEntityInput {
   name: string;
   slug: string;
   entityKind: string;
+  /** V3.1-72 : la fiche a un portrait (vignette) ; sinon l'icône de son genre. */
+  hasPortrait: boolean;
 }
 
 export interface RelationsGraphNode {
@@ -30,6 +32,7 @@ export interface RelationsGraphNode {
   name: string;
   slug: string;
   entityKind: string;
+  hasPortrait: boolean;
   /** Distance en sauts depuis la racine — 0 pour la racine elle-meme. */
   degree: number;
 }
@@ -88,7 +91,7 @@ export function buildRelationsGraph(params: {
 
   const nodes: RelationsGraphNode[] = [...degreeOf.keys()].map((id) => {
     const entity = entityById.get(id) as GraphEntityInput;
-    return { id, name: entity.name, slug: entity.slug, entityKind: entity.entityKind, degree: degreeOf.get(id) as number };
+    return { id, name: entity.name, slug: entity.slug, entityKind: entity.entityKind, hasPortrait: entity.hasPortrait, degree: degreeOf.get(id) as number };
   });
 
   const graphEdges: RelationsGraphEdge[] = [];

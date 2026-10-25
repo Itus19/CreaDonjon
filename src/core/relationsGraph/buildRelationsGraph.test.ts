@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import { buildRelationsGraph, type GraphEdgeInput, type GraphEntityInput } from "./buildRelationsGraph";
 
 const entities: GraphEntityInput[] = [
-  { id: "a", name: "A", slug: "a", entityKind: "character" },
-  { id: "b", name: "B", slug: "b", entityKind: "character" },
-  { id: "c", name: "C", slug: "c", entityKind: "character" },
-  { id: "d", name: "D", slug: "d", entityKind: "character" },
-  { id: "e", name: "E", slug: "e", entityKind: "faction" },
+  { id: "a", name: "A", slug: "a", entityKind: "character", hasPortrait: true },
+  { id: "b", name: "B", slug: "b", entityKind: "character", hasPortrait: false },
+  { id: "c", name: "C", slug: "c", entityKind: "character", hasPortrait: false },
+  { id: "d", name: "D", slug: "d", entityKind: "character", hasPortrait: false },
+  { id: "e", name: "E", slug: "e", entityKind: "faction", hasPortrait: false },
 ];
 
 // a - b - c - d, et a - e (etoile a un degre)
@@ -71,5 +71,13 @@ describe("buildRelationsGraph", () => {
     const graph = buildRelationsGraph({ rootId: "a", maxDegree: 3, edges: withGhost, entities });
     expect(graph.nodes.some((n) => n.id === "inconnu")).toBe(false);
     expect(graph.edges.some((e) => e.id === "ghost")).toBe(false);
+  });
+});
+
+describe("V3.1-72 : portrait des vignettes", () => {
+  it("chaque nœud garde le drapeau de portrait de sa fiche", () => {
+    const graph = buildRelationsGraph({ rootId: "a", maxDegree: 1, edges, entities });
+    expect(graph.nodes.find((n) => n.id === "a")?.hasPortrait).toBe(true);
+    expect(graph.nodes.find((n) => n.id === "b")?.hasPortrait).toBe(false);
   });
 });
