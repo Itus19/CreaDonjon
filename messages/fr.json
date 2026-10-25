@@ -1257,6 +1257,24 @@
     "enAttente": "En attente de la sauvegarde…"
   },
   "fiche": {
+    "lettrine": "Lettrine",
+    "lettrineTitre": "Lettrine sur le premier paragraphe",
+    "assistance": {
+      "titre": "Assistance IA",
+      "consigne": "ex. Ajoute un paragraphe décrivant l'ambiance de ce lieu.",
+      "consigneLabel": "Consigne pour l'IA",
+      "proposer": "Proposer",
+      "generation": "Génération…",
+      "budget": "Il reste {restant} propositions cette heure.",
+      "budgetEpuise": "Budget épuisé pour cette heure.",
+      "enAttente": "Proposition de l'IA — rien n'est écrit avant « Accepter ».",
+      "accepter": "Accepter",
+      "refuser": "Refuser",
+      "erreur": "Impossible de contacter le fournisseur IA local.",
+      "erreurBudget": "Trop de propositions demandées, réessaie dans quelques minutes.",
+      "rejetee": "Proposition rejetée.",
+      "rejeteeBudget": "Proposition rejetée (limite de propositions par tour atteinte)."
+    },
     "poignee": "Réordonner ce bloc",
     "poigneeTitre": "Glisser pour réordonner, ou Entrée puis flèches",
     "replier": "Replier",

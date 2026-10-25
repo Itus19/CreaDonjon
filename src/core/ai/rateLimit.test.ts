@@ -32,4 +32,12 @@ describe("decideRateLimit", () => {
     const decision = decideRateLimit({ countInWindow: 30, limit: 30, windowMs: 3_600_000, oldestCallAgeMs: 4_000_000 });
     expect(decision.retryAfterMs).toBe(0);
   });
+  /** V3.1-65 : l'encart d'assistance IA montre « ce qu'il reste » — le compte vient d'ici, jamais d'un calcul refait dans l'interface. */
+  it("rend le nombre d'appels restants", () => {
+    expect(decideRateLimit({ countInWindow: 5, limit: 30, windowMs: 3_600_000 }).remaining).toBe(25);
+  });
+
+  it("ne rend jamais un reste negatif", () => {
+    expect(decideRateLimit({ countInWindow: 42, limit: 30, windowMs: 3_600_000 }).remaining).toBe(0);
+  });
 });

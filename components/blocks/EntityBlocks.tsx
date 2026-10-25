@@ -1167,6 +1167,23 @@ function SortableBlockCard({
         onPatchBlock(block.id, { visibilityLevel: niveau });
         onSaveBlock(block.id, { visibilityLevel: niveau });
       }}
+      /* V3.1-65 : la lettrine vaut pour le bloc entier, d'ou sa place dans
+         l'en-tete et non dans le corps. Meme patron que la visibilite
+         juste au-dessus : on patche l'etat local ET on enregistre avec la
+         donnee en surcharge, sinon la requete partirait avec l'ancienne
+         (`onSaveBlock` lit l'etat du rendu courant). */
+      lettrine={
+        block.blockType === "text"
+          ? {
+              active: (block.data as TextBlockData).dropCap,
+              onBasculer: () => {
+                const data = { ...(block.data as TextBlockData), dropCap: !(block.data as TextBlockData).dropCap };
+                onPatchBlock(block.id, { data });
+                onSaveBlock(block.id, { data });
+              },
+            }
+          : undefined
+      }
       peutMonter={index > 0}
       peutDescendre={index < lastIndex}
       onMonter={() => onMoveBlock(block.id, "up")}

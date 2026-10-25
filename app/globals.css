@@ -232,7 +232,11 @@ body {
    titre entier : un lisere terracotta constant sur tout passage non
    public, jamais un simple style CSS qui masquerait sans filtrer (V0-06f,
    la visibilite reste resolue reellement cote serveur). */
-.rich-text-content [data-visibility]:not([data-visibility="public"]) {
+/* `:where()` met la specificite de ce `:not` a zero (V3.1-65). Sans lui,
+   cette regle pese (0,3,0) et bat les regles par niveau ci-dessous, qui
+   n'en pesent que (0,2,0) : le liseré « Joueurs » sortait terracotta quoi
+   qu'on ecrive apres. Le selecteur matche exactement les memes elements. */
+.rich-text-content [data-visibility]:not(:where([data-visibility="public"])) {
   border-left: 2px solid var(--gm);
   padding-left: 0.6em;
   margin-left: -0.8em;
@@ -243,6 +247,39 @@ body {
      commentaire sur le spoiler). */
   background: color-mix(in oklch, var(--gm) 16%, transparent);
   border-radius: 3px;
+}
+
+/* V3.1-65 : le niveau se lit maintenant a la couleur du lisere — bleu pour
+   « Joueurs » (--players, jeton pose par V3.1-63), terracotta pour MJ (le
+   defaut de la regle ci-dessus, garde pour « campagne », « utilisateur » et
+   « prive » qui sont aussi des secrets de MJ). */
+.rich-text-content [data-visibility="players"] {
+  border-left-color: var(--players);
+  background: color-mix(in oklch, var(--players) 16%, transparent);
+}
+
+/* ... et un passage MJ porte en plus la mention « MJ ». C'est la seule
+   marque qui survit a une impression en noir et blanc et au mode fort
+   contraste, ou --gm et --players sont ramenes au meme noir (plus bas dans
+   ce fichier) : la couleur seule ne doit jamais etre le seul porteur de
+   l'information. Le libelle est ici et non dans `messages/` parce qu'un
+   pseudo-element ne lit pas de traduction ; la variable permet a une locale
+   de le redefinir sans toucher a cette regle. */
+.rich-text-content {
+  --marque-gm: "MJ";
+}
+.rich-text-content [data-visibility="gm"]::after {
+  content: var(--marque-gm);
+  margin-left: 0.4em;
+  padding: 0 0.25em;
+  border: 1px solid var(--gm);
+  border-radius: 3px;
+  color: var(--gm);
+  font-family: var(--font-chrome), sans-serif;
+  font-size: 0.7em;
+  font-style: normal;
+  vertical-align: 0.15em;
+  user-select: none;
 }
 
 /* Spoiler (V0-06g) : caviarde a l'affichage, jamais a l'envoi — le texte
