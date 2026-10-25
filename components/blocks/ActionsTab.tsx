@@ -18,6 +18,8 @@ import NomDeRegle from "./NomDeRegle";
 import { refIdentity, type ResolvedChipView } from "./useReferenceChips";
 import { useRuleEntryBlocks, type RuleEntryBlockData } from "./useRuleEntryBlocks";
 import Dropdown from "@/components/shared/Dropdown";
+import Egaliseur from "./Egaliseur";
+import { colonnesEgaliseur, type GesteColonne } from "@/lib/ui/egaliseur";
 import type { WeaponData } from "@/src/core/rules/srdMapping";
 
 function findBlock<T>(blocks: RuleEntryBlockData[] | undefined, blockType: string): T | null {
@@ -31,14 +33,6 @@ function descriptionPreview(blocks: RuleEntryBlockData[] | undefined): string {
   const text = data?.segments.map((s) => s.text).join(" ") ?? "";
   return text.length > 130 ? `${text.slice(0, 130)}…` : text;
 }
-
-const RECHARGE_LABELS: Record<string, string> = {
-  short_rest: "repos court",
-  short_rest_one: "une au repos court",
-  long_rest: "repos long",
-  dawn: "à l'aube",
-  never: "jamais",
-};
 
 function resourceMax(tracker: { max: { formula: import("@/src/core/formula/ast").FormulaNode } }): number {
   const neverRolls = { nextInt: () => { throw new Error("le mode max n'appelle jamais le RNG"); } };
@@ -55,48 +49,6 @@ export interface PreparedSpellView {
   label: string;
   /** 0 = sort mineur (retour utilisateur, V2-G1 suite) — jamais d'emplacement, distinct des niveaux 1-9. */
   level: number;
-}
-
-/**
- * Emplacements de sort restants, entre les sorts mineurs et les sorts avec
- * niveau (retour utilisateur) — pastilles pleines = disponible, creuses =
- * deja depense, meme langage visuel que les ronds de maitrise de competence
- * (`PlayableCharacterSheet.tsx`). Un niveau sans emplacement du tout (classe
- * qui n'y a pas encore acces) n'apparait pas — jamais une ligne a "0/0".
- */
-function SpellSlotsTracker({
-  spellSlots,
-  spellSlotsUsed,
-}: {
-  spellSlots: Record<string, number>;
-  spellSlotsUsed: Record<string, number>;
-}) {
-  const levels = Object.entries(spellSlots)
-    .map(([level, total]) => ({ level: Number(level), total, used: spellSlotsUsed[level] ?? 0 }))
-    .filter((s) => s.total > 0)
-    .sort((a, b) => a.level - b.level);
-  if (levels.length === 0) return null;
-
-  return (
-    <div className="flex flex-wrap gap-x-4 gap-y-2 rounded-md border border-edge/60 bg-panel-sunken px-2.5 py-2">
-      {levels.map(({ level, total, used }) => {
-        const available = Math.max(0, total - used);
-        return (
-          <div key={level} className="flex items-center gap-1.5">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">Niv. {level}</span>
-            <div className="flex gap-0.5">
-              {Array.from({ length: total }, (_, i) => (
-                <span key={i} className={`h-2 w-2 rounded-full ${i < available ? "bg-accent" : "border border-edge bg-transparent"}`} />
-              ))}
-            </div>
-            <span className="mech text-[10px] text-ink-muted">
-              {available}/{total}
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
 }
 
 /**
@@ -283,6 +235,11 @@ export default function ActionsTab({
   resources,
   resourcesUsed,
   onChangeResource,
+  pact,
+  pactUsed,
+  classKeys,
+  onGesteEmplacement,
+  emplacementsDesactives,
 }: {
   worldSlug: string;
   busy: boolean;
@@ -312,11 +269,40 @@ export default function ActionsTab({
   resources: ResourcesBlockData | undefined;
   resourcesUsed: Record<string, number>;
   onChangeResource: (trackerId: string, delta: number) => void;
+  /** V3.1-114 : la réserve de pacte (`sheet.spellcasting.pactSlots`), montrée à part dans l'égaliseur. */
+  pact: { count: number; slotLevel: number } | null;
+  pactUsed: number;
+  /** Classes et sous-classes du personnage (clés de règle) : une ressource d'une de ces sources va au groupe « Classe ». */
+  classKeys: readonly string[];
+  /** Dépenser (+1) ou rendre (-1) un emplacement ou une utilisation de pacte. */
+  onGesteEmplacement: (geste: { pool: "slots"; level: number } | { pool: "pact" }, delta: number) => void;
+  /** Sans la commande `spell_slots` (V3.1-109), ou sans écriture possible : les colonnes d'emplacement ne se touchent pas. */
+  emplacementsDesactives: boolean;
 }) {
   const cantripSpells = preparedSpells.filter((s) => s.level === 0);
   const leveledSpells = preparedSpells.filter((s) => s.level > 0);
   const preparedSpellKeys = preparedSpells.map((s) => (s.ref.kind === "rule" ? s.ref.key : null)).filter((k): k is string => k !== null);
   const spellBlocksByKey = useRuleEntryBlocks(worldSlug, preparedSpellKeys);
+  const groupes = colonnesEgaliseur({
+    slots: Object.fromEntries(Object.entries(spellSlots).map(([niveau, total]) => [Number(niveau), total])),
+    slotsUsed: spellSlotsUsed,
+    pact,
+    pactUsed,
+    trackers: (resources?.trackers ?? []).map((tracker) => ({
+      id: tracker.id,
+      label: tracker.label,
+      max: resourceMax(tracker),
+      recharge: tracker.recharge,
+      sourceKey: tracker.source?.kind === "rule" ? tracker.source.key : null,
+    })),
+    resourcesUsed,
+    classKeys,
+  });
+
+  function geste(g: GesteColonne, delta: number) {
+    if ("tracker" in g) onChangeResource(g.tracker, delta);
+    else onGesteEmplacement(g, delta);
+  }
 
   return (
     <div className="flex flex-col gap-3 pt-3">
@@ -333,6 +319,8 @@ export default function ActionsTab({
           </button>
         ))}
       </div>
+
+      <Egaliseur groupes={groupes} onGeste={geste} desactive={busy} emplacementsDesactives={emplacementsDesactives} />
 
       {equippedWeapons.length === 0 && <p className="text-sm text-ink-muted">Aucune arme équipée.</p>}
       {equippedWeapons.map((item) => {
@@ -402,7 +390,6 @@ export default function ActionsTab({
               ))}
             </div>
           )}
-          {leveledSpells.length > 0 && <SpellSlotsTracker spellSlots={spellSlots} spellSlotsUsed={spellSlotsUsed} />}
           {leveledSpells.length > 0 && (
             <div className="flex flex-col gap-1.5">
               <span className="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">Sorts avec emplacement</span>
@@ -424,30 +411,6 @@ export default function ActionsTab({
               ))}
             </div>
           )}
-        </div>
-      )}
-
-      {(resources?.trackers.length ?? 0) > 0 && (
-        <div className="flex flex-col gap-1.5">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Ressources</span>
-          {resources!.trackers.map((tracker) => {
-            const max = resourceMax(tracker);
-            const used = resourcesUsed[tracker.id] ?? 0;
-            return (
-              <div key={tracker.id} className="flex items-center gap-2 text-sm">
-                <span className="flex-1 text-ink">{tracker.label}</span>
-                <span className="text-ink-muted">
-                  {Math.max(0, max - used)}/{max} · {RECHARGE_LABELS[tracker.recharge] ?? tracker.recharge}
-                </span>
-                <button type="button" disabled={busy || used >= max} onClick={() => onChangeResource(tracker.id, 1)} className="rounded border border-edge px-1.5 text-xs disabled:opacity-50">
-                  utiliser
-                </button>
-                <button type="button" disabled={busy || used <= 0} onClick={() => onChangeResource(tracker.id, -1)} className="rounded border border-edge px-1.5 text-xs disabled:opacity-50">
-                  annuler
-                </button>
-              </div>
-            );
-          })}
         </div>
       )}
     </div>

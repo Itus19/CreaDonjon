@@ -2,6 +2,36 @@
 
 ---
 
+### ☑ V3.1-114 — Ressources : repos et égaliseur · `S` · sans modèle IA — **fait le 25 octobre (ADR 0045)**
+
+**Modèle conseillé : Sonnet.** **Dépend de** : 113, 24, 26.
+
+**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+- `takeShortRest` rend les emplacements de pacte et une utilisation des
+  `short_rest_one` ; `takeLongRest` rend tout.
+- L'égaliseur (planche « Décidé · emplacements et ressources de classe »)
+  montre la réserve de pacte à part ; une ressource de plus de six
+  utilisations en compteur.
+
+**Reçu de V3.1-113** (13 octobre) : les deux repos rendent déjà la réserve de pacte et une utilisation des `short_rest_one` (`rechargeTrackers`). Il reste l'écran :
+- montrer `sheet.spellcasting.pactSlots` et `pact_slots_used`, à part ;
+- d'ici là, un occultiste ne voit pas ses emplacements de pacte, mais `castSpell` les dépense déjà.
+
+**Critères d'acceptation**
+- [x] Les trois cas de V3.1-40 se voient sur la fiche.
+
+**Réalisé**
+- Égaliseur (`components/blocks/Egaliseur.tsx`, Sonnet, relu) d'après la planche « Fiche-Emplacements » : groupes « Emplacements de sorts » (niveaux, puis la réserve de pacte à part), « Classe », « Traits » ; compteur au-delà de six ; recharge sous chaque colonne ; la ligne défile au téléphone. Il remplace la ligne d'emplacements et la liste « Ressources » de l'onglet Actions.
+- Répartition pure `lib/ui/egaliseur.ts` (tests d'abord) : « Classe » = ressource dont la source est une classe ou sous-classe du personnage.
+- Route `actions/spell-slot` : dépenser ou rendre un emplacement ou un de la réserve de pacte à la main, borné, derrière l'interrupteur « spell_slots » (test d'intégration, docs/SECURITE.md).
+- Vérifié au navigateur (ordinateur et 390 px), fiches de test du MJ supprimées : occultiste 3 (« Pacte niv. 2 », court) ; clerc 3 / magicien 2 (4/3/2) ; Conduit divin « 1 au court » en Classe, 8 points de chance en compteur ; geste de pacte enregistré.
+
+*Écart* : pas de jeton violet propre au pacte ; emplacements et pacte prennent `link-entity`, le pacte se distingue par son libellé et un séparateur.
+
+
+---
+
 ### ☑ V3.1-112 — Sauvegardes : les écrans · `M` · sans modèle IA — **fait le 24 octobre (ADR 0044)**
 
 **Modèle conseillé : Sonnet.** **Dépend de** : 111, 33, 34, 38.

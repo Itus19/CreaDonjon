@@ -479,6 +479,30 @@
     "lectureFiche": "Reading the entry…",
     "declencheursConserves": "{count, plural, one {One trigger entered in the sandbox is kept as is.} other {# triggers entered in the sandbox are kept as is.}}"
   },
+  "egaliseur": {
+    "ligne": "Spell slots and resources",
+    "groupes": {
+      "emplacements": "Spell slots",
+      "classe": "Class",
+      "traits": "Traits"
+    },
+    "niveau": "Lvl {niveau}",
+    "pacte": "Pact lvl {niveau}",
+    "recharge": {
+      "short_rest": "short",
+      "short_rest_one": "1 on short",
+      "long_rest": "long",
+      "dawn": "dawn",
+      "never": "never"
+    },
+    "restants": "{restants} of {total}",
+    "depenserEmplacement": "Spend a level {niveau} slot",
+    "rendreEmplacement": "Restore a level {niveau} slot",
+    "depenserPacte": "Spend a level {niveau} pact slot",
+    "rendrePacte": "Restore a level {niveau} pact slot",
+    "depenserRessource": "Spend a use: {nom}",
+    "rendreRessource": "Restore a use: {nom}"
+  },
   "mj": {
     "choisirOutil": "Choose a GM tool in the sidebar.",
     "chat": "Chat",

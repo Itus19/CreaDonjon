@@ -58,27 +58,6 @@ une fois l'écriture au nom du joueur tranchée et faite (V3.1-104). D'ici là,
 le joueur voit le verdict, sans application sur une cible qu'il ne contrôle
 pas.
 
-### ☐ V3.1-114 — Ressources : repos et égaliseur · `S` · sans modèle IA — **prêt**
-
-**Modèle conseillé : Sonnet.** **Dépend de** : 113, 24, 26.
-
-**Sous-tâches Haiku** (`aide-haiku`) : lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-- `takeShortRest` rend les emplacements de pacte et une utilisation des
-  `short_rest_one` ; `takeLongRest` rend tout.
-- L'égaliseur (planche « Décidé · emplacements et ressources de classe »)
-  montre la réserve de pacte à part ; une ressource de plus de six
-  utilisations en compteur.
-
-**Reçu de V3.1-113** (13 octobre) : les deux repos rendent déjà la réserve de pacte et une utilisation des `short_rest_one` (`rechargeTrackers`). Il reste l'écran :
-- montrer `sheet.spellcasting.pactSlots` et `pact_slots_used`, à part ;
-- d'ici là, un occultiste ne voit pas ses emplacements de pacte, mais `castSpell` les dépense déjà.
-
-**Critères d'acceptation**
-- [ ] Les trois cas de V3.1-40 se voient sur la fiche.
-
----
-
 ### ☐ V3.1-118 — Les choix dans l'assistant de création et de montée de niveau · `L` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet.** **Dépend de** : 116, 117, 49, 50, 51.

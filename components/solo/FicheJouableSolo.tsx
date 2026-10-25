@@ -524,6 +524,11 @@ export default function FicheJouableSolo({
               resources={resources}
               resourcesUsed={runtimeState?.resources ?? {}}
               onChangeResource={changeResource}
+              pact={sheet.spellcasting?.pactSlots ?? null}
+              pactUsed={runtimeState?.pact_slots_used ?? 0}
+              classKeys={[]}
+              onGesteEmplacement={() => {}}
+              emplacementsDesactives={true}
             />
           )}
 

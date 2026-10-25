@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <title>Catalogue — Fiche de personnage</title>
 <script src="./support.js"></script>
-<link rel="stylesheet" href="/_blob/b020de64437f43cc989c11a2ae82708b">
+<link rel="stylesheet" href="/_blob/28e740491e82330febddcf6160bfe1ce">
 </head>
 <body>
 <x-dc>
@@ -166,20 +166,14 @@ code{font-family:'Geist Mono',ui-monospace,monospace;font-size:0.92em}
 </section>
 <section id="emplacements" class="flex scroll-mt-28 flex-col gap-4 rounded-2xl border border-edge bg-panel p-6">
 <div class="flex flex-wrap items-baseline justify-between gap-3">
-<h2 class="font-display text-2xl font-bold text-ink">Emplacements de sort et ressources</h2>
-<span class="text-xs text-ink-muted">ActionsTab.tsx</span>
+<h2 class="font-display text-2xl font-bold text-ink">Égaliseur : emplacements et ressources</h2>
+<span class="text-xs text-ink-muted">Egaliseur.tsx</span>
 </div>
-<p class="max-w-3xl text-sm text-ink-soft">Une pastille de 8 px par emplacement : pleine accent si disponible, cerclée si dépensée. Les ressources de classe (Ki, Rage…) se comptent avec deux petits boutons carrés ±.</p>
+<p class="max-w-3xl text-sm text-ink-soft">Une seule ligne pour tout ce qui se dépense, en groupes titrés (Emplacements de sorts, Classe, Traits), chacun d'une largeur proportionnelle à son nombre de colonnes. Une pastille pleine se touche pour dépenser, une pastille vide pour rendre ; la réserve de pacte suit les niveaux. Au-delà de six utilisations, un compteur à commandes ▼ (dépenser) ▲ (rendre). Sous chaque colonne, sa recharge. La ligne défile à l'horizontale si elle déborde.</p>
 <div class="flex flex-wrap gap-x-6 gap-y-1 text-xs text-ink-muted"><span>Mouvement : <span class="text-ink">aucun</span></span></div>
-<div class="grid gap-3" style="grid-template-columns: repeat(3, minmax(0, 1fr))"><div class="flex flex-col gap-1.5">
-<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Emplacements</span>
-<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><div class="flex flex-wrap gap-x-4 gap-y-2 rounded-md border border-edge/60 bg-panel-sunken px-2.5 py-2"><div class="flex items-center gap-1.5"><span class="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">Niv. 1</span><div class="flex gap-0.5"><span class="h-2 w-2 rounded-full bg-accent"></span><span class="h-2 w-2 rounded-full bg-accent"></span><span class="h-2 w-2 rounded-full bg-accent"></span><span class="h-2 w-2 rounded-full border border-edge bg-transparent"></span></div><span class="mech text-[10px] text-ink-muted">3/4</span></div><div class="flex items-center gap-1.5"><span class="text-[10px] font-semibold uppercase tracking-wide text-ink-muted">Niv. 2</span><div class="flex gap-0.5"><span class="h-2 w-2 rounded-full border border-edge bg-transparent"></span><span class="h-2 w-2 rounded-full border border-edge bg-transparent"></span></div><span class="mech text-[10px] text-ink-muted">0/2</span></div></div></div>
-</div><div class="flex flex-col gap-1.5">
-<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Ressource</span>
-<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><div class="flex w-full items-center gap-2 text-sm"><span class="flex-1 text-ink">Inspiration bardique</span><span class="text-ink-muted">2/3</span><button type="button" class="rounded border border-edge px-1.5 text-xs">+</button><button type="button" class="rounded border border-edge px-1.5 text-xs">−</button></div></div>
-</div><div class="flex flex-col gap-1.5">
-<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Ressource à la borne</span>
-<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><div class="flex w-full items-center gap-2 text-sm"><span class="flex-1 text-ink">Rage</span><span class="text-ink-muted">3/3</span><button type="button" disabled="" class="rounded border border-edge px-1.5 text-xs disabled:opacity-50">+</button><button type="button" class="rounded border border-edge px-1.5 text-xs">−</button></div></div>
+<div class="grid gap-3" style="grid-template-columns: minmax(0, 1fr)"><div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Emplacements, pacte et ressource à compteur</span>
+<div class="flex min-h-[64px] items-center justify-center rounded-lg bg-panel-sunken px-3 py-4"><div role="group" class="flex items-stretch overflow-x-auto rounded-md border border-edge/60 bg-panel-sunken px-1 py-2"><div style="flex-grow: 3" class="flex flex-col items-center gap-1.5 px-1"><span class="text-center text-xs font-bold uppercase leading-tight tracking-[0.08em] text-ink-soft">Emplacements de sorts</span><div class="flex w-full flex-1 items-end justify-around"><div class="flex"><div class="flex min-w-[2.25rem] flex-col items-center gap-1 px-1"><div class="flex flex-col-reverse items-center"><button type="button" class="flex items-center justify-center p-1"><span class="block h-3 w-3 rounded-full border-[1.5px] bg-link-entity border-link-entity"></span></button><button type="button" class="flex items-center justify-center p-1"><span class="block h-3 w-3 rounded-full border-[1.5px] bg-link-entity border-link-entity"></span></button><button type="button" class="flex items-center justify-center p-1"><span class="block h-3 w-3 rounded-full border-[1.5px] bg-link-entity border-link-entity"></span></button><button type="button" class="flex items-center justify-center p-1"><span class="block h-3 w-3 rounded-full border-[1.5px] bg-transparent border-edge-strong"></span></button></div><span class="whitespace-nowrap text-xs text-ink-muted">Niv. 1</span><span class="whitespace-nowrap text-xs text-ink-muted opacity-80">long</span></div></div><div class="flex"><div class="flex min-w-[2.25rem] flex-col items-center gap-1 px-1"><div class="flex flex-col-reverse items-center"><button type="button" class="flex items-center justify-center p-1"><span class="block h-3 w-3 rounded-full border-[1.5px] bg-link-entity border-link-entity"></span></button><button type="button" class="flex items-center justify-center p-1"><span class="block h-3 w-3 rounded-full border-[1.5px] bg-link-entity border-link-entity"></span></button></div><span class="whitespace-nowrap text-xs text-ink-muted">Niv. 2</span><span class="whitespace-nowrap text-xs text-ink-muted opacity-80">long</span></div></div><div class="flex ml-1 border-l border-edge pl-1"><div class="flex min-w-[2.25rem] flex-col items-center gap-1 px-1"><div class="flex flex-col-reverse items-center"><button type="button" class="flex items-center justify-center p-1"><span class="block h-3 w-3 rounded-full border-[1.5px] bg-link-entity border-link-entity"></span></button><button type="button" class="flex items-center justify-center p-1"><span class="block h-3 w-3 rounded-full border-[1.5px] bg-transparent border-link-entity/70"></span></button></div><span class="whitespace-nowrap text-xs text-ink-muted">Pacte niv. 2</span><span class="whitespace-nowrap text-xs text-ink-muted opacity-80">court</span></div></div></div></div><div style="flex-grow: 1" class="flex flex-col items-center gap-1.5 px-1 border-l border-edge"><span class="text-center text-xs font-bold uppercase leading-tight tracking-[0.08em] text-ink-soft">Classe</span><div class="flex w-full flex-1 items-end justify-around"><div class="flex"><div class="flex min-w-[2.25rem] flex-col items-center gap-1 px-1"><div class="flex flex-col items-center gap-0.5 rounded-xl bg-panel-sunken px-1.5 py-1"><span class="mech font-display text-[17px] leading-none text-ink">7</span><span class="text-xs text-ink-muted">/ 10</span><div class="flex gap-[3px]"><button type="button" class="h-5 w-[22px] rounded border border-edge text-[8px] text-ink disabled:cursor-not-allowed disabled:opacity-50">▼</button><button type="button" class="h-5 w-[22px] rounded border border-edge text-[8px] text-ink disabled:cursor-not-allowed disabled:opacity-50">▲</button></div></div><span class="whitespace-nowrap text-xs text-ink-muted">Source de magie</span><span class="whitespace-nowrap text-xs text-ink-muted opacity-80">long</span></div></div></div></div></div></div>
 </div></div>
 
 </section>
@@ -341,7 +335,7 @@ code{font-family:'Geist Mono',ui-monospace,monospace;font-size:0.92em}
 </main>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":7200}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":7360}}'>
 class Component extends DCLogic {
   constructor(props) {
     super(props);

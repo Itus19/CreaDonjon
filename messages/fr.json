@@ -480,6 +480,30 @@
     "lectureFiche": "Lecture de la fiche…",
     "declencheursConserves": "{count, plural, one {Un déclencheur saisi dans le bac à sable est gardé tel quel.} other {# déclencheurs saisis dans le bac à sable sont gardés tels quels.}}"
   },
+  "egaliseur": {
+    "ligne": "Emplacements et ressources",
+    "groupes": {
+      "emplacements": "Emplacements de sorts",
+      "classe": "Classe",
+      "traits": "Traits"
+    },
+    "niveau": "Niv. {niveau}",
+    "pacte": "Pacte niv. {niveau}",
+    "recharge": {
+      "short_rest": "court",
+      "short_rest_one": "1 au court",
+      "long_rest": "long",
+      "dawn": "aube",
+      "never": "jamais"
+    },
+    "restants": "{restants} sur {total}",
+    "depenserEmplacement": "Dépenser un emplacement de niveau {niveau}",
+    "rendreEmplacement": "Rendre un emplacement de niveau {niveau}",
+    "depenserPacte": "Dépenser un emplacement de pacte de niveau {niveau}",
+    "rendrePacte": "Rendre un emplacement de pacte de niveau {niveau}",
+    "depenserRessource": "Dépenser une utilisation : {nom}",
+    "rendreRessource": "Rendre une utilisation : {nom}"
+  },
   "mj": {
     "choisirOutil": "Choisissez un outil MJ dans la barre latérale.",
     "chat": "Chat",

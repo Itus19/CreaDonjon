@@ -235,6 +235,11 @@ export default function PreviewStep({
               resources={undefined}
               resourcesUsed={{}}
               onChangeResource={noop}
+              pact={sheet.spellcasting?.pactSlots ?? null}
+              pactUsed={0}
+              classKeys={[]}
+              onGesteEmplacement={noop}
+              emplacementsDesactives={true}
             />
           )}
 

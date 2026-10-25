@@ -370,6 +370,27 @@ export default function PlayableCharacterSheet({
     reloadRemote();
   }
 
+  /**
+   * V3.1-114 — un geste de l'égaliseur sur un emplacement ou la réserve de pacte (+1 dépense, -1 rend).
+   * Comme `changeExhaustion` : le client reflète la borne tout de suite, le serveur la fait respecter.
+   */
+  async function changeEmplacement(geste: { pool: "slots"; level: number } | { pool: "pact" }, delta: number) {
+    patchRuntimeState((state) => {
+      if (geste.pool === "pact") {
+        const total = sheet.spellcasting?.pactSlots?.count ?? 0;
+        return { ...state, pact_slots_used: Math.max(0, Math.min(total, (state.pact_slots_used ?? 0) + delta)) };
+      }
+      const cle = String(geste.level);
+      const total = sheet.spellcasting?.slots[geste.level] ?? 0;
+      return { ...state, spell_slots_used: { ...state.spell_slots_used, [cle]: Math.max(0, Math.min(total, (state.spell_slots_used[cle] ?? 0) + delta)) } };
+    });
+    const corps = geste.pool === "pact" ? { campaignId, pool: "pact", delta } : { campaignId, pool: "slots", level: geste.level, delta };
+    await postAction("spell-slot", corps);
+    reloadRemote();
+  }
+
+  // V3.1-114 : les classes et sous-classes (clés de règle) — une ressource qui en vient va au groupe « Classe » de l'égaliseur.
+  const classKeys = character.classes.flatMap((c) => [c.class, c.subclass].flatMap((r) => (r?.kind === "rule" ? [r.key] : [])));
   const runtimeState = remote?.runtimeState.state;
   // V3.1-109 : tant que la fiche calculee n'est pas la, aucune commande (jamais un geste que le serveur refusera).
   const commandes = commandesImposees ?? commandesDeLaFiche(remote?.controls);
@@ -734,6 +755,11 @@ export default function PlayableCharacterSheet({
                 resources={resources}
                 resourcesUsed={runtimeState?.resources ?? {}}
                 onChangeResource={changeResource}
+                pact={sheet.spellcasting?.pactSlots ?? null}
+                pactUsed={runtimeState?.pact_slots_used ?? 0}
+                classKeys={classKeys}
+                onGesteEmplacement={changeEmplacement}
+                emplacementsDesactives={!commandes.spell_slots}
               />
             )}
 
