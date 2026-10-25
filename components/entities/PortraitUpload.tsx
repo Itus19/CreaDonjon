@@ -3,9 +3,6 @@
 import { useCallback, useRef, useState } from "react";
 import type { EntityPortraitLayout } from "@/src/server/repos/entityPortraits";
 
-/** Largeur de base a 100% (correspond a l'ancien `w-56` fixe) — la case grandit/retrecit autour de cette reference, 50-200%. */
-const BASE_WIDTH_PX = 224;
-
 /**
  * Portrait televersable, remplacable (retour utilisateur) : une seule
  * ligne par entite cote serveur (`entity_portraits`, cle primaire
@@ -122,8 +119,7 @@ export default function PortraitUpload({
           bouge jamais avec le curseur, seul le rendu du wiki en tient
           compte (PublicPortrait.tsx) — largeur fixe, jamais `sizePct`. */}
       <div
-        className="group relative flex aspect-[3/4] shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-edge bg-panel-sunken text-center text-xs text-ink-muted"
-        style={{ width: `${BASE_WIDTH_PX}px` }}
+        className="group relative flex aspect-[3/4] w-56 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-edge bg-panel-sunken text-center text-xs text-ink-muted @min-[36rem]:@max-[56rem]:w-32"
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img

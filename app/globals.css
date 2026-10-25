@@ -324,6 +324,16 @@ body {
   font-weight: 700;
   color: var(--ink);
 }
+/*
+ * V3.1-63 : le titre d'un bloc est un champ éditable sur place (BlockCard) ;
+ * dans une carte étroite (téléphone, volet partagé) il passe à la taille
+ * d'un titre de section plutôt que d'être coupé. La carte est le conteneur.
+ */
+@container bloc (width < 28rem) {
+  .block-title-carte {
+    font-size: 1.125rem;
+  }
+}
 
 /* Lettrine (V2.1-14) : option du bloc texte, cochee dans TextBlockEditor et
    portee par l'attribut `data-dropcap` du conteneur — le meme element en

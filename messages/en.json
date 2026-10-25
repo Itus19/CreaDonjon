@@ -1254,5 +1254,75 @@
     "saisir": "Enter",
     "pastille": "{n, plural, one {# saving throw to answer} other {# saving throws to answer}}",
     "enAttente": "Waiting for the saving throw…"
+  },
+  "fiche": {
+    "poignee": "Reorder this block",
+    "poigneeTitre": "Drag to reorder, or Enter then arrow keys",
+    "replier": "Collapse",
+    "deplier": "Expand",
+    "titreBloc": "Block title",
+    "enregistrement": "Saving…",
+    "enregistre": "Saved",
+    "actionsBloc": "Block actions",
+    "monter": "Move up",
+    "descendre": "Move down",
+    "dupliquer": "Duplicate",
+    "choisirVisibilite": "Choose visibility…",
+    "supprimer": "Delete…",
+    "confirmerSuppressionTitre": "Delete this block?",
+    "confirmerSuppression": "This removes the block from the sheet. It stays available in the entity history.",
+    "confirmerSuppressionBouton": "Delete",
+    "conflit": "Changed in the meantime. Reload the page before trying again.",
+    "erreurSauvegarde": "This change could not be saved. Check the fields (e.g. an empty name) and try again.",
+    "visibiliteBloc": "Block visibility: {niveau}. See who can see it.",
+    "visibiliteQui": "Visible to {qui}.",
+    "fermer": "Close",
+    "niveaux": {
+      "public": "Public",
+      "players": "Players",
+      "gm": "GM",
+      "private": "Private",
+      "campaign": "Campaign",
+      "user": "User"
+    },
+    "qui": {
+      "public": "everyone, public wiki included",
+      "players": "the table, not the public wiki",
+      "gm": "the GM only — never sent to players",
+      "private": "its author only",
+      "campaign": "one specific campaign",
+      "user": "one specific user"
+    },
+    "palette": {
+      "ajouter": "+ Add a block",
+      "titre": "Add a block",
+      "assistant": "+ Creation assistant",
+      "assistantRemplace": "Replaces this sheet's current character",
+      "familles": {
+        "recit": "Story",
+        "personnage": "Character",
+        "psyche": "Psyche and links",
+        "outils": "Game tools"
+      }
+    },
+    "reordonner": {
+      "instructions": "To reorder this block, press Enter, move it with the up and down arrow keys, then Enter to drop it or Escape to cancel.",
+      "prise": "Block “{bloc}” picked up, position {position} of {total}. Up and down arrows to move, Enter to drop, Escape to cancel.",
+      "deplace": "Block “{bloc}”: position {position} of {total}.",
+      "posee": "Block “{bloc}” dropped at position {position} of {total}.",
+      "annulee": "Move cancelled. Block “{bloc}”: position {position} of {total}."
+    },
+    "entete": {
+      "titrePlaceholder": "New entity",
+      "typeDeFiche": "Sheet type",
+      "alias": "Aliases",
+      "relations": "Relations",
+      "ajouterAlias": "+ add",
+      "retirerAlias": "Remove alias {alias}",
+      "publicVisible": "Visible on the public wiki — click to hide",
+      "publicMasque": "Hidden from the public wiki — click to show",
+      "publicMasquer": "Hide this sheet from the public wiki",
+      "publicRendre": "Show this sheet on the public wiki"
+    }
   }
 }

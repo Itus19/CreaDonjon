@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import RelationsChips, { type OtherEntityOption, type RelationChip } from "@/components/entities/RelationsChips";
 import EntityHistoryPanel from "@/components/entities/EntityHistoryPanel";
 import PortraitUpload from "@/components/entities/PortraitUpload";
@@ -64,6 +65,7 @@ export default function EditEntityForm({
 }) {
   useAmorcerFicheAvecPage({ worldSlug, entityId: entity.id, blocks: initialBlocks, promesse: ficheAvecPage });
   const router = useRouter();
+  const t = useTranslations("fiche");
   const [name, setName] = useState(entity.name);
   const [entityKind, setEntityKind] = useState(entity.entity_kind);
   const [isPublic, setIsPublic] = useState(entity.is_public);
@@ -411,7 +413,7 @@ export default function EditEntityForm({
               value={name}
               onChange={(e) => setName(e.target.value)}
               onBlur={() => save()}
-              placeholder="Nouvelle entité"
+              placeholder={t("entete.titrePlaceholder")}
               // Fiche vierge (V0-06g) : pas d'ecran de creation separe, on
               // arrive directement ici — le focus automatique invite a
               // nommer la fiche tout de suite, sans action supplementaire.
@@ -460,9 +462,12 @@ export default function EditEntityForm({
               <button
                 type="button"
                 onClick={toggleEntityPublic}
-                className="shrink-0 text-ink-muted hover:text-ink"
-                aria-label={isPublic ? "Masquer cette fiche au wiki public" : "Rendre cette fiche visible au wiki public"}
-                title={isPublic ? "Visible au wiki public — cliquer pour masquer" : "Masquée au wiki public — cliquer pour rendre visible"}
+                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border bg-panel-sunken transition-colors hover:text-ink ${
+                  isPublic ? "border-accent/60 text-accent" : "border-edge text-ink-muted"
+                }`}
+                aria-label={isPublic ? t("entete.publicMasquer") : t("entete.publicRendre")}
+                aria-pressed={isPublic}
+                title={isPublic ? t("entete.publicVisible") : t("entete.publicMasque")}
               >
                 <EyeIcon open={isPublic} className="h-4 w-4" />
               </button>
@@ -489,8 +494,8 @@ export default function EditEntityForm({
                   value={kindDropdownValue}
                   options={kindOptions}
                   onChange={handleKindChange}
-                  aria-label="Type de fiche"
-                  triggerClassName="inline-flex min-w-0 items-center gap-1 overflow-hidden bg-transparent px-1 py-1 text-sm font-medium text-ink-muted transition-colors hover:text-ink"
+                  aria-label={t("entete.typeDeFiche")}
+                  className="min-w-0"
                 />
               )}
             </div>
@@ -503,20 +508,20 @@ export default function EditEntityForm({
           </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-1.5 text-xs">
-            <span className="mr-1 text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
-              Alias :
+            <span className="mr-1 w-20 shrink-0 text-xs uppercase tracking-wider text-ink-muted">
+              {t("entete.alias")}
             </span>
             {aliases.map((alias) => (
               <span
                 key={alias}
-                className="flex items-center gap-1 rounded-full border border-edge bg-panel-raised px-2.5 py-1"
+                className="flex items-center gap-1 rounded-full border border-edge py-1 pl-2.5 pr-1.5 text-ink-soft"
               >
                 {alias}
                 <button
                   type="button"
                   onClick={() => removeAlias(alias)}
-                  className="text-ink-muted hover:text-danger"
-                  aria-label={`Retirer l'alias ${alias}`}
+                  className="text-ink-muted transition-colors hover:text-danger"
+                  aria-label={t("entete.retirerAlias", { alias })}
                 >
                   ×
                 </button>
@@ -531,15 +536,14 @@ export default function EditEntityForm({
                   addAlias();
                 }
               }}
-              placeholder="+ ajouter"
-              className="w-24 rounded-full border border-edge bg-transparent px-2.5 py-1 outline-none focus:border-accent"
+              aria-label={t("entete.alias")}
+              placeholder={t("entete.ajouterAlias")}
+              className="w-24 rounded-full border border-dashed border-edge-strong bg-transparent px-2.5 py-1 text-accent outline-none placeholder:text-accent focus:border-accent"
             />
           </div>
 
-          <div className="mt-4 flex flex-col gap-1.5 border-t border-edge/60 pt-2.5 text-xs">
-            <span className="mr-1 text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
-              Relations :
-            </span>
+          <div className="mt-3 flex flex-col gap-1.5 text-xs">
+            <span className="text-xs uppercase tracking-wider text-ink-muted">{t("entete.relations")}</span>
             <RelationsChips
               entityId={entity.id}
               worldSlug={worldSlug}

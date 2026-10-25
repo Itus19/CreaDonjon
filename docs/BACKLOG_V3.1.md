@@ -91,7 +91,7 @@ valables ; celui-ci les relie.
 | **2 · La coquille** — *faite* | ~~25~~ → ~~26~~ → ~~28~~ ; ~~27~~ → ~~29~~ → ~~30~~, ~~31~~, ~~32~~, ~~33~~ ; ~~20~~ ; ~~35~~ ; ~~34~~ ; ~~36~~ ; ~~62 étape 3~~ | Tout le reste vit dedans : pilule glissante, rail, fenêtres en deux volets, téléphone, accueil. |
 | **3 · Entrer et se reconnaître** | ~~85~~ → ~~86~~ ; ~~80~~ → ~~81~~ ; ~~82~~ → ~~83~~ (après 100) ; ~~87~~ → ~~88~~ | Le premier écran que voit un ami ; court, et tout est décidé. |
 | **4 · Les outils du MJ (lot i)** | ~~46~~, ~~55~~, ~~61~~ → ~~143~~, ~~54~~, ~~56~~, ~~44~~, ~~45~~, ~~43~~ ; ~~41~~ → ~~42~~ ; ~~59~~ → ~~60~~ ; ~~108~~ → ~~57~~, ~~109~~ ; ~~58~~ ; ~~102~~, ~~103~~ → ~~38~~ ; ~~105~~ → ~~106~~ ; ~~111~~ → ~~112~~ ; ~~113~~ → ~~114~~ | Les petits outils sans donnée nouvelle d'abord, puis ceux qui attendaient l'étape 1. |
-| **5 · La fiche du wiki et ses blocs** | 63 → 64 → 65 à 68 → 69 → 70 à 73 → 75 à 78 ; 79 (après 26 et 33). 73 remplit la ligne de dates de la généalogie avec les données de 74 (étape 1) | La carte de verre et sa pastille portent tous les blocs. |
+| **5 · La fiche du wiki et ses blocs** | ~~63~~ → 64 → 65 à 68 → 69 → 70 à 73 → 75 à 78 ; 79 (après 26 et 33). 73 remplit la ligne de dates de la généalogie avec les données de 74 (étape 1) | La carte de verre et sa pastille portent tous les blocs. |
 | **6 · La création de personnage** | 49 → 50, 51, 52, 53 (48 et 115 faits à l'étape 1) ; 118, 119 (116 et 117 faits) | Le plus gros chantier ; il attend les règles en données (47). |
 | **7 · Les statistiques du joueur** | ~~89~~ → 90 → 91 → 92 | Il leur faut des jets attribués ; les jets d'avant 89 ne comptent pas. |
 | **8 · Règles et Chronologie** | 93 → 94 → 95 ; 96 → 97 → 98 → 99 | Les règles s'appuient sur les fenêtres à volets (20) ; la Chronologie sur la pastille (64) et les dates de naissance (74). |
@@ -194,7 +194,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-60 | ☑ | sans | Publication : les réglages, et ce que voit un visiteur | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-61 | ☑ | sans | Journal historique : par fiche, ou chronologique | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-62 | ☑ | sans | Rapidité : mesurer, puis recâbler | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-63 | ☐ | sans | Fiche du wiki sur ordinateur : en-tête, cartes de verre, palette en familles | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
+| V3.1-63 | ☑ | sans | Fiche du wiki sur ordinateur : en-tête, cartes de verre, palette en familles | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-64 | ☐ | sans | La pastille de visibilité au toucher, avec « Annuler » | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
 | V3.1-65 | ☐ | **avec** | Bloc Texte : lettrine, bulle du paragraphe, assistance IA en encart | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
 | V3.1-66 | ☐ | sans | Blocs Encadré et Tableau | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |

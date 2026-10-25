@@ -2,6 +2,104 @@
 
 ---
 
+### ☑ V3.1-63 — Fiche du wiki sur ordinateur : en-tête, cartes de verre, palette en familles · `L` · sans modèle IA — **fait le 25 octobre**
+
+**Modèle conseillé : Sonnet** — planche définitive, aucune donnée nouvelle.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Planche** : `Wiki-Fiche-Decide.dc.html`. **Départ** :
+`app/m/[worldSlug]/(monde)/f/[entitySlug]/page.tsx` et `EditEntityForm.tsx`,
+`components/blocks/EntityBlocks.tsx` (`BLOCK_TYPE_LABELS`,
+`BlockDataEditor`, l'ajout de bloc), `components/shared/ActionsMenu.tsx`,
+`components/shared/visibilityOptions.ts`, `components/entities/RelationsChips.tsx`,
+`components/entities/PortraitUpload.tsx`, `components/entities/EntityHistoryPanel.tsx`.
+**Dépend de** : 20 (fenêtres à volets), 25 (pilule).
+
+**Ce qui est décidé**
+- La fiche **s'édite directement**, au verre minéral, dans la fenêtre à
+  volets du MJ (V3.1-20). C'est l'écran le plus utilisé du MJ. Le téléphone
+  garde l'éditeur de V3.1-30 et 31 (rien à changer ici sur téléphone).
+- **En-tête** :
+  - le titre, éditable sur place ; sur une fiche neuve, le nom par défaut
+    est **sélectionné** (on tape directement par-dessus) ;
+  - le **type ▾** (PJ, PNJ, Lieu… et « + Créer une catégorie » en bas du
+    menu — même service que la création de catégorie d'aujourd'hui) ;
+  - l'**historique** (ouvre `EntityHistoryPanel`) et l'**œil du wiki
+    public** (même lien qu'aujourd'hui) ;
+  - l'**adresse** (slug) dessous, en petit ;
+  - **Alias** et **Relations** en pastilles, × pour retirer, « + » pour
+    ajouter (relations : `RelationsChips`, même route qu'aujourd'hui) ;
+  - le **portrait à droite** (`PortraitUpload`).
+- **Une carte de verre par bloc.** En-tête de la carte, de gauche à droite :
+  - ⠿ pour glisser (réordonner), **aussi au clavier** (focus sur ⠿, puis
+    flèches haut/bas, Entrée pour poser, Échap pour annuler) ;
+  - ▾ / ▸ pour replier / déplier (l'état replié est une préférence locale
+    de l'éditeur, pas une donnée du bloc) ;
+  - le titre du bloc, **éditable sur place** (`display.label`) ;
+  - le type en pastille (« Texte », « Relation »…, `BLOCK_TYPE_LABELS`) ;
+  - « Enregistré », annoncé poliment (`aria-live="polite"`) après chaque
+    sauvegarde réussie ;
+  - **la visibilité en pastille de couleur** : vert Public, bleu Joueurs,
+    orange MJ, gris Privé (jetons de la charte ; « campagne » et
+    « utilisateur » gardent leur libellé actuel). Son comportement au
+    toucher est V3.1-64 ; ici elle ouvre seulement l'infobulle qui dit qui
+    la voit (« le MJ seul — jamais envoyé aux joueurs ») ;
+  - ⋮ (`ActionsMenu`) : Monter, Descendre, Dupliquer, Choisir la
+    visibilité…, Supprimer…. **Les ▲▼ d'aujourd'hui passent dans ⋮.** La
+    suppression est confirmée (`ConfirmDialog`) et rappelle que
+    l'historique la garde.
+- **« + Ajouter un bloc »** en bas ouvre la palette **en familles**, dans
+  cet ordre :
+  - Récit : Texte, Encadré, Image, Tableau, Chronologie ;
+  - Personnage : Personnage, Inventaire, Incantation, Ressources, Fiche de
+    créature ;
+  - Psyché et liens : Personnalité, Relation, Convictions, Réseau,
+    Généalogie ;
+  - Outils de jeu : Table aléatoire, Quête, Musique, Carte.
+  - `generator`, `note_tree` et `session_journal_meta` **n'apparaissent
+    pas** dans la palette (comme aujourd'hui pour le dernier).
+- **Fenêtre étroite** (tablette, volet partagé — requête de conteneur, pas
+  `window.innerWidth`) : portrait réduit, blocs Personnalité et Convictions
+  sur une colonne, pastille de type masquée dans l'en-tête de carte.
+- **Données** : rien de neuf.
+
+**À faire**
+1. Extraire l'en-tête de carte en un composant partagé `BlockCard`
+   (`components/blocks/BlockCard.tsx`) : il porte ⠿, ▾, titre, type,
+   « Enregistré », pastille, ⋮, et reçoit l'intérieur en `children`. Tous
+   les blocs passent par lui ; les tickets 65 à 79 n'y touchent pas.
+2. Refaire l'en-tête de fiche dans `EditEntityForm.tsx`.
+3. Palette en familles (constante ordonnée dans `EntityBlocks.tsx`, libellés
+   des familles dans le fichier de libellés).
+4. Planche du catalogue : en-tête de fiche, `BlockCard`, palette.
+
+**Ne pas faire** : toucher l'intérieur des blocs (tickets suivants) ;
+changer le téléphone ; ajouter un type de bloc.
+
+**Critères d'acceptation**
+- [x] Une fiche neuve s'ouvre le nom sélectionné ; taper le remplace.
+- [x] Réordonner un bloc au clavier (⠿ + flèches + Entrée) fonctionne et s'annonce.
+- [x] Les ▲▼ ont disparu des cartes ; Monter / Descendre sont dans ⋮.
+- [x] La palette montre quatre familles, dans l'ordre ci-dessus, sans `generator`, `note_tree`, `session_journal_meta`.
+- [x] En fenêtre étroite (volet partagé), la pastille de type disparaît et le portrait se réduit (test visuel à 820 px de volet).
+- [x] Aucun changement côté téléphone (390 px).
+
+**Réalisé** (Sonnet, relu et corrigé par Opus)
+- `BlockCard` (⠿, ▾/▸ en préférence locale, titre éditable, type, « Enregistré », pastille de visibilité, ⋮ : Monter, Descendre, Dupliquer, Choisir la visibilité…, Supprimer…) ; `SortableBlockCard` ne garde que le câblage.
+- En-tête de fiche refait (`EditEntityForm.tsx`) ; portrait réduit en fiche étroite.
+- Palette en familles (`lib/ui/ficheBlocs.ts`, testée) ; `BarreAjoutBloc` reste celle de l'éditeur téléphone.
+- Glisser au clavier : celui de dnd-kit (Entrée, flèches, Entrée, Échap) avec des annonces françaises calculées par `annonceReordonnancement`.
+- Jeton `players` (bleu Joueurs) ajouté à la charte, tous modes.
+- Vérifié au navigateur : 1440 px, 820 px (type masqué, portrait sous l'en-tête), 390 px ; menu ⋮ et palette.
+
+*Écarts* :
+- La fiche affichée au téléphone (pas l'éditeur) prend aussi les cartes de verre : elle partage le composant. Le titre de bloc y était coupé ; corrigé par une taille réduite en carte étroite (`.block-title-carte`, requête de conteneur).
+- `session_journal_meta` ne se pose plus à la main sur ordinateur, comme le demande le ticket.
+- La pastille vit dans `BlockCard` ; V3.1-64 l'extrait en `VisibilityPill`.
+
+---
+
 ### ☑ V3.1-114 — Ressources : repos et égaliseur · `S` · sans modèle IA — **fait le 25 octobre (ADR 0045)**
 
 **Modèle conseillé : Sonnet.** **Dépend de** : 113, 24, 26.

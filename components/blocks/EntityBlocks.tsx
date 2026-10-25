@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import { useTranslations } from "next-intl";
 import {
   DndContext,
   KeyboardSensor,
@@ -9,16 +10,16 @@ import {
   closestCenter,
   useSensor,
   useSensors,
+  type Announcements,
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { computeDroppedOrder } from "@/src/core/ordering/computeDroppedOrder";
 import { useCollapsedGroups } from "@/components/shell/useCollapsedGroups";
-import Dropdown from "@/components/shared/Dropdown";
-import ActionsMenu from "@/components/shared/ActionsMenu";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
-import { VISIBILITY_OPTIONS } from "@/components/shared/visibilityOptions";
+import BlockCard from "@/components/blocks/BlockCard";
+import { annonceReordonnancement, famillesAjoutables } from "@/lib/ui/ficheBlocs";
 import { EditCommitProvider } from "@/components/shared/EditCommitContext";
 /**
  * V3-R3 — les 21 vues de bloc sont chargees a la demande, jamais dans le
@@ -440,6 +441,95 @@ export function BarreAjoutBloc({
 }
 
 /**
+ * V3.1-63 — « + Ajouter un bloc » de la fiche sur ordinateur : la palette
+ * rangée en familles (Récit, Personnage, Psyché et liens, Outils de jeu),
+ * dont l'ordre et les exclusions viennent de `lib/ui/ficheBlocs`. Le
+ * téléphone garde `BarreAjoutBloc` (V3.1-31). Le nouveau bloc arrive en bas.
+ */
+function PaletteAjoutBloc({
+  blocks,
+  onAdd,
+  restrictAddableTypes,
+  onLaunchWizard,
+  hasCharacterBlock,
+}: {
+  blocks: readonly { blockType: string }[];
+  onAdd: (blockType: string) => void;
+  restrictAddableTypes?: string[];
+  onLaunchWizard?: () => void;
+  hasCharacterBlock?: boolean;
+}) {
+  const t = useTranslations("fiche");
+  const [ouverte, setOuverte] = useState(false);
+  const familles = famillesAjoutables(blocks, restrictAddableTypes);
+  const assistant = onLaunchWizard && (
+    <button
+      type="button"
+      onClick={onLaunchWizard}
+      title={hasCharacterBlock ? t("palette.assistantRemplace") : undefined}
+      className="self-start rounded-full border border-accent px-3 py-1 text-xs text-accent transition-colors hover:bg-accent/10"
+    >
+      {t("palette.assistant")}
+    </button>
+  );
+
+  return (
+    <div className="flex flex-col gap-3 pt-1">
+      {ouverte ? (
+        <div className="flex flex-col gap-3 rounded-2xl border border-dashed border-edge-strong p-4">
+          <div className="flex items-center gap-2">
+            <span className="flex-1 text-[11px] font-bold uppercase tracking-widest text-ink-muted">
+              {t("palette.titre")}
+            </span>
+            <button
+              type="button"
+              onClick={() => setOuverte(false)}
+              className="rounded-md px-1.5 text-ink-muted transition-colors hover:text-ink"
+              aria-label={t("fermer")}
+            >
+              ×
+            </button>
+          </div>
+          {familles.map((famille) => (
+            <div key={famille.cle} role="group" aria-label={t(`palette.familles.${famille.cle}`)} className="flex flex-wrap items-center gap-2">
+              <span className="w-28 shrink-0 text-xs uppercase tracking-wider text-ink-muted">
+                {t(`palette.familles.${famille.cle}`)}
+              </span>
+              {famille.types.map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => {
+                    setOuverte(false);
+                    onAdd(type);
+                  }}
+                  className="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised"
+                >
+                  {BLOCK_TYPE_LABELS[type] ?? type}
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setOuverte(true)}
+            aria-expanded={false}
+            className="rounded-full border border-dashed border-edge-strong px-4 py-1.5 text-sm text-accent transition-colors hover:bg-accent/10"
+          >
+            {t("palette.ajouter")}
+          </button>
+          {assistant}
+        </div>
+      )}
+      {ouverte && assistant}
+    </div>
+  );
+}
+
+/**
  * Blocs discrets, toujours editables en place — comme l'ancienne
  * application (master, EntityDetail.tsx) : pas d'encadre par bloc, juste
  * un separateur ; la sauvegarde se declenche a la perte de focus, jamais
@@ -482,6 +572,7 @@ export default function EntityBlocks({
   /** V3.1-31 : prevenu a chaque changement de la liste, pour que l'editeur plein ecran (monte par le parent) parte de l'etat COURANT des blocs et de leurs versions, jamais de celui du chargement de la page. */
   onBlocksChange?: (blocks: BlockItem[]) => void;
 }) {
+  const t = useTranslations("fiche");
   const [blocks, setBlocks] = useState<BlockItem[]>(initialBlocks);
   // Retour utilisateur : le pli/depli d'un bloc ne survivait pas a un
   // rechargement (Set en memoire) — meme mecanisme de persistance que le
@@ -861,6 +952,28 @@ export default function EntityBlocks({
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
+  /**
+   * V3.1-63 : le glisser au clavier (Entrée sur ⠿, flèches, Entrée pour poser,
+   * Échap pour annuler) est celui de `KeyboardSensor` ; ce qu'on ajoute, c'est
+   * l'annonce en français de chaque étape (texte calculé par `lib/ui/ficheBlocs`).
+   */
+  const annonces: Announcements = (() => {
+    const ids = sortedBlocks.map((b) => b.id);
+    const libelles = Object.fromEntries(
+      sortedBlocks.map((b) => [b.id, b.display.label || BLOCK_TYPE_LABELS[b.blockType] || b.blockType]),
+    );
+    const dire = (etape: "prise" | "deplace" | "posee" | "annulee", actif: string | number, cible: string | number | null) => {
+      const a = annonceReordonnancement(etape, ids, libelles, String(actif), cible === null ? null : String(cible));
+      return a ? t(`reordonner.${a.cle}`, { bloc: a.bloc, position: a.position, total: a.total }) : undefined;
+    };
+    return {
+      onDragStart: ({ active }) => dire("prise", active.id, active.id),
+      onDragOver: ({ active, over }) => dire("deplace", active.id, over ? over.id : active.id),
+      onDragEnd: ({ active, over }) => dire("posee", active.id, over ? over.id : active.id),
+      onDragCancel: ({ active }) => dire("annulee", active.id, active.id),
+    };
+  })();
+
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
@@ -878,7 +991,13 @@ export default function EntityBlocks({
           deja incremente ce compteur ailleurs sur la page (ex. plusieurs
           fenetres d'entite ouvertes). Base sur `entityId`, deja stable et
           identique cote serveur/client. */}
-      <DndContext id={`entity-blocks-${entityId}`} sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <DndContext
+        id={`entity-blocks-${entityId}`}
+        sensors={dndSensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+        accessibility={{ announcements: annonces, screenReaderInstructions: { draggable: t("reordonner.instructions") } }}
+      >
         <SortableContext items={sortedBlocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
           {sortedBlocks.map((block, index) => (
             <SortableBlockCard
@@ -926,7 +1045,7 @@ export default function EntityBlocks({
         </p>
       )}
 
-      <BarreAjoutBloc
+      <PaletteAjoutBloc
         blocks={blocks}
         onAdd={addBlock}
         restrictAddableTypes={restrictAddableTypes}
@@ -936,9 +1055,9 @@ export default function EntityBlocks({
 
       <ConfirmDialog
         open={pendingDeleteId !== null}
-        title="Supprimer ce bloc ?"
-        message="Cette action retire le bloc de la fiche. Il reste consultable dans l'historique de l'entité."
-        confirmLabel="Supprimer"
+        title={t("confirmerSuppressionTitre")}
+        message={t("confirmerSuppression")}
+        confirmLabel={t("confirmerSuppressionBouton")}
         danger
         onConfirm={confirmDeleteBlock}
         onCancel={() => setPendingDeleteId(null)}
@@ -1026,102 +1145,37 @@ function SortableBlockCard({
   /** ADR 0023 — « cette valeur est engagee, enregistre CE bloc ». Lu par `Checkbox` et `Dropdown` via `useEditCommit()`, sans qu'aucun editeur ait a le transmettre. */
   const commit = useCallback(() => onSaveBlock(block.id), [onSaveBlock, block.id]);
 
+  const pliable = block.blockType !== "statblock";
+
   return (
-    <div
-      ref={setNodeRef}
+    <BlockCard
+      cardRef={setNodeRef}
       style={style}
       onBlur={onBlur}
-      className={`border-b border-edge/60 py-4 first:pt-0 last:border-b-0 ${isDragging ? "relative z-10 bg-panel opacity-90" : ""}`}
+      estGlisse={isDragging}
+      poignee={{ attributes, listeners }}
+      pliable={pliable}
+      replie={pliable && isCollapsed}
+      onBasculerPli={() => onToggleCollapsed(block.id)}
+      titre={block.display.label}
+      titrePlaceholder={BLOCK_TYPE_LABELS[block.blockType] ?? block.blockType}
+      onTitreChange={(label) => onPatchBlock(block.id, { display: { ...block.display, label } })}
+      typeLibelle={BLOCK_TYPE_LABELS[block.blockType] ?? block.blockType}
+      etatSauvegarde={saveState}
+      niveauVisibilite={block.visibilityLevel}
+      onChoisirVisibilite={(niveau) => {
+        onPatchBlock(block.id, { visibilityLevel: niveau });
+        onSaveBlock(block.id, { visibilityLevel: niveau });
+      }}
+      peutMonter={index > 0}
+      peutDescendre={index < lastIndex}
+      onMonter={() => onMoveBlock(block.id, "up")}
+      onDescendre={() => onMoveBlock(block.id, "down")}
+      onDupliquer={() => onDuplicateBlock(block.id)}
+      onSupprimer={() => onRequestDelete(block.id)}
+      conflit={hasConflict}
+      erreurSauvegarde={hasSaveError}
     >
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-1 items-center gap-1.5">
-          <button
-            type="button"
-            {...attributes}
-            {...listeners}
-            className="touch-none cursor-grab text-ink-muted transition-colors hover:text-ink active:cursor-grabbing"
-            title="Glisser pour réordonner"
-            aria-label="Réordonner ce bloc"
-          >
-            ⠿
-          </button>
-          {block.blockType !== "statblock" && (
-            <button
-              type="button"
-              onClick={() => onToggleCollapsed(block.id)}
-              className="shrink-0 text-ink-muted transition-transform hover:text-ink"
-              style={{ transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)" }}
-              title={isCollapsed ? "Déplier" : "Replier"}
-            >
-              ▾
-            </button>
-          )}
-          <input
-            value={block.display.label}
-            placeholder={BLOCK_TYPE_LABELS[block.blockType] ?? block.blockType}
-            onChange={(e) => onPatchBlock(block.id, { display: { ...block.display, label: e.target.value } })}
-            className="block-title flex-1 bg-transparent outline-none placeholder:font-sans placeholder:text-base placeholder:font-normal placeholder:italic placeholder:text-ink-muted focus:border-b focus:border-accent"
-          />
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <span className="rounded-full border border-edge bg-panel-raised px-2 py-0.5 text-xs text-ink-muted">
-            {BLOCK_TYPE_LABELS[block.blockType] ?? block.blockType}
-          </span>
-          {/* ADR 0023 : l'ecriture etait entierement muette. `role="status"`
-              plutot qu'un simple texte — l'annonce polie vaut aussi pour qui
-              n'a pas l'oeil sur ce coin de l'ecran. */}
-          {saveState && (
-            <span role="status" className="shrink-0 text-xs text-ink-muted">
-              {saveState === "pending" ? "Enregistrement…" : "Enregistré"}
-            </span>
-          )}
-          <Dropdown
-            value={block.visibilityLevel}
-            options={VISIBILITY_OPTIONS}
-            onChange={(v) => {
-              onPatchBlock(block.id, { visibilityLevel: v });
-              onSaveBlock(block.id, { visibilityLevel: v });
-            }}
-            aria-label="Visibilité du bloc"
-            triggerClassName="rounded-full border border-edge bg-panel-raised px-2 py-0.5 text-xs text-ink transition-colors hover:bg-panel"
-          />
-          <button
-            type="button"
-            onClick={() => onMoveBlock(block.id, "up")}
-            disabled={index === 0}
-            className="text-xs text-ink-muted transition-colors hover:text-ink disabled:opacity-30"
-            aria-label="Monter"
-          >
-            ▲
-          </button>
-          <button
-            type="button"
-            onClick={() => onMoveBlock(block.id, "down")}
-            disabled={index === lastIndex}
-            className="text-xs text-ink-muted transition-colors hover:text-ink disabled:opacity-30"
-            aria-label="Descendre"
-          >
-            ▼
-          </button>
-          <ActionsMenu
-            aria-label="Actions du bloc"
-            items={[
-              { label: "Dupliquer", onSelect: () => onDuplicateBlock(block.id) },
-              { label: "Supprimer", onSelect: () => onRequestDelete(block.id), danger: true },
-            ]}
-          />
-        </div>
-      </div>
-
-      {hasConflict && (
-        <p className="mb-2 text-xs text-danger">Modifié entre-temps. Rechargez la page avant de réessayer.</p>
-      )}
-      {hasSaveError && (
-        <p className="mb-2 text-xs text-danger">
-          Cette modification n&apos;a pas pu être enregistrée. Vérifiez les champs (ex. un nom vide) et réessayez.
-        </p>
-      )}
-
       {/* La fiche jouable (V1-B5) vit dans la carte du bloc `character`
           lui-meme — plus de panneau de stats separe au-dessus de la
           liste des blocs (V1-C4, specs/arbitrage-modifications.md §3.1).
@@ -1184,6 +1238,6 @@ function SortableBlockCard({
         )
       )}
       </EditCommitProvider>
-    </div>
+    </BlockCard>
   );
 }

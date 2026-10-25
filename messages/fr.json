@@ -1255,5 +1255,75 @@
     "saisir": "Saisir",
     "pastille": "{n, plural, one {# sauvegarde à répondre} other {# sauvegardes à répondre}}",
     "enAttente": "En attente de la sauvegarde…"
+  },
+  "fiche": {
+    "poignee": "Réordonner ce bloc",
+    "poigneeTitre": "Glisser pour réordonner, ou Entrée puis flèches",
+    "replier": "Replier",
+    "deplier": "Déplier",
+    "titreBloc": "Titre du bloc",
+    "enregistrement": "Enregistrement…",
+    "enregistre": "Enregistré",
+    "actionsBloc": "Actions du bloc",
+    "monter": "Monter",
+    "descendre": "Descendre",
+    "dupliquer": "Dupliquer",
+    "choisirVisibilite": "Choisir la visibilité…",
+    "supprimer": "Supprimer…",
+    "confirmerSuppressionTitre": "Supprimer ce bloc ?",
+    "confirmerSuppression": "Cette action retire le bloc de la fiche. Il reste consultable dans l'historique de l'entité.",
+    "confirmerSuppressionBouton": "Supprimer",
+    "conflit": "Modifié entre-temps. Rechargez la page avant de réessayer.",
+    "erreurSauvegarde": "Cette modification n'a pas pu être enregistrée. Vérifiez les champs (ex. un nom vide) et réessayez.",
+    "visibiliteBloc": "Visibilité du bloc : {niveau}. Voir qui la voit.",
+    "visibiliteQui": "Visible par {qui}.",
+    "fermer": "Fermer",
+    "niveaux": {
+      "public": "Public",
+      "players": "Joueurs",
+      "gm": "MJ",
+      "private": "Privé",
+      "campaign": "Campagne",
+      "user": "Utilisateur"
+    },
+    "qui": {
+      "public": "tout le monde, wiki public compris",
+      "players": "la table, pas le wiki public",
+      "gm": "le MJ seul — jamais envoyé aux joueurs",
+      "private": "son auteur seul",
+      "campaign": "une campagne précise",
+      "user": "un utilisateur précis"
+    },
+    "palette": {
+      "ajouter": "+ Ajouter un bloc",
+      "titre": "Ajouter un bloc",
+      "assistant": "+ Assistant de création",
+      "assistantRemplace": "Remplace le personnage actuel de cette fiche",
+      "familles": {
+        "recit": "Récit",
+        "personnage": "Personnage",
+        "psyche": "Psyché et liens",
+        "outils": "Outils de jeu"
+      }
+    },
+    "reordonner": {
+      "instructions": "Pour réordonner ce bloc, appuyez sur Entrée, déplacez-le avec les flèches haut et bas, puis Entrée pour le poser ou Échap pour annuler.",
+      "prise": "Bloc « {bloc} » saisi, position {position} sur {total}. Flèches haut et bas pour le déplacer, Entrée pour le poser, Échap pour annuler.",
+      "deplace": "Bloc « {bloc} » : position {position} sur {total}.",
+      "posee": "Bloc « {bloc} » posé en position {position} sur {total}.",
+      "annulee": "Déplacement annulé. Bloc « {bloc} » : position {position} sur {total}."
+    },
+    "entete": {
+      "titrePlaceholder": "Nouvelle entité",
+      "typeDeFiche": "Type de fiche",
+      "alias": "Alias",
+      "relations": "Relations",
+      "ajouterAlias": "+ ajouter",
+      "retirerAlias": "Retirer l'alias {alias}",
+      "publicVisible": "Visible au wiki public — cliquer pour masquer",
+      "publicMasque": "Masquée au wiki public — cliquer pour rendre visible",
+      "publicMasquer": "Masquer cette fiche au wiki public",
+      "publicRendre": "Rendre cette fiche visible au wiki public"
+    }
   }
 }
