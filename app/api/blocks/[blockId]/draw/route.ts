@@ -3,7 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 import { drawTableSchema } from "@/lib/blocks/schemas";
 import { drawFromTableBlock } from "@/src/server/services/tables";
 import { serverRng } from "@/src/server/services/rng";
-import { TableError } from "@/src/core/tables/errors";
+import { TableError, TableExhaustedError } from "@/src/core/tables/errors";
+import { z } from "zod";
+
+const zParams = z.object({ blockId: z.string().uuid() });
 
 /**
  * Tirage sur un bloc `random_table` (V1-E1, specs/outils-mj.md §2) —
@@ -14,7 +17,9 @@ import { TableError } from "@/src/core/tables/errors";
  * corriger — 400, pas 500.
  */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ blockId: string }> }) {
-  const { blockId } = await params;
+  const parsedParams = zParams.safeParse(await params);
+  if (!parsedParams.success) return NextResponse.json({ error: "Adresse invalide." }, { status: 400 });
+  const { blockId } = parsedParams.data;
 
   const body = await request.json().catch(() => ({}));
   const parsed = drawTableSchema.safeParse(body);
@@ -31,12 +36,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 
   try {
-    const draws = await drawFromTableBlock(supabase, blockId, serverRng, parsed.data.count);
+    const draws = await drawFromTableBlock(supabase, blockId, serverRng, parsed.data.count, new Set(parsed.data.exclude));
     if (!draws) {
       return NextResponse.json({ error: "Table introuvable." }, { status: 404 });
     }
     return NextResponse.json({ draws }, { status: 200 });
   } catch (error) {
+    if (error instanceof TableExhaustedError) {
+      return NextResponse.json({ error: error.message }, { status: 409 });
+    }
     if (error instanceof TableError) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }

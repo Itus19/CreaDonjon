@@ -3,6 +3,7 @@ import { SeededRng } from "../dice/rng";
 import type { Rng } from "../dice/rng";
 import {
   buildFilteredTable,
+  drawExcluding,
   drawMultiple,
   drawOnce,
   extractCascadeKeys,
@@ -12,7 +13,7 @@ import {
   pickEntryForRoll,
   rollOnDie,
 } from "./roll";
-import { InvalidDieError, NoMatchingEntryError } from "./errors";
+import { InvalidDieError, NoMatchingEntryError, TableExhaustedError } from "./errors";
 import type { RandomTableData, TableEntry } from "./types";
 
 /** RNG deterministe : renvoie toujours la meme sequence de valeurs fournie, jamais aleatoire — pour verifier une entree precise sans dependre de l'implementation interne du RNG reel. */
@@ -176,6 +177,44 @@ describe("drawMultiple", () => {
     const a = drawMultiple(LOOT_TABLE, 3, new SeededRng(42));
     const b = drawMultiple(LOOT_TABLE, 3, new SeededRng(42));
     expect(a.map((d) => d.entry.text)).toEqual(b.map((d) => d.entry.text));
+  });
+});
+
+describe("V3.1-75 : chiffre, indice et « sans répétition » d'un appel à l'autre", () => {
+  it("drawOnce rend l'indice de l'entrée sortie (la ligne qui s'allume)", () => {
+    const draw = drawOnce(LOOT_TABLE, fixedRng([1])); // roll 2 -> « une bourse »
+    expect(draw.index).toBe(1);
+    expect(draw.roll).toBe(2);
+  });
+
+  it("drawExcluding ne rend jamais une entrée déjà sortie, et son chiffre tombe dans la plage de l'entrée", () => {
+    // Le dé retombe d'abord sur les deux entrées exclues (1, 2) avant de trouver la troisième.
+    const draw = drawExcluding(LOOT_TABLE, new Set([0, 1]), fixedRng([0, 1, 2]));
+    expect(draw.index).toBe(2);
+    expect(draw.roll).toBe(3);
+  });
+
+  it("drawExcluding se replie sur une entrée restante quand le dé s'obstine, chiffre toujours dans sa plage", () => {
+    // Le dé rend toujours 1 (exclu) : le repli choisit parmi les restantes par le RNG.
+    const draw = drawExcluding(LOOT_TABLE, new Set([0]), fixedRng([0]));
+    expect([1, 2]).toContain(draw.index);
+    const entree = LOOT_TABLE.entries[draw.index];
+    expect(draw.roll).toBeGreaterThanOrEqual(entree.range.min);
+    expect(draw.roll).toBeLessThanOrEqual(entree.range.max);
+  });
+
+  it("drawExcluding lève TableExhaustedError quand toutes les entrées sont sorties", () => {
+    expect(() => drawExcluding(LOOT_TABLE, new Set([0, 1, 2]), fixedRng([0]))).toThrow(TableExhaustedError);
+  });
+
+  it("drawMultiple avec unique_draws tient compte des entrées déjà sorties lors des appels précédents", () => {
+    const draws = drawMultiple(LOOT_TABLE, 5, new SeededRng(7), new Set([0]));
+    expect(draws.map((d) => d.index).sort()).toEqual([1, 2]);
+    expect(draws.every((d) => typeof d.roll === "number")).toBe(true);
+  });
+
+  it("drawMultiple avec unique_draws dit que la table est épuisée plutôt que de rendre une liste vide", () => {
+    expect(() => drawMultiple(LOOT_TABLE, 1, new SeededRng(7), new Set([0, 1, 2]))).toThrow(TableExhaustedError);
   });
 });
 

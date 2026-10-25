@@ -17,8 +17,18 @@ import { getBlockById, listBlocksForEntity } from "@/src/server/repos/blocks";
 
 type TypedClient = SupabaseClient<Database>;
 
+/** V3.1-75 : un sous-tirage de la cascade (`{table:cle}`), dans l'ordre ou ses des se figent a l'ecran. */
+export interface ResolvedSubDraw {
+  key: string;
+  die: string;
+  roll: number;
+  text: string;
+}
+
 export interface ResolvedTableDraw {
   text: string;
+  /** V3.1-75 : les sous-tirages, profondeur d'abord ; vide sans cascade. */
+  subDraws: ResolvedSubDraw[];
   refs: BlockReference[];
   /** Prix de l'entree TIREE (retour utilisateur) — jamais celui d'une sous-table resolue en cascade, aucun cas d'usage actuel pour un prix qui traverserait une cascade. */
   price?: TableEntryPrice;
@@ -73,6 +83,7 @@ export async function resolveCascade(
 ): Promise<ResolvedTableDraw> {
   const cascadeKeys = [...new Set(draw.cascadeKeys)];
   const resultsByKey = new Map<string, string>();
+  const subDraws: ResolvedSubDraw[] = [];
 
   for (const key of cascadeKeys) {
     if (visited.has(key)) throw new TableCascadeCycleError(key);
@@ -86,10 +97,12 @@ export async function resolveCascade(
     subVisited.add(key);
     const resolvedSub = await resolveCascade(supabase, entityId, subDraw, rng, subVisited, depth + 1);
     resultsByKey.set(key, resolvedSub.text);
+    subDraws.push({ key, die: subTable.die, roll: subDraw.roll, text: resolvedSub.text }, ...resolvedSub.subDraws);
   }
 
   return {
     text: interpolateCascadeResults(draw.entry.text, resultsByKey),
+    subDraws,
     refs: draw.entry.refs ?? [],
     price: draw.entry.price,
     tier: draw.entry.tier,
@@ -102,21 +115,31 @@ export async function resolveCascade(
  * — jamais une exception pour un simple "pas trouve" (RLS s'en charge deja
  * en amont : un bloc que l'appelant ne peut pas lire n'apparait jamais ici).
  */
+/** V3.1-75 : un tirage direct, avec ce que l'ecran anime — le de de la table, son chiffre, la ligne sortie. */
+export interface BlockTableDraw extends ResolvedTableDraw {
+  die: string;
+  roll: number;
+  index: number;
+}
+
 export async function drawFromTableBlock(
   supabase: TypedClient,
   blockId: string,
   rng: Rng,
-  count: number
-): Promise<ResolvedTableDraw[] | null> {
+  count: number,
+  /** V3.1-75 : « Sans repetition » d'un appel a l'autre — indices des entrees deja sorties (ignore sans `unique_draws`). */
+  alreadyDrawn: ReadonlySet<number> = new Set()
+): Promise<BlockTableDraw[] | null> {
   const block = await getBlockById(supabase, blockId);
   if (!block || block.block_type !== "random_table") return null;
 
   const table = zRandomTableBlockData.parse(block.data);
-  const draws = drawMultiple(table, count, rng);
+  const draws = drawMultiple(table, count, rng, alreadyDrawn);
 
-  const resolved: ResolvedTableDraw[] = [];
+  const resolved: BlockTableDraw[] = [];
   for (const draw of draws) {
-    resolved.push(await resolveCascade(supabase, block.entity_id, draw, rng, new Set([table.key]), 1));
+    const cascade = await resolveCascade(supabase, block.entity_id, draw, rng, new Set([table.key]), 1);
+    resolved.push({ ...cascade, die: table.die, roll: draw.roll, index: draw.index });
   }
   return resolved;
 }

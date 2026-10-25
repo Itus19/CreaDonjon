@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import { SeededRng } from "@/src/core/dice/rng";
 import { drawFromTableBlock } from "./tables";
-import { TableCascadeCycleError } from "@/src/core/tables/errors";
+import { TableCascadeCycleError, TableExhaustedError } from "@/src/core/tables/errors";
 import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
 
 /**
@@ -54,14 +54,14 @@ describe.skipIf(!hasCreds)("tirage sur random_table, cascade et cycles (integrat
     }
   });
 
-  async function insertTableBlock(key: string, entries: unknown[]) {
+  async function insertTableBlock(key: string, entries: unknown[], uniqueDraws = false) {
     const { data, error } = await admin
       .from("blocks")
       .insert({
         entity_id: entityId,
         block_type: "random_table",
         display: { label: key, layout: "table" },
-        data: { __v: 1, key, die: "d20", entries, unique_draws: false },
+        data: { __v: 1, key, die: "d20", entries, unique_draws: uniqueDraws },
         display_order: 1000,
         visibility_level: "public",
         visibility_scope_id: null,
@@ -78,7 +78,10 @@ describe.skipIf(!hasCreds)("tirage sur random_table, cascade et cycles (integrat
       { range: { min: 1, max: 20 }, weight: 20, text: "Rien à signaler." },
     ]);
     const draws = await drawFromTableBlock(admin, blockId, new SeededRng(1), 1);
-    expect(draws).toEqual([{ text: "Rien à signaler.", refs: [] }]);
+    // V3.1-75 : le tirage rend aussi le dé, son chiffre et la ligne sortie (l'écran les anime).
+    expect(draws).toMatchObject([{ text: "Rien à signaler.", refs: [], subDraws: [], die: "d20", index: 0 }]);
+    expect(draws?.[0].roll).toBeGreaterThanOrEqual(1);
+    expect(draws?.[0].roll).toBeLessThanOrEqual(20);
   });
 
   it("resout un tirage en cascade en interrogeant l'autre table de la meme entite", async () => {
@@ -90,7 +93,28 @@ describe.skipIf(!hasCreds)("tirage sur random_table, cascade et cycles (integrat
     ]);
 
     const draws = await drawFromTableBlock(admin, rumorsBlockId, new SeededRng(2), 1);
-    expect(draws).toEqual([{ text: "Une caravane de des tisserands de Valdoria cherche une escorte.", refs: [] }]);
+    expect(draws).toMatchObject([{ text: "Une caravane de des tisserands de Valdoria cherche une escorte.", refs: [] }]);
+    // V3.1-75 : le sous-tirage rend son dé et son chiffre, pour que l'écran le fige après le premier.
+    expect(draws?.[0].subDraws).toHaveLength(1);
+    expect(draws?.[0].subDraws[0]).toMatchObject({ key: "marchands", die: "d20", text: "des tisserands de Valdoria" });
+  });
+
+  it("V3.1-75 : « sans répétition » ne ressort jamais une entrée déjà sortie, et dit quand tout est sorti", async () => {
+    const blockId = await insertTableBlock(
+      "butin",
+      [
+        { range: { min: 1, max: 7 }, weight: 7, text: "une dague" },
+        { range: { min: 8, max: 14 }, weight: 7, text: "une bourse" },
+        { range: { min: 15, max: 20 }, weight: 6, text: "une gemme" },
+      ],
+      true
+    );
+    for (let graine = 0; graine < 15; graine++) {
+      const draws = await drawFromTableBlock(admin, blockId, new SeededRng(graine), 1, new Set([0, 2]));
+      expect(draws?.[0].index).toBe(1);
+      expect(draws?.[0].text).toBe("une bourse");
+    }
+    await expect(drawFromTableBlock(admin, blockId, new SeededRng(1), 1, new Set([0, 1, 2]))).rejects.toThrow(TableExhaustedError);
   });
 
   it("detecte un cycle entre deux tables qui se referencent mutuellement", async () => {

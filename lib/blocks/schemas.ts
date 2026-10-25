@@ -54,6 +54,8 @@ export type SaveEntityBlocksInput = z.infer<typeof saveEntityBlocksSchema>;
 /** Tirage sur un bloc random_table (V1-E1) — un seul champ optionnel, jamais plus que le nombre d'entrees distinctes d'une table (verifie cote pur, src/core/tables/roll.ts). */
 export const drawTableSchema = z.object({
   count: z.number().int().min(1).max(20).default(1),
+  /** V3.1-75 : « Sans répétition » d'un appel à l'autre — indices des entrées déjà sorties (le serveur tire parmi les autres). */
+  exclude: z.array(z.number().int().min(0).max(999)).max(1000).default([]),
 });
 
 /**

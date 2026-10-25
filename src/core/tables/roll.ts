@@ -1,6 +1,6 @@
 import type { Rng } from "../dice/rng";
 import type { RandomTableData, TableEntry, TableEntryRange } from "./types";
-import { InvalidDieError, NoMatchingEntryError } from "./errors";
+import { InvalidDieError, NoMatchingEntryError, TableExhaustedError } from "./errors";
 
 /**
  * Reconstruit une table a partir d'un SOUS-ENSEMBLE de ses entrees (ex.
@@ -100,50 +100,72 @@ export interface TableDraw {
 
 export interface SingleTableDraw extends TableDraw {
   roll: number;
+  /** V3.1-75 : l'indice de l'entree sortie dans `table.entries` (la ligne qui s'allume, et ce que « sans repetition » retient). */
+  index: number;
 }
 
 /** Un tirage : lance le de, trouve l'entree, releve ses references de cascade. Ne resout PAS la cascade elle-meme (I/O — cote service, cf. src/server/services). */
 export function drawOnce(table: RandomTableData, rng: Rng): SingleTableDraw {
   const roll = rollOnDie(table.die, rng);
-  const entry = pickEntryForRoll(table.entries, roll);
-  if (!entry) throw new NoMatchingEntryError(roll);
-  return { entry, cascadeKeys: extractCascadeKeys(entry.text), roll };
+  const index = table.entries.findIndex((e) => roll >= e.range.min && roll <= e.range.max);
+  if (index === -1) throw new NoMatchingEntryError(roll);
+  const entry = table.entries[index];
+  return { entry, cascadeKeys: extractCascadeKeys(entry.text), roll, index };
+}
+
+/**
+ * V3.1-75 — un tirage qui evite les entrees deja sorties (`exclude`, indices),
+ * pour « Sans repetition » d'un appel a l'autre. Rejet d'abord (on relance le
+ * de, borne), puis repli sur une entree restante choisie par le RNG, avec un
+ * chiffre tire dans SA plage : le chiffre montre correspond toujours a la
+ * ligne sortie. Toutes sorties : `TableExhaustedError`.
+ */
+export function drawExcluding(table: RandomTableData, exclude: ReadonlySet<number>, rng: Rng): SingleTableDraw {
+  const remaining = table.entries.map((_, i) => i).filter((i) => !exclude.has(i));
+  if (remaining.length === 0) throw new TableExhaustedError();
+  const maxAttempts = table.entries.length * 10 + 10;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const roll = rollOnDie(table.die, rng);
+    const index = table.entries.findIndex((e) => roll >= e.range.min && roll <= e.range.max);
+    if (index === -1 || exclude.has(index)) continue;
+    const entry = table.entries[index];
+    return { entry, cascadeKeys: extractCascadeKeys(entry.text), roll, index };
+  }
+  const index = remaining[rng.nextInt(remaining.length)];
+  const entry = table.entries[index];
+  const span = Math.max(1, entry.range.max - entry.range.min + 1);
+  const roll = entry.range.min + rng.nextInt(span);
+  return { entry, cascadeKeys: extractCascadeKeys(entry.text), roll, index };
 }
 
 /**
  * Plusieurs tirages sur la meme table. `unique_draws` (specs/outils-mj.md
  * §2.1) : jamais deux fois la meme entree tant qu'il en reste d'inutilisees
- * — retire par rejet (on relance jusqu'a tomber sur une entree neuve, borne
- * a un nombre d'essais raisonnable pour ne jamais boucler indefiniment sur
- * une table tres desequilibree), puis repli deterministe sur les entrees
- * encore inutilisees dans l'ordre si le rejet n'a pas suffi. Jamais plus de
- * resultats que d'entrees distinctes dans ce mode.
+ * — chaque tirage passe par `drawExcluding` (rejet borne, puis repli sur une
+ * entree restante choisie par le RNG). Jamais plus de resultats que
+ * d'entrees distinctes restantes dans ce mode.
  */
-export function drawMultiple(table: RandomTableData, count: number, rng: Rng): TableDraw[] {
+export function drawMultiple(
+  table: RandomTableData,
+  count: number,
+  rng: Rng,
+  /** V3.1-75 : entrees deja sorties lors d'appels precedents (seulement avec `unique_draws`). */
+  alreadyDrawn: ReadonlySet<number> = new Set()
+): SingleTableDraw[] {
   if (!table.unique_draws) {
     return Array.from({ length: count }, () => drawOnce(table, rng));
   }
 
-  const targetCount = Math.min(count, table.entries.length);
-  const usedIndexes = new Set<number>();
-  const results: TableDraw[] = [];
-  const maxAttempts = table.entries.length * 10 + 10;
-
-  for (let attempt = 0; results.length < targetCount && attempt < maxAttempts; attempt++) {
-    const roll = rollOnDie(table.die, rng);
-    const index = table.entries.findIndex((e) => roll >= e.range.min && roll <= e.range.max);
-    if (index === -1 || usedIndexes.has(index)) continue;
-    usedIndexes.add(index);
-    const entry = table.entries[index];
-    results.push({ entry, cascadeKeys: extractCascadeKeys(entry.text) });
+  const used = new Set(alreadyDrawn);
+  const remaining = table.entries.filter((_, i) => !used.has(i)).length;
+  // Epuisee PAR les tirages precedents seulement : une table vide (palier filtre, generateurs) rend toujours une liste vide.
+  if (count > 0 && remaining === 0 && used.size > 0) throw new TableExhaustedError();
+  const targetCount = Math.min(count, remaining);
+  const results: SingleTableDraw[] = [];
+  while (results.length < targetCount) {
+    const draw = drawExcluding(table, used, rng);
+    used.add(draw.index);
+    results.push(draw);
   }
-
-  for (let index = 0; results.length < targetCount && index < table.entries.length; index++) {
-    if (usedIndexes.has(index)) continue;
-    usedIndexes.add(index);
-    const entry = table.entries[index];
-    results.push({ entry, cascadeKeys: extractCascadeKeys(entry.text) });
-  }
-
   return results;
 }

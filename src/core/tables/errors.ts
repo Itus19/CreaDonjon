@@ -26,3 +26,10 @@ export class TableCascadeCycleError extends TableError {
     super(`Cycle détecté dans un tirage en cascade (retour sur "${tableKey}")`);
   }
 }
+
+/** V3.1-75 : « Sans répétition » et toutes les entrées déjà sorties — il faut « Remettre à zéro ». */
+export class TableExhaustedError extends TableError {
+  constructor() {
+    super("Toutes les entrées de cette table sont déjà sorties : remettez-la à zéro.");
+  }
+}
