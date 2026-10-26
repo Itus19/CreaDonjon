@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <title>Catalogue — Wiki visuel</title>
 <script src="./support.js"></script>
-<link rel="stylesheet" href="/_blob/021344de0841a3f0ae2a7403bccf3774">
+<link rel="stylesheet" href="/_blob/d3065d91e6c7b2dfb88ee3576b66ef09">
 </head>
 <body>
 <x-dc>
@@ -68,6 +68,34 @@ code{font-family:'Geist Mono',ui-monospace,monospace;font-size:0.92em}
 <div class="flex flex-col gap-2 rounded-xl border border-dashed border-edge-strong p-4">
 <span class="text-xs font-semibold uppercase tracking-wider text-accent">À essayer</span>
 <div class="relative rounded-lg border border-edge bg-panel-sunken" style="height: 160px; max-width: 420px"><span class="absolute" style="left: 60px; top: 50px"><button type="button" aria-label="Épingle" class="flex items-center justify-center overflow-hidden rounded-full border-2 border-accent bg-panel-raised shadow-md transition-transform hover:scale-110 " style="width: 28px; height: 28px"><span class="font-semibold text-ink-muted" style="font-size: 11px">C</span></button></span><span class="absolute" style="left: 200px; top: 90px"><button type="button" aria-label="Épingle" class="flex items-center justify-center overflow-hidden rounded-full border-2 border-accent bg-panel-raised shadow-md transition-transform hover:scale-110 " style="width: 36px; height: 36px"><span class="font-semibold text-ink-muted" style="font-size: 14px">F</span></button></span><span class="absolute" style="left: 320px; top: 40px"><button type="button" aria-label="Épingle" class="flex items-center justify-center overflow-hidden rounded-full border-2 border-accent bg-panel-raised shadow-md transition-transform hover:scale-110 " style="width: 20px; height: 20px"><span class="h-2 w-2 rounded-full bg-accent"></span></button></span></div><p class="text-xs text-ink-muted">Survole les épingles.</p>
+</div>
+<div class="flex flex-col gap-3 border-t border-edge pt-4">
+<div class="flex flex-wrap items-baseline justify-between gap-3"><span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Carte et liste par couches</span><span class="text-xs text-ink-muted">MapBlockEditor.tsx · map/CarteListe.tsx · lib/ui/carte.ts</span></div>
+<div class="grid gap-3" style="grid-template-columns: minmax(0, 1fr) 270px">
+<div class="flex min-w-0 flex-col gap-2">
+<div class="relative rounded-md border border-edge/60 bg-panel-sunken" style="height: 200px"><svg class="pointer-events-none absolute inset-0 h-full w-full overflow-visible" aria-hidden="true"><polygon points="120,150 160,80 200,150" fill="var(--success)" fill-opacity="0.35" stroke="var(--success)" stroke-width="2"></polygon></svg><button type="button" aria-label="Punaise" class="absolute flex -translate-x-1/2 -translate-y-1/2 items-center justify-center overflow-hidden rounded-full border-2 border-accent bg-panel-raised shadow-md" style="left: 70px; top: 70px; width: 20px; height: 20px"><span class="h-2 w-2 rounded-full bg-accent"></span></button><button type="button" aria-label="Punaise allumée" class="absolute flex -translate-x-1/2 -translate-y-1/2 scale-125 items-center justify-center overflow-hidden rounded-full border-2 border-accent bg-panel-raised shadow-md ring-4 ring-accent/50" style="left: 220px; top: 60px; width: 20px; height: 20px"><span class="h-2 w-2 rounded-full bg-accent"></span></button><button type="button" aria-label="Punaise" class="absolute flex -translate-x-1/2 -translate-y-1/2 items-center justify-center overflow-hidden rounded-full border-2 border-accent bg-panel-raised shadow-md" style="left: 40px; top: 140px; width: 20px; height: 20px"><span class="h-2 w-2 rounded-full bg-accent"></span></button><div class="absolute bottom-2 right-2 flex flex-col overflow-hidden rounded-md border border-edge bg-panel-raised shadow-md"><button type="button" aria-label="Zoomer" class="h-8 w-8 text-sm text-ink transition-colors hover:bg-panel-sunken">+</button><button type="button" aria-label="Dézoomer" class="h-8 w-8 text-sm text-ink transition-colors hover:bg-panel-sunken">−</button><button type="button" aria-label="Recadrer la carte" class="h-8 w-8 text-sm text-ink transition-colors hover:bg-panel-sunken">⤢</button></div></div>
+</div>
+<div class="flex min-w-0 flex-col gap-2">
+<div class="flex flex-wrap gap-1.5"><button type="button" class="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised">+ Punaise</button><button type="button" class="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised">+ Zone</button><button type="button" class="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised">+ Couche</button></div>
+<ul class="flex flex-col gap-3">
+<li class="flex flex-col gap-1">
+<div class="flex items-center justify-between gap-2"><h4 class="min-w-0 truncate text-xs font-semibold uppercase tracking-wide text-ink-muted">Villes</h4><span class="inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs transition-colors hover:bg-panel-raised border-success/45 text-success"><span aria-hidden class="h-1.5 w-1.5 rounded-full bg-success"></span>Public</span></div>
+<ul class="flex flex-col">
+<li class="flex items-center justify-between gap-2 rounded-md px-1"><span class="flex min-w-0 flex-1 items-center gap-2 py-1 text-left text-sm text-ink"><span aria-hidden class="h-2 w-2 shrink-0 rounded-full bg-accent"></span><span class="truncate">Auberge du Pont</span></span><span class="inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs border-success/45 text-success"><span aria-hidden class="h-1.5 w-1.5 rounded-full bg-success"></span>Public</span></li>
+<li class="flex items-center justify-between gap-2 rounded-md px-1"><span class="flex min-w-0 flex-1 items-center gap-2 py-1 text-left text-sm text-ink"><span aria-hidden class="h-2 w-2 shrink-0 rounded-full bg-gm"></span><span class="truncate">Trésor</span></span><span class="inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs border-gm/55 text-gm"><span aria-hidden class="h-1.5 w-1.5 rounded-full bg-gm"></span>MJ</span></li>
+<li class="flex items-center justify-between gap-2 rounded-md px-1"><span class="flex min-w-0 flex-1 items-center gap-2 py-1 text-left text-sm text-ink"><span aria-hidden class="h-2 w-2 shrink-0 rounded-[2px] bg-success"></span><span class="truncate">Marais</span></span><span class="inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs border-success/45 text-success"><span aria-hidden class="h-1.5 w-1.5 rounded-full bg-success"></span>Public</span></li>
+</ul>
+</li>
+<li class="flex flex-col gap-1">
+<div class="flex items-center justify-between gap-2"><h4 class="min-w-0 truncate text-xs font-semibold uppercase tracking-wide text-ink-muted">Secrets du MJ</h4><span class="inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs transition-colors hover:bg-panel-raised border-gm/55 text-gm"><span aria-hidden class="h-1.5 w-1.5 rounded-full bg-gm"></span>MJ</span></div>
+<ul class="flex flex-col">
+<li class="flex items-center justify-between gap-2 rounded-md bg-accent/15 px-1"><span class="flex min-w-0 flex-1 items-center gap-2 py-1 text-left text-sm text-ink"><span aria-hidden class="h-2 w-2 shrink-0 rounded-full bg-accent"></span><span class="truncate">Repaire caché</span></span><span class="inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs border-success/45 text-success"><span aria-hidden class="h-1.5 w-1.5 rounded-full bg-success"></span>Public</span></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<p class="text-xs text-ink-muted">Une punaise n'est vue que si sa couche l'est aussi (ADR 0017). Au téléphone, la liste passe sous la carte.</p>
 </div>
 </section>
 <section id="arbre" class="flex scroll-mt-28 flex-col gap-4 rounded-2xl border border-edge bg-panel p-6">
@@ -196,7 +224,7 @@ code{font-family:'Geist Mono',ui-monospace,monospace;font-size:0.92em}
 </main>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":7460}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":7760}}'>
 class Component extends DCLogic {
   constructor(props) {
     super(props);
