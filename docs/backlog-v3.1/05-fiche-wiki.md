@@ -68,6 +68,8 @@ serveur tire et lance** (règle 8).
 tout le reste. Si Sonnet bute sur une décision que le ticket ne tranche pas,
 il s'arrête et la note ici.
 
+**État au 26 octobre** : 63 à 79 sont faits (65 par la session locale de l'auteur, les autres par la session cloud ; détail dans `termines.md`). Restent les deux suites décidées par l'auteur le 26 octobre : **146** (musique, YouTube) et **147** (repaire et défenses). La recharge des capacités de créature en combat est rattachée à **V3.1-129** (`12-regles-jouables.md`).
+
 **Ordre conseillé** : 63 → 64 (tout le reste s'appuie sur la carte de verre
 et sa pastille) ; puis Récit (65 à 68) ; puis 69 (noyau psyché) → 70, 71,
 72, 73 ; puis Outils de jeu (75 à 78) ; 79 après V3.1-26 et 33 ; 74 après
@@ -92,6 +94,57 @@ V3.1-48.
 | V3.1-77 | Musique (A) : la platine, les bornes, la durée des fondus | M | Sonnet | 63 |
 | V3.1-78 | Carte (C) : la carte et sa liste par couches | M | Sonnet | 63, 64 ; « Voir comme » : 12 |
 | V3.1-79 | Fiche de créature (A) : la fiche de personnage, pour une créature | L | Sonnet | 25, 26, 33, 63 |
+| V3.1-146 | Musique : la position et la durée de la piste YouTube (suite de 77) | S | Sonnet | 77 |
+| V3.1-147 | Fiche de créature : le repaire et les défenses (suite de 79) | M | **Opus** puis Sonnet | 79 |
 
 ---
+
+### ☐ V3.1-146 — Musique : la position et la durée de la piste YouTube · `S` · sans modèle IA — **prêt**
+
+**Modèle conseillé : Sonnet** — décidé par l'auteur le 26 octobre ; le lecteur existe.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la section « Musique » de la planche `OutilsMJ.dc.html` ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Reçu de V3.1-77** : la platine du bloc Musique devait montrer la progression, les temps et la durée de chaque piste. Le lecteur partagé (`components/shell/MusicVoice.tsx`, `MusicPlaybackContext.tsx`, `youtubeApi.ts`) ne publie pas la position, et la donnée du bloc n'a pas de durée. **Décidé** : YouTube seulement (comme les bornes et les fondus) ; **rien pour Spotify et SoundCloud** — leur ligne garde sa forme actuelle, sans barre ni durée, sans phrase d'excuse.
+
+**Départ** : `components/blocks/MusicBlockEditor.tsx` (platine et liste), `lib/ui/musique.ts`, le lecteur partagé. **Dépend de** : 77.
+
+**Ce qui est décidé**
+- Le lecteur YouTube expose déjà `getCurrentTime()` et `getDuration()` (API IFrame) : le contexte de lecture les publie pour la voix en cours, **relevés pendant la lecture seulement** (un relevé par seconde au plus, arrêté en pause et quand plus rien ne joue — `docs/QUOTAS.md` ne compte pas ce relevé local, mais pas de minuterie qui tourne à vide).
+- Platine : la barre de progression et « 0:42 / 3:15 » sous le titre, en tenant compte des bornes (`startSeconds` / `endSeconds` : la barre va du début à la fin choisis).
+- Liste : la durée d'une piste YouTube **une fois connue** (après sa première lecture ; jamais un appel au service juste pour la durée), masquée au téléphone comme aujourd'hui.
+- Aucun champ ajouté au schéma `music` : la durée est une donnée de lecture, pas du bloc (règle 16).
+
+**Critères d'acceptation**
+- [ ] La barre et les temps avancent pendant la lecture d'une piste YouTube et s'arrêtent en pause (test du relevé : rien ne tourne en pause).
+- [ ] Une piste bornée « 0:12 → 1:30 » montre une barre de 0:12 à 1:30.
+- [ ] Spotify et SoundCloud : aucune barre ni durée, rien d'autre ne change.
+- [ ] La page de lecture ne change pas (le ♪ à côté du nom de la fiche reste tel quel).
+
+---
+
+### ☐ V3.1-147 — Fiche de créature : le repaire et les défenses · `M` · sans modèle IA — **prêt**
+
+**Modèle conseillé : Opus (schéma), puis Sonnet (affichage)** — ajout décidé par l'auteur le 26 octobre.
+
+**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la section « Fiche de créature » de la planche `OutilsMJ.dc.html` ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
+
+**Reçu de V3.1-79** : la planche « Fiche de créature » montre le repaire (« FP 8 · 3 900 PX · Thundertree », lien de fiche) et, dans Maîtrises, les défenses (immunités, résistances). Le schéma `statblock` n'a aucun champ pour eux : la fiche ne les affiche pas.
+
+**Départ** : `src/core/schemas/blocks/statblock.ts`, `components/blocks/MonsterStatblockSheet.tsx` (formulaire `StatblockForm`), `components/blocks/CreatureSheet.tsx`, `lib/ui/creature.ts`. **Dépend de** : 79.
+
+**Ce qui est décidé**
+- Schéma `statblock` (données du bloc, pas de migration SQL : les blocs existants restent valides car tous les champs sont facultatifs) :
+  - `lair` : une référence de fiche (`zBlockReference`, `kind: "entity"`), facultative ;
+  - `defenses` : `{ damage_immunities?, damage_resistances?, damage_vulnerabilities?, condition_immunities? }`, chacun une liste de chaînes (les noms des types de dégâts et des états, tels que le bestiaire les écrit).
+  - Mécanique : ces listes ne font **rien** en jeu ici ; leur effet sur les dégâts est le travail de V3.1-137 (« résistances et immunités »), qui les lira.
+- Visibilité du repaire : le lien ne se résout côté serveur que si le lecteur voit la fiche citée (règle 5, même chemin que les mentions de l'Encadré, V3.1-66) ; sinon, rien ne s'écrit.
+- Saisie : le formulaire « Modifier les valeurs » gagne un sélecteur de fiche pour le repaire et quatre champs de liste (pastilles, « + »), comme les autres listes du formulaire.
+- Affichage : l'en-tête ajoute « · <repaire> » (lien de fiche) ; l'onglet Maîtrises ajoute « Défenses » (Immunités, Résistances, Vulnérabilités, États immunisés), une ligne par catégorie présente.
+
+**Critères d'acceptation**
+- [ ] Un bloc `statblock` existant, sans les nouveaux champs, s'ouvre et s'enregistre sans erreur (test du schéma).
+- [ ] Un repaire caché au lecteur n'est pas envoyé (test serveur, wiki public et coquille joueur).
+- [ ] Les défenses s'affichent dans Maîtrises, une ligne par catégorie présente, rien quand la liste est vide.
+- [ ] Aucune règle de dégâts ne change (le travail mécanique reste à V3.1-137).
 

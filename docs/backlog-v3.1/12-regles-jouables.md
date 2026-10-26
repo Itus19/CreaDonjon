@@ -16,6 +16,8 @@
 
 *Reçu de V3.1-113 (13 octobre)* : la recharge partielle `short_rest_one` existe (noyau `rechargeTrackers`) ; les ressources déclarées par les règles l'utiliseront pour Rage, Conduit divin, Forme sauvage, Second souffle, et `long_rest` par niveau pour l'Arcanum mystique.
 
+*Reçu de V3.1-79 (26 octobre), décidé par l'auteur* : la **recharge des capacités de monstre** (« Souffle empoisonné (recharge 5–6) ») entre ici, comme une ressource qui se recharge, et non comme une colonne isolée. Aujourd'hui, la fiche de créature montre la capacité et sa règle (lue dans le texte : `lireRecharge`, `lib/ui/creature.ts`), sans point « prêt / dépensé » ni bouton, même en combat : une instance de combat (`combat_participants`) n'a aucun champ pour cet état. Le bloc `statblock` reste un **modèle** (specs/outils-mj.md §5) : l'état prêt / dépensé vit dans l'instance de combat, jamais dans le bloc.
+
 **Modèle conseillé : Opus** — noyau du moteur, tests d'abord.
 **Dépend de** : V3.1-113 (`short_rest_one`) pour la recharge partielle ; rien d'autre pour le reste.
 
@@ -25,6 +27,7 @@
 - Formules : `column.<clé>` (colonne de la progression de la classe qui accorde la fiche), `proficiency`, `spell_save_dc`.
 - `characterSheet()` : liste des ressources calculée depuis les fiches du personnage (objets seulement équipés ou liés) ; lecture des effets actifs en couche 7, modificateurs recalculés.
 - Fonctions pures : `planActivation` (vérifie `requires`, coût, budget, cibles ; lance les dés par le `Rng` injecté ; rend un plan d'écritures), `expireEffects` (sur `turn_start`, `turn_end`, `round_end`, repos, avance du temps), consommation d'un jeton, état de couverture d'une fiche.
+- **Recharge d'une capacité de créature** (reçu de V3.1-79) : une ressource à un usage, « prête » ou « dépensée », qui se recharge sur un jet de d6 au début du tour de la créature (seuil lu dans la règle, ex. 5–6) ; son état vit dans l'**instance de combat** — chaque « Gobelin ×4 » a le sien. La structure de la règle (seuil, déclencheur) passe en données ; l'état de l'instance demande sans doute une colonne (ou un champ de l'état d'instance) : migration à décider dans ce ticket. Ensuite, la fiche de créature (`CreatureSheet.tsx`) branche le point « prêt / dépensé » et le jet « Recharge d6 » sur l'instance choisie, et estompe les pastilles d'une capacité dépensée (ce que la planche « Fiche de créature » prévoyait).
 
 **Critères d'acceptation**
 - [ ] Un paladin 9 a 2 Conduits divins calculés depuis sa progression ; aucun compteur n'est écrit sur sa fiche (test).
@@ -32,6 +35,7 @@
 - [ ] L'Effrayé d'Abjuration disparaît dès que son porteur subit des dégâts, et au bout de 10 rounds sinon (tests).
 - [ ] Un jeton « avantage à un jet de votre choix » s'engage une fois puis disparaît (test).
 - [ ] Une activation sans ressource suffisante est refusée avec sa raison, sans rien écrire (test).
+- [ ] Recharge d'une créature : un souffle dépensé par « Gobelin 1 » ne l'est pas pour « Gobelin 2 » ; au début du tour de Gobelin 1, un d6 lancé par le serveur (`Rng` fixe) à 5 ou 6 le rend prêt, à 1–4 non (tests).
 
 ---
 
