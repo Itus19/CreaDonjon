@@ -2,6 +2,22 @@
 
 ---
 
+### ☑ V3.1-79 — Fiche de créature (A) : la fiche de personnage, pour une créature · `L` · sans modèle IA — **fait le 26 octobre**
+
+**Critères d'acceptation**
+- [x] Les quatre tuiles de constantes ont la même largeur et leurs libellés tiennent sur une ligne à 920 px et 390 px.
+- [x] Les composants de la fiche sont importés, pas recopiés (extraits une fois : `BouclierCA`, `EtatsEnCours`, `TuileCaracteristique`, variantes de `StatBadge` et `CommandeE`).
+- [x] Une pastille ouvre l'outil de dés avec la bonne formule (test de la construction du jet).
+- [x] Hors combat : aucune écriture de PV ou d'état possible depuis le bloc ; aucun champ de jeu ajouté au schéma `statblock`.
+- [x] Les modificateurs sont calculés (FOR 19 → +4), jamais stockés (test).
+
+**Réalisé** (serveur par Opus ; interface par Sonnet, relue par Opus ; vérifié en direct, hors combat et en combat, 920 et 390 px)
+- Serveur : route `GET /api/entities/[id]/creature-combat` (`creatureCombat.ts`, MJ seulement, combat en cours seulement) ; une fiche de créature entre dans l'initiative (CA et PV lus dans son `statblock`) ; **seul un personnage partage son état de jeu avec sa ligne de combat** — sans cela, le déclencheur de V3.1-38 recopiait les PV d'une instance sur toutes les instances de la même créature (trouvé en direct, test d'intégration).
+- Interface : `CreatureSheet.tsx` en deux colonnes, sélecteur d'instance numéroté (« … · 1 »), écritures par la route du participant sans engager le bloc. Logique pure dans `lib/ui/creature.ts`. L'anneau écrit la valeur et le maximum sur deux lignes au-delà de cinq signes (« 136 » / « /136 »).
+- Reste connu : « Ce qui se recharge » reste en lecture même en combat (aucun champ de recharge dans une instance — ajout de schéma à décider) ; le repaire et les défenses ne s'affichent pas faute de champs dans `statblock` ; la tuile de caractéristique de la fiche de personnage passe ses libellés de 10–11 px à 12 px (plancher du lint).
+
+---
+
 ### ☑ V3.1-78 — Carte (C) : la carte et sa liste par couches · `M` · sans modèle IA — **fait le 26 octobre**
 
 **Critères d'acceptation**
