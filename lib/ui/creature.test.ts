@@ -218,3 +218,33 @@ describe("libellesInstances", () => {
     expect(r.map((x) => x.value)).toEqual(["a", "b", "c"]);
   });
 });
+
+import { ajouterDefense, definirRepaire, retirerDefense } from "./creature";
+import type { StatblockBlockData } from "@/src/core/schemas/blocks/statblock";
+
+describe("repaire et défenses", () => {
+  const base = {
+    __v: 1, size: "M", creature_type: "x", ac: { value: 10 }, hp: { value: 5 }, speed: "9 m",
+    abilities: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 },
+    traits: [], actions: [], reactions: [], legendary_actions: [],
+  } as StatblockBlockData;
+  it("ajoute en rognant, refuse le vide et le doublon", () => {
+    const a = ajouterDefense(base, "damage_immunities", "  feu ");
+    expect(a.defenses).toEqual({ damage_immunities: ["feu"] });
+    expect(ajouterDefense(a, "damage_immunities", "Feu")).toBe(a);
+    expect(ajouterDefense(a, "damage_immunities", "   ")).toBe(a);
+  });
+  it("vider une liste supprime sa clé, puis `defenses`", () => {
+    let d = ajouterDefense(base, "damage_immunities", "feu");
+    d = ajouterDefense(d, "condition_immunities", "empoisonné");
+    d = retirerDefense(d, "damage_immunities", "feu");
+    expect(Object.keys(d.defenses ?? {})).toEqual(["condition_immunities"]);
+    d = retirerDefense(d, "condition_immunities", "empoisonné");
+    expect("defenses" in d).toBe(false);
+  });
+  it("le repaire : `null` supprime la clé", () => {
+    const d = definirRepaire(base, "e1");
+    expect(d.lair).toEqual({ kind: "entity", id: "e1" });
+    expect("lair" in definirRepaire(d, null)).toBe(false);
+  });
+});

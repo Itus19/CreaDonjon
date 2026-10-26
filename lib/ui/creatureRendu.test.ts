@@ -111,4 +111,30 @@ describe("rendu de la fiche de créature", () => {
     expect(html).toContain("DD 14");
     expect(html).toContain("12d6");
   });
+
+  it("le repaire est un lien de fiche quand elle est connue, rien sinon", () => {
+    const avecRepaire = { ...donnees, lair: { kind: "entity" as const, id: "l1" } };
+    const lieux = [{ id: "l1", name: "Thundertree", slug: "thundertree", entity_kind: "location" }];
+    const html = avec(createElement(CreatureSheet, props({ data: avecRepaire, otherEntities: lieux })));
+    expect(html).toContain('href="/m/monde/f/thundertree"');
+    expect(html).toContain("rich-ref-mention");
+    expect(html).toContain("Thundertree");
+    const inconnu = avec(createElement(CreatureSheet, props({ data: avecRepaire, otherEntities: [] })));
+    expect(inconnu).not.toContain("Thundertree");
+    expect(inconnu).not.toContain("rich-ref-mention");
+  });
+
+  it("Maîtrises : une ligne de défenses par catégorie présente, rien quand c'est vide", () => {
+    const avecDef = { ...donnees, defenses: { damage_immunities: ["poison"], condition_immunities: ["empoisonné", "charmé"] } };
+    const onglet = (data: StatblockBlockData) =>
+      // Le panneau actif est « Actions » : on rend le HTML de l'onglet Maîtrises par son état initial forcé.
+      avec(createElement(CreatureSheet, props({ data, ongletInitial: "maitrises" })));
+    const html = onglet(avecDef);
+    expect(html).toContain("Défenses");
+    expect(html).toContain("Immunités");
+    expect(html).toContain("poison");
+    expect(html).toContain("empoisonné, charmé");
+    expect(html).not.toContain("Résistances");
+    expect(onglet(donnees)).not.toContain("Défenses");
+  });
 });

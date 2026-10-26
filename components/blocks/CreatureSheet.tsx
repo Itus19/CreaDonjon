@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import type { StatblockBlockData } from "@/src/core/schemas/blocks/statblock";
 import { ABILITY_LABELS as ABILITY_NAMES, SKILLS, type Skill } from "@/src/core/rules/sheet";
@@ -9,6 +10,7 @@ import BouclierCA from "@/components/shared/BouclierCA";
 import CommandeE from "@/components/shared/CommandeE";
 import Dropdown from "@/components/shared/Dropdown";
 import Tabs, { TabPanel } from "@/components/shared/Tabs";
+import type { OtherEntityOption } from "@/components/entities/RelationsChips";
 import { StatBadge } from "./RangeeChiffree";
 import EtatsEnCours from "./EtatsEnCours";
 import NomDeRegle from "./NomDeRegle";
@@ -96,6 +98,10 @@ export interface FicheCreatureProps {
   onJet: (jet: JetPastille) => void;
   /** Message d'échec d'une écriture dans le combat, affiché tel quel. */
   erreur: string | null;
+  /** Les fiches du monde, pour résoudre le repaire (V3.1-147) : une fiche absente de la liste ne s'affiche pas. */
+  otherEntities?: OtherEntityOption[];
+  /** L'onglet ouvert au départ (« actions » par défaut). */
+  ongletInitial?: Onglet;
 }
 
 /**
@@ -122,9 +128,11 @@ export default function CreatureSheet({
   etatsDisponibles,
   onJet,
   erreur,
+  otherEntities = [],
+  ongletInitial = "actions",
 }: FicheCreatureProps) {
   const t = useTranslations("fiche.creature");
-  const [onglet, setOnglet] = useState<Onglet>("actions");
+  const [onglet, setOnglet] = useState<Onglet>(ongletInitial);
 
   const instance = combat ? instanceChoisie(combat, participantId) : null;
   const vitesses = lireVitesses(data.speed);
@@ -138,6 +146,17 @@ export default function CreatureSheet({
   const ligneIdentite = alignement
     ? t("identiteAlignement", { type: data.creature_type, taille: tailleCourte(data.size), alignement })
     : t("identite", { type: data.creature_type, taille: tailleCourte(data.size) });
+  const repaire = data.lair ? otherEntities.find((e) => e.id === data.lair?.id) : undefined;
+  const defenses = (
+    [
+      ["damage_immunities", t("immunitesDegats")],
+      ["damage_resistances", t("resistances")],
+      ["damage_vulnerabilities", t("vulnerabilites")],
+      ["condition_immunities", t("etatsImmunises")],
+    ] as const
+  )
+    .map(([cle, libelle]) => ({ cle, libelle, valeurs: data.defenses?.[cle] ?? [] }))
+    .filter((d) => d.valeurs.length > 0);
   const hpMax = instance ? instance.hpMax : data.hp.value;
   const hpCourant = instance ? instance.hpCurrent : data.hp.value;
   const complementPv = [
@@ -182,9 +201,17 @@ export default function CreatureSheet({
           <div className="min-w-0">
             {nom && <div className="truncate font-display text-lg font-bold text-ink">{nom}</div>}
             <div className="text-sm text-ink-soft">{ligneIdentite}</div>
-            {data.challenge_rating && (
+            {(data.challenge_rating || repaire) && (
               <div className="text-xs text-ink-muted">
-                {xp !== null ? t("fpLigne", { fp: data.challenge_rating, px: formaterNombre(xp) }) : t("fpLigneSansPx", { fp: data.challenge_rating })}
+                {data.challenge_rating && (xp !== null ? t("fpLigne", { fp: data.challenge_rating, px: formaterNombre(xp) }) : t("fpLigneSansPx", { fp: data.challenge_rating }))}
+                {repaire && (
+                  <>
+                    {data.challenge_rating ? " · " : ""}
+                    <Link href={`/m/${worldSlug}/f/${repaire.slug}`} prefetch={false} className="rich-ref-mention">
+                      {repaire.name}
+                    </Link>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -372,6 +399,16 @@ export default function CreatureSheet({
                   </div>
                 )}
               </div>
+              {defenses.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wide text-accent">{t("defenses")}</span>
+                  {defenses.map((d) => (
+                    <p key={d.cle} className="text-sm text-ink">
+                      <span className="text-ink-muted">{d.libelle}</span> {d.valeurs.join(", ")}
+                    </p>
+                  ))}
+                </div>
+              )}
               <div className="flex flex-col gap-2">
                 <span className="text-xs font-bold uppercase tracking-wide text-accent">{t("sens")}</span>
                 <p className="text-sm text-ink">{data.senses?.trim() || t("aucunSens")}</p>

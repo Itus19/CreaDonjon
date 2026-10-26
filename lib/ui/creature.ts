@@ -10,6 +10,7 @@
 import { z } from "zod";
 import { DIE_TYPES, type DieType } from "@/src/core/dice/roll";
 import type { BlockAbility } from "@/src/core/schemas/blocks/abilities";
+import type { StatblockBlockData } from "@/src/core/schemas/blocks/statblock";
 
 export const CARACTERISTIQUES: readonly BlockAbility[] = ["str", "dex", "con", "int", "wis", "cha"];
 
@@ -310,4 +311,41 @@ export function libellesInstances(instances: readonly { participantId: string; l
     vus.set(i.label, rang);
     return { value: i.participantId, label: `${i.label} · ${rang}` };
   });
+}
+
+// ---- le repaire et les défenses (V3.1-147) ---------------------------------------
+
+export type CleDefense = "damage_immunities" | "damage_resistances" | "damage_vulnerabilities" | "condition_immunities";
+export const CLES_DEFENSES: readonly CleDefense[] = ["damage_immunities", "damage_resistances", "damage_vulnerabilities", "condition_immunities"];
+
+type Defenses = NonNullable<StatblockBlockData["defenses"]>;
+
+/** Le bloc avec ces défenses ; aucune liste non vide : la clé `defenses` disparaît (jamais `undefined` écrit). */
+function avecDefenses(data: StatblockBlockData, defenses: Defenses): StatblockBlockData {
+  const { defenses: _ancien, ...reste } = data;
+  void _ancien;
+  const gardees = Object.fromEntries(Object.entries(defenses).filter(([, l]) => Array.isArray(l) && l.length > 0)) as Defenses;
+  return Object.keys(gardees).length > 0 ? { ...reste, defenses: gardees } : reste;
+}
+
+/** Ajoute une valeur à une liste : espaces rognés, chaîne vide et doublon (sans tenir compte de la casse) refusés. */
+export function ajouterDefense(data: StatblockBlockData, cle: CleDefense, saisie: string): StatblockBlockData {
+  const valeur = saisie.trim();
+  const liste = data.defenses?.[cle] ?? [];
+  if (valeur === "" || liste.some((v) => v.toLowerCase() === valeur.toLowerCase())) return data;
+  return avecDefenses(data, { ...data.defenses, [cle]: [...liste, valeur] });
+}
+
+/** Retire une valeur ; une liste vidée supprime sa clé, des défenses vides la leur. */
+export function retirerDefense(data: StatblockBlockData, cle: CleDefense, valeur: string): StatblockBlockData {
+  const liste = data.defenses?.[cle];
+  if (!liste) return data;
+  return avecDefenses(data, { ...data.defenses, [cle]: liste.filter((v) => v !== valeur) });
+}
+
+/** Le repaire : `null` supprime la clé `lair`. */
+export function definirRepaire(data: StatblockBlockData, id: string | null): StatblockBlockData {
+  const { lair: _ancien, ...reste } = data;
+  void _ancien;
+  return id === null ? reste : { ...reste, lair: { kind: "entity", id } };
 }

@@ -411,6 +411,7 @@ export function BlockDataEditor({
         <MonsterStatblockSheet
           worldSlug={worldSlug}
           entityId={block.entityId}
+          otherEntities={otherEntities}
           data={block.data as StatblockBlockData}
           onChange={(d) => onChange(d)}
         />
@@ -1466,6 +1467,7 @@ function SortableBlockCard({
             worldSlug={worldSlug}
             entityId={entityId}
             entityName={entityName}
+            otherEntities={otherEntities}
             data={block.data as StatblockBlockData}
             onChange={(data) => onPatchBlock(block.id, { data })}
           />

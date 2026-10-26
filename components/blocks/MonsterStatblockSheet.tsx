@@ -7,7 +7,8 @@ import { useWorldRuleEntries } from "./useWorldRuleEntries";
 import { useDiceRoll } from "@/components/shell/DiceRollPanel";
 import { lireCombatCreature } from "@/lib/ui/creatureApi";
 import { modifierParticipant } from "@/lib/ui/initiativeApi";
-import { instanceChoisie, pvApresEcart, type CombatCreature } from "@/lib/ui/creature";
+import { CLES_DEFENSES, ajouterDefense, definirRepaire, instanceChoisie, pvApresEcart, retirerDefense, type CleDefense, type CombatCreature } from "@/lib/ui/creature";
+import type { OtherEntityOption } from "@/components/entities/RelationsChips";
 import type { StatblockBlockData } from "@/src/core/schemas/blocks/statblock";
 import type { BlockAbility } from "@/src/core/schemas/blocks/abilities";
 import { SKILLS, type Skill } from "@/src/core/rules/sheet";
@@ -142,6 +143,58 @@ function FeatureList({
   );
 }
 
+const AUCUN_REPAIRE = "";
+const LIBELLE_DEFENSE: Record<CleDefense, "immunitesDegats" | "resistances" | "vulnerabilites" | "etatsImmunises"> = {
+  damage_immunities: "immunitesDegats",
+  damage_resistances: "resistances",
+  damage_vulnerabilities: "vulnerabilites",
+  condition_immunities: "etatsImmunises",
+};
+
+/** Une liste de défenses en pastilles, avec son champ et son « + » (V3.1-147). */
+function ListeDefense({ cle, data, onChange }: { cle: CleDefense; data: StatblockBlockData; onChange: (data: StatblockBlockData) => void }) {
+  const t = useTranslations("fiche.creature");
+  const [saisie, setSaisie] = useState("");
+  const liste = t(LIBELLE_DEFENSE[cle]);
+  function ajouter() {
+    const suivant = ajouterDefense(data, cle, saisie);
+    if (suivant !== data) onChange(suivant);
+    setSaisie("");
+  }
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">{liste}</span>
+      <div className="flex flex-wrap gap-1.5">
+        {(data.defenses?.[cle] ?? []).map((valeur) => (
+          <span key={valeur} className="inline-flex items-center gap-1 rounded-full border border-edge px-2.5 py-0.5 text-xs text-ink">
+            {valeur}
+            <button type="button" aria-label={t("retirerDefense", { valeur, liste })} onClick={() => onChange(retirerDefense(data, cle, valeur))} className="text-danger hover:underline">
+              ×
+            </button>
+          </span>
+        ))}
+      </div>
+      <div className="flex items-center gap-1.5">
+        <input
+          value={saisie}
+          onChange={(e) => setSaisie(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              ajouter();
+            }
+          }}
+          aria-label={t("champDefense", { liste })}
+          className="min-w-0 flex-1 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
+        />
+        <button type="button" onClick={ajouter} aria-label={t("ajouterDefense", { liste })} title={t("ajouter")} className="rounded-full border border-edge px-2.5 py-0.5 text-xs text-ink transition-colors hover:bg-panel-raised">
+          +
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /**
  * Fiche de créature (V1-E4 suite, retour utilisateur) : même architecture
  * visuelle que `PlayableCharacterSheet` (V1-B5) — caractéristiques en
@@ -166,10 +219,13 @@ function FeatureList({
 function StatblockForm({
   data,
   onChange,
+  otherEntities = [],
 }: {
   data: StatblockBlockData;
   onChange: (data: StatblockBlockData) => void;
+  otherEntities?: OtherEntityOption[];
 }) {
+  const t = useTranslations("fiche.creature");
   function patch(fields: Partial<StatblockBlockData>) {
     onChange({ ...data, ...fields });
   }
@@ -267,6 +323,25 @@ function StatblockForm({
           placeholder="1/4"
           onChange={(v) => patch({ challenge_rating: v || undefined })}
         />
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-1">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">{t("repaire")}</span>
+          <Dropdown
+            value={data.lair?.id ?? AUCUN_REPAIRE}
+            options={[{ value: AUCUN_REPAIRE, label: t("aucunRepaire") }, ...otherEntities.map((e) => ({ value: e.id, label: e.name }))]}
+            onChange={(v) => onChange(definirRepaire(data, v === AUCUN_REPAIRE ? null : v))}
+            triggerClassName="rounded-md border border-edge bg-transparent px-2 py-1 text-xs text-ink-muted outline-none transition-colors hover:bg-panel-raised"
+            aria-label={t("repaireAria")}
+          />
+        </div>
+        <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">{t("defenses")}</span>
+        <div className="grid gap-3 md:grid-cols-2">
+          {CLES_DEFENSES.map((cle) => (
+            <ListeDefense key={cle} cle={cle} data={data} onChange={onChange} />
+          ))}
+        </div>
       </div>
 
       <div className="flex flex-col gap-4 md:flex-row">
@@ -392,12 +467,15 @@ export default function MonsterStatblockSheet({
   worldSlug,
   entityId,
   entityName,
+  otherEntities,
   data,
   onChange,
 }: {
   worldSlug: string;
   entityId: string;
   entityName?: string;
+  /** Les fiches du monde : le repaire s'y choisit (formulaire) et s'y résout (en-tête). */
+  otherEntities?: OtherEntityOption[];
   data: StatblockBlockData;
   onChange: (data: StatblockBlockData) => void;
 }) {
@@ -462,12 +540,13 @@ export default function MonsterStatblockSheet({
         </button>
       </div>
       {edition ? (
-        <StatblockForm data={data} onChange={onChange} />
+        <StatblockForm data={data} onChange={onChange} otherEntities={otherEntities} />
       ) : (
         <CreatureSheet
           worldSlug={worldSlug}
           entityId={entityId}
           nom={entityName}
+          otherEntities={otherEntities}
           data={data}
           combat={combat}
           participantId={participantId}
