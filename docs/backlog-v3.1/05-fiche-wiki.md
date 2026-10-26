@@ -95,52 +95,6 @@ V3.1-48.
 
 ---
 
-### ☐ V3.1-75 — Table aléatoire (A) et le dé animé · `M` · sans modèle IA — **prêt**
-
-**Modèle conseillé : Sonnet** — planche définitive ; route de tirage existante.
-
-**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-**Planche** : `Outils-Decide.dc.html`, section « Table aléatoire — A ».
-**Départ** : `components/blocks/RandomTableBlockEditor.tsx`,
-`app/api/blocks/[blockId]/draw/route.ts`, `src/core/tables/`,
-`src/core/schemas/blocks/randomTable.ts`, et **l'animation de l'outil de
-dés de V3.1-33**. **Dépend de** : 63, 33.
-
-**Ce qui est décidé (A)**
-- La table **telle qu'on la lit** (plage à gauche, texte, prix et palier en
-  petites pastilles à droite), « **Tirer · d20** » au-dessus (le dé de la
-  table : `die`), « **Sans répétition** » en interrupteur (`unique_draws` ;
-  les entrées sorties sont barrées et pâlies), « Remettre à zéro ».
-- **Le résultat en carte** sous les boutons : les dés à gauche, le texte à
-  droite **avec ses liens cliquables** vers les fiches (`refs`), et le
-  sous-tirage écrit dessous : « ↳ tiré sur la table « Marchands » : nains
-  de Mirabar ».
-- **Le dé reprend l'animation de l'outil de dés** (scintillement, V3.1-33) :
-  au toucher, les chiffres **défilent flous puis se figent un par un** — le
-  d20, puis le dé de chaque sous-table (`{table:…}`) dans l'ordre ; le texte
-  du résultat reste pâle pendant l'animation ; **la ligne sortie ne
-  s'allume qu'à la fin**. L'animation couvre l'attente du serveur (qui seul
-  tire) ; les chiffres qui défilent sont décoratifs. **Réutiliser le
-  composant ou le crochet d'animation livré par V3.1-33** (s'il est
-  enfermé dans l'outil de dés, l'en extraire une fois, sans le dupliquer).
-  Mouvement réduit : résultat immédiat.
-- Un dé au maximum est bordé d'ambre, un 1 de rouge (comme l'outil de dés).
-- Pied : l'attribution en italique (« Par Orkish Blade »), « Modifier les
-  entrées » (bascule vers l'édition des lignes : plage, texte, prix, palier ;
-  `[[ ]]` lie une fiche ; `{table:clé}` tire sur une autre table, trois
-  niveaux au plus).
-- Téléphone : même bloc, plages plus étroites.
-
-**Critères d'acceptation**
-- [ ] Le tirage vient du serveur (aucun `Math.random` côté client hors des chiffres décoratifs de l'animation).
-- [ ] La ligne s'allume après la fin de l'animation, pas avant.
-- [ ] Avec sous-tirage : deux dés se figent l'un après l'autre.
-- [ ] Mouvement réduit : pas d'animation (test avec la préférence simulée).
-- [ ] « Sans répétition » : une entrée sortie ne ressort pas avant « Remettre à zéro » (test de la route).
-
----
-
 ### ☐ V3.1-76 — Quête (C) : une ligne, dépliable · `S` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — petit, tout décidé.

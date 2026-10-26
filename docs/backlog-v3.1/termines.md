@@ -2,6 +2,24 @@
 
 ---
 
+### ☑ V3.1-75 — Table aléatoire (A) et le dé animé · `M` · sans modèle IA — **fait le 26 octobre**
+
+**Critères d'acceptation**
+- [x] Le tirage vient du serveur (aucun `Math.random` côté client hors des chiffres décoratifs de l'animation).
+- [x] La ligne s'allume après la fin de l'animation, pas avant.
+- [x] Avec sous-tirage : deux dés se figent l'un après l'autre.
+- [x] Mouvement réduit : pas d'animation (test avec la préférence simulée).
+- [x] « Sans répétition » : une entrée sortie ne ressort pas avant « Remettre à zéro » (test de la route).
+
+**Réalisé** (serveur et cœur par Opus, tests d'abord ; interface par Sonnet, relue par Opus ; vérifié en direct, ordinateur, téléphone et mouvement réduit)
+- Cœur : chaque tirage rend son chiffre et l'indice de la ligne (`drawOnce`), `drawExcluding` tire parmi les lignes non encore sorties (rejet borné, puis repli par le RNG avec un chiffre dans la plage), `TableExhaustedError` quand tout est sorti.
+- Service et route : le tirage rend le dé, le chiffre, la ligne et les sous-tirages (`subDraws`, dé et chiffre de chaque `{table:…}`) ; `exclude` (Zod) porte les lignes déjà sorties, 409 quand la table est épuisée.
+- Interface : l'animation de l'outil de dés extraite une fois (`components/shared/DeAnime.tsx`, `lib/ui/animationDe.ts`) et partagée ; la table telle qu'on la lit, renvois `{table:…}` en pastille ; résultat en carte avec ses sous-tirages ; lignes sorties barrées, « Remettre à zéro ». Logique pure dans `lib/ui/tirageTable.ts`.
+- Le champ « nombre de tirages » de l'ancien bloc disparaît (absent de la planche) ; le serveur sait toujours tirer plusieurs fois.
+- Reste connu : les `refs` d'une entrée s'affichent sous le résultat (le moteur ne les place pas dans le texte) ; les lignes n'ont toujours pas d'éditeur de `refs`.
+
+---
+
 ### ☑ V3.1-73 — Généalogie (B) : les grands portraits · `M` · sans modèle IA — **fait le 25 octobre**
 
 **Critères d'acceptation**
