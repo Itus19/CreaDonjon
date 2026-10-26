@@ -2784,3 +2784,27 @@ système, une agrégation filtrée côté serveur.
 *Faille relevée en route, fermée* : un joueur pouvait créer la fiche système avant le MJ. Inscrite au registre de `SECURITE.md`. Le test d'intégration échouait avant la migration et passe après (3/3).
 
 *Restes* : l'écran de la frise (portées, filtres, ajout d'un événement) vient avec V3.1-97 et 98, qui lisent `scope` et `source`.
+
+### V3.1-146 — Musique : la position et la durée de la piste YouTube (26 octobre)
+
+Codé par `dev-sonnet`, relu par Opus.
+- Le lecteur partagé relève la position de la voix YouTube une fois par seconde, **seulement en lecture** : arrêt en pause, à la fin, au changement de piste et au démontage (`actionReleve`, testée).
+- Un contexte à part, `MusicProgressContext`, publie la position : la radio et le bouton public ne se redessinent pas chaque seconde.
+- Les durées connues restent en mémoire : aucun champ au schéma `music`, aucune requête.
+- La platine montre la barre et « 0:30 / 1:18 », relatifs aux bornes.
+- La liste montre la durée une fois connue, masquée au téléphone.
+- Spotify, SoundCloud et la page de lecture ne changent pas.
+
+*Reste* : la durée se perd au rechargement de la page (choix du ticket).
+
+### V3.1-147 — Fiche de créature : le repaire et les défenses (26 octobre)
+
+Opus : schéma et serveur. `dev-sonnet` : interface.
+- Le schéma `statblock` gagne `lair` (une fiche) et `defenses` (quatre listes), tous deux facultatifs ; un ancien bloc reste valide (tests du schéma).
+- `statblockLair.ts` résout le repaire pour le lecteur, dans le wiki public (fiches publiques) et la coquille joueur (`listPlayerVisibleEntityIds`). Un repaire caché est retiré de la donnée du bloc. Tests d'intégration : public et vrai compte joueur.
+- La fiche affiche « · repaire » dans l'en-tête (lien de fiche) et « Défenses » dans Maîtrises, une ligne par catégorie présente.
+- Le formulaire gagne le choix du repaire et quatre listes en pastilles.
+- Aucune règle de dégâts ne change : V3.1-137 lira ces listes.
+
+*Faille relevée en route, laissée ouverte* : dans la coquille joueur, une mention de texte ou d'Encadré vers une fiche réservée au MJ envoie son nom et son slug. Inscrite au registre de `SECURITE.md`.
+

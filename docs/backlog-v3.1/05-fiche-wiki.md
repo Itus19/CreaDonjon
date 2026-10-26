@@ -99,7 +99,7 @@ V3.1-48.
 
 ---
 
-### ☐ V3.1-146 — Musique : la position et la durée de la piste YouTube · `S` · sans modèle IA — **prêt**
+### ☑ V3.1-146 — Musique : la position et la durée de la piste YouTube · `S` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — décidé par l'auteur le 26 octobre ; le lecteur existe.
 
@@ -116,14 +116,14 @@ V3.1-48.
 - Aucun champ ajouté au schéma `music` : la durée est une donnée de lecture, pas du bloc (règle 16).
 
 **Critères d'acceptation**
-- [ ] La barre et les temps avancent pendant la lecture d'une piste YouTube et s'arrêtent en pause (test du relevé : rien ne tourne en pause).
-- [ ] Une piste bornée « 0:12 → 1:30 » montre une barre de 0:12 à 1:30.
-- [ ] Spotify et SoundCloud : aucune barre ni durée, rien d'autre ne change.
-- [ ] La page de lecture ne change pas (le ♪ à côté du nom de la fiche reste tel quel).
+- [x] La barre et les temps avancent pendant la lecture d'une piste YouTube et s'arrêtent en pause (test du relevé : rien ne tourne en pause).
+- [x] Une piste bornée « 0:12 → 1:30 » montre une barre de 0:12 à 1:30.
+- [x] Spotify et SoundCloud : aucune barre ni durée, rien d'autre ne change.
+- [x] La page de lecture ne change pas (le ♪ à côté du nom de la fiche reste tel quel).
 
 ---
 
-### ☐ V3.1-147 — Fiche de créature : le repaire et les défenses · `M` · sans modèle IA — **prêt**
+### ☑ V3.1-147 — Fiche de créature : le repaire et les défenses · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Opus (schéma), puis Sonnet (affichage)** — ajout décidé par l'auteur le 26 octobre.
 
@@ -143,8 +143,8 @@ V3.1-48.
 - Affichage : l'en-tête ajoute « · <repaire> » (lien de fiche) ; l'onglet Maîtrises ajoute « Défenses » (Immunités, Résistances, Vulnérabilités, États immunisés), une ligne par catégorie présente.
 
 **Critères d'acceptation**
-- [ ] Un bloc `statblock` existant, sans les nouveaux champs, s'ouvre et s'enregistre sans erreur (test du schéma).
-- [ ] Un repaire caché au lecteur n'est pas envoyé (test serveur, wiki public et coquille joueur).
-- [ ] Les défenses s'affichent dans Maîtrises, une ligne par catégorie présente, rien quand la liste est vide.
-- [ ] Aucune règle de dégâts ne change (le travail mécanique reste à V3.1-137).
+- [x] Un bloc `statblock` existant, sans les nouveaux champs, s'ouvre et s'enregistre sans erreur (test du schéma).
+- [x] Un repaire caché au lecteur n'est pas envoyé (test serveur, wiki public et coquille joueur).
+- [x] Les défenses s'affichent dans Maîtrises, une ligne par catégorie présente, rien quand la liste est vide.
+- [x] Aucune règle de dégâts ne change (le travail mécanique reste à V3.1-137).
 
