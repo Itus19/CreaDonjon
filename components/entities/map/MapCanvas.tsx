@@ -1,6 +1,9 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useImperativeHandle, useLayoutEffect, useRef, useState, type Ref } from "react";
+import { useTranslations } from "next-intl";
+import { zoomerAutour } from "@/lib/ui/arbre";
+import { cadrageSur } from "@/lib/ui/carte";
 import type { MapView } from "@/src/core/schemas/blocks/map";
 import type { MapPinSize } from "@/src/core/schemas/mapPin";
 import MapPinMarker from "./MapPinMarker";
@@ -23,6 +26,15 @@ export interface MapPinMarkerData {
   label: string;
   size: MapPinSize;
   refEntityId?: string | null;
+  /** V3.1-78 — infobulle au survol : nom, couche, visibilité. */
+  infoBulle?: string;
+}
+
+/** V3.1-78 — les commandes que la liste (et les boutons de zoom) donnent à la carte. */
+export interface CommandesCarte {
+  centrerSur: (centre: { x: number; y: number }) => void;
+  zoomer: (facteur: number) => void;
+  recadrer: () => void;
 }
 
 export interface MapRegionShapeData {
@@ -64,6 +76,9 @@ export default function MapCanvas({
   pendingRegionPoints,
   onAddRegionPoint,
   onFinishRegion,
+  commandesRef,
+  commandes = false,
+  allumeId = null,
 }: {
   /** Plein format (retour utilisateur, "carte de 4000px, vignette d'abord") — jamais charge sans un `placeholderUrl` deja a l'ecran pour eviter un flash de vide pendant le chargement. */
   imageUrl: string;
@@ -91,7 +106,14 @@ export default function MapCanvas({
   pendingRegionPoints?: { x: number; y: number }[];
   onAddRegionPoint?: (x: number, y: number) => void;
   onFinishRegion?: () => void;
+  /** V3.1-78 — reçoit `centrerSur`, `zoomer` et `recadrer`. */
+  commandesRef?: Ref<CommandesCarte>;
+  /** V3.1-78 — boutons + / − / recadrer en bas à droite (carte interactive seulement). */
+  commandes?: boolean;
+  /** V3.1-78 — la punaise ou la zone allumée (celle dont on vient de toucher le nom dans la liste). */
+  allumeId?: string | null;
 }) {
+  const t = useTranslations("fiche.carte");
   const containerRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState({ x: 0, y: 0, scale: 1 });
   const [fullLoaded, setFullLoaded] = useState(false);
@@ -112,9 +134,7 @@ export default function MapCanvas({
 
   const signature = `${imageUrl}:${initialView.x}:${initialView.y}:${initialView.zoom}`;
 
-  useLayoutEffect(() => {
-    if (fittedForRef.current === signature) return;
-    fittedForRef.current = signature;
+  function vueInitiale() {
     const container = containerRef.current;
     if (!container) return;
     const w = container.clientWidth;
@@ -124,8 +144,31 @@ export default function MapCanvas({
     const centerPxX = initialView.x * imageWidth;
     const centerPxY = initialView.y * imageHeight;
     setView({ scale, x: w / 2 - centerPxX * scale, y: h / 2 - centerPxY * scale });
+  }
+
+  useLayoutEffect(() => {
+    if (fittedForRef.current === signature) return;
+    fittedForRef.current = signature;
+    vueInitiale();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [signature, imageWidth, imageHeight]);
+
+  useImperativeHandle(commandesRef, () => ({
+    centrerSur(centre) {
+      const container = containerRef.current;
+      if (!container) return;
+      const next = cadrageSur(
+        centre,
+        { largeur: imageWidth, hauteur: imageHeight },
+        { largeur: container.clientWidth, hauteur: container.clientHeight },
+        view.scale,
+      );
+      setView(next);
+      reportView(next);
+    },
+    zoomer: zoomerParBouton,
+    recadrer: vueInitiale,
+  }));
 
   useEffect(() => {
     if (!interactive) return;
@@ -164,6 +207,14 @@ export default function MapCanvas({
       y: clamp(centerPxY / imageHeight, 0, 1),
       zoom: clamp(v.scale / baseScale, 0.1, 20),
     });
+  }
+
+  function zoomerParBouton(facteur: number) {
+    const container = containerRef.current;
+    if (!container) return;
+    const next = zoomerAutour(view, facteur, { x: container.clientWidth / 2, y: container.clientHeight / 2 }, { min: MIN_ZOOM, max: MAX_ZOOM });
+    setView(next);
+    reportView(next);
   }
 
   function handleMouseDown(e: React.MouseEvent) {
@@ -303,7 +354,7 @@ export default function MapCanvas({
                 fill={region.fillColor}
                 fillOpacity={0.35}
                 stroke={region.borderColor}
-                strokeWidth={2}
+                strokeWidth={region.id === allumeId ? 4 : 2}
                 strokeDasharray={region.unrevealedFog ? "6 4" : undefined}
                 className={regionInteractive ? "pointer-events-auto cursor-pointer" : undefined}
                 onClick={
@@ -350,11 +401,37 @@ export default function MapCanvas({
           label={pin.label}
           size={pin.size}
           refEntityId={pin.refEntityId}
+          infoBulle={pin.infoBulle}
+          allume={pin.id === allumeId}
           left={view.x + pin.x * imageWidth * view.scale}
           top={view.y + pin.y * imageHeight * view.scale}
           onClick={() => onPinClick?.(pin)}
         />
       ))}
+      {interactive && commandes && (
+        <div
+          className="absolute bottom-2 right-2 flex flex-col overflow-hidden rounded-md border border-edge bg-panel-raised shadow-md"
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {[
+            { cle: "zoomPlus", glyphe: "+", agir: () => zoomerParBouton(1.4) },
+            { cle: "zoomMoins", glyphe: "−", agir: () => zoomerParBouton(1 / 1.4) },
+            { cle: "recadrer", glyphe: "⤢", agir: () => vueInitiale() },
+          ].map(({ cle, glyphe, agir }) => (
+            <button
+              key={cle}
+              type="button"
+              aria-label={t(cle)}
+              title={t(cle)}
+              onClick={agir}
+              className="h-8 w-8 text-sm text-ink transition-colors hover:bg-panel-sunken focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+            >
+              {glyphe}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -19,6 +19,8 @@ export default function MapPinMarker({
   left,
   top,
   onClick,
+  infoBulle,
+  allume = false,
 }: {
   label: string;
   size: MapPinSize;
@@ -26,6 +28,10 @@ export default function MapPinMarker({
   left: number;
   top: number;
   onClick?: () => void;
+  /** V3.1-78 — infobulle au survol (nom, couche, visibilité) ; à défaut, le nom. */
+  infoBulle?: string;
+  /** V3.1-78 — allumée : on vient de toucher son nom dans la liste. */
+  allume?: boolean;
 }) {
   const [status, setStatus] = useState<"loading" | "loaded" | "error">("loading");
 
@@ -43,8 +49,8 @@ export default function MapPinMarker({
         onClick?.();
       }}
       onMouseDown={(e) => e.stopPropagation()}
-      title={label || undefined}
-      className="absolute flex -translate-x-1/2 -translate-y-1/2 items-center justify-center overflow-hidden rounded-full border-2 border-accent bg-panel-raised shadow-md transition-transform hover:scale-110"
+      title={infoBulle ?? (label || undefined)}
+      className={`absolute flex -translate-x-1/2 -translate-y-1/2 items-center justify-center overflow-hidden rounded-full border-2 border-accent bg-panel-raised shadow-md transition-transform hover:scale-110 ${allume ? "scale-125 ring-4 ring-accent/50" : ""}`}
       style={{ left, top, width: px, height: px }}
     >
       {refEntityId ? (

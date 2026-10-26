@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import MapCanvas, { type MapPinMarkerData, type MapRegionShapeData } from "@/components/entities/map/MapCanvas";
+import MapCanvas, { type CommandesCarte, type MapPinMarkerData, type MapRegionShapeData } from "@/components/entities/map/MapCanvas";
+import CarteListe, { DispositionCarte } from "@/components/entities/map/CarteListe";
+import { elementsDepuis, rangerParCouches, type ElementCarte } from "@/lib/ui/carte";
 import type { MapBlockData } from "@/src/core/schemas/blocks/map";
 import type { AssetRow } from "@/src/server/repos/assets";
 import type { MapSourceInfo } from "@/src/server/services/mapSource";
@@ -38,6 +40,8 @@ export default function PublicMapBlock({
   hrefBase: string;
 }) {
   const router = useRouter();
+  const commandesRef = useRef<CommandesCarte>(null);
+  const [allumeId, setAllumeId] = useState<string | null>(null);
   const assetId = data.mode === "own" ? data.assetId : mapSource?.assetId ?? null;
   const thumbnailAssetId = data.mode === "own" ? data.thumbnailAssetId : mapSource?.thumbnailAssetId ?? null;
   // Aperçu replié ET vue agrandie affichent tous les deux le plein format
@@ -73,6 +77,12 @@ export default function PublicMapBlock({
     };
   }, [assetId]);
 
+  /** Même liste et même centrage que l'éditeur, en lecture seule : le serveur n'envoie ni couches ni niveaux, donc une liste plate sans pastilles. */
+  function choisir(element: ElementCarte) {
+    setAllumeId(element.id);
+    commandesRef.current?.centrerSur(element.centre);
+  }
+
   function handlePinClick(pin: MapPinMarkerData) {
     const full = mapPins?.find((p) => p.id === pin.id);
     if (full?.refEntity) router.push(`${hrefBase}/${full.refEntity.slug}`);
@@ -98,17 +108,36 @@ export default function PublicMapBlock({
       <button type="button" onClick={() => setExpanded(true)} className="w-fit rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel">
         Agrandir
       </button>
-      <MapCanvas
-        imageUrl={`/api/assets/${assetId}`}
-        placeholderUrl={`/api/assets/${thumbnailAssetId}`}
-        imageWidth={asset.width ?? 1}
-        imageHeight={asset.height ?? 1}
-        initialView={data.defaultView}
-        height={COLLAPSED_HEIGHT}
-        interactive={false}
-        pins={mapPins?.map((p) => ({ id: p.id, x: p.x, y: p.y, label: p.label, size: p.size as MapPinMarkerData["size"], refEntityId: p.ref?.id ?? null }))}
-        regions={mapRegions?.map((r) => ({ id: r.id, name: r.name, shape: r.shape, fillColor: r.fillColor, borderColor: r.borderColor }))}
-      />
+      <div className="@container/bloc">
+        <DispositionCarte
+          carte={
+            <MapCanvas
+              imageUrl={`/api/assets/${assetId}`}
+              placeholderUrl={`/api/assets/${thumbnailAssetId}`}
+              imageWidth={asset.width ?? 1}
+              imageHeight={asset.height ?? 1}
+              initialView={data.defaultView}
+              height={COLLAPSED_HEIGHT}
+              commandes
+              commandesRef={commandesRef}
+              allumeId={allumeId}
+              pins={mapPins?.map((p) => ({ id: p.id, x: p.x, y: p.y, label: p.label, size: p.size as MapPinMarkerData["size"], refEntityId: p.ref?.id ?? null }))}
+              onPinClick={(p) => setAllumeId(p.id)}
+              regions={mapRegions?.map((r) => ({ id: r.id, name: r.name, shape: r.shape, fillColor: r.fillColor, borderColor: r.borderColor }))}
+              onRegionClick={(r) => setAllumeId(r.id)}
+            />
+          }
+          liste={
+            <CarteListe
+              groupes={rangerParCouches([], elementsDepuis(mapPins ?? [], mapRegions ?? []))}
+              allumeId={allumeId}
+              onChoisir={choisir}
+              afficherNiveaux={false}
+              titreSource={data.mode === "ref" ? mapSource?.entityName : undefined}
+            />
+          }
+        />
+      </div>
       {expanded && (
         <div className="fixed inset-0 z-50 flex flex-col bg-scrim p-6" onClick={() => setExpanded(false)}>
           <div className="flex min-h-0 flex-1 flex-col gap-2 rounded-lg border border-edge-strong bg-panel p-3" onClick={(e) => e.stopPropagation()}>

@@ -1807,6 +1807,36 @@
         "user": "one specific user"
       }
     },
-    "pastille": "Visibility: {niveau}. Tap to switch to {suivant}."
+    "pastille": "Visibility: {niveau}. Tap to switch to {suivant}.",
+    "carte": {
+      "titre": "Map",
+      "agrandirRef": "Enlarge / change",
+      "agrandirOwn": "Enlarge / replace",
+      "televerser": "+ Upload a map",
+      "referencer": "— reference:",
+      "utiliserImage": "Upload my own image instead",
+      "fermer": "Close",
+      "chargement": "Loading…",
+      "sourceIndisponible": "The referenced map is not available right now.",
+      "zoomPlus": "Zoom in",
+      "zoomMoins": "Zoom out",
+      "recadrer": "Reset the view",
+      "liste": "Map elements",
+      "punaise": "Pin",
+      "zone": "Area",
+      "couche": "Layer",
+      "suffixePunaise": "and only if its layer is too",
+      "ajouterPunaise": "+ Pin",
+      "ajouterZone": "+ Area",
+      "ajouterCouche": "+ Layer",
+      "nomCouche": "Layer name",
+      "creerCouche": "Create",
+      "sansCouche": "No layer",
+      "vide": "No pins or areas yet.",
+      "coucheVide": "Nothing in this layer.",
+      "sansNom": "Unnamed",
+      "centrer": "Center the map on {nom}",
+      "carteDe": "Map of {nom}"
+    }
   }
 }

@@ -1808,6 +1808,36 @@
         "user": "un utilisateur précis"
       }
     },
-    "pastille": "Visibilité : {niveau}. Toucher pour passer à {suivant}."
+    "pastille": "Visibilité : {niveau}. Toucher pour passer à {suivant}.",
+    "carte": {
+      "titre": "Carte",
+      "agrandirRef": "Agrandir / changer",
+      "agrandirOwn": "Agrandir / remplacer",
+      "televerser": "+ Téléverser une carte",
+      "referencer": "— référencer :",
+      "utiliserImage": "Téléverser ma propre image à la place",
+      "fermer": "Fermer",
+      "chargement": "Chargement…",
+      "sourceIndisponible": "Carte référencée non disponible pour l'instant.",
+      "zoomPlus": "Zoomer",
+      "zoomMoins": "Dézoomer",
+      "recadrer": "Recadrer la carte",
+      "liste": "Éléments de la carte",
+      "punaise": "Punaise",
+      "zone": "Zone",
+      "couche": "Couche",
+      "suffixePunaise": "et seulement si sa couche l'est aussi",
+      "ajouterPunaise": "+ Punaise",
+      "ajouterZone": "+ Zone",
+      "ajouterCouche": "+ Couche",
+      "nomCouche": "Nom de la couche",
+      "creerCouche": "Créer",
+      "sansCouche": "Sans couche",
+      "vide": "Aucune punaise ni zone pour l'instant.",
+      "coucheVide": "Aucun élément dans cette couche.",
+      "sansNom": "Sans nom",
+      "centrer": "Centrer la carte sur {nom}",
+      "carteDe": "Carte de {nom}"
+    }
   }
 }

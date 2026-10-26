@@ -1,7 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import MapCanvas, { type MapPinMarkerData } from "@/components/entities/map/MapCanvas";
+import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
+import MapCanvas, { type CommandesCarte, type MapPinMarkerData } from "@/components/entities/map/MapCanvas";
+import CarteListe, { DispositionCarte, type EcrireVisibilite } from "@/components/entities/map/CarteListe";
+import { elementsDepuis, rangerParCouches, texteInfoBulle, type ElementCarte } from "@/lib/ui/carte";
+import { isVisibilityLevelKey } from "@/components/shared/visibilityOptions";
+import type { VisibleMapLayer } from "@/src/server/services/mapLayers";
 import MapWorkspace from "@/components/entities/map/MapWorkspace";
 import MapRefPanel from "@/components/entities/map/MapRefPanel";
 import CartePicker from "@/components/entities/map/CartePicker";
@@ -48,6 +53,11 @@ export default function MapBlockEditor({
 }) {
   /** Persistance immediate (ADR 0023) — voir le commentaire dans `MapWorkspace.tsx`. */
   const commit = useEditCommit();
+  const t = useTranslations("fiche.carte");
+  const tn = useTranslations("fiche");
+  const commandesRef = useRef<CommandesCarte>(null);
+  const [allumeId, setAllumeId] = useState<string | null>(null);
+  const [layers, setLayers] = useState<VisibleMapLayer[]>([]);
   const [expanded, setExpanded] = useState(false);
   const [asset, setAsset] = useState<AssetRow | null>(null);
   // `undefined` = pas encore resolu, distinct de `null` = confirme
@@ -148,6 +158,8 @@ export default function MapBlockEditor({
     setTrackedOverlaySourceId(overlaySourceId);
     setPins([]);
     setRegions([]);
+    setLayers([]);
+    setAllumeId(null);
   }
 
   useEffect(() => {
@@ -156,11 +168,13 @@ export default function MapBlockEditor({
     Promise.all([
       fetch(`/api/blocks/${overlaySourceId}/pins`).then((res) => (res.ok ? res.json() : [])),
       fetch(`/api/blocks/${overlaySourceId}/regions`).then((res) => (res.ok ? res.json() : [])),
+      fetch(`/api/blocks/${overlaySourceId}/layers`).then((res) => (res.ok ? res.json() : [])),
     ])
-      .then(([p, r]: [VisibleMapPin[], VisibleMapRegion[]]) => {
+      .then(([p, r, l]: [VisibleMapPin[], VisibleMapRegion[], VisibleMapLayer[]]) => {
         if (!cancelled) {
           setPins(p);
           setRegions(r);
+          setLayers(l);
         }
       })
       .catch((erreur) => {
@@ -168,6 +182,7 @@ export default function MapBlockEditor({
         if (!cancelled) {
           setPins([]);
           setRegions([]);
+          setLayers([]);
         }
       });
     return () => {
@@ -197,61 +212,138 @@ export default function MapBlockEditor({
     commit?.();
   }
 
+  const elements = elementsDepuis(pins, regions);
+  const nomCouche = (layerId: string | null) => layers.find((l) => l.id === layerId)?.name ?? null;
+  const niveauLibelle = (n: string) => (isVisibilityLevelKey(n) ? tn(`niveaux.${n}`) : n);
+
+  function choisir(element: ElementCarte) {
+    setAllumeId(element.id);
+    commandesRef.current?.centrerSur(element.centre);
+  }
+
+  /**
+   * La pastille d'un élément ou d'une couche écrit par la route PROPRE de
+   * l'élément (PATCH partiel) : jamais `onChange`/`commit` du bloc, qui
+   * enverrait en plus une sauvegarde du bloc entier (409). L'écran change
+   * tout de suite et revient en arrière si le serveur refuse.
+   */
+  const ecrireVisibilite: EcrireVisibilite = async (genre, id, niveau) => {
+    const route = genre === "pin" ? "map-pins" : genre === "region" ? "map-regions" : "map-layers";
+    const avant =
+      genre === "pin" ? pins.find((p) => p.id === id)?.visibilityLevel : genre === "region" ? regions.find((r) => r.id === id)?.visibilityLevel : layers.find((l) => l.id === id)?.visibilityLevel;
+    const poser = (n: string) => {
+      if (genre === "pin") setPins((prev) => prev.map((p) => (p.id === id ? { ...p, visibilityLevel: n } : p)));
+      else if (genre === "region") setRegions((prev) => prev.map((r) => (r.id === id ? { ...r, visibilityLevel: n } : r)));
+      else setLayers((prev) => prev.map((l) => (l.id === id ? { ...l, visibilityLevel: n } : l)));
+    };
+    poser(niveau);
+    try {
+      const res = await fetch(`/api/${route}/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ visibility: { level: niveau, scopeId: null } }),
+      });
+      if (res.ok) return true;
+    } catch (erreur) {
+      console.error("Changement de visibilité impossible", erreur);
+    }
+    if (avant !== undefined) poser(avant);
+    return false;
+  };
+
+  async function ajouterCouche(nom: string): Promise<boolean> {
+    try {
+      const res = await fetch(`/api/blocks/${blockId}/layers`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: nom, visibility: { level: "public", scopeId: null } }),
+      });
+      if (!res.ok) return false;
+      const rel = await fetch(`/api/blocks/${blockId}/layers`);
+      if (rel.ok) setLayers((await rel.json()) as VisibleMapLayer[]);
+      return true;
+    } catch (erreur) {
+      console.error("Création de la couche impossible", erreur);
+      return false;
+    }
+  }
+
+  const marqueurs: MapPinMarkerData[] = pins.map((p) => ({
+    id: p.id,
+    x: p.x,
+    y: p.y,
+    label: p.label,
+    size: p.size as MapPinMarkerData["size"],
+    refEntityId: p.ref?.id ?? null,
+    infoBulle: texteInfoBulle(p.label, nomCouche(p.layerId), niveauLibelle(p.visibilityLevel)),
+  }));
+  const zones = regions.map((r) => ({
+    id: r.id,
+    name: r.name,
+    shape: r.shape,
+    fillColor: r.fillColor,
+    borderColor: r.borderColor,
+    unrevealedFog: r.fogGated && !r.revealed,
+  }));
+
+  function carteEtListe(assetIdPlein: string, assetIdVignette: string, dims: AssetRow, vue: MapView, source?: string) {
+    return (
+      <DispositionCarte
+        carte={
+          <MapCanvas
+            imageUrl={`/api/assets/${assetIdPlein}`}
+            placeholderUrl={`/api/assets/${assetIdVignette}`}
+            imageWidth={dims.width ?? 1}
+            imageHeight={dims.height ?? 1}
+            initialView={vue}
+            height={COLLAPSED_HEIGHT}
+            commandes
+            commandesRef={commandesRef}
+            allumeId={allumeId}
+            pins={marqueurs}
+            onPinClick={(p) => setAllumeId(p.id)}
+            regions={zones}
+            onRegionClick={(r) => setAllumeId(r.id)}
+          />
+        }
+        liste={
+          <CarteListe
+            groupes={rangerParCouches(layers, elements)}
+            allumeId={allumeId}
+            onChoisir={choisir}
+            ecrire={source === undefined ? ecrireVisibilite : undefined}
+            sansPrive={false}
+            titreSource={source}
+            actions={
+              source === undefined
+                ? { onAjouterPunaise: () => setExpanded(true), onAjouterZone: () => setExpanded(true), onAjouterCouche: ajouterCouche }
+                : undefined
+            }
+          />
+        }
+      />
+    );
+  }
+
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
         <button type="button" onClick={() => setExpanded(true)} className="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel">
-          {data.mode === "ref" ? "Agrandir / changer" : assetId ? "Agrandir / remplacer" : "+ Téléverser une carte"}
+          {data.mode === "ref" ? t("agrandirRef") : assetId ? t("agrandirOwn") : t("televerser")}
         </button>
       </div>
 
-      {data.mode === "own" && assetId && thumbnailAssetId && asset && (
-        <MapCanvas
-          imageUrl={`/api/assets/${assetId}`}
-          placeholderUrl={`/api/assets/${thumbnailAssetId}`}
-          imageWidth={asset.width ?? 1}
-          imageHeight={asset.height ?? 1}
-          initialView={data.defaultView}
-          height={COLLAPSED_HEIGHT}
-          interactive={false}
-          pins={pins.map((p) => ({ id: p.id, x: p.x, y: p.y, label: p.label, size: p.size as MapPinMarkerData["size"], refEntityId: p.ref?.id ?? null }))}
-          regions={regions.map((r) => ({
-            id: r.id,
-            name: r.name,
-            shape: r.shape,
-            fillColor: r.fillColor,
-            borderColor: r.borderColor,
-            unrevealedFog: r.fogGated && !r.revealed,
-          }))}
-        />
-      )}
+      {data.mode === "own" && assetId && thumbnailAssetId && asset && carteEtListe(assetId, thumbnailAssetId, asset, data.defaultView)}
 
       {data.mode === "ref" &&
         (refSource === undefined ? (
-          <p className="text-sm italic text-ink-muted">Chargement…</p>
+          <p className="text-sm italic text-ink-muted">{t("chargement")}</p>
         ) : refSource === null ? (
-          <p className="text-sm italic text-ink-muted">Carte référencée non disponible pour l&apos;instant.</p>
+          <p className="text-sm italic text-ink-muted">{t("sourceIndisponible")}</p>
         ) : refSource.assetId && refSource.thumbnailAssetId && refAsset ? (
-          <MapCanvas
-            imageUrl={`/api/assets/${refSource.assetId}`}
-            placeholderUrl={`/api/assets/${refSource.thumbnailAssetId}`}
-            imageWidth={refAsset.width ?? 1}
-            imageHeight={refAsset.height ?? 1}
-            initialView={data.defaultView}
-            height={COLLAPSED_HEIGHT}
-            interactive={false}
-            pins={pins.map((p) => ({ id: p.id, x: p.x, y: p.y, label: p.label, size: p.size as MapPinMarkerData["size"], refEntityId: p.ref?.id ?? null }))}
-            regions={regions.map((r) => ({
-            id: r.id,
-            name: r.name,
-            shape: r.shape,
-            fillColor: r.fillColor,
-            borderColor: r.borderColor,
-            unrevealedFog: r.fogGated && !r.revealed,
-          }))}
-          />
+          carteEtListe(refSource.assetId, refSource.thumbnailAssetId, refAsset, data.defaultView, refSource.entityName)
         ) : (
-          <p className="text-sm italic text-ink-muted">Chargement…</p>
+          <p className="text-sm italic text-ink-muted">{t("chargement")}</p>
         ))}
 
       {expanded && (
@@ -259,16 +351,16 @@ export default function MapBlockEditor({
           <div className="flex min-h-0 flex-1 flex-col gap-2 rounded-lg border border-edge-strong bg-panel p-3" onClick={(e) => e.stopPropagation()}>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-semibold text-ink">Carte</span>
-                <span className="text-xs text-ink-muted">— référencer :</span>
+                <span className="text-sm font-semibold text-ink">{t("titre")}</span>
+                <span className="text-xs text-ink-muted">{t("referencer")}</span>
                 <CartePicker worldSlug={worldSlug} value={sourceBlockId} onPick={pickCarte} />
                 {data.mode === "ref" && (
                   <button type="button" onClick={useOwnImage} className="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised">
-                    Téléverser ma propre image à la place
+                    {t("utiliserImage")}
                   </button>
                 )}
               </div>
-              <button type="button" onClick={() => setExpanded(false)} className="rounded-full border border-edge px-2 py-1 text-xs text-ink-muted hover:text-ink">
+              <button type="button" aria-label={t("fermer")} onClick={() => setExpanded(false)} className="rounded-full border border-edge px-2 py-1 text-xs text-ink-muted hover:text-ink">
                 ✕
               </button>
             </div>
