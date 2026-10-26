@@ -3,7 +3,8 @@
 import { useEffect, useRef } from "react";
 import { toEmbedUrl, youtubeVideoId } from "@/src/core/music/embedUrl";
 import { FADE_STEP_MS, fadeVolumeAt } from "@/src/core/music/fade";
-import { YT_ENDED, loadYouTubeApi, type YouTubePlayer } from "./youtubeApi";
+import { actionReleve, bornerPosition } from "@/lib/ui/musique";
+import { YT_ENDED, YT_PAUSED, YT_PLAYING, loadYouTubeApi, type YouTubePlayer } from "./youtubeApi";
 
 /**
  * Une « voix » : UNE piste en train de sonner (V2.1-6 lot 2,
@@ -39,23 +40,49 @@ export interface MusicVoiceProps {
   onFadedOut: () => void;
   /** Fin naturelle de la piste : le contexte enchaine sur la suivante du bloc. */
   onEnded: () => void;
+  /** V3.1-146 : position et durée de la piste, relevées toutes les secondes PENDANT LA LECTURE ; `null` quand la voix s'arrête. YouTube seulement. */
+  onReleve?: (releve: { position: number; duree: number } | null) => void;
 }
 
 export default function MusicVoice(props: MusicVoiceProps) {
   return youtubeVideoId(props.url) ? <VoixYouTube {...props} /> : <VoixIframe {...props} />;
 }
 
-function VoixYouTube({ url, startSeconds, endSeconds, fadeInMs, fadingOut, fadeOutMs, onFadedOut, onEnded }: MusicVoiceProps) {
+function VoixYouTube({ url, startSeconds, endSeconds, fadeInMs, fadingOut, fadeOutMs, onFadedOut, onEnded, onReleve }: MusicVoiceProps) {
   const hote = useRef<HTMLDivElement | null>(null);
   const lecteur = useRef<YouTubePlayer | null>(null);
   const rampe = useRef<ReturnType<typeof setInterval> | null>(null);
   // Les rappels changent d'identite a chaque rendu du contexte ; les garder
   // dans une ref evite de reconstruire le lecteur (donc de couper le son) a
   // chaque fois qu'un parent se redessine.
-  const rappels = useRef({ onFadedOut, onEnded });
+  const rappels = useRef({ onFadedOut, onEnded, onReleve });
   useEffect(() => {
-    rappels.current = { onFadedOut, onEnded };
+    rappels.current = { onFadedOut, onEnded, onReleve };
   });
+  // V3.1-146 : le relevé de position. Une minuterie d'une seconde, vivante
+  // seulement tant que le lecteur joue (`actionReleve`) : arrêtée en pause, à la
+  // fin, au changement de piste et au démontage.
+  const releve = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  function arreterReleve() {
+    if (releve.current !== null) {
+      clearInterval(releve.current);
+      releve.current = null;
+    }
+  }
+
+  function lireEtPublier() {
+    const lu = lecteur.current;
+    if (!lu) return;
+    const duree = lu.getDuration();
+    rappels.current.onReleve?.({ position: bornerPosition(lu.getCurrentTime(), duree), duree });
+  }
+
+  function demarrerReleve() {
+    if (releve.current !== null) return;
+    lireEtPublier();
+    releve.current = setInterval(lireEtPublier, 1000);
+  }
 
   function arreterRampe() {
     if (rampe.current !== null) {
@@ -132,7 +159,13 @@ function VoixYouTube({ url, startSeconds, endSeconds, fadeInMs, fadingOut, fadeO
             fondre(0, 100, fadeInMs);
           },
           onStateChange: (event) => {
-            if (event.data === YT_ENDED) rappels.current.onEnded();
+            const action = actionReleve(event.data, { enLecture: YT_PLAYING, enPause: YT_PAUSED, fini: YT_ENDED });
+            if (action === "demarrer") demarrerReleve();
+            if (action === "arreter") arreterReleve();
+            if (event.data === YT_ENDED) {
+              rappels.current.onReleve?.(null);
+              rappels.current.onEnded();
+            }
           },
         },
       });
@@ -141,6 +174,8 @@ function VoixYouTube({ url, startSeconds, endSeconds, fadeInMs, fadingOut, fadeO
     return () => {
       annule = true;
       arreterRampe();
+      arreterReleve();
+      rappels.current.onReleve?.(null);
       lecteur.current?.destroy();
       lecteur.current = null;
       // `destroy()` retire deja l'iframe ; ce retrait ne couvre que le cas ou

@@ -15,11 +15,14 @@ import { SortableContext, sortableKeyboardCoordinates, useSortable, verticalList
 import { CSS } from "@dnd-kit/utilities";
 import type { MusicBlockData, MusicTrack } from "@/src/core/schemas/blocks/music";
 import { PROVIDER_LABELS } from "@/src/core/music/embedUrl";
-import { useMusicPlayback } from "@/components/shell/MusicPlaybackContext";
+import { useMusicPlayback, useMusicProgress } from "@/components/shell/MusicPlaybackContext";
 import Checkbox from "@/components/shared/Checkbox";
 import {
   FONDU_PAR_DEFAUT_MS,
   capacites,
+  dureeJouee,
+  progressionPiste,
+  texteProgression,
   deplacerPiste,
   ecrireTemps,
   formaterFondu,
@@ -67,6 +70,7 @@ export default function MusicBlockEditor({
   const [courant, setCourant] = useState(0);
   const [ouvertId, setOuvertId] = useState<string | null>(null);
   const { currentKey, play, stop } = useMusicPlayback();
+  const suivi = useMusicProgress();
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -145,6 +149,9 @@ export default function MusicBlockEditor({
   const bornesPiste = piste ? texteBornes(piste.startSeconds, piste.endSeconds, { debut: t("debut"), fin: t("fin") }) : null;
   const service = piste ? capacites(piste.url).service : null;
   const joue = piste ? currentKey === cleDe(piste) : false;
+  // V3.1-146 : YouTube seulement, et seulement la piste dont on relève la position.
+  const progression =
+    piste && capacites(piste.url).fondus && suivi.cle === cleDe(piste) ? progressionPiste(suivi.position, suivi.duree, piste.startSeconds, piste.endSeconds) : null;
 
   return (
     <div className="flex flex-col gap-3">
@@ -166,6 +173,22 @@ export default function MusicBlockEditor({
               </span>
               {bornesPiste && <span>· {t("joue", { bornes: bornesPiste })}</span>}
             </div>
+            {progression && (
+              <div className="mt-1.5 flex items-center gap-2">
+                <div
+                  role="progressbar"
+                  aria-label={t("progression")}
+                  aria-valuemin={0}
+                  aria-valuemax={Math.floor(progression.total)}
+                  aria-valuenow={Math.floor(progression.ecoule)}
+                  aria-valuetext={texteProgression(progression)}
+                  className="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-panel-raised"
+                >
+                  <div className="h-full rounded-full bg-accent" style={{ width: `${Math.round(progression.ratio * 1000) / 10}%` }} />
+                </div>
+                <span className="shrink-0 text-xs tabular-nums text-ink-muted">{texteProgression(progression)}</span>
+              </div>
+            )}
           </div>
           <div className="flex shrink-0 items-center gap-1">
             <button type="button" onClick={() => aller(-1)} aria-label={t("precedente")} className="rounded-full px-2 py-1 text-sm text-ink-muted transition-colors hover:text-ink">
@@ -203,6 +226,7 @@ export default function MusicBlockEditor({
                   key={track.id}
                   track={track}
                   joue={currentKey === cleDe(track)}
+                  duree={capacites(track.url).fondus ? dureeJouee(suivi.durees[cleDe(track)] ?? 0, track.startSeconds, track.endSeconds) : null}
                   ouvert={ouvertId === track.id}
                   onLecture={() => toggleTrack(track)}
                   onTitre={(titre) => renameTrack(track, titre)}
@@ -279,6 +303,7 @@ export default function MusicBlockEditor({
 function LignePiste({
   track,
   joue,
+  duree,
   ouvert,
   onLecture,
   onTitre,
@@ -288,6 +313,8 @@ function LignePiste({
 }: {
   track: MusicTrack;
   joue: boolean;
+  /** V3.1-146 : durée jouée d'une piste YouTube, une fois connue (après sa première lecture) ; `null` sinon. */
+  duree: number | null;
   ouvert: boolean;
   onLecture: () => void;
   onTitre: (titre: string) => void;
@@ -340,6 +367,7 @@ function LignePiste({
           />
           {bornes && <span className="text-xs text-ink-muted">{bornes}</span>}
         </div>
+        {duree !== null && <span className="hidden shrink-0 text-xs tabular-nums text-ink-muted @md/bloc:block">{ecrireTemps(Math.floor(duree))}</span>}
         {cap.service && <span className="shrink-0 text-xs text-ink-muted">{PROVIDER_LABELS[cap.service]}</span>}
         <button
           type="button"

@@ -73,3 +73,14 @@ describe("Musique : rendu", () => {
     expect(html).toContain('aria-expanded="false"');
   });
 });
+
+describe("Musique : progression (V3.1-146)", () => {
+  it("aucune barre ni durée tant que rien ne joue, YouTube ou Spotify", () => {
+    expect(rendre(donnee)).not.toContain("progressbar");
+    const spotifyDabord = { ...donnee, tracks: [donnee.tracks[1]!, donnee.tracks[0]!] };
+    const html = rendre(spotifyDabord);
+    expect(html).not.toContain("progressbar");
+    expect(enTexte(html)).not.toMatch(/\d:\d\d \/ \d:\d\d/);
+  });
+});
+

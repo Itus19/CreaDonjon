@@ -1259,6 +1259,7 @@
   "fiche": {
     "musique": {
       "sansTitre": "Piste sans nom",
+      "progression": "Progression de la piste",
       "debut": "début",
       "fin": "fin",
       "fondus": "fondus {duree}",

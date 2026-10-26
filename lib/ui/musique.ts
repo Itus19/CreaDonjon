@@ -101,3 +101,58 @@ export function noteFondus(url: string, entrantMs: number, sortantMs: number): N
   if (!c.fondus) return { cle: "aucun", service: c.service };
   return { cle: "fondus", entrant: formaterFondu(entrantMs), sortant: formaterFondu(sortantMs) };
 }
+
+// ---- la progression de la piste YouTube (V3.1-146) -------------------------------
+
+export type ActionReleve = "demarrer" | "arreter" | "rien";
+
+/**
+ * Ce que le relevé de position fait à un changement d'état du lecteur : il ne
+ * démarre qu'en lecture, s'arrête en pause et à la fin, et ne touche à rien
+ * pour les autres états (mise en mémoire tampon, piste prête…). Aucune minuterie
+ * ne tourne à vide. `etats` est celui de l'API IFrame (`youtubeApi.ts`).
+ */
+export function actionReleve(etat: number, etats: { enLecture: number; enPause: number; fini: number }): ActionReleve {
+  if (etat === etats.enLecture) return "demarrer";
+  if (etat === etats.enPause || etat === etats.fini) return "arreter";
+  return "rien";
+}
+
+/** Une position bornée à la piste : jamais négative, jamais au-delà de la durée connue. */
+export function bornerPosition(position: number, duree: number): number {
+  if (!Number.isFinite(position) || position < 0) return 0;
+  return duree > 0 ? Math.min(position, duree) : position;
+}
+
+export interface Progression {
+  /** Secondes écoulées depuis le début de l'intervalle joué. */
+  ecoule: number;
+  /** Longueur de l'intervalle joué : du début choisi à la fin choisie (ou à la fin de la vidéo). */
+  total: number;
+  /** 0 à 1. */
+  ratio: number;
+}
+
+/**
+ * La barre va du début à la fin choisis ; les temps sont relatifs à cet
+ * intervalle (« 0:12 → 1:30 » lue à 0:42 : 0:30 sur 1:18). `null` tant que la
+ * durée n'est pas connue.
+ */
+export function progressionPiste(position: number, duree: number, debut?: number, fin?: number): Progression | null {
+  const total = dureeJouee(duree, debut, fin);
+  if (total === null) return null;
+  const ecoule = Math.min(total, Math.max(0, position - (debut ?? 0)));
+  return { ecoule, total, ratio: ecoule / total };
+}
+
+/** La durée de ce qui est joué (bornes comprises), ou `null` si la durée de la vidéo n'est pas connue ou si les bornes ne laissent rien. */
+export function dureeJouee(duree: number, debut?: number, fin?: number): number | null {
+  if (!(duree > 0)) return null;
+  const total = Math.min(fin ?? duree, duree) - (debut ?? 0);
+  return total > 0 ? total : null;
+}
+
+/** « 0:30 / 1:18 » (h:mm:ss au-delà d'une heure). */
+export function texteProgression(p: Progression): string {
+  return `${ecrireTemps(Math.floor(p.ecoule))} / ${ecrireTemps(Math.floor(p.total))}`;
+}

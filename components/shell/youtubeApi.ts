@@ -20,6 +20,9 @@ export interface YouTubePlayer {
   playVideo(): void;
   pauseVideo(): void;
   setVolume(volume: number): void;
+  /** V3.1-146 : position de lecture et durée de la vidéo, en secondes (0 tant que le lecteur ne les connaît pas). */
+  getCurrentTime(): number;
+  getDuration(): number;
   loadVideoById(options: { videoId: string; startSeconds?: number; endSeconds?: number }): void;
   destroy(): void;
 }
@@ -79,3 +82,7 @@ export function loadYouTubeApi(): Promise<YouTubeNamespace> {
 
 /** Etat « la piste est finie » — l'evenement qui declenche l'enchainement. */
 export const YT_ENDED = 0;
+
+/** États « en lecture » et « en pause » de l'API IFrame (V3.1-146 : le relevé de position ne tourne qu'en lecture). */
+export const YT_PLAYING = 1;
+export const YT_PAUSED = 2;

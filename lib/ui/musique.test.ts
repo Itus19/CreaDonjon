@@ -122,3 +122,44 @@ describe("deplacerPiste", () => {
     expect(deplacerPiste(["a", "b"], 0, 5)).toEqual(["a", "b"]);
   });
 });
+
+import { actionReleve, bornerPosition, dureeJouee, progressionPiste, texteProgression } from "./musique";
+
+describe("progression de la piste YouTube", () => {
+  const etats = { enLecture: 1, enPause: 2, fini: 0 };
+  it("le relevé ne démarre qu'en lecture, s'arrête en pause et à la fin, ignore le reste", () => {
+    expect(actionReleve(1, etats)).toBe("demarrer");
+    expect(actionReleve(2, etats)).toBe("arreter");
+    expect(actionReleve(0, etats)).toBe("arreter");
+    expect([actionReleve(3, etats), actionReleve(5, etats), actionReleve(-1, etats)]).toEqual(["rien", "rien", "rien"]);
+  });
+  it("borne une position", () => {
+    expect(bornerPosition(-3, 100)).toBe(0);
+    expect(bornerPosition(130, 100)).toBe(100);
+    expect(bornerPosition(42, 0)).toBe(42);
+    expect(bornerPosition(Number.NaN, 100)).toBe(0);
+  });
+  it("une piste entière : du début à la durée", () => {
+    const p = progressionPiste(42, 195)!;
+    expect(texteProgression(p)).toBe("0:42 / 3:15");
+    expect(p.ratio).toBeCloseTo(42 / 195);
+  });
+  it("une piste bornée 0:12 → 1:30 lue à 0:42 affiche 0:30 / 1:18", () => {
+    const p = progressionPiste(42, 195, 12, 90)!;
+    expect(texteProgression(p)).toBe("0:30 / 1:18");
+    expect(p.ratio).toBeCloseTo(30 / 78);
+  });
+  it("la barre reste dans l'intervalle", () => {
+    expect(progressionPiste(5, 195, 12, 90)!.ratio).toBe(0);
+    expect(progressionPiste(500, 195, 12, 90)!.ratio).toBe(1);
+  });
+  it("borne de fin au-delà de la vidéo : la durée gagne ; durée inconnue : rien", () => {
+    expect(dureeJouee(100, 10, 500)).toBe(90);
+    expect(dureeJouee(0)).toBeNull();
+    expect(progressionPiste(1, 0)).toBeNull();
+    expect(dureeJouee(100, 100, 100)).toBeNull();
+  });
+  it("h:mm:ss au-delà d'une heure", () => {
+    expect(texteProgression(progressionPiste(3700, 7300)!)).toBe("1:01:40 / 2:01:40");
+  });
+});

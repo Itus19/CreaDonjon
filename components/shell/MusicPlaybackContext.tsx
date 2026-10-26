@@ -26,6 +26,24 @@ interface MusicPlaybackContextValue {
 
 const MusicPlaybackContext = createContext<MusicPlaybackContextValue | null>(null);
 
+/**
+ * V3.1-146 — la position de la voix en cours et les durées déjà connues. Un
+ * contexte À PART : il change chaque seconde pendant la lecture, et les
+ * consommateurs de `MusicPlaybackContext` (radio, boutons publics) n'ont pas à
+ * se redessiner pour ça. Mémoire seulement : jamais écrit en base (règle 16).
+ */
+export interface MusicProgress {
+  /** Clé de la source (`block:<blocId>:<pisteId>`) dont on relève la position, ou `null`. */
+  cle: string | null;
+  position: number;
+  duree: number;
+  /** Durée de la vidéo par clé de source, connue après sa première lecture (jamais un appel au service juste pour ça). */
+  durees: Record<string, number>;
+}
+
+const PROGRESSION_VIDE: MusicProgress = { cle: null, position: 0, duree: 0, durees: {} };
+const MusicProgressContext = createContext<MusicProgress>(PROGRESSION_VIDE);
+
 /** Une voix montee : la source, la piste qu'elle joue, et si elle est en train de s'eteindre. */
 interface Voix {
   /** Distingue deux voix de la MEME source (on relance la meme station) — une cle React stable pendant toute la vie de la voix. */
@@ -60,6 +78,8 @@ interface Voix {
  */
 export function MusicPlaybackProvider({ children }: { children: React.ReactNode }) {
   const [voices, setVoices] = useState<Voix[]>([]);
+  const [releve, setReleve] = useState<{ instanceId: number; cle: string; position: number; duree: number } | null>(null);
+  const [durees, setDurees] = useState<Record<string, number>>({});
   const prochainId = useRef(0);
 
   /**
@@ -116,10 +136,26 @@ export function MusicPlaybackProvider({ children }: { children: React.ReactNode 
     );
   }, []);
 
+  /** Un relevé de la voix `instanceId` ; `null` la fait taire (pause exclue : une pause garde la dernière position). */
+  const relever = useCallback((instanceId: number, cle: string, r: { position: number; duree: number } | null) => {
+    if (r === null) {
+      setReleve((prev) => (prev?.instanceId === instanceId ? null : prev));
+      return;
+    }
+    setReleve({ instanceId, cle, ...r });
+    if (r.duree > 0) setDurees((prev) => (prev[cle] === r.duree ? prev : { ...prev, [cle]: r.duree }));
+  }, []);
+
   const active = voices.find((v) => !v.fadingOut) ?? null;
+  // Seule la voix active publie : une voix qui s'éteint ne vole pas la barre.
+  const progression: MusicProgress =
+    releve && active && releve.instanceId === active.instanceId
+      ? { cle: releve.cle, position: releve.position, duree: releve.duree, durees }
+      : { ...PROGRESSION_VIDE, durees };
 
   return (
     <MusicPlaybackContext.Provider value={{ currentKey: active?.source.key ?? null, play, stop }}>
+      <MusicProgressContext.Provider value={progression}>
       {children}
       {voices.map((voix) => {
         const track = voix.source.tracks[voix.trackIndex];
@@ -139,9 +175,11 @@ export function MusicPlaybackProvider({ children }: { children: React.ReactNode 
             fadeOutMs={voix.source.fadeOutMs ?? 0}
             onFadedOut={() => retirer(voix.instanceId)}
             onEnded={() => pisteTerminee(voix.instanceId)}
+            onReleve={(r) => relever(voix.instanceId, voix.source.key, r)}
           />
         );
       })}
+      </MusicProgressContext.Provider>
     </MusicPlaybackContext.Provider>
   );
 }
@@ -150,4 +188,9 @@ export function useMusicPlayback(): MusicPlaybackContextValue {
   const ctx = useContext(MusicPlaybackContext);
   if (!ctx) throw new Error("useMusicPlayback doit être utilisé sous MusicPlaybackProvider");
   return ctx;
+}
+
+/** V3.1-146 : la position de la piste en cours et les durées connues (valeurs vides hors fournisseur). */
+export function useMusicProgress(): MusicProgress {
+  return useContext(MusicProgressContext);
 }
