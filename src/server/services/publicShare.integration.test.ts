@@ -337,7 +337,8 @@ describe.skipIf(!hasCreds)("publicShare (integration, base reelle)", () => {
     expect(cache!.data.lair).toBeUndefined();
     // Les défenses, elles, partent : elles appartiennent au bloc visible.
     expect(cache!.data.defenses).toEqual({ damage_immunities: ["feu"] });
-    expect(JSON.stringify(detail)).not.toContain(hiddenEntityIdForRefs);
+    // Ciblé sur ce bloc : l'Encadré du test V3.1-66 cite la même fiche masquée dans sa propre donnée.
+    expect(JSON.stringify(cache)).not.toContain(hiddenEntityIdForRefs);
   });
 
   it("V3.1-68 — un événement MJ de la Chronologie d'une fiche ne part jamais au visiteur ; l'événement public, si", async () => {
