@@ -95,51 +95,6 @@ V3.1-48.
 
 ---
 
-### ☐ V3.1-78 — Carte (C) : la carte et sa liste par couches · `M` · sans modèle IA — **prêt**
-
-**Modèle conseillé : Sonnet** — modèle et services existants (ADR 0017).
-
-**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-**Planche** : `Outils-Decide.dc.html`, section « Carte — C ». **Départ** :
-`components/blocks/MapBlockEditor.tsx`, `components/entities/map/`
-(`MapCanvas`, `MapPinMarker`, `MapLayersPanel`, `MapRefPanel`),
-`components/entities/public/PublicMapBlock.tsx`,
-`src/server/services/mapPins.ts`, `mapRegions.ts`, `mapLayers.ts`.
-**Dépend de** : 63, 64 ; « Voir comme les joueurs » : 12.
-
-**Ce qui est décidé (C)**
-- **La carte à gauche, la liste à droite** (270 px) ; au téléphone, la liste
-  passe **sous** la carte.
-- **La liste est rangée par couches** : en-tête de couche (nom, sa
-  pastille de visibilité), puis ses punaises et zones (point ambre pour une
-  punaise, orange si MJ ; carré vert pour une zone), chacune avec **sa
-  pastille de visibilité** (V3.1-64).
-- **Toucher un nom centre la carte dessus** (et l'agrandit si besoin) et
-  l'allume sur la carte.
-- Survol d'une punaise sur la carte : son nom, sa couche, sa visibilité.
-- Au-dessus : « Voir comme les joueurs » (interrupteur), « + Punaise »,
-  « + Zone », « + Couche » ; zoom + / − / recadrer en bas à droite de la
-  carte.
-- **Rappel ADR 0017** : une punaise n'est vue que si sa couche l'est aussi ;
-  l'annonce de la pastille le dit (« … (et seulement si sa couche l'est
-  aussi) »).
-- **« Voir comme les joueurs »** : recharge la carte **telle que le serveur
-  l'envoie à un joueur** (couches et punaises MJ absentes du flux, pas
-  masquées en CSS). **Si V3.1-12 n'est pas livré, l'interrupteur
-  n'apparaît pas.**
-- Mode référent (`ref`) : la liste montre les éléments de la carte source,
-  sans « + » (on édite sur la carte source), avec une ligne « Carte de
-  <fiche source> ».
-
-**Critères d'acceptation**
-- [ ] Toucher un nom centre la carte sur l'élément.
-- [ ] Une punaise publique sur une couche MJ n'arrive pas au joueur (test serveur existant, rejoué depuis ce bloc).
-- [ ] « Voir comme les joueurs » ne reçoit aucun élément MJ dans la réponse (test).
-- [ ] Téléphone : liste sous la carte.
-
----
-
 ### ☐ V3.1-79 — Fiche de créature (A) : la fiche de personnage, pour une créature · `L` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — planche définitive ; composants de la fiche réutilisés ; règle de l'état de jeu tranchée ci-dessous.

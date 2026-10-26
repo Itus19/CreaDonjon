@@ -2,6 +2,20 @@
 
 ---
 
+### ☑ V3.1-78 — Carte (C) : la carte et sa liste par couches · `M` · sans modèle IA — **fait le 26 octobre**
+
+**Critères d'acceptation**
+- [x] Toucher un nom centre la carte sur l'élément.
+- [x] Une punaise publique sur une couche MJ n'arrive pas au joueur (vérifié en direct depuis ce bloc : la joueuse ne reçoit que la punaise publique d'une couche publique).
+- [ ] « Voir comme les joueurs » ne reçoit aucun élément MJ dans la réponse (test) — **reporté** : V3.1-12 n'est pas livré, l'interrupteur n'apparaît pas (comme le ticket le prévoit).
+- [x] Téléphone : liste sous la carte.
+
+**Réalisé** (interface par Sonnet, relue par Opus ; vérifié en direct, MJ, joueuse et téléphone)
+- La liste par couches (`components/entities/map/CarteListe.tsx`) : en-tête de couche et ses éléments, chacun avec sa pastille de visibilité écrite par sa propre route (`map-pins`, `map-regions`, `map-layers`), sans engager le bloc ; l'annonce d'une punaise dit « (et seulement si sa couche l'est aussi) » (ADR 0017). Toucher un nom centre et agrandit (`MapCanvas` expose `centrerSur`, `zoomer`, `recadrer`). Mode référent en lecture seule. Logique pure dans `lib/ui/carte.ts`.
+- Écarts : « + Punaise » et « + Zone » ouvrent la vue agrandie (l'outil de pose vit dans `MapWorkspace`) ; dans l'aperçu public, toucher une punaise liée l'allume au lieu d'ouvrir la fiche (la vue agrandie navigue toujours) ; le wiki public montre une liste plate, faute de couches dans la donnée publique.
+
+---
+
 ### ☑ V3.1-77 — Musique (A) : la platine, les bornes, la durée des fondus · `M` · sans modèle IA — **fait le 26 octobre**
 
 **Critères d'acceptation**
