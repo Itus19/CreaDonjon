@@ -2,6 +2,19 @@
 
 ---
 
+### ☑ V3.1-76 — Quête (C) : une ligne, dépliable · `S` · sans modèle IA — **fait le 26 octobre**
+
+**Critères d'acceptation**
+- [x] L'anneau et « Prochain » suivent les cases cochées sans rechargement.
+- [x] Les cinq états s'enregistrent (route existante).
+- [x] Téléphone : récompenses et prérequis empilés.
+
+**Réalisé** (interface par Sonnet, relue par Opus ; vérifié en direct)
+- Repliée : anneau de progression, état, commanditaire, « Prochain » ; dépliée : pilule à cinq états, objectifs à cocher (barrés quand atteints), récompenses et prérequis côte à côte (empilés sous 36 rem). Ligne partagée avec le wiki public (`components/entities/quest/QuestLigne.tsx`, `PublicQuestBlock.tsx`). Logique pure dans `lib/ui/quete.ts`.
+- Opus : une case d'objectif déclenchait, en plus de sa propre route, l'enregistrement du bloc (`Checkbox` → ADR 0023) : les deux écritures partaient ensemble et l'une revenait en 409. `Checkbox` gagne `ecritAilleurs`. La pilule d'état s'engage tout de suite, comme le menu d'avant (sinon perdue en quittant la page). `QUEST_STATE_LABELS_FR`, devenue inutile, est retirée.
+
+---
+
 ### ☑ V3.1-75 — Table aléatoire (A) et le dé animé · `M` · sans modèle IA — **fait le 26 octobre**
 
 **Critères d'acceptation**

@@ -95,37 +95,6 @@ V3.1-48.
 
 ---
 
-### ☐ V3.1-76 — Quête (C) : une ligne, dépliable · `S` · sans modèle IA — **prêt**
-
-**Modèle conseillé : Sonnet** — petit, tout décidé.
-
-**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-**Planche** : `Outils-Decide.dc.html`, section « Quête — C ». **Départ** :
-`components/blocks/QuestBlockEditor.tsx`, `src/core/schemas/blocks/quest.ts`.
-**Dépend de** : 63.
-
-**Ce qui est décidé (C)**
-- **Repliée**, une seule ligne : un **anneau de progression** (objectifs
-  atteints / total, au centre « 2 / 4 »), **l'état** en gras, « · confiée
-  par » et le commanditaire (lien de fiche, `giver`), dessous « Prochain : »
-  et le premier objectif non atteint (« Tous les objectifs sont atteints »
-  sinon), ▾ à droite. Toucher la ligne déplie.
-- **Dépliée** : la **pilule d'état à cinq choix** (Non commencée, En cours,
-  Réussie, Échouée, Abandonnée ; En cours en ambre, Réussie en vert,
-  Échouée en rouge), les **objectifs à cocher** (barrés quand atteints ;
-  liens de fiche dans le texte ; « + objectif »), **Récompenses** et
-  **Prérequis** côte à côte (l'un sous l'autre au téléphone), « + » dans
-  chacun.
-- L'état replié / déplié est local (non enregistré).
-
-**Critères d'acceptation**
-- [ ] L'anneau et « Prochain » suivent les cases cochées sans rechargement.
-- [ ] Les cinq états s'enregistrent (route existante).
-- [ ] Téléphone : récompenses et prérequis empilés.
-
----
-
 ### ☐ V3.1-77 — Musique (A) : la platine, les bornes, la durée des fondus · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — tous les champs existent (ADR 0022).
