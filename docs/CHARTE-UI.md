@@ -361,7 +361,7 @@ Neuf planches, en deux rangées sur le canevas : les briques (1 à 7), puis les 
 | 6 · Fiche de personnage | bouclier de CA, `StatBadge`, caractéristiques et sauvegardes, compétences et pastilles de maîtrise, `ActionButton`, `DieIcon`, égaliseur (emplacements, pacte et ressources), carte d'objet, états, bouton de jet de monstre, jauge à commandes (`CommandeE`), jets contre la mort (`BlocMourant`), nom de règle (`NomDeRegle`) |
 | 7 · Mode solo | `JaugeCirculaire`, fiche compacte, fil |
 | 8 · Wiki visuel | épingles et calques de carte, Généalogie (grands portraits, traits arrondis, barre) et Réseau (vignettes, filtres, survol), blocs Personnalité et Convictions (radar à bandes, barres, comparer avec), bloc Relation (face-à-face, fils à perle), frise, blocs Encadré, Tableau, Image et Chronologie (V3.1-66, 67, 68, 70, 71, 72, 73) |
-| 9 · Outils du MJ | suivi d'initiative, budget de rencontre, assistant de création, accueil et personnalisation |
+| 9 · Outils du MJ | suivi d'initiative, table aléatoire et dé animé (V3.1-75), budget de rencontre, assistant de création, accueil et personnalisation |
 | 10 · Téléphone | feuille du bas (`FeuilleDuBas`), barre flottante, accueil du lecteur (`AccueilLecteur`) et consultées récemment, éditeur plein écran (`EditeurPleinEcran`) |
 
 **Écarts relevés en le construisant**, à corriger par tickets (jamais en passe globale) :
