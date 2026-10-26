@@ -41,4 +41,46 @@ describe("zStatblockBlockData", () => {
     };
     expect(() => zStatblockBlockData.parse(data)).not.toThrow();
   });
+
+  // V3.1-147 : repaire et défenses, optionnels — un bloc écrit avant reste valide.
+  const base = {
+    __v: 1 as const,
+    size: "Grande",
+    creature_type: "dragon",
+    ac: { value: 18 },
+    hp: { value: 178 },
+    speed: "12 m, vol 24 m",
+    abilities: { str: 23, dex: 10, con: 21, int: 14, wis: 11, cha: 19 },
+    traits: [],
+    actions: [],
+    reactions: [],
+    legendary_actions: [],
+  };
+
+  it("accepte un repaire qui vise une fiche et des défenses", () => {
+    const data = {
+      ...base,
+      lair: { kind: "entity" as const, id: "11111111-1111-1111-1111-111111111111" },
+      defenses: {
+        damage_immunities: ["feu"],
+        damage_resistances: ["froid", "contondant non magique"],
+        condition_immunities: ["charmé", "effrayé"],
+      },
+    };
+    expect(zStatblockBlockData.parse(data)).toEqual(data);
+  });
+
+  it("refuse un repaire qui vise une règle", () => {
+    expect(() => zStatblockBlockData.parse({ ...base, lair: { kind: "rule", key: "lair" } })).toThrow();
+  });
+
+  it("refuse une défense vide", () => {
+    expect(() => zStatblockBlockData.parse({ ...base, defenses: { damage_immunities: [""] } })).toThrow();
+  });
+
+  it("un ancien bloc, sans repaire ni défenses, reste valide et inchangé", () => {
+    const parsed = zStatblockBlockData.parse(base);
+    expect(parsed.lair).toBeUndefined();
+    expect(parsed.defenses).toBeUndefined();
+  });
 });

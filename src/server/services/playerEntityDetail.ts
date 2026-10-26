@@ -42,6 +42,8 @@ import { getCalendar } from "@/src/server/services/worlds";
 import { listVisibleRelations } from "@/src/server/services/relations";
 import { listEntitiesForWorld, listEntitiesByIds, type EntitySummary } from "@/src/server/repos/entities";
 import type { PublicBlock, PublicRelation } from "./publicShare";
+import { lairEntityIds, resolveLair } from "@/src/server/services/statblockLair";
+import { listPlayerVisibleEntityIds } from "@/src/server/services/entities";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -390,12 +392,19 @@ export async function getPlayerEntityDetail(
       for (const key of ruleKeys) referencedRuleKeys.add(key);
     }
   }
-  const [entityExcerpts, ruleRefsByKey] = await Promise.all([
+  // V3.1-147 : le repaire d'une créature. La table ci-dessus liste TOUTES
+  // les fiches du monde (la RLS des entités ne connaît que l'appartenance) :
+  // elle ne dit pas ce que ce joueur voit. Le repaire passe donc par
+  // `listPlayerVisibleEntityIds`, et seulement s'il y en a un à résoudre.
+  const repaires = lairEntityIds(blocksWithTimelineCalendar);
+  const [entityExcerpts, ruleRefsByKey, repairesVisibles] = await Promise.all([
     resolveEntityRefExcerpts(supabase, [...referencedEntityIds], viewer),
     resolveRuleRefPreviews(supabase, worldId, [...referencedRuleKeys], locale),
+    resolveVisibleLairs(supabase, worldId, repaires, userId),
   ]);
 
   const blocksWithQuestRefs = blocksWithTimelineCalendar.map((block) => {
+    if (block.blockType === "statblock") return resolveLair(block, repairesVisibles);
     if (block.blockType === "text" && entityLookup) {
       const text = zTextBlockData.safeParse(block.data);
       if (!text.success) return block;
@@ -480,4 +489,20 @@ export async function getPlayerEntityDetail(
 
 
   return { entity, blocks: blocksWithMapSource, relations, portraitLayout, wikiBackground };
+}
+
+async function resolveVisibleLairs(
+  supabase: TypedClient,
+  worldId: string,
+  ids: string[],
+  userId: string
+): Promise<Map<string, { name: string; slug: string }>> {
+  if (ids.length === 0) return new Map();
+  const [visibles, fiches] = await Promise.all([
+    listPlayerVisibleEntityIds(supabase, worldId, ids, userId),
+    listEntitiesByIds(supabase, ids),
+  ]);
+  return new Map(
+    fiches.filter((e) => e.world_id === worldId && visibles.has(e.id)).map((e) => [e.id, { name: e.name, slug: e.slug }])
+  );
 }

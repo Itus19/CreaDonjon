@@ -3,6 +3,10 @@ import { zAbility, zAbilityScores } from "./abilities";
 
 const zStatblockEntry = z.object({ name: z.string().min(1), text: z.string() });
 
+// V3.1-147 : listes de texte libre ("feu", "contondant non magique"). Aucune
+// règle de dégâts ne les lit encore (V3.1-137) : ce sont des libellés.
+const zDefenseList = z.array(z.string().trim().min(1));
+
 /**
  * Bloc `statblock` (specs/wiki-blocs.md §4.1, §5) : une creature ou un PNJ
  * SANS build. Personne ne construira un gobelin niveau par niveau — les
@@ -33,5 +37,16 @@ export const zStatblockBlockData = z.object({
   actions: z.array(zStatblockEntry),
   reactions: z.array(zStatblockEntry),
   legendary_actions: z.array(zStatblockEntry),
+  // V3.1-147 : le repaire est une fiche du wiki (un lieu), jamais une règle.
+  // Optionnel, comme les défenses : un bloc écrit avant reste valide.
+  lair: z.object({ kind: z.literal("entity"), id: z.string().min(1) }).optional(),
+  defenses: z
+    .object({
+      damage_immunities: zDefenseList.optional(),
+      damage_resistances: zDefenseList.optional(),
+      damage_vulnerabilities: zDefenseList.optional(),
+      condition_immunities: zDefenseList.optional(),
+    })
+    .optional(),
 });
 export type StatblockBlockData = z.infer<typeof zStatblockBlockData>;

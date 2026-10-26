@@ -43,6 +43,7 @@ import { listVisibleMapPins, type VisibleMapPin } from "@/src/server/services/ma
 import { listVisibleMapRegions, type VisibleMapRegion } from "@/src/server/services/mapRegions";
 import type { FamilyTree } from "@/src/core/genealogy/buildFamilyTree";
 import { zQuestBlockData } from "@/src/core/schemas/blocks/quest";
+import { resolveLair } from "@/src/server/services/statblockLair";
 import { buildEntityTree, withPlayerCharacterKinds, type EntityTreeGroup } from "@/src/core/entity-tree/build-tree";
 import { listPlayerCharacterEntityIds } from "@/src/server/services/worldPlayerCharacters";
 import { zTimelineBlockData } from "@/src/core/schemas/blocks/timeline";
@@ -339,6 +340,8 @@ export interface PublicBlock {
    * lien (sa destination existe), la carte se resserre sur le nom.
    */
   textRefs?: Record<string, EntityRefPreview>;
+  /** Blocs `statblock` seulement (V3.1-147) : le repaire, s'il est visible du lecteur. Sinon absent, et `data.lair` retiré. */
+  lairRef?: { name: string; slug: string };
   /**
    * Blocs `text` seulement (V2.1-18 lot 2) : cibles des noeuds `ref` de kind
    * "rule", indexees par cle.
@@ -791,7 +794,12 @@ export async function getPublicEntityDetail(
     resolveRuleRefPreviews(supabase, worldId, [...referencedRuleKeys], locale),
   ]);
 
+  // V3.1-147 : le repaire d'une créature ne se résout que vers une fiche
+  // publique ; sinon son identifiant quitte la donnée du bloc.
+  const fichesPubliques = new Map(entitesDuMonde.filter((e) => e.is_public).map((e) => [e.id, { name: e.name, slug: e.slug }]));
+
   const blocksWithQuestRefs = blocksWithTimelineCalendar.map((block) => {
+    if (block.blockType === "statblock") return resolveLair(block, fichesPubliques);
     if (block.blockType === "text" && entityLookup) {
       const text = zTextBlockData.safeParse(block.data);
       if (!text.success) return block;

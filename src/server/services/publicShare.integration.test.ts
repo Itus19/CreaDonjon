@@ -304,6 +304,42 @@ describe.skipIf(!hasCreds)("publicShare (integration, base reelle)", () => {
     expect(JSON.stringify(detail)).not.toContain("fiche-masquee");
   });
 
+  it("V3.1-147 — le repaire d'une créature n'est résolu que vers une fiche visible ; sinon son identifiant ne part pas", async () => {
+    const statblock = (lairId: string) => ({
+      __v: 1,
+      size: "Grande",
+      creature_type: "dragon",
+      ac: { value: 18 },
+      hp: { value: 178 },
+      speed: "12 m",
+      abilities: { str: 23, dex: 10, con: 21, int: 14, wis: 11, cha: 19 },
+      traits: [],
+      actions: [],
+      reactions: [],
+      legendary_actions: [],
+      lair: { kind: "entity", id: lairId },
+      defenses: { damage_immunities: ["feu"] },
+    });
+    const { error } = await admin.from("blocks").insert([
+      { entity_id: mainEntityId, block_type: "statblock", display: { label: "Créature au repaire visible", layout: "statblock" }, visibility_level: "public", display_order: 940, created_by: userId, data: statblock(mainEntityId) },
+      { entity_id: mainEntityId, block_type: "statblock", display: { label: "Créature au repaire caché", layout: "statblock" }, visibility_level: "public", display_order: 941, created_by: userId, data: statblock(hiddenEntityIdForRefs) },
+    ]);
+    if (error) throw new Error(error.message);
+    const token = await insertTestShareLink();
+    const resolved = await resolveShareLink(token);
+    const detail = await getPublicEntityDetail(resolved!.worldId, entitySlug);
+    type Bloc = { display: { label: string }; data: { lair?: unknown; defenses?: unknown }; lairRef?: { name: string; slug: string } };
+    const visible = detail!.blocks.find((b) => b.display.label === "Créature au repaire visible") as Bloc | undefined;
+    const cache = detail!.blocks.find((b) => b.display.label === "Créature au repaire caché") as Bloc | undefined;
+    expect(visible?.lairRef).toEqual({ name: "Entite de test", slug: entitySlug });
+    expect(cache).toBeDefined();
+    expect(cache!.lairRef).toBeUndefined();
+    expect(cache!.data.lair).toBeUndefined();
+    // Les défenses, elles, partent : elles appartiennent au bloc visible.
+    expect(cache!.data.defenses).toEqual({ damage_immunities: ["feu"] });
+    expect(JSON.stringify(detail)).not.toContain(hiddenEntityIdForRefs);
+  });
+
   it("V3.1-68 — un événement MJ de la Chronologie d'une fiche ne part jamais au visiteur ; l'événement public, si", async () => {
     const date = { year: 1492, month: null, day: null, precision: "year", end: null, label: null };
     const { error } = await admin.from("blocks").insert({
