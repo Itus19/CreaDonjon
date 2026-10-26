@@ -2806,5 +2806,5 @@ Opus : schéma et serveur. `dev-sonnet` : interface.
 - Le formulaire gagne le choix du repaire et quatre listes en pastilles.
 - Aucune règle de dégâts ne change : V3.1-137 lira ces listes.
 
-*Faille relevée en route, laissée ouverte* : dans la coquille joueur, une mention de texte ou d'Encadré vers une fiche réservée au MJ envoie son nom et son slug. Inscrite au registre de `SECURITE.md`.
+*Faille relevée en route, fermée le même jour* : dans la coquille joueur, une mention de texte ou d'Encadré vers une fiche réservée au MJ envoyait son nom et son slug. Les fiches citées sont désormais filtrées par ce que le joueur voit (registre de `SECURITE.md`, test d'intégration).
 

@@ -115,4 +115,56 @@ describe.skipIf(!hasCreds)("fiche joueur : repaire de créature (integration, ba
     expect(envoye).not.toContain("ANTRE_SECRET_147");
     expect(envoye).not.toContain(cache);
   });
+
+  it("une mention de texte ou d'Encadré vers une fiche MJ ne livre ni son nom ni son slug ; une fiche visible devient un lien", async () => {
+    const visible = await fiche("le-pont-de-pierre", "Le Pont de pierre", "players");
+    const cache = await fiche("conspiration-mj", "CONSPIRATION_SECRETE_MJ", "gm");
+
+    const { data: page, error } = await admin
+      .from("entities")
+      .insert({ world_id: worldId, slug: "journal-du-village", name: "Journal du village", entity_kind: "location", created_by: ownerId })
+      .select("id")
+      .single();
+    if (error || !page) throw new Error(error?.message ?? "creation page echouee");
+    const ref = (id: string, label: string) => ({ t: "ref", kind: "entity", id, label });
+    const blocs = await admin.from("blocks").insert([
+      {
+        entity_id: page.id,
+        block_type: "text",
+        display: { label: "Récit", layout: "prose" },
+        visibility_level: "players",
+        display_order: 0,
+        created_by: ownerId,
+        data: {
+          __v: 1,
+          segments: [
+            { id: "s1", blockType: "paragraph", visibility: { level: "players", scopeId: null }, content: [ref(visible, "le pont"), { t: "text", v: " et " }, ref(cache, "les rumeurs")] },
+          ],
+        },
+      },
+      {
+        entity_id: page.id,
+        block_type: "infobox",
+        display: { label: "Encadré", layout: "key_values" },
+        visibility_level: "players",
+        display_order: 1,
+        created_by: ownerId,
+        data: { __v: 1, entries: [{ label: "Lieux", value: [ref(visible, "le pont")] }, { label: "Secret", value: [ref(cache, "on murmure")] }] },
+      },
+    ]);
+    if (blocs.error) throw new Error(blocs.error.message);
+
+    const detail = await getPlayerEntityDetail(playerClient, { worldId, entitySlug: "journal-du-village", userId: playerId });
+    if (!detail) throw new Error("page invisible du joueur");
+    type Bloc = { display: { label: string }; textRefs?: Record<string, { name: string; slug: string }> };
+    for (const label of ["Récit", "Encadré"]) {
+      const bloc = detail.blocks.find((b) => b.display.label === label) as Bloc | undefined;
+      expect(Object.keys(bloc?.textRefs ?? {})).toEqual([visible]);
+      expect(bloc!.textRefs![visible]).toMatchObject({ name: "Le Pont de pierre", slug: "le-pont-de-pierre" });
+    }
+    const envoye = JSON.stringify(detail);
+    expect(envoye).not.toContain("CONSPIRATION_SECRETE_MJ");
+    expect(envoye).not.toContain("conspiration-mj");
+  });
 });
+

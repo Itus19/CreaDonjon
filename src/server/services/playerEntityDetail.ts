@@ -367,45 +367,32 @@ export async function getPlayerEntityDetail(
       : block
   );
 
-  const hasQuestBlock = blocksWithTimelineCalendar.some((b) => b.blockType === "quest");
-  const hasTimelineBlockRefs = blocksWithTimelineCalendar.some((b) => b.blockType === "timeline");
-  const hasTextBlock = blocksWithTimelineCalendar.some((b) => b.blockType === "text");
-  const entityLookup =
-    hasQuestBlock || hasTimelineBlockRefs || hasTextBlock
-      ? new Map(
-          (await listEntitiesForWorld(supabase, worldId)).map((e) => [e.id, { name: e.name, slug: e.slug, kind: e.entity_kind }])
-        )
-      : null;
+  // Toutes les fiches citées par les blocs de la page (texte, Encadré,
+  // chronologie, quête, repaire), puis UN filtre par ce que ce joueur voit.
+  // `listEntitiesForWorld` seule ne suffit pas : la RLS des entités ne connaît
+  // que l'appartenance au monde, elle livrait le nom et le slug d'une fiche
+  // réservée au MJ dès qu'une mention la visait (registre de SECURITE.md).
+  const { entityIds: citees, ruleKeys: referencedRuleKeys } = citedTargets(blocksWithTimelineCalendar);
+  const [entityLookup, ruleRefsByKey] = await Promise.all([
+    resolveVisibleCitedEntities(supabase, worldId, [...citees], userId),
+    resolveRuleRefPreviews(supabase, worldId, [...referencedRuleKeys], locale),
+  ]);
 
   // V2.1-18 lot 2 — meme resolution que `getPublicEntityDetail`, avec le vrai
   // viewer joueur plutot que l'anonyme : l'extrait d'une fiche citee suit
   // exactement les memes regles de visibilite que son corps.
   const referencedEntityIds = new Set<string>();
-  const referencedRuleKeys = new Set<string>();
-  if (hasTextBlock && entityLookup) {
-    for (const block of blocksWithTimelineCalendar) {
-      if (block.blockType !== "text") continue;
-      const text = zTextBlockData.safeParse(block.data);
-      if (!text.success) continue;
-      const { entityIds, ruleKeys } = collectRefTargetIds(text.data.segments);
-      for (const id of entityIds) if (entityLookup.has(id)) referencedEntityIds.add(id);
-      for (const key of ruleKeys) referencedRuleKeys.add(key);
-    }
+  for (const block of blocksWithTimelineCalendar) {
+    if (block.blockType !== "text") continue;
+    const text = zTextBlockData.safeParse(block.data);
+    if (!text.success) continue;
+    for (const id of collectRefTargetIds(text.data.segments).entityIds) if (entityLookup.has(id)) referencedEntityIds.add(id);
   }
-  // V3.1-147 : le repaire d'une créature. La table ci-dessus liste TOUTES
-  // les fiches du monde (la RLS des entités ne connaît que l'appartenance) :
-  // elle ne dit pas ce que ce joueur voit. Le repaire passe donc par
-  // `listPlayerVisibleEntityIds`, et seulement s'il y en a un à résoudre.
-  const repaires = lairEntityIds(blocksWithTimelineCalendar);
-  const [entityExcerpts, ruleRefsByKey, repairesVisibles] = await Promise.all([
-    resolveEntityRefExcerpts(supabase, [...referencedEntityIds], viewer),
-    resolveRuleRefPreviews(supabase, worldId, [...referencedRuleKeys], locale),
-    resolveVisibleLairs(supabase, worldId, repaires, userId),
-  ]);
+  const entityExcerpts = await resolveEntityRefExcerpts(supabase, [...referencedEntityIds], viewer);
 
   const blocksWithQuestRefs = blocksWithTimelineCalendar.map((block) => {
-    if (block.blockType === "statblock") return resolveLair(block, repairesVisibles);
-    if (block.blockType === "text" && entityLookup) {
+    if (block.blockType === "statblock") return resolveLair(block, entityLookup);
+    if (block.blockType === "text") {
       const text = zTextBlockData.safeParse(block.data);
       if (!text.success) return block;
       const { entityIds, ruleKeys } = collectRefTargetIds(text.data.segments);
@@ -422,9 +409,9 @@ export async function getPlayerEntityDetail(
       return { ...block, textRefs, ruleRefs };
     }
     // V3.1-66 : une valeur d'Encadré peut citer une fiche. Même résolution
-    // que le texte : seule une fiche visible de ce lecteur (`entityLookup`)
+    // que le texte : seule une fiche visible de ce joueur (`entityLookup`)
     // devient un lien ; les autres restent leur libellé, en texte.
-    if (block.blockType === "infobox" && entityLookup) {
+    if (block.blockType === "infobox") {
       const infobox = zInfoboxBlockData.safeParse(block.data);
       if (!infobox.success) return block;
       const textRefs: Record<string, EntityRefPreview> = {};
@@ -434,7 +421,7 @@ export async function getPlayerEntityDetail(
       }
       return { ...block, textRefs };
     }
-    if (block.blockType === "timeline" && entityLookup) {
+    if (block.blockType === "timeline") {
       const timeline = zTimelineBlockData.safeParse(block.data);
       if (!timeline.success) return block;
       const timelineRefs: Record<string, { name: string; slug: string }> = {};
@@ -445,7 +432,7 @@ export async function getPlayerEntityDetail(
       }
       return { ...block, timelineRefs };
     }
-    if (block.blockType !== "quest" || !entityLookup) return block;
+    if (block.blockType !== "quest") return block;
     const quest = zQuestBlockData.safeParse(block.data);
     if (!quest.success) return block;
     const ids = new Set<string>();
@@ -491,18 +478,47 @@ export async function getPlayerEntityDetail(
   return { entity, blocks: blocksWithMapSource, relations, portraitLayout, wikiBackground };
 }
 
-async function resolveVisibleLairs(
+/** Les fiches citées par les blocs de la page, et les clés de règle citées par ses textes. */
+function citedTargets(blocks: readonly PublicBlock[]): { entityIds: Set<string>; ruleKeys: Set<string> } {
+  const entityIds = new Set<string>(lairEntityIds(blocks));
+  const ruleKeys = new Set<string>();
+  for (const block of blocks) {
+    if (block.blockType === "text") {
+      const text = zTextBlockData.safeParse(block.data);
+      if (!text.success) continue;
+      const refs = collectRefTargetIds(text.data.segments);
+      for (const id of refs.entityIds) entityIds.add(id);
+      for (const key of refs.ruleKeys) ruleKeys.add(key);
+    } else if (block.blockType === "infobox") {
+      const infobox = zInfoboxBlockData.safeParse(block.data);
+      if (infobox.success) for (const id of infoboxEntityRefIds(infobox.data)) entityIds.add(id);
+    } else if (block.blockType === "timeline") {
+      const timeline = zTimelineBlockData.safeParse(block.data);
+      if (timeline.success) for (const entry of timeline.data.entries) if (entry.ref?.kind === "entity") entityIds.add(entry.ref.id);
+    } else if (block.blockType === "quest") {
+      const quest = zQuestBlockData.safeParse(block.data);
+      if (!quest.success) continue;
+      if (quest.data.giver?.kind === "entity") entityIds.add(quest.data.giver.id);
+      for (const list of [quest.data.objectives, quest.data.rewards, quest.data.prerequisites]) {
+        for (const item of list) if (item.ref?.kind === "entity") entityIds.add(item.ref.id);
+      }
+    }
+  }
+  return { entityIds, ruleKeys };
+}
+
+/** Les fiches citées que ce joueur voit, par identifiant. Aucune requête quand rien n'est cité. */
+async function resolveVisibleCitedEntities(
   supabase: TypedClient,
   worldId: string,
   ids: string[],
   userId: string
-): Promise<Map<string, { name: string; slug: string }>> {
+): Promise<Map<string, { name: string; slug: string; kind: string }>> {
   if (ids.length === 0) return new Map();
+  // `listEntitiesForWorld` est mémoïsée : la barre latérale de la même requête l'a déjà demandée.
   const [visibles, fiches] = await Promise.all([
     listPlayerVisibleEntityIds(supabase, worldId, ids, userId),
-    listEntitiesByIds(supabase, ids),
+    listEntitiesForWorld(supabase, worldId),
   ]);
-  return new Map(
-    fiches.filter((e) => e.world_id === worldId && visibles.has(e.id)).map((e) => [e.id, { name: e.name, slug: e.slug }])
-  );
+  return new Map(fiches.filter((e) => visibles.has(e.id)).map((e) => [e.id, { name: e.name, slug: e.slug, kind: e.entity_kind }]));
 }
