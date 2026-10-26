@@ -39,13 +39,19 @@ type CheckboxProps = {
   onChange: () => void;
   disabled?: boolean;
   className?: string;
+  /**
+   * La case écrit par sa PROPRE route (objectif de quête, V3.1-76) : elle ne
+   * demande pas l'enregistrement du bloc. Sans cela, les deux écritures
+   * partent dans le même geste et l'une revient en conflit de version (409).
+   */
+  ecritAilleurs?: boolean;
 } & (
   | { label: React.ReactNode; "aria-label"?: string }
   | { label?: undefined; "aria-label": string }
 );
 
 export default function Checkbox(props: CheckboxProps) {
-  const { checked, onChange, label, disabled, className, "aria-label": ariaLabel } = props;
+  const { checked, onChange, label, disabled, className, ecritAilleurs, "aria-label": ariaLabel } = props;
   const commit = useEditCommit();
   const labelId = useId();
 
@@ -54,7 +60,7 @@ export default function Checkbox(props: CheckboxProps) {
     onChange();
     // Apres `onChange`, jamais avant : c'est lui qui pose la valeur neuve dans
     // le miroir synchrone du conteneur, que l'enregistrement va lire.
-    commit?.();
+    if (!ecritAilleurs) commit?.();
   }
 
   return (

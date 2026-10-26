@@ -8,11 +8,9 @@ import type { TextBlockData } from "@/src/core/schemas/blocks/text";
 import { infoboxValueNodes, type InfoboxBlockData } from "@/src/core/schemas/blocks/infobox";
 import type { ImageBlockData } from "@/src/core/schemas/blocks/image";
 import type { CustomTableBlockData } from "@/src/core/schemas/blocks/customTable";
-import type { QuestBlockData, QuestNote, QuestObjective } from "@/src/core/schemas/blocks/quest";
-import type { BlockReference } from "@/src/core/schemas/blocks/reference";
+import type { QuestBlockData } from "@/src/core/schemas/blocks/quest";
 import type { PublicBlock } from "@/src/server/services/publicShare";
 import type { EntityRefPreview, RuleRefPreview } from "@/src/server/services/refPreview";
-import { QUEST_STATE_LABELS_FR } from "@/src/i18n/fr";
 import type { PersonalityBlockData } from "@/src/core/schemas/blocks/personality";
 import type { WorldviewBlockData } from "@/src/core/schemas/blocks/worldview";
 import type { TimelineBlockData } from "@/src/core/schemas/blocks/timeline";
@@ -22,6 +20,7 @@ import { formatGameDate } from "@/src/core/calendar/formatDate";
 import { weekdayNameForDate } from "@/src/core/calendar/weekday";
 import SpoilerSpan from "./SpoilerSpan";
 import PublicGenealogyBlock from "./PublicGenealogyBlock";
+import PublicQuestBlock from "./PublicQuestBlock";
 import PublicPersonalityBlock from "./PublicPersonalityBlock";
 import PublicWorldviewBlock from "./PublicWorldviewBlock";
 import PublicRelationshipBlock from "./PublicRelationshipBlock";
@@ -454,71 +453,6 @@ function PublicCustomTableBlock({ data }: { data: CustomTableBlockData }) {
           ))}
         </tbody>
       </table>
-    </div>
-  );
-}
-
-function questRefLink(
-  ref: BlockReference | null | undefined,
-  questRefs: Record<string, { name: string; slug: string }> | undefined,
-  hrefBase: string
-) {
-  if (!ref || ref.kind !== "entity") return null;
-  const found = questRefs?.[ref.id];
-  if (!found) return null;
-  return (
-    /* `prefetch={false}` : meme raison qu'au lien d'entite (V2.1-20 lot 6). */
-    <Link href={`${hrefBase}/${found.slug}`} prefetch={false} className="rich-ref-mention">
-      {found.name}
-    </Link>
-  );
-}
-
-function PublicQuestBlock({
-  data,
-  questRefs,
-  hrefBase,
-}: {
-  data: QuestBlockData;
-  questRefs: Record<string, { name: string; slug: string }> | undefined;
-  hrefBase: string;
-}) {
-  function noteList(items: QuestNote[], label: string) {
-    if (items.length === 0) return null;
-    return (
-      <div>
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">{label}</span>
-        <ul className="mt-1 list-disc pl-5 text-sm">
-          {items.map((item) => (
-            <li key={item.id}>
-              {item.text} {questRefLink(item.ref, questRefs, hrefBase)}
-            </li>
-          ))}
-        </ul>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col gap-3 text-sm">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-muted">
-        <span className="rounded-full border border-edge px-2 py-0.5">{QUEST_STATE_LABELS_FR[data.state] ?? data.state}</span>
-        {questRefLink(data.giver, questRefs, hrefBase) && <span>Commanditaire : {questRefLink(data.giver, questRefs, hrefBase)}</span>}
-      </div>
-      {data.objectives.length > 0 && (
-        <ul className="flex flex-col gap-1">
-          {data.objectives.map((objective: QuestObjective) => (
-            <li key={objective.id} className={`flex items-start gap-2 ${objective.done ? "text-ink-muted line-through" : ""}`}>
-              <span aria-hidden>{objective.done ? "☑" : "☐"}</span>
-              <span>
-                {objective.text} {questRefLink(objective.ref, questRefs, hrefBase)}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-      {noteList(data.rewards, "Récompenses")}
-      {noteList(data.prerequisites, "Prérequis")}
     </div>
   );
 }

@@ -846,12 +846,4 @@ export const RELATIONSHIP_AXES_FR: Record<RelationshipAxisKey, RelationshipAxisD
   interest_indifference: { label: "Intérêt ↔ Indifférence", short: "Intérêt", positive: "Intérêt", negative: "Indifférence" },
 };
 
-export const QUEST_STATE_LABELS_FR: Record<string, string> = {
-  not_started: "Non commencée",
-  in_progress: "En cours",
-  succeeded: "Réussie",
-  failed: "Échouée",
-  abandoned: "Abandonnée",
-};
-
-export const fr = { RELATION_LABELS_FR, QUEST_STATE_LABELS_FR } as const;
+export const fr = { RELATION_LABELS_FR } as const;

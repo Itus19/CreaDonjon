@@ -312,6 +312,7 @@ export function BlockDataEditor({
           version={block.version}
           data={block.data as QuestBlockData}
           otherEntities={otherEntities}
+          worldSlug={worldSlug}
           onChange={(d) => onChange(d)}
           onBlockRefreshed={onBlockRefreshed}
         />

@@ -1257,6 +1257,41 @@
     "enAttente": "En attente de la sauvegarde…"
   },
   "fiche": {
+    "quete": {
+      "etats": {
+        "not_started": "Non commencée",
+        "in_progress": "En cours",
+        "succeeded": "Réussie",
+        "failed": "Échouée",
+        "abandoned": "Abandonnée"
+      },
+      "progression": "{atteints} / {total}",
+      "progressionLabel": "{atteints} objectifs atteints sur {total}",
+      "confieePar": "confiée par",
+      "prochain": "Prochain : {texte}",
+      "tousAtteints": "Tous les objectifs sont atteints",
+      "aucunObjectif": "Aucun objectif",
+      "deplier": "Déplier la quête",
+      "replier": "Replier la quête",
+      "etat": "État de la quête",
+      "commanditaire": "Commanditaire",
+      "ficheCommanditaire": "Fiche du commanditaire",
+      "aucuneEntite": "— aucune entité —",
+      "objectifs": "Objectifs",
+      "marquerAtteint": "Marquer comme atteint",
+      "marquerNonAtteint": "Marquer comme non atteint",
+      "objectifSansTexte": "objectif sans texte",
+      "objectifLabel": "Objectif {n}",
+      "ficheObjectif": "Fiche liée à l'objectif « {objectif} »",
+      "ficheNote": "Fiche liée à « {note} »",
+      "retirer": "Retirer",
+      "ajouterObjectif": "+ objectif",
+      "recompenses": "Récompenses",
+      "prerequis": "Prérequis",
+      "ajouterRecompense": "Ajouter une récompense",
+      "ajouterPrerequis": "Ajouter un prérequis",
+      "erreurObjectif": "Impossible de mettre à jour cet objectif."
+    },
     "table": {
       "tirer": "Tirer · {de}",
       "tirageEnCours": "Tirage…",

@@ -1256,6 +1256,41 @@
     "enAttente": "Waiting for the saving throw…"
   },
   "fiche": {
+    "quete": {
+      "etats": {
+        "not_started": "Not started",
+        "in_progress": "In progress",
+        "succeeded": "Succeeded",
+        "failed": "Failed",
+        "abandoned": "Abandoned"
+      },
+      "progression": "{atteints} / {total}",
+      "progressionLabel": "{atteints} objectives reached out of {total}",
+      "confieePar": "given by",
+      "prochain": "Next: {texte}",
+      "tousAtteints": "All objectives are reached",
+      "aucunObjectif": "No objectives",
+      "deplier": "Expand the quest",
+      "replier": "Collapse the quest",
+      "etat": "Quest state",
+      "commanditaire": "Quest giver",
+      "ficheCommanditaire": "Quest giver page",
+      "aucuneEntite": "— no page —",
+      "objectifs": "Objectives",
+      "marquerAtteint": "Mark as reached",
+      "marquerNonAtteint": "Mark as not reached",
+      "objectifSansTexte": "objective without text",
+      "objectifLabel": "Objective {n}",
+      "ficheObjectif": "Page linked to the objective \u201c{objectif}\u201d",
+      "ficheNote": "Page linked to \u201c{note}\u201d",
+      "retirer": "Remove",
+      "ajouterObjectif": "+ objective",
+      "recompenses": "Rewards",
+      "prerequis": "Prerequisites",
+      "ajouterRecompense": "Add a reward",
+      "ajouterPrerequis": "Add a prerequisite",
+      "erreurObjectif": "Could not update this objective."
+    },
     "table": {
       "tirer": "Roll · {de}",
       "tirageEnCours": "Rolling…",
