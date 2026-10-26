@@ -34,6 +34,8 @@ export default function CommandeE({
   complement,
   desactive = false,
   lectureSeule = false,
+  teinte = "accent",
+  texteCentre,
   onDelta,
 }: {
   /** « Points de vie », « Niveau 2 », « Épuisement » : au-dessus de la jauge, et nom accessible du champ. */
@@ -53,6 +55,10 @@ export default function CommandeE({
   desactive?: boolean;
   /** V3.1-109 : la valeur se voit, sans commande (▲, ▼ et champ absents) — l'interrupteur du MJ est coupé. */
   lectureSeule?: boolean;
+  /** V3.1-79 : couleur de l'anneau quand il n'est pas en `danger` — `link-entity` (violet) pour le FP de la fiche de créature. */
+  teinte?: "accent" | "link-entity";
+  /** V3.1-79 : texte au centre de l'anneau à la place de « valeur/maximum » (« FP 8 »). */
+  texteCentre?: string;
   /** L'écart à appliquer, jamais une valeur cible. */
   onDelta: (delta: number) => void;
 }) {
@@ -60,7 +66,7 @@ export default function CommandeE({
 
   const pct = maximum !== undefined ? (maximum > 0 ? (valeur / maximum) * 100 : 0) : (progression ?? 0);
   const borne = Math.max(0, Math.min(100, pct));
-  const texte = maximum !== undefined ? `${valeur}/${maximum}` : String(valeur);
+  const texte = texteCentre ?? (maximum !== undefined ? `${valeur}/${maximum}` : String(valeur));
 
   /** Envoie l'écart du champ dans le sens demandé, puis vide le champ. Saisie invalide : rien ne part, le champ reste. */
   function appliquer(signe: 1 | -1) {
@@ -118,10 +124,18 @@ export default function CommandeE({
               strokeLinecap={borne === 0 ? "butt" : "round"}
               pathLength={100}
               strokeDasharray={`${borne} ${100 - borne}`}
-              className={danger ? "stroke-danger" : "stroke-accent"}
+              className={danger ? "stroke-danger" : teinte === "link-entity" ? "stroke-link-entity" : "stroke-accent"}
             />
           </svg>
-          <span className="relative text-xs font-medium text-ink">{texte}</span>
+          {/* V3.1-79 : « 136/136 » déborde de l'anneau ; au-delà de cinq signes, le maximum passe dessous. */}
+          {texteCentre === undefined && maximum !== undefined && texte.length > 5 ? (
+            <span className="relative flex flex-col items-center text-xs font-medium leading-none text-ink">
+              <span>{valeur}</span>
+              <span className="text-ink-muted">/{maximum}</span>
+            </span>
+          ) : (
+            <span className="relative text-xs font-medium text-ink">{texte}</span>
+          )}
         </div>
         {!lectureSeule && (
           // Planche « Jauge à commandes — option E » : une colonne ▲ / champ / ▼

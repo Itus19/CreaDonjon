@@ -573,6 +573,7 @@ export default function EditEntityForm({
           worldId={entity.world_id}
           initialBlocks={blocsDeDepart}
           entityKind={entityKind}
+          entityName={name}
           onBlocksChange={(blocs) => {
             blocsCourantsRef.current = blocs;
           }}

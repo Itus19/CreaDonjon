@@ -34,6 +34,8 @@ import { entryNameFrom, getRuleEntryForWorld } from "@/src/server/services/rules
 import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
 import { fireTriggersForCombatTurn } from "@/src/server/services/combatTriggers";
 import { getEntityById } from "@/src/server/repos/entities";
+import { listBlocksByTypeForEntities } from "@/src/server/repos/blocks";
+import { zStatblockBlockData } from "@/src/core/schemas/blocks/statblock";
 import { putRuntimeState } from "@/src/server/repos/runtimeState";
 import { nextEventSeq, insertSessionEvent } from "@/src/server/repos/sessions";
 import { getCampaign } from "@/src/server/services/campaigns";
@@ -249,7 +251,30 @@ export async function addEntityParticipant(
     resolveCharacterActionContext(supabase, params.entityId, params.campaignId, params.locale),
     getEntityRuntimeState(supabase, params.entityId, params.campaignId),
   ]);
-  if (!entity || !ctx) return null;
+  if (!entity) return null;
+
+  // V3.1-79 : une fiche de créature (bloc `statblock`, sans fiche de
+  // personnage) entre aussi dans l'initiative ; ses CA et PV viennent du
+  // modèle, et l'instance porte ensuite ses PV courants (le bloc n'en
+  // stocke jamais).
+  if (!ctx) {
+    const statblock = (await listBlocksByTypeForEntities(supabase, [entity.id], "statblock"))
+      .map((b) => zStatblockBlockData.safeParse(b.data))
+      .find((r) => r.success);
+    if (!statblock?.success) return null;
+    return insertCombatParticipant(supabase, {
+      combatId: params.combatId,
+      sourceKind: "entity",
+      entityId: params.entityId,
+      ruleKey: null,
+      label: entity.name,
+      ac: statblock.data.ac.value,
+      hpMax: statblock.data.hp.value,
+      hpCurrent: statblock.data.hp.value,
+      isAlly: params.isAlly,
+      displayOrder: await nextDisplayOrder(supabase, params.combatId),
+    });
+  }
 
   return insertCombatParticipant(supabase, {
     combatId: params.combatId,
@@ -600,7 +625,15 @@ export async function patchCombatParticipant(
   const touchesRow = Object.values(rowPatch).some((v) => v !== undefined);
   const updated = touchesRow ? await updateCombatParticipant(supabase, participant.id, rowPatch) : participant;
 
-  if (participant.source_kind === "entity" && participant.entity_id) {
+  // V3.1-79 : seul un personnage (bloc `character`) partage son état de jeu
+  // avec sa ligne de combat. Une créature (bloc `statblock`) peut avoir
+  // plusieurs instances — « Gobelin ×4 » — et le déclencheur de V3.1-38
+  // recopierait l'état de la fiche sur toutes : chacune garde ses PV.
+  const estPersonnage =
+    participant.source_kind === "entity" &&
+    participant.entity_id !== null &&
+    (await listBlocksByTypeForEntities(supabase, [participant.entity_id], "character")).length > 0;
+  if (estPersonnage && participant.entity_id) {
     const state = await getEntityRuntimeState(supabase, participant.entity_id, combat.campaign_id);
     const rtPatch: RuntimeStatePatch = {};
     if (params.patch.hpCurrent !== undefined || params.patch.tempHp !== undefined) {

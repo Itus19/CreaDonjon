@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import { createEntity } from "./entities";
 import { getCreatureCombat } from "./creatureCombat";
+import { patchCombatParticipant } from "./combats";
 import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
 
 /**
@@ -102,5 +103,14 @@ describe.skipIf(!hasCreds)("combat d'une fiche de créature (integration, base r
       ])
     );
     expect(await getCreatureCombat(playerClient, { entityId: gobelin.id, userId: playerId })).toBeNull();
+
+    // Chaque instance garde ses PV : toucher Gobelin 1 ne touche pas Gobelin 2
+    // (une créature n'a pas d'état de jeu partagé, contrairement à un personnage).
+    const g1 = vuMj?.instances.find((i) => i.label === "Gobelin 1");
+    if (!g1) throw new Error("Gobelin 1 introuvable");
+    await patchCombatParticipant(ownerClient, { participantId: g1.participantId, patch: { hpCurrent: 2 }, actorUserId: ownerId, note: "test" });
+    const apres = await getCreatureCombat(ownerClient, { entityId: gobelin.id, userId: ownerId });
+    expect(apres?.instances.find((i) => i.label === "Gobelin 1")?.hpCurrent).toBe(2);
+    expect(apres?.instances.find((i) => i.label === "Gobelin 2")?.hpCurrent).toBe(3);
   });
 });

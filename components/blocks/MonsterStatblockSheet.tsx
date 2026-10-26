@@ -1,5 +1,13 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
+import CreatureSheet from "./CreatureSheet";
+import { useWorldRuleEntries } from "./useWorldRuleEntries";
+import { useDiceRoll } from "@/components/shell/DiceRollPanel";
+import { lireCombatCreature } from "@/lib/ui/creatureApi";
+import { modifierParticipant } from "@/lib/ui/initiativeApi";
+import { instanceChoisie, pvApresEcart, type CombatCreature } from "@/lib/ui/creature";
 import type { StatblockBlockData } from "@/src/core/schemas/blocks/statblock";
 import type { BlockAbility } from "@/src/core/schemas/blocks/abilities";
 import { SKILLS, type Skill } from "@/src/core/rules/sheet";
@@ -155,7 +163,7 @@ function FeatureList({
  * sauvegarde voisin. Même motif que `PlayableCharacterSheet`, qui n'a
  * jamais cette course precisement parce qu'il commit a chaque frappe.
  */
-export default function MonsterStatblockSheet({
+function StatblockForm({
   data,
   onChange,
 }: {
@@ -365,6 +373,125 @@ export default function MonsterStatblockSheet({
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Le bloc `statblock` (V3.1-79) : la fiche de créature en deux colonnes, et le
+ * formulaire de saisie des valeurs plates derrière « Modifier les valeurs ».
+ *
+ * L'initiative en cours n'est demandée qu'UNE fois, au montage, et seulement
+ * par le MJ (la route répond `null` aux autres) : pas de sondage ni de temps
+ * réel. En combat, les PV et les états s'écrivent sur l'instance choisie par la
+ * route de l'initiative — leur propre écriture, qui n'engage jamais le bloc
+ * (ni `onChange` ni `commit`) : le bloc est un modèle, il ne porte aucun état
+ * de jeu.
+ */
+export default function MonsterStatblockSheet({
+  worldSlug,
+  entityId,
+  entityName,
+  data,
+  onChange,
+}: {
+  worldSlug: string;
+  entityId: string;
+  entityName?: string;
+  data: StatblockBlockData;
+  onChange: (data: StatblockBlockData) => void;
+}) {
+  const t = useTranslations("fiche.creature");
+  const { openDiceTool } = useDiceRoll();
+  const [edition, setEdition] = useState(false);
+  const [combat, setCombat] = useState<CombatCreature | null>(null);
+  const [participantId, setParticipantId] = useState<string | null>(null);
+  const [erreur, setErreur] = useState<string | null>(null);
+  const enCours = useRef(false);
+
+  useEffect(() => {
+    let annule = false;
+    lireCombatCreature(entityId)
+      .then((c) => {
+        if (!annule) setCombat(c);
+      })
+      .catch((e: unknown) => {
+        console.error("Lecture du combat de la créature impossible", e);
+        if (!annule) setCombat(null);
+      });
+    return () => {
+      annule = true;
+    };
+  }, [entityId]);
+
+  const regles = useWorldRuleEntries(worldSlug);
+  const etatsDisponibles = regles.filter((e) => e.entryType === "condition").map((e) => e.name);
+
+  /** Écrit l'instance choisie ; un second geste pendant l'envoi est ignoré (le bouton, lui, ne se désactive pas : il perdrait le focus). */
+  async function ecrire(correctif: { hpCurrent?: number; conditions?: string[] }, note: string, appliquer: (c: CombatCreature, id: string) => CombatCreature) {
+    if (!combat || enCours.current) return;
+    const instance = instanceChoisie(combat, participantId);
+    enCours.current = true;
+    setErreur(null);
+    try {
+      await modifierParticipant(combat.campaignId, combat.combatId, instance.participantId, correctif, note, t("erreurEcriture"));
+      setCombat((actuel) => (actuel ? appliquer(actuel, instance.participantId) : actuel));
+    } catch (e: unknown) {
+      setErreur(e instanceof Error ? e.message : t("erreurEcriture"));
+    } finally {
+      enCours.current = false;
+    }
+  }
+
+  function majInstance(c: CombatCreature, id: string, champs: Partial<CombatCreature["instances"][number]>): CombatCreature {
+    return { ...c, instances: c.instances.map((i) => (i.participantId === id ? { ...i, ...champs } : i)) };
+  }
+
+  const instance = combat ? instanceChoisie(combat, participantId) : null;
+
+  return (
+    <div className="mb-4 flex flex-col gap-2">
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => setEdition((v) => !v)}
+          aria-pressed={edition}
+          className="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised"
+        >
+          {edition ? t("terminer") : t("modifier")}
+        </button>
+      </div>
+      {edition ? (
+        <StatblockForm data={data} onChange={onChange} />
+      ) : (
+        <CreatureSheet
+          worldSlug={worldSlug}
+          entityId={entityId}
+          nom={entityName}
+          data={data}
+          combat={combat}
+          participantId={participantId}
+          onChoisirInstance={setParticipantId}
+          onDeltaPv={(ecart) => {
+            if (!instance) return;
+            const hpCurrent = pvApresEcart(instance, ecart);
+            void ecrire({ hpCurrent }, t("notePv", { label: instance.label }), (c, id) => majInstance(c, id, { hpCurrent }));
+          }}
+          onRetirerEtat={(nom) => {
+            if (!instance) return;
+            const conditions = instance.conditions.filter((c) => c !== nom);
+            void ecrire({ conditions }, t("noteEtats", { label: instance.label }), (c, id) => majInstance(c, id, { conditions }));
+          }}
+          onAjouterEtat={(nom) => {
+            if (!instance || instance.conditions.includes(nom)) return;
+            const conditions = [...instance.conditions, nom];
+            void ecrire({ conditions }, t("noteEtats", { label: instance.label }), (c, id) => majInstance(c, id, { conditions }));
+          }}
+          etatsDisponibles={etatsDisponibles}
+          onJet={openDiceTool}
+          erreur={erreur}
+        />
+      )}
     </div>
   );
 }

@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { ftToM } from "@/src/core/rules/encumbrance";
 import { squaresFromMeters } from "@/src/core/rules/gridSquares";
@@ -10,11 +9,10 @@ import type { Concentration } from "@/src/core/schemas/runtimeState";
 import type { EtatMourant } from "@/lib/ui/etatMourant";
 import type { DeDeVie } from "@/lib/ui/outilTable";
 import { TOUTES_LES_COMMANDES, type CommandesFiche } from "@/lib/ui/commandesFiche";
-import ActionsMenu from "@/components/shared/ActionsMenu";
+import BouclierCA from "@/components/shared/BouclierCA";
 import CommandeE, { CommandeESquelette } from "@/components/shared/CommandeE";
-import FeuilleDuBas from "@/components/shared/FeuilleDuBas";
-import { useMatchMedia, WINDOWS_MOBILE_QUERY } from "@/components/shell/useMatchMedia";
 import BlocMourant from "./BlocMourant";
+import EtatsEnCours, { CROIX } from "./EtatsEnCours";
 import NomDeRegle from "./NomDeRegle";
 import { useWorldRuleEntries } from "./useWorldRuleEntries";
 
@@ -35,6 +33,7 @@ export function StatBadge({
   danger,
   chargement,
   onClick,
+  fluide = false,
 }: {
   label: string;
   value: string;
@@ -44,10 +43,15 @@ export function StatBadge({
   /** V3.1-26 : la fiche calculee n'est pas prete — case creuse, SANS chiffre (jamais la valeur provisoire). */
   chargement?: boolean;
   onClick?: () => void;
+  /** V3.1-79 : la tuile prend la largeur de sa cellule (quatre tuiles égales de la fiche de créature) au lieu des 72 px fixes, et son libellé reste sur une ligne. */
+  fluide?: boolean;
 }) {
+  const largeur = fluide ? "w-full min-w-0" : "w-[4.5rem] shrink-0";
+  // Fluide : libellé en casse normale (« Initiative » en capitales espacées déborderait d'un quart de 390 px).
+  const typo = fluide ? "whitespace-nowrap font-semibold" : "font-bold uppercase tracking-wide";
   if (chargement) {
     return (
-      <div className="flex w-[4.5rem] shrink-0 flex-col items-center gap-1" aria-hidden="true">
+      <div className={`flex ${largeur} flex-col items-center gap-1`} aria-hidden="true">
         <span className="flex h-8 items-end justify-center text-center text-xs font-bold uppercase leading-tight tracking-wide text-ink-muted">{label}</span>
         <div className="h-14 w-full animate-pulse rounded-md border border-edge bg-panel-sunken" />
       </div>
@@ -64,9 +68,9 @@ export function StatBadge({
     </div>
   );
   return (
-    <div className="flex w-[4.5rem] shrink-0 flex-col items-center gap-1">
+    <div className={`flex ${largeur} flex-col items-center gap-1`}>
       <span
-        className={`flex h-8 items-end justify-center text-center text-xs font-bold uppercase leading-tight tracking-wide ${
+        className={`flex h-8 items-end justify-center text-center text-xs leading-tight ${typo} ${
           danger ? "text-danger" : "text-ink-muted"
         }`}
       >
@@ -206,9 +210,6 @@ function DesDeVieBadge({
   );
 }
 
-const PASTILLE_ETAT = "rounded-full border border-danger text-xs text-danger";
-const CROIX =
-  "relative flex h-4 w-4 items-center justify-center rounded-full text-xs leading-none text-ink-muted transition-colors after:absolute after:-inset-1.5 after:content-[''] hover:text-danger disabled:opacity-40";
 
 export interface RangeeChiffreeProps {
   worldSlug: string;
@@ -305,14 +306,11 @@ export default function RangeeChiffree({
   onRompreConcentration,
 }: RangeeChiffreeProps) {
   const t = useTranslations("table");
-  const estTelephone = useMatchMedia(WINDOWS_MOBILE_QUERY);
-  const [feuilleEtats, setFeuilleEtats] = useState(false);
 
   // V3.1-32 : un état ou l'épuisement n'ouvre une règle que si la fiche existe dans le
   // ruleset du monde (jamais une clé devinée). Les états sont stockés par NOM traduit.
   const regles = useWorldRuleEntries(worldSlug);
   const reglesEtats = regles.filter((e) => e.entryType === "condition");
-  const cleEtat = (nom: string) => reglesEtats.find((e) => e.name.toLowerCase() === nom.toLowerCase())?.key;
   const cleEpuisement = reglesEtats.find((e) => e.key === "exhaustion")?.key;
 
   // Cases comptées depuis les METRES affichés, pas depuis les pieds d'origine :
@@ -323,22 +321,12 @@ export default function RangeeChiffree({
   const speedMeters = Math.round(ftToM(sheet.speed.value));
   const speedSquares = squaresFromMeters(speedMeters);
 
-  const dejaPoses = new Set(conditions.map((c) => c.toLowerCase()));
-  const aPoser = etatsDisponibles.filter((nom) => !dejaPoses.has(nom.toLowerCase()));
-
   return (
     <>
       <div className="flex flex-wrap items-start gap-x-5 gap-y-3">
-        <div className="flex w-12 shrink-0 flex-col items-center gap-1">
-          <span className="flex h-8 items-end justify-center text-xs font-bold uppercase tracking-wide text-ink-muted">CA</span>
-          <div
-            className="relative flex h-14 w-12 items-center justify-center border-2 border-accent bg-panel-raised"
-            style={{ clipPath: "polygon(50% 0%, 100% 20%, 100% 55%, 50% 100%, 0% 55%, 0% 20%)" }}
-            title="Classe d'armure — calculée automatiquement (10 + Dex + équipement)"
-          >
-            {pret && <span className="text-xl font-bold text-ink">{sheet.ac.value}</span>}
-          </div>
-        </div>
+        <BouclierCA titre="Classe d'armure — calculée automatiquement (10 + Dex + équipement)">
+          {pret && <span className="text-xl font-bold text-ink">{sheet.ac.value}</span>}
+        </BouclierCA>
 
         {pret ? (
           <>
@@ -448,86 +436,15 @@ export default function RangeeChiffree({
         </div>
       )}
 
-      {/* V2.1-26 — les états en cours. Ils étaient déjà en base, écrits par
-          l'écran Initiative, et la fiche ne les montrait nulle part : le MJ
-          posait un état, le joueur ne le voyait pas. */}
-      {(conditions.length > 0 || onAjouterEtat) && (
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs font-bold uppercase tracking-wide text-ink-muted">États</span>
-          {conditions.map((condition) => {
-            const cle = cleEtat(condition);
-            const nom = cle ? <NomDeRegle worldSlug={worldSlug} ruleKey={cle}>{condition}</NomDeRegle> : condition;
-            if (!onRetirerEtat) {
-              return (
-                <span key={condition} className={`${PASTILLE_ETAT} px-3 py-1`}>
-                  {nom}
-                </span>
-              );
-            }
-            return (
-              <span key={condition} className={`${PASTILLE_ETAT} inline-flex items-center gap-1.5 py-1 pl-3 pr-2`}>
-                {nom}
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => onRetirerEtat(condition)}
-                  title={t("retirerEtat", { nom: condition })}
-                  aria-label={t("retirerEtat", { nom: condition })}
-                  className={CROIX}
-                >
-                  ×
-                </button>
-              </span>
-            );
-          })}
-          {onAjouterEtat &&
-            (estTelephone ? (
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => setFeuilleEtats(true)}
-                aria-haspopup="dialog"
-                title={t("ajouterEtat")}
-                aria-label={t("ajouterEtat")}
-                className="min-h-8 min-w-8 rounded-full border border-edge px-2 py-1 text-xs text-ink transition-colors hover:bg-panel-raised disabled:opacity-50"
-              >
-                +
-              </button>
-            ) : (
-              <ActionsMenu
-                label="+"
-                aria-label={t("ajouterEtat")}
-                triggerClassName="rounded-full border border-edge px-2 py-1 text-xs text-ink transition-colors hover:bg-panel-raised"
-                items={aPoser.map((nom) => ({ label: nom, onSelect: () => onAjouterEtat(nom) }))}
-              />
-            ))}
-        </div>
-      )}
-
-      {feuilleEtats && onAjouterEtat && (
-        <FeuilleDuBas titre={t("ajouterEtat")} titreVisible onFermer={() => setFeuilleEtats(false)}>
-          {aPoser.length === 0 ? (
-            <p className="px-1 pb-2 text-sm text-ink-muted">{t("aucunEtatAPoser")}</p>
-          ) : (
-            <ul className="grid grid-cols-2 gap-2 pb-1">
-              {aPoser.map((nom) => (
-                <li key={nom}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onAjouterEtat(nom);
-                      setFeuilleEtats(false);
-                    }}
-                    className="flex min-h-11 w-full items-center rounded-2xl border border-edge bg-panel px-3 py-2 text-left text-sm text-ink transition-colors hover:bg-panel-raised"
-                  >
-                    {nom}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </FeuilleDuBas>
-      )}
+      {/* V2.1-26 — les états en cours (extraits dans `EtatsEnCours` par V3.1-79 : la fiche de créature les montre aussi). */}
+      <EtatsEnCours
+        worldSlug={worldSlug}
+        conditions={conditions}
+        busy={busy}
+        onRetirerEtat={onRetirerEtat}
+        onAjouterEtat={onAjouterEtat}
+        etatsDisponibles={etatsDisponibles}
+      />
     </>
   );
 }

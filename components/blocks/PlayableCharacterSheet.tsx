@@ -29,6 +29,7 @@ import LevelUpWizard from "./LevelUpWizard";
 import { useDiceRoll } from "@/components/shell/DiceRollPanel";
 import { chargerFicheCalculee, type SheetApiResponse } from "./ficheCalculee";
 import { ABILITY_LABELS, SORTED_SKILLS } from "./sheetLabels";
+import TuileCaracteristique from "./TuileCaracteristique";
 import { commandesDeLaFiche, type CommandesFiche } from "@/lib/ui/commandesFiche";
 import { useJetsDeLaFiche } from "./useJetsDeLaFiche";
 
@@ -480,59 +481,48 @@ export default function PlayableCharacterSheet({
               {(Object.keys(ABILITY_LABELS) as Ability[]).map((ability) => {
                 const save = sheet.savingThrows[ability];
                 return (
-                  <div key={ability} className="flex flex-col items-center gap-1 rounded-lg border border-edge/60 bg-panel-raised px-2 py-2.5 text-center">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-accent">{ABILITY_LABELS[ability]}</span>
-                    <button
-                      type="button"
-                      title={`Lancer un test de ${ABILITY_NAMES[ability]}`}
-                      aria-label={`Test de ${ABILITY_NAMES[ability]}`}
-                      onClick={() =>
-                        rollAbility(entityId, ability, advantage, {
-                          label: `Test de ${ABILITY_NAMES[ability]}`,
-                          modifier: sheet.abilities[ability].mod,
-                          inspiration,
-                          apresRelance: reloadRemote,
-                        })
-                      }
-                      className="min-h-9 min-w-12 text-xl font-bold text-ink hover:text-accent @min-[40rem]:min-h-0 @min-[40rem]:min-w-0"
-                    >
-                      {sheet.abilities[ability].mod >= 0 ? "+" : ""}
-                      {sheet.abilities[ability].mod}
-                    </button>
-                    <input
-                      type="number"
-                      value={character.abilities.base[ability]}
-                      onChange={(e) =>
-                        patchCharacter({
-                          abilities: {
-                            ...character.abilities,
-                            base: { ...character.abilities.base, [ability]: Number(e.target.value) || 0 },
-                          },
-                        })
-                      }
-                      className="w-10 rounded-full border border-edge bg-panel-sunken px-1 py-0.5 text-center text-xs text-ink-muted outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                    />
-                    <button
-                      type="button"
-                      title={`Lancer une sauvegarde de ${ABILITY_NAMES[ability]}`}
-                      aria-label={`Sauvegarde de ${ABILITY_NAMES[ability]}`}
-                      onClick={() =>
-                        rollSave(entityId, ability, advantage, {
-                          label: `Sauvegarde de ${ABILITY_NAMES[ability]}`,
-                          modifier: save.mod,
-                          inspiration,
-                          apresRelance: reloadRemote,
-                        })
-                      }
-                      className={`flex min-h-9 items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] @min-[40rem]:min-h-0 font-semibold hover:border-accent ${
-                        save.proficient ? "border-accent bg-accent/20 text-accent" : "border-edge text-ink-muted"
-                      }`}
-                    >
-                      <span className={`h-1.5 w-1.5 rounded-full ${save.proficient ? "bg-accent" : "bg-edge"}`} aria-hidden="true" />
-                      Sauv. {save.mod >= 0 ? "+" : ""}
-                      {save.mod}
-                    </button>
-                  </div>
+                  <TuileCaracteristique
+                    key={ability}
+                    abreviation={ABILITY_LABELS[ability]}
+                    modificateur={`${sheet.abilities[ability].mod >= 0 ? "+" : ""}${sheet.abilities[ability].mod}`}
+                    titreTest={`Lancer un test de ${ABILITY_NAMES[ability]}`}
+                    libelleTest={`Test de ${ABILITY_NAMES[ability]}`}
+                    onTest={() =>
+                      rollAbility(entityId, ability, advantage, {
+                        label: `Test de ${ABILITY_NAMES[ability]}`,
+                        modifier: sheet.abilities[ability].mod,
+                        inspiration,
+                        apresRelance: reloadRemote,
+                      })
+                    }
+                    milieu={
+                      <input
+                        type="number"
+                        value={character.abilities.base[ability]}
+                        onChange={(e) =>
+                          patchCharacter({
+                            abilities: {
+                              ...character.abilities,
+                              base: { ...character.abilities.base, [ability]: Number(e.target.value) || 0 },
+                            },
+                          })
+                        }
+                        className="w-10 rounded-full border border-edge bg-panel-sunken px-1 py-0.5 text-center text-xs text-ink-muted outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                      />
+                    }
+                    sauvegarde={`Sauv. ${save.mod >= 0 ? "+" : ""}${save.mod}`}
+                    titreSauvegarde={`Lancer une sauvegarde de ${ABILITY_NAMES[ability]}`}
+                    libelleSauvegarde={`Sauvegarde de ${ABILITY_NAMES[ability]}`}
+                    maitrise={save.proficient}
+                    onSauvegarde={() =>
+                      rollSave(entityId, ability, advantage, {
+                        label: `Sauvegarde de ${ABILITY_NAMES[ability]}`,
+                        modifier: save.mod,
+                        inspiration,
+                        apresRelance: reloadRemote,
+                      })
+                    }
+                  />
                 );
               })}
             </div>

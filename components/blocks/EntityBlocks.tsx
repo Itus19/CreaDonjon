@@ -408,6 +408,8 @@ export function BlockDataEditor({
       // plein ecran passe, lui, toujours par ici.
       return (
         <MonsterStatblockSheet
+          worldSlug={worldSlug}
+          entityId={block.entityId}
           data={block.data as StatblockBlockData}
           onChange={(d) => onChange(d)}
         />
@@ -634,6 +636,7 @@ export default function EntityBlocks({
   hideAiAssist,
   onBlocksChange,
   entityKind,
+  entityName,
 }: {
   entityId: string;
   /** V2-H3 : necessaire pour "creer la carte «X»" depuis le bloc genealogie. */
@@ -657,6 +660,8 @@ export default function EntityBlocks({
   onBlocksChange?: (blocks: BlockItem[]) => void;
   /** V3.1-66 : genre de la fiche (`entity_kind`), pour les intitulés proposés par le bloc Encadré. */
   entityKind?: string;
+  /** V3.1-79 : nom de la fiche, pour l'en-tête de la fiche de créature (bloc `statblock`). */
+  entityName?: string;
 }) {
   const t = useTranslations("fiche");
   const [blocks, setBlocks] = useState<BlockItem[]>(initialBlocks);
@@ -1220,6 +1225,7 @@ export default function EntityBlocks({
                 hideAiAssist={hideAiAssist}
                 siblings={sortedBlocks}
                 entityKind={entityKind}
+                entityName={entityName}
               />
             ))}
           </SortableContext>
@@ -1293,6 +1299,7 @@ function SortableBlockCard({
   hideAiAssist,
   siblings,
   entityKind,
+  entityName,
 }: {
   block: BlockItem;
   index: number;
@@ -1341,6 +1348,7 @@ function SortableBlockCard({
   /** V2.1-11 : tous les blocs de la fiche, dans l'ordre d'affichage — transmis au bloc `image`, qui y choisit son hôte d'ancrage. */
   siblings: BlockItem[];
   entityKind?: string;
+  entityName?: string;
 }) {
   const {
     attributes,
@@ -1454,6 +1462,9 @@ function SortableBlockCard({
           )
         ) : block.blockType === "statblock" ? (
           <MonsterStatblockSheet
+            worldSlug={worldSlug}
+            entityId={entityId}
+            entityName={entityName}
             data={block.data as StatblockBlockData}
             onChange={(data) => onPatchBlock(block.id, { data })}
           />
