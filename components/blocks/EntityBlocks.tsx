@@ -249,6 +249,8 @@ export function BlockDataEditor({
           data={block.data as RandomTableBlockData}
           onChange={(d) => onChange(d)}
           blockId={block.id}
+          worldSlug={worldSlug}
+          otherEntities={otherEntities}
         />
       );
     case "generator":

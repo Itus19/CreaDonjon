@@ -19,7 +19,6 @@ import {
   ddDepuisSaisie,
   emplacementsAttendus,
   ErreurLancer,
-  etatDe,
   formaterModificateur,
   pasDd,
   pasModificateur,
@@ -36,6 +35,8 @@ import {
 } from "@/lib/ui/outilDes";
 import { messageErreur, posterJet } from "@/lib/ui/outilDesApi";
 import { useMatchMedia } from "./useMatchMedia";
+import { CarreDe as Carre, useBruit } from "@/components/shared/DeAnime";
+import { ATTENTE_MIN_MS, PAS_FIGE_MS, REDUIT_QUERY } from "@/lib/ui/animationDe";
 import { useSauvegardes } from "./SauvegardesProvider";
 
 /**
@@ -59,14 +60,9 @@ const DIE_CLIP_PATH: Record<number, string> = {
   100: "polygon(50% 2%, 92% 36%, 76% 98%, 24% 98%, 8% 36%)",
 };
 
-const REDUIT_QUERY = "(prefers-reduced-motion: reduce)";
-/** Délai entre deux dés qui se figent, durée du compte du total, durée du remplissage du verdict. */
-const PAS_FIGE_MS = 110;
+/** Durée du compte du total, durée du remplissage du verdict (le reste de l'animation — pas entre deux dés, attente minimale, bruit — est partagé : `lib/ui/animationDe.ts`). */
 const COMPTE_MS = 450;
 const REMPLISSAGE_MS = 450;
-/** Attente minimale avant de figer : le scintillement doit se voir même si le serveur répond vite. */
-const ATTENTE_MIN_MS = 450;
-const RAFRAICHISSEMENT_BRUIT_MS = 70;
 
 // ---- conteneur : panneau flottant (ordinateur et tablette) ------------------
 
@@ -794,19 +790,6 @@ function useRevelation(jet: JetAffiche | null, nombre: number, aTeinte: boolean,
   return etat.pour === jet.id ? etat : REVELATION_VIDE;
 }
 
-/** Chiffres flous qui défilent (décoratifs : `Math.random` n'est jamais un résultat affiché comme tel). */
-function useBruit(faces: number[], actif: boolean): number[] {
-  const [bruit, setBruit] = useState<number[]>([]);
-  const cle = faces.join(",");
-  useEffect(() => {
-    if (!actif || cle === "") return;
-    const liste = cle.split(",").map(Number);
-    const id = setInterval(() => setBruit(liste.map((f) => 1 + Math.floor(Math.random() * f))), RAFRAICHISSEMENT_BRUIT_MS);
-    return () => clearInterval(id);
-  }, [actif, cle]);
-  return bruit;
-}
-
 const CLASSE_TON: Record<"success" | "fail" | "critical", string> = {
   success: "bg-success",
   fail: "bg-danger",
@@ -885,46 +868,6 @@ function ZoneResultat({
           {termine && jet && !jet.sansTotal ? t("annonceTotal", { total: jet.total }) : ""}
         </span>
       </div>
-    </div>
-  );
-}
-
-function Carre({
-  faces,
-  valeur,
-  bruit,
-  petit,
-  retenu,
-  libelleRetenu,
-}: {
-  faces: number;
-  valeur: number | undefined;
-  bruit: number | undefined;
-  petit: boolean;
-  /** Dans une paire : ce dé est-il celui qui compte ? Absent hors paire. */
-  retenu: boolean | undefined;
-  libelleRetenu: string;
-}) {
-  const taille = petit ? "h-7 w-7 text-xs" : "h-10 w-10 text-base";
-  if (valeur === undefined) {
-    return (
-      <div
-        className={`flex items-center justify-center rounded-md border border-dashed border-edge-strong font-mech font-semibold text-ink-muted ${taille}`}
-        aria-hidden="true"
-      >
-        {bruit !== undefined && <span className="blur-[2px]">{bruit}</span>}
-      </div>
-    );
-  }
-  const etat = etatDe(valeur, faces);
-  const couleur = etat === "maximum" ? "border-accent text-accent" : etat === "un" ? "border-danger text-danger" : "border-edge-strong text-ink";
-  const paire = retenu === undefined ? "" : retenu ? "ring-2 ring-accent ring-offset-1 ring-offset-panel-sunken" : "opacity-40";
-  return (
-    <div
-      className={`flex items-center justify-center rounded-md border bg-panel-raised font-mech font-bold ${taille} ${couleur} ${paire}`}
-      title={retenu ? libelleRetenu : undefined}
-    >
-      {valeur}
     </div>
   );
 }
