@@ -2,6 +2,21 @@
 
 ---
 
+### ☑ V3.1-77 — Musique (A) : la platine, les bornes, la durée des fondus · `M` · sans modèle IA — **fait le 26 octobre**
+
+**Critères d'acceptation**
+- [x] « 0:12 » écrit `startSeconds: 12` ; vide l'efface ; fin ≤ début refusé avec le message du schéma.
+- [x] Les champs de bornes n'apparaissent pas pour Spotify / SoundCloud.
+- [x] Pas-à-pas bornés à 0 et 5 s ; la platine applique la nouvelle durée au fondu suivant.
+- [x] Aucun changement du lecteur de la page de lecture.
+
+**Réalisé** (interface par Sonnet, relue par Opus ; vérifié en direct)
+- Platine (service, ce qu'il permet, bornes en cours, ◂◂ lecture ▸▸), liste rangeable (dnd-kit), « ⋯ » sous la piste (bornes m:ss pour YouTube, phrase pour Spotify / SoundCloud, « Retirer la piste »), réglages (trois interrupteurs, deux pas-à-pas), ajout d'un lien avec la validation du schéma, rappel sous le bloc. Logique pure dans `lib/ui/musique.ts` (la validation réutilise `zMusicBlockData`).
+- Lecteur inchangé (`MusicVoice`, `MusicPlaybackContext`, `youtubeApi`, `PublicMusicToggle`) : la durée des fondus est lue à chaque lancement de piste.
+- Reste à faire : la barre de progression, les temps de la platine et la durée de chaque piste — le lecteur partagé ne publie pas la position et la donnée n'a pas de durée ; il faudra que le lecteur l'expose (ticket à part). Le fondu sortant d'une piste déjà en cours garde l'ancienne durée jusqu'à la piste suivante.
+
+---
+
 ### ☑ V3.1-76 — Quête (C) : une ligne, dépliable · `S` · sans modèle IA — **fait le 26 octobre**
 
 **Critères d'acceptation**

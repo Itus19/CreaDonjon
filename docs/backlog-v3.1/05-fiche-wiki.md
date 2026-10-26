@@ -95,52 +95,6 @@ V3.1-48.
 
 ---
 
-### ☐ V3.1-77 — Musique (A) : la platine, les bornes, la durée des fondus · `M` · sans modèle IA — **prêt**
-
-**Modèle conseillé : Sonnet** — tous les champs existent (ADR 0022).
-
-**Sous-tâches Haiku** (`aide-haiku`) : reporter les libellés dans `messages/fr.json` et `messages/en.json` ; mettre à jour la planche du catalogue d'après le code livré ; lancer `npm run typecheck && npm run lint && npm run test` et résumer les échecs.
-
-**Planche** : `Outils-Decide.dc.html`, section « Musique — A » (ouvrir
-« ⋯ » sur une piste). **Départ** : `components/blocks/MusicBlockEditor.tsx`,
-`components/shell/MusicVoice.tsx`, `components/shell/youtubeApi.ts`,
-`components/entities/public/PublicMusicToggle.tsx`,
-`src/core/schemas/blocks/music.ts`, ADR 0022. **Dépend de** : 63.
-
-**Ce qui est décidé (A, complétée par l'auteur)**
-- **La platine en tête** : pochette (glyphe ♪), titre de la piste en cours,
-  service en pastille (YouTube, Spotify, SoundCloud), ce que le service
-  permet (« fondus 1,5 s » ou « pas de fondu : Spotify ne le permet pas »),
-  les bornes en cours (« joue 0:12 → fin ») ; ◂◂, lecture/pause (bouton
-  plein accent), ▸▸ ; la progression et les temps.
-- **La liste dessous** : une ligne par piste — lecture, ⠿ pour ranger,
-  titre et bornes (« 0:12 → fin »), service, durée, **« ⋯ »**.
-- **« ⋯ » ouvre sous la piste** : « Commencer à » et « Finir à » (m:ss ;
-  vide = piste entière) → `startSeconds` / `endSeconds` — **YouTube
-  seulement** ; pour Spotify et SoundCloud, à la place : « Spotify ne sait
-  pas commencer ni finir à un point précis : la piste joue en entier. » ;
-  et « Retirer la piste ».
-- **Réglages** : interrupteurs « Lancer à la visite de la fiche »
-  (`autoplayOnVisit`), « En boucle », « Fondus (YouTube) » ; et **deux
-  pas-à-pas** « Fondu entrant » et « Fondu sortant » (`fadeInMs`,
-  `fadeOutMs`) : 0 à 5 s par pas de 0,5 s, affichés « 1,5 s », avec la
-  mention « YouTube seulement ».
-- « Lien Spotify, SoundCloud ou YouTube… » + « Ajouter » (validation
-  existante : un lien non reconnu est refusé avec son message).
-- Rappel sous le bloc (éditeur seulement) : « Sur la page de lecture, le
-  bloc ne s'affiche pas » et l'aperçu du ♪ à côté du nom de la fiche
-  (comportement existant, inchangé).
-- Téléphone : durées et poignées masquées dans la liste ; tout le reste
-  identique.
-
-**Critères d'acceptation**
-- [ ] « 0:12 » écrit `startSeconds: 12` ; vide l'efface ; fin ≤ début refusé avec le message du schéma.
-- [ ] Les champs de bornes n'apparaissent pas pour Spotify / SoundCloud.
-- [ ] Pas-à-pas bornés à 0 et 5 s ; la platine applique la nouvelle durée au fondu suivant.
-- [ ] Aucun changement du lecteur de la page de lecture.
-
----
-
 ### ☐ V3.1-78 — Carte (C) : la carte et sa liste par couches · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet** — modèle et services existants (ADR 0017).

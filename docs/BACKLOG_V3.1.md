@@ -208,7 +208,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-74 | ☑ | sans | Dates de naissance et de mort (données) | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-75 | ☑ | sans | Table aléatoire (A) et le dé animé | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-76 | ☑ | sans | Quête (C) : une ligne, dépliable | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-77 | ☐ | sans | Musique (A) : la platine, les bornes, la durée des fondus | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
+| V3.1-77 | ☑ | sans | Musique (A) : la platine, les bornes, la durée des fondus | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-78 | ☐ | sans | Carte (C) : la carte et sa liste par couches | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
 | V3.1-79 | ☐ | sans | Fiche de créature (A) : la fiche de personnage, pour une créature | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
 | V3.1-80 | ☑ | sans | Compte (A) : une page en sections | [`termines.md`](backlog-v3.1/termines.md) |
