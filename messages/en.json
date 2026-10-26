@@ -1810,6 +1810,8 @@
     "pastille": "Visibility: {niveau}. Tap to switch to {suivant}.",
     "carte": {
       "titre": "Map",
+      "voirCommeJoueurs": "View as players",
+      "vueJoueursNote": "The map as the server sends it to a player: nothing of the GM reaches it.",
       "agrandirRef": "Enlarge / change",
       "agrandirOwn": "Enlarge / replace",
       "televerser": "+ Upload a map",

@@ -391,6 +391,7 @@ export function BlockDataEditor({
           visibilityLevel={block.visibilityLevel}
           visibilityScopeId={block.visibilityScopeId}
           onChange={(d) => onChange(d)}
+          isGm={!hideAiAssist}
         />
       );
     case "session_journal_meta":

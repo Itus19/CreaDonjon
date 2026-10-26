@@ -16,6 +16,7 @@ import type { MapSourceInfo, CarteOption } from "@/src/server/services/mapSource
 import type { VisibleMapPin } from "@/src/server/services/mapPins";
 import type { VisibleMapRegion } from "@/src/server/services/mapRegions";
 import type { OtherEntityOption } from "@/components/entities/RelationsChips";
+import Checkbox from "@/components/shared/Checkbox";
 import { useEditCommit } from "@/components/shared/EditCommitContext";
 
 // Meme hauteur que RelationsGraphCanvas/FamilyTreeCanvas (retour
@@ -40,6 +41,7 @@ export default function MapBlockEditor({
   visibilityLevel,
   visibilityScopeId,
   onChange,
+  isGm = false,
 }: {
   worldSlug: string;
   /** Punaises (Lot I, phase C) : `map_pins` est cle par `block_id`, jamais fourni par `data`. */
@@ -50,6 +52,8 @@ export default function MapBlockEditor({
   visibilityLevel: string;
   visibilityScopeId: string | null;
   onChange: (data: MapBlockData) => void;
+  /** V3.1-78 : le MJ peut voir la carte comme les joueurs (« Voir comme les joueurs »). */
+  isGm?: boolean;
 }) {
   /** Persistance immediate (ADR 0023) — voir le commentaire dans `MapWorkspace.tsx`. */
   const commit = useEditCommit();
@@ -58,6 +62,9 @@ export default function MapBlockEditor({
   const commandesRef = useRef<CommandesCarte>(null);
   const [allumeId, setAllumeId] = useState<string | null>(null);
   const [layers, setLayers] = useState<VisibleMapLayer[]>([]);
+  // V3.1-78 : état d'affichage, jamais enregistré. Le serveur rend alors la carte
+  // telle qu'il l'envoie à un joueur (`?vue=joueurs`, `mapViewer.ts`).
+  const [vueJoueurs, setVueJoueurs] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [asset, setAsset] = useState<AssetRow | null>(null);
   // `undefined` = pas encore resolu, distinct de `null` = confirme
@@ -165,10 +172,11 @@ export default function MapBlockEditor({
   useEffect(() => {
     if (!overlaySourceId) return;
     let cancelled = false;
+    const vue = vueJoueurs ? "?vue=joueurs" : "";
     Promise.all([
-      fetch(`/api/blocks/${overlaySourceId}/pins`).then((res) => (res.ok ? res.json() : [])),
-      fetch(`/api/blocks/${overlaySourceId}/regions`).then((res) => (res.ok ? res.json() : [])),
-      fetch(`/api/blocks/${overlaySourceId}/layers`).then((res) => (res.ok ? res.json() : [])),
+      fetch(`/api/blocks/${overlaySourceId}/pins${vue}`).then((res) => (res.ok ? res.json() : [])),
+      fetch(`/api/blocks/${overlaySourceId}/regions${vue}`).then((res) => (res.ok ? res.json() : [])),
+      fetch(`/api/blocks/${overlaySourceId}/layers${vue}`).then((res) => (res.ok ? res.json() : [])),
     ])
       .then(([p, r, l]: [VisibleMapPin[], VisibleMapRegion[], VisibleMapLayer[]]) => {
         if (!cancelled) {
@@ -188,7 +196,7 @@ export default function MapBlockEditor({
     return () => {
       cancelled = true;
     };
-  }, [overlaySourceId, expanded]);
+  }, [overlaySourceId, expanded, vueJoueurs]);
 
   function pickCarte(option: CarteOption) {
     // Le cadrage precedent n'a de sens que pour l'image d'avant (coordonnees
@@ -311,11 +319,11 @@ export default function MapBlockEditor({
             groupes={rangerParCouches(layers, elements)}
             allumeId={allumeId}
             onChoisir={choisir}
-            ecrire={source === undefined ? ecrireVisibilite : undefined}
+            ecrire={source === undefined && !vueJoueurs ? ecrireVisibilite : undefined}
             sansPrive={false}
             titreSource={source}
             actions={
-              source === undefined
+              source === undefined && !vueJoueurs
                 ? { onAjouterPunaise: () => setExpanded(true), onAjouterZone: () => setExpanded(true), onAjouterCouche: ajouterCouche }
                 : undefined
             }
@@ -327,6 +335,13 @@ export default function MapBlockEditor({
 
   return (
     <div className="flex flex-col gap-2">
+      {isGm && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          {/* N'écrit rien : n'engage pas l'enregistrement du bloc. */}
+          <Checkbox checked={vueJoueurs} onChange={() => setVueJoueurs((v) => !v)} label={t("voirCommeJoueurs")} className="text-xs text-ink-muted" ecritAilleurs />
+          {vueJoueurs && <span className="text-xs text-players">{t("vueJoueursNote")}</span>}
+        </div>
+      )}
       <div className="flex items-center gap-2">
         <button type="button" onClick={() => setExpanded(true)} className="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel">
           {data.mode === "ref" ? t("agrandirRef") : assetId ? t("agrandirOwn") : t("televerser")}

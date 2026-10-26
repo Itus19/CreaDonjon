@@ -1812,6 +1812,8 @@
     "carte": {
       "titre": "Carte",
       "agrandirRef": "Agrandir / changer",
+      "voirCommeJoueurs": "Voir comme les joueurs",
+      "vueJoueursNote": "La carte telle que le serveur l'envoie à un joueur : rien du MJ n'y arrive.",
       "agrandirOwn": "Agrandir / remplacer",
       "televerser": "+ Téléverser une carte",
       "referencer": "— référencer :",

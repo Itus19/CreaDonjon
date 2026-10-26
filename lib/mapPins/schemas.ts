@@ -27,3 +27,6 @@ export const updateMapPinSchema = z.object({
   layerId: z.string().nullable().optional(),
   visibility: zVisibilityInput.optional(),
 });
+
+/** V3.1-78 : `?vue=joueurs` sur les lectures de carte (punaises, zones, couches) — MJ seulement. */
+export const zVueCarte = z.object({ vue: z.enum(["joueurs"]).optional() });
