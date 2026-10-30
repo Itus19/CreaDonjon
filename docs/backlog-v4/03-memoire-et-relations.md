@@ -188,11 +188,11 @@ Se souvenir, être transformé par ses souvenirs, se lier, croire, colporter, me
 
 **À faire** (tests d'abord)
 - `passivePerception(sheet | statblock | figure)` : 10 + bonus de Perception de la fiche (`characterSheet`), ou la valeur du bloc de créature, ou 10 ajusté par les facettes pour une figure sans fiche.
-- `witnessesOf(act, roll, presentFigures)` : un acte discret oppose le jet du PJ à chaque Perception passive ; un acte ouvert est vu de tous.
+- `witnessesOf(act, roll, presentFigures)` : un acte discret est vu par chaque figure dont la Perception passive (le DD) dépasse strictement le jet ; un acte ouvert est vu de tous.
 - Les témoins reçoivent la croyance `witnessed` et entrent dans l'évaluation (E1) avec le rôle `witness`.
 
 **Critères d'acceptation**
-- [ ] Un jet de 14 est vu par une Perception passive de 15, pas de 13. Le cas d'égalité suit la règle du livre (D&D 2024), **vérifiée dans le livre par l'auteur** avant d'être écrite dans le code et testée.
+- [ ] La Perception passive est le DD : un jet **égal ou supérieur** passe inaperçu (règle confirmée par l'auteur). Un jet de 15 devant une Perception passive de 15 : rien vu ; devant 16 : vu (tests aux bornes).
 - [ ] Une figure sans fiche a une Perception passive déterministe (test).
 - [ ] Un acte sans témoin ne crée aucun souvenir chez personne (test).
 

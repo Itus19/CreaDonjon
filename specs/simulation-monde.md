@@ -363,7 +363,7 @@ La barre d'intention (V3-B1) gagne une puce facultative : un **acte** de la list
 
 Un fait n'a de suite que pour ceux qui le connaissent.
 
-- **Un acte discret** (voler, mentir, révéler un secret à l'oreille) oppose le jet du PJ (Escamotage, Discrétion, Tromperie) à la **Perception passive** de chaque figure présente : 10 + son bonus de Perception (fiche mécanique ou bloc de créature). Une figure sans fiche mécanique prend 10, ajusté par `curiosity` (±2) et `anxiety_propensity` (+1 si forte).
+- **Un acte discret** (voler, mentir, révéler un secret à l'oreille) se joue contre la **Perception passive** de chaque figure présente, qui sert de **DD** au jet du PJ (Escamotage, Discrétion, Tromperie). Règle du livre, confirmée par l'auteur le 30 octobre : le PJ réussit s'il fait **égal ou plus** ; un résultat de 15 passe inaperçu devant une Perception passive de 15. La Perception passive vaut 10 + le bonus de Perception (fiche mécanique ou bloc de créature). Une figure sans fiche mécanique prend 10, ajusté par `curiosity` (±2) et `anxiety_propensity` (+1 si forte).
 - **Un acte ouvert** est vu de tous les présents.
 - Ceux qui perçoivent sont les **témoins** (§6.1, rôle `witness`) ; les autres n'en savent rien.
 
