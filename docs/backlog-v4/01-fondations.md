@@ -179,7 +179,8 @@ Ce lot pose le hasard, l'horloge, les tables, le vocabulaire des événements, l
 
 **Sous-tâches Haiku** : libellés ; planche du catalogue.
 
-- Sous la saisie libre : « Ce que le monde retiendra », la puce (acte · cible), et les boutons Confirmer, Changer l'acte (liste groupée), Aucun acte. Une proposition du modèle est marquée comme telle.
+- Sous la saisie libre : « Ce que le monde retiendra », la puce (acte · manière · cible), et les boutons Confirmer, Changer (liste groupée), Aucun acte. Une proposition du modèle est marquée comme telle.
+- Le jet demandé affiche son DD (ou « aucun jet : c'est accordé »), son avantage ou désavantage, et ses raisons visibles (A15) ; un échec de peu propose le succès à un prix (A16).
 - Le tiroir de conséquences permet de **corriger l'acte retenu** du dernier tour.
 
 **Critères d'acceptation**
@@ -216,3 +217,88 @@ Ce lot pose le hasard, l'horloge, les tables, le vocabulaire des événements, l
 **Critères d'acceptation**
 - [ ] Chaque fait proposé cite sa phrase ; une figure inconnue n'est jamais proposée (test).
 - [ ] Rien n'entre dans le monde sans la coche du MJ.
+
+---
+
+### ☐ V4-A13 — L'acte et sa manière, partout · `M` · sans modèle IA — **prêt après A9**
+
+**Modèle conseillé : Opus** — moteur de tour. **ADR :** 0090. **Spec :** §5.9.
+
+**Sous-tâches Haiku** : libellés des manières ; marqueurs de manière dans `src/i18n/fr.ts` ; lancer les tests.
+
+**À faire** (tests d'abord)
+- `src/core/sim/approaches.ts` : `ACT_APPROACHES` (la table de la spec, social et exploration), `skillFor(act, approach)`.
+- `interpretIntent` (`src/core/rules/intent.ts`) reconnaît des **marqueurs de manière** fermés (« en lui faisant croire », « sincèrement », « en dansant », « de force »), dans `src/i18n/fr.ts` comme le lexique de verbes ; sans marqueur, la manière reste à choisir.
+- A11 (le modèle propose l'acte) propose aussi la manière, dans la même sortie structurée.
+
+**Critères d'acceptation**
+- [ ] « Je la séduis en lui faisant croire que je suis noble » → séduire · en feignant · Tromperie (test).
+- [ ] Un acte à une seule manière ne pose pas la question.
+- [ ] La manière est écrite dans le fait marquant (`data.approach`).
+
+---
+
+### ☐ V4-A14 — Faut-il lancer, et contre quoi · `L` · sans modèle IA — **prêt après A13, E1, C9**
+
+**Modèle conseillé : Opus** — arbitrage, règles absolues. **ADR :** 0090. **Spec :** §5.9.
+
+**Sous-tâches Haiku** : lancer les tests et résumer les échecs.
+
+**À faire** (tests d'abord), `src/core/sim/influence.ts`
+- `willingness(target, request, pcAttitude): "willing" | "hesitant" | "unwilling"` d'après besoins, rêves, valeurs, éthiques ; `levers` (pot-de-vin, menace crédible, aide reçue, preuve) qui font passer de réfractaire à hésitante.
+- `influenceDc(target)` (15 ou l'Intelligence de la cible) ; `deceptionDc(target)` (Perspicacité passive) ; la règle d'influence relue dans le livre par l'auteur avant d'être écrite.
+- `advantageState(target, pc, approach, context)` : sources de la spec, annulation selon la règle du livre.
+- Tentatives répétées : mémoire des demandes ratées par cible.
+- Le 20 naturel (`natural_20_auto_success`) : fait céder une cible réfractaire, **jamais** pour un consentement intime ni un acte `unthinkable` ; le 1 naturel selon son réglage.
+- En campagne : la même analyse rendue au MJ comme **suggestion** (compétence, DD, avantage, raisons).
+
+**Critères d'acceptation**
+- [ ] Une cible consentante n'appelle aucun jet ; une réfractaire sans levier ni 20 ne cède pas (tests).
+- [ ] Un 20 naturel ne fait **jamais** céder un refus de consentement intime, ni un acte `unthinkable` (tests exhaustifs).
+- [ ] Le DD n'est jamais vide en solo.
+- [ ] Une deuxième tentative ratée rend la cible réfractaire pour cette demande.
+
+---
+
+### ☐ V4-A15 — Les raisons du jet, en trois niveaux · `M` · sans modèle IA — **prêt après A14, C5**
+
+**Modèle conseillé : Opus** — fuite de secrets par l'interface (règle 5). **ADR :** 0090.
+
+**Sous-tâches Haiku** : libellés des raisons ; lancer les tests.
+
+- `visibleReasons(reasons, pcBeliefs, pcPassiveInsight)` (pur) : les raisons perceptibles toujours, celles que le PJ croit savoir avec leur certitude, les autres seulement si la Perspicacité passive du PJ dépasse le seuil de la raison. Le filtrage se fait **côté serveur** : une raison cachée n'est jamais envoyée.
+
+**Critères d'acceptation**
+- [ ] Une raison cachée (un rêve secret, une croyance que le PJ n'a pas) n'arrive jamais au client (test du service).
+- [ ] Un PJ très perspicace voit plus de raisons qu'un PJ qui ne l'est pas (test).
+
+---
+
+### ☐ V4-A16 — Aider, jets de groupe, changer de caractéristique, succès à un prix · `M` · sans modèle IA — **prêt après A14**
+
+**Modèle conseillé : Opus** — moteur de règles. **ADR :** 0090. **Spec :** §5.9.
+
+**Sous-tâches Haiku** : libellés des prix ; lancer les tests.
+
+- L'action Aider d'un allié donne l'avantage ; le jet de groupe (la moitié doit réussir).
+- `skill_ability_swap` : le moteur propose une autre caractéristique quand la manière le dit ; confirmée par le joueur ou le MJ selon le réglage.
+- `success_at_cost` : un échec de 1 ou 2 propose une réussite avec une complication tirée d'une liste fermée selon le contexte ; le joueur accepte ou garde l'échec. La complication est un fait (souvent marquant).
+
+**Critères d'acceptation**
+- [ ] Un jet de groupe à quatre avec deux réussites réussit ; avec une, échoue (test).
+- [ ] Le prix n'est jamais imposé : sans acceptation, l'échec reste (test).
+
+---
+
+### ☐ V4-A17 — Quand un PNJ tente quelque chose sur un PJ · `M` · sans modèle IA — **prêt après A14, E12**
+
+**Modèle conseillé : Opus** — règle d'agence du joueur. **ADR :** 0090. **Spec :** §5.9.
+
+**Sous-tâches Haiku** : lancer les tests.
+
+- Les réactions de scène (E12) qui visent un PJ et demandent un jet (mentir, intimider, séduire) : le moteur fait le jet du PNJ contre la Perspicacité passive du PJ.
+- Une réussite donne une **impression ou une information** au PJ (une croyance `lied_to`, la menace ressentie, l'attirance proposée) ; **jamais** une décision à la place du joueur.
+
+**Critères d'acceptation**
+- [ ] Un mensonge réussi d'un PNJ crée une croyance fausse chez le PJ, sans que la vérité arrive au client (test).
+- [ ] Aucun jet de PNJ ne change une action, un réglage ou une ressource d'un PJ sans le joueur (test).

@@ -32,6 +32,7 @@
 **Sous-tâches Haiku** : libellés ; planche du catalogue.
 
 - Dans les réglages de table (V3.1-108) : une section « Simulation et psyché » : mode, une ligne par couche (joueur, MJ seul, désactivée), évolution des traits des PJ, conséquences du corps, simulation romantique et simulation sexuelle, récit intime, délai de la mémoire longue (**curseur de 30 à 365 jours**, repères à 30, 90 et 365), âge adulte, normes sur l'identité, PJ concernés.
+- Une section « Les jets » : 20 naturel (réussite automatique, avec ses deux limites dites en clair), 1 naturel, succès à un prix, changement de caractéristique.
 - Une section « Thèmes et récit » : les quatre thèmes et leurs positions (une position au-delà du plafond n'est pas proposée), le détail de la violence, le ton. Chaque option dit son effet en une phrase.
 
 **Critères d'acceptation**

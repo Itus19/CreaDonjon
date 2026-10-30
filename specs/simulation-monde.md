@@ -1,8 +1,8 @@
 # Spécification — Le moteur de simulation
 
-**Version :** 1.1 — 24 octobre 2026 (sexualité, accords, identité perçue, thèmes de table, récit, faits marquants : ADR 0085 à 0089)
+**Version :** 1.1 — 24 octobre 2026 (sexualité, accords, identité perçue, thèmes de table, récit, faits marquants, choix du jet : ADR 0085 à 0090)
 **Tickets :** lots A, C, E, F, G, H de `docs/BACKLOG_V4.md`
-**ADR :** 0067 à 0089 · **Psyché :** `specs/psyche-v4.md` · **Sources :** `docs/recherche/simulation-inspirations.md`
+**ADR :** 0067 à 0090 · **Psyché :** `specs/psyche-v4.md` · **Sources :** `docs/recherche/simulation-inspirations.md`
 
 Ce document dit comment le monde vit : le temps, le hasard, les figures, ce qui arrive, comment on le ressent, s'en souvient, le raconte et agit. Les listes (facettes, valeurs, besoins, émotions, rêves) sont dans `specs/psyche-v4.md`.
 
@@ -378,6 +378,58 @@ Un acte sans témoin n'est pas perdu :
 ### 5.8 Le journal de séance
 
 En campagne autour d'une vraie table, le MJ écrit après la séance un résumé en prose. Le modèle en propose une liste de faits : un acte du vocabulaire, des acteurs et des cibles **parmi les figures connues**, une portée, et **la phrase d'où il vient**. Le MJ coche ceux qui sont vrais ; seuls ceux-là entrent dans le monde, par les propositions relues (règle 9). Le texte du journal est encadré comme donnée dans le prompt (règle 10).
+
+
+### 5.9 Choisir le jet : l'acte, la manière, la cible (ADR 0090)
+
+**L'acte et sa manière, partout.** Un acte dit *quoi* ; la manière dit *comment*, et c'est elle qui choisit la compétence. La puce d'acte (§5.5) pose une deuxième question, « comment ? », dès qu'un acte a plusieurs manières. Table fermée, en données (`ACT_APPROACHES`) :
+
+| Acte | Manières → compétence |
+|---|---|
+| séduire, convaincre, calmer, obtenir une faveur | sincère, intérêts communs → Persuasion · en feignant, en cachant ses intentions → Tromperie · avec panache, danse, éloquence → Représentation · par la peur → Intimidation |
+| obtenir une information | en interrogeant aimablement → Persuasion · en menaçant → Intimidation · en mentant sur son but → Tromperie · en écoutant aux portes → Discrétion, puis Perception |
+| ouvrir un passage fermé | en force → Athlétisme · en crochetant → Escamotage, avec outils de voleur · par ruse (clé, prétexte) → Tromperie |
+| franchir un obstacle | en escaladant ou sautant → Athlétisme · en souplesse → Acrobaties |
+| se cacher, filer quelqu'un | Discrétion |
+| calmer un animal | Dressage |
+| chercher | du regard, à l'écoute → Perception · en fouillant, en raisonnant → Investigation |
+
+Le modèle peut pré-remplir la manière depuis la phrase (« je lui fais croire que… » → en feignant) ; le joueur confirme ou corrige, comme pour l'acte. **La manière entre dans le fait marquant** : une séduction feinte qui réussit puis est découverte devient une trahison dans la mémoire de la cible ; une séduction sincère, non.
+
+**Faut-il lancer ?** La règle d'influence du Guide du maître 2024, confirmée par l'auteur le 30 octobre (à relire dans le livre en écrivant le ticket), d'après l'état de la cible :
+
+| La cible est… | Comment le moteur le sait | Jet |
+|---|---|---|
+| **consentante** | la demande sert ses besoins, ses rêves ou ses valeurs, et ne coûte rien à ses éthiques | aucun : c'est accordé |
+| **hésitante** | la demande lui coûte, sans heurter une éthique forte | un jet, DD 15 ou son Intelligence si elle est plus haute |
+| **réfractaire** | la demande heurte une éthique `shameful` ou `only_extreme`, ou ses intérêts vitaux | impossible sans **levier** (un pot-de-vin, une menace crédible, une aide reçue, une preuve) qui la rend hésitante — ou un **20 naturel** si la table l'a activé |
+
+**Le 20 naturel** (`natural_20_auto_success`, activé par défaut, décision de l'auteur) fait céder une cible réfractaire, **sauf deux limites absolues** : jamais pour un **consentement intime** (§8.5 : le dé ne force jamais un consentement), jamais pour un acte **`unthinkable`** pour la cible (une ligne rouge ne cède pas). Le 1 naturel (`natural_1_auto_failure`) est un réglage séparé.
+
+**Contre quoi.** Un mensonge se joue contre la **Perspicacité passive** de la cible, qui sert de DD (même règle que la Perception passive, §5.6 : égal ou plus réussit). Sinon, le DD de l'influence ci-dessus, ou le DD du ruleset pour l'exploration.
+
+**Avantage et désavantage** (ils s'annulent, sans cumul, selon la règle du livre) : l'attitude de la cible envers le PJ (amicale : avantage ; hostile : désavantage), son émotion du moment (en colère, effrayée), ses besoins (seule : avantage pour la séduction et la compagnie), la manière face à son caractère (qui chérit l'éloquence est sensible au panache ; une figure très méfiante résiste à la Tromperie), ses préjugés envers le PJ (§8.6), la réputation du PJ dans ce lieu (§9.5), l'**aide** d'un allié (action Aider).
+
+**Les tentatives répétées.** La cible se souvient d'avoir été sollicitée : après un échec, la même demande avant le lendemain se fait avec désavantage ; après un deuxième, la cible devient réfractaire pour cette demande. (Dwarf Fortress compte de même les tentatives de persuasion ratées.)
+
+**Les raisons, en trois niveaux.** Le joueur voit pourquoi un jet est facile ou dur, sans qu'on lui révèle un secret : ce qui se **perçoit** s'affiche toujours (« elle semble en colère ») ; ce que le PJ **croit savoir** s'affiche avec sa certitude (« elle te connaît comme voleur ») ; le reste n'apparaît que si la **Perspicacité passive** du PJ le perce.
+
+**Les jets de groupe et l'aide.** Une action menée à plusieurs (une infiltration) est un jet de groupe : la moitié des participants doit réussir. Un allié qui aide donne l'avantage.
+
+**Changer de caractéristique.** Une compétence peut s'associer à une autre caractéristique quand la manière le dit (intimider par la Force, `skill_ability_swap`) : le moteur le propose, le joueur ou le MJ confirme.
+
+**Le succès à un prix** (`success_at_cost`, réglage de table) : un échec de 1 ou 2 peut devenir une réussite avec une complication, tirée d'une liste fermée selon le contexte : du temps perdu, une ressource dépensée, l'attention attirée, un témoin de plus, une cible qui en gardera un mauvais souvenir. Le joueur accepte le prix ou garde l'échec.
+
+**Un PNJ qui tente quelque chose sur un PJ.** Même mécanisme dans l'autre sens : un marchand qui ment joue sa Tromperie contre la Perspicacité passive du PJ. Mais **un jet ne décide jamais à la place d'un joueur** : une Persuasion réussie sur un PJ donne une impression, une information ou une raison (le PJ croit le mensonge, sent la menace) ; elle ne dicte pas ce que le PJ fait. Ce que le PJ croit à tort entre dans ses croyances (`lied_to`), sans la vérité.
+
+**Les rôles.**
+
+| Qui | Ce qu'il fait |
+|---|---|
+| Le modèle d'IA | propose l'acte, la manière et la cible ; jamais le DD, l'avantage ni le résultat (règle 8) |
+| Le moteur, en solo | dit s'il faut lancer, fixe le DD et l'avantage, avec leurs raisons |
+| Le MJ, en campagne | décide ; le moteur lui **suggère** compétence, DD et avantage, comme pour les réactions (§10.7) |
+| Le joueur | confirme ou corrige avant de lancer, et lance lui-même (V3-B5) |
 
 ---
 
@@ -759,6 +811,12 @@ Dans `campaigns.table_settings` (existant, ADR 0043), sous la clé `sim`, valid�
     torture:              "absent" | "veiled" | "veiled_generated" | "shown",  // défaut : "veiled"
     violence_to_children: "absent" | "veiled" | "veiled_generated",            // défaut : "absent"
   },
+  rolls: {
+    natural_20_auto_success: boolean,        // défaut : true (décision de l'auteur) ; limites : §5.9
+    natural_1_auto_failure: boolean,         // défaut : false
+    success_at_cost: boolean,                // défaut : true
+    skill_ability_swap: "off" | "gm" | "everyone",  // défaut : "everyone"
+  },
   narration: {
     violence_detail: "sober" | "descriptive" | "graphic",   // défaut : "descriptive"
     tone: "heroic" | "grim" | "horror" | "cosmic_horror" | "light",  // défaut : "heroic"
@@ -891,4 +949,5 @@ Prises ici pour avancer ; chacune se change sans toucher au reste.
 | Défaire un lot | seulement le dernier | n'importe lequel, au prix d'une reconstruction complète |
 | Génération | dans le navigateur | script local, ou serveur par tranches |
 | L'IA propose des faits marquants | oui, sous forme de propositions confirmées : la puce d'acte pré-remplie, le journal de séance (§5.5, §5.8) | **validé le 30 octobre** |
+| Le 20 naturel face à un PNJ réfractaire | le fait céder, sauf consentement intime et acte `unthinkable` (§5.9) | **à confirmer par l'auteur** |
 | Réactions des PNJ en scène, en campagne | suggérées au MJ, qui décide (§10.7) | **validé le 30 octobre** |

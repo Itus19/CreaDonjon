@@ -39,3 +39,10 @@ Décisions prises avec l'auteur les 28 et 30 octobre, d'après une esquisse en c
 - [x] Témoins par la Perception passive, indices et découverte après coup, dès la V4.
 - [x] Journal de séance lu par le modèle, faits cochés par le MJ.
 - [x] Tickets nouveaux : A9, A10, A11, A12, C11, C12, E12 ; tickets amendés : A4, A7, E9.
+
+### ☑ V4-0d — Choisir le jet · sans modèle IA — **fait le 30 octobre 2026**
+
+- [x] Règle de discrétion corrigée : la Perception passive est le DD, égal ou plus réussit (confirmée par l'auteur).
+- [x] L'acte et sa manière, partout ; le DD et l'avantage tirés de l'état de la cible ; règle d'influence de 2024 ; tentatives répétées ; raisons en trois niveaux ; aide, jets de groupe, changement de caractéristique, succès à un prix ; jets d'un PNJ sur un PJ sans décider à sa place (ADR 0090).
+- [x] Le 20 naturel fait céder une cible réfractaire, sauf consentement intime et acte `unthinkable` : **limites proposées, à confirmer par l'auteur**.
+- [x] Tickets nouveaux : A13 à A17 ; tickets amendés : A10, H2.
