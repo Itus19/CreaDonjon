@@ -30,6 +30,12 @@ export interface ChoiceSource {
    * sorts se comptent au niveau de CETTE classe, pas au niveau de personnage.
    */
   classKey?: string;
+  /**
+   * V3.1-49 : d'où vient la fiche, pour ranger ses choix sous l'étape de
+   * création qui les fait naître. Un don accordé par l'historique est en
+   * couche 5 comme un don de classe : la couche ne suffit pas à le dire.
+   */
+  origin?: "species" | "class" | "background";
 }
 
 /** Un don qu'un choix `feat` peut désigner, avec ce qu'il accorde. */
@@ -66,6 +72,12 @@ export interface ResolveChoicesInput {
    * Absent (aperçu dans le navigateur) : le sort choisi est pris tel quel.
    */
   spells?: Readonly<Record<string, SpellMeta>>;
+  /**
+   * V3.1-49 : les autres aptitudes du personnage (hors de ces choix). Une
+   * expertise ne porte que sur une compétence qu'elles, ou un autre choix,
+   * rendent maîtrisée. Absent : l'expertise choisie est prise telle quelle.
+   */
+  otherFeatures?: readonly ResolvedFeature[];
 }
 
 /** Un choix ouvert au personnage, répondu ou non. */
@@ -95,6 +107,8 @@ export interface ResolvedChoices {
   features: ResolvedFeature[];
   tools: ChosenGrant[];
   languages: ChosenGrant[];
+  /** Les compétences maîtrisées hors expertise (V3.1-49) : ce qu'une expertise peut viser. Vide si `otherFeatures` est absent. */
+  proficientSkills: string[];
 }
 
 /** Libellé d'un texte localisé de fiche : français d'abord, puis anglais, puis le premier présent. */
@@ -124,7 +138,9 @@ interface Scope {
 }
 
 export function resolveChoices(input: ResolveChoicesInput): ResolvedChoices {
-  const result: ResolvedChoices = { open: [], features: [], tools: [], languages: [] };
+  const result: ResolvedChoices = { open: [], features: [], tools: [], languages: [], proficientSkills: [] };
+  /** Les expertises, retenues seulement à la fin : la maîtrise qui les autorise peut venir d'un choix résolu après elles. */
+  const expertises: { open: OpenChoice; values: string[]; count: number; options?: string[]; scope: Scope }[] = [];
 
   function answerOf(key: string): { values: string[]; preset: boolean } {
     const preset = input.presets?.[key];
@@ -208,6 +224,10 @@ export function resolveChoices(input: ResolveChoicesInput): ResolvedChoices {
 
       switch (from.kind) {
         case "skill": {
+          if (from.expertise) {
+            expertises.push({ open, values: answer.values, count, options: from.options, scope: here });
+            break;
+          }
           open.chosen = retain(answer.values, count, (v) => {
             const skill = skillKey(v);
             if (skill) return from.options ? from.options.some((o) => skillKey(o) === skill) : true;
@@ -280,6 +300,22 @@ export function resolveChoices(input: ResolveChoicesInput): ResolvedChoices {
   }
 
   for (const source of input.sources) walk(source.grants, { prefix: source.key, source });
+
+  const proficient = new Set<string>();
+  for (const feature of [...(input.otherFeatures ?? []), ...result.features]) {
+    for (const m of feature.modifiers) if (m.op === "proficiency" && m.target.startsWith("skill.")) proficient.add(m.target.slice(6));
+  }
+  if (input.otherFeatures) result.proficientSkills = SKILLS.filter((s) => proficient.has(s));
+  for (const e of expertises) {
+    e.open.chosen = retain(e.values, e.count, (v) => {
+      const skill = skillKey(v);
+      if (!skill) return false;
+      if (e.options && !e.options.some((o) => skillKey(o) === skill)) return false;
+      return !input.otherFeatures || proficient.has(skill);
+    });
+    const modifiers: Modifier[] = e.open.chosen.map((s) => ({ target: `skill.${skillKey(s)}`, op: "expertise", source: e.scope.source.key, label: e.scope.source.label, layer: e.scope.source.layer }));
+    pushFeature(`choice:${e.open.key}`, e.scope.source.label, e.scope, modifiers, []);
+  }
   return result;
 }
 

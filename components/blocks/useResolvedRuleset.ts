@@ -22,6 +22,8 @@ export interface RemainingChoiceView {
    * de l'afficher plus tard sans changer ce type.
    */
   kind: "skill" | "language" | "weapon_mastery";
+  /** V3.1-49 : l'étape de création qui fait naître ce choix (« character » : les langues du personnage, sous Identité). */
+  origin: "species" | "class" | "background" | "character";
 }
 
 /** Maitrise ou langue accordee, avec sa source pour affichage (onglet Traits, V1-C6). */

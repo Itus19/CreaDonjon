@@ -1089,13 +1089,14 @@ function modifiersBlock(entryKey: string): EntryBlock | null {
  * V3.1-116 — Choix accordes ecrits a la main (`data/srd/choices-2024.json`,
  * ADR 0046), meme raison que les effets passifs ci-dessus. Propres au SRD
  * 2024 : sous 2014, « Sens aiguises » accorde Perception sans choix, et
- * aucun historique n'accorde de don. Seules les fiches de trait, de don et
- * d'historique les recoivent : un index ne designe jamais autre chose.
+ * aucun historique n'accorde de don. Seules les fiches de trait, de don,
+ * d'historique et d'aptitude de classe (V3.1-49 : Expertise, Argot des
+ * voleurs) les recoivent : un index ne designe jamais autre chose.
  */
 const SRD_CHOICES: Record<string, { grants?: unknown[]; presets?: Record<string, string[]> }> = JSON.parse(
   readFileSync(resolve(process.cwd(), "data/srd/choices-2024.json"), "utf-8")
 );
-const CHOICE_CATEGORIES = new Set(["Traits", "Feats", "Backgrounds"]);
+const CHOICE_CATEGORIES = new Set(["Traits", "Feats", "Backgrounds", "Features"]);
 
 function choicesBlock(category: string, entryIndex: string, baseSystem: string): EntryBlock | null {
   if (baseSystem !== "dnd_srd_52" || !CHOICE_CATEGORIES.has(category)) return null;

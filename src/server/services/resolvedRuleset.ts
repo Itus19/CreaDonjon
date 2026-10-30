@@ -91,6 +91,8 @@ export interface RemainingChoice {
   options: string[];
   /** Distingue le rendu cote client (V1-C7) : la liste de competences est fixe et deja affichee par ailleurs, la liste de langues ne l'est pas — deux listes de cases a cocher differentes, pas une seule generique. */
   kind: "skill" | "language" | "weapon_mastery";
+  /** V3.1-49 : l'étape de création qui fait naître ce choix (« character » : les langues du personnage, sous Identité). */
+  origin: "species" | "class" | "background" | "character";
 }
 
 /**
@@ -510,9 +512,19 @@ export async function resolveCharacterChoices(
   assembled: Pick<AssembledRuleset, "choiceSources" | "choicePresets" | "featCatalog">,
   choices: Record<string, unknown>,
   characterLevel: number,
-  classLevels: Record<string, number> = {}
+  classLevels: Record<string, number> = {},
+  /** V3.1-49 : les autres aptitudes du personnage, pour valider une expertise (voir `ResolveChoicesInput`). */
+  otherFeatures?: readonly ResolvedFeature[]
 ): Promise<ResolvedChoices> {
-  const input = { sources: assembled.choiceSources, choices, presets: assembled.choicePresets, characterLevel, classLevels, feats: assembled.featCatalog };
+  const input = {
+    sources: assembled.choiceSources,
+    choices,
+    presets: assembled.choicePresets,
+    characterLevel,
+    classLevels,
+    feats: assembled.featCatalog,
+    ...(otherFeatures ? { otherFeatures } : {}),
+  };
   const firstPass = resolveChoices(input);
   // Toutes les réponses brutes, pas seulement celles retenues : sans le
   // catalogue, la première passe garde les `count` premières, et un sort
@@ -565,9 +577,16 @@ export async function assembleResolvedRuleset(
   // V3.1-116 : fiches qui portent des choix, et réponses imposées.
   const choiceSources: ChoiceSource[] = [];
   const choicePresets: Record<string, string[]> = {};
-  function addChoices(key: string, label: string, layer: ChoiceSource["layer"], block: ChoicesBlockData | undefined) {
+  /** `where` (V3.1-49) : l'étape de création qui fait naître ces choix, et la classe dont le niveau les ouvre. */
+  function addChoices(
+    key: string,
+    label: string,
+    layer: ChoiceSource["layer"],
+    block: ChoicesBlockData | undefined,
+    where: Pick<ChoiceSource, "origin" | "classKey">
+  ) {
     if (!block) return;
-    if (block.grants.length > 0) choiceSources.push({ key, label, layer, grants: block.grants });
+    if (block.grants.length > 0) choiceSources.push({ key, label, layer, grants: block.grants, ...where });
     Object.assign(choicePresets, block.presets ?? {});
   }
 
@@ -634,7 +653,7 @@ export async function assembleResolvedRuleset(
     if (found) {
       const label = found.name;
       const key = `background:${selection.background}`;
-      addChoices(key, label, 4, found.choices);
+      addChoices(key, label, 4, found.choices, { origin: "background" });
       // Fiche maison (bloc dedie `background`, jamais de `custom_table`) :
       // deux extracteurs distincts (`backgroundModifiersFromBlock`/
       // `backgroundFeatKeyFromBlock`, src/core/rules/srdMapping.ts) plutot
@@ -665,6 +684,7 @@ export async function assembleResolvedRuleset(
             count: languageChoice.count,
             options: [...SRD_LANGUAGES],
             kind: "language",
+            origin: "background",
           });
         }
 
@@ -740,6 +760,7 @@ export async function assembleResolvedRuleset(
         count: choice.count,
         options: choice.options,
         kind: "skill",
+        origin: "class",
       });
     }
 
@@ -781,6 +802,7 @@ export async function assembleResolvedRuleset(
       count: 2,
       options: SRD_LANGUAGES.filter((l) => l !== "common"),
       kind: "language",
+      origin: "character",
     });
   }
 
@@ -828,7 +850,7 @@ export async function assembleResolvedRuleset(
       // aiguisés, lignages) passe par le mécanisme générique ; le choix de
       // compétence lu dans le SRD ne s'y ajoute pas, il serait en double.
       if (trait.choices) {
-        addChoices(traitKey, trait.name, 2, trait.choices);
+        addChoices(traitKey, trait.name, 2, trait.choices, { origin: "species" });
         continue;
       }
       for (const choice of extractSkillChoices(trait.fields)) {
@@ -838,12 +860,13 @@ export async function assembleResolvedRuleset(
           count: choice.count,
           options: choice.options,
           kind: "skill",
+          origin: "species",
         });
       }
     }
     // Compétent, Sens aiguisés : à la même place et sous la même clé qu'avant le mécanisme générique.
     const traitSources = choiceSources.filter((s) => speciesEntry.traitKeys.includes(s.key));
-    traitChoices.push(...simpleGrantChoices(traitSources, characterLevel, SRD_LANGUAGES));
+    traitChoices.push(...simpleGrantChoices(traitSources, characterLevel, SRD_LANGUAGES).map((c) => ({ ...c, origin: "species" as const })));
     remainingChoices.splice(traitChoicesInsertAt, 0, ...traitChoices);
   }
   if (weaponPool) {
@@ -856,6 +879,7 @@ export async function assembleResolvedRuleset(
         count: pending.count,
         options,
         kind: "weapon_mastery",
+        origin: "class",
       });
     }
   }
@@ -893,7 +917,15 @@ export async function assembleResolvedRuleset(
       // modificateurs, et ne coute aucune requete de plus.
       const label = chip ? (nameByChipEntryId.get(chip.id) ?? entryNameFrom(chip)) : (resolvedFeatureBlocks.get(fk)?.name ?? fk);
       const modifiers = resolveDeclaredModifiers(declaredModifiersByKey.get(fk) ?? [], fk, label, layerForFeatureSource(source));
-      addChoices(fk, label, layerForFeatureSource(source), parseChoicesBlock(resolvedFeatureBlocks.get(fk)?.blocksByType.get("choices")));
+      // V3.1-49 : une aptitude de classe ouvre ses choix au niveau de SA classe (Expertise du roublard au niveau 6 de roublard).
+      const featureClassKey = source.startsWith("class:") ? source.slice(6) : undefined;
+      addChoices(
+        fk,
+        label,
+        layerForFeatureSource(source),
+        parseChoicesBlock(resolvedFeatureBlocks.get(fk)?.blocksByType.get("choices")),
+        featureClassKey ? { origin: "class", classKey: featureClassKey } : { origin: source.startsWith("background:") ? "background" : "species" }
+      );
       features[fk] = chip
         ? { key: fk, label, source, modifiers, prerequisites: mapPrerequisites(chip.source_raw) }
         : // Aucune ligne `ruleset_entries` : fiche maison (label resolu

@@ -177,6 +177,16 @@ export function useCharacterSheetContext(
       characterClasses.filter((c) => c.class.kind === "rule" && c.class.key).map((c) => [(c.class as { kind: "rule"; key: string }).key, c.level])
     ),
     feats: featCatalog,
+    // V3.1-49 : une expertise choisie ne vaut que sur une compétence maîtrisée par ailleurs.
+    otherFeatures: [
+      ...Object.values(ruleset.features),
+      ...remainingChoices.map((choice) => ({
+        key: `choice:${choice.id}`,
+        label: choice.label,
+        source: "choice",
+        modifiers: mapChosenSkillModifiers((character?.choices[choice.id] as string[] | undefined) ?? [], choice.id, choice.label),
+      })),
+    ],
   });
   const grantedChoiceKeys = new Set(grantedChoices.open.map((c) => c.key));
 

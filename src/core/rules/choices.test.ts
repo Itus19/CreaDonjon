@@ -267,7 +267,7 @@ describe("Polyvalent : un don au choix, et sa cascade", () => {
 describe("ce que la résolution n'invente pas", () => {
   it("une fiche sans choix n'ajoute rien à faire (V3.1-116, critère 3)", () => {
     const r = resolveChoices({ sources: [{ key: "darkvision", label: "Vision dans le noir", layer: 2, grants: [] }], choices: {}, characterLevel: 1 });
-    expect(r).toEqual({ open: [], features: [], tools: [], languages: [] });
+    expect(r).toEqual({ open: [], features: [], tools: [], languages: [], proficientSkills: [] });
   });
 
   it("un choix ouvert à un niveau plus haut n'apparaît pas avant", () => {
@@ -313,5 +313,73 @@ describe("le pont vers les écrans existants", () => {
     expect(views.map((v) => v.id)).toEqual(["skillful.skills", "keen-senses.skills"]);
     expect(views[0].options).toHaveLength(18);
     expect(views[1].options).toEqual(["insight", "animal_handling"]);
+  });
+});
+
+describe("Expertise : un choix parmi les compétences déjà maîtrisées (V3.1-49)", () => {
+  const EXPERTISE: ChoiceSource = {
+    key: "rogue-expertise",
+    label: "Expertise",
+    layer: 3,
+    origin: "class",
+    classKey: "rogue",
+    grants: [
+      { id: "skills", label: { fr: "Expertise" }, count: 2, from: { kind: "skill", expertise: true } },
+      { id: "skills-6", label: { fr: "Expertise (niveau 6)" }, count: 2, at_level: 6, from: { kind: "skill", expertise: true } },
+    ],
+  };
+  const maitrise = (skill: string) => ({
+    key: `p:${skill}`,
+    label: "Roublard",
+    source: "class:rogue",
+    modifiers: [{ target: `skill.${skill}`, op: "proficiency" as const, layer: 3 as const, source: "class:rogue", label: "Roublard" }],
+  });
+
+  it("le bloc accepte le drapeau `expertise`", () => {
+    expect(zChoicesBlockData.parse({ grants: EXPERTISE.grants }).grants[0].from).toEqual({ kind: "skill", expertise: true });
+  });
+
+  it("sans compétence maîtrisée, rien n'est retenu : l'expertise attend les compétences", () => {
+    const r = resolveChoices({ sources: [EXPERTISE], choices: { "rogue-expertise.skills": ["stealth", "perception"] }, characterLevel: 1, classLevels: { rogue: 1 }, otherFeatures: [] });
+    expect(r.open.find((c) => c.key === "rogue-expertise.skills")?.chosen).toEqual([]);
+    expect(r.proficientSkills).toEqual([]);
+    expect(r.features.flatMap((f) => f.modifiers)).toEqual([]);
+  });
+
+  it("une compétence maîtrisée ailleurs est retenue et devient une expertise ; une autre est écartée", () => {
+    const r = resolveChoices({
+      sources: [EXPERTISE],
+      choices: { "rogue-expertise.skills": ["stealth", "perception"] },
+      characterLevel: 1,
+      classLevels: { rogue: 1 },
+      otherFeatures: [maitrise("stealth")],
+    });
+    expect(r.open.find((c) => c.key === "rogue-expertise.skills")?.chosen).toEqual(["stealth"]);
+    expect(r.proficientSkills).toEqual(["stealth"]);
+    expect(r.features.flatMap((f) => f.modifiers)).toEqual([expect.objectContaining({ target: "skill.stealth", op: "expertise" })]);
+  });
+
+  it("une compétence maîtrisée par un AUTRE choix compte, quel que soit l'ordre des fiches", () => {
+    const competent: ChoiceSource = { key: "skillful", label: "Compétent", layer: 2, origin: "species", grants: [{ id: "skills", label: { fr: "Compétent" }, from: { kind: "skill" } }] };
+    const r = resolveChoices({
+      sources: [EXPERTISE, competent],
+      choices: { "rogue-expertise.skills": ["insight"], "skillful.skills": ["insight"] },
+      characterLevel: 1,
+      classLevels: { rogue: 1 },
+      otherFeatures: [],
+    });
+    expect(r.open.find((c) => c.key === "rogue-expertise.skills")?.chosen).toEqual(["insight"]);
+  });
+
+  it("le second choix n'apparaît qu'au niveau 6 de roublard", () => {
+    const r1 = resolveChoices({ sources: [EXPERTISE], choices: {}, characterLevel: 6, classLevels: { rogue: 5 }, otherFeatures: [] });
+    expect(r1.open.map((c) => c.key)).toEqual(["rogue-expertise.skills"]);
+    const r6 = resolveChoices({ sources: [EXPERTISE], choices: {}, characterLevel: 6, classLevels: { rogue: 6 }, otherFeatures: [] });
+    expect(r6.open.map((c) => c.key)).toEqual(["rogue-expertise.skills", "rogue-expertise.skills-6"]);
+  });
+
+  it("sans `otherFeatures` (appelant qui ne les connaît pas), l'expertise est prise telle quelle", () => {
+    const r = resolveChoices({ sources: [EXPERTISE], choices: { "rogue-expertise.skills": ["stealth"] }, characterLevel: 1, classLevels: { rogue: 1 } });
+    expect(r.open.find((c) => c.key === "rogue-expertise.skills")?.chosen).toEqual(["stealth"]);
   });
 });

@@ -36,8 +36,12 @@ export const zGrantedSpell = z.object({
 export type GrantedSpellData = z.infer<typeof zGrantedSpell>;
 
 export type ChoiceFrom =
-  /** `tools` : un outil peut remplacer une compétence (Doué : « trois compétences ou outils »). */
-  | { kind: "skill"; options?: string[]; tools?: boolean }
+  /**
+   * `tools` : un outil peut remplacer une compétence (Doué : « trois compétences ou outils »).
+   * `expertise` (V3.1-49) : le choix porte sur des compétences DÉJÀ maîtrisées et
+   * leur donne l'expertise (Roublard, Barde).
+   */
+  | { kind: "skill"; options?: string[]; tools?: boolean; expertise?: boolean }
   | { kind: "language"; options?: string[] }
   | { kind: "tool"; options?: string[] }
   /** `category` : la catégorie du don (`origin`, `general`, `fighting-style`, `epic-boon`). Absente : tout don. */
@@ -98,7 +102,7 @@ const zKeyList = z.array(z.string().min(1)).min(1).optional();
 
 export const zChoiceFrom: z.ZodType<ChoiceFrom> = z.lazy(() =>
   z.discriminatedUnion("kind", [
-    z.object({ kind: z.literal("skill"), options: zKeyList, tools: z.boolean().optional() }),
+    z.object({ kind: z.literal("skill"), options: zKeyList, tools: z.boolean().optional(), expertise: z.boolean().optional() }),
     z.object({ kind: z.literal("language"), options: zKeyList }),
     z.object({ kind: z.literal("tool"), options: zKeyList }),
     z.object({ kind: z.literal("feat"), category: z.string().min(1).optional() }),

@@ -621,5 +621,68 @@
         "wizard"
       ]
     }
+  },
+  "rogue-expertise": {
+    "_regle": "Expertise (roublard, niveaux 1 et 6) : l'expertise dans deux compétences déjà maîtrisées, puis deux autres au niveau 6 de roublard.",
+    "grants": [
+      {
+        "id": "skills",
+        "label": {
+          "fr": "Expertise",
+          "en": "Expertise"
+        },
+        "count": 2,
+        "from": {
+          "kind": "skill",
+          "expertise": true
+        }
+      },
+      {
+        "id": "skills-6",
+        "label": {
+          "fr": "Expertise (niveau 6)",
+          "en": "Expertise (level 6)"
+        },
+        "count": 2,
+        "at_level": 6,
+        "from": {
+          "kind": "skill",
+          "expertise": true
+        }
+      }
+    ]
+  },
+  "rogue-thieves-cant": {
+    "_regle": "Argot des voleurs (roublard, niveau 1) : l'Argot des voleurs est acquis, plus une langue au choix.",
+    "grants": [
+      {
+        "id": "cant",
+        "label": {
+          "fr": "Argot des voleurs",
+          "en": "Thieves' Cant"
+        },
+        "from": {
+          "kind": "language",
+          "options": [
+            "thieves-cant"
+          ]
+        }
+      },
+      {
+        "id": "language",
+        "label": {
+          "fr": "Une langue de plus",
+          "en": "One more language"
+        },
+        "from": {
+          "kind": "language"
+        }
+      }
+    ],
+    "presets": {
+      "rogue-thieves-cant.cant": [
+        "thieves-cant"
+      ]
+    }
   }
 }

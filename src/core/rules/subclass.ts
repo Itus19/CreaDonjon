@@ -58,7 +58,7 @@ export function subclassFeatures(sub: SubclassInfo, entries: readonly SubclassFe
       features.push({ key: `subclass:${sub.key}:${slug}`, label, source, modifiers, ...(spells.length > 0 ? { spells } : {}) });
     }
     if (entry.grants && entry.grants.length > 0) {
-      sources.push({ key: `${sub.key}.${slug}`, label, layer: 3, grants: entry.grants, classKey: sub.classKey });
+      sources.push({ key: `${sub.key}.${slug}`, label, layer: 3, grants: entry.grants, classKey: sub.classKey, origin: "class" });
     }
   }
   return { features, sources };

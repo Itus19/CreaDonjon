@@ -70,4 +70,22 @@ describe("les choix SRD écrits à la main", () => {
     expect(RAW.acolyte.presets).toEqual({ "magic-initiate.list": ["cleric"] });
     expect(RAW.sage.presets).toEqual({ "magic-initiate.list": ["wizard"] });
   });
+
+  it("V3.1-49 — Roublard : l'Expertise porte sur des compétences maîtrisées (deux au niveau 1, deux au niveau 6)", () => {
+    const grants = RAW["rogue-expertise"].grants as ChoiceGrant[];
+    expect(grants.map((g) => [g.id, g.count, g.at_level ?? 1, g.from])).toEqual([
+      ["skills", 2, 1, { kind: "skill", expertise: true }],
+      ["skills-6", 2, 6, { kind: "skill", expertise: true }],
+    ]);
+  });
+
+  it("V3.1-49 — Roublard : l'Argot des voleurs est acquis, une langue de plus au choix", () => {
+    const grants = RAW["rogue-thieves-cant"].grants as ChoiceGrant[];
+    expect(grants.map((g) => [g.id, g.count ?? 1, g.from.kind])).toEqual([
+      ["cant", 1, "language"],
+      ["language", 1, "language"],
+    ]);
+    expect(RAW["rogue-thieves-cant"].presets).toEqual({ "rogue-thieves-cant.cant": ["thieves-cant"] });
+  });
 });
+

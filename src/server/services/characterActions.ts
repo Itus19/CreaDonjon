@@ -216,7 +216,17 @@ export async function resolveCharacterActionContext(
   // ceux de l'ancienne boucle pour les mêmes clés.
   const characterLevel = Math.max(1, classSelections.reduce((sum, c) => sum + c.level, 0));
   const classLevels = Object.fromEntries(classSelections.map((c) => [c.key, c.level]));
-  const grantedChoices = await resolveCharacterChoices(supabase, rulesetId, assembled, characterData.choices, characterLevel, classLevels);
+  // V3.1-49 : une expertise choisie ne vaut que sur une compétence maîtrisée par ailleurs.
+  const autresAptitudes: ResolvedFeature[] = [
+    ...Object.values(assembled.ruleset.features),
+    ...assembled.remainingChoices.map((choice) => ({
+      key: `choice:${choice.id}`,
+      label: choice.label,
+      source: "choice",
+      modifiers: mapChosenSkillModifiers((characterData.choices[choice.id] as string[] | undefined) ?? [], choice.id, choice.label),
+    })),
+  ];
+  const grantedChoices = await resolveCharacterChoices(supabase, rulesetId, assembled, characterData.choices, characterLevel, classLevels, autresAptitudes);
   const grantedChoiceKeys = new Set(grantedChoices.open.map((c) => c.key));
 
   const choiceFeatures: Record<string, ResolvedFeature> = {};
