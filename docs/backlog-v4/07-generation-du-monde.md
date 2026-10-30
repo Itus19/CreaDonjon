@@ -119,3 +119,34 @@ En solo, un monde **naît avec une histoire**. En mode MJ, c'est une option. On 
 
 **Critères d'acceptation**
 - [ ] Aucune entité existante modifiée (test).
+
+---
+
+### ☐ V4-G9 — Contrôles de cohérence et rejet silencieux · `M` · sans modèle IA — **prêt après G3**
+
+**Modèle conseillé : Opus** — noyau de la génération. **ADR :** 0093. **Spec :** §13.6.
+
+**Sous-tâches Haiku** : lancer les tests.
+
+- `checkWorldConsistency(world)` : la liste de la spec ; un échec lève une erreur, jamais en silence.
+- `isWorldAlive(world, params)` ; régénération automatique et silencieuse avec `hash(seed, "retry", n)`, au plus 5 essais ; la graine retenue est enregistrée dans `world_generations`.
+
+**Critères d'acceptation**
+- [ ] Chaque contrôle a son test (un monde factice fautif est attrapé).
+- [ ] Un monde mort est régénéré sans rien montrer ; régénérer depuis la graine enregistrée redonne le monde retenu (test).
+
+---
+
+### ☐ V4-G10 — Le banc de 100 mondes et l'indice d'intérêt · `M` · sans modèle IA — **prêt après G9**
+
+**Modèle conseillé : Opus** — mesure. **ADR :** 0093. **Spec :** §13.6.
+
+**Sous-tâches Haiku** : reporter les fourchettes mesurées dans la spec ; lancer le banc.
+
+- Un banc dans le noyau, exclu de `test:core` par défaut, lancé avant de toucher à la génération : 100 graines, paramètres moyens ; distributions et fourchettes (populations, guerres, durées de vie, liens, profondeur des chaînes).
+- `interestIndex(world)` : profondeur moyenne des chaînes de causes, fils qui traversent plusieurs générations.
+- Le rapport de génération (G6) affiche ces courbes et ces chaînes.
+
+**Critères d'acceptation**
+- [ ] Les fourchettes sont fixées d'après une première mesure, puis vérifiées par le banc.
+- [ ] Le rapport de génération montre les courbes de population et les plus longues chaînes.

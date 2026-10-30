@@ -46,3 +46,10 @@ Décisions prises avec l'auteur les 28 et 30 octobre, d'après une esquisse en c
 - [x] L'acte et sa manière, partout ; le DD et l'avantage tirés de l'état de la cible ; règle d'influence de 2024 ; tentatives répétées ; raisons en trois niveaux ; aide, jets de groupe, changement de caractéristique, succès à un prix ; jets d'un PNJ sur un PJ sans décider à sa place (ADR 0090).
 - [x] Le 20 naturel fait céder une cible réfractaire, sauf consentement intime et acte `unthinkable` : **limites proposées, à confirmer par l'auteur**.
 - [x] Tickets nouveaux : A13 à A17 ; tickets amendés : A10, H2.
+
+### ☑ V4-0e — Le récit, le combat, les possessions, les tests de génération · sans modèle IA — **fait le 30 octobre 2026**
+
+- [x] La mémoire du récit : le contexte assemblé par couches, ce que la narration invente capté en propositions (décision de l'auteur), les fils ouverts, le contrôle après coup, résumé et reprise (`specs/memoire-du-recit.md`, ADR 0091). Lot I nouveau (I1 à I6), qui reprend V3-E1, E3 et F1.
+- [x] Les PNJ qui combattent selon leur psyché et leur morale, et des possessions réelles déplacées par la simulation (ADR 0092 ; E13, E14).
+- [x] Tester un monde : contrôles de cohérence, rejet automatique et silencieux (décision de l'auteur), banc de 100 mondes, rapport, indice d'intérêt (ADR 0093 ; G9, G10).
+- [x] Réglage « suggestions du moteur au MJ » (H2) ; le jeu à plusieurs face à un MJ-moteur noté comme question future (`00-cadre.md` §6).

@@ -2,7 +2,7 @@
 
 **Version :** 1.0 — 22 octobre 2026
 **Établi sur :** la discussion du 22 octobre 2026 avec l'auteur, en supposant faits tous les tickets des backlogs antérieurs (`backlog-v4/00-cadre.md` §1).
-**Documents liés :** `specs/psyche-v4.md` · `specs/simulation-monde.md` · `docs/recherche/simulation-inspirations.md` · ADR 0067 à 0090 · `specs/psyche-pnj.md` (que la V4 remplace en partie) · `specs/moteur-de-jeu.md` · `docs/adr/0009-viabilite-solo.md` · `docs/adr/0048-les-donnees-de-la-chronologie.md` · `docs/adr/0058-un-monde-solo-se-copie-il-ne-se-convertit-pas.md`
+**Documents liés :** `specs/psyche-v4.md` · `specs/simulation-monde.md` · `specs/memoire-du-recit.md` · `docs/recherche/simulation-inspirations.md` · ADR 0067 à 0093 · `specs/psyche-pnj.md` (que la V4 remplace en partie) · `specs/moteur-de-jeu.md` · `docs/adr/0009-viabilite-solo.md` · `docs/adr/0048-les-donnees-de-la-chronologie.md` · `docs/adr/0058-un-monde-solo-se-copie-il-ne-se-convertit-pas.md`
 
 Un **moteur de simulation** : des entités qui ont des traits, des valeurs, des besoins, des rêves, des émotions et des souvenirs, qui agissent selon eux, se transforment, se souviennent du joueur, et laissent une histoire. Un monde qui **naît avec une histoire générée** à partir d'une graine. Des outils **hybrides** : le MJ humain active ou non la simulation, et accepte ou rejette ce qu'elle propose. L'IA ne fait que raconter. Inspiration : Dwarf Fortress, Fable, Baldur's Gate 2, le système Nemesis.
 
@@ -12,7 +12,7 @@ Un **moteur de simulation** : des entités qui ont des traits, des valeurs, des 
 
 **Lire les titres.** ☑ : terminé. ☐ : il reste du travail. Sous chaque titre, le **modèle conseillé** (*Sonnet* : bien spécifié et local ; *Opus* : noyau du moteur, IA, schéma, RLS, sécurité), l'ADR et la section de spec, et les dépendances (« prêt après… »). Un ticket d'interface a pour première sous-tâche son **esquisse**, validée par l'auteur.
 
-**Le modèle d'IA, dans chaque titre** (même règle que `docs/BACKLOG_V3.md`). Presque toute la V4 est « sans modèle IA » : la simulation est du code. Quatre tickets seulement appellent un modèle : B9 (la psyché dans le contexte), E10 (raconter ce que le monde a fait), A11 (proposer l'acte) et A12 (lire le journal de séance).
+**Le modèle d'IA, dans chaque titre** (même règle que `docs/BACKLOG_V3.md`). Presque toute la V4 est « sans modèle IA » : la simulation est du code. Les tickets qui appellent un modèle sont marqués **avec** : la psyché dans le contexte (B9), raconter le monde (E10), proposer l'acte (A11), le journal de séance (A12), et le lot I du récit (I2, I4, I5, I6).
 
 ---
 
@@ -27,7 +27,7 @@ La V4 renverse deux décisions de `specs/psyche-pnj.md`, chacune par un ADR (`00
 
 ### Où en est la V4
 
-**Conçue le 22 octobre 2026, complétée le 24** (sexualité, accords et unions, identité perçue, normes et préjugés, thèmes de table et récit : ADR 0085 à 0088) ; **le 30**, les faits marquants et les réactions des PNJ en scène (ADR 0089), puis le choix du jet : l'acte, la manière, la cible (ADR 0090). La recherche (`docs/recherche/simulation-inspirations.md` : Dwarf Fortress par DFHack et son wiki, RimWorld, Crusader Kings III, Les Sims, Talk of the Town, Nemesis, Wildermyth, Ultima IV, Caves of Qud, l'IA par utilité), les deux specs (`specs/psyche-v4.md`, `specs/simulation-monde.md`) et les ADR 0067 à 0090 sont écrits. **Les 77 tickets sont prêts** ; ceux d'interface commencent par une esquisse à faire valider. Quelques choix restent à confirmer par l'auteur : `specs/simulation-monde.md` §17.
+**Conçue le 22 octobre 2026, complétée le 24** (sexualité, accords et unions, identité perçue, normes et préjugés, thèmes de table et récit : ADR 0085 à 0088) ; **le 30**, les faits marquants et les réactions des PNJ en scène (ADR 0089), puis le choix du jet : l'acte, la manière, la cible (ADR 0090) ; la mémoire du récit, le combat et les possessions des PNJ, les tests de génération (ADR 0091 à 0093). La recherche (`docs/recherche/simulation-inspirations.md` : Dwarf Fortress par DFHack et son wiki, RimWorld, Crusader Kings III, Les Sims, Talk of the Town, Nemesis, Wildermyth, Ultima IV, Caves of Qud, l'IA par utilité), les deux specs (`specs/psyche-v4.md`, `specs/simulation-monde.md`) et les ADR 0067 à 0093 sont écrits. **Les 87 tickets sont prêts** ; ceux d'interface commencent par une esquisse à faire valider. Quelques choix restent à confirmer par l'auteur : `specs/simulation-monde.md` §17.
 
 ### Ordre recommandé
 
@@ -38,12 +38,12 @@ La V4 renverse deux décisions de `specs/psyche-pnj.md`, chacune par un ADR (`00
 | **3 · Le questionnaire (noyau)** | D1, D2, D3 | rend la psyché saisissable, et D3 sert la génération |
 | **4 · La vie, en noyau pur** | E3, E1, C1, E2, C2, C3, C4, E4, E5, E8 | tests d'abord, tout en millisecondes |
 | **5 · Les figures, les croyances, la société** | E6, C5, C6, C8, C9, C10, E7, E11, A6, A9, A13, A14, A15, A16, A17, C11, C12, E12 | promotion, croyances, réputation, préjugés et normes, intimité et unions, thèmes de table, pont du jeu |
-| **6 · Le pas de simulation** | E9, puis A8 | tout s'assemble ; puis on mesure et on fixe les bornes |
+| **6 · Le pas de simulation** | E13, E14, E9, puis A8 | tout s'assemble ; puis on mesure et on fixe les bornes |
 | **7 · Le MJ** | F1, F2, F3, F5, F4, F6 | le mode hybride |
 | **8 · Les écrans** | B5, B7, B8, C7, D4, D5, H2, H3, H5, H7, A7, A10, A5 | chacun après son esquisse |
 | **9 · Les règles et le jeu** | H4, H6 | conséquences du corps, motif et Inspiration |
-| **10 · Raconter** | B9, E10, A11, A12 | **avec modèle IA** |
-| **11 · Générer le monde** | G1, G2, G3, G4, G5, G6, G7, G8 | la simulation tourne : on la fait tourner des siècles |
+| **10 · Raconter** | I1, I3, B9, E10, A11, A12, I2, I4, I5, I6 | le contexte assemblé et les fils ouverts d'abord (sans IA), puis tout ce qui appelle le modèle |
+| **11 · Générer le monde** | G1, G2, G3, G9, G10, G4, G5, G6, G7, G8 | la simulation tourne : on la fait tourner des siècles |
 | **Plus tard** | D6 ; le lot P (échelle politique) | quand le besoin se confirme |
 
 ---
@@ -59,6 +59,7 @@ La V4 renverse deux décisions de `specs/psyche-pnj.md`, chacune par un ADR (`00
 - [`06-simulation-et-mj.md`](backlog-v4/06-simulation-et-mj.md) — Lot F : activer, figer, le simulateur, rejeter une chaîne, ce qui bouge
 - [`07-generation-du-monde.md`](backlog-v4/07-generation-du-monde.md) — Lot G : graine, paramètres de départ, histoire simulée, légendes
 - [`08-pj-et-table.md`](backlog-v4/08-pj-et-table.md) — Lot H : réglages de table, psyché vue par le joueur, conséquences de règles, Inspiration
+- [`09-memoire-du-recit.md`](backlog-v4/09-memoire-du-recit.md) — Lot I : le contexte assemblé, ce que la narration invente, les fils ouverts, le contrôle après coup, résumé et reprise (reprend V3-E1, E3, F1)
 - [`termines.md`](backlog-v4/termines.md) — Tickets terminés (☑)
 
 | Ticket | État | Modèle | Modèle IA | Titre | Fichier |
@@ -119,6 +120,8 @@ La V4 renverse deux décisions de `specs/psyche-pnj.md`, chacune par un ADR (`00
 | V4-E10 | ☐ | Opus | **avec** | Raconter ce que le monde a fait | [`05-boucle-de-vie.md`](backlog-v4/05-boucle-de-vie.md) |
 | V4-E11 | ☐ | Opus | sans | Les thèmes de table : générer voilé, le trauma et la guérison | [`05-boucle-de-vie.md`](backlog-v4/05-boucle-de-vie.md) |
 | V4-E12 | ☐ | Opus | sans | Les réactions des PNJ en scène | [`05-boucle-de-vie.md`](backlog-v4/05-boucle-de-vie.md) |
+| V4-E13 | ☐ | Opus | sans | Les PNJ qui combattent | [`05-boucle-de-vie.md`](backlog-v4/05-boucle-de-vie.md) |
+| V4-E14 | ☐ | Opus | sans | Les possessions et la simulation | [`05-boucle-de-vie.md`](backlog-v4/05-boucle-de-vie.md) |
 | V4-F1 | ☐ | Opus | sans | Activer la simulation | [`06-simulation-et-mj.md`](backlog-v4/06-simulation-et-mj.md) |
 | V4-F2 | ☐ | Sonnet | sans | Une figure figée | [`06-simulation-et-mj.md`](backlog-v4/06-simulation-et-mj.md) |
 | V4-F3 | ☐ | Opus | sans | Les lots proposés | [`06-simulation-et-mj.md`](backlog-v4/06-simulation-et-mj.md) |
@@ -133,6 +136,8 @@ La V4 renverse deux décisions de `specs/psyche-pnj.md`, chacune par un ADR (`00
 | V4-G6 | ☐ | Sonnet | sans | La chronique et les légendes | [`07-generation-du-monde.md`](backlog-v4/07-generation-du-monde.md) |
 | V4-G7 | ☐ | Sonnet | sans | Réutiliser une graine | [`07-generation-du-monde.md`](backlog-v4/07-generation-du-monde.md) |
 | V4-G8 | ☐ | Sonnet | sans | Générer pour un MJ | [`07-generation-du-monde.md`](backlog-v4/07-generation-du-monde.md) |
+| V4-G9 | ☐ | Opus | sans | Contrôles de cohérence et rejet silencieux | [`07-generation-du-monde.md`](backlog-v4/07-generation-du-monde.md) |
+| V4-G10 | ☐ | Opus | sans | Le banc de 100 mondes et l'indice d'intérêt | [`07-generation-du-monde.md`](backlog-v4/07-generation-du-monde.md) |
 | V4-H1 | ☐ | Opus | sans | Les réglages et la projection du joueur | [`08-pj-et-table.md`](backlog-v4/08-pj-et-table.md) |
 | V4-H2 | ☐ | Sonnet | sans | L'écran des réglages | [`08-pj-et-table.md`](backlog-v4/08-pj-et-table.md) |
 | V4-H3 | ☐ | Sonnet | sans | La psyché du PJ vue par son joueur | [`08-pj-et-table.md`](backlog-v4/08-pj-et-table.md) |
@@ -140,3 +145,9 @@ La V4 renverse deux décisions de `specs/psyche-pnj.md`, chacune par un ADR (`00
 | V4-H5 | ☐ | Sonnet | sans | Proposer une transformation au joueur | [`08-pj-et-table.md`](backlog-v4/08-pj-et-table.md) |
 | V4-H6 | ☐ | Opus | sans | Le motif déclaré et l'Inspiration | [`08-pj-et-table.md`](backlog-v4/08-pj-et-table.md) |
 | V4-H7 | ☐ | Sonnet | sans | Ce que le MJ voit pour raconter | [`08-pj-et-table.md`](backlog-v4/08-pj-et-table.md) |
+| V4-I1 | ☐ | Opus | sans | Le contexte assemblé | [`09-memoire-du-recit.md`](backlog-v4/09-memoire-du-recit.md) |
+| V4-I2 | ☐ | Opus | **avec** | Capter ce que la narration invente | [`09-memoire-du-recit.md`](backlog-v4/09-memoire-du-recit.md) |
+| V4-I3 | ☐ | Opus | sans | Les fils ouverts | [`09-memoire-du-recit.md`](backlog-v4/09-memoire-du-recit.md) |
+| V4-I4 | ☐ | Opus | **avec** | Le contrôle après coup | [`09-memoire-du-recit.md`](backlog-v4/09-memoire-du-recit.md) |
+| V4-I5 | ☐ | Opus | **avec** | Résumé de scène et journal de personnage | [`09-memoire-du-recit.md`](backlog-v4/09-memoire-du-recit.md) |
+| V4-I6 | ☐ | Opus | **avec** | Reprendre une partie | [`09-memoire-du-recit.md`](backlog-v4/09-memoire-du-recit.md) |

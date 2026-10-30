@@ -1,8 +1,8 @@
 # Spécification — Le moteur de simulation
 
-**Version :** 1.1 — 24 octobre 2026 (sexualité, accords, identité perçue, thèmes de table, récit, faits marquants, choix du jet : ADR 0085 à 0090)
+**Version :** 1.1 — 24 octobre 2026 (sexualité, accords, identité perçue, thèmes de table, récit, faits marquants, choix du jet, combat, possessions, tests de génération : ADR 0085 à 0093)
 **Tickets :** lots A, C, E, F, G, H de `docs/BACKLOG_V4.md`
-**ADR :** 0067 à 0090 · **Psyché :** `specs/psyche-v4.md` · **Sources :** `docs/recherche/simulation-inspirations.md`
+**ADR :** 0067 à 0093 · **Psyché :** `specs/psyche-v4.md` · **Sources :** `docs/recherche/simulation-inspirations.md`
 
 Ce document dit comment le monde vit : le temps, le hasard, les figures, ce qui arrive, comment on le ressent, s'en souvient, le raconte et agit. Les listes (facettes, valeurs, besoins, émotions, rêves) sont dans `specs/psyche-v4.md`.
 
@@ -772,6 +772,26 @@ Quand le tour produit un fait (un acte du joueur, un jet, un événement mécani
 - **En campagne avec un MJ**, la réaction est une **suggestion** dans ses outils (« Aude préviendrait probablement Bram en secret ; puis : dénoncer, se taire »), avec ses raisons. Le MJ la retient, en choisit une autre, ou joue librement ; ce qu'il retient entre au journal du monde.
 - Bornes : une réaction par figure et par fait ; au plus six figures réagissent à un même fait (les plus concernées).
 
+
+### 10.8 Combattre (ADR 0092)
+
+En solo, l'action d'un PNJ en combat est choisie par le moteur, avec le même score d'utilité, dans un vocabulaire de combat : attaquer (qui), se défendre, protéger un allié, se replier, fuir, se rendre, parlementer, achever ou épargner un adversaire à terre, utiliser un objet ou un sort de sa fiche.
+
+- **La morale** : une jauge de combat, calculée (jamais stockée), qui part de `bravery` et baisse avec les PV perdus, les alliés tombés, la peur ressentie, et remonte avec un chef présent ou un rêve en jeu (protéger quelqu'un, garder un butin). Sous un seuil, fuir ou se rendre l'emportent : un PNJ trouillard fuit à mi-PV, un fanatique se bat jusqu'au bout, un mercenaire se rend quand la paie ne vaut plus le risque.
+- **Les cibles** : la menace, la rancune envers un PJ (§7), les préjugés (§8.6), la protection d'un proche.
+- **Les éthiques** : un PNJ pour qui `kill_in_fight` d'un adversaire à terre est `shameful` l'épargne ; `unthinkable` retire l'action.
+- Les règles (attaques, sorts, économie d'action) restent celles du moteur de combat existant ; le score ne fait que choisir parmi ce que la fiche permet.
+- Ces choix laissent des souvenirs : l'ennemi épargné peut revenir reconnaissant ou rancunier.
+- **En campagne**, comme les réactions (§10.7), c'est une **suggestion** au MJ.
+
+### 10.9 Posséder (ADR 0092)
+
+Un vol, un cadeau, un achat, un butin **déplacent un vrai objet**.
+
+- **Figure complète** : son bloc `inventory` réel. Le moteur y écrit lui-même les transferts (comme il écrit les effets d'un tour), dans la même transaction que l'événement du monde (`theft`, `gift_given`…), avec `world_event_id` en trace.
+- **Figure légère** : une jauge `wealth` (0…100) et une liste d'**objets notables** (un artefact, une relique, une arme connue), qui deviennent de vrais objets d'inventaire à la promotion (§4.1).
+- Le besoin `acquisition`, le rêve `acquire`, la réputation `thief` et les indices (§5.7 : la victime constate une absence) lisent ces possessions.
+
 ---
 
 ## 11. Les réglages
@@ -817,6 +837,7 @@ Dans `campaigns.table_settings` (existant, ADR 0043), sous la clé `sim`, valid�
     success_at_cost: boolean,                // défaut : true
     skill_ability_swap: "off" | "gm" | "everyone",  // défaut : "everyone"
   },
+  gm_suggestions: boolean,                   // campagne : le moteur suggère réactions, combat, jets ; défaut : true
   narration: {
     violence_detail: "sober" | "descriptive" | "graphic",   // défaut : "descriptive"
     tone: "heroic" | "grim" | "horror" | "cosmic_horror" | "light",  // défaut : "heroic"
@@ -898,6 +919,17 @@ Un pas par mois de jeu sur `history_years` : mortalité, unions et naissances, a
 
 Estimation pour un monde établi, densité moyenne : environ 4 000 figures (0,6 Ko chacune, 2,4 Mo) et 30 000 événements (0,35 Ko, 10 Mo). Un monde très ancien : environ 25 Mo. C'est compatible avec les 500 Mo du plan gratuit pour quelques mondes, pas pour des dizaines : `docs/QUOTAS.md` reçoit la règle (G1).
 
+
+### 13.6 Tester un monde (ADR 0093)
+
+Comme Dwarf Fortress, qui **rejette** un monde qui ne respecte pas ses seuils et recommence, et qu'on juge à l'œil dans le mode Légendes.
+
+1. **Contrôles de cohérence** (`checkWorldConsistency`, pur), à la fin de chaque génération et dans les tests : personne n'agit après sa mort ; aucun parent n'est plus jeune que son enfant ; aucune union ni aucun contenu intime avec un mineur ; aucun lieu dirigé par un mort ; toute chaîne `cause_id` remonte à un événement existant ; aucun événement d'un thème absent. **Un échec est un bogue** : le test échoue, la génération s'arrête avec une erreur, jamais en silence.
+2. **Le rejet** (`isWorldAlive`) : au moins deux peuples vivants, une population finale entre ×0,3 et ×5 de celle de départ, un minimum de figures et de chaînes notables. Un monde raté est **régénéré automatiquement et en silence** avec la graine dérivée suivante (`hash(seed, "retry", n)`, au plus 5 essais), décision de l'auteur ; la graine retenue est celle qui est enregistrée, pour que la régénérer redonne ce monde.
+3. **Le banc de 100 mondes** (tests du noyau, sans base) : des distributions (populations, guerres, durées de vie, liens, profondeur des chaînes) qui doivent rester dans des fourchettes. Une modification du code qui casse l'équilibre se voit tout de suite.
+4. **Le rapport de génération** : la page des Légendes (G6) gagne des courbes (population par peuple, conflits par siècle), les figures marquantes et les plus longues chaînes de causes, pour juger à l'œil.
+5. **L'indice d'intérêt** : la profondeur moyenne des chaînes de causes et le nombre de fils qui traversent plusieurs générations. Un monde vivant mais plat se mesure, et le banc le surveille.
+
 ---
 
 ## 14. Ce que voit un joueur (ADR 0080)
@@ -914,6 +946,8 @@ Estimation pour un monde établi, densité moyenne : environ 4 000 figures (0,6 
 ---
 
 ## 15. Ce que l'IA raconte
+
+*Le contrat complet du contexte assemblé, la captation de ce que la narration invente, les fils ouverts, le contrôle après coup et la reprise : `specs/memoire-du-recit.md`.*
 
 - Depuis le dernier récit : les événements que le PJ **croit**, dans leur version crue, et les changements visibles chez les figures présentes. Le modèle les raconte en deux à quatre phrases, comme un tour (règle 8).
 - Les figures présentes entrent avec leur résumé (psyché §10).

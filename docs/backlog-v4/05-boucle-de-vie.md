@@ -215,3 +215,36 @@ besoins + rêves + émotions + valeurs + relations → action → événement
 - [ ] Une réaction `unthinkable` n'est jamais choisie (test).
 - [ ] En campagne, aucune réaction n'est appliquée sans le MJ (test).
 - [ ] Vérifié en direct en solo : le récit du modèle raconte la réaction choisie, sans en inventer une autre.
+
+---
+
+### ☐ V4-E13 — Les PNJ qui combattent · `M` · sans modèle IA — **prêt après E4, E2**
+
+**Modèle conseillé : Opus** — moteur de combat. **ADR :** 0092. **Spec :** §10.8.
+
+**Sous-tâches Haiku** : libellés ; lancer les tests.
+
+- `src/core/sim/combat.ts` : `morale(figure, combatState)` (calculée), le vocabulaire de combat en données, `chooseCombatAction(figure, combatState, rng)` parmi ce que la fiche permet (attaques, sorts, objets).
+- Branché sur le tour de combat existant : en solo, appliqué ; en campagne, suggéré au MJ (`gm_suggestions`).
+- Épargner, fuir, se rendre écrivent leurs événements et leurs souvenirs.
+
+**Critères d'acceptation**
+- [ ] Un PNJ peu brave fuit avant un PNJ brave dans le même combat (test sur graine).
+- [ ] Un PNJ pour qui achever un adversaire à terre est `shameful` l'épargne (test).
+- [ ] Le choix ne sort jamais de ce que permet la fiche (test).
+
+---
+
+### ☐ V4-E14 — Les possessions et la simulation · `M` · sans modèle IA — **prêt après A9, E6**
+
+**Modèle conseillé : Opus** — écritures dans des inventaires, transactions. **ADR :** 0092. **Spec :** §10.9.
+
+**Sous-tâches Haiku** : remplir la liste de contrôle de `docs/SECURITE.md` ; lancer les tests.
+
+- `transferItem(fromFigure, toFigure, item, event)` : écrit dans les blocs `inventory` des figures complètes, dans la même transaction que l'événement du monde.
+- Figures légères : `wealth` et objets notables dans `state` ; ils deviennent des objets d'inventaire à la promotion (E6).
+- `theft`, `gift_given`, le butin et l'achat passent par `transferItem`.
+
+**Critères d'acceptation**
+- [ ] Après un vol, l'objet a quitté l'inventaire de la victime et rejoint celui du voleur, dans la même transaction (test d'intégration).
+- [ ] Une erreur ne laisse jamais un objet en double ni perdu.

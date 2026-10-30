@@ -116,7 +116,7 @@ Ce qu'on **n'en retient pas** : l'esprit du personnage échappe au joueur dans D
 
 ## 6. Décisions prises le 22 octobre, et ce qui reste ouvert
 
-**La conception est faite** : `specs/psyche-v4.md`, `specs/simulation-monde.md`, ADR 0067 à 0090, recherche dans `docs/recherche/simulation-inspirations.md`. Tous les tickets des lots A à H sont **prêts** ; les tickets d'interface commencent par une esquisse à faire valider par l'auteur.
+**La conception est faite** : `specs/psyche-v4.md`, `specs/simulation-monde.md`, ADR 0067 à 0093, recherche dans `docs/recherche/simulation-inspirations.md`. Tous les tickets des lots A à H sont **prêts** ; les tickets d'interface commencent par une esquisse à faire valider par l'auteur.
 
 | Question | Décision |
 |---|---|
@@ -127,6 +127,8 @@ Ce qu'on **n'en retient pas** : l'esprit du personnage échappe au joueur dans D
 | Comment cacher au joueur ce qui est « MJ seul » ? | Tables brutes réservées à l'admin ; une projection par PJ — ADR 0080 |
 
 **À valider par l'auteur** (choix faits pour avancer, réversibles) : `specs/simulation-monde.md` §17 — délai de la mémoire longue (90 jours), plafond de 150 figures complètes, conséquences du corps quand la couche est « MJ seul », défaire seulement le dernier lot, génération dans le navigateur, pas de faits marquants proposés par l'IA en V4.
+
+**Question future** : jouer **à plusieurs face à un MJ géré par le moteur**. Le mode solo est « une personne seule, l'IA en MJ » et une partie solo ne devient jamais une table (ADR 0058) ; la question reviendra le jour où ce mode existera (qui agit quand deux joueurs écrivent en même temps, à qui appartient un fait commun).
 
 **Toujours hors V4** : l'échelle politique (lot P : royaumes en jauges, territoires, flux, caravanes et armées en jetons), et la génération de cartes.
 

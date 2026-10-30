@@ -2,6 +2,8 @@
 
 *À ouvrir seulement après trois séances réellement jouées. Concevoir la mémoire longue avant, c'est deviner.*
 
+> **30 octobre 2026.** La conception est faite dans `specs/memoire-du-recit.md` (ADR 0091) : E1 et E3 sont repris par V4-I5, F1 par V4-I6 (`docs/backlog-v4/09-memoire-du-recit.md`). Les budgets (combien de tours garder en clair) restent à mesurer sur de vraies séances.
+
 *Partie du backlog V3. L'index, la feuille de route et la table de tous les tickets : [`docs/BACKLOG_V3.md`](../BACKLOG_V3.md). Le cadre commun (ce que S1 a changé, critères transverses) : [`00-cadre.md`](00-cadre.md).*
 
 ---
