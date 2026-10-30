@@ -15,7 +15,7 @@ import {
   parseBackgroundAbilityBonusChoice,
 } from "@/src/core/rules/backgroundAbilityBonus";
 import { totalCarriedWeight } from "@/src/core/rules/encumbrance";
-import { resolveChoices } from "@/src/core/rules/choices";
+import { resolveChoices, type ChoiceSource, type FeatChoiceData, type OpenChoice } from "@/src/core/rules/choices";
 import { useResolvedRuleset, type RemainingChoiceView, type TraitGrantView } from "./useResolvedRuleset";
 import { useReferenceChips, type ResolvedChipView } from "./useReferenceChips";
 import { itemLabel, itemRef } from "./inventoryItem";
@@ -66,6 +66,12 @@ export interface CharacterSheetContext {
   asiGrantedLevels: Record<string, number[]>;
   /** Les trois caracteristiques de l'historique choisi (V2-G7, bonus +2/+1) — `null` si aucun historique choisi ou sans donnee de caracteristiques. */
   backgroundAbilityScores: Ability[] | null;
+  /** V3.1-49 : les choix accordés ouverts (cascade comprise), leurs fiches et les dons désignables — le chemin de création les range. */
+  openChoices: OpenChoice[];
+  choiceSources: ChoiceSource[];
+  featCatalog: Record<string, FeatChoiceData>;
+  /** Ce qu'une expertise peut viser (compétences maîtrisées hors expertise). */
+  proficientSkills: string[];
 }
 
 /**
@@ -392,5 +398,9 @@ export function useCharacterSheetContext(
     masteredWeaponKeys,
     asiGrantedLevels,
     backgroundAbilityScores,
+    openChoices: grantedChoices.open,
+    choiceSources,
+    featCatalog,
+    proficientSkills: grantedChoices.proficientSkills,
   };
 }

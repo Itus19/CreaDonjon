@@ -2,24 +2,31 @@
 
 import { composeCharacterName } from "@/src/core/rules/characterName";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData } from "@/src/core/schemas/blocks/inventory";
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
 import { useCharacterSheetContext } from "./useCharacterSheetContext";
 import InventoryTab from "./InventoryTab";
 import AbilityScoreStep, { EMPTY_ABILITY_POOL_ASSIGNMENT, type AbilityPoolAssignment } from "./characterCreatorSteps/AbilityScoreStep";
-import RemainingChoicesStep from "./characterCreatorSteps/RemainingChoicesStep";
 import LevelClassesStep, { type ClassEquipmentChoiceState } from "./characterCreatorSteps/LevelClassesStep";
 import CreationHpRollStep, { type CreationHpGrant } from "./characterCreatorSteps/CreationHpRollStep";
 import IdentityStep from "./characterCreatorSteps/IdentityStep";
 import SpeciesStep from "./characterCreatorSteps/SpeciesStep";
 import BackgroundStep, { type BackgroundEquipmentChoice } from "./characterCreatorSteps/BackgroundStep";
-import SpellSelectionStep from "./characterCreatorSteps/SpellSelectionStep";
+import SpellSelectionStep, { spellClassesAndLevel } from "./characterCreatorSteps/SpellSelectionStep";
 import PreviewStep from "./characterCreatorSteps/PreviewStep";
 import { createCharacterFromWizardAction, type CreateCharacterFromWizardInput } from "@/app/m/[worldSlug]/mj/creation-personnage/actions";
 import { overwriteCharacterFromWizardAction, type OverwriteCharacterFromWizardInput } from "@/app/m/[worldSlug]/(monde)/f/[entitySlug]/actions";
 import { useWorldRuleEntries } from "./useWorldRuleEntries";
 import { useRuleEntryBlocks } from "./useRuleEntryBlocks";
+import EtapesCreation from "./characterCreator/EtapesCreation";
+import ChoixGenerique from "./characterCreator/ChoixGenerique";
+import ApercuDirect from "./characterCreator/ApercuDirect";
+import { construireChemin, etapeDe, positionValide, voisin, type CleEtape, type SousEtape } from "@/lib/ui/cheminCreation";
+import { SRD_LANGUAGES, type LanguageKey } from "@/src/core/rules/srdMapping";
+import { DAMAGE_TYPE_LABELS_FR, LANGUAGE_LABELS_FR, SKILL_LABELS_FR } from "@/src/i18n/fr";
+import { ABILITY_LABELS as ABILITY_NAMES, type Skill } from "@/src/core/rules/sheet";
 
 const EMPTY_CHARACTER: CharacterBlockData = {
   __v: 1,
@@ -49,18 +56,6 @@ const EMPTY_SPELLCASTING: SpellcastingBlockData = {
   slot_override: null,
 };
 
-const ALL_STEPS = [
-  "Identité",
-  "Espèce",
-  "Classe",
-  "Caractéristiques",
-  "Points de vie",
-  "Historique",
-  "Équipement",
-  "Compétences",
-  "Sorts",
-  "Aperçu",
-] as const;
 
 /**
  * Assistant de creation de personnage (V2-G1, ecran MJ — sur demande
@@ -84,6 +79,14 @@ const ALL_STEPS = [
  * Etape "Identite" en tete (V3-Z1) : age, genre, pronoms — le genre y
  * quitte la rangee du nom, ou il vivait seul et sans les pronoms. Toujours
  * visible, jamais filtree, et passable sans rien remplir.
+ *
+ * V3.1-49 : le chemin qui se ramifie (`lib/ui/cheminCreation.ts`). Les étapes
+ * à gauche avec, sous chacune, les choix qu'elle fait naître ; l'écran au
+ * centre ; l'aperçu en direct à droite. L'onglet Compétences disparaît :
+ * chaque choix vit sous l'étape qui l'accorde, les langues sous Identité.
+ * Un choix ouvert n'empêche pas de créer. La joueuse a les mêmes droits que
+ * le MJ (niveau de départ, multiclassage). La mise en page suit la largeur
+ * du conteneur, pas de l'écran : la même fenêtre MJ peut être étroite.
  */
 /**
  * Reutilisation depuis une fiche EXISTANTE (retour utilisateur : "Assistant
@@ -120,7 +123,6 @@ export default function CharacterCreatorWizard({
   worldSlug,
   worldId,
   entityMode,
-  playerRestricted,
   onCreate,
   onCancel,
 }: {
@@ -128,8 +130,6 @@ export default function CharacterCreatorWizard({
   /** Requis seulement hors `entityMode` (creation d'une nouvelle entite). */
   worldId?: string;
   entityMode?: CharacterWizardEntityMode;
-  /** Coquille joueur (retour utilisateur) : masque le multiclassage ("+ Ajouter une classe") a l'etape Classe — un joueur qui compose sa toute premiere fiche depuis l'onglet Personnage n'a pas a en decider seul. `undefined`/`false` en contexte MJ, rien ne change. */
-  playerRestricted?: boolean;
   /**
    * Remplace `createCharacterFromWizardAction` pour la creation d'une
    * nouvelle entite (V3.1-10, ecran "Choisis ton personnage" — Nouveau PJ) :
@@ -142,7 +142,11 @@ export default function CharacterCreatorWizard({
   /** Hors `entityMode` : un bouton « Annuler » (V3.1-83, retour au carrousel, rien n'est créé). Absent côté MJ, rien ne change. */
   onCancel?: () => void;
 }) {
-  const [rawStep, setStep] = useState(0);
+  const t = useTranslations("creation");
+  // Une position du parcours : une étape (`espece`) ou un choix (`c:versatile.feat`). L'étape est gardée à part :
+  // quand un choix disparaît (sa source a changé), on sait encore où revenir.
+  const [position, setPosition] = useState<string>("ident");
+  const [etapeCourante, setEtapeCourante] = useState<CleEtape>("ident");
   const [name, setName] = useState(entityMode?.initialName ?? "");
   const [character, setCharacter] = useState<CharacterBlockData>(entityMode?.initialCharacter ?? EMPTY_CHARACTER);
   const [inventory, setInventory] = useState<InventoryBlockData>(entityMode?.initialInventory ?? EMPTY_INVENTORY);
@@ -168,7 +172,7 @@ export default function CharacterCreatorWizard({
   // `SpellSelectionStep` retrouve le resultat en cache, instantanement.
   const allEntries = useWorldRuleEntries(worldSlug);
   const allSpellKeys = allEntries.filter((e) => e.entryType === "spell").map((e) => e.key);
-  useRuleEntryBlocks(worldSlug, allSpellKeys);
+  const spellBlocks = useRuleEntryBlocks(worldSlug, allSpellKeys);
 
   // Etape "Sorts" masquee pour une classe qui n'incante jamais (retour
   // utilisateur : "un onglet adaptatif" propose puis ecarte au profit de
@@ -202,8 +206,12 @@ export default function CharacterCreatorWizard({
     itemChips,
     equippedWeapons,
     buildChips,
-    skillChoices,
     backgroundAbilityScores,
+    rulesetPret,
+    openChoices,
+    choiceSources,
+    featCatalog,
+    proficientSkills,
   } = useCharacterSheetContext(worldSlug, character, inventory, spellcasting);
 
   // Points de vie (V2-G1, retour utilisateur) : un demarrage au-dela du
@@ -228,10 +236,92 @@ export default function CharacterCreatorWizard({
     });
   });
 
-  const steps = ALL_STEPS.filter(
-    (label) => (label !== "Sorts" || hasSpellcastingClass) && (label !== "Points de vie" || hpGrants.length > 0)
-  );
-  const step = Math.min(rawStep, steps.length - 1);
+  const entryName = new Map(allEntries.map((e) => [e.key, e.name]));
+  const languesFixes = new Set(languages.map((l) => l.key));
+  const chemin = construireChemin({
+    restants: remainingChoices,
+    ouverts: openChoices,
+    sources: choiceSources,
+    reponses: character.choices,
+    avecPointsDeVie: hpGrants.length > 0,
+    avecSorts: hasSpellcastingClass,
+    langues: SRD_LANGUAGES.filter((l) => !languesFixes.has(l)),
+    competencesMaitrisees: proficientSkills,
+    dons: featCatalog,
+    sorts: allEntries
+      .filter((e) => e.entryType === "spell")
+      .map((e) => {
+        const { classes, level } = spellClassesAndLevel(spellBlocks[e.key]);
+        return { cle: e.key, libelle: e.name, ...(level !== null ? { niveau: level } : {}), ...(classes.length > 0 ? { listes: classes } : {}) };
+      }),
+  });
+  const ici = positionValide(chemin, position) ? position : null;
+  const etapeIci = (ici && etapeDe(chemin, ici)) || etapeCourante;
+  const sousIci: SousEtape | undefined = ici?.startsWith("c:")
+    ? chemin.etapes.flatMap((e) => e.sous).find((s) => `c:${s.cle}` === ici)
+    : undefined;
+  const indexEtape = Math.max(0, chemin.etapes.findIndex((e) => e.cle === etapeIci));
+
+  function aller(cible: string) {
+    setPosition(cible);
+    const etape = etapeDe(chemin, cible);
+    if (etape) setEtapeCourante(etape);
+  }
+
+  function choisir(cle: string, valeurs: string[]) {
+    patchCharacter({ choices: { ...character.choices, [cle]: valeurs } });
+  }
+
+  function libelleOption(sous: SousEtape) {
+    return (cle: string): string => {
+      switch (sous.genre) {
+        case "skill":
+          return SKILL_LABELS_FR[cle as Skill] ?? cle;
+        case "language":
+          return LANGUAGE_LABELS_FR[cle as LanguageKey] ?? (t.has(`langues.${cle}`) ? t(`langues.${cle}`) : cle);
+        case "ability":
+          return ABILITY_NAMES[cle as keyof typeof ABILITY_NAMES] ?? cle;
+        case "damage_type":
+          return DAMAGE_TYPE_LABELS_FR[cle] ?? cle;
+        default:
+          return entryName.get(cle) ?? cle;
+      }
+    };
+  }
+
+  /** Ce qu'une autre source donne déjà : grisé, pour ne pas gâcher un choix (règle 2024 : en choisir une autre). */
+  function dejaAcquis(sous: SousEtape): Set<string> {
+    if (sous.genre === "skill") {
+      // Une expertise vise une compétence maîtrisée : seule une expertise venue d'ailleurs la rend inutile.
+      return new Set(
+        Object.entries(sheet.skills)
+          .filter(([, r]) => (sous.expertise ? r.proficiency === "expertise" : r.proficiency === "proficient" || r.proficiency === "expertise"))
+          .map(([k]) => k)
+      );
+    }
+    if (sous.genre === "language") return new Set(allLanguages.map((l) => l.key));
+    return new Set();
+  }
+
+  const nomClasse = (key: string) => ruleset.classes[key]?.label ?? entryName.get(key) ?? key;
+  const refKey = (ref: { kind: string; key?: string } | null) => (ref && ref.kind === "rule" && ref.key ? ref.key : null);
+  const especeCle = refKey(character.species as { kind: string; key?: string } | null);
+  const historiqueCle = refKey(character.background as { kind: string; key?: string } | null);
+  const ligne = [
+    especeCle ? entryName.get(especeCle) ?? especeCle : null,
+    character.classes
+      .filter((c) => c.class.kind === "rule" && c.class.key)
+      .map((c) => `${nomClasse((c.class as { kind: "rule"; key: string }).key)} ${c.level}`)
+      .join(" / ") || null,
+    historiqueCle ? entryName.get(historiqueCle) ?? historiqueCle : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const sortsConnus = [...new Set([...spellcasting.known.map((k) => (k.ref.kind === "rule" ? k.ref.key : "")), ...sheet.grantedSpells.map((g) => g.key)])]
+    .filter(Boolean)
+    .map((k) => entryName.get(k) ?? k);
+  const traitsAffiches = [...new Set(sheet.features.filter((f) => !f.source.startsWith("class:")).map((f) => f.label))];
+  const languesAffichees = allLanguages.map((l) => LANGUAGE_LABELS_FR[l.key as LanguageKey] ?? (t.has(`langues.${l.key}`) ? t(`langues.${l.key}`) : l.name));
 
   // « Prénom Nom » prime sur le champ libre quand l'étape Identité est remplie (V3.1-48).
   const finalName = composeCharacterName(character.given_name, character.family_name) || name.trim();
@@ -272,7 +362,7 @@ export default function CharacterCreatorWizard({
   }
 
   return (
-    <div className="flex flex-col gap-4 rounded-md border border-edge/60 bg-panel-raised p-4">
+    <div className="@container/creation flex flex-col gap-4">
       {entityMode && (
         <div className="flex items-center justify-between">
           <p className="text-xs text-ink-muted">
@@ -298,185 +388,217 @@ export default function CharacterCreatorWizard({
           </button>
         </div>
       )}
-      <div className="flex flex-wrap gap-3">
-        <label className="flex flex-col gap-1 text-[10px] uppercase tracking-widest text-ink-muted">
-          Nom du personnage
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Nom…"
-            className="w-full max-w-sm rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
-          />
-        </label>
-      </div>
+      <div className="flex flex-col gap-3 @2xl/creation:flex-row">
+        {/* Téléphone : une étape par écran, la progression au-dessus. Plus large : les étapes à gauche. */}
+        <div className="flex flex-col gap-1.5 @2xl/creation:hidden">
+          <div aria-hidden="true" className="flex gap-0.5">
+            {chemin.etapes.map((e, i) => (
+              <i key={e.cle} className={`h-1 flex-1 rounded-full ${i === indexEtape ? "bg-accent" : i < indexEtape && e.aFaire === 0 ? "bg-success" : "bg-edge"}`} />
+            ))}
+          </div>
+          <p className="text-xs text-ink-muted">
+            {t("etapeSur", { n: indexEtape + 1, total: chemin.etapes.length, nom: t(`etapes.${etapeIci}`) })}
+          </p>
+        </div>
+        <aside className="hidden w-56 shrink-0 @2xl/creation:block">
+          <EtapesCreation chemin={chemin} position={ici ?? ""} etapeCourante={etapeIci} onAller={aller} />
+        </aside>
 
-      <div className="flex flex-wrap gap-1 border-b border-edge/60 pb-3 text-xs">
-        {steps.map((label, i) => (
-          <button
-            key={label}
-            type="button"
-            onClick={() => setStep(i)}
-            className={`rounded-full border px-2.5 py-1 transition-colors ${
-              step === i ? "border-accent text-accent" : "border-edge text-ink-muted hover:bg-panel"
-            }`}
-          >
-            {i + 1}. {label}
-          </button>
-        ))}
-      </div>
+        <section aria-labelledby="creation-ecran" className="flex min-w-0 flex-1 flex-col gap-3 rounded-lg border border-edge bg-panel p-4">
+          <header className="flex flex-col gap-0.5">
+            <span className="text-xs text-ink-muted">{sousIci ? sousIci.source : t("etapeN", { n: indexEtape + 1 })}</span>
+            <h2 id="creation-ecran" className="font-display text-lg font-bold text-ink">
+              {ici === null ? t("choixDisparu") : sousIci ? sousIci.libelle : t(`etapes.${etapeIci}`)}
+            </h2>
+            {ici === null && <p className="text-sm text-ink-soft">{t("choixDisparuNote")}</p>}
+            {ici !== null && !sousIci && <p className="text-sm text-ink-soft">{t(`desc.${etapeIci}`)}</p>}
+          </header>
 
-      {steps[step] === "Identité" && <IdentityStep character={character} patchCharacter={patchCharacter} />}
+          {ici === null && (
+            <button type="button" onClick={() => aller(etapeCourante)} className="w-fit rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised">
+              {t("revenirEtape")}
+            </button>
+          )}
 
-      {steps[step] === "Espèce" && <SpeciesStep worldSlug={worldSlug} character={character} patchCharacter={patchCharacter} />}
+          {sousIci && (
+            <ChoixGenerique sous={sousIci} libelleOption={libelleOption(sousIci)} dejaAcquis={dejaAcquis(sousIci)} onChoisir={(v) => choisir(sousIci.cle, v)} />
+          )}
 
-      {steps[step] === "Classe" && (
-        <LevelClassesStep
-          worldSlug={worldSlug}
-          character={character}
-          patchCharacter={patchCharacter}
-          inventory={inventory}
-          onUpdateInventory={setInventory}
-          equipmentChoices={classEquipmentChoices}
-          onChooseEquipmentChoices={setClassEquipmentChoices}
-          hideAddClass={playerRestricted}
-        />
-      )}
+          {ici === "ident" && (
+            <>
+              <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-ink-muted">
+                {t("nomAffiche")}
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder={t("nomPlaceholder")}
+                  className="w-full max-w-sm rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm normal-case tracking-normal text-ink outline-none"
+                />
+              </label>
+              <IdentityStep character={character} patchCharacter={patchCharacter} />
+            </>
+          )}
 
-      {steps[step] === "Caractéristiques" && (
-        <AbilityScoreStep
-          character={character}
-          patchCharacter={patchCharacter}
-          pool={abilityPool}
-          onChangePool={setAbilityPool}
-          sheet={sheet}
-          characterRules={ruleset.characterRules}
-          worldSlug={worldSlug}
-          rulesLoaded={Object.keys(ruleset.classes).length + Object.keys(ruleset.features).length > 0}
-        />
-      )}
+          {ici === "espece" && <SpeciesStep worldSlug={worldSlug} character={character} patchCharacter={patchCharacter} />}
 
-      {steps[step] === "Points de vie" && (
-        <CreationHpRollStep character={character} patchCharacter={patchCharacter} grants={hpGrants} conMod={sheet.abilities.con.mod} />
-      )}
+          {ici === "classe" && (
+            <LevelClassesStep
+              worldSlug={worldSlug}
+              character={character}
+              patchCharacter={patchCharacter}
+              inventory={inventory}
+              onUpdateInventory={setInventory}
+              equipmentChoices={classEquipmentChoices}
+              onChooseEquipmentChoices={setClassEquipmentChoices}
+            />
+          )}
 
-      {steps[step] === "Historique" && (
-        <BackgroundStep
-          worldSlug={worldSlug}
-          character={character}
-          patchCharacter={patchCharacter}
-          inventory={inventory}
-          onUpdateInventory={setInventory}
-          choice={bgEquipmentChoice}
-          onChooseOption={setBgEquipmentChoice}
-          backgroundAbilityScores={backgroundAbilityScores}
-        />
-      )}
+          {ici === "carac" && (
+            <AbilityScoreStep
+              character={character}
+              patchCharacter={patchCharacter}
+              pool={abilityPool}
+              onChangePool={setAbilityPool}
+              sheet={sheet}
+              characterRules={ruleset.characterRules}
+              worldSlug={worldSlug}
+              rulesLoaded={Object.keys(ruleset.classes).length + Object.keys(ruleset.features).length > 0}
+            />
+          )}
 
-      {steps[step] === "Équipement" && (
-        <InventoryTab
-          worldSlug={worldSlug}
-          inventory={inventory}
-          onUpdateInventory={setInventory}
-          strMod={sheet.abilities.str.mod}
-          dexMod={sheet.abilities.dex.mod}
-          proficiencyBonus={sheet.proficiencyBonus}
-          isMonk={isMonk}
-          weaponByKey={weaponByKey}
-          equipment={equipment}
-          weight={weight}
-          cost={cost}
-          encumbrance={sheet.encumbrance}
-        />
-      )}
+          {ici === "pv" && <CreationHpRollStep character={character} patchCharacter={patchCharacter} grants={hpGrants} conMod={sheet.abilities.con.mod} />}
 
-      {steps[step] === "Compétences" && (
-        <RemainingChoicesStep
-          worldSlug={worldSlug}
-          remainingChoices={remainingChoices}
-          character={character}
-          patchCharacter={patchCharacter}
-          proficiencies={proficiencies}
-          languages={languages}
-          sheet={sheet}
-          skillChoices={skillChoices}
-        />
-      )}
+          {ici === "histo" && (
+            <BackgroundStep
+              worldSlug={worldSlug}
+              character={character}
+              patchCharacter={patchCharacter}
+              inventory={inventory}
+              onUpdateInventory={setInventory}
+              choice={bgEquipmentChoice}
+              onChooseOption={setBgEquipmentChoice}
+              backgroundAbilityScores={backgroundAbilityScores}
+            />
+          )}
 
-      {steps[step] === "Sorts" && (
-        <SpellSelectionStep worldSlug={worldSlug} character={character} spellcasting={spellcasting} onUpdateSpellcasting={setSpellcasting} />
-      )}
+          {ici === "equip" && (
+            <InventoryTab
+              worldSlug={worldSlug}
+              inventory={inventory}
+              onUpdateInventory={setInventory}
+              strMod={sheet.abilities.str.mod}
+              dexMod={sheet.abilities.dex.mod}
+              proficiencyBonus={sheet.proficiencyBonus}
+              isMonk={isMonk}
+              weaponByKey={weaponByKey}
+              equipment={equipment}
+              weight={weight}
+              cost={cost}
+              encumbrance={sheet.encumbrance}
+            />
+          )}
 
-      {steps[step] === "Aperçu" && (
-        <div className="flex flex-col gap-3">
-          <PreviewStep
-            worldSlug={worldSlug}
-            character={character}
-            patchCharacter={patchCharacter}
-            inventory={inventory}
-            onUpdateInventory={setInventory}
-            spellcasting={spellcasting}
-            onUpdateSpellcasting={setSpellcasting}
-            spellLevels={spellLevels}
-            sheet={sheet}
-            traits={traits}
-            traitChips={traitChips}
-            traitSourceLabel={traitSourceLabel}
-            proficiencies={proficiencies}
-            languageChoices={languageChoices}
-            allLanguages={allLanguages}
-            remainingChoices={remainingChoices}
-            weaponByKey={weaponByKey}
-            equipment={equipment}
-            weight={weight}
-            cost={cost}
-            itemChips={itemChips}
-            equippedWeapons={equippedWeapons}
-            isMonk={isMonk}
-            buildChips={buildChips}
-          />
+          {ici === "sorts" && <SpellSelectionStep worldSlug={worldSlug} character={character} spellcasting={spellcasting} onUpdateSpellcasting={setSpellcasting} />}
 
-          {sheet.warnings.length > 0 && (
-            <div className="rounded-md border border-danger/60 bg-danger/10 px-3 py-2 text-sm text-danger">
-              <p className="font-semibold">Personnage illégal — créable quand même :</p>
-              <ul className="list-inside list-disc">
-                {sheet.warnings.map((w, i) => (
-                  <li key={i}>{w.message}</li>
-                ))}
-              </ul>
+          {ici === "apercu" && (
+            <div className="flex flex-col gap-3">
+              <PreviewStep
+                worldSlug={worldSlug}
+                character={character}
+                patchCharacter={patchCharacter}
+                inventory={inventory}
+                onUpdateInventory={setInventory}
+                spellcasting={spellcasting}
+                onUpdateSpellcasting={setSpellcasting}
+                spellLevels={spellLevels}
+                sheet={sheet}
+                traits={traits}
+                traitChips={traitChips}
+                traitSourceLabel={traitSourceLabel}
+                proficiencies={proficiencies}
+                languageChoices={languageChoices}
+                allLanguages={allLanguages}
+                remainingChoices={remainingChoices}
+                weaponByKey={weaponByKey}
+                equipment={equipment}
+                weight={weight}
+                cost={cost}
+                itemChips={itemChips}
+                equippedWeapons={equippedWeapons}
+                isMonk={isMonk}
+                buildChips={buildChips}
+              />
+
+              {chemin.aFaire > 0 && (
+                <div className="flex flex-col gap-2 rounded-md border border-accent/50 bg-accent/10 px-3 py-2">
+                  <p className="text-sm text-ink">{t("choixOuverts", { n: chemin.aFaire })}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {chemin.etapes
+                      .flatMap((e) => e.sous)
+                      .filter((s) => !s.fait)
+                      .map((s) => (
+                        <button
+                          key={s.cle}
+                          type="button"
+                          onClick={() => aller(`c:${s.cle}`)}
+                          className="rounded-full border border-accent px-3 py-1 text-xs text-accent transition-colors hover:bg-accent/10"
+                        >
+                          {s.libelle}
+                        </button>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {sheet.warnings.length > 0 && (
+                <div className="rounded-md border border-danger/60 bg-danger/10 px-3 py-2 text-sm text-danger">
+                  <p className="font-semibold">{t("illegal")}</p>
+                  <ul className="list-inside list-disc">
+                    {sheet.warnings.map((w, i) => (
+                      <li key={i}>{w.message}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {error && <p className="text-xs text-danger">{error}</p>}
+
+              <button
+                type="button"
+                disabled={busy || !finalName}
+                onClick={submit}
+                className="w-fit rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50"
+                title={!finalName ? t("nomRequis") : undefined}
+              >
+                {entityMode ? t("enregistrer") : t("creer")}
+              </button>
             </div>
           )}
 
-          {error && <p className="text-xs text-danger">{error}</p>}
+          <div className="mt-auto flex items-center justify-between gap-2 border-t border-edge pt-3">
+            <button
+              type="button"
+              disabled={ici === chemin.ordre[0]}
+              onClick={() => aller(voisin(chemin, ici ?? etapeCourante, -1))}
+              className="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised disabled:opacity-30"
+            >
+              {t("precedent")}
+            </button>
+            <span className="text-xs text-ink-muted">{chemin.aFaire > 0 ? t("aFaire", { n: chemin.aFaire }) : t("toutChoisi")}</span>
+            <button
+              type="button"
+              disabled={ici === chemin.ordre[chemin.ordre.length - 1]}
+              onClick={() => aller(voisin(chemin, ici ?? etapeCourante, 1))}
+              className="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised disabled:opacity-30"
+            >
+              {t("suivant")}
+            </button>
+          </div>
+        </section>
 
-          <button
-            type="button"
-            disabled={busy || !finalName}
-            onClick={submit}
-            className="w-fit rounded-full border border-accent px-4 py-1.5 text-sm text-accent transition-colors hover:bg-accent/10 disabled:opacity-50"
-            title={!finalName ? "Donnez un nom au personnage d'abord" : undefined}
-          >
-            {entityMode ? "Enregistrer le personnage" : "Créer le personnage"}
-          </button>
-        </div>
-      )}
-
-      <div className="flex justify-between border-t border-edge/60 pt-3">
-        <button
-          type="button"
-          disabled={step === 0}
-          onClick={() => setStep((s) => Math.max(0, s - 1))}
-          className="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel disabled:opacity-30"
-        >
-          Précédent
-        </button>
-        <button
-          type="button"
-          disabled={step === steps.length - 1}
-          onClick={() => setStep((s) => Math.min(steps.length - 1, s + 1))}
-          className="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel disabled:opacity-30"
-        >
-          Suivant
-        </button>
+        <aside aria-label={t("apercuAria")} className="hidden w-72 shrink-0 rounded-lg border border-edge bg-panel p-4 @5xl/creation:block">
+          <ApercuDirect nom={finalName} ligne={ligne} sheet={sheet} pret={rulesetPret} langues={languesAffichees} traits={traitsAffiches} sorts={sortsConnus} />
+        </aside>
       </div>
     </div>
   );

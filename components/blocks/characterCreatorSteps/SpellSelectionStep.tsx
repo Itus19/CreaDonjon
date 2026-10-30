@@ -102,7 +102,8 @@ function computeBudget(
   return { classKey, className, ability: spellInfo.ability, cantripsAllowed, spellsAllowed, maxSpellLevel };
 }
 
-function spellClassesAndLevel(blocks: RuleEntryBlockData[] | undefined): { classes: string[]; level: number | null } {
+/** Exportée pour le chemin de création (V3.1-49) : un choix de sort s'y filtre par liste et par niveau. */
+export function spellClassesAndLevel(blocks: RuleEntryBlockData[] | undefined): { classes: string[]; level: number | null } {
   const table = blocks?.find((b) => b.blockType === "custom_table");
   if (!table) return { classes: [], level: null };
   const fields = parseCustomTableFields((table.data as CustomTableBlockData).rows as unknown as CustomTableRow[]);

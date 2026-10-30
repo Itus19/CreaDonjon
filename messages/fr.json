@@ -1933,5 +1933,75 @@
         "utilize": "Utiliser"
       }
     }
+  },
+  "creation": {
+    "etapesAria": "Étapes de la création",
+    "etapes": {
+      "ident": "Identité",
+      "espece": "Espèce",
+      "classe": "Classe",
+      "carac": "Caractéristiques",
+      "pv": "Points de vie",
+      "histo": "Historique",
+      "equip": "Équipement",
+      "sorts": "Sorts",
+      "apercu": "Aperçu"
+    },
+    "desc": {
+      "ident": "Qui est le personnage, avant ce qu'il sait faire. Rien d'obligatoire, sauf un nom pour créer. Les langues sont la sous-étape juste en dessous.",
+      "espece": "Les choix que l'espèce fait naître apparaissent sous l'étape.",
+      "classe": "Le niveau de départ et le multiclassage se règlent ici. La sous-classe vient à son niveau.",
+      "carac": "Trois méthodes officielles ; le résultat s'affiche avec les bonus d'historique.",
+      "pv": "Apparue parce que le personnage commence au-delà du niveau 1 : moyenne ou jet, pour chaque niveau après le premier.",
+      "histo": "Caractéristiques à répartir, un don d'origine et ses choix, des compétences, un outil.",
+      "equip": "Ce que donnent la classe et l'historique, puis l'inventaire libre.",
+      "sorts": "Le budget de sorts se lit dans la progression de la classe.",
+      "apercu": "La fiche calculée par le moteur. Un choix ouvert n'empêche pas de créer."
+    },
+    "etapeN": "Étape {n}",
+    "etapeSur": "Étape {n} sur {total} · {nom}",
+    "aFaire": "{n} à faire",
+    "aFaireUn": "à faire",
+    "fait": "fait",
+    "toutChoisi": "Tout est choisi",
+    "precedent": "◂ Précédent",
+    "suivant": "Suivant ▸",
+    "choixDisparu": "Ce choix n'existe plus",
+    "choixDisparuNote": "Il dépendait d'une espèce, d'une classe ou d'un historique qui a changé.",
+    "revenirEtape": "Revenir à l'étape",
+    "nomAffiche": "Nom affiché (si le prénom est vide)",
+    "nomPlaceholder": "Nom…",
+    "choixOuverts": "{n, plural, one {# choix reste ouvert} other {# choix restent ouverts}} — créable quand même, la fiche le rappellera.",
+    "illegal": "Personnage illégal — créable quand même :",
+    "nomRequis": "Donnez un nom au personnage d'abord",
+    "creer": "Créer le personnage ▸",
+    "enregistrer": "Enregistrer le personnage",
+    "apercuAria": "Aperçu en direct",
+    "apercuChargement": "Calcul de la fiche…",
+    "sansNom": "Sans nom",
+    "stat": {
+      "ca": "CA",
+      "pv": "PV",
+      "vitesse": "Vitesse",
+      "maitrise": "Maîtrise"
+    },
+    "competences": "Compétences",
+    "expertise": "expertise",
+    "resume": {
+      "langues": "Langues :",
+      "traits": "Dons et traits :",
+      "sorts": "Sorts :"
+    },
+    "impose": "Acquis d'office : {valeurs}.",
+    "attendCompetences": "Choisissez d'abord vos compétences : l'expertise porte sur des compétences que vous maîtrisez.",
+    "aucuneOption": "Rien à proposer ici pour l'instant.",
+    "choisirN": "Choisissez-en {n}.",
+    "choisirUn": "Choisissez-en un.",
+    "compte": "{fait} / {total}",
+    "dejaAcquis": "déjà acquis ailleurs",
+    "langues": {
+      "thieves-cant": "Argot des voleurs",
+      "druidic": "Druidique"
+    }
   }
 }

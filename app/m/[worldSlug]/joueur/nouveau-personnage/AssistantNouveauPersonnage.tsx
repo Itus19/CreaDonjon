@@ -29,7 +29,6 @@ export default function AssistantNouveauPersonnage({
       <CharacterCreatorWizard
         worldSlug={worldSlug}
         worldId={worldId}
-        playerRestricted
         onCreate={createAndClaimCharacterAction}
         onCancel={retourAuChoix}
       />
@@ -39,7 +38,6 @@ export default function AssistantNouveauPersonnage({
   return (
     <CharacterCreatorWizard
       worldSlug={worldSlug}
-      playerRestricted
       entityMode={{
         entityId: pj.entityId,
         expectedVersion: pj.version,

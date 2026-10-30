@@ -1932,5 +1932,75 @@
         "utilize": "Utilize"
       }
     }
+  },
+  "creation": {
+    "etapesAria": "Creation steps",
+    "etapes": {
+      "ident": "Identity",
+      "espece": "Species",
+      "classe": "Class",
+      "carac": "Ability scores",
+      "pv": "Hit points",
+      "histo": "Background",
+      "equip": "Equipment",
+      "sorts": "Spells",
+      "apercu": "Preview"
+    },
+    "desc": {
+      "ident": "Who the character is, before what they can do. Nothing is required except a name to create. Languages are the sub-step just below.",
+      "espece": "The choices the species opens appear under this step.",
+      "classe": "Starting level and multiclassing are set here. The subclass comes at its level.",
+      "carac": "Three official methods; the result includes the background bonuses.",
+      "pv": "Shown because the character starts above level 1: average or roll, for each level after the first.",
+      "histo": "Ability scores to assign, an origin feat and its choices, skills, a tool.",
+      "equip": "What the class and background give, then the free inventory.",
+      "sorts": "The spell budget comes from the class progression.",
+      "apercu": "The sheet computed by the engine. An open choice does not prevent creating."
+    },
+    "etapeN": "Step {n}",
+    "etapeSur": "Step {n} of {total} · {nom}",
+    "aFaire": "{n} to do",
+    "aFaireUn": "to do",
+    "fait": "done",
+    "toutChoisi": "Everything is chosen",
+    "precedent": "◂ Previous",
+    "suivant": "Next ▸",
+    "choixDisparu": "This choice no longer exists",
+    "choixDisparuNote": "It depended on a species, class or background that changed.",
+    "revenirEtape": "Back to the step",
+    "nomAffiche": "Display name (if the first name is empty)",
+    "nomPlaceholder": "Name…",
+    "choixOuverts": "{n, plural, one {# choice is still open} other {# choices are still open}} — you can still create; the sheet will remind you.",
+    "illegal": "Illegal character — can still be created:",
+    "nomRequis": "Give the character a name first",
+    "creer": "Create the character ▸",
+    "enregistrer": "Save the character",
+    "apercuAria": "Live preview",
+    "apercuChargement": "Computing the sheet…",
+    "sansNom": "Unnamed",
+    "stat": {
+      "ca": "AC",
+      "pv": "HP",
+      "vitesse": "Speed",
+      "maitrise": "Proficiency"
+    },
+    "competences": "Skills",
+    "expertise": "expertise",
+    "resume": {
+      "langues": "Languages:",
+      "traits": "Feats and traits:",
+      "sorts": "Spells:"
+    },
+    "impose": "Granted: {valeurs}.",
+    "attendCompetences": "Choose your skills first: expertise applies to skills you are proficient in.",
+    "aucuneOption": "Nothing to offer here yet.",
+    "choisirN": "Choose {n}.",
+    "choisirUn": "Choose one.",
+    "compte": "{fait} / {total}",
+    "dejaAcquis": "already gained elsewhere",
+    "langues": {
+      "thieves-cant": "Thieves' Cant",
+      "druidic": "Druidic"
+    }
   }
 }

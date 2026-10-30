@@ -44,6 +44,8 @@ export interface SousEtape {
   fait: boolean;
   /** L'expertise attend des compétences maîtrisées : aucune option tant qu'il n'y en a pas. */
   attend: boolean;
+  /** Un choix d'expertise : ses options sont des compétences déjà maîtrisées. */
+  expertise: boolean;
 }
 
 export interface Etape {
@@ -170,6 +172,7 @@ export function construireChemin(entree: EntreeChemin): Chemin {
       impose: false,
       fait: choisis.length >= r.count,
       attend: false,
+      expertise: false,
     });
   }
 
@@ -190,6 +193,7 @@ export function construireChemin(entree: EntreeChemin): Chemin {
       impose: c.preset,
       fait: c.chosen.length >= c.count,
       attend,
+      expertise: c.from.kind === "skill" && c.from.expertise === true,
     });
   }
 

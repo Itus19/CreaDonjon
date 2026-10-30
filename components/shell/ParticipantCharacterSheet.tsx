@@ -171,7 +171,6 @@ export default function ParticipantCharacterSheet({
       return (
         <CharacterCreatorWizard
           worldSlug={worldSlug}
-          playerRestricted
           entityMode={{
             entityId,
             expectedVersion: entityVersion,
