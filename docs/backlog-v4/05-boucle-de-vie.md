@@ -144,7 +144,7 @@ besoins + rêves + émotions + valeurs + relations → action → événement
 
 ---
 
-### ☐ V4-E9 — Le pas de simulation · `L` · sans modèle IA — **prêt après E1 à E8, E11, A6, C5, C9, C10, H1**
+### ☐ V4-E9 — Le pas de simulation · `L` · sans modèle IA — **prêt après E1 à E8, E11, E12, A6, A9, C5, C9 à C12, H1**
 
 **Modèle conseillé : Opus** — l'orchestration de tout ; quotas ; transactions.
 
@@ -195,3 +195,23 @@ besoins + rêves + émotions + valeurs + relations → action → événement
 - [ ] Une figure ordinaire (éthique `unthinkable`) ne commet jamais un acte de thème ; une figure à la psyché cohérente le peut (test sur graine).
 - [ ] Aucune victime mineure, aucun PJ victime d'un acte généré (test exhaustif sur un banc de 1 000 figures).
 - [ ] Un souvenir traumatique soutenu descend vers 30 sans jamais passer dessous ; sans soutien, il reste (tests).
+
+---
+
+### ☐ V4-E12 — Les réactions des PNJ en scène · `L` · sans modèle IA — **prêt après E4, C11**
+
+**Modèle conseillé : Opus** — noyau du tour, change ce que fait le récit. **ADR :** 0089. **Spec :** §10.7.
+
+**Sous-tâches Haiku** : libellés des réactions ; planche du catalogue (la suggestion du MJ) ; lancer les tests.
+
+**À faire** (tests d'abord)
+- `src/core/sim/reactions.ts` : le vocabulaire de scène (réactions face à un acte, réactions de témoin, dont `warn_secretly` et `blackmail`), en données, notées par le score d'utilité (E4) ; `concernedFigures(fact, scene)` (au plus six) ; `chooseReaction(figure, fact, rng)`.
+- **Solo** : la réaction est appliquée par le tour, écrite au journal du monde, transmise au modèle comme un fait à raconter (le modèle ne choisit plus les réactions des PNJ).
+- **Campagne** : la réaction est une suggestion dans les outils du MJ, avec ses raisons et les deux options suivantes ; le MJ la retient, en choisit une autre ou l'ignore.
+- `blackmail` fait naître un rêve qui vise l'acteur ; `warn_secretly` transmet une croyance à la victime, en privé.
+
+**Critères d'acceptation**
+- [ ] Deux témoins aux psychés opposées réagissent différemment au même vol (test sur graine, l'exemple Aude et Ulf de l'esquisse).
+- [ ] Une réaction `unthinkable` n'est jamais choisie (test).
+- [ ] En campagne, aucune réaction n'est appliquée sans le MJ (test).
+- [ ] Vérifié en direct en solo : le récit du modèle raconte la réaction choisie, sans en inventer une autre.

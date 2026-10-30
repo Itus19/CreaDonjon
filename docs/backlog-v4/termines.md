@@ -28,4 +28,14 @@ Décisions prises avec l'auteur les 22 et 24 octobre.
 - [x] Identité perçue, normes, préjugés, vies cachées ; la règle d'identité reformulée (ADR 0086, amende 0073).
 - [x] Thèmes de table et détail du récit (ADR 0085).
 - [x] Tickets nouveaux : C9, C10, E11 ; tickets amendés : A4, A6, A7, B1, B4, B5, B6, B9, C1, E4, E7, E9, E10, G2, G3, H1, H2.
-- [ ] Reste à discuter : les faits marquants et la simulation générale.
+- [x] Les faits marquants et la simulation générale : voir V4-0c.
+
+### ☑ V4-0c — Les faits marquants · sans modèle IA — **fait le 30 octobre 2026**
+
+Décisions prises avec l'auteur les 28 et 30 octobre, d'après une esquisse en cinq planches (artefact « Faits marquants — esquisse »).
+
+- [x] Quatre sources de faits : mécanique, acte déclaré (puce d'acte pré-remplie par le modèle et confirmée), PNJ en scène, table physique (ADR 0089).
+- [x] Les réactions des PNJ en scène sont choisies par le moteur en solo, suggérées au MJ en campagne.
+- [x] Témoins par la Perception passive, indices et découverte après coup, dès la V4.
+- [x] Journal de séance lu par le modèle, faits cochés par le MJ.
+- [x] Tickets nouveaux : A9, A10, A11, A12, C11, C12, E12 ; tickets amendés : A4, A7, E9.

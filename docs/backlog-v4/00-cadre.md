@@ -116,7 +116,7 @@ Ce qu'on **n'en retient pas** : l'esprit du personnage échappe au joueur dans D
 
 ## 6. Décisions prises le 22 octobre, et ce qui reste ouvert
 
-**La conception est faite** : `specs/psyche-v4.md`, `specs/simulation-monde.md`, ADR 0067 à 0088, recherche dans `docs/recherche/simulation-inspirations.md`. Tous les tickets des lots A à H sont **prêts** ; les tickets d'interface commencent par une esquisse à faire valider par l'auteur.
+**La conception est faite** : `specs/psyche-v4.md`, `specs/simulation-monde.md`, ADR 0067 à 0089, recherche dans `docs/recherche/simulation-inspirations.md`. Tous les tickets des lots A à H sont **prêts** ; les tickets d'interface commencent par une esquisse à faire valider par l'auteur.
 
 | Question | Décision |
 |---|---|

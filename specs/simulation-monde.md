@@ -1,8 +1,8 @@
 # Spécification — Le moteur de simulation
 
-**Version :** 1.1 — 24 octobre 2026 (sexualité, accords, identité perçue, thèmes de table, récit : ADR 0085 à 0088)
+**Version :** 1.1 — 24 octobre 2026 (sexualité, accords, identité perçue, thèmes de table, récit, faits marquants : ADR 0085 à 0089)
 **Tickets :** lots A, C, E, F, G, H de `docs/BACKLOG_V4.md`
-**ADR :** 0067 à 0088 · **Psyché :** `specs/psyche-v4.md` · **Sources :** `docs/recherche/simulation-inspirations.md`
+**ADR :** 0067 à 0089 · **Psyché :** `specs/psyche-v4.md` · **Sources :** `docs/recherche/simulation-inspirations.md`
 
 Ce document dit comment le monde vit : le temps, le hasard, les figures, ce qui arrive, comment on le ressent, s'en souvient, le raconte et agit. Les listes (facettes, valeurs, besoins, émotions, rêves) sont dans `specs/psyche-v4.md`.
 
@@ -220,7 +220,7 @@ Recalculée pour chaque figure vivante au début de chaque pas.
 
 | Classe | Qui | Pas | Ce qui est simulé |
 |---|---|---|---|
-| `scene` | présente dans `scene_states` | le tour | besoins, émotions, souvenirs de ce qui arrive en scène. **Aucune action choisie par la simulation** : la scène appartient au moteur de tour et au récit |
+| `scene` | présente dans `scene_states` | le tour | besoins, émotions, souvenirs de ce qui arrive en scène. Ses **réactions** au tour sont choisies par le moteur dans le vocabulaire de scène (§10.7), jamais par le récit |
 | `near` | complète, au même lieu que le groupe, ou dans son lieu parent ou ses lieux enfants (`src/core/entity-tree`) | 1 heure | tout |
 | `far` | complète, ailleurs | 1 jour | tout |
 | `light` | légère | 1 mois | la vie en grandes lignes (§10.5) |
@@ -295,7 +295,7 @@ Une figure complète de classe `far`, ni PJ, ni épinglée, sans contact avec un
 
 Seuls les genres du vocabulaire s'écrivent dans `world_events`. Les interactions du quotidien (bavarder, une remarque, un petit service) **ne s'y écrivent pas** : leurs effets vont dans `entity_attitudes`, résumés dans `attitude_events` une fois par semaine de jeu et par paire (§8.2), et dans les souvenirs avec une description en ligne. C'est ce qui tient le volume (§16).
 
-### 5.2 Le vocabulaire (62 genres)
+### 5.2 Le vocabulaire (65 genres)
 
 Chaque genre a un schéma Zod pour `data`, une portée par défaut, une **ampleur** (`harm` ou `benefit`, 0…100, pour l'évaluation §6), l'acte éthique qu'il constitue (psyché §3.2) et ses étiquettes de réputation (§9.5).
 
@@ -310,6 +310,7 @@ Chaque genre a un schéma Zod pour `data`, une portée par défaut, une **ampleu
 | Intimité | `advance_rejected`, `affair_began`, `affair_discovered`, `scandal`, `vow_broken` |
 | Identité et société | `outed` (une appartenance cachée devient connue), `discriminated`, `persecuted`, `disguise_pierced` |
 | Thèmes de table (§11.3) | `sexual_assault`, `abducted`, `enslaved`, `tortured` |
+| Faits marquants (§5.5, §5.7) | `threatened`, `blackmail`, `loss_noticed` |
 | Monde | `monster_attack`, `conversion`, `pilgrimage` |
 
 Ajouter un genre : un ADR, comme pour les événements des déclencheurs (ADR 0070).
@@ -319,13 +320,64 @@ Ajouter un genre : un ADR, comme pour les événements des déclencheurs (ADR 00
 - `cause_id` : l'événement qui a provoqué celui-ci (une insulte → une rancune → un duel). C'est ce qui permet de **rejeter une chaîne** (§12) et de raconter le pourquoi.
 - `scope` : `major` entre dans la Chronologie du monde (ADR 0048) sans condition ; `notable` y entre pour le MJ, et pour un joueur s'il le connaît (§9) ; `detail` n'y entre jamais.
 
-### 5.4 Le pont du jeu vers le monde (A7)
+### 5.4 Les faits marquants : comment ce que font les PJ entre dans le monde (ADR 0089)
 
-Ce que font les PJ doit entrer dans le monde, sinon personne ne s'en souvient.
+Ce que font les PJ doit entrer dans le monde, sinon personne ne s'en souvient. Quatre sources :
 
-1. **Les événements mécaniques** (`session_events`) sont traduits au début de chaque lot, par une table pure : une attaque d'un PJ sur une figure → `assault` ; une figure tuée par un PJ → `kill_in_fight` si la figure était hostile ou avait attaqué, `murder` sinon ; un soin donné à une figure → `help_given`.
-2. **Le fait marquant** : depuis le tiroir de conséquences (solo) ou les outils du MJ, on enregistre un événement du vocabulaire à la main (« Max a humilié Bram devant la taverne »), avec ses acteurs, sa cible, sa portée. Origine `player` en solo, `gm` en campagne.
-3. **L'IA ne crée pas d'événement du monde** en V4. Elle peut suggérer un fait marquant dans sa narration ; l'humain l'enregistre ou non.
+| Source | Chemin |
+|---|---|
+| **1. La mécanique** | les `session_events` sont traduits au début de chaque lot, par une table pure : une attaque d'un PJ sur une figure → `assault` ; une figure tuée par un PJ → `kill_in_fight` si elle était hostile ou avait attaqué, `murder` sinon ; un soin → `help_given` |
+| **2. L'acte déclaré** | la **puce d'acte** de la barre d'intention (§5.5) |
+| **3. Les PNJ en scène** | leurs réactions sont **choisies par le moteur** (§10.7) ; en campagne, **suggérées** au MJ |
+| **4. Hors de l'application** | la **saisie rapide** du MJ pendant la séance (qui, quoi, sur qui) ; le **journal de séance** après coup, dont le modèle propose des faits que le MJ coche (§5.8) |
+
+Le fait marquant saisi à la main (tiroir de conséquences en solo, outils du MJ en campagne) reste possible pour tout le reste.
+
+### 5.5 La puce d'acte
+
+La barre d'intention (V3-B1) gagne une puce facultative : un **acte** de la liste fermée et une **cible** parmi les figures présentes. Chaque acte correspond à un genre du journal du monde :
+
+| Acte | Genre | Jet demandé (V3-B5), si l'issue est incertaine |
+|---|---|---|
+| aider, consoler | `help_given` | — |
+| offrir | `gift_given` | — |
+| sauver | `rescue` | selon la situation |
+| promettre | `oath_sworn` | — |
+| séduire | `seduce` (action, §8.5) ; `advance_rejected` si refus | Persuasion, puis le consentement de la cible |
+| mentir à | `lie_told` | Tromperie contre la Perspicacité passive de la cible |
+| menacer | `threatened` | Intimidation |
+| insulter | `insult` | — |
+| humilier | `humiliation` | selon la situation |
+| trahir | `betrayal` | — |
+| voler | `theft` | Escamotage contre la Perception passive de chaque présent (§5.6) |
+| frapper | `assault` | le jet d'attaque |
+| avouer | `confession` | — |
+| révéler un secret | `secret_revealed` | — |
+
+- **Le modèle peut pré-remplir la puce** depuis la phrase du joueur (une sortie structurée : un acte de la liste, une cible parmi les présents, jamais un identifiant inventé). Le joueur **confirme d'un geste ou corrige** ; rien n'entre dans le monde sans sa confirmation. Sans modèle, la puce reste vide et le joueur la choisit (règles 8 et 9 : le modèle propose une étiquette, il ne décide rien).
+- L'acte entre dans le monde **avec son issue** : un mensonge raté est un `lie_told` découvert.
+- Un tour sans puce confirmée n'est pas un fait marquant ; ses effets du quotidien restent possibles (§8.2).
+- Les actes d'un thème de table suivent ce thème (§11.3).
+
+### 5.6 Les témoins
+
+Un fait n'a de suite que pour ceux qui le connaissent.
+
+- **Un acte discret** (voler, mentir, révéler un secret à l'oreille) oppose le jet du PJ (Escamotage, Discrétion, Tromperie) à la **Perception passive** de chaque figure présente : 10 + son bonus de Perception (fiche mécanique ou bloc de créature). Une figure sans fiche mécanique prend 10, ajusté par `curiosity` (±2) et `anxiety_propensity` (+1 si forte).
+- **Un acte ouvert** est vu de tous les présents.
+- Ceux qui perçoivent sont les **témoins** (§6.1, rôle `witness`) ; les autres n'en savent rien.
+
+### 5.7 Les indices, et la découverte après coup
+
+Un acte sans témoin n'est pas perdu :
+
+- **Le constat** : au premier pas où la victime en a l'occasion (elle rentre, elle compte sa bourse, elle cherche l'objet), le moteur produit `loss_noticed` et une croyance « quelqu'un m'a volé » (`zBeliefClaim` avec un acteur **inconnu**, certitude 100 sur l'acte, 0 sur le coupable).
+- **La suite** passe par les mécanismes existants : la victime parle (§9.2), les rumeurs courent, un témoin finit par parler ou mentir (§9.4), une enquête (`seek`, `deep_talk`), un aveu (`confess`), une dénonciation (`denounce`). Une croyance qui désigne un coupable peut être fausse.
+- **Déduction** : une figure qui croit « on m'a volé » et qui croit aussi « Max était là » peut soupçonner Max (croyance `deduced`, certitude faible), selon sa méfiance et ses préjugés (§8.6).
+
+### 5.8 Le journal de séance
+
+En campagne autour d'une vraie table, le MJ écrit après la séance un résumé en prose. Le modèle en propose une liste de faits : un acte du vocabulaire, des acteurs et des cibles **parmi les figures connues**, une portée, et **la phrase d'où il vient**. Le MJ coche ceux qui sont vrais ; seuls ceux-là entrent dans le monde, par les propositions relues (règle 9). Le texte du journal est encadré comme donnée dans le prompt (règle 10).
 
 ---
 
@@ -647,11 +699,26 @@ Un **rêve** a un petit plan en données : `avenge(X)` = trouver où est X (`see
 
 - **Faire agir un PJ.** Un PJ est cible, témoin, sujet de rumeurs ; jamais acteur d'une action simulée.
 - Faire agir une figure **figée** (§11.2).
-- Faire agir une figure en classe `scene` : c'est le tour qui décide.
+- Faire agir une figure en classe `scene` hors du vocabulaire de scène (§10.7).
 - Générer un acte d'un thème absent, ou au-delà de sa position (§11.3).
 - Faire d'un PJ la victime d'un acte de thème de table **généré** : seul le MJ peut l'enregistrer, et seulement si `pcs_concerned` l'accepte pour ce thème.
 - Quoi que ce soit de sexuel impliquant un mineur.
 - Dépasser les bornes (§16).
+
+
+### 10.7 Réagir en scène (ADR 0089)
+
+Quand le tour produit un fait (un acte du joueur, un jet, un événement mécanique), chaque figure présente **concernée** (cible, témoin, liée à la cible ou à l'acteur) choisit une réaction, par le même score d'utilité (§10.3) que les autres actions, dans un vocabulaire réduit :
+
+| Famille | Réactions |
+|---|---|
+| Face à un acte qui la vise | accueillir, aider, accepter, refuser, se méfier, céder, menacer, insulter, riposter, fuir, attaquer |
+| Témoin d'un acte | dénoncer à voix haute, prévenir la victime en secret (`warn_secretly` : une croyance transmise), se taire, faire chanter l'acteur plus tard (`blackmail` : un événement et un rêve qui le vise), s'en mêler, proposer de s'associer |
+
+- Le score lit sa psyché, ses éthiques (une réaction `unthinkable` est retirée), ses liens avec l'acteur et la victime, son état du moment, ses préjugés (§8.6).
+- **En solo**, la réaction est appliquée et entre au journal du monde ; le modèle la **raconte**, il ne la choisit pas.
+- **En campagne avec un MJ**, la réaction est une **suggestion** dans ses outils (« Aude préviendrait probablement Bram en secret ; puis : dénoncer, se taire »), avec ses raisons. Le MJ la retient, en choisit une autre, ou joue librement ; ce qu'il retient entre au journal du monde.
+- Bornes : une réaction par figure et par fait ; au plus six figures réagissent à un même fait (les plus concernées).
 
 ---
 
@@ -823,4 +890,5 @@ Prises ici pour avancer ; chacune se change sans toucher au reste.
 | Conséquences du corps quand la couche est « MJ seul » | appliquées, visibles comme une condition | laissées au MJ (`body_consequences: "gm"`) |
 | Défaire un lot | seulement le dernier | n'importe lequel, au prix d'une reconstruction complète |
 | Génération | dans le navigateur | script local, ou serveur par tranches |
-| L'IA propose des faits marquants | à rediscuter : les faits marquants et la simulation générale feront l'objet d'une discussion dédiée | — |
+| L'IA propose des faits marquants | oui, sous forme de propositions confirmées : la puce d'acte pré-remplie, le journal de séance (§5.5, §5.8) | **validé le 30 octobre** |
+| Réactions des PNJ en scène, en campagne | suggérées au MJ, qui décide (§10.7) | **validé le 30 octobre** |

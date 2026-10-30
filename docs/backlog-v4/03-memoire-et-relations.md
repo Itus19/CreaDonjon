@@ -177,3 +177,38 @@ Se souvenir, être transformé par ses souvenirs, se lier, croire, colporter, me
 - [ ] Une fausse accusation peut provoquer `outed` sans que la figure soit concernée ; la vérité reste visible du MJ (test).
 - [ ] Vivre caché contre un besoin pressant fait monter le stress (test).
 - [ ] Le test de la règle d'identité couvre les normes : elles jugent des conduites connues, jamais une appartenance non crue.
+
+---
+
+### ☐ V4-C11 — Les témoins et la Perception passive · `M` · sans modèle IA — **prêt après A9, C5**
+
+**Modèle conseillé : Opus** — moteur de règles, jets opposés. **ADR :** 0089. **Spec :** §5.6.
+
+**Sous-tâches Haiku** : lancer les tests.
+
+**À faire** (tests d'abord)
+- `passivePerception(sheet | statblock | figure)` : 10 + bonus de Perception de la fiche (`characterSheet`), ou la valeur du bloc de créature, ou 10 ajusté par les facettes pour une figure sans fiche.
+- `witnessesOf(act, roll, presentFigures)` : un acte discret oppose le jet du PJ à chaque Perception passive ; un acte ouvert est vu de tous.
+- Les témoins reçoivent la croyance `witnessed` et entrent dans l'évaluation (E1) avec le rôle `witness`.
+
+**Critères d'acceptation**
+- [ ] Un jet de 14 est vu par une Perception passive de 15, pas de 13. Le cas d'égalité suit la règle du livre (D&D 2024), **vérifiée dans le livre par l'auteur** avant d'être écrite dans le code et testée.
+- [ ] Une figure sans fiche a une Perception passive déterministe (test).
+- [ ] Un acte sans témoin ne crée aucun souvenir chez personne (test).
+
+---
+
+### ☐ V4-C12 — Les indices et la découverte après coup · `M` · sans modèle IA — **prêt après C11**
+
+**Modèle conseillé : Opus** — croyances. **ADR :** 0089. **Spec :** §5.7.
+
+**Sous-tâches Haiku** : lancer les tests.
+
+**À faire** (tests d'abord)
+- `zBeliefClaim` accepte un acteur **inconnu**.
+- `noticeLoss(victim, events, now)` : au premier pas où la victime en a l'occasion, `loss_noticed` et la croyance « quelqu'un m'a volé ».
+- `suspect(holder, beliefs)` : une croyance `deduced` sur un coupable possible (présents au moment des faits), selon `trust`, les préjugés (C9) et la familiarité.
+
+**Critères d'acceptation**
+- [ ] Un vol sans témoin finit par être constaté par la victime (test sur graine).
+- [ ] Un soupçon peut viser un innocent ; la vérité reste visible du MJ (test).

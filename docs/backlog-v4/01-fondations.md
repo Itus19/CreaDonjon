@@ -75,7 +75,7 @@ Ce lot pose le hasard, l'horloge, les tables, le vocabulaire des événements, l
 **Sous-tâches Haiku** : reporter les 49 libellés de genres dans `messages/` ; lancer `npm run test:core`.
 
 **À faire**
-- `src/core/sim/events.ts` : `WORLD_EVENT_KINDS` (les 62 genres de la spec), chacun rattaché à un thème de table s'il en relève (`sexual_assault`, `abducted`, `enslaved`, `tortured`), et pour chacun une entrée de `WORLD_EVENT_DEFS` : schéma Zod de `data`, portée par défaut, `harm` et `benefit` (0…100), acte éthique (`EthicKey | null`), étiquettes de réputation avec leur poids, formateur ou non (pour C2).
+- `src/core/sim/events.ts` : `WORLD_EVENT_KINDS` (les 65 genres de la spec), chacun rattaché à un thème de table s'il en relève (`sexual_assault`, `abducted`, `enslaved`, `tortured`), et pour chacun une entrée de `WORLD_EVENT_DEFS` : schéma Zod de `data`, portée par défaut, `harm` et `benefit` (0…100), acte éthique (`EthicKey | null`), étiquettes de réputation avec leur poids, formateur ou non (pour C2).
 - `zWorldEvent` : un événement complet validé (genre connu, `data` conforme à son genre, au moins un acteur sauf pour `birth`, `death` et `monster_attack`).
 - Une phrase de résumé par genre, avec trous (`{actor} a insulté {target}`), dans `messages/`.
 
@@ -129,6 +129,7 @@ Ce lot pose le hasard, l'horloge, les tables, le vocabulaire des événements, l
 
 **Sous-tâches Haiku** : libellés ; planche du catalogue.
 
+- **La saisie rapide du MJ** pendant une séance : trois touches (qui, quoi, sur qui), portée et phrase facultatives, depuis les outils de table.
 - Dans le tiroir de conséquences (solo) et dans les outils du MJ : « Enregistrer un fait marquant ». Champs : le genre (liste groupée par famille, recherche ; les genres d'un thème `absent` n'y figurent pas), qui agit, sur qui (parmi les figures présentes et connues), où, la portée, une phrase libre.
 - Réutiliser les éléments du catalogue (champ de recherche, puces de personnes) ; aucun élément neuf sans planche.
 
@@ -151,3 +152,67 @@ Ce lot pose le hasard, l'horloge, les tables, le vocabulaire des événements, l
 **Critères d'acceptation**
 - [ ] Un tour solo ordinaire (classe `near` : 20 figures, 1 heure) reste sous 300 ms de calcul et 50 lignes écrites.
 - [ ] Les bornes de la spec sont mises à jour avec leurs mesures.
+
+---
+
+### ☐ V4-A9 — La puce d'acte : données et tour · `M` · sans modèle IA — **prêt après A4, A6**
+
+**Modèle conseillé : Opus** — moteur de tour, jets demandés. **ADR :** 0089. **Spec :** §5.5.
+
+**Sous-tâches Haiku** : libellés des actes ; lancer les tests et résumer les échecs.
+
+**À faire** (tests d'abord)
+- `src/core/sim/acts.ts` : `SOCIAL_ACTS` (la table de la spec : acte, genre, jet demandé), `actToWorldEvent(act, actor, target, outcome)`.
+- La barre d'intention (`src/core/rules/intent.ts`) accepte un `social_act` facultatif `{ act, targetId }` à côté des intentions mécaniques ; quand l'acte demande un jet, le moteur le demande (V3-B5) avant d'écrire.
+- Le tour écrit le fait au journal du monde avec son issue (un mensonge raté : `lie_told` découvert).
+
+**Critères d'acceptation**
+- [ ] Chaque acte a son genre et, s'il y a lieu, son jet (test qui parcourt la table).
+- [ ] Un acte sans cible présente est refusé ; un acte d'un thème absent aussi.
+- [ ] Un tour sans acte confirmé n'écrit aucun fait marquant.
+
+---
+
+### ☐ V4-A10 — La puce d'acte : l'écran · `S` · sans modèle IA — **prêt après A9 (Sonnet)**
+
+**Modèle conseillé : Sonnet.** **Esquisse :** la planche « La barre d'intention et la puce d'acte » de l'esquisse du 28 octobre (artefact « Faits marquants — esquisse »), à faire valider dans l'application.
+
+**Sous-tâches Haiku** : libellés ; planche du catalogue.
+
+- Sous la saisie libre : « Ce que le monde retiendra », la puce (acte · cible), et les boutons Confirmer, Changer l'acte (liste groupée), Aucun acte. Une proposition du modèle est marquée comme telle.
+- Le tiroir de conséquences permet de **corriger l'acte retenu** du dernier tour.
+
+**Critères d'acceptation**
+- [ ] Tient à 375 px ; boutons de 44 px au moins ; planche à jour.
+- [ ] Sans modèle, la puce est vide et se choisit à la main.
+
+---
+
+### ☐ V4-A11 — Le modèle propose l'acte · `M` · **avec modèle IA** — **prêt après A10**
+
+**Modèle conseillé : Opus** — sortie structurée, garde-fous du modèle. **ADR :** 0089. **Spec :** §5.5.
+
+**Sous-tâches Haiku** : vérifications et résumé des échecs.
+
+- Un appel court dans `src/server/ai/` : la phrase du joueur et la liste des présents en entrée ; en sortie, un acte de la liste fermée et une cible parmi les présents (enum fermé, comme le garde-fou de S1), ou « aucun acte ». Validé par Zod ; journalisé dans `ai_usage_log` à chaque appel (règle 13).
+- La proposition pré-remplit la puce ; elle n'est **jamais** appliquée sans la confirmation du joueur.
+
+**Critères d'acceptation**
+- [ ] Une cible hors des présents ou un acte hors liste est refusé (test).
+- [ ] Une panne du modèle laisse la puce vide, le tour continue.
+- [ ] Vérifié en direct sur dix phrases : les propositions sont justes ou corrigeables d'un geste.
+
+---
+
+### ☐ V4-A12 — Le journal de séance lu par le modèle · `M` · **avec modèle IA** — **prêt après A6, A7**
+
+**Modèle conseillé : Opus** — propositions, contenu non fiable dans un prompt. **ADR :** 0089. **Spec :** §5.8.
+
+**Sous-tâches Haiku** : libellés ; planche du catalogue ; vérifications.
+
+- Écran du MJ : le résumé en prose à gauche, les faits proposés à droite (acte, acteurs, cible, portée, phrase citée), à cocher ; « Enregistrer les faits cochés ». Esquisse : la planche « Le journal de séance » de l'esquisse du 28 octobre.
+- L'appel au modèle : texte encadré comme donnée (règle 10), sortie structurée (actes et figures parmi les connus), passage par `ai_proposals` (règle 9), `ai_usage_log` (règle 13).
+
+**Critères d'acceptation**
+- [ ] Chaque fait proposé cite sa phrase ; une figure inconnue n'est jamais proposée (test).
+- [ ] Rien n'entre dans le monde sans la coche du MJ.
