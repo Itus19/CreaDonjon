@@ -2,7 +2,7 @@
 
 **Version :** 1.0 — 22 octobre 2026
 **Établi sur :** la discussion du 22 octobre 2026 avec l'auteur, en supposant faits tous les tickets des backlogs antérieurs (`backlog-v4/00-cadre.md` §1).
-**Documents liés :** `specs/psyche-v4.md` · `specs/simulation-monde.md` · `specs/memoire-du-recit.md` · `docs/recherche/simulation-inspirations.md` · ADR 0067 à 0093 · `specs/psyche-pnj.md` (que la V4 remplace en partie) · `specs/moteur-de-jeu.md` · `docs/adr/0009-viabilite-solo.md` · `docs/adr/0048-les-donnees-de-la-chronologie.md` · `docs/adr/0058-un-monde-solo-se-copie-il-ne-se-convertit-pas.md`
+**Documents liés :** `specs/psyche-v4.md` · `specs/simulation-monde.md` · `specs/memoire-du-recit.md` · `docs/recherche/simulation-inspirations.md` · ADR 0067 à 0094 · `specs/psyche-pnj.md` (que la V4 remplace en partie) · `specs/moteur-de-jeu.md` · `docs/adr/0009-viabilite-solo.md` · `docs/adr/0048-les-donnees-de-la-chronologie.md` · `docs/adr/0058-un-monde-solo-se-copie-il-ne-se-convertit-pas.md`
 
 Un **moteur de simulation** : des entités qui ont des traits, des valeurs, des besoins, des rêves, des émotions et des souvenirs, qui agissent selon eux, se transforment, se souviennent du joueur, et laissent une histoire. Un monde qui **naît avec une histoire générée** à partir d'une graine. Des outils **hybrides** : le MJ humain active ou non la simulation, et accepte ou rejette ce qu'elle propose. L'IA ne fait que raconter. Inspiration : Dwarf Fortress, Fable, Baldur's Gate 2, le système Nemesis.
 
@@ -27,7 +27,7 @@ La V4 renverse deux décisions de `specs/psyche-pnj.md`, chacune par un ADR (`00
 
 ### Où en est la V4
 
-**Conçue le 22 octobre 2026, complétée le 24** (sexualité, accords et unions, identité perçue, normes et préjugés, thèmes de table et récit : ADR 0085 à 0088) ; **le 30**, les faits marquants et les réactions des PNJ en scène (ADR 0089), puis le choix du jet : l'acte, la manière, la cible (ADR 0090) ; la mémoire du récit, le combat et les possessions des PNJ, les tests de génération (ADR 0091 à 0093). La recherche (`docs/recherche/simulation-inspirations.md` : Dwarf Fortress par DFHack et son wiki, RimWorld, Crusader Kings III, Les Sims, Talk of the Town, Nemesis, Wildermyth, Ultima IV, Caves of Qud, l'IA par utilité), les deux specs (`specs/psyche-v4.md`, `specs/simulation-monde.md`) et les ADR 0067 à 0093 sont écrits. **Les 87 tickets sont prêts** ; ceux d'interface commencent par une esquisse à faire valider. Quelques choix restent à confirmer par l'auteur : `specs/simulation-monde.md` §17.
+**Conçue le 22 octobre 2026, complétée le 24** (sexualité, accords et unions, identité perçue, normes et préjugés, thèmes de table et récit : ADR 0085 à 0088) ; **le 30**, les faits marquants et les réactions des PNJ en scène (ADR 0089), puis le choix du jet : l'acte, la manière, la cible (ADR 0090) ; la mémoire du récit, le combat et les possessions des PNJ, les tests de génération (ADR 0091 à 0093) ; la priorité du MJ (ADR 0094). La recherche (`docs/recherche/simulation-inspirations.md` : Dwarf Fortress par DFHack et son wiki, RimWorld, Crusader Kings III, Les Sims, Talk of the Town, Nemesis, Wildermyth, Ultima IV, Caves of Qud, l'IA par utilité), les deux specs (`specs/psyche-v4.md`, `specs/simulation-monde.md`) et les ADR 0067 à 0094 sont écrits. **Les 88 tickets sont prêts** ; ceux d'interface commencent par une esquisse à faire valider. Quelques choix restent à confirmer par l'auteur : `specs/simulation-monde.md` §17.
 
 ### Ordre recommandé
 
@@ -39,7 +39,7 @@ La V4 renverse deux décisions de `specs/psyche-pnj.md`, chacune par un ADR (`00
 | **4 · La vie, en noyau pur** | E3, E1, C1, E2, C2, C3, C4, E4, E5, E8 | tests d'abord, tout en millisecondes |
 | **5 · Les figures, les croyances, la société** | E6, C5, C6, C8, C9, C10, E7, E11, A6, A9, A13, A14, A15, A16, A17, C11, C12, E12 | promotion, croyances, réputation, préjugés et normes, intimité et unions, thèmes de table, pont du jeu |
 | **6 · Le pas de simulation** | E13, E14, E9, puis A8 | tout s'assemble ; puis on mesure et on fixe les bornes |
-| **7 · Le MJ** | F1, F2, F3, F5, F4, F6 | le mode hybride |
+| **7 · Le MJ** | F1, F2, F3, F7, F5, F4, F6 | le mode hybride |
 | **8 · Les écrans** | B5, B7, B8, C7, D4, D5, H2, H3, H5, H7, A7, A10, A5 | chacun après son esquisse |
 | **9 · Les règles et le jeu** | H4, H6 | conséquences du corps, motif et Inspiration |
 | **10 · Raconter** | I1, I3, B9, E10, A11, A12, I2, I4, I5, I6 | le contexte assemblé et les fils ouverts d'abord (sans IA), puis tout ce qui appelle le modèle |
@@ -128,6 +128,7 @@ La V4 renverse deux décisions de `specs/psyche-pnj.md`, chacune par un ADR (`00
 | V4-F4 | ☐ | Sonnet | sans | Le simulateur | [`06-simulation-et-mj.md`](backlog-v4/06-simulation-et-mj.md) |
 | V4-F5 | ☐ | Opus | sans | Défaire le dernier lot | [`06-simulation-et-mj.md`](backlog-v4/06-simulation-et-mj.md) |
 | V4-F6 | ☐ | Sonnet | sans | Ce qui bouge dans le monde | [`06-simulation-et-mj.md`](backlog-v4/06-simulation-et-mj.md) |
+| V4-F7 | ☐ | Opus | sans | Le MJ est prioritaire : réconciliation et éléments périmés | [`06-simulation-et-mj.md`](backlog-v4/06-simulation-et-mj.md) |
 | V4-G1 | ☐ | Opus | sans | Graine et paramètres | [`07-generation-du-monde.md`](backlog-v4/07-generation-du-monde.md) |
 | V4-G2 | ☐ | Opus | sans | Peuples, cultures et lieux | [`07-generation-du-monde.md`](backlog-v4/07-generation-du-monde.md) |
 | V4-G3 | ☐ | Opus | sans | La boucle d'histoire | [`07-generation-du-monde.md`](backlog-v4/07-generation-du-monde.md) |

@@ -1,8 +1,8 @@
 # Spécification — Le moteur de simulation
 
-**Version :** 1.1 — 24 octobre 2026 (sexualité, accords, identité perçue, thèmes de table, récit, faits marquants, choix du jet, combat, possessions, tests de génération : ADR 0085 à 0093)
+**Version :** 1.1 — 24 octobre 2026 (sexualité, accords, identité perçue, thèmes de table, récit, faits marquants, choix du jet, combat, possessions, tests de génération, priorité du MJ : ADR 0085 à 0094)
 **Tickets :** lots A, C, E, F, G, H de `docs/BACKLOG_V4.md`
-**ADR :** 0067 à 0093 · **Psyché :** `specs/psyche-v4.md` · **Sources :** `docs/recherche/simulation-inspirations.md`
+**ADR :** 0067 à 0094 · **Psyché :** `specs/psyche-v4.md` · **Sources :** `docs/recherche/simulation-inspirations.md`
 
 Ce document dit comment le monde vit : le temps, le hasard, les figures, ce qui arrive, comment on le ressent, s'en souvient, le raconte et agit. Les listes (facettes, valeurs, besoins, émotions, rêves) sont dans `specs/psyche-v4.md`.
 
@@ -867,6 +867,15 @@ Les outils de sécurité du jeu de rôle, appliqués au moteur : une **ligne** n
 - Ce qu'on en perçoit passe par les conséquences : souvenirs et trauma (§7.5), récits indirects, rumeurs, silences et mensonges (§9), réputation, justice ou impunité.
 - **La violence ordinaire** (un combat, la mort d'un adversaire) n'est pas un thème : elle se raconte selon `violence_detail` (`sober` : l'issue ; `descriptive` : le geste et ses effets ; `graphic` : sans détour). Le `tone` donne la couleur du récit ; `horror` et `cosmic_horror` s'appuient sur la psyché (terreur, stress, crises, souvenirs fondateurs : c'est déjà la santé mentale).
 - **Un fournisseur d'IA distant** peut refuser un récit cru que la table a choisi ; un modèle local, non. L'écran le dit quand c'est le cas, et le tour continue avec un récit plus sobre.
+
+
+### 11.4 Le MJ est prioritaire (ADR 0094)
+
+- **Ce que le MJ écrit fait foi.** Un fait posé par le MJ sur une fiche (une mort, un lieu de vie, un lien, une généalogie, un objet d'inventaire, une psyché retouchée) n'est **jamais** réécrit par la simulation. Elle peut seulement **proposer** de le changer, comme un élément de lot à relire, en mode `propose` comme en mode `auto`.
+- **La réconciliation**, au début de chaque lot, sans temps réel (aucun abonnement, `docs/QUOTAS.md`) : le moteur lit les blocs des entités qui ont une figure, modifiés depuis `simulated_until` (une requête groupée sur `updated_at`), compare avec l'état courant et met l'état à jour (lieu, mort, liens, possessions, psyché). Chaque écart corrigé s'écrit comme un ajustement du MJ (`personality_events` `gm_adjustment`, un événement `origin = 'gm'` pour une mort ou un départ).
+- **La psyché retouchée** dans l'onglet « aujourd'hui » s'applique tout de suite (ADR 0067).
+- **Un lot en attente** dont des éléments lisent une figure que le MJ a modifiée depuis le calcul : ces éléments sont marqués **périmés** (et leurs dépendants avec eux). Le MJ les rejette, ou relance la simulation pour cette figure. Un élément périmé ne peut pas être accepté.
+- En solo, le joueur est son propre MJ : ses retouches de fiche suivent la même règle.
 
 ---
 

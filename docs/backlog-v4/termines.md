@@ -53,3 +53,8 @@ Décisions prises avec l'auteur les 28 et 30 octobre, d'après une esquisse en c
 - [x] Les PNJ qui combattent selon leur psyché et leur morale, et des possessions réelles déplacées par la simulation (ADR 0092 ; E13, E14).
 - [x] Tester un monde : contrôles de cohérence, rejet automatique et silencieux (décision de l'auteur), banc de 100 mondes, rapport, indice d'intérêt (ADR 0093 ; G9, G10).
 - [x] Réglage « suggestions du moteur au MJ » (H2) ; le jeu à plusieurs face à un MJ-moteur noté comme question future (`00-cadre.md` §6).
+
+### ☑ V4-0f — Le MJ est prioritaire · sans modèle IA — **fait le 30 octobre 2026**
+
+- [x] Ce que le MJ écrit fait foi ; réconciliation au début de chaque lot, sans temps réel ; éléments périmés (ADR 0094 ; ticket F7).
+- [ ] Reste à concevoir dans cette session : la géographie abstraite, les saisons et la météo, puis le lot P (économie et flux) ; l'approfondissement de la génération du monde. Ensuite, la simulation à blanc dans une nouvelle session.

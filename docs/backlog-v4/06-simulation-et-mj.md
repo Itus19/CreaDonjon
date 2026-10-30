@@ -92,3 +92,23 @@ Un seul moteur, deux usages. En solo, il fait vivre le monde de lui-même. Pour 
 
 **Critères d'acceptation**
 - [ ] Esquisse validée ; chargement mesuré (`docs/CABLAGE.md`, `docs/QUOTAS.md`).
+
+---
+
+### ☐ V4-F7 — Le MJ est prioritaire : réconciliation et éléments périmés · `M` · sans modèle IA — **prêt après F3, E9**
+
+**Modèle conseillé : Opus** — cohérence entre la base et l'état simulé. **ADR :** 0094. **Spec :** §11.4.
+
+**Sous-tâches Haiku** : lancer les tests et résumer les échecs.
+
+**À faire** (tests d'abord)
+- `reconcile(figures, changedBlocks)` (pur) : lieu, mort, liens, possessions, psyché ; rend les ajustements à écrire.
+- Au début de chaque lot, une lecture groupée des blocs modifiés depuis `simulated_until` ; les ajustements écrits comme `gm_adjustment` ou événements `origin = 'gm'`.
+- Un fait posé par le MJ n'est jamais réécrit : la simulation le **propose** (élément de lot), même en mode `auto`.
+- Les éléments d'un lot en attente qui lisent une figure modifiée depuis le calcul sont marqués périmés, avec leurs dépendants ; `acceptItem` les refuse.
+
+**Critères d'acceptation**
+- [ ] Le MJ déclare Bram mort sur sa fiche : au lot suivant, la figure est morte et un événement `origin = 'gm'` l'explique (test d'intégration).
+- [ ] La simulation ne déplace jamais un PNJ dont le MJ a fixé le lieu ; elle le propose (test).
+- [ ] Un élément périmé ne peut pas être accepté (test).
+- [ ] Aucun abonnement temps réel n'est ajouté.
