@@ -70,6 +70,8 @@ export type ChoiceFrom =
 export interface ChoiceOption {
   id: string;
   label: Record<string, string>;
+  /** V3.1-118 : ce que donne l'option, en une phrase, quand ses effets ne sont pas structurés (Ascendance gigante). */
+  description?: Record<string, string>;
   modifiers?: z.infer<typeof zModifier>[];
   spells?: GrantedSpellData[];
   /** Les choix que cette option ouvre à son tour (Initié à la magie : la liste choisie ouvre ses sorts). */
@@ -92,6 +94,7 @@ export const zChoiceOption: z.ZodType<ChoiceOption> = z.lazy(() =>
   z.object({
     id: zChoiceId,
     label: zLocalized,
+    description: zLocalized.optional(),
     modifiers: z.array(zModifier).optional(),
     spells: z.array(zGrantedSpell).optional(),
     grants: z.array(zChoiceGrant).optional(),

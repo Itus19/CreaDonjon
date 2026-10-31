@@ -15,7 +15,7 @@ import {
   type ResolvedFeature,
 } from "@/src/core/rules/sheet";
 import { hasReachedNextLevel } from "@/src/core/rules/experience";
-import { asiExceedsCap, asiModifiers, isValidAsiChoice, parseAsiChoice, type AsiChoice } from "@/src/core/rules/abilityScoreImprovement";
+import { asiApplies, asiExceedsCap, asiModifiers, isValidAsiChoice, parseAsiChoice, type AsiChoice } from "@/src/core/rules/abilityScoreImprovement";
 import { checkMulticlassEntry, exceedsLevelCap, withinAbilityScoreCap } from "@/src/core/rules/characterRules";
 import { isWorldAdmin } from "@/src/server/services/permissions";
 import {
@@ -105,6 +105,8 @@ function buildAsiChoiceFeatures(
     const asi = parseAsiChoice(rawValue);
     if (!asi || !isValidAsiChoice(asi)) continue;
     if (!(asiGrantedLevels[classKey] ?? []).includes(Number(levelText))) continue;
+    // V3.1-118 : un autre don a été pris à ce niveau, le +2 / +1+1 ne compte pas.
+    if (!asiApplies(choices, choiceKey)) continue;
     const key = `choice:${choiceKey}`;
     const label = `Amélioration de caractéristique (${classes[classKey]?.label ?? classKey} niv. ${levelText})`;
     features[key] = { key, label, source: `asi:${choiceKey}`, modifiers: asiModifiers(asi, `asi:${choiceKey}`, label) };
@@ -1065,6 +1067,8 @@ export async function applyLevelUp(
     const match = ASI_CHOICE_KEY.exec(choiceKey);
     if (!match) continue;
     const [, classKey, levelText] = match;
+    // V3.1-118 : un autre don a été pris à ce niveau, le +2 / +1+1 éventuel est ignoré (ni validé, ni appliqué).
+    if (!asiApplies(next.choices, choiceKey)) continue;
     const asi = parseAsiChoice(rawValue);
     if (!asi || !isValidAsiChoice(asi)) return { error: "invalid_asi" };
     if (!(assembled.asiGrantedLevels[classKey] ?? []).includes(Number(levelText))) return { error: "invalid_asi" };

@@ -8,7 +8,7 @@ import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasti
 import { characterSheet, type Ability, type CharacterBuild, type DerivedSheet, type EquippedItem, type ResolvedFeature } from "@/src/core/rules/sheet";
 import { routeSkillChoices } from "@/src/core/rules/skillChoiceRouting";
 import { armorAcModifier, mapChosenSkillModifiers, type ArmorData, type ItemCost, type WeaponData } from "@/src/core/rules/srdMapping";
-import { asiModifiers, parseAsiChoice } from "@/src/core/rules/abilityScoreImprovement";
+import { asiApplies, asiModifiers, parseAsiChoice, withImplicitAsiFeat } from "@/src/core/rules/abilityScoreImprovement";
 import {
   backgroundAbilityBonusModifiers,
   isValidBackgroundAbilityBonusChoice,
@@ -176,7 +176,8 @@ export function useCharacterSheetContext(
   const characterLevel = Math.max(1, characterClasses.reduce((sum, c) => sum + c.level, 0));
   const grantedChoices = resolveChoices({
     sources: choiceSources,
-    choices: character?.choices ?? {},
+    // V3.1-118 : un personnage d'avant, avec son +2 déjà posé, a choisi le don d'amélioration.
+    choices: withImplicitAsiFeat(character?.choices ?? {}),
     presets: choicePresets,
     characterLevel,
     classLevels: Object.fromEntries(
@@ -220,6 +221,8 @@ export function useCharacterSheetContext(
   // montee elle-meme.
   for (const [choiceKey, rawValue] of Object.entries(character?.choices ?? {})) {
     if (!choiceKey.endsWith(".asi")) continue;
+    // V3.1-118 : un autre don a été pris à ce niveau, le +2 / +1+1 ne compte pas.
+    if (!asiApplies(character?.choices ?? {}, choiceKey)) continue;
     const asi = parseAsiChoice(rawValue);
     if (!asi) continue;
     const key = `choice:${choiceKey}`;

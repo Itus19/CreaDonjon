@@ -546,7 +546,7 @@
     ]
   },
   "giant-ancestry": {
-    "_regle": "Ascendance gigante (goliath) : un benefice au choix.",
+    "_regle": "Ascendance gigante (goliath) : un benefice au choix, utilisable un nombre de fois egal au bonus de maitrise par repos long (SRD 5.2.1).",
     "grants": [
       {
         "id": "ancestry",
@@ -562,6 +562,10 @@
               "label": {
                 "fr": "Saut des nuées",
                 "en": "Cloud's Jaunt"
+              },
+              "description": {
+                "fr": "Action bonus : téléportation jusqu'à 9 m vers un espace inoccupé visible.",
+                "en": "Bonus action: teleport up to 30 feet to an unoccupied space you can see."
               }
             },
             {
@@ -569,6 +573,10 @@
               "label": {
                 "fr": "Brûlure ignée",
                 "en": "Fire's Burn"
+              },
+              "description": {
+                "fr": "Quand vous touchez une cible avec un jet d'attaque et lui infligez des dégâts : +1d10 dégâts de feu.",
+                "en": "When you hit a target with an attack roll and deal damage to it: +1d10 Fire damage."
               }
             },
             {
@@ -576,6 +584,10 @@
               "label": {
                 "fr": "Froid mordant",
                 "en": "Frost's Chill"
+              },
+              "description": {
+                "fr": "Quand vous touchez et infligez des dégâts : +1d6 dégâts de froid, et la Vitesse de la cible baisse de 3 m jusqu'au début de votre prochain tour.",
+                "en": "When you hit and deal damage: +1d6 Cold damage, and the target's Speed is reduced by 10 feet until the start of your next turn."
               }
             },
             {
@@ -583,6 +595,10 @@
               "label": {
                 "fr": "Renversement des coteaux",
                 "en": "Hill's Tumble"
+              },
+              "description": {
+                "fr": "Quand vous touchez une créature de taille G ou inférieure et lui infligez des dégâts : elle est À terre.",
+                "en": "When you hit a Large or smaller creature and deal damage to it: it has the Prone condition."
               }
             },
             {
@@ -590,6 +606,10 @@
               "label": {
                 "fr": "Endurance de la pierre",
                 "en": "Stone's Endurance"
+              },
+              "description": {
+                "fr": "Réaction quand vous subissez des dégâts : lancez 1d12, ajoutez votre modificateur de Constitution, et réduisez les dégâts d'autant.",
+                "en": "Reaction when you take damage: roll 1d12, add your Constitution modifier, and reduce the damage by that total."
               }
             },
             {
@@ -597,6 +617,10 @@
               "label": {
                 "fr": "Tonnerre des cieux",
                 "en": "Storm's Thunder"
+              },
+              "description": {
+                "fr": "Réaction quand une créature à 18 m ou moins vous inflige des dégâts : elle subit 1d8 dégâts de tonnerre.",
+                "en": "Reaction when a creature within 60 feet damages you: it takes 1d8 Thunder damage."
               }
             }
           ]

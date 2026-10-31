@@ -4,6 +4,7 @@ import type { ResolvedFeature } from "@/src/core/rules/sheet";
 import type { ChoiceGrant } from "@/src/core/schemas/rule-blocks/choices";
 import type { RemainingChoiceView } from "@/components/blocks/useResolvedRuleset";
 import { choixOuverts, construireChemin, positionValide, voisin, type EntreeChemin } from "./cheminCreation";
+import { ASI_FEAT_KEY, asiFeatSources } from "@/src/core/rules/abilityScoreImprovement";
 
 const MAGIC_INITIATE: FeatChoiceData = {
   key: "magic-initiate",
@@ -259,5 +260,31 @@ describe("le don de l'historique : une seule sous-étape à sections (V3.1-50)",
       "versatile.feat.magic-initiate.list",
       "versatile.feat.magic-initiate.ability",
     ]);
+  });
+});
+
+describe("le don de niveau (V3.1-118) : l'amélioration n'est faite qu'avec son +2 / +1+1", () => {
+  const ASI: FeatChoiceData = { key: ASI_FEAT_KEY, label: "Amélioration de caractéristique", category: "general", modifiers: [], grants: [] };
+  const LUTTEUR: FeatChoiceData = { key: "grappler", label: "Lutteur", category: "general", modifiers: [], grants: [] };
+  const dons = { [ASI_FEAT_KEY]: ASI, grappler: LUTTEUR };
+  const sources = asiFeatSources({ fighter: [4] }, { fighter: "Guerrier" });
+  function cheminGuerrier(reponses: Record<string, unknown>) {
+    const resolu = resolveChoices({ sources, choices: reponses, characterLevel: 4, classLevels: { fighter: 4 }, feats: dons });
+    return construireChemin({ restants: [], ouverts: resolu.open, sources, reponses, avecPointsDeVie: false, avecSorts: false, langues: [], competencesMaitrisees: [], dons });
+  }
+  const sousDuDon = (reponses: Record<string, unknown>) => cheminGuerrier(reponses).etapes.find((e) => e.cle === "classe")!.sous.find((s) => s.cle === "fighter.l4.feat")!;
+
+  it("rangé sous Classe, au niveau 4, avec les dons généraux", () => {
+    const sous = sousDuDon({});
+    expect(sous).toMatchObject({ niveau: 4, classKey: "fighter", fait: false, genre: "feat" });
+    expect(sous.options.map((o) => o.cle)).toEqual([ASI_FEAT_KEY, "grappler"]);
+  });
+  it("un autre don : fait d'un coup", () => {
+    expect(sousDuDon({ "fighter.l4.feat": ["grappler"] }).fait).toBe(true);
+  });
+  it("l'amélioration : faite seulement quand le +2 / +1+1 est valide", () => {
+    expect(sousDuDon({ "fighter.l4.feat": [ASI_FEAT_KEY] }).fait).toBe(false);
+    expect(sousDuDon({ "fighter.l4.feat": [ASI_FEAT_KEY], "fighter.l4.asi": { kind: "asi", increases: { str: 1 } } }).fait).toBe(false);
+    expect(sousDuDon({ "fighter.l4.feat": [ASI_FEAT_KEY], "fighter.l4.asi": { kind: "asi", increases: { str: 1, con: 1 } } }).fait).toBe(true);
   });
 });

@@ -8,6 +8,7 @@ import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import type { Locale } from "@/src/i18n/request";
+import { asiFeatSources, withImplicitAsiFeat } from "@/src/core/rules/abilityScoreImprovement";
 import {
   ABILITIES,
   layerForFeatureSource,
@@ -520,7 +521,8 @@ export async function resolveCharacterChoices(
 ): Promise<ResolvedChoices> {
   const input = {
     sources: assembled.choiceSources,
-    choices,
+    // V3.1-118 : un personnage d'avant, avec son +2 déjà posé, a choisi le don d'amélioration.
+    choices: withImplicitAsiFeat(choices),
     presets: assembled.choicePresets,
     characterLevel,
     classLevels,
@@ -955,6 +957,9 @@ export async function assembleResolvedRuleset(
   if (locale !== "en") {
     for (const l of languages) l.name = LANGUAGE_LABELS_FR[l.key as LanguageKey] ?? l.name;
   }
+
+  // V3.1-118 : chaque niveau d'amélioration accorde un don général (l'amélioration de caractéristique en est un).
+  choiceSources.push(...asiFeatSources(asiGrantedLevels, Object.fromEntries(Object.entries(classes).map(([k, c]) => [k, c.label]))));
 
   // V3.1-116 : le catalogue des dons, seulement si un choix en désigne un.
   const featCategories = new Set<string | null>();

@@ -1,4 +1,5 @@
 import { ABILITIES, type Ability, type Modifier } from "./sheet";
+import type { ChoiceSource } from "./choices";
 
 /**
  * Amelioration de caracteristique (ASI, V2-G1 — montee de niveau
@@ -60,4 +61,59 @@ export function asiModifiers(choice: AsiChoice, source: string, label: string): 
     source,
     label,
   }));
+}
+
+/**
+ * V3.1-118 — En 2024, un niveau d'amélioration accorde un DON général ; le
+ * don « Amélioration de caractéristique » est l'un d'eux, et son +2 / +1+1
+ * reste stocké sous `"<classe>.l<niveau>.asi"`. Le don choisi l'est sous
+ * `"<classe>.l<niveau>.feat"` (la source `"<classe>.l<niveau>"`, son choix `feat`).
+ */
+export const ASI_FEAT_KEY = "ability-score-improvement";
+
+/** Les fiches de choix des niveaux d'amélioration : une par classe et par niveau, rangée sous la classe, comptée au niveau de cette classe. */
+export function asiFeatSources(asiGrantedLevels: Readonly<Record<string, readonly number[]>>, classLabels: Readonly<Record<string, string>>): ChoiceSource[] {
+  return Object.entries(asiGrantedLevels).flatMap(([classKey, levels]) =>
+    levels.map((level) => ({
+      key: `${classKey}.l${level}`,
+      label: `${classLabels[classKey] ?? classKey}, niveau ${level}`,
+      layer: 5 as const,
+      origin: "class" as const,
+      classKey,
+      grants: [
+        {
+          id: "feat",
+          label: { fr: "Don de niveau", en: "Level feat" },
+          at_level: level,
+          from: { kind: "feat" as const, category: "general" },
+        },
+      ],
+    }))
+  );
+}
+
+function featKeyOf(asiChoiceKey: string): string {
+  return asiChoiceKey.replace(/\.asi$/, ".feat");
+}
+
+/** Le +2 / +1+1 d'un niveau compte-t-il ? Oui si le don choisi est l'amélioration, ou si aucun don n'est choisi (personnage d'avant V3.1-118). */
+export function asiApplies(choices: Readonly<Record<string, unknown>>, asiChoiceKey: string): boolean {
+  const feat = choices[featKeyOf(asiChoiceKey)];
+  if (!Array.isArray(feat) || feat.length === 0) return true;
+  return feat[0] === ASI_FEAT_KEY;
+}
+
+/**
+ * Un personnage d'avant V3.1-118 a un `.asi` sans `.feat` : il a choisi
+ * l'amélioration. On le dit au moteur des choix, sans réécrire la base. Rend
+ * l'objet tel quel s'il n'y a rien à ajouter.
+ */
+export function withImplicitAsiFeat<T extends Readonly<Record<string, unknown>>>(choices: T): T {
+  const ajouts: Record<string, string[]> = {};
+  for (const key of Object.keys(choices)) {
+    if (!/\.l\d+\.asi$/.test(key)) continue;
+    const featKey = featKeyOf(key);
+    if (choices[featKey] === undefined) ajouts[featKey] = [ASI_FEAT_KEY];
+  }
+  return Object.keys(ajouts).length === 0 ? choices : { ...choices, ...ajouts };
 }

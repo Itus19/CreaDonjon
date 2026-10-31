@@ -1,5 +1,6 @@
 import { ABILITIES, SKILLS } from "@/src/core/rules/abilities";
 import { localizedLabel, type ChoiceSource, type FeatChoiceData, type OpenChoice } from "@/src/core/rules/choices";
+import { ASI_FEAT_KEY, isValidAsiChoice, parseAsiChoice } from "@/src/core/rules/abilityScoreImprovement";
 import { SPELL_DAMAGE_TYPES } from "@/src/core/rules/homebrewSpell";
 import type { ChoiceFrom } from "@/src/core/schemas/rule-blocks/choices";
 import type { RemainingChoiceView } from "@/components/blocks/useResolvedRuleset";
@@ -27,6 +28,8 @@ export interface OptionChoix {
   cle: string;
   /** Libellé porté par la donnée (don, option nommée, sort). Absent : l'écran le traduit (compétence, langue, caractéristique). */
   libelle?: string;
+  /** V3.1-118 : ce que donne l'option, quand la donnée le dit en une phrase (Ascendance gigante). */
+  description?: string;
 }
 
 export interface SousEtape {
@@ -133,7 +136,10 @@ function optionsAccordees(choix: OpenChoice, entree: EntreeChemin, languesPrises
     case "damage_type":
       return { options: (from.options ?? SPELL_DAMAGE_TYPES).map((cle) => ({ cle })), attend: false };
     case "option":
-      return { options: from.options.map((o) => ({ cle: o.id, libelle: localizedLabel(o.label, o.id) })), attend: false };
+      return {
+        options: from.options.map((o) => ({ cle: o.id, libelle: localizedLabel(o.label, o.id), ...(o.description ? { description: localizedLabel(o.description, "") } : {}) })),
+        attend: false,
+      };
     case "feat":
       return {
         options: Object.values(entree.dons)
@@ -185,6 +191,13 @@ export function construireChemin(entree: EntreeChemin): Chemin {
     });
   }
 
+  /** V3.1-118 : le don « Amélioration de caractéristique » n'est fait qu'avec son +2 / +1+1 valide (`<classe>.l<n>.asi`). */
+  function ameliorationComplete(c: OpenChoice, reponses: Readonly<Record<string, unknown>>): boolean {
+    if (c.from.kind !== "feat" || c.chosen[0] !== ASI_FEAT_KEY || !/\.l\d+\.feat$/.test(c.key)) return true;
+    const asi = parseAsiChoice(reponses[c.key.replace(/\.feat$/, ".asi")]);
+    return asi !== null && isValidAsiChoice(asi);
+  }
+
   const racineDe = new Map<string, ChoiceSource>();
   for (const c of entree.ouverts) {
     const fiche = racine(c.key, entree.sources);
@@ -202,7 +215,7 @@ export function construireChemin(entree: EntreeChemin): Chemin {
       options,
       genre: c.from.kind,
       impose: c.preset,
-      fait: c.chosen.length >= c.count,
+      fait: c.chosen.length >= c.count && ameliorationComplete(c, entree.reponses),
       attend,
       expertise: c.from.kind === "skill" && c.from.expertise === true,
       niveau: c.atLevel,
