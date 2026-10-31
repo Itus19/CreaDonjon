@@ -2907,4 +2907,22 @@ Opus : le noyau et la route ; `dev-sonnet` : l'écran ; relu, deux retouches d'O
   - l'achat de points : à 27 / 27, tous les + se grisent ;
   - le tirage : `{ worldSlug }` seul, jets du serveur, suggestion appliquée (SAG 17).
 
-*Restes* : le SRD ne donne que la caractéristique principale d'une classe (`suggested_abilities`). La suggestion place donc le reste de FOR à CHA. Un ordre complet par classe reste à saisir en données.
+*Restes* : le SRD ne donne que la caractéristique principale d'une classe (`suggested_abilities`). La suggestion place donc le reste de FOR à CHA. ~~Un ordre complet par classe reste à saisir en données.~~ Fait avec V3.1-53 : le tableau « Standard Array by Class » du SRD 5.2.1 (`data/srd/standard-array-2024.json`) donne l'ordre complet (Guerrier : FOR › DEX › CON › CHA › SAG › INT).
+
+### V3.1-53 — Création : l'Équipement (31 octobre)
+
+Opus : le noyau, les données et la route ; `dev-sonnet` : l'écran ; `aide-haiku` : la planche du catalogue ; relu, retouches d'Opus.
+- **Données SRD 5.2.1** (réimport approuvé par l'auteur) :
+  - « Starting Equipment at Higher Levels » dans `character-rules.json` : par palier, or fixe, `gold_roll` (1d10 × 25 ou × 250) et `magic_item_picks` par rareté ;
+  - « Standard Array by Class » : l'ordre complet des caractéristiques par classe (reste du 52) ;
+  - `bundle_size` du bloc `item_properties` : un objet vendu par lot (20 flèches pour 1 po et 1 lb).
+- **Noyau** (testé) :
+  - `startingAtHigherLevel`, `startingGold` (`characterRules.ts`) ; `perUnitWeight`, `perUnitCost`, `orderFromStandardArray` (`srdMapping.ts`) ;
+  - `lib/ui/equipement.ts` : `emplacementDe`, `basculerPort` (allumer range l'ancien du même emplacement), `acheter` / `rendre` (par `spendCoins` / `depositCoins`), `filtrerBoutique`.
+- **Route** `/api/character-creator/roll-starting-gold`, corps strict `{count, faces}` : le serveur lance les dés (règle 8).
+- **Serveur** : les poids et prix d'un objet vendu par lot sont rendus à l'unité. L'inventaire compte des unités : la charge de 20 flèches passait de 20 lb à 1 lb, et les rendre une à une ne rembourse plus 20 po.
+- **Écran** (`EquipmentStep.tsx`) : bourse et charge ; trois tuiles qui scintillent et CA du moteur qui compte ; bande d'équipement au trait ; inventaire alphabétique ; boutique cherchable, chargée seulement à l'ouverture ; départ à haut niveau (jet du serveur, objets magiques par rareté). Une bourse sans objet (option B) est maintenant envoyée à la création.
+- **Retouches d'Opus** : l'écran a son propre conteneur (`@container/equip`) — les seuils sur le conteneur de l'assistant cassaient la grille à 820 px ; portées en virgule décimale ; totaux de pile sur chaque ligne ; vente par lot dans la boutique.
+- **Vérifié au navigateur** : Soldat (option A), porter l'arc range la lance ; « perforants » ne garde que les armes perforantes ; achat 14 → 9 po ; 390 px, 820 px et ordinateur alignés sans défilement horizontal ; niveau 5 : jet du serveur (10 → 750 po), pas de relance au retour, or retiré en redescendant au niveau 1.
+
+*Restes* : le prix de l'arc long est faux à la source (`srd-2024.json` : 5 po, le SRD dit 50 po) ; les objets magiques déjà cochés restent si le palier change ; l'attaque de la tuile suppose la maîtrise de l'arme (comme la fiche).

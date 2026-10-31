@@ -127,7 +127,7 @@ C'est ce qui garantit que toutes les fiches se ressemblent sans avoir à dessine
 
 | Bloc | Layout | Contenu |
 |---|---|---|
-| `character_rules` | `key_values` | les règles de personnage du ruleset : `level_cap`, `ability_score_cap`, `ability_generation` (`standard_array`, `point_buy`, `roll`), `encumbrance` (capacité et paliers, en livres par point de Force), `sell_ratio`, `multiclass_spell_slots`, `starting_at_higher_level` |
+| `character_rules` | `key_values` | les règles de personnage du ruleset : `level_cap`, `ability_score_cap`, `ability_generation` (`standard_array`, `point_buy`, `roll`), `encumbrance` (capacité et paliers, en livres par point de Force), `sell_ratio`, `multiclass_spell_slots`, `starting_at_higher_level` (par palier : `gold`, `gold_roll`, `magic_item_picks`) |
 | `choices` | `key_values` | les choix que la fiche laisse au joueur (`grants`, `zChoiceGrant` : `id`, `label`, `count`, `at_level`, `refresh`, `from`) et les réponses qu'elle impose à une autre fiche (`presets`) — V3.1-116 |
 
 Porté par **une** fiche par ruleset, `character-rules` (type `rule`), surchargée champ par champ par une variante. Le code n'a aucune valeur de repli : sans fiche, l'écran et la fiche de personnage le disent. Les rulesets officiels la reçoivent de `data/srd/character-rules.json` à l'import. `class_basics` porte aussi `multiclass_prerequisites` (`all` / `any` de `{ ability, min }`) et `suggested_abilities`, lus du SRD.

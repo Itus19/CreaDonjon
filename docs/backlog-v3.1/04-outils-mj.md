@@ -293,7 +293,7 @@ données (41 → 42, 59 → 60, 23 → 57, 58), enfin la Création (47 → 48 �
 
 ---
 
-### ☐ V3.1-53 — Création : l'Équipement (bande d'équipement, boutique, départ à haut niveau) · `L` · sans modèle IA — **prêt après 24, 47 et 49**
+### ☑ V3.1-53 — Création : l'Équipement (bande d'équipement, boutique, départ à haut niveau) · `L` · sans modèle IA — **prêt après 24, 47 et 49**
 
 **Modèle conseillé : Sonnet** — planche définitive, très détaillée ; services de 24.
 
@@ -344,11 +344,11 @@ données (41 → 42, 59 → 60, 23 → 57, 58), enfin la Création (47 → 48 �
   deux colonnes.
 
 **Critères d'acceptation**
-- [ ] Acheter puis rendre : la bourse revient exactement à sa valeur.
-- [ ] Allumer une armure éteint l'ancienne en fondu ; la tuile scintille ; la CA compte jusqu'à la valeur du moteur.
-- [ ] Recherche « perforants » : seuls les objets qui ont cette propriété.
-- [ ] Poids et prix alignés en colonnes à 390 px, 820 px et sur ordinateur.
-- [ ] Mouvement réduit : aucune animation.
+- [x] Acheter puis rendre : la bourse revient exactement à sa valeur.
+- [x] Allumer une armure éteint l'ancienne en fondu ; la tuile scintille ; la CA compte jusqu'à la valeur du moteur.
+- [x] Recherche « perforants » : seuls les objets qui ont cette propriété.
+- [x] Poids et prix alignés en colonnes à 390 px, 820 px et sur ordinateur.
+- [x] Mouvement réduit : aucune animation.
 
 ---
 
