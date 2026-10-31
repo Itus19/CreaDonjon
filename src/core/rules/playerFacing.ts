@@ -1,4 +1,5 @@
 import type { TurnChange } from "./turn";
+import { conditionLabel } from "./weaponMastery";
 import type { WoundState } from "./combatPlayerView";
 
 /**
@@ -32,7 +33,7 @@ export function describeChangeForPlayer(change: TurnChange, actorOf: (who: strin
       return `${a.name} est ${ETAT_FR[woundState(change.to.current, a.hpMax)]}.`;
     }
     case "condition":
-      return `${actorOf(change.who).name} ${change.added ? "subit" : "n'a plus"} : ${change.key}`;
+      return `${actorOf(change.who).name} ${change.added ? "subit" : "n'a plus"} : ${conditionLabel(change.key)}`;
     case "zone":
       return `${actorOf(change.who).name} passe de ${change.from} à ${change.to}`;
     case "budget":

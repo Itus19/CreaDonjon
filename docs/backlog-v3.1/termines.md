@@ -2974,3 +2974,14 @@ Opus : conception (ADR 0069, choix de l'auteur : lecture signée), migration, no
 
 *Restes* : la faille du journal relevée en concevant (CA et PV des jets du MJ lisibles des joueurs) est le ticket V3.1-149 ; un sort à sauvegarde lancé par un joueur reste au MJ ; à vérifier au navigateur avec un compte joueur pendant une vraie initiative.
 
+### V3.1-148 — Les bottes d'armes maîtrisées, appliquées en jeu (1er novembre)
+
+Opus seul (moteur de jeu ; l'affichage tenait en quelques lignes).
+- **Noyau** (`src/core/rules/weaponMastery.ts`, testé d'abord) : une arme n'a sa botte que si elle est maîtrisée (choix `<classe>.weapon_mastery` encore ouverts à la fiche). Sape et Vexation posent une **marque** dans les états de la cible (`botte:<genre>:<auteur>:<round>`) ; Écorchure (raté : dégâts égaux au modificateur) et Renversement (touché : sauvegarde de Constitution DD 8 + mod + maîtrise) passent par les effets ; Poussée, Ralentissement, Enchaînement et Coup double se disent à la table. La marque se lit « Sapé » / « Vexé » partout où un état s'affiche.
+- **Serveur** (`resolveTargetedRoll`) : avant le jet, Sapé donne le désavantage à l'attaquant marqué, Vexé l'avantage à l'auteur contre sa cible ; la marque est consommée. Renversement : le serveur lance la sauvegarde d'un monstre ; un PJ reçoit l'indication. Au nom d'un joueur, tout passe par le changement signé (ADR 0041), comme les PV.
+- **Tour** (`moveTurn`) : Sapé tombe au début du tour suivant de son auteur ; Vexé à la fin de son prochain tour. En avant seulement, comme les déclencheurs, et par une écriture de participant journalisée (« Annuler » la rend).
+- L'onglet Actions affichait déjà la botte d'une arme maîtrisée (V2-G1) : inchangé.
+- **Vérifié** contre la base réelle : épée longue maîtrisée (SRD 5.2.1), touché → la cible « subit : Sapé » ; sa riposte a le désavantage et consomme la marque ; l'épée courte non maîtrisée ne pose rien ; expiration au tour. Le chemin joueur (signé) repasse 3/3.
+
+*Restes* : un monde en SRD 5.1 (2014) n'a pas de bottes (les armes n'en portent pas) ; Poussée, Ralentissement et Enchaînement restent à la table (pas de position ni de Vitesse dans la scène).
+

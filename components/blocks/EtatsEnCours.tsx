@@ -7,6 +7,7 @@ import FeuilleDuBas from "@/components/shared/FeuilleDuBas";
 import { useMatchMedia, WINDOWS_MOBILE_QUERY } from "@/components/shell/useMatchMedia";
 import NomDeRegle from "./NomDeRegle";
 import { useWorldRuleEntries } from "./useWorldRuleEntries";
+import { conditionLabel } from "@/src/core/rules/weaponMastery";
 
 const PASTILLE_ETAT = "rounded-full border border-danger text-xs text-danger";
 export const CROIX =
@@ -56,7 +57,7 @@ export default function EtatsEnCours({
           <span className="text-xs font-bold uppercase tracking-wide text-ink-muted">États</span>
           {conditions.map((condition) => {
             const cle = cleEtat(condition);
-            const nom = cle ? <NomDeRegle worldSlug={worldSlug} ruleKey={cle}>{condition}</NomDeRegle> : condition;
+            const nom = cle ? <NomDeRegle worldSlug={worldSlug} ruleKey={cle}>{condition}</NomDeRegle> : conditionLabel(condition);
             if (!onRetirerEtat) {
               return (
                 <span key={condition} className={`${PASTILLE_ETAT} px-3 py-1`}>
@@ -71,8 +72,8 @@ export default function EtatsEnCours({
                   type="button"
                   disabled={busy}
                   onClick={() => onRetirerEtat(condition)}
-                  title={t("retirerEtat", { nom: condition })}
-                  aria-label={t("retirerEtat", { nom: condition })}
+                  title={t("retirerEtat", { nom: conditionLabel(condition) })}
+                  aria-label={t("retirerEtat", { nom: conditionLabel(condition) })}
                   className={CROIX}
                 >
                   ×

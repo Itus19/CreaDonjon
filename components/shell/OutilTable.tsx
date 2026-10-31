@@ -24,6 +24,7 @@ import { useSauvegardes } from "./SauvegardesProvider";
 import type { DemandeSauvegarde } from "@/lib/ui/sauvegardes";
 import FeuilleToutelaTable, { type ModeToutelaTable } from "./FeuilleToutelaTable";
 import { useMatchMedia, WINDOWS_MOBILE_QUERY } from "./useMatchMedia";
+import { conditionLabel } from "@/src/core/rules/weaponMastery";
 
 const PILULE = "rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel disabled:opacity-50";
 const PETIT_BOUTON =
@@ -279,7 +280,7 @@ function LigneTelephone({
             <span className="mt-1 flex flex-wrap gap-1">
               {ligne.etats.map((etat) => (
                 <span key={etat} className="rounded-full border border-danger px-2 py-0.5 text-xs text-danger">
-                  {etat}
+                  {conditionLabel(etat)}
                 </span>
               ))}
             </span>

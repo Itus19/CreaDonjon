@@ -327,6 +327,73 @@ describe.skipIf(!hasCreds)("cibler : le cœur commun de résolution (integration
     }
   });
 
+  it("bottes (V3.1-148) : l'épée longue maîtrisée pose Sapé ; l'attaque suivante de la cible a le désavantage et consomme la marque ; une arme non maîtrisée n'applique rien", async () => {
+    await setHp(p["Gobelin 1"], null, 7);
+    await setHp(p.Brunhild, pc.brunhild, 40);
+    // CA 1 : seul un 1 naturel rate ; avec l'avantage, presque jamais.
+    await admin.from("combat_participants").update({ ac: 1 }).eq("id", p["Gobelin 1"]);
+    const { data: blocs } = await admin.from("blocks").select("id, block_type, data").eq("entity_id", pc.brunhild);
+    const perso = blocs!.find((b) => b.block_type === "character")!;
+    const inventaire = blocs!.find((b) => b.block_type === "inventory")!;
+    await admin.from("blocks").update({ data: { ...(perso.data as object), choices: { "fighter.weapon_mastery": ["longsword", "greataxe", "light-crossbow"] } } }).eq("id", perso.id);
+    const inv = inventaire.data as { items: unknown[] };
+    await admin.from("blocks").update({ data: { ...inv, items: [...inv.items, { id: "i2", ref: { kind: "rule", key: "longsword" }, qty: 1, equipped: true }] } }).eq("id", inventaire.id);
+
+    // Les bottes sont des règles 2024 : le monde passe en SRD 5.2.1 le temps des attaques de Brunhild.
+    const { data: srd52 } = await admin.from("rulesets").select("id").eq("base_system", "dnd_srd_52").eq("is_official_base", true).limit(1).single();
+    const { data: monde } = await admin.from("worlds").select("default_ruleset_id").eq("id", worldId).single();
+    const { data: campagne } = await admin.from("campaigns").select("ruleset_id").eq("id", campaignId).single();
+    const regles = async (worldRuleset: string, campaignRuleset: string) => {
+      await admin.from("worlds").update({ default_ruleset_id: worldRuleset }).eq("id", worldId);
+      await admin.from("campaigns").update({ ruleset_id: campaignRuleset }).eq("id", campaignId);
+    };
+    const toucher = async (itemId: string) => {
+      await regles(srd52!.id, srd52!.id);
+      for (let i = 0; i < 5; i++) {
+        const r = await roll({ kind: "attack", actor: { kind: "character", entityId: pc.brunhild }, action: { kind: "weapon", itemId }, targetId: p["Gobelin 1"], advantage: "advantage" });
+        if (!r.ok) throw new Error(r.reason);
+        if (r.verdict === "hit") {
+          await regles(monde!.default_ruleset_id!, campagne!.ruleset_id);
+          return r;
+        }
+      }
+      await regles(monde!.default_ruleset_id!, campagne!.ruleset_id);
+      throw new Error("cinq attaques ratées contre CA 1");
+    };
+
+    const touche = await toucher("i2");
+    expect((await participant(p["Gobelin 1"])).conditions).toEqual([expect.stringMatching(new RegExp(`^botte:sap:${p.Brunhild}:\\d+$`))]);
+    expect(touche.changes.join(" ")).toMatch(/Gobelin 1 subit : Sapé/);
+
+    const fiche = await getRuleEntryForWorld(gm.client, worldId, "goblin", "fr");
+    const actions = (fiche?.blocks.find((b) => b.blockType === "actions")?.data as { actions?: { name: string; attack_bonus?: number }[] } | undefined)?.actions ?? [];
+    const nom = actions.find((a) => a.attack_bonus !== undefined)?.name;
+    if (!nom) throw new Error("le gobelin n'a pas d'attaque");
+    const riposte = await roll({ kind: "attack", actor: { kind: "participant", participantId: p["Gobelin 1"] }, action: { kind: "monster_action", name: nom }, targetId: p.Brunhild });
+    if (!riposte.ok) throw new Error(riposte.reason);
+    expect(riposte.hints).toContain("Sapé : désavantage à ce jet.");
+    expect((await participant(p["Gobelin 1"])).conditions).toEqual([]);
+
+    // L'épée courte n'est pas maîtrisée : pas de Vexation.
+    await toucher("i1");
+    expect((await participant(p["Gobelin 1"])).conditions).toEqual([]);
+    await admin.from("combat_participants").update({ ac: 15 }).eq("id", p["Gobelin 1"]);
+  });
+
+  it("bottes (V3.1-148) : Sapé tombe au début du tour suivant de son auteur ; Vexé à la fin de son prochain tour", async () => {
+    await setHp(p["Gobelin 1"], null, 7);
+    await setHp(p["Gobelin 2"], null, 7);
+    const sape = `botte:sap:${p.Brunhild}:1`;
+    const vexe = `botte:vex:${p.Brunhild}:1`;
+    await admin.from("combat_participants").update({ conditions: [sape, vexe] }).eq("id", p["Gobelin 2"]);
+    // Ordre : Brunhild (20), Mirelle (15), Gobelin 1 (12), Gobelin 2 (10) ; fin du tour de Gobelin 2, round 1.
+    await admin.from("combats").update({ turn_index: 3, round: 1 }).eq("id", combatId);
+    await advanceCombatTurn(gm.client, { combatId, actorUserId: gm.id });
+    expect((await participant(p["Gobelin 2"])).conditions).toEqual([vexe]);
+    await advanceCombatTurn(gm.client, { combatId, actorUserId: gm.id });
+    expect((await participant(p["Gobelin 2"])).conditions).toEqual([]);
+  });
+
   it("hors d'un combat en cours : refusé", async () => {
     await admin.from("combats").update({ status: "draft" }).eq("id", combatId);
     const result = await roll({ kind: "attack", actor: { kind: "character", entityId: pc.brunhild }, action: { kind: "weapon", itemId: "i1" }, targetId: p["Gobelin 2"] });

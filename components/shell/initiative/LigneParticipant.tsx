@@ -20,6 +20,7 @@ import {
 import AnneauPv from "./AnneauPv";
 import IconeGenre from "./IconeGenre";
 import ActionsParticipant, { type DetailsParticipant } from "./ActionsParticipant";
+import { conditionLabel } from "@/src/core/rules/weaponMastery";
 
 const PETIT_BOUTON =
   "rounded-full border border-edge px-2.5 py-1 text-xs text-ink transition-colors hover:bg-panel-raised disabled:opacity-50";
@@ -127,7 +128,7 @@ export default function LigneParticipant({
                 {horsCombat && <span className="rounded-full border border-danger px-1.5 text-xs text-danger">{t("horsDeCombat")}</span>}
                 {etats.map((e) => (
                   <span key={e} className="rounded-full border border-gm px-1.5 text-xs text-gm">
-                    {e}
+                    {conditionLabel(e)}
                   </span>
                 ))}
                 {concentration && <span className="rounded-full border border-edge px-1.5 text-xs text-ink-soft">{t("concentration", { sort: concentration })}</span>}
@@ -258,7 +259,7 @@ export default function LigneParticipant({
             <div className="flex flex-wrap gap-1.5">
               {etats.map((e) => (
                 <button key={e} type="button" onClick={() => basculerEtat(e)} title={t("retirerEtat")} className="rounded-full border border-gm px-2 py-0.5 text-xs text-gm hover:bg-panel-raised">
-                  {e} ×
+                  {conditionLabel(e)} ×
                 </button>
               ))}
             </div>

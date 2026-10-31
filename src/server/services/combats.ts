@@ -40,6 +40,7 @@ import { putRuntimeState } from "@/src/server/repos/runtimeState";
 import { nextEventSeq, insertSessionEvent } from "@/src/server/repos/sessions";
 import { getCampaign } from "@/src/server/services/campaigns";
 import { getCampaignById, listCampaignCharacters } from "@/src/server/repos/campaigns";
+import { expiredMasteryMarkers } from "@/src/core/rules/weaponMastery";
 import { advanceTurnSkipping, isOutOfFight, retreatTurnSkipping } from "@/src/core/rules/targeting";
 import { isWorldAdmin } from "@/src/server/services/permissions";
 import { decideCombatAccess, type CombatAccess } from "@/src/core/permissions/combatAccess";
@@ -541,6 +542,25 @@ async function moveTurn(
       }
     } catch (err) {
       fired = { failures: [{ reason: err instanceof Error ? err.message : String(err) }] };
+    }
+  }
+
+  // V3.1-148 : les marques des bottes s'éteignent avec le tour. Sape tombe
+  // au début du tour suivant de l'attaquant ; Vexation à la fin de son tour,
+  // si le tour de pose est passé. Seulement en avant, comme les déclencheurs.
+  if (params.direction === "next") {
+    const ordre = orderParticipants(participants);
+    const bornes = { startingSource: ordre[next.turnIndex]?.id ?? null, endingSource: ordre[combat.turn_index]?.id ?? null, round: combat.round };
+    for (const p of participants) {
+      const etats = Array.isArray(p.conditions) ? p.conditions.filter((c): c is string => typeof c === "string") : [];
+      const eteintes = expiredMasteryMarkers(etats, bornes);
+      if (eteintes.length === 0) continue;
+      await patchCombatParticipant(supabase, {
+        participantId: p.id,
+        patch: { conditions: etats.filter((c) => !eteintes.includes(c)) },
+        actorUserId: params.actorUserId,
+        note: "Fin d'une botte",
+      });
     }
   }
 

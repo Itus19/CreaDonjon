@@ -18,6 +18,7 @@ import {
 } from "@/lib/ui/combatJoueur";
 import InvitationInitiative from "./InvitationInitiative";
 import { useCombatJoueur } from "./useCombatJoueur";
+import { conditionLabel } from "@/src/core/rules/weaponMastery";
 
 const CARTE = "rounded-[18px] border border-edge bg-panel backdrop-blur-[var(--blur)]";
 
@@ -116,7 +117,7 @@ function LigneParticipant({ participant: p, moi }: { participant: PlayerCombatPa
         <span className="flex w-full flex-wrap gap-1 pl-[3.75rem]">
           {p.conditions.map((c) => (
             <span key={c} className="rounded-full border border-edge bg-panel-raised px-1.5 py-px text-xs text-ink-soft">
-              {c}
+              {conditionLabel(c)}
             </span>
           ))}
         </span>

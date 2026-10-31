@@ -5,6 +5,7 @@ import type { Ability, DerivedSheet, Skill } from "@/src/core/rules/sheet";
 import { SKILL_ABILITIES } from "@/src/core/rules/sheet";
 import { SKILL_LABELS_FR } from "@/src/i18n/fr";
 import { ABILITY_LABELS, SORTED_SKILLS } from "@/components/blocks/sheetLabels";
+import { conditionLabel } from "@/src/core/rules/weaponMastery";
 
 /**
  * V3-D5 — Le haut de la fiche jouable au format étroit : le nom, les états,
@@ -166,7 +167,7 @@ export default function FicheJouableEnTete({
         <span className="font-chrome text-base font-medium text-ink">{name}</span>
         {conditions.map((etat) => (
           <span key={etat} className="rounded-full border border-danger px-2 py-0.5 text-xs text-danger">
-            {etat}
+            {conditionLabel(etat)}
           </span>
         ))}
       </div>

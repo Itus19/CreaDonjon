@@ -6,7 +6,7 @@ import { budgetOf, type SceneState } from "@/src/core/rules/scene";
 import { spendFromBudget, type BudgetKind } from "@/src/core/rules/actionBudget";
 import { applyEffects, type ApplyResult, type TurnActor, type TurnChange } from "@/src/core/rules/turn";
 import { eventsForAttack, eventsForDamage } from "@/src/core/rules/gameEvents";
-import { resolveAttackRoll, resolveDamageRoll, type AttackRollResult } from "@/src/core/rules/action";
+import { resolveAttackRoll, resolveDamageRoll, weaponAttackAbilityMod, type AttackRollResult } from "@/src/core/rules/action";
 import type { FiredEvent, ResolvedEffect } from "@/src/core/rules/triggers";
 import { attackVerdict, damageAfterSave, isOutOfFight, monsterSaveBonus, type AttackVerdict } from "@/src/core/rules/targeting";
 import { creatureTypeOf, isValidTarget, type TargetProfile, type TargetRefusal } from "@/src/core/rules/targetRestriction";
@@ -38,6 +38,8 @@ import {
   type JetonDegats,
 } from "@/src/server/services/engineSigning";
 import { canonicalJson } from "@/src/core/rules/engineChange";
+import { advantageFromMarkers, conditionLabel, isWeaponMastered, masteryOnAttack } from "@/src/core/rules/weaponMastery";
+import { rollDice } from "@/src/core/dice/roll";
 import { attackFactForPlayer, describeChangeForPlayer } from "@/src/core/rules/playerFacing";
 import { patchCombatParticipant } from "@/src/server/services/combats";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
@@ -93,7 +95,7 @@ function describeChange(change: TurnChange, nameOf: (id: string) => string): str
     case "hp":
       return `${nameOf(change.who)} : ${change.from.current} → ${change.to.current} PV (${change.note})`;
     case "condition":
-      return `${nameOf(change.who)} ${change.added ? "subit" : "n'a plus"} : ${change.key}`;
+      return `${nameOf(change.who)} ${change.added ? "subit" : "n'a plus"} : ${conditionLabel(change.key)}`;
     case "zone":
       return `${nameOf(change.who)} passe de ${change.from} à ${change.to}`;
     case "budget":
@@ -612,15 +614,25 @@ export async function resolveTargetedRoll(
   if (input.kind === "attack") {
     let attack: AttackRollResult;
     let label: string;
+    // V3.1-148 : les marques des bottes (Sape sur l'attaquant, Vexation de cet attaquant sur la cible) changent l'avantage, et sont consommées.
+    const tousParticipants = participantsSignes ?? (await listCombatParticipants(supabase, combat.id));
+    const attaquant =
+      input.actor.kind === "participant" ? tousParticipants.find((p) => p.id === actorParticipant?.id) : tousParticipants.find((p) => p.entity_id !== null && p.entity_id === ctx?.entityId);
+    const etats = (row: CombatParticipantRow | undefined) => (Array.isArray(row?.conditions) ? row.conditions.filter((c): c is string => typeof c === "string") : []);
+    const marques = advantageFromMarkers({ attackerSource: attaquant?.id ?? "", attackerConditions: etats(attaquant), targetConditions: etats(target), chosen: input.advantage });
+    const avantage = marques.advantage;
+    if (attaquant) for (const key of marques.removeFromAttacker) effects.push({ action: "remove_condition", who: `participant:${attaquant.id}`, key });
+    for (const key of marques.removeFromTarget) effects.push({ action: "remove_condition", who: targetKey, key });
+    hintsBefore.push(...marques.notes);
     if (action.kind === "weapon" && ctx) {
-      const rolled = await rollWeaponAttack(supabase, { entityId: ctx.entityId, campaignId: params.campaignId, itemId: action.itemId, advantage: input.advantage, locale: params.locale });
+      const rolled = await rollWeaponAttack(supabase, { entityId: ctx.entityId, campaignId: params.campaignId, itemId: action.itemId, advantage: avantage, locale: params.locale });
       if ("error" in rolled) return { ok: false, reason: rolled.error };
       if (!rolled.attack) return { ok: false, reason: "not_a_weapon" };
       attack = rolled.attack;
       label = rolled.weaponLabel;
       shown.push(attack);
     } else if (action.kind === "monster_action" && monsterAction && monsterAction.attack_bonus !== undefined) {
-      attack = resolveAttackRoll({ abilityMod: 0, proficiencyBonus: monsterAction.attack_bonus, proficient: true, advantage: input.advantage }, serverRng);
+      attack = resolveAttackRoll({ abilityMod: 0, proficiencyBonus: monsterAction.attack_bonus, proficient: true, advantage: avantage }, serverRng);
       label = monsterAction.name;
       shown.push(attack);
       await recordMonsterRoll(supabase, { campaignId: params.campaignId, entityId: actorParticipant?.entity_id ?? null, kind: "attack", secret: input.secret, roll: attack, who: actorName, what: `Attaque — ${label}` });
@@ -637,6 +649,41 @@ export async function resolveTargetedRoll(
             "."
     );
     if (actorTriggerKey && target.ac !== null) events = eventsForAttack({ attacker: actorTriggerKey, target: targetKey, result: attack, ac: target.ac });
+    // V3.1-148 : la botte de l'arme, si elle est maîtrisée.
+    // Seuls comptent les choix de maîtrise encore ouverts à la fiche (comme l'onglet Actions) : une classe retirée ne laisse pas sa maîtrise.
+    const maitrises = (c: NonNullable<typeof ctx>) =>
+      Object.fromEntries(c.remainingChoices.filter((r) => r.kind === "weapon_mastery").map((r) => [r.id, c.characterData.choices[r.id]]));
+    if (action.kind === "weapon" && ctx && target.ac !== null && verdict !== null) {
+      const objet = ctx.inventoryData?.items.find((i) => i.id === action.itemId);
+      const ref = objet ? ((objet as { ref?: { kind: "rule"; key: string } | { kind: "entity"; id: string } }).ref ?? null) : null;
+      const arme = ref?.kind === "rule" ? ctx.weaponByKey[ref.key] : null;
+      if (ref?.kind === "rule" && arme?.masteryKey && isWeaponMastered(maitrises(ctx), ref.key)) {
+        const mod = weaponAttackAbilityMod(arme.properties, arme.isRanged, ctx.sheet.abilities.str.mod, ctx.sheet.abilities.dex.mod);
+        const botte = masteryOnAttack({
+          mastery: arme.masteryKey,
+          verdict,
+          targetKey,
+          sourceId: attaquant?.id ?? ctx.entityId,
+          round: combat.round,
+          abilityMod: mod,
+          proficiencyBonus: ctx.sheet.proficiencyBonus,
+          damageType: arme.damageType,
+        });
+        effects.push(...botte.effects);
+        hintsBefore.push(...botte.hints);
+        if (botte.toppleSave) {
+          if (targetIsPc) {
+            hintsBefore.push(`Renversement : ${target.label} fait un jet de sauvegarde de Constitution DD ${botte.toppleSave.dc}, ou tombe À terre.`);
+          } else {
+            const { bonus } = await targetSaveBonus(supabase, { target, isPc: false, ability: "con", campaignId: params.campaignId, worldId: campaign.worldId, locale: params.locale });
+            const jet = rollDice(1, 20, serverRng).rolls[0]! + bonus;
+            const renverse = jet < botte.toppleSave.dc;
+            facts.push(`Renversement : ${target.label} ${renverse ? "rate" : "réussit"} sa sauvegarde de Constitution${joueur ? "" : ` (${jet} contre DD ${botte.toppleSave.dc})`}${renverse ? " et tombe À terre" : ""}.`);
+            if (renverse) effects.push({ action: "apply_condition", who: targetKey, key: "prone" });
+          }
+        }
+      }
+    }
     if (verdict === "hit") {
       chained = {
         kind: "damage",

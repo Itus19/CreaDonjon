@@ -98,7 +98,7 @@ pas.
 
 ---
 
-### ☐ V3.1-148 — Les bottes d'armes maîtrisées, appliquées en jeu · `M` · sans modèle IA — **après V3.1-107**
+### ☑ V3.1-148 — Les bottes d'armes maîtrisées, appliquées en jeu · `M` · sans modèle IA — **après V3.1-107**
 
 **Modèle conseillé : Opus** (moteur de jeu), puis Sonnet pour l'affichage. **Dépend de** : 118 et **107** : une botte a besoin de la cible et du « touché » de l'attaque, que l'attaque d'un personnage n'a pas encore. Décision de l'auteur (31 octobre) : 104, puis 107, puis ce ticket.
 
@@ -115,9 +115,9 @@ d'une arme maîtrisée (`WeaponData.masteryKey` est seulement affiché).
   l'IA (règle 8) ; une arme non maîtrisée ne l'a pas.
 
 **Critères d'acceptation**
-- [ ] Un Guerrier qui maîtrise l'Épée longue voit « Sape » sur son attaque ;
+- [x] Un Guerrier qui maîtrise l'Épée longue voit « Sape » sur son attaque ;
   touché, la cible a le désavantage à son prochain jet d'attaque.
-- [ ] Une arme non maîtrisée n'applique aucune botte.
+- [x] Une arme non maîtrisée n'applique aucune botte.
 
 ---
 
