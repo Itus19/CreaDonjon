@@ -5,6 +5,8 @@ import { getReusableTestAccount, type ReusableAccount } from "../testUtils/reusa
 
 vi.mock("server-only", () => ({}));
 const { resolveTargetedRoll } = await import("./targetedRoll");
+const { undoLastCombatAction } = await import("./combats");
+const { listSessionEvents } = await import("@/src/server/repos/sessions");
 
 /**
  * V3.1-107 (ADR 0069) — « Cibler » au nom d'un joueur, contre la base réelle :
@@ -173,4 +175,54 @@ describe.skipIf(!hasCreds)("cibler côté joueur (V3.1-107, integration, base re
     expect(payload?.changes).toBeUndefined();
     expect(JSON.stringify(payload?.changes_text ?? [])).not.toMatch(/PV/);
   });
+
+  it("V3.1-149 : après une attaque ciblée du MJ, un joueur ne lit au journal ni CA ni PV d'adversaire ; le fil du MJ et « Annuler » sont inchangés", async () => {
+    await admin.from("combat_participants").update({ hp_current: 30 }).eq("id", gobelinId);
+    const mj = (input: Record<string, unknown>) =>
+      resolveTargetedRoll(gm.client as unknown as SupabaseClient<Database>, {
+        campaignId,
+        combatId,
+        callerId: gm.id,
+        locale: "fr",
+        input: { actor: { kind: "character", entityId: pcEntityId }, action: { kind: "weapon", itemId: "i1" }, targetId: gobelinId, advantage: "normal", critical: false, secret: false, ...input } as never,
+      });
+    const attaqueMj = await mj({ kind: "attack" });
+    expect(attaqueMj.ok).toBe(true);
+    if (attaqueMj.ok) expect(attaqueMj.facts.join(" ")).toMatch(/contre CA 1/);
+    const degatsMj = await mj({ kind: "damage" });
+    expect(degatsMj.ok).toBe(true);
+    if (degatsMj.ok) expect(degatsMj.changes.join(" ")).toMatch(/Gobelin : 30 → \d+ PV/);
+
+    // Le joueur, par l'API : aucun événement de combat, ni CA, ni PV du gobelin.
+    const { data: sessions } = await admin.from("sessions").select("id").eq("campaign_id", campaignId);
+    const sessionIds = (sessions ?? []).map((x) => x.id);
+    const { data: lus, error } = await joueur().from("session_events").select("kind, payload").in("session_id", sessionIds);
+    expect(error).toBeNull();
+    expect((lus ?? []).length).toBeGreaterThan(0);
+    expect((lus ?? []).some((e) => e.kind === "combat")).toBe(false);
+    const texte = JSON.stringify(lus);
+    expect(texte).not.toMatch(/CA \d/);
+    expect(texte).not.toMatch(/Gobelin : \d+ → \d+ PV/);
+    expect(texte).not.toMatch(/"hp_current"|"ac"/);
+    expect((await joueur().from("session_event_gm_details").select("event_id")).data ?? []).toEqual([]);
+
+    // Le fil du MJ relit ses chiffres.
+    const filMj = JSON.stringify(await listSessionEvents(gm.client as unknown as SupabaseClient<Database>, sessionIds[0]!));
+    expect(filMj).toMatch(/contre CA 1/);
+    expect(filMj).toMatch(/Gobelin : 30 → \d+ PV/);
+
+    // Un joueur écrit encore au journal après des événements qu'il ne voit pas (numéro suivant compté sur tous).
+    let jeton: string | undefined;
+    for (let i = 0; i < 5 && !jeton; i++) {
+      const r = await attaque();
+      expect(r.ok).toBe(true);
+      if (r.ok) jeton = r.chained?.token;
+    }
+    expect(jeton).toBeDefined();
+
+    // « Annuler » du MJ rend les PV d'avant ses dégâts.
+    expect(await undoLastCombatAction(gm.client as unknown as SupabaseClient<Database>, combatId, gm.id)).toBe(true);
+    expect(await gobelin()).toBe(30);
+  });
 });
+

@@ -211,6 +211,8 @@ export async function applyResolvedEffects(
     signedWrites?: { ownEntityIds: ReadonlySet<string>; /** Le `nonce` du jeton de dégâts : la base refuse qu'il serve deux fois. */ nonce?: string };
     /** V3.1-107 : les participants déjà lus (lecture signée d'un joueur) ; absent : lus ici. */
     participants?: CombatParticipantRow[];
+    /** V3.1-149 : l'appelant est le MJ d'une table : le journal reçoit les phrases des joueurs, les chiffres vont à part. */
+    gmJournal?: boolean;
   }
 ): Promise<ApplyEffectsOutcome> {
   const participants = params.participants ?? (params.combatId ? await listCombatParticipants(supabase, params.combatId) : []);
@@ -333,6 +335,10 @@ export async function applyResolvedEffects(
   const changes = applied.changes
     .map((c) => (params.signedWrites ? describeChangeForPlayer(c, pourJoueur) : describeChange(c, nameOf)))
     .filter((line): line is string => line !== null);
+  // V3.1-149 : les phrases que lisent les joueurs au journal.
+  const changesPublics = params.signedWrites
+    ? changes
+    : applied.changes.map((c) => describeChangeForPlayer(c, pourJoueur)).filter((line): line is string => line !== null);
   const ignored = [
     ...applied.changes.filter((c): c is Extract<TurnChange, { kind: "ignored" }> => c.kind === "ignored").map((c) => c.reason),
     ...nonSignables,
@@ -343,6 +349,17 @@ export async function applyResolvedEffects(
 
   let applicationEventId: string | null = null;
   if (applied.changes.length > 0) {
+    // V3.1-107 (ADR 0069) / V3.1-149 : le journal est lisible des joueurs — ni les effets ni les changements
+    // bruts (PV d'un adversaire), seulement leurs phrases. Le MJ (journal à deux versions) garde les siens à part ;
+    // un appel sans `gmJournal` (le tour solo, la sauvegarde d'un joueur sur son PJ) écrit tout, comme avant.
+    // V3-B4 / V3-D4 : les phrases montrées à l'écran, écrites une fois, relues telles quelles par la narration et le fil.
+    const complet = { __v: 1, from_event: params.fromEventId, effects: params.effects, changes: applied.changes, persisted, changes_text: changes, hints_text: hints, ignored_text: ignored };
+    const publique = { __v: 1, from_event: params.fromEventId, persisted, changes_text: changesPublics, hints_text: hints, ignored_text: ignored };
+    const application = params.signedWrites
+      ? { publique: publique as unknown as Json, mj: null }
+      : params.gmJournal
+        ? journalPayloads({ joueur: false, secret: false, publique, mj: complet, trace: publique })
+        : { publique: complet as unknown as Json, mj: null };
     const sessionId = await getOrOpenSessionForCampaign(supabase, params.campaignId);
     const seq = await nextEventSeq(supabase, sessionId);
     const event = await insertSessionEvent(supabase, {
@@ -351,24 +368,24 @@ export async function applyResolvedEffects(
       kind: "rule_application",
       actor: "system",
       actorUserId: params.callerId,
-      payload: {
-        __v: 1,
-        from_event: params.fromEventId,
-        // V3.1-107 (ADR 0069) : le journal est lisible des joueurs ; au nom d'un joueur, ni les effets ni les
-        // changements bruts (PV de la cible), seulement les phrases.
-        ...(params.signedWrites ? {} : { effects: params.effects, changes: applied.changes }),
-        persisted,
-        // V3-B4 / V3-D4 : les phrases montrées à l'écran, écrites une fois,
-        // relues telles quelles par la narration et le fil.
-        changes_text: changes,
-        hints_text: hints,
-        ignored_text: ignored,
-      } as unknown as Json,
+      payload: application.publique,
+      ...(application.mj ? { gmDetails: application.mj } : {}),
     });
     applicationEventId = event.id;
   }
 
   return { applied, persisted, changes, hints, ignored, applicationEventId };
+}
+
+/**
+ * V3.1-149 — Les deux versions d'un événement du journal : ce que lisent les
+ * joueurs, et les chiffres du MJ (`session_event_gm_details`), écrits
+ * seulement s'ils diffèrent. Au nom d'un joueur, une seule version : la sienne.
+ */
+export function journalPayloads(p: { joueur: boolean; secret: boolean; publique: object; mj: object; trace: object }): { publique: Json; mj: Json | null } {
+  if (p.joueur) return { publique: p.publique as Json, mj: null };
+  const publique = p.secret ? p.trace : p.publique;
+  return { publique: publique as Json, mj: JSON.stringify(publique) === JSON.stringify(p.mj) ? null : (p.mj as Json) };
 }
 
 // ---------------------------------------------------------------------------
@@ -598,6 +615,12 @@ export async function resolveTargetedRoll(
   const actorTriggerKey = ctx ? ctx.entityId : null;
 
   const facts: string[] = [];
+  // V3.1-149 : ce que les joueurs lisent au journal (sans CA ni chiffres cachés) ; `facts` est la vue de l'appelant.
+  const factsPublics: string[] = [];
+  const fait = (pourMj: string, pourJoueurs: string = pourMj) => {
+    facts.push(joueur ? pourJoueurs : pourMj);
+    factsPublics.push(pourJoueurs);
+  };
   const effects: ResolvedEffect[] = [];
   const hintsBefore: string[] = [];
   let verdict: AttackVerdict | null = null;
@@ -640,13 +663,12 @@ export async function resolveTargetedRoll(
       return { ok: false, reason: action.kind === "monster_action" ? "no_attack" : "invalid_action" };
     }
     verdict = attackVerdict(attack, target.ac);
-    facts.push(
-      joueur
-        ? attackFactForPlayer({ actor: actorName, target: target.label, label, total: attack.total, verdict: target.ac === null ? null : verdict, critical: attack.isCritical, criticalFail: attack.isCriticalFail })
-        : `${actorName} attaque ${target.label} (${label}) : ${attack.total}` +
-            (target.ac === null ? " — CA inconnue, la table tranche" : ` contre CA ${target.ac} — ${verdict === "hit" ? "touché" : "raté"}`) +
-            (attack.isCritical ? " (critique)" : attack.isCriticalFail ? " (échec critique)" : "") +
-            "."
+    fait(
+      `${actorName} attaque ${target.label} (${label}) : ${attack.total}` +
+        (target.ac === null ? " — CA inconnue, la table tranche" : ` contre CA ${target.ac} — ${verdict === "hit" ? "touché" : "raté"}`) +
+        (attack.isCritical ? " (critique)" : attack.isCriticalFail ? " (échec critique)" : "") +
+        ".",
+      attackFactForPlayer({ actor: actorName, target: target.label, label, total: attack.total, verdict: target.ac === null ? null : verdict, critical: attack.isCritical, criticalFail: attack.isCriticalFail })
     );
     if (actorTriggerKey && target.ac !== null) events = eventsForAttack({ attacker: actorTriggerKey, target: targetKey, result: attack, ac: target.ac });
     // V3.1-148 : la botte de l'arme, si elle est maîtrisée.
@@ -678,7 +700,9 @@ export async function resolveTargetedRoll(
             const { bonus } = await targetSaveBonus(supabase, { target, isPc: false, ability: "con", campaignId: params.campaignId, worldId: campaign.worldId, locale: params.locale });
             const jet = rollDice(1, 20, serverRng).rolls[0]! + bonus;
             const renverse = jet < botte.toppleSave.dc;
-            facts.push(`Renversement : ${target.label} ${renverse ? "rate" : "réussit"} sa sauvegarde de Constitution${joueur ? "" : ` (${jet} contre DD ${botte.toppleSave.dc})`}${renverse ? " et tombe À terre" : ""}.`);
+            const issue = `Renversement : ${target.label} ${renverse ? "rate" : "réussit"} sa sauvegarde de Constitution`;
+            const suite = `${renverse ? " et tombe À terre" : ""}.`;
+            fait(`${issue} (${jet} contre DD ${botte.toppleSave.dc})${suite}`, `${issue}${suite}`);
             if (renverse) effects.push({ action: "apply_condition", who: targetKey, key: "prone" });
           }
         }
@@ -718,7 +742,7 @@ export async function resolveTargetedRoll(
       return { ok: false, reason: "no_formula" };
     }
     amount = total;
-    facts.push(`Dégâts sur ${target.label} : ${total}${critique ? " (critique)" : ""}.`);
+    fait(`Dégâts sur ${target.label} : ${total}${critique ? " (critique)" : ""}.`);
     effects.push({ action: "deal_damage", who: targetKey, amount: total, ...(damageType ? { damage_type: damageType } : {}), critical: critique });
     if (actorTriggerKey) events = eventsForDamage({ attacker: actorTriggerKey, target: targetKey, damage: total, critical: critique });
   } else {
@@ -740,16 +764,15 @@ export async function resolveTargetedRoll(
       verdict = attackVerdict(rolled.attack, target.ac);
       const cast = await castSpell(supabase, { ...castBase, critical: rolled.attack.isCritical, rollDamage: verdict === "hit" });
       if ("error" in cast) return { ok: false, reason: cast.error };
-      facts.push(
-        joueur
-          ? attackFactForPlayer({ actor: actorName, target: target.label, label: action.spellKey, total: rolled.attack.total, verdict: target.ac === null ? null : verdict, critical: rolled.attack.isCritical, criticalFail: rolled.attack.isCriticalFail })
-          : `${actorName} lance ${action.spellKey} sur ${target.label} : ${rolled.attack.total}` +
-              (target.ac === null ? " — CA inconnue, la table tranche" : ` contre CA ${target.ac} — ${verdict === "hit" ? "touché" : "raté"}`) +
-              "."
+      fait(
+        `${actorName} lance ${action.spellKey} sur ${target.label} : ${rolled.attack.total}` +
+          (target.ac === null ? " — CA inconnue, la table tranche" : ` contre CA ${target.ac} — ${verdict === "hit" ? "touché" : "raté"}`) +
+          ".",
+        attackFactForPlayer({ actor: actorName, target: target.label, label: action.spellKey, total: rolled.attack.total, verdict: target.ac === null ? null : verdict, critical: rolled.attack.isCritical, criticalFail: rolled.attack.isCriticalFail })
       );
       if (verdict === "hit" && cast.damage) {
         amount = cast.damage.total;
-        facts.push(`Dégâts sur ${target.label} : ${amount}${rolled.attack.isCritical ? " (critique)" : ""}.`);
+        fait(`Dégâts sur ${target.label} : ${amount}${rolled.attack.isCritical ? " (critique)" : ""}.`);
         effects.push({ action: "deal_damage", who: targetKey, amount, critical: rolled.attack.isCritical });
       }
       if (target.ac !== null) events = eventsForAttack({ attacker: ctx.entityId, target: targetKey, result: rolled.attack, ac: target.ac, damage: amount ?? undefined });
@@ -778,7 +801,7 @@ export async function resolveTargetedRoll(
         }),
       };
       amount = cast.damage ? rolledDamage : null;
-      facts.push(
+      fait(
         `${actorName} lance ${spellName} sur ${target.label} : sauvegarde ${ability.toUpperCase()} DD ${dc} demandée` +
           (cast.damage ? ` (dégâts lancés : ${rolledDamage})` : "") +
           "."
@@ -789,10 +812,22 @@ export async function resolveTargetedRoll(
       if ("error" in cast) return { ok: false, reason: cast.error };
       if (!cast.damage) return { ok: false, reason: "no_formula" };
       amount = cast.damage.total;
-      facts.push(`${actorName} soigne ${target.label} (${action.spellKey}) : ${amount}.`);
+      fait(`${actorName} soigne ${target.label} (${action.spellKey}) : ${amount}.`);
       effects.push({ action: "heal", who: targetKey, amount });
     }
   }
+
+  // V3.1-149 : le journal est lisible des joueurs. Un jet du MJ n'y écrit que
+  // les phrases des joueurs ; ses chiffres (CA) vont à part, pour le MJ seul.
+  // Un jet secret n'y laisse que sa trace.
+  const targeted = { kind: input.kind, actor: input.actor, action, target_id: target.id, target_label: target.label, verdict, amount, critical: critique };
+  const rollPayload = journalPayloads({
+    joueur,
+    secret: input.secret,
+    publique: { __v: 1, targeted, facts: factsPublics },
+    mj: { __v: 1, targeted, facts },
+    trace: { __v: 1, targeted: { kind: input.kind, actor: input.actor, target_id: target.id, target_label: target.label }, facts: ["Jet secret du MJ."] },
+  });
 
   // Le fait, journalisé AVANT toute application : si la suite tombe, le jet reste acquis.
   const seq = await nextEventSeq(supabase, sessionId);
@@ -802,11 +837,8 @@ export async function resolveTargetedRoll(
     kind: "roll",
     actor: "gm",
     actorUserId: params.callerId,
-    payload: {
-      __v: 1,
-      targeted: { kind: input.kind, actor: input.actor, action, target_id: target.id, target_label: target.label, verdict, amount, critical: critique },
-      facts,
-    } as unknown as Json,
+    payload: rollPayload.publique,
+    ...(rollPayload.mj ? { gmDetails: rollPayload.mj } : {}),
   });
 
   if (pendingSave && joueur) return { ok: false, reason: "save_gm_only" };
@@ -855,6 +887,7 @@ export async function resolveTargetedRoll(
     note: `Cibler — ${facts[0] ?? input.kind}`,
     fromEventId: rollEvent.id,
     combatId: combat.id,
+    ...(joueur ? {} : { gmJournal: true }),
     ...(joueur && participantsSignes
       ? { signedWrites: { ownEntityIds: new Set(ctx ? [ctx.entityId] : []), ...(jetonDegats ? { nonce: jetonDegats.nonce } : {}) }, participants: participantsSignes }
       : {}),

@@ -242,6 +242,8 @@ export async function answerSaveRequest(
     note,
     fromEventId: saveEvent.id,
     combatId: request.combat_id,
+    // V3.1-149 : les PV d'un monstre ne vont qu'au MJ ; le journal garde les phrases des joueurs.
+    gmJournal: true,
   });
   return { ok: true, passed, natural, total, changes: outcome.changes, hints: [...hints, ...outcome.hints], ignored: outcome.ignored };
 }

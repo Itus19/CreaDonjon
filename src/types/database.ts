@@ -2490,6 +2490,32 @@ export type Database = {
           },
         ]
       }
+      session_event_gm_details: {
+        Row: {
+          created_at: string
+          event_id: string
+          payload: Json
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          payload: Json
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          payload?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_event_gm_details_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
+            referencedRelation: "session_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       session_events: {
         Row: {
           actor: string
@@ -2936,6 +2962,10 @@ export type Database = {
       engine_read_combat: {
         Args: { p_payload: string; p_signature: string }
         Returns: Database["public"]["Tables"]["combat_participants"]["Row"][]
+      }
+      next_session_event_seq: {
+        Args: { p_session: string }
+        Returns: number
       }
       save_entity_blocks: {
         Args: { p_changes: Json; p_entity: string }
