@@ -51,7 +51,7 @@ V3.1-104 n'est plus bloqué : option B de l'ADR 0041, choisie le 10 octobre.
 
 ---
 
-### ☐ V3.1-107 — Cibler côté joueur · `M` · sans modèle IA — **dépend de V3.1-104**
+### ☑ V3.1-107 — Cibler côté joueur · `M` · sans modèle IA — **fait le 1er novembre (ADR 0069)**
 
 **Modèle conseillé : Sonnet.** Comme V3.1-106, pour le joueur avec son PJ,
 une fois l'écriture au nom du joueur tranchée et faite (V3.1-104). D'ici là,

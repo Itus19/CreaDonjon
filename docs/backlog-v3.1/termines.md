@@ -2962,3 +2962,15 @@ Opus seul (sécurité, base, cryptographie). ADR 0041, option B, avec un addendu
 
 *Restes* : le test de rotation (deux clés actives) attend une seconde clé ; le chemin signé ne sert qu'avec V3.1-107, qui doit aussi donner au joueur la lecture des participants (vue filtrée de V3.1-102).
 
+### V3.1-107 — Cibler côté joueur (1er novembre)
+
+Opus : conception (ADR 0069, choix de l'auteur : lecture signée), migration, noyau, serveur ; `dev-sonnet` : l'écran ; relu.
+- **Lecture signée** : `public.engine_read_combat` rend les participants d'un combat à une demande signée (même clé, 60 s, `nonce` commun ; une demande d'écriture ne passe pas pour une lecture). Migration `20261101090000_engine_signed_read`, appliquée en deux temps (même cas que le 104).
+- **Jeton de dégâts** (`signDamageToken` / `verifyDamageToken`, testés) : une attaque qui touche au nom d'un joueur rend un jeton signé (acteur, action, cible, critique, dix minutes) ; la demande de dégâts doit le présenter, et son `nonce` devient celui de l'écriture signée : la base refuse qu'il serve deux fois. Le critique ne vient jamais du client.
+- **Ce que lit le joueur** (`src/core/rules/playerFacing.ts`, testé) : le verdict sans la CA, l'effet sur un adversaire par son état de blessure, les PV d'un allié seulement ; au journal, les phrases sans les changements bruts.
+- **Route** `player-targeted-roll` : Zod strict (son PJ, arme ou sort, ni monstre, ni secret, ni critique), droit de modifier la fiche de l'acteur ; 503 explicite si le moteur ne peut pas signer. Un sort à sauvegarde reste au MJ (409, ADR 0044).
+- **Écran** : « Cibler » depuis Attaquer (arme) et les sorts de soin, cibles par la vue filtrée (V3.1-102), bande « Lancer les dégâts » avec le jeton. Le MJ garde son chemin.
+- **Vérifié** contre la base réelle (session cloud avec la clé) : 3/3. Depuis le serveur : signature fausse, clé hors liste et client anonyme refusés.
+
+*Restes* : la faille du journal relevée en concevant (CA et PV des jets du MJ lisibles des joueurs) est le ticket V3.1-149 ; un sort à sauvegarde lancé par un joueur reste au MJ ; à vérifier au navigateur avec un compte joueur pendant une vraie initiative.
+
