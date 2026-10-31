@@ -251,7 +251,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-117 | ☑ | sans | La sous-classe résolue et ses choix | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-118 | ☐ | sans | Les choix dans l'assistant de création et de montée de niveau | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
 | V3.1-119 | ☐ | sans | Les choix rouverts au repos | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
-| V3.1-148 | ☐ | sans | Les maîtrises d'armes (Weapon Mastery) : genre de choix, données, moteur | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
+| V3.1-148 | ☐ | sans | Les bottes d'armes maîtrisées, appliquées en jeu | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
 | V3.1-120 | ☑ | sans | Défaire les cycles d'import (services serveur, fiche jouable) | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-121 | ☑ | sans | Ténacité naine ignorée dans les PV max | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-125 | ☑ | sans | Masse d'armes : poids faux à l'import | [`termines.md`](backlog-v3.1/termines.md) |

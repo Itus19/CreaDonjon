@@ -98,25 +98,23 @@ pas.
 
 ---
 
-### ☐ V3.1-148 — Les maîtrises d'armes (Weapon Mastery) · `M` · sans modèle IA — **à concevoir (Opus)**
+### ☐ V3.1-148 — Les bottes d'armes maîtrisées, appliquées en jeu · `M` · sans modèle IA — **à concevoir (Opus)**
 
-**Modèle conseillé : Opus** pour le genre de choix et le moteur, puis Sonnet pour l'écran. **Dépend de** : 116, 118.
+**Modèle conseillé : Opus** (moteur de jeu), puis Sonnet pour l'affichage. **Dépend de** : 118.
 
-Sorti de V3.1-118 (décision de l'auteur, 31 octobre) : l'aptitude « Weapon
-Mastery » des classes 2024 (Barbare, Guerrier, Paladin, Rôdeur, Roublard)
-fait choisir des types d'armes dont on utilise la botte. Rien de cela n'existe
-aujourd'hui : ni genre de choix, ni donnée, ni moteur qui sache quelles
-bottes sont maîtrisées (`WeaponData.masteryKey` est affiché, jamais
-appliqué).
+Sorti de V3.1-118 (31 octobre). Ce qui EXISTE déjà : le choix des armes
+maîtrisées (`RemainingChoice` de genre `weapon_mastery`, lu dans la
+progression de classe), l'onglet Maîtrises de la fiche, le changement au
+repos long (V2-G1), et depuis V3.1-118 la botte de chaque arme sur les
+cartes de l'assistant. Ce qui MANQUE : le moteur ne fait rien de la botte
+d'une arme maîtrisée (`WeaponData.masteryKey` est seulement affiché).
 
-- Un genre de choix `weapon_mastery` (types d'armes, nombre par niveau de
-  classe), dans `choices` et `resolveChoices`.
-- Les données des cinq classes (`data/srd/choices-2024.json`).
-- La fiche sait quelles armes ont leur botte maîtrisée ; l'action d'attaque
-  la montre (son effet en jeu reste au moteur de jeu).
-- Le Guerrier peut en changer au repos long (s'appuie sur V3.1-119).
+- L'action d'attaque d'une arme maîtrisée porte sa botte (Sape, Ouverture,
+  Poussée, Ralentissement, Vexation, Coup double, Écorchure, Renversement).
+- Son effet passe par le moteur (déclencheurs, conditions), jamais par
+  l'IA (règle 8) ; une arme non maîtrisée ne l'a pas.
 
 **Critères d'acceptation**
-- [ ] Un Guerrier de niveau 1 choisit 3 types d'armes dans l'assistant ; la
-  fiche montre la botte de ces armes seulement.
-- [ ] Le nombre suit la table de la classe (Guerrier 3 → 4 au niveau 4…).
+- [ ] Un Guerrier qui maîtrise l'Épée longue voit « Sape » sur son attaque ;
+  touché, la cible a le désavantage à son prochain jet d'attaque.
+- [ ] Une arme non maîtrisée n'applique aucune botte.
