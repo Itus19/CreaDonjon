@@ -959,7 +959,11 @@ export async function assembleResolvedRuleset(
   }
 
   // V3.1-118 : chaque niveau d'amélioration accorde un don général (l'amélioration de caractéristique en est un).
-  choiceSources.push(...asiFeatSources(asiGrantedLevels, Object.fromEntries(Object.entries(classes).map(([k, c]) => [k, c.label]))));
+  // Seuls les niveaux atteints : un choix au-delà resterait fermé, et le catalogue des dons généraux ne se charge pas pour rien (quotas).
+  const asiAtteints = Object.fromEntries(
+    Object.entries(asiGrantedLevels).map(([k, niveaux]) => [k, niveaux.filter((n) => n <= (selection.classes.find((c) => c.key === k)?.level ?? 0))])
+  );
+  choiceSources.push(...asiFeatSources(asiAtteints, Object.fromEntries(Object.entries(classes).map(([k, c]) => [k, c.label]))));
 
   // V3.1-116 : le catalogue des dons, seulement si un choix en désigne un.
   const featCategories = new Set<string | null>();
