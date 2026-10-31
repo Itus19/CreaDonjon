@@ -2926,3 +2926,16 @@ Opus : le noyau, les données et la route ; `dev-sonnet` : l'écran ; `aide-haik
 - **Vérifié au navigateur** : Soldat (option A), porter l'arc range la lance ; « perforants » ne garde que les armes perforantes ; achat 14 → 9 po ; 390 px, 820 px et ordinateur alignés sans défilement horizontal ; niveau 5 : jet du serveur (10 → 750 po), pas de relance au retour, or retiré en redescendant au niveau 1.
 
 *Restes* : le prix de l'arc long est faux à la source (`srd-2024.json` : 5 po, le SRD dit 50 po) ; les objets magiques déjà cochés restent si le palier change ; l'attaque de la tuile suppose la maîtrise de l'arme (comme la fiche).
+
+### V3.1-118 — Les choix dans l'assistant de création et de montée de niveau (31 octobre)
+
+Opus : le noyau et le serveur ; `dev-sonnet` : les sélecteurs ; relu, retouches d'Opus. Décisions de l'auteur : le don à la place de l'amélioration entre dans ce ticket ; les maîtrises d'armes, à part (V3.1-148).
+- **Don de niveau** (`abilityScoreImprovement.ts`, testé) : chaque niveau d'amélioration ouvre un choix de don général (`<classe>.l<n>.feat`, rangé sous Classe à son niveau). Le don « Amélioration de caractéristique » garde son +2 / +1+1 sous `<classe>.l<n>.asi` ; un autre don le remplace (`asiApplies`, au client, au serveur et à la montée de niveau). Un personnage d'avant, avec son `.asi`, a choisi l'amélioration (`withImplicitAsiFeat`), sans réécriture en base.
+- **Chemin** : la sous-étape du don n'est faite qu'avec un +2 / +1+1 valide ; sa pastille remplace celle de l'amélioration sur la progression (comptée une fois).
+- **Sélecteurs** : dons en cartes (catégorie, prérequis, extrait de la fiche) avec le +2 / +1+1 dessous (`AsiStep`, sorti de l'étape Classe) ; cartes de maîtrise d'armes avec la botte de chaque arme ; options nommées avec leur effet (`description`, Ascendance gigante saisie d'après le SRD 5.2.1).
+- **Onglet Magie** (fiche, aperçu, solo) : les sorts accordés (`sheet.grantedSpells`), « toujours préparé » et leur source.
+- **Retouches d'Opus** : doublon de la pastille d'amélioration corrigé à la source (`progressionClasse`) ; formatage involontaire d'un fichier annulé ; gras Markdown retiré des extraits ; bottes des maîtrises ; sorts accordés passés aux deux autres onglets Magie.
+- **Vérifié au navigateur** : Guerrier niveau 4, la sous-étape « Don de niveau » ; « Amélioration de caractéristique » puis FOR +2 : l'aperçu passe à FOR 12 et le choix est fait ; « Empoigneur » à la place : le +2 disparaît ; maîtrise d'armes : chaque arme montre sa botte.
+
+*Restes* : l'Empoigneur n'a pas ses effets en données (le +1 en Force ou Dextérité) ; l'Ascendance gigante n'est pas une ressource qui se recharge (critère de V3.1-6, à reprendre avec V3.1-119) ; deux armes s'appellent « Lance » en français (lance et lance d'arçon) ; les textes de l'Ascendance gigante arrivent en base au prochain import.
+

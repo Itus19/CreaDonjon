@@ -58,7 +58,7 @@ une fois l'écriture au nom du joueur tranchée et faite (V3.1-104). D'ici là,
 le joueur voit le verdict, sans application sur une cible qu'il ne contrôle
 pas.
 
-### ☐ V3.1-118 — Les choix dans l'assistant de création et de montée de niveau · `L` · sans modèle IA — **prêt**
+### ☑ V3.1-118 — Les choix dans l'assistant de création et de montée de niveau · `L` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet.** **Dépend de** : 116, 117, 49, 50, 51.
 
@@ -78,7 +78,7 @@ pas.
 - faire passer les améliorations de caractéristiques et les dons de progression en choix `ability` / `feat`.
 
 **Critères d'acceptation**
-- [ ] Les trois critères de V3.1-3 et de V3.1-6 passent dans l'assistant.
+- [x] Les critères de V3.1-3 et de V3.1-6 passent dans l'assistant (reste : l'Ascendance gigante comme ressource rechargeable, avec V3.1-119).
 
 ---
 
