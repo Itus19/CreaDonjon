@@ -885,6 +885,8 @@ create table app_private.engine_change_nonces (
 
 Le moteur écrit au nom d'un joueur ce que le joueur n'a pas le droit d'écrire (PV et états d'un adversaire, ou d'un autre PJ) par un **changement signé** : un objet fermé `{ key_id, nonce, issued_at, campaign_id, changes: [{ kind: "participant" | "runtime", id, hp?, temp_hp?, conditions? }] }`, sérialisé sous forme canonique (clés triées, `canonicalJson`) et signé en HMAC-SHA256 par le serveur. La fonction recalcule l'HMAC sur le **texte reçu** (pas sur un `jsonb`, qui réordonne ses clés), puis refuse une clé inconnue ou inactive, une signature fausse, un `issued_at` à plus de 60 s, un `nonce` déjà vu, une clé hors liste, une ligne hors de la campagne nommée. Tout ou rien, dans une transaction ; les `nonce` de plus d'une heure sont purgés. Migration `20261031120000_engine_signed_changes`.
 
+**Lecture signée (V3.1-107, ADR 0069).** `public.engine_read_combat(p_payload text, p_signature text)` rend les participants d'un combat de la campagne nommée, à une demande `{ key_id, nonce, issued_at, campaign_id, combat_id }` signée de la même façon (mêmes refus, table de `nonce` commune ; une demande d'écriture ne passe pas pour une lecture). Le moteur lit ainsi la cible d'un joueur, qui ne lit pas `combat_participants` (ADR 0040). Migration `20261101090000_engine_signed_read`.
+
 ### 12.2 Effets actifs
 
 ```sql

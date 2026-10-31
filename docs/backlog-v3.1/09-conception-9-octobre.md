@@ -118,3 +118,24 @@ d'une arme maîtrisée (`WeaponData.masteryKey` est seulement affiché).
 - [ ] Un Guerrier qui maîtrise l'Épée longue voit « Sape » sur son attaque ;
   touché, la cible a le désavantage à son prochain jet d'attaque.
 - [ ] Une arme non maîtrisée n'applique aucune botte.
+
+---
+
+### ☐ V3.1-149 — Le journal de session sans la CA ni les PV des adversaires · `S` · sans modèle IA — **prêt (Opus)**
+
+**Modèle conseillé : Opus** (sécurité, RLS). Relevé en concevant V3.1-107 (registre de `SECURITE.md`, 31 octobre).
+
+`session_events` se lit par tout membre du monde. Les jets ciblés du MJ y
+écrivent « … contre CA 15 », « Worg : 26 → 13 PV » et les changements bruts
+(`rule_application`), et le journal de combat garde les lignes de
+participant avant/après, CA comprise. Un joueur qui interroge l'API voit
+donc ce que la vue filtrée (ADR 0040) lui cache.
+
+- Fermer aux joueurs les événements de genre `combat` (lignes de participant), ou les écrire ailleurs (table du MJ).
+- Pour `roll` et `rule_application` d'un jet du MJ : écrire les phrases comme pour un joueur (`playerFacing.ts`), et garder les chiffres dans une colonne ou une table réservée au MJ, que le fil et la narration du MJ relisent.
+- Vérifier les lecteurs : fil (`turnFil.ts`), narration (`soloNarration.ts`), journal d'activité, « Annuler » du combat.
+
+**Critères d'acceptation**
+- [ ] Un joueur qui lit `session_events` par l'API ne trouve ni CA ni PV d'adversaire après une attaque ciblée du MJ (test d'intégration).
+- [ ] Le fil du MJ et « Annuler » fonctionnent comme avant.
+

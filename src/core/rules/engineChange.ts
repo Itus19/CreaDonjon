@@ -27,6 +27,19 @@ export const zEngineChange = z
 
 export type EngineChange = z.infer<typeof zEngineChange>;
 
+/** V3.1-107 (ADR 0069) — une demande de LECTURE des participants d'un combat, signée comme un changement. Fermée, et sans `changes` : l'une ne passe jamais pour l'autre. */
+export const zEngineReadRequest = z
+  .object({
+    key_id: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
+    nonce: z.string().uuid(),
+    issued_at: z.string().datetime(),
+    campaign_id: z.string().uuid(),
+    combat_id: z.string().uuid(),
+  })
+  .strict();
+
+export type EngineReadRequest = z.infer<typeof zEngineReadRequest>;
+
 /**
  * La forme canonique d'une valeur JSON : clés d'objet triées à tous les
  * niveaux, aucun espace. Le serveur signe CE texte, et l'envoie tel quel à la

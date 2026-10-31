@@ -28,7 +28,17 @@ import {
 } from "@/src/server/services/characterActions";
 import { fireTriggersForCharacter } from "@/src/server/services/triggerRuntime";
 import { applyRuntimeStateChange, getEntityRuntimeState } from "@/src/server/services/runtimeState";
-import { applySignedEngineChange, type EngineChangeLine } from "@/src/server/services/engineSigning";
+import {
+  applySignedEngineChange,
+  engineSigningKeyFromEnv,
+  readCombatParticipantsSigned,
+  signDamageToken,
+  verifyDamageToken,
+  type EngineChangeLine,
+  type JetonDegats,
+} from "@/src/server/services/engineSigning";
+import { canonicalJson } from "@/src/core/rules/engineChange";
+import { attackFactForPlayer, describeChangeForPlayer } from "@/src/core/rules/playerFacing";
 import { patchCombatParticipant } from "@/src/server/services/combats";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
 import { getCampaign } from "@/src/server/services/campaigns";
@@ -196,10 +206,12 @@ export async function applyResolvedEffects(
      * un changement SIGNÉ ; seul son personnage (`ownEntityIds`) s'écrit
      * directement. Absent : écriture directe (le MJ).
      */
-    signedWrites?: { ownEntityIds: ReadonlySet<string> };
+    signedWrites?: { ownEntityIds: ReadonlySet<string>; /** Le `nonce` du jeton de dégâts : la base refuse qu'il serve deux fois. */ nonce?: string };
+    /** V3.1-107 : les participants déjà lus (lecture signée d'un joueur) ; absent : lus ici. */
+    participants?: CombatParticipantRow[];
   }
 ): Promise<ApplyEffectsOutcome> {
-  const participants = params.combatId ? await listCombatParticipants(supabase, params.combatId) : [];
+  const participants = params.participants ?? (params.combatId ? await listCombatParticipants(supabase, params.combatId) : []);
   const pcEntityIds = participants.some((p) => p.entity_id)
     ? new Set((await listCampaignCharacters(supabase, params.campaignId)).filter((c) => c.is_pc).map((c) => c.entity_id))
     : new Set<string>();
@@ -305,10 +317,20 @@ export async function applyResolvedEffects(
     persisted.push(names[who] ?? who);
   }
 
-  if (signes.length > 0) await applySignedEngineChange(supabase, { campaignId: params.campaignId, changes: signes });
+  if (signes.length > 0) {
+    await applySignedEngineChange(supabase, { campaignId: params.campaignId, changes: signes, ...(params.signedWrites?.nonce ? { nonce: params.signedWrites.nonce } : {}) });
+  }
 
   const nameOf = (id: string) => names[id] ?? id;
-  const changes = applied.changes.map((c) => describeChange(c, nameOf)).filter((line): line is string => line !== null);
+  // V3.1-107 (ADR 0069) : un joueur ne lit jamais les PV d'un adversaire, ni ici ni dans le journal.
+  const pourJoueur = (who: string) => {
+    const p = who.startsWith("participant:") ? participants.find((x) => `participant:${x.id}` === who) : undefined;
+    const allie = !p || p.is_ally || (p.entity_id !== null && pcEntityIds.has(p.entity_id));
+    return { name: nameOf(who), ally: allie, hpMax: p?.hp_max ?? actors[who]?.hp.max ?? 0 };
+  };
+  const changes = applied.changes
+    .map((c) => (params.signedWrites ? describeChangeForPlayer(c, pourJoueur) : describeChange(c, nameOf)))
+    .filter((line): line is string => line !== null);
   const ignored = [
     ...applied.changes.filter((c): c is Extract<TurnChange, { kind: "ignored" }> => c.kind === "ignored").map((c) => c.reason),
     ...nonSignables,
@@ -330,8 +352,9 @@ export async function applyResolvedEffects(
       payload: {
         __v: 1,
         from_event: params.fromEventId,
-        effects: params.effects,
-        changes: applied.changes,
+        // V3.1-107 (ADR 0069) : le journal est lisible des joueurs ; au nom d'un joueur, ni les effets ni les
+        // changements bruts (PV de la cible), seulement les phrases.
+        ...(params.signedWrites ? {} : { effects: params.effects, changes: applied.changes }),
         persisted,
         // V3-B4 / V3-D4 : les phrases montrées à l'écran, écrites une fois,
         // relues telles quelles par la narration et le fil.
@@ -363,7 +386,9 @@ export type TargetedRollErrorReason =
   | "item_not_found"
   | "not_a_spellcaster"
   | "not_found"
-  | "invalid_target";
+  | "invalid_target"
+  /** V3.1-107 : un sort à sauvegarde crée une demande, réservée au MJ (ADR 0044). */
+  | "save_gm_only";
 
 /** La demande de dégâts posée par une attaque qui touche : même acteur, même action, même cible ; dés doublés au critique. */
 export interface ChainedDamage {
@@ -372,6 +397,8 @@ export interface ChainedDamage {
   action: TargetedRollInput["action"];
   targetId: string;
   critical: boolean;
+  /** V3.1-107 : au nom d'un joueur, le jeton signé à présenter avec la demande de dégâts. */
+  token?: string;
 }
 
 export type TargetedRollResult =
@@ -508,7 +535,10 @@ export async function resolveTargetedRoll(
     combatId: string;
     callerId: string;
     locale: Locale;
-    input: TargetedRollInput;
+    input: TargetedRollInput & {
+      /** V3.1-107 : la demande de dégâts d'un joueur présente le jeton signé de son attaque qui a touché. */
+      damageToken?: string;
+    };
     /** V3.1-104 : `false` pour un joueur — ce qui n'est pas à lui s'écrit par un changement signé. Absent : le MJ, écriture directe. */
     callerIsGm?: boolean;
   }
@@ -517,15 +547,33 @@ export async function resolveTargetedRoll(
   const combat = await getCombatById(supabase, params.combatId);
   if (!combat || combat.campaign_id !== params.campaignId || combat.status !== "running") return { ok: false, reason: "not_running" };
 
-  const target = await getCombatParticipantById(supabase, input.targetId);
+  // V3.1-107 (ADR 0069) : un joueur ne lit pas les participants ; le moteur les lit par une demande signée.
+  const joueur = params.callerIsGm === false;
+  const participantsSignes = joueur ? await readCombatParticipantsSigned(supabase, { campaignId: params.campaignId, combatId: combat.id }) : null;
+  const target = participantsSignes ? (participantsSignes.find((p) => p.id === input.targetId) ?? null) : await getCombatParticipantById(supabase, input.targetId);
   if (!target || target.combat_id !== combat.id) return { ok: false, reason: "target_not_found" };
+  if (joueur && input.actor.kind !== "character") return { ok: false, reason: "actor_not_found" };
+  // V3.1-107 : des dégâts au nom d'un joueur ne viennent que d'une attaque qui a touché (jeton signé), une seule fois.
+  let jetonDegats: JetonDegats | null = null;
+  if (joueur && input.kind === "damage") {
+    jetonDegats = input.damageToken ? verifyDamageToken(input.damageToken, engineSigningKeyFromEnv()) : null;
+    const memeAttaque =
+      jetonDegats !== null &&
+      input.actor.kind === "character" &&
+      jetonDegats.actor === input.actor.entityId &&
+      jetonDegats.target === target.id &&
+      jetonDegats.action === canonicalJson(input.action);
+    if (!memeAttaque) return { ok: false, reason: "invalid_action" };
+  }
+  const critique = joueur ? (jetonDegats?.critical ?? false) : input.critical;
 
   const campaign = await getCampaign(supabase, params.campaignId);
   if (!campaign) return { ok: false, reason: "not_running" };
 
   // Sans session, le combat ne journalise rien et « Annuler » n'aurait rien à défaire.
   const sessionId = combat.session_id ?? (await getOrOpenSessionForCampaign(supabase, params.campaignId));
-  if (!combat.session_id) await updateCombat(supabase, combat.id, { sessionId });
+  // Le combat s'écrit par le MJ seul : un joueur ouvre la session sans la noter sur le combat.
+  if (!combat.session_id && !joueur) await updateCombat(supabase, combat.id, { sessionId });
 
   const campaignCharacters = (await listCampaignCharacters(supabase, params.campaignId)).filter((c) => c.is_pc);
   const pcEntityIds = new Set(campaignCharacters.map((c) => c.entity_id));
@@ -581,18 +629,31 @@ export async function resolveTargetedRoll(
     }
     verdict = attackVerdict(attack, target.ac);
     facts.push(
-      `${actorName} attaque ${target.label} (${label}) : ${attack.total}` +
-        (target.ac === null ? " — CA inconnue, la table tranche" : ` contre CA ${target.ac} — ${verdict === "hit" ? "touché" : "raté"}`) +
-        (attack.isCritical ? " (critique)" : attack.isCriticalFail ? " (échec critique)" : "") +
-        "."
+      joueur
+        ? attackFactForPlayer({ actor: actorName, target: target.label, label, total: attack.total, verdict: target.ac === null ? null : verdict, critical: attack.isCritical, criticalFail: attack.isCriticalFail })
+        : `${actorName} attaque ${target.label} (${label}) : ${attack.total}` +
+            (target.ac === null ? " — CA inconnue, la table tranche" : ` contre CA ${target.ac} — ${verdict === "hit" ? "touché" : "raté"}`) +
+            (attack.isCritical ? " (critique)" : attack.isCriticalFail ? " (échec critique)" : "") +
+            "."
     );
     if (actorTriggerKey && target.ac !== null) events = eventsForAttack({ attacker: actorTriggerKey, target: targetKey, result: attack, ac: target.ac });
-    if (verdict === "hit") chained = { kind: "damage", actor: input.actor, action, targetId: target.id, critical: attack.isCritical };
+    if (verdict === "hit") {
+      chained = {
+        kind: "damage",
+        actor: input.actor,
+        action,
+        targetId: target.id,
+        critical: attack.isCritical,
+        ...(joueur && input.actor.kind === "character"
+          ? { token: signDamageToken({ actorEntityId: input.actor.entityId, action, targetId: target.id, critical: attack.isCritical }, engineSigningKeyFromEnv()) }
+          : {}),
+      };
+    }
   } else if (input.kind === "damage") {
     let total: number;
     let damageType: string | undefined;
     if (action.kind === "weapon" && ctx) {
-      const rolled = await rollWeaponDamage(supabase, { entityId: ctx.entityId, campaignId: params.campaignId, itemId: action.itemId, critical: input.critical, versatile: false, locale: params.locale });
+      const rolled = await rollWeaponDamage(supabase, { entityId: ctx.entityId, campaignId: params.campaignId, itemId: action.itemId, critical: critique, versatile: false, locale: params.locale });
       if ("error" in rolled) return { ok: false, reason: rolled.error };
       if (!rolled.damage) return { ok: false, reason: "not_a_weapon" };
       total = rolled.damage.total;
@@ -600,7 +661,7 @@ export async function resolveTargetedRoll(
     } else if (action.kind === "monster_action" && monsterAction?.damage && monsterAction.damage.length > 0) {
       total = 0;
       for (const part of monsterAction.damage) {
-        const roll = resolveDamageRoll({ formula: formatFormulaNode(part.dice), critical: input.critical }, serverRng);
+        const roll = resolveDamageRoll({ formula: formatFormulaNode(part.dice), critical: critique }, serverRng);
         await recordMonsterRoll(supabase, { campaignId: params.campaignId, entityId: actorParticipant?.entity_id ?? null, kind: "damage", secret: input.secret, roll, who: actorName, what: `Dégâts — ${monsterAction.name}` });
         total += roll.total;
         shown.push(roll);
@@ -610,9 +671,9 @@ export async function resolveTargetedRoll(
       return { ok: false, reason: "no_formula" };
     }
     amount = total;
-    facts.push(`Dégâts sur ${target.label} : ${total}${input.critical ? " (critique)" : ""}.`);
-    effects.push({ action: "deal_damage", who: targetKey, amount: total, ...(damageType ? { damage_type: damageType } : {}), critical: input.critical });
-    if (actorTriggerKey) events = eventsForDamage({ attacker: actorTriggerKey, target: targetKey, damage: total, critical: input.critical });
+    facts.push(`Dégâts sur ${target.label} : ${total}${critique ? " (critique)" : ""}.`);
+    effects.push({ action: "deal_damage", who: targetKey, amount: total, ...(damageType ? { damage_type: damageType } : {}), critical: critique });
+    if (actorTriggerKey) events = eventsForDamage({ attacker: actorTriggerKey, target: targetKey, damage: total, critical: critique });
   } else {
     // Les trois genres de sort : un personnage, un sort connu.
     if (action.kind !== "spell" || !ctx) return { ok: false, reason: "invalid_action" };
@@ -633,9 +694,11 @@ export async function resolveTargetedRoll(
       const cast = await castSpell(supabase, { ...castBase, critical: rolled.attack.isCritical, rollDamage: verdict === "hit" });
       if ("error" in cast) return { ok: false, reason: cast.error };
       facts.push(
-        `${actorName} lance ${action.spellKey} sur ${target.label} : ${rolled.attack.total}` +
-          (target.ac === null ? " — CA inconnue, la table tranche" : ` contre CA ${target.ac} — ${verdict === "hit" ? "touché" : "raté"}`) +
-          "."
+        joueur
+          ? attackFactForPlayer({ actor: actorName, target: target.label, label: action.spellKey, total: rolled.attack.total, verdict: target.ac === null ? null : verdict, critical: rolled.attack.isCritical, criticalFail: rolled.attack.isCriticalFail })
+          : `${actorName} lance ${action.spellKey} sur ${target.label} : ${rolled.attack.total}` +
+              (target.ac === null ? " — CA inconnue, la table tranche" : ` contre CA ${target.ac} — ${verdict === "hit" ? "touché" : "raté"}`) +
+              "."
       );
       if (verdict === "hit" && cast.damage) {
         amount = cast.damage.total;
@@ -694,11 +757,12 @@ export async function resolveTargetedRoll(
     actorUserId: params.callerId,
     payload: {
       __v: 1,
-      targeted: { kind: input.kind, actor: input.actor, action, target_id: target.id, target_label: target.label, verdict, amount, critical: input.critical },
+      targeted: { kind: input.kind, actor: input.actor, action, target_id: target.id, target_label: target.label, verdict, amount, critical: critique },
       facts,
     } as unknown as Json,
   });
 
+  if (pendingSave && joueur) return { ok: false, reason: "save_gm_only" };
   if (pendingSave) {
     const targetUserId = target.entity_id ? (campaignCharacters.find((c) => c.entity_id === target.entity_id)?.user_id ?? null) : null;
     const request = await insertSaveRequest(supabase, {
@@ -744,7 +808,9 @@ export async function resolveTargetedRoll(
     note: `Cibler — ${facts[0] ?? input.kind}`,
     fromEventId: rollEvent.id,
     combatId: combat.id,
-    ...(params.callerIsGm === false ? { signedWrites: { ownEntityIds: new Set(ctx ? [ctx.entityId] : []) } } : {}),
+    ...(joueur && participantsSignes
+      ? { signedWrites: { ownEntityIds: new Set(ctx ? [ctx.entityId] : []), ...(jetonDegats ? { nonce: jetonDegats.nonce } : {}) }, participants: participantsSignes }
+      : {}),
   });
 
   const targetAfter = outcome.applied.state.actors[targetKey];

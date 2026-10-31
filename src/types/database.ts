@@ -2933,6 +2933,10 @@ export type Database = {
         Args: { p_payload: string; p_signature: string }
         Returns: undefined
       }
+      engine_read_combat: {
+        Args: { p_payload: string; p_signature: string }
+        Returns: Database["public"]["Tables"]["combat_participants"]["Row"][]
+      }
       save_entity_blocks: {
         Args: { p_changes: Json; p_entity: string }
         Returns: Json

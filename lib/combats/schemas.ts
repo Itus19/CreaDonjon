@@ -101,3 +101,25 @@ export const targetedRollSchema = z.object({
   secret: z.boolean().default(false),
 });
 export type TargetedRollInput = z.infer<typeof targetedRollSchema>;
+
+/**
+ * V3.1-107 (ADR 0069) — le jet ciblé d'un joueur : son PJ seulement, une arme
+ * ou un sort, jamais d'action de monstre ni de jet secret. Le critique des
+ * dégâts n'est pas accepté du client : il vient du jeton signé de l'attaque.
+ * Strict : rien d'autre ne passe.
+ */
+export const playerTargetedRollSchema = z
+  .object({
+    kind: z.enum(["attack", "damage", "spell_attack", "heal"]),
+    actor: z.object({ kind: z.literal("character"), entityId: z.string().uuid() }).strict(),
+    action: z.discriminatedUnion("kind", [
+      z.object({ kind: z.literal("weapon"), itemId: z.string().min(1).max(200) }).strict(),
+      z.object({ kind: z.literal("spell"), spellKey: z.string().min(1).max(200), slotLevel: z.number().int().min(0).max(9) }).strict(),
+    ]),
+    targetId: z.string().uuid(),
+    advantage: z.enum(["normal", "advantage", "disadvantage"]).default("normal"),
+    damageToken: z.string().min(1).max(2000).optional(),
+  })
+  .strict()
+  .refine((v) => v.kind !== "damage" || v.damageToken !== undefined, { message: "Les dégâts suivent une attaque qui touche." });
+export type PlayerTargetedRollInput = z.infer<typeof playerTargetedRollSchema>;
