@@ -3,10 +3,14 @@
 import { useTranslations } from "next-intl";
 import { libelleSuiteDegats } from "@/lib/ui/outilDes";
 import type { TextesJetCible } from "@/lib/ui/jetCibleOutil";
+import type { WoundState } from "@/src/core/rules/combatPlayerView";
+
+const CLES_BLESSURE = { unhurt: "blessureIndemne", hurt: "blessureBlesse", bloodied: "blessureEnSang", down: "blessureHorsDeCombat" } as const satisfies Record<WoundState, string>;
 
 /** Les textes d'un jet ciblé (espace `initiative`), partagés par l'outil Initiative et la fiche du MJ. */
 export function useTextesJetCible(): TextesJetCible {
   const t = useTranslations("initiative");
+  const tJoueur = useTranslations("combatJoueur");
   return {
     libelle: (cle, nom) =>
       cle === "touche"
@@ -27,5 +31,6 @@ export function useTextesJetCible(): TextesJetCible {
     validerDegats: t("validerDegats"),
     faireEchouer: t("faireEchouer"),
     refusMj: t("refusMj"),
+    blessure: (etat) => tJoueur(CLES_BLESSURE[etat]),
   };
 }

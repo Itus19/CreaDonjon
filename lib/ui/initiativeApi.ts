@@ -1,6 +1,6 @@
 import type { CombatParticipantRow, CombatRow } from "@/src/server/repos/combats";
 import type { CombatDetail, ParticipantCharacteristics } from "@/src/server/services/combats";
-import type { TargetedRollInput } from "@/lib/combats/schemas";
+import type { PlayerTargetedRollInput, TargetedRollInput } from "@/lib/combats/schemas";
 import type { ReponseJetCible } from "@/lib/ui/initiative";
 
 /**
@@ -158,4 +158,14 @@ export function lireBlocsEntite(entityId: string, parDefaut: string): Promise<Bl
 /** Un jet ciblé : le serveur lance, tranche et applique (règle 8). */
 export function lancerJetCible(campaignId: string, combatId: string, corps: TargetedRollInput, parDefaut: string): Promise<ReponseJetCible> {
   return post<ReponseJetCible>(`${base(campaignId)}/${combatId}/targeted-roll`, corps, parDefaut);
+}
+
+/**
+ * V3.1-107 : le jet ciblé d'une joueuse avec son PJ (`player-targeted-roll`). La
+ * réponse est déjà filtrée (ni CA ni PV d'adversaire). Un refus (409 d'un sort à
+ * sauvegarde, 503 du moteur sans clé) lève une `ErreurInitiative` dont le message
+ * est AFFICHÉ tel quel.
+ */
+export function lancerJetCibleJoueur(campaignId: string, combatId: string, corps: PlayerTargetedRollInput, parDefaut: string): Promise<ReponseJetCible> {
+  return post<ReponseJetCible>(`${base(campaignId)}/${combatId}/player-targeted-roll`, corps, parDefaut);
 }

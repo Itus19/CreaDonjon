@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CombatParticipantRow } from "@/src/server/repos/combats";
+import type { PlayerCombatParticipant } from "@/src/core/rules/combatPlayerView";
 import { preReglageCible, type ParametresJetCible, type TextesJetCible } from "@/lib/ui/jetCibleOutil";
 
 const textes: TextesJetCible = {
@@ -11,6 +12,7 @@ const textes: TextesJetCible = {
   validerDegats: "Valider · dégâts",
   faireEchouer: "Faire échouer",
   refusMj: "Raté (MJ) — aucun dégât",
+  blessure: (etat) => ({ unhurt: "Indemne", hurt: "Blessé", bloodied: "En sang", down: "Hors de combat" })[etat],
 };
 
 function participant(id: string, label: string, estAllie: boolean): CombatParticipantRow {
@@ -113,3 +115,45 @@ describe("preReglageCible", () => {
     expect(fetchSimule).not.toHaveBeenCalled();
   });
 });
+
+describe("preReglageCible · joueuse (V3.1-107)", () => {
+  const vue = [
+    { id: "worg", label: "Worg", side: "enemy", wound: "bloodied", hp: null },
+    { id: "leonie", label: "Léonie", side: "ally", wound: null, hp: { current: 15, max: 20, temp: 2 } },
+  ] as unknown as PlayerCombatParticipant[];
+  const acteur = { kind: "character", entityId: "e" } as const;
+  const joueuse = () => parametres({ acteur, nomActeur: "Léonie", action: { kind: "weapon", itemId: "epee" }, participants: [], joueur: vue });
+  const touche = (jeton?: string) => ({
+    ...reponseTouche("worg"),
+    changes: [],
+    chained: { kind: "damage", actor: acteur, action: { kind: "weapon", itemId: "epee" }, targetId: "worg", critical: false, ...(jeton ? { token: jeton } : {}) },
+  });
+
+  it("liste la vue filtrée : état de blessure d'un adversaire, PV d'un allié", () => {
+    expect(preReglageCible(joueuse()).cibles).toEqual([
+      { id: "worg", label: "Worg", info: "Adversaire · En sang" },
+      { id: "leonie", label: "Léonie", info: "Allié · 17/20" },
+    ]);
+  });
+
+  it("lance par la route de la joueuse, sans critique ni secret, puis renvoie le jeton avec les dégâts", async () => {
+    const fetchSimule = reponduPar(touche("jeton-signe"));
+    const sortie = await preReglageCible(joueuse()).lancer?.("worg", { avantage: "advantage" });
+    const [url, init] = fetchSimule.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("/api/campaigns/c/combats/k/player-targeted-roll");
+    const corps = JSON.parse(init.body as string);
+    expect(corps).toEqual({ kind: "attack", actor: acteur, action: { kind: "weapon", itemId: "epee" }, targetId: "worg", advantage: "advantage" });
+
+    fetchSimule.mockImplementationOnce(async () => new Response(JSON.stringify({ ...touche(), verdict: null, chained: null, amount: 4, changes: ["Un adversaire est blessé"], dice: null }), { status: 200 }));
+    await sortie?.suite?.lancer();
+    const degats = JSON.parse((fetchSimule.mock.calls[1] as unknown as [string, RequestInit])[1].body as string);
+    expect(degats).toMatchObject({ kind: "damage", targetId: "worg", damageToken: "jeton-signe" });
+    expect(degats).not.toHaveProperty("critical");
+  });
+
+  it("un refus du serveur (503) est affiché tel quel", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ error: "Le moteur n'a pas pu résoudre ce jet. Prévenez le MJ." }), { status: 503 })));
+    await expect(preReglageCible(joueuse()).lancer?.("worg", { avantage: "normal" })).rejects.toThrow("Le moteur n'a pas pu résoudre ce jet. Prévenez le MJ.");
+  });
+});
+

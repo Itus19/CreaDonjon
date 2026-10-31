@@ -571,9 +571,12 @@ export default function OutilDes({
         </button>
         <button
           type="button"
-          onClick={() => lancer(false)}
-          disabled={lancerDesactive}
-          className="flex-1 rounded-lg border border-accent bg-accent py-2 text-sm font-semibold text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50"
+          onClick={() => {
+            if (lancerDesactive) return;
+            void lancer(false);
+          }}
+          aria-disabled={lancerDesactive}
+          className="flex-1 rounded-lg border border-accent bg-accent py-2 text-sm font-semibold text-accent-ink transition-colors hover:bg-accent-hover aria-disabled:opacity-50"
         >
           {t("lancer")}
         </button>

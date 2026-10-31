@@ -1,5 +1,6 @@
 import type { CombatParticipantRow } from "@/src/server/repos/combats";
 import { ErreurLancer } from "@/lib/ui/outilDes";
+import type { PlayerCombatParticipant } from "@/src/core/rules/combatPlayerView";
 import { lireCombat, listerCombats } from "@/lib/ui/initiativeApi";
 
 /**
@@ -44,6 +45,30 @@ export async function lireCombatEnCours(campaignId: string, parDefaut: string): 
   } catch (e) {
     // Le combat n'a pas pu être lu : le jet reste un simple jet, et la raison reste dans la console.
     console.error("Combat en cours non lu", e);
+    return null;
+  }
+}
+
+export interface CombatEnCoursJoueur {
+  combatId: string;
+  participants: PlayerCombatParticipant[];
+}
+
+/**
+ * V3.1-107 : le combat `running` tel qu'une joueuse le voit (un seul GET, la vue
+ * filtrée : jamais de CA ni de PV d'adversaire), lu AU TOUCHER d'un bouton de sa
+ * fiche. `null` hors initiative en cours : le jet reste alors un simple jet.
+ */
+export async function lireCombatEnCoursJoueur(campaignId: string): Promise<CombatEnCoursJoueur | null> {
+  try {
+    const res = await fetch(`/api/campaigns/${campaignId}/combats/active/player`);
+    if (!res.ok) throw new Error(`Vue du combat refusée (${res.status})`);
+    const vue = (await res.json()) as { combat: { id: string; status: string } | null; participants: PlayerCombatParticipant[] };
+    if (!vue.combat || vue.combat.status !== "running") return null;
+    return { combatId: vue.combat.id, participants: vue.participants };
+  } catch (e) {
+    // Le combat n'a pas pu être lu : le jet reste un simple jet, et la raison reste dans la console.
+    console.error("Combat en cours non lu (joueuse)", e);
     return null;
   }
 }

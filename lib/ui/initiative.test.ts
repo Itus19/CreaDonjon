@@ -307,7 +307,9 @@ describe("jets ciblés : dés, avantage, suite (V3.1-38 suite)", () => {
     expect(demandeDegatsApres({ ...base, verdict: "hit", chained })).toEqual({
       demande: { kind: "damage", acteur: demande.acteur, action: demande.action, cibleId: "c1" },
       critique: true,
+      jeton: null,
     });
+    expect(demandeDegatsApres({ ...base, verdict: "hit", chained: { ...chained, token: "jeton-signe" } })?.jeton).toBe("jeton-signe");
     expect(demandeDegatsApres({ ...base, verdict: "miss" })).toBeNull();
   });
 });

@@ -1,7 +1,9 @@
 import type { CombatParticipantRow } from "@/src/server/repos/combats";
 import type { AdvantageState } from "@/src/core/rules/action";
+import type { PlayerCombatParticipant, WoundState } from "@/src/core/rules/combatPlayerView";
 import {
   corpsJetCible,
+  corpsJetJoueur,
   demandeDegatsApres,
   desDeLaFormule,
   libellePv,
@@ -10,7 +12,7 @@ import {
   type DemandeJetCible,
   type GenreJetCible,
 } from "@/lib/ui/initiative";
-import { ErreurInitiative, lancerJetCible } from "@/lib/ui/initiativeApi";
+import { ErreurInitiative, lancerJetCible, lancerJetCibleJoueur } from "@/lib/ui/initiativeApi";
 import { ErreurLancer, sortieSansDes, type CibleDeJet, type PreReglage, type SortieJet, type SuiteDeJet } from "@/lib/ui/outilDes";
 
 /**
@@ -34,6 +36,8 @@ export interface TextesJetCible {
   faireEchouer: string;
   /** « Raté (MJ) — Le MJ fait échouer la touche, aucun dégât ». */
   refusMj: string;
+  /** V3.1-107 : l'état de blessure d'un adversaire, tel que la joueuse le voit (« Blessé »). */
+  blessure: (etat: WoundState) => string;
 }
 
 export interface ParametresJetCible {
@@ -55,6 +59,12 @@ export interface ParametresJetCible {
   critique?: boolean;
   avantageInitial?: AdvantageState;
   participants: CombatParticipantRow[];
+  /**
+   * V3.1-107 : une JOUEUSE avec son PJ. La vue filtrée du combat (jamais de CA ni
+   * de PV d'adversaire) remplace `participants` (laissé vide), et « Lancer » passe
+   * par `player-targeted-roll`.
+   */
+  joueur?: PlayerCombatParticipant[];
   campaignId: string;
   combatId: string;
   textes: TextesJetCible;
@@ -71,6 +81,15 @@ export function ciblesDuCombat(participants: readonly CombatParticipantRow[], te
   }));
 }
 
+/** V3.1-107 : les cibles de la vue filtrée : PV d'un allié, état de blessure d'un adversaire. */
+export function ciblesDuCombatJoueur(participants: readonly PlayerCombatParticipant[], textes: Pick<TextesJetCible, "allie" | "adversaire" | "blessure">): CibleDeJet[] {
+  return participants.map((p) => {
+    const pv = p.side === "ally" && p.hp !== null && p.hp.max !== null && p.hp.max > 0 ? `${(p.hp.current ?? 0) + p.hp.temp}/${p.hp.max}` : null;
+    const etat = p.side === "enemy" && p.wound !== null ? textes.blessure(p.wound) : null;
+    return { id: p.id, label: p.label, info: [p.side === "ally" ? textes.allie : textes.adversaire, pv ?? etat].filter((x): x is string => x !== null).join(" · ") };
+  });
+}
+
 export function preReglageCible(p: ParametresJetCible): PreReglage {
   const { participants, textes } = p;
   const grille = p.touche ? { dice: { d20: 1 }, modifier: p.modifier ?? 0 } : desDeLaFormule(p.formule);
@@ -80,24 +99,27 @@ export function preReglageCible(p: ParametresJetCible): PreReglage {
     dice: grille.dice,
     modifier: grille.modifier,
     advantage: p.avantageInitial,
-    cibles: ciblesDuCombat(participants, textes),
+    cibles: p.joueur ? ciblesDuCombatJoueur(p.joueur, textes) : ciblesDuCombat(participants, textes),
     // Un jet d'attaque garde l'avantage au choix dans l'outil.
     avantageLibre: p.kind === "attack" || p.kind === "spell_attack",
     lancer: async (cibleId, options) => {
       if (!cibleId) return null;
       const cible = participants.find((x) => x.id === cibleId);
-      const nomCible = cible?.label ?? "";
+      const nomCible = cible?.label ?? p.joueur?.find((x) => x.id === cibleId)?.label ?? "";
 
       /** Un jet ciblé : le serveur lance, tranche et applique ; on affiche ses dés, et la suite qu'il propose. */
-      const executer = async (demande: DemandeJetCible, options2: { avantage?: AdvantageState; critique?: boolean }): Promise<SortieJet> => {
+      const executer = async (demande: DemandeJetCible, options2: { avantage?: AdvantageState; critique?: boolean; jeton?: string | null }): Promise<SortieJet> => {
         try {
-          const reponse = await lancerJetCible(p.campaignId, p.combatId, corpsJetCible(demande, options2), textes.erreurJet);
+          // Une joueuse : le critique des dégâts vient du jeton signé à la touche, jamais d'elle.
+          const reponse = p.joueur
+            ? await lancerJetCibleJoueur(p.campaignId, p.combatId, corpsJetJoueur(demande, options2), textes.erreurJet)
+            : await lancerJetCible(p.campaignId, p.combatId, corpsJetCible(demande, options2), textes.erreurJet);
           p.apresJet();
           const sortie = sortieDepuisJetCible(reponse, demande.kind, { acteur: p.nomActeur, cible: nomCible, libelle: textes.libelle });
           const degats = demandeDegatsApres(reponse);
           if (!degats) return sortie;
 
-          const lancerDegats = () => executer(degats.demande, { critique: degats.critique });
+          const lancerDegats = () => executer(degats.demande, { critique: degats.critique, jeton: degats.jeton });
           // La grille de l'outil passe aux dés des dégâts quand la suite est lancée.
           const preReglage = preReglageCible({
             ...p,

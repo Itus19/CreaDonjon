@@ -6,7 +6,7 @@ import { useDiceRoll } from "@/components/shell/DiceRollPanel";
 import { useTextesJetCible } from "@/components/shell/useTextesJetCible";
 import type { AdvantageState, AttackRollResult, DamageRollResult } from "@/src/core/rules/action";
 import { degatsProposes, genreCiblableDuLancer, sortieAttaque, sortieDegats, sortieSort, type ArmeFiche, type SortFiche } from "@/lib/ui/ficheDes";
-import { lireCombatEnCours, posterActionFiche, type CombatEnCours } from "@/lib/ui/ficheDesApi";
+import { lireCombatEnCours, lireCombatEnCoursJoueur, posterActionFiche, type CombatEnCours, type CombatEnCoursJoueur } from "@/lib/ui/ficheDesApi";
 import { desDeLaFormule } from "@/lib/ui/initiative";
 import { preReglageCible, type ParametresJetCible } from "@/lib/ui/jetCibleOutil";
 import type { PreReglage } from "@/lib/ui/outilDes";
@@ -24,7 +24,7 @@ import type { PreReglage } from "@/lib/ui/outilDes";
 export function useJetsDeLaFiche(params: {
   entityId: string;
   campaignId: string | null;
-  /** MJ du monde (`isWorldAdmin`) : seul à pouvoir cibler. */
+  /** MJ du monde (`isWorldAdmin`) : cible par la route du MJ ; sinon la joueuse cible avec son PJ (V3.1-107). */
   estMj: boolean;
   /** Après un sort lancé ou appliqué : la fiche se recharge (emplacements, PV). */
   apresSort: () => void;
@@ -35,16 +35,47 @@ export function useJetsDeLaFiche(params: {
   const { openDiceTool } = useDiceRoll();
   const occupe = useRef(false);
 
-  /** Ouvre l'outil : le préréglage ciblé si le MJ a un combat en cours, sinon le simple jet. */
-  async function ouvrir(simple: () => PreReglage, cibler: ((combat: CombatEnCours, campagne: string) => PreReglage) | null) {
+  /**
+   * Ouvre l'outil : le préréglage ciblé si un combat est en cours, sinon le simple jet.
+   * `ciblerJoueur` : ce que la joueuse sait cibler avec son PJ (V3.1-107) ; `null` = simple jet pour elle.
+   */
+  async function ouvrir(
+    simple: () => PreReglage,
+    cibler: ((combat: CombatEnCours, campagne: string) => PreReglage) | null,
+    ciblerJoueur: ((combat: CombatEnCoursJoueur, campagne: string) => PreReglage) | null = null
+  ) {
     if (occupe.current) return;
     occupe.current = true;
     try {
-      const combat = cibler && estMj && campaignId !== null ? await lireCombatEnCours(campaignId, t("ouvertureImpossible")) : null;
-      openDiceTool(combat && cibler && campaignId !== null ? cibler(combat, campaignId) : simple());
+      let preReglage: PreReglage | null = null;
+      if (campaignId !== null) {
+        if (estMj && cibler) {
+          const combat = await lireCombatEnCours(campaignId, t("ouvertureImpossible"));
+          preReglage = combat ? cibler(combat, campaignId) : null;
+        } else if (!estMj && ciblerJoueur) {
+          const combat = await lireCombatEnCoursJoueur(campaignId);
+          preReglage = combat ? ciblerJoueur(combat, campaignId) : null;
+        }
+      }
+      openDiceTool(preReglage ?? simple());
     } finally {
       occupe.current = false;
     }
+  }
+
+  /** V3.1-107 : les paramètres d'un jet ciblé d'une joueuse avec son PJ (la vue filtrée remplace les participants). */
+  function cibleeJoueur(combat: CombatEnCoursJoueur, campagne: string, nom: string, reste: Pick<ParametresJetCible, "titre" | "titreDegats" | "kind" | "action" | "formule" | "touche" | "modifier" | "avantageInitial">): PreReglage {
+    return preReglageCible({
+      ...reste,
+      acteur: { kind: "character", entityId },
+      nomActeur: nom,
+      participants: [],
+      joueur: combat.participants,
+      campaignId: campagne,
+      combatId: combat.combatId,
+      textes,
+      apresJet: apresSort,
+    });
   }
 
   /** Les paramètres communs d'un jet ciblé de cette fiche. */
@@ -124,12 +155,24 @@ export function useJetsDeLaFiche(params: {
           touche: true,
           modifier: arme.modificateurAttaque,
           avantageInitial: advantage,
+        }),
+      (combat, campagne) =>
+        cibleeJoueur(combat, campagne, arme.nom, {
+          titre,
+          titreDegats: t("titreDegats", { nom: arme.nom }),
+          kind: "attack",
+          action: { kind: "weapon", itemId: arme.itemId },
+          formule: arme.formuleDegats,
+          touche: true,
+          modifier: arme.modificateurAttaque,
+          avantageInitial: advantage,
         })
     );
   }
 
   function degatsArme(arme: ArmeFiche, deuxMains: boolean) {
     // `targeted-roll` ne connaît pas l'arme à deux mains : ce jet reste un simple jet.
+    // Une joueuse ne lance jamais des dégâts seuls : ils suivent sa touche (jeton signé), donc simple jet ici.
     void ouvrir(
       () => degatsArmeSimple(arme, { critique: false, deuxMains }),
       deuxMains
@@ -142,7 +185,8 @@ export function useJetsDeLaFiche(params: {
               action: { kind: "weapon", itemId: arme.itemId },
               formule: arme.formuleDegats,
               touche: false,
-            })
+            }),
+      null
     );
   }
 
@@ -214,7 +258,19 @@ export function useJetsDeLaFiche(params: {
               action: { kind: "spell", spellKey: sort.spellKey, slotLevel: sort.niveauLance },
               formule: sort.formuleDegats,
               touche: false,
+            }),
+      // Un sort à sauvegarde se résout par le MJ (409) : la joueuse ne cible que le soin.
+      genre === "heal"
+        ? (combat, campagne) =>
+            cibleeJoueur(combat, campagne, sort.nom, {
+              titre: sort.formuleDegats ? t("titreDegats", { nom: sort.nom }) : t("titreLancer", { nom: sort.nom }),
+              titreDegats: t("titreDegats", { nom: sort.nom }),
+              kind: "heal",
+              action: { kind: "spell", spellKey: sort.spellKey, slotLevel: sort.niveauLance },
+              formule: sort.formuleDegats,
+              touche: false,
             })
+        : null
     );
   }
 

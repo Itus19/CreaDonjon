@@ -4,7 +4,7 @@ import { zEffectsBlockData } from "@/src/core/schemas/rule-blocks";
 import type { CombatParticipantRow } from "@/src/server/repos/combats";
 import type { ParticipantCharacteristics } from "@/src/server/services/combats";
 import type { SortieJet } from "@/lib/ui/outilDes";
-import type { TargetedRollInput } from "@/lib/combats/schemas";
+import type { PlayerTargetedRollInput, TargetedRollInput } from "@/lib/combats/schemas";
 import type { RollDisplay } from "@/src/core/dice/diceTool";
 import type { AdvantageState } from "@/src/core/rules/action";
 
@@ -278,7 +278,7 @@ export interface ReponseJetCible {
   ignored: string[];
   targetOutOfFight: boolean;
   /** Après une touche : les dégâts à lancer sur la même cible (`ChainedDamage`, côté serveur). */
-  chained: { kind: "damage"; actor: TargetedRollInput["actor"]; action: TargetedRollInput["action"]; targetId: string; critical: boolean } | null;
+  chained: { kind: "damage"; actor: TargetedRollInput["actor"]; action: TargetedRollInput["action"]; targetId: string; critical: boolean; token?: string } | null;
   rollEventId: string;
   saveRequestId: string | null;
   /** V3.1-38 (suite) : les dés du jet (`RollDisplay`, côté serveur) ; `null` sans dés à montrer. */
@@ -286,10 +286,31 @@ export interface ReponseJetCible {
 }
 
 /** Après une touche, les dégâts à lancer sur la même cible, critique compris ; `null` sinon. */
-export function demandeDegatsApres(reponse: ReponseJetCible): { demande: DemandeJetCible; critique: boolean } | null {
+export function demandeDegatsApres(reponse: ReponseJetCible): { demande: DemandeJetCible; critique: boolean; jeton: string | null } | null {
   const suite = reponse.chained;
   if (!suite || suite.kind !== "damage") return null;
-  return { demande: { kind: "damage", acteur: suite.actor, action: suite.action, cibleId: suite.targetId }, critique: suite.critical };
+  return { demande: { kind: "damage", acteur: suite.actor, action: suite.action, cibleId: suite.targetId }, critique: suite.critical, jeton: suite.token ?? null };
+}
+
+/**
+ * V3.1-107 : le corps de `POST …/player-targeted-roll`. Il décrit le jet d'un
+ * PJ ; jamais de critique ni de secret (le critique des dégâts vient du jeton
+ * que le serveur a signé à la touche, `damageToken`). Une demande hors de ce
+ * que la route d'une joueuse accepte (monstre, sauvegarde de la cible) est une
+ * erreur de programmation, pas une saisie.
+ */
+export function corpsJetJoueur(demande: DemandeJetCible, options: { avantage?: AdvantageState; jeton?: string | null } = {}): PlayerTargetedRollInput {
+  const { kind, acteur, action } = demande;
+  if (kind === "spell_save") throw new Error("Un sort à sauvegarde se résout par le MJ.");
+  if (acteur.kind !== "character" || action.kind === "monster_action") throw new Error("Une joueuse n'agit qu'avec son personnage.");
+  return {
+    kind,
+    actor: { kind: "character", entityId: acteur.entityId },
+    action,
+    targetId: demande.cibleId,
+    advantage: options.avantage ?? "normal",
+    ...(options.jeton ? { damageToken: options.jeton } : {}),
+  };
 }
 
 /**
