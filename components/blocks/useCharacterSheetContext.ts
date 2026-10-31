@@ -373,7 +373,8 @@ export function useCharacterSheetContext(
     ruleset,
     rulesetPret,
     remainingChoices,
-    proficiencies,
+    // V3.1-50 : un outil choisi (le jeu du Soldat) est une maîtrise comme une autre.
+    proficiencies: [...proficiencies, ...grantedChoices.tools.map((tool) => ({ key: tool.key, name: tool.key, source: tool.source }))],
     languages,
     equipment,
     weaponByKey,

@@ -87,5 +87,12 @@ describe("les choix SRD écrits à la main", () => {
     ]);
     expect(RAW["rogue-thieves-cant"].presets).toEqual({ "rogue-thieves-cant.cant": ["thieves-cant"] });
   });
+
+  it("V3.1-50 — Soldat : un jeu au choix, parmi les quatre du SRD", () => {
+    const grants = RAW.soldier.grants as ChoiceGrant[];
+    expect(grants.map((g) => [g.id, g.count ?? 1, g.from])).toEqual([
+      ["gaming-set", 1, { kind: "tool", options: ["tool-dice", "tool-dragonchess", "tool-playing-cards", "tool-three-dragon-ante"] }],
+    ]);
+  });
 });
 

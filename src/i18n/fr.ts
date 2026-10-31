@@ -567,6 +567,11 @@ export const TOOL_PROFICIENCY_LABELS_FR: Record<string, string> = {
   "Woodcarver's Tools": "Outils de sculpteur sur bois",
   "Gaming Set": "Jeu",
   'Choose one kind of Gaming Set (see "Equipment")': "Un jeu au choix",
+  // V3.1-50 : les jeux du Soldat, choisis (clés d'index SRD) ; noms du SRD 5.2.1 français.
+  "tool-dice": "Dés",
+  "tool-dragonchess": "Échecs draconiques",
+  "tool-playing-cards": "Cartes à jouer",
+  "tool-three-dragon-ante": "Jeu des dragons",
 };
 
 /** Abreviations francaises des pieces de monnaie (onglet Inventaire, V1-C11) — la grille de monnaie du bloc Inventaire garde les codes SRD bruts (pp/gp/ep/sp/cp), non repris ici (hors perimetre de ce ticket). */

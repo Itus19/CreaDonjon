@@ -35,3 +35,11 @@ describe("dedoublonnerMaitrises", () => {
     expect(dedoublonnerMaitrises([{ key: "a", name: "Dague", source: "X" }, { key: "b", name: "Épée", source: "X" }])).toHaveLength(2);
   });
 });
+
+describe("un outil choisi (le jeu du Soldat, V3.1-50)", () => {
+  it("se lit en français depuis sa clé d'index", () => {
+    expect(dedoublonnerMaitrises([{ key: "tool-dragonchess", name: "tool-dragonchess", source: "Soldat" }])).toEqual([
+      { key: "tool-dragonchess", name: "Échecs draconiques", sources: ["Soldat"] },
+    ]);
+  });
+});

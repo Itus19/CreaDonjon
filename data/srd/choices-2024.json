@@ -684,5 +684,26 @@
         "thieves-cant"
       ]
     }
+  },
+  "soldier": {
+    "_regle": "Soldat (historique) : la maîtrise d'un jeu au choix (dés, échecs draconiques, cartes à jouer, jeu des dragons).",
+    "grants": [
+      {
+        "id": "gaming-set",
+        "label": {
+          "fr": "Un jeu",
+          "en": "A gaming set"
+        },
+        "from": {
+          "kind": "tool",
+          "options": [
+            "tool-dice",
+            "tool-dragonchess",
+            "tool-playing-cards",
+            "tool-three-dragon-ante"
+          ]
+        }
+      }
+    ]
   }
 }

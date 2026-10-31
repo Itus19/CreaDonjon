@@ -25,7 +25,7 @@ import EcranChoix from "./characterCreator/EcranChoix";
 import ApercuDirect from "./characterCreator/ApercuDirect";
 import { construireChemin, etapeDe, positionValide, voisin, type CleEtape, type SousEtape } from "@/lib/ui/cheminCreation";
 import { SRD_LANGUAGES, type LanguageKey } from "@/src/core/rules/srdMapping";
-import { DAMAGE_TYPE_LABELS_FR, LANGUAGE_LABELS_FR, SKILL_LABELS_FR } from "@/src/i18n/fr";
+import { DAMAGE_TYPE_LABELS_FR, LANGUAGE_LABELS_FR, SKILL_LABELS_FR, TOOL_PROFICIENCY_LABELS_FR } from "@/src/i18n/fr";
 import { ABILITY_LABELS as ABILITY_NAMES, type Skill } from "@/src/core/rules/sheet";
 
 const EMPTY_CHARACTER: CharacterBlockData = {
@@ -283,6 +283,8 @@ export default function CharacterCreatorWizard({
           return ABILITY_NAMES[cle as keyof typeof ABILITY_NAMES] ?? cle;
         case "damage_type":
           return DAMAGE_TYPE_LABELS_FR[cle] ?? cle;
+        case "tool":
+          return TOOL_PROFICIENCY_LABELS_FR[cle] ?? entryName.get(cle) ?? cle;
         default:
           return entryName.get(cle) ?? cle;
       }
