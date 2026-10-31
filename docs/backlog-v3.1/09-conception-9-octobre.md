@@ -95,3 +95,28 @@ pas.
 **Critères d'acceptation**
 - [ ] Cercle de la Terre : après un repos long, le terrain se rechoisit et
   la liste de sorts suit (test de service + écran).
+
+---
+
+### ☐ V3.1-148 — Les maîtrises d'armes (Weapon Mastery) · `M` · sans modèle IA — **à concevoir (Opus)**
+
+**Modèle conseillé : Opus** pour le genre de choix et le moteur, puis Sonnet pour l'écran. **Dépend de** : 116, 118.
+
+Sorti de V3.1-118 (décision de l'auteur, 31 octobre) : l'aptitude « Weapon
+Mastery » des classes 2024 (Barbare, Guerrier, Paladin, Rôdeur, Roublard)
+fait choisir des types d'armes dont on utilise la botte. Rien de cela n'existe
+aujourd'hui : ni genre de choix, ni donnée, ni moteur qui sache quelles
+bottes sont maîtrisées (`WeaponData.masteryKey` est affiché, jamais
+appliqué).
+
+- Un genre de choix `weapon_mastery` (types d'armes, nombre par niveau de
+  classe), dans `choices` et `resolveChoices`.
+- Les données des cinq classes (`data/srd/choices-2024.json`).
+- La fiche sait quelles armes ont leur botte maîtrisée ; l'action d'attaque
+  la montre (son effet en jeu reste au moteur de jeu).
+- Le Guerrier peut en changer au repos long (s'appuie sur V3.1-119).
+
+**Critères d'acceptation**
+- [ ] Un Guerrier de niveau 1 choisit 3 types d'armes dans l'assistant ; la
+  fiche montre la botte de ces armes seulement.
+- [ ] Le nombre suit la table de la classe (Guerrier 3 → 4 au niveau 4…).
