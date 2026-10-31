@@ -2929,6 +2929,10 @@ export type Database = {
         Args: { p_natural: number | null; p_request: string; p_total: number }
         Returns: Json
       }
+      apply_engine_change: {
+        Args: { p_payload: string; p_signature: string }
+        Returns: undefined
+      }
       save_entity_blocks: {
         Args: { p_changes: Json; p_entity: string }
         Returns: Json

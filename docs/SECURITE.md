@@ -114,6 +114,7 @@ Chaque faille trouvée : sa date, sa correction et son état. **État** : *corri
 | `SUPABASE_SERVICE_ROLE_KEY` | **serveur seulement** | Contourne toute la RLS : qui l'a lit et écrit toute la base. Confinée à un fichier par une règle ESLint (règles absolues 1 et 2). |
 | `ANTHROPIC_API_KEY`, `VOYAGE_API_KEY` | **serveur seulement** | Facturées à l'usage : volées, elles se vident. |
 | `MANUAL_TEST_PASSWORD` | **serveur et scripts** | Mot de passe des comptes de test (`docs/TESTS.md`). |
+| `ENGINE_SIGNING_KEY`, `ENGINE_SIGNING_KEY_ID` | **serveur seulement** | Signe les changements que le moteur écrit au nom d'un joueur (ADR 0041, V3.1-104) : volée, elle permet de fabriquer des changements acceptés par la base. Même valeur dans `app_private.engine_signing_keys`, que seule la fonction `apply_engine_change` lit. Rotation : `docs/CLE-MOTEUR.md`. |
 
 **Où vivent les valeurs.**
 - En local : `.env.local`, ignoré par Git (`.gitignore` : `.env*`, sauf `.env.example`, qui ne porte que des noms).

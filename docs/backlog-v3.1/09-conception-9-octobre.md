@@ -98,9 +98,9 @@ pas.
 
 ---
 
-### ☐ V3.1-148 — Les bottes d'armes maîtrisées, appliquées en jeu · `M` · sans modèle IA — **à concevoir (Opus)**
+### ☐ V3.1-148 — Les bottes d'armes maîtrisées, appliquées en jeu · `M` · sans modèle IA — **après V3.1-107**
 
-**Modèle conseillé : Opus** (moteur de jeu), puis Sonnet pour l'affichage. **Dépend de** : 118.
+**Modèle conseillé : Opus** (moteur de jeu), puis Sonnet pour l'affichage. **Dépend de** : 118 et **107** : une botte a besoin de la cible et du « touché » de l'attaque, que l'attaque d'un personnage n'a pas encore. Décision de l'auteur (31 octobre) : 104, puis 107, puis ce ticket.
 
 Sorti de V3.1-118 (31 octobre). Ce qui EXISTE déjà : le choix des armes
 maîtrisées (`RemainingChoice` de genre `weapon_mastery`, lu dans la

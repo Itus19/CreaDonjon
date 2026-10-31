@@ -32,3 +32,9 @@ Quand un joueur cible un adversaire (V3.1-21), le serveur résout le jet par le 
 ## Conséquences
 
 Bloque V3.1-107 (cibler côté joueur) et le soin d'un autre PJ. Ne bloque ni le MJ, ni le solo, ni les sauvegardes demandées (V3.1-39 : c'est le propriétaire de la cible qui applique), ni les droits des joueurs (ADR 0043).
+
+## Mise en œuvre (V3.1-104, 31 octobre)
+
+- **Texte, pas `jsonb`.** La fonction reçoit le changement en texte, `public.apply_engine_change(p_payload text, p_signature text)`, et calcule l'HMAC sur les octets reçus avant de les lire comme `jsonb`. Un `jsonb` réordonne et reformate ses clés : signer sa sortie ferait dépendre la sécurité d'un détail de sérialisation. La forme canonique (`canonicalJson`, `src/core/rules/engineChange.ts`) reste celle que le serveur produit et signe.
+- **Ce qui est signé.** Les PV, PV temporaires et états d'un participant de la campagne, ou de l'état de jeu d'une fiche de la campagne (un PJ du combat suit son participant dans le même changement). Les jets contre la mort d'une autre fiche ne le sont pas : le MJ les applique.
+- **La clé** : `docs/CLE-MOTEUR.md` (poser, faire tourner, fuite).

@@ -28,6 +28,7 @@ import {
 } from "@/src/server/services/characterActions";
 import { fireTriggersForCharacter } from "@/src/server/services/triggerRuntime";
 import { applyRuntimeStateChange, getEntityRuntimeState } from "@/src/server/services/runtimeState";
+import { applySignedEngineChange, type EngineChangeLine } from "@/src/server/services/engineSigning";
 import { patchCombatParticipant } from "@/src/server/services/combats";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
 import { getCampaign } from "@/src/server/services/campaigns";
@@ -189,6 +190,13 @@ export async function applyResolvedEffects(
     note: string;
     fromEventId: string | null;
     combatId: string | null;
+    /**
+     * V3.1-104 (ADR 0041) : l'appelant est un joueur. Ce qui n'est pas à lui
+     * (participants du combat, état de jeu d'un autre personnage) s'écrit par
+     * un changement SIGNÉ ; seul son personnage (`ownEntityIds`) s'écrit
+     * directement. Absent : écriture directe (le MJ).
+     */
+    signedWrites?: { ownEntityIds: ReadonlySet<string> };
   }
 ): Promise<ApplyEffectsOutcome> {
   const participants = params.combatId ? await listCombatParticipants(supabase, params.combatId) : [];
@@ -229,6 +237,8 @@ export async function applyResolvedEffects(
   const applied = applyEffects({ scene: params.scene ?? emptySceneFor(null), actors }, params.effects);
 
   const persisted: string[] = [];
+  const signes: EngineChangeLine[] = [];
+  const nonSignables: string[] = [];
   for (const [who, after] of Object.entries(applied.state.actors)) {
     const before = actors[who];
     const changedHp = before.hp.current !== after.hp.current || before.hp.temp !== after.hp.temp;
@@ -238,6 +248,28 @@ export async function applyResolvedEffects(
       after.deathSaves !== undefined &&
       (before.deathSaves.success !== after.deathSaves.success || before.deathSaves.fail !== after.deathSaves.fail);
     if (!changedHp && !changedConditions && !changedDeath) continue;
+
+    if (params.signedWrites && !params.signedWrites.ownEntityIds.has(who)) {
+      // V3.1-104 : PV et états seulement — les jets contre la mort d'une autre
+      // fiche ne sont pas dans la liste signable, le MJ les applique.
+      const valeurs = {
+        ...(changedHp ? { hp: after.hp.current, temp_hp: after.hp.temp } : {}),
+        ...(changedConditions ? { conditions: after.conditions } : {}),
+      };
+      if (changedDeath) nonSignables.push(`Jets contre la mort de ${names[who] ?? who} : à appliquer par le MJ.`);
+      if (Object.keys(valeurs).length === 0) continue;
+      if (who.startsWith("participant:")) {
+        const participantId = who.slice("participant:".length);
+        signes.push({ kind: "participant", id: participantId, ...valeurs });
+        // Un PJ du combat : son état de jeu suit, dans le même changement signé.
+        const entite = participants.find((p) => p.id === participantId)?.entity_id;
+        if (entite && pcEntityIds.has(entite)) signes.push({ kind: "runtime", id: entite, ...valeurs });
+      } else {
+        signes.push({ kind: "runtime", id: who, ...valeurs });
+      }
+      persisted.push(names[who] ?? who);
+      continue;
+    }
 
     if (who.startsWith("participant:")) {
       const participantId = who.slice("participant:".length);
@@ -273,11 +305,14 @@ export async function applyResolvedEffects(
     persisted.push(names[who] ?? who);
   }
 
+  if (signes.length > 0) await applySignedEngineChange(supabase, { campaignId: params.campaignId, changes: signes });
+
   const nameOf = (id: string) => names[id] ?? id;
   const changes = applied.changes.map((c) => describeChange(c, nameOf)).filter((line): line is string => line !== null);
-  const ignored = applied.changes
-    .filter((c): c is Extract<TurnChange, { kind: "ignored" }> => c.kind === "ignored")
-    .map((c) => c.reason);
+  const ignored = [
+    ...applied.changes.filter((c): c is Extract<TurnChange, { kind: "ignored" }> => c.kind === "ignored").map((c) => c.reason),
+    ...nonSignables,
+  ];
   const hints = applied.changes
     .filter((c): c is Extract<TurnChange, { kind: "hint" }> => c.kind === "hint")
     .map((c) => c.text);
@@ -468,7 +503,15 @@ async function targetProfileFor(supabase: TypedClient, params: { target: CombatP
  */
 export async function resolveTargetedRoll(
   supabase: TypedClient,
-  params: { campaignId: string; combatId: string; callerId: string; locale: Locale; input: TargetedRollInput }
+  params: {
+    campaignId: string;
+    combatId: string;
+    callerId: string;
+    locale: Locale;
+    input: TargetedRollInput;
+    /** V3.1-104 : `false` pour un joueur — ce qui n'est pas à lui s'écrit par un changement signé. Absent : le MJ, écriture directe. */
+    callerIsGm?: boolean;
+  }
 ): Promise<TargetedRollResult> {
   const { input } = params;
   const combat = await getCombatById(supabase, params.combatId);
@@ -701,6 +744,7 @@ export async function resolveTargetedRoll(
     note: `Cibler — ${facts[0] ?? input.kind}`,
     fromEventId: rollEvent.id,
     combatId: combat.id,
+    ...(params.callerIsGm === false ? { signedWrites: { ownEntityIds: new Set(ctx ? [ctx.entityId] : []) } } : {}),
   });
 
   const targetAfter = outcome.applied.state.actors[targetKey];

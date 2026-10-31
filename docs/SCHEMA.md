@@ -867,6 +867,24 @@ Séparer cette table permet au même personnage d'exister dans deux campagnes sa
 
 **Droits** (V3.1-108, ADR 0043) : lecture par tout membre du monde ; écriture de `entity_runtime_state` et `entity_active_effects` par `app.can_edit_entity(entity_id)` seulement (administrateur du monde, joueuse qui a revendiqué ce PJ, octroi). Un lecteur sans droit voit l'état de départ calculé, jamais enregistré (route de la fiche).
 
+### 12.1 bis Changements signés du moteur (V3.1-104, ADR 0041)
+
+```sql
+create schema app_private;                 -- aucun droit pour anon ni authenticated
+create table app_private.engine_signing_keys (
+  id     text primary key,                 -- l'identifiant envoyé dans le changement
+  secret bytea not null,                   -- 32 octets au moins
+  active boolean not null default true     -- deux actives à la fois : rotation
+);
+create table app_private.engine_change_nonces (
+  nonce   uuid primary key,                -- un changement ne se rejoue pas
+  seen_at timestamptz not null default now()
+);
+-- public.apply_engine_change(p_payload text, p_signature text), security definer
+```
+
+Le moteur écrit au nom d'un joueur ce que le joueur n'a pas le droit d'écrire (PV et états d'un adversaire, ou d'un autre PJ) par un **changement signé** : un objet fermé `{ key_id, nonce, issued_at, campaign_id, changes: [{ kind: "participant" | "runtime", id, hp?, temp_hp?, conditions? }] }`, sérialisé sous forme canonique (clés triées, `canonicalJson`) et signé en HMAC-SHA256 par le serveur. La fonction recalcule l'HMAC sur le **texte reçu** (pas sur un `jsonb`, qui réordonne ses clés), puis refuse une clé inconnue ou inactive, une signature fausse, un `issued_at` à plus de 60 s, un `nonce` déjà vu, une clé hors liste, une ligne hors de la campagne nommée. Tout ou rien, dans une transaction ; les `nonce` de plus d'une heure sont purgés. Migration `20261031120000_engine_signed_changes`.
+
 ### 12.2 Effets actifs
 
 ```sql

@@ -13,7 +13,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 // Tout ce qui n'est PAS `NEXT_PUBLIC_` et ne doit jamais quitter le serveur.
-const SECRETS = ["SUPABASE_SERVICE_ROLE_KEY", "ANTHROPIC_API_KEY", "VOYAGE_API_KEY", "MANUAL_TEST_PASSWORD"];
+const SECRETS = ["SUPABASE_SERVICE_ROLE_KEY", "ANTHROPIC_API_KEY", "VOYAGE_API_KEY", "MANUAL_TEST_PASSWORD", "ENGINE_SIGNING_KEY"];
 const DOSSIER = ".next/static";
 
 function fichiers(dossier) {
