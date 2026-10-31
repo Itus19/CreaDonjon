@@ -1,15 +1,9 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { rollDice } from "@/src/core/dice/roll";
+import { tirerCaracteristiques, zTirageCaracteristiques } from "@/lib/characterCreator/tirageCaracteristiques";
 import { serverRng } from "@/src/server/services/rng";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { readWorldCharacterRules } from "@/src/server/services/resolvedRuleset";
-
-const bodySchema = z.object({
-  /** Le monde dont le ruleset dit COMMENT tirer (V3.1-115, ADR 0046). */
-  worldSlug: z.string().trim().min(1).max(200),
-});
 
 /**
  * Tirage des caracteristiques (methode "roll" de l'assistant de creation de
@@ -30,7 +24,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json().catch(() => null);
-  const parsed = bodySchema.safeParse(body);
+  const parsed = zTirageCaracteristiques.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: "Corps invalide." }, { status: 400 });
   }
@@ -49,9 +43,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Ce ruleset ne propose pas la méthode de tirage." }, { status: 400 });
   }
 
-  const rolls = Array.from({ length: roll.rolls }, () =>
-    rollDice(roll.dice_count, roll.dice_faces, serverRng, { mode: "kh", count: roll.keep_highest }).total
-  );
+  const rolls = tirerCaracteristiques(roll, serverRng);
 
   return NextResponse.json({ rolls }, { status: 200 });
 }
