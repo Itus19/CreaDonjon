@@ -2939,3 +2939,15 @@ Opus : le noyau et le serveur ; `dev-sonnet` : les sélecteurs ; relu, retouches
 
 *Restes* : l'Empoigneur n'a pas ses effets en données (le +1 en Force ou Dextérité) ; l'Ascendance gigante n'est pas une ressource qui se recharge (critère de V3.1-6, à reprendre avec V3.1-119) ; deux armes s'appellent « Lance » en français (lance et lance d'arçon) ; les textes de l'Ascendance gigante arrivent en base au prochain import.
 
+### V3.1-119 — Les choix rouverts au repos (31 octobre)
+
+Opus : le noyau, l'état de jeu, le service et la route ; `dev-sonnet` : le bandeau ; relu, une retouche d'Opus.
+- **Noyau** (`src/core/rules/choiceRefresh.ts`, testé) : un repos long rouvre les choix « repos long » et « repos court », un repos court les siens ; seulement ceux déjà répondus. Une nouvelle réponse vaut si le moteur, résolu avec elle, la retient entière.
+- **État de jeu** : `choices_to_refresh` (jsonb, `.default([])`, aucune migration). Les deux repos le remplissent et le journal l'annonce (« Choisir à nouveau : Terrain »).
+- **Action** `POST /api/entities/{id}/actions/refresh-choice`, corps strict `{campaignId, key, values | null}`, mêmes droits qu'un repos : `values` rechoisit (validé par le moteur, écrit avec contrôle de version), `null` garde ; un choix non rouvert est refusé (409).
+- **Test de service** (base réelle, monde jetable) : Druide du Cercle de la Terre, repos long, Terres arides → Terres polaires, la liste de sorts suit (Rayon de givre remplace Mains brûlantes) ; réponse hors options refusée ; un repos court ne rouvre pas le terrain.
+- **Écran** (`ChoixRouverts.tsx`) : bandeau en tête de fiche, tableau comparatif ou sélecteur générique, « Valider » ou « Garder » ; au téléphone, un rappel et une feuille du bas. Retouche d'Opus : types de dégâts en français.
+- **Vérifié au navigateur** (druide de test créé puis supprimé) : repos long → bandeau ; « Valider » Terres polaires → 204, bandeau parti, terrain changé en base ; « Garder » → Terres arides reste, bloc non réécrit ; téléphone : « Un choix à refaire » ouvre la feuille.
+
+*Restes* : un choix de don ou de sort rouvert n'a que « Garder » sur la fiche (aucun catalogue chargé), aucun cas dans les données ; la sous-classe du druide s'appelle `circle-of-the-land-subclass` (homonyme d'une aptitude).
+

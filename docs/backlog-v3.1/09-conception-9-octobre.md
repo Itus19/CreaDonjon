@@ -82,7 +82,7 @@ pas.
 
 ---
 
-### ☐ V3.1-119 — Les choix rouverts au repos · `M` · sans modèle IA — **prêt**
+### ☑ V3.1-119 — Les choix rouverts au repos · `M` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet.** **Dépend de** : 116, 117, 24 (repos), V3.1-5.
 
@@ -93,7 +93,7 @@ pas.
   téléphone) ; sans réponse, le choix d'avant reste.
 
 **Critères d'acceptation**
-- [ ] Cercle de la Terre : après un repos long, le terrain se rechoisit et
+- [x] Cercle de la Terre : après un repos long, le terrain se rechoisit et
   la liste de sorts suit (test de service + écran).
 
 ---
