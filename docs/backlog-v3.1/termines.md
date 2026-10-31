@@ -2951,3 +2951,14 @@ Opus : le noyau, l'état de jeu, le service et la route ; `dev-sonnet` : le band
 
 *Restes* : un choix de don ou de sort rouvert n'a que « Garder » sur la fiche (aucun catalogue chargé), aucun cas dans les données ; la sous-classe du druide s'appelle `circle-of-the-land-subclass` (homonyme d'une aptitude).
 
+### V3.1-104 — Écritures du moteur au nom d'un joueur : changements signés (31 octobre)
+
+Opus seul (sécurité, base, cryptographie). ADR 0041, option B, avec un addendum.
+- **Migration** `20261031120000_engine_signed_changes` : schéma `app_private` sans droit pour les clients, tables `engine_signing_keys` et `engine_change_nonces`, fonction `public.apply_engine_change(p_payload text, p_signature text)` (security definer, `search_path` fixé). Écart avec l'ADR : le changement arrive en texte, l'HMAC porte sur les octets reçus (un `jsonb` réordonne ses clés). Appliquée en deux temps : la version était déjà enregistrée par un essai précédent, son insertion annulait tout le script.
+- **Noyau** (`src/core/rules/engineChange.ts`, testé) : `canonicalJson` et le schéma fermé `zEngineChange`.
+- **Serveur** : `engineSigning.ts` (HMAC-SHA256, clé de l'environnement, erreur explicite si absente), `repos/engineChanges.ts`. `applyResolvedEffects` écrit par un changement signé ce qui n'est pas au joueur quand `resolveTargetedRoll` reçoit `callerIsGm: false` ; le MJ garde l'écriture directe. Les jets contre la mort d'une autre fiche restent au MJ (hors liste signable).
+- **Clé** : posée par l'auteur (`docs/CLE-MOTEUR.md`), jamais passée par la conversation ; `ENGINE_SIGNING_KEY` ajoutée à `verifier:secrets`, `.env.example`, `SECURITE.md` §4, `SCHEMA.md` §12.1 bis.
+- **Vérifié** contre la base réelle (session cloud avec la clé) : changement appliqué puis rejoué refusé ; signature fausse, clé inconnue, `issued_at` trop vieux, champ hors liste, ligne d'une autre campagne refusés sans rien écrire ; client anonyme refusé. Depuis le serveur : table des clés invisible par l'API.
+
+*Restes* : le test de rotation (deux clés actives) attend une seconde clé ; le chemin signé ne sert qu'avec V3.1-107, qui doit aussi donner au joueur la lecture des participants (vue filtrée de V3.1-102).
+

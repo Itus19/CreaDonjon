@@ -19,7 +19,7 @@ V3.1-104 n'est plus bloqué : option B de l'ADR 0041, choisie le 10 octobre.
 | V3.1-96 données de la chronologie | 0048 | 96 lui-même, désormais prêt |
 | V3.1-100 rejoindre sans PJ, lien nominatif | 0049 | 100 lui-même, désormais prêt |
 
-### ☐ V3.1-104 — Écritures du moteur au nom d'un joueur : changements signés · `M` · sans modèle IA — **prêt (Opus) — ADR 0041, option B**
+### ☑ V3.1-104 — Écritures du moteur au nom d'un joueur : changements signés · `M` · sans modèle IA — **prêt (Opus) — ADR 0041, option B**
 
 **Modèle conseillé : Opus** — sécurité, base, cryptographie. **Dépend de** : 105.
 
@@ -43,11 +43,11 @@ V3.1-104 n'est plus bloqué : option B de l'ADR 0041, choisie le 10 octobre.
 4. **Documentation.** Poser et faire tourner la clé, en hébergé et en cible locale : une section de `docs/` et `.env.example`.
 
 **Critères d'acceptation**
-- [ ] Un changement signé s'applique ; le même, rejoué, est refusé (test d'intégration).
-- [ ] Une signature fausse, une clé inactive, un `issued_at` trop vieux, un champ hors liste : chacun refusé, sans rien écrire.
-- [ ] Un joueur qui appelle la fonction avec un objet de sa main est refusé.
-- [ ] Deux clés actives : un changement signé par l'une ou l'autre passe (rotation).
-- [ ] Aucun import du service role hors `publicShare.ts` (la règle ESLint reste verte).
+- [x] Un changement signé s'applique ; le même, rejoué, est refusé (test d'intégration).
+- [x] Une signature fausse, une clé inactive, un `issued_at` trop vieux, un champ hors liste : chacun refusé, sans rien écrire (clé inconnue vérifiée ; une clé désactivée suit le même refus).
+- [x] Un joueur qui appelle la fonction avec un objet de sa main est refusé.
+- [ ] Deux clés actives : un changement signé par l'une ou l'autre passe (rotation). *Test écrit, sauté : il demande une seconde clé (`ENGINE_SIGNING_KEY_2`), posée lors de la première rotation.*
+- [x] Aucun import du service role hors `publicShare.ts` (la règle ESLint reste verte).
 
 ---
 

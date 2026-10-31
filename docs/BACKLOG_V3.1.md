@@ -92,7 +92,7 @@ valables ; celui-ci les relie.
 | **3 · Entrer et se reconnaître** | ~~85~~ → ~~86~~ ; ~~80~~ → ~~81~~ ; ~~82~~ → ~~83~~ (après 100) ; ~~87~~ → ~~88~~ | Le premier écran que voit un ami ; court, et tout est décidé. |
 | **4 · Les outils du MJ (lot i)** | ~~46~~, ~~55~~, ~~61~~ → ~~143~~, ~~54~~, ~~56~~, ~~44~~, ~~45~~, ~~43~~ ; ~~41~~ → ~~42~~ ; ~~59~~ → ~~60~~ ; ~~108~~ → ~~57~~, ~~109~~ ; ~~58~~ ; ~~102~~, ~~103~~ → ~~38~~ ; ~~105~~ → ~~106~~ ; ~~111~~ → ~~112~~ ; ~~113~~ → ~~114~~ | Les petits outils sans donnée nouvelle d'abord, puis ceux qui attendaient l'étape 1. |
 | **5 · La fiche du wiki et ses blocs** — *faite le 26 octobre* | ~~63~~ → ~~64~~ → ~~65~~, ~~66~~, ~~67~~, ~~68~~ → ~~69~~ → ~~70~~, ~~71~~, ~~72~~, ~~73~~ → ~~75~~, ~~76~~, ~~77~~, ~~78~~ ; ~~79~~. Suites décidées le 26 octobre, faites le même jour : ~~146~~ (musique, YouTube), ~~147~~ (repaire et défenses) ; recharge des créatures en combat rattachée à 129 (étape 9) | La carte de verre et sa pastille portent tous les blocs. En chemin : trois failles de lecture corrigées (aspirations MJ, relations et souvenirs de psyché, `docs/SECURITE.md`). |
-| **6 · La création de personnage** | ~~49~~ → ~~50~~, ~~51~~, ~~52~~, ~~53~~ (48 et 115 faits à l'étape 1) ; ~~118~~, ~~119~~, 148 après 104 et 107 (116 et 117 faits) | Le plus gros chantier ; il attend les règles en données (47). |
+| **6 · La création de personnage** | ~~49~~ → ~~50~~, ~~51~~, ~~52~~, ~~53~~ (48 et 115 faits à l'étape 1) ; ~~118~~, ~~119~~, 148 après ~~104~~ et 107 (116 et 117 faits) | Le plus gros chantier ; il attend les règles en données (47). |
 | **7 · Les statistiques du joueur** | ~~89~~ → 90 → 91 → 92 | Il leur faut des jets attribués ; les jets d'avant 89 ne comptent pas. |
 | **8 · Règles et Chronologie** | 93 → 94 → 95 ; 96 → 97 → 98 → 99 | Les règles s'appuient sur les fenêtres à volets (20) ; la Chronologie sur la pastille (64) et les dates de naissance (74). |
 | **À côté, quand on veut** | 13 (attend le texte des manuels de l'auteur) ; vérifications en direct de 1, 2, 4, 5, 12, 17, 18 | Codés ; il ne reste que l'œil de l'auteur. | |
@@ -235,7 +235,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-101 | ☑ | sans | Initiative : la base et les routes réservées au MJ | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-102 | ☑ | sans | Initiative : la vue filtrée des joueurs | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-103 | ☑ | sans | Initiative : les jets d'initiative des joueurs | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-104 | ☐ | sans | Écritures du moteur au nom d'un joueur : changements signés | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
+| V3.1-104 | ☑ | sans | Écritures du moteur au nom d'un joueur : changements signés | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
 | V3.1-105 | ☑ | sans | Cibler : le cœur commun de résolution | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-106 | ☑ | sans | Cibler côté MJ : outil de dés, Table, Initiative | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-107 | ☐ | sans | Cibler côté joueur | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
