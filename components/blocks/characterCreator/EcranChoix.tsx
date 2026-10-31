@@ -7,9 +7,12 @@ import { colonnesComparatives, estTableauComparatif } from "@/lib/ui/optionsAvec
 import { ABILITIES, SKILLS, type Ability, type DerivedSheet, type Skill } from "@/src/core/rules/sheet";
 import { bestSpellAbility, skillChoiceEffects, spellAbilityEffects } from "@/src/core/rules/choiceEffects";
 import type { OpenChoice } from "@/src/core/rules/choices";
-import { parseCustomTableFields, parseSpellLevel, type CustomTableRow } from "@/src/core/rules/srdMapping";
-import type { CustomTableBlockData } from "@/src/core/schemas/rule-blocks";
-import type { RuleEntryBlockData } from "../useRuleEntryBlocks";
+import { parseCustomTableFields, parseSpellLevel, weaponDataFromBlock, type CustomTableRow } from "@/src/core/rules/srdMapping";
+import type { CustomTableBlockData, WeaponBlockData } from "@/src/core/schemas/rule-blocks";
+import { WEAPON_MASTERY_LABELS_FR } from "@/src/i18n/fr";
+import type { FeatChoiceData } from "@/src/core/rules/choices";
+import { useRuleEntryBlocks, type RuleEntryBlockData } from "../useRuleEntryBlocks";
+import ChoixDon, { type ContexteAmelioration } from "./ChoixDon";
 import ChoixGenerique from "./ChoixGenerique";
 import SelecteurSorts, { type CandidatSort } from "./SelecteurSorts";
 import FicheSort from "./FicheSort";
@@ -33,6 +36,10 @@ export interface ContexteEcranChoix {
   libelleOption: (sous: SousEtape) => (cle: string) => string;
   dejaAcquis: (sous: SousEtape) => Set<string>;
   onChoisir: (cleChoix: string, valeurs: string[]) => void;
+  /** V3.1-118 : le catalogue des dons du monde (catégorie de chaque carte). */
+  dons: Readonly<Record<string, FeatChoiceData>>;
+  /** V3.1-118 : de quoi régler le +2 / +1+1 sous le don « Amélioration de caractéristique ». */
+  amelioration: ContexteAmelioration;
 }
 
 /**
@@ -106,6 +113,10 @@ function Choix({
       );
     }
 
+    if (from?.kind === "feat") {
+      return <ChoixDon worldSlug={ctx.worldSlug} sous={sous} dons={ctx.dons} dejaAcquis={ctx.dejaAcquis(sous)} amelioration={ctx.amelioration} onChoisir={onChoisir} />;
+    }
+
     if (from?.kind === "ability" && from.spellcasting === true) {
       const options = sous.options.map((o) => o.cle).filter((c): c is Ability => (ABILITIES as readonly string[]).includes(c));
       const effets = spellAbilityEffects(ctx.sheet, options);
@@ -133,5 +144,38 @@ function Choix({
     }
   }
 
+  if (sous.genre === "weapon_mastery" && !sous.impose) {
+    return <ChoixMaitrise sous={sous} ctx={ctx} libelleOption={libelleOption} onChoisir={onChoisir} />;
+  }
+
   return <ChoixGenerique sous={sous} libelleOption={libelleOption} dejaAcquis={ctx.dejaAcquis(sous)} onChoisir={onChoisir} />;
+}
+
+/**
+ * V3.1-118 — Les maîtrises d'armes : le sélecteur générique, chaque arme avec
+ * sa botte (lue dans le bloc `weapon` de sa fiche, une seule requête pour les
+ * armes proposées).
+ */
+function ChoixMaitrise({
+  sous,
+  ctx,
+  libelleOption,
+  onChoisir,
+}: {
+  sous: SousEtape;
+  ctx: ContexteEcranChoix;
+  libelleOption: (cle: string) => string;
+  onChoisir: (valeurs: string[]) => void;
+}) {
+  const t = useTranslations("creation");
+  const blocs = useRuleEntryBlocks(
+    ctx.worldSlug,
+    sous.options.map((o) => o.cle)
+  );
+  const options = sous.options.map((o) => {
+    const arme = blocs[o.cle]?.find((b) => b.blockType === "weapon");
+    const botte = arme ? weaponDataFromBlock(arme.data as WeaponBlockData).masteryKey : null;
+    return botte ? { ...o, description: t("equip.fiche.botte", { nom: WEAPON_MASTERY_LABELS_FR[botte] ?? botte }) } : o;
+  });
+  return <ChoixGenerique sous={{ ...sous, options }} libelleOption={libelleOption} dejaAcquis={ctx.dejaAcquis(sous)} onChoisir={onChoisir} />;
 }

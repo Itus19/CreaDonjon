@@ -11,15 +11,13 @@ import type {
   ClassEquipmentBlockData,
   SubclassSlotBlockData,
 } from "@/src/core/schemas/rule-blocks";
-import type { DerivedSheet } from "@/src/core/rules/sheet";
 import { exceedsLevelCap } from "@/src/core/rules/characterRules";
 import { renderBlockData, type EquipmentCardInteraction } from "@/components/rules/blockContentRenderer";
 import Checkbox from "@/components/shared/Checkbox";
-import { cleAmelioration, type ProgressionEmplacement } from "@/lib/ui/progressionsPersonnage";
+import type { ProgressionEmplacement } from "@/lib/ui/progressionsPersonnage";
 import type { LigneProgression } from "@/lib/ui/progressionClasse";
 import { useWorldRuleEntries } from "../useWorldRuleEntries";
 import { useRuleEntryBlocks, type RuleEntryBlockData } from "../useRuleEntryBlocks";
-import AsiStep from "./AsiStep";
 
 const ABILITY_LABELS: Record<string, string> = { str: "FOR", dex: "DEX", con: "CON", int: "INT", wis: "SAG", cha: "CHA" };
 
@@ -54,7 +52,7 @@ const STYLE_LIGNE: Record<LigneProgression["etat"], { ligne: string; numero: str
   avenir: { ligne: "border-edge text-ink-soft opacity-50", numero: "text-ink-muted" },
 };
 
-type Panneau = { genre: "sousclasse" } | { genre: "amelioration"; niveau: number };
+type Panneau = { genre: "sousclasse" };
 
 /**
  * Etape Classe (V3.1-51, specs/wiki-liens-et-personnages.md §B8 etendue au
@@ -80,8 +78,6 @@ export default function LevelClassesStep({
   onChooseEquipmentChoices,
   hideEquipment = false,
   progressions,
-  sheet,
-  abilityScoreCap,
   plafondNiveau,
   niveauxAvant,
   controle,
@@ -98,8 +94,6 @@ export default function LevelClassesStep({
   hideEquipment?: boolean;
   /** Une progression par emplacement (`progressionsPersonnage`). */
   progressions: (ProgressionEmplacement | null)[];
-  sheet: DerivedSheet;
-  abilityScoreCap: number | undefined;
   /** `level_cap` du ruleset ; absent : aucun plafond invente. */
   plafondNiveau: number | undefined;
   /** Montee de niveau : le niveau de chaque classe avant. Absent : creation. */
@@ -282,7 +276,8 @@ export default function LevelClassesStep({
   function surPastille(genre: "choix" | "sousclasse" | "amelioration", cle: string, niveau: number) {
     if (genre === "choix") onAller(`c:${cle}`);
     else if (genre === "sousclasse") setPanneau((p) => (p?.genre === "sousclasse" ? null : { genre: "sousclasse" }));
-    else setPanneau((p) => (p?.genre === "amelioration" && p.niveau === niveau ? null : { genre: "amelioration", niveau }));
+    // V3.1-118 : l'amélioration vit dans la sous-étape du don de ce niveau (`<classe>.l<n>.feat`).
+    else onAller(`c:${classKey}.l${niveau}.feat`);
   }
 
   const afficherGrille = slot !== undefined && !verrouille && (classKey === "" || grilleOuverte);
@@ -534,15 +529,6 @@ export default function LevelClassesStep({
             </div>
           )}
 
-          {panneau?.genre === "amelioration" && (
-            <AsiStep
-              character={character}
-              patchCharacter={patchCharacter}
-              sheet={sheet}
-              abilityScoreCap={abilityScoreCap}
-              grants={[{ choiceKey: cleAmelioration(classKey, panneau.niveau), className: nomDeClasse(classKey), level: panneau.niveau }]}
-            />
-          )}
 
           {classKey && classBlocks && classBlocks.length > 0 && (
             <div className="flex flex-col gap-2 rounded-md border border-edge/40 bg-panel-sunken p-2.5 text-sm text-ink">

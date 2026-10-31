@@ -68,6 +68,7 @@ export default function ChoixGenerique({
               }`}
             >
               {o.libelle ?? libelleOption(o.cle)}
+              {o.description && <span className="text-xs font-normal text-ink-soft">{o.description}</span>}
               {acquis && <span className="text-xs font-normal text-ink-muted">{t("dejaAcquis")}</span>}
             </button>
           );

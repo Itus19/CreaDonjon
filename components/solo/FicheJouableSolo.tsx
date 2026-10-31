@@ -1,5 +1,6 @@
 "use client";
 
+import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import { useWorldCalendarContext } from "@/components/shared/WorldCalendarProvider";
 import { ageWithDeath } from "@/src/core/genealogy/lifeDates";
 import { useEffect, useMemo, useState } from "react";
@@ -238,7 +239,11 @@ export default function FicheJouableSolo({
     spellLevels,
   } = useCharacterSheetContext(worldSlug, character, inventory, spellcasting);
 
-  const knownSpellRefs = useMemo(() => (spellcasting?.known ?? []).map((k) => k.ref), [spellcasting]);
+  // V3.1-118 : les sorts accordés partent dans la même requête de noms que les sorts connus.
+  const knownSpellRefs = useMemo(
+    () => [...(spellcasting?.known ?? []).map((k) => k.ref), ...sheet.grantedSpells.map((g): BlockReference => ({ kind: "rule", key: g.key }))],
+    [spellcasting, sheet.grantedSpells]
+  );
   const spellChips = useReferenceChips(worldSlug, knownSpellRefs);
 
   const sortedKnownSpells: KnownSpellView[] = useMemo(() => {
@@ -537,7 +542,7 @@ export default function FicheJouableSolo({
           )}
 
           {tab === "magie" && spellcasting && (
-            <MagicTab worldSlug={worldSlug} sortedKnownSpells={sortedKnownSpells} spellChips={spellChips} spellcasting={spellcasting} onTogglePrepared={togglePrepared} />
+            <MagicTab worldSlug={worldSlug} sortedKnownSpells={sortedKnownSpells} spellChips={spellChips} spellcasting={spellcasting} grantedSpells={sheet.grantedSpells} onTogglePrepared={togglePrepared} />
           )}
 
           {tab === "traits" && <TraitsTab worldSlug={worldSlug} traits={traits} traitChips={traitChips} traitSourceLabel={traitSourceLabel} />}

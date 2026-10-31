@@ -1,5 +1,6 @@
 "use client";
 
+import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import { useMemo, useState } from "react";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData } from "@/src/core/schemas/blocks/inventory";
@@ -106,7 +107,11 @@ export default function PreviewStep({
   const totalLevel = Math.max(1, character.classes.reduce((sum, c) => sum + c.level, 0));
   const xpCeiling = XP_LEVEL_THRESHOLDS[totalLevel] ?? XP_LEVEL_THRESHOLDS[XP_LEVEL_THRESHOLDS.length - 1];
 
-  const knownSpellRefs = useMemo(() => spellcasting.known.map((k) => k.ref), [spellcasting]);
+  // V3.1-118 : les sorts accordés partent dans la même requête de noms que les sorts connus.
+  const knownSpellRefs = useMemo(
+    () => [...spellcasting.known.map((k) => k.ref), ...sheet.grantedSpells.map((g): BlockReference => ({ kind: "rule", key: g.key }))],
+    [spellcasting, sheet.grantedSpells]
+  );
   const spellChips = useReferenceChips(worldSlug, knownSpellRefs);
 
   // Le choix de maitrise d'armes se fait a l'etape 6 (Competences,
@@ -249,6 +254,7 @@ export default function PreviewStep({
               sortedKnownSpells={sortedKnownSpells}
               spellChips={spellChips}
               spellcasting={spellcasting}
+              grantedSpells={sheet.grantedSpells}
               onTogglePrepared={togglePrepared}
             />
           )}

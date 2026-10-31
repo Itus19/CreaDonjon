@@ -57,8 +57,11 @@ export function progressionClasse(e: EntreeProgression): { lignes: LigneProgress
       if (atteint) pastilles.push({ cle: "sousclasse", genre: "sousclasse", libelle: e.sousClasse.libelle, fait: e.sousClasse.choisie });
       else aVenir.push(e.sousClasse.libelle);
     }
+    // V3.1-118 : le don de ce niveau (`<classe>.l<n>.feat`) porte l'amélioration ; sa pastille de choix la remplace.
+    const donDeNiveau = e.choix.some((c) => c.niveau === n && c.cle.endsWith(`.l${n}.feat`));
     for (const a of e.ameliorations) {
       if (a.niveau !== n) continue;
+      if (atteint && donDeNiveau) continue;
       if (atteint) pastilles.push({ cle: `amelioration:${n}`, genre: "amelioration", libelle: a.libelle, fait: a.fait });
       else aVenir.push(a.libelle);
     }

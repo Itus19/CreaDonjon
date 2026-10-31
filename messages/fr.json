@@ -2074,6 +2074,21 @@
     "choisirUn": "Choisissez-en un.",
     "compte": "{fait} / {total}",
     "dejaAcquis": "déjà acquis ailleurs",
+    "choixDon": {
+      "categories": {
+        "origin": "Origine",
+        "general": "Général",
+        "fighting-style": "Style de combat",
+        "epic-boon": "Faveur épique"
+      },
+      "prerequis": "Prérequis : {liste}",
+      "categorie": "Catégorie : {nom}"
+    },
+    "magie": {
+      "accordes": "Sorts accordés",
+      "toujoursPrepare": "toujours préparé",
+      "source": "Source : {source}"
+    },
     "choixOuvertsFiche": "{n, plural, one {Un choix reste ouvert} other {# choix restent ouverts}} : {liste}.",
     "don": "Don : {nom}",
     "compteGroupe": "{fait}/{total}",

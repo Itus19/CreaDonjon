@@ -23,6 +23,7 @@ import { SKILL_LABELS_FR } from "@/src/i18n/fr";
 import CharacterSheetHeader from "./CharacterSheetHeader";
 import ActionsTab, { type PreparedSpellView } from "./ActionsTab";
 import MagicTab, { type KnownSpellView } from "./MagicTab";
+import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import InventoryTab from "./InventoryTab";
 import TraitsTab from "./TraitsTab";
 import MasteriesTab from "./MasteriesTab";
@@ -183,9 +184,13 @@ export default function PlayableCharacterSheet({
 
   const weaponMasteryChoices = remainingChoices.filter((c) => c.kind === "weapon_mastery");
 
+  // Les sorts accordés (V3.1-118) partent dans la même requête de noms que les sorts connus.
   const knownSpellRefs = useMemo(
-    () => (spellcasting?.known ?? []).map((k) => k.ref),
-    [spellcasting]
+    () => [
+      ...(spellcasting?.known ?? []).map((k) => k.ref),
+      ...sheet.grantedSpells.map((g): BlockReference => ({ kind: "rule", key: g.key })),
+    ],
+    [spellcasting, sheet.grantedSpells]
   );
   const spellChips = useReferenceChips(worldSlug, knownSpellRefs);
 
@@ -765,6 +770,7 @@ export default function PlayableCharacterSheet({
                 sortedKnownSpells={sortedKnownSpells}
                 spellChips={spellChips}
                 spellcasting={spellcasting}
+                grantedSpells={sheet.grantedSpells}
                 onTogglePrepared={togglePrepared}
               />
             )}

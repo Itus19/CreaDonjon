@@ -672,6 +672,8 @@ export default function CharacterCreatorWizard({
                 libelleOption,
                 dejaAcquis,
                 onChoisir: choisir,
+                dons: featCatalog,
+                amelioration: { character, patchCharacter, sheet, abilityScoreCap: ruleset.characterRules?.ability_score_cap, nomClasse },
               }}
             />
           )}
@@ -704,8 +706,6 @@ export default function CharacterCreatorWizard({
               onChooseEquipmentChoices={setClassEquipmentChoices}
               hideEquipment={montee !== undefined}
               progressions={progressions.parEmplacement}
-              sheet={sheet}
-              abilityScoreCap={ruleset.characterRules?.ability_score_cap}
               plafondNiveau={plafondNiveau}
               niveauxAvant={montee ? niveauxAvant : undefined}
               controle={controle}

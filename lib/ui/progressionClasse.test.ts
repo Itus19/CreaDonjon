@@ -57,6 +57,12 @@ describe("la progression d'une classe (V3.1-51)", () => {
     expect(p.lignes.slice(0, 6).map((l) => l.etat)).toEqual(["acquis", "acquis", "nouveau", "nouveau", "nouveau", "avenir"]);
   });
 
+  it("V3.1-118 : le don de niveau remplace la pastille d'amélioration (une seule pastille, comptée une fois)", () => {
+    const p = progressionClasse({ ...base, niveau: 4, sousClasse: null, choix: [sous("rogue.l4.feat", 4)] });
+    expect(p.lignes[3].pastilles.map((x) => [x.genre, x.cle])).toEqual([["choix", "rogue.l4.feat"]]);
+    expect(p.aFaireAuDelaDuPremier).toBe(1);
+  });
+
   it("le plafond de la classe borne les lignes", () => {
     expect(progressionClasse({ ...base, maxNiveau: 10, niveau: 1, choix: [] }).lignes).toHaveLength(10);
   });

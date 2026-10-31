@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
+import type { GrantedSpell } from "@/src/core/rules/sheet";
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import type { SpellCastingBlockData } from "@/src/core/schemas/rule-blocks";
@@ -157,18 +159,24 @@ export default function MagicTab({
   sortedKnownSpells,
   spellChips,
   spellcasting,
+  grantedSpells = [],
   onTogglePrepared,
 }: {
   worldSlug: string;
   sortedKnownSpells: KnownSpellView[];
   spellChips: Map<string, ResolvedChipView>;
   spellcasting: SpellcastingBlockData;
+  /** V3.1-118 : les sorts accordés par les aptitudes, tels que la fiche du moteur les donne. */
+  grantedSpells?: readonly GrantedSpell[];
   onTogglePrepared: (key: string) => void;
 }) {
+  const t = useTranslations("creation.magie");
   const knownRuleKeys = sortedKnownSpells
     .map((s) => (s.known.ref.kind === "rule" ? s.known.ref.key : null))
     .filter((k): k is string => k !== null);
   const blocksByKey = useRuleEntryBlocks(worldSlug, knownRuleKeys);
+  // Un sort accordé déjà connu est affiché une fois, comme sort connu.
+  const accordesSeuls = grantedSpells.filter((g) => !knownRuleKeys.includes(g.key));
 
   return (
     <div className="flex flex-col gap-2 pt-3">
@@ -189,7 +197,29 @@ export default function MagicTab({
           />
         );
       })}
-      {sortedKnownSpells.length === 0 && <p className="text-sm text-ink-muted">Aucun sort connu.</p>}
+      {sortedKnownSpells.length === 0 && accordesSeuls.length === 0 && <p className="text-sm text-ink-muted">Aucun sort connu.</p>}
+      {accordesSeuls.length > 0 && (
+        <section aria-label={t("accordes")} className="flex flex-col gap-2">
+          <h3 className="text-xs font-bold uppercase tracking-widest text-ink-muted">{t("accordes")}</h3>
+          {accordesSeuls.map((g) => {
+            const chip = spellChips.get(`rule:${g.key}`);
+            const nom = chip?.found ? chip.name : g.key;
+            return (
+              <div key={`${g.featureKey}:${g.key}`} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 rounded-md border border-edge/60 bg-panel-raised px-2.5 py-2">
+                {chip?.found && chip.kind === "rule" ? (
+                  <NomDeRegle worldSlug={worldSlug} ruleKey={chip.key} className="text-sm font-semibold">
+                    {nom}
+                  </NomDeRegle>
+                ) : (
+                  <span className="text-sm font-semibold text-ink">{nom}</span>
+                )}
+                {g.alwaysPrepared && <span className="rounded-full border border-accent/50 px-1.5 text-[10px] text-accent">{t("toujoursPrepare")}</span>}
+                <span className="text-xs text-ink-muted">{t("source", { source: g.label })}</span>
+              </div>
+            );
+          })}
+        </section>
+      )}
     </div>
   );
 }

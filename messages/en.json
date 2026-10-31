@@ -2073,6 +2073,21 @@
     "choisirUn": "Choose one.",
     "compte": "{fait} / {total}",
     "dejaAcquis": "already gained elsewhere",
+    "choixDon": {
+      "categories": {
+        "origin": "Origin",
+        "general": "General",
+        "fighting-style": "Fighting style",
+        "epic-boon": "Epic boon"
+      },
+      "prerequis": "Prerequisites: {liste}",
+      "categorie": "Category: {nom}"
+    },
+    "magie": {
+      "accordes": "Granted spells",
+      "toujoursPrepare": "always prepared",
+      "source": "Source: {source}"
+    },
     "choixOuvertsFiche": "{n, plural, one {One choice is still open} other {# choices are still open}}: {liste}.",
     "don": "Feat: {nom}",
     "compteGroupe": "{fait}/{total}",
