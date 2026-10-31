@@ -718,6 +718,8 @@ export default function CharacterCreatorWizard({
               characterRules={ruleset.characterRules}
               worldSlug={worldSlug}
               rulesLoaded={Object.keys(ruleset.classes).length + Object.keys(ruleset.features).length > 0}
+              classLabel={classKeys[0] ? nomClasse(classKeys[0]) : undefined}
+              suggestedAbilities={classKeys[0] ? ruleset.classes[classKeys[0]]?.suggestedAbilities : undefined}
             />
           )}
 
