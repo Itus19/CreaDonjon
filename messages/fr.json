@@ -2000,6 +2000,89 @@
     "compte": "{fait} / {total}",
     "dejaAcquis": "déjà acquis ailleurs",
     "choixOuvertsFiche": "{n, plural, one {Un choix reste ouvert} other {# choix restent ouverts}} : {liste}.",
+    "don": "Don : {nom}",
+    "compteGroupe": "{fait}/{total}",
+    "sorts": {
+      "rechercher": "Rechercher un sort…",
+      "aucunSort": "Aucun sort ne correspond.",
+      "tous": "Tous",
+      "mineurs": "Mineurs",
+      "mineur": "Mineur",
+      "niveau": "Niv. {n}",
+      "ficheVide": "Touchez un sort pour lire sa fiche.",
+      "temps": "Temps d'incantation",
+      "portee": "Portée",
+      "duree": "Durée",
+      "concentration": "{duree} (concentration)",
+      "sansDescription": "Pas de description.",
+      "voirRegle": "Voir la fiche de règle",
+      "aucuneClasse": "Aucune des classes choisies n'incante à ce niveau.",
+      "sortsMineurs": "Sorts mineurs",
+      "sortsPrepares": "Sorts préparés ({classe}, niveau max {max})"
+    },
+    "caracIncantation": {
+      "explication": "Cette caractéristique sert au DD de sauvegarde et à l'attaque des sorts de ce trait, rien d'autre.",
+      "effet": "mod. {mod} → DD {dd}, attaque {attaque}",
+      "saClasse": "celle de votre classe",
+      "laMeilleure": "la meilleure"
+    },
+    "competence": {
+      "total": "total {total}",
+      "dejaMaitrisee": "déjà maîtrisée ({source}) : ce choix ne donnerait rien de plus",
+      "couvre": {
+        "acrobatics": "Équilibre, acrobaties, éviter une chute.",
+        "animal_handling": "Calmer, monter, deviner les intentions d'un animal.",
+        "arcana": "Savoir sur la magie, les sorts, les plans.",
+        "athletics": "Escalade, saut, natation, lutte.",
+        "deception": "Mentir, bluffer, se faire passer pour un autre.",
+        "history": "Savoir sur les événements, les peuples, les royaumes.",
+        "insight": "Percevoir les intentions et les mensonges.",
+        "intimidation": "Menacer, impressionner, forcer la main.",
+        "investigation": "Fouiller, déduire, reconstituer un indice.",
+        "medicine": "Stabiliser un mourant, diagnostiquer un mal.",
+        "nature": "Savoir sur le terrain, les plantes, les bêtes.",
+        "perception": "Repérer, entendre, remarquer l'embuscade.",
+        "performance": "Chanter, jouer, captiver un public.",
+        "persuasion": "Convaincre avec tact et bonne foi.",
+        "religion": "Savoir sur les dieux, les rites, les morts-vivants.",
+        "sleight_of_hand": "Chaparder, escamoter, manipuler discrètement.",
+        "stealth": "Se cacher, se déplacer sans bruit.",
+        "survival": "Pister, chasser, s'orienter, survivre en pleine nature."
+      }
+    },
+    "tableau": {
+      "niveau": "Niveau {n}",
+      "rien": "—"
+    },
+    "origines": {
+      "lignees": "Lignées"
+    },
+    "fiche": {
+      "naissent": "Ce qui en naît"
+    },
+    "historique": {
+      "don": "Don",
+      "competences": "Compétences",
+      "outil": "Outil",
+      "valeursPossibles": "Valeurs : {liste}",
+      "valeurs": {
+        "titre": "Valeurs de caractéristique de l'historique",
+        "total": "{total} / 3",
+        "formes": "Forme de la répartition",
+        "deuxEtUn": "+2 et +1",
+        "chacune": "+1 à chacune",
+        "chacuneFait": "+1 sur chacune des trois.",
+        "toucherDeux": "Touchez la caractéristique qui reçoit +2.",
+        "toucherUn": "Touchez maintenant celle qui reçoit +1.",
+        "fait": "Touchez une caractéristique pour la retirer ou remplacer le +1."
+      },
+      "equipement": {
+        "titre": "Équipement de l'historique",
+        "aide": "Les objets de l'un, ou les pièces de l'autre.",
+        "option": "Option {nom}",
+        "aChoisir": "À choisir : {objet}"
+      }
+    },
     "langues": {
       "thieves-cant": "Argot des voleurs",
       "druidic": "Druidique"

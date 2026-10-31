@@ -1,31 +1,41 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
-import type { BlockType, CustomTableBlockData, SpeciesTraitsBlockData } from "@/src/core/schemas/rule-blocks";
-import { renderBlockData } from "@/components/rules/blockContentRenderer";
+import type { CustomTableBlockData, SpeciesTraitsBlockData } from "@/src/core/schemas/rule-blocks";
 import { mapSpeciesModifiers, parseCustomTableFields, type CustomTableRow } from "@/src/core/rules/srdMapping";
 import { ftToM } from "@/src/core/rules/encumbrance";
 import { CREATURE_TYPE_LABELS_FR, SIZE_LABELS_FR } from "@/src/i18n/fr";
+import type { SousEtape } from "@/lib/ui/cheminCreation";
 import { useWorldRuleEntries } from "../useWorldRuleEntries";
 import { useRuleEntryBlocks, type RuleEntryBlockData } from "../useRuleEntryBlocks";
+import FicheSelection, { type LigneFiche } from "../characterCreator/FicheSelection";
 
 const ABILITY_LABELS: Record<string, string> = { str: "FOR", dex: "DEX", con: "CON", int: "INT", wis: "SAG", cha: "CHA" };
 
 interface SpeciesCardInfo {
   statsLine: string | null;
   lifespan: string | null;
-  traitsLine: string | null;
+  traits: LigneFiche[];
+}
+
+type TraitResolu = { key: string; resolved_name?: string; resolved_description?: string };
+
+/** La première phrase, pour tenir sur une ligne. */
+function premierePhrase(texte: string | undefined): string | undefined {
+  if (!texte) return undefined;
+  const fin = texte.search(/[.!?](\s|$)/);
+  return (fin === -1 ? texte : texte.slice(0, fin + 1)).trim();
 }
 
 /**
  * Type, taille, vitesse, bonus de caracteristique, esperance de vie et
- * traits d'une espece, pour les afficher directement sur son bouton (retour
- * utilisateur, V2-G1 : seule la vitesse+bonus etait visible avant de
- * cliquer). `species_traits` (type/taille/vitesse/esperance de vie/traits,
- * deja resolu cote serveur — `listRuleEntryBlocksByKeys`) plutot que
- * `custom_table` pour ces champs ; `custom_table` reste la seule source du
- * bonus de caracteristique (`mapSpeciesModifiers`, absent de
- * `species_traits`). Jamais le resume fige `ai_digest` (anglais, en pieds).
+ * traits d'une espece (retour utilisateur, V2-G1). `species_traits`
+ * (type/taille/vitesse/esperance de vie/traits, deja resolu cote serveur —
+ * `listRuleEntryBlocksByKeys`) plutot que `custom_table` pour ces champs ;
+ * `custom_table` reste la seule source du bonus de caracteristique
+ * (`mapSpeciesModifiers`, absent de `species_traits`). Jamais le resume fige
+ * `ai_digest` (anglais, en pieds).
  */
 function speciesCardInfo(blocks: RuleEntryBlockData[] | undefined): SpeciesCardInfo | null {
   const table = blocks?.find((b) => b.blockType === "custom_table");
@@ -34,16 +44,15 @@ function speciesCardInfo(blocks: RuleEntryBlockData[] | undefined): SpeciesCardI
 
   const statsParts: string[] = [];
   let lifespan: string | null = null;
-  let traitsLine: string | null = null;
+  const traits: LigneFiche[] = [];
 
   if (traitsBlock) {
     const data = traitsBlock.data as SpeciesTraitsBlockData;
-    const traits = data.traits as unknown as { key: string; resolved_name?: string }[];
     if (data.creature_type) statsParts.push(CREATURE_TYPE_LABELS_FR[data.creature_type] ?? data.creature_type);
     if (data.sizes && data.sizes.length > 0) statsParts.push(data.sizes.map((s) => SIZE_LABELS_FR[s.label] ?? s.label).join("/"));
     if (data.speed?.value !== undefined) statsParts.push(`${ftToM(data.speed.value)} m`);
     lifespan = data.lifespan ?? null;
-    if (traits.length > 0) traitsLine = traits.map((t) => t.resolved_name ?? t.key).join(", ");
+    for (const tr of data.traits as unknown as TraitResolu[]) traits.push({ nom: tr.resolved_name ?? tr.key, texte: premierePhrase(tr.resolved_description) });
   }
 
   if (table) {
@@ -59,36 +68,39 @@ function speciesCardInfo(blocks: RuleEntryBlockData[] | undefined): SpeciesCardI
     }
   }
 
-  return { statsLine: statsParts.length > 0 ? statsParts.join(" · ") : null, lifespan, traitsLine };
+  return { statsLine: statsParts.length > 0 ? statsParts.join(" · ") : null, lifespan, traits };
 }
 
 /**
- * Etape 1 (specs/wiki-liens-et-personnages.md §B8), en boutons plutot qu'un
- * menu deroulant (demande explicite, meme motif que `LevelClassesStep`) :
- * type/taille/vitesse/esperance de vie/traits directement visibles sur
- * chaque bouton (retour utilisateur, V2-G1). La fiche de l'espece de base et
- * celle de la lignee choisie restent visibles SIMULTANEMENT (retour
- * utilisateur) : la fiche de base s'affiche des qu'une espece de base est
- * choisie, les boutons de lignee apparaissent en dessous d'elle, et choisir
- * une lignee ajoute sa propre fiche encore en dessous plutot que de
- * remplacer celle de l'espece. Espece de base et lignees (sous-especes)
- * sont un seul et meme `entry_type: "species"` cote donnees (`parentSpeciesKey` les distingue,
- * meme mecanisme que `parentClassKey` pour les sous-classes) — la 5.2.1 ne
- * porte pas de type distinct pour une lignee elfique ou une ascendance
- * draconique. Le niveau "de base" (`!parentSpeciesKey`) s'affiche en premier ;
- * choisir une lignee affine `character.species` vers sa cle precise, mais
- * rien n'empeche de garder l'espece de base si elle n'a pas de lignee ou si
- * aucune ne convient.
+ * Etape 1 (specs/wiki-liens-et-personnages.md §B8). V3.1-50 : les especes en
+ * petites cartes (trois par ligne, deux quand le conteneur est etroit),
+ * dessous la fiche de la selection — traits en une ligne chacun, puis
+ * « Ce qui en nait » en pastilles qui menent aux sous-etapes.
+ *
+ * La fiche de l'espece de base et celle de la lignee choisie restent
+ * visibles SIMULTANEMENT (retour utilisateur, V2-G1) : les cartes de lignee
+ * apparaissent sous la fiche de base, et choisir une lignee ajoute sa propre
+ * fiche en dessous. Espece de base et lignees (sous-especes) sont un seul et
+ * meme `entry_type: "species"` (`parentSpeciesKey` les distingue). Les choix
+ * que l'espece fait naitre (`sousEtapes`) sont ceux de la selection entiere :
+ * ils se rangent sous la fiche de la lignee si elle est choisie, sinon sous
+ * celle de l'espece.
  */
 export default function SpeciesStep({
   worldSlug,
   character,
   patchCharacter,
+  sousEtapes,
+  onAller,
 }: {
   worldSlug: string;
   character: CharacterBlockData;
   patchCharacter: (fields: Partial<CharacterBlockData>) => void;
+  /** Les sous-étapes de l'étape Espèce, venues du chemin. */
+  sousEtapes: readonly SousEtape[];
+  onAller: (position: string) => void;
 }) {
+  const t = useTranslations("creation.origines");
   const entries = useWorldRuleEntries(worldSlug);
   const speciesEntries = entries.filter((e) => e.entryType === "species");
   const topLevel = speciesEntries.filter((e) => !e.parentSpeciesKey);
@@ -108,38 +120,35 @@ export default function SpeciesStep({
     patchCharacter({ species: { kind: "rule", key } });
   }
 
-  function detailPanel(key: string) {
-    const blocks = blocksByKey[key];
-    if (!blocks || blocks.length === 0) return null;
+  function fiche(key: string, avecNaissances: boolean) {
+    const entry = speciesEntries.find((e) => e.key === key);
+    const info = speciesCardInfo(blocksByKey[key]);
+    if (!entry) return null;
     return (
-      <div className="flex flex-col gap-2 rounded-md border border-edge/40 bg-panel-sunken p-2.5 text-sm text-ink">
-        {blocks
-          .filter((b) => b.blockType === "description" || b.blockType === "species_traits")
-          .map((b, i) => (
-            <div key={i}>{renderBlockData(b.blockType as BlockType, b.data, worldSlug)}</div>
-          ))}
-      </div>
+      <FicheSelection
+        titre={entry.name}
+        resume={[info?.statsLine, info?.lifespan].filter(Boolean).join(" · ") || null}
+        lignes={info?.traits ?? []}
+        naissent={avecNaissances ? sousEtapes : []}
+        onAller={onAller}
+      />
     );
   }
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 @lg/creation:grid-cols-3">
         {topLevel.map((e) => (
           <SpeciesButton key={e.key} entry={e} info={speciesCardInfo(blocksByKey[e.key])} isSelected={e.key === expandedTopLevelKey} onSelect={select} />
         ))}
       </div>
 
-      {expandedTopLevelKey && detailPanel(expandedTopLevelKey)}
+      {expandedTopLevelKey && fiche(expandedTopLevelKey, !lineageSelected)}
 
-      {/* Boutons de lignee sous la fiche de l'espece de base (retour
-          utilisateur, V2-G1) : choisir une lignee AJOUTE sa propre fiche en
-          dessous plutot que de remplacer celle de l'espece — les deux
-          restent visibles a la fois. */}
       {lineages.length > 0 && (
         <div className="flex flex-col gap-1.5">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Lignées</span>
-          <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+          <span className="text-xs font-bold uppercase tracking-widest text-ink-muted">{t("lignees")}</span>
+          <div className="grid grid-cols-2 gap-2 @lg/creation:grid-cols-3">
             {lineages.map((e) => (
               <SpeciesButton key={e.key} entry={e} info={speciesCardInfo(blocksByKey[e.key])} isSelected={e.key === currentKey} onSelect={select} />
             ))}
@@ -147,7 +156,7 @@ export default function SpeciesStep({
         </div>
       )}
 
-      {lineageSelected && detailPanel(currentKey)}
+      {lineageSelected && fiche(currentKey, true)}
     </div>
   );
 }
@@ -166,15 +175,14 @@ function SpeciesButton({
   return (
     <button
       type="button"
+      aria-pressed={isSelected}
       onClick={() => onSelect(entry.key)}
-      className={`flex flex-col items-start gap-0.5 rounded-lg border px-2.5 py-2 text-left transition-colors ${
+      className={`flex min-w-0 flex-col items-start gap-0.5 rounded-lg border px-2.5 py-2 text-left transition-colors ${
         isSelected ? "border-accent bg-accent/10" : "border-edge/60 bg-panel-raised hover:bg-panel"
       }`}
     >
       <span className="text-sm font-semibold text-ink">{entry.name}</span>
-      {info?.statsLine && <span className="text-[10px] text-ink-muted">{info.statsLine}</span>}
-      {info?.lifespan && <span className="text-[10px] text-ink-muted">{info.lifespan}</span>}
-      {info?.traitsLine && <span className="text-[10px] text-ink-muted">{info.traitsLine}</span>}
+      {info?.statsLine && <span className="w-full truncate text-xs text-ink-muted">{info.statsLine}</span>}
     </button>
   );
 }

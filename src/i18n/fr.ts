@@ -535,6 +535,40 @@ export const CLASS_PROFICIENCY_LABELS_FR: Record<string, string> = {
   "Calligrapher's Supplies": "Matériel de calligraphe",
 };
 
+/**
+ * V3.1-50 — Maîtrises d'outil telles que le serveur les accorde : le nom
+ * anglais du SRD, ou la consigne brute d'un choix (le jeu du Soldat). Aucune
+ * fiche de règle ne les traduit (la clé d'une maîtrise de bloc `background`
+ * est son propre libellé), d'où cette table. Complète `CLASS_PROFICIENCY_LABELS_FR`.
+ */
+export const TOOL_PROFICIENCY_LABELS_FR: Record<string, string> = {
+  "Calligrapher's Supplies": "Matériel de calligraphe",
+  "Thieves' Tools": "Outils de voleur",
+  "Herbalism Kit": "Matériel d'herboriste",
+  "Alchemist's Supplies": "Matériel d'alchimiste",
+  "Brewer's Supplies": "Matériel de brasseur",
+  "Carpenter's Tools": "Outils de charpentier",
+  "Cartographer's Tools": "Outils de cartographe",
+  "Cobbler's Tools": "Outils de cordonnier",
+  "Cook's Utensils": "Ustensiles de cuisinier",
+  "Disguise Kit": "Matériel de déguisement",
+  "Forgery Kit": "Matériel de contrefaçon",
+  "Glassblower's Tools": "Outils de souffleur de verre",
+  "Jeweler's Tools": "Outils de joaillier",
+  "Leatherworker's Tools": "Outils de maroquinier",
+  "Mason's Tools": "Outils de maçon",
+  "Navigator's Tools": "Outils de navigateur",
+  "Painter's Supplies": "Matériel de peintre",
+  "Poisoner's Kit": "Matériel d'empoisonneur",
+  "Potter's Tools": "Outils de potier",
+  "Smith's Tools": "Outils de forgeron",
+  "Tinker's Tools": "Outils de bricoleur",
+  "Weaver's Tools": "Outils de tisserand",
+  "Woodcarver's Tools": "Outils de sculpteur sur bois",
+  "Gaming Set": "Jeu",
+  'Choose one kind of Gaming Set (see "Equipment")': "Un jeu au choix",
+};
+
 /** Abreviations francaises des pieces de monnaie (onglet Inventaire, V1-C11) — la grille de monnaie du bloc Inventaire garde les codes SRD bruts (pp/gp/ep/sp/cp), non repris ici (hors perimetre de ce ticket). */
 export const CURRENCY_LABELS_FR: Record<string, string> = {
   pp: "pp",

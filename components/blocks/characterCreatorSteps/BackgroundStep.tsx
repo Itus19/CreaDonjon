@@ -3,12 +3,15 @@
 import { useState } from "react";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/blocks/inventory";
-import type { BackgroundBlockData, BackgroundEquipmentOption, BlockType } from "@/src/core/schemas/rule-blocks";
-import type { Ability, Skill } from "@/src/core/rules/sheet";
+import { useTranslations } from "next-intl";
+import type { BackgroundBlockData, BackgroundEquipmentOption } from "@/src/core/schemas/rule-blocks";
+import { ABILITIES, ABILITY_LABELS as ABILITY_NAMES, type Ability, type Skill } from "@/src/core/rules/sheet";
 import { parseBackgroundAbilityBonusChoice, type BackgroundAbilityBonusChoice } from "@/src/core/rules/backgroundAbilityBonus";
-import { CLASS_PROFICIENCY_LABELS_FR, SKILL_LABELS_FR } from "@/src/i18n/fr";
-import { renderBlockData, type EquipmentCardInteraction } from "@/components/rules/blockContentRenderer";
-import Stepper from "@/components/shared/Stepper";
+import { CURRENCY_LABELS_FR, SKILL_LABELS_FR } from "@/src/i18n/fr";
+import { libelleMaitrise } from "@/lib/ui/maitrises";
+import type { SousEtape } from "@/lib/ui/cheminCreation";
+import FicheSelection, { type LigneFiche } from "../characterCreator/FicheSelection";
+import ValeursHistorique from "../characterCreator/ValeursHistorique";
 import { useWorldRuleEntries } from "../useWorldRuleEntries";
 import { useRuleEntryBlocks, type RuleEntryBlockData } from "../useRuleEntryBlocks";
 
@@ -16,17 +19,6 @@ export interface BackgroundEquipmentChoice {
   backgroundKey: string;
   optionLabel: string;
   appliedGold: { value: number; unit: string } | null;
-}
-
-const ABILITY_LABELS: Record<string, string> = { str: "FOR", dex: "DEX", con: "CON", int: "INT", wis: "SAG", cha: "CHA" };
-
-function modifierOf(score: number): number {
-  return Math.floor((score - 10) / 2);
-}
-
-function formatMod(score: number): string {
-  const mod = modifierOf(score);
-  return `${mod >= 0 ? "+" : ""}${mod}`;
 }
 
 function findBlock<T>(blocks: RuleEntryBlockData[] | undefined, blockType: string): T | null {
@@ -43,7 +35,7 @@ function withoutAbilityBonusChoice(choices: CharacterBlockData["choices"]): Char
 
 interface BackgroundCardInfo {
   featName: string | null;
-  statsLine: string | null;
+  abilities: Ability[];
   toolLine: string | null;
   skillsLine: string | null;
 }
@@ -61,19 +53,15 @@ function backgroundCardInfo(blocks: RuleEntryBlockData[] | undefined): Backgroun
   if (!data) return null;
   return {
     featName: data.feat_name ?? null,
-    statsLine: data.ability_scores.map((a) => ABILITY_LABELS[a] ?? a.toUpperCase()).join(", "),
-    toolLine: data.tool_proficiency ? (CLASS_PROFICIENCY_LABELS_FR[data.tool_proficiency] ?? data.tool_proficiency) : null,
+    abilities: data.ability_scores.filter((a): a is Ability => (ABILITIES as readonly string[]).includes(a)),
+    toolLine: data.tool_proficiency ? libelleMaitrise({ key: data.tool_proficiency, name: data.tool_proficiency }) : null,
     skillsLine: data.skill_proficiencies.map((s) => SKILL_LABELS_FR[s as Skill] ?? s).join(", "),
   };
 }
 
 const TAG_PREFIX = "background:";
 const ABILITY_BONUS_CHOICE_KEY = "background.ability_bonus";
-const ABILITY_BONUS_CAP = 20;
-/** 3 points a repartir (regle 2024) : soit +2/+1 sur deux caracteristiques, soit +1 sur les trois — `isValidBackgroundAbilityBonusChoice` (backgroundAbilityBonus.ts) n'accepte que ces deux formes, toutes deux exactement 3 points au total. */
-const ABILITY_BONUS_BUDGET = 3;
-/** Un maximum de +2 sur une seule caracteristique (regle 2024) — jamais 3, meme si le budget le permettrait arithmetiquement. */
-const ABILITY_BONUS_MAX_PER_ABILITY = 2;
+
 const EMPTY_ABILITY_BONUS_CHOICE: BackgroundAbilityBonusChoice = { kind: "background_ability_bonus", increases: {} };
 
 /**
@@ -111,6 +99,9 @@ export default function BackgroundStep({
   choice,
   onChooseOption,
   backgroundAbilityScores,
+  valeurs,
+  sousEtapes,
+  onAller,
 }: {
   worldSlug: string;
   character: CharacterBlockData;
@@ -120,8 +111,16 @@ export default function BackgroundStep({
   choice: BackgroundEquipmentChoice | null;
   onChooseOption: (choice: BackgroundEquipmentChoice | null) => void;
   backgroundAbilityScores: Ability[] | null;
+  /** Les caractéristiques calculées par le moteur (`sheet.abilities`), pour les jetons de l'historique. */
+  valeurs: Readonly<Record<Ability, { score: number; mod: number }>>;
+  /** Les sous-étapes de l'étape Historique, venues du chemin (le don et ses choix). */
+  sousEtapes: readonly SousEtape[];
+  onAller: (position: string) => void;
 }) {
-  const entries = useWorldRuleEntries(worldSlug).filter((e) => e.entryType === "background");
+  const t = useTranslations("creation.historique");
+  const allEntries = useWorldRuleEntries(worldSlug);
+  const entries = allEntries.filter((e) => e.entryType === "background");
+  const nomDe = (key: string) => allEntries.find((e) => e.key === key)?.name;
   const blocksByKey = useRuleEntryBlocks(
     worldSlug,
     entries.map((e) => e.key)
@@ -130,15 +129,15 @@ export default function BackgroundStep({
   const currentKey = character.background?.kind === "rule" ? character.background.key : "";
   const currentBlocks = blocksByKey[currentKey];
   const backgroundData = findBlock<BackgroundBlockData>(currentBlocks, "background");
+  const currentInfo = backgroundCardInfo(currentBlocks);
 
-  // Membre choisi pour un item "au choix" (ex. Symbole sacre -> Amulette),
-  // retour utilisateur V2-G1 — indexe par `<option.label>:<index d'item>`,
-  // remis a zero au changement d'historique pour ne jamais heriter une
-  // selection d'un autre historique reutilisant les memes labels "A"/"B".
-  // Vide (cle absente) tant que le joueur n'a pas explicitement choisi
-  // (retour utilisateur suite : jamais de premier membre presuppose) — l'item
-  // reste alors un objet generique sans reference, comme avant cette
-  // fonctionnalite.
+  // Membre choisi pour un item "au choix" (ex. Symbole sacre -> Amulette, le
+  // jeu du Soldat), retour utilisateur V2-G1 — indexe par
+  // `<option.label>:<index d'item>`, remis a zero au changement d'historique
+  // pour ne jamais heriter une selection d'un autre historique reutilisant les
+  // memes labels "A"/"B". Vide (cle absente) tant que le joueur n'a pas
+  // explicitement choisi : l'item reste alors un objet generique sans
+  // reference.
   const [categorySelections, setCategorySelections] = useState<Record<string, string>>({});
 
   function select(key: string) {
@@ -184,149 +183,148 @@ export default function BackgroundStep({
     onChooseOption({ backgroundKey: currentKey, optionLabel: option.label, appliedGold: option.gold ?? null });
   }
 
-  // Clic direct sur l'encadre de choix (retour utilisateur, V2-G1 — remplace
-  // les boutons "Choisir A/B" separes) : l'encadre vient de la fiche
-  // generique (`Background()`, blockContentRenderer.tsx), cette interaction
-  // le rend cliquable uniquement ici, jamais sur une fiche de regle en
-  // lecture seule. `categoryChoice` (meme retour utilisateur, suite) laisse
-  // choisir le membre reel d'une categorie "au choix" (ex. Symbole sacre) —
-  // reapplique immediatement si l'option est deja la selection active, pour
-  // que l'inventaire reflete toujours le dernier choix sans reclic sur
-  // l'encadre.
-  const equipmentInteraction: EquipmentCardInteraction | undefined = backgroundData
-    ? {
-        isChosen: (optionLabel) => choice?.backgroundKey === currentKey && choice.optionLabel === optionLabel,
-        onSelect: (optionLabel) => {
-          const option = backgroundData.equipment_options.find((o) => o.label === optionLabel);
-          if (option) applyOption(option);
-        },
-        categoryChoice: {
-          selectedKey: (optionLabel, itemIndex) => categorySelections[`${optionLabel}:${itemIndex}`] ?? "",
-          onSelectKey: (optionLabel, itemIndex, key) => {
-            const stateKey = `${optionLabel}:${itemIndex}`;
-            const next = { ...categorySelections, [stateKey]: key };
-            setCategorySelections(next);
-            if (choice?.backgroundKey === currentKey && choice.optionLabel === optionLabel) {
-              const option = backgroundData.equipment_options.find((o) => o.label === optionLabel);
-              if (option) applyOption(option, next);
-            }
-          },
-        },
-      }
-    : undefined;
+  function chooseCategoryMember(option: BackgroundEquipmentOption, itemIndex: number, key: string) {
+    const next = { ...categorySelections, [`${option.label}:${itemIndex}`]: key };
+    setCategorySelections(next);
+    // Reapplique tout de suite si l'option est deja la selection active : l'inventaire reflete le dernier choix sans reclic.
+    if (choice?.backgroundKey === currentKey && choice.optionLabel === option.label) applyOption(option, next);
+  }
 
-  // Bonus de caracteristique de l'historique (V2-G7, regle 2024) — retour
-  // utilisateur : repartition libre par +/- (meme motif que l'achat de
-  // points, `AbilityScoreStep.tsx`) plutot qu'un choix de "mode" prealable.
-  // Un budget fixe de 3 points, plafonne a 2 par caracteristique, ne permet
-  // d'atteindre QUE les deux formes officielles une fois entierement
-  // depense (2+1+0 ou 1+1+1) — `isValidBackgroundAbilityBonusChoice` n'en
-  // accepte d'ailleurs aucune autre, jamais besoin de choisir un mode a part.
+  // Valeurs de caracteristique de l'historique (V2-G7, regle 2024) : section a
+  // part, jamais sur l'etape Caracteristiques, qui reste independante de
+  // l'historique choisi. Meme donnee qu'avant (`background.ability_bonus`) ;
+  // `ValeursHistorique` ne compose que les deux formes officielles (+2/+1,
+  // +1/+1/+1), les seules que `isValidBackgroundAbilityBonusChoice` accepte.
   const abilityChoice = parseBackgroundAbilityBonusChoice(character.choices[ABILITY_BONUS_CHOICE_KEY]) ?? EMPTY_ABILITY_BONUS_CHOICE;
-  const abilitySpent = Object.values(abilityChoice.increases).reduce((sum: number, v) => sum + (v ?? 0), 0);
-  const abilityRemaining = ABILITY_BONUS_BUDGET - abilitySpent;
 
-  function setAbilityChoice(next: BackgroundAbilityBonusChoice) {
-    patchCharacter({ choices: { ...character.choices, [ABILITY_BONUS_CHOICE_KEY]: next } });
+  function setIncreases(increases: BackgroundAbilityBonusChoice["increases"]) {
+    patchCharacter({ choices: { ...character.choices, [ABILITY_BONUS_CHOICE_KEY]: { kind: "background_ability_bonus", increases } } });
   }
 
-  function incrementAbility(ability: Ability) {
-    const current = abilityChoice.increases[ability] ?? 0;
-    if (current >= ABILITY_BONUS_MAX_PER_ABILITY || abilityRemaining <= 0) return;
-    if (character.abilities.base[ability] + current + 1 > ABILITY_BONUS_CAP) return;
-    setAbilityChoice({ kind: "background_ability_bonus", increases: { ...abilityChoice.increases, [ability]: current + 1 } });
-  }
-
-  function decrementAbility(ability: Ability) {
-    const current = abilityChoice.increases[ability] ?? 0;
-    if (current <= 0) return;
-    const increases = { ...abilityChoice.increases };
-    if (current === 1) delete increases[ability];
-    else increases[ability] = current - 1;
-    setAbilityChoice({ kind: "background_ability_bonus", increases });
-  }
+  const ligneFiche: LigneFiche[] = currentInfo
+    ? [
+        ...(currentInfo.featName ? [{ nom: t("don"), texte: currentInfo.featName }] : []),
+        ...(currentInfo.skillsLine ? [{ nom: t("competences"), texte: currentInfo.skillsLine }] : []),
+        ...(currentInfo.toolLine ? [{ nom: t("outil"), texte: currentInfo.toolLine }] : []),
+      ]
+    : [];
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 @lg/creation:grid-cols-3">
         {entries.map((e) => {
           const info = backgroundCardInfo(blocksByKey[e.key]);
+          const choisi = e.key === currentKey;
           return (
             <button
               key={e.key}
               type="button"
+              aria-pressed={choisi}
               onClick={() => select(e.key)}
-              className={`flex flex-col items-start gap-0.5 rounded-lg border px-2.5 py-2 text-left transition-colors ${
-                e.key === currentKey ? "border-accent bg-accent/10" : "border-edge/60 bg-panel-raised hover:bg-panel"
+              className={`flex min-w-0 flex-col items-start gap-0.5 rounded-lg border px-2.5 py-2 text-left transition-colors ${
+                choisi ? "border-accent bg-accent/10" : "border-edge/60 bg-panel-raised hover:bg-panel"
               }`}
             >
               <span className="text-sm font-semibold text-ink">{e.name}</span>
-              {info?.featName && <span className="text-[10px] text-ink-muted">Don : {info.featName}</span>}
-              {info?.statsLine && <span className="text-[10px] text-ink-muted">{info.statsLine}</span>}
-              {info?.toolLine && <span className="text-[10px] text-ink-muted">{info.toolLine}</span>}
-              {info?.skillsLine && <span className="text-[10px] text-ink-muted">{info.skillsLine}</span>}
+              {info?.featName && <span className="w-full truncate text-xs text-ink-muted">{info.featName}</span>}
             </button>
           );
         })}
       </div>
 
-      {currentKey && currentBlocks && currentBlocks.length > 0 && (
-        <div className="flex flex-col gap-2 rounded-md border border-edge/40 bg-panel-sunken p-2.5 text-sm text-ink">
-          {currentBlocks
-            .filter((b) => b.blockType === "description" || b.blockType === "background")
-            .map((b, i) => (
-              <div key={i}>
-                {renderBlockData(
-                  b.blockType as BlockType,
-                  b.data,
-                  worldSlug,
-                  [],
-                  b.blockType === "background" ? equipmentInteraction : undefined
-                )}
-              </div>
-            ))}
-        </div>
+      {currentKey && (
+        <FicheSelection
+          titre={entries.find((e) => e.key === currentKey)?.name ?? currentKey}
+          resume={currentInfo && currentInfo.abilities.length > 0 ? t("valeursPossibles", { liste: currentInfo.abilities.map((a) => ABILITY_NAMES[a]).join(", ") }) : null}
+          lignes={ligneFiche}
+          naissent={sousEtapes}
+          onAller={onAller}
+        />
       )}
 
       {currentKey && backgroundAbilityScores && backgroundAbilityScores.length === 3 && (
-        <div className="flex flex-col gap-2 rounded-md border border-edge/60 p-3">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-ink">Bonus de caractéristique de l&rsquo;historique</p>
-            <span className={`text-xs ${abilityRemaining > 0 ? "text-ink-muted" : "text-accent"}`}>
-              {abilityRemaining} point{abilityRemaining !== 1 ? "s" : ""} à répartir
-            </span>
-          </div>
+        <ValeursHistorique abilities={backgroundAbilityScores} valeurs={valeurs} increases={abilityChoice.increases} onChange={setIncreases} />
+      )}
 
-          {/* Meme encadre/Stepper que les caracteristiques de base
-              (`AbilityScoreStep.tsx`, achat de points) — retour utilisateur :
-              "reprendre l'esthetique des stats normales", boutons +/-. Trois
-              encadres au plus (`backgroundAbilityScores.length === 3` ci-dessus),
-              un par caracteristique CONCERNEE par cet historique. */}
-          <div className="grid grid-cols-3 gap-2">
-            {backgroundAbilityScores.map((ability) => {
-              const increase = abilityChoice.increases[ability] ?? 0;
-              const base = character.abilities.base[ability];
-              const nextScore = base + increase;
+      {currentKey && backgroundData && backgroundData.equipment_options.length > 0 && (
+        <section aria-label={t("equipement.titre")} className="flex flex-col gap-2">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-ink-muted">{t("equipement.titre")}</h3>
+            <span className="text-xs text-ink-muted">{t("equipement.aide")}</span>
+          </div>
+          <div className="grid grid-cols-1 gap-2 @lg/creation:grid-cols-2">
+            {backgroundData.equipment_options.map((option) => {
+              const choisie = choice?.backgroundKey === currentKey && choice.optionLabel === option.label;
               return (
-                <div key={ability} className="flex flex-col items-center gap-1 rounded-lg border border-edge/60 bg-panel-raised px-2 py-2.5 text-center">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-accent">{ABILITY_LABELS[ability] ?? ability.toUpperCase()}</span>
-                  <Stepper
-                    onIncrement={() => incrementAbility(ability)}
-                    onDecrement={() => decrementAbility(ability)}
-                    incrementDisabled={increase >= ABILITY_BONUS_MAX_PER_ABILITY || abilityRemaining <= 0 || base + increase + 1 > ABILITY_BONUS_CAP}
-                    decrementDisabled={increase <= 0}
-                    incrementLabel={`Augmenter ${ABILITY_LABELS[ability]}`}
-                    decrementLabel={`Diminuer ${ABILITY_LABELS[ability]}`}
-                    className="w-14"
-                  >
-                    <span className="text-xl font-bold text-ink">{nextScore}</span>
-                  </Stepper>
-                  <span className="text-xs text-ink-muted">{formatMod(nextScore)}</span>
-                </div>
+                <button
+                  key={option.label}
+                  type="button"
+                  aria-pressed={choisie}
+                  onClick={() => applyOption(option)}
+                  className={`flex flex-col gap-1 rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
+                    choisie ? "border-accent bg-accent/10" : "border-edge bg-panel-sunken hover:bg-panel-raised"
+                  }`}
+                >
+                  <span className={`font-semibold ${choisie ? "text-accent" : "text-ink"}`}>{t("equipement.option", { nom: option.label })}</span>
+                  {option.items.length > 0 && (
+                    <ul className="flex flex-col gap-0.5 text-ink-soft">
+                      {option.items.map((it, i) => {
+                        const nom = it.ref?.kind === "rule" ? (nomDe(it.ref.key) ?? it.label) : it.label;
+                        const membre = it.category_options?.length ? categorySelections[`${option.label}:${i}`] : undefined;
+                        return (
+                          <li key={i}>
+                            {it.quantity > 1 ? `${it.quantity} × ` : ""}
+                            {membre ? (nomDe(membre) ?? nom) : nom}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                  {option.gold && (
+                    <span className="text-ink-soft">
+                      {option.gold.value} {CURRENCY_LABELS_FR[option.gold.unit] ?? option.gold.unit}
+                    </span>
+                  )}
+                </button>
               );
             })}
           </div>
-        </div>
+
+          {/* Un objet « au choix » (le jeu du Soldat, le symbole sacré de l'Acolyte) : ses membres en cartes, une fois l'option retenue. */}
+          {backgroundData.equipment_options.flatMap((option) =>
+            choice?.backgroundKey === currentKey && choice.optionLabel === option.label
+              ? option.items.flatMap((it, i) =>
+                  it.category_options?.length
+                    ? [
+                        <div key={`${option.label}:${i}`} className="flex flex-col gap-1.5">
+                          <span className="text-xs text-ink-muted">{t("equipement.aChoisir", { objet: it.label })}</span>
+                          <div className="grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-2">
+                            {it.category_options.map((m) => {
+                              const cle = m.kind === "rule" ? m.key : "";
+                              const choisi = categorySelections[`${option.label}:${i}`] === cle;
+                              return (
+                                <button
+                                  key={cle}
+                                  type="button"
+                                  aria-pressed={choisi}
+                                  disabled={!cle}
+                                  onClick={() => chooseCategoryMember(option, i, cle)}
+                                  className={`rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
+                                    choisi ? "border-accent bg-accent/10 font-semibold text-accent" : "border-edge bg-panel-sunken text-ink hover:bg-panel-raised"
+                                  }`}
+                                >
+                                  {nomDe(cle) ?? cle}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>,
+                      ]
+                    : []
+                )
+              : []
+          )}
+        </section>
       )}
     </div>
   );

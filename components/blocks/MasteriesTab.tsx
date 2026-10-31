@@ -6,6 +6,7 @@ import { LANGUAGE_LABELS_FR } from "@/src/i18n/fr";
 import type { RemainingChoiceView, TraitGrantView } from "./useResolvedRuleset";
 import type { ResolvedChipView } from "./useReferenceChips";
 import { toggleChoice } from "./characterChoiceUtils";
+import { dedoublonnerMaitrises } from "@/lib/ui/maitrises";
 
 /** Langues triées par libellé FR (V1-C7), même motif que SORTED_SKILLS (`PlayableCharacterSheet`). */
 const SORTED_LANGUAGES = [...SRD_LANGUAGES].sort((a, b) => LANGUAGE_LABELS_FR[a].localeCompare(LANGUAGE_LABELS_FR[b]));
@@ -47,14 +48,14 @@ export default function MasteriesTab({
       <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Maîtrises</span>
       {proficiencies.length > 0 ? (
         <div className="flex flex-wrap gap-2">
-          {proficiencies.map((p) => (
+          {dedoublonnerMaitrises(proficiencies).map((p) => (
             <span
-              key={`${p.source}:${p.key}`}
-              title={`Source : ${p.source}`}
+              key={p.name}
+              title={`Source : ${p.sources.join(", ")}`}
               className="inline-flex items-center gap-1 rounded-full border border-edge px-2 py-0.5 text-sm text-ink"
             >
               {p.name}
-              <span className="text-[10px] text-ink-muted">· {p.source}</span>
+              <span className="text-xs text-ink-muted">· {p.sources.join(", ")}</span>
             </span>
           ))}
         </div>

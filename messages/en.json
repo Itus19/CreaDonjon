@@ -1999,6 +1999,89 @@
     "compte": "{fait} / {total}",
     "dejaAcquis": "already gained elsewhere",
     "choixOuvertsFiche": "{n, plural, one {One choice is still open} other {# choices are still open}}: {liste}.",
+    "don": "Feat: {nom}",
+    "compteGroupe": "{fait}/{total}",
+    "sorts": {
+      "rechercher": "Search a spell…",
+      "aucunSort": "No spell matches.",
+      "tous": "All",
+      "mineurs": "Cantrips",
+      "mineur": "Cantrip",
+      "niveau": "Lv. {n}",
+      "ficheVide": "Touch a spell to read its sheet.",
+      "temps": "Casting time",
+      "portee": "Range",
+      "duree": "Duration",
+      "concentration": "{duree} (concentration)",
+      "sansDescription": "No description.",
+      "voirRegle": "Open the rules entry",
+      "aucuneClasse": "None of the chosen classes casts spells at this level.",
+      "sortsMineurs": "Cantrips",
+      "sortsPrepares": "Prepared spells ({classe}, max level {max})"
+    },
+    "caracIncantation": {
+      "explication": "This ability sets the save DC and the attack of this trait's spells, nothing else.",
+      "effet": "mod. {mod} → DC {dd}, attack {attaque}",
+      "saClasse": "your class's",
+      "laMeilleure": "the best one"
+    },
+    "competence": {
+      "total": "total {total}",
+      "dejaMaitrisee": "already proficient ({source}): this choice would add nothing",
+      "couvre": {
+        "acrobatics": "Balance, tumbling, staying on your feet.",
+        "animal_handling": "Calm, ride, read the intent of an animal.",
+        "arcana": "Lore on magic, spells and the planes.",
+        "athletics": "Climbing, jumping, swimming, grappling.",
+        "deception": "Lie, bluff, pass for someone else.",
+        "history": "Lore on events, peoples and kingdoms.",
+        "insight": "Read intentions and spot lies.",
+        "intimidation": "Threaten, overawe, force a hand.",
+        "investigation": "Search, deduce, piece a clue together.",
+        "medicine": "Stabilize the dying, diagnose an ailment.",
+        "nature": "Lore on terrain, plants and beasts.",
+        "perception": "Spot, hear, notice the ambush.",
+        "performance": "Sing, play, hold an audience.",
+        "persuasion": "Convince with tact and good faith.",
+        "religion": "Lore on gods, rites and the undead.",
+        "sleight_of_hand": "Pick pockets, palm, tamper discreetly.",
+        "stealth": "Hide, move without a sound.",
+        "survival": "Track, hunt, find your way in the wild."
+      }
+    },
+    "tableau": {
+      "niveau": "Level {n}",
+      "rien": "—"
+    },
+    "origines": {
+      "lignees": "Lineages"
+    },
+    "fiche": {
+      "naissent": "What comes of it"
+    },
+    "historique": {
+      "don": "Feat",
+      "competences": "Skills",
+      "outil": "Tool",
+      "valeursPossibles": "Scores: {liste}",
+      "valeurs": {
+        "titre": "Background ability scores",
+        "total": "{total} / 3",
+        "formes": "Shape of the split",
+        "deuxEtUn": "+2 and +1",
+        "chacune": "+1 to each",
+        "chacuneFait": "+1 on each of the three.",
+        "toucherDeux": "Touch the ability that gets +2.",
+        "toucherUn": "Now touch the one that gets +1.",
+        "fait": "Touch an ability to remove it or replace the +1."
+      },
+      "equipement": {
+        "titre": "Background equipment",
+        "aide": "The items of one, or the coins of the other.",
+        "option": "Option {nom}",
+        "aChoisir": "To choose: {objet}"
+      }
+    },
     "langues": {
       "thieves-cant": "Thieves' Cant",
       "druidic": "Druidic"

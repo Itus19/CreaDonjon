@@ -1,24 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import Link from "next/link";
-import EyeIcon from "@/components/shared/EyeIcon";
+import { useState } from "react";
+import { useTranslations } from "next-intl";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { AbilityScores } from "@/src/core/schemas/blocks/abilities";
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
-import type {
-  ClassProgressionBlockData,
-  CustomTableBlockData,
-  DescriptionBlockData,
-  SpellCastingBlockData,
-  SpellcastingProgressionBlockData,
-} from "@/src/core/schemas/rule-blocks";
+import type { ClassProgressionBlockData, CustomTableBlockData, SpellcastingProgressionBlockData } from "@/src/core/schemas/rule-blocks";
 import type { Ability } from "@/src/core/rules/sheet";
 import { parseCustomTableFields, parseSpellClasses, parseSpellLevel, type CustomTableRow } from "@/src/core/rules/srdMapping";
-import { renderBlockData } from "@/components/rules/blockContentRenderer";
-import { MAGIC_SCHOOL_LABELS_FR, MAGIC_SCHOOL_COLOR_VAR } from "@/src/i18n/fr";
 import { useWorldRuleEntries } from "../useWorldRuleEntries";
 import { useRuleEntryBlocks, type RuleEntryBlockData } from "../useRuleEntryBlocks";
+import SelecteurSorts, { type CandidatSort } from "../characterCreator/SelecteurSorts";
+import FicheSort from "../characterCreator/FicheSort";
 
 function findBlock<T>(blocks: RuleEntryBlockData[] | undefined, blockType: string): T | null {
   const found = blocks?.find((b) => b.blockType === blockType);
@@ -110,199 +103,6 @@ export function spellClassesAndLevel(blocks: RuleEntryBlockData[] | undefined): 
   return { classes: parseSpellClasses(fields), level: parseSpellLevel(fields) };
 }
 
-function spellSchool(blocks: RuleEntryBlockData[] | undefined): { label: string; colorVar: string } | null {
-  const casting = findBlock<SpellCastingBlockData>(blocks, "spell_casting");
-  if (!casting) return null;
-  return {
-    label: MAGIC_SCHOOL_LABELS_FR[casting.school] ?? casting.school,
-    colorVar: MAGIC_SCHOOL_COLOR_VAR[casting.school] ?? "--link-rule",
-  };
-}
-
-function descriptionPreview(blocks: RuleEntryBlockData[] | undefined): string {
-  const data = findBlock<DescriptionBlockData>(blocks, "description");
-  const text = data?.segments.map((s) => s.text).join(" ") ?? "";
-  return text.length > 130 ? `${text.slice(0, 130)}…` : text;
-}
-
-/**
- * Ligne d'un sort (retour utilisateur, V2-G1 — remplace les encadres
- * `SpellCard` : liste dense, une ligne par sort, plutot qu'une grille de
- * cartes) : nom + badge d'ecole + niveau sur la meme ligne, aperçu du texte
- * toujours visible en dessous, description complete depliable a la
- * demande. Selectionner (bande cliquable sur toute la ligne) et deplier
- * (bouton dedie a droite) restent deux interactions separees. Le badge
- * d'ecole porte une teinte par ecole (retour utilisateur, V2-G1 — un badge
- * neutre unique etait illisible a distinguer d'un coup d'oeil) : une
- * quatrieme categorie de couleur sanctionnee (`docs/adr/0010-couleurs-
- * ecoles-de-magie.md`), jamais une valeur en dur — chaque teinte vit dans
- * `tokens.css` (`--school-<ecole>`), jamais ici.
- */
-function SpellRow({
-  worldSlug,
-  entry,
-  level,
-  isChosen,
-  canPick,
-  blocks,
-  onToggle,
-}: {
-  worldSlug: string;
-  entry: { key: string; name: string };
-  level: number | null;
-  isChosen: boolean;
-  canPick: boolean;
-  blocks: RuleEntryBlockData[] | undefined;
-  onToggle: () => void;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const school = spellSchool(blocks);
-  const preview = descriptionPreview(blocks);
-  const descriptionBlocks = blocks?.filter((b) => b.blockType === "description") ?? [];
-
-  return (
-    <div className={`flex flex-col border-b border-edge/40 last:border-b-0 ${isChosen ? "bg-accent/10" : ""}`}>
-      <div className="flex items-start gap-2 px-2.5 py-2">
-        <button
-          type="button"
-          disabled={!canPick}
-          onClick={onToggle}
-          title={isChosen ? "Cliquer pour retirer" : "Cliquer pour choisir"}
-          className={`mt-0.5 h-4 w-4 shrink-0 rounded border transition-colors disabled:cursor-not-allowed disabled:opacity-30 ${
-            isChosen ? "border-accent bg-accent" : "border-edge hover:border-accent"
-          }`}
-          aria-label={isChosen ? "Retirer ce sort" : "Choisir ce sort"}
-        />
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <Link
-              href={`/m/${worldSlug}/regles/${entry.key}`}
-              className="text-sm font-semibold no-underline hover:underline"
-              style={{ color: "var(--link-rule)" }}
-            >
-              {entry.name}
-            </Link>
-            {school && (
-              <span
-                className="rounded-full border px-1.5 py-0 text-[10px]"
-                style={{ borderColor: `var(${school.colorVar})`, color: `var(${school.colorVar})` }}
-              >
-                {school.label}
-              </span>
-            )}
-            {level !== null && <span className="mech shrink-0 text-[10px] text-ink-muted">{level === 0 ? "Mineur" : `Niv. ${level}`}</span>}
-          </div>
-          {preview && !expanded && <p className="truncate text-xs text-ink-muted">{preview}</p>}
-        </div>
-        {descriptionBlocks.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setExpanded((e) => !e)}
-            title={expanded ? "Replier" : "En savoir plus"}
-            aria-label={expanded ? "Replier" : "En savoir plus"}
-            className="shrink-0 rounded-full p-1 text-ink-muted transition-colors hover:bg-panel hover:text-accent"
-          >
-            {expanded ? "▴" : <EyeIcon open className="h-4 w-4" />}
-          </button>
-        )}
-      </div>
-      {expanded && descriptionBlocks.length > 0 && (
-        <div className="px-2.5 pb-2.5 pl-9 text-xs text-ink-muted">
-          {descriptionBlocks.map((b, i) => (
-            <div key={i}>{renderBlockData("description", b.data, worldSlug)}</div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/** Filtre par nom (retour utilisateur, V2-G1) — insensible a la casse/aux accents, meme comportement que les recherches d'objet ailleurs dans l'assistant. */
-function matchesSearch(name: string, query: string): boolean {
-  if (query.trim() === "") return true;
-  const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-  return norm(name).includes(norm(query));
-}
-
-/**
- * Liste depliable d'un pool de sorts (mineurs, ou un niveau donne) — compteur
- * bien visible ("X/Y choisis") en tete, champ de recherche par nom, puis les
- * lignes (`SpellRow`). Composant a part pour que le champ de recherche ait
- * son propre etat local sans avoir a le remonter par pool dans le parent.
- */
-function SpellPool({
-  worldSlug,
-  title,
-  countLabel,
-  chosen,
-  allowed,
-  showCounter = true,
-  pool,
-  blocksByKey,
-  level,
-  isChosenKey,
-  canPick,
-  onToggle,
-}: {
-  worldSlug: string;
-  title: string;
-  countLabel: string;
-  chosen: number;
-  allowed: number;
-  /** Le compteur combine ("Sorts : X/Y") vit une seule fois au-dessus de toutes les sections de niveau — jamais repete section par section, ce serait faux : le budget n'est jamais compte par niveau (cf. commentaire de `computeBudget`). */
-  showCounter?: boolean;
-  pool: { key: string; name: string }[];
-  blocksByKey: Record<string, RuleEntryBlockData[]>;
-  level: number | null;
-  isChosenKey: (key: string) => boolean;
-  canPick: (key: string) => boolean;
-  onToggle: (key: string) => void;
-}) {
-  const [search, setSearch] = useState("");
-  const filtered = useMemo(() => pool.filter((e) => matchesSearch(e.name, search)), [pool, search]);
-
-  return (
-    <div className="flex flex-col gap-2">
-      <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">{title}</span>
-      {showCounter && (
-        <div className="flex flex-col items-center gap-1 self-center rounded-md border border-edge/60 bg-panel-raised px-6 py-2.5">
-          <span className="text-xl font-bold text-accent">
-            {chosen}/{allowed}
-          </span>
-          <span className="text-[10px] uppercase tracking-widest text-ink-muted">{countLabel}</span>
-        </div>
-      )}
-      <input
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder={`Rechercher — ${title.toLowerCase()}…`}
-        className="w-full rounded-md border border-edge bg-transparent px-2.5 py-1.5 text-sm text-ink outline-none"
-      />
-      {/* Hauteur plafonnee a environ 5-6 sorts (retour utilisateur) — une
-          liste de 300+ sorts (Magicien 2024) restait sinon une page entiere
-          a parcourir avant d'atteindre la recherche du pool suivant. */}
-      <div className="flex max-h-80 flex-col overflow-y-auto rounded-md border border-edge/60 bg-panel-raised">
-        {filtered.length === 0 ? (
-          <p className="px-2.5 py-2 text-xs text-ink-muted">Aucun sort ne correspond.</p>
-        ) : (
-          filtered.map((e) => (
-            <SpellRow
-              key={e.key}
-              worldSlug={worldSlug}
-              entry={e}
-              level={level}
-              isChosen={isChosenKey(e.key)}
-              canPick={canPick(e.key)}
-              blocks={blocksByKey[e.key]}
-              onToggle={() => onToggle(e.key)}
-            />
-          ))
-        )}
-      </div>
-    </div>
-  );
-}
-
 /**
  * Sorts connus/prepares a la creation (point 7 du retour utilisateur) —
  * hors perimetre de specs/wiki-liens-et-personnages.md §B8, ajoute en plus
@@ -323,6 +123,8 @@ export default function SpellSelectionStep({
   spellcasting: SpellcastingBlockData;
   onUpdateSpellcasting: (data: SpellcastingBlockData) => void;
 }) {
+  const t = useTranslations("creation.sorts");
+  const [touche, setTouche] = useState<string | null>(null);
   const entries = useWorldRuleEntries(worldSlug);
   const spellEntries = entries.filter((e) => e.entryType === "spell");
   const classKeys = character.classes.filter((c) => c.class.kind === "rule" && c.class.key).map((c) => (c.class as { kind: "rule"; key: string }).key);
@@ -380,8 +182,13 @@ export default function SpellSelectionStep({
   }
 
   if (budgets.length === 0) {
-    return <p className="text-sm text-ink-muted">Aucune des classes choisies n&apos;incante à ce niveau.</p>;
+    return <p className="text-sm text-ink-muted">{t("aucuneClasse")}</p>;
   }
+
+  const candidats = (cles: readonly { key: string; name: string }[], niveauDe: (key: string) => number | null): CandidatSort[] =>
+    cles
+      .map((e) => ({ cle: e.key, nom: e.name, niveau: niveauDe(e.key) }))
+      .sort((a, b) => (a.niveau ?? 0) - (b.niveau ?? 0) || a.nom.localeCompare(b.nom));
 
   return (
     <div className="flex flex-col gap-5">
@@ -394,74 +201,47 @@ export default function SpellSelectionStep({
           const { classes, level } = spellClassesAndLevel(blocksByKey[e.key]);
           return classes.includes(budget.classKey) && level !== null && level >= 1 && level <= budget.maxSpellLevel;
         });
-        const knownCantrips = spellcasting.known.filter((k) => cantripPool.some((p) => p.key === ruleKeyOf(k.ref))).length;
-        const knownSpells = spellcasting.known.filter((k) => spellPool.some((p) => p.key === ruleKeyOf(k.ref))).length;
-        const isChosenKey = (key: string) => spellcasting.known.some((k) => k.ref.kind === "rule" && k.ref.key === key);
+        const knownCantrips = spellcasting.known.filter((k) => cantripPool.some((p) => p.key === ruleKeyOf(k.ref))).map((k) => ruleKeyOf(k.ref) ?? "");
+        const knownSpells = spellcasting.known.filter((k) => spellPool.some((p) => p.key === ruleKeyOf(k.ref))).map((k) => ruleKeyOf(k.ref) ?? "");
 
         return (
           <div key={budget.classKey} className="flex flex-col gap-4 rounded-md border border-edge/60 p-3">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">{budget.className}</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-ink-muted">{budget.className}</span>
 
             {budget.cantripsAllowed > 0 && (
-              <SpellPool
+              <SelecteurSorts
                 worldSlug={worldSlug}
-                title="Sorts mineurs"
-                countLabel="Sorts mineurs sélectionnés"
-                chosen={knownCantrips}
-                allowed={budget.cantripsAllowed}
-                pool={cantripPool}
-                blocksByKey={blocksByKey}
-                level={0}
-                isChosenKey={isChosenKey}
-                canPick={(key) => isChosenKey(key) || knownCantrips < budget.cantripsAllowed}
-                onToggle={(key) => toggleSpell(budget, key, "cantrip")}
+                titre={t("sortsMineurs")}
+                candidats={candidats(cantripPool, () => 0)}
+                blocs={blocksByKey}
+                choisis={knownCantrips}
+                max={budget.cantripsAllowed}
+                onBasculer={(key) => toggleSpell(budget, key, "cantrip")}
+                touche={touche}
+                onToucher={setTouche}
               />
             )}
 
-            {/* Une sous-section par niveau (retour utilisateur, V2-G1) : le
-                budget reste un seul total combine (le SRD ne compte jamais
-                les sorts connus par niveau), mais parcourir un seul bloc
-                plat devenait illisible des que le niveau max depassait 1
-                ou 2. */}
+            {/* Le budget reste un seul total combiné (le SRD ne compte jamais
+                les sorts connus par niveau, cf. `computeBudget`) : un sélecteur
+                pour tous les niveaux, filtrable par niveau. */}
             {budget.spellsAllowed > 0 && (
-              <div className="flex flex-col gap-4">
-                {/* Compteur combine une seule fois pour toutes les sections
-                    de niveau ci-dessous — jamais par niveau, le budget ne
-                    se compte jamais ainsi (cf. commentaire de `computeBudget`). */}
-                <div className="flex flex-col items-center gap-1 self-center rounded-md border border-edge/60 bg-panel-raised px-6 py-2.5">
-                  <span className="text-xl font-bold text-accent">
-                    {knownSpells}/{budget.spellsAllowed}
-                  </span>
-                  <span className="text-[10px] uppercase tracking-widest text-ink-muted">
-                    Sorts préparés ({budget.className}, niveau max {budget.maxSpellLevel})
-                  </span>
-                </div>
-                {Array.from({ length: budget.maxSpellLevel }, (_, i) => i + 1).map((lvl) => {
-                  const levelPool = spellPool.filter((e) => spellClassesAndLevel(blocksByKey[e.key]).level === lvl);
-                  if (levelPool.length === 0) return null;
-                  return (
-                    <SpellPool
-                      key={lvl}
-                      worldSlug={worldSlug}
-                      title={`Sorts de niveau ${lvl}`}
-                      countLabel=""
-                      showCounter={false}
-                      chosen={knownSpells}
-                      allowed={budget.spellsAllowed}
-                      pool={levelPool}
-                      blocksByKey={blocksByKey}
-                      level={lvl}
-                      isChosenKey={isChosenKey}
-                      canPick={(key) => isChosenKey(key) || knownSpells < budget.spellsAllowed}
-                      onToggle={(key) => toggleSpell(budget, key, "spell")}
-                    />
-                  );
-                })}
-              </div>
+              <SelecteurSorts
+                worldSlug={worldSlug}
+                titre={t("sortsPrepares", { classe: budget.className, max: budget.maxSpellLevel })}
+                candidats={candidats(spellPool, (key) => spellClassesAndLevel(blocksByKey[key]).level)}
+                blocs={blocksByKey}
+                choisis={knownSpells}
+                max={budget.spellsAllowed}
+                onBasculer={(key) => toggleSpell(budget, key, "spell")}
+                touche={touche}
+                onToucher={setTouche}
+              />
             )}
           </div>
         );
       })}
+      <FicheSort worldSlug={worldSlug} cle={touche} nom={spellEntries.find((e) => e.key === touche)?.name ?? touche ?? ""} blocs={touche ? blocksByKey[touche] : undefined} />
     </div>
   );
 }

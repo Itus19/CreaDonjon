@@ -21,7 +21,7 @@ import { overwriteCharacterFromWizardAction, type OverwriteCharacterFromWizardIn
 import { useWorldRuleEntries } from "./useWorldRuleEntries";
 import { useRuleEntryBlocks } from "./useRuleEntryBlocks";
 import EtapesCreation from "./characterCreator/EtapesCreation";
-import ChoixGenerique from "./characterCreator/ChoixGenerique";
+import EcranChoix from "./characterCreator/EcranChoix";
 import ApercuDirect from "./characterCreator/ApercuDirect";
 import { construireChemin, etapeDe, positionValide, voisin, type CleEtape, type SousEtape } from "@/lib/ui/cheminCreation";
 import { SRD_LANGUAGES, type LanguageKey } from "@/src/core/rules/srdMapping";
@@ -303,6 +303,9 @@ export default function CharacterCreatorWizard({
     return new Set();
   }
 
+  const caracsDeClasse = Object.values(ruleset.classes).flatMap((c) => (c.spellcasting ? [c.spellcasting.ability] : []));
+  const sousDe = (cle: CleEtape) => chemin.etapes.find((e) => e.cle === cle)?.sous ?? [];
+
   const nomClasse = (key: string) => ruleset.classes[key]?.label ?? entryName.get(key) ?? key;
   const refKey = (ref: { kind: string; key?: string } | null) => (ref && ref.kind === "rule" && ref.key ? ref.key : null);
   const especeCle = refKey(character.species as { kind: string; key?: string } | null);
@@ -412,7 +415,7 @@ export default function CharacterCreatorWizard({
           <header className="flex flex-col gap-0.5">
             <span className="text-xs text-ink-muted">{sousIci ? sousIci.source : t("etapeN", { n: indexEtape + 1 })}</span>
             <h2 id="creation-ecran" className="font-display text-lg font-bold text-ink">
-              {ici === null ? t("choixDisparu") : sousIci ? sousIci.libelle : t(`etapes.${etapeIci}`)}
+              {ici === null ? t("choixDisparu") : sousIci ? (sousIci.genre === "groupe" ? t("don", { nom: sousIci.libelle }) : sousIci.libelle) : t(`etapes.${etapeIci}`)}
             </h2>
             {ici === null && <p className="text-sm text-ink-soft">{t("choixDisparuNote")}</p>}
             {ici !== null && !sousIci && <p className="text-sm text-ink-soft">{t(`desc.${etapeIci}`)}</p>}
@@ -425,7 +428,20 @@ export default function CharacterCreatorWizard({
           )}
 
           {sousIci && (
-            <ChoixGenerique sous={sousIci} libelleOption={libelleOption(sousIci)} dejaAcquis={dejaAcquis(sousIci)} onChoisir={(v) => choisir(sousIci.cle, v)} />
+            <EcranChoix
+              sous={sousIci}
+              ctx={{
+                worldSlug,
+                sheet,
+                ouverts: openChoices,
+                caracsDeClasse,
+                blocsSorts: spellBlocks,
+                nomSort: (cle) => entryName.get(cle) ?? cle,
+                libelleOption,
+                dejaAcquis,
+                onChoisir: choisir,
+              }}
+            />
           )}
 
           {ici === "ident" && (
@@ -443,7 +459,7 @@ export default function CharacterCreatorWizard({
             </>
           )}
 
-          {ici === "espece" && <SpeciesStep worldSlug={worldSlug} character={character} patchCharacter={patchCharacter} />}
+          {ici === "espece" && <SpeciesStep worldSlug={worldSlug} character={character} patchCharacter={patchCharacter} sousEtapes={sousDe("espece")} onAller={aller} />}
 
           {ici === "classe" && (
             <LevelClassesStep
@@ -482,6 +498,9 @@ export default function CharacterCreatorWizard({
               choice={bgEquipmentChoice}
               onChooseOption={setBgEquipmentChoice}
               backgroundAbilityScores={backgroundAbilityScores}
+              valeurs={sheet.abilities}
+              sousEtapes={sousDe("histo")}
+              onAller={aller}
             />
           )}
 

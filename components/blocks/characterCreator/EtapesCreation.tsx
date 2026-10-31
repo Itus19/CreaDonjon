@@ -62,7 +62,9 @@ export default function EtapesCreation({
                     }`}
                   >
                     <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${sous.fait ? "bg-success" : "bg-accent"}`} />
-                    <span className="min-w-0 flex-1 truncate">{sous.libelle}</span>
+                    <span className="min-w-0 flex-1 truncate">
+                      {sous.genre === "groupe" ? `${t("don", { nom: sous.libelle })} · ${t("compteGroupe", { fait: sous.choisis.length, total: sous.nombre })}` : sous.libelle}
+                    </span>
                     <span className="sr-only">{sous.fait ? t("fait") : t("aFaireUn")}</span>
                   </button>
                 );
