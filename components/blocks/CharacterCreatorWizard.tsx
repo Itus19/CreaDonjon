@@ -497,7 +497,9 @@ export default function CharacterCreatorWizard({
   ) : null;
 
   async function soumettreMontee() {
-    if (!montee) return;
+    // Le bouton n'est jamais désactivé pendant l'envoi : il a le focus, et le perdre déclencherait la sauvegarde
+    // de la carte du bloc (perte de focus), qui ferait monter la version pendant la requête (409). Ce garde suffit.
+    if (!montee || busy) return;
     setBusy(true);
     setError(null);
     try {
@@ -532,6 +534,7 @@ export default function CharacterCreatorWizard({
   }
 
   async function submit() {
+    if (busy) return;
     setBusy(true);
     setError(null);
     try {
@@ -788,7 +791,8 @@ export default function CharacterCreatorWizard({
 
               <button
                 type="button"
-                disabled={busy || plafondDepasse || multiclassBloque || niveauApresTotal <= niveauAvantTotal}
+                disabled={plafondDepasse || multiclassBloque || niveauApresTotal <= niveauAvantTotal}
+                aria-disabled={busy}
                 onClick={soumettreMontee}
                 className="w-fit rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50"
               >
@@ -862,7 +866,8 @@ export default function CharacterCreatorWizard({
 
               <button
                 type="button"
-                disabled={busy || !finalName}
+                disabled={!finalName}
+                aria-disabled={busy}
                 onClick={submit}
                 className="w-fit rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50"
                 title={!finalName ? t("nomRequis") : undefined}
