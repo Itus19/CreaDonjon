@@ -54,6 +54,7 @@ const runtime = {
   attuned: [],
   pending_request: null,
   concentration: null,
+  choices_to_refresh: [],
 } satisfies RuntimeState;
 
 describe("buildActorState", () => {

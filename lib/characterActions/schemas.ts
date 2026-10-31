@@ -211,3 +211,15 @@ export const applyLevelUpSchema = z.object({
   // INTENTION : le serveur la reclampe a `isWorldAdmin`, jamais fiee au client.
   overrideMulticlassPrerequisites: z.boolean().default(false),
 });
+
+/**
+ * V3.1-119 — Répondre à un choix rouvert par un repos : `values` le rechoisit,
+ * `null` garde l'ancienne réponse. Strict : rien d'autre ne passe.
+ */
+export const refreshChoiceSchema = z
+  .object({
+    campaignId: campaignIdField,
+    key: z.string().min(1).max(200),
+    values: z.array(z.string().min(1).max(200)).min(1).max(20).nullable(),
+  })
+  .strict();

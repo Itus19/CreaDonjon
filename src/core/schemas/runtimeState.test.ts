@@ -17,7 +17,7 @@ const ETAT_AVANT_INSPIRATION = {
 describe("zRuntimeState", () => {
   it("valide un etat complet (specs/wiki-blocs.md §4.2)", () => {
     const state = { ...ETAT_AVANT_INSPIRATION, inspiration: 1 };
-    expect(zRuntimeState.parse(state)).toEqual({ ...state, pending_request: null, concentration: null, pact_slots_used: 0 });
+    expect(zRuntimeState.parse(state)).toEqual({ ...state, pending_request: null, concentration: null, pact_slots_used: 0, choices_to_refresh: [] });
   });
 
   it("relit une ligne ecrite AVANT l'inspiration, et lui donne zero", () => {
@@ -32,7 +32,12 @@ describe("zRuntimeState", () => {
       pending_request: null,
       concentration: null,
       pact_slots_used: 0,
+      choices_to_refresh: [],
     });
+  });
+
+  it("relit une ligne écrite AVANT les choix rouverts (V3.1-119) : aucun choix en attente", () => {
+    expect(zRuntimeState.parse(ETAT_AVANT_INSPIRATION).choices_to_refresh).toEqual([]);
   });
 
   it("relit une ligne ecrite AVANT la magie de pacte (V3.1-113) : aucun emplacement de pacte consomme", () => {

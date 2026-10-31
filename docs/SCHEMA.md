@@ -861,7 +861,7 @@ create unique index runtime_state_uniq on entity_runtime_state
   (entity_id, coalesce(campaign_id, '00000000-0000-0000-0000-000000000000'::uuid));
 ```
 
-Contenu : points de vie courants et temporaires, dés de vie, épuisement, expérience, usages de ressources, emplacements de sorts consommés, conditions, jets de sauvegarde contre la mort, harmonisation.
+Contenu : points de vie courants et temporaires, dés de vie, épuisement, expérience, usages de ressources, emplacements de sorts consommés, conditions, jets de sauvegarde contre la mort, harmonisation, et (V3.1-119) `choices_to_refresh`, les choix qu'un repos a rouverts et qui attendent une réponse.
 
 Séparer cette table permet au même personnage d'exister dans deux campagnes sans que ses points de vie se mélangent, et évite qu'une fiche de wiki soit modifiée quarante fois par séance.
 

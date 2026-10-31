@@ -1,4 +1,6 @@
 import "server-only";
+import type { OpenChoice, ResolvedChoices } from "@/src/core/rules/choices";
+import { choicesToRefresh, isValidRefreshAnswer, withoutRefresh } from "@/src/core/rules/choiceRefresh";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
 import type { Locale } from "@/src/i18n/request";
@@ -134,6 +136,10 @@ export interface CharacterActionContext {
   hitDiceTotals: Record<string, number>;
   /** Choix non resolus (competences/langues/maitrise d'armes) du personnage — V2-G1, necessaire au repos long pour retrouver les cles de maitrise d'armes a effacer. */
   remainingChoices: RemainingChoice[];
+  /** V3.1-119 : les choix accordés du personnage, tels que le moteur les retient (repos qui en rouvrent). */
+  openChoices: OpenChoice[];
+  /** V3.1-119 : les mêmes choix résolus avec d'AUTRES réponses, pour valider une réponse avant de l'écrire. */
+  resolveChoicesWith: (choices: CharacterBlockData["choices"]) => Promise<ResolvedChoices>;
 }
 
 /**
@@ -298,6 +304,8 @@ export async function resolveCharacterActionContext(
     sheet,
     weaponByKey,
     hitDiceTotals,
+    openChoices: grantedChoices.open,
+    resolveChoicesWith: (choices) => resolveCharacterChoices(supabase, rulesetId, assembled, choices, characterLevel, classLevels, autresAptitudes),
     remainingChoices: assembled.remainingChoices,
   };
 }
@@ -746,6 +754,13 @@ async function restTriggersPatch(
   }
 }
 
+/** V3.1-119 : la ligne du journal qui annonce les choix rouverts (« Choisir à nouveau : Terrain »). */
+function refreshNotes(ctx: CharacterActionContext, rest: "short_rest" | "long_rest"): string[] {
+  const keys = new Set(choicesToRefresh(ctx.openChoices, rest));
+  const labels = ctx.openChoices.filter((c) => keys.has(c.key)).map((c) => c.label);
+  return labels.length === 0 ? [] : [`Choisir à nouveau : ${labels.join(", ")}`];
+}
+
 function restNote(base: string, notes: readonly string[]): string {
   return notes.length === 0 ? base : `${base} — ${notes.join(" ; ")}`;
 }
@@ -795,13 +810,15 @@ export async function takeShortRest(
     // V3.1-113 : une utilisation des `short_rest_one`, et la réserve de pacte entière.
     resources: rechargeTrackers(ctx.resourcesData?.trackers ?? [], state.resources, "short"),
     pact_slots_used: 0,
+    // V3.1-119 : les choix que ce repos rouvre ; la fiche propose de les refaire, l'ancienne réponse reste.
+    choices_to_refresh: [...new Set([...state.choices_to_refresh, ...choicesToRefresh(ctx.openChoices, "short_rest")])],
   };
   const triggered = await restTriggersPatch(supabase, ctx, mergeRuntimeState(state, basePatch), "short_rest");
   await applyRuntimeStateChange(supabase, {
     entityId: params.entityId,
     campaignId: params.campaignId,
     patch: { ...basePatch, ...triggered.patch },
-    note: restNote(`Repos court : ${hpHealed} PV soignes`, triggered.notes),
+    note: restNote(`Repos court : ${hpHealed} PV soignes`, [...triggered.notes, ...refreshNotes(ctx, "short_rest")]),
     sessionId,
     actor: "player",
     actorUserId: params.actorUserId,
@@ -862,13 +879,15 @@ export async function takeLongRest(
     spell_slots_used: clearedSpellSlots(state.spell_slots_used),
     resources: rechargeTrackers(ctx.resourcesData?.trackers ?? [], state.resources, "long"),
     pact_slots_used: 0,
+    // V3.1-119 : les choix que ce repos rouvre ; la fiche propose de les refaire, l'ancienne réponse reste.
+    choices_to_refresh: [...new Set([...state.choices_to_refresh, ...choicesToRefresh(ctx.openChoices, "long_rest")])],
   };
   const triggered = await restTriggersPatch(supabase, ctx, mergeRuntimeState(state, basePatch), "long_rest");
   await applyRuntimeStateChange(supabase, {
     entityId: params.entityId,
     campaignId: params.campaignId,
     patch: { ...basePatch, ...triggered.patch },
-    note: restNote("Repos long", triggered.notes),
+    note: restNote("Repos long", [...triggered.notes, ...refreshNotes(ctx, "long_rest")]),
     sessionId,
     actor: "player",
     actorUserId: params.actorUserId,
@@ -1506,3 +1525,51 @@ export async function changeSpellSlotUsage(
 }
 
 export type { RulesetEntryRow };
+
+export type RefreshChoiceError = "not_found" | "not_refreshable" | "invalid_answer" | "version_conflict";
+
+/**
+ * V3.1-119 — Répondre à un choix qu'un repos a rouvert : `values` le rechoisit
+ * (validé par le moteur résolu AVEC la nouvelle réponse, jamais tronqué),
+ * `null` garde l'ancienne réponse. Dans les deux cas, le choix quitte la liste
+ * des choix rouverts. Un choix qui n'y est pas est refusé : on ne change pas un
+ * choix fixe par cette porte.
+ */
+export async function refreshCharacterChoice(
+  supabase: TypedClient,
+  params: { entityId: string; campaignId: string | null; key: string; values: string[] | null; actorUserId: string; locale: Locale }
+): Promise<{ ok: true } | { error: RefreshChoiceError }> {
+  const ctx = await resolveCharacterActionContext(supabase, params.entityId, params.campaignId, params.locale);
+  if (!ctx) return { error: "not_found" };
+  const state = await getEntityRuntimeState(supabase, params.entityId, params.campaignId);
+  if (!state.choices_to_refresh.includes(params.key)) return { error: "not_refreshable" };
+
+  const label = ctx.openChoices.find((c) => c.key === params.key)?.label ?? params.key;
+  if (params.values !== null) {
+    const nextChoices = { ...ctx.characterData.choices, [params.key]: params.values };
+    const resolved = await ctx.resolveChoicesWith(nextChoices);
+    if (!isValidRefreshAnswer(resolved.open.find((c) => c.key === params.key), params.values)) return { error: "invalid_answer" };
+    const written = await updateBlockWithVersionCheck(supabase, {
+      id: ctx.characterBlockRow.id,
+      expectedVersion: ctx.characterBlockRow.version,
+      display: ctx.characterBlockRow.display,
+      data: { ...ctx.characterData, choices: nextChoices } as unknown as Json,
+      visibilityLevel: ctx.characterBlockRow.visibility_level,
+      visibilityScopeId: ctx.characterBlockRow.visibility_scope_id,
+    });
+    if (written === null) return { error: "version_conflict" };
+  }
+
+  const sessionId = params.campaignId ? await getOrOpenSessionForCampaign(supabase, params.campaignId) : null;
+  await applyRuntimeStateChange(supabase, {
+    entityId: params.entityId,
+    campaignId: params.campaignId,
+    patch: { choices_to_refresh: withoutRefresh(state.choices_to_refresh, params.key) },
+    note: params.values !== null ? `${label} : choisi à nouveau` : `${label} : choix gardé`,
+    sessionId,
+    actor: "player",
+    actorUserId: params.actorUserId,
+  });
+  return { ok: true };
+}
+

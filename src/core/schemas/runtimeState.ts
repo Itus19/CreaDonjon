@@ -101,6 +101,8 @@ export const zRuntimeState = z.object({
   pending_request: zPendingRequest.nullable().default(null),
   /** V3.1-24 — `.default(null)`, même raison que `inspiration` : les lignes déjà en base n'ont pas ce champ, aucune migration SQL. */
   concentration: zConcentration.nullable().default(null),
+  /** V3.1-119 — les choix qu'un repos a rouverts (clés de `character.choices`), en attente d'une réponse. `.default([])`, même raison que `inspiration`. */
+  choices_to_refresh: z.array(z.string().min(1)).max(50).default([]),
 });
 export type RuntimeState = z.infer<typeof zRuntimeState>;
 
@@ -117,6 +119,7 @@ export function defaultRuntimeState(): RuntimeState {
     conditions: [],
     pending_request: null,
     concentration: null,
+    choices_to_refresh: [],
     death_saves: { success: 0, fail: 0 },
     attuned: [],
   };

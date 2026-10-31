@@ -9,6 +9,7 @@ import {
   rollWeaponAttack,
   rollWeaponDamage,
   takeLongRest,
+  refreshCharacterChoice,
   takeShortRest,
 } from "./characterActions";
 import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
@@ -439,5 +440,78 @@ describe.skipIf(!hasCreds)("characterActions (integration, base reelle)", () => 
     expect(apres.spell_slots_used).toEqual({});
     await takeLongRest(admin, { entityId: occultiste, campaignId, actorUserId: ownerId, locale: "fr" });
     expect((await etat(occultiste)).state.pact_slots_used).toBe(0);
+  });
+
+  it("V3.1-119 — Cercle de la Terre : un repos long rouvre le terrain, la réponse le change et la liste de sorts suit", async () => {
+    const { data: srd52, error: srdError } = await admin.from("rulesets").select("id").eq("base_system", "dnd_srd_52").eq("is_official_base", true).limit(1).single();
+    if (srdError || !srd52) throw new Error(srdError?.message ?? "aucun ruleset SRD 5.2 officiel en base");
+    // Une campagne par monde : un monde à part, supprimé à la fin.
+    const { data: monde, error: mondeError } = await admin
+      .from("worlds")
+      .insert({ name: "Monde de test 2024", slug: `integration-test-actions-2024-${Date.now()}`, owner_id: ownerId, default_ruleset_id: srd52.id })
+      .select("id")
+      .single();
+    if (mondeError || !monde) throw new Error(mondeError?.message ?? "creation monde echouee");
+    try {
+    const { data: camp, error: campError } = await admin
+      .from("campaigns")
+      .insert({ world_id: monde.id, name: "Campagne 2024", ruleset_id: srd52.id, mode: "solo" })
+      .select("id")
+      .single();
+    if (campError || !camp) throw new Error(campError?.message ?? "creation campagne echouee");
+    const { data: druide, error } = await admin
+      .from("entities")
+      .insert({ world_id: monde.id, slug: "druide-terre", name: "Druide de la Terre", entity_kind: "character", created_by: ownerId })
+      .select("id")
+      .single();
+    if (error || !druide) throw new Error(error?.message ?? "creation entite echouee");
+    const personnage = (choices: Record<string, unknown>) => ({
+      __v: 1,
+      species: { kind: "rule", key: "human" },
+      background: null,
+      classes: [{ class: { kind: "rule", key: "druid" }, level: 3, subclass: { kind: "rule", key: "circle-of-the-land-subclass" } }],
+      abilities: { method: "manual", base: { str: 10, dex: 12, con: 12, int: 10, wis: 15, cha: 10 } },
+      choices,
+      hp_method: "fixed",
+      portrait_asset_id: null,
+    });
+    // Le terrain est d'abord répondu, pour trouver sa clé telle que le moteur la nomme.
+    const { data: bloc, error: blockError } = await admin
+      .from("blocks")
+      .insert({ entity_id: druide.id, block_type: "character", display: { label: "Personnage", layout: "character" }, data: personnage({}), visibility_level: "players", created_by: ownerId })
+      .select("id")
+      .single();
+    if (blockError || !bloc) throw new Error(blockError?.message ?? "creation bloc echouee");
+    const contexte = () => resolveCharacterActionContext(admin, druide.id, camp.id, "fr");
+    const cleTerrain = (await contexte())!.openChoices.find((c) => c.key.endsWith(".land"))!.key;
+    await admin.from("blocks").update({ data: personnage({ [cleTerrain]: ["arid"] }), version: 2 }).eq("id", bloc.id);
+    const sorts = async () => (await contexte())!.sheet.grantedSpells.map((g) => g.key);
+    expect(await sorts()).toContain("burning-hands");
+
+    // Un choix pas rouvert ne se change pas par cette porte.
+    const base = { entityId: druide.id, campaignId: camp.id, actorUserId: ownerId, locale: "fr" as const };
+    expect(await refreshCharacterChoice(admin, { ...base, key: cleTerrain, values: ["polar"] })).toEqual({ error: "not_refreshable" });
+
+    await takeLongRest(admin, { entityId: druide.id, campaignId: camp.id, actorUserId: ownerId, locale: "fr" });
+    const etatApres = async () => (await getOrInitializeRuntimeState(admin, (await contexte())!, { persist: true })).state;
+    expect((await etatApres()).choices_to_refresh).toEqual([cleTerrain]);
+
+    // Une réponse hors des options est refusée, rien ne change.
+    expect(await refreshCharacterChoice(admin, { ...base, key: cleTerrain, values: ["volcanic"] })).toEqual({ error: "invalid_answer" });
+    expect(await sorts()).toContain("burning-hands");
+
+    // Terres polaires : la liste de sorts suit, et le choix quitte la liste des rouverts.
+    expect(await refreshCharacterChoice(admin, { ...base, key: cleTerrain, values: ["polar"] })).toEqual({ ok: true });
+    const apres = await sorts();
+    expect(apres).toContain("ray-of-frost");
+    expect(apres).not.toContain("burning-hands");
+    expect((await etatApres()).choices_to_refresh).toEqual([]);
+
+    // Un repos court ne rouvre pas un choix « repos long ».
+    await takeShortRest(admin, { ...base, hitDiceSpent: {} });
+    expect((await etatApres()).choices_to_refresh).toEqual([]);
+    } finally {
+      await admin.from("worlds").delete().eq("id", monde.id);
+    }
   });
 });

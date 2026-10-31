@@ -32,6 +32,8 @@ export interface RuntimeStatePatch {
   pending_request?: PendingRequest | null;
   /** V3.1-24 — même distinction que `pending_request` : `undefined` n'y touche pas, `null` rompt la concentration. */
   concentration?: Concentration | null;
+  /** V3.1-119 — liste remplacée entière, comme `conditions`. */
+  choices_to_refresh?: string[];
 }
 
 export function mergeRuntimeState(current: RuntimeState, patch: RuntimeStatePatch): RuntimeState {
@@ -49,5 +51,6 @@ export function mergeRuntimeState(current: RuntimeState, patch: RuntimeStatePatc
     attuned: patch.attuned ?? current.attuned,
     pending_request: patch.pending_request !== undefined ? patch.pending_request : current.pending_request,
     concentration: patch.concentration !== undefined ? patch.concentration : current.concentration,
+    choices_to_refresh: patch.choices_to_refresh ?? current.choices_to_refresh,
   };
 }

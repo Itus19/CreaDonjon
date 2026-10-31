@@ -28,6 +28,7 @@ function etatDeJeu(patch: Partial<RuntimeState> = {}): RuntimeState {
     attuned: [],
     pending_request: null,
     concentration: null,
+    choices_to_refresh: [],
     ...patch,
   };
 }
