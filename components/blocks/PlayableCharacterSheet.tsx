@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useId, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
+import { choixOuverts } from "@/lib/ui/cheminCreation";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData } from "@/src/core/schemas/blocks/inventory";
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
@@ -183,7 +185,10 @@ export default function PlayableCharacterSheet({
     buildChips,
     weaponMasteryChips,
     masteredWeaponKeys,
+    openChoices,
   } = useCharacterSheetContext(worldSlug, character, inventory, spellcasting);
+  const t = useTranslations("creation");
+  const aRappeler = rulesetPret ? choixOuverts(remainingChoices, openChoices, character.choices) : [];
 
   const weaponMasteryChoices = remainingChoices.filter((c) => c.kind === "weapon_mastery");
 
@@ -465,6 +470,12 @@ export default function PlayableCharacterSheet({
         concentration={runtimeState?.concentration ?? null}
         commandes={commandes}
       />
+      {/* V3.1-49 : un personnage créé avec des choix ouverts les retrouve ici (la création ne les impose pas). */}
+      {aRappeler.length > 0 && (
+        <p className="rounded-md border border-accent/50 bg-accent/10 px-3 py-1.5 text-xs text-ink">
+          {t("choixOuvertsFiche", { n: aRappeler.length, liste: aRappeler.map((c) => c.libelle).join(", ") })}
+        </p>
+      )}
 
       {/*
         V3.1-28 — la fiche suit la largeur de SA fenêtre, pas celle de l'écran :

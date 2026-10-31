@@ -3,7 +3,7 @@ import { resolveChoices, type ChoiceSource, type FeatChoiceData } from "@/src/co
 import type { ResolvedFeature } from "@/src/core/rules/sheet";
 import type { ChoiceGrant } from "@/src/core/schemas/rule-blocks/choices";
 import type { RemainingChoiceView } from "@/components/blocks/useResolvedRuleset";
-import { construireChemin, positionValide, voisin, type EntreeChemin } from "./cheminCreation";
+import { choixOuverts, construireChemin, positionValide, voisin, type EntreeChemin } from "./cheminCreation";
 
 const MAGIC_INITIATE: FeatChoiceData = {
   key: "magic-initiate",
@@ -202,3 +202,14 @@ describe("compter et parcourir", () => {
     expect(positionValide(c, "espece")).toBe(true);
   });
 });
+
+describe("les choix ouverts, rappelés sur la fiche (critère 5)", () => {
+  it("un choix accordé non répondu et un ancien choix incomplet ; ni l'imposé, ni le complet", () => {
+    const resolu = resolveChoices({ sources: [THIEVES_CANT, VERSATILE], choices: { "versatile.feat": ["tough"] }, presets: { "rogue-thieves-cant.cant": ["thieves-cant"] }, characterLevel: 1, classLevels: { rogue: 1 }, feats: FEATS });
+    expect(choixOuverts([LANGUES_PERSO, COMPETENCES_ROUBLARD], resolu.open, { "character.languages": ["elvish", "giant"], "rogue.skills": ["stealth"] })).toEqual([
+      { cle: "rogue.skills", libelle: "Roublard — compétences" },
+      { cle: "rogue-thieves-cant.language", libelle: "Une langue de plus" },
+    ]);
+  });
+});
+

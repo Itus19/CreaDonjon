@@ -223,3 +223,23 @@ export function etapeDe(chemin: Chemin, position: string): CleEtape | null {
   const cle = position.slice(2);
   return chemin.etapes.find((e) => e.sous.some((s) => s.cle === cle))?.cle ?? null;
 }
+
+/**
+ * Les choix encore ouverts, pour les rappeler sur la fiche (V3.1-49 : un
+ * choix ouvert n'empêche pas de créer, la fiche le rappelle). Même règle que
+ * le chemin : un choix imposé est fait, un ancien choix restant dont la clé
+ * est aussi un choix accordé ne compte qu'une fois.
+ */
+export function choixOuverts(
+  restants: readonly RemainingChoiceView[],
+  ouverts: readonly OpenChoice[],
+  reponses: Readonly<Record<string, unknown>>
+): { cle: string; libelle: string }[] {
+  const clesAccordees = new Set(ouverts.map((c) => c.key));
+  const anciens = restants
+    .filter((r) => !clesAccordees.has(r.id) && asKeys(reponses[r.id]).filter((v) => r.options.includes(v)).length < r.count)
+    .map((r) => ({ cle: r.id, libelle: r.label }));
+  const accordes = ouverts.filter((c) => !c.preset && c.chosen.length < c.count).map((c) => ({ cle: c.key, libelle: c.label }));
+  return [...anciens, ...accordes];
+}
+

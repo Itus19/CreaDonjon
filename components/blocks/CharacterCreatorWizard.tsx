@@ -320,7 +320,11 @@ export default function CharacterCreatorWizard({
   const sortsConnus = [...new Set([...spellcasting.known.map((k) => (k.ref.kind === "rule" ? k.ref.key : "")), ...sheet.grantedSpells.map((g) => g.key)])]
     .filter(Boolean)
     .map((k) => entryName.get(k) ?? k);
-  const traitsAffiches = [...new Set(sheet.features.filter((f) => !f.source.startsWith("class:")).map((f) => f.label))];
+  // Dons et traits : ni les aptitudes de classe, ni les paquets d'espèce et d'historique (leur clé est leur source),
+  // ni les anciens choix de compétences ou de langues (déjà dans les compétences et les langues).
+  const traitsAffiches = [
+    ...new Set(sheet.features.filter((f) => !f.source.startsWith("class:") && f.source !== "choice" && f.key !== f.source).map((f) => f.label)),
+  ];
   const languesAffichees = allLanguages.map((l) => LANGUAGE_LABELS_FR[l.key as LanguageKey] ?? (t.has(`langues.${l.key}`) ? t(`langues.${l.key}`) : l.name));
 
   // « Prénom Nom » prime sur le champ libre quand l'étape Identité est remplie (V3.1-48).
@@ -388,9 +392,9 @@ export default function CharacterCreatorWizard({
           </button>
         </div>
       )}
-      <div className="flex flex-col gap-3 @2xl/creation:flex-row">
+      <div className="flex flex-col gap-3 @lg/creation:flex-row">
         {/* Téléphone : une étape par écran, la progression au-dessus. Plus large : les étapes à gauche. */}
-        <div className="flex flex-col gap-1.5 @2xl/creation:hidden">
+        <div className="flex flex-col gap-1.5 @lg/creation:hidden">
           <div aria-hidden="true" className="flex gap-0.5">
             {chemin.etapes.map((e, i) => (
               <i key={e.cle} className={`h-1 flex-1 rounded-full ${i === indexEtape ? "bg-accent" : i < indexEtape && e.aFaire === 0 ? "bg-success" : "bg-edge"}`} />
@@ -400,7 +404,7 @@ export default function CharacterCreatorWizard({
             {t("etapeSur", { n: indexEtape + 1, total: chemin.etapes.length, nom: t(`etapes.${etapeIci}`) })}
           </p>
         </div>
-        <aside className="hidden w-56 shrink-0 @2xl/creation:block">
+        <aside className="hidden w-44 shrink-0 @lg/creation:block @3xl/creation:w-56">
           <EtapesCreation chemin={chemin} position={ici ?? ""} etapeCourante={etapeIci} onAller={aller} />
         </aside>
 

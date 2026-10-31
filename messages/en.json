@@ -1947,7 +1947,7 @@
       "apercu": "Preview"
     },
     "desc": {
-      "ident": "Who the character is, before what they can do. Nothing is required except a name to create. Languages are the sub-step just below.",
+      "ident": "Languages are the sub-step just below.",
       "espece": "The choices the species opens appear under this step.",
       "classe": "Starting level and multiclassing are set here. The subclass comes at its level.",
       "carac": "Three official methods; the result includes the background bonuses.",
@@ -1998,6 +1998,7 @@
     "choisirUn": "Choose one.",
     "compte": "{fait} / {total}",
     "dejaAcquis": "already gained elsewhere",
+    "choixOuvertsFiche": "{n, plural, one {One choice is still open} other {# choices are still open}}: {liste}.",
     "langues": {
       "thieves-cant": "Thieves' Cant",
       "druidic": "Druidic"

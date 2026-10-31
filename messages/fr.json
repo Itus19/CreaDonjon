@@ -1948,7 +1948,7 @@
       "apercu": "Aperçu"
     },
     "desc": {
-      "ident": "Qui est le personnage, avant ce qu'il sait faire. Rien d'obligatoire, sauf un nom pour créer. Les langues sont la sous-étape juste en dessous.",
+      "ident": "Les langues sont la sous-étape juste en dessous.",
       "espece": "Les choix que l'espèce fait naître apparaissent sous l'étape.",
       "classe": "Le niveau de départ et le multiclassage se règlent ici. La sous-classe vient à son niveau.",
       "carac": "Trois méthodes officielles ; le résultat s'affiche avec les bonus d'historique.",
@@ -1999,6 +1999,7 @@
     "choisirUn": "Choisissez-en un.",
     "compte": "{fait} / {total}",
     "dejaAcquis": "déjà acquis ailleurs",
+    "choixOuvertsFiche": "{n, plural, one {Un choix reste ouvert} other {# choix restent ouverts}} : {liste}.",
     "langues": {
       "thieves-cant": "Argot des voleurs",
       "druidic": "Druidique"
