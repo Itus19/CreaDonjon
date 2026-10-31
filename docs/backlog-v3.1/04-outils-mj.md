@@ -263,7 +263,7 @@ données (41 → 42, 59 → 60, 23 → 57, 58), enfin la Création (47 → 48 �
 
 ---
 
-### ☐ V3.1-52 — Création : les Caractéristiques, la suggestion puis l'échange · `M` · sans modèle IA — **prêt après 47 et 49**
+### ☑ V3.1-52 — Création : les Caractéristiques, la suggestion puis l'échange · `M` · sans modèle IA — **prêt après 47 et 49**
 
 **Modèle conseillé : Sonnet** — planche définitive ; constantes déplacées par 47.
 
@@ -287,9 +287,9 @@ données (41 → 42, 59 → 60, 23 → 57, 58), enfin la Création (47 → 48 �
   les règle pas.
 
 **Critères d'acceptation**
-- [ ] Suggestion puis échange de deux cases ; les totaux suivent.
-- [ ] Achat de points : impossible de dépasser le budget (le + se grise).
-- [ ] Tirage : aucun résultat calculé côté client (test de la route).
+- [x] Suggestion puis échange de deux cases ; les totaux suivent.
+- [x] Achat de points : impossible de dépasser le budget (le + se grise).
+- [x] Tirage : aucun résultat calculé côté client (test de la route).
 
 ---
 

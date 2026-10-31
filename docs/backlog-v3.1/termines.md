@@ -2884,3 +2884,27 @@ Opus : le noyau et la route. `dev-sonnet` : les écrans. Relu, et un correctif d
 - la sauvegarde sur perte de focus des cartes de bloc enregistre même un bloc inchangé, et fait monter sa version à chaque fois : des écritures inutiles, et un risque de 409 ailleurs ;
 - aucun test d'intégration ne couvre `applyLevelUp` ;
 - les prérequis de multiclassage s'affichent à la création sans la bloquer (le serveur ne les vérifie qu'à la montée).
+
+### V3.1-52 — Création : les Caractéristiques, la suggestion puis l'échange (31 octobre)
+
+Opus : le noyau et la route ; `dev-sonnet` : l'écran ; relu, deux retouches d'Opus.
+- **Noyau** (`lib/ui/caracteristiques.ts`, testé) :
+  - `repartirSelonPriorite` : les valeurs de la plus haute à la plus basse, dans l'ordre de la classe lu dans le ruleset ;
+  - `echangerValeurs` ;
+  - `peutAugmenter` / `peutDiminuer` : le budget et les bornes de l'achat de points, lus dans le ruleset.
+- **Tirage** : `roll-abilities` passe par `lib/characterCreator/tirageCaracteristiques.ts`, au corps strict. Un client qui envoie des valeurs est refusé (testé).
+- **Écran** :
+  - les méthodes que le ruleset propose ;
+  - « Répartir pour un clerc », puis l'échange en touchant deux cases ;
+  - six grandes cases (total, modificateur, et d'où vient le total, lus dans la fiche du moteur) ;
+  - l'achat de points avec sa jauge ;
+  - le tirage, puis la même suggestion.
+- **Retouches d'Opus** :
+  - « Valeur attribuée » prend son accent (libellé du moteur) ;
+  - les boutons du `Stepper` partagé ont un nom accessible (« Augmenter FOR »), plus « ▲ ».
+- **Vérifié au navigateur** :
+  - la suggestion pour un clerc (SAG 15), puis l'échange SAG ↔ CHA : les totaux suivent ;
+  - l'achat de points : à 27 / 27, tous les + se grisent ;
+  - le tirage : `{ worldSlug }` seul, jets du serveur, suggestion appliquée (SAG 17).
+
+*Restes* : le SRD ne donne que la caractéristique principale d'une classe (`suggested_abilities`). La suggestion place donc le reste de FOR à CHA. Un ordre complet par classe reste à saisir en données.
