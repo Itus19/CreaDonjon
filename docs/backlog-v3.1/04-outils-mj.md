@@ -113,7 +113,7 @@ données (41 → 42, 59 → 60, 23 → 57, 58), enfin la Création (47 → 48 �
 
 ---
 
-### ☐ V3.1-49 — Création : le chemin qui se ramifie (structure, aperçu, joueuse) · `L` · sans modèle IA — **prêt après 47 et 48**
+### ☑ V3.1-49 — Création : le chemin qui se ramifie (structure, aperçu, joueuse) · `L` · sans modèle IA — **prêt après 47 et 48**
 
 **Modèle conseillé : Opus** — l'écran est décidé, mais le cœur est un état de choix en cascade (un choix naît de sa source, disparaît si elle change, attend un autre choix) partagé par toutes les étapes, l'aperçu en direct et la création finale ; une erreur y casse les quatre tickets suivants. **Sonnet** pour 50 à 53, qui se branchent dessus.
 
@@ -165,11 +165,11 @@ données (41 → 42, 59 → 60, 23 → 57, 58), enfin la Création (47 → 48 �
   **Téléphone** : une étape par écran, barre de progression.
 
 **Critères d'acceptation**
-- [ ] Humain → Polyvalent → Initié à la magie → liste de sorts : la cascade naît, et disparaît si on change d'espèce.
-- [ ] Roublard : l'Expertise attend les compétences ; l'Argot des voleurs est acquis sous Classe.
-- [ ] Plus d'étape Compétences ; les langues sous Identité.
-- [ ] Une joueuse crée un personnage de niveau 5 multiclassé.
-- [ ] Un personnage avec des choix ouverts se crée, et la fiche les signale.
+- [x] Humain → Polyvalent → Initié à la magie → liste de sorts : la cascade naît, et disparaît si on change d'espèce.
+- [x] Roublard : l'Expertise attend les compétences ; l'Argot des voleurs est acquis sous Classe.
+- [x] Plus d'étape Compétences ; les langues sous Identité.
+- [x] Une joueuse crée un personnage de niveau 5 multiclassé.
+- [x] Un personnage avec des choix ouverts se crée, et la fiche les signale.
 
 ---
 

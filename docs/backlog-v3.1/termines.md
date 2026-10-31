@@ -2808,3 +2808,29 @@ Opus : schéma et serveur. `dev-sonnet` : interface.
 
 *Faille relevée en route, fermée le même jour* : dans la coquille joueur, une mention de texte ou d'Encadré vers une fiche réservée au MJ envoyait son nom et son slug. Les fiches citées sont désormais filtrées par ce que le joueur voit (registre de `SECURITE.md`, test d'intégration).
 
+
+### V3.1-49 — Création : le chemin qui se ramifie (31 octobre)
+
+Opus, de bout en bout (ADR 0068). Deux décisions de l'auteur en route : ajouter au 49 l'Expertise et l'Argot des voleurs, absents des données, et poser un sélecteur générique en attendant les sélecteurs fins du 118.
+- **Noyau** : un choix de compétence peut être une `expertise`. `resolveChoices` ne la retient que sur une compétence maîtrisée ailleurs (`otherFeatures`, ou un autre choix). Chaque source de choix porte son origine (espèce, classe, historique), et les aptitudes de classe ouvrent leurs choix au niveau de leur classe.
+- **Données** : `rogue-expertise` (deux au niveau 1, deux au niveau 6) et `rogue-thieves-cant` (Argot imposé, plus une langue). L'import accepte les choix des aptitudes de classe ; `ingest-srd` relancé le 31 octobre.
+- **Chemin** (`lib/ui/cheminCreation.ts`, pur, 16 tests) : les étapes, les sous-étapes nées de chaque source, l'ordre Précédent / Suivant et les compteurs. Il est recalculé à chaque rendu, donc un choix disparaît quand sa source change.
+- **Assistant** :
+  - étapes à gauche, écran au centre, aperçu en direct à droite (grille des 18 compétences) ;
+  - plus d'étape Compétences, les langues sous Identité ;
+  - un choix ouvert n'empêche pas de créer ;
+  - tablette sans colonne d'aperçu, téléphone avec une étape par écran et une barre de progression ;
+  - la mise en page suit la largeur du conteneur, donc de la fenêtre du MJ.
+- **Joueuse** : mêmes droits que le MJ ; `playerRestricted` et `hideAddClass` disparaissent.
+- **Fiche jouable** : un bandeau rappelle les choix ouverts.
+- **Vérifié au navigateur** :
+  - Humain → Don d'origine → Initié à la magie → Liste → Sorts mineurs (7 sorts du clerc), puis disparition en passant à Elfe ;
+  - un Guerrier 3 / Roublard 2 créé côté MJ avec 8 choix ouverts, rappelés sur la fiche, puis supprimé ;
+  - Testeuse A : niveau de départ et seconde classe accessibles, sans valider ;
+  - mise en page à 1440, 820 et 390 px.
+
+*Restes* :
+- les sélecteurs fins par genre de choix (118) ;
+- l'équipement A/B et la sous-classe en sous-étapes (50 à 53) ;
+- l'Expertise du Barde et du Rôdeur, à saisir sur le même modèle ;
+- `RemainingChoicesStep` sert encore à la montée de niveau (51).
