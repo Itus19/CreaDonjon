@@ -3,6 +3,8 @@ import {
   mapMulticlassPrerequisites,
   mapSuggestedAbilities,
   orderFromStandardArray,
+  perUnitCost,
+  perUnitWeight,
   armorAcModifier,
   armorDataFromBlock,
   backgroundFeatKeyFromBlock,
@@ -829,5 +831,18 @@ describe("orderFromStandardArray : l'ordre complet d'une classe, lu dans « Stan
   it("refuse une ligne qui n'est pas une permutation de 15, 14, 13, 12, 10, 8", () => {
     expect(() => orderFromStandardArray({ str: 15, dex: 15, con: 13, int: 10, wis: 12, cha: 8 })).toThrow(/valeurs standard/);
     expect(() => orderFromStandardArray({ str: 15, dex: 14, con: 13, int: 10, wis: 12 })).toThrow(/valeurs standard/);
+  });
+});
+
+describe("les objets vendus par lot (V3.1-53) : poids et prix à l'unité", () => {
+  it("20 flèches pour 1 po et 1 lb : 5 pc et 0,05 lb la flèche", () => {
+    expect(perUnitCost({ quantity: 1, unit: "gp" }, 20)).toEqual({ quantity: 0.05, unit: "gp" });
+    expect(perUnitWeight(1, 20)).toBe(0.05);
+  });
+  it("sans lot, ou sans valeur, rien ne change", () => {
+    expect(perUnitCost({ quantity: 2, unit: "gp" }, undefined)).toEqual({ quantity: 2, unit: "gp" });
+    expect(perUnitCost(null, 20)).toBeNull();
+    expect(perUnitWeight(null, 20)).toBeNull();
+    expect(perUnitWeight(3, undefined)).toBe(3);
   });
 });

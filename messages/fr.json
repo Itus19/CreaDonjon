@@ -1936,6 +1936,81 @@
   },
   "creation": {
     "etapesAria": "Étapes de la création",
+    "equip": {
+      "bourse": "Bourse",
+      "charge": "Charge",
+      "chargeValeur": "{porte} / {capacite} kg",
+      "ca": "CA",
+      "attaque": "Attaque",
+      "porter": "Porter : {nom}",
+      "ranger": "Ranger : {nom}",
+      "rendre": "rendre",
+      "acheter": "acheter",
+      "sousEtape": "sous-étape",
+      "prixMJ": "prix : MJ",
+      "tuile": {
+        "armure": "Armure",
+        "main": "Main principale",
+        "secondaire": "Main secondaire",
+        "vide": "vide",
+        "sansArmure": "sans armure",
+        "mainsNues": "à mains nues",
+        "libre": "libre"
+      },
+      "inventaire": {
+        "titre": "Inventaire",
+        "vide": "Rien encore : choisissez l'équipement de départ de la classe et de l'historique, ou achetez avec l'or."
+      },
+      "boutique": {
+        "titre": "Boutique",
+        "recherche": "Rechercher un objet (nom, type, propriété)…",
+        "rechercheAria": "Rechercher un objet dans la boutique",
+        "suggestions": {
+          "epee": "épée",
+          "armure": "armure",
+          "perforants": "perforants"
+        },
+        "effacer": "Effacer",
+        "chargement": "Chargement des objets…",
+        "aucun": "Aucun objet ne correspond.",
+        "lot": "{nom} (lot de {n})"
+      },
+      "type": {
+        "armure": "armure",
+        "arme": "arme",
+        "bouclier": "bouclier",
+        "objet": "objet"
+      },
+      "cat": {
+        "courante": "arme courante",
+        "guerre": "arme de guerre",
+        "distance": "à distance",
+        "corps": "de corps à corps"
+      },
+      "fiche": {
+        "ca": "CA {n}",
+        "caDex": " + Dex",
+        "caDexMax": " + Dex (max {n})",
+        "bouclier": "+{n} CA · occupe une main",
+        "force": "For {n} requise",
+        "discretion": "Discrétion : désavantage",
+        "polyvalente": "polyvalente ({des})",
+        "portee": "portée {n} m",
+        "botte": "botte : {nom}"
+      },
+      "hauteNiveau": {
+        "titre": "Départ au niveau {niveau}",
+        "fixe": "{or} po",
+        "jet": "{count}d{faces} × {mult} po (jet du serveur)",
+        "lancer": "Lancer (serveur)",
+        "recevoir": "Recevoir l'or",
+        "resultat": "Jet du serveur : {jets} → {or} po versés dans la bourse.",
+        "resultatFixe": "{or} po versés dans la bourse.",
+        "echec": "Le jet n'a pas pu être fait. Réessayez.",
+        "retire": "Le niveau a changé : {or} po du palier précédent ont été retirés de la bourse.",
+        "magique": "Objets magiques ({rarete}) : {choisis} / {count}"
+      }
+    },
     "etapes": {
       "ident": "Identité",
       "espece": "Espèce",

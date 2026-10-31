@@ -1275,6 +1275,8 @@ function itemPropertiesBlock(entry: SrdRecord, sourceAttribution: string): Entry
     weight: weight !== null ? quantity(weight, "lb") : undefined,
     cost: cost ? quantity(cost.quantity, cost.unit) : undefined,
     rarity,
+    // V3.1-53 : un lot (20 fleches pour 1 po et 1 lb) ; poids et prix restent ceux du lot.
+    bundle_size: typeof entry.quantity === "number" && entry.quantity > 1 ? entry.quantity : undefined,
     requires_attunement: requiresAttunement,
     attunement_restriction: attunementRestriction,
     category,

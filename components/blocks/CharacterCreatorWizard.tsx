@@ -7,7 +7,7 @@ import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData } from "@/src/core/schemas/blocks/inventory";
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
 import { useCharacterSheetContext } from "./useCharacterSheetContext";
-import InventoryTab from "./InventoryTab";
+import EquipmentStep, { type OrDepart } from "./characterCreatorSteps/EquipmentStep";
 import AbilityScoreStep, { EMPTY_ABILITY_POOL_ASSIGNMENT, type AbilityPoolAssignment } from "./characterCreatorSteps/AbilityScoreStep";
 import LevelClassesStep, { type ClassEquipmentChoiceState, type ControlePrerequis } from "./characterCreatorSteps/LevelClassesStep";
 import CreationHpRollStep, { type CreationHpGrant, type IntentionsPointsDeVie } from "./characterCreatorSteps/CreationHpRollStep";
@@ -204,6 +204,8 @@ export default function CharacterCreatorWizard({
   const [abilityPool, setAbilityPool] = useState<AbilityPoolAssignment>(EMPTY_ABILITY_POOL_ASSIGNMENT);
   const [bgEquipmentChoice, setBgEquipmentChoice] = useState<BackgroundEquipmentChoice | null>(null);
   const [classEquipmentChoices, setClassEquipmentChoices] = useState<(ClassEquipmentChoiceState | null)[]>([]);
+  // L'or du départ à haut niveau déjà versé : revenir sur l'étape ne relance pas le dé (V3.1-53).
+  const [orDepart, setOrDepart] = useState<OrDepart | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -753,19 +755,24 @@ export default function CharacterCreatorWizard({
           )}
 
           {ici === "equip" && (
-            <InventoryTab
+            <EquipmentStep
               worldSlug={worldSlug}
               inventory={inventory}
               onUpdateInventory={setInventory}
+              allEntries={allEntries}
+              ca={sheet.ac.value}
+              encumbrance={sheet.encumbrance}
               strMod={sheet.abilities.str.mod}
               dexMod={sheet.abilities.dex.mod}
               proficiencyBonus={sheet.proficiencyBonus}
-              isMonk={isMonk}
               weaponByKey={weaponByKey}
               equipment={equipment}
               weight={weight}
               cost={cost}
-              encumbrance={sheet.encumbrance}
+              characterRules={ruleset.characterRules}
+              niveauTotal={niveauApresTotal}
+              orDepart={orDepart}
+              onChangeOrDepart={setOrDepart}
             />
           )}
 

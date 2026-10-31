@@ -554,6 +554,22 @@ export function costFromQuantity(quantity: Quantity | undefined): ItemCost | nul
 }
 
 /**
+ * V3.1-53 — Un objet vendu par lot (SRD : 20 flèches pour 1 po et 1 lb,
+ * `bundle_size` du bloc `item_properties`) : l'inventaire compte des UNITÉS
+ * (« 20 × Flèches »), donc la charge et le remboursement lisent le poids et le
+ * prix d'une unité. Sans lot, la valeur est rendue telle quelle.
+ */
+export function perUnitWeight(weight: number | null, bundleSize: number | undefined): number | null {
+  if (weight === null || !bundleSize || bundleSize <= 1) return weight;
+  return weight / bundleSize;
+}
+
+export function perUnitCost(cost: ItemCost | null, bundleSize: number | undefined): ItemCost | null {
+  if (cost === null || !bundleSize || bundleSize <= 1) return cost;
+  return { quantity: cost.quantity / bundleSize, unit: cost.unit };
+}
+
+/**
  * Niveau d'un sort (0 = tour de magie, 1-9 sinon) — champ `level` partage par
  * les entrees `Spells` du SRD, identique en forme entre 2014 et 2024. `null`
  * si absent (contenu maison sans niveau renseigne).

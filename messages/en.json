@@ -1935,6 +1935,81 @@
   },
   "creation": {
     "etapesAria": "Creation steps",
+    "equip": {
+      "bourse": "Purse",
+      "charge": "Load",
+      "chargeValeur": "{porte} / {capacite} kg",
+      "ca": "AC",
+      "attaque": "Attack",
+      "porter": "Wear: {nom}",
+      "ranger": "Stow: {nom}",
+      "rendre": "return",
+      "acheter": "buy",
+      "sousEtape": "sub-step",
+      "prixMJ": "price: GM",
+      "tuile": {
+        "armure": "Armor",
+        "main": "Main hand",
+        "secondaire": "Off hand",
+        "vide": "empty",
+        "sansArmure": "no armor",
+        "mainsNues": "bare hands",
+        "libre": "free"
+      },
+      "inventaire": {
+        "titre": "Inventory",
+        "vide": "Nothing yet: pick the starting equipment of the class and background, or buy with gold."
+      },
+      "boutique": {
+        "titre": "Shop",
+        "recherche": "Search an item (name, type, property)…",
+        "rechercheAria": "Search an item in the shop",
+        "suggestions": {
+          "epee": "sword",
+          "armure": "armor",
+          "perforants": "piercing"
+        },
+        "effacer": "Clear",
+        "chargement": "Loading items…",
+        "aucun": "No item matches.",
+        "lot": "{nom} (pack of {n})"
+      },
+      "type": {
+        "armure": "armor",
+        "arme": "weapon",
+        "bouclier": "shield",
+        "objet": "item"
+      },
+      "cat": {
+        "courante": "simple weapon",
+        "guerre": "martial weapon",
+        "distance": "ranged",
+        "corps": "melee"
+      },
+      "fiche": {
+        "ca": "AC {n}",
+        "caDex": " + Dex",
+        "caDexMax": " + Dex (max {n})",
+        "bouclier": "+{n} AC · takes a hand",
+        "force": "Str {n} required",
+        "discretion": "Stealth: disadvantage",
+        "polyvalente": "versatile ({des})",
+        "portee": "range {n} m",
+        "botte": "mastery: {nom}"
+      },
+      "hauteNiveau": {
+        "titre": "Starting at level {niveau}",
+        "fixe": "{or} gp",
+        "jet": "{count}d{faces} × {mult} gp (server roll)",
+        "lancer": "Roll (server)",
+        "recevoir": "Receive the gold",
+        "resultat": "Server roll: {jets} → {or} gp added to the purse.",
+        "resultatFixe": "{or} gp added to the purse.",
+        "echec": "The roll could not be made. Try again.",
+        "retire": "The level changed: {or} gp from the previous tier were taken from the purse.",
+        "magique": "Magic items ({rarete}): {choisis} / {count}"
+      }
+    },
     "etapes": {
       "ident": "Identity",
       "espece": "Species",

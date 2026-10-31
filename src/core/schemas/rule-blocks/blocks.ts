@@ -232,6 +232,8 @@ export const zItemPropertiesBlockData = z.object({
   weight: zQuantity.optional(),
   cost: zQuantity.optional(),
   rarity: z.string().optional(),
+  /** V3.1-53 : objet vendu par lot (20 flèches) ; `weight` et `cost` sont ceux du lot entier. */
+  bundle_size: z.number().int().min(2).optional(),
   requires_attunement: z.boolean().optional(),
   attunement_restriction: z.string().optional(),
   category: z.string().optional(),

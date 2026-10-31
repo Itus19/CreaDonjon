@@ -41,6 +41,8 @@ import {
   parseCustomTableFields,
   parseItemCost,
   parseItemWeight,
+  perUnitCost,
+  perUnitWeight,
   parseSpellClasses,
   parseSpellLevel,
   parseWeaponData,
@@ -1040,10 +1042,12 @@ export async function resolveEquipmentData(
 
     armor[key] = found ? (found.armor ? armorDataFromBlock(found.armor) : parseArmorData(found.fields)) : null;
     weapon[key] = found ? (found.weapon ? weaponDataFromBlock(found.weapon) : parseWeaponData(found.fields)) : null;
+    // V3.1-53 : un objet vendu par lot pèse et coûte à l'unité, l'inventaire comptant des unités.
+    const lot = found?.itemProperties?.bundle_size;
     const dedicatedWeight = found?.weapon?.weight ?? found?.armor?.weight ?? found?.itemProperties?.weight;
-    weight[key] = found ? (dedicatedWeight !== undefined ? weightFromQuantity(dedicatedWeight) : parseItemWeight(found.fields)) : null;
+    weight[key] = found ? perUnitWeight(dedicatedWeight !== undefined ? weightFromQuantity(dedicatedWeight) : parseItemWeight(found.fields), lot) : null;
     const dedicatedCost = found?.weapon?.cost ?? found?.armor?.cost ?? found?.itemProperties?.cost;
-    cost[key] = found ? (dedicatedCost !== undefined ? costFromQuantity(dedicatedCost) : parseItemCost(found.fields)) : null;
+    cost[key] = found ? perUnitCost(dedicatedCost !== undefined ? costFromQuantity(dedicatedCost) : parseItemCost(found.fields), lot) : null;
   }
 
   return { armor, weapon, weight, cost };
@@ -1092,7 +1096,7 @@ export async function resolveEquipmentWeight(
     keys.map(async (key) => {
       const found = await fetchEquipmentBlocks(supabase, rulesetId, key);
       const dedicated = found?.weapon?.weight ?? found?.armor?.weight ?? found?.itemProperties?.weight;
-      result[key] = found ? (dedicated !== undefined ? weightFromQuantity(dedicated) : parseItemWeight(found.fields)) : null;
+      result[key] = found ? perUnitWeight(dedicated !== undefined ? weightFromQuantity(dedicated) : parseItemWeight(found.fields), found.itemProperties?.bundle_size) : null;
     })
   );
   return result;
@@ -1109,7 +1113,7 @@ export async function resolveEquipmentCost(
     keys.map(async (key) => {
       const found = await fetchEquipmentBlocks(supabase, rulesetId, key);
       const dedicated = found?.weapon?.cost ?? found?.armor?.cost ?? found?.itemProperties?.cost;
-      result[key] = found ? (dedicated !== undefined ? costFromQuantity(dedicated) : parseItemCost(found.fields)) : null;
+      result[key] = found ? perUnitCost(dedicated !== undefined ? costFromQuantity(dedicated) : parseItemCost(found.fields), found.itemProperties?.bundle_size) : null;
     })
   );
   return result;
