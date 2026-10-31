@@ -82,3 +82,4 @@ Issue : **accepté** (tel quel) · **corrigé** (retouche locale par Opus) · **
 | 2026-10-26 | V3.1-147 (Repaire et défenses, interface) | dev-sonnet | 242 576 | corrigé | Conforme au plan, logique pure testée, clés vides jamais écrites. Opus : un commentaire de documentation déplacé ; schéma, serveur et tests d'intégration faits en direct. |
 | 2026-10-26 | V3.1-146 (Musique, position YouTube) | dev-sonnet | 272 004 | accepté | Relevé vivant seulement en lecture, contexte séparé pour ne pas redessiner la radio, bornes testées. A dit ce qui reste (durée perdue au rechargement). |
 
+| 2026-10-31 | V3.1-49 (planche de l'assistant de création) | aide-haiku | 59 052 | accepté | Section seule, classes recopiées des composants, approximations signalées ; a mis en doute à juste titre la place de la liste de sorts (elle est bien sous Espèce dans la cascade de l'Humain). |
