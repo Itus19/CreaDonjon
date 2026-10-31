@@ -136,7 +136,7 @@ describe("characterSheet — cas dores (specs/wiki-liens-et-personnages.md §B7)
     // 12 (assignee) + 2 (espece, couche 2) + 1 (ASI, couche 5) = 15
     expect(sheet.abilities.con.score).toBe(15);
     expect(sheet.abilities.con.sources).toEqual([
-      { label: "Valeur attribuee", value: 12 },
+      { label: "Valeur attribuée", value: 12 },
       { label: "Espece : nain", value: 2 },
       { label: "ASI (Guerrier niv. 4)", value: 1 },
     ]);

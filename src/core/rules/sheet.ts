@@ -526,7 +526,7 @@ export function characterSheet(
       `ability.${ability}`,
       allModifiers,
       build.abilities.assigned[ability],
-      "Valeur attribuee",
+      "Valeur attribuée",
     );
     // V3.1-115 : le plafond du ruleset, sauf si un objet FIXE la valeur (« Force 19 »), qui peut le dépasser.
     const cap = ruleset.characterRules?.ability_score_cap;
