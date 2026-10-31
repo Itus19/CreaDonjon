@@ -2860,3 +2860,27 @@ Opus : le noyau et les données ; `dev-sonnet` : les écrans ; relu et corrigé 
 *Restes* :
 - la double « Lance » de la vérification du 11 octobre n'a pas été reproduite ; le dédoublonnage la couvre, mais le serveur pousse toujours une ligne par source ;
 - les vitesses d'espèce s'écrivent « 9.1 m » (point décimal), comme avant.
+
+### V3.1-51 — Création : la Classe, et le même écran pour monter de niveau (31 octobre)
+
+Opus : le noyau et la route. `dev-sonnet` : les écrans. Relu, et un correctif d'Opus.
+- **Noyau** :
+  - chaque choix ouvert porte le niveau qui l'ouvre et sa classe (`atLevel`, `classKey`), et les sous-étapes du chemin aussi ;
+  - `progressionClasse` (pure) donne une ligne par niveau (acquis, atteint, nouveau, à venir) avec ses pastilles (choix, sous-classe, amélioration) et le compte « Choix de niveau · n à faire » ;
+  - `sousEtapesNouvelles` réduit la montée de niveau à ce qui change.
+- **« Lancer tous »** : `roll-hp` lance plusieurs dés de vie en un appel. Son corps est strict : un client qui envoie un résultat est refusé (`lib/characterCreator/desDeVie.ts`, testé).
+- **Écrans** :
+  - les classes en emplacements, avec les prérequis et le plafond du ruleset ;
+  - la progression avec ses pastilles ;
+  - les Points de vie ligne par ligne ;
+  - la montée de niveau dans le même assistant : classe existante ou nouvelle, plusieurs niveaux d'un coup, aperçu avant → après, UNE écriture (`level-up`, PV en intentions).
+- **Suppressions** : `LevelUpWizard.tsx`, `HpRollStep.tsx` et `RemainingChoicesStep.tsx` n'existent plus.
+- **Correctif d'Opus** : la validation de la montée renvoyait 409. Le bouton se désactivait pendant l'envoi ; le focus quittait alors la carte du bloc, dont la sauvegarde sur perte de focus faisait monter la version pendant la requête. Le bouton n'est plus désactivé, un garde empêche le double envoi.
+- **Vérifié au navigateur** :
+  - Clerc 3 / Guerrier 2 : deux emplacements, niveau 5, pastilles « compétences » (ligne 1) et « Sous-classe » (ligne 3), « Choix de niveau · 1 à faire » ;
+  - montée de 3 niveaux en ajoutant une classe (Moine) : aperçu « Niveau 8 → 11 », une seule écriture, 200, PV en moyenne calculés par le serveur.
+
+*Restes* :
+- la sauvegarde sur perte de focus des cartes de bloc enregistre même un bloc inchangé, et fait monter sa version à chaque fois : des écritures inutiles, et un risque de 409 ailleurs ;
+- aucun test d'intégration ne couvre `applyLevelUp` ;
+- les prérequis de multiclassage s'affichent à la création sans la bloquer (le serveur ne les vérifie qu'à la montée).

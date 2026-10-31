@@ -221,7 +221,7 @@ données (41 → 42, 59 → 60, 23 → 57, 58), enfin la Création (47 → 48 �
 
 ---
 
-### ☐ V3.1-51 — Création : la Classe, et le même écran pour monter de niveau · `L` · sans modèle IA — **prêt après 47 et 49**
+### ☑ V3.1-51 — Création : la Classe, et le même écran pour monter de niveau · `L` · sans modèle IA — **prêt après 47 et 49**
 
 **Modèle conseillé : Sonnet** — planche définitive ; règles fournies par 47.
 
@@ -256,10 +256,10 @@ données (41 → 42, 59 → 60, 23 → 57, 58), enfin la Création (47 → 48 �
 - **Joueuse** : niveau de départ et multiclassage libres (voir 49).
 
 **Critères d'acceptation**
-- [ ] Clerc 3 / Guerrier 2 : deux emplacements, niveau de personnage 5, choix de chaque ligne atteinte en pastilles.
-- [ ] Monter de 3 niveaux d'un coup en ajoutant une classe ; aperçu avant → après ; une seule écriture.
-- [ ] `LevelUpWizard.tsx` n'existe plus ; aucun import restant.
-- [ ] « Lancer tous » : les valeurs viennent du serveur (test de la route : le client n'envoie aucun résultat).
+- [x] Clerc 3 / Guerrier 2 : deux emplacements, niveau de personnage 5, choix de chaque ligne atteinte en pastilles.
+- [x] Monter de 3 niveaux d'un coup en ajoutant une classe ; aperçu avant → après ; une seule écriture.
+- [x] `LevelUpWizard.tsx` n'existe plus ; aucun import restant.
+- [x] « Lancer tous » : les valeurs viennent du serveur (test de la route : le client n'envoie aucun résultat).
 
 ---
 
