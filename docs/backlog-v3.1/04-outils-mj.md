@@ -173,7 +173,7 @@ données (41 → 42, 59 → 60, 23 → 57, 58), enfin la Création (47 → 48 �
 
 ---
 
-### ☐ V3.1-50 — Création : Origines, Historique et un seul sélecteur de sorts · `L` · sans modèle IA — **prêt après 49**
+### ☑ V3.1-50 — Création : Origines, Historique et un seul sélecteur de sorts · `L` · sans modèle IA — **prêt après 49**
 
 **Modèle conseillé : Sonnet** — planches définitives.
 
@@ -214,10 +214,10 @@ données (41 → 42, 59 → 60, 23 → 57, 58), enfin la Création (47 → 48 �
   cartes d'équipement s'empilent.
 
 **Critères d'acceptation**
-- [ ] Un seul composant de sélection de sorts, utilisé par l'étape Sorts et par Initié à la magie (aucun doublon).
-- [ ] Sens aiguisés sur une compétence déjà maîtrisée affiche « ce choix ne donnerait rien de plus ».
-- [ ] L'effet chiffré de la caractéristique d'incantation suit les valeurs de caractéristiques en direct.
-- [ ] Maîtrises sans doublon (« Lance » en double), toutes en français (outil de l'Acolyte), y compris la maîtrise d'outil du Soldat (vu par la vérification du 11 octobre).
+- [x] Un seul composant de sélection de sorts, utilisé par l'étape Sorts et par Initié à la magie (aucun doublon).
+- [x] Sens aiguisés sur une compétence déjà maîtrisée affiche « ce choix ne donnerait rien de plus ».
+- [x] L'effet chiffré de la caractéristique d'incantation suit les valeurs de caractéristiques en direct.
+- [x] Maîtrises sans doublon (« Lance » en double), toutes en français (outil de l'Acolyte), y compris la maîtrise d'outil du Soldat (vu par la vérification du 11 octobre).
 
 ---
 

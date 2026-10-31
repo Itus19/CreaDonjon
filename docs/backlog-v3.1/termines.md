@@ -2834,3 +2834,29 @@ Opus, de bout en bout (ADR 0068). Deux décisions de l'auteur en route : ajouter
 - l'équipement A/B et la sous-classe en sous-étapes (50 à 53) ;
 - l'Expertise du Barde et du Rôdeur, à saisir sur le même modèle ;
 - `RemainingChoicesStep` sert encore à la montée de niveau (51).
+
+### V3.1-50 — Création : Origines, Historique et un seul sélecteur de sorts (31 octobre)
+
+Opus : le noyau et les données ; `dev-sonnet` : les écrans ; relu et corrigé par Opus.
+- **Noyau** : `spellNumbers`, la seule formule du DD et de l'attaque des sorts (le moteur l'écrivait deux fois). `choiceEffects.ts` chiffre chaque option d'un choix pour ce personnage : DD et attaque d'une caractéristique d'incantation, total d'une compétence, et « déjà maîtrisée (Acolyte) ».
+- **Chemin** : le don qu'accorde l'historique devient une seule sous-étape, « Don : Initié à la magie (Clerc) · n/3 », dont l'écran réunit les choix en sections. La cascade de Polyvalent sous Espèce garde ses sous-étapes.
+- **Écrans** :
+  - un seul sélecteur de sorts (`SelecteurSorts`, avec la fiche du sort touché), pour l'étape Sorts comme pour tout choix de sort ;
+  - Espèce et Historique en petites cartes, avec la fiche de la sélection et « Ce qui en naît » ;
+  - un tableau comparatif des lignages aux niveaux 1, 3 et 5 ;
+  - les jetons « +2 et +1 » ;
+  - l'équipement de l'historique en deux cartes A et B.
+- **Maîtrises** : `dedoublonnerMaitrises` réunit les doublons et traduit, par exemple l'outil de l'Acolyte. Le jeu du Soldat était un `proficiency_choices` du SRD, que le serveur ignorait. Il devient un choix d'outil en données (`soldier`, sous-étape « Un jeu » en cartes), affiché dans les maîtrises ; `ingest-srd` relancé le 31 octobre.
+- **Corrections d'Opus** :
+  - les jetons de l'historique recalculaient le modificateur et codaient un plafond de 20 : ils lisent maintenant la fiche du moteur ;
+  - la vitesse d'une option de lignage s'affichait en pieds : elle est en mètres.
+- **Vérifié au navigateur** :
+  - le don de l'Acolyte et ses sections ;
+  - le tableau du lignage elfique (Vitesse +1,5 m) ;
+  - « mod. +0 → DD 10, attaque +2 », avec « celle de votre classe » ;
+  - Sens aiguisés : « déjà maîtrisée (Acolyte) » ;
+  - le Soldat : Échecs draconiques dans les maîtrises, aucun doublon, tout en français.
+
+*Restes* :
+- la double « Lance » de la vérification du 11 octobre n'a pas été reproduite ; le dédoublonnage la couvre, mais le serveur pousse toujours une ligne par source ;
+- les vitesses d'espèce s'écrivent « 9.1 m » (point décimal), comme avant.
