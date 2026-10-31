@@ -679,6 +679,24 @@ export function mapMulticlassPrerequisites(fields: ParsedFields): { all?: Abilit
   return { ...(all.length > 0 ? { all } : {}), ...(any.length > 0 ? { any } : {}) };
 }
 
+/**
+ * L'ordre complet d'une classe, lu dans une ligne du tableau « Standard Array
+ * by Class » (SRD 5.2.1) : de la plus haute valeur à la plus basse. Une ligne
+ * qui n'est pas une permutation des valeurs standard est une faute de saisie :
+ * on la refuse plutôt que d'en tirer un ordre faux.
+ */
+const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8];
+const ABILITY_ORDER: readonly Ability[] = ["str", "dex", "con", "int", "wis", "cha"];
+
+export function orderFromStandardArray(row: Partial<Record<Ability, number>>): Ability[] {
+  const values = ABILITY_ORDER.map((a) => row[a]);
+  const sorted = [...values].sort((a, b) => (b ?? 0) - (a ?? 0));
+  if (sorted.some((v, i) => v !== STANDARD_ARRAY[i])) {
+    throw new Error(`Ligne de valeurs standard invalide : ${JSON.stringify(row)}`);
+  }
+  return [...ABILITY_ORDER].sort((a, b) => (row[b] ?? 0) - (row[a] ?? 0));
+}
+
 /** V3.1-115 — les caractéristiques à privilégier : la caractéristique principale de la classe (SRD 2024, `primary_ability`). */
 export function mapSuggestedAbilities(fields: ParsedFields): Ability[] | undefined {
   const scores = (fields.primary_ability as { ability_scores?: { index?: unknown }[] } | undefined)?.ability_scores ?? [];

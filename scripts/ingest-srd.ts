@@ -27,6 +27,7 @@ import {
   mapClassCore,
   mapMulticlassPrerequisites,
   mapSuggestedAbilities,
+  orderFromStandardArray,
   parseArmorData,
   parseItemCost,
   parseItemWeight,
@@ -1128,6 +1129,29 @@ function mergeClassSpellcasting(category: string, entryIndex: string, baseSystem
 }
 
 /**
+ * V3.1-52 — Ordre complet des caracteristiques par classe
+ * (`data/srd/standard-array-2024.json`, tableau « Standard Array by Class »
+ * du SRD 5.2.1) : remplace la seule caracteristique principale dans
+ * `suggested_abilities`. Propre au SRD 2024. Une classe saisie mais jamais
+ * rencontree arrete l'import (elle serait sinon ignoree en silence).
+ */
+const SRD_STANDARD_ARRAY: Record<string, unknown> = JSON.parse(
+  readFileSync(resolve(process.cwd(), "data/srd/standard-array-2024.json"), "utf-8")
+);
+const mergedStandardArray = new Set<string>();
+
+function mergeStandardArray(category: string, entryIndex: string, baseSystem: string, blocks: EntryBlock[]): void {
+  if (category !== "Classes" || baseSystem !== "dnd_srd_52") return;
+  const row = SRD_STANDARD_ARRAY[entryIndex];
+  if (!row || typeof row !== "object") return;
+  const block = blocks.find((b) => b.block_type === "class_basics");
+  if (!block) throw new Error(`standard-array-2024.json : ${entryIndex} n'a pas de bloc class_basics`);
+  (block.data as Record<string, unknown>).suggested_abilities = orderFromStandardArray(row as Record<string, number>);
+  validateBlockData("class_basics", block.data);
+  mergedStandardArray.add(entryIndex);
+}
+
+/**
  * V3.1-110 — Restriction de cible des sorts (`data/srd/spell-targets.json`,
  * ADR 0044), par `base_system` : posee sur le premier effet du sort. Un sort
  * sans bloc `effects` (Charme-personne n'a pas de degats) en recoit un, avec
@@ -1165,6 +1189,12 @@ function mergeSpellTargets(category: string, item: SrdRecord, baseSystem: string
   effects[0] = { ...effects[0], target };
   validateBlockData("effects", block.data);
   mergedSpellTargets.add(`${baseSystem}/${entryIndex}`);
+}
+
+function assertStandardArrayMerged(baseSystem: string): void {
+  if (baseSystem !== "dnd_srd_52") return;
+  const missing = Object.keys(SRD_STANDARD_ARRAY).filter((key) => !key.startsWith("_") && !mergedStandardArray.has(key));
+  if (missing.length > 0) throw new Error(`standard-array-2024.json : classes introuvables : ${missing.join(", ")}`);
 }
 
 function assertSpellTargetsMerged(baseSystem: string): void {
@@ -2244,6 +2274,7 @@ async function importSrdVersion(config: SrdVersionConfig): Promise<ImportResult>
         if (choices) t.blocks.push(choices);
         mergeSubclassMechanics(category, String(item.index), config.baseSystem, t.blocks);
         mergeClassSpellcasting(category, String(item.index), config.baseSystem, t.blocks);
+        mergeStandardArray(category, String(item.index), config.baseSystem, t.blocks);
         mergeSpellTargets(category, item, config.baseSystem, t.blocks);
         transformed.push(t);
         blocksTotal += t.blocks.length;
@@ -2276,6 +2307,7 @@ async function importSrdVersion(config: SrdVersionConfig): Promise<ImportResult>
 
   // V3.1-110 : toute restriction saisie a trouve son sort, avant d'ecrire quoi que ce soit.
   assertSpellTargetsMerged(config.baseSystem);
+  assertStandardArrayMerged(config.baseSystem);
 
   // V3.1-115 : la fiche des regles de personnage, absente du JSON du SRD.
   const characterRules = characterRulesEntry(config.baseSystem, config.sourceAttribution);

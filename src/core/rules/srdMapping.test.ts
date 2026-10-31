@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   mapMulticlassPrerequisites,
   mapSuggestedAbilities,
+  orderFromStandardArray,
   armorAcModifier,
   armorDataFromBlock,
   backgroundFeatKeyFromBlock,
@@ -818,5 +819,15 @@ describe("mapMulticlassPrerequisites / mapSuggestedAbilities (V3.1-115)", () => 
   it("caractéristiques suggérées : la caractéristique principale de la classe (2024)", () => {
     expect(mapSuggestedAbilities({ primary_ability: { ability_scores: [{ index: "dex" }, { index: "wis" }] } })).toEqual(["dex", "wis"]);
     expect(mapSuggestedAbilities({})).toBeUndefined();
+  });
+});
+
+describe("orderFromStandardArray : l'ordre complet d'une classe, lu dans « Standard Array by Class » (SRD 5.2.1)", () => {
+  it("de la plus haute valeur à la plus basse : Clerc SAG › FOR › CON › CHA › INT › DEX", () => {
+    expect(orderFromStandardArray({ str: 14, dex: 8, con: 13, int: 10, wis: 15, cha: 12 })).toEqual(["wis", "str", "con", "cha", "int", "dex"]);
+  });
+  it("refuse une ligne qui n'est pas une permutation de 15, 14, 13, 12, 10, 8", () => {
+    expect(() => orderFromStandardArray({ str: 15, dex: 15, con: 13, int: 10, wis: 12, cha: 8 })).toThrow(/valeurs standard/);
+    expect(() => orderFromStandardArray({ str: 15, dex: 14, con: 13, int: 10, wis: 12 })).toThrow(/valeurs standard/);
   });
 });
