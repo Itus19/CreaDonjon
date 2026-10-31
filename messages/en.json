@@ -2089,6 +2089,13 @@
       "source": "Source: {source}"
     },
     "choixOuvertsFiche": "{n, plural, one {One choice is still open} other {# choices are still open}}: {liste}.",
+    "choixRouvertsTitre": "Choose again: {libelle}",
+    "choixRouvertsActuelle": "Current answer: {reponse}",
+    "choixRouvertsValider": "Confirm",
+    "choixRouvertsGarder": "Keep {reponse}",
+    "choixRouvertsRappel": "{n, plural, one {One choice to redo} other {# choices to redo}}",
+    "choixRouvertsFeuille": "Choices reopened by the rest",
+    "choixRouvertsErreur": "The choice could not be saved.",
     "don": "Feat: {nom}",
     "compteGroupe": "{fait}/{total}",
     "sorts": {

@@ -2090,6 +2090,13 @@
       "source": "Source : {source}"
     },
     "choixOuvertsFiche": "{n, plural, one {Un choix reste ouvert} other {# choix restent ouverts}} : {liste}.",
+    "choixRouvertsTitre": "Choisir à nouveau : {libelle}",
+    "choixRouvertsActuelle": "Réponse actuelle : {reponse}",
+    "choixRouvertsValider": "Valider",
+    "choixRouvertsGarder": "Garder {reponse}",
+    "choixRouvertsRappel": "{n, plural, one {Un choix à refaire} other {# choix à refaire}}",
+    "choixRouvertsFeuille": "Choix rouverts par le repos",
+    "choixRouvertsErreur": "Le choix n'a pas pu être enregistré.",
     "don": "Don : {nom}",
     "compteGroupe": "{fait}/{total}",
     "sorts": {

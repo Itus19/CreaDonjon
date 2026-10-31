@@ -36,6 +36,8 @@ import TuileCaracteristique from "./TuileCaracteristique";
 import { commandesDeLaFiche, type CommandesFiche } from "@/lib/ui/commandesFiche";
 import { useJetsDeLaFiche } from "./useJetsDeLaFiche";
 import { TAB_LABELS, type Tab } from "./ongletsFiche";
+import ChoixRouverts from "./ChoixRouverts";
+import { relireBloc, repondreChoixRouvert } from "@/lib/ui/choixRouvertsApi";
 
 
 
@@ -362,6 +364,16 @@ export default function PlayableCharacterSheet({
     reloadRemote();
   }
 
+  /** V3.1-119 — répond à un choix rouvert par un repos ; le serveur écrit le bloc `character`, on relit sa donnée et sa version (sinon la prochaine sauvegarde ferait un 409). */
+  async function repondreChoixRouvertFiche(key: string, values: string[] | null): Promise<string | null> {
+    const erreur = await repondreChoixRouvert(entityId, { campaignId, key, values });
+    if (erreur !== null) return erreur;
+    reloadRemote();
+    const bloc = await relireBloc(entityId, characterBlockId);
+    if (bloc) onBlockRefreshed(bloc);
+    return null;
+  }
+
   function exportJson() {
     const a = document.createElement("a");
     a.href = `/api/entities/${entityId}/export`;
@@ -403,6 +415,8 @@ export default function PlayableCharacterSheet({
   const hpMax = remote?.runtimeState.hpMax ?? sheet.hitPoints.max;
 
   const exhaustion = runtimeState?.exhaustion ?? 0;
+  // V3.1-119 : les choix que le dernier repos a rouverts et que la fiche sait proposer.
+  const choixRouverts = openChoices.filter((c) => (runtimeState?.choices_to_refresh ?? []).includes(c.key));
   // V2.1-26 : `?? 0` et `?? []` comme partout ici — l'etat de jeu n'est pas
   // encore charge au premier rendu, et une fiche sans campagne n'en a pas.
   const inspiration = runtimeState?.inspiration ?? 0;
@@ -470,6 +484,7 @@ export default function PlayableCharacterSheet({
         concentration={runtimeState?.concentration ?? null}
         commandes={commandes}
       />
+      <ChoixRouverts worldSlug={worldSlug} choix={choixRouverts} onRepondre={repondreChoixRouvertFiche} />
       {/* V3.1-49 : un personnage créé avec des choix ouverts les retrouve ici (la création ne les impose pas). */}
       {aRappeler.length > 0 && (
         <p className="rounded-md border border-accent/50 bg-accent/10 px-3 py-1.5 text-xs text-ink">
