@@ -74,6 +74,7 @@ export default function Stepper({
         disabled={incrementDisabled}
         onClick={onIncrement}
         title={incrementLabel}
+        aria-label={incrementLabel}
         className={`relative flex h-4 w-full shrink-0 items-center justify-center ${TAILLE_GLYPHE} leading-none text-ink-muted transition-colors after:absolute after:inset-x-0 after:top-0 after:h-6 after:content-[''] hover:bg-panel-raised hover:text-accent disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-ink-muted`}
       >
         ▲
@@ -84,6 +85,7 @@ export default function Stepper({
         disabled={decrementDisabled}
         onClick={onDecrement}
         title={decrementLabel}
+        aria-label={decrementLabel}
         className={`relative flex h-4 w-full shrink-0 items-center justify-center ${TAILLE_GLYPHE} leading-none text-ink-muted transition-colors after:absolute after:inset-x-0 after:bottom-0 after:h-6 after:content-[''] hover:bg-panel-raised hover:text-accent disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-ink-muted`}
       >
         ▼
