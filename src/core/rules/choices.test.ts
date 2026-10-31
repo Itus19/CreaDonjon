@@ -383,3 +383,27 @@ describe("Expertise : un choix parmi les compétences déjà maîtrisées (V3.1-
     expect(r.open.find((c) => c.key === "rogue-expertise.skills")?.chosen).toEqual(["stealth"]);
   });
 });
+
+describe("le niveau et la classe d'un choix ouvert (V3.1-51)", () => {
+  it("un choix porte le niveau qui l'ouvre et la classe de sa fiche ; un choix imbriqué hérite de son parent", () => {
+    const expertise: ChoiceSource = {
+      key: "rogue-expertise",
+      label: "Expertise",
+      layer: 3,
+      origin: "class",
+      classKey: "rogue",
+      grants: [
+        { id: "skills", label: { fr: "Expertise" }, count: 2, from: { kind: "skill", expertise: true } },
+        { id: "skills-6", label: { fr: "Expertise (6)" }, count: 2, at_level: 6, from: { kind: "skill", expertise: true } },
+      ],
+    };
+    const lignage: ChoiceSource = { key: "elven-lineage", label: "Lignage", layer: 2, origin: "species", grants: ELVEN_LINEAGE_GRANTS };
+    const r = resolveChoices({ sources: [expertise, lignage], choices: {}, characterLevel: 6, classLevels: { rogue: 6 } });
+    expect(r.open.map((c) => [c.key, c.atLevel, c.classKey ?? null])).toEqual([
+      ["rogue-expertise.skills", 1, "rogue"],
+      ["rogue-expertise.skills-6", 6, "rogue"],
+      ["elven-lineage.lineage", 1, null],
+      ["elven-lineage.ability", 1, null],
+    ]);
+  });
+});

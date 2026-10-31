@@ -49,6 +49,9 @@ export interface SousEtape {
   expertise: boolean;
   /** `groupe` seulement : les choix du don, dans l'ordre ; `choisis` y liste les sections faites. */
   sections?: SousEtape[];
+  /** V3.1-51 : le niveau qui ouvre le choix (de SA classe si `classKey`), pour le placer sur sa ligne de progression. */
+  niveau: number;
+  classKey?: string;
 }
 
 export interface Etape {
@@ -176,6 +179,9 @@ export function construireChemin(entree: EntreeChemin): Chemin {
       fait: choisis.length >= r.count,
       attend: false,
       expertise: false,
+      // Les anciens choix restants sont tous du niveau 1 ; ceux d'une classe portent sa clé en préfixe (« fighter.skills »).
+      niveau: 1,
+      ...(r.origin === "class" ? { classKey: r.id.split(".")[0] } : {}),
     });
   }
 
@@ -199,6 +205,8 @@ export function construireChemin(entree: EntreeChemin): Chemin {
       fait: c.chosen.length >= c.count,
       attend,
       expertise: c.from.kind === "skill" && c.from.expertise === true,
+      niveau: c.atLevel,
+      ...(c.classKey ? { classKey: c.classKey } : {}),
     });
   }
 
@@ -291,6 +299,7 @@ function regrouperDonsDHistorique(sous: SousEtape[], racineDe: ReadonlyMap<strin
       attend: false,
       expertise: false,
       sections,
+      niveau: membres[0].niveau,
     };
     const premier = sous.indexOf(membres[0]);
     for (let i = sous.length - 1; i >= 0; i--) if (membres.includes(sous[i])) sous.splice(i, 1);

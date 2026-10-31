@@ -93,6 +93,10 @@ export interface OpenChoice {
   preset: boolean;
   /** Clé de la fiche qui porte le choix. */
   sourceKey: string;
+  /** V3.1-51 : le niveau qui ouvre ce choix (niveau de SA classe si la fiche en vient, sinon de personnage). */
+  atLevel: number;
+  /** V3.1-51 : la classe de la fiche, pour placer le choix sur la ligne de sa progression. */
+  classKey?: string;
 }
 
 export interface ChosenGrant {
@@ -135,6 +139,8 @@ interface Scope {
   source: ChoiceSource;
   /** Caractéristique d'incantation des sorts accordés dans ce sous-arbre. */
   ability?: Ability;
+  /** Le niveau qui a ouvert le choix parent : un choix imbriqué ne s'ouvre pas plus tôt que lui. */
+  atLevel?: number;
 }
 
 export function resolveChoices(input: ResolveChoicesInput): ResolvedChoices {
@@ -217,7 +223,18 @@ export function resolveChoices(input: ResolveChoicesInput): ResolvedChoices {
       const count = grant.from.kind === "ability" || grant.from.kind === "option" || grant.from.kind === "feat" ? 1 : (grant.count ?? 1);
       const label = localizedLabel(grant.label, grant.id);
       const answer = answerOf(key);
-      const open: OpenChoice = { key, label, count, from: grant.from, refresh: grant.refresh ?? "never", chosen: [], preset: answer.preset, sourceKey: scope.source.key };
+      const open: OpenChoice = {
+        key,
+        label,
+        count,
+        from: grant.from,
+        refresh: grant.refresh ?? "never",
+        chosen: [],
+        preset: answer.preset,
+        sourceKey: scope.source.key,
+        atLevel: Math.max(grant.at_level ?? 1, scope.atLevel ?? 1),
+        ...(classKey ? { classKey } : {}),
+      };
       result.open.push(open);
       const here: Scope = { ...scope, ability };
       const from = grant.from;
@@ -277,7 +294,7 @@ export function resolveChoices(input: ResolveChoicesInput): ResolvedChoices {
             resolveDeclaredModifiers(option.modifiers ?? [], scope.source.key, optionLabel, scope.source.layer),
             featureSpells(option.spells ?? [], spellcastingAbility(option.grants ?? [], `${key}.${option.id}`, level) ?? ability, classKey)
           );
-          if (option.grants) walk(option.grants, { ...here, prefix: `${key}.${option.id}` });
+          if (option.grants) walk(option.grants, { ...here, prefix: `${key}.${option.id}`, atLevel: open.atLevel });
           break;
         }
         case "feat": {
@@ -289,7 +306,7 @@ export function resolveChoices(input: ResolveChoicesInput): ResolvedChoices {
           if (!feat) break;
           // Un don vit en couche 5, quelle que soit la fiche qui l'accorde.
           const featSource: ChoiceSource = { key: `${key}.${feat.key}`, label: feat.label, layer: 5, grants: feat.grants };
-          const featScope: Scope = { prefix: `${key}.${feat.key}`, source: featSource };
+          const featScope: Scope = { prefix: `${key}.${feat.key}`, source: featSource, atLevel: open.atLevel };
           // Un don choisi figure parmi les traits même sans effet chiffré (Vigilant).
           pushFeature(`choice:${key}`, feat.label, featScope, resolveDeclaredModifiers(feat.modifiers, featSource.key, feat.label, 5), [], true);
           walk(feat.grants, featScope);

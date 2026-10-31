@@ -1,12 +1,7 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { rollDice } from "@/src/core/dice/roll";
+import { lancerDesDeVie, zLancerDesDeVie } from "@/lib/characterCreator/desDeVie";
 import { serverRng } from "@/src/server/services/rng";
-
-const bodySchema = z.object({
-  dieFaces: z.union([z.literal(6), z.literal(8), z.literal(10), z.literal(12)]),
-});
 
 /**
  * Jet de de de vie pour un niveau au-dela du premier, a la CREATION d'un
@@ -28,11 +23,12 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json().catch(() => null);
-  const parsed = bodySchema.safeParse(body);
+  const parsed = zLancerDesDeVie.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: "Corps invalide." }, { status: 400 });
   }
 
-  const roll = rollDice(1, parsed.data.dieFaces, serverRng).total;
-  return NextResponse.json({ roll }, { status: 200 });
+  // V3.1-51 : `rolls` pour « Lancer tous » ; `roll` (le premier) garde l'appel d'un seul niveau inchangé.
+  const rolls = lancerDesDeVie(parsed.data, serverRng);
+  return NextResponse.json({ roll: rolls[0], rolls }, { status: 200 });
 }
