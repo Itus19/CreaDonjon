@@ -9,8 +9,8 @@ import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasti
 import { useCharacterSheetContext } from "./useCharacterSheetContext";
 import InventoryTab from "./InventoryTab";
 import AbilityScoreStep, { EMPTY_ABILITY_POOL_ASSIGNMENT, type AbilityPoolAssignment } from "./characterCreatorSteps/AbilityScoreStep";
-import LevelClassesStep, { type ClassEquipmentChoiceState } from "./characterCreatorSteps/LevelClassesStep";
-import CreationHpRollStep, { type CreationHpGrant } from "./characterCreatorSteps/CreationHpRollStep";
+import LevelClassesStep, { type ClassEquipmentChoiceState, type ControlePrerequis } from "./characterCreatorSteps/LevelClassesStep";
+import CreationHpRollStep, { type CreationHpGrant, type IntentionsPointsDeVie } from "./characterCreatorSteps/CreationHpRollStep";
 import IdentityStep from "./characterCreatorSteps/IdentityStep";
 import SpeciesStep from "./characterCreatorSteps/SpeciesStep";
 import BackgroundStep, { type BackgroundEquipmentChoice } from "./characterCreatorSteps/BackgroundStep";
@@ -21,12 +21,18 @@ import { overwriteCharacterFromWizardAction, type OverwriteCharacterFromWizardIn
 import { useWorldRuleEntries } from "./useWorldRuleEntries";
 import { useRuleEntryBlocks } from "./useRuleEntryBlocks";
 import EtapesCreation from "./characterCreator/EtapesCreation";
+import AvantApres, { resumeFiche } from "./characterCreator/AvantApres";
+import { ABILITY_LABELS as ABILITY_ABBR } from "./sheetLabels";
 import EcranChoix from "./characterCreator/EcranChoix";
 import ApercuDirect from "./characterCreator/ApercuDirect";
 import { construireChemin, etapeDe, positionValide, voisin, type CleEtape, type SousEtape } from "@/lib/ui/cheminCreation";
+import { sousEtapesNouvelles } from "@/lib/ui/progressionClasse";
+import { cheminMontee, progressionsPersonnage } from "@/lib/ui/progressionsPersonnage";
+import { checkMulticlassEntry, exceedsLevelCap } from "@/src/core/rules/characterRules";
+import { parseAsiChoice } from "@/src/core/rules/abilityScoreImprovement";
 import { SRD_LANGUAGES, type LanguageKey } from "@/src/core/rules/srdMapping";
 import { DAMAGE_TYPE_LABELS_FR, LANGUAGE_LABELS_FR, SKILL_LABELS_FR, TOOL_PROFICIENCY_LABELS_FR } from "@/src/i18n/fr";
-import { ABILITY_LABELS as ABILITY_NAMES, type Skill } from "@/src/core/rules/sheet";
+import { ABILITIES, ABILITY_LABELS as ABILITY_NAMES, type Ability, type HpGainChoice, type Skill } from "@/src/core/rules/sheet";
 
 const EMPTY_CHARACTER: CharacterBlockData = {
   __v: 1,
@@ -119,10 +125,35 @@ export interface CharacterWizardEntityMode {
   note?: string;
 }
 
+/** Le résultat de la route `level-up` : les deux blocs réécrits, avec leur nouvelle version. */
+export interface MonteeDeNiveauResultat {
+  character: { id: string; data: unknown; version: number };
+  spellcasting?: { id: string; data: unknown; version: number };
+}
+
+/**
+ * V3.1-51 — Monter de niveau : le même assistant, réduit à ce qui change
+ * (Classe, Points de vie, choix des nouveaux niveaux, Sorts, Aperçu avant →
+ * après). « Valider » fait UNE écriture : la route `level-up`. Les points de vie
+ * y sont des intentions (« moyenne » ou « jet » par niveau gagné), jamais des
+ * valeurs : le serveur lance les dés. Remplace l'ancien assistant de montée de niveau.
+ */
+export interface MonteeDeNiveau {
+  entityId: string;
+  campaignId: string | null;
+  expectedVersion: number;
+  initial: { character: CharacterBlockData; inventory: InventoryBlockData; spellcasting: SpellcastingBlockData | undefined };
+  /** Le MJ peut passer outre un prérequis de multiclassage (ADR 0046). Indication d'interface : le serveur le re-vérifie. */
+  isWorldAdmin: boolean;
+  onCancel: () => void;
+  onDone: (result: MonteeDeNiveauResultat) => void;
+}
+
 export default function CharacterCreatorWizard({
   worldSlug,
   worldId,
   entityMode,
+  montee,
   onCreate,
   onCancel,
 }: {
@@ -130,6 +161,8 @@ export default function CharacterCreatorWizard({
   /** Requis seulement hors `entityMode` (creation d'une nouvelle entite). */
   worldId?: string;
   entityMode?: CharacterWizardEntityMode;
+  /** Monter de niveau (V3.1-51) : le même écran, en mode montée. Prime sur `entityMode` et sur la création. */
+  montee?: MonteeDeNiveau;
   /**
    * Remplace `createCharacterFromWizardAction` pour la creation d'une
    * nouvelle entite (V3.1-10, ecran "Choisis ton personnage" — Nouveau PJ) :
@@ -145,12 +178,28 @@ export default function CharacterCreatorWizard({
   const t = useTranslations("creation");
   // Une position du parcours : une étape (`espece`) ou un choix (`c:versatile.feat`). L'étape est gardée à part :
   // quand un choix disparaît (sa source a changé), on sait encore où revenir.
-  const [position, setPosition] = useState<string>("ident");
-  const [etapeCourante, setEtapeCourante] = useState<CleEtape>("ident");
+  const [position, setPosition] = useState<string>(montee ? "classe" : "ident");
+  const [etapeCourante, setEtapeCourante] = useState<CleEtape>(montee ? "classe" : "ident");
   const [name, setName] = useState(entityMode?.initialName ?? "");
-  const [character, setCharacter] = useState<CharacterBlockData>(entityMode?.initialCharacter ?? EMPTY_CHARACTER);
-  const [inventory, setInventory] = useState<InventoryBlockData>(entityMode?.initialInventory ?? EMPTY_INVENTORY);
-  const [spellcasting, setSpellcasting] = useState<SpellcastingBlockData>(entityMode?.initialSpellcasting ?? EMPTY_SPELLCASTING);
+  // Ouvrir la montée propose déjà UN niveau (+1 sur la première classe, le cas le plus fréquent) plutôt qu'un écran « X → X ».
+  const [character, setCharacter] = useState<CharacterBlockData>(() => {
+    if (montee) {
+      const depart = montee.initial.character;
+      return { ...depart, classes: depart.classes.map((c, i) => (i === 0 ? { ...c, level: c.level + 1 } : c)) };
+    }
+    return entityMode?.initialCharacter ?? EMPTY_CHARACTER;
+  });
+  const [inventory, setInventory] = useState<InventoryBlockData>(montee?.initial.inventory ?? entityMode?.initialInventory ?? EMPTY_INVENTORY);
+  const [spellcasting, setSpellcasting] = useState<SpellcastingBlockData>(montee?.initial.spellcasting ?? entityMode?.initialSpellcasting ?? EMPTY_SPELLCASTING);
+  // Niveau de chaque classe AVANT la montée, figé au montage : ce qui est acquis est verrouillé.
+  const [niveauxAvant] = useState<ReadonlyMap<string, number>>(
+    () =>
+      new Map(
+        (montee?.initial.character.classes ?? []).flatMap((c) => (c.class.kind === "rule" && c.class.key ? [[c.class.key, c.level] as [string, number]] : []))
+      )
+  );
+  const [hpChoices, setHpChoices] = useState<Record<string, HpGainChoice[]>>({});
+  const [passeOutre, setPasseOutre] = useState(false);
   const [abilityPool, setAbilityPool] = useState<AbilityPoolAssignment>(EMPTY_ABILITY_POOL_ASSIGNMENT);
   const [bgEquipmentChoice, setBgEquipmentChoice] = useState<BackgroundEquipmentChoice | null>(null);
   const [classEquipmentChoices, setClassEquipmentChoices] = useState<(ClassEquipmentChoiceState | null)[]>([]);
@@ -212,18 +261,24 @@ export default function CharacterCreatorWizard({
     choiceSources,
     featCatalog,
     proficientSkills,
+    asiGrantedLevels,
   } = useCharacterSheetContext(worldSlug, character, inventory, spellcasting);
+
+  // Montée de niveau : la fiche d'AVANT, pour le « avant → après » et pour savoir quels choix sont nouveaux. Hors montée,
+  // sans personnage, le hook ne charge rien. Même sélection que la fiche ouverte : ses règles sont déjà en cache.
+  const avant = useCharacterSheetContext(worldSlug, montee?.initial.character, montee?.initial.inventory, montee?.initial.spellcasting);
 
   // Points de vie (V2-G1, retour utilisateur) : un demarrage au-dela du
   // niveau 1 (personnage OU classe multiclassee choisie directement a un
   // niveau superieur) a besoin d'un choix moyenne/jet par niveau non
   // exempte, exactement comme a la montee de niveau — seul le tout premier
-  // niveau du personnage (premiere classe, niveau 1) est exempt.
+  // niveau du personnage (premiere classe, niveau 1) est exempt. En montee,
+  // seuls les niveaux GAGNES comptent (V3.1-51).
   const hpGrants: CreationHpGrant[] = [];
   character.classes.forEach((c, index) => {
     if (c.class.kind !== "rule" || !c.class.key) return;
     const classKey = c.class.key;
-    const exemptLevel = index === 0 ? 1 : 0;
+    const exemptLevel = montee ? (niveauxAvant.get(classKey) ?? 0) : index === 0 ? 1 : 0;
     if (c.level <= exemptLevel) return;
     const levels: number[] = [];
     for (let lvl = exemptLevel + 1; lvl <= c.level; lvl++) levels.push(lvl);
@@ -238,7 +293,7 @@ export default function CharacterCreatorWizard({
 
   const entryName = new Map(allEntries.map((e) => [e.key, e.name]));
   const languesFixes = new Set(languages.map((l) => l.key));
-  const chemin = construireChemin({
+  const cheminComplet = construireChemin({
     restants: remainingChoices,
     ouverts: openChoices,
     sources: choiceSources,
@@ -254,6 +309,36 @@ export default function CharacterCreatorWizard({
         const { classes, level } = spellClassesAndLevel(spellBlocks[e.key]);
         return { cle: e.key, libelle: e.name, ...(level !== null ? { niveau: level } : {}), ...(classes.length > 0 ? { listes: classes } : {}) };
       }),
+  });
+
+  // Montée : les choix qui n'existaient pas pour le personnage d'origine (niveaux gagnés, classe nouvelle).
+  const cheminAvant = montee
+    ? construireChemin({
+        restants: avant.remainingChoices,
+        ouverts: avant.openChoices,
+        sources: avant.choiceSources,
+        reponses: montee.initial.character.choices,
+        avecPointsDeVie: false,
+        avecSorts: false,
+        langues: [],
+        competencesMaitrisees: avant.proficientSkills,
+        dons: avant.featCatalog,
+      })
+    : null;
+  const chemin = cheminAvant
+    ? cheminMontee(sousEtapesNouvelles(cheminAvant, cheminComplet), { avecPointsDeVie: hpGrants.length > 0, avecSorts: hasSpellcastingClass })
+    : cheminComplet;
+
+  // Les progressions des emplacements de l'étape Classe, et la somme des choix à faire au-delà du niveau 1.
+  const progressions = progressionsPersonnage({
+    classes: character.classes,
+    ...(montee ? { niveauxAvant } : {}),
+    blocs: classBlocksByKey,
+    chemin: cheminComplet,
+    niveauxAmelioration: asiGrantedLevels,
+    reponses: character.choices,
+    nomAptitude: (cle) => entryName.get(cle) ?? cle,
+    libelleAmelioration: t("classe.amelioration"),
   });
   const ici = positionValide(chemin, position) ? position : null;
   const etapeIci = (ici && etapeDe(chemin, ici)) || etapeCourante;
@@ -335,6 +420,117 @@ export default function CharacterCreatorWizard({
   // « Prénom Nom » prime sur le champ libre quand l'étape Identité est remplie (V3.1-48).
   const finalName = composeCharacterName(character.given_name, character.family_name) || name.trim();
 
+  // --- Montée de niveau (V3.1-51) -------------------------------------------------------------------------------
+  const niveauAvantTotal = montee ? montee.initial.character.classes.reduce((n, c) => n + c.level, 0) : 0;
+  const niveauApresTotal = character.classes.reduce((n, c) => n + c.level, 0);
+  const plafondNiveau = ruleset.characterRules?.level_cap;
+  const plafondDepasse = plafondNiveau !== undefined && exceedsLevelCap(niveauApresTotal, plafondNiveau);
+
+  function intentionAt(classKey: string, index: number): HpGainChoice {
+    return hpChoices[classKey]?.[index] ?? "average";
+  }
+  const intentions: IntentionsPointsDeVie | undefined = montee
+    ? {
+        choiceAt: intentionAt,
+        onChoose: (classKey, index, choix) =>
+          setHpChoices((prev) => {
+            const courant = [...(prev[classKey] ?? [])];
+            while (courant.length <= index) courant.push("average");
+            courant[index] = choix;
+            return { ...prev, [classKey]: courant };
+          }),
+        onAll: (choix) => setHpChoices(Object.fromEntries(hpGrants.map((g) => [g.classKey, g.levels.map((): HpGainChoice => choix)]))),
+      }
+    : undefined;
+  const jetEnAttente = hpGrants.some((g) => g.levels.some((_, i) => intentionAt(g.classKey, i) === "rolled"));
+
+  // Multiclassage : entrer dans une classe NOUVELLE exige son prérequis et celui de chaque classe actuelle, avec les
+  // caractéristiques d'AVANT la montée (on retranche les améliorations choisies pendant cette montée).
+  const cleDeClasse = (c: CharacterBlockData["classes"][number]) => (c.class.kind === "rule" && c.class.key ? c.class.key : null);
+  const clesClasses = character.classes.map(cleDeClasse).filter((k): k is string => k !== null);
+  const scoresAvantChoix = Object.fromEntries(ABILITIES.map((a) => [a, sheet.abilities[a].score])) as Record<Ability, number>;
+  if (montee) {
+    for (const [cle, brut] of Object.entries(character.choices)) {
+      if (!cle.endsWith(".asi") || cle in montee.initial.character.choices) continue;
+      const asi = parseAsiChoice(brut);
+      if (asi) for (const a of ABILITIES) scoresAvantChoix[a] -= asi.increases[a] ?? 0;
+    }
+  }
+  const nouvellesClasses = montee ? clesClasses.filter((k) => !niveauxAvant.has(k)) : clesClasses.slice(1);
+  const classesActuelles = montee ? [...niveauxAvant.keys()] : clesClasses.slice(0, 1);
+  const entreeClasse =
+    nouvellesClasses.length > 0 && classesActuelles.length > 0
+      ? checkMulticlassEntry(
+          [...nouvellesClasses, ...classesActuelles].map((key) => ({ key, prerequisites: ruleset.classes[key]?.multiclassPrerequisites })),
+          scoresAvantChoix
+        )
+      : { met: true, failures: [] };
+  const estMj = montee?.isWorldAdmin ?? false;
+  const controle: ControlePrerequis | null = entreeClasse.met
+    ? null
+    : {
+        lignes: entreeClasse.failures.map((f) =>
+          t("classe.prerequis.ligne", { classe: nomClasse(f.classKey), conditions: f.unmet.map((u) => `${ABILITY_ABBR[u.ability]} ${u.min}`).join(", ") })
+        ),
+        bloquant: montee !== undefined,
+        estMj,
+        passeOutre: estMj && passeOutre,
+        onPasserOutre: setPasseOutre,
+      };
+  const multiclassBloque = montee !== undefined && !entreeClasse.met && !(estMj && passeOutre);
+
+  // Ce qu'il reste à faire en montée : les choix nouveaux du chemin, plus les pastilles de sous-classe et d'amélioration.
+  const aFaireMontee =
+    chemin.aFaire +
+    progressions.parEmplacement.reduce(
+      (n, p) => n + (p?.lignes.filter((l) => l.etat === "nouveau").reduce((m, l) => m + l.pastilles.filter((x) => x.genre !== "choix" && !x.fait).length, 0) ?? 0),
+      0
+    );
+  const nouveautes = progressions.parEmplacement.flatMap((p) => p?.lignes.filter((l) => l.etat === "nouveau").flatMap((l) => l.aptitudes) ?? []);
+  const apercuMontee = montee ? (
+    <AvantApres
+      avant={resumeFiche(avant.sheet, niveauAvantTotal)}
+      apres={resumeFiche(sheet, niveauApresTotal)}
+      nouveautes={nouveautes}
+      estimation={jetEnAttente}
+    />
+  ) : null;
+
+  async function soumettreMontee() {
+    if (!montee) return;
+    setBusy(true);
+    setError(null);
+    try {
+      // Les intentions, jamais des valeurs : le serveur lance les dés (règle 8).
+      const hpChoicesEnvoyes: Record<string, HpGainChoice[]> = {};
+      for (const g of hpGrants) hpChoicesEnvoyes[g.classKey] = g.levels.map((_, i) => intentionAt(g.classKey, i));
+      const res = await fetch(`/api/entities/${montee.entityId}/actions/level-up`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          campaignId: montee.campaignId,
+          expectedVersion: montee.expectedVersion,
+          // Un emplacement dont la classe n'est pas choisie n'est pas une classe du personnage.
+          character: { ...character, classes: character.classes.filter((c) => c.class.kind !== "rule" || c.class.key !== "") },
+          spellcasting: spellcasting.known.length > 0 ? spellcasting : undefined,
+          hpChoices: hpChoicesEnvoyes,
+          overrideMulticlassPrerequisites: estMj && passeOutre,
+        }),
+      });
+      if (!res.ok) {
+        const corps = (await res.json().catch(() => null)) as { error?: string } | null;
+        setError(corps?.error ?? t("montee.echec"));
+        return;
+      }
+      montee.onDone((await res.json()) as MonteeDeNiveauResultat);
+    } catch (erreur: unknown) {
+      console.error("Montée de niveau échouée", erreur);
+      setError(t("montee.echec"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function submit() {
     setBusy(true);
     setError(null);
@@ -372,7 +568,19 @@ export default function CharacterCreatorWizard({
 
   return (
     <div className="@container/creation flex flex-col gap-4">
-      {entityMode && (
+      {montee && (
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm font-medium text-ink">{t("montee.titre", { avant: niveauAvantTotal, apres: niveauApresTotal })}</p>
+          <button
+            type="button"
+            onClick={montee.onCancel}
+            className="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted transition-colors hover:bg-panel"
+          >
+            {t("montee.fermer")}
+          </button>
+        </div>
+      )}
+      {!montee && entityMode && (
         <div className="flex items-center justify-between">
           <p className="text-xs text-ink-muted">
             {entityMode.note ?? "Assistant de création — remplace le personnage actuel de cette fiche à la validation."}
@@ -386,7 +594,7 @@ export default function CharacterCreatorWizard({
           </button>
         </div>
       )}
-      {!entityMode && onCancel && (
+      {!montee && !entityMode && onCancel && (
         <div className="flex justify-end">
           <button
             type="button"
@@ -410,17 +618,31 @@ export default function CharacterCreatorWizard({
           </p>
         </div>
         <aside className="hidden w-44 shrink-0 @lg/creation:block @3xl/creation:w-56">
-          <EtapesCreation chemin={chemin} position={ici ?? ""} etapeCourante={etapeIci} onAller={aller} />
+          <EtapesCreation
+            chemin={chemin}
+            position={ici ?? ""}
+            etapeCourante={etapeIci}
+            choixDeNiveau={montee ? undefined : progressions.aFaireAuDelaDuPremier}
+            onAller={aller}
+          />
         </aside>
 
         <section aria-labelledby="creation-ecran" className="flex min-w-0 flex-1 flex-col gap-3 rounded-lg border border-edge bg-panel p-4">
           <header className="flex flex-col gap-0.5">
             <span className="text-xs text-ink-muted">{sousIci ? sousIci.source : t("etapeN", { n: indexEtape + 1 })}</span>
             <h2 id="creation-ecran" className="font-display text-lg font-bold text-ink">
-              {ici === null ? t("choixDisparu") : sousIci ? (sousIci.genre === "groupe" ? t("don", { nom: sousIci.libelle }) : sousIci.libelle) : t(`etapes.${etapeIci}`)}
+              {ici === null
+                ? t("choixDisparu")
+                : sousIci
+                  ? sousIci.genre === "groupe"
+                    ? t("don", { nom: sousIci.libelle })
+                    : sousIci.libelle
+                  : montee && etapeIci === "classe"
+                    ? t("montee.titreClasse")
+                    : t(`etapes.${etapeIci}`)}
             </h2>
             {ici === null && <p className="text-sm text-ink-soft">{t("choixDisparuNote")}</p>}
-            {ici !== null && !sousIci && <p className="text-sm text-ink-soft">{t(`desc.${etapeIci}`)}</p>}
+            {ici !== null && !sousIci && <p className="text-sm text-ink-soft">{t(montee ? `descMontee.${etapeIci}` : `desc.${etapeIci}`)}</p>}
           </header>
 
           {ici === null && (
@@ -472,6 +694,14 @@ export default function CharacterCreatorWizard({
               onUpdateInventory={setInventory}
               equipmentChoices={classEquipmentChoices}
               onChooseEquipmentChoices={setClassEquipmentChoices}
+              hideEquipment={montee !== undefined}
+              progressions={progressions.parEmplacement}
+              sheet={sheet}
+              abilityScoreCap={ruleset.characterRules?.ability_score_cap}
+              plafondNiveau={plafondNiveau}
+              niveauxAvant={montee ? niveauxAvant : undefined}
+              controle={controle}
+              onAller={aller}
             />
           )}
 
@@ -488,7 +718,15 @@ export default function CharacterCreatorWizard({
             />
           )}
 
-          {ici === "pv" && <CreationHpRollStep character={character} patchCharacter={patchCharacter} grants={hpGrants} conMod={sheet.abilities.con.mod} />}
+          {ici === "pv" && (
+            <CreationHpRollStep
+              character={character}
+              patchCharacter={patchCharacter}
+              grants={hpGrants}
+              conMod={sheet.abilities.con.mod}
+              intentions={intentions}
+            />
+          )}
 
           {ici === "histo" && (
             <BackgroundStep
@@ -525,7 +763,41 @@ export default function CharacterCreatorWizard({
 
           {ici === "sorts" && <SpellSelectionStep worldSlug={worldSlug} character={character} spellcasting={spellcasting} onUpdateSpellcasting={setSpellcasting} />}
 
-          {ici === "apercu" && (
+          {ici === "apercu" && montee && (
+            <div className="flex flex-col gap-3">
+              {apercuMontee}
+
+              {aFaireMontee > 0 && <p className="text-sm text-accent">{t("aFaire", { n: aFaireMontee })}</p>}
+
+              {plafondDepasse && plafondNiveau !== undefined && (
+                <p className="text-sm text-danger">{t("montee.auDessusDuPlafond", { n: niveauApresTotal, plafond: plafondNiveau })}</p>
+              )}
+
+              {sheet.warnings.length > 0 && (
+                <div className="rounded-md border border-danger/60 bg-danger/10 px-3 py-2 text-sm text-danger">
+                  <p className="font-semibold">{t("montee.illegal")}</p>
+                  <ul className="list-inside list-disc">
+                    {sheet.warnings.map((w, i) => (
+                      <li key={i}>{w.message}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {error && <p className="text-sm text-danger">{error}</p>}
+
+              <button
+                type="button"
+                disabled={busy || plafondDepasse || multiclassBloque || niveauApresTotal <= niveauAvantTotal}
+                onClick={soumettreMontee}
+                className="w-fit rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50"
+              >
+                {t("montee.valider")}
+              </button>
+            </div>
+          )}
+
+          {ici === "apercu" && !montee && (
             <div className="flex flex-col gap-3">
               <PreviewStep
                 worldSlug={worldSlug}
@@ -609,7 +881,9 @@ export default function CharacterCreatorWizard({
             >
               {t("precedent")}
             </button>
-            <span className="text-xs text-ink-muted">{chemin.aFaire > 0 ? t("aFaire", { n: chemin.aFaire }) : t("toutChoisi")}</span>
+            <span className="text-xs text-ink-muted">
+              {(montee ? aFaireMontee : chemin.aFaire) > 0 ? t("aFaire", { n: montee ? aFaireMontee : chemin.aFaire }) : t("toutChoisi")}
+            </span>
             <button
               type="button"
               disabled={ici === chemin.ordre[chemin.ordre.length - 1]}
@@ -622,7 +896,11 @@ export default function CharacterCreatorWizard({
         </section>
 
         <aside aria-label={t("apercuAria")} className="hidden w-72 shrink-0 rounded-lg border border-edge bg-panel p-4 @5xl/creation:block">
-          <ApercuDirect nom={finalName} ligne={ligne} sheet={sheet} pret={rulesetPret} langues={languesAffichees} traits={traitsAffiches} sorts={sortsConnus} />
+          {montee ? (
+            apercuMontee
+          ) : (
+            <ApercuDirect nom={finalName} ligne={ligne} sheet={sheet} pret={rulesetPret} langues={languesAffichees} traits={traitsAffiches} sorts={sortsConnus} />
+          )}
         </aside>
       </div>
     </div>

@@ -2086,6 +2086,73 @@
     "langues": {
       "thieves-cant": "Argot des voleurs",
       "druidic": "Druidique"
+    },
+    "choixDeNiveau": "Choix de niveau",
+    "classe": {
+      "niveauTotal": "Niveau du personnage : {n}",
+      "surPlafond": "(plafond {plafond})",
+      "emplacementsAria": "Classes du personnage",
+      "nouvelleClasse": "Nouvelle classe",
+      "niveauCourt": "niv. {n}",
+      "gain": "(+{n})",
+      "retirer": "Retirer cette classe",
+      "ajouter": "+ Ajouter une classe",
+      "plafondAtteint": "Le niveau du personnage ne dépasse pas {plafond} (plafond du ruleset).",
+      "prerequis": {
+        "titre": "Prérequis de multiclassage non remplis :",
+        "ligne": "{classe} : {conditions} requis",
+        "signale": "Signalé seulement : à la création, rien n'est bloqué.",
+        "passerOutre": "Passer outre (MJ)",
+        "seulMj": "Seul le MJ peut passer outre."
+      },
+      "niveauDe": "Niveau · {classe}",
+      "moins": "Un niveau de moins",
+      "plus": "Un niveau de plus",
+      "niveauRapide": "Niveau {n}",
+      "changerClasse": "Changer de classe",
+      "sauvegardes": "Sauv. {liste}",
+      "legende": "Acquis en vert, niveau atteint en doré, la suite estompée avec ce qui viendra.",
+      "legendeMontee": "Les niveaux acquis sont verrouillés ; les nouveaux niveaux sont en doré.",
+      "aVenir": "À venir : {liste}",
+      "verrouille": "(niveau acquis, verrouillé)",
+      "aucuneSousClasse": "Aucune sous-classe à proposer pour cette classe.",
+      "amelioration": "Amélioration de caractéristique"
+    },
+    "pv": {
+      "echec": "Échec du jet.",
+      "moyennePourTous": "Moyenne pour tous",
+      "lancerTous": "Lancer tous",
+      "enCours": "Jet en cours…",
+      "noteServeur": "Les jets sont faits par le serveur à la validation ; l'aperçu compte la moyenne en attendant.",
+      "ligne": "{classe} · niveau {niveau}",
+      "moyenne": "Moyenne ({moyenne}{mod} = {total})",
+      "jeter": "Jeter (1d{faces}{mod})",
+      "jete": "Jeté : {valeur}{mod} = {total}",
+      "jetServeur": "Jet (1d{faces}{mod})"
+    },
+    "avantApres": {
+      "titre": "Avant → après",
+      "niveau": "Niveau",
+      "pv": "Points de vie",
+      "ca": "CA",
+      "maitrise": "Maîtrise",
+      "estimation": "Estimation à la moyenne : le jet réel est fait par le serveur à la validation.",
+      "nouveau": "Nouveau :"
+    },
+    "montee": {
+      "titre": "Monter de niveau · {avant} → {apres}",
+      "fermer": "Fermer sans enregistrer",
+      "titreClasse": "Quelle classe gagne le niveau ?",
+      "echec": "Échec de la montée de niveau.",
+      "auDessusDuPlafond": "Niveau {n} : au-dessus du plafond de niveau ({plafond}) de ce ruleset.",
+      "illegal": "Personnage illégal — enregistrable quand même :",
+      "valider": "Valider la montée de niveau"
+    },
+    "descMontee": {
+      "classe": "Une classe existante, ou une nouvelle (multiclassage). Les niveaux acquis ne se rechoisissent pas ; plusieurs niveaux d'un coup sont possibles.",
+      "pv": "Moyenne ou jet pour chaque niveau gagné. Le serveur lance les dés à la validation.",
+      "sorts": "Les sorts que les nouveaux niveaux permettent d'apprendre.",
+      "apercu": "Le personnage avant et après la montée. Une seule écriture, à la validation."
     }
   }
 }

@@ -17,7 +17,7 @@ import MagicTab, { type KnownSpellView } from "../MagicTab";
 import InventoryTab from "../InventoryTab";
 import TraitsTab from "../TraitsTab";
 import MasteriesTab from "../MasteriesTab";
-import { TAB_LABELS, type Tab } from "../PlayableCharacterSheet";
+import { TAB_LABELS, type Tab } from "../ongletsFiche";
 import Tabs, { TabPanel } from "@/components/shared/Tabs";
 
 function noop() {}

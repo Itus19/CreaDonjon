@@ -2085,6 +2085,73 @@
     "langues": {
       "thieves-cant": "Thieves' Cant",
       "druidic": "Druidic"
+    },
+    "choixDeNiveau": "Level choices",
+    "classe": {
+      "niveauTotal": "Character level: {n}",
+      "surPlafond": "(cap {plafond})",
+      "emplacementsAria": "Character classes",
+      "nouvelleClasse": "New class",
+      "niveauCourt": "lvl {n}",
+      "gain": "(+{n})",
+      "retirer": "Remove this class",
+      "ajouter": "+ Add a class",
+      "plafondAtteint": "Character level cannot exceed {plafond} (ruleset cap).",
+      "prerequis": {
+        "titre": "Multiclass prerequisites not met:",
+        "ligne": "{classe}: {conditions} required",
+        "signale": "Flagged only: nothing is blocked at creation.",
+        "passerOutre": "Override (GM)",
+        "seulMj": "Only the GM can override."
+      },
+      "niveauDe": "Level · {classe}",
+      "moins": "One level less",
+      "plus": "One level more",
+      "niveauRapide": "Level {n}",
+      "changerClasse": "Change class",
+      "sauvegardes": "Saves {liste}",
+      "legende": "Gained in green, current level in gold, the rest faded with what is to come.",
+      "legendeMontee": "Gained levels are locked; new levels are in gold.",
+      "aVenir": "Coming: {liste}",
+      "verrouille": "(gained level, locked)",
+      "aucuneSousClasse": "No subclass to offer for this class.",
+      "amelioration": "Ability score improvement"
+    },
+    "pv": {
+      "echec": "The roll failed.",
+      "moyennePourTous": "Average for all",
+      "lancerTous": "Roll all",
+      "enCours": "Rolling…",
+      "noteServeur": "The server makes the rolls on confirmation; the preview counts the average meanwhile.",
+      "ligne": "{classe} · level {niveau}",
+      "moyenne": "Average ({moyenne}{mod} = {total})",
+      "jeter": "Roll (1d{faces}{mod})",
+      "jete": "Rolled: {valeur}{mod} = {total}",
+      "jetServeur": "Roll (1d{faces}{mod})"
+    },
+    "avantApres": {
+      "titre": "Before → after",
+      "niveau": "Level",
+      "pv": "Hit points",
+      "ca": "AC",
+      "maitrise": "Proficiency",
+      "estimation": "Estimated at the average: the real roll is made by the server on confirmation.",
+      "nouveau": "New:"
+    },
+    "montee": {
+      "titre": "Level up · {avant} → {apres}",
+      "fermer": "Close without saving",
+      "titreClasse": "Which class gains the level?",
+      "echec": "Level up failed.",
+      "auDessusDuPlafond": "Level {n}: above this ruleset's level cap ({plafond}).",
+      "illegal": "Illegal character — can still be saved:",
+      "valider": "Confirm level up"
+    },
+    "descMontee": {
+      "classe": "An existing class, or a new one (multiclassing). Gained levels are not chosen again; several levels at once are possible.",
+      "pv": "Average or roll for each level gained. The server rolls the dice on confirmation.",
+      "sorts": "The spells the new levels let you learn.",
+      "apercu": "The character before and after leveling up. A single write, on confirmation."
     }
   }
 }

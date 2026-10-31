@@ -167,7 +167,6 @@ const eslintConfig = defineConfig([
         "components/blocks/characterCreatorSteps/AbilityScoreStep.tsx",
         "components/blocks/characterCreatorSteps/BackgroundStep.tsx",
         "components/blocks/characterCreatorSteps/LevelClassesStep.tsx",
-        "components/blocks/characterCreatorSteps/RemainingChoicesStep.tsx",
         "components/blocks/characterCreatorSteps/SpeciesStep.tsx",
         "components/blocks/characterCreatorSteps/SpellSelectionStep.tsx",
         "components/entities/PortraitUpload.tsx",

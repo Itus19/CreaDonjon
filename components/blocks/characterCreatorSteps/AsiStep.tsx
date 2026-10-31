@@ -6,7 +6,7 @@ import { ABILITIES, type Ability, type DerivedSheet } from "@/src/core/rules/she
 import { asiExceedsCap, isValidAsiChoice, parseAsiChoice, type AsiChoice } from "@/src/core/rules/abilityScoreImprovement";
 import { ABILITY_LABELS } from "../sheetLabels";
 
-/** Un niveau d'ASI a traiter (V2-G1) — resolu en amont par `LevelUpWizard` a partir de `asiGrantedLevels`, jamais devine ici. */
+/** Un niveau d'ASI a traiter (V2-G1) — resolu en amont par l'etape Classe a partir de `asiGrantedLevels`, jamais devine ici. */
 export interface AsiGrant {
   /** Cle de `character.choices`, format `"<classe>.l<niveau>.asi"`. */
   choiceKey: string;

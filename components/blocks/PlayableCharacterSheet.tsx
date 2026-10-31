@@ -27,24 +27,15 @@ import InventoryTab from "./InventoryTab";
 import TraitsTab from "./TraitsTab";
 import MasteriesTab from "./MasteriesTab";
 import { toggleChoice } from "./characterChoiceUtils";
-import LevelUpWizard from "./LevelUpWizard";
+import CharacterCreatorWizard from "./CharacterCreatorWizard";
 import { useDiceRoll } from "@/components/shell/DiceRollPanel";
 import { chargerFicheCalculee, type SheetApiResponse } from "./ficheCalculee";
 import { ABILITY_LABELS, SORTED_SKILLS } from "./sheetLabels";
 import TuileCaracteristique from "./TuileCaracteristique";
 import { commandesDeLaFiche, type CommandesFiche } from "@/lib/ui/commandesFiche";
 import { useJetsDeLaFiche } from "./useJetsDeLaFiche";
+import { TAB_LABELS, type Tab } from "./ongletsFiche";
 
-export type Tab = "actions" | "magie" | "inventaire" | "traits" | "maitrise";
-
-/** Libelles d'onglet (retour utilisateur, V2-G1) : ecrits ici, jamais deduits de la cle par une classe `capitalize` (par mot), qui rendait "Maitrise D'armes" — sans accent et mal coupe. Exporte pour l'apercu de l'assistant de creation (`PreviewStep`), qui affichait justement ses onglets par `capitalize` sur la cle brute. */
-export const TAB_LABELS: Record<Tab, string> = {
-  actions: "Actions",
-  magie: "Magie",
-  inventaire: "Inventaire",
-  traits: "Traits",
-  maitrise: "Maîtrises",
-};
 
 
 /**
@@ -253,26 +244,30 @@ export default function PlayableCharacterSheet({
 
   if (levelUpOpen) {
     return (
-      <LevelUpWizard
+      <CharacterCreatorWizard
         worldSlug={worldSlug}
-        entityId={entityId}
-        campaignId={campaignId}
-        expectedVersion={characterBlockVersion}
-        initialCharacter={character}
-        initialInventory={inventory ?? { __v: 1, items: [], containers: [], currency: { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 } }}
-        initialSpellcasting={spellcasting}
-        isWorldAdmin={isWorldAdmin}
-        onCancel={() => setLevelUpOpen(false)}
-        onDone={(result) => {
-          onBlockRefreshed({ id: characterBlockId, data: result.character.data, version: result.character.version });
-          if (result.spellcasting) onBlockRefreshed(result.spellcasting);
-          setLevelUpOpen(false);
-          // `remote.runtimeState.hpMax` (V1-B5) vient de `/sheet`, chargee
-          // une seule fois au montage — sans ce rechargement, la barre de PV
-          // resterait plafonnee a l'ANCIEN niveau jusqu'au prochain rechargement
-          // complet de la page, alors que le bloc `character` local, lui, est
-          // deja a jour (V2-G1).
-          reloadRemote();
+        montee={{
+          entityId,
+          campaignId,
+          expectedVersion: characterBlockVersion,
+          initial: {
+            character,
+            inventory: inventory ?? { __v: 1, items: [], containers: [], currency: { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 } },
+            spellcasting,
+          },
+          isWorldAdmin,
+          onCancel: () => setLevelUpOpen(false),
+          onDone: (result) => {
+            onBlockRefreshed({ id: characterBlockId, data: result.character.data, version: result.character.version });
+            if (result.spellcasting) onBlockRefreshed(result.spellcasting);
+            setLevelUpOpen(false);
+            // `remote.runtimeState.hpMax` (V1-B5) vient de `/sheet`, chargee
+            // une seule fois au montage — sans ce rechargement, la barre de PV
+            // resterait plafonnee a l'ANCIEN niveau jusqu'au prochain rechargement
+            // complet de la page, alors que le bloc `character` local, lui, est
+            // deja a jour (V2-G1).
+            reloadRemote();
+          },
         }}
       />
     );
