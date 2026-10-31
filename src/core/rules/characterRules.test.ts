@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { CharacterRules } from "../schemas/rule-blocks/characterRules";
 import { zCharacterRulesBlockData } from "../schemas/rule-blocks/characterRules";
-import { checkMulticlassEntry, checkMulticlassPrerequisites, exceedsLevelCap, pointBuyCost, withinAbilityScoreCap } from "./characterRules";
+import { checkMulticlassEntry, checkMulticlassPrerequisites, exceedsLevelCap, pointBuyCost, startingAtHigherLevel, startingGold, withinAbilityScoreCap } from "./characterRules";
 import { computeEncumbrance } from "./encumbrance";
 
 /** Les valeurs 2024, telles que l'import SRD les pose (data/srd/character-rules-2024.json). */
@@ -127,5 +127,32 @@ describe("charge lue dans les règles", () => {
     expect(computeEncumbrance(17, 165, variante2014)).toMatchObject({ tier: "encumbered", speedPenalty: 10, disadvantageAbilities: [] });
     expect(computeEncumbrance(10, 101, variante2014)).toMatchObject({ tier: "heavily_encumbered", speedPenalty: 20, disadvantageAbilities: ["str", "dex", "con"] });
     expect(computeEncumbrance(10, 50, variante2014).tier).toBe("none");
+  });
+});
+
+describe("départ à haut niveau (V3.1-53, SRD 5.2.1 « Starting Equipment at Higher Levels »)", () => {
+  const PALIERS: CharacterRules["starting_at_higher_level"] = [
+    { min_level: 2, max_level: 4, gold: 0 },
+    { min_level: 5, max_level: 10, gold: 500, gold_roll: { count: 1, faces: 10, multiplier: 25 }, magic_item_picks: [{ rarity: "Common", count: 1 }] },
+    { min_level: 11, max_level: 16, gold: 5000, gold_roll: { count: 1, faces: 10, multiplier: 250 } },
+  ];
+  const regles = { ...REGLES_2024, starting_at_higher_level: PALIERS };
+
+  it("le bloc accepte le jet d'or et les objets magiques par rareté", () => {
+    expect(zCharacterRulesBlockData.safeParse(regles).success).toBe(true);
+  });
+  it("trouve le palier du niveau total ; rien au niveau 1, ni hors table, ni sans table", () => {
+    expect(startingAtHigherLevel(regles, 7)?.gold).toBe(500);
+    expect(startingAtHigherLevel(regles, 11)?.gold).toBe(5000);
+    expect(startingAtHigherLevel(regles, 1)).toBeNull();
+    expect(startingAtHigherLevel(regles, 18)).toBeNull();
+    expect(startingAtHigherLevel(REGLES_2024, 7)).toBeNull();
+  });
+  it("un palier sans or ni objet ne donne rien : « équipement normal »", () => {
+    expect(startingAtHigherLevel(regles, 3)).toBeNull();
+  });
+  it("l'or : somme fixe + somme des dés × multiplicateur", () => {
+    expect(startingGold(PALIERS![1]!, [7])).toBe(675);
+    expect(startingGold(PALIERS![0]!, [])).toBe(0);
   });
 });

@@ -16,6 +16,7 @@ import SpeciesStep from "./characterCreatorSteps/SpeciesStep";
 import BackgroundStep, { type BackgroundEquipmentChoice } from "./characterCreatorSteps/BackgroundStep";
 import SpellSelectionStep, { spellClassesAndLevel } from "./characterCreatorSteps/SpellSelectionStep";
 import PreviewStep from "./characterCreatorSteps/PreviewStep";
+import { totalValueCp } from "@/src/core/rules/currency";
 import { createCharacterFromWizardAction, type CreateCharacterFromWizardInput } from "@/app/m/[worldSlug]/mj/creation-personnage/actions";
 import { overwriteCharacterFromWizardAction, type OverwriteCharacterFromWizardInput } from "@/app/m/[worldSlug]/(monde)/f/[entitySlug]/actions";
 import { useWorldRuleEntries } from "./useWorldRuleEntries";
@@ -537,6 +538,8 @@ export default function CharacterCreatorWizard({
     if (busy) return;
     setBusy(true);
     setError(null);
+    // V3.1-53 : une bourse sans objet (option B : des pièces seulement) est envoyée aussi.
+    const inventaireAEnvoyer = inventory.items.length > 0 || totalValueCp(inventory.currency) > 0 ? inventory : undefined;
     try {
       if (entityMode) {
         const result = await (entityMode.onSubmit ?? overwriteCharacterFromWizardAction)(worldSlug, {
@@ -544,7 +547,7 @@ export default function CharacterCreatorWizard({
           expectedVersion: entityMode.expectedVersion,
           name: finalName,
           character,
-          inventory: inventory.items.length > 0 ? inventory : undefined,
+          inventory: inventaireAEnvoyer,
           spellcasting: spellcasting.known.length > 0 ? spellcasting : undefined,
         });
         if (!result) return;
@@ -560,7 +563,7 @@ export default function CharacterCreatorWizard({
         worldId: worldId!,
         name: finalName,
         character,
-        inventory: inventory.items.length > 0 ? inventory : undefined,
+        inventory: inventaireAEnvoyer,
         spellcasting: spellcasting.known.length > 0 ? spellcasting : undefined,
       });
       if (result?.error) setError(result.error);

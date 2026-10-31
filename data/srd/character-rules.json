@@ -5,7 +5,7 @@
     "ingest-srd.ts en fait la fiche « character-rules » (bloc `character_rules`) de chaque ruleset officiel.",
     "Une variante (ruleset personnel) les surcharge champ par champ ; le code n'a aucune valeur de repli.",
     "Clé : le base_system du ruleset. Chaque bloc est validé par zCharacterRulesBlockData à l'import.",
-    "starting_at_higher_level est absent : à saisir d'après le MdJ 2024 (valeurs sous droits)."
+    "starting_at_higher_level : table « Starting Equipment at Higher Levels » du SRD 5.2.1 (V3.1-53), absente du SRD 5.1."
   ],
 
   "dnd_srd_52": {
@@ -25,7 +25,16 @@
         "9": [4, 3, 3, 3, 1], "10": [4, 3, 3, 3, 2], "11": [4, 3, 3, 3, 2, 1], "12": [4, 3, 3, 3, 2, 1],
         "13": [4, 3, 3, 3, 2, 1, 1], "14": [4, 3, 3, 3, 2, 1, 1], "15": [4, 3, 3, 3, 2, 1, 1, 1], "16": [4, 3, 3, 3, 2, 1, 1, 1],
         "17": [4, 3, 3, 3, 2, 1, 1, 1, 1], "18": [4, 3, 3, 3, 3, 1, 1, 1, 1], "19": [4, 3, 3, 3, 3, 2, 1, 1, 1], "20": [4, 3, 3, 3, 3, 2, 2, 1, 1]
-      }
+      },
+      "starting_at_higher_level": [
+        { "min_level": 2, "max_level": 4, "gold": 0, "magic_item_picks": [{ "rarity": "Common", "count": 1 }] },
+        { "min_level": 5, "max_level": 10, "gold": 500, "gold_roll": { "count": 1, "faces": 10, "multiplier": 25 },
+          "magic_item_picks": [{ "rarity": "Common", "count": 1 }, { "rarity": "Uncommon", "count": 1 }] },
+        { "min_level": 11, "max_level": 16, "gold": 5000, "gold_roll": { "count": 1, "faces": 10, "multiplier": 250 },
+          "magic_item_picks": [{ "rarity": "Common", "count": 2 }, { "rarity": "Uncommon", "count": 3 }, { "rarity": "Rare", "count": 1 }] },
+        { "min_level": 17, "max_level": 20, "gold": 20000, "gold_roll": { "count": 1, "faces": 10, "multiplier": 250 },
+          "magic_item_picks": [{ "rarity": "Common", "count": 2 }, { "rarity": "Uncommon", "count": 4 }, { "rarity": "Rare", "count": 3 }, { "rarity": "Very Rare", "count": 1 }] }
+      ]
     }
   },
 

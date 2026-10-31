@@ -1,5 +1,5 @@
 import type { Ability } from "./abilities";
-import type { MulticlassPrerequisites } from "../schemas/rule-blocks/characterRules";
+import type { CharacterRules, MulticlassPrerequisites } from "../schemas/rule-blocks/characterRules";
 
 /**
  * Les règles de personnage d'un ruleset appliquées (V3.1-115, ADR 0046).
@@ -74,4 +74,24 @@ export function checkMulticlassEntry(
     if (!check.met) failures.push({ classKey: c.key, unmet: check.unmet });
   }
   return { met: failures.length === 0, failures };
+}
+
+export type StartingTier = NonNullable<CharacterRules["starting_at_higher_level"]>[number];
+
+/**
+ * Le palier de départ à haut niveau du niveau total (V3.1-53). `null` hors
+ * table, ou quand le palier ne donne rien de plus que l'équipement normal
+ * (niveaux 2 à 4 du SRD) : il n'y a alors rien à montrer.
+ */
+export function startingAtHigherLevel(rules: Pick<CharacterRules, "starting_at_higher_level">, totalLevel: number): StartingTier | null {
+  const tier = (rules.starting_at_higher_level ?? []).find((t) => totalLevel >= t.min_level && totalLevel <= t.max_level);
+  if (!tier) return null;
+  const givesSomething = tier.gold > 0 || tier.gold_roll !== undefined || (tier.magic_item_picks?.length ?? 0) > 0;
+  return givesSomething ? tier : null;
+}
+
+/** L'or du palier, en po : somme fixe + somme des dés (lancés par le serveur) × multiplicateur. */
+export function startingGold(tier: StartingTier, rolls: readonly number[]): number {
+  const dice = rolls.reduce((sum, r) => sum + r, 0);
+  return tier.gold + (tier.gold_roll ? dice * tier.gold_roll.multiplier : 0);
 }

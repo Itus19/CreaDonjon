@@ -69,9 +69,23 @@ export const zCharacterRulesBlockData = z.object({
   sell_ratio: z.number().min(0).max(1),
   /** Table du multiclassé (ADR 0045) : niveau de lanceur (« 1 » à « 20 ») → emplacements par niveau de sort. */
   multiclass_spell_slots: z.record(z.string().regex(/^\d{1,2}$/), z.array(z.number().int().min(0)).max(9)).optional(),
-  /** Départ à haut niveau, par palier. À saisir d'après le MdJ 2024 : absent de l'import SRD. */
+  /**
+   * Départ à haut niveau, par palier (SRD 5.2.1, « Starting Equipment at
+   * Higher Levels ») : `gold` po fixes, plus `gold_roll` (dés lancés par le
+   * serveur, multipliés), plus des objets magiques à choisir par rareté
+   * (V3.1-53). `magic_items` : ancien texte libre, gardé pour compatibilité.
+   */
   starting_at_higher_level: z
-    .array(z.object({ min_level: z.number().int().min(1), max_level: z.number().int().min(1), gold: z.number().int().min(0), magic_items: z.string().optional() }))
+    .array(
+      z.object({
+        min_level: z.number().int().min(1),
+        max_level: z.number().int().min(1),
+        gold: z.number().int().min(0),
+        gold_roll: z.object({ count: z.number().int().min(1).max(10), faces: z.number().int().min(2).max(100), multiplier: z.number().int().min(1) }).optional(),
+        magic_item_picks: z.array(z.object({ rarity: z.string().min(1), count: z.number().int().min(1).max(10) })).optional(),
+        magic_items: z.string().optional(),
+      })
+    )
     .optional(),
 });
 export type CharacterRules = z.infer<typeof zCharacterRulesBlockData>;
