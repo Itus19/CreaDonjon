@@ -38,7 +38,8 @@ export interface SousEtape {
   nombre: number;
   choisis: string[];
   options: OptionChoix[];
-  genre: ChoiceFrom["kind"] | "weapon_mastery";
+  /** `groupe` (V3.1-50) : le don d'un historique, ses choix réunis en `sections`. */
+  genre: ChoiceFrom["kind"] | "weapon_mastery" | "groupe";
   /** La réponse est imposée par une autre fiche (Argot des voleurs) : acquise, rien à choisir. */
   impose: boolean;
   fait: boolean;
@@ -46,6 +47,8 @@ export interface SousEtape {
   attend: boolean;
   /** Un choix d'expertise : ses options sont des compétences déjà maîtrisées. */
   expertise: boolean;
+  /** `groupe` seulement : les choix du don, dans l'ordre ; `choisis` y liste les sections faites. */
+  sections?: SousEtape[];
 }
 
 export interface Etape {
@@ -176,8 +179,10 @@ export function construireChemin(entree: EntreeChemin): Chemin {
     });
   }
 
+  const racineDe = new Map<string, ChoiceSource>();
   for (const c of entree.ouverts) {
     const fiche = racine(c.key, entree.sources);
+    if (fiche) racineDe.set(c.key, fiche);
     const etape = fiche?.origin ? ETAPE_DE_L_ORIGINE[fiche.origin] : "classe";
     const don = c.sourceKey !== fiche?.key ? entree.dons[c.sourceKey.split(".").pop() ?? ""] : undefined;
     const { options, attend } = c.preset ? { options: c.chosen.map((cle) => ({ cle })), attend: false } : optionsAccordees(c, entree, languesPrises);
@@ -196,6 +201,8 @@ export function construireChemin(entree: EntreeChemin): Chemin {
       expertise: c.from.kind === "skill" && c.from.expertise === true,
     });
   }
+
+  regrouperDonsDHistorique(sous, racineDe, entree.ouverts);
 
   const etapes: Etape[] = ORDRE_ETAPES.filter((cle) => (cle !== "pv" || entree.avecPointsDeVie) && (cle !== "sorts" || entree.avecSorts)).map((cle) => {
     const ici = sous.filter((s) => s.etape === cle);
@@ -241,5 +248,53 @@ export function choixOuverts(
     .map((r) => ({ cle: r.id, libelle: r.label }));
   const accordes = ouverts.filter((c) => !c.preset && c.chosen.length < c.count).map((c) => ({ cle: c.key, libelle: c.label }));
   return [...anciens, ...accordes];
+}
+
+/**
+ * V3.1-50 — Le don qu'accorde l'historique (Initié à la magie de l'Acolyte)
+ * devient UNE sous-étape, « Initié à la magie (Clerc) · n/3 », dont l'écran
+ * réunit les choix en sections. Une réponse imposée (la liste du clerc) n'est
+ * pas une section : elle précise le nom. La cascade d'un don choisi sous
+ * Espèce (Polyvalent) garde ses sous-étapes séparées.
+ */
+function regrouperDonsDHistorique(sous: SousEtape[], racineDe: ReadonlyMap<string, ChoiceSource>, ouverts: readonly OpenChoice[]): void {
+  const dons = new Map<string, ChoiceSource>();
+  for (const fiche of racineDe.values()) {
+    if (fiche.origin === "background" && !fiche.key.startsWith("background:")) dons.set(fiche.key, fiche);
+  }
+  for (const don of dons.values()) {
+    const membres = sous.filter((s) => racineDe.get(s.cle)?.key === don.key);
+    if (membres.length === 0) continue;
+    const precisions: string[] = [];
+    for (const m of membres) {
+      if (!m.impose) continue;
+      const ouvert = ouverts.find((o) => o.key === m.cle);
+      if (ouvert?.from.kind !== "option") continue;
+      const from = ouvert.from;
+      for (const c of m.choisis) {
+        const option = from.options.find((o) => o.id === c);
+        if (option) precisions.push(localizedLabel(option.label, option.id));
+      }
+    }
+    const sections = membres.filter((m) => !m.impose);
+    const groupe: SousEtape = {
+      cle: `don:${don.key}`,
+      etape: membres[0].etape,
+      libelle: precisions.length > 0 ? `${don.label} (${precisions.join(", ")})` : don.label,
+      source: don.label,
+      nombre: sections.length,
+      choisis: sections.filter((m) => m.fait).map((m) => m.cle),
+      options: [],
+      genre: "groupe",
+      impose: false,
+      fait: sections.every((m) => m.fait),
+      attend: false,
+      expertise: false,
+      sections,
+    };
+    const premier = sous.indexOf(membres[0]);
+    for (let i = sous.length - 1; i >= 0; i--) if (membres.includes(sous[i])) sous.splice(i, 1);
+    sous.splice(premier, 0, groupe);
+  }
 }
 

@@ -89,6 +89,11 @@ export interface DeclaredModifier {
  * passent pas par cette fonction : leurs modificateurs sont deja produits
  * directement en couche 2/4 par `mapSpeciesModifiers`/`mapBackgroundModifiers`.
  */
+/** DD et attaque des sorts : la seule formule du moteur (V3.1-50 : la fiche, les sorts d'un trait et les écrans de choix la partagent). */
+export function spellNumbers(abilityMod: number, proficiencyBonus: number): { saveDc: number; attackBonus: number } {
+  return { saveDc: 8 + proficiencyBonus + abilityMod, attackBonus: proficiencyBonus + abilityMod };
+}
+
 export function layerForFeatureSource(source: string): Layer {
   return source.startsWith("class:") ? 3 : 5;
 }
@@ -618,8 +623,7 @@ export function characterSheet(
     }
     spellcasting = {
       ability,
-      saveDc: 8 + proficiencyBonus + abilities[ability].mod,
-      attackBonus: proficiencyBonus + abilities[ability].mod,
+      ...spellNumbers(abilities[ability].mod, proficiencyBonus),
       slots: computed.slots,
       ...(computed.pact ? { pactSlots: computed.pact } : {}),
     };
@@ -635,7 +639,7 @@ export function characterSheet(
         alwaysPrepared: s.alwaysPrepared,
         ...(s.freeCast ? { freeCast: s.freeCast } : {}),
         ...(s.ability
-          ? { ability: s.ability, saveDc: 8 + proficiencyBonus + abilities[s.ability].mod, attackBonus: proficiencyBonus + abilities[s.ability].mod }
+          ? { ability: s.ability, ...spellNumbers(abilities[s.ability].mod, proficiencyBonus) }
           : {}),
       }))
   );

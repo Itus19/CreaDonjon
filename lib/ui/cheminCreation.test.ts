@@ -213,3 +213,51 @@ describe("les choix ouverts, rappelés sur la fiche (critère 5)", () => {
   });
 });
 
+
+describe("le don de l'historique : une seule sous-étape à sections (V3.1-50)", () => {
+  const INITIE_ACOLYTE: ChoiceSource = { key: "magic-initiate", label: "Initié à la magie", layer: 5, origin: "background", grants: MAGIC_INITIATE.grants };
+  const cheminAcolyte = (answers: Record<string, unknown>) => {
+    const resolu = resolveChoices({ sources: [INITIE_ACOLYTE], choices: answers, presets: { "magic-initiate.list": ["cleric"] }, characterLevel: 1, feats: FEATS });
+    return construireChemin({
+      restants: [],
+      ouverts: resolu.open,
+      sources: [INITIE_ACOLYTE],
+      reponses: answers,
+      avecPointsDeVie: false,
+      avecSorts: false,
+      langues: [],
+      competencesMaitrisees: [],
+      dons: FEATS,
+    });
+  };
+
+  it("« Don : Initié à la magie (Clerc) », ses choix en sections ; la liste imposée n'en est pas une à faire", () => {
+    const histo = cheminAcolyte({}).etapes.find((e) => e.cle === "histo");
+    expect(histo?.sous.map((s) => s.cle)).toEqual(["don:magic-initiate"]);
+    const don = histo!.sous[0];
+    expect(don.libelle).toBe("Initié à la magie (Clerc)");
+    expect(don.genre).toBe("groupe");
+    expect(don.sections?.map((s) => s.cle)).toEqual(["magic-initiate.list.cleric.cantrips", "magic-initiate.list.cleric.spell", "magic-initiate.ability"]);
+    expect([don.choisis.length, don.nombre, don.fait]).toEqual([0, 3, false]);
+    expect(histo!.aFaire).toBe(1);
+  });
+
+  it("le compte suit les sections faites ; le don est fait quand toutes le sont", () => {
+    const partiel = cheminAcolyte({ "magic-initiate.ability": ["wis"] }).etapes.find((e) => e.cle === "histo")!.sous[0];
+    expect([partiel.choisis.length, partiel.fait]).toEqual([1, false]);
+    const complet = cheminAcolyte({
+      "magic-initiate.ability": ["wis"],
+      "magic-initiate.list.cleric.cantrips": ["guidance", "light"],
+      "magic-initiate.list.cleric.spell": ["bless"],
+    }).etapes.find((e) => e.cle === "histo")!.sous[0];
+    expect([complet.choisis.length, complet.fait]).toEqual([3, true]);
+  });
+
+  it("la cascade de Polyvalent sous Espèce reste en sous-étapes séparées", () => {
+    expect(sousDe(chemin([VERSATILE], { "versatile.feat": ["magic-initiate"] }), "espece")).toEqual([
+      "versatile.feat",
+      "versatile.feat.magic-initiate.list",
+      "versatile.feat.magic-initiate.ability",
+    ]);
+  });
+});
