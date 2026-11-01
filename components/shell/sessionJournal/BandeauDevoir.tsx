@@ -6,7 +6,9 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import type { JournalStatus } from "@/src/core/sessionJournal/devoir";
 
 function jourIrl(iso: string): string {
-  return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long" });
+  const date = new Date(iso);
+  const mois = date.toLocaleDateString("fr-FR", { month: "long" });
+  return `${date.getDate() === 1 ? "1er" : date.getDate()} ${mois}`;
 }
 
 /**

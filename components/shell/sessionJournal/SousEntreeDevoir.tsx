@@ -11,7 +11,7 @@ export interface DevoirRail {
 /**
  * Le devoir de journal sous « Édition » dans le rail joueur (V3.1-150,
  * piste A de l'esquisse). Deux états : « À rendre » (point doré) puis
- * « Rendu · à valider par le MJ » (coche verte). Une fois le devoir validé,
+ * « Rendu · à valider » (coche verte). Une fois le devoir validé,
  * le layout ne le transmet plus : la sous-entrée disparaît.
  */
 export default function SousEntreeDevoir({ devoir, href, actif }: { devoir: DevoirRail; href: string; actif: boolean }) {
@@ -19,6 +19,7 @@ export default function SousEntreeDevoir({ devoir, href, actif }: { devoir: Devo
   return (
     <Link
       href={href}
+      title={aRendre ? `Devoir de journal à rendre (${devoir.dateEnJeu})` : "Devoir rendu, à valider par le MJ"}
       aria-current={actif ? "page" : undefined}
       className={`ml-[22px] flex flex-col gap-0.5 rounded-r-xl border-l-2 py-1.5 pl-2.5 pr-2 transition-colors hover:bg-panel-raised ${
         aRendre ? "border-accent" : "border-success"
@@ -34,7 +35,7 @@ export default function SousEntreeDevoir({ devoir, href, actif }: { devoir: Devo
         )}
         Devoir de journal
       </span>
-      <span className="truncate text-xs text-ink-muted">{aRendre ? `À rendre · ${devoir.dateEnJeu}` : "Rendu · à valider par le MJ"}</span>
+      <span className="truncate text-xs text-ink-muted">{aRendre ? `À rendre · ${devoir.dateEnJeu}` : "Rendu · à valider"}</span>
     </Link>
   );
 }

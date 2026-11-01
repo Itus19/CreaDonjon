@@ -53,7 +53,12 @@ export default async function JoueurFicheEntityPage({
   return (
     <>
       {devoir && <BandeauDevoir worldSlug={worldSlug} devoir={devoir} />}
+      {/* Clé = état du devoir : « Devoir fait » publie la fiche et date le
+          bloc Séance côté serveur ; le formulaire repart alors des données
+          fraîches (versions comprises), une seule fois. Jamais la version de
+          la fiche, qui change à chaque renommage et couperait la frappe. */}
       <EditEntityForm
+        key={devoir?.status ?? "fiche"}
         entity={data.entity}
         worldSlug={data.worldSlug}
         initialBlocks={data.blocks}
