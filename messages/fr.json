@@ -684,8 +684,26 @@
     "personnageIntrouvable": "Personnage introuvable",
     "prochaineSeance": "Prochaine séance",
     "aucuneSeance": "Aucune séance prévue",
-    "mjNoms": "MJ : {noms}",
-    "statsJets": "Stats de jets"
+    "mjNoms": "MJ : {noms}"
+  },
+  "statsJoueur": {
+    "titre": "Tes dés et tes titres",
+    "porteeAria": "Période des statistiques",
+    "campagne": "Cette campagne",
+    "derniereSeance": "Dernière séance",
+    "chargement": "…",
+    "erreur": "Impossible de charger tes statistiques pour l'instant.",
+    "sansCampagne": "Ce monde n'a pas encore de campagne.",
+    "sansPersonnage": "Tu n'as pas encore de personnage dans cette campagne.",
+    "peuDeJets": "Lance quelques dés : tes statistiques apparaîtront ici.",
+    "depuisLe9Octobre": "Statistiques depuis le 9 octobre",
+    "histogrammeAria": "Répartition de tes jets de d20, de 1 à 20",
+    "titresAria": "Tes titres",
+    "jets": "{nombre, plural, one {# jet} other {# jets}}",
+    "moyenneAria": "Moyenne des jets : {valeur}",
+    "nombreDe1Aria": "Nombre de 1 : {nombre}",
+    "nombreDe20Aria": "Nombre de 20 : {nombre}",
+    "survol": "{face} : {nombre} fois"
   },
   "table": {
     "titre": "Table",

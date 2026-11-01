@@ -3018,3 +3018,13 @@ Opus seul (le contexte de V3.1-89 était chargé ; un fichier). Tests d'abord, 2
 
 *Restes* : le service et le volet (V3.1-91) ; l'éditeur des paliers (V3.1-92) lira `checkTiers`.
 
+### V3.1-91 — Statistiques : le service et le volet de l'accueil (1er novembre)
+
+Opus : service, route, accès ; `dev-sonnet` : le volet ; `aide-haiku` : la planche ; relu et vérifié au navigateur par Opus.
+- **Service** `getPlayerStats` (`src/server/services/playerStats.ts`) : le personnage réclamé de l'appelante est résolu par le serveur (la route n'accepte que `scope`, Zod strict) ; ses jets publics seulement ; la moyenne de la table en une requête (`listTableD20`, personnages réclamés ayant lancé un d20 dans la période, elle comprise ; seule la moyenne sort) ; « Dernière séance » = la séance la plus récente (jets et argent) ; paliers lus et validés (`listPlayerTitleTiers`, une ligne abîmée écartée et signalée).
+- **Route** `GET /api/campaigns/[campaignId]/player-stats?scope=…`.
+- **Volet** `StatsJoueur.tsx` (remplace `DiceStatsPanel`, retiré avec la route `economy-stats` qu'il était seul à lire) : pilule, histogramme sur une grille de 20 colonnes partagée (moyenne au centre, 1 en rouge et 20 en vert au-dessus de leur colonne, même source que les barres), quatre titres en 2 × 2 avec icônes au trait (`IconeTitre.tsx`), états vides et d'erreur. Appel dans `lib/ui/statsJoueurApi.ts`.
+- **Vérifié** contre la base (`playerStats.integration.test.ts`, 3/3 : secrets et cachés exclus, 1 et 20 égaux aux colonnes, dernière séance, chacune son personnage, MJ sans statistiques) et au navigateur (Testeuse A, banc d'essai) : 1400 × 860 sans défilement ; 390 px, aucun chiffre recouvert.
+
+*Restes* : « Statistiques depuis le 9 octobre » est un libellé fixe ; l'attaque sournoise n'a pas encore de jet qui la nomme (V3.1-90).
+

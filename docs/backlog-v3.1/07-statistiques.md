@@ -102,7 +102,7 @@ des données de V3.1-89.
 
 ---
 
-### ☐ V3.1-91 — Statistiques : le service et le volet de l'accueil · `M` · sans modèle IA — **prêt**
+### ☑ V3.1-91 — Statistiques : le service et le volet de l'accueil · `M` · sans modèle IA — **fait le 1er novembre**
 
 **Modèle conseillé : Sonnet.**
 
@@ -151,15 +151,15 @@ volet de droite de l'accueil (`Accueil-3-Tableau.dc.html`, V3.1-35).
   largeur.
 
 **Critères d'acceptation**
-- [ ] Les nombres de 1 et de 20 égalent la hauteur relative de leurs
+- [x] Les nombres de 1 et de 20 égalent la hauteur relative de leurs
   colonnes (même source).
-- [ ] « Dernière séance » ne compte que les jets et mouvements de la
+- [x] « Dernière séance » ne compte que les jets et mouvements de la
   dernière séance de la campagne.
-- [ ] Aucun jet secret (MJ ou joueur, même les siens) n'entre dans les
+- [x] Aucun jet secret (MJ ou joueur, même les siens) n'entre dans les
   chiffres ; une joueuse ne voit jamais les statistiques d'un autre PJ.
-- [ ] Ordinateur 1400 × 860 : volet sans défilement ; téléphone 390 px :
+- [x] Ordinateur 1400 × 860 : volet sans défilement ; téléphone 390 px :
   aucun chiffre recouvert.
-- [ ] `DiceStatsPanel` retiré (et ses routes si plus rien ne les lit).
+- [x] `DiceStatsPanel` retiré (et ses routes si plus rien ne les lit).
 
 ---
 

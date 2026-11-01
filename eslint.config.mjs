@@ -201,7 +201,6 @@ const eslintConfig = defineConfig([
         "components/shell/ChatPanel.tsx",
         "components/shell/ChatThreadsPanel.tsx",
         "components/shell/DiceRollPanel.tsx",
-        "components/shell/DiceStatsPanel.tsx",
         "components/shell/EncounterBuilder.tsx",
         "components/shell/EntityTree.tsx",
         "components/shell/GmJournalPanel.tsx",

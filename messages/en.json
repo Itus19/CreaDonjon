@@ -683,8 +683,26 @@
     "personnageIntrouvable": "Character not found",
     "prochaineSeance": "Next session",
     "aucuneSeance": "No session planned",
-    "mjNoms": "GM: {noms}",
-    "statsJets": "Roll stats"
+    "mjNoms": "GM: {noms}"
+  },
+  "statsJoueur": {
+    "titre": "Your dice and your titles",
+    "porteeAria": "Statistics period",
+    "campagne": "This campaign",
+    "derniereSeance": "Last session",
+    "chargement": "…",
+    "erreur": "Could not load your statistics right now.",
+    "sansCampagne": "This world has no campaign yet.",
+    "sansPersonnage": "You do not have a character in this campaign yet.",
+    "peuDeJets": "Roll a few dice: your statistics will show up here.",
+    "depuisLe9Octobre": "Statistics since October 9",
+    "histogrammeAria": "Distribution of your d20 rolls, from 1 to 20",
+    "titresAria": "Your titles",
+    "jets": "{nombre, plural, one {# roll} other {# rolls}}",
+    "moyenneAria": "Average roll: {valeur}",
+    "nombreDe1Aria": "Number of 1s: {nombre}",
+    "nombreDe20Aria": "Number of 20s: {nombre}",
+    "survol": "{face}: {nombre, plural, one {# time} other {# times}}"
   },
   "table": {
     "titre": "Table",

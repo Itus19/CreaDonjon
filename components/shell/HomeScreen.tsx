@@ -6,7 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import type { JournalEntry } from "@/src/server/services/activityJournal";
 import WorldCardActions from "@/app/WorldCardActions";
 import Tabs, { TabPanel } from "@/components/shared/Tabs";
-import DiceStatsPanel from "./DiceStatsPanel";
+import StatsJoueur from "./StatsJoueur";
 import InviteLinkPanel from "./InviteLinkPanel";
 import FeuilleDuBas from "@/components/shared/FeuilleDuBas";
 import AccueilHaut from "./AccueilHaut";
@@ -138,8 +138,7 @@ function WorldDetail({ world, currentUserId, canUseSoloMode }: { world: HomeWorl
             </p>
           </div>
           {world.gmNames.length > 0 && <p className="text-sm text-ink-muted">{t("mjNoms", { noms: world.gmNames.join(", ") })}</p>}
-          <span className="text-xs font-bold uppercase tracking-widest text-ink-muted">{t("statsJets")}</span>
-          <DiceStatsPanel campaignId={world.campaignId} />
+          <StatsJoueur campaignId={world.campaignId} />
         </div>
       ) : (
         <div className="flex min-h-0 flex-1 flex-col">
