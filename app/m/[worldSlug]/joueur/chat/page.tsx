@@ -2,9 +2,9 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { listCampaigns } from "@/src/server/services/campaigns";
-import ChatPanel from "@/components/shell/ChatPanel";
+import ChatThreadsPanel from "@/components/shell/ChatThreadsPanel";
 
-/** Onglet Chat (V2-M12/M13, retour utilisateur : "ajoute un outil de chat avec le mj dans la liste des outils de joueur") — fil du joueur avec le MJ, meme composant que cote MJ (`threadUserId` omis : le serveur retombe sur son propre fil). */
+/** Onglet Chat (V2-M12/M13, V3.1-22) — page pleine du joueur : liste « Conversations » (salon de table, MJ en prive) et la conversation choisie. */
 export default async function JoueurChatPage({ params }: { params: Promise<{ worldSlug: string }> }) {
   const { worldSlug } = await params;
   const supabase = await createClient();
@@ -15,8 +15,8 @@ export default async function JoueurChatPage({ params }: { params: Promise<{ wor
   const campaignId = campaigns[0]?.id ?? null;
 
   return (
-    <div className="mx-auto flex h-full max-w-3xl flex-col">
-      <ChatPanel worldSlug={worldSlug} campaignId={campaignId} />
+    <div className="mx-auto flex h-full max-w-5xl flex-col">
+      <ChatThreadsPanel campaignId={campaignId} role="joueur" />
     </div>
   );
 }

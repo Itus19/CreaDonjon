@@ -18,7 +18,7 @@ export default async function MjChatPage({ params }: { params: Promise<{ worldSl
   return (
     <div className="flex h-full flex-col gap-4">
       <RegisterPrimaryWindow windowRef={{ kind: "mj", key: "chat" }} name="Chat" badge="" homeHref={`/m/${worldSlug}/mj/chat`} />
-      <ChatThreadsPanel worldSlug={worldSlug} campaignId={campaignId} />
+      <ChatThreadsPanel campaignId={campaignId} role="mj" />
     </div>
   );
 }

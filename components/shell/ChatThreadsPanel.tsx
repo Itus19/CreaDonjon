@@ -71,8 +71,11 @@ function ChatMj({ campaignId }: { campaignId: string }) {
   const ouvertRef = useRef<string | null>(null);
   const userIdRef = useRef<string | null>(null);
 
+  const liste = Array.isArray(threads) ? threads : [];
+  // Téléphone, vue « Fils privés » : sans choix, on ouvre le premier fil.
+  const filTelephone = estTelephone && vue === "prives" ? (liste.find((th) => th.userId === selected) ?? liste[0] ?? null) : null;
   // Le fil réellement affiché : sur téléphone, seulement dans la vue « Fils privés ».
-  const filAffiche = estTelephone && vue !== "prives" ? null : selected;
+  const filAffiche = estTelephone ? (filTelephone?.userId ?? null) : selected;
   useEffect(() => {
     ouvertRef.current = filAffiche;
   }, [filAffiche]);
@@ -128,10 +131,7 @@ function ChatMj({ campaignId }: { campaignId: string }) {
     setThreads((prev) => (Array.isArray(prev) ? prev.map((x) => (x.userId === userId ? { ...x, unreadCount: 0 } : x)) : prev));
   }
 
-  const liste = Array.isArray(threads) ? threads : [];
   const filChoisi = liste.find((th) => th.userId === filAffiche) ?? null;
-  // Téléphone, vue « Fils privés » : sans choix, on ouvre le premier fil.
-  const filTelephone = estTelephone && vue === "prives" ? (liste.find((th) => th.userId === selected) ?? liste[0] ?? null) : null;
 
   const pastilles = (
     <div className="flex min-w-0 flex-wrap items-center gap-1.5" role="group" aria-label={t("filsPrives")}>
@@ -140,7 +140,7 @@ function ChatMj({ campaignId }: { campaignId: string }) {
       {threads === "error" && <span className="text-xs text-ink-muted">{t("filsImpossibles")}</span>}
       {Array.isArray(threads) && threads.length === 0 && <span className="text-xs text-ink-muted">{t("aucunJoueur")}</span>}
       {liste.map((th) => {
-        const actif = (estTelephone ? filTelephone?.userId : filAffiche) === th.userId;
+        const actif = filAffiche === th.userId;
         return (
           <button
             key={th.userId}

@@ -12,7 +12,6 @@ import EditeurPleinEcran, { type ResultatEditeur } from "@/components/blocks/Edi
 import CarteMapPanel from "@/components/entities/map/CarteMapPanel";
 import Dropdown from "@/components/shared/Dropdown";
 import EyeIcon from "@/components/shared/EyeIcon";
-import RequestEditButton from "@/components/entities/RequestEditButton";
 import { DEFAULT_ENTITY_NAME } from "@/lib/entities/schemas";
 import { CUSTOM_KIND_OPTION, PJ_VALUE, PNJ_VALUE, optionsTypeFiche } from "@/components/entities/optionsTypeFiche";
 import type { EntitySummary } from "@/src/server/repos/entities";
@@ -431,11 +430,6 @@ export default function EditEntityForm({
                 groupe de boutons qui retrecit, la categorie se tronquant en
                 dernier recours (titre complet visible au survol). */}
             <div className="flex min-w-0 items-center gap-2">
-              {playerRestricted && (
-                <span className="shrink-0">
-                  <RequestEditButton campaignId={campaignId} entityId={entity.id} />
-                </span>
-              )}
               {entity.entity_kind === "session_prep" && (
                 <button
                   type="button"

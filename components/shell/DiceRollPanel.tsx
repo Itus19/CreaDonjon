@@ -56,14 +56,25 @@ interface DiceRollContextValue {
    * n'aurait plus de dé. `ancre` : le dé du rail, auquel le panneau s'accroche.
    */
   enregistrerDalle: (portee: PorteeDalle, ancre?: RefObject<HTMLElement | null>) => () => void;
-  /** V3.1-22 : les jets que ce fournisseur reçoit déjà (historique de l'outil, jets en direct), en lecture ; le salon de table les fusionne avec les siens, sans second abonnement (QUOTAS Q3). */
-  jetsRecus: JetAffiche[];
 }
 
 /** Où le dé de la coquille vit : le rail (à partir de 768 px) ou la barre flottante (en dessous). */
 export type PorteeDalle = "ordinateur" | "telephone";
 
 const DiceRollContext = createContext<DiceRollContextValue | null>(null);
+
+/**
+ * V3.1-22 : les jets que ce fournisseur reçoit déjà (historique de l'outil,
+ * jets en direct), en lecture ; le salon de table les fusionne avec les
+ * siens, sans second abonnement (QUOTAS Q3). Un contexte À PART : il change
+ * à chaque jet, et seuls ses lecteurs doivent se redessiner, pas toutes les
+ * fiches qui ouvrent l'outil de dés.
+ */
+const JetsRecusContext = createContext<JetAffiche[]>([]);
+
+export function useJetsRecus(): JetAffiche[] {
+  return useContext(JetsRecusContext);
+}
 
 /** Pour un clic sur une fiche (stat/compétence/sauvegarde/initiative) : ouvre l'outil, jamais un second affichage local. */
 export function useDiceRoll(): DiceRollContextValue {
@@ -310,8 +321,8 @@ export default function DiceRollProvider({
           : "";
 
   const contextValue = useMemo<DiceRollContextValue>(
-    () => ({ isGm, openDiceTool, rollAbility, rollSkill, rollSave, rollInitiative, ouvrirVolet, enregistrerDalle, jetsRecus: rolls }),
-    [isGm, openDiceTool, rollAbility, rollSkill, rollSave, rollInitiative, ouvrirVolet, enregistrerDalle, rolls]
+    () => ({ isGm, openDiceTool, rollAbility, rollSkill, rollSave, rollInitiative, ouvrirVolet, enregistrerDalle }),
+    [isGm, openDiceTool, rollAbility, rollSkill, rollSave, rollInitiative, ouvrirVolet, enregistrerDalle]
   );
 
   const fermer = useCallback(() => setOpen(false), []);
@@ -335,6 +346,7 @@ export default function DiceRollProvider({
 
   return (
     <DiceRollContext.Provider value={contextValue}>
+      <JetsRecusContext.Provider value={rolls}>
       {children}
 
       {toast && (
@@ -381,6 +393,7 @@ export default function DiceRollProvider({
             </PanneauFlottant>
           )
         ))}
+      </JetsRecusContext.Provider>
     </DiceRollContext.Provider>
   );
 }

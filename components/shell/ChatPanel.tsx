@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { useChatUnread } from "./useChatUnread";
-import { useDiceRoll } from "./DiceRollPanel";
+import { useJetsRecus } from "./DiceRollPanel";
 import CarteJetSalon from "./CarteJetSalon";
 import { jetDepuisLigne, type JetAffiche } from "@/lib/ui/outilDes";
 import { cibleDuFil, fusionnerSalon, type FilChat } from "@/lib/ui/salon";
@@ -37,7 +37,7 @@ export default function ChatPanel({ campaignId, fil, estMj }: { campaignId: stri
   const t = useTranslations("chat");
   const supabase = useMemo(() => createClient(), []);
   const { markRead } = useChatUnread();
-  const { jetsRecus } = useDiceRoll();
+  const jetsRecus = useJetsRecus();
   const [messages, setMessages] = useState<ChatMessageRow[] | "loading" | "error">("loading");
   const [jetsCharges, setJetsCharges] = useState<JetAffiche[]>([]);
   const [members, setMembers] = useState<Map<string, ChatMember>>(new Map());

@@ -33,12 +33,13 @@ const NO_CAMPAIGN_MESSAGE = "Aucune campagne dans ce monde — créez-en une dan
  */
 export default function MjToolWindowContent({ worldSlug, data }: { worldSlug: string; data: MjToolWindowData }) {
   const tInitiative = useTranslations("initiative");
+  const tChat = useTranslations("chat");
   switch (data.tool) {
     case "chat":
       return (
         <div className="flex h-full flex-col gap-4">
-          <h1 className="block-title text-base">Chat</h1>
-          <ChatThreadsPanel worldSlug={worldSlug} campaignId={data.campaignId} />
+          <h1 className="block-title text-base">{tChat("titre")}</h1>
+          <ChatThreadsPanel campaignId={data.campaignId} role="mj" />
         </div>
       );
 
