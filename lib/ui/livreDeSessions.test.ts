@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
+import type { JournalStatus } from "@/src/core/sessionJournal/devoir";
 import { derniereSeanceJouee, prochaineSeance, registre, seanceReelleDuDevoir, type DevoirLivre, type SeanceReelle } from "./livreDeSessions";
 
 const s = (id: string, date: string): SeanceReelle => ({ id, scheduled_date: date, starts_at: "19:00:00", duration_minutes: 240 });
 const SEANCES = [s("s1", "2026-09-19"), s("s2", "2026-09-26"), s("s3", "2026-10-03"), s("s4", "2026-10-24")];
 const MAINTENANT = new Date("2026-10-10T12:00:00").getTime();
 
-function devoir(id: string, created_at: string, status: "pending" | "written" = "pending"): DevoirLivre {
+function devoir(id: string, created_at: string, status: JournalStatus = "pending"): DevoirLivre {
   return { id, status, assigned_to: "u1", created_at, written_at: null, entity_name: null, entity_slug: null };
 }
 
@@ -46,13 +47,17 @@ describe("registre", () => {
     const lignes = registre([devoir("d1", "2026-09-27T08:00:00Z", "written")], SEANCES, MAINTENANT);
     const sans = lignes.filter((l) => l.etat === "sans_devoir").map((l) => l.seance?.id);
     expect(sans.sort()).toEqual(["s1", "s3"]);
-    expect(lignes.find((l) => l.devoir?.id === "d1")?.etat).toBe("redigee");
+    expect(lignes.find((l) => l.devoir?.id === "d1")?.etat).toBe("rendue");
   });
   it("ne compte pas une séance à venir", () => {
     expect(registre([], SEANCES, MAINTENANT).some((l) => l.seance?.id === "s4")).toBe(false);
   });
-  it("marque un devoir en attente", () => {
-    expect(registre([devoir("d1", "2026-10-04T08:00:00Z")], SEANCES, MAINTENANT).find((l) => l.devoir)?.etat).toBe("attente");
+  it("marque un devoir en cours d'écriture", () => {
+    expect(registre([devoir("d1", "2026-10-04T08:00:00Z")], SEANCES, MAINTENANT).find((l) => l.devoir)?.etat).toBe("en_cours");
+  });
+  it("V3.1-150 : un devoir rendu est « à valider », un devoir validé l'est", () => {
+    expect(registre([devoir("d1", "2026-10-04T08:00:00Z", "written")], SEANCES, MAINTENANT).find((l) => l.devoir)?.etat).toBe("rendue");
+    expect(registre([devoir("d1", "2026-10-04T08:00:00Z", "validated")], SEANCES, MAINTENANT).find((l) => l.devoir)?.etat).toBe("validee");
   });
   it("trie du plus récent au plus ancien", () => {
     const lignes = registre([devoir("d1", "2026-09-27T08:00:00Z")], SEANCES, MAINTENANT);

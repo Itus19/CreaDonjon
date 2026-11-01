@@ -100,7 +100,7 @@ import { PERSONALITY_POLE_KEYS, WORLDVIEW_POLE_KEYS } from "@/src/core/psyche/ke
  * entree du Livre de sessions (date ingame, autrice, date IRL de
  * redaction, seance reelle). Jamais dans "+ Ajouter un bloc"
  * (EntityBlocks.tsx l'exclut explicitement), pose une seule fois par
- * `submitJournalEntry`.
+ * `assignJournalEntry` (V3.1-150).
  */
 export const BLOCK_TYPES = [
   "text",

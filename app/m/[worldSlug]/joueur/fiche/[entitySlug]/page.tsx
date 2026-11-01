@@ -8,6 +8,8 @@ import { getEntityWindowData } from "@/src/server/services/entityWindow";
 import EditEntityForm from "../../../(monde)/f/[entitySlug]/EditEntityForm";
 import { lancerFicheAvecPage } from "@/src/server/services/ficheAvecPage";
 import type { Locale } from "@/src/i18n/request";
+import { getDevoirBandeau, SESSION_JOURNAL_KIND } from "@/src/server/services/sessionJournal";
+import BandeauDevoir from "@/components/shell/sessionJournal/BandeauDevoir";
 
 /**
  * Fiche d'une entree de l'outil Édition (V2-M13) — toujours en edition
@@ -39,23 +41,32 @@ export default async function JoueurFicheEntityPage({
     redirect(`/m/${worldSlug}/joueur/wiki/${entitySlug}`);
   }
 
-  const data = await getEntityWindowData(supabase, worldSlug, entitySlug);
+  // V3.1-150 : la page d'un devoir de journal porte son bandeau (« Devoir
+  // fait »), pour son autrice. Lu en même temps que la fiche, et seulement
+  // pour une page du Livre.
+  const [data, devoir] = await Promise.all([
+    getEntityWindowData(supabase, worldSlug, entitySlug),
+    entity.entity_kind === SESSION_JOURNAL_KIND ? getDevoirBandeau(supabase, { worldId: world.id, entityId: entity.id, userId: user.id }) : Promise.resolve(null),
+  ]);
   if (!data) notFound();
 
   return (
-    <EditEntityForm
-      entity={data.entity}
-      worldSlug={data.worldSlug}
-      initialBlocks={data.blocks}
-      initialRelations={data.relations}
-      otherEntities={data.otherEntities}
-      worldCustomKinds={data.worldCustomKinds}
-      campaignId={data.campaignId}
-      initialIsPc={data.isPc}
-      campaignCharacterUserId={data.campaignCharacterUserId}
-      initialPortraitLayout={data.portraitLayout}
-      playerRestricted
-      ficheAvecPage={lancerFicheAvecPage(supabase, { worldId: data.entity.world_id, entityId: data.entity.id, userId: user.id, locale: (await getLocale()) as Locale, blocks: data.blocks })}
-    />
+    <>
+      {devoir && <BandeauDevoir worldSlug={worldSlug} devoir={devoir} />}
+      <EditEntityForm
+        entity={data.entity}
+        worldSlug={data.worldSlug}
+        initialBlocks={data.blocks}
+        initialRelations={data.relations}
+        otherEntities={data.otherEntities}
+        worldCustomKinds={data.worldCustomKinds}
+        campaignId={data.campaignId}
+        initialIsPc={data.isPc}
+        campaignCharacterUserId={data.campaignCharacterUserId}
+        initialPortraitLayout={data.portraitLayout}
+        playerRestricted
+        ficheAvecPage={lancerFicheAvecPage(supabase, { worldId: data.entity.world_id, entityId: data.entity.id, userId: user.id, locale: (await getLocale()) as Locale, blocks: data.blocks })}
+      />
+    </>
   );
 }

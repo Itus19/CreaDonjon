@@ -1,3 +1,5 @@
+import type { JournalStatus } from "@/src/core/sessionJournal/devoir";
+
 /**
  * Livre de sessions (V3.1-43) : le calcul du registre MJ, sans DOM ni réseau.
  * Un devoir n'a pas de séance réelle stockée : on la retrouve par la date de
@@ -13,7 +15,7 @@ export interface SeanceReelle {
 
 export interface DevoirLivre {
   id: string;
-  status: "pending" | "written";
+  status: JournalStatus;
   assigned_to: string;
   created_at: string;
   written_at: string | null;
@@ -21,7 +23,10 @@ export interface DevoirLivre {
   entity_slug: string | null;
 }
 
-export type EtatLigne = "redigee" | "attente" | "sans_devoir";
+/** V3.1-150 : en cours d'écriture → rendue (à valider) → validée ; plus les séances passées sans devoir. */
+export type EtatLigne = "en_cours" | "rendue" | "validee" | "sans_devoir";
+
+const ETAT_DU_DEVOIR: Record<JournalStatus, EtatLigne> = { pending: "en_cours", written: "rendue", validated: "validee" };
 
 export interface LigneRegistre<D extends DevoirLivre> {
   cle: string;
@@ -70,7 +75,7 @@ export function registre<D extends DevoirLivre>(devoirs: readonly D[], seances: 
     const seance = seanceReelleDuDevoir(d.created_at, seances);
     if (seance) couvertes.add(seance.id);
     return {
-      ligne: { cle: `devoir-${d.id}`, devoir: d, seance, etat: d.status === "written" ? "redigee" : "attente" },
+      ligne: { cle: `devoir-${d.id}`, devoir: d, seance, etat: ETAT_DU_DEVOIR[d.status] },
       date: Date.parse(d.created_at),
     };
   });

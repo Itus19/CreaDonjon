@@ -5,24 +5,30 @@ import {
   insertAssignment,
   deleteAssignment,
   getAssignmentById,
-  markWritten,
+  getAssignmentByEntityId,
+  submitAssignment,
+  markValidated,
   listAssignmentsForCampaign,
-  listPendingAssignmentsForUser,
-  claimJournalEntryGrant,
+  listOpenAssignmentsForUser,
   type SessionJournalEntryRow,
   type SessionJournalAssignmentView,
   type WrittenJournalEntry,
 } from "@/src/server/repos/sessionJournal";
-import { createEntity } from "@/src/server/services/entities";
-import { insertBlock } from "@/src/server/repos/blocks";
+import { createEntity, updateEntity } from "@/src/server/services/entities";
+import { updateBlockContent } from "@/src/server/services/blocks";
+import { insertBlock, listBlocksForEntity } from "@/src/server/repos/blocks";
+import { getEntityById, softDeleteEntity } from "@/src/server/repos/entities";
+import { grantEntityAccess } from "@/src/server/repos/entityGrants";
 import { defaultBlockData, defaultBlockDisplay } from "@/src/core/schemas/blocks/registry";
 import { zSessionJournalMetaBlockData } from "@/src/core/schemas/blocks/sessionJournalMeta";
 import { getCalendar } from "@/src/server/services/worlds";
 import { formatGameDate } from "@/src/core/calendar/formatDate";
 import { resolvePlayerNames } from "@/src/server/services/scheduling";
-import { listCampaignMembers } from "@/src/server/repos/campaigns";
+import { getCampaignById, listCampaignMembers } from "@/src/server/repos/campaigns";
+import { isWorldAdmin } from "@/src/server/services/permissions";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
 import { insertSessionEvent, nextEventSeq } from "@/src/server/repos/sessions";
+import { canCancelDevoir, canSubmitDevoir, canValidateDevoir, mentionDevoir, titreProvisoire, type JournalStatus, type MentionDevoir } from "@/src/core/sessionJournal/devoir";
 import type { GameDate } from "@/src/core/calendar/types";
 
 type TypedClient = SupabaseClient<Database>;
@@ -61,154 +67,266 @@ export async function listJournalRoster(supabase: TypedClient, campaignId: strin
   return [...gms, ...players];
 }
 
+type GesteDevoir = "assign" | "cancel" | "submit" | "validate";
+
 /**
  * V3.1-43 : chaque geste sur un devoir s'écrit UNE fois dans le journal de
- * la campagne (`session_events`, événement `system` du MJ), comme les
- * demandes de sauvegarde. Le fait nomme l'autrice par son PJ (« MJ » pour un
- * MJ, comme le sélecteur).
+ * la campagne (`session_events`, événement `system`). Le fait nomme
+ * l'autrice par son PJ (« MJ » pour un MJ, comme le sélecteur). V3.1-150 :
+ * « Devoir fait » s'y écrit au nom de l'autrice, la validation au nom du MJ.
  */
 async function journaliserDevoir(
   supabase: TypedClient,
-  params: { campaignId: string; action: "assign" | "cancel"; assignmentId: string; assignedTo: string; callerId: string }
+  params: { campaignId: string; action: GesteDevoir; assignmentId: string; assignedTo: string; callerId: string }
 ): Promise<void> {
   const [sessionId, noms] = await Promise.all([getOrOpenSessionForCampaign(supabase, params.campaignId), resolvePlayerNames(supabase, params.campaignId)]);
   const autrice = noms.get(params.assignedTo) ?? "MJ";
-  const fait = params.action === "assign" ? `Livre de sessions : devoir assigné à ${autrice}.` : `Livre de sessions : devoir de ${autrice} annulé.`;
+  const faits: Record<GesteDevoir, string> = {
+    assign: `Livre de sessions : devoir assigné à ${autrice}.`,
+    cancel: `Livre de sessions : devoir de ${autrice} annulé.`,
+    submit: `Livre de sessions : ${autrice} a rendu son devoir.`,
+    validate: `Livre de sessions : devoir de ${autrice} validé.`,
+  };
+  const fait = faits[params.action];
   const seq = await nextEventSeq(supabase, sessionId);
   await insertSessionEvent(supabase, {
     sessionId,
     seq,
     kind: "system",
-    actor: "gm",
+    actor: params.action === "submit" && params.callerId === params.assignedTo ? "player" : "gm",
     actorUserId: params.callerId,
     // `note` : ce que le journal historique affiche (« Système — Livre de sessions : … »).
     payload: { __v: 1, journal_assignment: { action: params.action, assignmentId: params.assignmentId, assignedTo: params.assignedTo }, note: fait, facts: [fait] } as unknown as Json,
   });
 }
 
+/** Annule une page à moitié créée. Journalisé si l'annulation échoue elle-même. */
+async function abandonnerPage(supabase: TypedClient, entityId: string): Promise<void> {
+  try {
+    await softDeleteEntity(supabase, entityId);
+  } catch (erreur) {
+    console.error("Page de devoir abandonnée non supprimée", entityId, erreur);
+  }
+}
+
+export type AssignResult = { ok: true; assignment: SessionJournalEntryRow } | { ok: false; reason: "not_found" | "forbidden" | "not_member" };
+
+/**
+ * Assigner un devoir (V3.1-150, ADR 0071) : la page naît aussitôt, créée
+ * par le MJ — fiche `session_journal` non publique, titre provisoire, blocs
+ * « Séance » et « Récit », octroi d'édition à l'autrice — puis le devoir
+ * `pending` qui la désigne. Le MJ vérifie ici, avant toute écriture, qu'il
+ * l'est bien et que l'autrice est de la campagne : l'octroi lui donne
+ * l'édition d'une fiche du monde. Une écriture ratée en chemin efface la
+ * page à moitié créée.
+ */
 export async function assignJournalEntry(
   supabase: TypedClient,
   params: { campaignId: string; ingameDate: GameDate; assignedTo: string; createdBy: string }
-): Promise<SessionJournalEntryRow> {
-  const row = await insertAssignment(supabase, params);
-  await journaliserDevoir(supabase, { campaignId: row.campaign_id, action: "assign", assignmentId: row.id, assignedTo: row.assigned_to, callerId: params.createdBy });
-  return row;
+): Promise<AssignResult> {
+  const campaign = await getCampaignById(supabase, params.campaignId);
+  if (!campaign) return { ok: false, reason: "not_found" };
+  const [admin, roster, calendar] = await Promise.all([
+    isWorldAdmin(supabase, { worldId: campaign.world_id, userId: params.createdBy }),
+    listJournalRoster(supabase, params.campaignId),
+    getCalendar(supabase, campaign.world_id),
+  ]);
+  if (!admin) return { ok: false, reason: "forbidden" };
+  const autrice = roster.find((r) => r.userId === params.assignedTo);
+  if (!autrice) return { ok: false, reason: "not_member" };
+
+  const entity = await createEntity(supabase, {
+    worldId: campaign.world_id,
+    createdBy: params.createdBy,
+    name: titreProvisoire(formatGameDate(params.ingameDate, calendar)),
+    entityKind: SESSION_JOURNAL_KIND,
+    aliases: [],
+  });
+
+  try {
+    await grantEntityAccess(supabase, { entityId: entity.id, userId: params.assignedTo, grantedBy: params.createdBy });
+    await insertBlock(supabase, {
+      entityId: entity.id,
+      blockType: "session_journal_meta",
+      display: defaultBlockDisplay("session_journal_meta", "Séance"),
+      data: zSessionJournalMetaBlockData.parse({
+        __v: 1,
+        ingameDate: params.ingameDate,
+        writtenBy: { userId: params.assignedTo, name: autrice.name ?? "?" },
+        // Posée au rendu (« Devoir fait »), pas à la naissance de la page.
+        writtenAt: null,
+        realSession: null,
+      }),
+      displayOrder: 1000,
+      visibilityLevel: "players",
+      visibilityScopeId: null,
+      createdBy: params.createdBy,
+    });
+    await insertBlock(supabase, {
+      entityId: entity.id,
+      blockType: "text",
+      display: defaultBlockDisplay("text", "Récit"),
+      data: defaultBlockData("text") as Json,
+      displayOrder: 2000,
+      visibilityLevel: "players",
+      visibilityScopeId: null,
+      createdBy: params.createdBy,
+    });
+    const assignment = await insertAssignment(supabase, { ...params, entityId: entity.id });
+    await journaliserDevoir(supabase, { campaignId: assignment.campaign_id, action: "assign", assignmentId: assignment.id, assignedTo: assignment.assigned_to, callerId: params.createdBy });
+    return { ok: true, assignment };
+  } catch (erreur) {
+    await abandonnerPage(supabase, entity.id);
+    throw erreur;
+  }
 }
 
-/** Annule un devoir ; journalisé seulement s'il a vraiment été effacé. */
-export async function cancelJournalAssignment(supabase: TypedClient, params: { id: string; callerId: string }): Promise<void> {
+export type CancelResult = { ok: true } | { ok: false; reason: "not_found" | "forbidden" | "already_submitted" };
+
+/**
+ * Annule un devoir encore en cours, et efface sa page (suppression douce) :
+ * elle n'a jamais été publiée. Un devoir rendu ne s'annule plus (le rendu
+ * est définitif). Journalisé seulement s'il a vraiment été effacé.
+ */
+export async function cancelJournalAssignment(supabase: TypedClient, params: { id: string; campaignId: string; callerId: string }): Promise<CancelResult> {
+  const existing = await getAssignmentById(supabase, params.id);
+  // Le devoir doit être celui de la campagne de l'adresse.
+  if (!existing || existing.campaign_id !== params.campaignId) return { ok: false, reason: "not_found" };
+  if (!canCancelDevoir(existing.status)) return { ok: false, reason: "already_submitted" };
+  // La RLS réserve l'effacement au MJ : rien d'effacé = refusé.
   const deleted = await deleteAssignment(supabase, params.id);
-  if (!deleted) return;
+  if (!deleted) return { ok: false, reason: "forbidden" };
+  if (deleted.entity_id) await softDeleteEntity(supabase, deleted.entity_id);
   await journaliserDevoir(supabase, { campaignId: deleted.campaign_id, action: "cancel", assignmentId: deleted.id, assignedTo: deleted.assigned_to, callerId: params.callerId });
+  return { ok: true };
 }
 
 export async function listJournalAssignments(supabase: TypedClient, campaignId: string): Promise<SessionJournalAssignmentView[]> {
   return listAssignmentsForCampaign(supabase, campaignId);
 }
 
-/** Devoir en attente de ce compte pour cette campagne (retour utilisateur : bannière côté joueuse) — au plus un a la fois n'est pas impose par le schema, mais le premier suffit a l'affichage. */
-export async function getMyPendingJournalAssignment(
-  supabase: TypedClient,
-  params: { campaignId: string; userId: string }
-): Promise<SessionJournalEntryRow | null> {
-  const rows = await listPendingAssignmentsForUser(supabase, params);
-  return rows[0] ?? null;
+/** Ce que la barre de l'autrice montre sous « Édition » (V3.1-150, piste A). */
+export interface MonDevoir {
+  mention: MentionDevoir;
+  /** Page du devoir dans l'onglet Édition. */
+  slug: string;
+  dateEnJeu: string;
 }
 
-/** Meme devoir que ci-dessus, avec la date ingame deja formatee (retour utilisateur : bannière) — evite au client de porter le calendrier du monde juste pour un libelle. */
-export async function getMyPendingJournalAssignmentLabel(
-  supabase: TypedClient,
-  params: { worldId: string; campaignId: string; userId: string }
-): Promise<{ id: string; ingameDateLabel: string } | null> {
-  const assignment = await getMyPendingJournalAssignment(supabase, params);
-  if (!assignment) return null;
+/**
+ * Le devoir à montrer dans la barre de l'autrice : le plus récent qui n'est
+ * pas encore validé. `null` sinon. Une requête, plus le calendrier quand un
+ * devoir existe (pour la date en jeu).
+ */
+export async function getMyOpenDevoir(supabase: TypedClient, params: { worldId: string; campaignId: string; userId: string }): Promise<MonDevoir | null> {
+  const ouverts = await listOpenAssignmentsForUser(supabase, params);
+  const devoir = ouverts.find((d) => d.entity_slug !== null);
+  if (!devoir || !devoir.entity_slug) return null;
+  const mention = mentionDevoir(devoir.status);
+  if (!mention) return null;
   const calendar = await getCalendar(supabase, params.worldId);
-  return { id: assignment.id, ingameDateLabel: formatGameDate(assignment.ingame_date, calendar) };
+  return { mention, slug: devoir.entity_slug, dateEnJeu: formatGameDate(devoir.ingame_date, calendar) };
+}
+
+/** Le bandeau d'une page de devoir, pour son autrice seulement ; `null` ailleurs. */
+export interface BandeauDevoir {
+  id: string;
+  /** Validé : plus de bandeau. */
+  status: Exclude<JournalStatus, "validated">;
+  dateEnJeu: string;
+  writtenAt: string | null;
+}
+
+export async function getDevoirBandeau(supabase: TypedClient, params: { worldId: string; entityId: string; userId: string }): Promise<BandeauDevoir | null> {
+  const devoir = await getAssignmentByEntityId(supabase, params.entityId);
+  if (!devoir || devoir.assigned_to !== params.userId) return null;
+  const status = devoir.status;
+  if (status === "validated") return null;
+  const calendar = await getCalendar(supabase, params.worldId);
+  return { id: devoir.id, status, dateEnJeu: formatGameDate(devoir.ingame_date, calendar), writtenAt: devoir.written_at };
 }
 
 /**
- * L'autrice commence a ecrire (retour utilisateur : le devoir devient une
- * vraie fiche) : cree l'entite `session_journal` + un bloc
- * `session_journal_meta` (les quatre champs fixes — date ingame, autrice,
- * date IRL de redaction, seance reelle) + un bloc `text` vide pret a
- * rediger, puis marque le devoir redige. Renvoie le slug pour rediriger
- * vers l'edition NORMALE de la fiche (memes blocs "+ Ajouter" que partout
- * ailleurs).
+ * Une page du Livre encore en brouillon est-elle cachée à ce lecteur ?
+ * (V3.1-150) Oui pour tout le monde sauf l'autrice et le MJ — la lecture
+ * directe d'une fiche dans le wiki joueur répond alors « introuvable ».
  */
-export async function submitJournalEntry(
-  supabase: TypedClient,
-  params: { assignment: SessionJournalEntryRow; worldId: string; userId: string; title: string }
-): Promise<{ slug: string }> {
-  const roster = await listJournalRoster(supabase, params.assignment.campaign_id);
-  // Retour utilisateur : "je dois pouvoir me l'attribuer à moi-même (MJ)" —
-  // le MJ n'a normalement pas de PJ dans cette campagne, jamais de nom via
-  // `listJournalRoster` sinon son libelle fixe "MJ" (voir ce service).
-  const authorName = roster.find((r) => r.userId === params.userId)?.name ?? "?";
-  const entity = await createEntity(supabase, {
-    worldId: params.worldId,
-    createdBy: params.userId,
-    name: params.title,
-    entityKind: SESSION_JOURNAL_KIND,
-    aliases: [],
-  });
-
-  // V2.1-15 : AVANT les blocs, jamais apres — `blocks_insert` appelle
-  // `app.can_edit_entity`, qui ne connait plus de cas propre au Livre de
-  // sessions. Sans cet octroi, l'autrice creerait sa fiche puis echouerait a
-  // y poser une seule ligne.
-  const granted = await claimJournalEntryGrant(supabase, { assignmentId: params.assignment.id, entityId: entity.id });
-  if (!granted) throw new Error("L'octroi d'edition n'a pas pu etre pose sur cette entree.");
-
-  await insertBlock(supabase, {
-    entityId: entity.id,
-    blockType: "session_journal_meta",
-    display: defaultBlockDisplay("session_journal_meta", "Séance"),
-    data: zSessionJournalMetaBlockData.parse({
-      __v: 1,
-      ingameDate: params.assignment.ingame_date,
-      writtenBy: { userId: params.userId, name: authorName },
-      writtenAt: new Date().toISOString(),
-      realSession: null,
-    }),
-    displayOrder: 1000,
-    visibilityLevel: "players",
-    visibilityScopeId: null,
-    createdBy: params.userId,
-  });
-  await insertBlock(supabase, {
-    entityId: entity.id,
-    blockType: "text",
-    display: defaultBlockDisplay("text", "Récit"),
-    data: defaultBlockData("text") as Json,
-    displayOrder: 2000,
-    visibilityLevel: "players",
-    visibilityScopeId: null,
-    createdBy: params.userId,
-  });
-
-  await markWritten(supabase, { id: params.assignment.id, entityId: entity.id });
-  return { slug: entity.slug };
+export async function isJournalDraftHiddenFrom(supabase: TypedClient, params: { worldId: string; entityId: string; userId: string }): Promise<boolean> {
+  const devoir = await getAssignmentByEntityId(supabase, params.entityId);
+  if (!devoir || devoir.status !== "pending" || devoir.assigned_to === params.userId) return false;
+  return !(await isWorldAdmin(supabase, { worldId: params.worldId, userId: params.userId }));
 }
+
+export type SubmitResult = { ok: true; slug: string } | { ok: false; reason: "not_found" | "forbidden" | "already_submitted" | "conflict" };
 
 /**
- * Point d'entree route (V2.1-3) : verifie que ce devoir precis appartient
- * bien a ce compte et est toujours en attente AVANT de creer quoi que ce
- * soit — la RLS de `session_journal_entries` bloquerait deja une
- * reassignation frauduleuse au moment du `markWritten`, mais creer une
- * fiche puis echouer a l'attacher laisserait une fiche orpheline (PDD §28,
- * verifier cote service plutot que compter sur le filet RLS seul).
+ * « Devoir fait » (V3.1-150) : définitif. Dans cet ordre, pour qu'un échec
+ * laisse le devoir à rendre plutôt qu'à moitié publié :
+ * 1. la page devient publique (l'autrice a l'octroi : service ordinaire,
+ *    révision tracée) ;
+ * 2. la date de rédaction se pose dans le bloc « Séance » ;
+ * 3. le devoir passe à `written` par `submit_journal_assignment` — la
+ *    seule écriture de l'autrice sur son devoir ;
+ * 4. le fait s'écrit au journal de la campagne.
  */
-export async function submitMyJournalEntry(
-  supabase: TypedClient,
-  params: { assignmentId: string; worldId: string; userId: string; title: string }
-): Promise<{ slug: string } | { error: string }> {
-  const assignment = await getAssignmentById(supabase, params.assignmentId);
-  if (!assignment || assignment.assigned_to !== params.userId) {
-    return { error: "Ce devoir ne vous est pas assigné." };
+export async function submitMyJournalAssignment(supabase: TypedClient, params: { assignmentId: string; userId: string }): Promise<SubmitResult> {
+  const devoir = await getAssignmentById(supabase, params.assignmentId);
+  if (!devoir) return { ok: false, reason: "not_found" };
+  if (devoir.assigned_to !== params.userId) return { ok: false, reason: "forbidden" };
+  if (!canSubmitDevoir({ status: devoir.status, assignedTo: devoir.assigned_to, entityId: devoir.entity_id }, params.userId) || !devoir.entity_id) {
+    return { ok: false, reason: "already_submitted" };
   }
-  if (assignment.status !== "pending") {
-    return { error: "Ce devoir a déjà été rédigé." };
+  const entity = await getEntityById(supabase, devoir.entity_id);
+  if (!entity) return { ok: false, reason: "not_found" };
+
+  if (!entity.is_public) {
+    const publiee = await updateEntity(supabase, {
+      id: entity.id,
+      changedBy: params.userId,
+      expectedVersion: entity.version,
+      name: entity.name,
+      entityKind: entity.entity_kind,
+      aliases: entity.aliases,
+      isPublic: true,
+    });
+    if (!publiee.ok) return { ok: false, reason: publiee.reason === "conflict" ? "conflict" : "forbidden" };
   }
-  return submitJournalEntry(supabase, { assignment, worldId: params.worldId, userId: params.userId, title: params.title });
+
+  const meta = (await listBlocksForEntity(supabase, entity.id)).find((b) => b.block_type === "session_journal_meta");
+  if (meta) {
+    const data = zSessionJournalMetaBlockData.parse(meta.data);
+    const datee = await updateBlockContent(supabase, {
+      id: meta.id,
+      expectedVersion: meta.version,
+      display: meta.display,
+      data: { ...data, writtenAt: new Date().toISOString() },
+      visibilityLevel: meta.visibility_level,
+      visibilityScopeId: meta.visibility_scope_id,
+      changedBy: params.userId,
+    });
+    if (!datee.ok) return { ok: false, reason: datee.reason === "conflict" ? "conflict" : "forbidden" };
+  }
+
+  if (!(await submitAssignment(supabase, devoir.id))) return { ok: false, reason: "already_submitted" };
+  await journaliserDevoir(supabase, { campaignId: devoir.campaign_id, action: "submit", assignmentId: devoir.id, assignedTo: devoir.assigned_to, callerId: params.userId });
+  return { ok: true, slug: entity.slug };
 }
 
+export type ValidateResult = { ok: true } | { ok: false; reason: "not_found" | "forbidden" | "not_submitted" };
+
+/** Le MJ valide un devoir rendu (V3.1-150) : la mention quitte la barre de l'autrice. */
+export async function validateJournalAssignment(
+  supabase: TypedClient,
+  params: { campaignId: string; assignmentId: string; callerId: string }
+): Promise<ValidateResult> {
+  const [campaign, devoir] = await Promise.all([getCampaignById(supabase, params.campaignId), getAssignmentById(supabase, params.assignmentId)]);
+  if (!campaign) return { ok: false, reason: "not_found" };
+  // Refusé avant introuvable : un non-MJ n'apprend rien du devoir visé.
+  if (!(await isWorldAdmin(supabase, { worldId: campaign.world_id, userId: params.callerId }))) return { ok: false, reason: "forbidden" };
+  if (!devoir || devoir.campaign_id !== campaign.id) return { ok: false, reason: "not_found" };
+  if (!canValidateDevoir(devoir.status)) return { ok: false, reason: "not_submitted" };
+  const valide = await markValidated(supabase, devoir.id);
+  if (!valide) return { ok: false, reason: "not_submitted" };
+  await journaliserDevoir(supabase, { campaignId: devoir.campaign_id, action: "validate", assignmentId: devoir.id, assignedTo: devoir.assigned_to, callerId: params.callerId });
+  return { ok: true };
+}

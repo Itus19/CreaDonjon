@@ -1,11 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { createPortal } from "react-dom";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import FeuilleDuBas from "@/components/shared/FeuilleDuBas";
-import { useModalKeyboard } from "@/components/shared/useModalKeyboard";
+import type { JournalStatus } from "@/src/core/sessionJournal/devoir";
 import { derniereSeanceJouee, prochaineSeance, registre, type DevoirLivre, type LigneRegistre, type SeanceReelle } from "@/lib/ui/livreDeSessions";
 import { nextWriter } from "@/src/core/sessionJournal/nextWriter";
 import type { CalendarConfigInput } from "@/src/core/schemas/calendar";
@@ -18,7 +16,7 @@ interface Assignment {
   id: string;
   ingame_date: GameDate;
   assigned_to: string;
-  status: string;
+  status: JournalStatus;
   entity_id: string | null;
   entity_name: string | null;
   entity_slug: string | null;
@@ -26,7 +24,6 @@ interface Assignment {
   written_at: string | null;
 }
 
-/** Un devoir dont l'état est rétréci : tout ce qui n'est pas « rédigé » est en attente. */
 type Devoir = DevoirLivre & { ingame_date: GameDate };
 
 /** Largeur du panneau (px) sous laquelle la lecture passe en panneau par-dessus (tablette, téléphone). */
@@ -55,9 +52,9 @@ function libelleProchaine(s: SeanceReelle): string {
  * ligne par devoir et une par séance réelle passée sans devoir. En tête, la
  * prochaine séance et « Assigner le devoir ». Une ligne s'ouvre en lecture
  * (colonne de droite, ou panneau par-dessus quand le conteneur est étroit).
- * La fiche elle-même n'est normalement écrite que par l'autrice assignée,
- * SAUF quand le MJ se l'attribue (il rédige alors le titre ici, puis rejoint
- * l'édition normale de la fiche créée).
+ * V3.1-150 (ADR 0071) : assigner crée la page ; un devoir en cours
+ * s'annule (sa page avec), un devoir rendu se valide. Quand le MJ s'est
+ * attribué le devoir, il le rend d'ici (« Devoir fait »).
  */
 export default function SessionJournalMjPanel({
   campaignId,
@@ -70,7 +67,6 @@ export default function SessionJournalMjPanel({
   currentUserId: string;
   initialCalendar: CalendarConfigInput;
 }) {
-  const router = useRouter();
   const [roster, setRoster] = useState<Redactrice[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [seances, setSeances] = useState<SeanceReelle[]>([]);
@@ -84,13 +80,9 @@ export default function SessionJournalMjPanel({
   const [erreurFeuille, setErreurFeuille] = useState<string | null>(null);
   const [aAnnuler, setAAnnuler] = useState<string | null>(null);
   const [erreurListe, setErreurListe] = useState<string | null>(null);
-  const [writing, setWriting] = useState<Assignment | null>(null);
-  const [title, setTitle] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const [aRendre, setARendre] = useState<string | null>(null);
+  const [occupe, setOccupe] = useState(false);
   const racineRef = useRef<HTMLDivElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
-  useModalKeyboard({ open: writing !== null, onClose: () => setWriting(null), panelRef });
 
   // Largeur du conteneur (pas de la fenêtre) : la fenêtre MJ peut être étroite sur un grand écran.
   useEffect(() => {
@@ -121,7 +113,7 @@ export default function SessionJournalMjPanel({
   useEffect(loadRoster, [campaignId]);
   useEffect(loadAssignments, [campaignId]);
 
-  const devoirs: Devoir[] = assignments.map((a) => ({ ...a, status: a.status === "written" ? "written" : "pending" }));
+  const devoirs: Devoir[] = assignments;
   const lignes: LigneRegistre<Devoir>[] = registre(devoirs, seances, maintenant);
   const nomDe = new Map(roster.map((r) => [r.userId, r.name]));
   // « À qui le tour » ne propose d'office qu'une joueuse ; le MJ seulement s'il n'y en a aucune (il reste choisissable).
@@ -160,50 +152,45 @@ export default function SessionJournalMjPanel({
       .finally(() => setEnvoi(false));
   }
 
-  function cancel(id: string) {
-    setAAnnuler(null);
-    fetch(`/api/campaigns/${campaignId}/session-journal/assignments/${id}`, { method: "DELETE" })
-      .then((res) => {
-        if (!res.ok) throw new Error("Impossible d'annuler le devoir.");
-        setOuverte(null);
+  /** Un geste sur un devoir : une requête, puis le registre relu (C5 : seul ce coin d'écran change). */
+  function geste(url: string, init: RequestInit, echec: string, apres?: () => void) {
+    setOccupe(true);
+    fetch(url, init)
+      .then(async (res) => {
+        if (!res.ok) {
+          const corps: unknown = await res.json().catch(() => null);
+          const message = corps && typeof corps === "object" && "error" in corps && typeof corps.error === "string" ? corps.error : echec;
+          throw new Error(message);
+        }
         setErreurListe(null);
+        apres?.();
         loadAssignments();
       })
-      .catch((err: Error) => setErreurListe(err.message));
+      .catch((err: Error) => setErreurListe(err.message))
+      .finally(() => setOccupe(false));
+  }
+
+  function cancel(id: string) {
+    setAAnnuler(null);
+    geste(`/api/campaigns/${campaignId}/session-journal/assignments/${id}`, { method: "DELETE" }, "Impossible d'annuler le devoir.", () => setOuverte(null));
+  }
+
+  function rendre(id: string) {
+    setARendre(null);
+    geste(
+      `/api/worlds/${worldSlug}/session-journal/submit`,
+      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ assignmentId: id }) },
+      "Impossible de rendre le devoir."
+    );
+  }
+
+  function valider(id: string) {
+    geste(`/api/campaigns/${campaignId}/session-journal/assignments/${id}/validate`, { method: "POST" }, "Impossible de valider le devoir.");
   }
 
   function clic(ligne: LigneRegistre<Devoir>) {
     if (ligne.devoir) setOuverte(ligne.cle);
     else ouvrirFeuille();
-  }
-
-  function openWriting(a: Assignment) {
-    setWriting(a);
-    setTitle("");
-    setError(null);
-  }
-
-  function submitWriting() {
-    if (!writing) return;
-    if (title.trim() === "") {
-      setError("Un titre est requis.");
-      return;
-    }
-    setSubmitting(true);
-    fetch(`/api/worlds/${worldSlug}/session-journal/submit`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ assignmentId: writing.id, title }),
-    })
-      .then((res) => (res.ok ? res.json() : res.json().then((b) => Promise.reject(new Error(b.error)))))
-      .then((body: { slug: string }) => {
-        setWriting(null);
-        router.push(`/m/${worldSlug}/f/${body.slug}`);
-      })
-      .catch((err: Error) => {
-        setError(err.message || "Impossible de créer l'entrée.");
-        setSubmitting(false);
-      });
   }
 
   function donneesLecture(l: LigneRegistre<Devoir>): DonneesLecture {
@@ -215,7 +202,7 @@ export default function SessionJournalMjPanel({
       seance: libelleSeance(l.seance),
       etat: l.etat,
       lien: d.entity_slug ? `/m/${worldSlug}/f/${d.entity_slug}` : null,
-      peutEcrire: d.assigned_to === currentUserId,
+      peutRendre: d.assigned_to === currentUserId && l.etat === "en_cours",
     };
   }
 
@@ -224,8 +211,10 @@ export default function SessionJournalMjPanel({
     return (
       <LectureDevoir
         donnees={donneesLecture(l)}
+        occupe={occupe}
         onFermer={surFeuille ? undefined : () => setOuverte(null)}
-        onEcrire={() => openWriting(assignments.find((a) => a.id === d.id) as Assignment)}
+        onRendre={() => setARendre(d.id)}
+        onValider={() => valider(d.id)}
         onAnnuler={() => setAAnnuler(d.id)}
       />
     );
@@ -308,7 +297,7 @@ export default function SessionJournalMjPanel({
       <ConfirmDialog
         open={aAnnuler !== null}
         title="Annuler le devoir"
-        message="Le devoir en attente sera retiré. Cette action ne peut pas être défaite."
+        message="Le devoir en cours et sa page seront effacés. Cette action ne peut pas être défaite."
         confirmLabel="Annuler le devoir"
         cancelLabel="Garder"
         danger
@@ -316,39 +305,15 @@ export default function SessionJournalMjPanel({
         onCancel={() => setAAnnuler(null)}
       />
 
-      {writing &&
-        createPortal(
-          <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-scrim" onClick={() => setWriting(null)} role="dialog" aria-modal="true" aria-label="Rédiger l'entrée">
-            <div ref={panelRef} tabIndex={-1} onClick={(e) => e.stopPropagation()} className="w-full max-w-sm rounded-lg border border-edge-strong bg-panel-raised p-4 shadow-2xl outline-none">
-              <h2 className="mb-2 text-sm font-semibold text-ink">Titre de l&apos;entrée</h2>
-              <input
-                value={title}
-                onChange={(e) => {
-                  setTitle(e.target.value);
-                  setError(null);
-                }}
-                placeholder="Ce que le Grelot Fêlé a vu passer"
-                className="w-full rounded border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none"
-                autoFocus
-              />
-              {error && <p className="mt-1.5 text-xs text-danger">{error}</p>}
-              <div className="mt-3 flex justify-end gap-2">
-                <button type="button" onClick={() => setWriting(null)} className="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted hover:bg-panel">
-                  Annuler
-                </button>
-                <button
-                  type="button"
-                  onClick={submitWriting}
-                  disabled={submitting}
-                  className="rounded-full bg-accent px-3 py-1 text-xs font-medium text-accent-ink hover:bg-accent-hover disabled:opacity-50"
-                >
-                  Créer et rédiger
-                </button>
-              </div>
-            </div>
-          </div>,
-          document.body
-        )}
+      <ConfirmDialog
+        open={aRendre !== null}
+        title="Rendre le devoir"
+        message="La page sera publiée dans le Livre de sessions, pour toute la table. Ce geste est définitif."
+        confirmLabel="Devoir fait"
+        cancelLabel="Pas encore"
+        onConfirm={() => aRendre && rendre(aRendre)}
+        onCancel={() => setARendre(null)}
+      />
     </div>
   );
 }

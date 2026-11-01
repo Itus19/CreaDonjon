@@ -10,8 +10,6 @@ import { chooseWikiBackground } from "@/src/core/theme/worldWikiBackground";
 import { EN_TETE_CHEMIN, entitySlugFromPathname } from "@/lib/wikiPath";
 import WikiBackgroundProvider from "@/components/entities/public/WikiBackgroundProvider";
 import BookSkin from "@/components/entities/public/BookSkin";
-import SessionJournalBanner from "@/components/shell/sessionJournal/SessionJournalBanner";
-import { getMyPendingJournalAssignmentLabel } from "@/src/server/services/sessionJournal";
 
 /**
  * Onglet Wiki (retour utilisateur 31 août) : "reprend exactement la
@@ -51,22 +49,16 @@ export default async function JoueurWikiLayout({
   // `user`, pas de fond : cette route exige une session de toute façon.
   const entitySlug = entitySlugFromPathname((await headers()).get(EN_TETE_CHEMIN), `/m/${worldSlug}/joueur/wiki`);
 
-  const campagnes = listCampaigns(supabase, world.id);
-  const [tree, campaigns, ficheBackground, worldBackground, devoir] = await Promise.all([
+  const [tree, campaigns, ficheBackground, worldBackground] = await Promise.all([
     getEntityTree(supabase, world.id, user?.id ?? null).then((groups) => groups.filter((g) => g.kind !== "notes")),
-    campagnes,
+    listCampaigns(supabase, world.id),
     entitySlug && user
       ? getPlayerWikiBackground(supabase, world.id, entitySlug, user.id)
       : Promise.resolve(null),
     // V3.1-59 : le fond par défaut du wiki du monde, le même qu'au wiki public.
     getMemberWorldWikiBackground(supabase, { id: world.id, slug: worldSlug }),
-    // V3.1-62, étape 3 (C1) : le devoir de journal arrive avec le layout, sans
-    // vague de plus (il ne suit que la lecture des campagnes).
-    user
-      ? campagnes.then((liste) =>
-          liste[0] ? getMyPendingJournalAssignmentLabel(supabase, { worldId: world.id, campaignId: liste[0].id, userId: user.id }) : null
-        )
-      : Promise.resolve(null),
+    // V3.1-150 : le devoir de journal n'est plus ici. Il vit sous « Édition »,
+    // dans le rail de la coquille joueuse (layout `joueur/`).
   ]);
   const initialBackground = chooseWikiBackground(ficheBackground, worldBackground);
   const title = campaigns[0]?.name ?? world.name;
@@ -78,7 +70,6 @@ export default async function JoueurWikiLayout({
         worldSlug={worldSlug}
         tree={tree}
         hrefBase={`/m/${worldSlug}/joueur/wiki`}
-        banner={<SessionJournalBanner worldSlug={worldSlug} initialAssignment={devoir} />}
         recents="joueur-wiki"
       >
         {children}

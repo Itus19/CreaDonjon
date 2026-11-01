@@ -44,6 +44,15 @@ describe("nextWriter", () => {
     expect(nextWriter(roster, entries)).toBe("u-ana");
   });
 
+  it("un devoir validé compte comme écrit (V3.1-150)", () => {
+    const entries = [
+      { assignedTo: "u-ana", status: "validated" as const, writtenAt: "2026-07-01T10:00:00Z" },
+      { assignedTo: "u-bruno", status: "written" as const, writtenAt: "2026-05-01T10:00:00Z" },
+      { assignedTo: "u-ines", status: "written" as const, writtenAt: "2026-06-01T10:00:00Z" },
+    ];
+    expect(nextWriter(roster, entries)).toBe("u-bruno");
+  });
+
   it("égalité de date : par nom", () => {
     const meme = "2026-05-01T10:00:00Z";
     const entries = roster.map((r) => ({ assignedTo: r.userId, status: "written" as const, writtenAt: meme }));

@@ -8,6 +8,7 @@ import { OutilsDalle, Rail, RailPart, RailRow, TraitSvg, useRailReplie } from ".
 import { useChatUnread } from "./useChatUnread";
 import NextSessionBadge, { type ProchaineSession } from "./scheduling/NextSessionBadge";
 import { adresseVue, vueDepuisAdresse, type VueSolo } from "@/lib/ui/solo";
+import SousEntreeDevoir, { type DevoirRail } from "./sessionJournal/SousEntreeDevoir";
 
 interface Destination {
   href: string;
@@ -59,6 +60,7 @@ export default function PlayerShell({
   worldName,
   hasHumanGm,
   prochaineSession,
+  devoir,
   children,
 }: {
   worldSlug: string;
@@ -67,6 +69,8 @@ export default function PlayerShell({
   hasHumanGm: boolean;
   /** Badge « Prochaine session », lu par le layout joueur (`null` : monde sans campagne). */
   prochaineSession: ProchaineSession | null;
+  /** V3.1-150 : le devoir de journal pas encore validé, lu par le layout joueur (`null` : aucun). */
+  devoir: DevoirRail | null;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -76,6 +80,8 @@ export default function PlayerShell({
   const base = `/m/${worldSlug}/joueur`;
   const { unreadCount } = useChatUnread();
   const { replie, basculer } = useRailReplie();
+  // Un devoir à rendre se signale sur « Édition » même rail replié ou au téléphone.
+  const badgeEdition = devoir?.mention === "a_rendre" ? 1 : undefined;
 
   const destinations: Destination[] = [
     { href: base, label: "Personnage", icon: "user", match: (p) => p === base },
@@ -113,7 +119,7 @@ export default function PlayerShell({
         libelle: libellesBarre[icon] ?? d.label,
         icone: <Icon name={icon} />,
         actif: d.match(pathname),
-        badge: icon === "chat" ? unreadCount : undefined,
+        badge: icon === "chat" ? unreadCount : icon === "card" ? badgeEdition : undefined,
         // V3.1-30 : Wiki ouvre son accueil du telephone (`?accueil=1` evite la
         // redirection vers la derniere entree du Livre de sessions).
         href: icon === "map" ? `${d.href}?accueil=1` : d.href,
@@ -190,14 +196,17 @@ export default function PlayerShell({
           <div className="flex flex-1 justify-around md:min-h-0 md:flex-col md:items-center md:justify-start md:gap-0.5 md:overflow-y-auto md:overflow-x-hidden md:p-2">
             <div className="hidden w-full flex-col gap-0.5 md:flex">
               {destinations.map((d) => (
-                <RailRow
-                  key={d.href}
-                  href={d.href}
-                  icone={<Icon name={d.icon} />}
-                  libelle={d.label}
-                  actif={d.match(pathname)}
-                  badge={d.icon === "chat" ? unreadCount : undefined}
-                />
+                <div key={d.href} className="flex flex-col gap-0.5">
+                  <RailRow
+                    href={d.href}
+                    icone={<Icon name={d.icon} />}
+                    libelle={d.label}
+                    actif={d.match(pathname)}
+                    badge={d.icon === "chat" ? unreadCount : d.icon === "card" && replie ? badgeEdition : undefined}
+                  />
+                  {/* V3.1-150, piste A : le devoir de journal, sous « Édition ». Replié, la pastille suffit. */}
+                  {d.icon === "card" && devoir && !replie && <SousEntreeDevoir devoir={devoir} href={`${base}/fiche/${devoir.slug}`} actif={pathname === `${base}/fiche/${devoir.slug}`} />}
+                </div>
               ))}
             </div>
             {/* Rail seulement : sous 768 px le badge vit en tete de la page Perso

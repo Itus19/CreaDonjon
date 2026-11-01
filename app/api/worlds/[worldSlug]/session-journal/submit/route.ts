@@ -1,15 +1,24 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getWorldBySlug } from "@/src/server/services/worlds";
-import { submitJournalEntrySchema } from "@/lib/sessionJournal/schemas";
-import { submitMyJournalEntry } from "@/src/server/services/sessionJournal";
+import { submitJournalAssignmentSchema } from "@/lib/sessionJournal/schemas";
+import { submitMyJournalAssignment } from "@/src/server/services/sessionJournal";
 
-/** L'autrice assignée commence à rédiger (V2.1-3) — crée la fiche et renvoie son slug pour rediriger vers son édition normale. */
-export async function POST(request: NextRequest, { params }: { params: Promise<{ worldSlug: string }> }) {
-  const { worldSlug } = await params;
+const MESSAGES = {
+  not_found: { status: 404, error: "Devoir introuvable." },
+  forbidden: { status: 403, error: "Ce devoir ne vous est pas assigné." },
+  already_submitted: { status: 409, error: "Ce devoir a déjà été rendu." },
+  conflict: { status: 409, error: "La page a été modifiée entre-temps. Rechargez avant de réessayer." },
+} as const;
 
+/**
+ * « Devoir fait » (V3.1-150, ADR 0071) : l'autrice rend son devoir — la page
+ * devient publique et entre dans le Livre. Définitif. Le monde de l'adresse
+ * ne donne aucun droit : le service vérifie que le devoir est celui de
+ * l'appelante, et la base le revérifie (`submit_journal_assignment`).
+ */
+export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null);
-  const parsed = submitJournalEntrySchema.safeParse(body);
+  const parsed = submitJournalAssignmentSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Corps invalide." }, { status: 400 });
   }
@@ -22,19 +31,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
-  const world = await getWorldBySlug(supabase, worldSlug);
-  if (!world) {
-    return NextResponse.json({ error: "Monde introuvable." }, { status: 404 });
+  const result = await submitMyJournalAssignment(supabase, { assignmentId: parsed.data.assignmentId, userId: user.id });
+  if (!result.ok) {
+    const { status, error } = MESSAGES[result.reason];
+    return NextResponse.json({ error }, { status });
   }
-
-  const result = await submitMyJournalEntry(supabase, {
-    assignmentId: parsed.data.assignmentId,
-    worldId: world.id,
-    userId: user.id,
-    title: parsed.data.title,
-  });
-  if ("error" in result) {
-    return NextResponse.json({ error: result.error }, { status: 403 });
-  }
-  return NextResponse.json(result, { status: 201 });
+  return NextResponse.json({ slug: result.slug }, { status: 200 });
 }

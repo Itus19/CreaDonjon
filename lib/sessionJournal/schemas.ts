@@ -7,8 +7,7 @@ export const assignJournalEntrySchema = z.object({
   assignedTo: z.uuid(),
 });
 
-/** L'autrice commence a rediger : titre libre, jamais vide. */
-export const submitJournalEntrySchema = z.object({
+/** « Devoir fait » (V3.1-150) : l'autrice rend son devoir. Rien d'autre ne vient du client. */
+export const submitJournalAssignmentSchema = z.strictObject({
   assignmentId: z.uuid(),
-  title: z.string().trim().min(1, "Un titre est requis.").max(200, "200 caractères maximum."),
 });

@@ -492,7 +492,7 @@ export function BarreAjoutBloc({
           // "Générateurs" vit desormais uniquement dans la sidebar MJ. Le libelle
           // reste dans BLOCK_TYPE_LABELS pour les blocs generator deja existants.
           // "session_journal_meta" redevient ajoutable a la main (V2.1-14) :
-          // il reste pose automatiquement par submitJournalEntry, mais rien ne
+          // il reste pose automatiquement par assignJournalEntry, mais rien ne
           // justifie plus de le reserver au Livre de sessions — c'est un bloc
           // de wiki comme un autre, avec quatre libelles fixes.
           // personality/worldview retires des qu'un exemplaire existe deja sur

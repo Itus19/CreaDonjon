@@ -4,6 +4,8 @@
  * son dernier texte il y a le plus longtemps ; à égalité, par nom. Un devoir
  * en attente n'est pas un texte écrit. `null` si personne n'est candidat.
  */
+import { isPublishedStatus, type JournalStatus } from "./devoir";
+
 export interface WriterCandidate {
   userId: string;
   name: string;
@@ -11,14 +13,15 @@ export interface WriterCandidate {
 
 export interface WriterEntry {
   assignedTo: string;
-  status: "pending" | "written";
+  status: JournalStatus;
   writtenAt: string | null;
 }
 
 export function nextWriter(roster: readonly WriterCandidate[], entries: readonly WriterEntry[]): string | null {
   const lastWritten = new Map<string, number>();
   for (const e of entries) {
-    if (e.status !== "written" || !e.writtenAt) continue;
+    // V3.1-150 : un devoir validé reste un texte écrit.
+    if (!isPublishedStatus(e.status) || !e.writtenAt) continue;
     const t = Date.parse(e.writtenAt);
     if (Number.isNaN(t)) continue;
     lastWritten.set(e.assignedTo, Math.max(lastWritten.get(e.assignedTo) ?? -Infinity, t));

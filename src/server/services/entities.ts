@@ -37,6 +37,7 @@ import { listPlayerCharacterEntityIds } from "@/src/server/services/worldPlayerC
 import { canUserEditEntity, isWorldAdmin } from "@/src/server/services/permissions";
 import { buildViewerForWorld } from "@/src/server/services/visibility";
 import { getSessionJournalTreeGroup } from "@/src/server/services/sessionJournalTree";
+import { listUnpublishedJournalEntityIds } from "@/src/server/repos/sessionJournal";
 import { getDisplayNamesForUsers } from "@/src/server/repos/activityJournal";
 
 type TypedClient = SupabaseClient<Database>;
@@ -127,10 +128,11 @@ export async function listPlayerEditableEntities(
  * plus deroutant qu'une fiche simplement vide.
  */
 export async function listPlayerVisibleEntityIds(supabase: TypedClient, worldId: string, entityIds: string[], userId: string): Promise<Set<string>> {
-  const [rows, viewer, campaigns] = await Promise.all([
+  const [rows, viewer, campaigns, brouillons] = await Promise.all([
     listBlockVisibilityForEntities(supabase, entityIds),
     buildViewerForWorld(supabase, worldId, userId),
     listCampaignsForWorld(supabase, worldId),
+    listUnpublishedJournalEntityIds(supabase, worldId),
   ]);
   const visible = filterBlocks(
     rows.map((r) => ({
@@ -140,6 +142,10 @@ export async function listPlayerVisibleEntityIds(supabase: TypedClient, worldId:
     viewer
   );
   const ids = new Set(visible.map((r) => r.entity_id));
+  // V3.1-150 : une page du Livre dont le devoir n'est pas rendu est un
+  // brouillon. Ecartee ici, elle revient juste en dessous pour son autrice,
+  // qui en a l'octroi d'edition (le MJ ne passe jamais par ce filtre).
+  for (const id of brouillons) ids.delete(id);
   const editable = await listPlayerEditableEntities(supabase, { worldId, campaignId: campaigns[0]?.id ?? null, userId });
   for (const e of editable) ids.add(e.id);
   return ids;

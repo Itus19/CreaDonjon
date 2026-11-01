@@ -8,7 +8,8 @@ import { zGameDate } from "@/src/core/schemas/calendar";
  * un `infobox` générique, dont les libellés sont éditables un par un et
  * dont les valeurs restent du texte libre. Ce bloc n'est JAMAIS proposé
  * via "+ Ajouter un bloc" (EntityBlocks.tsx) : posé une seule fois par
- * `submitJournalEntry` au moment où l'autrice commence à écrire.
+ * `assignJournalEntry` quand le MJ assigne le devoir (V3.1-150) ; la date
+ * de rédaction s'y pose au rendu (« Devoir fait »).
  *
  * `writtenBy`/`realSession` portent un instantané (id + libellé déjà
  * résolu), pas seulement une référence — délibéré, contrairement au

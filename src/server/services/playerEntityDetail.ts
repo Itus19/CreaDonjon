@@ -44,6 +44,7 @@ import { listEntitiesForWorld, listEntitiesByIds, type EntitySummary } from "@/s
 import type { PublicBlock, PublicRelation } from "./publicShare";
 import { lairEntityIds, resolveLair } from "@/src/server/services/statblockLair";
 import { listPlayerVisibleEntityIds } from "@/src/server/services/entities";
+import { isJournalDraftHiddenFrom, SESSION_JOURNAL_KIND } from "@/src/server/services/sessionJournal";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -268,6 +269,9 @@ export async function getPlayerEntityDetail(
   const { worldId, entitySlug, userId, locale = "fr" } = params;
   const entity = await entityFor(supabase, worldId, entitySlug);
   if (!entity) return null;
+  // V3.1-150 : une page du Livre pas encore rendue n'existe que pour son
+  // autrice et le MJ. Une requete de plus, pour les seules pages du Livre.
+  if (entity.entity_kind === SESSION_JOURNAL_KIND && (await isJournalDraftHiddenFrom(supabase, { worldId, entityId: entity.id, userId }))) return null;
 
   // Les blocs et le fond passent par les mêmes fonctions mémoïsées que le
   // `layout.tsx` (V2.1-20 lot 2.1) : une seule lecture pour les deux, et

@@ -3,10 +3,10 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { cancelJournalAssignment } from "@/src/server/services/sessionJournal";
 
-/** Annule un devoir en attente (réservé au MJ, RLS de `session_journal_entries`). */
+/** Annule un devoir encore en cours et efface sa page (réservé au MJ, RLS de `session_journal_entries`). */
 export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ campaignId: string; assignmentId: string }> }) {
-  const parsedId = z.string().uuid().safeParse((await params).assignmentId);
-  if (!parsedId.success) {
+  const parsedIds = z.object({ campaignId: z.uuid(), assignmentId: z.uuid() }).safeParse(await params);
+  if (!parsedIds.success) {
     return NextResponse.json({ error: "Devoir introuvable." }, { status: 404 });
   }
   const supabase = await createClient();
@@ -18,6 +18,15 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
   }
 
   // V3.1-43 : journalisé seulement si un devoir a vraiment été effacé (la RLS réserve l'effacement au MJ).
-  await cancelJournalAssignment(supabase, { id: parsedId.data, callerId: user.id });
+  // V3.1-150 : un devoir rendu ne s'annule plus ; annuler efface aussi la page jamais publiée.
+  const result = await cancelJournalAssignment(supabase, { id: parsedIds.data.assignmentId, campaignId: parsedIds.data.campaignId, callerId: user.id });
+  if (!result.ok) {
+    const refus = {
+      not_found: { status: 404, error: "Devoir introuvable." },
+      forbidden: { status: 403, error: "Seul le MJ annule un devoir." },
+      already_submitted: { status: 409, error: "Ce devoir a été rendu : il ne s'annule plus." },
+    }[result.reason];
+    return NextResponse.json({ error: refus.error }, { status: refus.status });
+  }
   return new NextResponse(null, { status: 204 });
 }

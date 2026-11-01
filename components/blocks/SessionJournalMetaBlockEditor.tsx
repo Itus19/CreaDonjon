@@ -32,7 +32,7 @@ function formatWrittenAt(iso: string): string {
  * chacune avec son propre contrôle plutôt que du texte libre.
  *
  * "Rédigé le" n'est modifiable que par le MJ (`isGm`) — posé automatiquement
- * à la soumission (`submitJournalEntry`), l'autrice ne peut plus le changer
+ * au rendu (`submitMyJournalAssignment`, V3.1-150), l'autrice ne peut plus le changer
  * ensuite : c'est justement ce qui permet au MJ de voir quand elle a
  * réellement écrit, un champ qu'elle pourrait sinon avancer/reculer à sa
  * guise vide le repère de tout son sens.

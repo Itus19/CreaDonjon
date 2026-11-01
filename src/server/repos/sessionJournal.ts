@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
 import type { GameDate } from "@/src/core/calendar/types";
+import { parseJournalStatus, type JournalStatus } from "@/src/core/sessionJournal/devoir";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -10,22 +11,25 @@ export interface SessionJournalEntryRow {
   campaign_id: string;
   ingame_date: GameDate;
   assigned_to: string;
-  status: string;
+  status: JournalStatus;
   entity_id: string | null;
   created_by: string;
   created_at: string;
   written_at: string | null;
+  validated_at: string | null;
 }
 
-const COLUMNS = "id, campaign_id, ingame_date, assigned_to, status, entity_id, created_by, created_at, written_at";
+const COLUMNS = "id, campaign_id, ingame_date, assigned_to, status, entity_id, created_by, created_at, written_at, validated_at";
 
-function toRow(data: unknown): SessionJournalEntryRow {
-  return data as SessionJournalEntryRow;
+/** L'état est un `text` contraint en base : `parseJournalStatus` refuse une valeur inconnue plutôt que de la deviner. */
+function toRow(data: { status: string } & Record<string, unknown>): SessionJournalEntryRow {
+  return { ...(data as unknown as SessionJournalEntryRow), status: parseJournalStatus(data.status) };
 }
 
+/** V3.1-150 : le devoir naît avec sa page (`entityId`), créée juste avant par le MJ. */
 export async function insertAssignment(
   supabase: TypedClient,
-  params: { campaignId: string; ingameDate: GameDate; assignedTo: string; createdBy: string }
+  params: { campaignId: string; ingameDate: GameDate; assignedTo: string; createdBy: string; entityId: string }
 ): Promise<SessionJournalEntryRow> {
   const { data, error } = await supabase
     .from("session_journal_entries")
@@ -34,6 +38,7 @@ export async function insertAssignment(
       ingame_date: params.ingameDate as unknown as Json,
       assigned_to: params.assignedTo,
       created_by: params.createdBy,
+      entity_id: params.entityId,
     })
     .select(COLUMNS)
     .single();
@@ -47,6 +52,13 @@ export async function getAssignmentById(supabase: TypedClient, id: string): Prom
   return data ? toRow(data) : null;
 }
 
+/** Le devoir qui porte cette page (au plus un : la page naît avec lui). */
+export async function getAssignmentByEntityId(supabase: TypedClient, entityId: string): Promise<SessionJournalEntryRow | null> {
+  const { data, error } = await supabase.from("session_journal_entries").select(COLUMNS).eq("entity_id", entityId).limit(1).maybeSingle();
+  if (error) throw new Error(error.message);
+  return data ? toRow(data) : null;
+}
+
 /** Efface un devoir et rend la ligne effacée — `null` si rien ne l'a été (déjà effacé, ou refusé par la RLS) : V3.1-43 ne journalise qu'un vrai geste. */
 export async function deleteAssignment(supabase: TypedClient, id: string): Promise<SessionJournalEntryRow | null> {
   const { data, error } = await supabase.from("session_journal_entries").delete().eq("id", id).select(COLUMNS);
@@ -54,19 +66,30 @@ export async function deleteAssignment(supabase: TypedClient, id: string): Promi
   return data.length > 0 ? toRow(data[0]) : null;
 }
 
-/** Marque un devoir redige — pose `entity_id`/`written_at` en une seule ecriture, jamais deux (concurrence). */
-export async function markWritten(supabase: TypedClient, params: { id: string; entityId: string }): Promise<SessionJournalEntryRow> {
-  const { data, error } = await supabase
-    .from("session_journal_entries")
-    .update({ status: "written", entity_id: params.entityId, written_at: new Date().toISOString() })
-    .eq("id", params.id)
-    .select(COLUMNS)
-    .single();
+/**
+ * « Devoir fait » (V3.1-150) : `submit_journal_assignment`, la seule écriture
+ * de l'autrice sur son devoir. `false` quand la base refuse (pas le sien,
+ * déjà rendu, sans page).
+ */
+export async function submitAssignment(supabase: TypedClient, id: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc("submit_journal_assignment", { p_assignment_id: id });
   if (error) throw new Error(error.message);
-  return toRow(data);
+  return data === true;
 }
 
-/** Un devoir avec le nom et le slug de son entrée rédigée (V3.1-43 : registre du MJ) ; `null` tant qu'il est en attente, ou si la RLS cache l'entrée. */
+/** Le MJ valide un devoir rendu ; `null` si aucune ligne `written` ne correspond (déjà validé, ou refusé par la RLS). */
+export async function markValidated(supabase: TypedClient, id: string): Promise<SessionJournalEntryRow | null> {
+  const { data, error } = await supabase
+    .from("session_journal_entries")
+    .update({ status: "validated", validated_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("status", "written")
+    .select(COLUMNS);
+  if (error) throw new Error(error.message);
+  return data.length > 0 ? toRow(data[0]) : null;
+}
+
+/** Un devoir avec le nom et le slug de son entrée (V3.1-43 : registre du MJ) ; `null` si la RLS cache l'entrée. */
 export interface SessionJournalAssignmentView extends SessionJournalEntryRow {
   entity_name: string | null;
   entity_slug: string | null;
@@ -82,16 +105,34 @@ export async function listAssignmentsForCampaign(supabase: TypedClient, campaign
   return data.map(({ entities, ...row }) => ({ ...toRow(row), entity_name: entities?.name ?? null, entity_slug: entities?.slug ?? null }));
 }
 
-/** Devoirs en attente d'un compte, tous mondes/campagnes confondus ou une seule campagne selon l'appelant. */
-export async function listPendingAssignmentsForUser(supabase: TypedClient, params: { campaignId: string; userId: string }): Promise<SessionJournalEntryRow[]> {
+/** Les devoirs pas encore validés d'un compte dans une campagne, avec leur page ; le plus récent d'abord. */
+export async function listOpenAssignmentsForUser(supabase: TypedClient, params: { campaignId: string; userId: string }): Promise<SessionJournalAssignmentView[]> {
   const { data, error } = await supabase
     .from("session_journal_entries")
-    .select(COLUMNS)
+    .select(`${COLUMNS}, entities(name, slug)`)
     .eq("campaign_id", params.campaignId)
     .eq("assigned_to", params.userId)
-    .eq("status", "pending");
+    .in("status", ["pending", "written"])
+    .not("entity_id", "is", null)
+    .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
-  return data.map(toRow);
+  return data.map(({ entities, ...row }) => ({ ...toRow(row), entity_name: entities?.name ?? null, entity_slug: entities?.slug ?? null }));
+}
+
+/**
+ * Les pages du Livre dont le devoir n'est pas encore rendu (V3.1-150) : un
+ * brouillon, que seuls son autrice et le MJ voient. Lu par le filtre de
+ * visibilité des fiches côté joueur.
+ */
+export async function listUnpublishedJournalEntityIds(supabase: TypedClient, worldId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("session_journal_entries")
+    .select("entity_id, campaigns!inner(world_id)")
+    .eq("campaigns.world_id", worldId)
+    .eq("status", "pending")
+    .not("entity_id", "is", null);
+  if (error) throw new Error(error.message);
+  return data.flatMap((row) => (row.entity_id ? [row.entity_id] : []));
 }
 
 export interface WrittenJournalEntry {
@@ -110,7 +151,8 @@ export async function listWrittenEntriesForWorld(supabase: TypedClient, worldId:
     .from("session_journal_entries")
     .select("id, entity_id, written_at, ingame_date, campaigns!inner(world_id), entities(name, slug, is_public)")
     .eq("campaigns.world_id", worldId)
-    .eq("status", "written")
+    // V3.1-150 : rendu, validé ou non — un brouillon n'est jamais dans le Livre.
+    .in("status", ["written", "validated"])
     .order("written_at", { ascending: false });
   if (error) throw new Error(error.message);
   return data
@@ -124,28 +166,4 @@ export async function listWrittenEntriesForWorld(supabase: TypedClient, worldId:
       writtenAt: row.written_at as string,
       ingameDate: row.ingame_date as unknown as GameDate,
     }));
-}
-
-/**
- * Pose l'octroi d'edition de l'autrice sur l'entree qu'elle vient de creer
- * (V2.1-15, migration 20260915190000). RPC plutot qu'un `insert` direct :
- * `entity_grants_write` reste reservee au MJ, et cette fonction
- * `security definer` est la seule exception — etroite, elle ne sait poser
- * qu'une ligne pour l'appelante elle-meme, sur un devoir qui lui est
- * reellement assigne.
- *
- * `false` (plutot qu'une erreur) quand les conditions ne sont pas reunies :
- * l'appelant decide quoi en faire, et c'est `submitJournalEntry` qui sait
- * que cela doit interrompre la redaction.
- */
-export async function claimJournalEntryGrant(
-  supabase: TypedClient,
-  params: { assignmentId: string; entityId: string }
-): Promise<boolean> {
-  const { data, error } = await supabase.rpc("claim_journal_entry_grant", {
-    p_assignment_id: params.assignmentId,
-    p_entity_id: params.entityId,
-  });
-  if (error) throw new Error(error.message);
-  return data === true;
 }

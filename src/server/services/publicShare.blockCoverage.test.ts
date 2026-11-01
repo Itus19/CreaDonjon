@@ -86,7 +86,7 @@ const SELF_CONTAINED: readonly BlockType[] = [
   "generator",
   "music",
   // session_journal_meta (V2.1-3 suite) : instantane pose une seule fois par
-  // submitJournalEntry (id + libelle deja resolus, ex. { userId, name }) —
+  // assignJournalEntry (id + libelle deja resolus, ex. { userId, name }) —
   // aucun champ n'est une reference a revalider, la visibilite du bloc
   // entier suffit deja.
   "session_journal_meta",

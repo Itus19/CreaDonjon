@@ -2567,6 +2567,7 @@ export type Database = {
           id: string
           ingame_date: Json
           status: string
+          validated_at: string | null
           written_at: string | null
         }
         Insert: {
@@ -2578,6 +2579,7 @@ export type Database = {
           id?: string
           ingame_date: Json
           status?: string
+          validated_at?: string | null
           written_at?: string | null
         }
         Update: {
@@ -2589,6 +2591,7 @@ export type Database = {
           id?: string
           ingame_date?: Json
           status?: string
+          validated_at?: string | null
           written_at?: string | null
         }
         Relationships: [
@@ -2836,10 +2839,6 @@ export type Database = {
         Args: { p_campaign_id: string; p_entity_id: string }
         Returns: boolean
       }
-      claim_journal_entry_grant: {
-        Args: { p_assignment_id: string; p_entity_id: string }
-        Returns: boolean
-      }
       campaign_invite_password_hash: { Args: { p_token: string }; Returns: string }
       combat_player_view: {
         Args: { p_combat: string }
@@ -3049,6 +3048,10 @@ export type Database = {
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       soft_delete_entity: { Args: { p_entity_id: string }; Returns: boolean }
+      submit_journal_assignment: {
+        Args: { p_assignment_id: string }
+        Returns: boolean
+      }
       unaccent: { Args: { "": string }; Returns: string }
       upsert_ruleset_override: {
         Args: {

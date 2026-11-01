@@ -4,6 +4,7 @@ import { getWorldBySlug } from "@/src/server/services/worlds";
 import { resolveCampaignId, hasHumanGm } from "@/src/server/services/campaigns";
 import { getNextSession, getOpenRequest, hasRespondedToRequest } from "@/src/server/services/scheduling";
 import PlayerShell from "@/components/shell/PlayerShell";
+import { getMyOpenDevoir } from "@/src/server/services/sessionJournal";
 
 /**
  * Coquille joueur (V2-M7b) — a l'ecart de `MondeShell`/`WindowsDesktop`
@@ -33,16 +34,19 @@ export default async function JoueurLayout({
   // V3.1-62 (docs/CABLAGE.md, C1) : le badge « Prochaine session » est
   // toujours visible ; ses donnees arrivent avec la page, en une vague,
   // au lieu de deux appels `/api` apres l'affichage sur chaque page joueuse.
-  const [humanGm, nextSession, openRequest] = await Promise.all([
+  // V3.1-150 : le devoir de journal (sous « Édition », dans le rail) part
+  // dans la même vague ; le calendrier ne se lit que si un devoir existe.
+  const [humanGm, nextSession, openRequest, devoir] = await Promise.all([
     campaignId ? hasHumanGm(supabase, campaignId) : Promise.resolve(false),
     campaignId ? getNextSession(supabase, campaignId) : Promise.resolve(null),
     campaignId ? getOpenRequest(supabase, campaignId) : Promise.resolve(null),
+    campaignId ? getMyOpenDevoir(supabase, { worldId: world.id, campaignId, userId: user.id }) : Promise.resolve(null),
   ]);
   const demandeEnAttente = openRequest ? !(await hasRespondedToRequest(supabase, openRequest.id, user.id)) : false;
   const prochaineSession = campaignId ? { date: nextSession?.scheduled_date ?? null, demandeEnAttente } : null;
 
   return (
-    <PlayerShell worldSlug={worldSlug} worldName={world.name} hasHumanGm={humanGm} prochaineSession={prochaineSession}>
+    <PlayerShell worldSlug={worldSlug} worldName={world.name} hasHumanGm={humanGm} prochaineSession={prochaineSession} devoir={devoir}>
       {children}
     </PlayerShell>
   );

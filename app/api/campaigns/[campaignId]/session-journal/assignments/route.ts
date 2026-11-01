@@ -25,7 +25,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   return NextResponse.json({ assignments, realSessions }, { status: 200 });
 }
 
-/** Assigne un devoir (réservé au MJ, appliqué par la RLS de `session_journal_entries`). */
+/** Assigne un devoir et crée sa page (réservé au MJ : vérifié par le service, puis par la RLS). */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ campaignId: string }> }) {
   const parsedCampaign = z.string().uuid().safeParse((await params).campaignId);
   if (!parsedCampaign.success) {
@@ -47,11 +47,20 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
-  const assignment = await assignJournalEntry(supabase, {
+  // V3.1-150 : assigner crée aussi la page ; le service vérifie d'abord le MJ et l'autrice.
+  const result = await assignJournalEntry(supabase, {
     campaignId,
     ingameDate: parsed.data.ingameDate,
     assignedTo: parsed.data.assignedTo,
     createdBy: user.id,
   });
-  return NextResponse.json(assignment, { status: 201 });
+  if (!result.ok) {
+    const refus = {
+      not_found: { status: 404, error: "Campagne introuvable." },
+      forbidden: { status: 403, error: "Seul le MJ assigne un devoir." },
+      not_member: { status: 400, error: "Cette personne n'est pas de la campagne." },
+    }[result.reason];
+    return NextResponse.json({ error: refus.error }, { status: refus.status });
+  }
+  return NextResponse.json(result.assignment, { status: 201 });
 }
