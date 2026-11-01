@@ -28,6 +28,7 @@ describe.skipIf(!hasCreds)("cibler côté joueur (V3.1-107, integration, base re
   let combatId: string;
   let pcEntityId: string;
   let gobelinId: string;
+  let brunhildParticipantId: string;
 
   const joueur = () => player.client as unknown as SupabaseClient<Database>;
   const gobelin = async () => (await admin.from("combat_participants").select("hp_current").eq("id", gobelinId).single()).data?.hp_current;
@@ -120,6 +121,7 @@ describe.skipIf(!hasCreds)("cibler côté joueur (V3.1-107, integration, base re
       ])
       .select("id, label");
     gobelinId = rows!.find((r) => r.label === "Gobelin")!.id;
+    brunhildParticipantId = rows!.find((r) => r.label === "Brunhild")!.id;
   });
 
   afterAll(async () => {
@@ -223,6 +225,26 @@ describe.skipIf(!hasCreds)("cibler côté joueur (V3.1-107, integration, base re
     // « Annuler » du MJ rend les PV d'avant ses dégâts.
     expect(await undoLastCombatAction(gm.client as unknown as SupabaseClient<Database>, combatId, gm.id)).toBe(true);
     expect(await gobelin()).toBe(30);
+  });
+
+  it("« Annuler » ne rejoue rien de forgé : un joueur n'insère un événement de combat que sur la ligne de SON personnage", async () => {
+    const { data: sessions } = await admin.from("sessions").select("id").eq("campaign_id", campaignId);
+    const sessionId = sessions![0]!.id;
+    const { data: seq } = await joueur().rpc("next_session_event_seq", { p_session: sessionId });
+    const evenement = (targetId: string, target: "participant" | "combat", actorUserId: string, n: number) => ({
+      session_id: sessionId,
+      seq: n,
+      kind: "combat",
+      actor: "player",
+      actor_user_id: actorUserId,
+      payload: { combatId, target, targetId, before: { hp_current: 1 }, after: { hp_current: 1 }, note: "forgé" },
+    });
+    // Un monstre, le tour du combat, ou au nom du MJ : refusés.
+    expect((await joueur().from("session_events").insert(evenement(gobelinId, "participant", player.id, seq!))).error).not.toBeNull();
+    expect((await joueur().from("session_events").insert(evenement(combatId, "combat", player.id, seq!))).error).not.toBeNull();
+    expect((await joueur().from("session_events").insert(evenement(brunhildParticipantId, "participant", gm.id, seq!))).error).not.toBeNull();
+    // Sa propre ligne, signée de son compte : acceptée (sa sauvegarde la journalise ainsi).
+    expect((await joueur().from("session_events").insert(evenement(brunhildParticipantId, "participant", player.id, seq!))).error).toBeNull();
   });
 });
 
