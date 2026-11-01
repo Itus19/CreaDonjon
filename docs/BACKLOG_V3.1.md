@@ -96,7 +96,7 @@ valables ; celui-ci les relie.
 | **7 · Les statistiques du joueur** | ~~89~~ → 90 → 91 → 92 | Il leur faut des jets attribués ; les jets d'avant 89 ne comptent pas. |
 | **8 · Règles et Chronologie** | 93 → 94 → 95 ; 96 → 97 → 98 → 99 | Les règles s'appuient sur les fenêtres à volets (20) ; la Chronologie sur la pastille (64) et les dates de naissance (74). |
 | **À côté, quand on veut** | 13 (attend le texte des manuels de l'auteur) ; 145 (les tests d'intégration se suppriment les mondes entre eux : dette technique) ; vérifications en direct de 1, 2, 4, 5, 12, 17, 18 | Codés ; il ne reste que l'œil de l'auteur. | |
-| **Étape 4, avec 105** | ~~104~~ (ADR 0041, option B) → ~~107~~ (ADR 0069) → 149 (faille du journal relevée en concevant 107) | Le joueur qui cible : écritures et lectures signées par le serveur, et un journal qui ne lui montre que ce qu'il a le droit de voir. | Après 105. |
+| **Étape 4, avec 105** | ~~104~~ (ADR 0041, option B) → ~~107~~ (ADR 0069) → ~~149~~ (faille du journal relevée en concevant 107) | Le joueur qui cible : écritures et lectures signées par le serveur, et un journal qui ne lui montre que ce qu'il a le droit de voir. | Après 105. |
 | **Étape 9 · Les règles jouables** | 129 → 130 → 131, 132 ; 133 (après 129) ; puis 134 à 138, un ADR chacun ; 139, 140 ; 141 (monnaie en données) quand on veut | La clé de voûte du solo : toute règle en jeu est jouable à 100 % par le moteur, sans qu'un modèle la lise (ADR 0059). 129 peut partir tout de suite (la recharge partielle de 113 est faite) ; 130 n’attend plus 24 (fait le 13 octobre : la concentration change en un seul point, `setConcentration`) ; 131 et 132 attendent que les planches « Esquisse · Règle jouable » passent en « Décidé ». |
 | **Fin de V3.1 · L'audit** | 144, en dernier | Les retouches d'affichage relevées en vérifiant les tickets, en une seule passe (une session au navigateur). Chaque défaut vu en chemin, qu'aucun ticket prévu ne couvre, s'ajoute au ticket 144. | Après tout le reste. |
 
@@ -252,7 +252,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-118 | ☑ | sans | Les choix dans l'assistant de création et de montée de niveau | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
 | V3.1-119 | ☑ | sans | Les choix rouverts au repos | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
 | V3.1-148 | ☑ | sans | Les bottes d'armes maîtrisées, appliquées en jeu | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
-| V3.1-149 | ☐ | sans | Le journal de session sans la CA ni les PV des adversaires (faille ouverte) | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
+| V3.1-149 | ☑ | sans | Le journal de session sans la CA ni les PV des adversaires | [`09-conception-9-octobre.md`](backlog-v3.1/09-conception-9-octobre.md) |
 | V3.1-120 | ☑ | sans | Défaire les cycles d'import (services serveur, fiche jouable) | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-121 | ☑ | sans | Ténacité naine ignorée dans les PV max | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-125 | ☑ | sans | Masse d'armes : poids faux à l'import | [`termines.md`](backlog-v3.1/termines.md) |

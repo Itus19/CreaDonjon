@@ -121,7 +121,7 @@ d'une arme maîtrisée (`WeaponData.masteryKey` est seulement affiché).
 
 ---
 
-### ☐ V3.1-149 — Le journal de session sans la CA ni les PV des adversaires · `S` · sans modèle IA — **prêt (Opus)**
+### ☑ V3.1-149 — Le journal de session sans la CA ni les PV des adversaires · `S` · sans modèle IA — **prêt (Opus)**
 
 **Modèle conseillé : Opus** (sécurité, RLS). Relevé en concevant V3.1-107 (registre de `SECURITE.md`, 31 octobre).
 
@@ -136,6 +136,6 @@ donc ce que la vue filtrée (ADR 0040) lui cache.
 - Vérifier les lecteurs : fil (`turnFil.ts`), narration (`soloNarration.ts`), journal d'activité, « Annuler » du combat.
 
 **Critères d'acceptation**
-- [ ] Un joueur qui lit `session_events` par l'API ne trouve ni CA ni PV d'adversaire après une attaque ciblée du MJ (test d'intégration).
-- [ ] Le fil du MJ et « Annuler » fonctionnent comme avant.
+- [x] Un joueur qui lit `session_events` par l'API ne trouve ni CA ni PV d'adversaire après une attaque ciblée du MJ (test d'intégration).
+- [x] Le fil du MJ et « Annuler » fonctionnent comme avant.
 

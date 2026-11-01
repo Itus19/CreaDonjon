@@ -2985,3 +2985,17 @@ Opus seul (moteur de jeu ; l'affichage tenait en quelques lignes).
 
 *Restes* : un monde en SRD 5.1 (2014) n'a pas de bottes (les armes n'en portent pas) ; Poussée, Ralentissement et Enchaînement restent à la table (pas de position ni de Vitesse dans la scène).
 
+### V3.1-149 — Le journal de session sans la CA ni les PV des adversaires (1er novembre)
+
+Opus seul (sécurité, RLS). ADR 0070.
+- **Migration** `20261102090000_session_events_gm_details` :
+  - les événements `combat` se lisent par l'administrateur du monde et leur auteur ;
+  - l'ancienne écriture `FOR ALL` (qui ouvrait aussi la lecture) est découpée : insérer pour les membres, modifier et supprimer pour l'administrateur ;
+  - la table `session_event_gm_details` (MJ seul) ;
+  - la fonction `next_session_event_seq`.
+  Suivie de `20261102100000` : la fonction accepte le client service-role, qu'elle refusait (les tests du tour solo l'utilisent).
+- **Serveur** : un jet ciblé du MJ et la sauvegarde d'un monstre écrivent au journal les phrases de `playerFacing.ts` ; CA, PV et changements bruts vont dans la table du MJ (`journalPayloads`, `gmJournal`). Un jet secret n'y laisse que « Jet secret du MJ. ». Le dépôt joint les chiffres à la lecture quand la RLS les rend : le fil du MJ et la narration ne changent pas.
+- **Vérifié** contre la base réelle : le joueur ne lit au journal ni CA, ni PV d'adversaire, ni événement de combat, ni la table du MJ ; le fil du MJ relit « contre CA 1 » et « Gobelin : 30 → … PV » ; un joueur journalise encore après des événements qu'il ne voit pas ; « Annuler » rend les PV.
+
+*Restes* : le journal d'activité d'un joueur ne montre plus les lignes de combat ; « Annuler » rejoue un événement `combat` inséré par un joueur sans vérifier l'auteur (registre de `SECURITE.md`, faible).
+

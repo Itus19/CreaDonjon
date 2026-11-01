@@ -844,6 +844,17 @@ create index session_events_session_idx on session_events (session_id, seq desc)
 
 Journal en **ajout seul**. Annuler un tour ne supprime rien : on ajoute un événement de compensation. C'est ce qui permet de reconstruire l'état, de déboguer une partie solo, et d'auditer ce que l'IA a réellement fait.
 
+**V3.1-149 (ADR 0070) — les chiffres du MJ à part.** Un événement `combat` se lit par l'administrateur du monde et son auteur ; les autres genres par tout membre. Insérer : membre ; modifier, supprimer : administrateur. Le numéro suivant : `public.next_session_event_seq(p_session)`.
+
+```sql
+create table session_event_gm_details (
+  event_id   uuid primary key references session_events(id) on delete cascade,
+  payload    jsonb not null,   -- recouvre `session_events.payload` clé par clé, pour le MJ
+  created_at timestamptz not null default now()
+);
+-- RLS : lecture et écriture par app.is_world_admin (lecture aussi par le superadmin).
+```
+
 ### 12.1 État de jeu
 
 Ni build, ni valeur dérivée : ce qui change à chaque tour et dépend de la campagne.
