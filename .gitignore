@@ -50,3 +50,6 @@ Thumbs.db
 # meme prive — l'historique reste permanent. Fichiers d'import pour un ruleset
 # personal_reference, jamais commites.
 data/personnel/
+
+# skill taste-skill : fichiers de travail (tirages, captures)
+/.taste-skill/
