@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { ChatMessageRow } from "@/src/server/repos/chatMessages";
+import type { FilChat } from "@/lib/ui/salon";
 
 /**
  * Pastille de notification du chat (V2-M12/M13, retour utilisateur : "avec
@@ -15,14 +16,14 @@ import type { ChatMessageRow } from "@/src/server/repos/chatMessages";
  * `isMj` (meme heuristique que `DiceRollProvider.isGm`, `pathname.startsWith`
  * cote AppShell) : purement cosmetique ici (quel(s) fil(s) compter pour la
  * pastille), jamais une verification de securite — RLS/les gardes de route
- * font deja ce travail ailleurs. Un joueur ne compte QUE son propre fil ;
- * le MJ compte tous les fils (n'importe quel joueur peut lui envoyer un
- * message).
+ * font deja ce travail ailleurs. Un joueur compte le salon de table (V3.1-22,
+ * thread nul) et son propre fil prive ; le MJ compte le salon et tous les
+ * fils (n'importe quel joueur peut lui envoyer un message).
  */
 interface ChatUnreadValue {
   unreadCount: number;
-  /** `threadUserId` omis pour un joueur (son seul fil, toujours le sien) ; requis pour le MJ (quel fil vient d'etre ouvert). */
-  markRead: (threadUserId?: string) => void;
+  /** Quel fil vient d'etre ouvert : le salon, ou un fil prive (`joueurId` omis cote joueur : c'est le sien, requis cote MJ). */
+  markRead: (fil: FilChat) => void;
 }
 
 const ChatUnreadContext = createContext<ChatUnreadValue>({ unreadCount: 0, markRead: () => {} });
@@ -85,7 +86,8 @@ export default function ChatUnreadProvider({
         (payload) => {
           const row = payload.new as ChatMessageRow;
           if (row.sender_id === userIdRef.current) return;
-          if (!isMj && row.thread_user_id !== userIdRef.current) return;
+          // Le salon (thread nul) compte pour tout le monde ; un fil prive, pour son joueur et le MJ.
+          if (!isMj && row.thread_user_id !== null && row.thread_user_id !== userIdRef.current) return;
           setUnreadCount((n) => n + 1);
         }
       )
@@ -98,20 +100,13 @@ export default function ChatUnreadProvider({
   }, [campaignId, supabase, isMj]);
 
   const markRead = useCallback(
-    (threadUserId?: string) => {
+    (fil: FilChat) => {
       if (!campaignId) return;
-      if (!isMj) {
-        // Un seul fil cote joueur : le vider vide toute la pastille, tout de suite.
-        setUnreadCount(0);
-        fetch(`/api/campaigns/${campaignId}/chat/read`, { method: "POST" }).catch((erreur: unknown) => {
-          console.error("Lecture du chat non enregistree", erreur);
-        });
-        return;
-      }
-      // Cote MJ, ouvrir UN fil ne vide jamais la pastille globale a l'aveugle
-      // (les autres fils peuvent rester non lus) — un aller-retour de plus,
-      // mais un compte exact plutot qu'une soustraction locale approximative.
-      fetch(`/api/campaigns/${campaignId}/chat/read${threadUserId ? `?avec=${threadUserId}` : ""}`, { method: "POST" })
+      const requete = fil.genre === "salon" ? "?fil=salon" : fil.joueurId ? `?avec=${fil.joueurId}` : "";
+      // Ouvrir UN fil ne vide jamais la pastille globale a l'aveugle (les
+      // autres fils, ou le salon, peuvent rester non lus) — un aller-retour de
+      // plus, mais un compte exact plutot qu'une soustraction locale approximative.
+      fetch(`/api/campaigns/${campaignId}/chat/read${requete}`, { method: "POST" })
         .then(() => fetch(`/api/campaigns/${campaignId}/chat/unread-count`))
         .then((res) => (res.ok ? res.json() : null))
         .then((body: { count: number } | null) => {
@@ -121,7 +116,7 @@ export default function ChatUnreadProvider({
           console.error("Messages non lus non recalcules", erreur);
         });
     },
-    [campaignId, isMj]
+    [campaignId]
   );
 
   const value = useMemo(() => ({ unreadCount, markRead }), [unreadCount, markRead]);

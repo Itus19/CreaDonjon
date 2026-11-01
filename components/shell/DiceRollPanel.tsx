@@ -9,14 +9,10 @@ import { useMatchMedia, WINDOWS_MOBILE_QUERY } from "./useMatchMedia";
 import OutilDes, { PanneauFlottant, type PositionPanneau } from "./OutilDes";
 import type { AdvantageState } from "@/src/core/rules/action";
 import type { Ability, Skill } from "@/src/core/rules/sheet";
-import { advantagePairFromTrace } from "@/src/core/dice/diceTool";
-import { naturalD20FromTrace } from "@/src/core/dice/rollAttribution";
-import { extractDiceGroups, parseRollDetail } from "@/src/core/dice/parseRollDetail";
 import type { DiceRollRow } from "@/src/server/repos/diceRolls";
 import {
-  estSecret,
   fusionnerJets,
-  lireDcPrive,
+  jetDepuisLigne,
   lireDiffusionDd,
   preReglageDepuisFiche,
   type ApercuFiche,
@@ -35,25 +31,6 @@ import {
  * Toute la logique de jeu (modificateur, verdict, visibilité) vit côté
  * serveur (checkRolls.ts) : l'écran n'affiche que ce que le serveur renvoie.
  */
-
-function jetDepuisLigne(row: DiceRollRow): JetAffiche {
-  const detail = parseRollDetail(row.detail);
-  return {
-    id: row.id,
-    who: detail.who ?? (row.rolled_by === "gm" ? "MJ" : "Joueur"),
-    what: detail.what ?? "Jet",
-    chips: detail.chips ?? [],
-    total: row.result,
-    dc: detail.dc ?? null,
-    dcPrivate: lireDcPrive(row.detail),
-    verdict: detail.verdict ?? null,
-    naturalD20: naturalD20FromTrace(detail.trace ?? []) ?? null,
-    secret: estSecret(row.visibility_level),
-    groups: extractDiceGroups(detail.trace),
-    pair: advantagePairFromTrace(detail.trace),
-    createdAt: row.created_at,
-  };
-}
 
 // ---- contexte : ouvre l'outil depuis n'importe quelle fiche ----
 
@@ -79,6 +56,8 @@ interface DiceRollContextValue {
    * n'aurait plus de dé. `ancre` : le dé du rail, auquel le panneau s'accroche.
    */
   enregistrerDalle: (portee: PorteeDalle, ancre?: RefObject<HTMLElement | null>) => () => void;
+  /** V3.1-22 : les jets que ce fournisseur reçoit déjà (historique de l'outil, jets en direct), en lecture ; le salon de table les fusionne avec les siens, sans second abonnement (QUOTAS Q3). */
+  jetsRecus: JetAffiche[];
 }
 
 /** Où le dé de la coquille vit : le rail (à partir de 768 px) ou la barre flottante (en dessous). */
@@ -331,8 +310,8 @@ export default function DiceRollProvider({
           : "";
 
   const contextValue = useMemo<DiceRollContextValue>(
-    () => ({ isGm, openDiceTool, rollAbility, rollSkill, rollSave, rollInitiative, ouvrirVolet, enregistrerDalle }),
-    [isGm, openDiceTool, rollAbility, rollSkill, rollSave, rollInitiative, ouvrirVolet, enregistrerDalle]
+    () => ({ isGm, openDiceTool, rollAbility, rollSkill, rollSave, rollInitiative, ouvrirVolet, enregistrerDalle, jetsRecus: rolls }),
+    [isGm, openDiceTool, rollAbility, rollSkill, rollSave, rollInitiative, ouvrirVolet, enregistrerDalle, rolls]
   );
 
   const fermer = useCallback(() => setOpen(false), []);

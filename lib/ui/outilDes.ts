@@ -1,6 +1,7 @@
 import { DIE_TYPES, type DieType } from "@/src/core/dice/roll";
-import type { AdvantagePair } from "@/src/core/dice/diceTool";
-import type { DiceGroup, RollChip } from "@/src/core/dice/parseRollDetail";
+import { extractDiceGroups, parseRollDetail, type DiceGroup, type RollChip } from "@/src/core/dice/parseRollDetail";
+import { advantagePairFromTrace, type AdvantagePair } from "@/src/core/dice/diceTool";
+import { naturalD20FromTrace } from "@/src/core/dice/rollAttribution";
 import type { AdvantageState } from "@/src/core/rules/action";
 import type { Ability, Skill } from "@/src/core/rules/sheet";
 
@@ -300,6 +301,36 @@ export interface JetAffiche {
   createdAt: string;
   /** V3.1-106 : pas de total à montrer (voir `SortieJet.sansTotal`). */
   sansTotal?: boolean;
+}
+
+/** Ce que `jetDepuisLigne` lit d'une ligne `dice_rolls` : `DiceRollRow` (repo serveur) y entre sans que ce fichier importe le serveur. */
+export interface LigneJet {
+  id: string;
+  result: number;
+  detail: unknown;
+  rolled_by: string;
+  visibility_level: string;
+  created_at: string;
+}
+
+/** Une ligne `dice_rolls` (route ou Realtime) mise en forme d'affichage ; partagée par l'outil de dés et le salon (V3.1-22). */
+export function jetDepuisLigne(row: LigneJet): JetAffiche {
+  const detail = parseRollDetail(row.detail);
+  return {
+    id: row.id,
+    who: detail.who ?? (row.rolled_by === "gm" ? "MJ" : "Joueur"),
+    what: detail.what ?? "Jet",
+    chips: detail.chips ?? [],
+    total: row.result,
+    dc: detail.dc ?? null,
+    dcPrivate: lireDcPrive(row.detail),
+    verdict: detail.verdict ?? null,
+    naturalD20: naturalD20FromTrace(detail.trace ?? []) ?? null,
+    secret: estSecret(row.visibility_level),
+    groups: extractDiceGroups(detail.trace),
+    pair: advantagePairFromTrace(detail.trace),
+    createdAt: row.created_at,
+  };
 }
 
 /** `detail.dcPrivate` d'un jet Realtime (le détail est un JSON libre : on rétrécit, on ne suppose pas). */
