@@ -37,3 +37,21 @@ export async function listPlayerTitleTiers(supabase: TypedClient): Promise<Playe
     return [parsed.data];
   });
 }
+
+/**
+ * V3.1-92 — Remplace TOUS les paliers par `tiers`, sans jamais laisser la
+ * table vide : on insère d'abord le nouveau jeu, puis on retire l'ancien
+ * (par ses identifiants, lus avant). Un échec à l'insertion ne change rien ;
+ * un échec au retrait laisse les deux jeux côte à côte, et l'erreur remonte.
+ * La RLS (`player_title_tiers_write`) n'ouvre l'écriture qu'au superadmin.
+ */
+export async function replacePlayerTitleTiers(supabase: TypedClient, tiers: readonly PlayerTitleTier[]): Promise<void> {
+  const { data: anciens, error: lectureErreur } = await supabase.from("player_title_tiers").select("id");
+  if (lectureErreur) throw new Error(lectureErreur.message);
+  const { error: insertionErreur } = await supabase.from("player_title_tiers").insert(tiers.map((t) => ({ ...t, updated_at: new Date().toISOString() })));
+  if (insertionErreur) throw new Error(insertionErreur.message);
+  const ids = anciens.map((r) => r.id);
+  if (ids.length === 0) return;
+  const { error: retraitErreur } = await supabase.from("player_title_tiers").delete().in("id", ids);
+  if (retraitErreur) throw new Error(retraitErreur.message);
+}
