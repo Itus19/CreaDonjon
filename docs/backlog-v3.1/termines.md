@@ -2999,3 +2999,13 @@ Opus seul (sécurité, RLS). ADR 0070.
 
 *Restes* : le journal d'activité d'un joueur ne montre plus les lignes de combat ; « Annuler » rejoue un événement `combat` inséré par un joueur sans vérifier l'auteur (registre de `SECURITE.md`, faible).
 
+### V3.1-22 — Salon de groupe et jets dans le chat (1er novembre)
+
+Opus : migration, RLS, routes, logique du DD privé, relecture ; `dev-sonnet` : les écrans ; `aide-haiku` : la planche. ADR 0038.
+- **Migration** `20261102120000_campaign_chat_salon` : `thread_user_id` nul = salon, lisible et écrivable des membres de la campagne et du MJ ; fils privés inchangés ; la lecture du salon se note (index unique `nulls not distinct`). `related_entity_id` reste en base, plus écrit ni lu.
+- **Routes** : `?fil=salon` (messages, lecture) ; le salon rend aussi les jets de la campagne (RLS : publics, et les secrets de leur auteur et du MJ). Un verdict contre un DD privé ne part plus chez un joueur (`rollDetailForReader`, aussi sur la route `dice-rolls`).
+- **Écrans** : fenêtre du MJ (salon en grand, fils privés en pastilles, colonne ou panneau par requête de conteneur), page pleine du joueur (deux conversations), pilules au téléphone ; jets en cartes intercalés par l'heure, sans abonnement de plus (les jets que reçoit déjà l'outil de dés, dans un contexte à part). Demande de modification retirée (bouton, champ du schéma, affichage).
+- **Vérifié** contre la base réelle (`chatSalon.integration.test.ts`, 3/3) : salon lu et écrit par les membres, refusé hors campagne et au nom d'un autre ; fil privé d'un autre illisible et non écrivable ; lecture du salon notée une fois.
+
+*Restes* : à voir au navigateur par l'auteur ; non-lus par conversation côté joueur partent de zéro au chargement (la pastille globale est exacte) ; pas d'animation d'entrée du panneau ; le temps réel des jets envoie encore le verdict d'un DD privé (registre de `SECURITE.md`).
+

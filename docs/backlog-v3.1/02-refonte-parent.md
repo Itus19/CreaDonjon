@@ -1689,7 +1689,7 @@ une planche « Rail repliable » à créer).
 ---
 
 
-### ☐ V3.1-22 — Salon de groupe et jets dans le chat · `M` · sans modèle IA — **décidé le 5 octobre, à coder**
+### ☑ V3.1-22 — Salon de groupe et jets dans le chat · `M` · sans modèle IA — **fait le 1er novembre**
 
 **Modèle conseillé : Opus** — nouveau salon : schéma, RLS, temps réel.
 
@@ -1717,10 +1717,10 @@ de l'initiative ; un jet secret visible du seul joueur et du MJ).
   `relatedEntityId` (schéma Zod, route, repo) et leur affichage côté MJ.
 
 **Critères d'acceptation**
-- [ ] Un salon commun MJ + joueurs, à côté des fils privés.
-- [ ] Les jets publics apparaissent dans le salon en cartes ; les secrets seulement pour leur auteur et le MJ.
-- [ ] RLS : un joueur ne lit jamais le fil privé d'un autre.
+- [x] Un salon commun MJ + joueurs, à côté des fils privés.
+- [x] Les jets publics apparaissent dans le salon en cartes ; les secrets seulement pour leur auteur et le MJ.
+- [x] RLS : un joueur ne lit jamais le fil privé d'un autre.
 - [x] RLS : un joueur ne lit jamais le jet `roller` d'un autre ; il lit le sien. *(fait par V3.1-33 : migration `20261017170000`.)*
-- [ ] Fenêtre du MJ conforme à la planche B ; page pleine côté joueur ; tablette en panneau.
-- [ ] Plus aucune trace de la demande de modification (bouton, champ, route).
-- [ ] `docs/SCHEMA.md` à jour, migration nouvelle (aucune migration appliquée modifiée).
+- [ ] Fenêtre du MJ conforme à la planche B ; page pleine côté joueur ; tablette en panneau. *(codé ; reste l'œil de l'auteur au navigateur, et l'animation d'entrée du panneau)*
+- [x] Plus aucune trace de la demande de modification (bouton, champ, route).
+- [x] `docs/SCHEMA.md` à jour, migration nouvelle (aucune migration appliquée modifiée).

@@ -855,6 +855,29 @@ create table session_event_gm_details (
 -- RLS : lecture et écriture par app.is_world_admin (lecture aussi par le superadmin).
 ```
 
+### 12.0 Chat de campagne (V2-M12/M13, V3.1-22, ADR 0038)
+
+```sql
+create table campaign_chat_messages (
+  id             uuid primary key default gen_random_uuid(),
+  campaign_id    uuid not null references campaigns(id) on delete cascade,
+  sender_id      uuid not null references auth.users(id) on delete cascade,
+  thread_user_id uuid references auth.users(id),   -- null = salon de table ; sinon le joueur du fil privé
+  related_entity_id uuid references entities(id) on delete set null, -- ancienne « Demande de modification », plus écrite ni lue
+  body           text not null check (char_length(body) between 1 and 2000),
+  created_at     timestamptz not null default now()
+);
+create table campaign_chat_reads (
+  campaign_id    uuid not null references campaigns(id) on delete cascade,
+  user_id        uuid not null references auth.users(id) on delete cascade,
+  thread_user_id uuid references auth.users(id),   -- null = le salon
+  last_read_at   timestamptz not null default now()
+);
+create unique index campaign_chat_reads_key on campaign_chat_reads (campaign_id, user_id, thread_user_id) nulls not distinct;
+```
+
+RLS : le salon se lit et s'écrit par tout membre de la campagne (`campaign_members`) et l'administrateur du monde ; un fil privé par son joueur et le MJ ; on n'écrit qu'à son nom. Les jets ne sont jamais recopiés en message : le salon lit `dice_rolls` et les intercale par l'heure.
+
 ### 12.1 État de jeu
 
 Ni build, ni valeur dérivée : ce qui change à chaque tour et dépend de la campagne.
