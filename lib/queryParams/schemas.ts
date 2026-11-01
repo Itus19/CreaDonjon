@@ -85,6 +85,13 @@ export const diceRollsQuerySchema = z.object({
   limit: zClampedLimit(HISTORY_LIMIT_DEFAULT, HISTORY_LIMIT_MAX),
 });
 
+/** `GET /api/campaigns/[campaignId]/player-stats` (V3.1-91) — la période ; défaut : toute la campagne. */
+export const playerStatsQuerySchema = z
+  .object({
+    scope: z.enum(["campaign", "last_session"]).default("campaign"),
+  })
+  .strict();
+
 /** `GET /api/entities/[id]/export` et `GET /api/entities/[id]/sheet` — etat de jeu, par campagne ou hors partie. */
 export const entityCampaignQuerySchema = z.object({
   campaignId: zOptionalGuid,

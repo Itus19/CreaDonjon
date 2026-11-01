@@ -32,6 +32,19 @@ export interface SessionRow {
   ended_at: string | null;
 }
 
+/** V3.1-91 — La dernière séance d'une campagne (la plus récemment ouverte) ; `null` sans séance. */
+export async function getLatestSessionForCampaign(supabase: TypedClient, campaignId: string): Promise<SessionRow | null> {
+  const { data, error } = await supabase
+    .from("sessions")
+    .select("id, campaign_id, title, summary, started_at, ended_at")
+    .eq("campaign_id", campaignId)
+    .order("started_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 export async function getSessionById(supabase: TypedClient, id: string): Promise<SessionRow | null> {
   const { data, error } = await supabase
     .from("sessions")

@@ -138,3 +138,39 @@ export async function listRollsForStats(
     };
   });
 }
+
+/**
+ * V3.1-91 — Les d20 gardés des personnages de la table, en UNE requête, pour
+ * la moyenne de la table : seulement les jets publics (les secrets n'entrent
+ * jamais dans une moyenne, ADR 0064) ; aucun autre champ n'est lu.
+ */
+export async function listTableD20(
+  supabase: TypedClient,
+  params: { campaignId: string; entityIds: string[]; sinceCreatedAt?: string }
+): Promise<{ entityId: string; naturalD20: number }[]> {
+  if (params.entityIds.length === 0) return [];
+  let query = supabase
+    .from("dice_rolls")
+    .select("entity_id, detail->naturalD20")
+    .eq("campaign_id", params.campaignId)
+    .in("entity_id", params.entityIds)
+    .eq("visibility_level", "public");
+  if (params.sinceCreatedAt) query = query.gte("created_at", params.sinceCreatedAt);
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  return (data as unknown as { entity_id: string | null; naturalD20: unknown }[]).flatMap((row) =>
+    row.entity_id !== null && typeof row.naturalD20 === "number" ? [{ entityId: row.entity_id, naturalD20: row.naturalD20 }] : []
+  );
+}
+
+/** V3.1-91 — La campagne a-t-elle des jets d'avant l'attribution (sans personnage) ? Un comptage, aucune ligne lue. */
+export async function hasUnattributedRollsBefore(supabase: TypedClient, params: { campaignId: string; before: string }): Promise<boolean> {
+  const { count, error } = await supabase
+    .from("dice_rolls")
+    .select("id", { count: "exact", head: true })
+    .eq("campaign_id", params.campaignId)
+    .is("entity_id", null)
+    .lt("created_at", params.before);
+  if (error) throw new Error(error.message);
+  return (count ?? 0) > 0;
+}
