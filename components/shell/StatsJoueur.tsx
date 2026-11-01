@@ -6,8 +6,8 @@ import Tabs from "@/components/shared/Tabs";
 import { TITLE_FAMILIES } from "@/src/core/stats/titleTiers";
 import type { PlayerStatsView } from "@/src/server/services/playerStats";
 import { chargerStatsJoueurApi, type PorteeStats } from "@/lib/ui/statsJoueurApi";
-import { classeBarre, classesPastille, formaterMoyenne, GRADUATIONS, hauteurBarre, maximumCompteurs } from "@/lib/ui/statsJoueur";
-import IconeTitre from "./IconeTitre";
+import { classeBarre, formaterMoyenne, GRADUATIONS, hauteurBarre, maximumCompteurs } from "@/lib/ui/statsJoueur";
+import CarteTitre from "./CarteTitre";
 
 /** La grille de 20 colonnes PARTAGÉE par l'en-tête de chiffres, les barres et les graduations : c'est elle qui fait tomber chaque chiffre pile au-dessus de sa colonne. */
 const GRILLE = "grid grid-cols-[repeat(20,minmax(0,1fr))] gap-[3px]";
@@ -161,14 +161,8 @@ function Titres({ titres }: { titres: Extract<PlayerStatsView, { status: "ok" }>
         // Une case sans palier reste présente, vide : la grille garde ses quatre cases.
         if (!titre || !palier) return <li key={famille} aria-hidden="true" className="min-h-[52px] rounded-lg border border-edge bg-panel-sunken" />;
         return (
-          <li key={famille} className="flex min-w-0 items-center gap-2 rounded-lg border border-edge bg-panel-sunken p-2">
-            <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${classesPastille(palier.color_token)}`}>
-              <IconeTitre cle={palier.icon_key} className="h-5 w-5" />
-            </span>
-            <span className="min-w-0">
-              <span className="block text-sm font-bold leading-tight text-ink">{palier.name}</span>
-              {titre.text && <span className="block text-xs leading-snug text-ink-muted">{titre.text}</span>}
-            </span>
+          <li key={famille} className="min-w-0">
+            <CarteTitre icone={palier.icon_key} couleur={palier.color_token} nom={palier.name} texte={titre.text} />
           </li>
         );
       })}

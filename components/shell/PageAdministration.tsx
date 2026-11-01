@@ -8,6 +8,8 @@ import ActionsMenu, { type ActionsMenuItem } from "@/components/shared/ActionsMe
 import Dropdown from "@/components/shared/Dropdown";
 import { LogoApp } from "@/components/brand/LogoApp";
 import PanneauIdentite from "@/components/shell/PanneauIdentite";
+import PanneauTitres from "@/components/shell/PanneauTitres";
+import type { PlayerTitleTier } from "@/src/core/stats/titleTiers";
 import type { AppLogoKey } from "@/src/core/brand/identity";
 import type { CampaignInviteAdminSummary } from "@/src/server/services/campaignInvites";
 import type { AdminAccountRow } from "@/src/server/repos/account";
@@ -477,11 +479,13 @@ export default function PageAdministration({
   liensInitiaux,
   identite,
   nombreTitres,
+  titresInitiaux,
 }: {
   comptesInitiaux: AdminAccountRow[];
   liensInitiaux: CampaignInviteAdminSummary[];
   identite: { name: string; tagline: string; logoKey: AppLogoKey; logoUrl: string | null };
   nombreTitres: number;
+  titresInitiaux: PlayerTitleTier[];
 }) {
   const t = useTranslations("administration");
   const [comptes, setComptes] = useState(comptesInitiaux);
@@ -687,7 +691,7 @@ export default function PageAdministration({
       {tuile === "titres" && (
         <section aria-label={t("tuileTitres")} className="flex flex-col gap-2">
           <h2 className="block-title text-sm text-ink">{t("tuileTitres")}</h2>
-          <p className="text-sm text-ink-muted">{t("titresBientot")}</p>
+          <PanneauTitres titresInitiaux={titresInitiaux} />
         </section>
       )}
     </div>

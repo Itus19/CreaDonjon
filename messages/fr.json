@@ -940,7 +940,97 @@
         "map": "La carte"
       }
     },
-    "titresBientot": "L'éditeur des titres arrive bientôt."
+    "titres": {
+      "note": "Les quatre cases du volet « Je joue ». Chaque case lit une mesure et affiche le titre du palier où elle tombe. Les changements valent pour tous les mondes, aussitôt enregistrés.",
+      "famillesAria": "Famille de titres",
+      "familles": {
+        "chance": {
+          "nom": "Chance",
+          "sous": "les 20 naturels",
+          "mesure": "20 naturels de la joueuse ÷ moyenne des joueurs de la table"
+        },
+        "malchance": {
+          "nom": "Malchance",
+          "sous": "les 1 naturels",
+          "mesure": "1 naturels de la joueuse ÷ moyenne des joueurs de la table"
+        },
+        "bourse": {
+          "nom": "Bourse",
+          "sous": "dépensé ÷ gagné",
+          "mesure": "pièces dépensées ÷ pièces gagnées (en valeur, po)"
+        },
+        "action": {
+          "nom": "Action favorite",
+          "sous": "ce qu'on fait le plus",
+          "mesure": "l'action la plus utilisée (hors dégâts et jets libres)"
+        }
+      },
+      "mesure": "Mesure :",
+      "iconeAria": "Changer l'icône et la couleur",
+      "iconesAria": "Icône",
+      "couleursAria": "Couleur",
+      "icones": {
+        "star": "Étoile",
+        "clover": "Trèfle",
+        "d20": "d20",
+        "shield": "Bouclier",
+        "cat": "Chat",
+        "purse": "Bourse",
+        "coin": "Pièce",
+        "dagger": "Dague",
+        "sword": "Épée",
+        "wand": "Baguette",
+        "heart": "Cœur",
+        "scroll": "Parchemin"
+      },
+      "couleurs": {
+        "success": "Vert",
+        "danger": "Rouge",
+        "accent": "Ambre",
+        "link_entity": "Sarcelle",
+        "link_rule": "Violet"
+      },
+      "actions": {
+        "sournoise": "Attaque sournoise",
+        "arme": "Attaque d'arme",
+        "sort": "Sort",
+        "soin": "Soin",
+        "test": "Test ou sauvegarde"
+      },
+      "nomAria": "Nom du titre",
+      "texteAria": "Petit texte du titre",
+      "sorteAria": "Sorte d'action",
+      "de": "de",
+      "a": "à",
+      "deAria": "Début de la plage",
+      "aAria": "Fin de la plage (vide : sans fin)",
+      "retirerAria": "Retirer le palier « {nom} »",
+      "nouveauPalier": "Nouveau titre",
+      "ajouterPalier": "+ Ajouter un palier",
+      "ajouterAction": "+ Ajouter une action",
+      "variables": "Variables :",
+      "avertissement": "Plages à revoir : {liste}. Enregistrer reste possible ; une valeur hors plage n'affiche pas de titre.",
+      "problemeTrou": "rien de {de} à {a}",
+      "problemeTrouFin": "rien à partir de {de}",
+      "problemeChevauchement": "deux paliers se recouvrent de {de} à {a}",
+      "problemeChevauchementFin": "deux paliers se recouvrent à partir de {de}",
+      "problemeActionDouble": "« {action} » apparaît deux fois",
+      "apercu": "Aperçu",
+      "valeurEssai": "Valeur d'essai",
+      "uniteTable": "{valeur} × la table",
+      "unitePurse": "{valeur} dépensé ÷ gagné",
+      "essaiAction": "Touchez un palier pour essayer cette action.",
+      "aucunTitre": "Aucun titre",
+      "aucunTitreTexte": "Cette valeur ne tombe dans aucune plage.",
+      "exemple": "Chiffres d'exemple : 14 × 20, 9 × 1, 3 d'affilée, −860 / +1 240 po, Attaque sournoise ×47, record 27.",
+      "enregistrer": "Enregistrer",
+      "enregistrement": "Enregistrement…",
+      "enregistre": "Enregistré",
+      "retablir": "Rétablir les titres par défaut",
+      "retablirTitre": "Rétablir les titres par défaut ?",
+      "retablirMessage": "Tous les paliers reviennent à ceux d'origine, pour tous les joueurs et tous les mondes. Vos réglages actuels sont perdus.",
+      "erreurServeur": "Le serveur n'a pas répondu ; rien n'est changé. Réessaie."
+    }
   },
   "probabilites": {
     "titre": "Probabilités de réussite",

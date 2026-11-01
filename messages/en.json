@@ -939,7 +939,97 @@
         "map": "The map"
       }
     },
-    "titresBientot": "The titles editor is coming soon."
+    "titres": {
+      "note": "The four boxes of the \"Play\" panel. Each box reads a measure and shows the title of the tier it falls in. Changes apply to every world, saved right away.",
+      "famillesAria": "Title family",
+      "familles": {
+        "chance": {
+          "nom": "Luck",
+          "sous": "natural 20s",
+          "mesure": "the player's natural 20s ÷ average of the table's players"
+        },
+        "malchance": {
+          "nom": "Bad luck",
+          "sous": "natural 1s",
+          "mesure": "the player's natural 1s ÷ average of the table's players"
+        },
+        "bourse": {
+          "nom": "Purse",
+          "sous": "spent ÷ earned",
+          "mesure": "coins spent ÷ coins earned (by value, gp)"
+        },
+        "action": {
+          "nom": "Favorite action",
+          "sous": "what you do most",
+          "mesure": "the most used action (excluding damage and free rolls)"
+        }
+      },
+      "mesure": "Measure:",
+      "iconeAria": "Change the icon and color",
+      "iconesAria": "Icon",
+      "couleursAria": "Color",
+      "icones": {
+        "star": "Star",
+        "clover": "Clover",
+        "d20": "d20",
+        "shield": "Shield",
+        "cat": "Cat",
+        "purse": "Purse",
+        "coin": "Coin",
+        "dagger": "Dagger",
+        "sword": "Sword",
+        "wand": "Wand",
+        "heart": "Heart",
+        "scroll": "Scroll"
+      },
+      "couleurs": {
+        "success": "Green",
+        "danger": "Red",
+        "accent": "Amber",
+        "link_entity": "Teal",
+        "link_rule": "Violet"
+      },
+      "actions": {
+        "sournoise": "Sneak attack",
+        "arme": "Weapon attack",
+        "sort": "Spell",
+        "soin": "Healing",
+        "test": "Check or save"
+      },
+      "nomAria": "Title name",
+      "texteAria": "Title short text",
+      "sorteAria": "Kind of action",
+      "de": "from",
+      "a": "to",
+      "deAria": "Start of the range",
+      "aAria": "End of the range (empty: no end)",
+      "retirerAria": "Remove the \"{nom}\" tier",
+      "nouveauPalier": "New title",
+      "ajouterPalier": "+ Add a tier",
+      "ajouterAction": "+ Add an action",
+      "variables": "Variables:",
+      "avertissement": "Ranges to review: {liste}. You can still save; a value outside every range shows no title.",
+      "problemeTrou": "nothing from {de} to {a}",
+      "problemeTrouFin": "nothing from {de} onward",
+      "problemeChevauchement": "two tiers overlap from {de} to {a}",
+      "problemeChevauchementFin": "two tiers overlap from {de} onward",
+      "problemeActionDouble": "\"{action}\" appears twice",
+      "apercu": "Preview",
+      "valeurEssai": "Trial value",
+      "uniteTable": "{valeur} × the table",
+      "unitePurse": "{valeur} spent ÷ earned",
+      "essaiAction": "Touch a tier to try this action.",
+      "aucunTitre": "No title",
+      "aucunTitreTexte": "This value falls in no range.",
+      "exemple": "Sample figures: 14 × 20, 9 × 1, 3 in a row, −860 / +1,240 gp, Sneak attack ×47, record 27.",
+      "enregistrer": "Save",
+      "enregistrement": "Saving…",
+      "enregistre": "Saved",
+      "retablir": "Restore default titles",
+      "retablirTitre": "Restore the default titles?",
+      "retablirMessage": "Every tier goes back to the original ones, for all players and all worlds. Your current settings are lost.",
+      "erreurServeur": "The server did not respond; nothing was changed. Try again."
+    }
   },
   "probabilites": {
     "titre": "Success probabilities",
