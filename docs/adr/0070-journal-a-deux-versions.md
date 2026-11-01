@@ -23,4 +23,4 @@ Les événements `combat` (lignes avant/après d'un participant) se lisent par l
 
 - Le journal d'activité d'un joueur ne montre plus les lignes de combat des autres participants.
 - Le tour solo et la sauvegarde d'un joueur sur son PJ écrivent comme avant : rien n'y est caché à leur seul lecteur.
-- Un joueur peut toujours insérer un événement `combat` qu'« Annuler » du MJ rejouerait : l'annulation ne vérifie pas encore l'auteur (relevé au registre, `SECURITE.md`).
+- Un événement `combat` ne s'insère, côté joueur, que sur la ligne de son propre personnage et à son nom (migration `20261102110000`) : « Annuler » du MJ ne rejoue rien de forgé.
