@@ -66,13 +66,18 @@ export const journalQuerySchema = z.object({
  * verifie que la forme : c'est `resolveThreadUserId` qui decide qui a le
  * droit de lire quel fil, et il reste seul juge (services/chat.ts).
  */
+/** V3.1-22 (ADR 0038) : `fil=salon` designe le salon de table ; sinon `avec` (MJ) ou le fil de l'appelant. */
+const zFilSalon = z.literal("salon").optional();
+
 export const chatMessagesQuerySchema = z.object({
   limit: zClampedLimit(HISTORY_LIMIT_DEFAULT, HISTORY_LIMIT_MAX),
   avec: zOptionalGuid,
+  fil: zFilSalon,
 });
 
 export const chatReadQuerySchema = z.object({
   avec: zOptionalGuid,
+  fil: zFilSalon,
 });
 
 /** `GET /api/campaigns/[campaignId]/dice-rolls` — historique du volet de des. */

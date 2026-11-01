@@ -6,8 +6,9 @@ import { isWorldAdmin } from "@/src/server/services/permissions";
 import { getCampaignById } from "@/src/server/repos/campaigns";
 import { listDiceRollsForCampaign } from "@/src/server/repos/diceRolls";
 import { diceRollsQuerySchema, searchParamsToObject } from "@/lib/queryParams/schemas";
+import { rollDetailForReader } from "@/src/core/dice/rollForReader";
 
-/** Onglet Historique du volet (V2-M11) — RLS `dice_rolls_select` filtre deja les jets `gm` pour un simple joueur, jamais un second filtre ici. */
+/** Onglet Historique du volet (V2-M11) — RLS `dice_rolls_select` filtre deja les jets secrets d'un simple joueur ; le verdict d'un DD prive est retire ici (V3.1-22). */
 export async function GET(request: NextRequest, { params }: { params: Promise<{ campaignId: string }> }) {
   const { campaignId } = await params;
   const parsedQuery = diceRollsQuerySchema.safeParse(searchParamsToObject(request.nextUrl.searchParams));
@@ -17,8 +18,22 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const { limit } = parsedQuery.data;
 
   const supabase = await createClient();
-  const rolls = await listDiceRollsForCampaign(supabase, { campaignId, limit });
-  return NextResponse.json({ rolls }, { status: 200 });
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
+  }
+  const campaign = await getCampaignById(supabase, campaignId);
+  if (!campaign) {
+    return NextResponse.json({ error: "Campagne introuvable." }, { status: 404 });
+  }
+  const [rolls, isGm] = await Promise.all([
+    listDiceRollsForCampaign(supabase, { campaignId, limit }),
+    isWorldAdmin(supabase, { worldId: campaign.world_id, userId: user.id }),
+  ]);
+  // V3.1-22 (règle 5) : un verdict contre un DD privé ne part pas chez un joueur.
+  return NextResponse.json({ rolls: rolls.map((r) => ({ ...r, detail: rollDetailForReader(r.detail, { isGm }) })) }, { status: 200 });
 }
 
 /** Jet de l'outil de des (V2-M11, V3.1-33) — aucune fiche, attribue au PJ revendique par l'appelant ou "MJ" (checkRolls.ts). Le client decrit le jet ; le serveur le lance. */

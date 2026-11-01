@@ -543,7 +543,7 @@ export type Database = {
           id: string
           related_entity_id: string | null
           sender_id: string
-          thread_user_id: string
+          thread_user_id: string | null
         }
         Insert: {
           body: string
@@ -552,7 +552,7 @@ export type Database = {
           id?: string
           related_entity_id?: string | null
           sender_id: string
-          thread_user_id: string
+          thread_user_id: string | null
         }
         Update: {
           body?: string
@@ -561,7 +561,7 @@ export type Database = {
           id?: string
           related_entity_id?: string | null
           sender_id?: string
-          thread_user_id?: string
+          thread_user_id?: string | null
         }
         Relationships: [
           {
@@ -584,19 +584,19 @@ export type Database = {
         Row: {
           campaign_id: string
           last_read_at: string
-          thread_user_id: string
+          thread_user_id: string | null
           user_id: string
         }
         Insert: {
           campaign_id: string
           last_read_at?: string
-          thread_user_id: string
+          thread_user_id: string | null
           user_id: string
         }
         Update: {
           campaign_id?: string
           last_read_at?: string
-          thread_user_id?: string
+          thread_user_id?: string | null
           user_id?: string
         }
         Relationships: [

@@ -23,23 +23,25 @@ export interface ChatThreadSummary {
 
 /**
  * Quel fil cet appelant a le droit de consulter (V2-M13, "un fenetre de
- * chat par joueur") — un joueur ne voit JAMAIS que le sien, force a son
- * propre id sans lire quoi que ce soit du corps de la requete (jamais fait
- * confiance au client sur ce point, meme si RLS le refuserait de toute
- * facon en dernier recours). Le MJ doit designer explicitement un joueur de
- * CETTE campagne (`?avec=<userId>`) ; `null` si absent ou si ce n'est pas
- * un joueur de la campagne — la route appelante doit alors refuser.
+ * chat par joueur"). V3.1-22 (ADR 0038) : `salon` designe le salon de table,
+ * commun a la campagne (`threadUserId: null`). Sinon, un joueur ne voit
+ * JAMAIS que son propre fil, force a son propre id sans lire quoi que ce soit
+ * du corps de la requete (RLS le refuserait de toute facon en dernier
+ * recours). Le MJ doit designer explicitement un joueur de CETTE campagne
+ * (`?avec=<userId>`) ; `ok: false` si absent ou si ce n'est pas un joueur de
+ * la campagne — la route appelante doit alors refuser.
  */
 export async function resolveThreadUserId(
   supabase: TypedClient,
-  params: { worldId: string; campaignId: string; callerId: string; requestedThreadUserId: string | null }
-): Promise<string | null> {
+  params: { worldId: string; campaignId: string; callerId: string; requestedThreadUserId: string | null; salon?: boolean }
+): Promise<{ ok: true; threadUserId: string | null } | { ok: false }> {
+  if (params.salon) return { ok: true, threadUserId: null };
   const isMj = await isWorldAdmin(supabase, { worldId: params.worldId, userId: params.callerId });
-  if (!isMj) return params.callerId;
-  if (!params.requestedThreadUserId) return null;
+  if (!isMj) return { ok: true, threadUserId: params.callerId };
+  if (!params.requestedThreadUserId) return { ok: false };
   const members = await listCampaignMembers(supabase, params.campaignId);
   const isPlayerMember = members.some((m) => m.user_id === params.requestedThreadUserId && m.role === "player");
-  return isPlayerMember ? params.requestedThreadUserId : null;
+  return isPlayerMember ? { ok: true, threadUserId: params.requestedThreadUserId } : { ok: false };
 }
 
 /** Sommaire des fils pour le selecteur MJ (V2-M13) — un fil par joueur de la campagne, meme sans message (une conversation pas encore commencee reste accessible). */
@@ -94,11 +96,20 @@ export async function countUnreadChatMessages(
   supabase: TypedClient,
   params: { campaignId: string; worldId: string; userId: string }
 ): Promise<number> {
-  const isMj = await isWorldAdmin(supabase, { worldId: params.worldId, userId: params.userId });
+  const [isMj, salon] = await Promise.all([
+    isWorldAdmin(supabase, { worldId: params.worldId, userId: params.userId }),
+    countUnreadInSalon(supabase, { campaignId: params.campaignId, userId: params.userId }),
+  ]);
   if (isMj) {
     const threads = await listChatThreadSummaries(supabase, { campaignId: params.campaignId, mjUserId: params.userId });
-    return threads.reduce((sum, t) => sum + t.unreadCount, 0);
+    return salon + threads.reduce((sum, t) => sum + t.unreadCount, 0);
   }
   const lastReadAt = await getChatLastReadAt(supabase, { campaignId: params.campaignId, userId: params.userId, threadUserId: params.userId });
-  return countUnreadInThread(supabase, { campaignId: params.campaignId, threadUserId: params.userId, readerId: params.userId, sinceExclusive: lastReadAt });
+  return salon + (await countUnreadInThread(supabase, { campaignId: params.campaignId, threadUserId: params.userId, readerId: params.userId, sinceExclusive: lastReadAt }));
+}
+
+/** V3.1-22 — les messages du salon de table reçus depuis la dernière lecture de l'appelant. */
+export async function countUnreadInSalon(supabase: TypedClient, params: { campaignId: string; userId: string }): Promise<number> {
+  const lastReadAt = await getChatLastReadAt(supabase, { campaignId: params.campaignId, userId: params.userId, threadUserId: null });
+  return countUnreadInThread(supabase, { campaignId: params.campaignId, threadUserId: null, readerId: params.userId, sinceExclusive: lastReadAt });
 }

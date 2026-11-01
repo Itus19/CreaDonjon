@@ -8,24 +8,25 @@ export interface ChatMessageRow {
   id: string;
   campaign_id: string;
   sender_id: string;
-  thread_user_id: string;
-  related_entity_id: string | null;
+  /** V3.1-22 (ADR 0038) : `null` = le salon de table ; sinon le joueur du fil privé. */
+  thread_user_id: string | null;
   body: string;
   created_at: string;
 }
 
-const CHAT_MESSAGE_COLUMNS = "id, campaign_id, sender_id, thread_user_id, related_entity_id, body, created_at";
+const CHAT_MESSAGE_COLUMNS = "id, campaign_id, sender_id, thread_user_id, body, created_at";
 
-/** Fil MJ/joueur (V2-M13 : "un fenetre de chat par joueur") — RLS `campaign_chat_messages_select` filtre deja aux membres du monde ET au bon fil (le sien, ou n'importe lequel pour le MJ), jamais un second filtre ici. */
+/**
+ * Un fil (V2-M13) ou le salon (V3.1-22, `threadUserId: null`) — RLS
+ * `campaign_chat_messages_select` filtre deja : le salon aux membres de la
+ * campagne, un fil prive a son joueur et au MJ ; jamais un second filtre ici.
+ */
 export async function listChatMessagesForThread(
   supabase: TypedClient,
-  params: { campaignId: string; threadUserId: string; limit: number }
+  params: { campaignId: string; threadUserId: string | null; limit: number }
 ): Promise<ChatMessageRow[]> {
-  const { data, error } = await supabase
-    .from("campaign_chat_messages")
-    .select(CHAT_MESSAGE_COLUMNS)
-    .eq("campaign_id", params.campaignId)
-    .eq("thread_user_id", params.threadUserId)
+  const base = supabase.from("campaign_chat_messages").select(CHAT_MESSAGE_COLUMNS).eq("campaign_id", params.campaignId);
+  const { data, error } = await (params.threadUserId === null ? base.is("thread_user_id", null) : base.eq("thread_user_id", params.threadUserId))
     .order("created_at", { ascending: false })
     .limit(params.limit);
   if (error) throw new Error(error.message);
@@ -47,14 +48,14 @@ export async function listLastMessagePerThread(
   if (error) throw new Error(error.message);
   const result = new Map<string, ChatMessageRow>();
   for (const row of data) {
-    if (!result.has(row.thread_user_id)) result.set(row.thread_user_id, row);
+    if (row.thread_user_id !== null && !result.has(row.thread_user_id)) result.set(row.thread_user_id, row);
   }
   return result;
 }
 
 export async function insertChatMessage(
   supabase: TypedClient,
-  params: { campaignId: string; senderId: string; threadUserId: string; relatedEntityId: string | null; body: string }
+  params: { campaignId: string; senderId: string; threadUserId: string | null; body: string }
 ): Promise<ChatMessageRow> {
   const { data, error } = await supabase
     .from("campaign_chat_messages")
@@ -62,7 +63,6 @@ export async function insertChatMessage(
       campaign_id: params.campaignId,
       sender_id: params.senderId,
       thread_user_id: params.threadUserId,
-      related_entity_id: params.relatedEntityId,
       body: params.body,
     })
     .select(CHAT_MESSAGE_COLUMNS)
@@ -74,14 +74,10 @@ export async function insertChatMessage(
 /** Compte les messages recus (jamais les siens) dans CE fil depuis la derniere lecture — `lastReadAt` nul si jamais ouvert (tout compte). */
 export async function countUnreadInThread(
   supabase: TypedClient,
-  params: { campaignId: string; threadUserId: string; readerId: string; sinceExclusive: string | null }
+  params: { campaignId: string; threadUserId: string | null; readerId: string; sinceExclusive: string | null }
 ): Promise<number> {
-  let query = supabase
-    .from("campaign_chat_messages")
-    .select("id", { count: "exact", head: true })
-    .eq("campaign_id", params.campaignId)
-    .eq("thread_user_id", params.threadUserId)
-    .neq("sender_id", params.readerId);
+  const base = supabase.from("campaign_chat_messages").select("id", { count: "exact", head: true }).eq("campaign_id", params.campaignId);
+  let query = (params.threadUserId === null ? base.is("thread_user_id", null) : base.eq("thread_user_id", params.threadUserId)).neq("sender_id", params.readerId);
   if (params.sinceExclusive) query = query.gt("created_at", params.sinceExclusive);
   const { count, error } = await query;
   if (error) throw new Error(error.message);
@@ -91,7 +87,7 @@ export async function countUnreadInThread(
 /** Total tous fils confondus, pour la pastille globale (badge MJ dans la barre laterale, pastille joueur unique puisqu'il n'a qu'un fil). */
 export async function countUnreadAcrossThreads(
   supabase: TypedClient,
-  params: { campaignId: string; readerId: string; threads: { threadUserId: string; sinceExclusive: string | null }[] }
+  params: { campaignId: string; readerId: string; threads: { threadUserId: string | null; sinceExclusive: string | null }[] }
 ): Promise<number> {
   const counts = await Promise.all(
     params.threads.map((t) => countUnreadInThread(supabase, { campaignId: params.campaignId, threadUserId: t.threadUserId, readerId: params.readerId, sinceExclusive: t.sinceExclusive }))
@@ -101,15 +97,10 @@ export async function countUnreadAcrossThreads(
 
 export async function getChatLastReadAt(
   supabase: TypedClient,
-  params: { campaignId: string; userId: string; threadUserId: string }
+  params: { campaignId: string; userId: string; threadUserId: string | null }
 ): Promise<string | null> {
-  const { data, error } = await supabase
-    .from("campaign_chat_reads")
-    .select("last_read_at")
-    .eq("campaign_id", params.campaignId)
-    .eq("user_id", params.userId)
-    .eq("thread_user_id", params.threadUserId)
-    .maybeSingle();
+  const base = supabase.from("campaign_chat_reads").select("last_read_at").eq("campaign_id", params.campaignId).eq("user_id", params.userId);
+  const { data, error } = await (params.threadUserId === null ? base.is("thread_user_id", null) : base.eq("thread_user_id", params.threadUserId)).maybeSingle();
   if (error) throw new Error(error.message);
   return data?.last_read_at ?? null;
 }
@@ -125,11 +116,12 @@ export async function listChatLastReadAtByThread(
     .eq("campaign_id", params.campaignId)
     .eq("user_id", params.userId);
   if (error) throw new Error(error.message);
-  return new Map(data.map((r) => [r.thread_user_id, r.last_read_at]));
+  // Le salon (fil nul) se lit par `getChatLastReadAt` : ici, les fils prives seulement.
+  return new Map(data.flatMap((r) => (r.thread_user_id === null ? [] : [[r.thread_user_id, r.last_read_at] as const])));
 }
 
 /** Marque un fil lu maintenant (V2-M13, pastille) — upsert : la ligne (campagne, lecteur, fil) existe deja des la premiere ouverture. */
-export async function markChatRead(supabase: TypedClient, params: { campaignId: string; userId: string; threadUserId: string }): Promise<void> {
+export async function markChatRead(supabase: TypedClient, params: { campaignId: string; userId: string; threadUserId: string | null }): Promise<void> {
   const { error } = await supabase
     .from("campaign_chat_reads")
     .upsert(

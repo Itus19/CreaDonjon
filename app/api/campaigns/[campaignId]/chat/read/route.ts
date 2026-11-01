@@ -27,16 +27,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "Campagne introuvable." }, { status: 404 });
   }
 
-  const threadUserId = await resolveThreadUserId(supabase, {
+  const fil = await resolveThreadUserId(supabase, {
     worldId: campaign.world_id,
     campaignId,
     callerId: user.id,
     requestedThreadUserId: parsedQuery.data.avec ?? null,
+    salon: parsedQuery.data.fil === "salon",
   });
-  if (!threadUserId) {
+  if (!fil.ok) {
     return NextResponse.json({ error: "Fil introuvable." }, { status: 404 });
   }
 
-  await markChatRead(supabase, { campaignId, userId: user.id, threadUserId });
+  await markChatRead(supabase, { campaignId, userId: user.id, threadUserId: fil.threadUserId });
   return NextResponse.json({ ok: true }, { status: 200 });
 }
