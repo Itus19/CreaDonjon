@@ -34,7 +34,7 @@ exemples.
 
 ---
 
-### ☐ V3.1-93 — Règles : le sommaire passe dans la fenêtre · `M` · sans modèle IA — **prêt**
+### ☑ V3.1-93 — Règles : le sommaire passe dans la fenêtre · `M` · sans modèle IA — **fait le 1er novembre**
 
 **Modèle conseillé : Sonnet.**
 
@@ -59,9 +59,9 @@ exemples.
 - La règle ouverte est surlignée dans le sommaire.
 
 **Critères d'acceptation**
-- [ ] Plus aucune barre de règles hors de la fenêtre.
-- [ ] La recherche et « Récemment » fonctionnent sans rechargement.
-- [ ] Les formulaires d'ajout et les bacs à sable s'ouvrent comme
+- [x] Plus aucune barre de règles hors de la fenêtre.
+- [x] La recherche et « Récemment » fonctionnent sans rechargement.
+- [x] Les formulaires d'ajout et les bacs à sable s'ouvrent comme
   aujourd'hui (aucun geste perdu).
 
 ---

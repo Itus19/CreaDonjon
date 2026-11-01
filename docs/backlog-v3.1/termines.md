@@ -3037,3 +3037,13 @@ Opus : écriture, validation, accès ; `dev-sonnet` : l'éditeur ; `aide-haiku` 
 
 *À vérifier par l'auteur* (seul superadmin) : Administration › Titres des joueurs, changer un nom de palier, Enregistrer, puis recharger le volet « Je joue » d'une joueuse ; Rétablir remet les paliers par défaut.
 
+### V3.1-93 — Règles : le sommaire passe dans la fenêtre (1er novembre)
+
+`dev-sonnet` : le code ; `aide-haiku` : la planche ; relu et vérifié au navigateur par Opus.
+- **`WindowsDesktop`** accepte un `sommaire` : sur ordinateur, une colonne de 250 px à gauche de la zone ; la couche des volets reste calée sur la zone (mesurée par `ResizeObserver`), donc à droite du sommaire. Sans `sommaire`, rendu inchangé (Monde, MJ).
+- **`SommaireRegles.tsx`** : recherche en direct, « Récemment » (même clé que le téléphone, espace `mj-regles`), catégories repliables avec leur nombre, sous-classes et sous-espèces sous leur parent, règle ouverte surlignée (`aria-current`), « + Ajouter une règle ▾ » et « Bacs à sable ▾ » en pied (mêmes liens qu'avant, en volet). Fenêtre étroite (requête de conteneur, 48 rem) : colonne réduite et tiroir ☰.
+- **`RulesSidebar`** ne garde que le rail commun (sections, dé, radio) ; téléphone inchangé.
+- **Vérifié au navigateur** (MJ du banc d'essai, 1440 et 900 px) : recherche « boule » filtrée en direct, « Récemment », les cinq formulaires et les deux bacs à sable listés, « Créer une arme maison » ouvert en volet à droite de la règle, tiroir en fenêtre étroite.
+
+*Restes* : le contenu de la règle, ses onglets et le ⋮ (V3.1-94).
+
