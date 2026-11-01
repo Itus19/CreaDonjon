@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isSystemKind } from "@/src/core/entities/systemKinds";
 
 const ENTITY_KINDS = [
   "character",
@@ -75,7 +76,13 @@ export const DEFAULT_ENTITY_NAME = "Nouvelle entité";
 export const createEntityWithNameSchema = z.object({
   worldId: z.guid(),
   name: z.string().trim().min(1, "Un nom est requis.").max(200, "200 caractères maximum."),
-  entityKind: z.string().trim().min(1).max(40).default("character"),
+  entityKind: z
+    .string()
+    .trim()
+    .min(1)
+    .max(40)
+    .default("character")
+    .refine((kind) => !isSystemKind(kind), "Ce type de fiche ne se choisit pas à la main."),
 });
 
 // Octroi d'edition d'une fiche a un joueur precis (V2-M7, panneau MJ) —

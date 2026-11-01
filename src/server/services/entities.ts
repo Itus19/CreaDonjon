@@ -1,5 +1,5 @@
 import "server-only";
-import { isWikiHiddenKind } from "@/src/core/entities/systemKinds";
+import { canChangeEntityKind, isWikiHiddenKind } from "@/src/core/entities/systemKinds";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import { nextNumericSlug } from "@/src/core/slug/slug";
@@ -229,7 +229,7 @@ export async function createEntity(
 
 export type UpdateEntityResult =
   | { ok: true; entity: EntitySummary }
-  | { ok: false; reason: "conflict" | "not_found" | "forbidden" };
+  | { ok: false; reason: "conflict" | "not_found" | "forbidden" | "system_kind" };
 
 export async function updateEntity(
   supabase: TypedClient,
@@ -256,6 +256,9 @@ export async function updateEntity(
     userId: params.changedBy,
   });
   if (!allowed) return { ok: false, reason: "forbidden" };
+  // Un type système ne s'obtient et ne se quitte que par son parcours
+  // (devoir, partage du cahier, Chronologie) — voir `canChangeEntityKind`.
+  if (!canChangeEntityKind(existing.entity_kind, params.entityKind)) return { ok: false, reason: "system_kind" };
 
   const updated = await updateEntityWithVersionCheck(supabase, params);
   if (!updated) {

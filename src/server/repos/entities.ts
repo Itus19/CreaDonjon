@@ -3,6 +3,7 @@ import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import { ENTITY_KINDS } from "@/lib/entities/schemas";
+import { SYSTEM_KINDS } from "@/src/core/entities/systemKinds";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -334,7 +335,7 @@ export async function listCustomEntityKindsForWorld(supabase: TypedClient, world
     .select("entity_kind")
     .eq("world_id", worldId)
     .is("deleted_at", null)
-    .not("entity_kind", "in", `(${ENTITY_KINDS.join(",")})`);
+    .not("entity_kind", "in", `(${[...ENTITY_KINDS, ...SYSTEM_KINDS].join(",")})`);
   if (error) throw new Error(error.message);
   return [...new Set(data.map((row) => row.entity_kind))].sort((a, b) => a.localeCompare(b));
 }
