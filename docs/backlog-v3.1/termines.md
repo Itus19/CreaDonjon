@@ -3028,3 +3028,12 @@ Opus : service, route, accès ; `dev-sonnet` : le volet ; `aide-haiku` : la plan
 
 *Restes* : « Statistiques depuis le 9 octobre » est un libellé fixe ; l'attaque sournoise n'a pas encore de jet qui la nomme (V3.1-90).
 
+### V3.1-92 — Administration › Titres des joueurs : l'éditeur (1er novembre)
+
+Opus : écriture, validation, accès ; `dev-sonnet` : l'éditeur ; `aide-haiku` : la planche ; relu par Opus.
+- **Serveur** : `savePlayerTitleTiersAction` / `resetPlayerTitleTiersAction` (`app/admin/titresActions.ts`) → `playerTitleTiersWrite.ts` : superadmin vérifié (puis RLS), jeu complet validé par `zPlayerTitleTierSet` (douze icônes, cinq couleurs, variables connues, chaque famille garde un palier) ; remplacement sans table vide (le nouveau jeu inséré avant le retrait de l'ancien). L'Administration charge les paliers avec la page.
+- **Éditeur** (`PanneauTitres.tsx`) : familles, mesure, une ligne par palier (sélecteur d'icône 6 × 2 et de couleur, nom, plage en virgule décimale ou sorte d'action, petit texte, × jamais sur le dernier), avertissement `checkTiers`, aperçu avec valeur d'essai et la carte partagée avec le volet (`CarteTitre.tsx`, texte brut), Enregistrer, Rétablir confirmé ; erreur du serveur affichée (retouche d'Opus).
+- **Vérifié** : validation (4 tests : icône, couleur, famille vide, variable inconnue ; du HTML reste une simple chaîne) ; contre la base, un compte ordinaire refusé par le service puis par la RLS, rien ne change.
+
+*À vérifier par l'auteur* (seul superadmin) : Administration › Titres des joueurs, changer un nom de palier, Enregistrer, puis recharger le volet « Je joue » d'une joueuse ; Rétablir remet les paliers par défaut.
+

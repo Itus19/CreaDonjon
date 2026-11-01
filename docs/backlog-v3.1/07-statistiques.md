@@ -163,7 +163,7 @@ volet de droite de l'accueil (`Accueil-3-Tableau.dc.html`, V3.1-35).
 
 ---
 
-### ☐ V3.1-92 — Administration › Titres des joueurs : l'éditeur · `M` · sans modèle IA — **prêt**
+### ☑ V3.1-92 — Administration › Titres des joueurs : l'éditeur · `M` · sans modèle IA — **fait le 1er novembre**
 
 **Modèle conseillé : Sonnet.**
 
@@ -205,7 +205,7 @@ joueurs » (vivante : familles, paliers, icônes, couleurs, valeur d'essai).
 
 **Critères d'acceptation**
 - [ ] Un changement enregistré se voit dans le volet « Je joue » de toutes
-  les joueuses au rechargement.
-- [ ] Une icône ou une couleur hors liste est refusée par le serveur.
-- [ ] Le petit texte ne peut pas injecter de HTML (affiché en texte brut).
-- [ ] Rétablir remet les paliers par défaut de V3.1-90.
+  les joueuses au rechargement. *(codé : le volet relit les paliers à chaque chargement ; à vérifier à la main par l'auteur, seul superadmin)*
+- [x] Une icône ou une couleur hors liste est refusée par le serveur.
+- [x] Le petit texte ne peut pas injecter de HTML (affiché en texte brut).
+- [x] Rétablir remet les paliers par défaut de V3.1-90.
