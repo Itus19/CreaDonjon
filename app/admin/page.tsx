@@ -4,7 +4,7 @@ import { isSuperadmin } from "@/src/server/services/account";
 import { listAccountsForAdmin } from "@/src/server/services/adminAccounts";
 import { listAllInvitesForAdmin } from "@/src/server/services/campaignInvites";
 import { getAppIdentity } from "@/src/server/services/appIdentity";
-import { countPlayerTitleTiers } from "@/src/server/repos/playerTitleTiers";
+import { listPlayerTitleTiers } from "@/src/server/repos/playerTitleTiers";
 import HomeShell from "@/components/shell/HomeShell";
 import PageAdministration from "@/components/shell/PageAdministration";
 
@@ -20,11 +20,11 @@ export default async function AdministrationPage() {
   const user = await getAuthUser(supabase);
   if (!user || !(await isSuperadmin(supabase, user.id))) notFound();
 
-  const [comptes, liens, identite, nombreTitres] = await Promise.all([
+  const [comptes, liens, identite, titres] = await Promise.all([
     listAccountsForAdmin(supabase, user.id),
     listAllInvitesForAdmin(supabase),
     getAppIdentity(),
-    countPlayerTitleTiers(supabase),
+    listPlayerTitleTiers(supabase),
   ]);
   if (comptes === null) notFound();
 
@@ -39,7 +39,8 @@ export default async function AdministrationPage() {
             comptesInitiaux={comptes}
             liensInitiaux={liens}
             identite={identite}
-            nombreTitres={nombreTitres}
+            nombreTitres={titres.length}
+            titresInitiaux={titres}
           />
         }
       />
