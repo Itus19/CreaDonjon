@@ -279,4 +279,4 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-145 | ☐ | sans | Les tests d'intégration se suppriment les mondes entre eux | [`10-dette-technique.md`](backlog-v3.1/10-dette-technique.md) |
 | V3.1-146 | ☑ | sans | Musique : la position et la durée de la piste YouTube | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
 | V3.1-147 | ☑ | sans | Fiche de créature : le repaire et les défenses | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
-| V3.1-150 | ☐ | sans | Le devoir de journal : la page naît à l'assignation, « Devoir fait » la publie, le MJ valide | [`14-rugosites-novembre.md`](backlog-v3.1/14-rugosites-novembre.md) |
+| V3.1-150 | ☑ | sans | Le devoir de journal : la page naît à l'assignation, « Devoir fait » la publie, le MJ valide | [`termines.md`](backlog-v3.1/termines.md) |
