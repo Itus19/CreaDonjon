@@ -25,13 +25,13 @@ Ce qu'on a constaté en jouant, à partir du 1ᵉʳ novembre. Même règle que l
 **Hors du ticket.** Fusionner deux comptes d'une même personne ; empêcher qu'un lien d'invitation ouvre un second compte (à trancher à part si le cas revient). Un devoir « en attente » sans page n'existe pas dans la base au 1ᵉʳ novembre (les trois devoirs existants sont rédigés) : rien n'est prévu pour ce cas, le MJ l'annule et le réassigne.
 
 **Critères d'acceptation.**
-- [ ] Assigner un devoir crée la page, l'octroi et les deux blocs ; la page est dans l'onglet Édition de l'autrice et nulle part ailleurs pour un autre joueur.
-- [ ] Un autre joueur ne trouve la page ni dans le Livre, ni dans le sommaire, ni par la recherche, et sa lecture directe répond « introuvable ».
-- [ ] « Devoir fait » : devoir `written`, page publique, date de rédaction posée, fait au journal ; la page est dans le Livre.
-- [ ] La joueuse ne peut ni valider son devoir, ni modifier ses autres colonnes, ni rendre le devoir d'une autre.
-- [ ] « Valider » (MJ seul) passe le devoir à `validated` ; la mention quitte la barre de la joueuse.
-- [ ] Annuler un devoir non rendu efface aussi sa page.
-- [ ] `npm run typecheck`, lint, tests unitaires ; test d'intégration `sessionJournalDevoir.integration.test.ts` contre la vraie base (après application de la migration).
+- [x] Assigner un devoir crée la page, l'octroi et les deux blocs ; la page est dans l'onglet Édition de l'autrice et nulle part ailleurs pour un autre joueur.
+- [x] Un autre joueur ne trouve la page ni dans le Livre, ni dans le sommaire, ni par la recherche, et sa lecture directe répond « introuvable ».
+- [x] « Devoir fait » : devoir `written`, page publique, date de rédaction posée, fait au journal ; la page est dans le Livre.
+- [x] La joueuse ne peut ni valider son devoir, ni modifier ses autres colonnes, ni rendre le devoir d'une autre.
+- [x] « Valider » (MJ seul) passe le devoir à `validated` ; la mention quitte la barre de la joueuse.
+- [x] Annuler un devoir non rendu efface aussi sa page.
+- [x] `npm run typecheck`, lint, tests unitaires ; test d'intégration `sessionJournalDevoir.integration.test.ts` contre la vraie base (après application de la migration).
 
 **Sous-tâches Haiku.** Planche du catalogue (sous-entrée du rail, bandeau du devoir, pastilles d'état du registre).
 
@@ -40,6 +40,6 @@ Ce qu'on a constaté en jouant, à partir du 1ᵉʳ novembre. Même règle que l
 - **Migration** `20261102130000_session_journal_devoir` : état `validated` et `validated_at` ; modification réservée au MJ ; `submit_journal_assignment` ; `claim_journal_entry_grant` retirée. Types mis à jour à la main.
 - **Serveur** (`sessionJournal.ts`) : `assignJournalEntry` crée page, octroi, blocs et devoir (MJ et autrice de la campagne vérifiés avant ; page effacée si une écriture rate) ; `submitMyJournalAssignment` publie, date, puis rend ; `validateJournalAssignment` ; `cancelJournalAssignment` refuse un devoir rendu et efface la page ; `getMyOpenDevoir`, `getDevoirBandeau`. Brouillon masqué dans `listPlayerVisibleEntityIds` et `getPlayerEntityDetail`. Routes : `submit` (« Devoir fait », Zod strict), `validate` (nouvelle), assigner et annuler disent leurs refus ; annuler vérifie la campagne de l'adresse. Retirés : la route `my-assignment` et la bannière du Wiki.
 - **Écrans** : `SousEntreeDevoir` dans le rail (`PlayerShell`), pastille sur « Édition » rail replié et au téléphone ; `BandeauDevoir` sur la page de l'onglet Édition ; registre MJ à trois états, « Devoir fait » pour le MJ autrice, « Valider le devoir ». Planche « Livre de sessions » (`OutilsMJ.dc.html`), `docs/CABLAGE.md`, `docs/SCHEMA.md`, registre de `docs/SECURITE.md`.
-- **Vérifié** : typecheck ; lint des fichiers touchés ; tests unitaires (292 fichiers) dont `devoir.test.ts` et `sessionJournalGestes.test.ts` (16 cas : ordre des écritures, refus, journal). `sessionJournalDevoir.integration.test.ts` lancé une fois : échoue comme attendu, la migration n'étant pas appliquée (`validated_at` absente) ; aucun monde de test laissé.
+- **Vérifié** : typecheck ; lint des fichiers touchés ; tests unitaires (292 fichiers) dont `devoir.test.ts` et `sessionJournalGestes.test.ts` (16 cas : ordre des écritures, refus, journal). `sessionJournalDevoir.integration.test.ts` contre la base réelle, migration appliquée : 6/6 ; aucun monde de test laissé ; les trois devoirs existants intacts (`written`).
 
-*Restes* : **appliquer la migration avant de mettre le code en ligne** (sans elle, la coquille joueuse lit une colonne absente et tombe en erreur), puis relancer le test d'intégration et passer le registre de `SECURITE.md` à « corrigée » ; publier la planche sur le canevas du catalogue (CSS à recompiler, `docs/catalogue/README.md`) ; vérifier au navigateur (Testeur MJ assigne, Testeuse A rend, Testeur B ne voit rien avant) ; `/security-review` sur la branche.
+*Restes* : publier la planche sur le canevas du catalogue (CSS à recompiler, `docs/catalogue/README.md`) ; vérifier au navigateur (Testeur MJ assigne, Testeuse A rend, Testeur B ne voit rien avant) ; `/security-review` sur la branche.
