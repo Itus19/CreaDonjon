@@ -139,5 +139,7 @@ export async function reclamerEtCreerFiche(
     inventory: params.inventory,
     spellcasting: params.spellcasting,
   });
-  return ecrit.ok ? { ok: true } : { ok: false, reason: ecrit.reason };
+  if (ecrit.ok) return { ok: true };
+  // Une fiche système (entrée du Livre, page partagée) ne devient pas un PJ : refus, comme un droit manquant.
+  return { ok: false, reason: ecrit.reason === "system_kind" ? "forbidden" : ecrit.reason };
 }

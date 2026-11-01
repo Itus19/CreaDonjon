@@ -40,6 +40,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (result.reason === "forbidden") {
       return NextResponse.json({ error: "Vous n'avez pas le droit de modifier cette fiche." }, { status: 403 });
     }
+    if (result.reason === "system_kind") {
+      return NextResponse.json({ error: "Ce type de fiche ne se choisit pas à la main." }, { status: 400 });
+    }
     return NextResponse.json(
       { error: "Cette fiche a été modifiée entre-temps. Rechargez avant de réessayer." },
       { status: 409 }

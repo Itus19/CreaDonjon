@@ -55,6 +55,7 @@ export async function overwriteCharacterFromWizardAction(
       conflict: "Cette fiche a été modifiée entre-temps. Rechargez la page avant de réessayer.",
       forbidden: "Vous n'avez pas le droit de modifier cette fiche.",
       not_found: "Fiche introuvable.",
+      system_kind: "Ce type de fiche ne se choisit pas à la main.",
     };
     return { error: messages[result.reason] };
   }

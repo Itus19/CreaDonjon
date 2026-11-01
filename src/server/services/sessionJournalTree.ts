@@ -13,8 +13,9 @@ import type { EntityTreeGroup } from "@/src/core/entity-tree/build-tree";
 
 type TypedClient = SupabaseClient<Database>;
 
-/** Entity_kind dedie (V2.1-3) — chaque entree du Livre de sessions est une vraie fiche, jamais un ecran a part (voir la migration 20260913160000 pour le detail de la table qui porte le devoir/la date ingame). */
-export const SESSION_JOURNAL_KIND = "session_journal";
+/** Entity_kind dedie (V2.1-3) — chaque entree du Livre de sessions est une vraie fiche, jamais un ecran a part (voir la migration 20260913160000 pour le detail de la table qui porte le devoir/la date ingame). Defini dans le noyau, qui en a besoin pour la regle des types systeme. */
+import { SESSION_JOURNAL_KIND } from "@/src/core/entities/systemKinds";
+export { SESSION_JOURNAL_KIND };
 
 /**
  * Groupe epingle du sommaire (retour utilisateur : "Livre de sessions" en
