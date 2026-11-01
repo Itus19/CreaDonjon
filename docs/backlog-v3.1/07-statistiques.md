@@ -37,7 +37,7 @@ Les règles de lecture des tickets du 9 octobre (plus haut) valent ici.
 
 ---
 
-### ☐ V3.1-90 — Statistiques : le noyau pur · `S` · sans modèle IA — **prêt**
+### ☑ V3.1-90 — Statistiques : le noyau pur · `S` · sans modèle IA — **fait le 1er novembre**
 
 **Modèle conseillé : Sonnet** — logique pure, **tests d'abord**
 (`npm run test:core`).
@@ -95,10 +95,10 @@ des données de V3.1-89.
   marqué `tooFew` (le volet affiche un état vide).
 
 **Critères d'acceptation**
-- [ ] Tests écrits avant le code ; cas : aucun jet, avantage, désavantage,
+- [x] Tests écrits avant le code ; cas : aucun jet, avantage, désavantage,
   égalités, suite de 1, table d'une seule joueuse (moyenne = elle-même →
   `patient`, `steady`).
-- [ ] Aucune valeur stockée : tout se recalcule (règle 16).
+- [x] Aucune valeur stockée : tout se recalcule (règle 16).
 
 ---
 

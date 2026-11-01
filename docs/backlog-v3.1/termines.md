@@ -3009,3 +3009,12 @@ Opus : migration, RLS, routes, logique du DD privé, relecture ; `dev-sonnet` : 
 
 *Restes* : à voir au navigateur par l'auteur ; non-lus par conversation côté joueur partent de zéro au chargement (la pastille globale est exacte) ; pas d'animation d'entrée du panneau ; le temps réel des jets envoie encore le verdict d'un DD privé (registre de `SECURITE.md`).
 
+### V3.1-90 — Statistiques : le noyau pur (1er novembre)
+
+Opus seul (le contexte de V3.1-89 était chargé ; un fichier). Tests d'abord, 29 cas.
+- **`src/core/stats/playerStats.ts`** : `d20Histogram` (vingt colonnes sur le d20 GARDÉ, `tooFew` sous 5 jets), `rollCount`, `d20Average` (au dixième), `longestStreak` (ordre des dates, jets sans d20 ignorés), `favoriteAction` (hors dégâts et jet libre ; test et sauvegarde confondus ; l'attaque sournoise reconnue à son libellé, faute de genre propre ; égalité : le plus récent), `biggestHit`, `familyMeasures`, `pickTitle`, `renderTemplate` (une seule passe, texte brut, décimal à la française), `checkTiers` (trous, chevauchements, nature d'action en double), `playerTitles` (une case par famille, vide sans palier ; `[]` sous 5 jets).
+- **Cas limites tranchés** : rapport à une table à zéro : 0 pour 0 vaut 1, sinon l'infini ; bourse sans rien dépensé : 0 (« rien gagné » ne fait pas une bourse percée quand rien n'est sorti).
+- Rien n'est stocké (règle 16) ; rien de `next`, `react` ni `@supabase` (règle 19).
+
+*Restes* : le service et le volet (V3.1-91) ; l'éditeur des paliers (V3.1-92) lira `checkTiers`.
+
