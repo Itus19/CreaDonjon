@@ -188,6 +188,9 @@
   "regles": {
     "rechercherRegle": "Rechercher une règle…",
     "aucuneRegleTrouvee": "Aucune règle trouvée.",
+    "sommaireRegles": "Sommaire des règles",
+    "ajouterUneRegleMenu": "+ Ajouter une règle ▾",
+    "bacsASableMenu": "Bacs à sable ▾",
     "ouvrirListe": "Ouvrir la liste des règles",
     "reglesDuMonde": "Règles du monde",
     "pasDeRuleset": "Ce monde n'a pas encore de ruleset assigné — aucune règle à consulter pour l'instant.",

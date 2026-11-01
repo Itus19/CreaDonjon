@@ -21,7 +21,18 @@ export interface AddRuleMenuItem {
  * navigation plutot qu'un selecteur de valeur : les items sont des liens,
  * pas un `onChange`.
  */
-export default function AddRuleMenu({ label, items, onNavigate }: { label: string; items: AddRuleMenuItem[]; onNavigate?: () => void }) {
+export default function AddRuleMenu({
+  label,
+  items,
+  onNavigate,
+  contour = false,
+}: {
+  label: string;
+  items: AddRuleMenuItem[];
+  onNavigate?: () => void;
+  /** V3.1-93 : bouton secondaire (contour, sans fond d'accent) pour « Bacs à sable ». */
+  contour?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const [rect, setRect] = useState<{ left: number; width: number; bottom: number } | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -61,7 +72,9 @@ export default function AddRuleMenu({ label, items, onNavigate }: { label: strin
         onClick={toggle}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="block w-full rounded-full bg-accent px-4 py-2 text-center text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover"
+        className={`block w-full rounded-full px-4 py-2 text-center text-sm font-medium transition-colors ${
+          contour ? "border border-edge text-ink hover:bg-panel-raised" : "bg-accent text-accent-ink hover:bg-accent-hover"
+        }`}
       >
         {label}
       </button>

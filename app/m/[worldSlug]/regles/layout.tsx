@@ -2,11 +2,12 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import RulesSidebar from "@/components/rules/RulesSidebar";
+import SommaireRegles from "@/components/rules/SommaireRegles";
 import WindowsDesktop from "@/components/shell/WindowsDesktop";
 
 /**
  * La liste des regles est desormais recuperee cote client par
- * `RulesSidebar` (`useWorldRuleEntries`, deja utilise ailleurs dans
+ * le sommaire des regles (`useWorldRuleEntries`, deja utilise ailleurs dans
  * l'application) plutot que passee en props par ce layout serveur — sinon
  * chaque page du monde paierait le cout de cette liste (mesure a 1.4-1.8s
  * sous le SRD 2024, V2-G1) meme en ne visitant jamais Regles, une fois le
@@ -27,7 +28,7 @@ export default async function ReglesLayout({
   return (
     <>
       <RulesSidebar worldSlug={worldSlug} worldName={world.name} />
-      <WindowsDesktop>{children}</WindowsDesktop>
+      <WindowsDesktop sommaire={<SommaireRegles worldSlug={worldSlug} />}>{children}</WindowsDesktop>
     </>
   );
 }

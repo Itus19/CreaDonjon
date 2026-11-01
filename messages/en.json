@@ -187,6 +187,9 @@
   "regles": {
     "rechercherRegle": "Search a rule…",
     "aucuneRegleTrouvee": "No rule found.",
+    "sommaireRegles": "Rules contents",
+    "ajouterUneRegleMenu": "+ Add a rule ▾",
+    "bacsASableMenu": "Sandboxes ▾",
     "ouvrirListe": "Open the rule list",
     "reglesDuMonde": "World rules",
     "pasDeRuleset": "This world has no ruleset assigned yet — no rule to consult for now.",
