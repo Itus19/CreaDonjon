@@ -210,8 +210,10 @@ export default function PlayerShell({
               ))}
             </div>
             {/* Rail seulement : sous 768 px le badge vit en tete de la page Perso
-                (plus bas). Replie, la banniere n'aurait pas la place : elle disparait. */}
-            {!replie && <NextSessionBadge worldSlug={worldSlug} prochaineSession={prochaineSession} />}
+                (plus bas). V3.1-153 : replie, il reste, debout (`replie`). */}
+            <div className="hidden w-full md:mt-2 md:block md:border-t md:border-edge md:pt-2">
+              <NextSessionBadge worldSlug={worldSlug} prochaineSession={prochaineSession} replie={replie} />
+            </div>
           </div>
 
           <div className="hidden shrink-0 border-t border-edge p-2 md:block">

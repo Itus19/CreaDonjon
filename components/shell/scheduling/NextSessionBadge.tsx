@@ -16,6 +16,12 @@ function formatSessionDate(dateStr: string): string {
   return date.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
 }
 
+/** « dim. 8 nov. » : la date qui tient debout dans le rail replié (V3.1-153). */
+function formatSessionDateCourte(dateStr: string): string {
+  const date = new Date(`${dateStr}T00:00:00`);
+  return date.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
+}
+
 function CalendarIcon() {
   return (
     <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
@@ -29,17 +35,29 @@ function CalendarIcon() {
  * Lien "Prochaine session" (V2.1-4, recalibré V3.1-9, mène à une page depuis
  * V3.1-8 — jamais une fenêtre pop-up, retour utilisateur : "à l'image de ce
  * que le joueur peut voir pour les autres onglets"). Deux présentations du
- * même lien, pas deux composants : sur desktop, la bannière verticale
- * habituelle (retour utilisateur : "je voulais le garder vertical") ; sur
- * mobile, une icône + libellé court comme les autres destinations de la
- * barre du bas (retour utilisateur : "le bouton de prochaine session
- * disparaît" sur téléphone — il n'existait jusque-là que pour desktop,
- * `hidden md:block` côté `PlayerShell.tsx`).
+ * même lien, pas deux composants : au téléphone, une icône + libellé court
+ * comme les autres destinations de la barre du bas ; dans le rail, une ligne.
+ *
+ * V3.1-153 (esquisse du 2 novembre, proposition B + animation X) : rail
+ * déplié, une ligne comme les autres (icône dorée, « Prochaine session »,
+ * date en doré) ; rail replié, la même ligne se dresse — icône et date
+ * courte à la verticale — au lieu de disparaître. Les deux présentations
+ * sont posées l'une sur l'autre et se croisent en fondu pendant que le
+ * rail change de largeur : le texte ne pivote jamais, il reste lisible.
  *
  * Pastille (V3.1-8) : dès qu'une ronde de demande est ouverte pour la
  * campagne et que la joueuse n'y a pas encore répondu.
  */
-export default function NextSessionBadge({ worldSlug, prochaineSession }: { worldSlug: string; prochaineSession: ProchaineSession | null }) {
+export default function NextSessionBadge({
+  worldSlug,
+  prochaineSession,
+  replie = false,
+}: {
+  worldSlug: string;
+  prochaineSession: ProchaineSession | null;
+  /** Rail replié (V3.1-153) : la ligne se dresse. Sans effet au téléphone. */
+  replie?: boolean;
+}) {
   const pathname = usePathname();
   const href = `/m/${worldSlug}/joueur/prochaine-session`;
   const active = pathname === href;
@@ -47,6 +65,9 @@ export default function NextSessionBadge({ worldSlug, prochaineSession }: { worl
   if (!prochaineSession) return null;
 
   const showBadge = prochaineSession.demandeEnAttente;
+  const dateLongue = prochaineSession.date ? formatSessionDate(prochaineSession.date) : "à définir";
+  const dateMoyenne = prochaineSession.date ? formatSessionDate(prochaineSession.date).replace(/^(\p{L}{3})\p{L}*/u, "$1.") : "à définir";
+  const dateCourte = prochaineSession.date ? formatSessionDateCourte(prochaineSession.date) : "à définir";
 
   return (
     <>
@@ -65,23 +86,42 @@ export default function NextSessionBadge({ worldSlug, prochaineSession }: { worl
 
       <Link
         href={href}
-        style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
-        className={`relative hidden rounded-md border border-accent px-1.5 py-2 font-mono text-[clamp(8px,1.3vh,11px)] leading-tight text-accent transition-colors hover:bg-panel-raised md:block ${active ? "bg-accent/10" : ""}`}
+        aria-label={`Prochaine session : ${dateLongue}${showBadge ? " — une demande de disponibilités attend ta réponse" : ""}`}
+        title={replie ? `Prochaine session : ${dateLongue}` : undefined}
+        aria-current={active ? "page" : undefined}
+        className={`relative hidden w-full rounded-xl text-ink-soft transition-colors hover:bg-panel-raised hover:text-ink md:block ${active ? "bg-panel-raised" : ""}`}
       >
-        {showBadge && (
-          // `left`/`bottom`, pas `right`/`top` : le parent est tourne a
-          // 180deg (`transform: rotate(180deg)`, pour lire le texte de bas
-          // en haut), ce qui tourne AUSSI cette pastille positionnee en
-          // absolu — verifie visuellement, "top-right" en CSS atterrissait
-          // en bas-gauche a l'ecran avant ce correctif.
-          <span
-            aria-label="Une demande de disponibilités attend une réponse"
-            className="absolute -bottom-1 -left-1 h-2.5 w-2.5 rounded-full bg-danger"
-            style={{ writingMode: "horizontal-tb", transform: "none" }}
-          />
-        )}
-        <span className="block">Prochaine session</span>
-        <span className="block font-semibold">{prochaineSession.date ? formatSessionDate(prochaineSession.date) : "à définir"}</span>
+        {/* Déplié : une ligne du rail. Replié : effacée, hors du flux. */}
+        <span
+          aria-hidden="true"
+          className={`flex items-center gap-[13px] px-2.5 py-[9px] transition-opacity motion-reduce:transition-none ${
+            replie ? "pointer-events-none absolute inset-x-0 top-0 opacity-0 duration-150" : "opacity-100 delay-150 duration-200"
+          }`}
+        >
+          <span className="relative block h-[18px] w-[18px] shrink-0 text-accent">
+            <CalendarIcon />
+            {showBadge && <span className="absolute -right-1.5 -top-1.5 h-2 w-2 rounded-full bg-danger" />}
+          </span>
+          <span className="flex min-w-0 flex-col whitespace-nowrap">
+            <span className="text-[12.5px]">Prochaine session</span>
+            <span className="truncate text-xs font-semibold text-accent">{dateMoyenne}</span>
+          </span>
+        </span>
+        {/* Replié : l'icône et la date debout. Déplié : effacée, hors du flux. */}
+        <span
+          aria-hidden="true"
+          className={`flex flex-col items-center gap-2 py-2.5 transition-opacity motion-reduce:transition-none ${
+            replie ? "opacity-100 delay-150 duration-200" : "pointer-events-none absolute inset-x-0 top-0 opacity-0 duration-150"
+          }`}
+        >
+          <span className="relative block h-[18px] w-[18px] shrink-0 text-accent">
+            <CalendarIcon />
+            {showBadge && <span className="absolute -right-1.5 -top-1.5 h-2 w-2 rounded-full bg-danger" />}
+          </span>
+          <span style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }} className="whitespace-nowrap text-xs font-semibold text-accent">
+            {dateCourte}
+          </span>
+        </span>
       </Link>
     </>
   );
