@@ -128,7 +128,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 - [`11-verification-11-octobre.md`](backlog-v3.1/11-verification-11-octobre.md) — Ce qu'a montré la vérification du 11 octobre : tri, rattachements, V3.1-121 et 125
 - [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) — Les règles jouables : fondation et chantiers (V3.1-129 à 141, 13 octobre)
 - [`13-audit-de-fin.md`](backlog-v3.1/13-audit-de-fin.md) — L'audit de fin de V3.1 : les retouches d'affichage relevées en chemin, V3.1-144
-- [`14-rugosites-novembre.md`](backlog-v3.1/14-rugosites-novembre.md) — Rugosités de novembre : ce qu'on a constaté en jouant (V3.1-150…)
+- [`14-rugosites-novembre.md`](backlog-v3.1/14-rugosites-novembre.md) — Rugosités de novembre : ce qu'on a constaté en jouant (V3.1-150 à 154, terminés)
 - [`termines.md`](backlog-v3.1/termines.md) — Tickets terminés (☑)
 
 | Ticket | État | Modèle IA | Titre | Fichier |
@@ -280,3 +280,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-146 | ☑ | sans | Musique : la position et la durée de la piste YouTube | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
 | V3.1-147 | ☑ | sans | Fiche de créature : le repaire et les défenses | [`05-fiche-wiki.md`](backlog-v3.1/05-fiche-wiki.md) |
 | V3.1-150 | ☑ | sans | Le devoir de journal : la page naît à l'assignation, « Devoir fait » la publie, le MJ valide | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-151 | ☑ | sans | « Insérer un trait » passe dans la bulle de mise en forme | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-152 | ☑ | sans | « Lier tout » dans « Détecter des liens » | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-153 | ☑ | sans | Le badge « Prochaine session » couché rail déplié, debout rail replié | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-154 | ☑ | sans | PJ attribué sans fiche : sa carte et « Créer la fiche de … » | [`termines.md`](backlog-v3.1/termines.md) |

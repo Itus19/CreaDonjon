@@ -3089,3 +3089,30 @@ Opus : écriture, validation, accès ; `dev-sonnet` : l'éditeur ; `aide-haiku` 
 - **Navigateur**, Banc d'essai, Chromium local : Testeur MJ assigne (« En cours d'écriture ») ; Testeur B ne voit ni sous-entrée, ni page au sommaire, et l'adresse directe répond 404 ; Testeuse A voit « Devoir de journal · À rendre » sous Édition et la page dans sa colonne, rend par « Devoir fait » (confirmation), bandeau vert et « Rendu · à valider » ; Testeur B lit alors la page ; le MJ valide, la mention quitte la barre de A ; téléphone 390 px : pastille « 1 » sur Édition. Corrigé en chemin : le formulaire gardait l'ancienne version de la fiche après le rendu (« Rédigé le » vide, faux conflit au renommage) ; libellé du rail tronqué ; « 1er novembre ». Les trois devoirs d'essai, leurs pages et octrois sont retirés du Banc d'essai.
 - **`/security-review`** : aucune faille au-dessus du seuil. Note retenue : la confidentialité du brouillon repose sur les lectures côté serveur (`listPlayerVisibleEntityIds`, `getPlayerEntityDetail`), pas sur la RLS d'`entities`/`blocks` (lisibles des membres du monde, comme avant) — toute nouvelle route de lecture joueuse doit passer par elles.
 - **Catalogue** : CSS recompilé et téléversé, planche « Outils du MJ » publiée sur le canevas (hauteur 21 000) ; `canvas.json` du dépôt réaligné sur celui du canevas, qui avait divergé. Les autres planches gardent l'ancienne feuille, suffisante pour elles.
+
+### V3.1-151 — « Insérer un trait » passe dans la bulle de mise en forme (2 novembre)
+
+Opus seul (petit, contexte chargé). Demande de l'auteur : sortir « — Insérer un trait » du haut du bloc de texte.
+- **Bulle de mise en forme** (`RichTextEditor.tsx`) : un bouton « — » après le spoiler. La bulle ne s'ouvre que sur une sélection, que la commande standard remplacerait : le trait se pose SOUS le bloc où finit la sélection, texte intact (`insertContentAt` après le bloc).
+- **Ligne vide** (option b choisie par l'auteur) : un petit « — » apparaît au curseur dans un paragraphe vide (`FloatingMenu` de Tiptap, déjà chargé par le module de menus avec la bulle : aucune dépendance nouvelle).
+- **Vérifié au navigateur** (Banc d'essai, fiche d'essai) : l'ancien bouton a disparu ; « — » dans la bulle insère un trait sans toucher au mot sélectionné ; « — » apparaît sur une ligne vide.
+
+### V3.1-152 — « Lier tout » dans « Détecter des liens » (2 novembre)
+
+Opus seul. Demande de l'auteur : retirer les mauvaises détections, puis lier le reste d'un coup.
+- **Bouton « Lier tout (n) »** en bas de la liste, dès qu'il reste une proposition. Toutes les plages sont calculées avant toute modification, puis remplacées de la dernière à la première dans une seule transaction (un seul « Annuler ») ; deux propositions qui se chevauchent : la première gagne.
+- **Vérifié au navigateur** : deux propositions, une ignorée, « Lier tout (1) » lie la restante et vide la liste.
+
+### V3.1-153 — Le badge « Prochaine session » couché rail déplié, debout rail replié (2 novembre)
+
+Opus seul. Esquisse « Prochaine session et fiche à créer » : proposition B, animation X, choisies par l'auteur. Revient sur le choix « vertical » de V3.1-9 pour le rail déplié seulement.
+- **`NextSessionBadge`** reçoit `replie`. Déplié : une ligne du rail (icône dorée, « Prochaine session », date abrégée en doré). Replié : la même, debout (icône, date courte « dim. 8 nov. » à la verticale) — il ne disparaît plus. Les deux présentations sont superposées et se croisent en fondu pendant le changement de largeur du rail ; le texte ne pivote jamais. Coupé sous `motion-reduce`. Pastille rouge et téléphone inchangés.
+- **Vérifié au navigateur** (Testeur B) : badge visible rail déplié et rail replié.
+
+### V3.1-154 — PJ attribué sans fiche : sa carte et « Créer la fiche de … » (2 novembre)
+
+Opus seul. Demande de l'auteur : remplacer la petite ligne « Aucune fiche de personnage pour cette entrée » par un dérivé de l'écran de choix.
+- **Serveur** (`choixPersonnage.ts`) : la construction des cartes sort de `listCartesPersonnage` dans `cartesPourFiches` (mêmes lectures par lot, même filtre de visibilité) ; `getCartePersonnage` pour le PJ de la joueuse, lue par la page `/joueur` seulement quand il n'a pas de bloc `character`.
+- **Carte partagée** `ContenuCartePersonnage.tsx` : le carrousel et le nouvel écran s'en servent, rien n'est recopié.
+- **Écran** (`ParticipantCharacterSheet`) : « Ton personnage », la carte seule (halo d'accent), bouton « Créer la fiche de {prénom} » qui ouvre l'assistant comme avant. Libellés fr et en.
+- **Vérifié au navigateur** (Testeur B, rattaché le temps du test à un PJ vide, puis remis sur le sien ; PJ d'essai supprimé) : carte avec la phrase, ancienne ligne absente, l'assistant s'ouvre.

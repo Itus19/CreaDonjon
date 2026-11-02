@@ -4,4 +4,4 @@ Ce qu'on a constaté en jouant, à partir du 1ᵉʳ novembre. Même règle que l
 
 ---
 
-*Aucun ticket ouvert pour l'instant. V3.1-150 est terminé (`termines.md`).*
+*Aucun ticket ouvert pour l'instant. V3.1-150 à 154 sont terminés (`termines.md`).*
