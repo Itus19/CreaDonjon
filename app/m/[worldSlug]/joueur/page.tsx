@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { listCampaigns } from "@/src/server/services/campaigns";
-import { listCartesPersonnage } from "@/src/server/services/choixPersonnage";
+import { getCartePersonnage, listCartesPersonnage } from "@/src/server/services/choixPersonnage";
 import { getClaimedCharacterEntityId } from "@/src/server/repos/campaigns";
 import { getEntityById } from "@/src/server/repos/entities";
 import { listVisibleBlocks } from "@/src/server/services/blocks";
@@ -87,6 +87,11 @@ export default async function JoueurPersonnagePage({
   ]);
   const vueInitiale: VueCombatJoueur = vueCombat.kind === "ok" ? vueCombat : VUE_AUCUN_COMBAT;
   if (!entity) notFound();
+  // V3.1-154 : PJ sans fiche de personnage — sa carte (portrait, phrase),
+  // lue seulement dans ce cas, pour l'écran « Créer la fiche de … ».
+  const carteSansFiche = blocks.some((b) => b.blockType === "character")
+    ? null
+    : await getCartePersonnage(supabase, { entityId, entityName: entity.name, rulesetId: campaign.rulesetId, worldId: world.id, userId: user.id, locale: locale as Locale });
   const t = await getTranslations("choixPersonnage");
   const ficheAvecPage = lancerFicheAvecPage(supabase, {
     worldId: world.id,
@@ -119,6 +124,7 @@ export default async function JoueurPersonnagePage({
           entityVersion={entity.version}
           initialBlocks={blocks}
           ficheAvecPage={ficheAvecPage}
+          carteSansFiche={carteSansFiche}
         />
       </CombatJoueur>
     </div>

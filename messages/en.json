@@ -880,7 +880,10 @@
     "aCreer": "Character sheet to create",
     "jouerCreer": "Play {prenom} · create their sheet",
     "assistantTitrePj": "{nom}'s sheet",
-    "assistantNote": "Character creator — {prenom} becomes yours when you confirm the sheet. Cancelling claims nothing."
+    "assistantNote": "Character creator — {prenom} becomes yours when you confirm the sheet. Cancelling claims nothing.",
+    "ficheACreerTitre": "Your character",
+    "ficheACreerIntro": "Your GM gave you this character. It still needs its character sheet.",
+    "creerFiche": "Create {prenom}'s sheet"
   },
   "administration": {
     "titre": "Administration",

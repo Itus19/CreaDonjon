@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { claimCharacterAction } from "./actions";
 import type { ChooseStart } from "@/src/core/campaigns/claimable";
 import type { CartePersonnage } from "@/src/server/services/choixPersonnage";
+import ContenuCartePersonnage from "@/components/shell/ContenuCartePersonnage";
 import {
   decalage,
   directionGlisse,
@@ -196,35 +197,7 @@ export default function ChooseCharacterScreen({
                 role === "voisine" ? "cursor-pointer" : ""
               } ${role === "masquee" ? "pointer-events-none" : ""}`}
             >
-              <div className="relative flex h-[250px] items-center justify-center overflow-hidden bg-panel-sunken md:h-[280px] lg:h-[330px]">
-                {item.carte?.portraitUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- portrait servi par /api/entities/[id]/portrait
-                  <img src={item.carte.portraitUrl} alt="" draggable={false} className="h-full w-full object-cover" />
-                ) : (
-                  <span aria-hidden className={`font-display text-[96px] font-bold ${item.carte ? "text-ink-muted" : "text-accent"}`}>
-                    {item.carte ? (nom.trim()[0] ?? "").toUpperCase() : "+"}
-                  </span>
-                )}
-              </div>
-              <div className="flex flex-col gap-1 p-3">
-                <span className="block-title text-base">{nom}</span>
-                {item.carte?.identite && (
-                  <span className="text-xs text-accent">
-                    {/* `classesLabel` porte déjà les niveaux (« Rôdeuse 3 », « Guerrier 2 / Magicien 1 »). */}
-                    {[item.carte.identite.speciesLabel, item.carte.identite.classesLabel].filter(Boolean).join(" · ")}
-                  </span>
-                )}
-                {item.carte && item.carte.identite === null && (
-                  <span className="self-start rounded-full border border-dashed border-accent/60 px-2.5 py-0.5 text-xs text-accent">
-                    {t("aCreer")}
-                  </span>
-                )}
-                {item.carte ? (
-                  item.carte.phrase && <span className="text-xs leading-relaxed text-ink-soft">{item.carte.phrase}</span>
-                ) : (
-                  <span className="text-xs leading-relaxed text-ink-soft">{t("nouveauTexte")}</span>
-                )}
-              </div>
+              <ContenuCartePersonnage carte={item.carte} />
             </div>
           );
         })}

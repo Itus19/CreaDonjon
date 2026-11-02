@@ -39,11 +39,7 @@ export interface ChoixPersonnage {
 
 /**
  * V3.1-82 — les PJ réclamables (`listClaimableCharacters`, V3.1-100 : qui,
- * et sur quelle carte s'ouvrir), enrichis pour le carrousel : portrait,
- * phrase, espèce · classes · niveau. Tout se lit PAR LOT, une requête par
- * nature de donnée et jamais une par PJ (docs/CABLAGE.md, C4). Seul ce que
- * la joueuse peut voir sort d'ici (règle 5) : les blocs passent le filtre de
- * visibilité de la fiche, et les segments d'un texte le leur.
+ * et sur quelle carte s'ouvrir), enrichis pour le carrousel.
  */
 export async function listCartesPersonnage(
   supabase: TypedClient,
@@ -51,8 +47,34 @@ export async function listCartesPersonnage(
 ): Promise<ChoixPersonnage> {
   const { characters, startOn } = await listClaimableCharacters(supabase, params.campaignId);
   if (characters.length === 0) return { cartes: [], startOn };
+  return { cartes: await cartesPourFiches(supabase, { ...params, fiches: characters }), startOn };
+}
 
-  const entityIds = characters.map((c) => c.entityId);
+/**
+ * V3.1-154 — la carte du PJ que la joueuse a déjà, quand il n'a pas encore
+ * de fiche de personnage : l'onglet Personnage la montre seule, avec
+ * « Créer la fiche de … ». Mêmes lectures et même filtrage que le carrousel.
+ */
+export async function getCartePersonnage(
+  supabase: TypedClient,
+  params: { entityId: string; entityName: string; rulesetId: string; worldId: string; userId: string; locale: Locale }
+): Promise<CartePersonnage> {
+  const [carte] = await cartesPourFiches(supabase, { ...params, fiches: [{ entityId: params.entityId, entityName: params.entityName }] });
+  return carte;
+}
+
+/**
+ * Les cartes de plusieurs fiches (V3.1-82) : portrait, phrase, espèce ·
+ * classes · niveau. Tout se lit PAR LOT, une requête par nature de donnée et
+ * jamais une par PJ (docs/CABLAGE.md, C4). Seul ce que la joueuse peut voir
+ * sort d'ici (règle 5) : les blocs passent le filtre de visibilité de la
+ * fiche, et les segments d'un texte le leur.
+ */
+async function cartesPourFiches(
+  supabase: TypedClient,
+  params: { fiches: { entityId: string; entityName: string }[]; rulesetId: string; worldId: string; userId: string; locale: Locale }
+): Promise<CartePersonnage[]> {
+  const entityIds = params.fiches.map((c) => c.entityId);
   const [blocs, avecPortrait, viewer] = await Promise.all([
     listBlocksByTypesForEntities(supabase, entityIds, ["character", "text"]),
     listEntityIdsWithPortrait(supabase, entityIds),
@@ -84,16 +106,13 @@ export async function listCartesPersonnage(
     params.locale
   );
 
-  return {
-    cartes: characters.map(({ entityId, entityName }) => ({
-      entityId,
-      entityName,
-      portraitUrl: avecPortrait.has(entityId) ? `/api/entities/${entityId}/portrait` : null,
-      phrase: phraseParFiche.get(entityId) ?? null,
-      identite: identites.get(entityId) ?? null,
-    })),
-    startOn,
-  };
+  return params.fiches.map(({ entityId, entityName }) => ({
+    entityId,
+    entityName,
+    portraitUrl: avecPortrait.has(entityId) ? `/api/entities/${entityId}/portrait` : null,
+    phrase: phraseParFiche.get(entityId) ?? null,
+    identite: identites.get(entityId) ?? null,
+  }));
 }
 
 export type ReclamerAvecFicheResult =

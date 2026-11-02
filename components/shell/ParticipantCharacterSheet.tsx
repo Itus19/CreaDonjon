@@ -10,6 +10,10 @@ import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasti
 import type { ResourcesBlockData } from "@/src/core/schemas/blocks/resources";
 import type { CommandesFiche } from "@/lib/ui/commandesFiche";
 import { useAmorcerFicheAvecPage, type FicheAvecPage } from "@/components/blocks/useAmorcerFicheAvecPage";
+import { useTranslations } from "next-intl";
+import ContenuCartePersonnage from "@/components/shell/ContenuCartePersonnage";
+import { prenom } from "@/lib/ui/carrousel";
+import type { CartePersonnage } from "@/src/server/services/choixPersonnage";
 
 /**
  * Fiche de personnage complete d'un participant `entity` (PJ/PNJ), pour le
@@ -36,6 +40,7 @@ export default function ParticipantCharacterSheet({
   ficheAvecPage = null,
   commandesImposees,
   isWorldAdmin = false,
+  carteSansFiche = null,
 }: {
   worldSlug: string;
   campaignId: string;
@@ -55,7 +60,10 @@ export default function ParticipantCharacterSheet({
   commandesImposees?: CommandesFiche;
   /** V3.1-106 : le MJ du monde (écran Initiative seulement) peut cibler un participant depuis les boutons d'attaque et de sort. Indication d'interface, le serveur le re-vérifie. */
   isWorldAdmin?: boolean;
+  /** V3.1-154 : la carte du PJ, lue par la page quand il n'a pas encore de fiche ; montrée seule avec « Créer la fiche de … ». */
+  carteSansFiche?: CartePersonnage | null;
 }) {
+  const t = useTranslations("choixPersonnage");
   const [blocks, setBlocks] = useState<BlockItem[] | "loading" | "error">(initialBlocks ?? "loading");
   useAmorcerFicheAvecPage({ worldSlug, entityId, campaignId, blocks: initialBlocks ?? [], promesse: ficheAvecPage });
   const versionsRef = useRef<Record<string, number>>(
@@ -182,6 +190,28 @@ export default function ParticipantCharacterSheet({
             },
           }}
         />
+      );
+    }
+    // V3.1-154 : la joueuse dont le PJ attend sa fiche voit sa carte, comme
+    // sur l'écran « Choisis ton personnage », et un seul bouton.
+    if (carteSansFiche && entityName !== undefined && entityVersion !== undefined) {
+      return (
+        <div className="flex flex-col items-center gap-5 py-6">
+          <div className="text-center">
+            <h1 className="block-title text-base">{t("ficheACreerTitre")}</h1>
+            <p className="text-xs text-ink-muted">{t("ficheACreerIntro")}</p>
+          </div>
+          <div className="flex w-[250px] flex-col overflow-hidden rounded-2xl border border-accent bg-panel shadow-[0_0_32px_-6px_var(--accent)] backdrop-blur-[var(--blur)] md:w-[280px] lg:w-[320px]">
+            <ContenuCartePersonnage carte={carteSansFiche} />
+          </div>
+          <button
+            type="button"
+            onClick={() => setWizardOpen(true)}
+            className="w-full rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-ink transition-opacity hover:opacity-90 md:w-auto md:min-w-64"
+          >
+            {t("creerFiche", { prenom: prenom(carteSansFiche.entityName) })}
+          </button>
+        </div>
       );
     }
     return (

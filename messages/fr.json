@@ -881,7 +881,10 @@
     "aCreer": "Fiche de personnage à créer",
     "jouerCreer": "Jouer {prenom} · créer sa fiche",
     "assistantTitrePj": "La fiche de {nom}",
-    "assistantNote": "Assistant de création — {prenom} sera à toi quand tu valideras sa fiche. Annuler ne réclame rien."
+    "assistantNote": "Assistant de création — {prenom} sera à toi quand tu valideras sa fiche. Annuler ne réclame rien.",
+    "ficheACreerTitre": "Ton personnage",
+    "ficheACreerIntro": "Le MJ t'a confié ce personnage. Il lui manque encore sa fiche.",
+    "creerFiche": "Créer la fiche de {prenom}"
   },
   "administration": {
     "titre": "Administration",
