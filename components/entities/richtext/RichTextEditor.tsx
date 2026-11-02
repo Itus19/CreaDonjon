@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useEditor, EditorContent } from "@tiptap/react";
-import { BubbleMenu } from "@tiptap/react/menus";
+import { BubbleMenu, FloatingMenu } from "@tiptap/react/menus";
 import { NodeSelection } from "@tiptap/pm/state";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
@@ -407,6 +407,58 @@ export default function RichTextEditor({
     setSuggestions((prev) => prev.filter((x) => x !== s));
   }
 
+  /**
+   * V3.1-152 : « Lier tout » — les propositions restantes (l'autrice a
+   * retiré les mauvaises par « Ignorer »). Toutes les plages sont calculées
+   * sur le document AVANT la moindre modification, puis remplacées de la
+   * dernière à la première, dans une seule transaction : une plage plus
+   * haut ne bouge pas quand on remplace plus bas, et un seul « Annuler »
+   * défait le tout. Deux propositions qui se chevauchent : la première
+   * gagne, l'autre est laissée.
+   */
+  function lierTout() {
+    if (!editor) return;
+    const plages = suggestions
+      .map((s) => ({ s, from: segmentOffsetToPos(s.segmentId, s.start), to: segmentOffsetToPos(s.segmentId, s.end) }))
+      .filter((p): p is { s: DetectedSuggestion; from: number; to: number } => p.from !== null && p.to !== null && p.from < p.to)
+      .sort((a, b) => a.from - b.from)
+      .filter((p, i, toutes) => i === 0 || p.from >= toutes[i - 1].to);
+    if (plages.length === 0) return;
+    editor
+      .chain()
+      .focus()
+      .command(({ tr, state }) => {
+        for (const { s, from, to } of [...plages].reverse()) {
+          tr.replaceRangeWith(
+            from,
+            to,
+            state.schema.nodes.refMention.create({
+              kind: s.target.kind,
+              id: s.target.kind === "entity" ? s.target.id : undefined,
+              key: s.target.kind === "rule" ? s.target.key : undefined,
+              label: state.doc.textBetween(from, to),
+            })
+          );
+        }
+        return true;
+      })
+      .run();
+    const liees = new Set(plages.map((p) => p.s));
+    setSuggestions((prev) => prev.filter((x) => !liees.has(x)));
+  }
+
+  /**
+   * V3.1-151 : le trait depuis la bulle de mise en forme. La bulle ne
+   * s'ouvre que sur une sélection, que la commande standard remplacerait :
+   * le trait se pose donc SOUS le bloc où finit la sélection, texte intact.
+   */
+  function insererTraitSousLaSelection() {
+    if (!editor) return;
+    const { $to } = editor.state.selection;
+    const apres = $to.depth > 0 ? $to.after(1) : $to.pos;
+    editor.chain().focus().insertContentAt(apres, { type: "horizontalRule" }).run();
+  }
+
   function dismissSuggestion(s: DetectedSuggestion) {
     setSuggestions((prev) => prev.filter((x) => x !== s));
   }
@@ -547,6 +599,15 @@ export default function RichTextEditor({
         >
           ▓
         </button>
+        <button
+          type="button"
+          onClick={insererTraitSousLaSelection}
+          aria-label="Insérer un trait de séparation sous ce paragraphe"
+          title="Trait de séparation, sous ce paragraphe"
+          className="rounded px-2 py-1 text-xs text-ink transition-colors hover:bg-panel"
+        >
+          —
+        </button>
         <span className="mx-0.5 h-4 w-px bg-edge" />
         <BubbleSelect
           value={currentVisibility}
@@ -555,17 +616,21 @@ export default function RichTextEditor({
           aria-label="Visibilité du passage"
         />
       </BubbleMenu>
-      {/* Hors de la bulle a dessein : la bulle ne s'ouvre que sur une
-          selection, alors qu'un trait s'insere precisement la ou il n'y a
-          rien a selectionner (une ligne vide entre deux parties). */}
-      <button
-        type="button"
-        onClick={() => editor.chain().focus().setHorizontalRule().run()}
-        title="Insérer un trait de séparation à l'endroit du curseur"
-        className="self-start text-xs font-medium text-ink-muted transition-colors hover:text-ink"
-      >
-        — Insérer un trait
-      </button>
+      {/* V3.1-151 : sur une ligne vide (où la bulle, qui attend une
+          sélection, ne s'ouvre pas), un petit bouton « — » apparaît au
+          curseur. Le menu par défaut de Tiptap ne se montre que dans un
+          paragraphe vide de l'éditeur actif. */}
+      <FloatingMenu editor={editor} className="flex items-center">
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().setHorizontalRule().run()}
+          aria-label="Insérer un trait de séparation ici"
+          title="Trait de séparation"
+          className="rounded-md border border-edge-strong bg-panel-raised px-2 py-0.5 text-xs text-ink-muted shadow-lg transition-colors hover:text-ink"
+        >
+          —
+        </button>
+      </FloatingMenu>
       <EditorContent editor={editor} />
       {worldSlug && otherEntities && (
         <div className="flex flex-col gap-1.5 rounded-md border border-edge/50 bg-panel-sunken p-2">
@@ -602,6 +667,16 @@ export default function RichTextEditor({
                       </span>
                     </li>
                   ))}
+                  {/* Toujours là, même pour une seule : on retire les mauvaises, puis on lie le reste. */}
+                  <li className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={lierTout}
+                      className="rounded-full bg-accent px-3 py-1 text-xs font-medium text-accent-ink transition-colors hover:bg-accent-hover"
+                    >
+                      Lier tout ({suggestions.length})
+                    </button>
+                  </li>
                 </ul>
               ) : (
                 hasDetected && <p className="text-xs italic text-ink-muted">Aucune mention détectée.</p>
