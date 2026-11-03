@@ -38,6 +38,7 @@ function participant(extra: Partial<CombatParticipantRow> & { id: string }): Com
     temp_hp: 0,
     conditions: [],
     concentration: null,
+    resources_used: {},
     is_ally: false,
     display_order: 0,
     created_at: "2026-10-24T00:00:00Z",

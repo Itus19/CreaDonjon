@@ -20,6 +20,8 @@ import {
   signe,
   valeurFp,
   xpDuFp,
+  capaciteDepensee,
+  usagesApresBascule,
 } from "./creature";
 import { zStatblockBlockData } from "@/src/core/schemas/blocks/statblock";
 
@@ -246,5 +248,18 @@ describe("repaire et défenses", () => {
     const d = definirRepaire(base, "e1");
     expect(d.lair).toEqual({ kind: "entity", id: "e1" });
     expect("lair" in definirRepaire(d, null)).toBe(false);
+  });
+});
+
+describe("recharge d'une capacité sur l'instance (V3.1-129)", () => {
+  const instance = { participantId: "p1", label: "Dragonnet 1", hpCurrent: 10, hpMax: 10, tempHp: 0, conditions: [], resourcesUsed: { "souffle-empoisonne": 1 } };
+  it("une capacité est dépensée chez l'instance qui l'a utilisée, jamais hors combat", () => {
+    expect(capaciteDepensee(instance, "Souffle empoisonné (Recharge 5–6)")).toBe(true);
+    expect(capaciteDepensee({ ...instance, resourcesUsed: {} }, "Souffle empoisonné (Recharge 5–6)")).toBe(false);
+    expect(capaciteDepensee(null, "Souffle empoisonné (Recharge 5–6)")).toBe(false);
+  });
+  it("marquer dépensée pose 1 ; marquer prête retire la clé ; les autres capacités ne bougent pas", () => {
+    expect(usagesApresBascule({ rugissement: 1 }, "Souffle empoisonné", true)).toEqual({ rugissement: 1, "souffle-empoisonne": 1 });
+    expect(usagesApresBascule({ rugissement: 1, "souffle-empoisonne": 1 }, "Souffle empoisonné", false)).toEqual({ rugissement: 1 });
   });
 });

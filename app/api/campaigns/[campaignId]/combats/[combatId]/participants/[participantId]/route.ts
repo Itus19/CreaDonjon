@@ -28,6 +28,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       tempHp: parsed.data.tempHp,
       conditions: parsed.data.conditions,
       concentration: parsed.data.concentration,
+      resourcesUsed: parsed.data.resourcesUsed,
     },
     actorUserId: userId,
     note: parsed.data.note,

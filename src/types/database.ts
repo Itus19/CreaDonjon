@@ -942,6 +942,7 @@ export type Database = {
           initiative: number | null
           is_ally: boolean
           label: string
+          resources_used: Json
           rule_key: string | null
           source_kind: string
           temp_hp: number
@@ -960,6 +961,7 @@ export type Database = {
           initiative?: number | null
           is_ally?: boolean
           label: string
+          resources_used?: Json
           rule_key?: string | null
           source_kind: string
           temp_hp?: number
@@ -978,6 +980,7 @@ export type Database = {
           initiative?: number | null
           is_ally?: boolean
           label?: string
+          resources_used?: Json
           rule_key?: string | null
           source_kind?: string
           temp_hp?: number

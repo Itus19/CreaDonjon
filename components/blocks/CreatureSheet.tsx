@@ -23,6 +23,7 @@ import {
   CARACTERISTIQUES,
   bonusMaitrise,
   capacitesARecharge,
+  capaciteDepensee,
   formaterNombre,
   instanceChoisie,
   jetD20,
@@ -98,6 +99,12 @@ export interface FicheCreatureProps {
   onJet: (jet: JetPastille) => void;
   /** Message d'échec d'une écriture dans le combat, affiché tel quel. */
   erreur: string | null;
+  /** V3.1-129 : marque une capacité à recharge dépensée ou prête sur l'instance choisie. */
+  onBasculerRecharge?: (nom: string, depensee: boolean) => void;
+  /** V3.1-129 : « Recharge d6 » d'une capacité dépensée ; le serveur lance le dé. */
+  onJetRecharge?: (nom: string) => void;
+  /** V3.1-129 : le résultat du dernier jet de recharge, annoncé sous la liste. */
+  annonceRecharge?: string | null;
   /** Les fiches du monde, pour résoudre le repaire (V3.1-147) : une fiche absente de la liste ne s'affiche pas. */
   otherEntities?: OtherEntityOption[];
   /** L'onglet ouvert au départ (« actions » par défaut). */
@@ -128,6 +135,9 @@ export default function CreatureSheet({
   etatsDisponibles,
   onJet,
   erreur,
+  onBasculerRecharge,
+  onJetRecharge,
+  annonceRecharge = null,
   otherEntities = [],
   ongletInitial = "actions",
 }: FicheCreatureProps) {
@@ -166,9 +176,16 @@ export default function CreatureSheet({
     .filter(Boolean)
     .join(" · ");
 
-  function pastille(jet: JetPastille, texte: string) {
+  /** `estompee` : la capacité est dépensée chez l'instance choisie (V3.1-129) ; la pastille reste utilisable, le MJ décide. */
+  function pastille(jet: JetPastille, texte: string, estompee = false) {
     return (
-      <button key={`${jet.label}:${texte}`} type="button" onClick={() => onJet(jet)} title={t("jetTitre", { jet: jet.label })} className={PASTILLE_JET}>
+      <button
+        key={`${jet.label}:${texte}`}
+        type="button"
+        onClick={() => onJet(jet)}
+        title={estompee ? t("jetTitreDepensee", { jet: jet.label }) : t("jetTitre", { jet: jet.label })}
+        className={`${PASTILLE_JET}${estompee ? " opacity-50" : ""}`}
+      >
         {texte}
       </button>
     );
@@ -176,17 +193,18 @@ export default function CreatureSheet({
 
   function ligneAction(e: EntreeAction) {
     const { toucher, degats, dd } = e.jets;
+    const estompee = e.recharge !== null && capaciteDepensee(instance, e.name);
     return (
       <div key={`${e.name}:${e.text}`} className="flex flex-wrap items-baseline gap-x-2 gap-y-1 border-b border-edge/40 pb-2 last:border-b-0">
         <NomAction worldSlug={worldSlug} nom={e.name} />
         {e.recharge && <span className="text-xs text-ink-muted">· {t("rechargeRegle", { plage: e.recharge.libelle })}</span>}
-        {toucher !== undefined && pastille(jetD20(t("jetAttaque", { nom: e.name }), toucher), signe(toucher))}
+        {toucher !== undefined && pastille(jetD20(t("jetAttaque", { nom: e.name }), toucher), signe(toucher), estompee)}
         {dd !== undefined && (
           <span title={t("ddTitre")} className="rounded-full border border-edge px-2 py-0.5 text-xs font-semibold text-ink-muted">
             {t("dd", { dd })}
           </span>
         )}
-        {degats.length > 0 && pastille(jetDegats(t("jetDegats", { nom: e.name }), degats), degats.join(" · "))}
+        {degats.length > 0 && pastille(jetDegats(t("jetDegats", { nom: e.name }), degats), degats.join(" · "), estompee)}
         {e.text.trim() !== "" && <p className="basis-full text-sm leading-relaxed text-ink-muted">{e.text}</p>}
       </div>
     );
@@ -289,12 +307,39 @@ export default function CreatureSheet({
         {recharges.length > 0 && (
           <div className="flex flex-col gap-1">
             <span className="text-xs font-bold uppercase tracking-wide text-ink-muted">{t("recharge")}</span>
-            {recharges.map((r) => (
-              <div key={r.name} className="flex flex-wrap items-baseline gap-2 text-sm">
-                <b className="text-ink">{r.name.replace(/\s*\((?:recharge|Recharge)[^)]*\)\s*/, "").trim()}</b>
-                <span className="text-xs text-ink-muted">{t("rechargeRegle", { plage: r.recharge.libelle })}</span>
-              </div>
-            ))}
+            {recharges.map((r) => {
+              const nu = r.name.replace(/\s*\((?:recharge|Recharge)[^)]*\)\s*/, "").trim();
+              const depensee = capaciteDepensee(instance, r.name);
+              return (
+                <div key={r.name} className="flex flex-wrap items-center gap-2 text-sm">
+                  {/* V3.1-129 : l'état vit dans l'instance choisie ; hors combat, la fiche est un modèle et n'en montre aucun. */}
+                  {instance && onBasculerRecharge && (
+                    <button
+                      type="button"
+                      onClick={() => onBasculerRecharge(r.name, !depensee)}
+                      aria-pressed={depensee}
+                      title={depensee ? t("marquerPrete", { nom: nu }) : t("marquerDepensee", { nom: nu })}
+                      className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs transition-colors hover:bg-panel-raised ${depensee ? "border-edge text-ink-muted" : "border-success/45 text-success"}`}
+                    >
+                      <span aria-hidden="true" className={`h-2 w-2 rounded-full ${depensee ? "border border-ink-muted" : "bg-success"}`} />
+                      {depensee ? t("depensee") : t("prete")}
+                    </button>
+                  )}
+                  <b className={depensee ? "text-ink-muted" : "text-ink"}>{nu}</b>
+                  <span className="text-xs text-ink-muted">{t("rechargeRegle", { plage: r.recharge.libelle })}</span>
+                  {instance && depensee && onJetRecharge && (
+                    <button type="button" onClick={() => onJetRecharge(r.name)} title={t("jetRechargeTitre", { nom: nu })} className={PASTILLE_JET}>
+                      {t("jetRecharge")}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+            {annonceRecharge && (
+              <p role="status" className="text-xs text-ink-muted">
+                {annonceRecharge}
+              </p>
+            )}
           </div>
         )}
 

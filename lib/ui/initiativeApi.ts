@@ -124,6 +124,17 @@ export function modifierParticipant(
   );
 }
 
+/** V3.1-129 : « Recharge d6 » d'une capacité dépensée ; le serveur lance le dé et rend le jet (vide si rien à lancer). */
+export function rechargerCapacite(
+  campaignId: string,
+  combatId: string,
+  participantId: string,
+  key: string,
+  parDefaut: string
+): Promise<{ rolls: { key: string; name: string; roll: number; recharged: boolean }[] }> {
+  return post(`${base(campaignId)}/${combatId}/participants/${participantId}/recharge`, { key }, parDefaut);
+}
+
 export type AjoutParticipant =
   | { sourceKind: "entity"; entityId: string; isAlly: true }
   | { sourceKind: "statblock"; entryKey: string; label: string; isAlly: false }

@@ -68,3 +68,15 @@ export function rollRechargesAtTurnStart(
   }
   return { used: next, rolls };
 }
+
+/** Les capacités à recharge d'une liste d'actions (nom et texte), dans l'ordre ; une clé déjà vue n'est gardée qu'une fois. */
+export function rechargeAbilitiesFrom(entries: readonly { name: string; text: string }[]): (RechargeableAbility & { name: string })[] {
+  const out: (RechargeableAbility & { name: string })[] = [];
+  for (const e of entries) {
+    const recharge = readRecharge(`${e.name} ${e.text}`);
+    if (!recharge) continue;
+    const key = abilityKey(e.name);
+    if (key && !out.some((a) => a.key === key)) out.push({ key, name: e.name.replace(/\s*\(\s*recharge[^)]*\)\s*/i, "").trim(), recharge });
+  }
+  return out;
+}

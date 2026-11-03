@@ -92,13 +92,15 @@ export interface CombatParticipantRow {
   temp_hp: number;
   conditions: Json;
   concentration: Json;
+  /** V3.1-129 : usages consommés de l'instance (recharge d'une capacité de créature). */
+  resources_used: Json;
   is_ally: boolean;
   display_order: number;
   created_at: string;
 }
 
 const PARTICIPANT_COLUMNS =
-  "id, combat_id, source_kind, entity_id, rule_key, label, initiative, ac, hp_max, hp_current, temp_hp, conditions, concentration, is_ally, display_order, created_at";
+  "id, combat_id, source_kind, entity_id, rule_key, label, initiative, ac, hp_max, hp_current, temp_hp, conditions, concentration, resources_used, is_ally, display_order, created_at";
 
 export async function listCombatParticipants(supabase: TypedClient, combatId: string): Promise<CombatParticipantRow[]> {
   const { data, error } = await supabase
@@ -161,6 +163,8 @@ export interface CombatParticipantPatch {
   tempHp?: number;
   conditions?: Json;
   concentration?: Json;
+  /** V3.1-129 : usages consommés de l'instance (recharge d'une capacité), remplacés en entier. */
+  resourcesUsed?: Json;
 }
 
 export async function updateCombatParticipant(
@@ -176,6 +180,7 @@ export async function updateCombatParticipant(
   if (patch.tempHp !== undefined) update.temp_hp = patch.tempHp;
   if (patch.conditions !== undefined) update.conditions = patch.conditions;
   if (patch.concentration !== undefined) update.concentration = patch.concentration;
+  if (patch.resourcesUsed !== undefined) update.resources_used = patch.resourcesUsed;
   const { data, error } = await supabase
     .from("combat_participants")
     .update(update)

@@ -41,6 +41,8 @@ import { nextEventSeq, insertSessionEvent } from "@/src/server/repos/sessions";
 import { getCampaign } from "@/src/server/services/campaigns";
 import { getCampaignById, listCampaignCharacters } from "@/src/server/repos/campaigns";
 import { expiredMasteryMarkers } from "@/src/core/rules/weaponMastery";
+import { rechargeAbilitiesFrom, rollRechargesAtTurnStart } from "@/src/core/rules/creatureRecharge";
+import { serverRng } from "@/src/server/services/rng";
 import { advanceTurnSkipping, isOutOfFight, retreatTurnSkipping } from "@/src/core/rules/targeting";
 import { isWorldAdmin } from "@/src/server/services/permissions";
 import { decideCombatAccess, type CombatAccess } from "@/src/core/permissions/combatAccess";
@@ -564,6 +566,20 @@ async function moveTurn(
     }
   }
 
+  // V3.1-129 : au début de son tour, une créature relance ses capacités
+  // dépensées (un d6 chacune, par le serveur). Seulement en avant, comme les
+  // bottes ; une panne n'emporte pas la bascule, mais se voit dans la console.
+  if (params.direction === "next") {
+    const entrant = orderParticipants(participants)[next.turnIndex];
+    if (entrant && Object.keys(usagesDe(entrant)).length > 0) {
+      try {
+        await rollParticipantRecharges(supabase, { participant: entrant, campaignId: combat.campaign_id, actorUserId: params.actorUserId });
+      } catch (err) {
+        console.error("Recharge au début du tour impossible", entrant.id, err);
+      }
+    }
+  }
+
   await journalCombatEvent(supabase, combat, {
     target: "combat",
     targetId: combat.id,
@@ -574,6 +590,54 @@ async function moveTurn(
     triggers: fired,
   });
   return updated;
+}
+
+/**
+ * V3.1-129 (reçu de V3.1-79) — les capacités à recharge d'une instance, lues
+ * dans le MODÈLE de la créature : le bloc `statblock` d'une fiche du wiki, ou
+ * les actions d'une fiche de monstre du ruleset. Une instance sans modèle
+ * lisible (personnage, adversaire saisi à la main) n'en a aucune.
+ */
+async function rechargeAbilitiesOfParticipant(supabase: TypedClient, participant: CombatParticipantRow, campaignId: string) {
+  if (participant.source_kind === "entity" && participant.entity_id) {
+    const [bloc] = await listBlocksByTypeForEntities(supabase, [participant.entity_id], "statblock");
+    const lu = bloc ? zStatblockBlockData.safeParse(bloc.data) : null;
+    if (!lu?.success) return [];
+    return rechargeAbilitiesFrom([...lu.data.actions, ...lu.data.reactions, ...lu.data.legendary_actions]);
+  }
+  if (participant.source_kind === "statblock" && participant.rule_key) {
+    const car = await getParticipantCharacteristics(supabase, { participant, campaignId, locale: "fr" });
+    if (car.kind !== "monster") return [];
+    const versTexte = (a: { name: string; description: string }) => ({ name: a.name, text: a.description });
+    return rechargeAbilitiesFrom([...(car.actions?.actions ?? []).map(versTexte), ...(car.legendaryActions?.actions ?? []).map(versTexte)]);
+  }
+  return [];
+}
+
+function usagesDe(participant: CombatParticipantRow): Record<string, number> {
+  const brut = participant.resources_used;
+  if (typeof brut !== "object" || brut === null || Array.isArray(brut)) return {};
+  return Object.fromEntries(Object.entries(brut).filter((e): e is [string, number] => typeof e[1] === "number"));
+}
+
+/**
+ * V3.1-129 — lance, côté serveur (règle 8), le d6 de chaque capacité DÉPENSÉE
+ * de l'instance (toutes, ou seulement `keys`), et écrit le résultat par
+ * `patchCombatParticipant` : journalisé comme toute écriture de combat, donc
+ * annulable. Rien à lancer : rien d'écrit. Rend les jets pour l'écran.
+ */
+export async function rollParticipantRecharges(
+  supabase: TypedClient,
+  params: { participant: CombatParticipantRow; campaignId: string; actorUserId: string; keys?: readonly string[]; rng?: Rng },
+): Promise<{ key: string; name: string; roll: number; recharged: boolean }[]> {
+  const toutes = await rechargeAbilitiesOfParticipant(supabase, params.participant, params.campaignId);
+  const visees = params.keys ? toutes.filter((a) => params.keys!.includes(a.key)) : toutes;
+  const r = rollRechargesAtTurnStart(visees, usagesDe(params.participant), params.rng ?? serverRng);
+  if (r.rolls.length === 0) return [];
+  const jets = r.rolls.map((j) => ({ ...j, name: toutes.find((a) => a.key === j.key)?.name ?? j.key }));
+  const note = `Recharge (${params.participant.label}) : ${jets.map((j) => `${j.name} d6 = ${j.roll}, ${j.recharged ? "prête" : "toujours dépensée"}`).join(" ; ")}`;
+  await patchCombatParticipant(supabase, { participantId: params.participant.id, patch: { resourcesUsed: r.used }, actorUserId: params.actorUserId, note });
+  return jets;
 }
 
 export const advanceCombatTurn = (supabase: TypedClient, params: { combatId: string; actorUserId: string }) =>
@@ -603,6 +667,8 @@ export interface ParticipantPatchInput {
   concentration?: { label: string } | null;
   /** V3.1-105 : jets contre la mort d'un PJ (état de jeu seulement : la ligne de combat n'en porte pas). */
   deathSaves?: { success: number; fail: number };
+  /** V3.1-129 : usages consommés de l'instance (capacité à recharge dépensée = 1), remplacés en entier. */
+  resourcesUsed?: Record<string, number>;
 }
 
 /**
@@ -638,6 +704,7 @@ export async function patchCombatParticipant(
     tempHp: params.patch.tempHp,
     conditions: params.patch.conditions as unknown as Json | undefined,
     concentration: params.patch.concentration === undefined ? undefined : ((params.patch.concentration ?? null) as unknown as Json),
+    resourcesUsed: params.patch.resourcesUsed as unknown as Json | undefined,
   };
   // V3.1-105 : un coup sur un PJ déjà à 0 PV ne change que ses jets contre la
   // mort (état de jeu) — la ligne de combat n'a alors rien à écrire, et une
@@ -726,6 +793,8 @@ export async function undoLastCombatAction(supabase: TypedClient, combatId: stri
       tempHp: before.temp_hp,
       conditions: before.conditions,
       concentration: before.concentration,
+      // V3.1-129 : un journal d'avant la colonne n'a pas `resources_used` : on n'y touche alors pas.
+      ...(before.resources_used !== undefined ? { resourcesUsed: before.resources_used } : {}),
     });
     const participant = await getCombatParticipantById(supabase, last.payload.targetId);
     if (participant?.source_kind === "entity" && participant.entity_id) {

@@ -29,6 +29,8 @@ export interface CreatureCombatInstance {
   hpMax: number | null;
   tempHp: number;
   conditions: string[];
+  /** V3.1-129 : usages consommés de l'instance (capacité à recharge dépensée = 1). */
+  resourcesUsed: Record<string, number>;
 }
 
 export interface CreatureCombat {
@@ -61,6 +63,10 @@ export async function getCreatureCombat(
       hpMax: p.hp_max,
       tempHp: p.temp_hp,
       conditions: Array.isArray(p.conditions) ? p.conditions.filter((c): c is string => typeof c === "string") : [],
+      resourcesUsed:
+        typeof p.resources_used === "object" && p.resources_used !== null && !Array.isArray(p.resources_used)
+          ? Object.fromEntries(Object.entries(p.resources_used).filter((e): e is [string, number] => typeof e[1] === "number"))
+          : {},
     }));
   if (instances.length === 0) return null;
   return { campaignId, combatId: combat.id, instances };

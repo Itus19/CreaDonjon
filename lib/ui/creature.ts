@@ -11,7 +11,7 @@ import { z } from "zod";
 import { DIE_TYPES, type DieType } from "@/src/core/dice/roll";
 import type { BlockAbility } from "@/src/core/schemas/blocks/abilities";
 import type { StatblockBlockData } from "@/src/core/schemas/blocks/statblock";
-import { readRecharge } from "@/src/core/rules/creatureRecharge";
+import { abilityKey, isSpent, readRecharge } from "@/src/core/rules/creatureRecharge";
 
 export const CARACTERISTIQUES: readonly BlockAbility[] = ["str", "dex", "con", "int", "wis", "cha"];
 
@@ -229,6 +229,8 @@ export interface InstanceCombat {
   hpMax: number;
   tempHp: number;
   conditions: string[];
+  /** V3.1-129 : usages consommés de l'instance, par clé de capacité (1 = dépensée). */
+  resourcesUsed: Record<string, number>;
 }
 
 export interface CombatCreature {
@@ -244,6 +246,7 @@ const zInstance = z.object({
   hpMax: z.number(),
   tempHp: z.number(),
   conditions: z.array(z.string()),
+  resourcesUsed: z.record(z.string(), z.number()).default({}),
 });
 const zReponseCombat = z.object({
   combat: z
@@ -347,4 +350,18 @@ export function definirRepaire(data: StatblockBlockData, id: string | null): Sta
   const { lair: _ancien, ...reste } = data;
   void _ancien;
   return id === null ? reste : { ...reste, lair: { kind: "entity", id } };
+}
+
+/** V3.1-129 : la capacité de ce nom est-elle dépensée chez cette instance ? Hors combat (pas d'instance) : jamais. */
+export function capaciteDepensee(instance: InstanceCombat | null, nom: string): boolean {
+  return instance !== null && isSpent(instance.resourcesUsed, abilityKey(nom));
+}
+
+/** V3.1-129 : les usages de l'instance après avoir marqué une capacité dépensée (1) ou prête (retirée). */
+export function usagesApresBascule(usages: Readonly<Record<string, number>>, nom: string, depensee: boolean): Record<string, number> {
+  const cle = abilityKey(nom);
+  const suite = { ...usages };
+  if (depensee) suite[cle] = 1;
+  else delete suite[cle];
+  return suite;
 }

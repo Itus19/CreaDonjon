@@ -2,7 +2,9 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import { createEntity } from "./entities";
 import { getCreatureCombat } from "./creatureCombat";
-import { patchCombatParticipant } from "./combats";
+import { advanceCombatTurn, patchCombatParticipant, rollParticipantRecharges, undoLastCombatAction } from "./combats";
+import { getCombatParticipantById } from "../repos/combats";
+import type { Rng } from "../../core/dice/rng";
 import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
 
 /**
@@ -112,5 +114,59 @@ describe.skipIf(!hasCreds)("combat d'une fiche de créature (integration, base r
     const apres = await getCreatureCombat(ownerClient, { entityId: gobelin.id, userId: ownerId });
     expect(apres?.instances.find((i) => i.label === "Gobelin 1")?.hpCurrent).toBe(2);
     expect(apres?.instances.find((i) => i.label === "Gobelin 2")?.hpCurrent).toBe(3);
+  });
+
+  it("V3.1-129 : recharge d'une capacité par instance — dépensée chez Gobelin 1 seulement, d6 du serveur à 5 ou 6 pour la rendre prête, annulable", async () => {
+    const dragonnet = await createEntity(ownerClient, { worldId, createdBy: ownerId, name: "Dragonnet", entityKind: "creature", aliases: [] });
+    const { error: blocError } = await admin.from("blocks").insert({
+      entity_id: dragonnet.id,
+      block_type: "statblock",
+      display: { label: "Créature", layout: "statblock" },
+      data: {
+        __v: 1, size: "Petite", creature_type: "dragon", ac: { value: 14 }, hp: { value: 10 }, speed: "9 m",
+        abilities: { str: 10, dex: 12, con: 12, int: 6, wis: 10, cha: 10 },
+        traits: [], reactions: [], legendary_actions: [],
+        actions: [{ name: "Morsure", text: "+4 pour toucher." }, { name: "Souffle empoisonné (Recharge 5–6)", text: "Cône de 4,5 m." }],
+      },
+    });
+    if (blocError) throw new Error(blocError.message);
+    // Une séance ouverte : sans elle, rien n'est journalisé ni donc annulable (comme en jeu).
+    const { data: seance, error: seanceError } = await admin.from("sessions").insert({ campaign_id: campaignId, started_at: new Date().toISOString() }).select("id").single();
+    if (seanceError || !seance) throw new Error(seanceError?.message ?? "séance");
+    const { data: combat, error: combatError } = await admin.from("combats").insert({ campaign_id: campaignId, name: "Nid", status: "running", session_id: seance.id }).select("id").single();
+    if (combatError || !combat) throw new Error(combatError?.message ?? "combat");
+    // Le combat d'avant est encore en cours : on le clôt pour que celui-ci soit « le » combat actif.
+    await admin.from("combats").update({ status: "ended" }).eq("campaign_id", campaignId).neq("id", combat.id);
+    const ligne = (label: string, ordre: number) => ({ combat_id: combat.id, source_kind: "entity", entity_id: dragonnet.id, label, hp_max: 10, hp_current: 10, initiative: 20 - ordre, display_order: ordre });
+    const { data: lignes, error: partError } = await admin.from("combat_participants").insert([ligne("Dragonnet 1", 0), ligne("Dragonnet 2", 1)]).select("id, label");
+    if (partError || !lignes) throw new Error(partError?.message ?? "participants");
+    const d1 = lignes.find((l) => l.label === "Dragonnet 1")!.id;
+    const d2 = lignes.find((l) => l.label === "Dragonnet 2")!.id;
+
+    await patchCombatParticipant(ownerClient, { participantId: d1, patch: { resourcesUsed: { "souffle-empoisonne": 1 } }, actorUserId: ownerId, note: "Souffle" });
+    const vu = await getCreatureCombat(ownerClient, { entityId: dragonnet.id, userId: ownerId });
+    expect(vu?.instances.find((i) => i.participantId === d1)?.resourcesUsed).toEqual({ "souffle-empoisonne": 1 });
+    expect(vu?.instances.find((i) => i.participantId === d2)?.resourcesUsed).toEqual({});
+
+    const d6 = (face: number): Rng => ({ nextInt: () => face - 1 });
+    const rate = await rollParticipantRecharges(ownerClient, { participant: (await getCombatParticipantById(ownerClient, d1))!, campaignId, actorUserId: ownerId, rng: d6(3) });
+    expect(rate).toEqual([{ key: "souffle-empoisonne", name: "Souffle empoisonné", roll: 3, recharged: false }]);
+    expect((await getCombatParticipantById(ownerClient, d1))?.resources_used).toEqual({ "souffle-empoisonne": 1 });
+
+    const reussi = await rollParticipantRecharges(ownerClient, { participant: (await getCombatParticipantById(ownerClient, d1))!, campaignId, actorUserId: ownerId, rng: d6(5) });
+    expect(reussi[0]).toMatchObject({ roll: 5, recharged: true });
+    expect((await getCombatParticipantById(ownerClient, d1))?.resources_used).toEqual({});
+    // Une capacité prête ne lance rien, et l'autre instance n'a jamais rien eu à lancer.
+    expect(await rollParticipantRecharges(ownerClient, { participant: (await getCombatParticipantById(ownerClient, d2))!, campaignId, actorUserId: ownerId })).toEqual([]);
+
+    // « Annuler » rend l'état d'avant la recharge.
+    expect(await undoLastCombatAction(ownerClient, combat.id, ownerId)).toBe(true);
+    expect((await getCombatParticipantById(ownerClient, d1))?.resources_used).toEqual({ "souffle-empoisonne": 1 });
+
+    // Au début du tour de Dragonnet 1, le serveur lance le d6 lui-même : un jet de recharge est journalisé.
+    await admin.from("combats").update({ round: 1, turn_index: 1 }).eq("id", combat.id);
+    await advanceCombatTurn(ownerClient, { combatId: combat.id, actorUserId: ownerId });
+    const { data: notes } = await admin.from("session_events").select("payload").eq("session_id", seance.id).eq("kind", "combat").order("seq", { ascending: false }).limit(5);
+    expect((notes ?? []).some((n) => String((n.payload as { note?: string }).note).startsWith("Recharge (Dragonnet 1) : Souffle empoisonné d6 = "))).toBe(true);
   });
 });

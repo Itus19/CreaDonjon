@@ -6,8 +6,9 @@ import CreatureSheet from "./CreatureSheet";
 import { useWorldRuleEntries } from "./useWorldRuleEntries";
 import { useDiceRoll } from "@/components/shell/DiceRollPanel";
 import { lireCombatCreature } from "@/lib/ui/creatureApi";
-import { modifierParticipant } from "@/lib/ui/initiativeApi";
-import { CLES_DEFENSES, ajouterDefense, definirRepaire, instanceChoisie, pvApresEcart, retirerDefense, type CleDefense, type CombatCreature } from "@/lib/ui/creature";
+import { modifierParticipant, rechargerCapacite } from "@/lib/ui/initiativeApi";
+import { abilityKey } from "@/src/core/rules/creatureRecharge";
+import { CLES_DEFENSES, ajouterDefense, definirRepaire, instanceChoisie, pvApresEcart, retirerDefense, usagesApresBascule, type CleDefense, type CombatCreature } from "@/lib/ui/creature";
 import type { OtherEntityOption } from "@/components/entities/RelationsChips";
 import type { StatblockBlockData } from "@/src/core/schemas/blocks/statblock";
 import type { BlockAbility } from "@/src/core/schemas/blocks/abilities";
@@ -485,6 +486,7 @@ export default function MonsterStatblockSheet({
   const [combat, setCombat] = useState<CombatCreature | null>(null);
   const [participantId, setParticipantId] = useState<string | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
+  const [annonceRecharge, setAnnonceRecharge] = useState<string | null>(null);
   const enCours = useRef(false);
 
   useEffect(() => {
@@ -506,7 +508,7 @@ export default function MonsterStatblockSheet({
   const etatsDisponibles = regles.filter((e) => e.entryType === "condition").map((e) => e.name);
 
   /** Écrit l'instance choisie ; un second geste pendant l'envoi est ignoré (le bouton, lui, ne se désactive pas : il perdrait le focus). */
-  async function ecrire(correctif: { hpCurrent?: number; conditions?: string[] }, note: string, appliquer: (c: CombatCreature, id: string) => CombatCreature) {
+  async function ecrire(correctif: { hpCurrent?: number; conditions?: string[]; resourcesUsed?: Record<string, number> }, note: string, appliquer: (c: CombatCreature, id: string) => CombatCreature) {
     if (!combat || enCours.current) return;
     const instance = instanceChoisie(combat, participantId);
     enCours.current = true;
@@ -526,6 +528,25 @@ export default function MonsterStatblockSheet({
   }
 
   const instance = combat ? instanceChoisie(combat, participantId) : null;
+
+  /** V3.1-129 : « Recharge d6 » — le serveur lance le dé et écrit ; l'écran reprend son verdict. */
+  async function jeterRecharge(nom: string) {
+    if (!combat || !instance || enCours.current) return;
+    enCours.current = true;
+    setErreur(null);
+    try {
+      const { rolls } = await rechargerCapacite(combat.campaignId, combat.combatId, instance.participantId, abilityKey(nom), t("erreurEcriture"));
+      const jet = rolls[0];
+      if (!jet) return;
+      const resourcesUsed = jet.recharged ? usagesApresBascule(instance.resourcesUsed, nom, false) : instance.resourcesUsed;
+      setCombat((actuel) => (actuel ? majInstance(actuel, instance.participantId, { resourcesUsed }) : actuel));
+      setAnnonceRecharge(t(jet.recharged ? "rechargePrete" : "rechargeRatee", { nom: jet.name, de: jet.roll }));
+    } catch (e: unknown) {
+      setErreur(e instanceof Error ? e.message : t("erreurEcriture"));
+    } finally {
+      enCours.current = false;
+    }
+  }
 
   return (
     <div className="mb-4 flex flex-col gap-2">
@@ -550,7 +571,11 @@ export default function MonsterStatblockSheet({
           data={data}
           combat={combat}
           participantId={participantId}
-          onChoisirInstance={setParticipantId}
+          onChoisirInstance={(id) => {
+            // L'annonce d'un jet de recharge concerne l'instance précédente : elle part avec elle.
+            setAnnonceRecharge(null);
+            setParticipantId(id);
+          }}
           onDeltaPv={(ecart) => {
             if (!instance) return;
             const hpCurrent = pvApresEcart(instance, ecart);
@@ -569,6 +594,14 @@ export default function MonsterStatblockSheet({
           etatsDisponibles={etatsDisponibles}
           onJet={openDiceTool}
           erreur={erreur}
+          annonceRecharge={annonceRecharge}
+          onBasculerRecharge={(nom, depensee) => {
+            if (!instance) return;
+            const resourcesUsed = usagesApresBascule(instance.resourcesUsed, nom, depensee);
+            setAnnonceRecharge(null);
+            void ecrire({ resourcesUsed }, t("noteRecharge", { label: instance.label }), (c, id) => majInstance(c, id, { resourcesUsed }));
+          }}
+          onJetRecharge={(nom) => void jeterRecharge(nom)}
         />
       )}
     </div>

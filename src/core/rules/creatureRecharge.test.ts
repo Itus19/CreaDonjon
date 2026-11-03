@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Rng } from "../dice/rng";
-import { abilityKey, isSpent, rollRechargesAtTurnStart, spendAbility } from "./creatureRecharge";
+import { abilityKey, isSpent, rechargeAbilitiesFrom, rollRechargesAtTurnStart, spendAbility } from "./creatureRecharge";
 
 /**
  * V3.1-129, reçu de V3.1-79 — la recharge d'une capacité de créature
@@ -52,5 +52,18 @@ describe("recharge d'une capacité de créature", () => {
     const six = { key: "griffe", recharge: { min: 6, max: 6 } };
     expect(isSpent(rollRechargesAtTurnStart([six], spendAbility({}, "griffe"), d6(5)).used, "griffe")).toBe(true);
     expect(isSpent(rollRechargesAtTurnStart([six], spendAbility({}, "griffe"), d6(6)).used, "griffe")).toBe(false);
+  });
+
+  it("lit les capacités à recharge d'une liste d'actions, dans le nom ou le texte", () => {
+    expect(
+      rechargeAbilitiesFrom([
+        { name: "Morsure", text: "Attaque au corps à corps : +4." },
+        { name: "Souffle empoisonné (Recharge 5–6)", text: "Cône de 4,5 m." },
+        { name: "Rugissement", text: "Chaque créature… (recharge 6)." },
+      ]),
+    ).toEqual([
+      { key: "souffle-empoisonne", name: "Souffle empoisonné", recharge: { min: 5, max: 6 } },
+      { key: "rugissement", name: "Rugissement", recharge: { min: 6, max: 6 } },
+    ]);
   });
 });

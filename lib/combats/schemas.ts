@@ -56,8 +56,16 @@ export const patchParticipantSchema = z.object({
   tempHp: z.number().int().nonnegative().optional(),
   conditions: z.array(z.string()).optional(),
   concentration: z.object({ label: z.string().trim().min(1) }).nullable().optional(),
+  /** V3.1-129 : usages consommés de l'instance (capacité à recharge : 1 = dépensée), remplacés en entier. Clés en slug. */
+  resourcesUsed: z
+    .record(z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(80), z.number().int().min(0).max(99))
+    .refine((r) => Object.keys(r).length <= 32, "32 capacités au plus.")
+    .optional(),
   note: z.string().trim().min(1).max(200),
 });
+
+/** V3.1-129 : le d6 de recharge d'UNE capacité dépensée, lancé par le serveur (règle 8). */
+export const rechargeParticipantSchema = z.object({ key: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(80) });
 
 /**
  * V3.1-103 (ADR 0040) — une joueuse écrit l'initiative de son PJ pendant les
