@@ -39,7 +39,7 @@
 
 ---
 
-### ☐ V3.1-130 — La migration et le service `activateFeature` · `M` · sans modèle IA — **prêt (Opus)**
+### ☑ V3.1-130 — La migration et le service `activateFeature` · `M` · sans modèle IA — **prêt (Opus)**
 
 **Modèle conseillé : Opus** — migration, sécurité, écritures du moteur.
 **Dépend de** : 129, V3.1-24 (concentration dans l'état de jeu).

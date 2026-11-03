@@ -3179,3 +3179,15 @@ Opus, tests d'abord ; planche par `aide-haiku`.
 - **Catalogue** : « Fiche de créature » (`OutilsMJ`), version 87.
 
 *Restes* : le jet de recharge est noté au journal du combat, pas dans `dice_rolls` ; le service `activateFeature` et les effets actifs en base viennent avec V3.1-130 ; les données du SRD (Conduit divin, etc.) avec V3.1-133.
+
+### V3.1-130 — Activer une règle et faire durer ses effets (3 novembre)
+
+Opus. Choix de l'auteur : les effets se rangent **par instance de combat** (ADR 0073).
+- **Migration `20261103130000`** : `entity_active_effects` accepte `feature`, `payload`, et un porteur entité OU instance (`combat_participant_id`) ; politique MJ seulement pour une instance ; `apply_engine_change` gagne `effect_add` et `effect_remove` ; `engine_read_combat_effects` (lecture signée).
+- **Service** `featureActivation.ts` et route `actions/activate` (Zod, `canEditEntity` par la garde commune, règle possédée par le personnage) : `planActivation` avec les dés du serveur ; usages dans l'état de jeu ; effets immédiats et états par `applyResolvedEffects` (direct pour le MJ, signé pour un joueur) ; effets qui durent par PJ ou par instance ; concentration posée.
+- **Expiration** `effectExpiry.ts` : décision du noyau (`expireEffects`), écriture ici ; branchée sur la bascule de tour (fin de tour, fin de round, début de tour), les dégâts subis, la concentration rompue et les repos ; un effet retiré emporte ses états (sauf s'ils sont tenus par un autre) et se journalise.
+- **Fiche** : les effets portés par le personnage entrent en couche 7 (une lecture de plus, dans la même vague).
+- **Vérifié** contre la base (`featureActivation.integration.test.ts` 5/5) : Abjuration sur deux gobelins (1 Conduit divin, sauvegardes au détail du MJ, effets par instance, tout relu) ; quatrième cible et ressource épuisée refusées sans écriture ; Effrayé retiré aux dégâts avec son état ; effet de concentration compté sur la fiche puis retiré à la rupture ; joueur sans droit refusé, insertion directe sur une instance refusée.
+- **Docs** : SCHEMA §12.2, specs/regles-blocs.md §5, SECURITE (registre), QUOTAS.
+
+*Restes* : `characterSheet()` n'applique pas les modificateurs `add` aux sauvegardes (tâche proposée à part) ; le budget d'action de la table n'est pas tenu en base (la boucle du solo le tiendra) ; les jets de sauvegarde vont au journal (détail du MJ), pas dans `dice_rolls` ; l'application n'est pas une transaction unique (le chemin signé l'est, l'écriture directe du MJ se fait en plusieurs requêtes) ; les libellés d'état restent des clés (« frightened ») au journal des joueurs.

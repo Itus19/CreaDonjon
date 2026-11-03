@@ -45,6 +45,7 @@ describe.skipIf(!hasCreds)("activer une règle (V3.1-130, integration, base reel
   let variantId: string;
   let paladinId: string;
   let combatId: string;
+  let seanceId: string;
   const gobelins: string[] = [];
   const client = (a: ReusableAccount) => a.client as unknown as SupabaseClient<Database>;
 
@@ -97,7 +98,7 @@ describe.skipIf(!hasCreds)("activer une règle (V3.1-130, integration, base reel
       ],
       durable_effects: [
         EFFRAYE,
-        { id: "veille", label: { fr: "Veille sacrée" }, conditions: [], modifiers: [{ target: "save.wis", op: "add", value: 1 }], duration: { unit: "minute", amount: 10 }, concentration: true, ends_on: [], token: null },
+        { id: "veille", label: { fr: "Veille sacrée" }, conditions: [], modifiers: [{ target: "ac", op: "add", value: 1 }], duration: { unit: "minute", amount: 10 }, concentration: true, ends_on: [], token: null },
       ],
     });
 
@@ -138,6 +139,7 @@ describe.skipIf(!hasCreds)("activer une règle (V3.1-130, integration, base reel
     await admin.from("campaign_characters").insert({ campaign_id: campaignId, entity_id: paladinId, user_id: joueuse.id, is_pc: true });
 
     const { data: seance } = await admin.from("sessions").insert({ campaign_id: campaignId, started_at: new Date().toISOString() }).select("id").single();
+    seanceId = seance!.id;
     const { data: combat } = await admin.from("combats").insert({ campaign_id: campaignId, name: "Embuscade", status: "running", session_id: seance!.id, round: 1, turn_index: 0 }).select("id").single();
     combatId = combat!.id;
     const { data: lignes } = await admin
@@ -173,9 +175,10 @@ describe.skipIf(!hasCreds)("activer une règle (V3.1-130, integration, base reel
       expect((await effetsDe("combat_participant_id", g)).length).toBe(effraye ? 1 : 0);
     }
     expect(await effetsDe("combat_participant_id", gobelins[2])).toEqual([]);
-    // Le journal porte l'application, avec ses jets de sauvegarde.
-    const { data: evts } = await admin.from("session_events").select("payload").eq("kind", "rule_application").order("created_at", { ascending: false }).limit(10);
-    expect(JSON.stringify(evts)).toMatch(/Sauvegarde WIS contre DD 15/);
+    // Le journal porte l'application : les phrases des joueurs à l'événement, les jets (chiffres) au détail du MJ (ADR 0070).
+    const { data: evts } = await admin.from("session_events").select("id").eq("session_id", seanceId).eq("kind", "rule_application").order("seq", { ascending: false }).limit(1);
+    const { data: details } = await admin.from("session_event_gm_details").select("payload").eq("event_id", evts![0].id);
+    expect(JSON.stringify(details)).toMatch(/Sauvegarde WIS contre DD 15/);
   });
 
   it("une quatrième cible est refusée, et sans Conduit divin restant l'activation l'est aussi, sans rien écrire", async () => {
@@ -212,12 +215,12 @@ describe.skipIf(!hasCreds)("activer une règle (V3.1-130, integration, base reel
     expect(await effetsDe("entity_id", paladinId)).toHaveLength(1);
     expect((await getEntityRuntimeState(client(gm), paladinId, campaignId)).concentration?.label).toBe("Veille sacrée (test)");
     const fiche = await resolveCharacterActionContext(client(gm), paladinId, campaignId, "fr");
-    const sansEffet = fiche!.sheet.savingThrows.wis.mod - 1;
-    expect(fiche!.sheet.savingThrows.wis.sources.some((s) => s.label === "Veille sacrée")).toBe(true);
+    const sansEffet = fiche!.sheet.ac.value - 1;
+    expect(fiche!.sheet.ac.sources.some((s) => s.label === "Veille sacrée")).toBe(true);
 
     await breakConcentration(client(gm), { entityId: paladinId, campaignId, actorUserId: gm.id });
     expect(await effetsDe("entity_id", paladinId)).toEqual([]);
-    expect((await resolveCharacterActionContext(client(gm), paladinId, campaignId, "fr"))!.sheet.savingThrows.wis.mod).toBe(sansEffet);
+    expect((await resolveCharacterActionContext(client(gm), paladinId, campaignId, "fr"))!.sheet.ac.value).toBe(sansEffet);
   });
 
   it("un joueur sans droit sur la fiche est refusé ; il n'écrit pas non plus d'effet sur une instance par l'API", async () => {

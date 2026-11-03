@@ -122,6 +122,13 @@ Les tests, les mesures et les scripts tournent **contre la vraie base**, celle d
 - **Supabase prévient par email** quand une limite approche. Un tel email est une **alerte de panne prochaine** : on regarde le jour même ce qui consomme.
 - **Une hausse sans raison** se diagnostique avec les outils de `CABLAGE.md` (§2) : quel écran fait le plus de requêtes, quelle route est la plus appelée.
 
+### Ce que consomment les règles jouables (V3.1-129/130)
+
+- **Ouvrir une fiche de personnage** : une lecture de plus (`entity_active_effects` du personnage), dans la même vague que la fiche et ses blocs.
+- **Une activation** (`actions/activate`) : une seule demande, sans lecture en boucle. Lectures : la fiche, le bloc `activation` de la règle, la campagne, le combat et ses participants (signés pour un joueur), un bonus de sauvegarde par cible et par caractéristique. Écritures : l'état de jeu (usages), les effets immédiats et états (une écriture par cible touchée), une ligne par effet qui dure (ou un seul changement signé pour un joueur), le journal.
+- **Expiration** : rien en tâche de fond. Elle ne tourne que sur un geste déjà fait — bascule de tour, dégâts, concentration rompue, repos — et lit les effets du combat une fois par geste.
+- **Recharge d'une créature** : au plus un d6 et une écriture par instance qui commence son tour avec une capacité dépensée.
+
 ## 5. Où cette règle est appliquée
 
 - `CLAUDE.md` : la ligne de ce document dans le tableau, et la méthode de travail.

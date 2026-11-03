@@ -132,6 +132,16 @@ C'est ce qui garantit que toutes les fiches se ressemblent sans avoir à dessine
 
 Porté par **une** fiche par ruleset, `character-rules` (type `rule`), surchargée champ par champ par une variante. Le code n'a aucune valeur de repli : sans fiche, l'écran et la fiche de personnage le disent. Les rulesets officiels la reçoivent de `data/srd/character-rules.json` à l'import. `class_basics` porte aussi `multiclass_prerequisites` (`all` / `any` de `{ ability, min }`) et `suggested_abilities`, lus du SRD.
 
+### Règles jouables (V3.1-129/130, ADR 0060 et 0073)
+
+| Bloc | Layout | Contenu |
+|---|---|---|
+| `resources` | `key_values` | les ressources qu'une règle déclare : `key` (unique dans le ruleset, dépensée par d'autres fiches), `label`, `max` (formule : `column.<clé>`, `class.level`, `level`, `ability.*`, `proficiency`), `recharge` (`short_rest`, `short_rest_one`, `long_rest`, `dawn`, `never`). Calculées par `characterSheet()`, jamais copiées sur le personnage |
+| `activation` | `key_values` | « cette règle se joue » : `activations` (`id`, `label`, `requires`, `cost` — action et ressources —, `targets`, `effects` du vocabulaire des déclencheurs, `variants`) et `durable_effects` (`conditions`, `modifiers`, `duration`, `concentration`, `ends_on`, `token`). Un `apply_effect` vise un effet du même bloc |
+| `coverage` | `key_values` | ce que la fiche ne sait pas encore jouer : `gaps` (`text`, `missing`). Jouable, partielle ou non évaluée : calculé, jamais stocké |
+
+Un effet qui dure s'écrit dans `entity_active_effects` (SCHEMA.md §12.2) : par le PJ, ou par l'instance de combat pour toute autre créature (ADR 0073).
+
 ### Blocs requis par type d'entrée
 
 C'est ce qui répond à « n'oublier aucune information ». Chaque `entry_type` déclare les blocs qu'il doit posséder :

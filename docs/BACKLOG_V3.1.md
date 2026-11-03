@@ -97,7 +97,7 @@ valables ; celui-ci les relie.
 | **8 · Règles et Chronologie** | ~~93~~ → ~~94~~ → ~~95~~ ; ~~96~~ → ~~97~~ → ~~98~~ → ~~99~~ | Les règles s'appuient sur les fenêtres à volets (20) ; la Chronologie sur la pastille (64) et les dates de naissance (74). |
 | **À côté, quand on veut** | 13 (attend le texte des manuels de l'auteur) ; 145 (les tests d'intégration se suppriment les mondes entre eux : dette technique) ; vérifications en direct de 1, 2, 4, 5, 12, 17, 18 | Codés ; il ne reste que l'œil de l'auteur. | |
 | **Étape 4, avec 105** | ~~104~~ (ADR 0041, option B) → ~~107~~ (ADR 0069) → ~~149~~ (faille du journal relevée en concevant 107) | Le joueur qui cible : écritures et lectures signées par le serveur, et un journal qui ne lui montre que ce qu'il a le droit de voir. | Après 105. |
-| **Étape 9 · Les règles jouables** | ~~129~~ → 130 → 131, 132 ; 133 (après 129) ; puis 134 à 138, un ADR chacun ; 139, 140 ; 141 (monnaie en données) quand on veut | La clé de voûte du solo : toute règle en jeu est jouable à 100 % par le moteur, sans qu'un modèle la lise (ADR 0059). 129 peut partir tout de suite (la recharge partielle de 113 est faite) ; 130 n’attend plus 24 (fait le 13 octobre : la concentration change en un seul point, `setConcentration`) ; 131 et 132 attendent que les planches « Esquisse · Règle jouable » passent en « Décidé ». |
+| **Étape 9 · Les règles jouables** | ~~129~~ → ~~130~~ → 131, 132 ; 133 (après 129) ; puis 134 à 138, un ADR chacun ; 139, 140 ; 141 (monnaie en données) quand on veut | La clé de voûte du solo : toute règle en jeu est jouable à 100 % par le moteur, sans qu'un modèle la lise (ADR 0059). 129 peut partir tout de suite (la recharge partielle de 113 est faite) ; 130 n’attend plus 24 (fait le 13 octobre : la concentration change en un seul point, `setConcentration`) ; 131 et 132 attendent que les planches « Esquisse · Règle jouable » passent en « Décidé ». |
 | **Fin de V3.1 · L'audit** | 144, en dernier | Les retouches d'affichage relevées en vérifiant les tickets, en une seule passe (une session au navigateur). Chaque défaut vu en chemin, qu'aucun ticket prévu ne couvre, s'ajoute au ticket 144. | Après tout le reste. |
 
 **Règle** : un ticket Opus « à concevoir » ne se code pas ; il se conçoit
@@ -261,7 +261,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-127 | ☑ | sans | Mettre à jour Next et les dépendances vulnérables | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-128 | ☑ | sans | Les cartes laissent leurs images dans le stockage | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-129 | ☑ | sans | Le noyau : ressources déclarées, activation, effets qui durent | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
-| V3.1-130 | ☐ | sans | La migration et le service `activateFeature` | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
+| V3.1-130 | ☑ | sans | La migration et le service `activateFeature` | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
 | V3.1-131 | ☐ | sans | La fiche jouable : un bouton par activation | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
 | V3.1-132 | ☐ | sans | L'éditeur de briques et l'état de couverture | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
 | V3.1-133 | ☐ | sans | Les données : le quotidien du SRD rendu jouable | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
