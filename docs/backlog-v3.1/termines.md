@@ -3127,3 +3127,13 @@ Opus : la version maison (ADR 0072, choix de l'auteur : copie sous la même clé
 
 *Restes* : la version maison n'a pas été créée au navigateur (le banc d'essai est sur la base officielle) ; le sommaire garde le nom officiel d'une version maison renommée ; revenir à l'officielle n'existe pas encore (ADR 0072).
 
+### V3.1-95 — Règles : fenêtre étroite et page du joueur (3 novembre)
+
+Opus : le filtrage côté serveur (faille trouvée en préparant le ticket) ; `dev-sonnet` : l'écran ; `aide-haiku` : la planche ; relu et vérifié au navigateur par Opus.
+- **Faille corrigée** (registre de `SECURITE.md`) : la page joueur et la fenêtre d'une règle (`…/regles/[cle]/window`, lue aussi par la fiche et le cahier du joueur) envoyaient la fiche entière — données brutes du SRD, donnée officielle d'avant variante, marques du MJ — masquées seulement à l'écran. `getRuleEntryPageData` applique désormais `ruleEntryForPlayer` (`src/core/rules/ruleForReader.ts`, testé) à tout appelant qui n'est pas administrateur du monde ; `tableRule` dit seulement que la règle diffère de l'officielle.
+- **Fenêtre étroite** (requête de conteneur, 48 rem) : un renvoi s'ouvre en panneau opaque de 340 px (`PanneauRenvoi.tsx`) par-dessus la page ; × ou Échap le ferme ; au-delà du seuil, volet de droite inchangé.
+- **Page du joueur** : `SommaireRegles` avec un drapeau `joueur` (sans « Ajouter » ni bacs à sable, Récemment de l'espace `joueur-regles`) ; la règle sans ⋮ ni bascule ; badge « Règle de la table ». Téléphone inchangé (V3.1-30).
+- **Vérifié** : contre la base (`houseVersion.integration.test.ts`, 4/4 : la réponse servie au joueur n'a ni données brutes ni `originalData`, celle du MJ si) ; au navigateur (MJ à 860 px : tiroir et panneau opaque ; Testeuse A : page sans ⋮ ni données brutes, rien dans le HTML reçu).
+
+*Restes* : la colonne du sommaire joueur fait 176 px (gabarit partagé avec le wiki) au lieu de 250 ; le panneau de renvoi n'existe que dans la section Règles du MJ.
+

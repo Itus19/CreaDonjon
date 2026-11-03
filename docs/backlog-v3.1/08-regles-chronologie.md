@@ -99,7 +99,7 @@ exemples.
 
 ---
 
-### ☐ V3.1-95 — Règles : fenêtre étroite et page du joueur · `S` · sans modèle IA — **prêt**
+### ☑ V3.1-95 — Règles : fenêtre étroite et page du joueur · `S` · sans modèle IA — **fait le 3 novembre**
 
 **Modèle conseillé : Sonnet.**
 
@@ -121,8 +121,8 @@ exemples.
   pas de données brutes.
 
 **Critères d'acceptation**
-- [ ] Fenêtre de 560 px : tiroir ☰ et panneau de renvoi opaque.
-- [ ] Le joueur ne reçoit ni les gestes du MJ ni les données brutes (vérifié
+- [x] Fenêtre de 560 px : tiroir ☰ et panneau de renvoi opaque.
+- [x] Le joueur ne reçoit ni les gestes du MJ ni les données brutes (vérifié
   dans la réponse serveur, pas seulement à l'écran).
 
 ---
