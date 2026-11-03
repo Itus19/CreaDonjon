@@ -74,8 +74,8 @@ describe.skipIf(!hasCreds)("entriesFromChainByKeys — priorite de chaine (integ
 
   it("garde la version de l'enfant pour une cle surchargee, et retombe sur le parent pour une cle qui n'existe que chez lui", async () => {
     const chain: RulesetChainLink[] = [
-      { rulesetId: childRulesetId, parentRulesetId, contentOrigin: "user_created" },
-      { rulesetId: parentRulesetId, parentRulesetId: null, contentOrigin: "user_created" },
+      { rulesetId: childRulesetId, parentRulesetId, contentOrigin: "user_created", isOfficialBase: false },
+      { rulesetId: parentRulesetId, parentRulesetId: null, contentOrigin: "user_created", isOfficialBase: false },
     ];
 
     const result = await entriesFromChainByKeys(admin, chain, [sharedKey, parentOnlyKey, missingKey]);

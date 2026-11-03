@@ -33,6 +33,7 @@ import { nextSlugCandidate, slugify } from "@/src/core/slug/slug";
 import { buildHomebrewSubclassEntry, subclassSlotWrite, type HomebrewSubclassInput } from "@/src/core/rules/homebrewSubclass";
 import { buildHomebrewSpellEntry, HomebrewSpellError, type HomebrewSpellInput } from "@/src/core/rules/homebrewSpell";
 import { blockTypesToRemove } from "@/src/core/rules/homebrewEdit";
+import { houseVersionChangedBlocks, isEditableHomebrewType, zHouseVersionPayload, type HouseVersionPayload } from "@/src/core/rules/houseVersion";
 import {
   applyOverrides,
   mergeHomebrewEntries,
@@ -87,6 +88,8 @@ export interface RulesetChainLink {
   parentRulesetId: string | null;
   /** V1-D5, specs/ruleset-personnel.md — sert a marquer une fiche "reference personnelle" quand une surcharge de ce niveau la touche reellement. */
   contentOrigin: string;
+  /** V3.1-94 : ce niveau est une base officielle (règle 18 : jamais de copie ni de modification). */
+  isOfficialBase: boolean;
 }
 
 /**
@@ -119,7 +122,7 @@ async function walkRulesetChainUncached(supabase: TypedClient, startRulesetId: s
 
     const ruleset = await getRulesetById(supabase, currentId);
     if (!ruleset) break;
-    chain.push({ rulesetId: currentId, parentRulesetId: ruleset.parent_ruleset_id, contentOrigin: ruleset.content_origin });
+    chain.push({ rulesetId: currentId, parentRulesetId: ruleset.parent_ruleset_id, contentOrigin: ruleset.content_origin, isOfficialBase: ruleset.is_official_base });
     currentId = ruleset.parent_ruleset_id;
   }
 
@@ -321,6 +324,22 @@ function resolveOneEntryBlocks(
   for (const link of [...chain].reverse()) {
     const rows = overridesByRuleset.get(link.rulesetId) ?? [];
     for (const row of rows) {
+      if (row.action === "replace_entry") {
+        // V3.1-94 : une version maison remplace aussi l'officielle pour la mécanique.
+        const parsed = zHouseVersionPayload.safeParse(row.payload);
+        if (!parsed.success) {
+          console.error("Version maison illisible, ignorée", entryKey, parsed.error.issues[0]?.message);
+          continue;
+        }
+        homebrewName = parsed.data.name;
+        overrides.push({
+          block_type: null,
+          action: "replace_entry",
+          payload: { entry_key: entryKey, entry_type: parsed.data.entry_type, blocks: parsed.data.blocks as ResolvableBlock[] } satisfies ResolvableEntry,
+          patch: null,
+        });
+        continue;
+      }
       if (row.action === "add_entry") {
         const addEntry = zAddEntryPayload.parse(row.payload);
         homebrewName = addEntry.name;
@@ -469,6 +488,10 @@ export interface RuleEntryDetail {
   personalReference: boolean;
   /** Fiche maison (V1-D4, `add_entry` sans aucune ligne de base dans la chaine officielle) — n'existe QUE par surcharge, jamais materialisee dans `ruleset_entries`. Seule condition pour proposer "Supprimer cette fiche" : une fiche officielle ou heritee reste intouchable. */
   isHomebrew: boolean;
+  /** V3.1-94 (ADR 0072) : une version maison de la variante active (copie `replace_entry` d'une règle officielle) — se modifie par « Modifier ». */
+  houseVersion: boolean;
+  /** Le ruleset actif du monde est une base officielle : aucune copie ni modification possible (règle 18). */
+  isOfficialBase: boolean;
 }
 
 function maxLevelForAxis(axis: ScalingBlockData["axis"]): number {
@@ -879,10 +902,30 @@ export async function getRuleEntryForWorld(
   // personal_reference peut tres bien ne rien surcharger sur telle entree).
   let personalReference = false;
   const overridesByRuleset = await listOverridesAcrossRulesets(supabase, chain.map((link) => link.rulesetId), entryKey);
+  // V3.1-94 (ADR 0072) : une version maison (`replace_entry`) de la variante
+  // active ; seule celle de la feuille de la chaîne se modifie ici.
+  let houseVersion = false;
+  let houseVersionName: string | null = null;
   for (const link of [...chain].reverse()) {
     const rows = overridesByRuleset.get(link.rulesetId) ?? [];
     if (rows.length > 0 && link.contentOrigin === "personal_reference") personalReference = true;
     for (const row of rows) {
+      if (row.action === "replace_entry") {
+        const parsed = zHouseVersionPayload.safeParse(row.payload);
+        if (!parsed.success) {
+          console.error("Version maison illisible, ignorée", entryKey, parsed.error.issues[0]?.message);
+          continue;
+        }
+        houseVersionName = parsed.data.name;
+        houseVersion = link.rulesetId === chain[0]?.rulesetId;
+        overrides.push({
+          block_type: null,
+          action: "replace_entry",
+          payload: { entry_key: entryKey, entry_type: parsed.data.entry_type, blocks: parsed.data.blocks as ResolvableBlock[] } satisfies ResolvableEntry,
+          patch: null,
+        });
+        continue;
+      }
       if (row.action === "add_entry") {
         const addEntry = zAddEntryPayload.parse(row.payload);
         homebrewName = addEntry.name;
@@ -903,10 +946,16 @@ export async function getRuleEntryForWorld(
     }
   }
 
-  const resolved = applyOverrides(baseEntry, overrides);
+  const appliquee = applyOverrides(baseEntry, overrides);
   // Desactivee dans cette variante : traitee comme absente, pas comme une erreur.
   // Ni base ni `add_entry` : la fiche n'existe simplement pas.
-  if (!resolved || resolved.disabled) return null;
+  if (!appliquee || appliquee.disabled) return null;
+  // V3.1-94 : une version maison porte « Modifiée dans ta variante » sur les
+  // blocs qui different de l'officielle (la bascule ne fait que lire).
+  const resolved =
+    houseVersionName !== null && baseEntry
+      ? { ...appliquee, modifiedBlockTypes: [...new Set([...appliquee.modifiedBlockTypes, ...houseVersionChangedBlocks(baseEntry.blocks, appliquee.blocks)])] }
+      : appliquee;
 
   // id stable pour l'affichage (cle React) : celui de la ligne d'origine
   // quand elle existe encore, sinon un id synthetique (bloc introduit par
@@ -1149,7 +1198,7 @@ export async function getRuleEntryForWorld(
     id: entry?.id ?? entryKey,
     entryKey,
     entryType: resolved.entry_type as EntryType,
-    name: entry ? (translation?.name ?? entryNameFrom(entry)) : (homebrewName ?? entryKey),
+    name: houseVersionName ?? (entry ? (translation?.name ?? entryNameFrom(entry)) : (homebrewName ?? entryKey)),
     sourceAttribution: entry?.source_attribution ?? null,
     blocks,
     missingBlocks: missingRequiredBlocks(
@@ -1162,6 +1211,8 @@ export async function getRuleEntryForWorld(
     modifiedBlockTypes: resolved.modifiedBlockTypes,
     personalReference,
     isHomebrew: entry === null,
+    houseVersion,
+    isOfficialBase: chain[0]?.isOfficialBase ?? false,
   };
 }
 
@@ -1953,6 +2004,8 @@ export interface HomebrewEntryForEdit {
   entryType: EntryType;
   parentClassKey: string | null;
   blocks: { blockType: string; data: unknown }[];
+  /** V3.1-94 : une version maison d'une règle officielle (`replace_entry`), réécrite d'un bloc. */
+  houseVersion: boolean;
 }
 
 /**
@@ -1967,6 +2020,19 @@ export async function getHomebrewEntryForEdit(
   params: { rulesetId: string; entryKey: string }
 ): Promise<HomebrewEntryForEdit | null> {
   const rows = await listOverridesForRuleset(supabase, params.rulesetId, params.entryKey);
+  // V3.1-94 (ADR 0072) : une version maison se rouvre depuis sa copie entière.
+  const houseRow = rows.find((r) => r.action === "replace_entry");
+  if (houseRow) {
+    const house = zHouseVersionPayload.parse(houseRow.payload);
+    return {
+      entryKey: params.entryKey,
+      name: house.name,
+      entryType: house.entry_type as EntryType,
+      parentClassKey: house.parent_class_key ?? null,
+      blocks: house.blocks.map((b) => ({ blockType: b.block_type, data: b.data })),
+      houseVersion: true,
+    };
+  }
   const addEntryRow = rows.find((r) => r.action === "add_entry");
   if (!addEntryRow) return null;
   const addEntry = zAddEntryPayload.parse(addEntryRow.payload);
@@ -1978,6 +2044,7 @@ export async function getHomebrewEntryForEdit(
     blocks: rows
       .filter((r) => r.action === "add_block" && r.block_type)
       .map((r) => ({ blockType: r.block_type as string, data: (r.payload as { data?: unknown } | null)?.data ?? null })),
+    houseVersion: false,
   };
 }
 
@@ -2002,6 +2069,38 @@ export async function replaceHomebrewEntry(
   const existing = await getHomebrewEntryForEdit(supabase, { rulesetId: params.rulesetId, entryKey: params.entryKey });
   if (!existing) return { ok: false, reason: "not_found" };
   if (existing.entryType !== params.entry.entry_type) return { ok: false, reason: "type_mismatch" };
+
+  // V3.1-94 : une version maison se réécrit d'un seul tenant (une nouvelle copie `replace_entry`).
+  if (existing.houseVersion) {
+    let payload: HouseVersionPayload;
+    try {
+      payload = zHouseVersionPayload.parse({
+        entry_key: params.entryKey,
+        entry_type: params.entry.entry_type,
+        name: params.entry.name,
+        ...(params.entry.parent_class_key ? { parent_class_key: params.entry.parent_class_key } : {}),
+        blocks: params.entry.blocks.map((b, index) => ({
+          block_type: b.block_type,
+          display: { ...DEFAULT_BLOCK_DISPLAY[b.block_type], ...b.display },
+          data: validateBlockData(b.block_type, b.data),
+          display_order: (index + 1) * 100,
+        })),
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) return { ok: false, reason: "invalid", message: error.issues[0]?.message ?? "Donnée invalide." };
+      throw error;
+    }
+    const rulesetId = await upsertRulesetOverride(supabase, {
+      rulesetId: params.rulesetId,
+      entryKey: params.entryKey,
+      blockType: null,
+      action: "replace_entry",
+      payload: payload as unknown as Json,
+      patch: null,
+      note: params.entry.note ?? null,
+    });
+    return { ok: true, entryKey: params.entryKey, rulesetId };
+  }
 
   let rulesetId: string;
   try {
@@ -2241,6 +2340,69 @@ export async function createHomebrewSpell(
     return { ok: false, reason: "invalid", message: imported.errors[0]?.message };
   }
   return { ok: true, entryKey: imported.imported[0].entryKey, rulesetId: imported.rulesetId };
+}
+
+export type CreateHouseVersionResult =
+  | { ok: true; entryKey: string; rulesetId: string }
+  | { ok: false; reason: "no_variant" | "not_found" | "already" | "not_editable" | "invalid"; message?: string };
+
+/**
+ * V3.1-94 (ADR 0072) — « Créer une version maison » : copie la règle telle
+ * qu'on la lit (blocs de la base, traduits) dans la variante active du
+ * monde, sous la MÊME clé (surcharge `replace_entry`). Elle remplace
+ * l'officielle partout dans le monde ; la base officielle reste intacte
+ * (règle 18 : la RPC refuse toute surcharge sur une base officielle, et
+ * seul le créateur de la variante écrit). Seuls les types qui ont un
+ * formulaire se copient : la copie se modifie ensuite par « Modifier ».
+ */
+export async function createHouseVersion(
+  supabase: TypedClient,
+  params: { worldId: string; entryKey: string; locale: Locale }
+): Promise<CreateHouseVersionResult> {
+  const rulesetId = await getWorldDefaultRulesetId(supabase, params.worldId);
+  if (!rulesetId) return { ok: false, reason: "not_found" };
+  const chain = await walkRulesetChain(supabase, rulesetId);
+  if (chain[0]?.isOfficialBase ?? true) return { ok: false, reason: "no_variant" };
+
+  const detail = await getRuleEntryForWorld(supabase, params.worldId, params.entryKey, params.locale);
+  if (!detail) return { ok: false, reason: "not_found" };
+  if (detail.isHomebrew || detail.houseVersion) return { ok: false, reason: "already" };
+  if (!isEditableHomebrewType(detail.entryType)) return { ok: false, reason: "not_editable" };
+
+  const entry = await entryFromChainByKey(supabase, chain, params.entryKey);
+  if (!entry) return { ok: false, reason: "not_found" };
+  const translation = params.locale !== "en" ? await getEntryTranslation(supabase, entry.id, params.locale) : null;
+  const translated = (translation?.blocks ?? {}) as Record<string, unknown>;
+  const rows = await listBlocksForRulesetEntry(supabase, entry.id);
+
+  let payload: HouseVersionPayload;
+  try {
+    payload = zHouseVersionPayload.parse({
+      entry_key: params.entryKey,
+      entry_type: entry.entry_type,
+      name: detail.name,
+      blocks: rows.map((row) => ({
+        block_type: row.block_type,
+        display: row.display,
+        data: validateBlockData(row.block_type as BlockType, translated[row.block_type] ?? row.data),
+        display_order: row.display_order,
+      })),
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) return { ok: false, reason: "invalid", message: error.issues[0]?.message ?? "Donnée invalide." };
+    throw error;
+  }
+
+  const ecrit = await upsertRulesetOverride(supabase, {
+    rulesetId,
+    entryKey: params.entryKey,
+    blockType: null,
+    action: "replace_entry",
+    payload: payload as unknown as Json,
+    patch: null,
+    note: "Version maison",
+  });
+  return { ok: true, entryKey: params.entryKey, rulesetId: ecrit };
 }
 
 export type DisableRulesetEntryResult = "ok" | "not_found" | "official";

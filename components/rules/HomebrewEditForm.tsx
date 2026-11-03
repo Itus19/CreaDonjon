@@ -6,12 +6,8 @@ import CreateHomebrewSpellForm from "@/components/rules/CreateHomebrewSpellForm"
 import CreateHomebrewSubclassForm from "@/components/rules/CreateHomebrewSubclassForm";
 import CreateHomebrewWeaponForm from "@/components/rules/CreateHomebrewWeaponForm";
 
-/** Les cinq types qui ont un formulaire « Créer un/une… » — les seuls qu'on rouvre pour les modifier (V3.1-2). */
-const EDITABLE_TYPES = ["spell", "subclass", "feature", "background", "weapon"] as const;
-
-export function isEditableHomebrewType(entryType: string): boolean {
-  return (EDITABLE_TYPES as readonly string[]).includes(entryType);
-}
+/** Les cinq types qui ont un formulaire « Créer un/une… » — les seuls qu'on rouvre pour les modifier (V3.1-2) ; une seule liste, partagée avec la version maison (V3.1-94). */
+export { isEditableHomebrewType } from "@/src/core/rules/houseVersion";
 
 /**
  * Rouvre le formulaire de creation d'une fiche maison, pre-rempli, pour la
