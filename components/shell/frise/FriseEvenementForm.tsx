@@ -6,6 +6,13 @@ import { addTimelineEventAction } from "@/app/m/[worldSlug]/(monde)/chronologie/
 import Dropdown from "@/components/shared/Dropdown";
 import GameDateInput from "@/components/shared/GameDateInput";
 import { VISIBILITY_OPTIONS } from "@/components/shared/visibilityOptions";
+
+/**
+ * Sans « Privé » : une date de la frise ne retient pas son auteur, le filtre
+ * serveur la refuserait donc à tout le monde, MJ compris (même règle que la
+ * pastille, `sansPrive`).
+ */
+const NIVEAUX_FRISE = VISIBILITY_OPTIONS.filter((o) => o.value !== "private");
 import type { GameDate } from "@/src/core/calendar/types";
 import type { CalendarConfigInput } from "@/src/core/schemas/calendar";
 import { TIMELINE_ENTRY_KINDS, TIMELINE_SCOPES, type TimelineEntryKind, type TimelineScope } from "@/src/core/schemas/blocks/timeline";
@@ -98,7 +105,7 @@ export default function FriseEvenementForm({
         <textarea value={resume} onChange={(e) => setResume(e.target.value)} rows={2} maxLength={4000} className={CHAMP} />
       </label>
       <div className="flex flex-wrap items-center gap-3">
-        <Dropdown size="md" value={visibilite} options={VISIBILITY_OPTIONS} onChange={setVisibilite} aria-label={t("visibilite")} />
+        <Dropdown size="md" value={visibilite} options={NIVEAUX_FRISE} onChange={setVisibilite} aria-label={t("visibilite")} />
         <Dropdown
           size="md"
           value={portee}

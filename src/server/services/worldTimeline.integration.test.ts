@@ -98,4 +98,14 @@ describe.skipIf(!hasCreds)("Chronologie du monde (integration, base reelle)", ()
     expect(ok.ok).toBe(true);
     expect(await compter()).toBe((avant ?? 0) + 1);
   });
+
+  it("V3.1-99 : la réponse servie à une joueuse ne contient ni date du MJ, ni date privée — pas même dans le JSON", async () => {
+    const prive = { date: year(1401), kind: "custom" as const, title: "Note privée du MJ", summary: "", visibility: { level: "private" as const, scopeId: null } };
+    expect((await addTimelineEvent(owner.client, { worldId, userId: owner.id, target: { kind: "world" }, event: prive })).ok).toBe(true);
+    // Une date de la frise ne retient pas son auteur : « Privé » n'est servi à personne (le formulaire ne le propose plus).
+    const joueuse = JSON.stringify(await getWorldTimeline(player.client, worldId, player.id));
+    expect(joueuse).toContain("La Grande Guerre");
+    expect(joueuse).not.toContain("Le complot");
+    expect(joueuse).not.toContain("Note privée du MJ");
+  });
 });
