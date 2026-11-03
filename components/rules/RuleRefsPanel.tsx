@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { useTranslations } from "next-intl";
 import type { RuleRefView } from "@/src/server/services/rules";
 import { renderMarkdownBoldText } from "./layouts/Prose";
+import LienRegle from "./LienRegle";
 
 function RefList({
   refs,
@@ -19,16 +19,12 @@ function RefList({
   return (
     <ul className="flex flex-col gap-1 text-sm">
       {refs.map((ref, i) => {
-        const href =
-          withPath && ref.path
-            ? `/m/${worldSlug}/regles/${ref.key}?path=${encodeURIComponent(ref.path)}`
-            : `/m/${worldSlug}/regles/${ref.key}`;
         return (
           <li key={i} className="flex items-baseline gap-2">
             {ref.entryType ? (
-              <Link href={href} className="hover:underline">
+              <LienRegle worldSlug={worldSlug} ruleKey={ref.key} chemin={withPath ? (ref.path ?? undefined) : undefined} className="hover:underline">
                 {ref.name}
-              </Link>
+              </LienRegle>
             ) : (
               <span className="text-ink-muted">
                 {ref.name} ({t("renvoiNonResolu")})
@@ -68,12 +64,13 @@ function GrantedRefList({
           <div className="flex items-baseline gap-2">
             {ref.level !== undefined && <span className="mech text-xs text-ink-muted">Niveau {ref.level}</span>}
             {ref.entryType ? (
-              <Link
-                href={`/m/${worldSlug}/regles/${ref.key}`}
+              <LienRegle
+                worldSlug={worldSlug}
+                ruleKey={ref.key}
                 className="text-xs font-bold uppercase tracking-wide text-ink hover:underline"
               >
                 {ref.name}
-              </Link>
+              </LienRegle>
             ) : (
               <span className="text-ink-muted">
                 {ref.name} ({t("renvoiNonResolu")})
@@ -113,13 +110,13 @@ export default function RuleRefsPanel({
     <>
       {outgoingRefs.length > 0 && (
         <details className="border-b border-edge/60 py-4 first:pt-0 last:border-b-0">
-          <summary className="block-title mb-2 cursor-pointer">{t("renvoisSortants")}</summary>
+          <summary className="block-title mb-2 cursor-pointer">{t("regleCite")}</summary>
           <GrantedRefList refs={outgoingRefs} worldSlug={worldSlug} refKindLabels={refKindLabels} />
         </details>
       )}
       {incomingRefs.length > 0 && (
         <div className="border-b border-edge/60 py-4 first:pt-0 last:border-b-0">
-          <h3 className="block-title mb-2">{t("renvoisEntrants")}</h3>
+          <h3 className="block-title mb-2">{t("regleCiteePar")}</h3>
           <RefList refs={incomingRefs} worldSlug={worldSlug} refKindLabels={refKindLabels} withPath={true} />
         </div>
       )}

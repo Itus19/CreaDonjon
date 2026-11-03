@@ -12,6 +12,9 @@ import RuleRefsPanel from "@/components/rules/RuleRefsPanel";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import { clearWorldRuleEntriesCache } from "@/components/blocks/useWorldRuleEntries";
 import HomebrewEditForm, { isEditableHomebrewType } from "@/components/rules/HomebrewEditForm";
+import ActionsMenu, { type ActionsMenuItem } from "@/components/shared/ActionsMenu";
+import { creerVersionMaison, epinglerRegle } from "@/lib/ui/regleApi";
+import { entreesMenuRegle, estModifieeDansVariante, lienRegleWiki } from "@/lib/ui/regleEcran";
 
 /** Coquille joueur (retour utilisateur : "les blocs de données brutes SRD ne sont pas visibles par défaut" — puis, sur un `<details>` replie : "le titre... est toujours visible") — retires ENTIEREMENT pour un joueur (jamais juste replies, un `<summary>` reste visible par nature), toujours visibles pour le MJ. Tables techniques telles quelles, jamais mises en recit — le contenu narratif (description, traits, actions...) n'est jamais concerne. */
 const RAW_DATA_BLOCK_TYPES = new Set(["custom_table", "class_progression", "spellcasting_progression"]);
@@ -44,7 +47,59 @@ export default function RuleEntryView({
   // creation rouvert ici meme (meme fenetre, meme page) — pas de nouvelle
   // route ni de nouvelle cle de fenetre.
   const [editing, setEditing] = useState(false);
-  const canEdit = !playerRestricted && entry.isHomebrew && isEditableHomebrewType(entry.entryType);
+  // Message du dernier geste du menu (confirmation ou erreur du serveur).
+  const [geste, setGeste] = useState<{ texte: string; erreur: boolean } | null>(null);
+  const typeModifiable = isEditableHomebrewType(entry.entryType);
+  const modifieeDansVariante = estModifieeDansVariante(entry.modifiedBlockTypes, entry.houseVersion);
+
+  const entrees = entreesMenuRegle({
+    playerRestricted: !!playerRestricted,
+    isHomebrew: entry.isHomebrew,
+    houseVersion: entry.houseVersion,
+    isOfficialBase: entry.isOfficialBase,
+    typeModifiable,
+  });
+
+  async function epingler() {
+    const r = await epinglerRegle(worldSlug, entry.entryKey);
+    if (!r.ok) setGeste({ texte: r.message, erreur: true });
+    else setGeste({ texte: r.valeur.alreadyPinned ? t("dejaDansBlocNotes") : t("epingleBlocNotes"), erreur: false });
+  }
+
+  async function copierLien() {
+    try {
+      await navigator.clipboard.writeText(lienRegleWiki(window.location.origin, worldSlug, entry.entryKey));
+      setGeste({ texte: t("lienCopie"), erreur: false });
+    } catch (erreur) {
+      console.error("copie du lien de règle", erreur);
+      setGeste({ texte: t("copieImpossible"), erreur: true });
+    }
+  }
+
+  async function creerMaison() {
+    const r = await creerVersionMaison(worldSlug, entry.entryKey);
+    if (!r.ok) {
+      setGeste({ texte: r.message, erreur: true });
+      return;
+    }
+    setGeste(null);
+    // Les listes laterales vivent dans un cache du navigateur ; la fiche est relue par le serveur.
+    clearWorldRuleEntriesCache(worldSlug);
+    relireFiche();
+  }
+
+  // Un seul point de rechargement de la fiche (cliquet du cablage, docs/CABLAGE.md §6).
+  function relireFiche() {
+    router.refresh();
+  }
+
+  const libellesEntrees: Record<(typeof entrees)[number], ActionsMenuItem> = {
+    epingler: { label: t("epinglerBlocNotes"), onSelect: () => void epingler() },
+    copierLien: { label: t("copierLienWiki"), onSelect: () => void copierLien() },
+    versionMaison: { label: t("creerVersionMaison"), onSelect: () => void creerMaison() },
+    modifier: { label: t("modifier"), onSelect: () => setEditing(true) },
+    supprimer: { label: t("supprimer"), onSelect: () => setConfirmingDelete(true), danger: true },
+  };
 
   async function handleDelete() {
     setDeleting(true);
@@ -74,63 +129,39 @@ export default function RuleEntryView({
 
   return (
     <div className="flex flex-col gap-5">
-      <div className={playerRestricted ? "flex flex-col" : "grid grid-cols-[1fr_auto] gap-6"}>
-        <div className="flex flex-col">
-          <div className="flex items-start justify-between gap-3">
-            <h1 className="entity-title">{entry.name}</h1>
-            <div className="flex shrink-0 items-center gap-2">
-              {entry.personalReference && (
-                <span
-                  className="whitespace-nowrap rounded-full border px-2 py-0.5 text-[10px] font-medium"
-                  style={{ borderColor: "var(--danger)", color: "var(--danger)" }}
-                  title={t("referencePersonnelleFicheTitre")}
-                >
-                  {t("referencePersonnelle")}
-                </span>
-              )}
-              <span className="whitespace-nowrap px-1 py-1 text-sm font-medium text-ink-muted">
-                {entryTypeLabels[entry.entryType] ?? entry.entryType}
+      <div className="flex flex-col">
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="entity-title">{entry.name}</h1>
+          <div className="flex shrink-0 items-center gap-2">
+            {entry.personalReference && (
+              <span
+                className="whitespace-nowrap rounded-full border px-2 py-0.5 text-[10px] font-medium"
+                style={{ borderColor: "var(--danger)", color: "var(--danger)" }}
+                title={t("referencePersonnelleFicheTitre")}
+              >
+                {t("referencePersonnelle")}
               </span>
-              {canEdit && !editing && (
-                <button
-                  type="button"
-                  onClick={() => setEditing(true)}
-                  className="whitespace-nowrap text-xs text-accent hover:underline"
-                  title="Modifier cette fiche maison"
-                >
-                  Modifier
-                </button>
-              )}
-              {!playerRestricted && entry.isHomebrew && (
-                <button
-                  type="button"
-                  onClick={() => setConfirmingDelete(true)}
-                  className="whitespace-nowrap text-xs text-danger hover:underline"
-                  title="Supprimer cette fiche maison"
-                >
-                  Supprimer
-                </button>
-              )}
-            </div>
+            )}
+            {!playerRestricted && modifieeDansVariante && (
+              <span className="whitespace-nowrap rounded-full border border-accent/60 px-2 py-0.5 text-[10px] font-medium text-accent">
+                {t("modifieeDansTaVariante")}
+              </span>
+            )}
+            {entrees.length > 0 && !editing && (
+              <ActionsMenu items={entrees.map((e) => libellesEntrees[e])} aria-label={t("actionsRegle")} />
+            )}
           </div>
-          {entry.sourceAttribution && (
-            <span className="mt-0.5 font-mech text-xs text-ink-muted">{entry.sourceAttribution}</span>
-          )}
-          {deleteError && <p className="mt-0.5 text-xs text-danger">{deleteError}</p>}
         </div>
-
-        {/* Coquille joueur (retour utilisateur) : "si il n'y en a pas, le
-            cadre du portrait vide ne s'affiche pas" — aucune fiche de regle
-            n'a de veritable illustration aujourd'hui (`RuleEntryDetail` ne
-            porte aucun champ image, contrairement au portrait d'entite,
-            meme mecanisme que `PublicPortrait.tsx` : jamais de cadre vide a
-            la place d'une image reelle). Le cadre reste visible cote MJ,
-            comme un rappel qu'aucune illustration n'existe encore. */}
-        {!playerRestricted && (
-          <div className="flex aspect-[3/4] w-56 shrink-0 items-center justify-center rounded-2xl border border-edge bg-panel-sunken text-center text-xs text-ink-muted">
-            {t("illustration")}
-          </div>
+        <span className="mt-0.5 text-sm font-medium text-ink-muted">{entryTypeLabels[entry.entryType] ?? entry.entryType}</span>
+        {entry.sourceAttribution && (
+          <span className="mt-0.5 font-mech text-xs text-ink-muted">{entry.sourceAttribution}</span>
         )}
+        {geste && (
+          <p role="status" className={`mt-1 text-xs ${geste.erreur ? "text-danger" : "text-ink-muted"}`}>
+            {geste.texte}
+          </p>
+        )}
+        {deleteError && <p className="mt-0.5 text-xs text-danger">{deleteError}</p>}
       </div>
 
       {editing && (
@@ -140,7 +171,7 @@ export default function RuleEntryView({
           entryKey={entry.entryKey}
           onDone={() => {
             setEditing(false);
-            router.refresh();
+            relireFiche();
           }}
           onCancel={() => setEditing(false)}
         />
@@ -168,7 +199,7 @@ export default function RuleEntryView({
                 />
               </div>
             ) : (
-              <RuleBlockRenderer key={block.id} block={block} worldSlug={worldSlug} outgoingRefs={entry.outgoingRefs} />
+              <RuleBlockRenderer key={block.id} block={block} worldSlug={worldSlug} outgoingRefs={entry.outgoingRefs} sansBascule={playerRestricted} />
             )
           )}
         <RuleRefsPanel worldSlug={worldSlug} outgoingRefs={entry.outgoingRefs} incomingRefs={entry.incomingRefs} />
@@ -181,13 +212,13 @@ export default function RuleEntryView({
           entry.blocks
             .filter((block) => block.blockType === "custom_table")
             .map((block) => (
-              <RuleBlockRenderer key={block.id} block={block} worldSlug={worldSlug} outgoingRefs={entry.outgoingRefs} />
+              <RuleBlockRenderer key={block.id} block={block} worldSlug={worldSlug} outgoingRefs={entry.outgoingRefs} sansBascule={playerRestricted} />
             ))}
       </div>
 
       <ConfirmDialog
         open={confirmingDelete}
-        title="Supprimer cette fiche ?"
+        title={t("supprimerTitre")}
         message={`« ${entry.name} » sera retirée de ce ruleset. Cette action ne peut pas être annulée depuis l'interface.`}
         confirmLabel={deleting ? "Suppression…" : "Supprimer"}
         cancelLabel="Annuler"

@@ -6,20 +6,22 @@ export default function RuleBlockRenderer({
   block,
   worldSlug,
   outgoingRefs,
+  sansBascule,
 }: {
   block: RuleEntryBlockView;
   worldSlug: string;
   outgoingRefs: RuleRefView[];
+  /** Coquille joueur : pas de bascule Officiel / Ta variante (V3.1-94). */
+  sansBascule?: boolean;
 }) {
   const content = renderBlockData(block.blockType, block.data, worldSlug, outgoingRefs);
 
-  if (block.originalData !== undefined) {
+  if (block.originalData !== undefined && !sansBascule) {
     return (
       <ModifiedBlockBadge
         label={block.display.label}
         collapsed={block.display.collapsed}
         blockType={block.blockType}
-        currentData={block.data}
         originalData={block.originalData}
         worldSlug={worldSlug}
       >

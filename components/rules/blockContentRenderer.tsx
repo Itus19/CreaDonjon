@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
+import LienRegle from "@/components/rules/LienRegle";
 import { formatFormulaNode } from "@/src/core/formula";
 import type {
   ActionsBlockData,
@@ -322,9 +322,9 @@ function grantsCell(
         const path = `blocks.class_progression.rows[${String(level)}].${columnKey}[${i}]`;
         const ref = refsByKey.get(feature);
         return (
-          <Link key={i} href={`/m/${worldSlug}/regles/${feature}`} data-ref-path={path} className="hover:underline">
+          <LienRegle key={i} worldSlug={worldSlug} ruleKey={feature} dataRefPath={path} className="hover:underline">
             {ref?.name ?? feature}
-          </Link>
+          </LienRegle>
         );
       }
       if (typeof choice === "string") return <span key={i}>{choice}</span>;
@@ -409,13 +409,14 @@ function CustomTable({ data }: { data: CustomTableBlockData }) {
  */
 function ResolvedRefLink({ worldSlug, refItem }: { worldSlug: string; refItem: { key: string; resolved_name: string } }) {
   return (
-    <Link
-      href={`/m/${worldSlug}/regles/${refItem.key}`}
+    <LienRegle
+      worldSlug={worldSlug}
+      ruleKey={refItem.key}
       className="text-xs font-bold uppercase tracking-wide hover:underline"
       style={{ color: "var(--link-rule)" }}
     >
       {refItem.resolved_name}
-    </Link>
+    </LienRegle>
   );
 }
 
@@ -583,9 +584,9 @@ function ItemProperties({ data, worldSlug }: { data: ResolvedItemPropertiesBlock
                   <div key={i} className="flex items-baseline gap-1.5 text-sm">
                     <span className="mech shrink-0 text-ink-muted">×{item.quantity}</span>
                     {item.ref ? (
-                      <Link href={`/m/${worldSlug}/regles/${item.ref.key}`} className="hover:underline" style={{ color: "var(--link-rule)" }}>
+                      <LienRegle worldSlug={worldSlug} ruleKey={item.ref.key} className="hover:underline" style={{ color: "var(--link-rule)" }}>
                         {item.resolved_label}
-                      </Link>
+                      </LienRegle>
                     ) : (
                       <span>{item.resolved_label}</span>
                     )}
@@ -1097,9 +1098,9 @@ function SubclassSlot({ data, worldSlug }: { data: ResolvedSubclassSlotBlockData
             value: (
               <span className="flex flex-wrap gap-x-2">
                 {data.options.map((opt, i) => (
-                  <Link key={i} href={`/m/${worldSlug}/regles/${opt.key}`} className="hover:underline" style={{ color: "var(--link-rule)" }}>
+                  <LienRegle key={i} worldSlug={worldSlug} ruleKey={opt.key} className="hover:underline" style={{ color: "var(--link-rule)" }}>
                     {opt.resolved_name}
-                  </Link>
+                  </LienRegle>
                 ))}
               </span>
             ),
@@ -1217,14 +1218,15 @@ function BackgroundEquipmentCard({
             <div key={i} className="flex items-baseline gap-1.5 text-sm">
               <span className="mech shrink-0 text-ink-muted">×{item.quantity}</span>
               {item.ref ? (
-                <Link
-                  href={`/m/${worldSlug}/regles/${item.ref.key}`}
+                <LienRegle
+                  worldSlug={worldSlug}
+                  ruleKey={item.ref.key}
                   onClick={interaction ? (e) => e.stopPropagation() : undefined}
                   className="hover:underline"
                   style={{ color: "var(--link-rule)" }}
                 >
                   {item.resolved_label}
-                </Link>
+                </LienRegle>
               ) : (
                 <span>{item.resolved_label}</span>
               )}
@@ -1279,13 +1281,14 @@ function Background({
           valeur lisait mal) — meme gabarit que `ResolvedRefDetail` (lien
           gras en capitales + texte en dessous), pas un nouveau style. */}
       <div className="flex flex-col gap-1">
-        <Link
-          href={`/m/${worldSlug}/regles/${data.feat.key}`}
+        <LienRegle
+          worldSlug={worldSlug}
+          ruleKey={data.feat.key}
           className="text-xs font-bold uppercase tracking-wide hover:underline"
           style={{ color: "var(--link-rule)" }}
         >
           Don : {data.feat_name}
-        </Link>
+        </LienRegle>
         {data.feat_description && <div className="text-sm text-ink-muted">{renderMarkdownBoldText(data.feat_description, "feat")}</div>}
       </div>
       <div className="flex flex-col gap-2">
@@ -1326,9 +1329,9 @@ function ClassEquipment({
             <div key={i} className="flex items-baseline gap-1.5 text-sm">
               <span className="mech shrink-0 text-ink-muted">×{item.quantity}</span>
               {item.ref ? (
-                <Link href={`/m/${worldSlug}/regles/${item.ref.key}`} className="hover:underline" style={{ color: "var(--link-rule)" }}>
+                <LienRegle worldSlug={worldSlug} ruleKey={item.ref.key} className="hover:underline" style={{ color: "var(--link-rule)" }}>
                   {item.resolved_label}
-                </Link>
+                </LienRegle>
               ) : (
                 <span>{item.resolved_label}</span>
               )}
