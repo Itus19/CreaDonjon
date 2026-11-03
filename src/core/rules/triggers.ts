@@ -113,6 +113,13 @@ export type EffectNode =
   | { action: "grant_budget"; who: string; kind: BudgetKind; amount: FormulaNode }
   /** ADR 0050 — accorde une Inspiration heroique, dans la limite du maximum (« Ingenieux », V3.1-5). */
   | { action: "grant_inspiration"; who: string }
+  /**
+   * ADR 0060 §3 — pose un effet qui DURE, décrit par son identifiant dans le
+   * bloc `activation` de la même fiche (`durable_effects`). L'évaluateur ne
+   * l'interprète pas : il le restitue tel quel, et c'est l'activation
+   * (`activation.ts`) qui l'instancie avec son porteur et sa source.
+   */
+  | { action: "apply_effect"; who: string; effect: string }
   | { action: "roll"; label: string; formula: FormulaNode }
   | { action: "narrate_hint"; text: string };
 
@@ -128,6 +135,7 @@ export type ResolvedEffect =
   | { action: "move"; who: string; zone: TriggerZone }
   | { action: "grant_budget"; who: string; kind: BudgetKind; amount: number }
   | { action: "grant_inspiration"; who: string }
+  | { action: "apply_effect"; who: string; effect: string }
   | { action: "roll"; label: string; value: number }
   | { action: "narrate_hint"; text: string };
 
@@ -152,7 +160,7 @@ export interface Trigger {
 
 const zZone = z.enum(TRIGGER_ZONES);
 
-const zCondition: z.ZodType<ConditionNode> = z.lazy(() =>
+export const zCondition: z.ZodType<ConditionNode> = z.lazy(() =>
   z.union([
     z.object({ op: z.literal("and"), args: z.array(zCondition).min(1) }),
     z.object({ op: z.literal("or"), args: z.array(zCondition).min(1) }),
@@ -177,7 +185,7 @@ const zModifier: z.ZodType<Modifier> = z.object({
   stacking: z.enum(["stack", "highest", "unique"]).optional(),
 });
 
-const zEffect: z.ZodType<EffectNode> = z.lazy(() =>
+export const zEffect: z.ZodType<EffectNode> = z.lazy(() =>
   z.union([
     z.object({
       action: z.literal("saving_throw"),
@@ -211,6 +219,7 @@ const zEffect: z.ZodType<EffectNode> = z.lazy(() =>
       amount: zFormulaNode,
     }),
     z.object({ action: z.literal("grant_inspiration"), who: z.string().min(1) }),
+    z.object({ action: z.literal("apply_effect"), who: z.string().min(1), effect: z.string().min(1) }),
     z.object({ action: z.literal("roll"), label: z.string().min(1), formula: zFormulaNode }),
     z.object({ action: z.literal("narrate_hint"), text: z.string().min(1) }),
   ]),
@@ -432,6 +441,24 @@ function resolveEffect(
     default:
       return { resolved: effect, branch: [] };
   }
+}
+
+/**
+ * V3.1-129 (ADR 0060) — résout une liste d'effets dans l'ordre, branches de
+ * sauvegarde comprises, SANS relancer de chaîne de déclencheurs : c'est le
+ * chemin d'une activation, qui part d'un clic et non d'un événement. Même
+ * `resolveEffect` que `runTriggers` : un seul vocabulaire, un seul moteur.
+ * Une erreur (acteur absent, référence inconnue) remonte à l'appelant.
+ */
+export function resolveEffectList(effects: readonly EffectNode[], ctx: TriggerContext, fired: FiredEvent, rng: Rng): ResolvedEffect[] {
+  const out: ResolvedEffect[] = [];
+  const pending: EffectNode[] = [...effects];
+  while (pending.length > 0) {
+    const { resolved, branch } = resolveEffect(pending.shift()!, ctx, fired, rng);
+    out.push(resolved);
+    pending.unshift(...branch);
+  }
+  return out;
 }
 
 /**

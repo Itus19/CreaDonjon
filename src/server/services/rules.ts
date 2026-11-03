@@ -1892,6 +1892,9 @@ const DEFAULT_BLOCK_DISPLAY: Record<BlockType, { label: string; layout: string }
   triggers: { label: "Déclencheurs", layout: "key_values" },
   character_rules: { label: "Règles de personnage", layout: "key_values" },
   choices: { label: "Choix", layout: "key_values" },
+  resources: { label: "Ressources", layout: "key_values" },
+  activation: { label: "Activations", layout: "key_values" },
+  coverage: { label: "Couverture", layout: "key_values" },
 };
 
 export interface ImportRulesetEntryInput {

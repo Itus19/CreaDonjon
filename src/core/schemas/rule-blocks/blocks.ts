@@ -3,6 +3,7 @@ import { zFormulaNode, zLocalized, zModifier, zQuantity, zReference } from "./pr
 import { zCharacterRulesBlockData, zMulticlassPrerequisites } from "./characterRules";
 import { zChoiceGrant, zChoicesBlockData, zGrantedSpell } from "./choices";
 import { zTrigger } from "../../rules/triggers";
+import { zActivationBlockData, zCoverageBlockData, zRuleResourcesBlockData } from "./playable";
 
 /**
  * Catalogue V1 des blocs de regles (specs/regles-blocs.md §5). Cinq blocs
@@ -47,6 +48,10 @@ export const BLOCK_TYPES = [
   "triggers",
   "character_rules",
   "choices",
+  // V3.1-129 (ADR 0060) : la fondation des règles jouables.
+  "resources",
+  "activation",
+  "coverage",
 ] as const;
 export type BlockType = (typeof BLOCK_TYPES)[number];
 
@@ -579,6 +584,9 @@ const DATA_SCHEMA_BY_BLOCK_TYPE = {
   triggers: zTriggersBlockData,
   character_rules: zCharacterRulesBlockData,
   choices: zChoicesBlockData,
+  resources: zRuleResourcesBlockData,
+  activation: zActivationBlockData,
+  coverage: zCoverageBlockData,
 } satisfies Record<BlockType, z.ZodTypeAny>;
 
 /** Registre : le moteur demande le schema Zod d'un block_type et recoit une forme garantie. */

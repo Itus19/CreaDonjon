@@ -148,6 +148,8 @@ export default function TriggerSandbox() {
         return `${effect.who} dépense ${effect.amount} de « ${effect.key} »`;
       case "grant_inspiration":
         return `${effect.who} gagne l'Inspiration héroïque`;
+      case "apply_effect":
+        return `${effect.who} reçoit l'effet « ${effect.effect} »`;
       case "roll":
         return `${effect.label} : ${effect.value}`;
       case "narrate_hint":

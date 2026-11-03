@@ -11,6 +11,7 @@ import { z } from "zod";
 import { DIE_TYPES, type DieType } from "@/src/core/dice/roll";
 import type { BlockAbility } from "@/src/core/schemas/blocks/abilities";
 import type { StatblockBlockData } from "@/src/core/schemas/blocks/statblock";
+import { readRecharge } from "@/src/core/rules/creatureRecharge";
 
 export const CARACTERISTIQUES: readonly BlockAbility[] = ["str", "dex", "con", "int", "wis", "cha"];
 
@@ -100,12 +101,10 @@ export interface RechargeLue {
 
 /** « (Recharge 5–6) », « recharge 6 » : la plage du d6. `null` si le texte n'en parle pas. */
 export function lireRecharge(texte: string): RechargeLue | null {
-  const m = /recharge\s*(\d)(?:\s*[–—-]\s*(\d))?/i.exec(texte);
-  if (!m) return null;
-  const min = Number(m[1]);
-  const max = m[2] ? Number(m[2]) : min;
-  if (min < 1 || max > 6 || min > max) return null;
-  return { min, max, libelle: min === max ? String(min) : `${min}–${max}` };
+  // V3.1-129 : la règle se lit dans le noyau (`readRecharge`), seul le libellé est d'écran.
+  const r = readRecharge(texte);
+  if (!r) return null;
+  return { ...r, libelle: r.min === r.max ? String(r.min) : `${r.min}–${r.max}` };
 }
 
 export interface JetsLus {

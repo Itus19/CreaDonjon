@@ -255,6 +255,18 @@ export function applyEffects(state: TurnState, effects: readonly ResolvedEffect[
         });
         break;
 
+      case "apply_effect":
+        // V3.1-129 : un effet qui dure se pose par une activation, qui porte
+        // sa description (`durable_effects`) ; le tour n'en a pas. Rapporté,
+        // jamais perdu, jusqu'au branchement des effets actifs (V3.1-130).
+        changes.push({
+          kind: "ignored",
+          action: effect.action,
+          who: effect.who,
+          reason: `Effet qui dure « ${effect.effect} » non posé par le tour : seule une activation le pose (ADR 0060).`,
+        });
+        break;
+
       case "apply_modifier":
         // V3-A6 a compte ce manque parmi les cinq : un effet QUI DURE n'a
         // aucune ecriture — `entity_active_effects` existe depuis la Phase 0

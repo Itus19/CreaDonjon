@@ -19,6 +19,8 @@ import type { FreeCast } from "../schemas/rule-blocks/choices";
 import { rollDice } from "../dice/roll";
 import { computeSpellSlots } from "./spellSlots";
 import type { Rng } from "../dice/rng";
+import type { RuleResource } from "../schemas/rule-blocks/playable";
+import { evaluate } from "../formula/evaluate";
 
 // --- Vocabulaire de base -------------------------------------------------
 
@@ -137,6 +139,8 @@ export interface ResolvedFeature {
   prerequisites?: Prerequisite[];
   /** V3.1-116 : sorts accordés, filtrés par niveau dans `characterSheet()`. */
   spells?: FeatureSpell[];
+  /** V3.1-129 (ADR 0060 §1) : ressources déclarées par la fiche (bloc de règle `resources`), maximum en formule. */
+  resources?: RuleResource[];
 }
 
 /** Un sort accordé par une aptitude, sur la fiche calculée (V3.1-116). DD et attaque se calculent avec SA caractéristique, pas celle de la classe. */
@@ -157,7 +161,19 @@ export type Warning =
   /** V3.1-113 : plusieurs classes à emplacements, mais pas de table du multiclassé dans le ruleset. */
   | { kind: "missing_multiclass_table"; message: string }
   /** V3.1-115 : le ruleset n'a pas de fiche de règles de personnage ; plafond et charge ne sont pas appliqués. */
-  | { kind: "missing_character_rules"; message: string };
+  | { kind: "missing_character_rules"; message: string }
+  /** V3.1-129 : le maximum d'une ressource n'a pas pu se calculer (référence inconnue) ; elle compte pour 0. */
+  | { kind: "resource_formula"; message: string; featureKey: string };
+
+/** V3.1-129 (ADR 0060 §1) : une ressource du personnage, calculée depuis ses fiches — jamais stockée. */
+export interface SheetResource {
+  key: string;
+  label: Record<string, string>;
+  max: number;
+  recharge: RuleResource["recharge"];
+  /** Clé de la fiche (ou de l'objet) qui la déclare. */
+  source: string;
+}
 
 // --- Ruleset resolu et build (§B1-B3) --------------------------------------
 
@@ -182,6 +198,13 @@ export interface ResolvedClass {
    * la position de la classe dans `build.classes`.
    */
   savingThrowProficiencies: readonly Ability[];
+  /**
+   * V3.1-129 : les colonnes chiffrées de la progression (`class_progression`),
+   * par niveau de classe — lues par `column.<clé>` dans le maximum d'une
+   * ressource. Seules les lignes qui changent quelque chose ont à y figurer :
+   * la dernière ligne atteinte vaut.
+   */
+  progression?: Record<number, Record<string, number>>;
   spellcasting?: ClassSpellcasting;
   /** V3.1-115 : prérequis pour entrer dans cette classe en multiclassant (bloc `class_basics`). Absent : aucun déclaré. */
   multiclassPrerequisites?: MulticlassPrerequisites;
@@ -228,6 +251,10 @@ export interface EquippedItem {
   label: string;
   equipped: boolean;
   modifiers: Modifier[];
+  /** V3.1-129 : ressources déclarées par l'objet (Bâton de charges) ; comptées équipé, et lié s'il demande un lien. */
+  resources?: RuleResource[];
+  requiresAttunement?: boolean;
+  attuned?: boolean;
 }
 
 export interface ActiveEffect {
@@ -291,6 +318,8 @@ export interface DerivedSheet {
   };
   /** V3.1-116 : sorts accordés par les aptitudes, au niveau atteint. */
   grantedSpells: GrantedSpell[];
+  /** V3.1-129 : ressources déclarées par les règles du personnage. Seuls les usages consommés vivent dans l'état de jeu. */
+  resources: SheetResource[];
   warnings: Warning[];
   encumbrance: EncumbranceResult;
 }
@@ -644,5 +673,83 @@ export function characterSheet(
       }))
   );
 
-  return { abilities, proficiencyBonus, ac, savingThrows, abilityChecks, skills, hitPoints, speed, features, spellcasting, grantedSpells, warnings, encumbrance };
+  const resources = computeResources({ build, ruleset, features, equipment, abilities, proficiencyBonus, totalLevel, spellSaveDc: spellcasting?.saveDc, warnings });
+
+  return { abilities, proficiencyBonus, ac, savingThrows, abilityChecks, skills, hitPoints, speed, features, spellcasting, grantedSpells, resources, warnings, encumbrance };
+}
+
+/** Un maximum ne lance jamais de dé : un `dice` dans la formule est une faute de donnée, signalée comme une référence inconnue. */
+const SANS_DE: Rng = {
+  nextInt() {
+    throw new Error("un maximum de ressource ne lance pas de dé");
+  },
+};
+
+/** La dernière ligne de progression atteinte au niveau `level` (colonnes `column.<clé>`). */
+function progressionAt(progression: ResolvedClass["progression"], level: number): Record<string, number> {
+  if (!progression) return {};
+  const niveaux = Object.keys(progression)
+    .map(Number)
+    .filter((n) => n <= level)
+    .sort((a, b) => a - b);
+  const out: Record<string, number> = {};
+  for (const n of niveaux) Object.assign(out, progression[n]);
+  return out;
+}
+
+/**
+ * V3.1-129 (ADR 0060 §1) — les ressources déclarées, calculées depuis les
+ * fiches du personnage et ses objets équipés (liés s'ils le demandent).
+ * Références : `level` (personnage), `class.level` et `column.<clé>` (classe
+ * qui accorde la fiche, lue dans le préfixe `class:` de sa source),
+ * `proficiency`, `ability.<car>` (modificateur), `spell_save_dc`. Deux fiches
+ * qui déclarent la même clé : une seule ligne, le plus grand maximum.
+ */
+function computeResources(p: {
+  build: CharacterBuild;
+  ruleset: ResolvedRuleset;
+  features: readonly ResolvedFeature[];
+  equipment: readonly EquippedItem[];
+  abilities: Record<Ability, AbilityResult>;
+  proficiencyBonus: number;
+  totalLevel: number;
+  spellSaveDc: number | undefined;
+  warnings: Warning[];
+}): SheetResource[] {
+  const base: Record<string, number> = { level: p.totalLevel, proficiency: p.proficiencyBonus };
+  for (const a of ABILITIES) base[`ability.${a}`] = p.abilities[a].mod;
+  if (p.spellSaveDc !== undefined) base.spell_save_dc = p.spellSaveDc;
+
+  const sources: { key: string; classKey: string | null; resources: readonly RuleResource[] }[] = [
+    ...p.features.map((f) => ({ key: f.key, classKey: f.source.startsWith("class:") ? f.source.slice("class:".length) : null, resources: f.resources ?? [] })),
+    ...p.equipment
+      .filter((e) => e.equipped && (!e.requiresAttunement || e.attuned === true))
+      .map((e) => ({ key: e.key, classKey: null, resources: e.resources ?? [] })),
+  ];
+
+  const byKey = new Map<string, SheetResource>();
+  for (const src of sources) {
+    if (src.resources.length === 0) continue;
+    const classLevel = src.classKey ? (p.build.classes.find((c) => c.key === src.classKey)?.level ?? 0) : p.totalLevel;
+    const refs: Record<string, number> = { ...base, "class.level": classLevel };
+    if (src.classKey) {
+      for (const [k, v] of Object.entries(progressionAt(p.ruleset.classes[src.classKey]?.progression, classLevel))) refs[`column.${k}`] = v;
+    }
+    for (const r of src.resources) {
+      let max: number;
+      try {
+        max = Math.max(0, Math.floor(evaluate(r.max, refs, SANS_DE, "average").value));
+      } catch (err) {
+        max = 0;
+        p.warnings.push({
+          kind: "resource_formula",
+          featureKey: src.key,
+          message: `Maximum de « ${r.key} » incalculable : ${err instanceof Error ? err.message : String(err)}`,
+        });
+      }
+      const existing = byKey.get(r.key);
+      if (!existing || max > existing.max) byKey.set(r.key, { key: r.key, label: r.label, max, recharge: r.recharge, source: src.key });
+    }
+  }
+  return [...byKey.values()];
 }
