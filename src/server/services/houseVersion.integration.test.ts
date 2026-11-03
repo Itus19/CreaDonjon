@@ -4,6 +4,8 @@ import type { Database } from "@/src/types/database";
 import { getReusableTestAccount, type ReusableAccount } from "../testUtils/reusableTestAccounts";
 
 vi.mock("server-only", () => ({}));
+const { pinRuleToNotebook } = await import("./notebookPin");
+const { loadNotebookTree } = await import("./notebook");
 const { createHouseVersion, createRulesetVariant, getRuleEntryForWorld, getHomebrewEntryForEdit, replaceHomebrewEntry, resolveEntryBlocksInRuleset } = await import("./rules");
 
 /**
@@ -92,5 +94,12 @@ describe.skipIf(!hasCreds)("version maison d'une règle officielle (V3.1-94, int
     // L'officielle n'a pas bougé.
     const officielle = await resolveEntryBlocksInRuleset(client(), officialId, "longsword");
     expect((officielle?.blocksByType.get("weapon") as { damage: { dice: { faces: number } } }).damage.dice.faces).toBe(8);
+  });
+
+  it("« Épingler au Bloc-notes » ajoute la règle au cahier privé, une seule fois", async () => {
+    expect(await pinRuleToNotebook(client(), { worldId, userId: gm.id, ruleKey: "longsword" })).toEqual({ ok: true, alreadyPinned: false });
+    expect(await pinRuleToNotebook(client(), { worldId, userId: gm.id, ruleKey: "longsword" })).toEqual({ ok: true, alreadyPinned: true });
+    const { items } = await loadNotebookTree(client(), { worldId, userId: gm.id });
+    expect(items.filter((i) => i.kind === "pinned_rule" && i.targetKey === "longsword")).toHaveLength(1);
   });
 });
