@@ -395,6 +395,18 @@ function resolveTargetStack(
 }
 
 /**
+ * Une pile posée SUR une valeur déjà calculée (caractéristique + maîtrise) :
+ * les bonus chiffrés d'une sauvegarde ou d'une compétence (`add`, `set`,
+ * `min`, `max`), avec les mêmes règles que `resolveTargetStack`. Les sources
+ * de départ restent en tête ; un `set` les remplace, comme partout ailleurs.
+ */
+function stackOnto(target: string, modifiers: readonly Modifier[], base: number, baseSources: readonly Source[]): { value: number; sources: Source[] } {
+  const r = resolveTargetStack(target, modifiers, base, null);
+  const fixe = modifiers.some((m) => m.target === target && m.op === "set");
+  return { value: r.value, sources: fixe ? r.sources : [...baseSources, ...r.sources] };
+}
+
+/**
  * Etat d'un jet (§B4 regle 6) : avantage et desavantage ne s'empilent jamais
  * et s'annulent mutuellement des qu'ils coexistent sur la meme cible.
  */
@@ -581,9 +593,11 @@ export function characterSheet(
   for (const ability of ABILITIES) {
     const target = `save.${ability}`;
     const proficient = allModifiers.some((m) => m.target === target && m.op === "proficiency");
-    const mod = abilities[ability].mod + (proficient ? proficiencyBonus : 0);
-    const sources: Source[] = [{ label: ABILITY_LABELS[ability], value: abilities[ability].mod }];
-    if (proficient) sources.push({ label: "Maitrise", value: proficiencyBonus });
+    const base = abilities[ability].mod + (proficient ? proficiencyBonus : 0);
+    const baseSources: Source[] = [{ label: ABILITY_LABELS[ability], value: abilities[ability].mod }];
+    if (proficient) baseSources.push({ label: "Maitrise", value: proficiencyBonus });
+    // Les bonus chiffrés (« +1 aux sauvegardes ») passent par la même pile que la CA.
+    const { value: mod, sources } = stackOnto(target, allModifiers, base, baseSources);
     savingThrows[ability] = { mod, proficient, rollState: resolveRollState(target, allModifiers), sources };
   }
 
@@ -615,10 +629,11 @@ export function characterSheet(
     const proficient = expertise || allModifiers.some((m) => m.target === target && m.op === "proficiency");
     const half = !proficient && halfProficiencyApplies(governing);
     const multiplier = expertise ? 2 : 1;
-    const mod = abilities[governing].mod + (proficient ? proficiencyBonus * multiplier : half ? halfProficiency : 0);
-    const sources: Source[] = [{ label: ABILITY_LABELS[governing], value: abilities[governing].mod }];
-    if (proficient) sources.push({ label: expertise ? "Expertise" : "Maitrise", value: proficiencyBonus * multiplier });
-    if (half) sources.push({ label: halfProficiencyLabel(governing), value: halfProficiency });
+    const base = abilities[governing].mod + (proficient ? proficiencyBonus * multiplier : half ? halfProficiency : 0);
+    const baseSources: Source[] = [{ label: ABILITY_LABELS[governing], value: abilities[governing].mod }];
+    if (proficient) baseSources.push({ label: expertise ? "Expertise" : "Maitrise", value: proficiencyBonus * multiplier });
+    if (half) baseSources.push({ label: halfProficiencyLabel(governing), value: halfProficiency });
+    const { value: mod, sources } = stackOnto(target, allModifiers, base, baseSources);
     skills[skill] = {
       mod,
       proficiency: expertise ? "expertise" : proficient ? "proficient" : half ? "half" : "none",
