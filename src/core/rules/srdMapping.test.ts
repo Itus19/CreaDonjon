@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  progressionColumns,
   mapMulticlassPrerequisites,
   mapSuggestedAbilities,
   orderFromStandardArray,
@@ -844,5 +845,17 @@ describe("les objets vendus par lot (V3.1-53) : poids et prix à l'unité", () =
     expect(perUnitCost(null, 20)).toBeNull();
     expect(perUnitWeight(null, 20)).toBeNull();
     expect(perUnitWeight(3, undefined)).toBe(3);
+  });
+});
+
+describe("progressionColumns (V3.1-129)", () => {
+  it("garde les colonnes chiffrées par niveau, sans `level` ni `features`, ni valeur non numérique", () => {
+    expect(
+      progressionColumns([
+        { level: 1, features: [{ feature: "x" }], class_specific_channel_divinity_charges: 0, prof_bonus: 2, weapon_mastery_melee_only: true },
+        { level: 2, features: [] },
+        { level: 3, class_specific_channel_divinity_charges: 2, label: "texte" },
+      ]),
+    ).toEqual({ 1: { class_specific_channel_divinity_charges: 0, prof_bonus: 2 }, 3: { class_specific_channel_divinity_charges: 2 } });
   });
 });

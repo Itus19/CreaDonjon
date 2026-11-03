@@ -111,6 +111,25 @@ export interface ProgressionRow {
   [key: string]: unknown;
 }
 
+/**
+ * V3.1-129 (ADR 0060 §1) — les colonnes CHIFFRÉES d'une progression, par
+ * niveau de classe, pour `column.<clé>` (Conduit divin, Rage…). Seules les
+ * valeurs numériques passent : un booléen ou un texte n'a pas de sens dans
+ * une formule de maximum.
+ */
+export function progressionColumns(rows: readonly ProgressionRow[]): Record<number, Record<string, number>> {
+  const out: Record<number, Record<string, number>> = {};
+  for (const row of rows) {
+    const cols: Record<string, number> = {};
+    for (const [key, value] of Object.entries(row)) {
+      if (key === "level" || key === "features") continue;
+      if (typeof value === "number" && Number.isFinite(value)) cols[key] = value;
+    }
+    if (Object.keys(cols).length > 0) out[row.level] = cols;
+  }
+  return out;
+}
+
 const MAX_SPELL_SLOT_LEVEL = 9;
 
 /** Table d'emplacements de sort par niveau de classe, lue dans les colonnes `spellcasting_spell_slots_level_N` du bloc `class_progression` (deja importe, V1-A1). */

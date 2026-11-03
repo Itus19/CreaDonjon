@@ -56,7 +56,9 @@ import {
   type LanguageKey,
   type ProgressionRow,
   type WeaponData,
+  progressionColumns,
 } from "@/src/core/rules/srdMapping";
+import { zRuleResourcesBlockData, type RuleResource } from "@/src/core/schemas/rule-blocks/playable";
 import type { ArmorBlockData, BackgroundBlockData, ItemPropertiesBlockData, WeaponBlockData } from "@/src/core/schemas/rule-blocks";
 import {
   listFeatKeysByCategory,
@@ -283,6 +285,17 @@ function declaredModifiers(data: unknown): DeclaredModifier[] {
     return [];
   }
   return parsed.data.modifiers;
+}
+
+/** V3.1-129 (ADR 0060 §1) : ressources du bloc de règle `resources`. Absent : aucune. Mal formé : aucune, mais journalisé, comme `modifiers`. */
+function declaredResources(data: unknown): RuleResource[] {
+  if (data === undefined || data === null) return [];
+  const parsed = zRuleResourcesBlockData.safeParse(data);
+  if (!parsed.success) {
+    console.error("Bloc resources mal forme, ignore", parsed.error.issues);
+    return [];
+  }
+  return parsed.data.resources;
 }
 
 /** Cles de regle du bloc `species_traits` ; tolere une donnee absente ou d'une autre forme. */
@@ -736,6 +749,8 @@ export async function assembleResolvedRuleset(
         : undefined,
       ...(found.multiclassPrerequisites ? { multiclassPrerequisites: found.multiclassPrerequisites } : {}),
       ...(found.suggestedAbilities ? { suggestedAbilities: found.suggestedAbilities } : {}),
+      // V3.1-129 : colonnes chiffrées, pour le maximum des ressources (`column.<clé>`).
+      progression: progressionColumns(found.progressionRows),
     };
 
     const classProficiencies = mapProficiencies(found.fields);
@@ -921,6 +936,8 @@ export async function assembleResolvedRuleset(
       // modificateurs, et ne coute aucune requete de plus.
       const label = chip ? (nameByChipEntryId.get(chip.id) ?? entryNameFrom(chip)) : (resolvedFeatureBlocks.get(fk)?.name ?? fk);
       const modifiers = resolveDeclaredModifiers(declaredModifiersByKey.get(fk) ?? [], fk, label, layerForFeatureSource(source));
+      // V3.1-129 : ressources déclarées (Conduit divin…), déjà lues avec les blocs de l'aptitude : aucune requête de plus.
+      const resources = declaredResources(resolvedFeatureBlocks.get(fk)?.blocksByType.get("resources"));
       // V3.1-49 : une aptitude de classe ouvre ses choix au niveau de SA classe (Expertise du roublard au niveau 6 de roublard).
       const featureClassKey = source.startsWith("class:") ? source.slice(6) : undefined;
       addChoices(
@@ -931,14 +948,14 @@ export async function assembleResolvedRuleset(
         featureClassKey ? { origin: "class", classKey: featureClassKey } : { origin: source.startsWith("background:") ? "background" : "species" }
       );
       features[fk] = chip
-        ? { key: fk, label, source, modifiers, prerequisites: mapPrerequisites(chip.source_raw) }
+        ? { key: fk, label, source, modifiers, prerequisites: mapPrerequisites(chip.source_raw), ...(resources.length > 0 ? { resources } : {}) }
         : // Aucune ligne `ruleset_entries` : fiche maison (label resolu
           // ci-dessus) ou, plus rarement, aptitude jamais importee (label =
           // cle brute). Conservee dans les deux cas pour que
           // build.featureKeys puisse la referencer sans faire echouer
           // characterSheet(). Pas de prerequis : ils se lisent sur
           // `source_raw`, que seule une entree importee possede.
-          { key: fk, label, source, modifiers };
+          { key: fk, label, source, modifiers, ...(resources.length > 0 ? { resources } : {}) };
     }
 
     for (const p of proficiencies) {
