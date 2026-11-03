@@ -66,7 +66,7 @@ exemples.
 
 ---
 
-### ☐ V3.1-94 — Règles : la règle au centre, renvois en volet, onglets · `L` · sans modèle IA — **prêt**
+### ☑ V3.1-94 — Règles : la règle au centre, renvois en volet, onglets · `L` · sans modèle IA — **fait le 3 novembre**
 
 **Modèle conseillé : Sonnet.**
 
@@ -93,9 +93,9 @@ exemples.
   jamais (règle 18) : l'entrée n'existe pas pour elle.
 
 **Critères d'acceptation**
-- [ ] Ouvrir un renvoi ne change pas la règle du volet principal.
-- [ ] La bascule Officiel / Ta variante n'écrit rien en base.
-- [ ] « Modifier » est absent sur une règle `is_official_base`.
+- [x] Ouvrir un renvoi ne change pas la règle du volet principal.
+- [x] La bascule Officiel / Ta variante n'écrit rien en base.
+- [x] « Modifier » est absent sur une règle `is_official_base`.
 
 ---
 

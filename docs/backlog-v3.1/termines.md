@@ -3116,3 +3116,14 @@ Opus seul. Demande de l'auteur : remplacer la petite ligne « Aucune fiche de pe
 - **Carte partagée** `ContenuCartePersonnage.tsx` : le carrousel et le nouvel écran s'en servent, rien n'est recopié.
 - **Écran** (`ParticipantCharacterSheet`) : « Ton personnage », la carte seule (halo d'accent), bouton « Créer la fiche de {prénom} » qui ouvre l'assistant comme avant. Libellés fr et en.
 - **Vérifié au navigateur** (Testeur B, rattaché le temps du test à un PJ vide, puis remis sur le sien ; PJ d'essai supprimé) : carte avec la phrase, ancienne ligne absente, l'assistant s'ouvre.
+
+### V3.1-94 — Règles : la règle au centre, renvois en volet, onglets (3 novembre)
+
+Opus : la version maison (ADR 0072, choix de l'auteur : copie sous la même clé) et l'épinglage côté serveur ; `dev-sonnet` : l'écran ; `aide-haiku` : la planche ; relu et vérifié au navigateur par Opus.
+- **Version maison** (`createHouseVersion`, route `POST /api/worlds/[worldSlug]/rules/house-version`, Zod, MJ) : copie de la règle (blocs de base traduits) dans la variante active, sous la même clé (`replace_entry`, déjà prévu, aucune migration) ; refusée sur une base officielle (règle 18, et par la RPC) ; seulement les cinq types qui ont un formulaire. Lue par la fiche ET par la mécanique ; « Modifier » la réécrit ; les blocs qui diffèrent portent « Modifiée dans ta variante ». Noyau `src/core/rules/houseVersion.ts` (testé).
+- **Épingler au Bloc-notes** (`pinRuleToNotebook`, route `POST /api/worlds/[worldSlug]/notes/pin-rule`) : ajout côté serveur dans le cahier privé, écriture versionnée (relue et réessayée une fois, jamais d'écrasement), une seule fois par règle. Relevé par `dev-sonnet`, qui s'est arrêté plutôt que de réécrire le cahier depuis le client.
+- **Écran** : plus de cadre d'illustration vide ; renvois soulignés en pointillé (`LienRegle`), ouverts dans le volet de droite ; bascule Officiel / Ta variante en lecture ; « Cette règle cite / Citée par » ; ⋮ (`lib/ui/regleEcran.ts`, testé) : épingler, copier le lien (l'adresse de la page : le wiki n'a pas de syntaxe textuelle de renvoi — retouche d'Opus), version maison, Modifier jamais sur une règle officielle.
+- **Vérifié** : contre la base (`houseVersion.integration.test.ts`, 3/3 : refus sur base officielle ; copie, « Modifier » 1d8 → 1d12 lu par la mécanique, officielle intacte ; épinglage unique) ; au navigateur (MJ du banc d'essai, base officielle) : renvoi « Polyvalente » ouvert à droite sans changer l'Épée longue, ⋮ réduit à Épingler et Copier le lien.
+
+*Restes* : la version maison n'a pas été créée au navigateur (le banc d'essai est sur la base officielle) ; le sommaire garde le nom officiel d'une version maison renommée ; revenir à l'officielle n'existe pas encore (ADR 0072).
+

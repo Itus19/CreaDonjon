@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <title>Catalogue — Éléments d'écran</title>
 <script src="./support.js"></script>
-<link rel="stylesheet" href="/_blob/4196b6fd60e8d010e643e76edf4a74c3">
+<link rel="stylesheet" href="/_blob/55d0477b776f15120fcb07a70694c10f">
 </head>
 <body>
 <x-dc>
@@ -29,7 +29,7 @@ code{font-family:'Geist Mono',ui-monospace,monospace;font-size:0.92em}
 </div>
 <div class="flex flex-wrap items-center gap-3">
 <nav class="flex flex-wrap items-center gap-1 rounded-full border border-edge p-0.5" aria-label="Planches du catalogue"><a href="Main.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Fondations</a><a href="Controles.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Boutons et champs</a><a href="Navigation.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Onglets, puces, menus</a><a href="Surfaces.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Surfaces et retours</a><a href="Ecrans.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors bg-panel-raised text-ink">Éléments d'écran</a><a href="Fiche.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Fiche de personnage</a><a href="Solo.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Mode solo</a><a href="WikiVisuel.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Wiki visuel</a><a href="OutilsMJ.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Outils du MJ</a><a href="Telephone.dc.html" class="rounded-full px-3 py-1 text-xs no-underline transition-colors text-ink-muted hover:text-ink">Téléphone</a></nav>
-<nav class="flex flex-wrap gap-1.5" aria-label="Sections"><a href="#grille" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Grille</a><a href="#curseur" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Curseur horaire</a><a href="#curseur-natif" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Curseur natif</a><a href="#compteur" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Compteur</a><a href="#des" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Dés</a><a href="#barres" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Barres</a><a href="#chargement" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Chargement</a><a href="#texte" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Texte</a></nav>
+<nav class="flex flex-wrap gap-1.5" aria-label="Sections"><a href="#grille" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Grille</a><a href="#curseur" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Curseur horaire</a><a href="#curseur-natif" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Curseur natif</a><a href="#compteur" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Compteur</a><a href="#des" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Dés</a><a href="#barres" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Barres</a><a href="#chargement" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Chargement</a><a href="#texte" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Texte</a><a href="#regle-centre" class="rounded-full border border-edge px-3 py-1 text-xs text-ink-muted no-underline transition-colors hover:bg-panel-raised hover:text-ink">Règle au centre</a></nav>
 </div>
 </div>
 </header>
@@ -205,10 +205,69 @@ code{font-family:'Geist Mono',ui-monospace,monospace;font-size:0.92em}
 </div>
 
 </section>
+<section id="regle-centre" class="flex scroll-mt-28 flex-col gap-4 rounded-2xl border border-edge bg-panel p-6">
+<div class="flex flex-wrap items-baseline justify-between gap-3">
+<h2 class="font-display text-2xl font-bold text-ink">Règle au centre (V3.1-94)</h2>
+<span class="text-xs text-ink-muted">components/rules/RuleEntryView.tsx · LienRegle.tsx · ModifiedBlockBadge.tsx · RuleRefsPanel.tsx · lib/ui/regleEcran.ts</span>
+</div>
+<p class="max-w-3xl text-sm text-ink-soft">Fiche d'une règle, vue MJ. En-tête : titre, type, source, pastille « Modifiée dans ta variante » et menu ⋮ (entrées choisies par <code>entreesMenuRegle</code>). Un bloc modifié s'ouvre sur la bascule <strong>Officiel / Ta variante</strong>, en lecture seule. Les renvois sont soulignés en pointillé. « Cette règle cite » vient avant « Citée par », en pied de fiche. Le joueur n'a ni ⋮ ni bascule.</p>
+<div class="flex flex-wrap gap-x-6 gap-y-1 text-xs text-ink-muted"><span>Mouvement : <span class="text-ink">couleurs du ⋮ (<code>transition-colors</code>) ; pilule de la bascule glissante, 260 ms, cubic-bezier(.4, 0, .2, 1)</span></span></div>
+<div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Règle au centre (Épée longue)</span>
+<div class="flex flex-col gap-5 rounded-lg bg-panel-sunken p-5">
+<div class="flex flex-col">
+<div class="flex items-start justify-between gap-3">
+<h1 class="entity-title text-ink">Épée longue</h1>
+<div class="flex shrink-0 items-center gap-2"><span class="whitespace-nowrap rounded-full border border-accent/60 px-2 py-0.5 text-[10px] font-medium text-accent">Modifiée dans ta variante</span><button type="button" aria-label="Actions de la règle" aria-haspopup="menu" aria-expanded="false" class="rounded-md px-1.5 py-1 text-ink-muted transition-colors hover:bg-panel-raised hover:text-ink">⋮</button></div>
+</div>
+<span class="mt-0.5 text-sm font-medium text-ink-muted">Arme</span>
+<span class="mt-0.5 font-mech text-xs text-ink-muted">SRD 5.2.1</span>
+</div>
+<div class="flex flex-col">
+<div class="border-b border-edge/60 py-4 first:pt-0 last:border-b-0">
+<h3 class="block-title mb-2 flex items-center gap-2">Dégâts<span class="rounded-full border border-accent/60 px-2 py-0.5 text-[10px] font-medium text-accent">Modifiée dans ta variante</span></h3>
+<div role="tablist" aria-label="Version à lire" class="relative mb-2 flex items-center overflow-x-auto rounded-full border border-edge bg-panel-sunken p-[3px] text-xs"><span aria-hidden="true" class="pointer-events-none absolute bottom-[3px] top-[3px] rounded-full border border-edge-strong bg-panel-raised shadow-sm" style="left: 50%; width: calc(50% - 3px)"></span><button type="button" role="tab" aria-selected="false" tabindex="-1" class="relative flex-1 shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-center transition-colors text-ink-muted hover:text-ink disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-ink-muted">Officiel</button><button type="button" role="tab" aria-selected="true" tabindex="0" class="relative flex-1 shrink-0 whitespace-nowrap rounded-full px-3 py-1 text-center transition-colors font-semibold text-ink disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-ink-muted">Ta variante</button></div>
+<p class="text-sm text-ink">1d10 tranchant</p>
+</div>
+<div class="border-b border-edge/60 py-4 first:pt-0 last:border-b-0">
+<p class="text-sm text-ink">Arme de mêlée. Maniement : <a href="#regle-centre" class="underline decoration-dotted underline-offset-[3px]">Polyvalente</a>.</p>
+</div>
+<details open class="border-b border-edge/60 py-4 first:pt-0 last:border-b-0">
+<summary class="block-title mb-2 cursor-pointer">Cette règle cite</summary>
+<ul class="flex flex-col gap-4 text-sm">
+<li class="flex flex-col gap-1"><div class="flex items-baseline gap-2"><a href="#regle-centre" class="underline decoration-dotted underline-offset-[3px] text-xs font-bold uppercase tracking-wide text-ink hover:underline">Polyvalente</a><span class="text-xs text-ink-muted">utilise</span></div></li>
+<li class="flex flex-col gap-1"><div class="flex items-baseline gap-2"><a href="#regle-centre" class="underline decoration-dotted underline-offset-[3px] text-xs font-bold uppercase tracking-wide text-ink hover:underline">Tranchant</a><span class="text-xs text-ink-muted">type de dégâts</span></div></li>
+</ul>
+</details>
+<div class="border-b border-edge/60 py-4 first:pt-0 last:border-b-0">
+<h3 class="block-title mb-2">Citée par</h3>
+<ul class="flex flex-col gap-1 text-sm">
+<li class="flex items-baseline gap-2"><a href="#regle-centre" class="underline decoration-dotted underline-offset-[3px] hover:underline">Guerrier</a><span class="text-xs text-ink-muted">utilise</span></li>
+<li class="flex items-baseline gap-2"><a href="#regle-centre" class="underline decoration-dotted underline-offset-[3px] hover:underline">Barbare</a><span class="text-xs text-ink-muted">utilise</span></li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Menu ⋮ ouvert, avec confirmation (Épée longue)</span>
+<div class="relative flex min-h-[64px] flex-col rounded-lg bg-panel-sunken p-5" style="height: 240px">
+<div class="flex items-start justify-between gap-3">
+<h1 class="entity-title text-ink">Épée longue</h1>
+<div class="flex shrink-0 items-center gap-2"><span class="whitespace-nowrap rounded-full border border-accent/60 px-2 py-0.5 text-[10px] font-medium text-accent">Modifiée dans ta variante</span><button type="button" aria-label="Actions de la règle" aria-haspopup="menu" aria-expanded="true" class="rounded-md px-1.5 py-1 text-ink-muted transition-colors hover:bg-panel-raised hover:text-ink">⋮</button></div>
+</div>
+<span class="mt-0.5 text-sm font-medium text-ink-muted">Arme</span>
+<span class="mt-0.5 font-mech text-xs text-ink-muted">SRD 5.2.1</span>
+<p role="status" class="mt-1 text-xs text-ink-muted">Épinglé au Bloc-notes</p>
+<div role="menu" class="absolute z-[100] overflow-hidden rounded-[14px] border border-edge-strong bg-panel-raised shadow-2xl backdrop-blur-[var(--blur)]" style="right: 20px; top: 56px; width: 160px"><button type="button" role="menuitem" class="block w-full whitespace-nowrap px-3 py-1.5 text-left text-xs transition-colors hover:bg-panel text-ink">Épingler au Bloc-notes</button><button type="button" role="menuitem" class="block w-full whitespace-nowrap px-3 py-1.5 text-left text-xs transition-colors hover:bg-panel text-ink">Copier le lien pour le wiki</button><button type="button" role="menuitem" class="block w-full whitespace-nowrap px-3 py-1.5 text-left text-xs transition-colors hover:bg-panel text-ink">Créer une version maison</button></div>
+</div>
+</div>
+
+</section>
 </main>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":4000}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":5100}}'>
 class Component extends DCLogic {
   constructor(props) {
     super(props);
