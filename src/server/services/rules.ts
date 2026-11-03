@@ -33,6 +33,8 @@ import { nextSlugCandidate, slugify } from "@/src/core/slug/slug";
 import { buildHomebrewSubclassEntry, subclassSlotWrite, type HomebrewSubclassInput } from "@/src/core/rules/homebrewSubclass";
 import { buildHomebrewSpellEntry, HomebrewSpellError, type HomebrewSpellInput } from "@/src/core/rules/homebrewSpell";
 import { blockTypesToRemove } from "@/src/core/rules/homebrewEdit";
+import { ruleEntryForPlayer } from "@/src/core/rules/ruleForReader";
+import { isWorldAdmin } from "@/src/server/services/permissions";
 import { houseVersionChangedBlocks, isEditableHomebrewType, zHouseVersionPayload, type HouseVersionPayload } from "@/src/core/rules/houseVersion";
 import {
   applyOverrides,
@@ -492,6 +494,8 @@ export interface RuleEntryDetail {
   houseVersion: boolean;
   /** Le ruleset actif du monde est une base officielle : aucune copie ni modification possible (règle 18). */
   isOfficialBase: boolean;
+  /** V3.1-95 : la règle diffère de l'officielle (variante ou version maison) — badge « Règle de la table » du joueur. */
+  tableRule: boolean;
 }
 
 function maxLevelForAxis(axis: ScalingBlockData["axis"]): number {
@@ -1213,6 +1217,7 @@ export async function getRuleEntryForWorld(
     isHomebrew: entry === null,
     houseVersion,
     isOfficialBase: chain[0]?.isOfficialBase ?? false,
+    tableRule: houseVersion || resolved.modifiedBlockTypes.length > 0,
   };
 }
 
@@ -1639,7 +1644,15 @@ export async function getRuleEntryPageData(
 ): Promise<RuleEntryDetail | null> {
   const world = await getWorldBySlug(supabase, worldSlug);
   if (!world) return null;
-  return getRuleEntryForWorld(supabase, world.id, entryKey, locale);
+  const entry = await getRuleEntryForWorld(supabase, world.id, entryKey, locale);
+  if (!entry) return null;
+  // V3.1-95 (règle 5) : un joueur ne reçoit ni données brutes, ni donnée
+  // d'avant la variante, ni marques du MJ — filtré ici, avant l'envoi, pour la
+  // page comme pour la fenêtre (`/regles/[cle]/window`, lue aussi par la fiche
+  // et le cahier du joueur).
+  const user = await getAuthUser(supabase);
+  if (user && (await isWorldAdmin(supabase, { worldId: world.id, userId: user.id }))) return entry;
+  return ruleEntryForPlayer(entry);
 }
 
 // --- Selection du ruleset actif (V1-C5) ---------------------------------

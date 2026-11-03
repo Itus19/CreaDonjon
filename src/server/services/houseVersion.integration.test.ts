@@ -6,7 +6,7 @@ import { getReusableTestAccount, type ReusableAccount } from "../testUtils/reusa
 vi.mock("server-only", () => ({}));
 const { pinRuleToNotebook } = await import("./notebookPin");
 const { loadNotebookTree } = await import("./notebook");
-const { createHouseVersion, createRulesetVariant, getRuleEntryForWorld, getHomebrewEntryForEdit, replaceHomebrewEntry, resolveEntryBlocksInRuleset } = await import("./rules");
+const { getRuleEntryPageData, createHouseVersion, createRulesetVariant, getRuleEntryForWorld, getHomebrewEntryForEdit, replaceHomebrewEntry, resolveEntryBlocksInRuleset } = await import("./rules");
 
 /**
  * V3.1-94 (ADR 0072) — « Créer une version maison » contre la base réelle :
@@ -20,6 +20,8 @@ const hasCreds = Boolean(SUPABASE_URL && SERVICE_ROLE_KEY);
 describe.skipIf(!hasCreds)("version maison d'une règle officielle (V3.1-94, integration, base reelle)", () => {
   let admin: SupabaseClient<Database>;
   let gm: ReusableAccount;
+  let joueuse: ReusableAccount;
+  let worldSlug: string;
   let worldId: string;
   let officialId: string;
   let variantId: string;
@@ -27,16 +29,22 @@ describe.skipIf(!hasCreds)("version maison d'une règle officielle (V3.1-94, int
 
   beforeAll(async () => {
     admin = createSupabaseClient<Database>(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
-    gm = await getReusableTestAccount(admin, "gm");
+    [gm, joueuse] = await Promise.all([getReusableTestAccount(admin, "gm"), getReusableTestAccount(admin, "player")]);
     const { data: official } = await admin.from("rulesets").select("id").eq("base_system", "dnd_srd_52").eq("is_official_base", true).limit(1).single();
     officialId = official!.id;
     const { data: world, error } = await admin
       .from("worlds")
       .insert({ name: "Monde de test version maison", slug: `integration-test-house-version-${Date.now()}`, owner_id: gm.id, default_ruleset_id: officialId })
-      .select("id")
+      .select("id, slug")
       .single();
     if (error || !world) throw new Error(error?.message ?? "monde");
     worldId = world.id;
+    worldSlug = world.slug;
+    const { data: campaign } = await admin.from("campaigns").insert({ world_id: worldId, name: "Campagne", ruleset_id: officialId, mode: "campaign", gm_user_id: gm.id }).select("id").single();
+    await admin.from("campaign_members").insert([
+      { campaign_id: campaign!.id, user_id: gm.id, role: "gm" },
+      { campaign_id: campaign!.id, user_id: joueuse.id, role: "player" },
+    ]);
   });
 
   afterAll(async () => {
@@ -101,5 +109,19 @@ describe.skipIf(!hasCreds)("version maison d'une règle officielle (V3.1-94, int
     expect(await pinRuleToNotebook(client(), { worldId, userId: gm.id, ruleKey: "longsword" })).toEqual({ ok: true, alreadyPinned: true });
     const { items } = await loadNotebookTree(client(), { worldId, userId: gm.id });
     expect(items.filter((i) => i.kind === "pinned_rule" && i.targetKey === "longsword")).toHaveLength(1);
+  });
+
+  it("V3.1-95 : la réponse servie à un joueur n'a ni données brutes, ni donnée officielle d'avant, ni marques du MJ ; le MJ les a", async () => {
+    const mj = await getRuleEntryPageData(client(), worldSlug, "longsword", "fr");
+    const joueur = await getRuleEntryPageData(joueuse.client as unknown as SupabaseClient<Database>, worldSlug, "longsword", "fr");
+    expect(mj?.houseVersion).toBe(true);
+    expect(mj?.blocks.some((b) => b.blockType === "custom_table")).toBe(true);
+    expect(mj?.blocks.some((b) => b.originalData !== undefined)).toBe(true);
+
+    expect(joueur?.tableRule).toBe(true);
+    expect(joueur?.houseVersion).toBe(false);
+    expect(joueur?.modifiedBlockTypes).toEqual([]);
+    expect(joueur?.blocks.some((b) => b.blockType === "custom_table")).toBe(false);
+    expect(JSON.stringify(joueur)).not.toMatch(/"originalData"/);
   });
 });
