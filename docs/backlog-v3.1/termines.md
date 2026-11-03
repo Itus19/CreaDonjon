@@ -3144,3 +3144,14 @@ Opus : le filtrage côté serveur (faille trouvée en préparant le ticket) ; `d
 - Le noyau reçoit des points `{ id, year, scope }` : l'écran calcule l'année (`yearPosition`) et la portée (`resolveScope`).
 - Choix non tranchés par le ticket : seuils 400 et 130 inclus dans « major + notable » ; libellés des niveaux autres que « tout » (« grandes dates et notables », « grandes dates seulement »).
 
+
+### V3.1-98 — Chronologie : la frise du MJ (3 novembre)
+
+`dev-sonnet` : l'écran ; Opus : le serveur et un correctif ancien.
+- **Serveur (Opus)** : `getWorldTimeline(…, { vueJoueurs })` passe par `resolveMapViewer` (refusé à un non-MJ) ; chaque entrée porte son bloc (`block: { id, version }`, nul pour naissances et morts) pour la portée et la promotion.
+- **Écran** : `WorldTimelineView.tsx` réécrit, `components/shell/frise/` (carte, formulaire, ères), `lib/ui/frise.ts` (testé), `lib/ui/friseApi.ts`. Fleuve, ères, aujourd'hui, cartes alternées ; barre (vue, compteur des dates cachées, − / +, préréglages, Centrer, ‹ ›, filtres, recherche) ; molette, Ctrl + molette, glisser, pincer ; « Voir comme les joueurs » par `?vue=joueurs` (le serveur retire les dates du MJ) ; + Événement, Ères… (route calendrier), portée et visibilité au toucher, « → en faire une fiche ». Rafraîchissement par une action `revalidatePath` (cliquet du câblage).
+- **Correctif** : `promoteTimelineEntry` créait la fiche avant de vérifier la version du bloc ; un conflit laissait une fiche orpheline. Version vérifiée d'abord, fiche retirée si l'écriture échoue ; test d'intégration.
+- **Vérifié** : contre la base (`worldTimeline.integration.test.ts`, 5/5) ; au navigateur avec le MJ du banc d'essai (ajout par le formulaire, seuils de vue, Ctrl + molette sans défilement de la page, vue des joueurs sans la date MJ, portée, visibilité, promotion, panneau des ères, 700 px sans débordement). Données de test supprimées.
+- **Catalogue** : section « Frise du monde » de `WikiVisuel` (version 85).
+
+*Restes* : « Dans : une fiche » ne propose que les fiches qui ont déjà une chronologie ; la visibilité relit tout le bloc (deux allers-retours) ; enregistrer des ères n'a pas été essayé au navigateur (route existante).

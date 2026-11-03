@@ -168,7 +168,7 @@ exemples.
 
 ---
 
-### ☐ V3.1-98 — Chronologie : la frise du MJ · `L` · sans modèle IA — **prêt**
+### ☑ V3.1-98 — Chronologie : la frise du MJ · `L` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet.**
 
