@@ -223,3 +223,17 @@ export const refreshChoiceSchema = z
     values: z.array(z.string().min(1).max(200)).min(1).max(20).nullable(),
   })
   .strict();
+
+/**
+ * V3.1-130 (ADR 0060 §5) — jouer une règle : la fiche de règle (une aptitude
+ * du personnage), l'activation, la variante, et les participants visés du
+ * combat en cours (sans cible : sur soi). Une campagne est requise : les
+ * usages et les effets vivent dans son état de jeu.
+ */
+export const activateFeatureSchema = z.object({
+  campaignId: z.string().uuid(),
+  ruleKey: z.string().min(1).max(200),
+  activationId: z.string().min(1).max(100),
+  variantId: z.string().min(1).max(100).nullable().default(null),
+  targetParticipantIds: z.array(z.string().uuid()).max(20).default([]),
+});

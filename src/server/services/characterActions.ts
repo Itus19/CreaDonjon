@@ -66,6 +66,9 @@ import { grantTempHp, type TempHpChoice } from "@/src/core/rules/tempHp";
 import { zSpellCastingBlockData } from "@/src/core/schemas/rule-blocks/blocks";
 import { setConcentration } from "@/src/server/services/concentration";
 import type { Concentration } from "@/src/core/schemas/runtimeState";
+import { expireFeatureEffects } from "@/src/server/services/effectExpiry";
+import { listFeatureEffectsForEntity } from "@/src/server/repos/activeEffects";
+import { activeEffectsForSheet, effectFromRow } from "@/src/core/rules/durableEffects";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -159,10 +162,12 @@ export async function resolveCharacterActionContext(
 ): Promise<CharacterActionContext | null> {
   // V3.1-62 (docs/CABLAGE.md, C3) : la fiche, ses blocs et la campagne ne
   // dependent pas les uns des autres — une seule vague au lieu de trois.
-  const [entity, campaign, blocks] = await Promise.all([
+  const [entity, campaign, blocks, effectRows] = await Promise.all([
     getEntityById(supabase, entityId),
     campaignId ? getCampaignById(supabase, campaignId) : Promise.resolve(null),
     listBlocksForEntity(supabase, entityId),
+    // V3.1-130 : les effets qui durent portés par ce personnage (couche 7), dans la même vague.
+    campaignId ? listFeatureEffectsForEntity(supabase, entityId, campaignId) : Promise.resolve([]),
   ]);
   if (!entity) return null;
 
@@ -278,7 +283,14 @@ export async function resolveCharacterActionContext(
     // V3.1-115 : plafond de caracteristique et charge lus dans les regles du ruleset.
     { classes: assembled.ruleset.classes, features: { ...assembled.ruleset.features, ...choiceFeatures }, characterRules: assembled.ruleset.characterRules },
     equippedItems,
-    [],
+    activeEffectsForSheet(
+      effectRows.flatMap((row) => {
+        const e = effectFromRow(row, entityId);
+        if (!e) console.error("Effet actif mal formé, ignoré sur la fiche", row.id);
+        return e ? [e] : [];
+      }),
+      entityId
+    ),
     carriedWeight
   );
 
@@ -824,6 +836,8 @@ export async function takeShortRest(
     actorUserId: params.actorUserId,
   });
   await advanceSceneClockForRest(supabase, params.campaignId, SHORT_REST_MINUTES, params.actorUserId);
+  // V3.1-130 : un repos fait tomber les effets « jusqu'au repos » du personnage et décompte les autres.
+  if (params.campaignId) await expireOwnEffectsAtRest(supabase, { entityId: params.entityId, campaignId: params.campaignId, rest: "short", actorUserId: params.actorUserId });
 
   return { hpHealed, hitDiceSpent: params.hitDiceSpent };
 }
@@ -893,6 +907,8 @@ export async function takeLongRest(
     actorUserId: params.actorUserId,
   });
   await advanceSceneClockForRest(supabase, params.campaignId, LONG_REST_MINUTES, params.actorUserId);
+  // V3.1-130 : un repos fait tomber les effets « jusqu'au repos » du personnage et décompte les autres.
+  if (params.campaignId) await expireOwnEffectsAtRest(supabase, { entityId: params.entityId, campaignId: params.campaignId, rest: "long", actorUserId: params.actorUserId });
 
   return { ok: true };
 }
@@ -1573,3 +1589,25 @@ export async function refreshCharacterChoice(
   return { ok: true };
 }
 
+
+/**
+ * V3.1-130 — les effets du personnage au repos : seulement les siens (un repos
+ * ne touche pas les effets des autres). Une panne ne défait pas le repos,
+ * acquis, mais se voit dans la console.
+ */
+async function expireOwnEffectsAtRest(
+  supabase: TypedClient,
+  params: { entityId: string; campaignId: string; rest: "short" | "long"; actorUserId: string }
+): Promise<void> {
+  try {
+    await expireFeatureEffects(supabase, {
+      campaignId: params.campaignId,
+      events: [{ kind: "rest", rest: params.rest }],
+      callerId: params.actorUserId,
+      onlyBearer: params.entityId,
+      ownEntityId: params.entityId,
+    });
+  } catch (err) {
+    console.error("Expiration des effets au repos impossible", params.entityId, err);
+  }
+}

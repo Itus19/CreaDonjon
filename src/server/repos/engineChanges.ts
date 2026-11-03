@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import type { CombatParticipantRow } from "@/src/server/repos/combats";
+import type { ActiveEffectRow } from "@/src/server/repos/activeEffects";
 
 export type { CombatParticipantRow };
 
@@ -21,6 +22,13 @@ export async function applyEngineChange(supabase: TypedClient, payload: string, 
 }
 
 /** V3.1-107 (ADR 0069) — les participants d'un combat, rendus par la base à une demande signée (`public.engine_read_combat`). */
+/** V3.1-130 (ADR 0073) : les effets posés par une règle dans ce combat (instances) et sur les fiches de la campagne, lus par une demande signée. */
+export async function readCombatEffectsSigned(supabase: TypedClient, payload: string, signature: string): Promise<ActiveEffectRow[]> {
+  const { data, error } = await supabase.rpc("engine_read_combat_effects", { p_payload: payload, p_signature: signature });
+  if (error) throw new Error(`Lecture des effets refusée : ${error.message}`);
+  return (data ?? []) as ActiveEffectRow[];
+}
+
 export async function readCombatSigned(supabase: TypedClient, payload: string, signature: string): Promise<CombatParticipantRow[]> {
   const { data, error } = await supabase.rpc("engine_read_combat", { p_payload: payload, p_signature: signature });
   if (error) throw new Error(`Lecture du moteur refusée : ${error.message}`);

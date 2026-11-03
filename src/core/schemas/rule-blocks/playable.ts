@@ -81,7 +81,7 @@ const zDuration = z.union([
 export type DurableEffectDuration = z.infer<typeof zDuration>;
 
 /** Une fin sur événement : un événement du vocabulaire fermé, pour le porteur ou la source ; `dismissed` : au choix. */
-const zEndsOn = z.union([
+export const zEndsOn = z.union([
   z.object({ event: z.enum(TRIGGER_EVENTS), subject: z.enum(["bearer", "source"]) }),
   z.object({ event: z.literal("dismissed") }),
 ]);

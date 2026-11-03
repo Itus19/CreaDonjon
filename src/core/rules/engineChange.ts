@@ -5,7 +5,7 @@ import { z } from "zod";
  * d'un joueur et que le serveur signe. Un objet FERMÉ : la fonction de la base
  * refuse toute clé hors de cette liste, ce schéma aussi, avant même de signer.
  */
-const zChange = z
+const zStateChange = z
   .object({
     kind: z.enum(["participant", "runtime"]),
     id: z.string().uuid(),
@@ -14,6 +14,33 @@ const zChange = z
     conditions: z.array(z.string().min(1)).max(40).optional(),
   })
   .strict();
+
+/**
+ * V3.1-130 (ADR 0073) — poser un effet qui dure sur une instance de combat ou
+ * un PJ de la campagne. `effect` est exactement ce que la base accepte : la
+ * fonction refuse toute autre clé.
+ */
+const zEffectAdd = z
+  .object({
+    kind: z.literal("effect_add"),
+    id: z.string().uuid(),
+    bearer: z.enum(["participant", "entity"]),
+    effect: z
+      .object({
+        label: z.string().min(1).max(200),
+        source_key: z.string().min(1).max(200),
+        modifiers: z.array(z.unknown()).max(20),
+        duration: z.record(z.string(), z.unknown()),
+        payload: z.record(z.string(), z.unknown()),
+      })
+      .strict(),
+  })
+  .strict();
+
+/** V3.1-130 : retirer un effet (ligne de `entity_active_effects`) de la campagne. */
+const zEffectRemove = z.object({ kind: z.literal("effect_remove"), id: z.string().uuid() }).strict();
+
+const zChange = z.union([zStateChange, zEffectAdd, zEffectRemove]);
 
 export const zEngineChange = z
   .object({

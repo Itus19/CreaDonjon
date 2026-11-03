@@ -52,6 +52,7 @@ import { getRuleEntryForWorld } from "@/src/server/services/rules";
 import { ABILITY_LABELS, type Ability } from "@/src/core/rules/abilities";
 import { serverRng } from "@/src/server/services/rng";
 import type { TargetedRollInput } from "@/lib/combats/schemas";
+import { expireFeatureEffects } from "@/src/server/services/effectExpiry";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -323,6 +324,24 @@ export async function applyResolvedEffects(
 
   if (signes.length > 0) {
     await applySignedEngineChange(supabase, { campaignId: params.campaignId, changes: signes, ...(params.signedWrites?.nonce ? { nonce: params.signedWrites.nonce } : {}) });
+  }
+
+  // V3.1-130 (ADR 0060 §3) : des dégâts subis font tomber les effets qui finissent ainsi (l'Effrayé d'Abjuration).
+  const blesses = [...new Set(params.effects.filter((e) => e.action === "deal_damage" && e.amount > 0).map((e) => (e as { who: string }).who))];
+  if (blesses.length > 0) {
+    try {
+      await expireFeatureEffects(supabase, {
+        campaignId: params.campaignId,
+        events: blesses.map((who) => ({ kind: "game_event" as const, event: "damage_taken" as const, subject: who })),
+        callerId: params.callerId,
+        callerIsGm: !params.signedWrites,
+        combatId: params.combatId,
+        participants,
+        ...(params.actor ? { ownEntityId: params.actor.entityId } : {}),
+      });
+    } catch (err) {
+      console.error("Expiration des effets aux dégâts impossible", err);
+    }
   }
 
   const nameOf = (id: string) => names[id] ?? id;

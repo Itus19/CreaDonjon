@@ -50,6 +50,7 @@ import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
 import { getEntityRuntimeState } from "@/src/server/services/runtimeState";
 import { resolveCharacterActionContext } from "@/src/server/services/characterActions";
 import type { Locale } from "@/src/i18n/request";
+import { expireFeatureEffects } from "@/src/server/services/effectExpiry";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -563,6 +564,25 @@ async function moveTurn(
         actorUserId: params.actorUserId,
         note: "Fin d'une botte",
       });
+    }
+  }
+
+  // V3.1-130 (ADR 0060 §3) : les effets qui durent suivent la bascule — fin du
+  // tour qui s'achève, fin de round, début du tour qui commence. En avant
+  // seulement ; une panne n'emporte pas la bascule, mais se voit.
+  if (params.direction === "next") {
+    const ordre = orderParticipants(participants);
+    const sortant = ordre[combat.turn_index];
+    const entrant = ordre[next.turnIndex];
+    const events = [
+      ...(sortant ? [{ kind: "turn_end" as const, actor: `participant:${sortant.id}` }] : []),
+      ...(next.round !== combat.round ? [{ kind: "round_end" as const }] : []),
+      ...(entrant ? [{ kind: "turn_start" as const, actor: `participant:${entrant.id}` }] : []),
+    ];
+    try {
+      await expireFeatureEffects(supabase, { campaignId: combat.campaign_id, events, callerId: params.actorUserId, callerIsGm: true, combatId: combat.id, participants });
+    } catch (err) {
+      console.error("Expiration des effets à la bascule impossible", combat.id, err);
     }
   }
 

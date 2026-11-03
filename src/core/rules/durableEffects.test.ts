@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activeEffectsForSheet, consumeToken, expireEffects, instantiateDurableEffect, type ActiveDurableEffect } from "./durableEffects";
+import { activeEffectsForSheet, consumeToken, effectFromRow, effectToRow, expireEffects, instantiateDurableEffect, type ActiveDurableEffect } from "./durableEffects";
 import type { DurableEffect } from "../schemas/rule-blocks/playable";
 
 /**
@@ -138,5 +138,19 @@ describe("activeEffectsForSheet — la couche 7 de la fiche", () => {
     expect(activeEffectsForSheet([beni, effraye("g1")], "allie")).toEqual([
       { key: beni.instanceId, label: "Bénédiction", modifiers: [{ target: "save.wis", op: "add", value: 2, source: `effect:${beni.instanceId}`, label: "Bénédiction", layer: 7 }] },
     ]);
+  });
+});
+
+describe("forme stockée (V3.1-130, ADR 0073)", () => {
+  it("un effet passe en ligne et revient identique, l'identifiant de la ligne devenant celui de l'instance", () => {
+    const e = { ...effraye("g1"), tokenGrants: null };
+    const ligne = effectToRow(e, "channel-divinity-paladin");
+    expect(ligne.source_key).toBe("channel-divinity-paladin");
+    const relu = effectFromRow({ id: "row-1", ...ligne }, "g1");
+    expect(relu).toEqual({ ...e, instanceId: "row-1" });
+  });
+
+  it("une ligne mal formée est écartée (null), jamais devinée", () => {
+    expect(effectFromRow({ id: "x", label: "X", modifiers: [], duration: {}, payload: {} }, "g1")).toBeNull();
   });
 });

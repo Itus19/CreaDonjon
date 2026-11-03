@@ -1,4 +1,6 @@
-import type { DurableEffect, DurableEffectEnd } from "../schemas/rule-blocks/playable";
+import { z } from "zod";
+import { zEndsOn, type DurableEffect, type DurableEffectEnd } from "../schemas/rule-blocks/playable";
+import { zModifier } from "../schemas/rule-blocks/primitives";
 import { resolveDeclaredModifiers, type ActiveEffect } from "./sheet";
 import type { TriggerEvent } from "./triggers";
 
@@ -179,4 +181,76 @@ export function activeEffectsForSheet(effects: readonly ActiveDurableEffect[], b
   return effects
     .filter((e) => e.bearer === bearer)
     .map((e) => ({ key: e.instanceId, label: e.label, modifiers: resolveDeclaredModifiers(e.modifiers, `effect:${e.instanceId}`, e.label, 7) }));
+}
+
+// ---------------------------------------------------------------------------
+// V3.1-130 (ADR 0073) — la forme STOCKÉE d'un effet (`entity_active_effects`).
+// Le porteur est la ligne elle-même (entité ou instance de combat) ; le reste
+// se range en trois colonnes : `modifiers` (déclarés), `duration` (le temps
+// restant) et `payload` (états, fins, jeton, ancrage). Relu par Zod : une
+// ligne mal formée est écartée et signalée, jamais devinée.
+// ---------------------------------------------------------------------------
+
+export const zStoredEffectDuration = z.object({
+  remainingRounds: z.number().nonnegative().nullable(),
+  untilTurnEnd: z.object({ actor: z.string().min(1), left: z.number().int().positive() }).nullable(),
+  untilRest: z.boolean(),
+});
+
+export const zStoredEffectPayload = z.object({
+  effectId: z.string().min(1),
+  activationId: z.string().min(1),
+  /** Identifiant de la source : son entité si elle en a une (un PJ), sinon son instance de combat. */
+  source: z.string().min(1),
+  conditions: z.array(z.string().min(1)),
+  endsOn: z.array(zEndsOn),
+  concentration: z.boolean(),
+  tokenGrants: z.string().min(1).nullable(),
+  tokenUsesLeft: z.number().int().nonnegative(),
+  startedRound: z.number().int().nullable(),
+});
+
+export interface StoredEffectRow {
+  id: string;
+  label: string;
+  modifiers: unknown;
+  duration: unknown;
+  payload: unknown;
+}
+
+/** Les colonnes d'une ligne pour un effet ; `sourceKey` : la clé de la fiche de règle qui l'a posé. */
+export function effectToRow(e: ActiveDurableEffect, sourceKey: string) {
+  return {
+    label: e.label,
+    source_key: sourceKey,
+    modifiers: e.modifiers,
+    duration: { remainingRounds: e.remainingRounds, untilTurnEnd: e.untilTurnEnd, untilRest: e.untilRest },
+    payload: {
+      effectId: e.effectId,
+      activationId: e.activationId,
+      source: e.source,
+      conditions: e.conditions,
+      endsOn: e.endsOn,
+      concentration: e.concentration,
+      tokenGrants: e.tokenGrants,
+      tokenUsesLeft: e.tokenUsesLeft,
+      startedRound: e.startedRound,
+    },
+  };
+}
+
+/** Relit une ligne pour le porteur `bearer` (l'identifiant que l'appelant emploie dans ses événements). `null` : ligne mal formée. */
+export function effectFromRow(row: StoredEffectRow, bearer: string): ActiveDurableEffect | null {
+  const modifiers = z.array(zModifier).safeParse(row.modifiers);
+  const duration = zStoredEffectDuration.safeParse(row.duration);
+  const payload = zStoredEffectPayload.safeParse(row.payload);
+  if (!modifiers.success || !duration.success || !payload.success) return null;
+  return {
+    instanceId: row.id,
+    label: row.label,
+    bearer,
+    modifiers: modifiers.data,
+    ...duration.data,
+    ...payload.data,
+  };
 }

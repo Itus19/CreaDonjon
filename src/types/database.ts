@@ -1234,39 +1234,45 @@ export type Database = {
         Row: {
           applied_at_event: string | null
           campaign_id: string
+          combat_participant_id: string | null
           created_at: string
           duration: Json
-          entity_id: string
+          entity_id: string | null
           expires_at_event: string | null
           id: string
           label: string
           modifiers: Json
+          payload: Json
           source_key: string | null
           source_kind: string
         }
         Insert: {
           applied_at_event?: string | null
           campaign_id: string
+          combat_participant_id?: string | null
           created_at?: string
           duration?: Json
-          entity_id: string
+          entity_id?: string | null
           expires_at_event?: string | null
           id?: string
           label: string
           modifiers?: Json
+          payload?: Json
           source_key?: string | null
           source_kind: string
         }
         Update: {
           applied_at_event?: string | null
           campaign_id?: string
+          combat_participant_id?: string | null
           created_at?: string
           duration?: Json
-          entity_id?: string
+          entity_id?: string | null
           expires_at_event?: string | null
           id?: string
           label?: string
           modifiers?: Json
+          payload?: Json
           source_key?: string | null
           source_kind?: string
         }
@@ -2964,6 +2970,10 @@ export type Database = {
       engine_read_combat: {
         Args: { p_payload: string; p_signature: string }
         Returns: Database["public"]["Tables"]["combat_participants"]["Row"][]
+      }
+      engine_read_combat_effects: {
+        Args: { p_payload: string; p_signature: string }
+        Returns: Database["public"]["Tables"]["entity_active_effects"]["Row"][]
       }
       next_session_event_seq: {
         Args: { p_session: string }

@@ -4,7 +4,8 @@ import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import { canonicalJson, zEngineChange, zEngineReadRequest, type EngineChange } from "@/src/core/rules/engineChange";
-import { applyEngineChange, readCombatSigned, type CombatParticipantRow } from "@/src/server/repos/engineChanges";
+import { applyEngineChange, readCombatEffectsSigned, readCombatSigned, type CombatParticipantRow } from "@/src/server/repos/engineChanges";
+import type { ActiveEffectRow } from "@/src/server/repos/activeEffects";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -68,6 +69,12 @@ export function signEngineRead(params: { campaignId: string; combatId: string; n
 }
 
 /** Lit les participants d'un combat au nom d'un joueur : la base ne les rend qu'à une demande signée. */
+/** V3.1-130 (ADR 0073) : les effets du combat, pour un joueur qui ne les lit pas (même demande signée que les participants). */
+export async function readCombatEffectsForEngine(supabase: TypedClient, params: { campaignId: string; combatId: string }): Promise<ActiveEffectRow[]> {
+  const { payload, signature } = signEngineRead(params, engineSigningKeyFromEnv());
+  return readCombatEffectsSigned(supabase, payload, signature);
+}
+
 export async function readCombatParticipantsSigned(supabase: TypedClient, params: { campaignId: string; combatId: string }): Promise<CombatParticipantRow[]> {
   const { payload, signature } = signEngineRead(params, engineSigningKeyFromEnv());
   return readCombatSigned(supabase, payload, signature);

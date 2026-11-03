@@ -5,6 +5,7 @@ import { applyConcentrationChange, type ConcentrationChange } from "@/src/core/r
 import type { Concentration } from "@/src/core/schemas/runtimeState";
 import { applyRuntimeStateChange, getEntityRuntimeState } from "@/src/server/services/runtimeState";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
+import { expireFeatureEffects } from "@/src/server/services/effectExpiry";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -46,6 +47,19 @@ export async function setConcentration(
     actor: "player",
     actorUserId: params.actorUserId,
   });
+  // V3.1-130 (ADR 0060 §3) : une concentration rompue emporte les effets qui en dépendaient, chez toutes leurs cibles.
+  if (change.broken && params.campaignId) {
+    try {
+      await expireFeatureEffects(supabase, {
+        campaignId: params.campaignId,
+        events: [{ kind: "concentration_broken", source: params.entityId }],
+        callerId: params.actorUserId,
+        ownEntityId: params.entityId,
+      });
+    } catch (err) {
+      console.error("Effets de concentration non retirés", params.entityId, err);
+    }
+  }
   return change;
 }
 
