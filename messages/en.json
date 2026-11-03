@@ -2095,6 +2095,111 @@
       }
     }
   },
+  "frise": {
+    "titre": "Timeline",
+    "frise": "World timeline",
+    "aucun": "No event matches these filters.",
+    "aucunMonde": "No events yet: add one with “+ Event”.",
+    "aujourdhui": "Today in the game",
+    "autour": "+ {n} nearby",
+    "autourLabel": "Zoom in on the {n} dates attached to “{titre}”",
+    "barre": {
+      "vue": "View: {etendue} years · {detail}",
+      "detail": {
+        "all": "everything, down to births",
+        "notable": "major dates and notable ones",
+        "major": "major dates only"
+      },
+      "cachees": "{n} more when zooming in",
+      "moins": "Zoom out",
+      "plus": "Zoom in",
+      "precedent": "Scroll toward the past",
+      "suivant": "Scroll toward the future",
+      "presets": "View presets",
+      "preset": {
+        "world": "The world",
+        "era": "An era",
+        "century": "A century",
+        "life": "A lifetime"
+      },
+      "centrer": "◎ Center on today",
+      "centrerSans": "No current day is set in the calendar.",
+      "eres": "Eras…",
+      "evenement": "+ Event",
+      "voirJoueurs": "View as the players",
+      "voirMj": "Back to the GM view",
+      "recherche": "Search",
+      "rechercheLabel": "Search an event",
+      "tousGenres": "All kinds",
+      "toutesFiches": "All sheets",
+      "filtreGenre": "Filter by kind",
+      "filtreFiche": "Filter by sheet"
+    },
+    "vueJoueurs": "Players' view: dates reserved for the GM do not appear.",
+    "carte": {
+      "portee": {
+        "major": "World",
+        "notable": "Region",
+        "detail": "Detail"
+      },
+      "porteeLabel": "Scope of “{titre}”: {portee}. Tap to switch to {suivante}.",
+      "source": {
+        "world": "General timeline",
+        "entity": "From the sheet of {nom}",
+        "birth": "Birth",
+        "death": "Death"
+      },
+      "ouvrir": "Open the details of “{titre}”",
+      "visibilite": "“{titre}”"
+    },
+    "detail": {
+      "titre": "Event details",
+      "sansResume": "No summary.",
+      "fermer": "Close",
+      "faireFiche": "→ make it a sheet",
+      "faireFicheEnCours": "Creating…",
+      "voirFiche": "See the sheet",
+      "erreurFiche": "Could not make it a sheet.",
+      "erreurPortee": "Could not change the scope.",
+      "erreurVisibilite": "Could not change the visibility.",
+      "conflit": "This timeline changed in the meantime: the frieze is reloaded, try again."
+    },
+    "form": {
+      "titre": "New event",
+      "date": "Date (world calendar)",
+      "genre": "Kind",
+      "titreLabel": "Title",
+      "titrePlaceholder": "Event title",
+      "resume": "Summary (optional)",
+      "visibilite": "Visibility",
+      "portee": "Scope",
+      "porteeAuto": "By kind",
+      "dans": "In",
+      "friseGenerale": "The general timeline",
+      "ajouter": "Add",
+      "enCours": "Adding…",
+      "annuler": "Cancel",
+      "erreur": "Could not add the event."
+    },
+    "eres": {
+      "titre": "Eras",
+      "aide": "The same eras as the Calendar tool.",
+      "nom": "Era name",
+      "debut": "Start year of the era {nom}",
+      "plage": "from year {debut} to year {fin}",
+      "plageOuverte": "since year {debut}",
+      "supprimer": "Delete the era {nom}",
+      "ajouter": "+ Add an era",
+      "nouvelle": "New era",
+      "enregistrer": "Save",
+      "enCours": "Saving…",
+      "nonEnregistre": "Unsaved changes",
+      "toutEnregistre": "Everything is saved",
+      "aucune": "No eras.",
+      "fermer": "Close the eras panel",
+      "erreur": "Could not save the eras."
+    }
+  },
   "creation": {
     "etapesAria": "Creation steps",
     "equip": {

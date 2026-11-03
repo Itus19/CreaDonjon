@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { getWorldTimeline } from "@/src/server/services/timeline";
+import { isWorldAdmin } from "@/src/server/services/permissions";
+import { estVueJoueurs } from "@/lib/ui/frise";
 import WorldTimelineView from "@/components/shell/WorldTimelineView";
 
 /**
@@ -13,10 +15,13 @@ import WorldTimelineView from "@/components/shell/WorldTimelineView";
  */
 export default async function ChronologiePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ worldSlug: string }>;
+  searchParams: Promise<{ vue?: string | string[] }>;
 }) {
   const { worldSlug } = await params;
+  const { vue } = await searchParams;
   const supabase = await createClient();
   const world = await getWorldBySlug(supabase, worldSlug);
   if (!world) notFound();
@@ -24,7 +29,11 @@ export default async function ChronologiePage({
   const user = await getAuthUser(supabase);
   if (!user) notFound();
 
-  const { entries, calendar } = await getWorldTimeline(supabase, world.id, user.id);
+  // V3.1-98 : « Voir comme les joueurs » est demandé au serveur (`?vue=joueurs`), qui
+  // retire les dates du MJ du flux ; le service refuse la demande à qui n'est pas MJ.
+  const estMj = await isWorldAdmin(supabase, { worldId: world.id, userId: user.id });
+  const vueJoueurs = estMj && estVueJoueurs(vue);
+  const { entries, calendar } = await getWorldTimeline(supabase, world.id, user.id, { vueJoueurs });
 
-  return <WorldTimelineView worldSlug={worldSlug} entries={entries} calendar={calendar} />;
+  return <WorldTimelineView worldSlug={worldSlug} entries={entries} calendar={calendar} estMj={estMj} vueJoueurs={vueJoueurs} />;
 }

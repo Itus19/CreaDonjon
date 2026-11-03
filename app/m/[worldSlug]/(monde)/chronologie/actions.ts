@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { addTimelineEventSchema, setTimelineEntryScopeSchema } from "@/lib/timeline/schemas";
 import { getWorldBySlug } from "@/src/server/services/worlds";
@@ -61,4 +62,17 @@ export async function setTimelineEntryScopeAction(input: unknown): Promise<Timel
   if (!result.ok) return { ok: false, error: ERRORS[result.reason] };
   revalidatePath(`/m/${parsed.data.worldSlug}/chronologie`);
   return { ok: true };
+}
+
+const rafraichirFriseSchema = z.object({ worldSlug: z.string().min(1) });
+
+/**
+ * V3.1-98 : relire la frise après une écriture faite par une route (promotion,
+ * visibilité). `revalidatePath` dans une action remet la page à jour sans
+ * `router.refresh()` (cliquet du câblage). Ne lit ni n'écrit rien d'autre.
+ */
+export async function rafraichirFriseAction(input: unknown): Promise<void> {
+  const parsed = rafraichirFriseSchema.safeParse(input);
+  if (!parsed.success) return;
+  revalidatePath(`/m/${parsed.data.worldSlug}/chronologie`);
 }

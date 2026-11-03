@@ -2096,6 +2096,111 @@
       }
     }
   },
+  "frise": {
+    "titre": "Chronologie",
+    "frise": "Frise chronologique du monde",
+    "aucun": "Aucun événement ne correspond à ces filtres.",
+    "aucunMonde": "Aucun événement pour l'instant : ajoutez-en un avec « + Événement ».",
+    "aujourdhui": "Aujourd'hui en jeu",
+    "autour": "+ {n} autour",
+    "autourLabel": "Zoomer sur les {n} dates rattachées à « {titre} »",
+    "barre": {
+      "vue": "Vue : {etendue} ans · {detail}",
+      "detail": {
+        "all": "tout, jusqu'aux naissances",
+        "notable": "grandes dates et notables",
+        "major": "grandes dates seulement"
+      },
+      "cachees": "{n} de plus en zoomant",
+      "moins": "Dézoomer",
+      "plus": "Zoomer",
+      "precedent": "Défiler vers le passé",
+      "suivant": "Défiler vers l'avenir",
+      "presets": "Préréglages de la vue",
+      "preset": {
+        "world": "Le monde",
+        "era": "Une ère",
+        "century": "Un siècle",
+        "life": "Une vie"
+      },
+      "centrer": "◎ Centrer sur aujourd'hui",
+      "centrerSans": "Aucun jour actuel n'est réglé dans le calendrier.",
+      "eres": "Ères…",
+      "evenement": "+ Événement",
+      "voirJoueurs": "Voir comme les joueurs",
+      "voirMj": "Revenir à la vue du MJ",
+      "recherche": "Rechercher",
+      "rechercheLabel": "Rechercher un événement",
+      "tousGenres": "Tous les genres",
+      "toutesFiches": "Toutes les fiches",
+      "filtreGenre": "Filtrer par genre",
+      "filtreFiche": "Filtrer par fiche"
+    },
+    "vueJoueurs": "Vue des joueurs : les dates réservées au MJ n'y figurent pas.",
+    "carte": {
+      "portee": {
+        "major": "Monde",
+        "notable": "Région",
+        "detail": "Détail"
+      },
+      "porteeLabel": "Portée de « {titre} » : {portee}. Toucher pour passer à {suivante}.",
+      "source": {
+        "world": "Frise générale",
+        "entity": "Depuis la fiche de {nom}",
+        "birth": "Naissance",
+        "death": "Mort"
+      },
+      "ouvrir": "Ouvrir le détail de « {titre} »",
+      "visibilite": "« {titre} »"
+    },
+    "detail": {
+      "titre": "Détail de l'événement",
+      "sansResume": "Pas de résumé.",
+      "fermer": "Fermer",
+      "faireFiche": "→ en faire une fiche",
+      "faireFicheEnCours": "Création…",
+      "voirFiche": "Voir la fiche",
+      "erreurFiche": "Impossible d'en faire une fiche.",
+      "erreurPortee": "Impossible de changer la portée.",
+      "erreurVisibilite": "Impossible de changer la visibilité.",
+      "conflit": "Cette chronologie a changé entre-temps : la frise est relue, recommencez."
+    },
+    "form": {
+      "titre": "Nouvel événement",
+      "date": "Date (calendrier du monde)",
+      "genre": "Genre",
+      "titreLabel": "Titre",
+      "titrePlaceholder": "Titre de l'événement",
+      "resume": "Résumé (facultatif)",
+      "visibilite": "Visibilité",
+      "portee": "Portée",
+      "porteeAuto": "Selon le genre",
+      "dans": "Dans",
+      "friseGenerale": "La frise générale",
+      "ajouter": "Ajouter",
+      "enCours": "Ajout…",
+      "annuler": "Annuler",
+      "erreur": "Impossible d'ajouter l'événement."
+    },
+    "eres": {
+      "titre": "Ères",
+      "aide": "Les mêmes ères que l'outil Calendrier.",
+      "nom": "Nom de l'ère",
+      "debut": "Année de début de l'ère {nom}",
+      "plage": "de l'an {debut} à l'an {fin}",
+      "plageOuverte": "depuis l'an {debut}",
+      "supprimer": "Supprimer l'ère {nom}",
+      "ajouter": "+ Ajouter une ère",
+      "nouvelle": "Nouvelle ère",
+      "enregistrer": "Enregistrer",
+      "enCours": "Enregistrement…",
+      "nonEnregistre": "Modifications non enregistrées",
+      "toutEnregistre": "Tout est enregistré",
+      "aucune": "Aucune ère.",
+      "fermer": "Fermer le panneau des ères",
+      "erreur": "Impossible d'enregistrer les ères."
+    }
+  },
   "creation": {
     "etapesAria": "Étapes de la création",
     "equip": {
