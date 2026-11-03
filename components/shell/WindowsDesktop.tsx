@@ -9,6 +9,8 @@ import { RESERVE_BARRE } from "./BarreFlottante";
 import { useDesktop } from "./DesktopContext";
 import { useDesktopWindowsState } from "./DesktopWindowsProvider";
 import { useMatchMedia, WINDOWS_MOBILE_QUERY } from "./useMatchMedia";
+import PanneauRenvoi from "./PanneauRenvoi";
+import { estFenetreEtroite } from "@/lib/ui/fenetreEtroite";
 
 /**
  * Zone de travail d'une section (ADR-0011, ADR-0066) : monte a la fois par
@@ -25,7 +27,16 @@ import { useMatchMedia, WINDOWS_MOBILE_QUERY } from "./useMatchMedia";
  * large (requete de CONTENEUR : la fenetre, pas l'ecran), la colonne se reduit
  * a un bouton ☰ qui ouvre le sommaire en tiroir. Sur telephone, rien ne change.
  */
-export default function WindowsDesktop({ children, sommaire }: { children: React.ReactNode; sommaire?: React.ReactNode }) {
+export default function WindowsDesktop({
+  children,
+  sommaire,
+  worldSlug,
+}: {
+  children: React.ReactNode;
+  sommaire?: React.ReactNode;
+  /** Pour le panneau de renvoi (fenetre etroite) ; requis avec `sommaire`. */
+  worldSlug?: string;
+}) {
   const desktop = useDesktop();
   const pathname = usePathname();
   const state = useDesktopWindowsState();
@@ -34,6 +45,18 @@ export default function WindowsDesktop({ children, sommaire }: { children: React
   const refZone = useCallback((el: HTMLDivElement | null) => enregistrerZone?.(el), [enregistrerZone]);
   const t = useTranslations("regles");
   const [tiroirOuvert, setTiroirOuvert] = useState(false);
+  const [conteneur, setConteneur] = useState<HTMLDivElement | null>(null);
+  const fixerEtroit = state?.fixerEtroit;
+
+  // V3.1-95 : largeur du CONTENEUR (pas de l'ecran), meme seuil que le tiroir ☰ ;
+  // l'observateur rappelle une premiere fois des l'observation.
+  useEffect(() => {
+    if (!conteneur || !fixerEtroit) return;
+    const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+    const observer = new ResizeObserver(() => fixerEtroit(estFenetreEtroite(conteneur.getBoundingClientRect().width, rem)));
+    observer.observe(conteneur);
+    return () => observer.disconnect();
+  }, [conteneur, fixerEtroit]);
 
   // Echap referme le tiroir du sommaire (fenetre etroite).
   useEffect(() => {
@@ -89,7 +112,7 @@ export default function WindowsDesktop({ children, sommaire }: { children: React
   if (!sommaire) return zone;
 
   return (
-    <div className="@container relative flex min-h-0 flex-1 overflow-hidden">
+    <div ref={setConteneur} className="@container relative flex min-h-0 flex-1 overflow-hidden">
       {/* z-50 : au-dessus de la couche des volets (fixed, z-40), pour que le ☰
           et le tiroir restent atteignables quand une fiche couvre la zone. */}
       <div className="relative z-50 shrink-0 @max-[48rem]:w-11 w-[250px]">
@@ -105,7 +128,10 @@ export default function WindowsDesktop({ children, sommaire }: { children: React
         <div
           // Un clic sur un lien (regle, formulaire, bac a sable) referme le tiroir.
           onClick={(e) => {
-            if (e.target instanceof Element && e.target.closest("a")) setTiroirOuvert(false);
+            if (e.target instanceof Element && e.target.closest("a")) {
+              setTiroirOuvert(false);
+              state.fermerRenvoi();
+            }
           }}
           className={`${tiroirOuvert ? "flex" : "hidden @[48rem]:flex"} h-full w-[250px] @max-[48rem]:absolute @max-[48rem]:left-0 @max-[48rem]:top-0 @max-[48rem]:shadow-[20px_0_40px_-20px_rgba(0,0,0,.7)]`}
         >
@@ -113,6 +139,9 @@ export default function WindowsDesktop({ children, sommaire }: { children: React
         </div>
       </div>
       {zone}
+      {state.etroit && state.renvoi && worldSlug && (
+        <PanneauRenvoi worldSlug={worldSlug} data={state.renvoi.data} onFermer={state.fermerRenvoi} />
+      )}
     </div>
   );
 }

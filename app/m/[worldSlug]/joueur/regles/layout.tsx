@@ -18,7 +18,7 @@ export default async function JoueurReglesLayout({
   const { worldSlug } = await params;
 
   return <TwoPaneReaderLayout
-      sidebar={<PlayerRulesSidebar worldSlug={worldSlug} />}
+      sidebar={<PlayerRulesSidebar worldSlug={worldSlug} sommaire />}
       recents={{ worldSlug, espace: "joueur-regles" }}
     >
       {children}

@@ -6,7 +6,7 @@ import { useOpenRuleLink } from "@/components/shell/useOpenRuleLink";
 
 /**
  * Renvoi vers une règle (V3.1-94) : un toucher l'ouvre dans le volet de droite
- * (V3.1-20, `?avec=`), sans changer la règle du volet principal. Hors bureau
+ * (V3.1-20, `?avec=`), ou en panneau opaque de 340 px quand la fenêtre est étroite (V3.1-95), sans changer la règle du volet principal. Hors bureau
  * (téléphone, page du joueur), c'est un lien ordinaire vers la page de la règle.
  * `chemin` (renvoi entrant) ajoute `?path=` au lien ordinaire seulement.
  */
@@ -29,7 +29,7 @@ export default function LienRegle({
   dataRefPath?: string;
   children: ReactNode;
 }) {
-  const lien = useOpenRuleLink(worldSlug, ruleKey);
+  const lien = useOpenRuleLink(worldSlug, ruleKey, { renvoi: true });
   const href = chemin ? `/m/${worldSlug}/regles/${ruleKey}?path=${encodeURIComponent(chemin)}` : `/m/${worldSlug}/regles/${ruleKey}`;
   return (
     <Link

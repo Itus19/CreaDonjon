@@ -20,6 +20,7 @@ export function RuleEntryLink({
   onNavigate,
   nested,
   disambiguation,
+  base,
 }: {
   entry: RuleEntrySummary;
   worldSlug: string;
@@ -28,13 +29,15 @@ export function RuleEntryLink({
   nested?: boolean;
   /** Nom de classe affiché en retrait sous le nom (ticket #57) — seulement pour les Aptitudes dont le nom est partagé par plusieurs classes. */
   disambiguation?: string;
+  /** Page du joueur (V3.1-95) : lien ordinaire vers `<base>/<clé>`, jamais une fenêtre. */
+  base?: string;
 }) {
   const link = useOpenRuleLink(worldSlug, entry.key);
   return (
     <Link
-      href={link.href}
+      href={base ? `${base}/${entry.key}` : link.href}
       onClick={(e) => {
-        link.onClick(e);
+        if (!base) link.onClick(e);
         onNavigate?.();
       }}
       aria-current={entry.key === currentKey ? "page" : undefined}
@@ -69,6 +72,7 @@ export function RuleTypeGroup({
   collapsed,
   onToggle,
   afficherNombre = false,
+  base,
 }: {
   entryType: string;
   items: RuleEntrySummary[];
@@ -82,6 +86,8 @@ export function RuleTypeGroup({
   onToggle: () => void;
   /** V3.1-93 : le sommaire de la fenêtre montre le nombre de fiches (sous-classes et sous-espèces comprises) ; la feuille du téléphone, non. */
   afficherNombre?: boolean;
+  /** Page du joueur : liens ordinaires vers `<base>/<clé>`. */
+  base?: string;
 }) {
   const t = useTranslations("shell");
   const tRegles = useTranslations("regles");
@@ -122,6 +128,7 @@ export function RuleTypeGroup({
                 worldSlug={worldSlug}
                 currentKey={currentKey}
                 onNavigate={onNavigate}
+                base={base}
                 disambiguation={
                   duplicateNames?.has(entry.name) && entry.parentClassKey
                     ? classNameByKey?.get(entry.parentClassKey)
@@ -129,7 +136,7 @@ export function RuleTypeGroup({
                 }
               />
               {childrenByParent?.get(entry.key)?.map((sub) => (
-                <RuleEntryLink key={sub.key} entry={sub} worldSlug={worldSlug} currentKey={currentKey} onNavigate={onNavigate} nested />
+                <RuleEntryLink key={sub.key} entry={sub} worldSlug={worldSlug} currentKey={currentKey} onNavigate={onNavigate} nested base={base} />
               ))}
             </li>
           ))}
@@ -218,7 +225,7 @@ export function useGroupesRegles(entries: RuleEntrySummary[], query: string) {
 }
 
 /** Une pastille de « Récemment » : une règle s'ouvre comme depuis la liste (volet), tout autre lien navigue. */
-function PastilleRecente({ worldSlug, href, titre }: { worldSlug: string; href: string; titre: string }) {
+function PastilleRecente({ worldSlug, href, titre, joueur }: { worldSlug: string; href: string; titre: string; joueur?: boolean }) {
   const cle = href.match(/\/regles\/([^/]+)$/)?.[1];
   const link = useOpenRuleLink(worldSlug, cle ? decodeURIComponent(cle) : "");
   return (
@@ -226,7 +233,7 @@ function PastilleRecente({ worldSlug, href, titre }: { worldSlug: string; href: 
       href={href}
       prefetch={false}
       onClick={(e) => {
-        if (cle) link.onClick(e);
+        if (cle && !joueur) link.onClick(e);
       }}
       className="max-w-full truncate rounded-full border border-edge px-2 py-px text-xs text-ink-soft transition-colors hover:bg-panel-raised hover:text-ink"
     >
@@ -242,15 +249,19 @@ function PastilleRecente({ worldSlug, href, titre }: { worldSlug: string; href: 
  * nombre de fiches, puis en pied les menus « Ajouter une règle » et
  * « Bacs à sable ». Chaque geste ouvre sa fiche en volet (`useOpenRuleLink`,
  * `useOpenRuleToolLink`), comme l'ancienne barre.
+ *
+ * `joueur` (V3.1-95) : la page du joueur, sans fenêtre. Même sommaire (recherche,
+ * « Récemment » de l'espace `joueur-regles`, catégories) mais sans « Ajouter »
+ * ni bacs à sable, et des liens ordinaires vers `/joueur/regles/<clé>`.
  */
-export default function SommaireRegles({ worldSlug }: { worldSlug: string }) {
+export default function SommaireRegles({ worldSlug, joueur = false }: { worldSlug: string; joueur?: boolean }) {
   const entries = useWorldRuleEntries(worldSlug);
   const t = useTranslations("regles");
   const tLecteur = useTranslations("lecteur");
   const [query, setQuery] = useState("");
   const { isCollapsed, toggle } = useCollapsedGroups(`creadonjon:collapsed:rules:${worldSlug}`);
   const currentKey = useCleRegleCourante();
-  const recents = useRecents(worldSlug, "mj-regles");
+  const recents = useRecents(worldSlug, joueur ? "joueur-regles" : "mj-regles");
   const { groups, subclassesByParent, subspeciesByParent, classNameByKey } = useGroupesRegles(entries, query);
 
   // Fenetres de creation de regle et bacs a sable : memes hooks que l'ancienne
@@ -263,10 +274,11 @@ export default function SommaireRegles({ worldSlug }: { worldSlug: string }) {
   const openBacASable = useOpenRuleToolLink(worldSlug, "bac-a-sable");
   const openBacASableDeclencheurs = useOpenRuleToolLink(worldSlug, "bac-a-sable-declencheurs");
 
+  const base = joueur ? `/m/${worldSlug}/joueur/regles` : undefined;
   const recentes = query.trim() === "" ? recents.slice(0, 5) : [];
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-col gap-2 border-r border-edge bg-panel-sunken px-2.5 py-3">
+    <div className={`flex h-full min-h-0 w-full flex-col gap-2 ${joueur ? "" : "border-r border-edge bg-panel-sunken px-2.5 py-3"}`}>
       <input
         value={query}
         onChange={(e) => setQuery(e.target.value)}
@@ -281,7 +293,7 @@ export default function SommaireRegles({ worldSlug }: { worldSlug: string }) {
             <h2 className="px-1 text-xs font-semibold uppercase tracking-wide text-ink-muted">{tLecteur("recemment")}</h2>
             <div className="flex flex-wrap gap-1">
               {recentes.map((r) => (
-                <PastilleRecente key={r.href} worldSlug={worldSlug} href={r.href} titre={r.titre} />
+                <PastilleRecente key={r.href} worldSlug={worldSlug} href={r.href} titre={r.titre} joueur={joueur} />
               ))}
             </div>
           </section>
@@ -299,10 +311,12 @@ export default function SommaireRegles({ worldSlug }: { worldSlug: string }) {
             collapsed={isCollapsed(entryType)}
             onToggle={() => toggle(entryType)}
             afficherNombre
+            base={base}
           />
         ))}
       </nav>
 
+      {!joueur && (
       <div className="flex shrink-0 flex-col gap-1.5 border-t border-edge pt-2">
         <AddRuleMenu
           label={t("ajouterUneRegleMenu")}
@@ -323,6 +337,7 @@ export default function SommaireRegles({ worldSlug }: { worldSlug: string }) {
           ]}
         />
       </div>
+      )}
     </div>
   );
 }

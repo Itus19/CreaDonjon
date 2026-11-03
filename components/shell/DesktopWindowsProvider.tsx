@@ -57,6 +57,12 @@ export interface DesktopWindowsState {
   deplacerOnglet: (id: string, vers: 0 | 1) => void;
   fixerPartage: (pourcent: number) => void;
   basculerAgrandi: (volet: number) => void;
+  /** V3.1-95 : la zone des règles est plus étroite que 48 rem (mesure de `WindowsDesktop`, requête de conteneur). */
+  etroit: boolean;
+  fixerEtroit: (etroit: boolean) => void;
+  /** Le renvoi ouvert en panneau de 340 px (fenêtre étroite seulement), avec sa fiche une fois chargée. */
+  renvoi: { ref: WindowRef; data: RuleEntryDetail | undefined } | null;
+  fermerRenvoi: () => void;
 }
 
 /**
@@ -100,6 +106,8 @@ export default function DesktopWindowsProvider({
   const [voletAgrandi, setVoletAgrandi] = useState<number | null>(null);
   const [zone, setZone] = useState<HTMLElement | null>(null);
   const [emplacementPrimaire, setEmplacementPrimaire] = useState<HTMLElement | null>(null);
+  const [etroit, setEtroit] = useState(false);
+  const [renvoiRef, setRenvoiRef] = useState<WindowRef | null>(null);
 
   useEffect(() => {
     function onPopState() {
@@ -165,6 +173,26 @@ export default function DesktopWindowsProvider({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [avecRefsKey, worldSlug]);
 
+  // V3.1-95 : la fiche d'un renvoi ouvert en panneau se charge par la meme
+  // route que celle d'une fenetre (`/window`), et se garde dans le meme cache.
+  useEffect(() => {
+    if (!renvoiRef) return;
+    const id = refId(renvoiRef);
+    if (fetchedRef.current.has(id)) return;
+    fetchedRef.current.add(id);
+    fetch(windowDataUrl(worldSlug, renvoiRef))
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: RuleEntryDetail | null) => {
+        if (data) setAvecData((prev) => ({ ...prev, [id]: data }));
+        // Echec : on retente a la prochaine ouverture plutot que de rester sur « Chargement ».
+        else fetchedRef.current.delete(id);
+      })
+      .catch((erreur: unknown) => {
+        console.error("Chargement du renvoi de règle impossible", erreur);
+        fetchedRef.current.delete(id);
+      });
+  }, [renvoiRef, worldSlug]);
+
   /** Ecrit `avec` ET `volets` dans une seule URL, sans aller-retour serveur. */
   function ecrireFenetres(nextAvec: WindowRef[], nextDispo: Disposition) {
     const params = new URLSearchParams(window.location.search);
@@ -227,6 +255,14 @@ export default function DesktopWindowsProvider({
     );
   }
 
+  /** Un renvoi : panneau opaque en fenetre etroite, volet de droite sinon (V3.1-20). */
+  function ouvrirRenvoi(ref: WindowRef) {
+    if (etroit && ref.kind === "rule") setRenvoiRef(ref);
+    else openRef(ref);
+  }
+
+  const renvoi = renvoiRef ? { ref: renvoiRef, data: avecData[refId(renvoiRef)] as RuleEntryDetail | undefined } : null;
+
   const avecWindows: AvecWindowEntry[] = avecRefs.map((ref) => ({ ref, data: avecData[refId(ref)] }));
 
   const state: DesktopWindowsState = {
@@ -243,10 +279,14 @@ export default function DesktopWindowsProvider({
     deplacerOnglet: (id, vers) => ecrireDispo(deplacer(disposition, id, vers)),
     fixerPartage: (pourcent) => ecrireDispo(fixerPartageDisposition(disposition, pourcent)),
     basculerAgrandi: (volet) => setVoletAgrandi((prev) => (prev === volet ? null : volet)),
+    etroit,
+    fixerEtroit: setEtroit,
+    renvoi,
+    fermerRenvoi: () => setRenvoiRef(null),
   };
 
   return (
-    <DesktopContext.Provider value={{ openRef, registerPrimary }}>
+    <DesktopContext.Provider value={{ openRef, ouvrirRenvoi, registerPrimary }}>
       <DesktopWindowsStateContext.Provider value={state}>{children}</DesktopWindowsStateContext.Provider>
     </DesktopContext.Provider>
   );

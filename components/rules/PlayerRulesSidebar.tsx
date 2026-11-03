@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useWorldRuleEntries } from "@/components/blocks/useWorldRuleEntries";
+import { useMatchMedia, WINDOWS_MOBILE_QUERY } from "@/components/shell/useMatchMedia";
+import SommaireRegles from "@/components/rules/SommaireRegles";
 
 /**
  * Polarite inversee de `useCollapsedGroups.ts` (retour utilisateur : "par
@@ -68,7 +70,15 @@ function useExpandedGroups(storageKey: string) {
  * GROUPES par leur libelle affiche (pas leur cle brute `entryType`, qui ne
  * suit pas le meme alphabet une fois traduite).
  */
-export default function PlayerRulesSidebar({ worldSlug }: { worldSlug: string }) {
+export default function PlayerRulesSidebar({ worldSlug, sommaire = false }: { worldSlug: string; sommaire?: boolean }) {
+  const telephone = useMatchMedia(WINDOWS_MOBILE_QUERY);
+  // V3.1-95 : sur ordinateur, la page du joueur reprend le sommaire du MJ (sans
+  // « Ajouter » ni bacs à sable). Sur téléphone, la feuille garde sa liste (V3.1-30).
+  if (sommaire && !telephone) return <SommaireRegles worldSlug={worldSlug} joueur />;
+  return <ListeReglesJoueur worldSlug={worldSlug} />;
+}
+
+function ListeReglesJoueur({ worldSlug }: { worldSlug: string }) {
   const entries = useWorldRuleEntries(worldSlug);
   const tRegles = useTranslations("regles");
   const entryTypeLabels = tRegles.raw("entryTypes") as Record<string, string>;

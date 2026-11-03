@@ -32,6 +32,8 @@ export interface PrimaryWindowInfo {
 export interface DesktopContextValue {
   /** Ouvre une reference (entite ou regle) : fenetre supplementaire si une fiche est deja la fenetre primaire, sinon navigation normale. */
   openRef: (ref: WindowRef) => void;
+  /** V3.1-95 : ouvre un renvoi de règle — panneau opaque de 340 px en fenêtre étroite, sinon comme `openRef`. */
+  ouvrirRenvoi: (ref: WindowRef) => void;
   /** Marqueur pose par la fiche actuellement routee (ADR-0011) — jamais appele pour une fenetre secondaire. */
   registerPrimary: (info: PrimaryWindowInfo | null) => void;
 }

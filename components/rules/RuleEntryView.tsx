@@ -13,11 +13,13 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import { clearWorldRuleEntriesCache } from "@/components/blocks/useWorldRuleEntries";
 import HomebrewEditForm, { isEditableHomebrewType } from "@/components/rules/HomebrewEditForm";
 import ActionsMenu, { type ActionsMenuItem } from "@/components/shared/ActionsMenu";
+import { RAW_DATA_BLOCK_TYPES } from "@/src/core/rules/ruleForReader";
 import { creerVersionMaison, epinglerRegle } from "@/lib/ui/regleApi";
 import { entreesMenuRegle, estModifieeDansVariante, lienRegleWiki } from "@/lib/ui/regleEcran";
 
-/** Coquille joueur (retour utilisateur : "les blocs de données brutes SRD ne sont pas visibles par défaut" — puis, sur un `<details>` replie : "le titre... est toujours visible") — retires ENTIEREMENT pour un joueur (jamais juste replies, un `<summary>` reste visible par nature), toujours visibles pour le MJ. Tables techniques telles quelles, jamais mises en recit — le contenu narratif (description, traits, actions...) n'est jamais concerne. */
-const RAW_DATA_BLOCK_TYPES = new Set(["custom_table", "class_progression", "spellcasting_progression"]);
+// Les blocs de donnees brutes sont deja retires par le serveur pour un joueur
+// (V3.1-95, `ruleEntryForPlayer`) ; ce filtre reste en ceinture pour les fiches
+// jouables et n'est jamais la barriere de securite.
 
 /**
  * Contenu d'une fiche de regle, partage entre le rendu serveur de la
@@ -34,7 +36,7 @@ export default function RuleEntryView({
 }: {
   entry: RuleEntryDetail;
   worldSlug: string;
-  /** Coquille joueur — voir `RAW_DATA_BLOCK_TYPES` ci-dessus. */
+  /** Coquille joueur : ni ⋮, ni bascule, ni données brutes ; badge « Règle de la table ». */
   playerRestricted?: boolean;
 }) {
   const t = useTranslations("regles");
@@ -140,6 +142,11 @@ export default function RuleEntryView({
                 title={t("referencePersonnelleFicheTitre")}
               >
                 {t("referencePersonnelle")}
+              </span>
+            )}
+            {playerRestricted && entry.tableRule && (
+              <span className="whitespace-nowrap rounded-full border border-accent/60 px-2 py-0.5 text-[10px] font-medium text-accent">
+                {t("regleDeLaTable")}
               </span>
             )}
             {!playerRestricted && modifieeDansVariante && (
