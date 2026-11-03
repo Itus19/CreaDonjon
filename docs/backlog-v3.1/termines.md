@@ -3167,3 +3167,15 @@ Opus : le filtrage côté serveur (faille trouvée en préparant le ticket) ; `d
 - **Catalogue** : vue joueur dans « Frise du monde » (`WikiVisuel`), entrée du rail joueur (`Navigation`), version 86.
 
 *Restes* : glisser ne part pas d'une carte (seulement du fond de la scène) ; l'accueil du Wiki joueur au téléphone n'a pas de planche.
+
+### V3.1-129 — Le noyau des règles jouables (3 novembre)
+
+Opus, tests d'abord ; planche par `aide-haiku`.
+- **Blocs de règle** (`src/core/schemas/rule-blocks/playable.ts`, ADR 0060) : `resources`, `activation` (avec `durable_effects`, variantes, jetons ; un `apply_effect` qui vise un effet absent du bloc est refusé), `coverage`. `apply_effect` rejoint `EffectNode`, `ResolvedEffect` et `zEffect` ; `resolveEffectList` résout une liste sans chaîne de déclencheurs. Le tour (`turn.ts`) rapporte un `apply_effect` comme non posé, jamais en silence.
+- **Fiche** : `characterSheet().resources`, calculées depuis les aptitudes (`ResolvedFeature.resources`) et les objets équipés (liés s'ils le demandent). Références : `level`, `class.level` et `column.<clé>` (classe qui accorde, dernière ligne de progression atteinte), `proficiency`, `ability.*`, `spell_save_dc`. Même clé deux fois : le plus grand maximum. Formule incalculable : 0 et un avertissement. Le serveur fournit ressources et colonnes (`progressionColumns`) sans requête de plus.
+- **Fonctions pures** : `planActivation` (prérequis, ressources tout ou rien avant le moindre dé, cibles, budget payé sans bloquer, effets par cible, effets qui durent ancrés) ; `expireEffects` (début de tour de la source, fin de tour, repos et avance du temps — un repos fait passer 1 h ou 8 h —, événements, concentration, « au choix ») ; `consumeToken` ; `coverageState` ; `activeEffectsForSheet` (couche 7).
+- **Recharge des créatures** : `creatureRecharge.ts` (lecture du seuil dans le nom ou le texte, clé stable, d6) ; migration `20261103120000` (`combat_participants.resources_used`) ; d6 du serveur au début du tour de l'instance et par « Recharge d6 » (`POST …/participants/[id]/recharge`), journalisé et annulable ; fiche de créature : pastille Prête / Dépensée, bouton Recharge d6, pastilles estompées.
+- **Vérifié** : critères en tests (Paladin 9 → 2 Conduits divins, Abjuration à `Rng` fixe, Effrayé aux dégâts et à 10 rounds, jeton, refus sans ressource, recharge par instance) ; contre la base (`creatureCombat.integration.test.ts`, 2/2 : instance par instance, d6 à 3 puis 5, annulation, jet au début du tour) ; au navigateur (MJ du banc d'essai, deux dragonnets). Données de test supprimées.
+- **Catalogue** : « Fiche de créature » (`OutilsMJ`), version 87.
+
+*Restes* : le jet de recharge est noté au journal du combat, pas dans `dice_rolls` ; le service `activateFeature` et les effets actifs en base viennent avec V3.1-130 ; les données du SRD (Conduit divin, etc.) avec V3.1-133.

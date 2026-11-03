@@ -12,7 +12,7 @@
 
 ## La fondation (ADR 0060)
 
-### ☐ V3.1-129 — Le noyau : ressources déclarées, activation, effets qui durent · `L` · sans modèle IA — **prêt (Opus)**
+### ☑ V3.1-129 — Le noyau : ressources déclarées, activation, effets qui durent · `L` · sans modèle IA — **prêt (Opus)**
 
 *Reçu de V3.1-113 (13 octobre)* : la recharge partielle `short_rest_one` existe (noyau `rechargeTrackers`) ; les ressources déclarées par les règles l'utiliseront pour Rage, Conduit divin, Forme sauvage, Second souffle, et `long_rest` par niveau pour l'Arcanum mystique.
 
