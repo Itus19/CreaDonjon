@@ -198,9 +198,9 @@ code{font-family:'Geist Mono',ui-monospace,monospace;font-size:0.92em}
 <section id="frise-monde" class="flex scroll-mt-28 flex-col gap-4 rounded-2xl border border-edge bg-panel p-6">
 <div class="flex flex-wrap items-baseline justify-between gap-3">
 <h2 class="font-display text-2xl font-bold text-ink">Frise du monde (Chronologie, MJ)</h2>
-<span class="text-xs text-ink-muted">components/shell/WorldTimelineView.tsx · components/shell/frise/ · lib/ui/frise.ts</span>
+<span class="text-xs text-ink-muted">components/shell/WorldTimelineView.tsx · components/shell/frise/ · lib/ui/frise.ts · app/m/[worldSlug]/joueur/chronologie/page.tsx</span>
 </div>
-<p class="max-w-3xl text-sm text-ink-soft">Un fleuve horizontal d'événements : les ères en bandeaux, « Aujourd'hui » en trait doré. Les cartes alternent au-dessus et au-dessous de l'axe, reliées par une tige ; chacune donne le genre, la date, le titre (lien si fiche), la provenance et, pour le MJ, la pastille de visibilité et la pastille de portée au toucher. La barre « Vue : 60 ans · tout, jusqu'aux naissances » règle l'étendue (seuils 120 et 500 ans : au-delà de 120 ans les détails se cachent, au-delà de 500 seules les grandes dates), avec « n de plus en zoomant » ; − / +, préréglages Le monde / Une ère / Un siècle / Une vie, « ◎ Centrer sur aujourd'hui » (grisé sans jour actuel), ‹ ›. Filtres genre, fiche et recherche. Gestes : molette (défile), Ctrl + molette (zoom), glisser, pincer. En-tête : « Voir comme les joueurs » (bandeau « Vue des joueurs : les dates réservées au MJ n'y figurent pas. », filtré par le serveur), « Ères… » (panneau latéral, tiroir en fenêtre étroite), « + Événement » (formulaire au-dessus de la frise). Toucher une carte ouvre son détail sous la frise, avec « → en faire une fiche ».</p>
+<p class="max-w-3xl text-sm text-ink-soft">Un fleuve horizontal d'événements : les ères en bandeaux, « Aujourd'hui » en trait doré. Les cartes alternent au-dessus et au-dessous de l'axe, reliées par une tige ; chacune donne le genre, la date, le titre (lien si fiche), la provenance et, pour le MJ, la pastille de visibilité et la pastille de portée au toucher. La barre « Vue : 60 ans · tout, jusqu'aux naissances » règle l'étendue (seuils 120 et 500 ans : au-delà de 120 ans les détails se cachent, au-delà de 500 seules les grandes dates), avec « n de plus en zoomant » ; − / +, préréglages Le monde / Une ère / Un siècle / Une vie, « ◎ Centrer sur aujourd'hui » (grisé sans jour actuel), ‹ ›. Filtres genre, fiche et recherche. Gestes : molette (défile), Ctrl + molette (zoom), glisser, pincer. En-tête : « Voir comme les joueurs » (bandeau « Vue des joueurs : les dates réservées au MJ n'y figurent pas. », filtré par le serveur), « Ères… » (panneau latéral, tiroir en fenêtre étroite), « + Événement » (formulaire au-dessus de la frise). Toucher une carte ouvre son détail sous la frise, avec « → en faire une fiche ». Vue joueur sur <code>/joueur/chronologie</code> (V3.1-99) : la même frise, seulement les dates que le joueur peut voir (filtrées par le serveur), sans « Ères… », « + Événement », « Voir comme les joueurs », pastilles ni « → en faire une fiche » ; les liens d'une carte mènent à <code>/joueur/wiki/&lt;fiche&gt;</code>. Sous 768 px, les préréglages (Le monde, Une ère, Un siècle, Une vie) passent en pilules centrées sous la frise.</p>
 <div class="flex flex-wrap gap-x-6 gap-y-1 text-xs text-ink-muted"><span>Mouvement : <span class="text-ink">couleurs, 150 ms (<code>transition-colors</code>) ; les positions se recalculent</span></span></div>
 <div class="flex flex-col gap-3 rounded-xl border border-edge/60 bg-panel p-3" style="max-width: 760px">
 <div class="flex flex-wrap items-center justify-between gap-2">
@@ -291,7 +291,7 @@ code{font-family:'Geist Mono',ui-monospace,monospace;font-size:0.92em}
 </main>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":8560}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":8640}}'>
 class Component extends DCLogic {
   constructor(props) {
     super(props);

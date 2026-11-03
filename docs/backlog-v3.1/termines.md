@@ -3155,3 +3155,15 @@ Opus : le filtrage côté serveur (faille trouvée en préparant le ticket) ; `d
 - **Catalogue** : section « Frise du monde » de `WikiVisuel` (version 85).
 
 *Restes* : « Dans : une fiche » ne propose que les fiches qui ont déjà une chronologie ; la visibilité relit tout le bloc (deux allers-retours) ; enregistrer des ères n'a pas été essayé au navigateur (route existante).
+
+### V3.1-99 — Chronologie : la page des joueurs (3 novembre)
+
+`dev-sonnet` : la page et le rail ; Opus : le test serveur et un correctif.
+- **Page** : `app/m/[worldSlug]/joueur/chronologie/page.tsx`, la frise du 98 avec `estMj={false}` ; le serveur ne renvoie que les dates visibles du lecteur. Route hors de `/joueur/wiki/` : une fiche nommée « chronologie » y serait masquée.
+- **Accès** : rail du joueur (`PlayerShell`, après Wiki, icône `frise`) ; au téléphone, lien « Chronologie › » en tête de l'accueil du Wiki ; préréglages en pilules sous la frise sous 768 px (frise du MJ comprise).
+- **Correctif de Sonnet** : les liens d'une carte menaient à la route du MJ (`/f/…`) ; ils mènent au wiki du joueur (`baseFiche`).
+- **Correctif d'Opus** : le formulaire de la frise ne propose plus « Privé » — une date ne retient pas son auteur, le filtre la refusait à tout le monde, MJ compris.
+- **Vérifié** : contre la base (`worldTimeline.integration.test.ts`, 6/6 : la joueuse ne reçoit ni date MJ ni date privée, pas même dans le JSON) ; au navigateur avec la Testeuse A (ordinateur et 390 px : date MJ absente du HTML reçu, aucun outil du MJ, rail actif, lien de l'accueil Wiki, aucun débordement ; au doigt, glisser défile et pincer zoome de 390 à 78 ans). Données de test supprimées.
+- **Catalogue** : vue joueur dans « Frise du monde » (`WikiVisuel`), entrée du rail joueur (`Navigation`), version 86.
+
+*Restes* : glisser ne part pas d'une carte (seulement du fond de la scène) ; l'accueil du Wiki joueur au téléphone n'a pas de planche.

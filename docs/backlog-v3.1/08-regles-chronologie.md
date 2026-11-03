@@ -219,7 +219,7 @@ exemples.
 
 ---
 
-### ☐ V3.1-99 — Chronologie : la page des joueurs · `S` · sans modèle IA — **prêt**
+### ☑ V3.1-99 — Chronologie : la page des joueurs · `S` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Sonnet.**
 
