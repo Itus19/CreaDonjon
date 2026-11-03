@@ -75,4 +75,12 @@ describe.skipIf(!hasCreds)("Chronologie du monde (integration, base reelle)", ()
     expect(entries[0].source).toEqual({ kind: "world" });
   });
 
+  it("V3.1-98 : « Voir comme les joueurs » rend au MJ le flux d'une joueuse ; demandé par une joueuse, rien de plus que sa vue", async () => {
+    const mj = await getWorldTimeline(owner.client, worldId, owner.id);
+    expect(mj.entries.map((e) => e.entry.title).sort()).toEqual(["La Grande Guerre", "Le complot"]);
+    const commeJoueurs = await getWorldTimeline(owner.client, worldId, owner.id, { vueJoueurs: true });
+    expect(commeJoueurs.entries.map((e) => e.entry.title)).toEqual(["La Grande Guerre"]);
+    const parJoueuse = await getWorldTimeline(player.client, worldId, player.id, { vueJoueurs: true });
+    expect(parJoueuse.entries.map((e) => e.entry.title)).toEqual(["La Grande Guerre"]);
+  });
 });

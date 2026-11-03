@@ -1,4 +1,5 @@
 import "server-only";
+import { resolveMapViewer } from "@/src/server/services/mapViewer";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import { canSee, filterBlocks, type VisibilityLevel } from "@/src/core/visibility";
@@ -48,12 +49,17 @@ export interface WorldTimelineEntry {
 export async function getWorldTimeline(
   supabase: TypedClient,
   worldId: string,
-  userId: string
+  userId: string,
+  options: { vueJoueurs?: boolean } = {}
 ): Promise<{ entries: WorldTimelineEntry[]; calendar: CalendarConfigInput }> {
+  // V3.1-98 : « Voir comme les joueurs » — le lecteur joueur générique de la
+  // campagne, réservé au MJ (même règle que la carte, V3.1-78) : les dates MJ
+  // sont absentes du flux, pas masquées à l'écran. Refusé : vue du lecteur lui-même.
+  const lecteur = options.vueJoueurs ? await resolveMapViewer(supabase, { worldId, userId, vueJoueurs: true }) : null;
   const [entities, calendar, viewer] = await Promise.all([
     listEntitiesForWorld(supabase, worldId),
     getCalendar(supabase, worldId),
-    buildViewerForWorld(supabase, worldId, userId),
+    lecteur ? Promise.resolve(lecteur.viewer) : buildViewerForWorld(supabase, worldId, userId),
   ]);
   const entityById = new Map<string, EntitySummary>(entities.map((e) => [e.id, e]));
   const rows = await listBlocksByTypesForEntities(
