@@ -73,6 +73,8 @@ describe.skipIf(!hasCreds)("Chronologie du monde (integration, base reelle)", ()
     const { entries } = await getWorldTimeline(player.client, worldId, player.id);
     expect(entries.map((e) => e.entry.title)).toEqual(["La Grande Guerre"]);
     expect(entries[0].source).toEqual({ kind: "world" });
+    // V3.1-98 : le bloc porteur, pour la portée et la promotion.
+    expect(entries[0].block).toMatchObject({ id: expect.any(String), version: expect.any(Number) });
   });
 
   it("V3.1-98 : « Voir comme les joueurs » rend au MJ le flux d'une joueuse ; demandé par une joueuse, rien de plus que sa vue", async () => {

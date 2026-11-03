@@ -36,6 +36,12 @@ export interface WorldTimelineEntry {
   sourceEntitySlug: string;
   /** Slug de l'entite pointee par `entry.ref` (kind "entity"), resolu ici : `entry.ref` ne porte qu'un id, jamais un slug (specs/wiki-blocs.md §3). */
   refEntitySlug: string | null;
+  /**
+   * V3.1-98 : le bloc `timeline` qui porte l'entrée (identifiant et version),
+   * pour changer sa portée ou la promouvoir en fiche ; `null` pour une
+   * naissance ou une mort, tirées d'un bloc `character` et non modifiables ici.
+   */
+  block: { id: string; version: number } | null;
 }
 
 /**
@@ -73,7 +79,7 @@ export async function getWorldTimeline(
   );
 
   const result: WorldTimelineEntry[] = [];
-  const push = (entry: TimelineEntry, source: WorldTimelineSource, sourceEntity: EntitySummary) => {
+  const push = (entry: TimelineEntry, source: WorldTimelineSource, sourceEntity: EntitySummary, block: WorldTimelineEntry["block"]) => {
     result.push({
       entry,
       scope: resolveScope(entry),
@@ -83,6 +89,7 @@ export async function getWorldTimeline(
       sourceEntityName: sourceEntity.name,
       sourceEntitySlug: sourceEntity.slug,
       refEntitySlug: entry.ref?.kind === "entity" ? (entityById.get(entry.ref.id)?.slug ?? null) : null,
+      block,
     });
   };
 
@@ -93,7 +100,7 @@ export async function getWorldTimeline(
       const dates = lifeDatesFromCharacter(block.data);
       const visibility = { level: block.visibility_level as TimelineEntry["visibility"]["level"], scopeId: block.visibility_scope_id };
       for (const entry of lifeEventEntries({ entityId: sourceEntity.id, name: sourceEntity.name, ...dates, visibility })) {
-        push(entry, { kind: entry.kind === "birth" ? "birth" : "death" }, sourceEntity);
+        push(entry, { kind: entry.kind === "birth" ? "birth" : "death" }, sourceEntity, null);
       }
       continue;
     }
@@ -105,7 +112,7 @@ export async function getWorldTimeline(
     const source: WorldTimelineSource = sourceEntity.entity_kind === WORLD_TIMELINE_KIND ? { kind: "world" } : { kind: "entity", blockId: block.id };
     for (const entry of parsed.data.entries) {
       if (!canSee({ level: entry.visibility.level, scopeId: entry.visibility.scopeId, createdBy: null }, viewer)) continue;
-      push(entry, source, sourceEntity);
+      push(entry, source, sourceEntity, { id: block.id, version: block.version });
     }
   }
   result.sort((a, b) => a.sortKey - b.sortKey);
