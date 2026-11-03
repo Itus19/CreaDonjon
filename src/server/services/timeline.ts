@@ -11,7 +11,7 @@ import { lifeDatesFromCharacter } from "@/src/core/genealogy/lifeDates";
 import { getBlockById, listBlocksByTypeForEntities, listBlocksByTypesForEntities, type BlockRow } from "@/src/server/repos/blocks";
 import { getEntityById, listEntitiesByKinds, listEntitiesForWorld, type EntitySummary } from "@/src/server/repos/entities";
 import { createBlock, updateBlockContent, type VisibleBlock } from "@/src/server/services/blocks";
-import { createEntity } from "@/src/server/services/entities";
+import { createEntity, deleteEntity } from "@/src/server/services/entities";
 import { isWorldAdmin } from "@/src/server/services/permissions";
 import { promoteToEntity } from "@/src/server/services/promotion";
 import { getCalendar } from "@/src/server/services/worlds";
@@ -233,6 +233,8 @@ export async function promoteTimelineEntry(
   const entry = parsed.data.entries.find((e) => e.id === params.entryId);
   if (!entry) return { ok: false, reason: "not_found" };
   if (entry.ref) return { ok: false, reason: "already_promoted" };
+  // V3.1-98 : version vérifiée AVANT de créer la fiche — sinon un conflit laissait une fiche orpheline.
+  if (row.version !== params.expectedVersion) return { ok: false, reason: "conflict" };
 
   const hostEntity = await getEntityById(supabase, row.entity_id);
   if (!hostEntity) return { ok: false, reason: "not_found" };
@@ -261,6 +263,11 @@ export async function promoteTimelineEntry(
     visibilityScopeId: row.visibility_scope_id,
     changedBy: params.createdBy,
   });
-  if (!result.ok) return { ok: false, reason: result.reason };
+  if (!result.ok) {
+    // Le bloc a bougé entre la lecture et l'écriture : la fiche créée n'est reliée à rien, on la retire.
+    const retrait = await deleteEntity(supabase, { id: newEntity.id, userId: params.createdBy });
+    if (!retrait.deleted) console.error("Promotion annulée : fiche orpheline non supprimée", newEntity.id, retrait.error);
+    return { ok: false, reason: result.reason };
+  }
   return { ok: true, entity: newEntity, block: result.block };
 }

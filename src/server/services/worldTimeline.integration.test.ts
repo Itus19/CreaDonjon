@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
-import { addTimelineEvent, getWorldTimeline } from "./timeline";
+import { addTimelineEvent, getWorldTimeline, promoteTimelineEntry } from "./timeline";
 import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
 
 /**
@@ -84,5 +84,18 @@ describe.skipIf(!hasCreds)("Chronologie du monde (integration, base reelle)", ()
     expect(commeJoueurs.entries.map((e) => e.entry.title)).toEqual(["La Grande Guerre"]);
     const parJoueuse = await getWorldTimeline(player.client, worldId, player.id, { vueJoueurs: true });
     expect(parJoueuse.entries.map((e) => e.entry.title)).toEqual(["La Grande Guerre"]);
+  });
+
+  it("V3.1-98 : une promotion sur une version périmée est refusée sans laisser de fiche ; à jour, elle relie la date", async () => {
+    const { entries } = await getWorldTimeline(owner.client, worldId, owner.id);
+    const guerre = entries.find((e) => e.entry.title === "La Grande Guerre")!;
+    const compter = async () => (await admin.from("entities").select("id", { count: "exact", head: true }).eq("world_id", worldId).eq("entity_kind", "event")).count;
+    const avant = await compter();
+    const perimee = await promoteTimelineEntry(owner.client, { blockId: guerre.block!.id, entryId: guerre.entry.id, expectedVersion: guerre.block!.version - 1, createdBy: owner.id });
+    expect(perimee).toEqual({ ok: false, reason: "conflict" });
+    expect(await compter()).toBe(avant);
+    const ok = await promoteTimelineEntry(owner.client, { blockId: guerre.block!.id, entryId: guerre.entry.id, expectedVersion: guerre.block!.version, createdBy: owner.id });
+    expect(ok.ok).toBe(true);
+    expect(await compter()).toBe((avant ?? 0) + 1);
   });
 });
