@@ -31,7 +31,7 @@ export const TIGE = 36;
 export default function FriseCarte({
   item,
   calendrier,
-  worldSlug,
+  baseFiche,
   x,
   cote,
   hauteurStade,
@@ -45,7 +45,8 @@ export default function FriseCarte({
 }: {
   item: WorldTimelineEntry;
   calendrier: CalendarConfigInput;
-  worldSlug: string;
+  /** Début de l'adresse d'une fiche : `/m/<monde>/f` pour le MJ, `/m/<monde>/joueur/wiki` pour un joueur. */
+  baseFiche: string;
   x: number;
   cote: "above" | "below";
   hauteurStade: number;
@@ -68,7 +69,7 @@ export default function FriseCarte({
   const provenance =
     item.source.kind === "entity" ? (
       <a
-        href={`/m/${worldSlug}/f/${item.sourceEntitySlug}`}
+        href={`${baseFiche}/${item.sourceEntitySlug}`}
         onClick={(e) => e.stopPropagation()}
         className="truncate text-xs text-ink-muted hover:underline"
       >
@@ -107,7 +108,7 @@ export default function FriseCarte({
         <span className="font-mono text-xs text-ink-muted">{formatGameDate(entry.date, calendrier)}</span>
         <p className="line-clamp-2 text-sm font-semibold text-ink">
           {ref ? (
-            <a href={`/m/${worldSlug}/f/${ref}`} onClick={(e) => e.stopPropagation()} className="text-link-entity hover:underline">
+            <a href={`${baseFiche}/${ref}`} onClick={(e) => e.stopPropagation()} className="text-link-entity hover:underline">
               {entry.title}
             </a>
           ) : (

@@ -199,6 +199,13 @@ export default function AccueilLecteur({
         </section>
       ) : (
         <section className="flex flex-col gap-1">
+          {/* V3.1-99 : la frise des joueurs, rangée sous Wiki ; un simple lien. */}
+          {espace === "joueur-wiki" && (
+            <Link href={`/m/${worldSlug}/joueur/chronologie`} className={`${CLASSE_LIEN} mb-2 border border-edge`}>
+              <span>{tShell("chronologie")}</span>
+              <span aria-hidden="true">›</span>
+            </Link>
+          )}
           <h2 className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
             {t("consulteesRecemment")}
           </h2>

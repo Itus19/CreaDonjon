@@ -94,6 +94,9 @@ export default function PlayerShell({
     ...(hasHumanGm ? [] : [{ href: `${base}/solo`, label: "Solo", icon: "dice", match: (p: string) => p.startsWith(`${base}/solo`) }]),
     { href: `${base}/notes`, label: "Notes", icon: "notes", match: (p) => p.startsWith(`${base}/notes`) },
     { href: `${base}/wiki`, label: "Wiki", icon: "map", match: (p) => p.startsWith(`${base}/wiki`) },
+    // V3.1-99 : la frise des joueurs, juste après Wiki. Rail seulement : la barre
+    // du téléphone (`ordreBarre`) ne la liste pas, on l'y atteint par Wiki › Chronologie.
+    { href: `${base}/chronologie`, label: t("chronologie"), icon: "frise", match: (p) => p.startsWith(`${base}/chronologie`) },
     { href: `${base}/regles`, label: "Règles", icon: "books", match: (p) => p.startsWith(`${base}/regles`) },
     { href: `${base}/chat`, label: "Chat", icon: "chat", match: (p) => p.startsWith(`${base}/chat`) },
   ];
@@ -317,6 +320,15 @@ function Icon({ name }: { name: string }) {
         <svg {...common}>
           <path d="M4 5h16v11H8l-4 4V5Z" />
           <path d="M8 9h8M8 12.5h5" />
+        </svg>
+      );
+    case "frise":
+      return (
+        <svg {...common}>
+          <path d="M3 12h18" />
+          <circle cx="7" cy="12" r="2" />
+          <circle cx="16" cy="12" r="2" />
+          <path d="M7 6v4M16 14v4" />
         </svg>
       );
     case "quest":

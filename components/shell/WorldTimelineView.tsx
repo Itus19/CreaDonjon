@@ -93,6 +93,8 @@ export default function WorldTimelineView({
   const [calendrier, setCalendrier] = useState(calendar);
   const todayYear = calendrier.currentDate ? yearPosition(calendrier.currentDate, calendrier) : null;
   const voitPastilles = estMj && !vueJoueurs;
+  // Un joueur lit les fiches dans son Wiki ; la route du MJ ne lui est pas destinée.
+  const baseFiche = estMj ? `/m/${worldSlug}/f` : `/m/${worldSlug}/joueur/wiki`;
 
   const [filtres, setFiltres] = useState<FiltresFrise>(FILTRES_VIERGES);
   const filtrees = useMemo(() => filtrerEntrees(entries, filtres), [entries, filtres]);
@@ -258,6 +260,16 @@ export default function WorldTimelineView({
   const ficheOptions = [{ value: "", label: t("barre.toutesFiches") }, ...fiches.map((f) => ({ value: f.id, label: f.nom }))];
   const detailVue = t(`barre.detail.${resume.level}`);
 
+  const preregles = (
+    <div role="group" aria-label={t("barre.presets")} className="flex flex-wrap gap-1.5">
+      {PRESETS.map((p) => (
+        <button key={p} type="button" onClick={() => setVue((v) => presetView(p, v, monde))} className={BOUTON}>
+          {t(`barre.preset.${p}`)}
+        </button>
+      ))}
+    </div>
+  );
+
   return (
     <div className="@container relative flex min-h-0 flex-1 gap-0">
       <div className="flex min-w-0 flex-1 flex-col gap-3">
@@ -311,13 +323,8 @@ export default function WorldTimelineView({
             <button type="button" onClick={() => setVue((v) => zoomAround(v, zoomFactor("in", "button"), v.center, monde))} aria-label={t("barre.plus")} className={BOUTON}>
               +
             </button>
-            <div role="group" aria-label={t("barre.presets")} className="flex flex-wrap gap-1.5">
-              {PRESETS.map((p) => (
-                <button key={p} type="button" onClick={() => setVue((v) => presetView(p, v, monde))} className={BOUTON}>
-                  {t(`barre.preset.${p}`)}
-                </button>
-              ))}
-            </div>
+            {/* Téléphone : les préréglages passent en pilules sous la frise. */}
+            <div className="max-md:hidden">{preregles}</div>
             <button
               type="button"
               disabled={todayYear === null}
@@ -422,7 +429,7 @@ export default function WorldTimelineView({
                 <FriseCarte
                   item={item}
                   calendrier={calendrier}
-                  worldSlug={worldSlug}
+                  baseFiche={baseFiche}
                   x={c.x}
                   cote={c.side}
                   hauteurStade={HAUTEUR}
@@ -439,6 +446,8 @@ export default function WorldTimelineView({
           })}
         </div>
 
+        <div className="flex flex-wrap justify-center gap-1.5 md:hidden">{preregles}</div>
+
         {selection && (
           <section aria-label={t("detail.titre")} className="flex flex-col gap-2 rounded-lg border border-edge bg-panel p-4">
             <div className="flex items-start justify-between gap-2">
@@ -454,7 +463,7 @@ export default function WorldTimelineView({
             <p className={`text-sm ${selection.entry.summary ? "text-ink-soft" : "italic text-ink-muted"}`}>{selection.entry.summary || t("detail.sansResume")}</p>
             <div className="flex flex-wrap items-center gap-2">
               {selection.refEntitySlug && (
-                <a href={`/m/${worldSlug}/f/${selection.refEntitySlug}`} className="text-sm text-link-entity hover:underline">
+                <a href={`${baseFiche}/${selection.refEntitySlug}`} className="text-sm text-link-entity hover:underline">
                   {t("detail.voirFiche")}
                 </a>
               )}
