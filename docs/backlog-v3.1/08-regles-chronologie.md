@@ -127,7 +127,7 @@ exemples.
 
 ---
 
-### ☐ V3.1-97 — Chronologie : le noyau pur · `S` · sans modèle IA — **prêt**
+### ☑ V3.1-97 — Chronologie : le noyau pur · `S` · sans modèle IA — **fait le 3 novembre**
 
 **Modèle conseillé : Sonnet** — logique pure, **tests d'abord**.
 
@@ -162,7 +162,7 @@ exemples.
   aujourd'hui au quart gauche de la vue).
 
 **Critères d'acceptation**
-- [ ] Tests : bornes de zoom, seuils 400 / 130 exacts, rangement avec
+- [x] Tests : bornes de zoom, seuils 400 / 130 exacts, rangement avec
   chevauchement, ère coupée au bord, aucune date perdue (montrée, cachée ou
   dans un « + n »).
 

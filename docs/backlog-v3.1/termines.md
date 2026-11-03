@@ -3137,3 +3137,10 @@ Opus : le filtrage côté serveur (faille trouvée en préparant le ticket) ; `d
 
 *Restes* : la colonne du sommaire joueur fait 176 px (gabarit partagé avec le wiki) au lieu de 250 ; le panneau de renvoi n'existe que dans la section Règles du MJ.
 
+### V3.1-97 — Chronologie : le noyau pur (3 novembre)
+
+`dev-sonnet` : le code et ses tests ; relu par Opus (retrait d'un champ toujours vide).
+- **`src/core/timeline/view.ts`** (55 tests du dossier) : échelle (`xOfYear`, `yearOfX`, marge 110 px, `clampSpan` entre 20 ans et l'étendue du monde, `worldExtent`) ; niveau de détail (`detailLevel` : > 400 major ; 130–400 major + notable ; < 130 tout ; `summarizeView` compte les dates cachées ; `viewLabel`) ; graduations (250/100/50/10/5) ; rangement des cartes (186 px, alternance, « + n autour » avec sa plage — aucune date perdue, prouvé sur cinq étendues) ; ères en bandeaux coupées aux bords ; gestes purs (défiler ±12 %, ‹ › ±30 %, zoom ×1,25 / ×0,8 / ×1,6 autour d'un point, préréglages, centrer sur aujourd'hui).
+- Le noyau reçoit des points `{ id, year, scope }` : l'écran calcule l'année (`yearPosition`) et la portée (`resolveScope`).
+- Choix non tranchés par le ticket : seuils 400 et 130 inclus dans « major + notable » ; libellés des niveaux autres que « tout » (« grandes dates et notables », « grandes dates seulement »).
+
