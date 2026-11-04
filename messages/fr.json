@@ -1419,6 +1419,70 @@
     "enAttente": "En attente de la sauvegarde…"
   },
   "fiche": {
+    "activation": {
+      "ressources": "Ressources · calculées depuis les règles",
+      "capacites": "Capacités",
+      "surLaScene": "Sur la scène",
+      "pastilles": "{restants, plural, one {# utilisation restante} other {# utilisations restantes}} sur {max}",
+      "restantes": "{restants}/{max} · {recharge}",
+      "recharge": {
+        "short_rest": "au repos court",
+        "short_rest_one": "1 au repos court",
+        "long_rest": "au repos long",
+        "dawn": "à l'aube",
+        "never": "jamais"
+      },
+      "action": {
+        "action": "Action",
+        "bonus": "Action Bonus",
+        "reaction": "Réaction",
+        "magic": "Magie",
+        "free": "Gratuit",
+        "none": "Sans action"
+      },
+      "cibles": "jusqu'à {n, plural, one {# cible} other {# cibles}}",
+      "surSoi": "sur soi",
+      "sauvegarde": "{caracteristique} DD {dd}",
+      "sauvegardeSansDd": "sauvegarde de {caracteristique}",
+      "duree": {
+        "round": "{n, plural, one {# round} other {# rounds}}",
+        "minute": "{n, plural, one {# minute} other {# minutes}}",
+        "hour": "{n, plural, one {# heure} other {# heures}}",
+        "day": "{n, plural, one {# jour} other {# jours}}",
+        "finDeTour": "jusqu'à la fin du tour",
+        "repos": "jusqu'au prochain repos",
+        "permanent": "permanent"
+      },
+      "utiliser": "Utiliser",
+      "variante": "Variante de {nom}",
+      "ressourceInsuffisante": "Plus assez de {ressource}.",
+      "sansCampagne": "Cette fiche n'est liée à aucune campagne : rien ne peut s'y jouer.",
+      "choisirCibles": "Cibles choisies ({choisies} / {max})",
+      "choisirCiblesSansMax": "Cibles choisies ({choisies})",
+      "lectureCombat": "Lecture du combat…",
+      "aucunCombat": "Aucun combat en cours : cette capacité vise d'autres créatures, elle se joue pendant l'initiative.",
+      "aucuneCible": "Aucune créature de ce genre dans le combat en cours.",
+      "cocherCible": "Viser {nom}",
+      "confirmer": "Confirmer",
+      "annuler": "Annuler",
+      "fermerResultat": "Fermer le résultat",
+      "resultat": "Résultat · {nom}",
+      "effetPose": "Effet posé : {effet}",
+      "reussite": "réussite",
+      "echec": "échec",
+      "echecEffets": "échec → {effets}",
+      "jet": "{caracteristique} {total} contre DD {dd}",
+      "erreur": "L'activation n'a pas pu être jouée.",
+      "scene": {
+        "rounds": "{n, plural, one {# round} other {# rounds}}",
+        "minutesRestantes": "{n, plural, one {# minute} other {# minutes}}",
+        "heuresRestantes": "{n, plural, one {# heure} other {# heures}}",
+        "finDeTour": "fin de tour",
+        "repos": "jusqu'au repos",
+        "concentration": "concentration",
+        "jeton": "{n, plural, one {# usage} other {# usages}} du jeton"
+      }
+    },
     "musique": {
       "sansTitre": "Piste sans nom",
       "progression": "Progression de la piste",

@@ -5,7 +5,7 @@ import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/blocks/inventory";
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
-import { characterSheet, type Ability, type CharacterBuild, type DerivedSheet, type EquippedItem, type ResolvedFeature } from "@/src/core/rules/sheet";
+import { characterSheet, type Ability, type ActiveEffect, type CharacterBuild, type DerivedSheet, type EquippedItem, type ResolvedFeature } from "@/src/core/rules/sheet";
 import { routeSkillChoices } from "@/src/core/rules/skillChoiceRouting";
 import { armorAcModifier, mapChosenSkillModifiers, type ArmorData, type ItemCost, type WeaponData } from "@/src/core/rules/srdMapping";
 import { asiApplies, asiModifiers, parseAsiChoice, withImplicitAsiFeat } from "@/src/core/rules/abilityScoreImprovement";
@@ -121,7 +121,9 @@ export function useCharacterSheetContext(
   worldSlug: string,
   character: CharacterBlockData | undefined,
   inventory: InventoryBlockData | undefined,
-  spellcasting: SpellcastingBlockData | undefined
+  spellcasting: SpellcastingBlockData | undefined,
+  /** V3.1-131 : les effets qui durent portés par le personnage (fiche du serveur), pour la couche 7 — sinon la CA affichée ignorerait « +1 CA ». */
+  activeEffects: readonly ActiveEffect[] = []
 ): CharacterSheetContext {
   // V3.1-62 (ADR 0056) : la meme fonction construit cette selection cote
   // serveur, pour la reponse partie avec la page — memes cles des deux cotes.
@@ -270,7 +272,7 @@ export function useCharacterSheetContext(
     // V3.1-115 : les regles de personnage du ruleset (plafond, charge) suivent la reponse deja chargee.
     { classes: ruleset.classes, features: { ...ruleset.features, ...choiceFeatures }, characterRules: ruleset.characterRules },
     equippedItems,
-    [],
+    [...activeEffects],
     carriedWeight
   );
 

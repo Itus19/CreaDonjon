@@ -22,6 +22,8 @@ import Tabs, { TabPanel } from "@/components/shared/Tabs";
 import { SKILL_LABELS_FR } from "@/src/i18n/fr";
 import CharacterSheetHeader from "./CharacterSheetHeader";
 import ActionsTab, { type PreparedSpellView } from "./ActionsTab";
+import type { ActivationsPanelProps } from "./ActivationsPanel";
+import { nombresDeLaFiche } from "@/lib/ui/activationFiche";
 import MagicTab, { type KnownSpellView } from "./MagicTab";
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import InventoryTab from "./InventoryTab";
@@ -38,6 +40,7 @@ import { useJetsDeLaFiche } from "./useJetsDeLaFiche";
 import { TAB_LABELS, type Tab } from "./ongletsFiche";
 import ChoixRouverts from "./ChoixRouverts";
 import { relireBloc, repondreChoixRouvert } from "@/lib/ui/choixRouvertsApi";
+import { activeEffectsForSheet } from "@/src/core/rules/durableEffects";
 
 
 
@@ -114,6 +117,8 @@ export default function PlayableCharacterSheet({
   const [tab, setTab] = useState<Tab>("actions");
   const [advantage, setAdvantage] = useState<AdvantageState>("normal");
   const [remote, setRemote] = useState<SheetApiResponse | null>(null);
+  // V3.1-131 : les effets que porte le personnage (lus par le serveur) entrent dans la fiche calculée ici, en couche 7.
+  const effetsPortes = useMemo(() => activeEffectsForSheet(remote?.effects ?? [], entityId), [remote?.effects, entityId]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Montee de niveau (V2-G1) : le meme motif que "wizardOpen" dans
@@ -180,7 +185,7 @@ export default function PlayableCharacterSheet({
     weaponMasteryChips,
     masteredWeaponKeys,
     openChoices,
-  } = useCharacterSheetContext(worldSlug, character, inventory, spellcasting);
+  } = useCharacterSheetContext(worldSlug, character, inventory, spellcasting, effetsPortes);
   const t = useTranslations("creation");
   const aRappeler = rulesetPret ? choixOuverts(remainingChoices, openChoices, character.choices) : [];
 
@@ -432,6 +437,34 @@ export default function PlayableCharacterSheet({
 
   const totalLevel = Math.max(1, character.classes.reduce((sum, c) => sum + c.level, 0));
   const levelIndex = Math.min(totalLevel, XP_LEVEL_THRESHOLDS.length) - 1;
+  // V3.1-131 : ressources calculées, capacités jouables et effets viennent de la fiche calculée par le serveur (déjà chargée) ; rien de plus à l'ouverture.
+  const fiche = remote?.sheet;
+  const activations: ActivationsPanelProps | null = fiche
+    ? {
+        entityId,
+        campaignId,
+        estMj: isWorldAdmin,
+        ressources: fiche.resources ?? [],
+        features: fiche.features,
+        utilises: runtimeState?.resources ?? {},
+        nombres: nombresDeLaFiche({
+          niveau: totalLevel,
+          bonusMaitrise: fiche.proficiencyBonus,
+          modificateurs: {
+            str: fiche.abilities.str.mod,
+            dex: fiche.abilities.dex.mod,
+            con: fiche.abilities.con.mod,
+            int: fiche.abilities.int.mod,
+            wis: fiche.abilities.wis.mod,
+            cha: fiche.abilities.cha.mod,
+          },
+          ddDeSort: fiche.spellcasting?.saveDc ?? null,
+        }),
+        effets: remote?.effects ?? [],
+        apresActivation: reloadRemote,
+        busy,
+      }
+    : null;
   const xpFloor = XP_LEVEL_THRESHOLDS[levelIndex] ?? 0;
   const xpCeiling = XP_LEVEL_THRESHOLDS[levelIndex + 1] ?? xpFloor;
   const xpCurrent = runtimeState?.xp ?? 0;
@@ -776,6 +809,7 @@ export default function PlayableCharacterSheet({
                 classKeys={classKeys}
                 onGesteEmplacement={changeEmplacement}
                 emplacementsDesactives={!commandes.spell_slots}
+                activations={activations}
               />
             )}
 

@@ -214,6 +214,13 @@ describe.skipIf(!hasCreds)("activer une règle (V3.1-130, integration, base reel
     if (!r.ok) throw new Error(r.reason);
     expect(await effetsDe("entity_id", paladinId)).toHaveLength(1);
     expect((await getEntityRuntimeState(client(gm), paladinId, campaignId)).concentration?.label).toBe("Veille sacrée (test)");
+    // Relancer la même concentration remplace l'effet, sans l'empiler.
+    const encore = await activateFeature(client(gm), {
+      entityId: paladinId, campaignId, ruleKey: "paladin-abjure-foes", activationId: "veille", variantId: null,
+      targetParticipantIds: [], callerId: gm.id, callerIsGm: true, locale: "fr",
+    });
+    expect(encore.ok).toBe(true);
+    expect(await effetsDe("entity_id", paladinId)).toHaveLength(1);
     const fiche = await resolveCharacterActionContext(client(gm), paladinId, campaignId, "fr");
     const sansEffet = fiche!.sheet.ac.value - 1;
     expect(fiche!.sheet.ac.sources.some((s) => s.label === "Veille sacrée")).toBe(true);

@@ -17,6 +17,7 @@ import { getCampaign } from "@/src/server/services/campaigns";
 import { applyRuntimeStateChange, getEntityRuntimeState } from "@/src/server/services/runtimeState";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
 import { setConcentration } from "@/src/server/services/concentration";
+import { expireFeatureEffects } from "@/src/server/services/effectExpiry";
 import { applySignedEngineChange, readCombatParticipantsSigned, type EngineChangeLine } from "@/src/server/services/engineSigning";
 import { applyResolvedEffects, targetSaveBonus } from "@/src/server/services/targetedRoll";
 import { serverRng } from "@/src/server/services/rng";
@@ -210,7 +211,24 @@ export async function activateFeature(
     ...(params.callerIsGm ? { gmJournal: true } : { signedWrites: { ownEntityIds: new Set([params.entityId]) } }),
   });
 
-  // 3. Les effets qui durent : par PJ (son entité) ou par instance de combat (ADR 0073).
+  // 3. La concentration, AVANT de poser les nouveaux effets : une nouvelle
+  // concentration rompt la précédente et retire ses effets chez toutes leurs
+  // cibles (V3.1-24) — même quand elle porte le même nom, sinon relancer
+  // « Veille sacrée » empilerait deux fois son bonus.
+  if (plan.plan.applied.some((a) => a.concentration)) {
+    const change = await setConcentration(supabase, { entityId: params.entityId, campaignId: params.campaignId, incoming: { spell_key: null, label }, actorUserId: params.callerId });
+    if (!change.broken) {
+      await expireFeatureEffects(supabase, {
+        campaignId: params.campaignId,
+        events: [{ kind: "concentration_broken", source: params.entityId }],
+        callerId: params.callerId,
+        callerIsGm: params.callerIsGm,
+        ownEntityId: params.entityId,
+      });
+    }
+  }
+
+  // 4. Les effets qui durent : par PJ (son entité) ou par instance de combat (ADR 0073).
   const signes: EngineChangeLine[] = [];
   for (const effet of plan.plan.applied) {
     const porteur = bearerOf(effet, participants, pcEntityIds);
@@ -236,11 +254,6 @@ export async function activateFeature(
     }
   }
   if (signes.length > 0) await applySignedEngineChange(supabase, { campaignId: params.campaignId, changes: signes });
-
-  // 4. La concentration : un effet qui en dépend la pose (la précédente est rompue, V3.1-24).
-  if (plan.plan.applied.some((a) => a.concentration)) {
-    await setConcentration(supabase, { entityId: params.entityId, campaignId: params.campaignId, incoming: { spell_key: null, label }, actorUserId: params.callerId });
-  }
 
   const targets = params.targetParticipantIds.map((id) => {
     const key = `participant:${id}`;

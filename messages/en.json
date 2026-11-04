@@ -1418,6 +1418,70 @@
     "enAttente": "Waiting for the saving throw…"
   },
   "fiche": {
+    "activation": {
+      "ressources": "Resources · computed from the rules",
+      "capacites": "Abilities",
+      "surLaScene": "On the scene",
+      "pastilles": "{restants, plural, one {# use left} other {# uses left}} of {max}",
+      "restantes": "{restants}/{max} · {recharge}",
+      "recharge": {
+        "short_rest": "on a short rest",
+        "short_rest_one": "1 on a short rest",
+        "long_rest": "on a long rest",
+        "dawn": "at dawn",
+        "never": "never"
+      },
+      "action": {
+        "action": "Action",
+        "bonus": "Bonus Action",
+        "reaction": "Reaction",
+        "magic": "Magic",
+        "free": "Free",
+        "none": "No action"
+      },
+      "cibles": "up to {n, plural, one {# target} other {# targets}}",
+      "surSoi": "on self",
+      "sauvegarde": "{caracteristique} DC {dd}",
+      "sauvegardeSansDd": "{caracteristique} save",
+      "duree": {
+        "round": "{n, plural, one {# round} other {# rounds}}",
+        "minute": "{n, plural, one {# minute} other {# minutes}}",
+        "hour": "{n, plural, one {# hour} other {# hours}}",
+        "day": "{n, plural, one {# day} other {# days}}",
+        "finDeTour": "until the end of the turn",
+        "repos": "until the next rest",
+        "permanent": "permanent"
+      },
+      "utiliser": "Use",
+      "variante": "Variant of {nom}",
+      "ressourceInsuffisante": "Not enough {ressource} left.",
+      "sansCampagne": "This sheet is not linked to a campaign: nothing can be played from it.",
+      "choisirCibles": "Chosen targets ({choisies} / {max})",
+      "choisirCiblesSansMax": "Chosen targets ({choisies})",
+      "lectureCombat": "Reading the combat…",
+      "aucunCombat": "No combat in progress: this ability targets other creatures and is played during initiative.",
+      "aucuneCible": "No creature of that kind in the current combat.",
+      "cocherCible": "Target {nom}",
+      "confirmer": "Confirm",
+      "annuler": "Cancel",
+      "fermerResultat": "Close the result",
+      "resultat": "Result · {nom}",
+      "effetPose": "Effect applied: {effet}",
+      "reussite": "success",
+      "echec": "failure",
+      "echecEffets": "failure → {effets}",
+      "jet": "{caracteristique} {total} vs DC {dd}",
+      "erreur": "The ability could not be played.",
+      "scene": {
+        "rounds": "{n, plural, one {# round} other {# rounds}}",
+        "minutesRestantes": "{n, plural, one {# minute} other {# minutes}}",
+        "heuresRestantes": "{n, plural, one {# hour} other {# hours}}",
+        "finDeTour": "end of turn",
+        "repos": "until rest",
+        "concentration": "concentration",
+        "jeton": "{n, plural, one {# use} other {# uses}} of the token"
+      }
+    },
     "musique": {
       "sansTitre": "Unnamed track",
       "progression": "Track progress",

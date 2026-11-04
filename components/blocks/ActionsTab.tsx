@@ -21,6 +21,7 @@ import Dropdown from "@/components/shared/Dropdown";
 import Egaliseur from "./Egaliseur";
 import { colonnesEgaliseur, type GesteColonne } from "@/lib/ui/egaliseur";
 import type { WeaponData } from "@/src/core/rules/srdMapping";
+import ActivationsPanel, { type ActivationsPanelProps } from "./ActivationsPanel";
 
 function findBlock<T>(blocks: RuleEntryBlockData[] | undefined, blockType: string): T | null {
   const found = blocks?.find((b) => b.blockType === blockType);
@@ -240,6 +241,7 @@ export default function ActionsTab({
   classKeys,
   onGesteEmplacement,
   emplacementsDesactives,
+  activations,
 }: {
   worldSlug: string;
   busy: boolean;
@@ -278,6 +280,8 @@ export default function ActionsTab({
   onGesteEmplacement: (geste: { pool: "slots"; level: number } | { pool: "pact" }, delta: number) => void;
   /** Sans la commande `spell_slots` (V3.1-109), ou sans écriture possible : les colonnes d'emplacement ne se touchent pas. */
   emplacementsDesactives: boolean;
+  /** V3.1-131 : ressources calculées, capacités jouables et effets du personnage. `null` tant que la fiche calculée n'est pas arrivée. */
+  activations?: ActivationsPanelProps | null;
 }) {
   const cantripSpells = preparedSpells.filter((s) => s.level === 0);
   const leveledSpells = preparedSpells.filter((s) => s.level > 0);
@@ -319,6 +323,8 @@ export default function ActionsTab({
           </button>
         ))}
       </div>
+
+      {activations && <ActivationsPanel {...activations} />}
 
       <Egaliseur groupes={groupes} onGeste={geste} desactive={busy} emplacementsDesactives={emplacementsDesactives} />
 
