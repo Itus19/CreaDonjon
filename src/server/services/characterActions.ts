@@ -68,7 +68,7 @@ import { setConcentration } from "@/src/server/services/concentration";
 import type { Concentration } from "@/src/core/schemas/runtimeState";
 import { expireFeatureEffects } from "@/src/server/services/effectExpiry";
 import { listFeatureEffectsForEntity } from "@/src/server/repos/activeEffects";
-import { activeEffectsForSheet, effectFromRow } from "@/src/core/rules/durableEffects";
+import { activeEffectsForSheet, effectFromRow, type ActiveDurableEffect } from "@/src/core/rules/durableEffects";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -139,6 +139,8 @@ export interface CharacterActionContext {
   hitDiceTotals: Record<string, number>;
   /** Choix non resolus (competences/langues/maitrise d'armes) du personnage — V2-G1, necessaire au repos long pour retrouver les cles de maitrise d'armes a effacer. */
   remainingChoices: RemainingChoice[];
+  /** V3.1-131 : les effets qui durent portés par ce personnage dans la campagne (déjà lus pour la couche 7). */
+  activeEffects: ActiveDurableEffect[];
   /** V3.1-119 : les choix accordés du personnage, tels que le moteur les retient (repos qui en rouvrent). */
   openChoices: OpenChoice[];
   /** V3.1-119 : les mêmes choix résolus avec d'AUTRES réponses, pour valider une réponse avant de l'écrire. */
@@ -278,19 +280,17 @@ export async function resolveCharacterActionContext(
     featureKeys: [...Object.keys(assembled.ruleset.features), ...choiceFeatureKeys],
   };
 
+  const activeEffects = effectRows.flatMap((row) => {
+    const e = effectFromRow(row, entityId);
+    if (!e) console.error("Effet actif mal formé, ignoré sur la fiche", row.id);
+    return e ? [e] : [];
+  });
   const sheet = characterSheet(
     build,
     // V3.1-115 : plafond de caracteristique et charge lus dans les regles du ruleset.
     { classes: assembled.ruleset.classes, features: { ...assembled.ruleset.features, ...choiceFeatures }, characterRules: assembled.ruleset.characterRules },
     equippedItems,
-    activeEffectsForSheet(
-      effectRows.flatMap((row) => {
-        const e = effectFromRow(row, entityId);
-        if (!e) console.error("Effet actif mal formé, ignoré sur la fiche", row.id);
-        return e ? [e] : [];
-      }),
-      entityId
-    ),
+    activeEffectsForSheet(activeEffects, entityId),
     carriedWeight
   );
 
@@ -319,6 +319,7 @@ export async function resolveCharacterActionContext(
     openChoices: grantedChoices.open,
     resolveChoicesWith: (choices) => resolveCharacterChoices(supabase, rulesetId, assembled, choices, characterLevel, classLevels, autresAptitudes),
     remainingChoices: assembled.remainingChoices,
+    activeEffects,
   };
 }
 

@@ -19,7 +19,7 @@ import type { FreeCast } from "../schemas/rule-blocks/choices";
 import { rollDice } from "../dice/roll";
 import { computeSpellSlots } from "./spellSlots";
 import type { Rng } from "../dice/rng";
-import type { RuleResource } from "../schemas/rule-blocks/playable";
+import type { ActivationBlockData, RuleResource } from "../schemas/rule-blocks/playable";
 import { evaluate } from "../formula/evaluate";
 
 // --- Vocabulaire de base -------------------------------------------------
@@ -141,6 +141,8 @@ export interface ResolvedFeature {
   spells?: FeatureSpell[];
   /** V3.1-129 (ADR 0060 §1) : ressources déclarées par la fiche (bloc de règle `resources`), maximum en formule. */
   resources?: RuleResource[];
+  /** V3.1-131 : « cette règle se joue » (bloc `activation`), pour l'onglet Actions — lu avec les blocs déjà chargés. */
+  activation?: ActivationBlockData;
 }
 
 /** Un sort accordé par une aptitude, sur la fiche calculée (V3.1-116). DD et attaque se calculent avec SA caractéristique, pas celle de la classe. */

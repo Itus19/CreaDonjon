@@ -62,7 +62,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
   // V3.1-109 : `controls` dit à la fiche quelles commandes montrer à CET appelant.
   return NextResponse.json(
-    { sheet: ctx.sheet, hitDiceTotals: ctx.hitDiceTotals, runtimeState, controls },
+    // V3.1-131 : les effets que porte le personnage (onglet Actions, « Sur la scène ») — déjà lus pour la fiche.
+    { sheet: ctx.sheet, hitDiceTotals: ctx.hitDiceTotals, runtimeState, controls, effects: ctx.activeEffects },
     { status: 200 }
   );
 }

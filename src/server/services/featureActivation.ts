@@ -56,6 +56,12 @@ export interface ActivateFeatureSuccess {
   applied: { bearer: string; label: string }[];
   /** Usages consommés après l'activation. */
   used: Record<string, number>;
+  /**
+   * V3.1-131 : le résultat par cible, pour la carte de l'onglet Actions. Une
+   * joueuse n'en reçoit que le verdict (ADR 0070 : les chiffres d'un monstre
+   * restent au MJ) ; `save` n'est rempli que pour le MJ.
+   */
+  targets: { participantId: string; label: string; saved: boolean | null; applied: string[]; save?: { roll: number; total: number; dc: number } }[];
 }
 
 /** Les caractéristiques qu'une liste d'effets fait sauvegarder (branches comprises), pour ne lire que ces bonus-là. */
@@ -236,8 +242,21 @@ export async function activateFeature(
     await setConcentration(supabase, { entityId: params.entityId, campaignId: params.campaignId, incoming: { spell_key: null, label }, actorUserId: params.callerId });
   }
 
+  const targets = params.targetParticipantIds.map((id) => {
+    const key = `participant:${id}`;
+    const sauvegarde = plan.plan.effects.find((e): e is Extract<ResolvedEffect, { action: "saving_throw" }> => e.action === "saving_throw" && e.who === key);
+    return {
+      participantId: id,
+      label: participants.find((p) => p.id === id)?.label ?? id,
+      saved: sauvegarde ? sauvegarde.passed : null,
+      applied: plan.plan.applied.filter((a) => a.bearer === key).map((a) => a.label),
+      ...(params.callerIsGm && sauvegarde ? { save: { roll: sauvegarde.roll, total: sauvegarde.total, dc: sauvegarde.dc } } : {}),
+    };
+  });
+
   return {
     ok: true,
+    targets,
     changes: outcome.changes,
     applied: plan.plan.applied.map((a) => ({ bearer: a.bearer, label: a.label })),
     used: plan.plan.used,

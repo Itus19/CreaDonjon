@@ -58,7 +58,7 @@ import {
   type WeaponData,
   progressionColumns,
 } from "@/src/core/rules/srdMapping";
-import { zRuleResourcesBlockData, type RuleResource } from "@/src/core/schemas/rule-blocks/playable";
+import { zActivationBlockData, zRuleResourcesBlockData, type ActivationBlockData, type RuleResource } from "@/src/core/schemas/rule-blocks/playable";
 import type { ArmorBlockData, BackgroundBlockData, ItemPropertiesBlockData, WeaponBlockData } from "@/src/core/schemas/rule-blocks";
 import {
   listFeatKeysByCategory,
@@ -296,6 +296,17 @@ function declaredResources(data: unknown): RuleResource[] {
     return [];
   }
   return parsed.data.resources;
+}
+
+/** V3.1-131 : le bloc de règle `activation`. Absent : `undefined`. Mal formé : `undefined`, mais journalisé. */
+function declaredActivation(data: unknown): ActivationBlockData | undefined {
+  if (data === undefined || data === null) return undefined;
+  const parsed = zActivationBlockData.safeParse(data);
+  if (!parsed.success) {
+    console.error("Bloc activation mal forme, ignore", parsed.error.issues);
+    return undefined;
+  }
+  return parsed.data;
 }
 
 /** Cles de regle du bloc `species_traits` ; tolere une donnee absente ou d'une autre forme. */
@@ -938,6 +949,8 @@ export async function assembleResolvedRuleset(
       const modifiers = resolveDeclaredModifiers(declaredModifiersByKey.get(fk) ?? [], fk, label, layerForFeatureSource(source));
       // V3.1-129 : ressources déclarées (Conduit divin…), déjà lues avec les blocs de l'aptitude : aucune requête de plus.
       const resources = declaredResources(resolvedFeatureBlocks.get(fk)?.blocksByType.get("resources"));
+      const activation = declaredActivation(resolvedFeatureBlocks.get(fk)?.blocksByType.get("activation"));
+      const jouable = { ...(resources.length > 0 ? { resources } : {}), ...(activation ? { activation } : {}) };
       // V3.1-49 : une aptitude de classe ouvre ses choix au niveau de SA classe (Expertise du roublard au niveau 6 de roublard).
       const featureClassKey = source.startsWith("class:") ? source.slice(6) : undefined;
       addChoices(
@@ -948,14 +961,14 @@ export async function assembleResolvedRuleset(
         featureClassKey ? { origin: "class", classKey: featureClassKey } : { origin: source.startsWith("background:") ? "background" : "species" }
       );
       features[fk] = chip
-        ? { key: fk, label, source, modifiers, prerequisites: mapPrerequisites(chip.source_raw), ...(resources.length > 0 ? { resources } : {}) }
+        ? { key: fk, label, source, modifiers, prerequisites: mapPrerequisites(chip.source_raw), ...jouable }
         : // Aucune ligne `ruleset_entries` : fiche maison (label resolu
           // ci-dessus) ou, plus rarement, aptitude jamais importee (label =
           // cle brute). Conservee dans les deux cas pour que
           // build.featureKeys puisse la referencer sans faire echouer
           // characterSheet(). Pas de prerequis : ils se lisent sur
           // `source_raw`, que seule une entree importee possede.
-          { key: fk, label, source, modifiers, ...(resources.length > 0 ? { resources } : {}) };
+          { key: fk, label, source, modifiers, ...jouable };
     }
 
     for (const p of proficiencies) {
