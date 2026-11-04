@@ -879,14 +879,8 @@ export async function listEntryBlockFacts(supabase: TypedClient, rulesetId: stri
     toutes.push(...lignes.map((l) => ({ entry_key: l.ruleset_entries.entry_key, block_type: l.block_type, data: null })));
     if (lignes.length < LIST_PAGE_SIZE) break;
   }
-  const { data: cov, error: covError } = await supabase
-    .from("ruleset_entry_blocks")
-    .select("data, ruleset_entries!inner(entry_key, ruleset_id)")
-    .eq("ruleset_entries.ruleset_id", rulesetId)
-    .eq("block_type", "coverage");
-  if (covError) throw new Error(covError.message);
-  for (const l of (cov ?? []) as unknown as { data: Json; ruleset_entries: { entry_key: string } }[]) {
-    toutes.push({ entry_key: l.ruleset_entries.entry_key, block_type: "coverage", data: l.data });
+  for (const l of await listEntryBlocksOfType(supabase, rulesetId, "coverage")) {
+    toutes.push({ entry_key: l.entry_key, block_type: "coverage", data: l.data });
   }
   return toutes;
 }
@@ -918,4 +912,16 @@ export async function listOverridesForRulesets(supabase: TypedClient, rulesetIds
     if (data.length < LIST_PAGE_SIZE) break;
   }
   return toutes;
+}
+
+/** V3.1-132 — les blocs d'UN type (petit : `coverage`, `resources`) des règles d'UN ruleset, avec leurs données. */
+export async function listEntryBlocksOfType(supabase: TypedClient, rulesetId: string, blockType: string): Promise<{ entry_key: string; data: Json }[]> {
+  const { data, error } = await supabase
+    .from("ruleset_entry_blocks")
+    .select("data, ruleset_entries!inner(entry_key, ruleset_id)")
+    .eq("ruleset_entries.ruleset_id", rulesetId)
+    .eq("block_type", blockType)
+    .limit(LIST_PAGE_SIZE);
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as unknown as { data: Json; ruleset_entries: { entry_key: string } }[]).map((l) => ({ entry_key: l.ruleset_entries.entry_key, data: l.data }));
 }

@@ -8,10 +8,10 @@ import { applyOverrideFacts, COVERAGE_ENTRY_TYPES, pruneOrphanDurableEffects, ty
 import { coverageState, MECHANICAL_BLOCK_TYPES, type CoverageState } from "@/src/core/rules/activation";
 import type { EntryType } from "@/src/core/schemas/rule-blocks";
 import type { Locale } from "@/src/i18n/request";
-import type { ActivationBlockData } from "@/src/core/schemas/rule-blocks/playable";
+import { zRuleResourcesBlockData, type ActivationBlockData } from "@/src/core/schemas/rule-blocks/playable";
 import type { ResolvableBlock } from "@/src/core/rules/resolve";
 import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
-import { listEntryBlockFacts, listOverridesForRuleset, listOverridesForRulesets, upsertRulesetOverride } from "@/src/server/repos/rules";
+import { listEntryBlockFacts, listEntryBlocksOfType, listOverridesForRuleset, listOverridesForRulesets, upsertRulesetOverride } from "@/src/server/repos/rules";
 import { DEFAULT_BLOCK_DISPLAY, listEntriesInRulesetChain, resolveEntryBlocksInRuleset, walkRulesetChain } from "@/src/server/services/rules";
 
 type TypedClient = SupabaseClient<Database>;
@@ -186,4 +186,68 @@ export async function listUnplayableRules(supabase: TypedClient, params: { world
     if (state !== "playable") out.push({ key: e.key, name: e.name, entryType: e.entryType, state, gaps: f.gaps });
   }
   return out.sort((a, b) => a.name.localeCompare(b.name, params.locale));
+}
+
+/**
+ * V3.1-132 (ADR 0059 §3) — le mode solo avertit avant qu'une règle incomplète
+ * n'entre en jeu : parmi les règles d'un personnage, celles qui ne sont pas
+ * jouables. Même calcul que la vue du MJ ; aucune donnée de bloc n'est rendue,
+ * seulement nom, type et état (déjà lisibles du joueur dans l'onglet Règles).
+ */
+export async function unplayableAmong(supabase: TypedClient, params: { worldId: string; keys: readonly string[]; locale: Locale }): Promise<UnplayableRule[]> {
+  if (params.keys.length === 0) return [];
+  const voulues = new Set(params.keys);
+  return ((await listUnplayableRules(supabase, { worldId: params.worldId, locale: params.locale })) ?? []).filter((r) => voulues.has(r.key));
+}
+
+export interface DeclaredResource {
+  key: string;
+  /** Le libellé dans la langue demandée, sinon le premier disponible. */
+  label: string;
+  /** La règle qui la déclare. */
+  entryKey: string;
+}
+
+/**
+ * V3.1-132 — les ressources déclarées dans le ruleset actif d'un monde (bloc
+ * `resources` des règles de la base, puis des variantes), pour le menu
+ * « Ressource dépensée » de l'éditeur. Une variante qui retire ou remplace le
+ * bloc l'emporte, comme partout.
+ */
+export async function listDeclaredResources(supabase: TypedClient, params: { worldId: string; locale: Locale }): Promise<DeclaredResource[] | null> {
+  const rulesetId = await getWorldDefaultRulesetId(supabase, params.worldId);
+  if (!rulesetId) return null;
+  const chain = await walkRulesetChain(supabase, rulesetId);
+  const base = chain.find((l) => l.isOfficialBase);
+  const [baseRows, overrides] = await Promise.all([
+    base ? listEntryBlocksOfType(supabase, base.rulesetId, "resources") : Promise.resolve([]),
+    listOverridesForRulesets(
+      supabase,
+      chain.filter((l) => !l.isOfficialBase).map((l) => l.rulesetId)
+    ),
+  ]);
+  const parRegle = new Map<string, unknown>(baseRows.map((r) => [r.entry_key, r.data]));
+  const rang = new Map(chain.map((l, i) => [l.rulesetId, i]));
+  for (const o of [...overrides].sort((a, b) => (rang.get(b.ruleset_id) ?? 0) - (rang.get(a.ruleset_id) ?? 0))) {
+    if (o.action === "disable_entry") parRegle.delete(o.entry_key);
+    else if (o.action === "replace_entry") {
+      const blocs = (o.payload as { blocks?: { block_type?: unknown; data?: unknown }[] } | null)?.blocks ?? [];
+      const r = blocs.find((b) => b.block_type === "resources");
+      if (r) parRegle.set(o.entry_key, r.data);
+      else parRegle.delete(o.entry_key);
+    } else if (o.block_type === "resources") {
+      if (o.action === "remove_block") parRegle.delete(o.entry_key);
+      else if (o.action === "add_block" || o.action === "replace_block") parRegle.set(o.entry_key, (o.payload as { data?: unknown } | null)?.data);
+    }
+  }
+  const out = new Map<string, DeclaredResource>();
+  for (const [entryKey, data] of parRegle) {
+    const parsed = zRuleResourcesBlockData.safeParse(data);
+    if (!parsed.success) continue;
+    for (const r of parsed.data.resources) {
+      const label = r.label[params.locale] ?? Object.values(r.label).find((v): v is string => typeof v === "string") ?? r.key;
+      if (!out.has(r.key)) out.set(r.key, { key: r.key, label, entryKey });
+    }
+  }
+  return [...out.values()].sort((a, b) => a.label.localeCompare(b.label, params.locale));
 }

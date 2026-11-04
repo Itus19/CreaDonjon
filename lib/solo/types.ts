@@ -30,6 +30,8 @@ export interface IntentBarData {
   actor: { entityId: string; name: string };
   catalog: IntentCatalog;
   targetDetails: IntentTargetDetail[];
+  /** V3.1-132 : les clés des règles du personnage (aptitudes de classe, d'espèce, dons), pour l'avertissement « règle non jouable » du mode solo. */
+  ruleKeys: string[];
 }
 
 export interface TurnRecord {

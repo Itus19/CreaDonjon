@@ -236,6 +236,7 @@ export async function buildIntentBarData(
     actor: { entityId: ctx.entityId, name: ctx.entityName },
     catalog: { actions, targets, verbs: INTENT_VERBS_FR },
     targetDetails,
+    ruleKeys: ctx.sheet.features.map((f) => f.key).filter((k) => !k.startsWith("choice:")),
   };
 }
 

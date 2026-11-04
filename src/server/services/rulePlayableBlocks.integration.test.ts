@@ -4,7 +4,7 @@ import type { Database } from "@/src/types/database";
 import { getReusableTestAccount, type ReusableAccount } from "../testUtils/reusableTestAccounts";
 
 vi.mock("server-only", () => ({}));
-const { savePlayableBlocks, listUnplayableRules } = await import("./rulePlayableBlocks");
+const { savePlayableBlocks, listUnplayableRules, listDeclaredResources } = await import("./rulePlayableBlocks");
 const { createRulesetVariant, getRuleEntryForWorld, createHouseVersion } = await import("./rules");
 
 /**
@@ -90,6 +90,16 @@ describe.skipIf(!hasCreds)("briques jouables d'une règle (V3.1-132, integration
     // L'officielle : aucune surcharge écrite sur la base.
     const { count } = await admin.from("ruleset_overrides").select("id", { count: "exact", head: true }).eq("ruleset_id", officialId).eq("entry_key", KEY);
     expect(count).toBe(0);
+
+    // Une ressource déclarée se retrouve dans le menu de l'éditeur.
+    await savePlayableBlocks(client(), {
+      worldId,
+      entryKey: KEY,
+      blocks: { resources: { resources: [{ key: "test-res", label: { fr: "Ressource de test" }, max: num(2), recharge: "long_rest", passage: "deux fois" }] } },
+    });
+    expect((await listDeclaredResources(client(), { worldId, locale: "fr" }))?.find((r) => r.key === "test-res")).toEqual({ key: "test-res", label: "Ressource de test", entryKey: KEY });
+    await savePlayableBlocks(client(), { worldId, entryKey: KEY, blocks: { resources: null } });
+    expect((await listDeclaredResources(client(), { worldId, locale: "fr" }))?.some((r) => r.key === "test-res")).toBe(false);
 
     // Une lacune déclarée : partielle.
     await savePlayableBlocks(client(), { worldId, entryKey: KEY, blocks: { coverage: { gaps: [{ text: "voir à 18 m", missing: "distances réelles" }] } } });
