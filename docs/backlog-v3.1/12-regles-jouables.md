@@ -59,7 +59,7 @@
 
 ---
 
-### ☐ V3.1-131 — La fiche jouable : un bouton par activation · `M` · sans modèle IA — **à décider (esquisse)**
+### ☑ V3.1-131 — La fiche jouable : un bouton par activation · `M` · sans modèle IA — **à décider (esquisse)**
 
 **Modèle conseillé : Sonnet**, une fois les planches « Esquisse · Règle jouable » passées en « Décidé ».
 **Dépend de** : 130.
