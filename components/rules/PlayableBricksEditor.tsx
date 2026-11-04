@@ -151,6 +151,12 @@ export default function PlayableBricksEditor({
     if (citation) setSelection(citation);
   }
 
+  // Au téléphone, une sélection au doigt ne déclenche ni `mouseup` ni `keyup` : on suit aussi la sélection du document.
+  useEffect(() => {
+    document.addEventListener("selectionchange", capturerSelection);
+    return () => document.removeEventListener("selectionchange", capturerSelection);
+  });
+
   async function enregistrer() {
     setMessageServeur(null);
     const r = brouillonVersBlocs(brouillon, nomsEtats);

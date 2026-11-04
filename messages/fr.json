@@ -401,7 +401,7 @@
         "playable": "Jouable",
         "partial": "Partielle",
         "unevaluated": "Non évaluée",
-        "briques": "{n, plural, one {# brique} other {# briques}} sur {m} citées",
+        "briques": "{n, plural, one {# brique} other {# briques}}, {m, plural, one {# citée} other {# citées}}",
         "lacunes": "{n, plural, one {# passage reste en texte} other {# passages restent en texte}}",
         "aide": {
           "playable": "Cette règle se joue depuis la fiche.",

@@ -143,9 +143,10 @@ export default function RuleEntryView({
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col">
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <h1 className="entity-title">{entry.name}</h1>
-          <div className="flex shrink-0 items-center gap-2">
+          {/* V3.1-132 : les badges passent à la ligne au téléphone (le badge de couverture allonge la rangée). */}
+          <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
             {entry.personalReference && (
               <span
                 className="whitespace-nowrap rounded-full border px-2 py-0.5 text-[10px] font-medium"

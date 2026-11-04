@@ -21,7 +21,7 @@ export default function AvertissementReglesNonJouables({ worldSlug, regles }: { 
         {regles.map((r) => (
           <li key={r.key}>
             <Link
-              href={`/m/${encodeURIComponent(worldSlug)}/regles/${encodeURIComponent(r.key)}`}
+              href={`/m/${encodeURIComponent(worldSlug)}/joueur/regles/${encodeURIComponent(r.key)}`}
               className="inline-block rounded-full border border-edge px-3 py-1 text-xs text-link-rule transition-colors hover:bg-panel-raised"
             >
               {r.name}
