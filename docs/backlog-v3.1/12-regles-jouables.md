@@ -75,7 +75,7 @@
 
 ---
 
-### ☐ V3.1-132 — L'éditeur de briques et l'état de couverture · `L` · sans modèle IA — **à décider (esquisse)**
+### ☑ V3.1-132 — L'éditeur de briques et l'état de couverture · `L` · sans modèle IA — **à décider (esquisse)**
 
 **Modèle conseillé : Sonnet** pour l'interface, une fois l'esquisse décidée ; Opus relit la validation.
 **Dépend de** : 129.
@@ -87,8 +87,12 @@
 - Le mode solo avertit avant qu'une fiche non jouable n'entre en jeu (ADR 0059 §3).
 
 **Critères d'acceptation**
-- [ ] Abjuration d'ennemis se saisit entièrement depuis l'éditeur, sans JSON, et se joue sur la fiche.
-- [ ] Une règle officielle ne se modifie pas : l'éditeur crée la surcharge dans le ruleset personnel (règle absolue 18).
+- [x] Abjuration d'ennemis se saisit entièrement depuis l'éditeur, sans JSON, et se joue sur la fiche.
+- [x] Une règle officielle ne se modifie pas : l'éditeur crée la surcharge dans le ruleset personnel (règle absolue 18).
+
+*Fait le 4 novembre.* Planches décidées avec cinq ajustements (pas de cadre « Proposition de l'IA », renvoyé au 140 ; une citation facultative par brique, surlignée ; « Appliquer un état » en une brique ; section « Ressources déclarées » ; écriture dans la variante, jamais dans l'officielle). Noyau : `passage` / `passages` (chemins de `brickPaths`), `coverageSummary`, `pruneOrphanDurableEffects`, `applyOverrideFacts`. Serveur : `savePlayableBlocks` (`add_block`, `replace_block` ou `remove_block` selon la règle d'en dessous ; version maison réécrite d'un tenant ; refus sans variante), `listUnplayableRules`, `listDeclaredResources`, `unplayableAmong` ; routes MJ `rules/playable` et `rules/resources` ; `RuleEntryDetail.coverage`. Écran (Sonnet) : éditeur dans la fiche (⋮ « Rendre jouable »), rendu des trois blocs, badge, page « Règles non jouables » (MJ), bandeau du mode solo. Vérifié au navigateur dans un monde isolé : Conduit divin puis Abjuration saisis à l'éditeur par le MJ, joués par la Testeuse A (1 usage dépensé, sauvegarde du serveur, Effrayé posé) ; règle officielle : message et Enregistrer grisé ; téléphone. Corrigés en vérifiant : badges du titre qui débordaient au téléphone, sélection au doigt, liens du bandeau solo, libellé du badge. Test d'intégration `rulePlayableBlocks.integration.test.ts` (3/3).
+
+*Reste* : l'aperçu du bouton montre les formules brutes (`{spell_save_dc}`) faute de personnage ; les briques « Avantage / désavantage » et « Modificateur temporaire » s'enregistrent mais le tour du moteur ignore encore `apply_modifier` (V3.1-134) ; la condition d'accès `requires`, les jetons et les modificateurs d'un effet qui dure sont conservés mais pas saisissables.
 
 ---
 

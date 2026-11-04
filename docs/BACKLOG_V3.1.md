@@ -263,7 +263,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-129 | ☑ | sans | Le noyau : ressources déclarées, activation, effets qui durent | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
 | V3.1-130 | ☑ | sans | La migration et le service `activateFeature` | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
 | V3.1-131 | ☑ | sans | La fiche jouable : un bouton par activation | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
-| V3.1-132 | ☐ | sans | L'éditeur de briques et l'état de couverture | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
+| V3.1-132 | ☑ | sans | L'éditeur de briques et l'état de couverture | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
 | V3.1-133 | ☐ | sans | Les données : le quotidien du SRD rendu jouable | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
 | V3.1-134 | ☐ | sans | Les valeurs calculées | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
 | V3.1-135 | ☐ | sans | Intervenir sur un jet | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
