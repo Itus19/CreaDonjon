@@ -12,6 +12,9 @@ import { TRIGGER_EVENTS, zCondition, zEffect, type EffectNode } from "../../rule
 
 // --- resources -------------------------------------------------------------
 
+/** V3.1-132 : une citation du texte de la règle, attachée à une brique. Facultative. */
+export const zPassage = z.string().trim().min(1).max(2000);
+
 /** Même vocabulaire que les compteurs du personnage (`resourceRecharge.ts`). */
 export const RULE_RECHARGES = ["short_rest", "short_rest_one", "long_rest", "dawn", "never"] as const;
 
@@ -22,6 +25,8 @@ export const zRuleResource = z.object({
   /** Formule : `column.<clé>` (progression de la classe qui accorde la fiche), `class.level`, `level`, `ability.*`, `proficiency`. */
   max: zFormulaNode,
   recharge: z.enum(RULE_RECHARGES),
+  /** V3.1-132 : le passage du texte de la règle dont vient la brique (surligné à côté de l'éditeur). */
+  passage: zPassage.optional(),
 });
 export type RuleResource = z.infer<typeof zRuleResource>;
 
@@ -68,6 +73,8 @@ export const zActivation = z.object({
   targets: zActivationTargets,
   effects: zEffectList,
   variants: z.array(zActivationVariant).nullable(),
+  /** V3.1-132 : le passage dont vient chaque brique, par chemin (`brickPaths`) : `cost`, `targets`, `effects.0.on_fail.0`… */
+  passages: z.record(z.string(), zPassage).optional(),
 });
 export type Activation = z.infer<typeof zActivation>;
 
@@ -99,6 +106,8 @@ export const zDurableEffect = z.object({
   ends_on: z.array(zEndsOn),
   /** Jeton : tant que l'effet dure, son porteur dispose de l'activation `grants` ; un usage épuisé retire l'effet. */
   token: z.object({ uses: z.number().int().positive(), grants: z.string().min(1) }).nullable(),
+  /** V3.1-132 : le passage dont vient l'effet. */
+  passage: zPassage.optional(),
 });
 export type DurableEffect = z.infer<typeof zDurableEffect>;
 
@@ -109,6 +118,28 @@ function appliedEffectIds(effects: readonly EffectNode[]): string[] {
     if (e.action === "saving_throw") return [...appliedEffectIds(e.on_fail ?? []), ...appliedEffectIds(e.on_pass ?? [])];
     return [];
   });
+}
+
+function effectPaths(prefix: string, effects: readonly EffectNode[]): string[] {
+  return effects.flatMap((e, i) => {
+    const p = `${prefix}.${i}`;
+    if (e.action !== "saving_throw") return [p];
+    return [p, ...effectPaths(`${p}.on_fail`, e.on_fail ?? []), ...effectPaths(`${p}.on_pass`, e.on_pass ?? [])];
+  });
+}
+
+/**
+ * V3.1-132 — les chemins des briques d'une activation, dans l'ordre de
+ * l'éditeur : coût, cibles, effets (branches de sauvegarde comprises), puis
+ * effets des variantes. Une citation (`passages`) s'attache à l'un d'eux.
+ */
+export function brickPaths(a: Pick<Activation, "effects" | "variants">): string[] {
+  return [
+    "cost",
+    "targets",
+    ...effectPaths("effects", a.effects),
+    ...(a.variants ?? []).flatMap((v, k) => effectPaths(`variants.${k}.effects`, v.effects)),
+  ];
 }
 
 export const zActivationBlockData = z
@@ -123,6 +154,10 @@ export const zActivationBlockData = z
       const listes = [a.effects, ...(a.variants ?? []).map((v) => v.effects)];
       for (const id of listes.flatMap(appliedEffectIds)) {
         if (!effets.has(id)) ctx.addIssue({ code: "custom", message: `L'activation « ${a.id} » pose l'effet « ${id} », que le bloc ne décrit pas.` });
+      }
+      const chemins = new Set(brickPaths(a));
+      for (const cle of Object.keys(a.passages ?? {})) {
+        if (!chemins.has(cle)) ctx.addIssue({ code: "custom", message: `Le passage « ${cle} » de « ${a.id} » ne désigne aucune brique.` });
       }
     }
     for (const e of d.durable_effects) {

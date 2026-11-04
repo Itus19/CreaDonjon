@@ -34,6 +34,7 @@ import { buildHomebrewSubclassEntry, subclassSlotWrite, type HomebrewSubclassInp
 import { buildHomebrewSpellEntry, HomebrewSpellError, type HomebrewSpellInput } from "@/src/core/rules/homebrewSpell";
 import { blockTypesToRemove } from "@/src/core/rules/homebrewEdit";
 import { ruleEntryForPlayer } from "@/src/core/rules/ruleForReader";
+import { COVERAGE_ENTRY_TYPES, coverageSummary, type CoverageSummary } from "@/src/core/rules/activationEditor";
 import { isWorldAdmin } from "@/src/server/services/permissions";
 import { houseVersionChangedBlocks, isEditableHomebrewType, zHouseVersionPayload, type HouseVersionPayload } from "@/src/core/rules/houseVersion";
 import {
@@ -496,6 +497,8 @@ export interface RuleEntryDetail {
   isOfficialBase: boolean;
   /** V3.1-95 : la règle diffère de l'officielle (variante ou version maison) — badge « Règle de la table » du joueur. */
   tableRule: boolean;
+  /** V3.1-132 : l'état de couverture (aptitude, sort, objet magique) ; `null` pour les autres types. Calculé, jamais stocké. */
+  coverage: CoverageSummary | null;
 }
 
 function maxLevelForAxis(axis: ScalingBlockData["axis"]): number {
@@ -1218,6 +1221,9 @@ export async function getRuleEntryForWorld(
     houseVersion,
     isOfficialBase: chain[0]?.isOfficialBase ?? false,
     tableRule: houseVersion || resolved.modifiedBlockTypes.length > 0,
+    coverage: (COVERAGE_ENTRY_TYPES as readonly string[]).includes(resolved.entry_type)
+      ? coverageSummary(blocks.map((b) => ({ blockType: b.blockType, data: b.data })))
+      : null,
   };
 }
 
@@ -1291,7 +1297,7 @@ function speciesParentKey(sourceRaw: unknown): string | undefined {
  * correspondante, seul son entry_key/entry_type/name portes par la
  * surcharge elle-meme la decrivent.
  */
-async function listEntriesInRulesetChain(
+export async function listEntriesInRulesetChain(
   supabase: TypedClient,
   rulesetId: string,
   locale: Locale
@@ -1864,7 +1870,7 @@ export async function createHomebrewWeapon(
 }
 
 /** Gabarit label/mise en page par defaut (retour utilisateur, import JSON) — meme table que `scripts/ingest-srd.ts`, pour qu'un fichier ecrit a la main n'ait pas a connaitre les six mises en page (specs/regles-blocs.md §4) juste pour un premier import. Toujours ecrasable par un `display` explicite dans le fichier. */
-const DEFAULT_BLOCK_DISPLAY: Record<BlockType, { label: string; layout: string }> = {
+export const DEFAULT_BLOCK_DISPLAY: Record<BlockType, { label: string; layout: string }> = {
   description: { label: "Description", layout: "prose" },
   spell_casting: { label: "Incantation", layout: "key_values" },
   effects: { label: "Effets", layout: "formula_list" },

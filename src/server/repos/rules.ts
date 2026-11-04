@@ -849,3 +849,73 @@ export async function listIncomingRefsForKey(
   }
   return result;
 }
+
+export interface EntryBlockFactRow {
+  entry_key: string;
+  block_type: string;
+  /** Seulement pour `coverage` (le nombre de lacunes) ; `null` ailleurs. */
+  data: Json | null;
+}
+
+/**
+ * V3.1-132 — la vue « règles non jouables » : pour UN ruleset, les règles qui
+ * portent un bloc d'un des types donnés, sans lire leurs données (sauf
+ * `coverage`, petit). Paginée comme `listRulesetEntries` (plafond PostgREST).
+ */
+export async function listEntryBlockFacts(supabase: TypedClient, rulesetId: string, blockTypes: readonly string[]): Promise<EntryBlockFactRow[]> {
+  if (blockTypes.length === 0) return [];
+  const toutes: EntryBlockFactRow[] = [];
+  for (let page = 0; page <= MAX_EXTRA_PAGES; page++) {
+    const from = page * LIST_PAGE_SIZE;
+    const { data, error } = await supabase
+      .from("ruleset_entry_blocks")
+      .select("id, block_type, ruleset_entries!inner(entry_key, ruleset_id)")
+      .eq("ruleset_entries.ruleset_id", rulesetId)
+      .in("block_type", [...blockTypes])
+      .order("id")
+      .range(from, from + LIST_PAGE_SIZE - 1);
+    if (error) throw new Error(error.message);
+    const lignes = (data ?? []) as unknown as { id: string; block_type: string; ruleset_entries: { entry_key: string } }[];
+    toutes.push(...lignes.map((l) => ({ entry_key: l.ruleset_entries.entry_key, block_type: l.block_type, data: null })));
+    if (lignes.length < LIST_PAGE_SIZE) break;
+  }
+  const { data: cov, error: covError } = await supabase
+    .from("ruleset_entry_blocks")
+    .select("data, ruleset_entries!inner(entry_key, ruleset_id)")
+    .eq("ruleset_entries.ruleset_id", rulesetId)
+    .eq("block_type", "coverage");
+  if (covError) throw new Error(covError.message);
+  for (const l of (cov ?? []) as unknown as { data: Json; ruleset_entries: { entry_key: string } }[]) {
+    toutes.push({ entry_key: l.ruleset_entries.entry_key, block_type: "coverage", data: l.data });
+  }
+  return toutes;
+}
+
+export interface ChainOverrideRow {
+  ruleset_id: string;
+  entry_key: string;
+  block_type: string | null;
+  action: string;
+  payload: Json;
+  created_at: string;
+}
+
+/** V3.1-132 — toutes les surcharges de quelques variantes (une chaîne, sans la base officielle), dans l'ordre d'écriture. Paginée. */
+export async function listOverridesForRulesets(supabase: TypedClient, rulesetIds: readonly string[]): Promise<ChainOverrideRow[]> {
+  if (rulesetIds.length === 0) return [];
+  const toutes: ChainOverrideRow[] = [];
+  for (let page = 0; page <= MAX_EXTRA_PAGES; page++) {
+    const from = page * LIST_PAGE_SIZE;
+    const { data, error } = await supabase
+      .from("ruleset_overrides")
+      .select("ruleset_id, entry_key, block_type, action, payload, created_at")
+      .in("ruleset_id", [...rulesetIds])
+      .order("created_at")
+      .order("id")
+      .range(from, from + LIST_PAGE_SIZE - 1);
+    if (error) throw new Error(error.message);
+    toutes.push(...data);
+    if (data.length < LIST_PAGE_SIZE) break;
+  }
+  return toutes;
+}
