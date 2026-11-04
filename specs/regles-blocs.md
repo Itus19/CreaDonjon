@@ -140,6 +140,8 @@ Porté par **une** fiche par ruleset, `character-rules` (type `rule`), surcharg�
 | `activation` | `key_values` | « cette règle se joue » : `activations` (`id`, `label`, `requires`, `cost` — action et ressources —, `targets`, `effects` du vocabulaire des déclencheurs, `variants`) et `durable_effects` (`conditions`, `modifiers`, `duration`, `concentration`, `ends_on`, `token`). Un `apply_effect` vise un effet du même bloc |
 | `coverage` | `key_values` | ce que la fiche ne sait pas encore jouer : `gaps` (`text`, `missing`). Jouable, partielle ou non évaluée : calculé, jamais stocké |
 
+Chaque brique peut citer le passage du texte de la règle dont elle vient (V3.1-132) : `passage` sur une ressource et sur un effet qui dure, `passages` sur une activation, indexés par le chemin de la brique (`cost`, `targets`, `effects.0`, `effects.0.on_fail.0`, `variants.1.effects.0` — `brickPaths`). Facultatif ; un passage qui ne désigne aucune brique est refusé. L'éditeur écrit ces trois blocs en surcharge dans la variante active du monde (`replace_block` si la règle d'en dessous a le bloc, sinon `add_block` ; `remove_block` pour le retirer), jamais dans l'officielle.
+
 Un effet qui dure s'écrit dans `entity_active_effects` (SCHEMA.md §12.2) : par le PJ, ou par l'instance de combat pour toute autre créature (ADR 0073).
 
 ### Blocs requis par type d'entrée

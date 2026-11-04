@@ -122,12 +122,15 @@ Les tests, les mesures et les scripts tournent **contre la vraie base**, celle d
 - **Supabase prévient par email** quand une limite approche. Un tel email est une **alerte de panne prochaine** : on regarde le jour même ce qui consomme.
 - **Une hausse sans raison** se diagnostique avec les outils de `CABLAGE.md` (§2) : quel écran fait le plus de requêtes, quelle route est la plus appelée.
 
-### Ce que consomment les règles jouables (V3.1-129/130)
+### Ce que consomment les règles jouables (V3.1-129 à 132)
 
 - **Ouvrir une fiche de personnage** : une lecture de plus (`entity_active_effects` du personnage), dans la même vague que la fiche et ses blocs.
 - **Une activation** (`actions/activate`) : une seule demande, sans lecture en boucle. Lectures : la fiche, le bloc `activation` de la règle, la campagne, le combat et ses participants (signés pour un joueur), un bonus de sauvegarde par cible et par caractéristique. Écritures : l'état de jeu (usages), les effets immédiats et états (une écriture par cible touchée), une ligne par effet qui dure (ou un seul changement signé pour un joueur), le journal.
 - **Expiration** : rien en tâche de fond. Elle ne tourne que sur un geste déjà fait — bascule de tour, dégâts, concentration rompue, repos — et lit les effets du combat une fois par geste.
 - **Recharge d'une créature** : au plus un d6 et une écriture par instance qui commence son tour avec une capacité dépensée.
+- **Éditeur de briques** (V3.1-132) : à l'ouverture, une lecture des ressources déclarées (blocs `resources` de la base et surcharges des variantes) ; à l'enregistrement, une surcharge par bloc changé (trois au plus) et une résolution de la règle dans le ruleset parent.
+- **Vue « règles non jouables »** (V3.1-132, MJ, à la demande) : la liste des règles (celle de la barre latérale, deux pages pour le SRD), les types de blocs mécaniques de la base (155 lignes pour le SRD, mesuré le 4 nov. : 0,5 s) et les surcharges des variantes, paginées.
+- **Mode solo** (V3.1-132) : le même calcul à l'ouverture de l'écran solo, pour avertir des règles non jouables du personnage ; jamais en boucle.
 
 ## 5. Où cette règle est appliquée
 
