@@ -25,6 +25,12 @@ describe("entreesMenuRegle", () => {
     expect(entreesMenuRegle({ ...base, isHomebrew: true })).toContain("supprimer");
     expect(entreesMenuRegle({ ...base, houseVersion: true })).not.toContain("supprimer");
   });
+  it("propose l'éditeur de briques pour un type jouable, même sur une base officielle, jamais au joueur", () => {
+    expect(entreesMenuRegle(base)).not.toContain("briques");
+    expect(entreesMenuRegle({ ...base, typeJouable: true })).toContain("briques");
+    expect(entreesMenuRegle({ ...base, typeJouable: true, isOfficialBase: true })).toContain("briques");
+    expect(entreesMenuRegle({ ...base, typeJouable: true, playerRestricted: true })).toEqual([]);
+  });
   it("ne donne rien au joueur", () => {
     expect(entreesMenuRegle({ ...base, playerRestricted: true, isHomebrew: true })).toEqual([]);
   });

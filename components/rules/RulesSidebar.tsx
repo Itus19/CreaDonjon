@@ -134,6 +134,14 @@ function ListeTelephone({ worldSlug, onNavigate }: { worldSlug: string; onNaviga
         >
           {t("bacASableDeclencheurs")}
         </Link>
+        {/* V3.1-132 : la vue des règles à rendre jouables ; page serveur réservée au MJ. */}
+        <Link
+          href={`/m/${encodeURIComponent(worldSlug)}/regles/non-jouables`}
+          onClick={() => onNavigate()}
+          className="block w-full rounded-full border border-edge px-4 py-2 text-center text-sm font-medium text-ink transition-colors hover:bg-panel-raised"
+        >
+          {t("briques.nonJouablesLien")}
+        </Link>
       </div>
     </>
   );

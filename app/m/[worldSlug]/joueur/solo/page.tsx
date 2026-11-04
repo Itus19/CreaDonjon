@@ -7,12 +7,14 @@ import { getClaimedCharacterEntityId } from "@/src/server/repos/campaigns";
 import { buildIntentBarData } from "@/src/server/services/turnIntent";
 import { listSceneChoices, loadSceneView, sceneDateLabel } from "@/src/server/services/soloScene";
 import { buildViewerForWorld } from "@/src/server/services/visibility";
+import { unplayableAmong } from "@/src/server/services/rulePlayableBlocks";
 import { buildWikiColumn, buildQuestColumn } from "@/src/server/services/soloWorldColumn";
 import EmptyState from "@/components/shell/EmptyState";
 import ColonneMonde, { ColonneMondeTelephone } from "@/components/solo/ColonneMonde";
 import QuetesTelephone from "@/components/solo/QuetesTelephone";
 import EnTeteEtat from "@/components/solo/EnTeteEtat";
 import FicheJouableSolo from "@/components/solo/FicheJouableSolo";
+import AvertissementReglesNonJouables from "@/components/solo/AvertissementReglesNonJouables";
 import SoloScreen from "@/components/solo/SoloScreen";
 import SoloShell from "@/components/solo/SoloShell";
 import type { Locale } from "@/src/i18n/request";
@@ -78,17 +80,20 @@ export default async function JoueurSoloPage({ params }: { params: Promise<{ wor
 
   const viewer = await buildViewerForWorld(supabase, world.id, user.id);
   const t = await getTranslations("shell");
-  const [scene, choices, calendar, wiki, quests] = await Promise.all([
+  const [scene, choices, calendar, wiki, quests, nonJouables] = await Promise.all([
     loadSceneView(supabase, { campaignId: campaign.id, worldId: world.id }),
     listSceneChoices(supabase, world.id),
     getCalendar(supabase, world.id),
     buildWikiColumn(supabase, world.id, user.id, viewer, t.raw("kindLabels") as Record<string, string>, campaign.id, entityId),
     buildQuestColumn(supabase, world.id, viewer),
+    // V3.1-132 : les règles du personnage qui ne sont pas entièrement jouables (trois lectures, une fois par ouverture du solo).
+    unplayableAmong(supabase, { worldId: world.id, keys: data.ruleKeys, locale }),
   ]);
   const dateLabel = scene ? sceneDateLabel(scene.time.day, calendar) : null;
 
   return (
     <div className="flex h-full min-h-0 flex-col">
+      <AvertissementReglesNonJouables worldSlug={worldSlug} regles={nonJouables} />
       <SoloShell
         worldSlug={worldSlug}
         entete={<EnTeteEtat worldSlug={worldSlug} scene={scene} dateLabel={dateLabel} />}

@@ -1,6 +1,7 @@
 import type { RuleEntryBlockView, RuleRefView } from "@/src/server/services/rules";
 import { renderBlockData } from "./blockContentRenderer";
 import ModifiedBlockBadge from "./ModifiedBlockBadge";
+import BriquesLecture, { BLOCS_BRIQUES } from "./BriquesLecture";
 
 export default function RuleBlockRenderer({
   block,
@@ -14,7 +15,9 @@ export default function RuleBlockRenderer({
   /** Coquille joueur : pas de bascule Officiel / Ta variante (V3.1-94). */
   sansBascule?: boolean;
 }) {
-  const content = renderBlockData(block.blockType, block.data, worldSlug, outgoingRefs);
+  // V3.1-132 : les briques d'une règle jouable ont leur propre rendu (planche « Fiche terminée »).
+  const brique = BLOCS_BRIQUES.find((b) => b === block.blockType);
+  const content = brique ? <BriquesLecture blockType={brique} data={block.data} /> : renderBlockData(block.blockType, block.data, worldSlug, outgoingRefs);
 
   if (block.originalData !== undefined && !sansBascule) {
     return (

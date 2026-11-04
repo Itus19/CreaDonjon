@@ -12,6 +12,10 @@ import RuleRefsPanel from "@/components/rules/RuleRefsPanel";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import { clearWorldRuleEntriesCache } from "@/components/blocks/useWorldRuleEntries";
 import HomebrewEditForm, { isEditableHomebrewType } from "@/components/rules/HomebrewEditForm";
+import PlayableBricksEditor from "@/components/rules/PlayableBricksEditor";
+import BadgeCouverture from "@/components/rules/BadgeCouverture";
+import { COVERAGE_ENTRY_TYPES } from "@/src/core/rules/activationEditor";
+import { aDesBriques } from "@/lib/ui/briquesRegle";
 import ActionsMenu, { type ActionsMenuItem } from "@/components/shared/ActionsMenu";
 import { RAW_DATA_BLOCK_TYPES } from "@/src/core/rules/ruleForReader";
 import { creerVersionMaison, epinglerRegle } from "@/lib/ui/regleApi";
@@ -49,6 +53,8 @@ export default function RuleEntryView({
   // creation rouvert ici meme (meme fenetre, meme page) — pas de nouvelle
   // route ni de nouvelle cle de fenetre.
   const [editing, setEditing] = useState(false);
+  // V3.1-132 : l'éditeur de briques s'ouvre lui aussi dans la fiche, jamais dans une autre page.
+  const [editingBriques, setEditingBriques] = useState(false);
   // Message du dernier geste du menu (confirmation ou erreur du serveur).
   const [geste, setGeste] = useState<{ texte: string; erreur: boolean } | null>(null);
   const typeModifiable = isEditableHomebrewType(entry.entryType);
@@ -60,6 +66,7 @@ export default function RuleEntryView({
     houseVersion: entry.houseVersion,
     isOfficialBase: entry.isOfficialBase,
     typeModifiable,
+    typeJouable: (COVERAGE_ENTRY_TYPES as readonly string[]).includes(entry.entryType),
   });
 
   async function epingler() {
@@ -100,6 +107,10 @@ export default function RuleEntryView({
     copierLien: { label: t("copierLienWiki"), onSelect: () => void copierLien() },
     versionMaison: { label: t("creerVersionMaison"), onSelect: () => void creerMaison() },
     modifier: { label: t("modifier"), onSelect: () => setEditing(true) },
+    briques: {
+      label: aDesBriques(entry.blocks) ? t("briques.modifierBriques") : t("briques.rendreJouable"),
+      onSelect: () => setEditingBriques(true),
+    },
     supprimer: { label: t("supprimer"), onSelect: () => setConfirmingDelete(true), danger: true },
   };
 
@@ -154,7 +165,8 @@ export default function RuleEntryView({
                 {t("modifieeDansTaVariante")}
               </span>
             )}
-            {entrees.length > 0 && !editing && (
+            {entry.coverage && <BadgeCouverture coverage={entry.coverage} />}
+            {entrees.length > 0 && !editing && !editingBriques && (
               <ActionsMenu items={entrees.map((e) => libellesEntrees[e])} aria-label={t("actionsRegle")} />
             )}
           </div>
@@ -181,6 +193,18 @@ export default function RuleEntryView({
             relireFiche();
           }}
           onCancel={() => setEditing(false)}
+        />
+      )}
+
+      {editingBriques && (
+        <PlayableBricksEditor
+          worldSlug={worldSlug}
+          entry={entry}
+          onDone={() => {
+            setEditingBriques(false);
+            relireFiche();
+          }}
+          onCancel={() => setEditingBriques(false)}
         />
       )}
 

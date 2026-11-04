@@ -336,6 +336,13 @@ export default function SommaireRegles({ worldSlug, joueur = false }: { worldSlu
             { href: openBacASableDeclencheurs.href, label: t("bacASableDeclencheurs"), onClick: openBacASableDeclencheurs.onClick },
           ]}
         />
+        {/* V3.1-132 : la vue des règles à rendre jouables (page serveur, MJ seulement). */}
+        <Link
+          href={`/m/${encodeURIComponent(worldSlug)}/regles/non-jouables`}
+          className="block w-full rounded-full border border-edge px-3 py-1.5 text-center text-[12.5px] text-ink transition-colors hover:bg-panel-raised"
+        >
+          {t("briques.nonJouablesLien")}
+        </Link>
       </div>
       )}
     </div>

@@ -33,3 +33,36 @@ export async function epinglerRegle(worldSlug: string, key: string): Promise<Res
   const corps = (await res.json().catch(() => null)) as { alreadyPinned?: unknown } | null;
   return { ok: true, valeur: { alreadyPinned: corps?.alreadyPinned === true } };
 }
+
+/** V3.1-132 : une ressource déclarée dans le ruleset actif, pour le menu « Ressource dépensée » de l'éditeur de briques. */
+export interface RessourceDeclaree {
+  key: string;
+  label: string;
+  entryKey: string;
+}
+
+/** Lue une seule fois, à l'ouverture de l'éditeur (docs/QUOTAS.md) ; `null` si le serveur refuse. */
+export async function chargerRessourcesDeclarees(worldSlug: string): Promise<RessourceDeclaree[] | null> {
+  const res = await fetch(`/api/worlds/${worldSlug}/rules/resources`);
+  if (!res.ok) return null;
+  const corps = (await res.json().catch(() => null)) as { resources?: RessourceDeclaree[] } | null;
+  return Array.isArray(corps?.resources) ? corps.resources : null;
+}
+
+export type ResultatBriques = { ok: true } | { ok: false; message: string; sansVariante: boolean };
+
+/** « Enregistrer » de l'éditeur de briques. `sansVariante` : le serveur a refusé (409) parce que la règle est officielle. */
+export async function enregistrerBriques(worldSlug: string, corps: Record<string, unknown>): Promise<ResultatBriques> {
+  const res = await fetch(`/api/worlds/${worldSlug}/rules/playable`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(corps),
+  });
+  if (res.ok) return { ok: true };
+  const erreur = (await res.json().catch(() => null)) as { error?: unknown; reason?: unknown } | null;
+  return {
+    ok: false,
+    sansVariante: res.status === 409 && erreur?.reason === "no_variant",
+    message: typeof erreur?.error === "string" ? erreur.error : "Impossible d'enregistrer les briques.",
+  };
+}

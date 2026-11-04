@@ -1,0 +1,903 @@
+/**
+ * V3.1-132 — logique pure de l'éditeur de briques d'une règle (ADR 0060).
+ *
+ * L'écran ne manipule jamais de JSON : il édite un BROUILLON où chaque formule
+ * est un texte (`{ability.cha}`, `max(1, {ability.cha})`), chaque liste un
+ * tableau, chaque citation une chaîne portée par sa brique. Ce module fait
+ * l'aller-retour brouillon <-> blocs `resources` / `activation` / `coverage`,
+ * et valide avant l'envoi (le serveur revalide de toute façon par Zod).
+ *
+ * Aucun effet ici : pas de réseau, pas de React.
+ */
+import { formatFormulaNode, FormulaError, parseFormula, type FormulaNode } from "@/src/core/formula";
+import { pruneOrphanDurableEffects } from "@/src/core/rules/activationEditor";
+import { OPS_BY_TARGET_CATEGORY, modifierOpNeedsValue, modifierTargetOption } from "@/src/core/rules/modifierTargets";
+import type { Modifier, ModifierOp } from "@/src/core/rules/sheet";
+import type { BudgetKind } from "@/src/core/rules/actionBudget";
+import type { ConditionNode, EffectNode, TriggerZone } from "@/src/core/rules/triggers";
+import {
+  zActivationBlockData,
+  zCoverageBlockData,
+  zRuleResourcesBlockData,
+  type ActivationBlockData,
+  type CoverageBlockData,
+  type DurableEffect,
+  type DurableEffectDuration,
+  type DurableEffectEnd,
+  type RuleResourcesBlockData,
+} from "@/src/core/schemas/rule-blocks/playable";
+
+export type Localise = Record<string, string>;
+export type RechargeRegle = RuleResourcesBlockData["resources"][number]["recharge"];
+export type TypeAction = ActivationBlockData["activations"][number]["cost"]["action"];
+export type GenreCible = ActivationBlockData["activations"][number]["targets"]["kind"];
+export type QuiBrique = "self" | "target";
+
+// --- Les formules, en texte --------------------------------------------------
+
+/** Pourquoi un texte n'est pas une formule valide ; `null` s'il l'est. Jamais d'exception pour l'écran. */
+export function erreurFormule(texte: string): string | null {
+  if (texte.trim() === "") return "Formule vide.";
+  try {
+    parseFormula(texte);
+    return null;
+  } catch (erreur) {
+    if (erreur instanceof FormulaError) return erreur.message;
+    throw erreur;
+  }
+}
+
+/** Les références que l'aide « insérer une référence » propose (clé de libellé dans `messages/`, texte à insérer). */
+export const REFERENCES_FORMULE: readonly { cle: string; texte: string }[] = [
+  { cle: "modFor", texte: "{ability.str}" },
+  { cle: "modDex", texte: "{ability.dex}" },
+  { cle: "modCon", texte: "{ability.con}" },
+  { cle: "modInt", texte: "{ability.int}" },
+  { cle: "modSag", texte: "{ability.wis}" },
+  { cle: "modCha", texte: "{ability.cha}" },
+  { cle: "ddSorts", texte: "{spell_save_dc}" },
+  { cle: "niveau", texte: "{level}" },
+  { cle: "niveauClasse", texte: "{class.level}" },
+  { cle: "maitrise", texte: "{proficiency}" },
+];
+
+// --- Le brouillon ------------------------------------------------------------
+
+export interface BrouillonRessource {
+  uid: string;
+  key: string;
+  label: string;
+  labelOrig: Localise;
+  max: string;
+  recharge: RechargeRegle;
+  passage: string | null;
+}
+
+export interface BrouillonDepense {
+  cle: string;
+  quantite: string;
+}
+
+export interface BrouillonCout {
+  action: TypeAction;
+  depenses: BrouillonDepense[];
+  passage: string | null;
+}
+
+export interface BrouillonCibles {
+  kind: GenreCible;
+  nombre: string;
+  portee: string;
+  doitVoir: boolean;
+  passage: string | null;
+}
+
+export interface BrouillonDuree {
+  unit: DurableEffectDuration["unit"];
+  amount: string;
+  whose: "bearer" | "source";
+  which: "current" | "next";
+}
+
+export interface BrouillonFin {
+  /** Un événement de `TRIGGER_EVENTS`, ou `dismissed` (au choix de la source). */
+  event: string;
+  subject: "bearer" | "source";
+}
+
+export type CorpsEffet =
+  | { type: "saving_throw"; ability: string; dc: string; echec: BrouillonEffet[]; reussite: BrouillonEffet[] }
+  | { type: "deal_damage"; montant: string; typeDegats: string }
+  | { type: "heal"; montant: string }
+  | { type: "apply_condition"; cle: string }
+  | { type: "remove_condition"; cle: string }
+  /** « Appliquer un état » : UNE brique à l'écran, un `apply_effect` ET son effet qui dure (ADR 0060 §3). */
+  | { type: "apply_state"; effectId: string; cle: string; labelOrig: Localise; duree: BrouillonDuree; concentration: boolean; finSi: BrouillonFin[] }
+  /** Un effet qui dure que le formulaire ne sait pas saisir (modificateurs, jeton) : conservé tel quel, jamais perdu. */
+  | { type: "existing_durable"; effectId: string }
+  | { type: "apply_modifier"; cible: string; op: ModifierOp; valeur: string; libelle: string; origine: Modifier | null }
+  | { type: "grant_budget"; kind: BudgetKind; montant: string }
+  | { type: "move"; zone: TriggerZone }
+  | { type: "roll"; libelle: string; formule: string }
+  | { type: "narrate_hint"; texte: string }
+  /** Un effet hors du formulaire (dépense de ressource, inspiration) : conservé tel quel. */
+  | { type: "opaque"; effet: EffectNode };
+
+export type BrouillonEffet = { uid: string; who: string; passage: string | null } & CorpsEffet;
+
+export interface BrouillonVariante {
+  uid: string;
+  id: string;
+  label: string;
+  labelOrig: Localise;
+  effets: BrouillonEffet[];
+  /** `null` : le coût de l'activation. */
+  cout: BrouillonCout | null;
+}
+
+export interface BrouillonActivation {
+  uid: string;
+  id: string;
+  label: string;
+  labelOrig: Localise;
+  /** Condition d'accès (« niveau 3 »), conservée telle quelle : elle ne se saisit pas ici. */
+  requires: ConditionNode | undefined;
+  cout: BrouillonCout;
+  cibles: BrouillonCibles;
+  effets: BrouillonEffet[];
+  variantes: BrouillonVariante[];
+}
+
+export interface BrouillonLacune {
+  uid: string;
+  texte: string;
+  manque: string;
+}
+
+export interface Brouillon {
+  ressources: BrouillonRessource[];
+  activations: BrouillonActivation[];
+  /** Les effets qui durent hors formulaire, gardés pour être réécrits. */
+  durablesConserves: DurableEffect[];
+  lacunes: BrouillonLacune[];
+  /** Les blocs existaient déjà : les retirer s'envoie `null`. */
+  existait: { resources: boolean; activation: boolean; coverage: boolean };
+}
+
+let compteur = 0;
+/** Un identifiant d'écran (clé React, survol) : jamais enregistré, jamais affiché. */
+export function nouvelUid(): string {
+  compteur += 1;
+  return `b${compteur}`;
+}
+
+export function libelleFr(l: Localise): string {
+  return l.fr ?? Object.values(l)[0] ?? "";
+}
+
+function localise(origine: Localise, texte: string): Localise {
+  return { ...origine, fr: texte };
+}
+
+/** Un identifiant libre : `base`, puis `base-2`, `base-3`… */
+export function idLibre(base: string, pris: ReadonlySet<string>): string {
+  if (!pris.has(base)) return base;
+  let n = 2;
+  while (pris.has(`${base}-${n}`)) n += 1;
+  return `${base}-${n}`;
+}
+
+/** Un identifiant technique lisible à partir d'un libellé (`Conduit divin` -> `conduit-divin`). */
+export function cleDepuisLibelle(libelle: string): string {
+  return libelle
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+// --- Brouillon vide et nouvelles briques ------------------------------------
+
+export function brouillonVide(): Brouillon {
+  return { ressources: [], activations: [], durablesConserves: [], lacunes: [], existait: { resources: false, activation: false, coverage: false } };
+}
+
+export function nouvelleRessource(): BrouillonRessource {
+  return { uid: nouvelUid(), key: "", label: "", labelOrig: {}, max: "1", recharge: "long_rest", passage: null };
+}
+
+export function nouveauCout(): BrouillonCout {
+  return { action: "action", depenses: [], passage: null };
+}
+
+export function nouvellesCibles(): BrouillonCibles {
+  return { kind: "creature", nombre: "", portee: "", doitVoir: false, passage: null };
+}
+
+export function nouvelleLacune(texte = ""): BrouillonLacune {
+  return { uid: nouvelUid(), texte, manque: "" };
+}
+
+export function toutesLesActivationsIds(b: Brouillon): Set<string> {
+  return new Set(b.activations.map((a) => a.id));
+}
+
+export function nouvelleActivation(b: Brouillon): BrouillonActivation {
+  return {
+    uid: nouvelUid(),
+    id: idLibre("utilisation", toutesLesActivationsIds(b)),
+    label: "",
+    labelOrig: {},
+    requires: undefined,
+    cout: nouveauCout(),
+    cibles: nouvellesCibles(),
+    effets: [],
+    variantes: [],
+  };
+}
+
+export function nouvelleVariante(a: BrouillonActivation): BrouillonVariante {
+  return {
+    uid: nouvelUid(),
+    id: idLibre("variante", new Set(a.variantes.map((v) => v.id))),
+    label: "",
+    labelOrig: {},
+    effets: [],
+    cout: null,
+  };
+}
+
+/** Ce que la liste « Ajouter une brique » propose (« Avantage / désavantage » et « Modificateur temporaire » écrivent le même effet). */
+export const ENTREES_AJOUT = [
+  "saving_throw",
+  "deal_damage",
+  "heal",
+  "apply_state",
+  "remove_condition",
+  "advantage",
+  "apply_modifier",
+  "move",
+  "grant_budget",
+  "roll",
+  "narrate_hint",
+] as const;
+export type EntreeAjout = (typeof ENTREES_AJOUT)[number];
+
+/** Tous les identifiants d'effets qui durent déjà posés ou conservés dans le brouillon. */
+export function idsEffetsPris(b: Brouillon): Set<string> {
+  const pris = new Set(b.durablesConserves.map((d) => d.id));
+  const parcourir = (liste: readonly BrouillonEffet[]) => {
+    for (const e of liste) {
+      if (e.type === "apply_state" || e.type === "existing_durable") pris.add(e.effectId);
+      if (e.type === "saving_throw") {
+        parcourir(e.echec);
+        parcourir(e.reussite);
+      }
+    }
+  };
+  for (const a of b.activations) {
+    parcourir(a.effets);
+    for (const v of a.variantes) parcourir(v.effets);
+  }
+  return pris;
+}
+
+export function nouvelEffet(entree: EntreeAjout, b: Brouillon): BrouillonEffet {
+  const base = { uid: nouvelUid(), passage: null };
+  switch (entree) {
+    case "saving_throw":
+      return { ...base, who: "target", type: "saving_throw", ability: "wis", dc: "{spell_save_dc}", echec: [], reussite: [] };
+    case "deal_damage":
+      return { ...base, who: "target", type: "deal_damage", montant: "1d6", typeDegats: "" };
+    case "heal":
+      return { ...base, who: "self", type: "heal", montant: "1d6" };
+    case "apply_state":
+      return {
+        ...base,
+        who: "target",
+        type: "apply_state",
+        effectId: idLibre("effet", idsEffetsPris(b)),
+        cle: "",
+        labelOrig: {},
+        duree: { unit: "minute", amount: "1", whose: "bearer", which: "next" },
+        concentration: false,
+        finSi: [],
+      };
+    case "remove_condition":
+      return { ...base, who: "target", type: "remove_condition", cle: "" };
+    case "advantage":
+      return { ...base, who: "self", type: "apply_modifier", cible: "save.str", op: "advantage", valeur: "", libelle: "", origine: null };
+    case "apply_modifier":
+      return { ...base, who: "self", type: "apply_modifier", cible: "ac", op: "add", valeur: "1", libelle: "", origine: null };
+    case "move":
+      return { ...base, who: "target", type: "move", zone: "far" };
+    case "grant_budget":
+      return { ...base, who: "self", type: "grant_budget", kind: "action", montant: "1" };
+    case "roll":
+      return { ...base, who: "self", type: "roll", libelle: "", formule: "1d20" };
+    case "narrate_hint":
+      return { ...base, who: "self", type: "narrate_hint", texte: "" };
+  }
+}
+
+/** Les effets permis pour une cible de modificateur (jamais une opération que le moteur ignore). */
+export function opsPourCible(cible: string): readonly ModifierOp[] {
+  const option = modifierTargetOption(cible);
+  return option ? OPS_BY_TARGET_CATEGORY[option.category] : ["add"];
+}
+
+// --- Listes immuables --------------------------------------------------------
+
+export function remplacerA<T>(liste: readonly T[], i: number, valeur: T): T[] {
+  return liste.map((x, k) => (k === i ? valeur : x));
+}
+
+export function retirerA<T>(liste: readonly T[], i: number): T[] {
+  return liste.filter((_, k) => k !== i);
+}
+
+/** Décale l'élément `i` de `delta` rangs ; hors bornes, la liste est rendue inchangée. */
+export function deplacerA<T>(liste: readonly T[], i: number, delta: number): T[] {
+  const j = i + delta;
+  if (i < 0 || j < 0 || i >= liste.length || j >= liste.length) return [...liste];
+  const copie = [...liste];
+  const [x] = copie.splice(i, 1);
+  copie.splice(j, 0, x);
+  return copie;
+}
+
+// --- Blocs -> brouillon ------------------------------------------------------
+
+function coutVersBrouillon(c: ActivationBlockData["activations"][number]["cost"], passage: string | null): BrouillonCout {
+  return { action: c.action, depenses: c.resources.map((r) => ({ cle: r.key, quantite: formatFormulaNode(r.amount) })), passage };
+}
+
+function dureeVersBrouillon(d: DurableEffectDuration): BrouillonDuree {
+  const base: BrouillonDuree = { unit: d.unit, amount: "1", whose: "bearer", which: "next" };
+  if (d.unit === "until_turn_end") return { ...base, whose: d.whose, which: d.which };
+  if (d.unit === "until_rest" || d.unit === "permanent") return base;
+  return { ...base, amount: String(d.amount) };
+}
+
+function finVersBrouillon(f: DurableEffectEnd): BrouillonFin {
+  return f.event === "dismissed" ? { event: "dismissed", subject: "bearer" } : { event: f.event, subject: f.subject };
+}
+
+/** Un effet qui dure que le formulaire sait saisir : un seul état, ni modificateur ni jeton. */
+function durableSaisissable(d: DurableEffect): boolean {
+  return d.conditions.length === 1 && d.modifiers.length === 0 && d.token === null;
+}
+
+interface CtxLecture {
+  durables: Map<string, DurableEffect>;
+  /** Identifiants déjà repris par une brique `apply_state`. */
+  repris: Set<string>;
+  conserves: Map<string, DurableEffect>;
+  passages: Record<string, string> | undefined;
+}
+
+function effetVersBrouillon(e: EffectNode, chemin: string, ctx: CtxLecture): BrouillonEffet {
+  const base = { uid: nouvelUid(), passage: ctx.passages?.[chemin] ?? null };
+  const liste = (effets: readonly EffectNode[] | undefined, prefixe: string) => (effets ?? []).map((x, i) => effetVersBrouillon(x, `${prefixe}.${i}`, ctx));
+  switch (e.action) {
+    case "saving_throw":
+      return {
+        ...base,
+        who: e.who,
+        type: "saving_throw",
+        ability: e.ability,
+        dc: formatFormulaNode(e.dc),
+        echec: liste(e.on_fail, `${chemin}.on_fail`),
+        reussite: liste(e.on_pass, `${chemin}.on_pass`),
+      };
+    case "deal_damage":
+      return { ...base, who: e.who, type: "deal_damage", montant: formatFormulaNode(e.amount), typeDegats: e.damage_type ?? "" };
+    case "heal":
+      return { ...base, who: e.who, type: "heal", montant: formatFormulaNode(e.amount) };
+    case "apply_condition":
+      return { ...base, who: e.who, type: "apply_condition", cle: e.key };
+    case "remove_condition":
+      return { ...base, who: e.who, type: "remove_condition", cle: e.key };
+    case "apply_modifier":
+      return {
+        ...base,
+        who: e.who,
+        type: "apply_modifier",
+        cible: e.modifier.target,
+        op: e.modifier.op,
+        valeur: e.modifier.value === undefined ? "" : String(e.modifier.value),
+        libelle: e.modifier.label,
+        origine: e.modifier,
+      };
+    case "grant_budget":
+      return { ...base, who: e.who, type: "grant_budget", kind: e.kind, montant: formatFormulaNode(e.amount) };
+    case "move":
+      return { ...base, who: e.who, type: "move", zone: e.zone };
+    case "roll":
+      return { ...base, who: "self", type: "roll", libelle: e.label, formule: formatFormulaNode(e.formula) };
+    case "narrate_hint":
+      return { ...base, who: "self", type: "narrate_hint", texte: e.text };
+    case "apply_effect": {
+      const d = ctx.durables.get(e.effect);
+      if (!d) return { ...base, who: e.who, type: "opaque", effet: e };
+      if (durableSaisissable(d) && !ctx.repris.has(d.id)) {
+        ctx.repris.add(d.id);
+        return {
+          ...base,
+          passage: base.passage ?? d.passage ?? null,
+          who: e.who,
+          type: "apply_state",
+          effectId: d.id,
+          cle: d.conditions[0],
+          labelOrig: d.label,
+          duree: dureeVersBrouillon(d.duration),
+          concentration: d.concentration,
+          finSi: d.ends_on.map(finVersBrouillon),
+        };
+      }
+      ctx.conserves.set(d.id, d);
+      return { ...base, who: e.who, type: "existing_durable", effectId: d.id };
+    }
+    case "spend_resource":
+    case "grant_inspiration":
+      return { ...base, who: e.who, type: "opaque", effet: e };
+  }
+}
+
+/** Les blocs DÉJÀ validés d'une règle (ceux que `RuleEntryDetail` porte) vers un brouillon éditable. */
+export function blocsVersBrouillon(blocs: readonly { blockType: string; data: unknown }[]): Brouillon {
+  const b = brouillonVide();
+  const res = blocs.find((x) => x.blockType === "resources");
+  const act = blocs.find((x) => x.blockType === "activation");
+  const cov = blocs.find((x) => x.blockType === "coverage");
+  b.existait = { resources: !!res, activation: !!act, coverage: !!cov };
+
+  if (res) {
+    b.ressources = (res.data as RuleResourcesBlockData).resources.map((r) => ({
+      uid: nouvelUid(),
+      key: r.key,
+      label: libelleFr(r.label),
+      labelOrig: r.label,
+      max: formatFormulaNode(r.max),
+      recharge: r.recharge,
+      passage: r.passage ?? null,
+    }));
+  }
+
+  if (act) {
+    const data = act.data as ActivationBlockData;
+    const durables = new Map(data.durable_effects.map((d) => [d.id, d]));
+    const repris = new Set<string>();
+    const conserves = new Map<string, DurableEffect>();
+    b.activations = data.activations.map((a) => {
+      const ctx: CtxLecture = { durables, repris, conserves, passages: a.passages };
+      return {
+        uid: nouvelUid(),
+        id: a.id,
+        label: libelleFr(a.label),
+        labelOrig: a.label,
+        requires: a.requires,
+        cout: coutVersBrouillon(a.cost, a.passages?.cost ?? null),
+        cibles: {
+          kind: a.targets.kind,
+          nombre: a.targets.count ? formatFormulaNode(a.targets.count) : "",
+          portee: a.targets.range ? String(a.targets.range.value) : "",
+          doitVoir: a.targets.must_see === true,
+          passage: a.passages?.targets ?? null,
+        },
+        effets: a.effects.map((e, i) => effetVersBrouillon(e, `effects.${i}`, ctx)),
+        variantes: (a.variants ?? []).map((v, k) => ({
+          uid: nouvelUid(),
+          id: v.id,
+          label: libelleFr(v.label),
+          labelOrig: v.label,
+          effets: v.effects.map((e, i) => effetVersBrouillon(e, `variants.${k}.effects.${i}`, ctx)),
+          cout: v.cost ? coutVersBrouillon(v.cost, null) : null,
+        })),
+      };
+    });
+    b.durablesConserves = [...conserves.values()];
+  }
+
+  if (cov) {
+    b.lacunes = (cov.data as CoverageBlockData).gaps.map((g) => ({ uid: nouvelUid(), texte: g.text, manque: g.missing }));
+  }
+  return b;
+}
+
+// --- Brouillon -> blocs ------------------------------------------------------
+
+export type ResultatBlocs =
+  | { ok: true; resources: RuleResourcesBlockData | null; activation: ActivationBlockData | null; coverage: CoverageBlockData | null }
+  | { ok: false; erreurs: string[] };
+
+interface CtxEcriture {
+  erreurs: string[];
+  durables: DurableEffect[];
+  conserves: Map<string, DurableEffect>;
+  nomsEtats: Readonly<Record<string, string>>;
+}
+
+function formule(texte: string, contexte: string, ctx: CtxEcriture): FormulaNode {
+  try {
+    return parseFormula(texte);
+  } catch (erreur) {
+    if (!(erreur instanceof FormulaError)) throw erreur;
+    ctx.erreurs.push(`${contexte} : ${texte.trim() === "" ? "formule vide" : erreur.message}`);
+    return { op: "num", value: 0 };
+  }
+}
+
+function nombrePositif(texte: string, contexte: string, ctx: CtxEcriture): number {
+  const n = Number(texte.trim().replace(",", "."));
+  if (!Number.isFinite(n) || n <= 0) {
+    ctx.erreurs.push(`${contexte} : un nombre supérieur à zéro est attendu`);
+    return 1;
+  }
+  return n;
+}
+
+function coutEcrit(c: BrouillonCout, contexte: string, ctx: CtxEcriture): ActivationBlockData["activations"][number]["cost"] {
+  return {
+    action: c.action,
+    resources: c.depenses.map((d) => {
+      if (d.cle === "") ctx.erreurs.push(`${contexte} : choisis la ressource dépensée`);
+      return { key: d.cle || "?", amount: formule(d.quantite, `${contexte}, quantité`, ctx) };
+    }),
+  };
+}
+
+function dureeEcrite(d: BrouillonDuree, contexte: string, ctx: CtxEcriture): DurableEffectDuration {
+  if (d.unit === "until_turn_end") return { unit: "until_turn_end", whose: d.whose, which: d.which };
+  if (d.unit === "until_rest" || d.unit === "permanent") return { unit: d.unit };
+  return { unit: d.unit, amount: nombrePositif(d.amount, `${contexte}, durée`, ctx) };
+}
+
+function finEcrite(f: BrouillonFin): DurableEffectEnd {
+  // Le cast est borné : `event` vient d'une liste fermée de l'écran, et Zod revalide juste après.
+  return f.event === "dismissed" ? { event: "dismissed" } : ({ event: f.event, subject: f.subject } as DurableEffectEnd);
+}
+
+function effetEcrit(e: BrouillonEffet, contexte: string, activationId: string, ctx: CtxEcriture): EffectNode {
+  const ou = `${contexte}`;
+  switch (e.type) {
+    case "saving_throw": {
+      const echec = e.echec.map((x, i) => effetEcrit(x, `${ou}, si échec ${i + 1}`, activationId, ctx));
+      const reussite = e.reussite.map((x, i) => effetEcrit(x, `${ou}, si réussite ${i + 1}`, activationId, ctx));
+      return {
+        action: "saving_throw",
+        who: e.who,
+        ability: e.ability,
+        dc: formule(e.dc, `${ou}, DD`, ctx),
+        ...(echec.length > 0 ? { on_fail: echec } : {}),
+        ...(reussite.length > 0 ? { on_pass: reussite } : {}),
+      };
+    }
+    case "deal_damage":
+      return { action: "deal_damage", who: e.who, amount: formule(e.montant, `${ou}, dégâts`, ctx), ...(e.typeDegats ? { damage_type: e.typeDegats } : {}) };
+    case "heal":
+      return { action: "heal", who: e.who, amount: formule(e.montant, `${ou}, soins`, ctx) };
+    case "apply_condition":
+    case "remove_condition":
+      if (e.cle === "") ctx.erreurs.push(`${ou} : choisis l'état`);
+      return { action: e.type, who: e.who, key: e.cle || "?" };
+    case "apply_state": {
+      if (e.cle === "") ctx.erreurs.push(`${ou} : choisis l'état`);
+      const nom = ctx.nomsEtats[e.cle] ?? e.cle;
+      if (!ctx.durables.some((d) => d.id === e.effectId)) {
+        ctx.durables.push({
+          id: e.effectId,
+          label: localise(e.labelOrig, nom),
+          conditions: [e.cle || "?"],
+          modifiers: [],
+          duration: dureeEcrite(e.duree, ou, ctx),
+          concentration: e.concentration,
+          ends_on: e.finSi.map(finEcrite),
+          token: null,
+          ...(e.passage ? { passage: e.passage } : {}),
+        });
+      }
+      return { action: "apply_effect", who: e.who, effect: e.effectId };
+    }
+    case "existing_durable": {
+      const d = ctx.conserves.get(e.effectId);
+      if (d && !ctx.durables.some((x) => x.id === d.id)) ctx.durables.push(d);
+      return { action: "apply_effect", who: e.who, effect: e.effectId };
+    }
+    case "apply_modifier": {
+      const necessiteValeur = modifierOpNeedsValue(e.op);
+      const valeur = necessiteValeur ? Number(e.valeur.trim().replace(",", ".")) : undefined;
+      if (necessiteValeur && (e.valeur.trim() === "" || !Number.isFinite(valeur))) ctx.erreurs.push(`${ou} : une valeur numérique est attendue`);
+      const modifier: Modifier = {
+        target: e.cible,
+        op: e.op,
+        ...(valeur !== undefined && Number.isFinite(valeur) ? { value: valeur } : {}),
+        source: e.origine?.source ?? `activation:${activationId}`,
+        label: e.libelle.trim() || e.cible,
+        layer: e.origine?.layer ?? 7,
+        ...(e.origine?.stacking ? { stacking: e.origine.stacking } : {}),
+        ...(e.origine?.perLevel ? { perLevel: e.origine.perLevel } : {}),
+      };
+      return { action: "apply_modifier", who: e.who, modifier };
+    }
+    case "grant_budget":
+      return { action: "grant_budget", who: e.who, kind: e.kind, amount: formule(e.montant, `${ou}, montant`, ctx) };
+    case "move":
+      return { action: "move", who: e.who, zone: e.zone };
+    case "roll":
+      if (e.libelle.trim() === "") ctx.erreurs.push(`${ou} : donne un libellé au jet`);
+      return { action: "roll", label: e.libelle.trim() || "?", formula: formule(e.formule, `${ou}, formule`, ctx) };
+    case "narrate_hint":
+      if (e.texte.trim() === "") ctx.erreurs.push(`${ou} : écris l'indication`);
+      return { action: "narrate_hint", text: e.texte.trim() || "?" };
+    case "opaque":
+      return e.effet;
+  }
+}
+
+/** Les citations d'une liste d'effets, par chemin : le même ordre que `brickPaths`. */
+function passagesEffets(prefixe: string, liste: readonly BrouillonEffet[], sortie: Record<string, string>): void {
+  liste.forEach((e, i) => {
+    const p = `${prefixe}.${i}`;
+    if (e.passage) sortie[p] = e.passage;
+    if (e.type === "saving_throw") {
+      passagesEffets(`${p}.on_fail`, e.echec, sortie);
+      passagesEffets(`${p}.on_pass`, e.reussite, sortie);
+    }
+  });
+}
+
+/**
+ * Le brouillon, prêt à envoyer : blocs validés par les schémas, effets qui
+ * durent orphelins retirés (`pruneOrphanDurableEffects`). Ou la liste des
+ * erreurs à montrer à l'auteur. Un bloc vide devient `null` (retiré) s'il
+ * existait, sinon reste `null` (rien à envoyer : l'appelant ne l'inclut pas).
+ */
+export function brouillonVersBlocs(b: Brouillon, nomsEtats: Readonly<Record<string, string>>): ResultatBlocs {
+  const ctx: CtxEcriture = { erreurs: [], durables: [], conserves: new Map(b.durablesConserves.map((d) => [d.id, d])), nomsEtats };
+
+  const ressources = b.ressources.map((r, i) => {
+    const nom = r.label.trim();
+    if (nom === "") ctx.erreurs.push(`Ressource ${i + 1} : donne-lui un libellé`);
+    return {
+      key: r.key.trim() || cleDepuisLibelle(nom) || `ressource-${i + 1}`,
+      label: localise(r.labelOrig, nom),
+      max: formule(r.max, `Ressource ${nom || i + 1}, maximum`, ctx),
+      recharge: r.recharge,
+      ...(r.passage ? { passage: r.passage } : {}),
+    };
+  });
+
+  const activations = b.activations.map((a, i) => {
+    const nom = a.label.trim();
+    const nomAct = `Utilisation ${nom || i + 1}`;
+    if (nom === "") ctx.erreurs.push(`${nomAct} : donne-lui un libellé`);
+    const passages: Record<string, string> = {};
+    if (a.cout.passage) passages.cost = a.cout.passage;
+    if (a.cibles.passage) passages.targets = a.cibles.passage;
+    passagesEffets("effects", a.effets, passages);
+    a.variantes.forEach((v, k) => passagesEffets(`variants.${k}.effects`, v.effets, passages));
+
+    const nombre = a.cibles.nombre.trim();
+    const portee = a.cibles.portee.trim();
+    return {
+      id: a.id,
+      label: localise(a.labelOrig, nom),
+      ...(a.requires ? { requires: a.requires } : {}),
+      cost: coutEcrit(a.cout, `${nomAct}, coût`, ctx),
+      targets: {
+        kind: a.cibles.kind,
+        ...(nombre !== "" ? { count: formule(nombre, `${nomAct}, nombre de cibles`, ctx) } : {}),
+        ...(portee !== "" ? { range: { value: nombrePositif(portee, `${nomAct}, portée`, ctx), unit: "m" as const } } : {}),
+        ...(a.cibles.doitVoir ? { must_see: true } : {}),
+      },
+      effects: a.effets.map((e, k) => effetEcrit(e, `${nomAct}, effet ${k + 1}`, a.id, ctx)),
+      variants:
+        a.variantes.length === 0
+          ? null
+          : a.variantes.map((v, k) => {
+              const nomV = v.label.trim();
+              if (nomV === "") ctx.erreurs.push(`${nomAct}, variante ${k + 1} : donne-lui un libellé`);
+              return {
+                id: v.id,
+                label: localise(v.labelOrig, nomV),
+                effects: v.effets.map((e, j) => effetEcrit(e, `${nomAct}, variante ${nomV || k + 1}, effet ${j + 1}`, a.id, ctx)),
+                ...(v.cout ? { cost: coutEcrit(v.cout, `${nomAct}, variante ${nomV || k + 1}, coût`, ctx) } : {}),
+              };
+            }),
+      ...(Object.keys(passages).length > 0 ? { passages } : {}),
+    };
+  });
+
+  const lacunes = b.lacunes.map((g, i) => {
+    if (g.texte.trim() === "" || g.manque.trim() === "") ctx.erreurs.push(`Passage non exprimable ${i + 1} : le texte et ce qui manque sont tous deux requis`);
+    return { text: g.texte.trim() || "?", missing: g.manque.trim() || "?" };
+  });
+
+  if (ctx.erreurs.length > 0) return { ok: false, erreurs: ctx.erreurs };
+
+  let resources: RuleResourcesBlockData | null = null;
+  if (ressources.length > 0) {
+    const r = zRuleResourcesBlockData.safeParse({ resources: ressources });
+    if (!r.success) return { ok: false, erreurs: [r.error.issues[0]?.message ?? "Ressources invalides."] };
+    resources = r.data;
+  }
+
+  let activation: ActivationBlockData | null = null;
+  if (activations.length > 0) {
+    const r = zActivationBlockData.safeParse({ activations, durable_effects: ctx.durables });
+    if (!r.success) return { ok: false, erreurs: [r.error.issues[0]?.message ?? "Utilisations invalides."] };
+    activation = pruneOrphanDurableEffects(r.data);
+  }
+
+  let coverage: CoverageBlockData | null = null;
+  if (lacunes.length > 0) {
+    const r = zCoverageBlockData.safeParse({ gaps: lacunes });
+    if (!r.success) return { ok: false, erreurs: [r.error.issues[0]?.message ?? "Passages invalides."] };
+    coverage = r.data;
+  }
+  return { ok: true, resources, activation, coverage };
+}
+
+/** Le corps du PUT : absent = inchangé, `null` = retiré (seulement si le bloc existait). */
+export function corpsEnregistrement(
+  b: Brouillon,
+  blocs: { resources: RuleResourcesBlockData | null; activation: ActivationBlockData | null; coverage: CoverageBlockData | null }
+): { resources?: RuleResourcesBlockData | null; activation?: ActivationBlockData | null; coverage?: CoverageBlockData | null } {
+  const corps: { resources?: RuleResourcesBlockData | null; activation?: ActivationBlockData | null; coverage?: CoverageBlockData | null } = {};
+  if (blocs.resources || b.existait.resources) corps.resources = blocs.resources;
+  if (blocs.activation || b.existait.activation) corps.activation = blocs.activation;
+  if (blocs.coverage || b.existait.coverage) corps.coverage = blocs.coverage;
+  return corps;
+}
+
+// --- Citations et surlignage -------------------------------------------------
+
+export type FamilleSurlignage = "cout" | "cibles" | "sauvegarde" | "etat" | "autre" | "lacune";
+
+export interface Surlignage {
+  /** Identifiant d'écran de la brique citante (jamais enregistré). */
+  uid: string;
+  texte: string;
+  famille: FamilleSurlignage;
+}
+
+function famille(e: BrouillonEffet): FamilleSurlignage {
+  if (e.type === "saving_throw") return "sauvegarde";
+  if (e.type === "apply_state" || e.type === "apply_condition" || e.type === "existing_durable") return "etat";
+  return "autre";
+}
+
+/** Toutes les citations du brouillon, pour surligner le texte de la règle. */
+export function surlignagesDuBrouillon(b: Brouillon): Surlignage[] {
+  const sortie: Surlignage[] = [];
+  const ajouter = (uid: string, texte: string | null, f: FamilleSurlignage) => {
+    if (texte) sortie.push({ uid, texte, famille: f });
+  };
+  const effets = (liste: readonly BrouillonEffet[]) => {
+    for (const e of liste) {
+      ajouter(e.uid, e.passage, famille(e));
+      if (e.type === "saving_throw") {
+        effets(e.echec);
+        effets(e.reussite);
+      }
+    }
+  };
+  for (const r of b.ressources) ajouter(r.uid, r.passage, "cout");
+  for (const a of b.activations) {
+    ajouter(`${a.uid}:cout`, a.cout.passage, "cout");
+    ajouter(`${a.uid}:cibles`, a.cibles.passage, "cibles");
+    effets(a.effets);
+    for (const v of a.variantes) effets(v.effets);
+  }
+  for (const g of b.lacunes) ajouter(g.uid, g.texte, "lacune");
+  return sortie;
+}
+
+export interface Fragment {
+  texte: string;
+  /** La brique à laquelle le fragment est surligné ; absent pour le texte courant. */
+  surlignage?: Surlignage;
+}
+
+function motif(texte: string): RegExp | null {
+  const mots = texte.trim().split(/\s+/).filter((m) => m !== "");
+  if (mots.length === 0) return null;
+  return new RegExp(mots.map((m) => m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("\\s+"));
+}
+
+/**
+ * Découpe le texte de la règle en fragments, surlignés là où une citation
+ * l'atteint (espaces et retours à la ligne indifférents). Deux citations qui
+ * se recouvrent : la première dans le texte l'emporte, l'autre n'est pas
+ * surlignée (elle reste enregistrée).
+ */
+export function decouperTexte(texte: string, surlignages: readonly Surlignage[]): Fragment[] {
+  const trouves = surlignages
+    .map((s) => {
+      const m = motif(s.texte)?.exec(texte);
+      return m ? { s, debut: m.index, fin: m.index + m[0].length } : null;
+    })
+    .filter((x): x is { s: Surlignage; debut: number; fin: number } => x !== null)
+    .sort((a, b) => a.debut - b.debut);
+
+  const fragments: Fragment[] = [];
+  let curseur = 0;
+  for (const t of trouves) {
+    if (t.debut < curseur) continue;
+    if (t.debut > curseur) fragments.push({ texte: texte.slice(curseur, t.debut) });
+    fragments.push({ texte: texte.slice(t.debut, t.fin), surlignage: t.s });
+    curseur = t.fin;
+  }
+  if (curseur < texte.length) fragments.push({ texte: texte.slice(curseur) });
+  return fragments;
+}
+
+/** Une sélection du navigateur, nettoyée pour servir de citation (espaces compactés, bornée à 2000 caractères) ; `null` si vide. */
+export function citationDepuisSelection(brut: string): string | null {
+  const t = brut.replace(/\s+/g, " ").trim();
+  return t === "" ? null : t.slice(0, 2000);
+}
+
+// --- Aperçu du bouton --------------------------------------------------------
+
+export interface ApercuBouton {
+  libelle: string;
+  action: TypeAction;
+  depenses: BrouillonDepense[];
+  nombre: string;
+  portee: string;
+  genre: GenreCible;
+  sauvegardes: { ability: string; dc: string }[];
+}
+
+function sauvegardesDe(liste: readonly BrouillonEffet[]): { ability: string; dc: string }[] {
+  return liste.flatMap((e) => (e.type === "saving_throw" ? [{ ability: e.ability, dc: e.dc }, ...sauvegardesDe(e.echec), ...sauvegardesDe(e.reussite)] : []));
+}
+
+export function apercuBouton(a: BrouillonActivation): ApercuBouton {
+  return {
+    libelle: a.label.trim(),
+    action: a.cout.action,
+    depenses: a.cout.depenses,
+    nombre: a.cibles.nombre.trim(),
+    portee: a.cibles.portee.trim(),
+    genre: a.cibles.kind,
+    sauvegardes: sauvegardesDe(a.effets),
+  };
+}
+
+// --- Écran : drapeaux --------------------------------------------------------
+
+/** « Rendre jouable » (aucun bloc encore) ou « Modifier les briques ». */
+export function aDesBriques(blocs: readonly { blockType: string }[]): boolean {
+  return blocs.some((b) => b.blockType === "resources" || b.blockType === "activation" || b.blockType === "coverage");
+}
+
+/** Le texte de la règle (blocs `description`), paragraphes séparés par une ligne vide. */
+export function texteDeLaRegle(blocs: readonly { blockType: string; data: unknown }[]): string {
+  return blocs
+    .filter((b) => b.blockType === "description")
+    .flatMap((b) => ((b.data as { segments?: { text?: unknown }[] }).segments ?? []).map((s) => (typeof s.text === "string" ? s.text : "")))
+    .filter((t) => t.trim() !== "")
+    .join("\n\n");
+}
+
+/** Les numéros affichés des effets d'une activation (« 1, 2, 3 » à travers les branches), dans l'ordre de lecture. */
+export function numeroterEffets(listes: readonly (readonly BrouillonEffet[])[]): Map<string, number> {
+  const numeros = new Map<string, number>();
+  let n = 0;
+  const parcourir = (liste: readonly BrouillonEffet[]) => {
+    for (const e of liste) {
+      n += 1;
+      numeros.set(e.uid, n);
+      if (e.type === "saving_throw") {
+        parcourir(e.echec);
+        parcourir(e.reussite);
+      }
+    }
+  };
+  listes.forEach(parcourir);
+  return numeros;
+}

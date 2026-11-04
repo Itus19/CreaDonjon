@@ -4,7 +4,7 @@
  * Aucun effet ici : les appels réseau vivent dans `regleApi.ts`.
  */
 
-export type EntreeMenuRegle = "epingler" | "copierLien" | "versionMaison" | "modifier" | "supprimer";
+export type EntreeMenuRegle = "epingler" | "copierLien" | "versionMaison" | "modifier" | "briques" | "supprimer";
 
 export interface DrapeauxRegle {
   /** Coquille joueur : ni ⋮ ni bascule (la page du joueur est le ticket V3.1-95). */
@@ -17,6 +17,8 @@ export interface DrapeauxRegle {
   isOfficialBase: boolean;
   /** Le type de la fiche a un formulaire de modification (`isEditableHomebrewType`). */
   typeModifiable: boolean;
+  /** V3.1-132 : le type de la fiche se « joue » (aptitude, sort, objet magique) — l'éditeur de briques existe pour elle. */
+  typeJouable?: boolean;
 }
 
 /** Les entrées du ⋮, dans l'ordre d'affichage. Vide pour le joueur. */
@@ -26,6 +28,8 @@ export function entreesMenuRegle(d: DrapeauxRegle): EntreeMenuRegle[] {
   if (!d.isOfficialBase && !d.isHomebrew && !d.houseVersion && d.typeModifiable) entrees.push("versionMaison");
   // Sur une base officielle, la fiche n'est jamais modifiable : l'entrée n'existe pas.
   if (!d.isOfficialBase && (d.isHomebrew || d.houseVersion) && d.typeModifiable) entrees.push("modifier");
+  // Même sur une base officielle : l'éditeur s'ouvre et explique qu'il faut d'abord choisir une variante.
+  if (d.typeJouable) entrees.push("briques");
   if (d.isHomebrew) entrees.push("supprimer");
   return entrees;
 }
