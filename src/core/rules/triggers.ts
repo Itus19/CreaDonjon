@@ -110,7 +110,7 @@ export type EffectNode =
   | { action: "spend_resource"; who: string; key: string; amount: FormulaNode }
   | { action: "move"; who: string; zone: TriggerZone }
   /** ADR 0029 — accorde (montant positif) ou retire (negatif) du budget d'action. */
-  | { action: "grant_budget"; who: string; kind: BudgetKind; amount: FormulaNode }
+  | { action: "grant_budget"; who: string; kind: BudgetKind; amount: FormulaNode; /** V3.1-165 (ADR 0076) : une action qui ne paie pas l'action Magie (Sursaut d'action). */ not_magic?: boolean }
   /** ADR 0050 — accorde une Inspiration heroique, dans la limite du maximum (« Ingenieux », V3.1-5). */
   | { action: "grant_inspiration"; who: string }
   /**
@@ -135,7 +135,7 @@ export type ResolvedEffect =
   | { action: "heal"; who: string; amount: number }
   | { action: "spend_resource"; who: string; key: string; amount: number }
   | { action: "move"; who: string; zone: TriggerZone }
-  | { action: "grant_budget"; who: string; kind: BudgetKind; amount: number }
+  | { action: "grant_budget"; who: string; kind: BudgetKind; amount: number; not_magic?: boolean }
   | { action: "grant_inspiration"; who: string }
   | { action: "apply_effect"; who: string; effect: string }
   | { action: "cast_spell"; who: string; spell: string; free: boolean }
@@ -220,6 +220,7 @@ export const zEffect: z.ZodType<EffectNode> = z.lazy(() =>
       who: z.string().min(1),
       kind: z.enum(BUDGET_KINDS),
       amount: zFormulaNode,
+      not_magic: z.boolean().optional(),
     }),
     z.object({ action: z.literal("grant_inspiration"), who: z.string().min(1) }),
     z.object({ action: z.literal("apply_effect"), who: z.string().min(1), effect: z.string().min(1) }),
@@ -441,6 +442,7 @@ function resolveEffect(
           who: effect.who,
           kind: effect.kind,
           amount: evalNumber(effect.amount, ctx, fired, rng),
+          ...(effect.not_magic ? { not_magic: true } : {}),
         },
         branch: [],
       };

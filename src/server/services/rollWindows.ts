@@ -3,7 +3,8 @@ import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import type { Locale } from "@/src/i18n/request";
-import { zRollOperation } from "@/src/core/schemas/rule-blocks/playable";
+import { zActivationBlockData, zRollOperation, type Activation } from "@/src/core/schemas/rule-blocks/playable";
+import { resolveEntryBlocksInRulesetBatch } from "@/src/server/services/rules";
 import {
   applyRollOperations,
   eligibleReactions,
@@ -67,6 +68,8 @@ const zWindowChoice = z.object({
   numbers: z.record(z.string(), z.number()),
   operations: z.array(zRollOperation),
   usage: zTurnUsage,
+  /** V3.1-165 (ADR 0076) : une réaction qui est un sort (Bouclier) : l'emplacement qu'elle dépensera. */
+  spellSlot: z.number().int().min(1).max(9).optional(),
 });
 export type WindowChoice = z.infer<typeof zWindowChoice>;
 
@@ -90,6 +93,8 @@ export interface ReactorPool {
   meta: Record<string, { userId: string | null; participantId: string | null; name: string; numbers: Record<string, Record<string, number>> }>;
   ctx: TriggerContext;
   teams: Record<string, string>;
+  /** V3.1-165 : `"<acteur>|<sort>"` → le plus petit emplacement disponible d'un sort de réaction. */
+  spellSlots: Record<string, number>;
 }
 
 /**
@@ -110,7 +115,7 @@ export async function gatherReactors(
     locale: Locale;
   },
 ): Promise<ReactorPool> {
-  const pool: ReactorPool = { candidates: [], meta: {}, ctx: { actors: {} }, teams: {} };
+  const pool: ReactorPool = { candidates: [], meta: {}, ctx: { actors: {} }, teams: {}, spellSlots: {} };
   const ordre = orderParticipants(params.participants);
   for (const p of params.participants) {
     const key = p.entity_id && params.pcs.some((c) => c.entity_id === p.entity_id) ? p.entity_id : `participant:${p.id}`;
@@ -129,7 +134,8 @@ export async function gatherReactors(
     const ctx = params.loaded?.find((c) => c.entityId === pc.entity_id) ?? (await resolveCharacterActionContext(supabase, pc.entity_id, params.campaignId, params.locale));
     if (!ctx) continue;
     const features = ctx.sheet.features.filter((f) => f.activation?.activations.some((a) => a.trigger));
-    if (features.length === 0) continue;
+    const sorts = await reactionSpells(supabase, ctx);
+    if (features.length === 0 && sorts.length === 0) continue;
     const state = await getEntityRuntimeState(supabase, pc.entity_id, params.campaignId);
     const usage = zTurnUsage.safeParse(p?.turn_usage);
     const numbersByRule: Record<string, Record<string, number>> = {};
@@ -148,8 +154,26 @@ export async function gatherReactors(
         });
       }
     }
+    // V3.1-165 (ADR 0076) : un sort de réaction préparé (Bouclier), tant qu'un emplacement de son niveau ou plus reste.
+    for (const sort of sorts) {
+      const base = sort.activation.cost.slot?.level ?? 0;
+      const libre = base === 0 ? 0 : lowestFreeSlot(ctx, state, base);
+      if (libre === null) continue;
+      numbersByRule[sort.key] = { ...actorNumbersFor(ctx, sort.key), "slot.level": libre };
+      if (libre > 0) pool.spellSlots[`${pc.entity_id}|${sort.key}`] = libre;
+      pool.candidates.push({
+        actorId: pc.entity_id,
+        ruleKey: sort.key,
+        activation: sort.activation,
+        resources: ctx.sheet.resources,
+        used: state.resources,
+        usage: usage.success ? usage.data : EMPTY_TURN_USAGE,
+        ownTurnIndex: p ? Math.max(0, ordre.findIndex((o) => o.id === p.id)) : null,
+      });
+    }
     pool.meta[pc.entity_id] = { userId: pc.user_id, participantId: p?.id ?? null, name: ctx.entityName, numbers: numbersByRule };
-    const actor: TriggerActorState = { conditions: [...state.conditions], features: ctx.sheet.features.map((f) => f.key), numbers: numbersByRule[features[0]!.key] ?? {} };
+    const premiere = features[0]?.key ?? sorts[0]?.key ?? "";
+    const actor: TriggerActorState = { conditions: [...state.conditions], features: ctx.sheet.features.map((f) => f.key), numbers: numbersByRule[premiere] ?? {} };
     pool.ctx = { actors: { ...pool.ctx.actors, [pc.entity_id]: actor } };
   }
   return pool;
@@ -212,6 +236,7 @@ export async function interveneOnRoll(
     numbers: numbersOf(e),
     operations: [...opsOf(e)],
     usage: usageOf(e),
+    ...(params.pool.spellSlots[`${e.actorId}|${e.ruleKey}`] ? { spellSlot: params.pool.spellSlots[`${e.actorId}|${e.ruleKey}`] } : {}),
   }));
   const activationLabel = (e: EligibleReaction) => {
     const a = params.pool.candidates.find((c) => c.actorId === e.actorId && c.ruleKey === e.ruleKey && c.activation.id === e.activationId)?.activation;
@@ -278,4 +303,30 @@ export async function selfReactorPool(
     locale: params.locale,
   });
   return { pool, combat: running };
+}
+
+/** V3.1-165 : les sorts connus du personnage qui portent une activation à déclencheur (une lecture groupée). */
+async function reactionSpells(supabase: TypedClient, ctx: CharacterActionContext): Promise<{ key: string; activation: Activation }[]> {
+  const cles = [
+    ...new Set([...(ctx.spellcastingData?.known ?? []).flatMap((k) => (k.ref.kind === "rule" ? [k.ref.key] : [])), ...ctx.sheet.grantedSpells.map((g) => g.key)]),
+  ];
+  if (cles.length === 0) return [];
+  const blocs = await resolveEntryBlocksInRulesetBatch(supabase, ctx.rulesetId, cles);
+  const out: { key: string; activation: Activation }[] = [];
+  for (const cle of cles) {
+    const lu = zActivationBlockData.safeParse(blocs.get(cle)?.blocksByType.get("activation"));
+    if (!lu.success) continue;
+    for (const a of lu.data.activations) if (a.trigger) out.push({ key: cle, activation: a });
+  }
+  return out;
+}
+
+/** Le plus petit emplacement libre d'au moins `base` (ordinaire, puis la réserve de pacte) ; `null` s'il n'y en a plus. */
+function lowestFreeSlot(ctx: CharacterActionContext, state: { spell_slots_used: Record<string, number>; pact_slots_used: number }, base: number): number | null {
+  for (let n = base; n <= 9; n++) {
+    if ((state.spell_slots_used[String(n)] ?? 0) < (ctx.sheet.spellcasting?.slots[n] ?? 0)) return n;
+  }
+  const pact = ctx.sheet.spellcasting?.pactSlots;
+  if (pact && pact.slotLevel >= base && state.pact_slots_used < pact.count) return pact.slotLevel;
+  return null;
 }

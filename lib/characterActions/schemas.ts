@@ -236,4 +236,11 @@ export const activateFeatureSchema = z.object({
   activationId: z.string().min(1).max(100),
   variantId: z.string().min(1).max(100).nullable().default(null),
   targetParticipantIds: z.array(z.string().uuid()).max(20).default([]),
+  /** V3.1-165 (ADR 0076) : `ruleKey` est un sort ; l'emplacement dépensé, et l'option de lancement d'une aptitude. */
+  spell: z
+    .object({
+      slotLevel: z.number().int().min(0).max(9),
+      castOption: z.object({ ruleKey: z.string().min(1).max(200), optionId: z.string().min(1).max(100) }).optional(),
+    })
+    .optional(),
 });
