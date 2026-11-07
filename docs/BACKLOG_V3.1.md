@@ -294,8 +294,8 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-161 | ☐ | sans | Espèce, don d'origine, historique : le texte entier, sans quitter l'écran | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
 | V3.1-162 | ☐ | sans | Expliquer compétences, bottes d'armes et aptitudes de classe | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
 | V3.1-163 | ☐ | sans | La sous-classe en sous-étape, ses choix expliqués | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
-| V3.1-164 | ☐ | sans | Caractéristiques : des cases lisibles (esquisse d'abord) | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
+| V3.1-164 | ☑ | sans | Caractéristiques : des cases lisibles (esquisse d'abord) | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-165 | ☐ | sans | Points de vie : « Maximum » en plus de la moyenne et du jet | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
 | V3.1-166 | ☐ | sans | Aperçu : la colonne s'efface, la fiche s'affiche comme sur la fiche | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
-| V3.1-167 | ☐ | sans | Les valeurs passives : Perception, Intuition, Investigation | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
+| V3.1-167 | ☑ | sans | Les valeurs passives : Perception, Intuition, Investigation | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-168 | ☐ | sans | Trois sous-classes pour « La Croisade des Ombres », saisies et jouables | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |

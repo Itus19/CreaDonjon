@@ -5747,3 +5747,35 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
 - **Vérifié** : `srdPlayableData.test.ts`, `srdPlayable.integration.test.ts` 4/4, et au navigateur (Testeuse A et MJ, monde isolé sur l'officiel).
 
 *Restes* : Fougue n'ajoute l'action qu'au journal (pas de budget d'action en base à la table) ; Fougue et Abjuration s'affichent « Partielle », honnêtement.
+
+### V3.1-164 — Caractéristiques : des cases lisibles (7 novembre)
+
+**Modèle conseillé : Sonnet**, une fois l'esquisse décidée.
+
+**Constat (capture de l'auteur).** Dans les six cases, « d'où vient le total » s'écrit en phrases longues (« Valeur attribuée 10 Amélioration de caractéristique (Rôdeur niv. 4) +1 ») qui débordent. La décision du 7 octobre voulait six grandes cases lisibles (total, modificateur, provenance).
+
+**À faire.** Une esquisse avec des propositions pour la provenance (par exemple : une ligne de jetons « 10 · +1 Rôdeur 4 » ; le détail au survol ou au toucher ; une petite décomposition sous la case), décidée par l'auteur, puis l'écran. Les libellés courts viennent de la fiche du moteur, pas de l'écran.
+
+**Critères.** Aucun texte ne sort d'une case à 1440, 820 et 390 px ; la provenance reste lisible en entier ; planche du catalogue.
+
+**Fait le 7 novembre** (Opus seul). Esquisse « Cases des caractéristiques » : A (jetons), B (addition en couleurs et légende), C (détail au toucher) ; **B choisie par l'auteur**.
+- `lib/ui/sourcesCaracteristiques.ts` (testé, 4 cas) : la base de chaque case en gris, une couleur par source de bonus, la même dans toutes les cases, dans l'ordre d'apparition ; la légende nomme les bases et les bonus une fois.
+- `AbilityScoreStep.tsx` : une seule ligne de chiffres par case (« 15 +2 »), le détail complet au survol ; la légende sous les six cases (cinq couleurs de la charte). Les sources viennent toujours de la fiche du moteur.
+- Vérifié au navigateur (Testeur MJ, Humain Rôdeur, tableau standard) : les six cases sur une ligne, plus aucun texte qui déborde ; la légende « Valeur attribuée ». Le cas avec bonus (l'Acolyte +1) est montré sur la planche « Création » du catalogue ; la sous-étape de répartition de l'historique n'a pas été pilotée au navigateur.
+
+### V3.1-167 — Les valeurs passives : Perception, Intuition, Investigation (7 novembre)
+
+**Modèle conseillé : Opus** (noyau du moteur, règle 16).
+
+**Constat.** Seule la Perception passive existe, calculée dans l'écran. Les règles 2024 connaissent aussi l'Intuition et l'Investigation passives.
+
+**À faire.** Le moteur (`characterSheet`) calcule les trois valeurs passives (10 + modificateur de la compétence, +5 avec avantage et −5 avec désavantage, bonus des règles par une cible de modificateur `passive.<compétence>`) ; la fiche, l'aperçu de l'assistant, l'outil Table du MJ et la fiche de créature les lisent du moteur, plus de calcul dans l'écran.
+
+**Critères.** Tests d'abord (base, avantage, désavantage, bonus de règle) ; la fiche montre les trois ; « Vigilant » ou un objet qui donne +5 se voit ; aucune valeur passive stockée.
+
+**Fait le 7 novembre** (Opus seul). L'affichage d'après l'esquisse (A, B, C) : **A choisie par l'auteur**.
+- **Noyau** (tests d'abord, 7 cas) : `characterSheet` rend `passives` (10 + compétence, +5 avec l'avantage, −5 avec le désavantage, avantage et désavantage s'annulent, bonus d'une règle sur la nouvelle cible `passive.<compétence>`, catégorie « Valeur passive », « ajouter » seulement). Rien n'est stocké.
+- **Fiche** : une tuile « Passives » à la place du badge « Perception passive », deux fois plus large, trois valeurs abrégées (nom complet au survol). **Assistant** : l'aperçu porte « Valeurs passives : Perception · Intuition · Investigation » ; l'étape Caractéristiques lit la Perception passive du moteur.
+- Vérifié au navigateur (Testeuse A) : la tuile montre 13, 13, 10.
+
+*Restes* : l'outil Table du MJ et la fiche de créature n'affichent pas de valeurs passives (la créature garde celle de son bloc de stats) ; « Vigilant » n'en donne pas en 2024, contrairement à ce que disait le critère.

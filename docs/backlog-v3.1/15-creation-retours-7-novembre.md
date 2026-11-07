@@ -68,16 +68,6 @@ Ordre conseillé : 162 (les textes en données) avant 161 et 163 ; 167 (noyau) i
 
 **Critères.** Rôdeur 3 : la sous-étape apparaît, le Chasseur s'explique, « Proie du chasseur » montre le texte de chaque option ; une sous-classe d'un ruleset personnel s'y range comme une officielle ; planche du catalogue.
 
-### V3.1-164 — Caractéristiques : des cases lisibles (esquisse d'abord) (sans modèle IA)
-
-**Modèle conseillé : Sonnet**, une fois l'esquisse décidée.
-
-**Constat (capture de l'auteur).** Dans les six cases, « d'où vient le total » s'écrit en phrases longues (« Valeur attribuée 10 Amélioration de caractéristique (Rôdeur niv. 4) +1 ») qui débordent. La décision du 7 octobre voulait six grandes cases lisibles (total, modificateur, provenance).
-
-**À faire.** Une esquisse avec des propositions pour la provenance (par exemple : une ligne de jetons « 10 · +1 Rôdeur 4 » ; le détail au survol ou au toucher ; une petite décomposition sous la case), décidée par l'auteur, puis l'écran. Les libellés courts viennent de la fiche du moteur, pas de l'écran.
-
-**Critères.** Aucun texte ne sort d'une case à 1440, 820 et 390 px ; la provenance reste lisible en entier ; planche du catalogue.
-
 ### V3.1-165 — Points de vie : « Maximum » en plus de la moyenne et du jet (sans modèle IA)
 
 **Modèle conseillé : Opus** (noyau : `HpGainChoice`, `sheet.ts`).
@@ -93,16 +83,6 @@ Ordre conseillé : 162 (les textes en données) avant 161 et 163 ; 167 (noyau) i
 **À faire.** À l'étape Aperçu, la colonne d'aperçu de droite se retire dans une animation douce (largeur et opacité, coupée sous mouvement réduit) et l'étape montre la fiche **telle qu'elle s'affichera** dans le bloc Personnage de la fiche (le même composant, en lecture), à la place de l'aperçu actuel.
 
 **Critères.** Même rendu que la fiche une fois créée ; retour à l'étape précédente : la colonne revient ; tablette et téléphone inchangés (pas de colonne) ; planche du catalogue.
-
-### V3.1-167 — Les valeurs passives : Perception, Intuition, Investigation (sans modèle IA)
-
-**Modèle conseillé : Opus** (noyau du moteur, règle 16).
-
-**Constat.** Seule la Perception passive existe, calculée dans l'écran. Les règles 2024 connaissent aussi l'Intuition et l'Investigation passives.
-
-**À faire.** Le moteur (`characterSheet`) calcule les trois valeurs passives (10 + modificateur de la compétence, +5 avec avantage et −5 avec désavantage, bonus des règles par une cible de modificateur `passive.<compétence>`) ; la fiche, l'aperçu de l'assistant, l'outil Table du MJ et la fiche de créature les lisent du moteur, plus de calcul dans l'écran.
-
-**Critères.** Tests d'abord (base, avantage, désavantage, bonus de règle) ; la fiche montre les trois ; « Vigilant » ou un objet qui donne +5 se voit ; aucune valeur passive stockée.
 
 ### V3.1-168 — Trois sous-classes pour « La Croisade des Ombres », saisies et jouables (sans modèle IA)
 
