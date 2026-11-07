@@ -33,19 +33,47 @@ function sortsDuBloc(spells: readonly HomebrewGrantedSpellInput[] | undefined) {
     .map((s) => ({ key: s.key, ...(s.alwaysPrepared ? { always_prepared: true } : {}), ...(s.freeCast ? { free_cast: s.freeCast } : {}) }));
 }
 
+/**
+ * V3.1-185 : une sous-classe qui lance des sorts (Arnaqueur arcanique) — sa
+ * caractéristique, son poids au multiclassage (le tiers s'arrondit à
+ * l'inférieur, la moitié au supérieur, comme en 2024) et sa table
+ * d'emplacements : `counts[i]` emplacements du niveau i + 1.
+ */
+export interface HomebrewSubclassSpellcastingInput {
+  ability: "str" | "dex" | "con" | "int" | "wis" | "cha";
+  fraction: "full" | "half" | "third";
+  rows: { level: number; counts: number[] }[];
+}
+
 export interface HomebrewSubclassInput {
   name: string;
   parentClassKey: string;
   description: string;
   pageRef: string;
   features: HomebrewSubclassFeatureInput[];
+  spellcasting?: HomebrewSubclassSpellcastingInput;
+}
+
+/** Le bloc `subclass_spellcasting` ; `null` si la table ne donne aucun emplacement. Les zéros de fin d'une ligne tombent. */
+function incantationDuBloc(sc: HomebrewSubclassSpellcastingInput | undefined) {
+  if (!sc) return null;
+  const slots = sc.rows
+    .map((r) => {
+      const counts = [...r.counts];
+      while (counts.length > 0 && counts[counts.length - 1] === 0) counts.pop();
+      return { level: r.level, counts };
+    })
+    .filter((r) => r.counts.length > 0)
+    .sort((a, b) => a.level - b.level);
+  if (slots.length === 0) return null;
+  return { ability: sc.ability, caster_weight: { fraction: sc.fraction, rounding: sc.fraction === "half" ? "up" : "down" }, slots };
 }
 
 export interface HomebrewSubclassEntry {
   name: string;
   entry_type: "subclass";
   parent_class_key: string;
-  blocks: { block_type: "description" | "subclass_features"; data: unknown }[];
+  blocks: { block_type: "description" | "subclass_features" | "subclass_spellcasting"; data: unknown }[];
 }
 
 /**
@@ -76,6 +104,8 @@ export function buildHomebrewSubclassEntry(input: HomebrewSubclassInput): Homebr
     });
   }
   blocks.push({ block_type: "subclass_features", data: { features } });
+  const incantation = incantationDuBloc(input.spellcasting);
+  if (incantation) blocks.push({ block_type: "subclass_spellcasting", data: incantation });
 
   return { name: input.name.trim(), entry_type: "subclass", parent_class_key: input.parentClassKey, blocks };
 }

@@ -126,6 +126,49 @@ describe("subclassFormValues — sorts accordés (V3.1-182)", () => {
   });
 });
 
+describe("subclassFormValues — incantation d'une sous-classe (V3.1-185)", () => {
+  it("écrit le bloc subclass_spellcasting et le relit ; les lignes vides sont écartées et la table triée", () => {
+    const entry = buildHomebrewSubclassEntry({
+      name: "Arnaqueur arcanique",
+      parentClassKey: "rogue",
+      description: "",
+      pageRef: "",
+      features: [{ name: "Sorts", level: 3, description: "" }],
+      spellcasting: {
+        ability: "int",
+        fraction: "third",
+        rows: [
+          { level: 7, counts: [4, 2] },
+          { level: 3, counts: [2] },
+          { level: 5, counts: [0, 0] },
+        ],
+      },
+    });
+    expect(entry.blocks.find((b) => b.block_type === "subclass_spellcasting")?.data).toEqual({
+      ability: "int",
+      caster_weight: { fraction: "third", rounding: "down" },
+      slots: [
+        { level: 3, counts: [2] },
+        { level: 7, counts: [4, 2] },
+      ],
+    });
+    expect(subclassFormValues(asBlocks(entry.blocks)).spellcasting).toEqual({
+      ability: "int",
+      fraction: "third",
+      rows: [
+        { level: 3, counts: [2] },
+        { level: 7, counts: [4, 2] },
+      ],
+    });
+  });
+
+  it("sans incantation, ni bloc ni valeur", () => {
+    const entry = buildHomebrewSubclassEntry({ name: "Champion maison", parentClassKey: "fighter", description: "", pageRef: "", features: [{ name: "A", level: 3, description: "" }] });
+    expect(entry.blocks.some((b) => b.block_type === "subclass_spellcasting")).toBe(false);
+    expect(subclassFormValues(asBlocks(entry.blocks)).spellcasting).toBeUndefined();
+  });
+});
+
 describe("featureFormValues (V3.1-2)", () => {
   it("relit description, prerequis, modificateurs et declencheurs", () => {
     const trigger = { id: "t1", when: { event: "check_failed" }, then: [{ action: "narrate_hint", text: "Relance." }] };

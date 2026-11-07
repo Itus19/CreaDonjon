@@ -151,6 +151,7 @@ function PreparedSpellCard({
     formuleDegats: resolvedDamage,
     genre: classerSort(blocks).genre,
     modificateurAttaque: spellAttackBonus,
+    ecole: findBlock<{ school?: string }>(blocks, "spell_casting")?.school ?? null,
   });
 
   return (

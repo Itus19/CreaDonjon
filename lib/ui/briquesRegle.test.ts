@@ -14,6 +14,7 @@ import {
   avecDeclencheur,
   idLibre,
   momentsPermis,
+  nouvelEchec,
   nouvelleOperation,
   operationsPermises,
   nouvelEffet,
@@ -508,5 +509,31 @@ describe("V3.1-184 — « après un sort lancé » dans l'éditeur", () => {
     const deNouveau = avecApresSort(enReaction, {});
     expect(deNouveau.declencheur).toBeNull();
     expect(deNouveau.operations).toEqual([]);
+  });
+});
+
+describe("V3.1-186 — l'échec automatique d'une sauvegarde dans l'éditeur", () => {
+  it("s'écrit, se relit, et part dans le corps de l'enregistrement", () => {
+    const b = brouillonVide();
+    b.echecs = [{ ...nouvelEchec(), sorts: ["command"] }];
+    const r = brouillonVersBlocs(b, {});
+    if (!r.ok) throw new Error(r.erreurs.join(" ; "));
+    expect(r.forced_save_failures).toEqual({ failures: [{ spells: ["command"], target_condition: "charmed", imposed_by_caster: true }] });
+    expect(corpsEnregistrement(b, r).forced_save_failures).toEqual(r.forced_save_failures);
+    const relu = blocsVersBrouillon([{ blockType: "forced_save_failures", data: r.forced_save_failures }]);
+    expect(relu.echecs.map(({ sorts, etat, parMoi }) => ({ sorts, etat, parMoi }))).toEqual([{ sorts: ["command"], etat: "charmed", parMoi: true }]);
+    expect(relu.existait.forced_save_failures).toBe(true);
+  });
+
+  it("sans sort, refusé avec un message ; retiré alors qu'il existait, il part à null", () => {
+    const vide = brouillonVide();
+    vide.echecs = [nouvelEchec()];
+    const r = brouillonVersBlocs(vide, {});
+    expect(r.ok).toBe(false);
+    const existant = blocsVersBrouillon([{ blockType: "forced_save_failures", data: { failures: [{ spells: ["command"], target_condition: "charmed", imposed_by_caster: true }] } }]);
+    existant.echecs = [];
+    const ecrit = brouillonVersBlocs(existant, {});
+    if (!ecrit.ok) throw new Error("écriture attendue");
+    expect(corpsEnregistrement(existant, ecrit).forced_save_failures).toBeNull();
   });
 });

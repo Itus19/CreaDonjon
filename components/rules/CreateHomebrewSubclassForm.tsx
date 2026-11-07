@@ -9,6 +9,7 @@ import Checkbox from "@/components/shared/Checkbox";
 import { clearWorldRuleEntriesCache, useWorldRuleEntries } from "@/components/blocks/useWorldRuleEntries";
 import { subclassFormValues } from "@/src/core/rules/homebrewEdit";
 import { useHomebrewEntryForEdit } from "@/components/rules/useHomebrewEntryForEdit";
+import ChoixSort from "@/components/rules/ChoixSort";
 
 interface SelectableRuleset {
   id: string;
@@ -32,52 +33,20 @@ interface FeatureDraft {
   spells: SortDraft[];
 }
 
+/** V3.1-185 : l'incantation d'une sous-classe, en brouillon d'écran (nombres en texte, comme les autres champs). */
+type Carac = "str" | "dex" | "con" | "int" | "wis" | "cha";
+type Fraction = "full" | "half" | "third";
+interface IncantationDraft {
+  active: boolean;
+  ability: Carac;
+  fraction: Fraction;
+  colonnes: number;
+  rows: { level: string; counts: string[] }[];
+}
+const INCANTATION_VIDE: IncantationDraft = { active: false, ability: "int", fraction: "third", colonnes: 4, rows: [{ level: "3", counts: ["2", "", "", ""] }] };
+
 const EMPTY_FEATURE: FeatureDraft = { name: "", level: "3", description: "", spells: [] };
 const EMPTY_SORT: SortDraft = { key: "", alwaysPrepared: true, gratuit: "0", repos: "long_rest" };
-
-/**
- * V3.1-182 — Le choix d'un sort parmi ceux du monde (plusieurs centaines) :
- * un champ de recherche et quelques propositions dessous. La charte écarte le
- * `<select>` natif et `Dropdown` n'a pas de recherche ; le nom choisi
- * s'affiche, la clé part au serveur.
- */
-function ChoixSort({ sorts, value, onChange }: { sorts: readonly { key: string; name: string }[]; value: string; onChange: (key: string) => void }) {
-  const t = useTranslations("regles");
-  const [requete, setRequete] = useState("");
-  const choisi = sorts.find((s) => s.key === value);
-  if (choisi) {
-    return (
-      <span className="flex items-center gap-2">
-        <span className="rounded-md border border-edge px-2 py-1 text-sm text-ink">{choisi.name}</span>
-        <button type="button" onClick={() => onChange("")} className="text-xs text-ink-muted hover:text-ink">
-          {t("sortsAccordes.changer")}
-        </button>
-      </span>
-    );
-  }
-  const q = requete.trim().toLocaleLowerCase("fr");
-  const propositions = q.length < 2 ? [] : sorts.filter((s) => s.name.toLocaleLowerCase("fr").includes(q)).slice(0, 6);
-  return (
-    <span className="flex min-w-48 flex-col gap-1">
-      <input
-        value={requete}
-        onChange={(e) => setRequete(e.target.value)}
-        placeholder={t("sortsAccordes.chercher")}
-        aria-label={t("sortsAccordes.chercher")}
-        className="rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
-      />
-      {propositions.length > 0 && (
-        <span className="flex flex-wrap gap-1">
-          {propositions.map((s) => (
-            <button key={s.key} type="button" onClick={() => onChange(s.key)} className="rounded-full border border-edge px-2.5 py-0.5 text-xs text-ink hover:bg-panel-raised">
-              {s.name}
-            </button>
-          ))}
-        </span>
-      )}
-    </span>
-  );
-}
 
 /**
  * Formulaire dedie « Creer une sous-classe » (V2-N1) — meme famille que
@@ -120,6 +89,7 @@ export default function CreateHomebrewSubclassForm({
   const [description, setDescription] = useState("");
   const [pageRef, setPageRef] = useState("");
   const [features, setFeatures] = useState<FeatureDraft[]>([EMPTY_FEATURE]);
+  const [incantation, setIncantation] = useState<IncantationDraft>(INCANTATION_VIDE);
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -159,6 +129,17 @@ export default function CreateHomebrewSubclassForm({
           }))
         : [EMPTY_FEATURE]
     );
+    const sc = v.spellcasting;
+    if (sc) {
+      const colonnes = Math.max(4, ...sc.rows.map((r) => r.counts.length));
+      setIncantation({
+        active: true,
+        ability: sc.ability,
+        fraction: sc.fraction,
+        colonnes,
+        rows: sc.rows.map((r) => ({ level: String(r.level), counts: Array.from({ length: colonnes }, (_, i) => (r.counts[i] ? String(r.counts[i]) : "")) })),
+      });
+    }
   }
 
   function updateFeature(index: number, patch: Partial<FeatureDraft>) {
@@ -191,6 +172,17 @@ export default function CreateHomebrewSubclassForm({
             .filter((sp) => sp.key !== "")
             .map((sp) => ({ key: sp.key, alwaysPrepared: sp.alwaysPrepared, ...(Number(sp.gratuit) > 0 ? { freeCast: { uses: Number(sp.gratuit), refresh: sp.repos } } : {}) })),
         })),
+        ...(incantation.active
+          ? {
+              spellcasting: {
+                ability: incantation.ability,
+                fraction: incantation.fraction,
+                rows: incantation.rows
+                  .filter((r) => Number(r.level) >= 1)
+                  .map((r) => ({ level: Number(r.level), counts: r.counts.map((c) => Math.max(0, Math.trunc(Number(c) || 0))) })),
+              },
+            }
+          : {}),
         ...(edit ? { entryKey: edit.entryKey } : {}),
       }),
     });
@@ -370,6 +362,8 @@ export default function CreateHomebrewSubclassForm({
         </button>
       </div>
 
+      <IncantationSousClasse valeur={incantation} onChange={setIncantation} />
+
       {error && <p className="text-sm text-danger">{error}</p>}
 
       <div className="flex items-center gap-3">
@@ -456,6 +450,103 @@ function SortsAccordes({
             {t("ajouter")}
           </button>
         </div>
+      )}
+    </div>
+  );
+}
+
+const CARACS: readonly Carac[] = ["str", "dex", "con", "int", "wis", "cha"];
+const FRACTIONS: readonly Fraction[] = ["third", "half", "full"];
+
+/**
+ * V3.1-185 — « Cette sous-classe lance des sorts » (Arnaqueur arcanique,
+ * Chevalier occulte) : sa caractéristique, son poids au multiclassage, et la
+ * table de ses emplacements par niveau de classe. Seules les lignes qui
+ * changent ; la dernière atteinte vaut (le moteur la déroule).
+ */
+function IncantationSousClasse({ valeur, onChange }: { valeur: IncantationDraft; onChange: (v: IncantationDraft) => void }) {
+  const t = useTranslations("regles.incantationSousClasse");
+  const maj = (patch: Partial<IncantationDraft>) => onChange({ ...valeur, ...patch });
+  const majLigne = (i: number, patch: Partial<IncantationDraft["rows"][number]>) => maj({ rows: valeur.rows.map((r, j) => (j === i ? { ...r, ...patch } : r)) });
+  const colonnes = Array.from({ length: valeur.colonnes }, (_, i) => i);
+  const champ = "w-12 rounded-md border border-edge bg-transparent px-1.5 py-1 text-center text-sm text-ink outline-none";
+  return (
+    <div className="flex flex-col gap-2 rounded-md border border-edge/60 bg-panel-sunken p-3">
+      <Checkbox checked={valeur.active} onChange={() => maj({ active: !valeur.active })} label={t("lanceDesSorts")} />
+      {valeur.active && (
+        <>
+          <p className="text-xs text-ink-muted">{t("aide")}</p>
+          <div className="flex flex-wrap items-center gap-2 text-xs text-ink-soft">
+            <span>{t("caracteristique")}</span>
+            <Dropdown value={valeur.ability} options={CARACS.map((c) => ({ value: c, label: t(`carac.${c}`) }))} onChange={(c) => maj({ ability: c as Carac })} aria-label={t("caracteristique")} />
+            <span>{t("multiclassage")}</span>
+            <Dropdown value={valeur.fraction} options={FRACTIONS.map((f) => ({ value: f, label: t(`fraction.${f}`) }))} onChange={(f) => maj({ fraction: f as Fraction })} aria-label={t("multiclassage")} />
+          </div>
+          <div className="overflow-x-auto">
+            <table className="text-sm text-ink">
+              <thead>
+                <tr className="text-xs text-ink-muted">
+                  <th className="px-1 py-1 text-left font-medium">{t("niveauDeClasse")}</th>
+                  {colonnes.map((i) => (
+                    <th key={i} className="px-1 py-1 font-medium">
+                      {t("niveauEmplacement", { n: i + 1 })}
+                    </th>
+                  ))}
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {valeur.rows.map((r, i) => (
+                  <tr key={i}>
+                    <td className="px-1 py-0.5">
+                      <input type="number" min={1} max={20} value={r.level} onChange={(e) => majLigne(i, { level: e.target.value })} aria-label={t("niveauDeClasse")} className={champ} />
+                    </td>
+                    {colonnes.map((c) => (
+                      <td key={c} className="px-1 py-0.5">
+                        <input
+                          type="number"
+                          min={0}
+                          max={9}
+                          value={r.counts[c] ?? ""}
+                          placeholder="—"
+                          onChange={(e) => majLigne(i, { counts: colonnes.map((k) => (k === c ? e.target.value : (r.counts[k] ?? ""))) })}
+                          aria-label={t("emplacementsDuNiveau", { niveau: r.level, n: c + 1 })}
+                          className={champ}
+                        />
+                      </td>
+                    ))}
+                    <td className="px-1 py-0.5">
+                      <button type="button" onClick={() => maj({ rows: valeur.rows.filter((_, j) => j !== i) })} className="text-xs text-danger hover:underline">
+                        {t("retirer")}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                const dernier = Math.max(0, ...valeur.rows.map((r) => Number(r.level) || 0));
+                maj({ rows: [...valeur.rows, { level: String(Math.min(20, dernier + 1)), counts: colonnes.map(() => "") }] });
+              }}
+              className="w-fit rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel"
+            >
+              {t("ajouterLigne")}
+            </button>
+            {valeur.colonnes < 9 && (
+              <button
+                type="button"
+                onClick={() => maj({ colonnes: valeur.colonnes + 1, rows: valeur.rows.map((r) => ({ ...r, counts: [...r.counts, ""] })) })}
+                className="w-fit rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel"
+              >
+                {t("ajouterColonne")}
+              </button>
+            )}
+          </div>
+        </>
       )}
     </div>
   );

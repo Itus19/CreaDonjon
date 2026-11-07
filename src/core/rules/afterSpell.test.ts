@@ -28,6 +28,13 @@ describe("le déclencheur « après un sort lancé »", () => {
     expect(spellCastMatches(declencheur, { school: null, slotLevel: 1 })).toBe(false);
   });
 
+  it("l'école traduite (fiche lue en français) se reconnaît : Enchantement, Invocation, Évocation", () => {
+    expect(spellCastMatches(declencheur, { school: "Enchantement", slotLevel: 1 })).toBe(true);
+    expect(spellCastMatches({ on: "spell_cast", schools: ["Conjuration"] }, { school: "Invocation", slotLevel: 1 })).toBe(true);
+    expect(spellCastMatches({ on: "spell_cast", schools: ["Evocation"] }, { school: "Évocation", slotLevel: 1 })).toBe(true);
+    expect(spellCastMatches({ on: "spell_cast", schools: ["Necromancy"] }, { school: "Nécromancie", slotLevel: 1 })).toBe(true);
+  });
+
   it("sans école ni emplacement exigés : tout sort lancé, même mineur", () => {
     expect(spellCastMatches({ on: "spell_cast" }, { school: null, slotLevel: 0 })).toBe(true);
   });

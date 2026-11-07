@@ -9,7 +9,7 @@ import { degatsProposes, genreCiblableDuLancer, sortieAttaque, sortieDegats, sor
 import { lireCombatEnCours, lireCombatEnCoursJoueur, posterActionFiche, type CombatEnCours, type CombatEnCoursJoueur } from "@/lib/ui/ficheDesApi";
 import { desDeLaFormule } from "@/lib/ui/initiative";
 import { preReglageCible, type ParametresJetCible } from "@/lib/ui/jetCibleOutil";
-import type { PreReglage } from "@/lib/ui/outilDes";
+import type { PreReglage, SuiteDeJet } from "@/lib/ui/outilDes";
 
 /**
  * V3.1-106 : les boutons Attaquer, Dégâts, attaque de sort et lancer de sort de
@@ -28,8 +28,10 @@ export function useJetsDeLaFiche(params: {
   estMj: boolean;
   /** Après un sort lancé ou appliqué : la fiche se recharge (emplacements, PV). */
   apresSort: () => void;
+  /** V3.1-184 : ce qu'un sort lancé propose aussitôt après (Magie envoûtante), en suite du résultat. */
+  suiteDuSort?: (sort: SortFiche) => SuiteDeJet | undefined;
 }) {
-  const { entityId, campaignId, estMj, apresSort } = params;
+  const { entityId, campaignId, estMj, apresSort, suiteDuSort } = params;
   const t = useTranslations("outilDes");
   const textes = useTextesJetCible();
   const { openDiceTool } = useDiceRoll();
@@ -208,7 +210,9 @@ export function useJetsDeLaFiche(params: {
           t("erreurJet")
         );
         apresSort();
-        return sortieSort(r.damage, { who: sort.nom, what: titre }, t("sortLance"));
+        const sortie = sortieSort(r.damage, { who: sort.nom, what: titre }, t("sortLance"));
+        const suite = suiteDuSort?.(sort);
+        return suite ? { ...sortie, suite } : sortie;
       },
     };
   }

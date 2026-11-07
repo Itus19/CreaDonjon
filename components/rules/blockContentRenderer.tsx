@@ -23,6 +23,8 @@ import type {
   SubclassFeaturesBlockData,
   TraitsBlockData,
 } from "@/src/core/schemas/rule-blocks";
+import type { ForcedSaveFailuresBlockData, SubclassSpellcastingBlockData } from "@/src/core/schemas/rule-blocks/blocks";
+import { ABILITY_LABELS } from "@/src/core/rules/abilities";
 import {
   ALIGNMENT_WORD_LABELS_FR,
   ARMOR_CATEGORY_LABELS_FR,
@@ -926,6 +928,45 @@ function Traits({ data }: { data: TraitsBlockData }) {
 }
 
 /** Effets d'une condition (V1-D7, sur retour utilisateur) — meme patron que `Traits`, type distinct (`ConditionEffectsBlockData`, pas `TraitsBlockData`) pour rester nomme comme tel dans un futur formulaire MJ "creer une condition". */
+const POIDS_MULTICLASSAGE: Record<SubclassSpellcastingBlockData["caster_weight"]["fraction"], string> = {
+  full: "tous les niveaux",
+  half: "la moitié des niveaux",
+  third: "le tiers des niveaux",
+};
+
+/** V3.1-185 : l'incantation d'une sous-classe — caractéristique, poids au multiclassage, table d'emplacements. */
+function SubclassSpellcasting({ data }: { data: SubclassSpellcastingBlockData }) {
+  const largeur = Math.max(1, ...data.slots.map((r) => r.counts.length));
+  const colonnes = ["Niveau de classe", ...Array.from({ length: largeur }, (_, i) => (i === 0 ? "1er" : `${i + 1}e`))];
+  const rows = data.slots.map((r) => Object.fromEntries(colonnes.map((c, i) => [c, i === 0 ? String(r.level) : r.counts[i - 1] ? String(r.counts[i - 1]) : "—"])));
+  const arrondi = data.caster_weight.fraction === "full" ? "" : data.caster_weight.rounding === "up" ? ", arrondi au supérieur" : ", arrondi à l'inférieur";
+  return (
+    <div className="flex flex-col gap-2">
+      <KeyValues
+        items={[
+          { label: "Caractéristique d'incantation", value: ABILITY_LABELS[data.ability] },
+          { label: "Multiclassage", value: `${POIDS_MULTICLASSAGE[data.caster_weight.fraction]}${arrondi}` },
+        ]}
+      />
+      <Table columns={colonnes} rows={rows} />
+    </div>
+  );
+}
+
+/** V3.1-186 : les sauvegardes qui échouent d'office contre les sorts de la lanceuse. */
+function ForcedSaveFailures({ data }: { data: ForcedSaveFailuresBlockData }) {
+  return (
+    <ul className="flex flex-col gap-1 text-sm text-ink">
+      {data.failures.map((f, i) => (
+        <li key={i}>
+          Contre {f.spells.join(", ")} : une cible {conditionLabel(f.target_condition).toLowerCase()}
+          {f.imposed_by_caster ? " par la lanceuse" : ""} rate sa sauvegarde d&apos;office.
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function ConditionEffects({ data }: { data: ConditionEffectsBlockData }) {
   return (
     <KeyValues
@@ -1414,6 +1455,8 @@ export function renderBlockData(
     );
   if (blockType === "condition_effects") return <ConditionEffects data={data as ConditionEffectsBlockData} />;
   if (blockType === "subclass_features") return <SubclassFeatures data={data as SubclassFeaturesBlockData} />;
+  if (blockType === "subclass_spellcasting") return <SubclassSpellcasting data={data as SubclassSpellcastingBlockData} />;
+  if (blockType === "forced_save_failures") return <ForcedSaveFailures data={data as ForcedSaveFailuresBlockData} />;
   if (blockType === "modifiers") return <Modifiers data={data as ModifiersBlockData} />;
   if (blockType === "triggers") return <Triggers data={data as TriggersBlockData} />;
   return null;

@@ -4,7 +4,9 @@ import { useTranslations } from "next-intl";
 import Checkbox from "@/components/shared/Checkbox";
 import Dropdown from "@/components/shared/Dropdown";
 import { REACTION_ROLLS, REACTION_SUBJECTS } from "@/src/core/schemas/rule-blocks/playable";
+import { SPELL_SCHOOLS } from "@/src/core/rules/homebrewSpell";
 import {
+  avecApresSort,
   avecDeclencheur,
   momentsPermis,
   nouvelleOperation,
@@ -30,19 +32,41 @@ import { BoutonPetit, CarteBrique, ChampListe, ChampTexte } from "@/components/r
 export default function ReactionEditeur({ activation: a, onChange }: { activation: BrouillonActivation; onChange: (a: BrouillonActivation) => void }) {
   const t = useTranslations("regles.briques.reaction");
   const d = a.declencheur;
+  const apres = a.apresSort;
   const permises = d ? operationsPermises(d.jet) : [];
 
   return (
     <div className="flex flex-col gap-3">
       <ChampListe
         libelle={t("declenchement")}
-        valeur={d ? "reaction" : "clic"}
+        valeur={d ? "reaction" : apres ? "apres_sort" : "clic"}
         options={[
           { value: "clic", label: t("auClic") },
           { value: "reaction", label: t("enReaction") },
+          { value: "apres_sort", label: t("apresUnSort") },
         ]}
-        onChange={(v) => onChange(avecDeclencheur(a, v === "reaction" ? {} : null))}
+        onChange={(v) => onChange(v === "reaction" ? avecDeclencheur(a, {}) : v === "apres_sort" ? avecApresSort(a, {}) : avecApresSort(avecDeclencheur(a, null), null))}
       />
+
+      {/* V3.1-184 : proposée sur la fiche juste après un sort lancé ; reste jouable au clic. */}
+      {apres && (
+        <CarteBrique uid={`${a.uid}:apres-sort`} titre={t("declencheur")}>
+          <p className="text-xs text-ink-muted">{t("apresUnSortAide")}</p>
+          <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+            {SPELL_SCHOOLS.map((ecole) => (
+              <Checkbox
+                key={ecole}
+                checked={apres.ecoles.includes(ecole)}
+                onChange={() =>
+                  onChange(avecApresSort(a, { ecoles: apres.ecoles.includes(ecole) ? apres.ecoles.filter((e) => e !== ecole) : [...apres.ecoles, ecole] }))
+                }
+                label={t(`ecoles.${ecole}`)}
+              />
+            ))}
+          </div>
+          <Checkbox checked={apres.avecEmplacement} onChange={() => onChange(avecApresSort(a, { avecEmplacement: !apres.avecEmplacement }))} label={t("parUnEmplacement")} />
+        </CarteBrique>
+      )}
 
       {d && (
         <CarteBrique uid={`${a.uid}:declencheur`} titre={t("declencheur")}>
@@ -116,6 +140,8 @@ export default function ReactionEditeur({ activation: a, onChange }: { activatio
   );
 }
 
+const CARACS = ["str", "dex", "con", "int", "wis", "cha"] as const;
+
 function ChampsOperation({ operation: o, onChange }: { operation: BrouillonOperation; onChange: (o: BrouillonOperation) => void }) {
   const t = useTranslations("regles.briques.reaction");
   switch (o.op) {
@@ -148,6 +174,18 @@ function ChampsOperation({ operation: o, onChange }: { operation: BrouillonOpera
         <div className="grid gap-3 sm:grid-cols-2">
           <ChampFormule libelle={t("degatsEnPlus")} valeur={o.formule} onChange={(formule) => onChange({ ...o, formule })} />
           <ChampTexte libelle={t("typeDeDegats")} valeur={o.typeDegats} onChange={(typeDegats) => onChange({ ...o, typeDegats })} mecanique />
+        </div>
+      );
+    case "attacker_save":
+      return (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <ChampListe
+            libelle={t("caracteristiqueDeLAssaillant")}
+            valeur={o.carac}
+            options={CARACS.map((c) => ({ value: c, label: t(`caracs.${c}`) }))}
+            onChange={(v) => onChange({ ...o, carac: CARACS.find((c) => c === v) ?? o.carac })}
+          />
+          <ChampFormule libelle={t("ddDeLaSauvegarde")} valeur={o.dd} onChange={(dd) => onChange({ ...o, dd })} />
         </div>
       );
   }

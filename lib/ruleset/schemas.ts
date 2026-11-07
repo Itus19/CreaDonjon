@@ -127,6 +127,17 @@ export const createHomebrewSubclassSchema = z.object({
     )
     .max(30, "30 aptitudes maximum.")
     .refine((features) => features.some((f) => f.name.trim().length > 0), "Ajoute au moins une aptitude nommée."),
+  /** V3.1-185 : une sous-classe qui lance des sorts — caractéristique, poids au multiclassage, table d'emplacements. */
+  spellcasting: z
+    .object({
+      ability: z.enum(["str", "dex", "con", "int", "wis", "cha"]),
+      fraction: z.enum(["full", "half", "third"]),
+      rows: z
+        .array(z.object({ level: z.number().int().min(1, "Niveau entre 1 et 20.").max(20, "Niveau entre 1 et 20."), counts: z.array(z.number().int().min(0).max(9)).max(9) }))
+        .max(20, "20 lignes maximum.")
+        .refine((rows) => new Set(rows.map((r) => r.level)).size === rows.length, "Deux lignes pour le même niveau."),
+    })
+    .optional(),
 });
 export type CreateHomebrewSubclassInput = z.infer<typeof createHomebrewSubclassSchema>;
 

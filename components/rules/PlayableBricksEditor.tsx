@@ -20,6 +20,7 @@ import {
   nouvelEffet,
   nouvelleActivation,
   nouvelleLacune,
+  nouvelEchec,
   nouvelleRessource,
   nouvelleVariante,
   numeroterEffets,
@@ -38,6 +39,7 @@ import {
 import { chargerRessourcesDeclarees, enregistrerBriques, type RessourceDeclaree } from "@/lib/ui/regleApi";
 import ChampFormule from "@/components/rules/briques/ChampFormule";
 import ReactionEditeur from "@/components/rules/briques/BriqueReaction";
+import ChoixSort from "@/components/rules/ChoixSort";
 import { ListeEffets } from "@/components/rules/briques/BriqueEffet";
 import {
   BoutonPetit,
@@ -288,6 +290,12 @@ export default function PlayableBricksEditor({
                 </BoutonPetit>
               </div>
             </section>
+            <SectionEchecs
+              brouillon={brouillon}
+              onChange={setBrouillon}
+              etats={etats}
+              sorts={regles.filter((r) => r.entryType === "spell").map((r) => ({ key: r.key, name: r.name }))}
+            />
             <SectionLacunes brouillon={brouillon} onChange={setBrouillon} />
           </div>
         </div>
@@ -368,6 +376,72 @@ function SectionRessources({
       })}
       <div className="w-fit">
         <BoutonPetit onClick={() => onChange({ ...brouillon, ressources: [...brouillon.ressources, nouvelleRessource()] })}>{t("ajouterRessource")}</BoutonPetit>
+      </div>
+    </section>
+  );
+}
+
+/**
+ * V3.1-186 — « Échec automatique d'une sauvegarde » (Mante de majesté) : contre
+ * ces sorts, une cible qui porte cet état — posé par vous, si coché — rate sa
+ * sauvegarde d'office. Le moteur l'applique quand le MJ cible avec le sort.
+ */
+function SectionEchecs({
+  brouillon,
+  onChange,
+  etats,
+  sorts,
+}: {
+  brouillon: Brouillon;
+  onChange: (b: Brouillon) => void;
+  etats: readonly { value: string; label: string }[];
+  sorts: readonly { key: string; name: string }[];
+}) {
+  const t = useTranslations("regles.briques.echecs");
+  if (brouillon.echecs.length === 0) {
+    return (
+      <div className="w-fit">
+        <BoutonPetit onClick={() => onChange({ ...brouillon, echecs: [nouvelEchec()] })}>{t("ajouter")}</BoutonPetit>
+      </div>
+    );
+  }
+  return (
+    <section className="flex flex-col gap-3">
+      <h3 className="block-title">{t("titre")}</h3>
+      <p className="text-xs text-ink-muted">{t("aide")}</p>
+      {brouillon.echecs.map((e, i) => {
+        const maj = (n: typeof e) => onChange({ ...brouillon, echecs: remplacerA(brouillon.echecs, i, n) });
+        return (
+          <CarteBrique
+            key={e.uid}
+            uid={e.uid}
+            titre={t("brique")}
+            actions={
+              <BoutonPetit onClick={() => onChange({ ...brouillon, echecs: retirerA(brouillon.echecs, i) })} danger>
+                {t("retirer")}
+              </BoutonPetit>
+            }
+          >
+            <div className="flex flex-wrap items-center gap-2 text-xs text-ink-soft">
+              <span>{t("contre")}</span>
+              {e.sorts.map((cle) => (
+                <span key={cle} className="flex items-center gap-1 rounded-full border border-edge px-2 py-0.5 text-xs text-ink">
+                  {sorts.find((s) => s.key === cle)?.name ?? cle}
+                  <button type="button" aria-label={t("retirerSort")} onClick={() => maj({ ...e, sorts: e.sorts.filter((k) => k !== cle) })} className="text-ink-muted hover:text-danger">
+                    ×
+                  </button>
+                </span>
+              ))}
+              {/* Une clé par nombre de sorts : le champ de recherche se vide après chaque choix. */}
+              <ChoixSort key={e.sorts.length} sorts={sorts.filter((s) => !e.sorts.includes(s.key))} value="" onChange={(cle) => cle && maj({ ...e, sorts: [...e.sorts, cle] })} />
+            </div>
+            <ChampListe libelle={t("siLaCibleEst")} valeur={e.etat} options={etats.map((x) => ({ value: x.value, label: x.label }))} onChange={(etat) => maj({ ...e, etat })} />
+            <Checkbox checked={e.parMoi} onChange={() => maj({ ...e, parMoi: !e.parMoi })} label={t("parVous")} />
+          </CarteBrique>
+        );
+      })}
+      <div className="w-fit">
+        <BoutonPetit onClick={() => onChange({ ...brouillon, echecs: [...brouillon.echecs, nouvelEchec()] })}>{t("ajouterAutre")}</BoutonPetit>
       </div>
     </section>
   );

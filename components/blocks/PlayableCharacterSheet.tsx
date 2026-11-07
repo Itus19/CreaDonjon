@@ -36,6 +36,7 @@ import { ABILITY_LABELS, PASSIVES_COURTS, SORTED_SKILLS } from "./sheetLabels";
 import TuileCaracteristique from "./TuileCaracteristique";
 import { commandesDeLaFiche, TOUTES_LES_COMMANDES, type CommandesFiche } from "@/lib/ui/commandesFiche";
 import { useJetsDeLaFiche } from "./useJetsDeLaFiche";
+import { suiteApresSort } from "@/lib/ui/apresSort";
 import { TAB_LABELS, type Tab } from "./ongletsFiche";
 import ChoixRouverts from "./ChoixRouverts";
 import { relireBloc, repondreChoixRouvert } from "@/lib/ui/choixRouvertsApi";
@@ -269,7 +270,28 @@ export default function PlayableCharacterSheet({
   }, [entityId, campaignId, apercu]);
 
   // V3.1-106 : attaque, dégâts et sorts ouvrent l'outil de dés pré-rempli ; le MJ peut y cibler un participant du combat en cours.
-  const jets = useJetsDeLaFiche({ entityId, campaignId, estMj: isWorldAdmin, apresSort: reloadRemote });
+  const tApres = useTranslations("fiche.activation.apresSort");
+  const jets = useJetsDeLaFiche({
+    entityId,
+    campaignId,
+    estMj: isWorldAdmin,
+    apresSort: reloadRemote,
+    suiteDuSort: (sort) =>
+      suiteApresSort({
+        features: sheet.features,
+        sort: { school: sort.ecole, slotLevel: sort.niveauLance },
+        entityId,
+        campaignId,
+        textes: {
+          libelle: (action, aptitude) => tApres("libelle", { action, aptitude }),
+          passer: tApres("passer"),
+          passe: tApres("passe"),
+          utilisee: tApres("utilisee"),
+          erreur: tApres("erreur"),
+        },
+        apres: reloadRemote,
+      }),
+  });
 
 
   async function postAction<T>(path: string, body: unknown): Promise<T | null> {

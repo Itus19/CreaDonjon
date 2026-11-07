@@ -5951,3 +5951,56 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
 - Vérifié au navigateur (Testeuse A, 1400 et 390 px) : 13, 13, 10 sous les caractéristiques, la rangée du haut sans tuile de passives.
 
 *Restes* : l'outil Table du MJ et la fiche de créature n'affichent pas de valeurs passives (la créature garde celle de son bloc de stats) ; « Vigilant » n'en donne pas en 2024, contrairement à ce que disait le critère.
+
+### V3.1-184 — Une utilisation proposée après un sort lancé (7 novembre)
+
+**Modèle conseillé : Opus** (déclencheurs, ADR 0075).
+
+**Constat.** « Aussitôt après avoir lancé un sort d'Enchantement ou d'Illusion par un emplacement de sort, vous pouvez contraindre une créature… » (Magie envoûtante). Une utilisation se joue au clic ou en réaction à un jet ; l'événement `spell_cast` existe pour les déclencheurs, pas pour proposer une utilisation, et rien ne filtre par école ni par « avec un emplacement ».
+
+**À faire.** Un déclencheur d'utilisation « après un sort lancé » (école, avec emplacement), qui ouvre la fenêtre de proposition comme une réaction ; sinon, l'utilisation reste jouable au clic.
+
+**Critères.** Après *charme-personne* lancé par un emplacement, la fiche propose Magie envoûtante ; pas après un sort mineur ni un sort d'une autre école.
+
+**Fait le 7 novembre** (Opus seul ; écran : solution A, choix de l'auteur). ADR 0077.
+- **Noyau** (tests d'abord) : `trigger` devient une union — `on: "roll"` (ADR 0075) ou `on: "spell_cast"` (`schools`, `with_slot`) ; `spellCastMatches` et `proposalsAfterSpell` ; l'école se reconnaît en anglais comme en français (les traductions écrivent « Enchantement »).
+- **Éditeur** : « Déclenchement » propose « Après un sort lancé », les huit écoles à cocher et « par un emplacement ». Un seul déclencheur par utilisation.
+- **Fiche** : après « Lancer », le résultat de l'outil de dés propose « Aussitôt après : Envoûter (Magie envoûtante) » et « Passer » ; « Utiliser » passe par la route d'activation (le serveur vérifie et dépense).
+- Les sorts toujours préparés d'une sous-classe se lancent depuis l'onglet Actions (le serveur ne les acceptait pas : `canCastSpell`).
+- Vérifié au navigateur (Testeuse A, monde temporaire supprimé ensuite) : *charme-personne* lancé par un emplacement → la proposition ; « Utiliser » → « Utilisée. », Magie envoûtante 0/1 ; une seconde fois sans ressource → « Ressource insuffisante. ».
+
+*Restes* : la proposition ne vise personne (en combat, la cible se dit au récit) ; une seule proposition par sort lancé (la première).
+
+### V3.1-185 — Une sous-classe qui lance des sorts : sa progression d'emplacements (7 novembre)
+
+**Modèle conseillé : Opus** (noyau, `characterSheet`).
+
+**Constat.** L'Arnaqueur arcanique (et le Chevalier occulte) sont des tiers de lanceur : la sous-classe donne caractéristique d'incantation, sorts connus et emplacements. Le moteur ne lit une incantation que sur la classe (`spellcasting_progression`) ; la saisie de l'auteur la porte en tableau de texte. Un Arnaqueur n'a donc ni emplacements ni DD de sort sur sa fiche.
+
+**À faire.** Une sous-classe peut déclarer sa progression d'incantation (même bloc que la classe, au tiers) ; le moteur la compte, multiclassage compris (règle du tiers arrondi à l'inférieur) ; l'écran de saisie la propose.
+
+**Critères.** Un Arnaqueur 3 a deux emplacements du 1er niveau, son DD et son attaque de sort ; tests du noyau (tiers de lanceur seul, multiclassé).
+
+**Fait le 7 novembre** (Opus seul ; écran : solution A, choix de l'auteur). ADR 0077.
+- **Noyau** (tests d'abord) : bloc `subclass_spellcasting` ; `subclassSpellcasting` déroule la table (la dernière ligne atteinte vaut) ; poids `third` dans le multiclassage (arrondi à l'inférieur) ; la sous-classe prête son incantation à une classe qui n'en a pas.
+- **Formulaire de sous-classe** : « Cette sous-classe lance des sorts », caractéristique, multiclassage, table par niveau de classe (« + Une ligne », « + Un niveau d'emplacement ») ; relue à la modification. La page de la règle montre la section « Incantation ».
+- Vérifié au navigateur : un « Arnaqueur de test » saisi par le formulaire, un Roublard 3 créé par l'assistant a ses emplacements dans l'aperçu.
+
+*Restes* : les sorts mineurs et sorts préparés de la sous-classe (leur nombre) ne sont pas comptés ; l'Arnaqueur arcanique de « DnD 2024 » garde sa table en texte tant que l'auteur ne coche pas la section.
+
+### V3.1-186 — « Sauvegarde ou l'attaque rate », et l'échec automatique d'une créature charmée (7 novembre)
+
+**Modèle conseillé : Opus**, dans la lignée de V3.1-135 et 163 (fenêtre de réaction).
+
+**Constat.** Majesté souveraine : « chaque fois qu'une créature vous touche avec un jet d'attaque pour la première fois d'un tour, l'assaillant doit réussir un jet de sauvegarde de Charisme contre votre DD, sans quoi l'attaque rate ». Les opérations sur un jet ajoutent un dé, relancent, fixent le d20, donnent un bonus de CA : aucune ne fait « sauvegarde de l'assaillant, sinon raté ». Mante de majesté : « une créature Charmée par vous rate automatiquement son jet de sauvegarde contre toute *injonction* que vous lancez » : rien ne fait échouer d'office une sauvegarde selon un état et un sort.
+
+**À faire.** Une opération de réaction « sauvegarde imposée à l'assaillant ; échec : l'attaque rate » (automatique, une fois par tour, tant qu'un effet dure) ; et une règle d'échec automatique d'une sauvegarde (état de la cible, sort lancé).
+
+**Critères.** Sous Majesté souveraine, une attaque qui touche la barde déclenche la sauvegarde ; un échec la fait rater ; une *injonction* contre une créature charmée par elle échoue d'office.
+
+**Fait le 7 novembre** (Opus seul ; écrans approuvés tels qu'esquissés). ADR 0077.
+- **Majesté souveraine** : opération de réaction `attacker_save { ability, dc }` sur une attaque ; le serveur lance la sauvegarde avec les bonus de l'assaillant (lus seulement si une réaction en a besoin), un échec pose `forcedMiss` et l'attaque rate ; voyage dans le jet suspendu signé. Saisie dans « Opérations sur le jet ».
+- **Mante de majesté** : bloc `forced_save_failures` (sorts, état, imposé par la lanceuse), brique « Échec automatique d'une sauvegarde » de l'éditeur ; quand le MJ cible avec ce sort une créature charmée par la lanceuse, la sauvegarde n'est pas demandée et l'échec s'applique.
+- Vérifié : tests du noyau (sauvegarde ratée ou réussie, échec d'office selon la source de l'état) ; l'éditeur enregistre la brique (navigateur). **Le combat lui-même n'a pas été joué au navigateur.**
+
+*Restes* : « pour la première fois d'un tour » se compte une fois par tour pour la barde, pas par assaillant ; un état posé à la main par le MJ n'a pas de source, il ne suffit pas quand « par vous » est coché ; la condition « sous Mante de majesté » d'une réaction ne se saisit pas encore dans l'éditeur.

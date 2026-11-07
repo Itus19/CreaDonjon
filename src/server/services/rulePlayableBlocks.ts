@@ -32,7 +32,7 @@ type TypedClient = SupabaseClient<Database>;
  * version maison (`replace_entry`, ADR 0072) se réécrit d'un seul tenant.
  */
 
-export const PLAYABLE_BLOCK_TYPES = ["resources", "activation", "coverage"] as const;
+export const PLAYABLE_BLOCK_TYPES = ["resources", "activation", "coverage", "forced_save_failures"] as const;
 export type PlayableBlockType = (typeof PLAYABLE_BLOCK_TYPES)[number];
 
 /** `undefined` : ne pas toucher ; `null` : retirer le bloc ; un objet : la donnée (revalidée ici). */
@@ -43,7 +43,7 @@ export type SavePlayableBlocksResult =
   | { ok: false; reason: "no_variant" | "not_found" | "invalid"; message?: string };
 
 /** Après les blocs existants d'une règle officielle (leurs ordres vont de 100 en 100). */
-const DISPLAY_ORDER: Record<PlayableBlockType, number> = { resources: 9000, activation: 9100, coverage: 9200 };
+const DISPLAY_ORDER: Record<PlayableBlockType, number> = { resources: 9000, activation: 9100, forced_save_failures: 9150, coverage: 9200 };
 
 function validate(input: PlayableBlocksInput): Map<PlayableBlockType, unknown | null> {
   const out = new Map<PlayableBlockType, unknown | null>();

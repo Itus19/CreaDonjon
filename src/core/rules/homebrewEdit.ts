@@ -7,13 +7,14 @@ import {
   zScalingBlockData,
   zSpellCastingBlockData,
   zSubclassFeaturesBlockData,
+  zSubclassSpellcastingBlockData,
   zTriggersBlockData,
   zWeaponBlockData,
 } from "../schemas/rule-blocks/blocks";
 import type { Trigger } from "./triggers";
 import { formatFormulaNode } from "../formula/format";
 import type { HomebrewSpellEffectInput } from "./homebrewSpell";
-import type { HomebrewSubclassFeatureInput } from "./homebrewSubclass";
+import type { HomebrewSubclassFeatureInput, HomebrewSubclassSpellcastingInput } from "./homebrewSubclass";
 
 /**
  * V3.1-2 — Rouvrir une fiche maison dans son formulaire de creation.
@@ -126,12 +127,18 @@ export interface SubclassFormValues {
   description: string;
   pageRef: string;
   features: HomebrewSubclassFeatureInput[];
+  /** V3.1-185 : absente si la sous-classe ne lance pas de sorts. */
+  spellcasting?: HomebrewSubclassSpellcastingInput;
 }
 
 export function subclassFormValues(blocks: readonly EditableBlock[]): SubclassFormValues {
   const features = zSubclassFeaturesBlockData.safeParse(dataOf(blocks, "subclass_features"));
+  const incantation = zSubclassSpellcastingBlockData.safeParse(dataOf(blocks, "subclass_spellcasting"));
   return {
     ...descriptionOf(blocks),
+    ...(incantation.success
+      ? { spellcasting: { ability: incantation.data.ability, fraction: incantation.data.caster_weight.fraction, rows: incantation.data.slots.map((r) => ({ level: r.level, counts: [...r.counts] })) } }
+      : {}),
     features: features.success
       ? features.data.features.map((f) => ({
           name: f.name,

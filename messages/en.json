@@ -204,6 +204,31 @@
     "maitrisesAccordees": "Granted by a rule"
   },
   "regles": {
+    "incantationSousClasse": {
+      "lanceDesSorts": "This subclass casts spells",
+      "aide": "For a subclass that grants spellcasting to its class (Arcane Trickster, Eldritch Knight). Only the rows that change: the last one reached applies until the next.",
+      "caracteristique": "Ability:",
+      "multiclassage": "Multiclassing:",
+      "carac": {
+        "str": "Strength",
+        "dex": "Dexterity",
+        "con": "Constitution",
+        "int": "Intelligence",
+        "wis": "Wisdom",
+        "cha": "Charisma"
+      },
+      "fraction": {
+        "third": "one third of levels, rounded down",
+        "half": "half of levels, rounded up",
+        "full": "all levels"
+      },
+      "niveauDeClasse": "Class level",
+      "niveauEmplacement": "{n, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}",
+      "emplacementsDuNiveau": "Level {n} slots at class level {niveau}",
+      "retirer": "remove",
+      "ajouterLigne": "+ A row",
+      "ajouterColonne": "+ A slot level"
+    },
     "sortsAccordes": {
       "titre": "Granted spells ({n})",
       "chercher": "Search a spell…",
@@ -229,10 +254,18 @@
       "enCours": "Opening…"
     },
     "briques": {
+      "echecs": {"ajouter": "+ Automatic saving throw failure", "titre": "Automatic failures", "aide": "Against these spells, a target with this condition fails its save automatically: the GM targeting with the spell has no save to request.", "brique": "Automatic saving throw failure", "retirer": "Remove", "contre": "Against:", "retirerSort": "Remove this spell", "siLaCibleEst": "If the target is", "parVous": "… by you (the condition comes from your effect)", "ajouterAutre": "+ Another automatic failure"},
       "reaction": {
         "declenchement": "Trigger mode",
         "auClic": "On click",
         "enReaction": "In reaction to a roll",
+        "apresUnSort": "After a spell is cast",
+        "apresUnSortAide": "The sheet offers this use right after a spell of these schools (none ticked: any). It can still be used on click.",
+        "parUnEmplacement": "with a spell slot (not a cantrip)",
+        "ecoles": {"Abjuration": "Abjuration", "Conjuration": "Conjuration", "Divination": "Divination", "Enchantment": "Enchantment", "Evocation": "Evocation", "Illusion": "Illusion", "Necromancy": "Necromancy", "Transmutation": "Transmutation"},
+        "caracteristiqueDeLAssaillant": "Attacker's save",
+        "ddDeLaSauvegarde": "DC",
+        "caracs": {"str": "Strength", "dex": "Dexterity", "con": "Constitution", "int": "Intelligence", "wis": "Wisdom", "cha": "Charisma"},
         "declencheur": "Trigger",
         "jetVise": "Roll",
         "deQui": "Rolled by",
@@ -1811,6 +1844,7 @@
   },
   "fiche": {
     "activation": {
+      "apresSort": {"libelle": "Right after: {action} ({aptitude})", "passer": "Skip", "passe": "Skipped: nothing is used.", "utilisee": "Used.", "erreur": "The use could not be played."},
       "reaction": "Reaction: offered during the roll",
       "limiteTour": "once per turn",
       "limiteRound": "once per round",

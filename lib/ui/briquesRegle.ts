@@ -35,6 +35,7 @@ import {
   type ResourceRegain,
 } from "@/src/core/schemas/rule-blocks/playable";
 import type { SpellSchool } from "@/src/core/rules/homebrewSpell";
+import { zForcedSaveFailuresBlockData, type ForcedSaveFailuresBlockData } from "@/src/core/schemas/rule-blocks/blocks";
 
 export type Localise = Record<string, string>;
 export type RechargeRegle = RuleResourcesBlockData["resources"][number]["recharge"];
@@ -235,14 +236,24 @@ export interface BrouillonLacune {
   manque: string;
 }
 
+/** V3.1-186 : une sauvegarde qui échoue d'office (Mante de majesté) : les sorts (clés), l'état de la cible, et s'il vient de vous. */
+export interface BrouillonEchec {
+  uid: string;
+  sorts: string[];
+  etat: string;
+  parMoi: boolean;
+}
+
 export interface Brouillon {
   ressources: BrouillonRessource[];
   activations: BrouillonActivation[];
   /** Les effets qui durent hors formulaire, gardés pour être réécrits. */
   durablesConserves: DurableEffect[];
   lacunes: BrouillonLacune[];
+  /** V3.1-186 : les échecs automatiques d'une sauvegarde (bloc `forced_save_failures`). */
+  echecs: BrouillonEchec[];
   /** Les blocs existaient déjà : les retirer s'envoie `null`. */
-  existait: { resources: boolean; activation: boolean; coverage: boolean };
+  existait: { resources: boolean; activation: boolean; coverage: boolean; forced_save_failures: boolean };
 }
 
 let compteur = 0;
@@ -281,7 +292,18 @@ export function cleDepuisLibelle(libelle: string): string {
 // --- Brouillon vide et nouvelles briques ------------------------------------
 
 export function brouillonVide(): Brouillon {
-  return { ressources: [], activations: [], durablesConserves: [], lacunes: [], existait: { resources: false, activation: false, coverage: false } };
+  return {
+    ressources: [],
+    activations: [],
+    durablesConserves: [],
+    lacunes: [],
+    echecs: [],
+    existait: { resources: false, activation: false, coverage: false, forced_save_failures: false },
+  };
+}
+
+export function nouvelEchec(): BrouillonEchec {
+  return { uid: nouvelUid(), sorts: [], etat: "charmed", parMoi: true };
 }
 
 export function nouvelleRessource(): BrouillonRessource {
@@ -694,7 +716,12 @@ export function blocsVersBrouillon(blocs: readonly { blockType: string; data: un
   const res = blocs.find((x) => x.blockType === "resources");
   const act = blocs.find((x) => x.blockType === "activation");
   const cov = blocs.find((x) => x.blockType === "coverage");
-  b.existait = { resources: !!res, activation: !!act, coverage: !!cov };
+  const ech = blocs.find((x) => x.blockType === "forced_save_failures");
+  b.existait = { resources: !!res, activation: !!act, coverage: !!cov, forced_save_failures: !!ech };
+  if (ech) {
+    const lu = zForcedSaveFailuresBlockData.safeParse(ech.data);
+    if (lu.success) b.echecs = lu.data.failures.map((f) => ({ uid: nouvelUid(), sorts: [...f.spells], etat: f.target_condition, parMoi: f.imposed_by_caster }));
+  }
 
   if (res) {
     b.ressources = (res.data as RuleResourcesBlockData).resources.map((r) => ({
@@ -763,7 +790,13 @@ export function blocsVersBrouillon(blocs: readonly { blockType: string; data: un
 // --- Brouillon -> blocs ------------------------------------------------------
 
 export type ResultatBlocs =
-  | { ok: true; resources: RuleResourcesBlockData | null; activation: ActivationBlockData | null; coverage: CoverageBlockData | null }
+  | {
+      ok: true;
+      resources: RuleResourcesBlockData | null;
+      activation: ActivationBlockData | null;
+      coverage: CoverageBlockData | null;
+      forced_save_failures: ForcedSaveFailuresBlockData | null;
+    }
   | { ok: false; erreurs: string[] };
 
 interface CtxEcriture {
@@ -1052,6 +1085,12 @@ export function brouillonVersBlocs(b: Brouillon, nomsEtats: Readonly<Record<stri
     return { text: g.texte.trim() || "?", missing: g.manque.trim() || "?" };
   });
 
+  const echecs = b.echecs.map((e, i) => {
+    if (e.sorts.length === 0) ctx.erreurs.push(`Échec automatique ${i + 1} : au moins un sort est requis`);
+    if (e.etat.trim() === "") ctx.erreurs.push(`Échec automatique ${i + 1} : l'état de la cible est requis`);
+    return { spells: e.sorts, target_condition: e.etat.trim(), imposed_by_caster: e.parMoi };
+  });
+
   if (ctx.erreurs.length > 0) return { ok: false, erreurs: ctx.erreurs };
 
   let resources: RuleResourcesBlockData | null = null;
@@ -1074,18 +1113,38 @@ export function brouillonVersBlocs(b: Brouillon, nomsEtats: Readonly<Record<stri
     if (!r.success) return { ok: false, erreurs: [r.error.issues[0]?.message ?? "Passages invalides."] };
     coverage = r.data;
   }
-  return { ok: true, resources, activation, coverage };
+
+  let forced_save_failures: ForcedSaveFailuresBlockData | null = null;
+  if (echecs.length > 0) {
+    const r = zForcedSaveFailuresBlockData.safeParse({ failures: echecs });
+    if (!r.success) return { ok: false, erreurs: [r.error.issues[0]?.message ?? "Échecs automatiques invalides."] };
+    forced_save_failures = r.data;
+  }
+  return { ok: true, resources, activation, coverage, forced_save_failures };
 }
 
 /** Le corps du PUT : absent = inchangé, `null` = retiré (seulement si le bloc existait). */
+export interface CorpsBriques {
+  resources?: RuleResourcesBlockData | null;
+  activation?: ActivationBlockData | null;
+  coverage?: CoverageBlockData | null;
+  forced_save_failures?: ForcedSaveFailuresBlockData | null;
+}
+
 export function corpsEnregistrement(
   b: Brouillon,
-  blocs: { resources: RuleResourcesBlockData | null; activation: ActivationBlockData | null; coverage: CoverageBlockData | null }
-): { resources?: RuleResourcesBlockData | null; activation?: ActivationBlockData | null; coverage?: CoverageBlockData | null } {
-  const corps: { resources?: RuleResourcesBlockData | null; activation?: ActivationBlockData | null; coverage?: CoverageBlockData | null } = {};
+  blocs: {
+    resources: RuleResourcesBlockData | null;
+    activation: ActivationBlockData | null;
+    coverage: CoverageBlockData | null;
+    forced_save_failures?: ForcedSaveFailuresBlockData | null;
+  }
+): CorpsBriques {
+  const corps: CorpsBriques = {};
   if (blocs.resources || b.existait.resources) corps.resources = blocs.resources;
   if (blocs.activation || b.existait.activation) corps.activation = blocs.activation;
   if (blocs.coverage || b.existait.coverage) corps.coverage = blocs.coverage;
+  if (blocs.forced_save_failures || b.existait.forced_save_failures) corps.forced_save_failures = blocs.forced_save_failures ?? null;
   return corps;
 }
 

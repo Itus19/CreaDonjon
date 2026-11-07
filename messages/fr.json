@@ -205,6 +205,31 @@
     "maitrisesAccordees": "Accordées par une règle"
   },
   "regles": {
+    "incantationSousClasse": {
+      "lanceDesSorts": "Cette sous-classe lance des sorts",
+      "aide": "Pour une sous-classe qui donne l'incantation à sa classe (Arnaqueur arcanique, Chevalier occulte). Seules les lignes qui changent : la dernière atteinte vaut jusqu'à la suivante.",
+      "caracteristique": "Caractéristique :",
+      "multiclassage": "Multiclassage :",
+      "carac": {
+        "str": "Force",
+        "dex": "Dextérité",
+        "con": "Constitution",
+        "int": "Intelligence",
+        "wis": "Sagesse",
+        "cha": "Charisme"
+      },
+      "fraction": {
+        "third": "le tiers des niveaux, arrondi à l'inférieur",
+        "half": "la moitié des niveaux, arrondie au supérieur",
+        "full": "tous les niveaux"
+      },
+      "niveauDeClasse": "Niveau de classe",
+      "niveauEmplacement": "{n, selectordinal, one {#er} other {#e}}",
+      "emplacementsDuNiveau": "Emplacements du niveau {n} au niveau de classe {niveau}",
+      "retirer": "retirer",
+      "ajouterLigne": "+ Une ligne",
+      "ajouterColonne": "+ Un niveau d'emplacement"
+    },
     "sortsAccordes": {
       "titre": "Sorts accordés ({n})",
       "chercher": "Chercher un sort…",
@@ -230,10 +255,18 @@
       "enCours": "Ouverture…"
     },
     "briques": {
+      "echecs": {"ajouter": "+ Échec automatique d'une sauvegarde", "titre": "Échecs automatiques", "aide": "Contre ces sorts, une cible qui porte cet état rate sa sauvegarde d'office : le MJ qui cible avec le sort n'a pas de sauvegarde à demander.", "brique": "Échec automatique d'une sauvegarde", "retirer": "Retirer", "contre": "Contre :", "retirerSort": "Retirer ce sort", "siLaCibleEst": "Si la cible est", "parVous": "… par vous (l'état vient de votre effet)", "ajouterAutre": "+ Un autre échec automatique"},
       "reaction": {
         "declenchement": "Déclenchement",
         "auClic": "Au clic",
         "enReaction": "En réaction à un jet",
+        "apresUnSort": "Après un sort lancé",
+        "apresUnSortAide": "La fiche propose cette utilisation juste après un sort de ces écoles (aucune cochée : toutes). Elle reste jouable au clic.",
+        "parUnEmplacement": "par un emplacement de sort (pas un sort mineur)",
+        "ecoles": {"Abjuration": "Abjuration", "Conjuration": "Invocation", "Divination": "Divination", "Enchantment": "Enchantement", "Evocation": "Évocation", "Illusion": "Illusion", "Necromancy": "Nécromancie", "Transmutation": "Transmutation"},
+        "caracteristiqueDeLAssaillant": "Sauvegarde de l'assaillant",
+        "ddDeLaSauvegarde": "DD",
+        "caracs": {"str": "Force", "dex": "Dextérité", "con": "Constitution", "int": "Intelligence", "wis": "Sagesse", "cha": "Charisme"},
         "declencheur": "Déclencheur",
         "jetVise": "Jet visé",
         "deQui": "De qui",
@@ -1812,6 +1845,7 @@
   },
   "fiche": {
     "activation": {
+      "apresSort": {"libelle": "Aussitôt après : {action} ({aptitude})", "passer": "Passer", "passe": "Passé : rien n'est utilisé.", "utilisee": "Utilisée.", "erreur": "L'utilisation n'a pas pu être jouée."},
       "reaction": "Réaction : se propose pendant le jet",
       "limiteTour": "une fois par tour",
       "limiteRound": "une fois par round",

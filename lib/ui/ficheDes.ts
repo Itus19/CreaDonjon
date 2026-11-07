@@ -62,6 +62,8 @@ export interface SortFiche {
   genre: GenreSort | null;
   /** Bonus du d20 d'attaque de sort affiché dans la grille. */
   modificateurAttaque: number;
+  /** V3.1-184 : l'école (`spell_casting.school`), pour proposer ce qu'un sort lancé déclenche ; `null` si inconnue. */
+  ecole: string | null;
 }
 
 // ---- ce que le serveur a rendu -------------------------------------------------

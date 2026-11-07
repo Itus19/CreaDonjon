@@ -1,4 +1,5 @@
 import type { ActivationBlockData, SpellCastTrigger } from "../schemas/rule-blocks/playable";
+import { SPELL_SCHOOLS, type SpellSchool } from "./homebrewSpell";
 
 /**
  * V3.1-184 — les utilisations qu'une fiche propose juste après un sort lancé
@@ -8,17 +9,38 @@ import type { ActivationBlockData, SpellCastTrigger } from "../schemas/rule-bloc
  * vérifie coût et ressources (règle 8 : rien ne se décide ici).
  */
 export interface CastSpellInfo {
-  /** L'école du sort (`spell_casting.school`, « Enchantment ») ; `null` si inconnue. */
+  /** L'école du sort (`spell_casting.school`, « Enchantment » ou sa traduction « Enchantement ») ; `null` si inconnue. */
   school: string | null;
   /** Le niveau de l'emplacement dépensé ; 0 : sort mineur, aucun emplacement. */
   slotLevel: number;
 }
 
+/** Les écoles telles que les traductions françaises les écrivent (`ruleset_entry_translations`), vers leur nom anglais. */
+const ECOLES_TRADUITES: Readonly<Record<string, SpellSchool>> = {
+  abjuration: "Abjuration",
+  invocation: "Conjuration",
+  divination: "Divination",
+  enchantement: "Enchantment",
+  evocation: "Evocation",
+  illusion: "Illusion",
+  necromancie: "Necromancy",
+  transmutation: "Transmutation",
+};
+
+const sansAccents = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+/** L'école canonique d'un sort, qu'elle soit lue en anglais (« Enchantment ») ou en français (« Enchantement ») ; `null` sinon. */
+export function canonicalSchool(school: string | null): SpellSchool | null {
+  if (!school) return null;
+  const s = sansAccents(school.trim());
+  return SPELL_SCHOOLS.find((e) => e.toLowerCase() === s) ?? ECOLES_TRADUITES[s] ?? null;
+}
+
 export function spellCastMatches(trigger: SpellCastTrigger, cast: CastSpellInfo): boolean {
   if (trigger.with_slot && cast.slotLevel <= 0) return false;
   if (!trigger.schools) return true;
-  const ecole = cast.school?.toLowerCase();
-  return ecole !== undefined && trigger.schools.some((s) => s.toLowerCase() === ecole);
+  const ecole = canonicalSchool(cast.school);
+  return ecole !== null && trigger.schools.includes(ecole);
 }
 
 export interface SpellCastProposal {
