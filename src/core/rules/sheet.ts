@@ -503,11 +503,15 @@ export function averageHitDie(faces: number): number {
   return Math.floor(faces / 2) + 1;
 }
 
-export type HpGainChoice = "average" | "rolled";
+/** V3.1-176 : `max` (le dé entier) s'ajoute à la moyenne et au jet. */
+export const HP_GAIN_CHOICES = ["average", "rolled", "max"] as const;
+export type HpGainChoice = (typeof HP_GAIN_CHOICES)[number];
 
-/** Un seul gain de PV (V2-G1) : la moyenne 5e (arrondie au superieur), ou un jet reel via le RNG injecte — jamais `Math.random()` (CLAUDE.md regle 6). Pure : le RNG vient toujours de l'appelant (le serveur pour une vraie montee de niveau). */
+/** Un seul gain de PV (V2-G1) : la moyenne 5e (arrondie au superieur), le dé entier (V3.1-176), ou un jet reel via le RNG injecte — jamais `Math.random()` (CLAUDE.md regle 6). Pure : le RNG vient toujours de l'appelant (le serveur pour une vraie montee de niveau). */
 export function resolveHpGain(choice: HpGainChoice, dieFaces: number, rng: Rng): number {
-  return choice === "average" ? averageHitDie(dieFaces) : rollDice(1, dieFaces, rng).total;
+  if (choice === "average") return averageHitDie(dieFaces);
+  if (choice === "max") return dieFaces;
+  return rollDice(1, dieFaces, rng).total;
 }
 
 function computeHitPoints(

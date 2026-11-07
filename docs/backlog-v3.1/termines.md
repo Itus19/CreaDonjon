@@ -5763,6 +5763,22 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
 - `AbilityScoreStep.tsx` : une seule ligne de chiffres par case (« 15 +2 »), le détail complet au survol ; la légende sous les six cases (cinq couleurs de la charte). Les sources viennent toujours de la fiche du moteur.
 - Vérifié au navigateur (Testeur MJ, Humain Rôdeur, tableau standard) : les six cases sur une ligne, plus aucun texte qui déborde ; la légende « Valeur attribuée ». Le cas avec bonus (l'Acolyte +1) est montré sur la planche « Création » du catalogue ; la sous-étape de répartition de l'historique n'a pas été pilotée au navigateur.
 
+### V3.1-176 — Points de vie : « Maximum » en plus de la moyenne et du jet (7 novembre)
+
+**Modèle conseillé : Opus** (noyau : `HpGainChoice`, `sheet.ts`).
+
+**À faire.** Un troisième mode par niveau, « Maximum » (le dé entier), avec « Maximum pour tous », à la création comme à la montée de niveau. Le noyau (`hpGainForLevel`) et l'intention envoyée au serveur l'acceptent ; le serveur continue de calculer (le client n'envoie qu'une intention).
+
+**Critères.** Tests du noyau (moyenne, jet, maximum) ; une montée de niveau en « Maximum » écrit les bons PV ; l'écran propose les trois modes.
+
+**Fait le 7 novembre** (Opus seul, code direct à la demande de l'auteur).
+- **Noyau** (test d'abord) : `HpGainChoice` devient `HP_GAIN_CHOICES = ["average", "rolled", "max"]` ; `resolveHpGain("max")` rend le dé entier sans toucher au générateur.
+- **Serveur** : le schéma de la montée de niveau (`applyLevelUpSchema.hpChoices`) accepte l'intention `max` (test : une valeur ou un mot inconnu sont refusés) ; `applyLevelUp` la résout par `resolveHpGain`, le client n'envoie toujours qu'une intention.
+- **Écran** (`CreationHpRollStep`) : un troisième bouton par niveau, « Maximum (10 = 10) », et « Maximum pour tous » en tête, à la création (la valeur s'écrit, comme la moyenne : rien n'est tiré) comme à la montée (l'intention part au serveur).
+- Vérifié au navigateur (Rôdeur 3, création) : niveau 2 au maximum, niveau 3 à la moyenne, PV 26 (10 + 10 + 6).
+
+*Restes* : en montée de niveau, l'aperçu compte la moyenne pour tout niveau en attente, maximum compris (le serveur écrit la vraie valeur à la validation) ; une montée réelle en « Maximum » n'a pas été jouée contre la base (elle aurait modifié un PJ du Banc d'essai).
+
 ### V3.1-174 — La sous-classe en sous-étape, ses choix expliqués (7 novembre)
 
 **Modèle conseillé : Sonnet**, après 162. Revient sur « la sous-classe en pastille de la progression » (V3.1-51).

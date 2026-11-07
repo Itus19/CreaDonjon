@@ -18,7 +18,7 @@ export interface CreationHpGrant {
 
 /**
  * Montée de niveau : le client n'envoie JAMAIS un résultat, seulement une
- * intention par niveau gagné (« average » ou « rolled »), que le serveur
+ * intention par niveau gagné (« average », « rolled » ou « max »), que le serveur
  * exécute à la validation (règle 8). L'assistant garde ces intentions.
  */
 export interface IntentionsPointsDeVie {
@@ -34,8 +34,10 @@ function modSuffix(conMod: number): string {
 
 /**
  * Étape « Points de vie » (V3.1-51) : une ligne par niveau au-delà du premier,
- * avec sa classe, son dé, et la moyenne ou le jet à basculer ; « Moyenne pour
- * tous » et « Lancer tous » en tête.
+ * avec sa classe, son dé, et la moyenne, le jet ou le maximum (V3.1-176) à
+ * basculer ; « Moyenne pour tous », « Lancer tous » et « Maximum pour tous »
+ * en tête. Le maximum est le dé entier : comme la moyenne, il ne tire rien,
+ * le client peut l'écrire à la création.
  *
  * Création : l'assistant écrit le bloc `character` tel quel à la fin, la
  * valeur doit donc être définitive en quittant l'étape. Les jets viennent du
@@ -137,13 +139,14 @@ export default function CreationHpRollStep({
     }
   }
 
-  function moyennePourTous() {
+  /** Moyenne ou maximum pour tous : aucune valeur tirée, le client l'écrit (création) ou n'envoie que l'intention (montée). */
+  function fixePourTous(choix: "average" | "max") {
     if (intentions) {
-      intentions.onAll("average");
+      intentions.onAll(choix);
       return;
     }
     const valeurs = new Map<string, number>();
-    for (const g of grants) g.levels.forEach((_, i) => valeurs.set(`${g.classIndex}:${i}`, averageHitDie(g.dieFaces)));
+    for (const g of grants) g.levels.forEach((_, i) => valeurs.set(`${g.classIndex}:${i}`, choix === "max" ? g.dieFaces : averageHitDie(g.dieFaces)));
     ecrire(valeurs);
   }
 
@@ -155,7 +158,7 @@ export default function CreationHpRollStep({
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
-          onClick={moyennePourTous}
+          onClick={() => fixePourTous("average")}
           className="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised"
         >
           {t("moyennePourTous")}
@@ -168,6 +171,13 @@ export default function CreationHpRollStep({
         >
           {rollingKey === "tous" ? t("enCours") : t("lancerTous")}
         </button>
+        <button
+          type="button"
+          onClick={() => fixePourTous("max")}
+          className="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised"
+        >
+          {t("maximumPourTous")}
+        </button>
       </div>
       {intentions && <p className="text-sm text-ink-soft">{t("noteServeur")}</p>}
 
@@ -177,7 +187,15 @@ export default function CreationHpRollStep({
           const rolls = character.classes[grant.classIndex]?.hp_rolls ?? [];
           return grant.levels.map((level, i) => {
             const current = rolls[i];
-            const choisiJet = intentions ? intentions.choiceAt(grant.classKey, i) === "rolled" : current !== undefined && current !== average;
+            // Création : le mode se lit dans la valeur écrite (un jet égal à la moyenne ou au dé entier se lit comme eux : même valeur).
+            const mode: HpGainChoice = intentions
+              ? intentions.choiceAt(grant.classKey, i)
+              : current === undefined || current === average
+                ? "average"
+                : current === grant.dieFaces
+                  ? "max"
+                  : "rolled";
+            const choisiJet = mode === "rolled";
             const enCours = rollingKey === `${grant.classIndex}:${i}`;
             return (
               <li key={`${grant.classIndex}:${level}`} className="flex flex-wrap items-center gap-2 rounded-md border border-edge/60 px-3 py-2 text-sm">
@@ -189,7 +207,7 @@ export default function CreationHpRollStep({
                   type="button"
                   onClick={() => (intentions ? intentions.onChoose(grant.classKey, i, "average") : ecrire(new Map([[`${grant.classIndex}:${i}`, average]])))}
                   className={`rounded-full border px-2.5 py-1 text-xs transition-colors ${
-                    !choisiJet ? "border-accent bg-accent/10 text-accent" : "border-edge text-ink-muted hover:bg-panel-raised"
+                    mode === "average" ? "border-accent bg-accent/10 text-accent" : "border-edge text-ink-muted hover:bg-panel-raised"
                   }`}
                 >
                   {t("moyenne", { moyenne: average, mod, total: average + conMod })}
@@ -209,6 +227,15 @@ export default function CreationHpRollStep({
                       : choisiJet && current !== undefined
                         ? t("jete", { valeur: current, mod, total: current + conMod })
                         : t("jeter", { faces: grant.dieFaces, mod })}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => (intentions ? intentions.onChoose(grant.classKey, i, "max") : ecrire(new Map([[`${grant.classIndex}:${i}`, grant.dieFaces]])))}
+                  className={`rounded-full border px-2.5 py-1 text-xs transition-colors ${
+                    mode === "max" ? "border-accent bg-accent/10 text-accent" : "border-edge text-ink-muted hover:bg-panel-raised"
+                  }`}
+                >
+                  {t("maximum", { faces: grant.dieFaces, mod, total: grant.dieFaces + conMod })}
                 </button>
               </li>
             );

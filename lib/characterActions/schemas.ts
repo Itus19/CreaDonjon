@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { zCharacterBlockData } from "@/src/core/schemas/blocks/character";
 import { zSpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
-import { ABILITIES, SKILLS, type Ability, type Skill } from "@/src/core/rules/sheet";
+import { ABILITIES, HP_GAIN_CHOICES, SKILLS, type Ability, type Skill } from "@/src/core/rules/sheet";
 
 const campaignIdField = z.string().uuid().nullable();
 
@@ -206,7 +206,7 @@ export const applyLevelUpSchema = z.object({
   spellcasting: zSpellcastingBlockData.optional(),
   // Une INTENTION par nouveau niveau gagne, par classe (V2-G1) — jamais une
   // valeur de PV : le jet reel se fait cote serveur (CLAUDE.md regle 6).
-  hpChoices: z.record(z.string(), z.array(z.enum(["average", "rolled"]))).default({}),
+  hpChoices: z.record(z.string(), z.array(z.enum(HP_GAIN_CHOICES))).default({}),
   // V3.1-115 : le MJ passe outre un prerequis de multiclassage non rempli. Une
   // INTENTION : le serveur la reclampe a `isWorldAdmin`, jamais fiee au client.
   overrideMulticlassPrerequisites: z.boolean().default(false),

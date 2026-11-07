@@ -291,6 +291,12 @@ describe("characterSheet — cas dores (specs/wiki-liens-et-personnages.md §B7)
     expect(resolveHpGain("rolled", 10, fixedRoll)).toBe(5);
   });
 
+  it("resolveHpGain (V3.1-176) : « Maximum » donne le dé entier, sans toucher au RNG", () => {
+    const interdit: Rng = { nextInt: () => { throw new Error("le maximum ne lance aucun dé"); } };
+    expect(resolveHpGain("max", 10, interdit)).toBe(10);
+    expect(resolveHpGain("max", 6, interdit)).toBe(6);
+  });
+
   it("sous benediction et entrave : couche 7, avantage et desavantage s'annulent", () => {
     const build: CharacterBuild = {
       species: "human",

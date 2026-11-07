@@ -38,14 +38,6 @@ Ordre conseillé : 162 (les textes en données) avant 161 et 163 ; 167 (noyau) i
 
 **Sous-tâches Haiku.** Recenser les champs et boutons de l'assistant et leurs classes ; planche du catalogue.
 
-### V3.1-176 — Points de vie : « Maximum » en plus de la moyenne et du jet (sans modèle IA)
-
-**Modèle conseillé : Opus** (noyau : `HpGainChoice`, `sheet.ts`).
-
-**À faire.** Un troisième mode par niveau, « Maximum » (le dé entier), avec « Maximum pour tous », à la création comme à la montée de niveau. Le noyau (`hpGainForLevel`) et l'intention envoyée au serveur l'acceptent ; le serveur continue de calculer (le client n'envoie qu'une intention).
-
-**Critères.** Tests du noyau (moyenne, jet, maximum) ; une montée de niveau en « Maximum » écrit les bons PV ; l'écran propose les trois modes.
-
 ### V3.1-177 — Aperçu : la colonne s'efface, la fiche s'affiche comme sur la fiche (sans modèle IA)
 
 **Modèle conseillé : Sonnet.**
