@@ -5,7 +5,13 @@ import { getReusableTestAccount, type ReusableAccount } from "../testUtils/reusa
 
 vi.mock("server-only", () => ({}));
 const { resolveTargetedRoll } = await import("./targetedRoll");
-const { answerRollWindow, resumeRollWindow } = await import("./rollWindowResume");
+const { answerRollWindow, resumeRollWindow: resumeAny } = await import("./rollWindowResume");
+/** Les fenêtres de ce test viennent de jets ciblés : on lit leur résultat. */
+async function resumeRollWindow(...args: Parameters<typeof resumeAny>) {
+  const r = await resumeAny(...args);
+  if (r.origin !== "targeted") throw new Error(`origine inattendue : ${r.origin}`);
+  return r.result;
+}
 const { createRulesetVariant, getRuleEntryForWorld } = await import("./rules");
 
 /**

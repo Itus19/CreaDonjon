@@ -19,6 +19,7 @@ import { insertSessionEvent, nextEventSeq } from "@/src/server/repos/sessions";
 import { getCampaign } from "@/src/server/services/campaigns";
 import { resolveCharacterActionContext } from "@/src/server/services/characterActions";
 import { journalCombatEvent } from "@/src/server/services/combats";
+import { interveneOnRoll, selfReactorPool } from "@/src/server/services/rollWindows";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
 import { applyResolvedEffects, targetSaveBonus } from "@/src/server/services/targetedRoll";
 import { serverRng } from "@/src/server/services/rng";
@@ -81,12 +82,30 @@ export async function listMyPendingSaveRequests(supabase: TypedClient, campaignI
 }
 
 export type AnswerSaveRequestResult =
-  | { ok: true; passed: boolean; natural: number | null; total: number; changes: string[]; hints: string[]; ignored: string[] }
+  | {
+      ok: true;
+      passed: boolean;
+      natural: number | null;
+      total: number;
+      changes: string[];
+      hints: string[];
+      ignored: string[];
+      /** V3.1-163 (ADR 0075) : une fenêtre de réaction s'est ouverte sur la sauvegarde ; rien n'est encore écrit, la suite viendra à sa reprise. */
+      rollWindowId: string | null;
+    }
   | { ok: false; reason: "not_found" | "not_pending" | "invalid_effect" | "no_target" | "refused" };
 
 export async function answerSaveRequest(
   supabase: TypedClient,
-  params: { campaignId: string; requestId: string; callerId: string; locale: Locale; input: AnswerSaveRequestInput }
+  params: {
+    campaignId: string;
+    requestId: string;
+    callerId: string;
+    locale: Locale;
+    input: AnswerSaveRequestInput;
+    /** V3.1-163 : la reprise d'une fenêtre rejoue la réponse avec le jet modifié par les réactions, sans relancer. */
+    preset?: { natural: number | null; total: number };
+  }
 ): Promise<AnswerSaveRequestResult> {
   const request = await getSaveRequestById(supabase, params.requestId);
   if (!request || request.campaign_id !== params.campaignId) return { ok: false, reason: "not_found" };
@@ -135,7 +154,13 @@ export async function answerSaveRequest(
   let expression: string;
   let ast: unknown;
   let trace: Json;
-  if (params.input.mode === "roll") {
+  if (params.preset) {
+    natural = params.preset.natural;
+    total = params.preset.total;
+    expression = `${total} (après réaction)`;
+    ast = parseFormula(String(Math.max(0, total)));
+    trace = [{ text: "après réaction", value: natural ?? total }] as unknown as Json;
+  } else if (params.input.mode === "roll") {
     const roll = resolveCheckRoll({ modifier: bonus, advantage: "normal", bonusDice: dice }, serverRng);
     natural = roll.trace[0]?.value ?? null;
     total = roll.total;
@@ -147,6 +172,36 @@ export async function answerSaveRequest(
     expression = params.input.modifierIncluded ? `${total} (annoncé, modificateur inclus)` : `${natural} (annoncé) + ${bonus}`;
     ast = parseFormula(String(Math.max(0, total)));
     trace = [{ text: "annoncé", value: params.input.natural }] as unknown as Json;
+  }
+
+  // V3.1-163 (ADR 0075) : le joueur de la cible a son d20 — peut-il réagir
+  // sur sa propre sauvegarde (Inflexible, Coup de chance, Chance) ? Rien n'est
+  // encore écrit : la demande reste en attente jusqu'à la reprise.
+  if (!params.preset && answeringAsTarget && ctx && request.target_entity_id) {
+    const { pool, combat } = await selfReactorPool(supabase, {
+      campaignId: request.campaign_id,
+      entityId: request.target_entity_id,
+      userId: params.callerId,
+      callerIsGm: false,
+      loaded: ctx,
+      locale: params.locale,
+    });
+    const r = await interveneOnRoll(supabase, {
+      campaignId: request.campaign_id,
+      combat,
+      roll: { kind: "save", roller: request.target_entity_id, target: null, natural, total, critRange: 20, ac: null, dc: request.dc, acBonus: 0, damage: null },
+      pool,
+      label: `${request.label} : ${total}`,
+      resume: { requestId: request.id, input: params.input },
+      origin: "save_request",
+      locale: params.locale,
+    });
+    if (r.kind === "window") return { ok: true, passed: false, natural, total, changes: [], hints: ["En attente des réactions."], ignored: [], rollWindowId: r.windowId };
+    if (r.automatic.length > 0) {
+      natural = r.roll.natural;
+      total = r.roll.total;
+      hints.push(`${r.automatic.map((e) => e.ruleKey).join(", ")} : la sauvegarde devient ${total}.`);
+    }
   }
 
   // La réponse, d'abord : la fonction refuse un autre compte, une demande
@@ -234,7 +289,7 @@ export async function answerSaveRequest(
         });
       }
     }
-    return { ok: true, passed, natural, total, changes: outcome.changes, hints: [...hints, ...outcome.hints], ignored: outcome.ignored };
+    return { ok: true, passed, natural, total, changes: outcome.changes, hints: [...hints, ...outcome.hints], ignored: outcome.ignored, rollWindowId: null };
   }
 
   // Le MJ : la cible telle que le combat la porte, par le cœur commun.
@@ -251,5 +306,5 @@ export async function answerSaveRequest(
     // V3.1-149 : les PV d'un monstre ne vont qu'au MJ ; le journal garde les phrases des joueurs.
     gmJournal: true,
   });
-  return { ok: true, passed, natural, total, changes: outcome.changes, hints: [...hints, ...outcome.hints], ignored: outcome.ignored };
+  return { ok: true, passed, natural, total, changes: outcome.changes, hints: [...hints, ...outcome.hints], ignored: outcome.ignored, rollWindowId: null };
 }

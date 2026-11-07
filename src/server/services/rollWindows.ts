@@ -17,11 +17,11 @@ import {
   type RollOutcome,
 } from "@/src/core/rules/rollWindow";
 import type { TriggerActorState, TriggerContext } from "@/src/core/rules/triggers";
-import type { CombatParticipantRow, CombatRow } from "@/src/server/repos/combats";
+import { getActiveCombatForCampaign, listCombatParticipants, type CombatParticipantRow, type CombatRow } from "@/src/server/repos/combats";
 import { resolveCharacterActionContext, type CharacterActionContext } from "@/src/server/services/characterActions";
 import { getEntityRuntimeState } from "@/src/server/services/runtimeState";
 import { orderParticipants } from "@/src/server/services/combats";
-import { openRollWindow } from "@/src/server/services/engineSigning";
+import { openRollWindow, readCombatParticipantsSigned } from "@/src/server/services/engineSigning";
 import { actorNumbersFor } from "@/src/server/services/actorNumbers";
 import { serverRng } from "@/src/server/services/rng";
 
@@ -73,7 +73,8 @@ export type WindowChoice = z.infer<typeof zWindowChoice>;
 /** Ce qu'il faut pour reprendre : l'entrée d'origine, telle quelle (revalidée par son service à la reprise). */
 export const zRollWindowState = z.object({
   __v: z.literal(1),
-  origin: z.literal("targeted"),
+  /** D'où vient le jet : la reprise rejoue ce chemin (jet ciblé, sauvegarde demandée, test ou sauvegarde de la fiche). */
+  origin: z.enum(["targeted", "save_request", "sheet_check"]),
   campaignId: z.string().uuid(),
   combatId: z.string().uuid().nullable(),
   stamp: z.string().nullable(),
@@ -104,6 +105,8 @@ export async function gatherReactors(
     pcs: readonly { entity_id: string; user_id: string | null }[];
     only?: ReadonlySet<string>;
     loaded?: readonly CharacterActionContext[];
+    /** V3.1-163 : un PJ hors combat (pas de ligne de participant) : ses réactions sur son propre jet, sans compte. */
+    standalone?: { entity_id: string; user_id: string | null };
     locale: Locale;
   },
 ): Promise<ReactorPool> {
@@ -113,15 +116,22 @@ export async function gatherReactors(
     const key = p.entity_id && params.pcs.some((c) => c.entity_id === p.entity_id) ? p.entity_id : `participant:${p.id}`;
     pool.teams[key] = p.is_ally || key === p.entity_id ? "pj" : "adversaires";
   }
-  for (const p of params.participants) {
+  const rows: { pc: { entity_id: string; user_id: string | null }; p: CombatParticipantRow | null }[] = params.participants.flatMap((p) => {
     const pc = p.entity_id ? params.pcs.find((c) => c.entity_id === p.entity_id) : undefined;
-    if (!pc || (params.only && !params.only.has(pc.entity_id))) continue;
+    return pc ? [{ pc, p }] : [];
+  });
+  if (params.standalone && !rows.some((r) => r.pc.entity_id === params.standalone!.entity_id)) {
+    rows.push({ pc: params.standalone, p: null });
+    pool.teams[params.standalone.entity_id] = "pj";
+  }
+  for (const { pc, p } of rows) {
+    if (params.only && !params.only.has(pc.entity_id)) continue;
     const ctx = params.loaded?.find((c) => c.entityId === pc.entity_id) ?? (await resolveCharacterActionContext(supabase, pc.entity_id, params.campaignId, params.locale));
     if (!ctx) continue;
     const features = ctx.sheet.features.filter((f) => f.activation?.activations.some((a) => a.trigger));
     if (features.length === 0) continue;
     const state = await getEntityRuntimeState(supabase, pc.entity_id, params.campaignId);
-    const usage = zTurnUsage.safeParse(p.turn_usage);
+    const usage = zTurnUsage.safeParse(p?.turn_usage);
     const numbersByRule: Record<string, Record<string, number>> = {};
     for (const f of features) {
       numbersByRule[f.key] = actorNumbersFor(ctx, f.key);
@@ -134,11 +144,11 @@ export async function gatherReactors(
           resources: ctx.sheet.resources,
           used: state.resources,
           usage: usage.success ? usage.data : EMPTY_TURN_USAGE,
-          ownTurnIndex: Math.max(0, ordre.findIndex((o) => o.id === p.id)),
+          ownTurnIndex: p ? Math.max(0, ordre.findIndex((o) => o.id === p.id)) : null,
         });
       }
     }
-    pool.meta[pc.entity_id] = { userId: pc.user_id, participantId: p.id, name: ctx.entityName, numbers: numbersByRule };
+    pool.meta[pc.entity_id] = { userId: pc.user_id, participantId: p?.id ?? null, name: ctx.entityName, numbers: numbersByRule };
     const actor: TriggerActorState = { conditions: [...state.conditions], features: ctx.sheet.features.map((f) => f.key), numbers: numbersByRule[features[0]!.key] ?? {} };
     pool.ctx = { actors: { ...pool.ctx.actors, [pc.entity_id]: actor } };
   }
@@ -171,6 +181,8 @@ export async function interveneOnRoll(
     pool: ReactorPool;
     label: string;
     resume: Record<string, unknown>;
+    /** V3.1-163 : par défaut un jet ciblé. */
+    origin?: RollWindowState["origin"];
     locale: Locale;
   },
 ): Promise<InterveneResult> {
@@ -208,7 +220,7 @@ export async function interveneOnRoll(
   const outcome = outcomeOf(roll);
   const state: RollWindowState = {
     __v: 1,
-    origin: "targeted",
+    origin: params.origin ?? "targeted",
     campaignId: params.campaignId,
     combatId: params.combat?.id ?? null,
     stamp,
@@ -236,4 +248,34 @@ export async function interveneOnRoll(
     },
   });
   return { kind: "window", windowId };
+}
+
+/**
+ * V3.1-163 — le réservoir d'un seul personnage, pour un jet qui ne regarde
+ * que lui (sa sauvegarde, son test) : en combat, avec sa ligne (réaction et
+ * limite comptées) ; hors combat, sans compte. Une joueuse lit le combat par
+ * une demande signée (ADR 0069).
+ */
+export async function selfReactorPool(
+  supabase: TypedClient,
+  params: { campaignId: string; entityId: string; userId: string | null; callerIsGm: boolean; loaded?: CharacterActionContext; locale: Locale },
+): Promise<{ pool: ReactorPool; combat: CombatRow | null }> {
+  const combat = await getActiveCombatForCampaign(supabase, params.campaignId);
+  const running = combat && combat.status === "running" ? combat : null;
+  const participants = running
+    ? params.callerIsGm
+      ? await listCombatParticipants(supabase, running.id)
+      : await readCombatParticipantsSigned(supabase, { campaignId: params.campaignId, combatId: running.id })
+    : [];
+  const pc = { entity_id: params.entityId, user_id: params.userId };
+  const pool = await gatherReactors(supabase, {
+    campaignId: params.campaignId,
+    participants,
+    pcs: [pc],
+    only: new Set([params.entityId]),
+    loaded: params.loaded ? [params.loaded] : [],
+    standalone: pc,
+    locale: params.locale,
+  });
+  return { pool, combat: running };
 }

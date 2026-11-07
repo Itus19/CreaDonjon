@@ -1,7 +1,7 @@
 import "server-only";
 import { zCharacterRulesBlockData, type CharacterRules, type MulticlassPrerequisites } from "@/src/core/schemas/rule-blocks/characterRules";
 import { zClassBasicsBlockData, zModifiersBlockData, zSubclassFeaturesBlockData } from "@/src/core/schemas/rule-blocks/blocks";
-import { subclassFeatures, type SubclassFeatureData } from "@/src/core/rules/subclass";
+import { subclassFeatureSlug, subclassFeatures, type SubclassFeatureData } from "@/src/core/rules/subclass";
 import { zChoicesBlockData, type ChoiceGrant, type ChoicesBlockData } from "@/src/core/schemas/rule-blocks/choices";
 import { resolveChoices, simpleGrantChoices, type ChoiceSource, type FeatChoiceData, type ResolvedChoices, type SpellMeta } from "@/src/core/rules/choices";
 import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
@@ -229,6 +229,9 @@ interface BatchEntry {
   choices?: ChoicesBlockData;
   /** V3.1-117 : les aptitudes d'une fiche de sous-classe (bloc `subclass_features`). */
   subclassFeatures?: SubclassFeatureData[];
+  /** V3.1-163 : ce qu'un trait d'espèce déclare de jouable (Chance du halfelin), pour en faire une aptitude de la fiche. */
+  activation?: ActivationBlockData;
+  resources?: RuleResource[];
 }
 
 /** Bloc `subclass_features`, validé. Mal formé : ignoré mais journalisé. */
@@ -382,6 +385,8 @@ async function fetchEntriesBatch(
       const classBasicsRow = rows.find((r) => r.block_type === "class_basics");
       const choicesRow = rows.find((r) => r.block_type === "choices");
       const subclassFeaturesRow = rows.find((r) => r.block_type === "subclass_features");
+      const activationRow = rows.find((r) => r.block_type === "activation");
+      const resourcesRow = rows.find((r) => r.block_type === "resources");
 
       const customTableData = (overrideBlocks.custom_table ?? customTableRow?.data) as { rows: CustomTableRow[] } | undefined;
       const progressionData = (overrideBlocks.class_progression ?? progressionRow?.data) as
@@ -397,6 +402,8 @@ async function fetchEntriesBatch(
         ...classBasicsExtras(overrideBlocks.class_basics ?? classBasicsRow?.data),
         choices: parseChoicesBlock(choicesRow?.data),
         subclassFeatures: parseSubclassFeatures(subclassFeaturesRow?.data),
+        activation: declaredActivation(overrideBlocks.activation ?? activationRow?.data),
+        resources: declaredResources(overrideBlocks.resources ?? resourcesRow?.data),
       });
       remaining.delete(entry.entry_key);
     }
@@ -418,6 +425,8 @@ async function fetchEntriesBatch(
         ...classBasicsExtras(resolved.blocksByType.get("class_basics")),
         choices: parseChoicesBlock(resolved.blocksByType.get("choices")),
         subclassFeatures: parseSubclassFeatures(resolved.blocksByType.get("subclass_features")),
+        activation: declaredActivation(resolved.blocksByType.get("activation")),
+        resources: declaredResources(resolved.blocksByType.get("resources")),
       });
       remaining.delete(key);
     }
@@ -598,6 +607,8 @@ export async function assembleResolvedRuleset(
   const remainingChoices: RemainingChoice[] = [];
   /** Cles de feature a resoudre en lot (aptitudes de classe + dons accordes, V1-C8), avec leur source pour affichage — Map plutot que Set depuis V1-C8 : toutes n'ont plus la meme source "class" litterale. */
   const extraFeatureKeys = new Map<string, string>();
+  /** V3.1-163 : clés lues seulement pour leurs briques jouables (aptitudes de sous-classe). */
+  const playableOnlyKeys = new Set<string>();
   const proficiencies: TraitGrant[] = [];
   const languages: TraitGrant[] = [];
   const asiGrantedLevels: Record<string, number[]> = {};
@@ -781,6 +792,17 @@ export async function assembleResolvedRuleset(
       );
       for (const f of sub.features) features[f.key] = f;
       choiceSources.push(...sub.sources);
+      // V3.1-163 : une aptitude de sous-classe qui a sa propre fiche de règle (`lore-cutting-words`)
+      // y porte ses briques jouables ; on la lit comme une aptitude de classe, et on l'écarte
+      // ensuite si elle n'apporte rien de jouable (pas de doublon dans l'onglet Traits).
+      for (const entry of subclassEntry.subclassFeatures) {
+        if (entry.level > cl.level) continue;
+        const ruleKey = `${cl.subclass}-${subclassFeatureSlug(entry.name)}`;
+        if (!extraFeatureKeys.has(ruleKey)) {
+          extraFeatureKeys.set(ruleKey, `class:${cl.key}`);
+          playableOnlyKeys.add(ruleKey);
+        }
+      }
     }
 
     for (const choice of extractSkillChoices(found.fields)) {
@@ -876,6 +898,18 @@ export async function assembleResolvedRuleset(
       if (speciesFeature && trait.modifiers.length > 0) {
         speciesFeature.modifiers.push(...resolveDeclaredModifiers(trait.modifiers, traitKey, trait.name, 2));
       }
+      // V3.1-163 : un trait qui se JOUE (activation, ressource : Chance du halfelin) devient une aptitude
+      // de la fiche, sous sa propre clé ; ses modificateurs restent sur l'espèce (jamais comptés deux fois).
+      if (trait.activation || (trait.resources?.length ?? 0) > 0) {
+        features[traitKey] = {
+          key: traitKey,
+          label: trait.name,
+          source: `species:${selection.species ?? ""}`,
+          modifiers: [],
+          ...(trait.activation ? { activation: trait.activation } : {}),
+          ...((trait.resources?.length ?? 0) > 0 ? { resources: trait.resources } : {}),
+        };
+      }
       // V3.1-116 : un trait qui porte un bloc `choices` (Compétent, Sens
       // aiguisés, lignages) passe par le mécanisme générique ; le choix de
       // compétence lu dans le SRD ne s'y ajoute pas, il serait en double.
@@ -951,6 +985,8 @@ export async function assembleResolvedRuleset(
       const resources = declaredResources(resolvedFeatureBlocks.get(fk)?.blocksByType.get("resources"));
       const activation = declaredActivation(resolvedFeatureBlocks.get(fk)?.blocksByType.get("activation"));
       const jouable = { ...(resources.length > 0 ? { resources } : {}), ...(activation ? { activation } : {}) };
+      // V3.1-163 : une aptitude de sous-classe lue pour ses briques, et qui n'en a pas : rien à ajouter.
+      if (playableOnlyKeys.has(fk) && !activation && resources.length === 0) continue;
       // V3.1-49 : une aptitude de classe ouvre ses choix au niveau de SA classe (Expertise du roublard au niveau 6 de roublard).
       const featureClassKey = source.startsWith("class:") ? source.slice(6) : undefined;
       addChoices(

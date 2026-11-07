@@ -811,5 +811,240 @@
       ],
       "durable_effects": []
     }
+  },
+  "luck": {
+    "_regle": "Chance (halfelin) : un 1 naturel sur un Test d20 se relance, et le nouveau jet s'impose. Automatique. V3.1-163.",
+    "activation": {
+      "activations": [
+        {
+          "id": "luck",
+          "label": {
+            "fr": "Chance",
+            "en": "Luck"
+          },
+          "cost": {
+            "action": "none",
+            "resources": []
+          },
+          "targets": {
+            "kind": "self"
+          },
+          "effects": [],
+          "variants": null,
+          "trigger": {
+            "on": "roll",
+            "roll": "d20",
+            "subject": "self",
+            "when": "natural",
+            "natural": 1,
+            "automatic": true
+          },
+          "roll_operations": [
+            {
+              "op": "reroll"
+            }
+          ]
+        }
+      ],
+      "durable_effects": []
+    }
+  },
+  "lore-cutting-words": {
+    "_regle": "Mots cinglants : Reaction, une Inspiration bardique, soustraire le de d'inspiration a un jet de degats ou a une attaque reussie d'une creature a 18 m. Le test de caracteristique reussi : V3.1-163 ne sait pas encore « reussi » sur un test. V3.1-163.",
+    "activation": {
+      "activations": [
+        {
+          "id": "cutting-words-damage",
+          "label": {
+            "fr": "Mots cinglants (dégâts)",
+            "en": "Cutting Words"
+          },
+          "cost": {
+            "action": "reaction",
+            "resources": [
+              {
+                "key": "bardic-inspiration",
+                "amount": {
+                  "op": "num",
+                  "value": 1
+                }
+              }
+            ]
+          },
+          "targets": {
+            "kind": "self"
+          },
+          "effects": [],
+          "variants": null,
+          "trigger": {
+            "on": "roll",
+            "roll": "damage",
+            "subject": "enemy",
+            "when": "rolled",
+            "range": {
+              "value": 18,
+              "unit": "m"
+            }
+          },
+          "roll_operations": [
+            {
+              "op": "add_die",
+              "count": {
+                "op": "num",
+                "value": 1
+              },
+              "faces": {
+                "op": "min",
+                "args": [
+                  {
+                    "op": "num",
+                    "value": 12
+                  },
+                  {
+                    "op": "add",
+                    "args": [
+                      {
+                        "op": "num",
+                        "value": 6
+                      },
+                      {
+                        "op": "mul",
+                        "args": [
+                          {
+                            "op": "num",
+                            "value": 2
+                          },
+                          {
+                            "op": "floor",
+                            "args": [
+                              {
+                                "op": "div",
+                                "args": [
+                                  {
+                                    "op": "ref",
+                                    "name": "class.level"
+                                  },
+                                  {
+                                    "op": "num",
+                                    "value": 5
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "sign": -1
+            }
+          ]
+        },
+        {
+          "id": "cutting-words-attack",
+          "label": {
+            "fr": "Mots cinglants (attaque)",
+            "en": "Cutting Words"
+          },
+          "cost": {
+            "action": "reaction",
+            "resources": [
+              {
+                "key": "bardic-inspiration",
+                "amount": {
+                  "op": "num",
+                  "value": 1
+                }
+              }
+            ]
+          },
+          "targets": {
+            "kind": "self"
+          },
+          "effects": [],
+          "variants": null,
+          "trigger": {
+            "on": "roll",
+            "roll": "attack",
+            "subject": "enemy",
+            "when": "hit",
+            "range": {
+              "value": 18,
+              "unit": "m"
+            }
+          },
+          "roll_operations": [
+            {
+              "op": "add_die",
+              "count": {
+                "op": "num",
+                "value": 1
+              },
+              "faces": {
+                "op": "min",
+                "args": [
+                  {
+                    "op": "num",
+                    "value": 12
+                  },
+                  {
+                    "op": "add",
+                    "args": [
+                      {
+                        "op": "num",
+                        "value": 6
+                      },
+                      {
+                        "op": "mul",
+                        "args": [
+                          {
+                            "op": "num",
+                            "value": 2
+                          },
+                          {
+                            "op": "floor",
+                            "args": [
+                              {
+                                "op": "div",
+                                "args": [
+                                  {
+                                    "op": "ref",
+                                    "name": "class.level"
+                                  },
+                                  {
+                                    "op": "num",
+                                    "value": 5
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "sign": -1
+            }
+          ]
+        }
+      ],
+      "durable_effects": []
+    },
+    "coverage": {
+      "gaps": [
+        {
+          "text": "ou bien réussit un test de caractéristique",
+          "missing": "Un test de caractéristique réussi d'une autre créature : la fenêtre ne s'ouvre pas encore sur les tests des autres."
+        },
+        {
+          "text": "Lorsqu’une créature que vous voyez dans un rayon de 18 m",
+          "missing": "La portée (18 m) et « que vous voyez » attendent les distances réelles et la perception (V3.1-137, 138) : la réaction est proposée sans les vérifier."
+        }
+      ]
+    }
   }
 }
