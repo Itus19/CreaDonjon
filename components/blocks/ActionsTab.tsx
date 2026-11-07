@@ -390,7 +390,7 @@ export default function ActionsTab({
         );
       })}
 
-      {spellcasting && (
+      {(spellcasting || preparedSpells.length > 0) && (
         <div className="flex flex-col gap-3">
           <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Sorts préparés</span>
           {preparedSpells.length === 0 && (

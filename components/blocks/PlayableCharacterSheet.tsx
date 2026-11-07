@@ -219,9 +219,18 @@ export default function PlayableCharacterSheet({
       .sort((a, b) => a.level - b.level || a.label.localeCompare(b.label));
   }, [spellcasting, spellChips, spellLevels]);
 
-  const preparedSpells: PreparedSpellView[] = sortedKnownSpells
+  const preparedConnus: PreparedSpellView[] = sortedKnownSpells
     .filter((s) => s.known.ref.kind === "rule" && (spellcasting?.prepared ?? []).includes(s.known.ref.key))
     .map((s) => ({ ref: s.known.ref, label: s.label, level: s.level }));
+  // Les sorts toujours préparés d'une aptitude (sous-classe) se lancent aussi depuis l'onglet Actions.
+  const preparedAccordes: PreparedSpellView[] = sheet.grantedSpells
+    .filter((g) => g.alwaysPrepared && !preparedConnus.some((p) => p.ref.kind === "rule" && p.ref.key === g.key))
+    .filter((g, i, tous) => tous.findIndex((x) => x.key === g.key) === i)
+    .map((g) => {
+      const chip = spellChips.get(refIdentity({ kind: "rule", key: g.key }));
+      return { ref: { kind: "rule", key: g.key }, label: chip?.found ? chip.name : g.key, level: spellLevels[g.key] ?? 0 };
+    });
+  const preparedSpells: PreparedSpellView[] = [...preparedConnus, ...preparedAccordes].sort((a, b) => a.level - b.level || a.label.localeCompare(b.label));
 
   function togglePrepared(key: string) {
     if (!spellcasting) return;

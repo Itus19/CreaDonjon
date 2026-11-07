@@ -10,6 +10,7 @@ import {
   decouperTexte,
   deplacerA,
   erreurFormule,
+  avecApresSort,
   avecDeclencheur,
   idLibre,
   momentsPermis,
@@ -475,5 +476,37 @@ describe("ADR 0076 — le regain d'une ressource dans l'éditeur (V3.1-183)", ()
     if (r.ok) return;
     expect(r.erreurs).toContain("Ressource Magie envoûtante : choisis la ressource dépensée pour la regagner");
     expect(r.erreurs).toContain("Ressource Mante de majesté : le niveau minimal de l'emplacement va de 1 à 9");
+  });
+});
+
+describe("V3.1-184 — « après un sort lancé » dans l'éditeur", () => {
+  function envouter(): Brouillon {
+    const b = brouillonVide();
+    let a = nouvelleActivation(b);
+    a.id = "envouter";
+    a.label = "Envoûter";
+    a.cout = { action: "free", depenses: [], passage: null };
+    a = avecApresSort(a, { ecoles: ["Enchantment", "Illusion"] });
+    b.activations = [a];
+    return b;
+  }
+
+  it("s'écrit avec ses écoles et l'emplacement exigé par défaut, puis fait l'aller-retour", () => {
+    const r = brouillonVersBlocs(envouter(), {});
+    if (!r.ok || !r.activation) throw new Error(r.ok ? "écriture attendue" : r.erreurs.join(" ; "));
+    expect(r.activation.activations[0].trigger).toEqual({ on: "spell_cast", schools: ["Enchantment", "Illusion"], with_slot: true });
+    const encore = brouillonVersBlocs(blocsVersBrouillon([{ blockType: "activation", data: r.activation }]), {});
+    if (!encore.ok) throw new Error(encore.erreurs.join(" ; "));
+    expect(encore.activation).toEqual(r.activation);
+  });
+
+  it("un seul déclencheur : la réaction à un jet remplace « après un sort », et l'inverse", () => {
+    const a = envouter().activations[0];
+    const enReaction = avecDeclencheur(a, { jet: "attack" });
+    expect(enReaction.apresSort).toBeNull();
+    expect(enReaction.declencheur).not.toBeNull();
+    const deNouveau = avecApresSort(enReaction, {});
+    expect(deNouveau.declencheur).toBeNull();
+    expect(deNouveau.operations).toEqual([]);
   });
 });

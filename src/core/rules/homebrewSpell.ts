@@ -27,6 +27,7 @@ import { formatFormulaNode } from "../formula/format";
  */
 
 export const SPELL_SCHOOLS = ["Abjuration", "Conjuration", "Divination", "Enchantment", "Evocation", "Illusion", "Necromancy", "Transmutation"] as const;
+export type SpellSchool = (typeof SPELL_SCHOOLS)[number];
 export const SAVE_ABILITIES = ["str", "dex", "con", "int", "wis", "cha"] as const;
 export const SPELL_DAMAGE_TYPES = [
   "acid",

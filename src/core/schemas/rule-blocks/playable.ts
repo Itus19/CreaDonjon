@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { zFormulaNode, zLocalized, zModifier } from "./primitives";
 import { TRIGGER_EVENTS, zCondition, zEffect, type EffectNode } from "../../rules/triggers";
+import { SPELL_SCHOOLS } from "../../rules/homebrewSpell";
 
 /**
  * V3.1-129 (ADR 0060) — les trois blocs de règle de la fondation des règles
@@ -79,7 +80,7 @@ export const REACTION_SUBJECTS = ["self", "attack_against_self", "ally", "enemy"
 /** `rolled` : le dé est connu, l'issue pas encore. `hit`, `failed` : l'issue est connue, rien n'est appliqué. */
 export const REACTION_MOMENTS = ["rolled", "hit", "failed", "natural"] as const;
 
-export const zActivationTrigger = z
+export const zRollTrigger = z
   .object({
     on: z.literal("roll"),
     roll: z.enum(REACTION_ROLLS),
@@ -96,6 +97,23 @@ export const zActivationTrigger = z
     if (t.when === "hit" && t.roll !== "attack") ctx.addIssue({ code: "custom", message: "« touché » ne se dit que d'une attaque." });
     if (t.roll === "damage" && t.when !== "rolled") ctx.addIssue({ code: "custom", message: "Un jet de dégâts n'a qu'un moment : quand il est lancé." });
   });
+export type RollTrigger = z.infer<typeof zRollTrigger>;
+
+/**
+ * V3.1-184 : « aussitôt après avoir lancé un sort d'Enchantement ou d'Illusion
+ * par un emplacement de sort » (Magie envoûtante). Pas une réaction : la fiche
+ * propose l'utilisation juste après le lancer, qui reste jouable au clic.
+ * `schools` absent : toute école ; `with_slot` : un emplacement dépensé (pas un
+ * sort mineur).
+ */
+export const zSpellCastTrigger = z.object({
+  on: z.literal("spell_cast"),
+  schools: z.array(z.enum(SPELL_SCHOOLS)).min(1).optional(),
+  with_slot: z.boolean().optional(),
+});
+export type SpellCastTrigger = z.infer<typeof zSpellCastTrigger>;
+
+export const zActivationTrigger = z.union([zRollTrigger, zSpellCastTrigger]);
 export type ActivationTrigger = z.infer<typeof zActivationTrigger>;
 
 /** Les opérations sur le jet en cours. Les dés sont lancés par le serveur (règle 8). */
@@ -122,7 +140,7 @@ const OPERATION_ROLLS: Record<RollOperation["op"], readonly (typeof REACTION_ROL
 /** V3.1-159 : le refus d'une opération qui n'a pas de sens sur le jet visé (`ac_bonus` sur une sauvegarde). */
 export function rollOperationProblems(trigger: ActivationTrigger | undefined, ops: readonly RollOperation[]): string[] {
   if (ops.length === 0) return [];
-  if (!trigger) return ["Une opération sur le jet demande un déclencheur « en réaction à un jet »."];
+  if (!trigger || trigger.on !== "roll") return ["Une opération sur le jet demande un déclencheur « en réaction à un jet »."];
   return ops.filter((o) => !OPERATION_ROLLS[o.op].includes(trigger.roll)).map((o) => `L'opération « ${o.op} » n'a pas de sens sur un jet « ${trigger.roll} ».`);
 }
 
@@ -146,7 +164,7 @@ export const zActivation = z.object({
   targets: zActivationTargets,
   effects: zEffectList,
   variants: z.array(zActivationVariant).nullable(),
-  /** V3.1-159 (ADR 0075) : absent, l'activation se joue au clic ; présent, en réaction à un jet. */
+  /** V3.1-159 (ADR 0075) : absent, l'activation se joue au clic ; `roll`, en réaction à un jet ; `spell_cast` (V3.1-184), proposée après un sort. */
   trigger: zActivationTrigger.optional(),
   /** V3.1-159 : ce que la réaction fait au jet en cours. */
   roll_operations: z.array(zRollOperation).optional(),

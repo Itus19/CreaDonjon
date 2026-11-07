@@ -56,6 +56,7 @@ import { insertDiceRoll, type DiceRollAttribution } from "@/src/server/repos/dic
 import { listBlocksForRulesetEntry, type RulesetEntryRow } from "@/src/server/repos/rules";
 import { entryNameFrom, findEntryInRulesetChain } from "@/src/server/services/rules";
 import { rechargeTrackers, trackersForRest } from "@/src/core/rules/resourceRecharge";
+import { canCastSpell } from "@/src/core/rules/castableSpells";
 import { naturalD20FromTrace } from "@/src/core/dice/rollAttribution";
 import { parseFormula } from "@/src/core/formula";
 import { assembleResolvedRuleset, resolveCharacterChoices, resolveEquipmentData, type RemainingChoice } from "@/src/server/services/resolvedRuleset";
@@ -518,7 +519,7 @@ export async function rollSpellAttack(
 ): Promise<{ attack: AttackRollResult; recorded: boolean } | { error: ActionErrorReason }> {
   const ctx = await resolveCharacterActionContext(supabase, params.entityId, params.campaignId, params.locale);
   if (!ctx) return { error: "not_found" };
-  if (!ctx.spellcastingData?.known.some((k) => k.ref.kind === "rule" && k.ref.key === params.spellKey)) {
+  if (!canCastSpell(ctx.spellcastingData?.known, ctx.sheet.grantedSpells, params.spellKey)) {
     return { error: "item_not_found" };
   }
   if (!ctx.sheet.spellcasting) return { error: "not_a_spellcaster" };
@@ -582,7 +583,7 @@ export async function castSpell(
 ): Promise<CastSpellOutcome | { error: ActionErrorReason | "no_slot_available" }> {
   const ctx = await resolveCharacterActionContext(supabase, params.entityId, params.campaignId, params.locale);
   if (!ctx) return { error: "not_found" };
-  if (!ctx.spellcastingData?.known.some((k) => k.ref.kind === "rule" && k.ref.key === params.spellKey)) {
+  if (!canCastSpell(ctx.spellcastingData?.known, ctx.sheet.grantedSpells, params.spellKey)) {
     return { error: "item_not_found" };
   }
 

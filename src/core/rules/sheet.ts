@@ -214,7 +214,7 @@ export interface ClassSpellcasting {
   /** V3.1-113 (ADR 0045) : `pact` — magie de pacte, réserve séparée d'un seul niveau. Absent : emplacements ordinaires. */
   kind?: "slots" | "pact";
   /** V3.1-113 : poids dans le calcul du multiclassé. Absent : la classe ne compte pas (occultiste, non-lanceur). */
-  casterWeight?: { fraction: "full" | "half"; rounding: "up" | "down" };
+  casterWeight?: { fraction: "full" | "half" | "third"; rounding: "up" | "down" };
   /** Niveau de classe -> niveau d'emplacement -> nombre d'emplacements. */
   slotsByLevel: Record<number, Record<number, number>>;
 }

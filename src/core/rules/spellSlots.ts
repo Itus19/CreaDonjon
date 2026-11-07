@@ -32,7 +32,9 @@ export interface SpellSlotsResult {
 function weightedLevel(level: number, weight: ClassSpellcasting["casterWeight"]): number {
   if (!weight) return 0;
   if (weight.fraction === "full") return level;
-  return weight.rounding === "up" ? Math.ceil(level / 2) : Math.floor(level / 2);
+  // V3.1-185 : le tiers (Arnaqueur arcanique, Chevalier occulte).
+  const diviseur = weight.fraction === "half" ? 2 : 3;
+  return weight.rounding === "up" ? Math.ceil(level / diviseur) : Math.floor(level / diviseur);
 }
 
 export function computeSpellSlots(classes: readonly CastingClass[], multiclassTable: Readonly<Record<string, readonly number[]>> | undefined): SpellSlotsResult {

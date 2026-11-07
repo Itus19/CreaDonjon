@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { Rng } from "../dice/rng";
 import { evaluate } from "../formula/evaluate";
 import type { FormulaNode } from "../formula/ast";
-import type { Activation, ActivationTrigger, RollOperation } from "../schemas/rule-blocks/playable";
+import type { Activation, RollOperation, RollTrigger } from "../schemas/rule-blocks/playable";
 import { requirementMet } from "./activation";
 import { attackVerdict } from "./targeting";
 import type { TriggerContext } from "./triggers";
@@ -140,15 +140,15 @@ export interface EligibleReaction {
   limitKey: string | null;
   /** Le moteur sait-il que la réaction changerait l'issue ? `null` : un dé décidera. */
   changesOutcome: boolean | null;
-  range: ActivationTrigger["range"] | null;
+  range: RollTrigger["range"] | null;
 }
 
-function rollMatches(trigger: ActivationTrigger, kind: PendingRollKind): boolean {
+function rollMatches(trigger: RollTrigger, kind: PendingRollKind): boolean {
   if (trigger.roll === "d20") return kind !== "damage";
   return trigger.roll === kind;
 }
 
-function subjectMatches(trigger: ActivationTrigger, roll: PendingRoll, actorId: string, teams: Readonly<Record<string, string>>): boolean {
+function subjectMatches(trigger: RollTrigger, roll: PendingRoll, actorId: string, teams: Readonly<Record<string, string>>): boolean {
   const mine = teams[actorId];
   const theirs = teams[roll.roller];
   switch (trigger.subject) {
@@ -165,7 +165,7 @@ function subjectMatches(trigger: ActivationTrigger, roll: PendingRoll, actorId: 
   }
 }
 
-function momentMatches(trigger: ActivationTrigger, roll: PendingRoll): boolean {
+function momentMatches(trigger: RollTrigger, roll: PendingRoll): boolean {
   const outcome = outcomeOf(roll);
   switch (trigger.when) {
     case "rolled":
@@ -214,7 +214,8 @@ export function eligibleReactions(p: {
   const seen = new Set<string>();
   for (const c of p.candidates) {
     const t = c.activation.trigger;
-    if (!t) continue;
+    // V3.1-184 : un déclencheur « après un sort » n'ouvre pas de fenêtre de jet.
+    if (!t || t.on !== "roll") continue;
     const id = `${c.actorId}|${c.ruleKey}|${c.activation.id}`;
     if (seen.has(id)) continue;
     if (!rollMatches(t, p.roll.kind) || !subjectMatches(t, p.roll, c.actorId, p.teams) || !momentMatches(t, p.roll)) continue;

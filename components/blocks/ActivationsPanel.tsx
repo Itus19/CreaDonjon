@@ -205,7 +205,7 @@ function CarteCapacite(
   }
 
   // V3.1-161 (ADR 0075) : une activation à déclencheur ne se joue pas au clic ; elle se propose pendant le jet (bandeau de réaction).
-  const reaction = activation.trigger !== undefined;
+  const reaction = activation.trigger?.on === "roll";
   if (activation.limit) morceaux.push(t(activation.limit.per === "turn" ? "limiteTour" : "limiteRound"));
 
   const nomCapacite = localized(activation.label, locale);

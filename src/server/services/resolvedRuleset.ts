@@ -1,6 +1,8 @@
 import "server-only";
 import { zCharacterRulesBlockData, type CharacterRules, type MulticlassPrerequisites } from "@/src/core/schemas/rule-blocks/characterRules";
-import { zClassBasicsBlockData, zModifiersBlockData, zSubclassFeaturesBlockData } from "@/src/core/schemas/rule-blocks/blocks";
+import { zClassBasicsBlockData, zModifiersBlockData, zSubclassFeaturesBlockData, zSubclassSpellcastingBlockData } from "@/src/core/schemas/rule-blocks/blocks";
+import { classSpellcastingWithSubclass, subclassSpellcasting } from "@/src/core/rules/subclassSpellcasting";
+import type { ClassSpellcasting } from "@/src/core/rules/sheet";
 import { subclassFeatureEntryKey, subclassFeatures, type SubclassFeatureData } from "@/src/core/rules/subclass";
 import { zChoicesBlockData, type ChoiceGrant, type ChoicesBlockData } from "@/src/core/schemas/rule-blocks/choices";
 import { resolveChoices, simpleGrantChoices, type ChoiceSource, type FeatChoiceData, type ResolvedChoices, type SpellMeta } from "@/src/core/rules/choices";
@@ -224,7 +226,9 @@ interface BatchEntry {
   suggestedAbilities?: Ability[];
   /** V3.1-113 : magie de pacte et poids dans la table du multiclassé (bloc `class_basics`). */
   spellcastingKind?: "slots" | "pact";
-  casterWeight?: { fraction: "full" | "half"; rounding: "up" | "down" };
+  casterWeight?: { fraction: "full" | "half" | "third"; rounding: "up" | "down" };
+  /** V3.1-185 : l'incantation qu'une sous-classe donne à sa classe (bloc `subclass_spellcasting`). */
+  subclassSpellcasting?: ClassSpellcasting;
   /** V3.1-116 : le bloc `choices` de la fiche, s'il en porte un. */
   choices?: ChoicesBlockData;
   /** V3.1-117 : les aptitudes d'une fiche de sous-classe (bloc `subclass_features`). */
@@ -232,6 +236,17 @@ interface BatchEntry {
   /** V3.1-163 : ce qu'un trait d'espèce déclare de jouable (Chance du halfelin), pour en faire une aptitude de la fiche. */
   activation?: ActivationBlockData;
   resources?: RuleResource[];
+}
+
+/** V3.1-185 : bloc `subclass_spellcasting`, validé. Mal formé : ignoré mais journalisé. */
+function parseSubclassSpellcasting(data: unknown): Pick<BatchEntry, "subclassSpellcasting"> {
+  if (data === undefined || data === null) return {};
+  const parsed = zSubclassSpellcastingBlockData.safeParse(data);
+  if (!parsed.success) {
+    console.error("Bloc subclass_spellcasting mal forme, ignore", parsed.error.issues);
+    return {};
+  }
+  return { subclassSpellcasting: subclassSpellcasting(parsed.data) };
 }
 
 /** Bloc `subclass_features`, validé. Mal formé : ignoré mais journalisé. */
@@ -385,6 +400,7 @@ async function fetchEntriesBatch(
       const classBasicsRow = rows.find((r) => r.block_type === "class_basics");
       const choicesRow = rows.find((r) => r.block_type === "choices");
       const subclassFeaturesRow = rows.find((r) => r.block_type === "subclass_features");
+      const subclassSpellcastingRow = rows.find((r) => r.block_type === "subclass_spellcasting");
       const activationRow = rows.find((r) => r.block_type === "activation");
       const resourcesRow = rows.find((r) => r.block_type === "resources");
 
@@ -402,6 +418,7 @@ async function fetchEntriesBatch(
         ...classBasicsExtras(overrideBlocks.class_basics ?? classBasicsRow?.data),
         choices: parseChoicesBlock(choicesRow?.data),
         subclassFeatures: parseSubclassFeatures(subclassFeaturesRow?.data),
+        ...parseSubclassSpellcasting(subclassSpellcastingRow?.data),
         activation: declaredActivation(overrideBlocks.activation ?? activationRow?.data),
         resources: declaredResources(overrideBlocks.resources ?? resourcesRow?.data),
       });
@@ -425,6 +442,7 @@ async function fetchEntriesBatch(
         ...classBasicsExtras(resolved.blocksByType.get("class_basics")),
         choices: parseChoicesBlock(resolved.blocksByType.get("choices")),
         subclassFeatures: parseSubclassFeatures(resolved.blocksByType.get("subclass_features")),
+        ...parseSubclassSpellcasting(resolved.blocksByType.get("subclass_spellcasting")),
         activation: declaredActivation(resolved.blocksByType.get("activation")),
         resources: declaredResources(resolved.blocksByType.get("resources")),
       });
@@ -785,6 +803,9 @@ export async function assembleResolvedRuleset(
     // V3.1-117 : la sous-classe choisie rejoint le lot ; ses aptitudes atteintes
     // (niveau de classe) donnent leurs effets et leurs choix.
     const subclassEntry = cl.subclass ? batch.get(cl.subclass) : undefined;
+    // V3.1-185 : une sous-classe qui lance des sorts les prête à une classe qui n'en lance pas.
+    const incantation = classSpellcastingWithSubclass(classes[cl.key].spellcasting, subclassEntry?.subclassSpellcasting);
+    if (incantation) classes[cl.key] = { ...classes[cl.key], spellcasting: incantation };
     if (cl.subclass && subclassEntry?.subclassFeatures) {
       const sub = subclassFeatures(
         { key: cl.subclass, label: subclassEntry.name, classKey: cl.key, classLevel: cl.level },
@@ -1251,5 +1272,11 @@ export async function buildResolvedRulesetView(
     resolveSpellLevels(supabase, rulesetId, selection.spellKeys ?? []),
   ]);
   const { armor: equipment, weapon: weaponByKey, weight, cost } = equipmentData;
-  return { ...assembled, equipment, weaponByKey, weight, cost, spellLevels };
+  // Les sorts qu'une aptitude accorde (sous-classe) se lancent depuis la fiche comme les connus :
+  // leur niveau se lit aussi, en une requête de plus, seulement s'il y en a hors des connus.
+  const accordes = [...new Set(Object.values(assembled.ruleset.features).flatMap((f) => (f.spells ?? []).map((sp) => sp.key)))].filter(
+    (k) => !(k in spellLevels)
+  );
+  const niveauxAccordes = accordes.length > 0 ? await resolveSpellLevels(supabase, rulesetId, accordes) : {};
+  return { ...assembled, equipment, weaponByKey, weight, cost, spellLevels: { ...spellLevels, ...niveauxAccordes } };
 }

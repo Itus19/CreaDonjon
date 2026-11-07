@@ -42,6 +42,8 @@ export const BLOCK_TYPES = [
   "background",
   "condition_effects",
   "subclass_features",
+  // V3.1-185 : une sous-classe qui lance des sorts (tiers de lanceur).
+  "subclass_spellcasting",
   "species_traits",
   "class_equipment",
   "modifiers",
@@ -373,7 +375,7 @@ export const zClassBasicsBlockData = z.object({
   /** V3.1-113 (ADR 0045) : `pact` — magie de pacte, réserve séparée. Absent : emplacements ordinaires. */
   spellcasting_kind: z.enum(["slots", "pact"]).optional(),
   /** V3.1-113 : poids dans la table du multiclassé, et l'arrondi de la moitié (2024 : supérieur ; 2014 : inférieur). Absent : ne compte pas. */
-  caster_weight: z.object({ fraction: z.enum(["full", "half"]), rounding: z.enum(["up", "down"]) }).optional(),
+  caster_weight: z.object({ fraction: z.enum(["full", "half", "third"]), rounding: z.enum(["up", "down"]) }).optional(),
 });
 export type ClassBasicsBlockData = z.infer<typeof zClassBasicsBlockData>;
 
@@ -484,6 +486,22 @@ export const zSubclassFeatureEntry = z.object({
 export const zSubclassFeaturesBlockData = z.object({ features: z.array(zSubclassFeatureEntry) });
 export type SubclassFeaturesBlockData = z.infer<typeof zSubclassFeaturesBlockData>;
 
+// --- subclass_spellcasting (V3.1-185) -----------------------------------
+// Une sous-classe qui donne l'incantation à une classe qui ne l'a pas
+// (Arnaqueur arcanique, Chevalier occulte) : caractéristique, poids dans la
+// table du multiclassé (2024 : le tiers, arrondi à l'inférieur), et sa propre
+// table d'emplacements par niveau de CLASSE. `counts[i]` : les emplacements du
+// niveau i + 1, comme une ligne de `multiclass_spell_slots`. Seules les lignes
+// qui changent ont à figurer : la dernière atteinte vaut.
+export const zSubclassSpellcastingBlockData = z.object({
+  ability: z.enum(["str", "dex", "con", "int", "wis", "cha"]),
+  caster_weight: z.object({ fraction: z.enum(["full", "half", "third"]), rounding: z.enum(["up", "down"]) }),
+  slots: z
+    .array(z.object({ level: z.number().int().min(1).max(20), counts: z.array(z.number().int().nonnegative()).max(9) }))
+    .refine((rows) => new Set(rows.map((r) => r.level)).size === rows.length, { message: "Deux lignes pour le même niveau." }),
+});
+export type SubclassSpellcastingBlockData = z.infer<typeof zSubclassSpellcastingBlockData>;
+
 // --- species_traits (layout: key_values, V1-D7) --------------------------
 // Traits d'une espece, ou d'une sous-espece (ascendance/lignee/heritage
 // choisis au sein d'une espece, ex. "Ascendance draconique (Noir)") : la
@@ -578,6 +596,7 @@ const DATA_SCHEMA_BY_BLOCK_TYPE = {
   background: zBackgroundBlockData,
   condition_effects: zConditionEffectsBlockData,
   subclass_features: zSubclassFeaturesBlockData,
+  subclass_spellcasting: zSubclassSpellcastingBlockData,
   species_traits: zSpeciesTraitsBlockData,
   class_equipment: zClassEquipmentBlockData,
   modifiers: zModifiersBlockData,

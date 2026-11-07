@@ -128,7 +128,7 @@ export async function gatherReactors(
     if (params.only && !params.only.has(pc.entity_id)) continue;
     const ctx = params.loaded?.find((c) => c.entityId === pc.entity_id) ?? (await resolveCharacterActionContext(supabase, pc.entity_id, params.campaignId, params.locale));
     if (!ctx) continue;
-    const features = ctx.sheet.features.filter((f) => f.activation?.activations.some((a) => a.trigger));
+    const features = ctx.sheet.features.filter((f) => f.activation?.activations.some((a) => a.trigger?.on === "roll"));
     if (features.length === 0) continue;
     const state = await getEntityRuntimeState(supabase, pc.entity_id, params.campaignId);
     const usage = zTurnUsage.safeParse(p?.turn_usage);
@@ -136,7 +136,7 @@ export async function gatherReactors(
     for (const f of features) {
       numbersByRule[f.key] = actorNumbersFor(ctx, f.key);
       for (const a of f.activation!.activations) {
-        if (!a.trigger) continue;
+        if (a.trigger?.on !== "roll") continue;
         pool.candidates.push({
           actorId: pc.entity_id,
           ruleKey: f.key,

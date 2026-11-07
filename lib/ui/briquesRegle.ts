@@ -30,9 +30,11 @@ import {
   type DurableEffectDuration,
   type DurableEffectEnd,
   type RollOperation,
+  type RollTrigger,
   type RuleResourcesBlockData,
   type ResourceRegain,
 } from "@/src/core/schemas/rule-blocks/playable";
+import type { SpellSchool } from "@/src/core/rules/homebrewSpell";
 
 export type Localise = Record<string, string>;
 export type RechargeRegle = RuleResourcesBlockData["resources"][number]["recharge"];
@@ -173,7 +175,13 @@ export interface BrouillonDeclencheur {
   /** Sans fenêtre : s'applique d'office (Chance). */
   automatique: boolean;
   /** La portée du déclencheur (m), conservée telle quelle : elle ne se saisit pas encore ici. */
-  portee: NonNullable<ActivationBloc["trigger"]>["range"];
+  portee: RollTrigger["range"];
+}
+
+/** V3.1-184 : « après un sort lancé » — les écoles (aucune : toutes), et s'il faut un emplacement. */
+export interface BrouillonApresSort {
+  ecoles: SpellSchool[];
+  avecEmplacement: boolean;
 }
 
 /** Une opération sur le jet en cours ; les nombres et formules sont des textes. */
@@ -212,6 +220,8 @@ export interface BrouillonActivation {
   variantes: BrouillonVariante[];
   /** `null` : l'activation se joue au clic. */
   declencheur: BrouillonDeclencheur | null;
+  /** V3.1-184 : proposée après un sort lancé ; exclut `declencheur` (un seul déclencheur par activation). */
+  apresSort: BrouillonApresSort | null;
   operations: BrouillonOperation[];
   /** « Une fois par tour / par round » ; `null` : sans limite. */
   limite: LimiteReaction | null;
@@ -304,6 +314,7 @@ export function nouvelleActivation(b: Brouillon): BrouillonActivation {
     effets: [],
     variantes: [],
     declencheur: null,
+    apresSort: null,
     operations: [],
     limite: null,
   };
@@ -373,12 +384,23 @@ export function nouvelleOperation(op: GenreOperation): BrouillonOperation {
  */
 export function avecDeclencheur(a: BrouillonActivation, changement: Partial<BrouillonDeclencheur> | null): BrouillonActivation {
   if (changement === null) return { ...a, declencheur: null, operations: [] };
+  a = { ...a, apresSort: null };
   const d: BrouillonDeclencheur = { ...(a.declencheur ?? nouveauDeclencheur()), ...changement };
   if (!momentsPermis(d.jet).includes(d.moment)) d.moment = "rolled";
   if (d.moment !== "natural") d.naturel = "";
   else if (d.naturel.trim() === "") d.naturel = "1";
   const permises = operationsPermises(d.jet);
   return { ...a, declencheur: d, operations: a.operations.filter((o) => permises.includes(o.op)) };
+}
+
+/**
+ * V3.1-184 : « après un sort lancé » (ou l'enlève avec `null`). Une activation
+ * n'a qu'un déclencheur : celui-ci retire la réaction à un jet et ses opérations.
+ */
+export function avecApresSort(a: BrouillonActivation, changement: Partial<BrouillonApresSort> | null): BrouillonActivation {
+  if (changement === null) return { ...a, apresSort: null };
+  const d: BrouillonApresSort = { ...(a.apresSort ?? { ecoles: [], avecEmplacement: true }), ...changement };
+  return { ...a, apresSort: d, declencheur: null, operations: [] };
 }
 
 /** Ce que la liste « Ajouter une brique » propose (« Avantage / désavantage » et « Modificateur temporaire » écrivent le même effet). */
@@ -545,7 +567,7 @@ interface CtxLecture {
   passages: Record<string, string> | undefined;
 }
 
-function declencheurVersBrouillon(t: NonNullable<ActivationBloc["trigger"]>): BrouillonDeclencheur {
+function declencheurVersBrouillon(t: RollTrigger): BrouillonDeclencheur {
   return { jet: t.roll, sujet: t.subject, moment: t.when, naturel: t.natural === undefined ? "" : String(t.natural), automatique: t.automatic === true, portee: t.range };
 }
 
@@ -716,7 +738,8 @@ export function blocsVersBrouillon(blocs: readonly { blockType: string; data: un
           cout: v.cost ? coutVersBrouillon(v.cost, null) : null,
           ...(v.roll_operations && v.roll_operations.length > 0 ? { operationsConservees: v.roll_operations } : {}),
         })),
-        declencheur: a.trigger ? declencheurVersBrouillon(a.trigger) : null,
+        declencheur: a.trigger?.on === "roll" ? declencheurVersBrouillon(a.trigger) : null,
+        apresSort: a.trigger?.on === "spell_cast" ? { ecoles: a.trigger.schools ?? [], avecEmplacement: a.trigger.with_slot === true } : null,
         operations: (a.roll_operations ?? []).map(operationVersBrouillon),
         limite: a.limit?.per ?? null,
       };
@@ -803,7 +826,7 @@ function entierDansBornes(texte: string, contexte: string, ctx: CtxEcriture): nu
   return n;
 }
 
-function declencheurEcrit(d: BrouillonDeclencheur, contexte: string, ctx: CtxEcriture): NonNullable<ActivationBloc["trigger"]> {
+function declencheurEcrit(d: BrouillonDeclencheur, contexte: string, ctx: CtxEcriture): RollTrigger {
   return {
     on: "roll",
     roll: d.jet,
@@ -1004,7 +1027,11 @@ export function brouillonVersBlocs(b: Brouillon, nomsEtats: Readonly<Record<stri
                 ...(v.operationsConservees && v.operationsConservees.length > 0 ? { roll_operations: v.operationsConservees } : {}),
               };
             }),
-      ...(a.declencheur ? { trigger: declencheurEcrit(a.declencheur, `${nomAct}, déclencheur`, ctx) } : {}),
+      ...(a.declencheur
+        ? { trigger: declencheurEcrit(a.declencheur, `${nomAct}, déclencheur`, ctx) }
+        : a.apresSort
+          ? { trigger: { on: "spell_cast" as const, ...(a.apresSort.ecoles.length > 0 ? { schools: a.apresSort.ecoles } : {}), ...(a.apresSort.avecEmplacement ? { with_slot: true } : {}) } }
+          : {}),
       ...(a.declencheur && a.operations.length > 0 ? { roll_operations: a.operations.map((o, k) => operationEcrite(o, `${nomAct}, opération ${k + 1}`, ctx)) } : {}),
       ...(a.limite ? { limit: { per: a.limite } } : {}),
       ...(Object.keys(passages).length > 0 ? { passages } : {}),

@@ -1894,6 +1894,7 @@ export const DEFAULT_BLOCK_DISPLAY: Record<BlockType, { label: string; layout: s
   background: { label: "Historique", layout: "key_values" },
   condition_effects: { label: "Effets", layout: "key_values" },
   subclass_features: { label: "Sous-classe", layout: "progression_table" },
+  subclass_spellcasting: { label: "Incantation", layout: "key_values" },
   species_traits: { label: "Traits", layout: "key_values" },
   class_equipment: { label: "Équipement de départ", layout: "key_values" },
   modifiers: { label: "Effets chiffrés", layout: "key_values" },
