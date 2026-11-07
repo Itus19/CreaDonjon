@@ -5748,7 +5748,7 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
 
 *Restes* : Fougue n'ajoute l'action qu'au journal (pas de budget d'action en base à la table) ; Fougue et Abjuration s'affichent « Partielle », honnêtement.
 
-### V3.1-164 — Caractéristiques : des cases lisibles (7 novembre)
+### V3.1-175 — Caractéristiques : des cases lisibles (7 novembre)
 
 **Modèle conseillé : Sonnet**, une fois l'esquisse décidée.
 
@@ -5763,7 +5763,7 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
 - `AbilityScoreStep.tsx` : une seule ligne de chiffres par case (« 15 +2 »), le détail complet au survol ; la légende sous les six cases (cinq couleurs de la charte). Les sources viennent toujours de la fiche du moteur.
 - Vérifié au navigateur (Testeur MJ, Humain Rôdeur, tableau standard) : les six cases sur une ligne, plus aucun texte qui déborde ; la légende « Valeur attribuée ». Le cas avec bonus (l'Acolyte +1) est montré sur la planche « Création » du catalogue ; la sous-étape de répartition de l'historique n'a pas été pilotée au navigateur.
 
-### V3.1-167 — Les valeurs passives : Perception, Intuition, Investigation (7 novembre)
+### V3.1-178 — Les valeurs passives : Perception, Intuition, Investigation (7 novembre)
 
 **Modèle conseillé : Opus** (noyau du moteur, règle 16).
 

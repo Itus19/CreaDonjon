@@ -26,7 +26,7 @@ export type ModifierTargetCategory =
   | "sense"
   | "prof"
   | "ac_unarmored"
-  /** V3.1-167 : une valeur passive seule (Perception, Intuition, Investigation). */
+  /** V3.1-178 : une valeur passive seule (Perception, Intuition, Investigation). */
   | "passive";
 
 export interface ModifierTargetOption {

@@ -89,7 +89,7 @@ export default function ApercuDirect({
             );
           })}
         </ul>
-        {/* V3.1-167 : les trois valeurs passives, calculées par le moteur. */}
+        {/* V3.1-178 : les trois valeurs passives, calculées par le moteur. */}
         <p className="text-ink-muted">
           {t("passives")}{" "}
           <span className="text-ink-soft">{PASSIVE_SKILLS.map((p) => `${SKILL_LABELS_FR[p]} ${sheet.passives[p].value}`).join(" · ")}</span>

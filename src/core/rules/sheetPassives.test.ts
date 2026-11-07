@@ -3,7 +3,7 @@ import { characterSheet, PASSIVE_SKILLS, type ActiveEffect, type CharacterBuild,
 import { MODIFIER_TARGET_OPTIONS, OPS_BY_TARGET_CATEGORY } from "./modifierTargets";
 
 /**
- * V3.1-167 — les valeurs passives (règles 2024) : 10 + le modificateur de la
+ * V3.1-178 — les valeurs passives (règles 2024) : 10 + le modificateur de la
  * compétence ; +5 avec l'avantage, −5 avec le désavantage ; puis les bonus
  * qu'une règle pose sur `passive.<compétence>`. Perception, Intuition et
  * Investigation. Calculées, jamais stockées (règle 16).
@@ -30,7 +30,7 @@ const mod = (target: string, op: Modifier["op"], label: string, value?: number):
 const objet = (modifiers: Modifier[]): EquippedItem => ({ key: "o", label: "Objet", equipped: true, modifiers });
 const effet = (modifiers: Modifier[]): ActiveEffect => ({ key: "fx", label: "Effet", modifiers });
 
-describe("characterSheet — valeurs passives (V3.1-167)", () => {
+describe("characterSheet — valeurs passives (V3.1-178)", () => {
   it("les trois valeurs passives existent : Perception, Intuition, Investigation", () => {
     expect([...PASSIVE_SKILLS]).toEqual(["perception", "insight", "investigation"]);
     const s = characterSheet(build, ruleset, [], []);

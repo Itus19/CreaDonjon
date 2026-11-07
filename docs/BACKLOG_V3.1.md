@@ -129,7 +129,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 - [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) — Les règles jouables : fondation et chantiers (V3.1-129 à 141, 13 octobre)
 - [`13-audit-de-fin.md`](backlog-v3.1/13-audit-de-fin.md) — L'audit de fin de V3.1 : les retouches d'affichage relevées en chemin, V3.1-144
 - [`14-rugosites-novembre.md`](backlog-v3.1/14-rugosites-novembre.md) — Rugosités de novembre : ce qu'on a constaté en jouant (V3.1-150 à 154, terminés)
-- [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) — La Création de personnage : retours du 7 novembre (V3.1-159 à 168)
+- [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) — La Création de personnage : retours du 7 novembre (V3.1-170 à 168)
 - [`termines.md`](backlog-v3.1/termines.md) — Tickets terminés (☑)
 
 | Ticket | État | Modèle IA | Titre | Fichier |
@@ -289,13 +289,13 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-152 | ☑ | sans | « Lier tout » dans « Détecter des liens » | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-153 | ☑ | sans | Le badge « Prochaine session » couché rail déplié, debout rail replié | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-154 | ☑ | sans | PJ attribué sans fiche : sa carte et « Créer la fiche de … » | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-159 | ☐ | sans | Pronoms : une liste à choix multiples, lue pour accorder | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
-| V3.1-160 | ☐ | sans | Identité : des champs à la même taille, et « le Commun est acquis » | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
-| V3.1-161 | ☐ | sans | Espèce, don d'origine, historique : le texte entier, sans quitter l'écran | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
-| V3.1-162 | ☐ | sans | Expliquer compétences, bottes d'armes et aptitudes de classe | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
-| V3.1-163 | ☐ | sans | La sous-classe en sous-étape, ses choix expliqués | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
-| V3.1-164 | ☑ | sans | Caractéristiques : des cases lisibles (esquisse d'abord) | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-165 | ☐ | sans | Points de vie : « Maximum » en plus de la moyenne et du jet | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
-| V3.1-166 | ☐ | sans | Aperçu : la colonne s'efface, la fiche s'affiche comme sur la fiche | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
-| V3.1-167 | ☑ | sans | Les valeurs passives : Perception, Intuition, Investigation | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-168 | ☐ | sans | Trois sous-classes pour « La Croisade des Ombres », saisies et jouables | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
+| V3.1-170 | ☐ | sans | Pronoms : une liste à choix multiples, lue pour accorder | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
+| V3.1-171 | ☐ | sans | Identité : des champs à la même taille, et « le Commun est acquis » | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
+| V3.1-172 | ☐ | sans | Espèce, don d'origine, historique : le texte entier, sans quitter l'écran | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
+| V3.1-173 | ☐ | sans | Expliquer compétences, bottes d'armes et aptitudes de classe | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
+| V3.1-174 | ☐ | sans | La sous-classe en sous-étape, ses choix expliqués | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
+| V3.1-175 | ☑ | sans | Caractéristiques : des cases lisibles (esquisse d'abord) | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-176 | ☐ | sans | Points de vie : « Maximum » en plus de la moyenne et du jet | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
+| V3.1-177 | ☐ | sans | Aperçu : la colonne s'efface, la fiche s'affiche comme sur la fiche | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
+| V3.1-178 | ☑ | sans | Les valeurs passives : Perception, Intuition, Investigation | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-179 | ☐ | sans | Trois sous-classes pour « La Croisade des Ombres », saisies et jouables | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { legendeSources, type SourcesParCase } from "./sourcesCaracteristiques";
 
 /**
- * V3.1-164 (proposition B) : une addition en couleurs dans chaque case, une
+ * V3.1-175 (proposition B) : une addition en couleurs dans chaque case, une
  * légende sous les six. La première source d'une case est sa base (grise) ;
  * chaque autre source reçoit une couleur, la même partout où elle revient,
  * dans l'ordre où elle apparaît.

@@ -338,7 +338,7 @@ export interface SkillResult {
 }
 
 /**
- * V3.1-167 — les valeurs passives des règles 2024. Perception, Intuition,
+ * V3.1-178 — les valeurs passives des règles 2024. Perception, Intuition,
  * Investigation : 10 + modificateur de la compétence, ±5 selon l'état du jet,
  * puis les bonus posés sur `passive.<compétence>`.
  */
@@ -361,7 +361,7 @@ export interface DerivedSheet {
   /** V3.1-46 : les six jets de caractéristique. */
   abilityChecks: Record<Ability, AbilityCheckResult>;
   skills: Record<Skill, SkillResult>;
-  /** V3.1-167 : Perception, Intuition et Investigation passives. */
+  /** V3.1-178 : Perception, Intuition et Investigation passives. */
   passives: Record<PassiveSkill, PassiveResult>;
   hitPoints: { max: number; hitDice: string; sources: Source[] };
   speed: { value: number; sources: Source[] };
@@ -865,7 +865,7 @@ export function characterSheet(
     };
   }
 
-  // V3.1-167 : chaque valeur passive part du jet actif de sa compétence
+  // V3.1-178 : chaque valeur passive part du jet actif de sa compétence
   // (maîtrise, expertise, bonus compris), puis l'avantage vaut +5, le
   // désavantage −5, et une règle peut viser la valeur passive seule.
   const passives = {} as Record<PassiveSkill, PassiveResult>;

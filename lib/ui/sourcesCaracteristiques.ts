@@ -1,5 +1,5 @@
 /**
- * V3.1-164 (proposition B de l'esquisse du 7 novembre) : les six cases de
+ * V3.1-175 (proposition B de l'esquisse du 7 novembre) : les six cases de
  * l'étape Caractéristiques écrivent « d'où vient le total » en une addition
  * en couleurs (« 15 +2 »), et une légende sous les cases nomme chaque
  * couleur une seule fois. Avant, chaque source s'écrivait en phrase dans la

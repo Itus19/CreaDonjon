@@ -21,7 +21,7 @@ function signe(n: number): string {
   return `${n >= 0 ? "+" : ""}${n}`;
 }
 
-/** V3.1-164 : une couleur par source de bonus (jetons de la charte), dans l'ordre de `legendeSources`. */
+/** V3.1-175 : une couleur par source de bonus (jetons de la charte), dans l'ordre de `legendeSources`. */
 const TEXTE_BONUS = ["text-accent", "text-players", "text-link-rule", "text-gm", "text-link-entity"] as const;
 const FOND_BONUS = ["bg-accent", "bg-players", "bg-link-rule", "bg-gm", "bg-link-entity"] as const;
 
@@ -202,7 +202,7 @@ export default function AbilityScoreStep({
         <span className="text-xs font-bold uppercase tracking-widest text-accent">{ABILITY_LABELS[ability]}</span>
         <span className="text-3xl font-bold leading-none text-ink">{r.score}</span>
         <span className="text-sm text-ink-soft">{signe(r.mod)}</span>
-        {/* V3.1-164 (proposition B) : une addition en couleurs, nommée par la légende sous les cases. */}
+        {/* V3.1-175 (proposition B) : une addition en couleurs, nommée par la légende sous les cases. */}
         <span
           title={r.sources.map((s, i) => (i === 0 ? `${s.label} ${s.value}` : `${s.label} ${signe(s.value)}`)).join(" · ")}
           className="flex flex-wrap justify-center gap-x-1.5 text-xs font-semibold tabular-nums"

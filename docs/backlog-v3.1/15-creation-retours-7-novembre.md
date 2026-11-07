@@ -8,11 +8,13 @@ Retours de l'auteur après avoir créé une Rôdeuse de niveau 4 dans l'assistan
 - la source française du SRD 5.2.1 (`data/srd/fr-source/`) contient la description des compétences et des bottes d'armes, qui ne sont pas importées en base ;
 - le ruleset de « La Croisade des Ombres » est « DnD 2024 », variante personnelle du SRD 5.2.1 : le Champion y est déjà (hérité du SRD) ; l'Arnaqueur arcanique et le Collège de la séduction n'y sont pas.
 
+**Numéros.** Ces tickets ont d'abord été écrits V3.1-159 à 168 (sur une branche) ; ces numéros étaient déjà pris sur `master` par le chantier des réactions (159 à 163). Renumérotés **V3.1-170 à 179**, dans le même ordre, le 7 novembre. Les commits du 7 novembre qui disent « V3.1-164 » et « V3.1-167 » parlent de 175 et 178.
+
 Ordre conseillé : 162 (les textes en données) avant 161 et 163 ; 167 (noyau) indépendant ; 164 attend son esquisse ; 168 attend les textes de l'auteur.
 
 ---
 
-### V3.1-159 — Pronoms : une liste à choix multiples, lue pour accorder (sans modèle IA)
+### V3.1-170 — Pronoms : une liste à choix multiples, lue pour accorder (sans modèle IA)
 
 **Modèle conseillé : Opus** (forme des données d'un bloc, lecture par le solo).
 
@@ -25,7 +27,7 @@ Ordre conseillé : 162 (les textes en données) avant 161 et 163 ; 167 (noyau) i
 
 **Critères.** Plusieurs pronoms se choisissent et se relisent ; une fiche ancienne garde son texte ; tests du noyau (liste, reprise, accord) ; le contexte du solo porte les pronoms de l'entité.
 
-### V3.1-160 — Identité : des champs à la même taille, et « le Commun est acquis » (sans modèle IA)
+### V3.1-171 — Identité : des champs à la même taille, et « le Commun est acquis » (sans modèle IA)
 
 **Modèle conseillé : Sonnet.**
 
@@ -36,7 +38,7 @@ Ordre conseillé : 162 (les textes en données) avant 161 et 163 ; 167 (noyau) i
 
 **Sous-tâches Haiku.** Recenser les champs et boutons de l'assistant et leurs classes ; planche du catalogue.
 
-### V3.1-161 — Espèce, don d'origine, historique : le texte entier, sans quitter l'écran (sans modèle IA)
+### V3.1-172 — Espèce, don d'origine, historique : le texte entier, sans quitter l'écran (sans modèle IA)
 
 **Modèle conseillé : Sonnet**, après 162 pour la mise en forme des textes. Revient sur « traits en une ligne chacun » (décision du 5 octobre).
 
@@ -46,7 +48,7 @@ Ordre conseillé : 162 (les textes en données) avant 161 et 163 ; 167 (noyau) i
 
 **Critères.** Aucun texte de trait, de don ou d'historique n'est tronqué sans moyen de le lire ; un seul composant ; planche du catalogue.
 
-### V3.1-162 — Expliquer compétences, bottes d'armes et aptitudes de classe (sans modèle IA)
+### V3.1-173 — Expliquer compétences, bottes d'armes et aptitudes de classe (sans modèle IA)
 
 **Modèle conseillé : Opus** pour les données (import du SRD), **Sonnet** pour l'affichage.
 
@@ -58,7 +60,7 @@ Ordre conseillé : 162 (les textes en données) avant 161 et 163 ; 167 (noyau) i
 
 **Critères.** Les dix-huit compétences et les huit bottes ont un texte en base, en français ; chaque choix de compétence, de maîtrise d'arme et chaque aptitude de la progression s'explique sans quitter l'assistant ; aucun texte de règle dans le code (règle « le contenu de règles est de la donnée »).
 
-### V3.1-163 — La sous-classe en sous-étape, ses choix expliqués (sans modèle IA)
+### V3.1-174 — La sous-classe en sous-étape, ses choix expliqués (sans modèle IA)
 
 **Modèle conseillé : Sonnet**, après 162. Revient sur « la sous-classe en pastille de la progression » (V3.1-51).
 
@@ -68,7 +70,7 @@ Ordre conseillé : 162 (les textes en données) avant 161 et 163 ; 167 (noyau) i
 
 **Critères.** Rôdeur 3 : la sous-étape apparaît, le Chasseur s'explique, « Proie du chasseur » montre le texte de chaque option ; une sous-classe d'un ruleset personnel s'y range comme une officielle ; planche du catalogue.
 
-### V3.1-165 — Points de vie : « Maximum » en plus de la moyenne et du jet (sans modèle IA)
+### V3.1-176 — Points de vie : « Maximum » en plus de la moyenne et du jet (sans modèle IA)
 
 **Modèle conseillé : Opus** (noyau : `HpGainChoice`, `sheet.ts`).
 
@@ -76,7 +78,7 @@ Ordre conseillé : 162 (les textes en données) avant 161 et 163 ; 167 (noyau) i
 
 **Critères.** Tests du noyau (moyenne, jet, maximum) ; une montée de niveau en « Maximum » écrit les bons PV ; l'écran propose les trois modes.
 
-### V3.1-166 — Aperçu : la colonne s'efface, la fiche s'affiche comme sur la fiche (sans modèle IA)
+### V3.1-177 — Aperçu : la colonne s'efface, la fiche s'affiche comme sur la fiche (sans modèle IA)
 
 **Modèle conseillé : Sonnet.**
 
@@ -84,7 +86,7 @@ Ordre conseillé : 162 (les textes en données) avant 161 et 163 ; 167 (noyau) i
 
 **Critères.** Même rendu que la fiche une fois créée ; retour à l'étape précédente : la colonne revient ; tablette et téléphone inchangés (pas de colonne) ; planche du catalogue.
 
-### V3.1-168 — Trois sous-classes pour « La Croisade des Ombres », saisies et jouables (sans modèle IA)
+### V3.1-179 — Trois sous-classes pour « La Croisade des Ombres », saisies et jouables (sans modèle IA)
 
 **Modèle conseillé : Opus** (saisie par l'éditeur de briques, relevé des briques manquantes). **Attend les textes de l'auteur** pour les deux sous-classes hors SRD.
 

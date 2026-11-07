@@ -32,7 +32,7 @@ import { useWorldRuleEntries } from "./useWorldRuleEntries";
 const PASSIVES_COURTS: Record<PassiveSkill, string> = { perception: "Percep.", insight: "Intuit.", investigation: "Invest." };
 
 /**
- * V3.1-167 : les trois valeurs passives (Perception, Intuition,
+ * V3.1-178 : les trois valeurs passives (Perception, Intuition,
  * Investigation) en une seule tuile, au gabarit des autres (même hauteur,
  * même libellé au-dessus) mais deux fois plus large : trois badges de 72 px
  * auraient coupé « INVESTIGATION PASSIVE ». Les valeurs viennent du moteur.
