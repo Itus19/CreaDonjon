@@ -635,7 +635,9 @@ function jetDepuisSortie(sortie: SortieJet): JetAffiche {
     groups: extractDiceGroups(sortie.trace),
     pair: sortie.pair,
     createdAt: new Date().toISOString(),
-    sansTotal: sortie.sansTotal,
+    sansTotal: sortie.sansTotal || !!sortie.rollWindowId,
+    enAttenteReactions: !!sortie.rollWindowId,
+    ...(sortie.rollWindowId ? { verdict: null } : {}),
   };
 }
 
@@ -900,7 +902,8 @@ function DetailsJet({ jet, ton }: { jet: JetAffiche; ton: "success" | "fail" | "
     <>
       <p className="line-clamp-2">
         <span className="text-ink">{jet.what}</span>
-        {contre && <span> · {contre}</span>}
+        {jet.enAttenteReactions && <span className="italic text-ink-muted"> · {t("enAttenteReactions")}</span>}
+        {contre && !jet.enAttenteReactions && <span> · {contre}</span>}
         {verdict && <span className={`font-semibold ${couleurVerdict}`}> · {verdict}</span>}
       </p>
       {jet.chips.length > 0 && (

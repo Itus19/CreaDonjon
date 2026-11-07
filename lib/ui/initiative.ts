@@ -279,7 +279,10 @@ export interface ReponseJetCible {
   targetOutOfFight: boolean;
   /** Après une touche : les dégâts à lancer sur la même cible (`ChainedDamage`, côté serveur). */
   chained: { kind: "damage"; actor: TargetedRollInput["actor"]; action: TargetedRollInput["action"]; targetId: string; critical: boolean; token?: string } | null;
-  rollEventId: string;
+  /** `null` : le jet attend des réactions (`rollWindowId`), rien n'est encore journalisé ni appliqué. */
+  rollEventId: string | null;
+  /** V3.1-161 (ADR 0075) : la fenêtre de réaction ouverte sur ce jet ; absente des anciennes réponses. */
+  rollWindowId?: string | null;
   saveRequestId: string | null;
   /** V3.1-38 (suite) : les dés du jet (`RollDisplay`, côté serveur) ; `null` sans dés à montrer. */
   dice: RollDisplay | null;
@@ -340,9 +343,26 @@ export function validationMjRequise(acteur: TargetedRollInput["actor"], cible: {
 export function sortieDepuisJetCible(
   reponse: ReponseJetCible,
   kind: GenreJetCible,
-  contexte: { acteur: string; cible: string; libelle: (cle: "touche" | "rate" | "attaque" | "degats" | "sauvegarde" | "soin", cible: string) => string }
+  contexte: { acteur: string; cible: string; libelle: (cle: "touche" | "rate" | "attaque" | "degats" | "sauvegarde" | "soin" | "attenteReactions", cible: string) => string }
 ): SortieJet {
   const { acteur, cible, libelle } = contexte;
+  // V3.1-161 : une fenêtre de réaction est ouverte ; ni verdict ni total, la suite viendra à la reprise.
+  if (reponse.rollWindowId) {
+    return {
+      who: acteur,
+      what: libelle("attenteReactions", cible),
+      chips: [],
+      total: 0,
+      dc: null,
+      verdict: null,
+      hidden: false,
+      trace: reponse.dice?.trace ?? [],
+      pair: reponse.dice?.pair ?? null,
+      naturalD20: reponse.dice?.naturalD20 ?? null,
+      dcPrivate: false,
+      sansTotal: true,
+    };
+  }
   let what: string;
   if (kind === "attack" || kind === "spell_attack") {
     what = libelle(reponse.verdict === "hit" ? "touche" : reponse.verdict === "miss" ? "rate" : "attaque", cible);

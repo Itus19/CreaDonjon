@@ -48,18 +48,6 @@ Ordre conseillé : 162 (les textes en données) avant 161 et 163 ; 167 (noyau) i
 
 **Critères.** Aucun texte de trait, de don ou d'historique n'est tronqué sans moyen de le lire ; un seul composant ; planche du catalogue.
 
-### V3.1-173 — Expliquer compétences, bottes d'armes et aptitudes de classe (sans modèle IA)
-
-**Modèle conseillé : Opus** pour les données (import du SRD), **Sonnet** pour l'affichage.
-
-**Constat.** Les compétences (Dressage, Nature…), les bottes d'armes (Renversement, Coup double…) et les aptitudes de la table de progression d'une classe s'affichent sans explication.
-
-**À faire.**
-- Données : importer de la source française du SRD 5.2.1 la description de chaque compétence et de chaque botte d'arme (entrées de règle du ruleset officiel, avec l'attribution CC-BY-4.0 de `NOTICE.md`), par `ingest-srd`. Les aptitudes de classe ont déjà leur texte (entrées `feature`).
-- Affichage, sans surcharger : une ou deux phrases sous chaque option de compétence (le reste en infobulle de règle) ; la botte d'une arme et la ligne d'une aptitude ouvrent leur infobulle de règle (celle de la fiche, V3.1-32) ; dans la table de progression, chaque nom d'aptitude ouvre la sienne.
-
-**Critères.** Les dix-huit compétences et les huit bottes ont un texte en base, en français ; chaque choix de compétence, de maîtrise d'arme et chaque aptitude de la progression s'explique sans quitter l'assistant ; aucun texte de règle dans le code (règle « le contenu de règles est de la donnée »).
-
 ### V3.1-174 — La sous-classe en sous-étape, ses choix expliqués (sans modèle IA)
 
 **Modèle conseillé : Sonnet**, après 162. Revient sur « la sous-classe en pastille de la progression » (V3.1-51).

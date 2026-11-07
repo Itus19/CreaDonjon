@@ -252,12 +252,16 @@ Réactions (une fenêtre de choix dans le déroulé d'un jet, côté serveur), o
 - Reçu du 162 : les activations des aptitudes de sous-classe (Mots cinglants, `lore-cutting-words` : deux activations, dégâts lancés et attaque qui touche, `add_die` négatif du dé `column.class_specific_bardic_inspiration_die`, portée 18 m) et des traits d'espèce (Chance, `luck` : automatique, relance d'un 1) arrivent sur la fiche ; une activation accordée par un jeton (le dé d'Inspiration bardique) est candidate à une réaction. Les formules d'une réaction lisent aussi les colonnes de la classe (`column.*`), comme les ressources.
 
 **Critères d'acceptation**
-- [ ] Intégration : Guerrier 9 rate une sauvegarde demandée → fenêtre ; Indomptable → relance + 9, usage dépensé.
-- [ ] Chance (automatique) relance un 1 naturel sur un test sans fenêtre.
+- [x] Intégration : Guerrier 9 rate une sauvegarde demandée → fenêtre ; Indomptable → relance + 9, usage dépensé.
+- [x] Chance (automatique) relance un 1 naturel sur un test sans fenêtre. *La relance est prouvée par le noyau ; l'intégration prouve que le trait est une aptitude jouable et qu'aucune fenêtre ne s'ouvre.*
 - [ ] Solo : une réaction se propose dans le tour, et le budget de la scène la compte.
 
+*En partie fait le 7 novembre.* Point de décision dans `answerSaveRequest` (après le d20, la demande reste en attente) et dans les tests et sauvegardes de la fiche (`recordAndBuildOutcome`, rien n'est enregistré avant la reprise ; hors combat, rien n'est compté) ; `selfReactorPool` (un seul personnage, en combat ou non) ; la reprise rejoue les trois origines (`ResumedRoll`, union étiquetée). Le résolveur attache les briques jouables des **traits d'espèce** (Chance) et des **aptitudes de sous-classe qui ont leur fiche** (Mots cinglants, `lore-cutting-words`), sans doubler leurs modificateurs ni ajouter d'aptitude vide. Données : Chance (automatique), Mots cinglants (deux activations : dégâts lancés, attaque qui touche ; dé d'inspiration en formule sur le niveau de Barde, `min(12, 6 + 2 × ⌊niveau / 5⌋)`), réimport fait. Vérifié : `rollWindowsSelf.integration.test.ts` 4/4 (Inflexible, Coup de chance, Chance sur la fiche, Mots cinglants sur la fiche d'un Barde du Savoir 3).
 
-#### ☐ V3.1-161 — Les écrans : le bandeau de réaction ; l'éditeur suit · `M` · sans modèle IA — **prêt (Sonnet)**
+*Reste* : la boucle du solo ; l'attaque sans cible ; le dé d'Inspiration bardique reçu (activation accordée par un jeton) ; le test de caractéristique réussi d'une autre créature (Mots cinglants).
+
+
+#### ☑ V3.1-161 — Les écrans : le bandeau de réaction ; l'éditeur suit · `M` · sans modèle IA — **prêt (Sonnet)**
 
 **Modèle conseillé : Sonnet**, une fois 160 fait ; Opus relit.
 **Dépend de** : 160.
@@ -268,8 +272,12 @@ Réactions (une fenêtre de choix dans le déroulé d'un jet, côté serveur), o
 - Éditeur de briques : un déclencheur « En réaction à un jet » et les opérations sur le jet ; la limite « une fois par tour ».
 
 **Critères d'acceptation**
-- [ ] Au téléphone, le bandeau tient à 390 px, ses deux boutons au pouce.
-- [ ] Esquive instinctive se saisit à l'éditeur sans JSON.
+- [x] Au téléphone, le bandeau tient à 390 px, ses deux boutons au pouce.
+- [x] Esquive instinctive se saisit à l'éditeur sans JSON.
+
+*Fait le 7 novembre* (codé par `dev-sonnet`, relu et corrigé par Opus). `lib/ui/reactions.ts` (pur, testé), `lib/ui/reactionsApi.ts` (le seul appel), `components/shell/reaction/BandeauReaction.tsx` (« Utiliser » / « Passer », « Continuer » pour le MJ, « changerait l'issue », reprise faite une fois par l'écran de l'autrice), fenêtres sur le canal unique de `SauvegardesProvider` (lues avec la page, docs/CABLAGE.md C1), pastille du dé ; « En attente des réactions » dans l'outil de dés et le bandeau de sauvegarde ; sur la fiche, une réaction n'a pas de bouton « Utiliser » (« Réaction : se propose pendant le jet ») ; éditeur : `BriqueReaction.tsx` (déclencheur, opérations filtrées par jet, limite), aller-retour sans perte testé. Correctif d'Opus : **une reprise survit au rechargement** (le layout lit aussi les fenêtres fermées et pas reprises, `separerFenetres`). Vérifié au navigateur : la MJ fait frapper un gobelin, le bandeau s'ouvre chez la joueuse à 390 px (deux boutons de 44 px, aucun débordement), « Utiliser » → l'écran de la MJ reprend seul, Lia passe de 38 à 33 PV, réaction datée.
+
+*Reste* : la planche du catalogue ; l'aperçu de l'éditeur affiche encore « Utiliser » pour une réaction ; le bandeau de réaction et celui de sauvegarde se superposent s'ils sont ouverts ensemble.
 
 #### ☑ V3.1-162 — Les données : les réactions du SRD · `S` · sans modèle IA — **prêt (Opus)**
 

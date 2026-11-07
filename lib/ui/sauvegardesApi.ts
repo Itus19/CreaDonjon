@@ -12,6 +12,8 @@ export interface ReponseSauvegarde {
   total: number;
   changes: string[];
   hints: string[];
+  /** V3.1-163 (ADR 0075) : une fenêtre de réaction s'est ouverte sur la sauvegarde ; rien n'est encore écrit, le verdict viendra à la reprise. */
+  rollWindowId?: string | null;
 }
 
 export type ResultatReponse = { ok: true; reponse: ReponseSauvegarde } | { ok: false; erreur: string };

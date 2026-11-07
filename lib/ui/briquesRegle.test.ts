@@ -10,7 +10,11 @@ import {
   decouperTexte,
   deplacerA,
   erreurFormule,
+  avecDeclencheur,
   idLibre,
+  momentsPermis,
+  nouvelleOperation,
+  operationsPermises,
   nouvelEffet,
   nouvelleActivation,
   nouveauModificateur,
@@ -339,5 +343,107 @@ describe("un apply_modifier déjà enregistré", () => {
       expect(r.activation.activations[0].effects[0].action).toBe("apply_effect");
       expect(r.activation.durable_effects[0].modifiers).toEqual([{ target: "ac", op: "add", value: 5 }]);
     }
+  });
+});
+
+describe("réactions à un jet (V3.1-161)", () => {
+  const NOMS_VIDES = {};
+
+  /** Esquive instinctive, saisie sans JSON : réaction, dégâts d'une attaque contre soi, moitié des dégâts. */
+  function esquive(): Brouillon {
+    const b = brouillonVide();
+    let a = nouvelleActivation(b);
+    a.id = "esquive-instinctive";
+    a.label = "Esquive instinctive";
+    a.cout = { action: "reaction", depenses: [], passage: null };
+    a.cibles = { ...a.cibles, kind: "self" };
+    a = avecDeclencheur(a, { jet: "damage", sujet: "attack_against_self", moment: "rolled" });
+    a = { ...a, operations: [nouvelleOperation("damage_multiplier")] };
+    b.activations = [a];
+    return b;
+  }
+
+  it("Esquive instinctive s'écrit en blocs valides, sans JSON", () => {
+    const r = brouillonVersBlocs(esquive(), NOMS_VIDES);
+    if (!r.ok) throw new Error(r.erreurs.join(" ; "));
+    const a = r.activation?.activations[0];
+    expect(a?.cost.action).toBe("reaction");
+    expect(a?.trigger).toEqual({ on: "roll", roll: "damage", subject: "attack_against_self", when: "rolled" });
+    expect(a?.roll_operations).toEqual([{ op: "damage_multiplier", factor: 0.5 }]);
+  });
+
+  it("une activation à déclencheur relue puis réécrite reste identique", () => {
+    const r = brouillonVersBlocs(esquive(), NOMS_VIDES);
+    if (!r.ok || !r.activation) throw new Error("écriture attendue");
+    const b = blocsVersBrouillon([{ blockType: "activation", data: r.activation }]);
+    const encore = brouillonVersBlocs(b, NOMS_VIDES);
+    if (!encore.ok) throw new Error(encore.erreurs.join(" ; "));
+    expect(encore.activation).toEqual(r.activation);
+  });
+
+  it("un déclencheur « naturel » avec limite, bonus de relance et automatique fait l'aller-retour", () => {
+    const data: ActivationBlockData = zActivationBlockData.parse({
+      activations: [
+        {
+          id: "chance",
+          label: { fr: "Chance" },
+          cost: { action: "none", resources: [] },
+          targets: { kind: "self" },
+          effects: [],
+          variants: null,
+          trigger: { on: "roll", roll: "d20", subject: "self", when: "natural", natural: 1, automatic: true },
+          roll_operations: [{ op: "reroll", bonus: { op: "num", value: 2 } }],
+          limit: { per: "turn" },
+        },
+      ],
+      durable_effects: [],
+    });
+    const r = brouillonVersBlocs(blocsVersBrouillon([{ blockType: "activation", data }]), NOMS_VIDES);
+    if (!r.ok) throw new Error(r.erreurs.join(" ; "));
+    expect(r.activation?.activations[0].trigger).toEqual(data.activations[0].trigger);
+    expect(r.activation?.activations[0].limit).toEqual({ per: "turn" });
+    expect(r.activation?.activations[0].roll_operations).toEqual(data.activations[0].roll_operations);
+  });
+
+  it("ne propose que les opérations et les moments qui ont un sens sur le jet visé", () => {
+    expect(operationsPermises("damage").sort()).toEqual(["add_damage", "add_die", "damage_multiplier"]);
+    expect(operationsPermises("save")).not.toContain("ac_bonus");
+    expect(operationsPermises("attack")).toContain("ac_bonus");
+    expect(momentsPermis("damage")).toEqual(["rolled"]);
+    expect(momentsPermis("save")).not.toContain("hit");
+    expect(momentsPermis("attack")).toContain("hit");
+  });
+
+  it("changer de jet retire les opérations devenues absurdes et remet le moment d'équerre", () => {
+    let a = nouvelleActivation(brouillonVide());
+    a = avecDeclencheur(a, { jet: "attack", moment: "hit" });
+    a = { ...a, operations: [nouvelleOperation("ac_bonus"), nouvelleOperation("add_die")] };
+    a = avecDeclencheur(a, { jet: "save" });
+    expect(a.declencheur?.moment).toBe("rolled");
+    expect(a.operations.map((o) => o.op)).toEqual(["add_die"]);
+  });
+
+  it("le moment « naturel » demande la valeur du d20, et elle disparaît avec lui", () => {
+    let a = avecDeclencheur(nouvelleActivation(brouillonVide()), { jet: "d20", moment: "natural" });
+    expect(a.declencheur?.naturel).toBe("1");
+    a = avecDeclencheur(a, { moment: "rolled" });
+    expect(a.declencheur?.naturel).toBe("");
+  });
+
+  it("retirer le déclencheur retire les opérations", () => {
+    let a = avecDeclencheur(nouvelleActivation(brouillonVide()), { jet: "damage" });
+    a = { ...a, operations: [nouvelleOperation("damage_multiplier")] };
+    expect(avecDeclencheur(a, null)).toMatchObject({ declencheur: null, operations: [] });
+  });
+
+  it("refuse une valeur de d20 hors bornes et un facteur nul, avec un message d'écran", () => {
+    const b = esquive();
+    b.activations[0] = { ...b.activations[0], operations: [{ uid: "x", op: "damage_multiplier", facteur: "0" }] };
+    const r = brouillonVersBlocs(b, NOMS_VIDES);
+    expect(r.ok).toBe(false);
+    const c = brouillonVide();
+    c.activations = [avecDeclencheur({ ...nouvelleActivation(c), label: "Chance" }, { jet: "d20", moment: "natural", naturel: "25" })];
+    const r2 = brouillonVersBlocs(c, NOMS_VIDES);
+    expect(r2.ok).toBe(false);
   });
 });

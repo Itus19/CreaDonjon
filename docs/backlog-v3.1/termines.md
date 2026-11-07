@@ -5763,6 +5763,29 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
 - `AbilityScoreStep.tsx` : une seule ligne de chiffres par case (« 15 +2 »), le détail complet au survol ; la légende sous les six cases (cinq couleurs de la charte). Les sources viennent toujours de la fiche du moteur.
 - Vérifié au navigateur (Testeur MJ, Humain Rôdeur, tableau standard) : les six cases sur une ligne, plus aucun texte qui déborde ; la légende « Valeur attribuée ». Le cas avec bonus (l'Acolyte +1) est montré sur la planche « Création » du catalogue ; la sous-étape de répartition de l'historique n'a pas été pilotée au navigateur.
 
+### V3.1-173 — Expliquer compétences, bottes d'armes et aptitudes de classe (7 novembre)
+
+**Modèle conseillé : Opus** pour les données (import du SRD), **Sonnet** pour l'affichage.
+
+**Constat.** Les compétences (Dressage, Nature…), les bottes d'armes (Renversement, Coup double…) et les aptitudes de la table de progression d'une classe s'affichent sans explication.
+
+**À faire.**
+- Données : importer de la source française du SRD 5.2.1 la description de chaque compétence et de chaque botte d'arme (entrées de règle du ruleset officiel, avec l'attribution CC-BY-4.0 de `NOTICE.md`), par `ingest-srd`. Les aptitudes de classe ont déjà leur texte (entrées `feature`).
+- Affichage, sans surcharger : une ou deux phrases sous chaque option de compétence (le reste en infobulle de règle) ; la botte d'une arme et la ligne d'une aptitude ouvrent leur infobulle de règle (celle de la fiche, V3.1-32) ; dans la table de progression, chaque nom d'aptitude ouvre la sienne.
+
+**Critères.** Les dix-huit compétences et les huit bottes ont un texte en base, en français ; chaque choix de compétence, de maîtrise d'arme et chaque aptitude de la progression s'explique sans quitter l'assistant ; aucun texte de règle dans le code (règle « le contenu de règles est de la donnée »).
+
+**Fait le 7 novembre** (Opus seul). Pour **toutes les classes**, y compris celles d'un ruleset personnel : tout vient des fiches de règle du monde.
+- **Données** : les dix-huit compétences deviennent des fiches `skill-<index>` dans les deux SRD (`ingest-srd --only=Skills`, l'option `--only` ne touche qu'aux catégories nommées et ne purge rien) ; leur nom et leur phrase française sont lus dans le tableau « Compétences » de la source française (`scripts/translate-skills-2024-fr.ts`, rien d'écrit à la main). Les huit bottes avaient déjà leur fiche et leur traduction.
+- **Affichage, d'après l'esquisse** (choix de l'auteur : A, A, B) :
+  - compétences (A) : chaque carte dit la caractéristique du jet et la phrase de sa fiche, aussi pour les compétences de la classe (elles passaient par le sélecteur générique) ; les dix-huit résumés écrits dans `messages/` disparaissent ;
+  - maîtrise d'armes (A) : la botte de chaque arme est un nom de règle (`NomDeRegle`, V3.1-32) qui ouvre sa fiche, fenêtre sur ordinateur, feuille du bas sur téléphone ; le lien est hors du bouton qui choisit l'arme ;
+  - progression (B) : un clic sur un niveau le déplie et montre le texte entier de ses aptitudes (rendu de la page de règle, gras et listes compris) ; « Tout déplier » au-dessus. Les aptitudes de la progression gardent leur clé (`AptitudeNiveau`, `lib/ui/progressionClasse.ts`).
+- **Chargement** : les phrases des compétences proposées en une requête (`rule-entry-blocks`, en cache) ; le texte des aptitudes n'est demandé qu'au dépliage, « Tout déplier » réunit les clés en une requête.
+- Vérifié au navigateur (Testeur MJ, 1400 px) : Rôdeur et Guerrier, compétences, bottes (« Sape » s'ouvre en fenêtre, en français), niveaux dépliés.
+
+*Restes* : les sous-classes s'expliquent avec V3.1-174 ; la ligne d'une aptitude de la **fiche** du personnage ne change pas ici.
+
 ### V3.1-178 — Les valeurs passives : Perception, Intuition, Investigation (7 novembre)
 
 **Modèle conseillé : Opus** (noyau du moteur, règle 16).

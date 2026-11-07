@@ -37,6 +37,7 @@ import {
 } from "@/lib/ui/briquesRegle";
 import { chargerRessourcesDeclarees, enregistrerBriques, type RessourceDeclaree } from "@/lib/ui/regleApi";
 import ChampFormule from "@/components/rules/briques/ChampFormule";
+import ReactionEditeur from "@/components/rules/briques/BriqueReaction";
 import { ListeEffets } from "@/components/rules/briques/BriqueEffet";
 import {
   BoutonPetit,
@@ -418,6 +419,8 @@ function CarteActivation({ activation: a, onChange, onRemove }: { activation: Br
           {t("retirerUtilisation")}
         </BoutonPetit>
       </div>
+
+      <ReactionEditeur activation={a} onChange={onChange} />
 
       <CoutEditeur cout={a.cout} onChange={(cout) => onChange({ ...a, cout })} uid={`${a.uid}:cout`} avecCitation />
 

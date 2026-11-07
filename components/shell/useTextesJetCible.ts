@@ -23,7 +23,9 @@ export function useTextesJetCible(): TextesJetCible {
               ? t("jetDegats", { cible: nom })
               : cle === "sauvegarde"
                 ? t("jetSauvegarde", { cible: nom })
-                : t("jetSoin", { cible: nom }),
+                : cle === "attenteReactions"
+                  ? t("jetAttenteReactions", { cible: nom })
+                  : t("jetSoin", { cible: nom }),
     erreurJet: t("erreurJet"),
     allie: t("allie"),
     adversaire: t("adversaire"),

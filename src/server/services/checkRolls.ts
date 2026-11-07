@@ -25,6 +25,7 @@ import { getCampaignById, getClaimedCharacterEntityId } from "@/src/server/repos
 import { insertDiceRoll, type DiceRollVisibility } from "@/src/server/repos/diceRolls";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
 import { serverRng } from "@/src/server/services/rng";
+import { interveneOnRoll, selfReactorPool } from "@/src/server/services/rollWindows";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -69,7 +70,15 @@ export interface RollOutcome {
    * partie, et c'est voulu.
    */
   triggers?: FiredForRoll;
+  /** V3.1-163 (ADR 0075) : une fenêtre de réaction s'est ouverte sur ce jet ; rien n'est encore enregistré, la suite viendra à sa reprise. */
+  rollWindowId?: string;
 }
+
+/** V3.1-163 : ce qu'il faut pour rejouer un jet de la fiche à la reprise d'une fenêtre. */
+export type SheetCheckReplay =
+  | { fn: "ability"; ability: Ability }
+  | { fn: "skill"; skill: Skill }
+  | { fn: "save"; ability: Ability };
 
 interface RollParams {
   entityId: string;
@@ -87,6 +96,8 @@ interface RollParams {
   /** V3.1-33 : relance payee par l'Inspiration heroique — le libelle le dit. */
   reroll?: boolean;
   locale: Locale;
+  /** V3.1-163 : la reprise d'une fenêtre rejoue le jet modifié par les réactions, sans relancer ni rouvrir de fenêtre. */
+  preset?: { natural: number | null; total: number };
 }
 
 /** Qui lit un jet secret : le MJ seul s'il vient du MJ, sinon le lanceur et le MJ (V3.1-33, ADR 0038). */
@@ -107,6 +118,13 @@ async function requireCanRollForEntity(
   const allowed = await canUserEditEntityById(supabase, { entityId: params.entityId, userId: params.callerId });
   if (!allowed) return { ok: false, reason: "forbidden" };
   return { ok: true, worldId: entity.world_id, entity };
+}
+
+/** Les paramètres d'un jet, sans le jet déjà lancé : ce qu'on rejouera. */
+function sansPreset(params: RollParams): Omit<RollParams, "preset"> {
+  const rest: RollParams = { ...params };
+  delete rest.preset;
+  return rest;
 }
 
 function verdictFor(total: number, dc: number | null): "success" | "fail" | null {
@@ -193,10 +211,54 @@ async function recordAndBuildOutcome(
       sheet: DerivedSheet;
       events: (passed: boolean, total: number, dc: number) => FiredEvent[];
     };
+    /** V3.1-163 : de quoi ouvrir une fenêtre de réaction (le jet du personnage, ses seules réactions) et le rejouer. */
+    react?: { callerId: string; locale: Locale; replay: SheetCheckReplay; params: Omit<RollParams, "preset">; preset?: RollParams["preset"] };
   }
 ): Promise<RollOutcome> {
   const modifier = params.chips.reduce((sum, c) => sum + c.value, 0);
-  const { total, ast, expression, trace } = resolveCheckRoll({ modifier, advantage: params.advantage, bonusDice: params.dice }, serverRng);
+  const rolled = params.react?.preset
+    ? {
+        total: params.react.preset.total,
+        ast: parseFormula(String(Math.max(0, params.react.preset.total))),
+        expression: `${params.react.preset.total} (après réaction)`,
+        trace: [{ text: "d20", value: params.react.preset.natural ?? params.react.preset.total }] as TraceStep[],
+      }
+    : resolveCheckRoll({ modifier, advantage: params.advantage, bonusDice: params.dice }, serverRng);
+  let { total, trace } = rolled;
+  const { ast, expression } = rolled;
+
+  // V3.1-163 (ADR 0075) : le d20 est connu, rien n'est écrit — le personnage peut-il réagir sur son propre jet ?
+  if (params.react && !params.react.preset && params.campaignId && params.emit) {
+    const natural = naturalD20FromTrace(trace) ?? null;
+    const { pool, combat } = await selfReactorPool(supabase, {
+      campaignId: params.campaignId,
+      entityId: params.entityId,
+      userId: params.isAdmin ? null : params.react.callerId,
+      callerIsGm: params.isAdmin,
+      loaded: params.emit.ctx,
+      locale: params.react.locale,
+    });
+    const r = await interveneOnRoll(supabase, {
+      campaignId: params.campaignId,
+      combat,
+      roll: { kind: params.kind === "save" ? "save" : "check", roller: params.entityId, target: null, natural, total, critRange: 20, ac: null, dc: params.dc, acBonus: 0, damage: null },
+      pool,
+      label: `${params.who} — ${params.what} : ${total}`,
+      resume: { replay: params.react.replay, params: params.react.params },
+      origin: "sheet_check",
+      locale: params.react.locale,
+    });
+    if (r.kind === "window") {
+      return {
+        who: params.who, what: params.what, chips: params.chips, total, expression, dc: params.dc, verdict: null, hidden: params.hidden,
+        pair: advantagePairFromTrace(trace), naturalD20: natural, dcPrivate: params.dcPrivate, recorded: false, trace, rollWindowId: r.windowId,
+      };
+    }
+    if (r.automatic.length > 0) {
+      total = r.roll.total;
+      trace = [...trace, { text: `${r.automatic.map((e) => e.ruleKey).join(", ")} : d20 ${r.roll.natural ?? "?"}`, value: total }];
+    }
+  }
   const verdict = verdictFor(total, params.dc);
 
   // Les declencheurs partent AVANT l'enregistrement, pour que leur sortie
@@ -273,6 +335,7 @@ export async function rollAbilityCheck(
     hidden: params.hidden,
     isAdmin,
     dcPrivate: (params.dcPrivate ?? false) && isAdmin,
+    react: { callerId: params.callerId, locale: params.locale, replay: { fn: "ability", ability: params.ability }, params: sansPreset(params), preset: params.preset },
     emit: {
       ctx,
       sheet: ctx.sheet,
@@ -308,6 +371,7 @@ export async function rollSkillCheck(
     hidden: params.hidden,
     isAdmin,
     dcPrivate: (params.dcPrivate ?? false) && isAdmin,
+    react: { callerId: params.callerId, locale: params.locale, replay: { fn: "skill", skill: params.skill }, params: sansPreset(params), preset: params.preset },
     emit: {
       ctx,
       sheet: ctx.sheet,
@@ -350,6 +414,7 @@ export async function rollSavingThrow(
     hidden: params.hidden,
     isAdmin,
     dcPrivate: (params.dcPrivate ?? false) && isAdmin,
+    react: { callerId: params.callerId, locale: params.locale, replay: { fn: "save", ability: params.ability }, params: sansPreset(params), preset: params.preset },
     emit: {
       ctx,
       sheet: ctx.sheet,

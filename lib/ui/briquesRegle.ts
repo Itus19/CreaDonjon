@@ -17,6 +17,10 @@ import { isRollTarget } from "@/src/core/schemas/rule-blocks/primitives";
 import type { BudgetKind } from "@/src/core/rules/actionBudget";
 import type { ConditionNode, EffectNode, TriggerZone } from "@/src/core/rules/triggers";
 import {
+  REACTION_MOMENTS,
+  REACTION_ROLLS,
+  REACTION_SUBJECTS,
+  rollOperationProblems,
   zActivationBlockData,
   zCoverageBlockData,
   zRuleResourcesBlockData,
@@ -25,6 +29,7 @@ import {
   type DurableEffect,
   type DurableEffectDuration,
   type DurableEffectEnd,
+  type RollOperation,
   type RuleResourcesBlockData,
 } from "@/src/core/schemas/rule-blocks/playable";
 
@@ -142,6 +147,37 @@ export type CorpsEffet =
 
 export type BrouillonEffet = { uid: string; who: string; passage: string | null } & CorpsEffet;
 
+// --- Les réactions à un jet (V3.1-161, ADR 0075) ----------------------------
+
+type ActivationBloc = ActivationBlockData["activations"][number];
+export type JetReaction = (typeof REACTION_ROLLS)[number];
+export type SujetReaction = (typeof REACTION_SUBJECTS)[number];
+export type MomentReaction = (typeof REACTION_MOMENTS)[number];
+export type LimiteReaction = NonNullable<ActivationBloc["limit"]>["per"];
+
+/** « En réaction à un jet » : quel jet, de qui, quand. `naturel` : la valeur du d20 du moment « naturel » (texte). */
+export interface BrouillonDeclencheur {
+  jet: JetReaction;
+  sujet: SujetReaction;
+  moment: MomentReaction;
+  naturel: string;
+  /** Sans fenêtre : s'applique d'office (Chance). */
+  automatique: boolean;
+  /** La portée du déclencheur (m), conservée telle quelle : elle ne se saisit pas encore ici. */
+  portee: NonNullable<ActivationBloc["trigger"]>["range"];
+}
+
+/** Une opération sur le jet en cours ; les nombres et formules sont des textes. */
+export type BrouillonOperation = { uid: string } & (
+  | { op: "add_die"; nombre: string; faces: string; signe: 1 | -1 }
+  | { op: "reroll"; bonus: string }
+  | { op: "set_natural"; valeur: string }
+  | { op: "ac_bonus"; valeur: string }
+  | { op: "damage_multiplier"; facteur: string }
+  | { op: "add_damage"; formule: string; typeDegats: string }
+);
+export type GenreOperation = RollOperation["op"];
+
 export interface BrouillonVariante {
   uid: string;
   id: string;
@@ -150,6 +186,8 @@ export interface BrouillonVariante {
   effets: BrouillonEffet[];
   /** `null` : le coût de l'activation. */
   cout: BrouillonCout | null;
+  /** Les opérations sur le jet propres à la variante : conservées telles quelles, elles ne se saisissent pas ici. */
+  operationsConservees?: RollOperation[];
 }
 
 export interface BrouillonActivation {
@@ -163,6 +201,11 @@ export interface BrouillonActivation {
   cibles: BrouillonCibles;
   effets: BrouillonEffet[];
   variantes: BrouillonVariante[];
+  /** `null` : l'activation se joue au clic. */
+  declencheur: BrouillonDeclencheur | null;
+  operations: BrouillonOperation[];
+  /** « Une fois par tour / par round » ; `null` : sans limite. */
+  limite: LimiteReaction | null;
 }
 
 export interface BrouillonLacune {
@@ -251,6 +294,9 @@ export function nouvelleActivation(b: Brouillon): BrouillonActivation {
     cibles: nouvellesCibles(),
     effets: [],
     variantes: [],
+    declencheur: null,
+    operations: [],
+    limite: null,
   };
 }
 
@@ -263,6 +309,67 @@ export function nouvelleVariante(a: BrouillonActivation): BrouillonVariante {
     effets: [],
     cout: null,
   };
+}
+
+// --- Les réactions : ce qui a un sens, et les nouvelles briques ----------------
+
+const MODELES_OPERATIONS: readonly RollOperation[] = [
+  { op: "add_die", count: { op: "num", value: 1 }, faces: { op: "num", value: 6 }, sign: 1 },
+  { op: "reroll" },
+  { op: "set_natural", value: 20 },
+  { op: "ac_bonus", value: { op: "num", value: 1 } },
+  { op: "damage_multiplier", factor: 1 },
+  { op: "add_damage", formula: { op: "num", value: 1 } },
+];
+
+/** Les opérations qui ont un sens sur le jet visé (le noyau en décide : `rollOperationProblems`). */
+export function operationsPermises(jet: JetReaction): GenreOperation[] {
+  return MODELES_OPERATIONS.filter((o) => rollOperationProblems({ on: "roll", roll: jet, subject: "any", when: "rolled" }, [o]).length === 0).map((o) => o.op);
+}
+
+/** Les moments qui ont un sens sur le jet visé : « touché » ne se dit que d'une attaque, un jet de dégâts n'a que « quand il est lancé ». */
+export function momentsPermis(jet: JetReaction): MomentReaction[] {
+  if (jet === "damage") return ["rolled"];
+  return REACTION_MOMENTS.filter((m) => m !== "hit" || jet === "attack");
+}
+
+export function nouveauDeclencheur(): BrouillonDeclencheur {
+  return { jet: "attack", sujet: "any", moment: "rolled", naturel: "", automatique: false, portee: undefined };
+}
+
+export function nouvelleOperation(op: GenreOperation): BrouillonOperation {
+  const base = { uid: nouvelUid() };
+  switch (op) {
+    case "add_die":
+      return { ...base, op, nombre: "1", faces: "4", signe: 1 };
+    case "reroll":
+      return { ...base, op, bonus: "" };
+    case "set_natural":
+      return { ...base, op, valeur: "20" };
+    case "ac_bonus":
+      return { ...base, op, valeur: "5" };
+    case "damage_multiplier":
+      return { ...base, op, facteur: "0.5" };
+    case "add_damage":
+      return { ...base, op, formule: "1d6", typeDegats: "" };
+  }
+}
+
+/**
+ * Change le déclencheur d'une activation (ou le crée / l'enlève avec `null`) et
+ * remet d'équerre ce qui en dépend : un moment sans sens sur le nouveau jet
+ * redevient « quand il est lancé », la valeur du d20 ne survit pas au moment
+ * « naturel », et les opérations qui n'ont plus de sens sont retirées. Sans
+ * déclencheur, plus d'opération.
+ */
+export function avecDeclencheur(a: BrouillonActivation, changement: Partial<BrouillonDeclencheur> | null): BrouillonActivation {
+  if (changement === null) return { ...a, declencheur: null, operations: [] };
+  const d: BrouillonDeclencheur = { ...(a.declencheur ?? nouveauDeclencheur()), ...changement };
+  if (!momentsPermis(d.jet).includes(d.moment)) d.moment = "rolled";
+  if (d.moment !== "natural") d.naturel = "";
+  else if (d.naturel.trim() === "") d.naturel = "1";
+  const permises = operationsPermises(d.jet);
+  return { ...a, declencheur: d, operations: a.operations.filter((o) => permises.includes(o.op)) };
 }
 
 /** Ce que la liste « Ajouter une brique » propose (« Avantage / désavantage » et « Modificateur temporaire » écrivent le même effet). */
@@ -425,6 +532,28 @@ interface CtxLecture {
   passages: Record<string, string> | undefined;
 }
 
+function declencheurVersBrouillon(t: NonNullable<ActivationBloc["trigger"]>): BrouillonDeclencheur {
+  return { jet: t.roll, sujet: t.subject, moment: t.when, naturel: t.natural === undefined ? "" : String(t.natural), automatique: t.automatic === true, portee: t.range };
+}
+
+function operationVersBrouillon(o: RollOperation): BrouillonOperation {
+  const base = { uid: nouvelUid() };
+  switch (o.op) {
+    case "add_die":
+      return { ...base, op: "add_die", nombre: formatFormulaNode(o.count), faces: formatFormulaNode(o.faces), signe: o.sign };
+    case "reroll":
+      return { ...base, op: "reroll", bonus: o.bonus ? formatFormulaNode(o.bonus) : "" };
+    case "set_natural":
+      return { ...base, op: "set_natural", valeur: String(o.value) };
+    case "ac_bonus":
+      return { ...base, op: "ac_bonus", valeur: formatFormulaNode(o.value) };
+    case "damage_multiplier":
+      return { ...base, op: "damage_multiplier", facteur: String(o.factor) };
+    case "add_damage":
+      return { ...base, op: "add_damage", formule: formatFormulaNode(o.formula), typeDegats: o.damage_type ?? "" };
+  }
+}
+
 function effetVersBrouillon(e: EffectNode, chemin: string, ctx: CtxLecture): BrouillonEffet {
   const base = { uid: nouvelUid(), passage: ctx.passages?.[chemin] ?? null };
   const liste = (effets: readonly EffectNode[] | undefined, prefixe: string) => (effets ?? []).map((x, i) => effetVersBrouillon(x, `${prefixe}.${i}`, ctx));
@@ -565,7 +694,11 @@ export function blocsVersBrouillon(blocs: readonly { blockType: string; data: un
           labelOrig: v.label,
           effets: v.effects.map((e, i) => effetVersBrouillon(e, `variants.${k}.effects.${i}`, ctx)),
           cout: v.cost ? coutVersBrouillon(v.cost, null) : null,
+          ...(v.roll_operations && v.roll_operations.length > 0 ? { operationsConservees: v.roll_operations } : {}),
         })),
+        declencheur: a.trigger ? declencheurVersBrouillon(a.trigger) : null,
+        operations: (a.roll_operations ?? []).map(operationVersBrouillon),
+        limite: a.limit?.per ?? null,
       };
     });
     b.durablesConserves = [...conserves.values()];
@@ -639,6 +772,44 @@ function modificateurEcrit(m: BrouillonModificateur, contexte: string, ctx: CtxE
     value = noeud.op === "num" ? noeud.value : noeud;
   }
   return { target: m.cible, op: m.op, ...(value !== undefined ? { value } : {}), ...(m.perLevel ? { per_level: true } : {}) };
+}
+
+function entierDansBornes(texte: string, contexte: string, ctx: CtxEcriture): number {
+  const n = Number(texte.trim());
+  if (!Number.isInteger(n) || n < 1 || n > 20) {
+    ctx.erreurs.push(`${contexte} : un nombre entier de 1 à 20 est attendu`);
+    return 1;
+  }
+  return n;
+}
+
+function declencheurEcrit(d: BrouillonDeclencheur, contexte: string, ctx: CtxEcriture): NonNullable<ActivationBloc["trigger"]> {
+  return {
+    on: "roll",
+    roll: d.jet,
+    subject: d.sujet,
+    when: d.moment,
+    ...(d.moment === "natural" ? { natural: entierDansBornes(d.naturel, `${contexte}, valeur du d20`, ctx) } : {}),
+    ...(d.portee ? { range: d.portee } : {}),
+    ...(d.automatique ? { automatic: true } : {}),
+  };
+}
+
+function operationEcrite(o: BrouillonOperation, contexte: string, ctx: CtxEcriture): RollOperation {
+  switch (o.op) {
+    case "add_die":
+      return { op: "add_die", count: formule(o.nombre, `${contexte}, nombre de dés`, ctx), faces: formule(o.faces, `${contexte}, faces`, ctx), sign: o.signe };
+    case "reroll":
+      return { op: "reroll", ...(o.bonus.trim() !== "" ? { bonus: formule(o.bonus, `${contexte}, bonus`, ctx) } : {}) };
+    case "set_natural":
+      return { op: "set_natural", value: entierDansBornes(o.valeur, `${contexte}, valeur du d20`, ctx) };
+    case "ac_bonus":
+      return { op: "ac_bonus", value: formule(o.valeur, `${contexte}, bonus de CA`, ctx) };
+    case "damage_multiplier":
+      return { op: "damage_multiplier", factor: nombrePositif(o.facteur, `${contexte}, facteur`, ctx) };
+    case "add_damage":
+      return { op: "add_damage", formula: formule(o.formule, `${contexte}, dégâts`, ctx), ...(o.typeDegats.trim() !== "" ? { damage_type: o.typeDegats.trim() } : {}) };
+  }
 }
 
 function effetEcrit(e: BrouillonEffet, contexte: string, activationId: string, ctx: CtxEcriture): EffectNode {
@@ -789,8 +960,12 @@ export function brouillonVersBlocs(b: Brouillon, nomsEtats: Readonly<Record<stri
                 label: localise(v.labelOrig, nomV),
                 effects: v.effets.map((e, j) => effetEcrit(e, `${nomAct}, variante ${nomV || k + 1}, effet ${j + 1}`, a.id, ctx)),
                 ...(v.cout ? { cost: coutEcrit(v.cout, `${nomAct}, variante ${nomV || k + 1}, coût`, ctx) } : {}),
+                ...(v.operationsConservees && v.operationsConservees.length > 0 ? { roll_operations: v.operationsConservees } : {}),
               };
             }),
+      ...(a.declencheur ? { trigger: declencheurEcrit(a.declencheur, `${nomAct}, déclencheur`, ctx) } : {}),
+      ...(a.declencheur && a.operations.length > 0 ? { roll_operations: a.operations.map((o, k) => operationEcrite(o, `${nomAct}, opération ${k + 1}`, ctx)) } : {}),
+      ...(a.limite ? { limit: { per: a.limite } } : {}),
       ...(Object.keys(passages).length > 0 ? { passages } : {}),
     };
   });

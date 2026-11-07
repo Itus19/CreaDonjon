@@ -107,6 +107,7 @@
     "total": "Total {total}"
   },
   "outilDes": {
+    "enAttenteReactions": "Waiting for reactions",
     "titreLibre": "Free roll",
     "secret": "Secret",
     "secretAide": "Only you and the GM see this roll.",
@@ -204,6 +205,43 @@
   },
   "regles": {
     "briques": {
+      "reaction": {
+        "declenchement": "Trigger mode",
+        "auClic": "On click",
+        "enReaction": "In reaction to a roll",
+        "declencheur": "Trigger",
+        "jetVise": "Roll",
+        "deQui": "Rolled by",
+        "quand": "When",
+        "jets": { "attack": "An attack", "save": "A saving throw", "check": "An ability check", "d20": "A d20 (attack, save or check)", "damage": "Damage" },
+        "sujets": { "self": "Me", "attack_against_self": "An attack against me", "ally": "An ally", "enemy": "An enemy", "any": "Anyone" },
+        "moments": { "rolled": "The die is rolled", "hit": "The attack hits", "failed": "The roll fails", "natural": "The d20 shows a given value" },
+        "valeurDuD20": "d20 value (1 to 20)",
+        "automatique": "Applies by itself, no window",
+        "operations": "Operations on the roll",
+        "ajouterOperation": "Add an operation",
+        "retirer": "Remove",
+        "op": {
+          "add_die": "Add a die to the roll",
+          "reroll": "Reroll the d20",
+          "set_natural": "Set the d20 value",
+          "ac_bonus": "AC bonus against the attack",
+          "damage_multiplier": "Multiply the damage",
+          "add_damage": "Add damage"
+        },
+        "signe": "Direction",
+        "ajoute": "Adds",
+        "retranche": "Subtracts",
+        "nombreDeDes": "Number of dice",
+        "facesDuDe": "Faces",
+        "bonusApresRelance": "Bonus after the reroll (optional)",
+        "bonusDeCa": "AC bonus",
+        "facteur": "Factor (0.5: half the damage)",
+        "degatsEnPlus": "Extra damage",
+        "typeDeDegats": "Damage type (optional)",
+        "limite": "Limit",
+        "limites": { "aucune": "None", "turn": "Once per turn", "round": "Once per round" }
+      },
       "insererReference": "Insert a reference",
       "insererReferenceAria": "Insert a reference into \"{champ}\"",
       "reference": {
@@ -1536,6 +1574,7 @@
     }
   },
   "initiative": {
+    "jetAttenteReactions": "Waiting for reactions — {cible}",
     "titre": "Initiative",
     "description": "Track the turn order, hit points and conditions of a combat.",
     "aucuneCampagne": "No campaign in this world — create one in the Campaigns tab.",
@@ -1687,7 +1726,27 @@
     "actionBonus": "Bonus action",
     "reaction": "Reaction"
   },
+  "reactions": {
+    "titreBandeau": "Reaction available",
+    "jetAvecIssue": "Total {total} · {issue}",
+    "jetSansIssue": "Total {total}",
+    "enAttenteDesAutres": "Waiting for the other answers…",
+    "changeraitLIssue": "Would change the outcome",
+    "utiliser": "Use",
+    "passer": "Pass",
+    "continuer": "Continue",
+    "erreurEnvoi": "The answer could not be sent.",
+    "erreurReprise": "The roll could not be resumed.",
+    "fermer": "Close",
+    "issueTitre": "Roll result",
+    "seReferme": "closes in {secondes} s…",
+    "jetTestReussi": "{what}: {total}, success",
+    "jetTestRate": "{what}: {total}, failure",
+    "jetTestSansVerdict": "{what}: {total}"
+  },
   "sauvegardes": {
+    "pastilleReactions": "{n, plural, one {# reaction to answer} other {# reactions to answer}}",
+    "enAttenteReactions": "Waiting for reactions…",
     "titreBandeau": "Saving throw requested",
     "resiste": "Resist {label}",
     "lancer": "Roll",
@@ -1714,6 +1773,9 @@
   },
   "fiche": {
     "activation": {
+      "reaction": "Reaction: offered during the roll",
+      "limiteTour": "once per turn",
+      "limiteRound": "once per round",
       "ressources": "Resources · computed from the rules",
       "capacites": "Abilities",
       "surLaScene": "On the scene",
