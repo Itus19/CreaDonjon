@@ -293,7 +293,7 @@ Réactions (une fenêtre de choix dans le déroulé d'un jet, côté serveur), o
 
 *Reste, passé au V3.1-163* : **Mots cinglants** (une aptitude de sous-classe n'arrive sur la fiche que si elle porte modificateurs ou sorts : `subclassFeatures` ne lui attache pas son bloc d'activation), **Chance** du halfelin (trait d'espèce, même vérification à faire), et **le dé d'Inspiration bardique** reçu (une activation accordée par un jeton n'est pas encore candidate à une réaction). Bouclier attend 136.
 
-### ☐ V3.1-136 — Les actions modifiées · `M` · sans modèle IA — **conçu le 7 novembre ([ADR 0076](../adr/0076-les-actions-modifiees.md)), découpé en V3.1-164 à 167**
+### ☑ V3.1-136 — Les actions modifiées · `M` · sans modèle IA — **conçu le 7 novembre ([ADR 0076](../adr/0076-les-actions-modifiees.md)), découpé en V3.1-164 à 167**
 Attaques multiples, action disponible en action bonus, temps d'incantation changé, attaque remplacée, budget réservé à un usage, accorder ou lancer un sort comme effet. Règles visées : 7, 13, 14, 16, 21, 24, 32, 33, 35, 39.
 
 
@@ -332,7 +332,7 @@ Attaques multiples, action disponible en action bonus, temps d'incantation chang
 
 *Reste* : la durée « jusqu'au début de votre prochain tour » ; un sort mineur de réaction ; le coût de `gatherReactors` (une fiche par PJ du combat à chaque attaque d'un monstre, ~2 s à trois PJ) — à mettre en cache si la table le sent (docs/QUOTAS.md).
 
-#### ☐ V3.1-166 — Les écrans : budget du tour, lancer un sort par son activation ; l'éditeur suit · `M` · sans modèle IA — **prêt (Sonnet)**
+#### ☑ V3.1-166 — Les écrans : budget du tour, lancer un sort par son activation ; l'éditeur suit · `M` · sans modèle IA — **prêt (Sonnet)**
 
 **Modèle conseillé : Sonnet**, une fois 165 fait ; Opus relit.
 **Dépend de** : 165.
@@ -343,8 +343,12 @@ Attaques multiples, action disponible en action bonus, temps d'incantation chang
 - Éditeur de briques : le coût en emplacement et le coût « une attaque » ; les options de lancement d'une aptitude ; l'effet « lancer un sort ».
 
 **Critères d'acceptation**
-- [ ] Au téléphone, la carte d'un sort tient à 390 px avec son choix d'emplacement.
-- [ ] Bénédiction se saisit à l'éditeur sur la fiche du sort, sans JSON.
+- [x] Au téléphone, la carte d'un sort tient à 390 px avec son choix d'emplacement.
+- [x] Bénédiction se saisit à l'éditeur sur la fiche du sort, sans JSON. *Prouvé par l'aller-retour de l'éditeur (`briquesRegle.test.ts`) ; Bénédiction n'est pas dans le SRD 2024 importé.*
+
+*Fait le 7 novembre* (codé par `dev-sonnet`, relu par Opus). Sonnet s'est arrêté avant de coder : deux chargements manquaient ; Opus les a ajoutés côté serveur — `combat_player_view` rend le budget du tour des alliés (migration `20261107160000_combat_player_view_budget`), et la fiche reçoit `spellActivations` (une lecture groupée, page et route `/sheet`, `loadSpellActivations` partagé avec les fenêtres de réaction). Écrans : `lib/ui/budgetTour.ts` (ce qui reste, testé), ligne « Reste » sous les cases de la carte « Économie d'action » (les cases locales restent pour la réaction), avertissement de dépassement ; « En action bonus : … » en tête de l'onglet Actions ; section « Sorts » (carte d'activation réutilisée, pastilles d'emplacement, options de lancement, un sort à déclencheur garde sa mention « Réaction ») ; `lib/ui/lancerSort.ts` (testé). Éditeur : coût en emplacement, coût « Une attaque », options de lancement, effet « Lancer un sort », aller-retour testé. Vérifié au navigateur : Mira (Clerc 5) lance Bouclier de la foi depuis la fiche à 390 px (pastilles qui passent à la ligne, aucun débordement) → emplacement de niveau 1 dépensé, concentration, effet posé.
+
+*Reste* : la planche du catalogue ; le total « 1 / 2 » des attaques (la carte de combat ne connaît pas la fiche) ; les pastilles fusionnent emplacement ordinaire et de pacte du même niveau.
 
 #### ☑ V3.1-167 — Les données : sorts et actions modifiées du SRD · `S` · sans modèle IA — **prêt (Opus)**
 
