@@ -5763,6 +5763,28 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
 - `AbilityScoreStep.tsx` : une seule ligne de chiffres par case (« 15 +2 »), le détail complet au survol ; la légende sous les six cases (cinq couleurs de la charte). Les sources viennent toujours de la fiche du moteur.
 - Vérifié au navigateur (Testeur MJ, Humain Rôdeur, tableau standard) : les six cases sur une ligne, plus aucun texte qui déborde ; la légende « Valeur attribuée ». Le cas avec bonus (l'Acolyte +1) est montré sur la planche « Création » du catalogue ; la sous-étape de répartition de l'historique n'a pas été pilotée au navigateur.
 
+### V3.1-170 — Pronoms : une liste à choix multiples, lue pour accorder (7 novembre)
+
+**Modèle conseillé : Opus** (forme des données d'un bloc, lecture par le solo).
+
+**Constat.** « Pronoms » est un champ de texte libre (`character.pronouns: string`). L'auteur veut choisir dans une liste, et pouvoir en cocher plusieurs (une personne genrée au masculin ET au féminin), avec des propositions qui serviront aussi au mode solo pour accorder.
+
+**À faire.**
+- Données : `pronouns` devient une liste de jeux de pronoms connus (il, elle, iel, ils, elles…) plus une saisie libre. Une ancienne valeur texte se relit comme saisie libre (Zod avec reprise, aucune migration SQL : la donnée vit dans le JSON du bloc). Les jeux proposés et leur accord (« il/le/lui », « elle/la/elle », « iel/lae/ellui »…) vivent dans le noyau, une seule liste.
+- Écran (Identité de l'assistant, et le bloc Personnage) : des pastilles à cocher, plusieurs possibles, plus « Autre… ».
+- Une fonction pure dit comment accorder une entité (premier jeu choisi, ou alternance quand il y en a plusieurs) : le contexte que le solo fournit au modèle la lira (règle 10 : la donnée reste de la donnée).
+
+**Critères.** Plusieurs pronoms se choisissent et se relisent ; une fiche ancienne garde son texte ; tests du noyau (liste, reprise, accord) ; le contexte du solo porte les pronoms de l'entité.
+
+**Fait le 7 novembre** (Opus seul, sans esquisse à la demande de l'auteur : « petites modifications rapides »).
+- **Noyau** (`src/core/rules/pronouns.ts`, tests d'abord) : une seule liste, `PRONOUN_SETS` (il, elle, iel, ils, elles, chacun avec ses formes : « il/le/lui », « iel/lae/ellui »…) ; `zPronouns` (`{ sets, custom }`) relit un ancien texte comme saisie libre — aucune migration, la donnée vit dans le JSON du bloc ; `pronounGuidance` dit comment accorder : un jeu et ses formes, ou « il et elle, en alternance (…) » dans l'ordre choisi, la saisie libre ajoutée telle quelle, rien quand rien n'est choisi.
+- **Bloc `character`** : `pronouns: zPronouns.optional()` ; la garde de la montée de niveau compare la nouvelle forme.
+- **Écran** (`PronomsField`, un composant) : des pastilles à cocher, plusieurs possibles, dans l'ordre où on les coche, et « Autre… » pour la saisie libre ; dans l'Identité de l'assistant et dans le bloc Personnage de la fiche.
+- **Solo** : la ligne d'un PNJ présent, dans le contexte encadré du tour (et de la question au MJ), porte « pronoms : … » (`TurnContextNpc.pronouns`). Les blocs `character` des présents sont lus en une requête, en parallèle des autres, par le client du joueur (la RLS borne l'audience, règle 11). Coût : une lecture de plus par tour solo (`docs/QUOTAS.md`, Q1).
+- Vérifié au navigateur (Identité de l'assistant) : il et elle cochés, « Autre… » ouvert.
+
+*Restes* : le personnage joué (PJ) ne figure pas dans le contexte du tour aujourd'hui, donc ses propres pronoms non plus ; à brancher quand le contexte le décrira.
+
 ### V3.1-176 — Points de vie : « Maximum » en plus de la moyenne et du jet (7 novembre)
 
 **Modèle conseillé : Opus** (noyau : `HpGainChoice`, `sheet.ts`).

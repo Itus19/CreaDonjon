@@ -1,4 +1,6 @@
 import "server-only";
+import { listBlocksByTypeForEntities } from "@/src/server/repos/blocks";
+import { pronounGuidance, zPronouns } from "@/src/core/rules/pronouns";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import type { Viewer } from "@/src/core/visibility";
@@ -59,11 +61,23 @@ async function resolvePresentNpcs(
   const others = params.present.filter((p) => p.entityId !== params.playerEntityId);
   if (others.length === 0) return [];
 
-  const [entities, knownAs] = await Promise.all([
+  // V3.1-170 : les blocs `character` des présents, en UNE requête avec le reste (client du joueur : la RLS ne rend que ce qu'il peut voir).
+  const [entities, knownAs, characterBlocks] = await Promise.all([
     listEntitiesByIds(supabase, others.map((p) => p.entityId)),
     knownAsByTarget(supabase, params.playerEntityId),
+    listBlocksByTypeForEntities(
+      supabase,
+      others.map((p) => p.entityId),
+      "character"
+    ),
   ]);
   const nameById = new Map(entities.map((e) => [e.id, e.name]));
+  const pronounsById = new Map<string, string>();
+  for (const b of characterBlocks) {
+    const lu = zPronouns.safeParse((b.data as { pronouns?: unknown } | null)?.pronouns);
+    const guidance = lu.success ? pronounGuidance(lu.data) : null;
+    if (guidance) pronounsById.set(b.entity_id, guidance);
+  }
 
   const npcs: TurnContextNpc[] = [];
   for (const p of others) {
@@ -74,6 +88,7 @@ async function resolvePresentNpcs(
       name: knownAs.get(p.entityId) ?? nameById.get(p.entityId) ?? p.entityId,
       attitudeLabel: value === undefined ? null : relationshipAxisLabel(GENERAL_ATTITUDE_AXIS, value),
       zone: p.zone,
+      ...(pronounsById.has(p.entityId) ? { pronouns: pronounsById.get(p.entityId) } : {}),
     });
   }
   return npcs;

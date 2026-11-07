@@ -216,7 +216,7 @@ const DEFAULT_DATA_BY_BLOCK_TYPE: Record<BlockType, unknown> = {
     hp_method: "fixed",
     portrait_asset_id: null,
     gender: "unspecified",
-    pronouns: "",
+    pronouns: { sets: [] },
   },
   inventory: { __v: 1, items: [], containers: [], currency: { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 } },
   spellcasting: { __v: 1, sources: [], known: [], prepared: [], slot_override: null },

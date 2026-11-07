@@ -104,3 +104,16 @@ describe("buildTurnContext — V3-B4, varier la narration", () => {
     expect(out).not.toContain("ne répète pas");
   });
 });
+
+describe("V3.1-170 — les pronoms d'un PNJ présent", () => {
+  it("la ligne du PNJ dit comment l'accorder, dans l'encadrement des PNJ présents", () => {
+    const out = buildTurnContext(input({ npcs: [{ id: "npc-1", name: "Bram", attitudeLabel: "cordial", zone: "near", pronouns: "il et elle, en alternance (il/le/lui ; elle/la/elle)" }] }));
+    const debut = out.indexOf('<donnee source="pnjs-presents">');
+    const fin = out.indexOf("</donnee>", debut);
+    expect(out.slice(debut, fin)).toContain("- Bram (id: npc-1) — à portée, cordial, pronoms : il et elle, en alternance (il/le/lui ; elle/la/elle)");
+  });
+
+  it("sans pronoms choisis, la ligne n'en parle pas", () => {
+    expect(buildTurnContext(input())).not.toContain("pronoms");
+  });
+});

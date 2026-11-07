@@ -1,5 +1,6 @@
 "use client";
 
+import PronomsField from "@/components/blocks/PronomsField";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import Dropdown from "@/components/shared/Dropdown";
 import { BirthFields, NameFields, GENDER_OPTIONS, genderDropdownValue } from "../CharacterSheetHeader";
@@ -50,15 +51,7 @@ export default function IdentityStep({
             />
           )}
         </label>
-        <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-ink-muted">
-          Pronoms
-          <input
-            value={character.pronouns ?? ""}
-            onChange={(e) => patchCharacter({ pronouns: e.target.value })}
-            placeholder="elle, il, iel…"
-            className="w-32 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
-          />
-        </label>
+        <PronomsField value={character.pronouns} onChange={(pronouns) => patchCharacter({ pronouns })} />
       </div>
       <BirthFields character={character} patchCharacter={patchCharacter} className="w-24" />
     </div>

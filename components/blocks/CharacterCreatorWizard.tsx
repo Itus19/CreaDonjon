@@ -45,7 +45,7 @@ const EMPTY_CHARACTER: CharacterBlockData = {
   hp_method: "fixed",
   portrait_asset_id: null,
   gender: "unspecified",
-  pronouns: "",
+  pronouns: { sets: [] },
 };
 
 const EMPTY_INVENTORY: InventoryBlockData = {

@@ -1021,7 +1021,7 @@ export async function applyLevelUp(
     !sameBlockReference(old.background, next.background) ||
     old.portrait_asset_id !== next.portrait_asset_id ||
     (old.gender ?? null) !== (next.gender ?? null) ||
-    (old.pronouns ?? "") !== (next.pronouns ?? "") ||
+    JSON.stringify(old.pronouns ?? null) !== JSON.stringify(next.pronouns ?? null) ||
     JSON.stringify(old.birth ?? null) !== JSON.stringify(next.birth ?? null) ||
     (old.given_name ?? "") !== (next.given_name ?? "") ||
     (old.family_name ?? "") !== (next.family_name ?? "")

@@ -1,5 +1,6 @@
 "use client";
 
+import PronomsField from "@/components/blocks/PronomsField";
 import { useMemo } from "react";
 import Link from "next/link";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
@@ -508,15 +509,7 @@ export default function CharacterSheetHeader({
               />
             )}
           </label>
-          <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-ink-muted">
-            Pronoms
-            <input
-              value={character.pronouns ?? ""}
-              onChange={(e) => patchCharacter({ pronouns: e.target.value })}
-              placeholder="elle, il, iel…"
-              className="w-24 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
-            />
-          </label>
+          <PronomsField value={character.pronouns} onChange={(pronouns) => patchCharacter({ pronouns })} />
           <NameFields character={character} patchCharacter={patchCharacter} className="w-28" />
           <BirthFields character={character} patchCharacter={patchCharacter} className="w-16" />
           <div className="flex flex-col gap-1 text-xs uppercase tracking-wide text-ink-muted">

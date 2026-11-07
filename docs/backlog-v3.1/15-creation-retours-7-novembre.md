@@ -14,19 +14,6 @@ Ordre conseillé : 162 (les textes en données) avant 161 et 163 ; 167 (noyau) i
 
 ---
 
-### V3.1-170 — Pronoms : une liste à choix multiples, lue pour accorder (sans modèle IA)
-
-**Modèle conseillé : Opus** (forme des données d'un bloc, lecture par le solo).
-
-**Constat.** « Pronoms » est un champ de texte libre (`character.pronouns: string`). L'auteur veut choisir dans une liste, et pouvoir en cocher plusieurs (une personne genrée au masculin ET au féminin), avec des propositions qui serviront aussi au mode solo pour accorder.
-
-**À faire.**
-- Données : `pronouns` devient une liste de jeux de pronoms connus (il, elle, iel, ils, elles…) plus une saisie libre. Une ancienne valeur texte se relit comme saisie libre (Zod avec reprise, aucune migration SQL : la donnée vit dans le JSON du bloc). Les jeux proposés et leur accord (« il/le/lui », « elle/la/elle », « iel/lae/ellui »…) vivent dans le noyau, une seule liste.
-- Écran (Identité de l'assistant, et le bloc Personnage) : des pastilles à cocher, plusieurs possibles, plus « Autre… ».
-- Une fonction pure dit comment accorder une entité (premier jeu choisi, ou alternance quand il y en a plusieurs) : le contexte que le solo fournit au modèle la lira (règle 10 : la donnée reste de la donnée).
-
-**Critères.** Plusieurs pronoms se choisissent et se relisent ; une fiche ancienne garde son texte ; tests du noyau (liste, reprise, accord) ; le contexte du solo porte les pronoms de l'entité.
-
 ### V3.1-171 — Identité : des champs à la même taille, et « le Commun est acquis » (sans modèle IA)
 
 **Modèle conseillé : Sonnet.**
