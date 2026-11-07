@@ -371,6 +371,7 @@ export default function CharacterSheetHeader({
   onJetDeMort = () => {},
   concentration = null,
   commandes,
+  lecture = false,
 }: {
   worldSlug: string;
   character: CharacterBlockData;
@@ -429,6 +430,8 @@ export default function CharacterSheetHeader({
   concentration?: Concentration | null;
   /** V3.1-109 : commandes montrées à la joueuse (interrupteurs du MJ). Absent : toutes (aperçu de l'assistant). */
   commandes?: CommandesFiche;
+  /** V3.1-177 : l'aperçu de l'assistant — ni champs de build (ils se règlent aux étapes), ni repos, export ou montée de niveau, ni avertissements (l'assistant les montre). */
+  lecture?: boolean;
 }) {
   // Lignee (retour utilisateur : "il manque la sous-espece") — meme mecanisme
   // que classe/sous-classe cote donnees, mais `character.species` ne porte
@@ -455,6 +458,7 @@ export default function CharacterSheetHeader({
 
   return (
     <>
+      {!lecture && (
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-wrap items-start gap-3">
           <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-ink-muted">
@@ -595,6 +599,7 @@ export default function CharacterSheetHeader({
           />
         </div>
       </div>
+      )}
 
       {/* V3.1-26 / V3.1-34 : la rangée chiffrée vit dans `RangeeChiffree`, partagée avec l'outil Table du MJ. */}
       <RangeeChiffree
@@ -627,7 +632,7 @@ export default function CharacterSheetHeader({
         commandes={commandes}
       />
 
-      {pret && canLevelUp && (
+      {!lecture && pret && canLevelUp && (
         <button
           type="button"
           onClick={onLevelUp}
@@ -637,7 +642,7 @@ export default function CharacterSheetHeader({
         </button>
       )}
 
-      {sheet.warnings.length > 0 && (
+      {!lecture && sheet.warnings.length > 0 && (
         <div className="rounded-md border border-danger/60 bg-danger/10 px-3 py-2 text-sm text-danger">
           <p className="font-semibold">Personnage illégal — enregistrable quand même :</p>
           <ul className="list-inside list-disc">

@@ -30,12 +30,11 @@ import InventoryTab from "./InventoryTab";
 import TraitsTab from "./TraitsTab";
 import MasteriesTab from "./MasteriesTab";
 import { toggleChoice } from "./characterChoiceUtils";
-import CharacterCreatorWizard from "./CharacterCreatorWizard";
 import { useDiceRoll } from "@/components/shell/DiceRollPanel";
 import { chargerFicheCalculee, type SheetApiResponse } from "./ficheCalculee";
 import { ABILITY_LABELS, PASSIVES_COURTS, SORTED_SKILLS } from "./sheetLabels";
 import TuileCaracteristique from "./TuileCaracteristique";
-import { commandesDeLaFiche, type CommandesFiche } from "@/lib/ui/commandesFiche";
+import { commandesDeLaFiche, TOUTES_LES_COMMANDES, type CommandesFiche } from "@/lib/ui/commandesFiche";
 import { useJetsDeLaFiche } from "./useJetsDeLaFiche";
 import { TAB_LABELS, type Tab } from "./ongletsFiche";
 import ChoixRouverts from "./ChoixRouverts";
@@ -87,13 +86,14 @@ export default function PlayableCharacterSheet({
   spellcasting,
   resources,
   characterBlockId,
-  characterBlockVersion,
   onUpdateCharacter,
   onUpdateInventory,
   onUpdateSpellcasting,
   onBlockRefreshed,
   isWorldAdmin = false,
   commandesImposees,
+  apercu = false,
+  onMonterDeNiveau,
 }: {
   worldSlug: string;
   entityId: string;
@@ -114,6 +114,17 @@ export default function PlayableCharacterSheet({
   isWorldAdmin?: boolean;
   /** V3.1-57 : l'aperçu de l'écran Règles actives impose les commandes que montrerait la fiche d'une joueuse ; remplace celles du serveur. */
   commandesImposees?: CommandesFiche;
+  /**
+   * V3.1-177 : l'aperçu de l'assistant de création — la même fiche, en
+   * lecture. Le personnage n'existe pas encore : rien n'est chargé ni envoyé
+   * au serveur (aucune commande de jeu), les champs de build, repos et
+   * export disparaissent, et tout ce qui agit (jets, attaques, inventaire)
+   * reste visible mais éteint (`fieldset disabled`). Les onglets et les
+   * liens de règle restent utilisables pour lire.
+   */
+  apercu?: boolean;
+  /** V3.1-177 : ouvre l'assistant de montée de niveau (`FicheAvecMontee`). Absent : pas de montée depuis cette fiche. */
+  onMonterDeNiveau?: () => void;
 }) {
   const [tab, setTab] = useState<Tab>("actions");
   const [advantage, setAdvantage] = useState<AdvantageState>("normal");
@@ -122,13 +133,7 @@ export default function PlayableCharacterSheet({
   const effetsPortes = useMemo(() => activeEffectsForSheet(remote?.effects ?? [], entityId), [remote?.effects, entityId]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Montee de niveau (V2-G1) : le meme motif que "wizardOpen" dans
-  // EditEntityForm.tsx — l'assistant remplace tout le rendu de cette fiche
-  // tant qu'il est ouvert. L'etat vit ici (avec les autres), mais le
-  // "return" anticipe qui remplace le rendu doit attendre la fin de TOUS
-  // les hooks de ce composant (react-hooks/rules-of-hooks) — il vit plus
-  // bas, juste apres le dernier `useEffect`.
-  const [levelUpOpen, setLevelUpOpen] = useState(false);
+  // Montée de niveau (V2-G1) : l'assistant remplace la fiche le temps de la montée ; depuis V3.1-177, c'est `FicheAvecMontee` qui l'ouvre (`onMonterDeNiveau`), pour que la fiche n'importe pas l'assistant (qui l'importe pour son aperçu).
   // V3.1-29 : sous 40rem de fiche, les competences sont une ligne repliable, fermee par defaut.
   const [competencesOuvertes, setCompetencesOuvertes] = useState(false);
   // V3.1-32 : le d20 du dernier jet contre la mort lance depuis cette fiche (montre a cote du bouton).
@@ -236,6 +241,8 @@ export default function PlayableCharacterSheet({
   // l'etat de facon synchrone du point de vue de l'analyse statique — meme
   // motif que useReferenceChips.ts/useWorldRuleEntries.ts.
   useEffect(() => {
+    // V3.1-177 : l'aperçu n'a pas d'entité à charger.
+    if (apercu) return;
     let cancelled = false;
     chargerFicheCalculee(entityId, campaignId)
       .then((body) => {
@@ -250,41 +257,11 @@ export default function PlayableCharacterSheet({
     return () => {
       cancelled = true;
     };
-  }, [entityId, campaignId]);
+  }, [entityId, campaignId, apercu]);
 
   // V3.1-106 : attaque, dégâts et sorts ouvrent l'outil de dés pré-rempli ; le MJ peut y cibler un participant du combat en cours.
   const jets = useJetsDeLaFiche({ entityId, campaignId, estMj: isWorldAdmin, apresSort: reloadRemote });
 
-  if (levelUpOpen) {
-    return (
-      <CharacterCreatorWizard
-        worldSlug={worldSlug}
-        montee={{
-          entityId,
-          campaignId,
-          expectedVersion: characterBlockVersion,
-          initial: {
-            character,
-            inventory: inventory ?? { __v: 1, items: [], containers: [], currency: { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 } },
-            spellcasting,
-          },
-          isWorldAdmin,
-          onCancel: () => setLevelUpOpen(false),
-          onDone: (result) => {
-            onBlockRefreshed({ id: characterBlockId, data: result.character.data, version: result.character.version });
-            if (result.spellcasting) onBlockRefreshed(result.spellcasting);
-            setLevelUpOpen(false);
-            // `remote.runtimeState.hpMax` (V1-B5) vient de `/sheet`, chargee
-            // une seule fois au montage — sans ce rechargement, la barre de PV
-            // resterait plafonnee a l'ANCIEN niveau jusqu'au prochain rechargement
-            // complet de la page, alors que le bloc `character` local, lui, est
-            // deja a jour (V2-G1).
-            reloadRemote();
-          },
-        }}
-      />
-    );
-  }
 
   async function postAction<T>(path: string, body: unknown): Promise<T | null> {
     setBusy(true);
@@ -417,7 +394,8 @@ export default function PlayableCharacterSheet({
   const classKeys = character.classes.flatMap((c) => [c.class, c.subclass].flatMap((r) => (r?.kind === "rule" ? [r.key] : [])));
   const runtimeState = remote?.runtimeState.state;
   // V3.1-109 : tant que la fiche calculee n'est pas la, aucune commande (jamais un geste que le serveur refusera).
-  const commandes = commandesImposees ?? commandesDeLaFiche(remote?.controls);
+  // V3.1-177 : l'aperçu se montre comme une fiche où tout est permis — éteinte par son `fieldset`, jamais « le MJ s'en charge ».
+  const commandes = commandesImposees ?? (apercu ? TOUTES_LES_COMMANDES : commandesDeLaFiche(remote?.controls));
   const hpMax = remote?.runtimeState.hpMax ?? sheet.hitPoints.max;
 
   const exhaustion = runtimeState?.exhaustion ?? 0;
@@ -434,7 +412,7 @@ export default function PlayableCharacterSheet({
   const etat = etatMourant({ current: hpCurrent }, deathSaves);
   // V3.1-26 : l'en-tete n'affiche un chiffre que quand tout ce qui le fonde est la — les regles
   // resolues (CA, PV max, vitesse) ET l'etat de jeu. Avant, valeurs de depart fausses (CA 11, PV 0/0).
-  const pret = rulesetPret && remote !== null;
+  const pret = rulesetPret && (apercu || remote !== null);
 
   const totalLevel = Math.max(1, character.classes.reduce((sum, c) => sum + c.level, 0));
   const levelIndex = Math.min(totalLevel, XP_LEVEL_THRESHOLDS.length) - 1;
@@ -477,6 +455,7 @@ export default function PlayableCharacterSheet({
 
   return (
     <div className="@container mb-4 flex flex-col gap-3 rounded-md border border-edge/60 bg-panel-raised p-3">
+      <fieldset disabled={apercu} className="contents">
       <CharacterSheetHeader
         worldSlug={worldSlug}
         character={character}
@@ -506,7 +485,7 @@ export default function PlayableCharacterSheet({
         xpLevelThresholdsLength={XP_LEVEL_THRESHOLDS.length}
         onChangeXp={changeXp}
         canLevelUp={canLevelUp}
-        onLevelUp={() => setLevelUpOpen(true)}
+        onLevelUp={() => onMonterDeNiveau?.()}
         onRest={rest}
         onExportJson={exportJson}
         onRollInitiative={() => rollInitiative(entityId, advantage, { label: "Initiative", modifier: sheet.abilities.dex.mod })}
@@ -517,10 +496,12 @@ export default function PlayableCharacterSheet({
         onJetDeMort={jetDeMort}
         concentration={runtimeState?.concentration ?? null}
         commandes={commandes}
+        lecture={apercu}
       />
+      </fieldset>
       <ChoixRouverts worldSlug={worldSlug} choix={choixRouverts} onRepondre={repondreChoixRouvertFiche} />
-      {/* V3.1-49 : un personnage créé avec des choix ouverts les retrouve ici (la création ne les impose pas). */}
-      {aRappeler.length > 0 && (
+      {/* V3.1-49 : un personnage créé avec des choix ouverts les retrouve ici (la création ne les impose pas). L'aperçu les montre déjà, sous la fiche. */}
+      {!apercu && aRappeler.length > 0 && (
         <p className="rounded-md border border-accent/50 bg-accent/10 px-3 py-1.5 text-xs text-ink">
           {t("choixOuvertsFiche", { n: aRappeler.length, liste: aRappeler.map((c) => c.libelle).join(", ") })}
         </p>
@@ -534,6 +515,7 @@ export default function PlayableCharacterSheet({
         au-dessus des onglets ; au-delà, la colonne de gauche.
       */}
       <div className="flex flex-col gap-4 @min-[40rem]:flex-row">
+        <fieldset disabled={apercu} className="contents">
         <aside className="flex flex-col gap-3 @min-[40rem]:w-48 @min-[40rem]:shrink-0">
           <div className="flex flex-col gap-2">
             <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Caractéristiques</span>
@@ -639,7 +621,7 @@ export default function PlayableCharacterSheet({
               id={idCompetences}
               className={`flex-col gap-1.5 @min-[40rem]:flex ${competencesOuvertes ? "flex" : "hidden"}`}
             >
-              {remainingChoices.some((c) => c.kind === "skill") && (
+              {!apercu && remainingChoices.some((c) => c.kind === "skill") && (
                 <div className="flex flex-col gap-0.5">
                   {remainingChoices
                     .filter((c) => c.kind === "skill")
@@ -757,6 +739,7 @@ export default function PlayableCharacterSheet({
             </div>
           </div>
         </aside>
+        </fieldset>
 
         <div className="min-w-0 flex-1">
           {/*
@@ -783,6 +766,7 @@ export default function PlayableCharacterSheet({
           </div>
 
           <TabPanel idPrefix="fiche" value={tab} className="mt-2 rounded-lg border border-edge bg-panel p-3">
+            <fieldset disabled={apercu} className="contents">
             {tab === "maitrise" && (
               <MasteriesTab
                 proficiencies={proficiencies}
@@ -867,6 +851,7 @@ export default function PlayableCharacterSheet({
             {tab === "traits" && (
               <TraitsTab worldSlug={worldSlug} traits={traits} traitChips={traitChips} traitSourceLabel={traitSourceLabel} />
             )}
+            </fieldset>
           </TabPanel>
         </div>
       </div>

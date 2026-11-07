@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { PRONOUN_SETS, type PronounSetKey, type Pronouns } from "@/src/core/rules/pronouns";
+import { PRONOUN_SETS, zPronouns, type PronounSetKey, type Pronouns } from "@/src/core/rules/pronouns";
 
 const PASTILLE = "rounded-full border px-2.5 py-1 text-xs normal-case tracking-normal transition-colors";
 const ACTIVE = "border-accent bg-accent/10 text-accent";
@@ -20,13 +20,16 @@ export default function PronomsField({
   className = "",
   formulaire = false,
 }: {
-  value: Pronouns | undefined;
+  /** La valeur telle qu'elle est stockée : la fiche passe le bloc sans le relire par le schéma, un personnage ancien y porte encore un texte. */
+  value: Pronouns | string | undefined;
   onChange: (next: Pronouns) => void;
   className?: string;
   /** V3.1-171 : la saisie libre à la hauteur des champs de formulaire (assistant). */
   formulaire?: boolean;
 }) {
-  const courant: Pronouns = value ?? { sets: [] };
+  // Relue ici, comme le fait le schéma du bloc : un ancien texte devient une saisie libre (V3.1-170), rien ne casse.
+  const lu = zPronouns.safeParse(value ?? { sets: [] });
+  const courant: Pronouns = lu.success ? lu.data : { sets: [] };
   const [autreOuvert, setAutreOuvert] = useState(Boolean(courant.custom));
 
   function basculer(cle: PronounSetKey) {

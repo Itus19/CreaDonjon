@@ -14,14 +14,6 @@ Ordre conseillé : 162 (les textes en données) avant 161 et 163 ; 167 (noyau) i
 
 ---
 
-### V3.1-177 — Aperçu : la colonne s'efface, la fiche s'affiche comme sur la fiche (sans modèle IA)
-
-**Modèle conseillé : Sonnet.**
-
-**À faire.** À l'étape Aperçu, la colonne d'aperçu de droite se retire dans une animation douce (largeur et opacité, coupée sous mouvement réduit) et l'étape montre la fiche **telle qu'elle s'affichera** dans le bloc Personnage de la fiche (le même composant, en lecture), à la place de l'aperçu actuel.
-
-**Critères.** Même rendu que la fiche une fois créée ; retour à l'étape précédente : la colonne revient ; tablette et téléphone inchangés (pas de colonne) ; planche du catalogue.
-
 ### V3.1-179 — Trois sous-classes pour « La Croisade des Ombres », saisies et jouables (sans modèle IA)
 
 **Modèle conseillé : Opus** (saisie par l'éditeur de briques, relevé des briques manquantes). **Attend les textes de l'auteur** pour les deux sous-classes hors SRD.

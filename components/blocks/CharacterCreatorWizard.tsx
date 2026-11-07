@@ -15,7 +15,7 @@ import IdentityStep from "./characterCreatorSteps/IdentityStep";
 import SpeciesStep from "./characterCreatorSteps/SpeciesStep";
 import BackgroundStep, { type BackgroundEquipmentChoice } from "./characterCreatorSteps/BackgroundStep";
 import SpellSelectionStep, { spellClassesAndLevel } from "./characterCreatorSteps/SpellSelectionStep";
-import PreviewStep from "./characterCreatorSteps/PreviewStep";
+import PlayableCharacterSheet from "./PlayableCharacterSheet";
 import { totalValueCp } from "@/src/core/rules/currency";
 import { createCharacterFromWizardAction, type CreateCharacterFromWizardInput } from "@/app/m/[worldSlug]/mj/creation-personnage/actions";
 import { overwriteCharacterFromWizardAction, type OverwriteCharacterFromWizardInput } from "@/app/m/[worldSlug]/(monde)/f/[entitySlug]/actions";
@@ -246,18 +246,8 @@ export default function CharacterCreatorWizard({
     equipment,
     weight,
     cost,
-    spellLevels,
-    proficiencies,
     languages,
-    isMonk,
-    traits,
-    traitChips,
-    traitSourceLabel,
-    languageChoices,
     allLanguages,
-    itemChips,
-    equippedWeapons,
-    buildChips,
     backgroundAbilityScores,
     rulesetPret,
     openChoices,
@@ -372,6 +362,8 @@ export default function CharacterCreatorWizard({
     ? chemin.etapes.flatMap((e) => e.sous).find((s) => `c:${s.cle}` === ici)
     : undefined;
   const indexEtape = Math.max(0, chemin.etapes.findIndex((e) => e.cle === etapeIci));
+  // V3.1-177 : la colonne d'aperçu direct se replie à l'étape Aperçu de la création (la montée garde son avant → après).
+  const colonneRepliee = ici === "apercu" && !montee;
 
   function aller(cible: string) {
     setPosition(cible);
@@ -849,31 +841,22 @@ export default function CharacterCreatorWizard({
 
           {ici === "apercu" && !montee && (
             <div className="flex flex-col gap-3">
-              <PreviewStep
+              {/* V3.1-177 (esquisse, solution A) : la fiche telle qu'elle s'affichera dans le bloc Personnage, le même composant, en lecture. */}
+              <PlayableCharacterSheet
                 worldSlug={worldSlug}
+                entityId=""
+                campaignId={null}
                 character={character}
-                patchCharacter={patchCharacter}
                 inventory={inventory}
+                spellcasting={spellcasting.known.length > 0 ? spellcasting : undefined}
+                resources={undefined}
+                characterBlockId=""
+                characterBlockVersion={0}
+                onUpdateCharacter={patchCharacter}
                 onUpdateInventory={setInventory}
-                spellcasting={spellcasting}
                 onUpdateSpellcasting={setSpellcasting}
-                spellLevels={spellLevels}
-                sheet={sheet}
-                traits={traits}
-                traitChips={traitChips}
-                traitSourceLabel={traitSourceLabel}
-                proficiencies={proficiencies}
-                languageChoices={languageChoices}
-                allLanguages={allLanguages}
-                remainingChoices={remainingChoices}
-                weaponByKey={weaponByKey}
-                equipment={equipment}
-                weight={weight}
-                cost={cost}
-                itemChips={itemChips}
-                equippedWeapons={equippedWeapons}
-                isMonk={isMonk}
-                buildChips={buildChips}
+                onBlockRefreshed={() => undefined}
+                apercu
               />
 
               {chemin.aFaire > 0 && (
@@ -946,7 +929,18 @@ export default function CharacterCreatorWizard({
           </div>
         </section>
 
-        <aside aria-label={t("apercuAria")} className="hidden w-72 shrink-0 rounded-lg border border-edge bg-panel p-4 @5xl/creation:block">
+        {/*
+          V3.1-177 : à l'Aperçu (création), la colonne se replie — largeur, marge et opacité, coupées sous mouvement
+          réduit — et la fiche prend la place ; elle revient en quittant l'étape. Tablette et téléphone : pas de colonne.
+        */}
+        <aside
+          aria-label={t("apercuAria")}
+          aria-hidden={colonneRepliee || undefined}
+          inert={colonneRepliee || undefined}
+          className={`hidden shrink-0 overflow-hidden rounded-lg bg-panel transition-[width,opacity,margin,padding] duration-300 ease-out motion-reduce:transition-none @5xl/creation:block ${
+            colonneRepliee ? "-ml-3 w-0 border-0 p-0 opacity-0" : "w-72 border border-edge p-4 opacity-100"
+          }`}
+        >
           {montee ? (
             apercuMontee
           ) : (

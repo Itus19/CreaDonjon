@@ -85,9 +85,7 @@ const RelationsGraphBlockEditor = dynamic(
 const TimelineBlockEditor = dynamic(() => import("./TimelineBlockEditor"));
 const MapBlockEditor = dynamic(() => import("./MapBlockEditor"));
 const MonsterStatblockSheet = dynamic(() => import("./MonsterStatblockSheet"));
-const PlayableCharacterSheet = dynamic(
-  () => import("./PlayableCharacterSheet"),
-);
+const FicheAvecMontee = dynamic(() => import("./FicheAvecMontee"));
 const SessionJournalMetaBlockEditor = dynamic(
   () => import("./SessionJournalMetaBlockEditor"),
 );
@@ -1443,7 +1441,7 @@ function SortableBlockCard({
       <EditCommitProvider commit={commit}>
         {block.blockType === "character" ? (
           !isCollapsed && (
-            <PlayableCharacterSheet
+            <FicheAvecMontee
               worldSlug={worldSlug}
               entityId={entityId}
               campaignId={null}

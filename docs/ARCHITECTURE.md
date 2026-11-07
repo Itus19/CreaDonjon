@@ -164,7 +164,7 @@ Pour chacun, le point d'entrée dans le code et l'ADR qui l'explique.
 | un appel d'IA | `src/server/ai/`, par `runAiCompletion` |
 | une règle de jeu (sort, don, sous-classe…) | **pas dans le code** : en base, ou dans `data/personnel/` (ignoré par Git) |
 
-**Aucun cycle d'import** dans `src/` et `components/` (V3.1-120) : la règle ESLint `import/no-cycle` fait échouer le lint. Si deux services ont besoin l'un de l'autre, appeler le repo quand le service ne fait que le relayer, sinon descendre la fonction partagée dans un module « feuille » qui n'importe aucun service (exemples : `worldLookup.ts`, `campaignSummary.ts`, `sessionJournalTree.ts`), réexporté par son ancien fichier. Jamais un `import()` dynamique, jamais une requête dupliquée. Une fonction enveloppée dans `React.cache()` se déplace, elle ne se remplace pas par l'appel au repo : la mémoïsation par requête serait perdue.
+**Aucun cycle d'import** dans `src/` et `components/` (V3.1-120) : la règle ESLint `import/no-cycle` fait échouer le lint. Si deux services ont besoin l'un de l'autre, appeler le repo quand le service ne fait que le relayer, sinon descendre la fonction partagée dans un module « feuille » qui n'importe aucun service (exemples : `worldLookup.ts`, `campaignSummary.ts`, `sessionJournalTree.ts`), réexporté par son ancien fichier. Jamais un `import()` dynamique, jamais une requête dupliquée. Côté composants, même idée : quand deux composants s'affichent l'un l'autre, un troisième les réunit (`FicheAvecMontee.tsx`, V3.1-177 : la fiche jouable et l'assistant, qui montre la fiche en aperçu). Une fonction enveloppée dans `React.cache()` se déplace, elle ne se remplace pas par l'appel au repo : la mémoïsation par requête serait perdue.
 
 ## 7. Les tests
 

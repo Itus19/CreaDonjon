@@ -5763,6 +5763,21 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
 - `AbilityScoreStep.tsx` : une seule ligne de chiffres par case (« 15 +2 »), le détail complet au survol ; la légende sous les six cases (cinq couleurs de la charte). Les sources viennent toujours de la fiche du moteur.
 - Vérifié au navigateur (Testeur MJ, Humain Rôdeur, tableau standard) : les six cases sur une ligne, plus aucun texte qui déborde ; la légende « Valeur attribuée ». Le cas avec bonus (l'Acolyte +1) est montré sur la planche « Création » du catalogue ; la sous-étape de répartition de l'historique n'a pas été pilotée au navigateur.
 
+### V3.1-177 — Aperçu : la colonne s'efface, la fiche s'affiche comme sur la fiche (7 novembre)
+
+**Modèle conseillé : Sonnet.**
+
+**À faire.** À l'étape Aperçu, la colonne d'aperçu de droite se retire dans une animation douce (largeur et opacité, coupée sous mouvement réduit) et l'étape montre la fiche **telle qu'elle s'affichera** dans le bloc Personnage de la fiche (le même composant, en lecture), à la place de l'aperçu actuel.
+
+**Critères.** Même rendu que la fiche une fois créée ; retour à l'étape précédente : la colonne revient ; tablette et téléphone inchangés (pas de colonne) ; planche du catalogue.
+
+**Fait le 7 novembre** (Opus seul). D'après l'esquisse, **solution A** choisie par l'auteur : la fiche en lecture.
+- **La fiche elle-même** : l'étape Aperçu affiche `PlayableCharacterSheet` — le composant du bloc Personnage — en mode `apercu` : rien n'est chargé ni envoyé au serveur (le personnage n'existe pas encore), les champs de build, les repos, l'export, la montée de niveau et les avertissements (l'assistant les montre dessous) disparaissent ; tout ce qui agit (jets, attaques, inventaire, choix de compétences) reste visible mais éteint (`fieldset disabled`) ; onglets et liens de règle restent utilisables. La fiche s'y montre comme si tout était permis (`TOUTES_LES_COMMANDES`), jamais « le MJ s'en charge ». L'ancien aperçu (`PreviewStep.tsx`, une copie qui avait dérivé : ni colonne des caractéristiques ni valeurs passives) est supprimé.
+- **La colonne** : à l'Aperçu de la création, elle se replie (largeur, marge, opacité, 300 ms, coupées sous mouvement réduit, `inert` une fois repliée) et revient en quittant l'étape. La montée de niveau garde son avant → après ; tablette et téléphone n'ont pas de colonne.
+- **Cycle d'import** : la fiche ouvrait l'assistant (montée de niveau) et l'assistant affiche maintenant la fiche. La montée vit désormais dans `FicheAvecMontee.tsx`, qui réunit les deux ; `EntityBlocks` et `ParticipantCharacterSheet` passent par lui (docs/ARCHITECTURE.md).
+- **Bogue de V3.1-170 trouvé ici et corrigé** : la fiche passe le bloc tel qu'il est stocké, sans le relire par le schéma ; un personnage ancien y porte encore des pronoms en texte, et le champ plantait. `PronomsField` relit désormais la valeur par `zPronouns`.
+- Vérifié au navigateur : la colonne mesure 288 px, 46 px à 120 ms, puis 0, et 288 px au retour ; aucune requête vers une entité pendant l'aperçu ; la fiche du PJ de Testeuse A se charge (passives 13, 13, 10).
+
 ### V3.1-171 — Identité : des champs à la même taille, et « le Commun est acquis » (7 novembre)
 
 **Modèle conseillé : Sonnet.**

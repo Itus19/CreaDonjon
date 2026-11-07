@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import PlayableCharacterSheet from "@/components/blocks/PlayableCharacterSheet";
+import FicheAvecMontee from "@/components/blocks/FicheAvecMontee";
 import CharacterCreatorWizard from "@/components/blocks/CharacterCreatorWizard";
 import type { BlockItem } from "@/components/blocks/EntityBlocks";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
@@ -261,7 +261,7 @@ export default function ParticipantCharacterSheet({
   }
 
   return (
-    <PlayableCharacterSheet
+    <FicheAvecMontee
       worldSlug={worldSlug}
       entityId={entityId}
       campaignId={campaignId}
