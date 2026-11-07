@@ -9,14 +9,17 @@ import {
   ABILITY_LABELS,
   SKILLS,
   SKILL_ABILITIES,
+  rollBonus,
   type Ability,
+  type BonusDie,
   type Skill,
   type Source,
 } from "@/src/core/rules/sheet";
 import { SKILL_LABELS_FR, INTENT_VERBS_FR } from "@/src/i18n/fr";
 import { type IntentAction, type IntentTarget } from "@/src/core/rules/intent";
 import type { ResolvedEffect, FiredEvent } from "@/src/core/rules/triggers";
-import { resolveCheckRoll, resolveDamageRoll, weaponAttackAbilityMod, type AdvantageState } from "@/src/core/rules/action";
+import { resolveCheckRoll, resolveDamageRoll, weaponAttackAbility, type AdvantageState } from "@/src/core/rules/action";
+import { rollDice } from "@/src/core/dice/roll";
 import { eventsForCheck, eventsForSave } from "@/src/core/rules/gameEvents";
 import { parseFormula } from "@/src/core/formula/parser";
 import type { TraceStep } from "@/src/core/formula/evaluate";
@@ -539,7 +542,11 @@ interface PendingBasis {
   modifier: number;
   chips: Source[];
   what: string;
+  /** V3.1-156 : dés de bonus de la fiche, lancés par le serveur à la résolution. */
+  bonus_dice: { count: number; faces: number; label: string }[];
 }
+
+const desDeBonus = (dice: readonly BonusDie[]) => dice.map((d) => ({ count: d.count, faces: d.faces, label: d.label }));
 
 /**
  * "1d6" -> 6, "2d6" -> 12 — jamais un modificateur, deja separe dans
@@ -566,10 +573,12 @@ function buildPendingBasis(
     const ref = itemRef(item);
     const weapon = ref?.kind === "rule" ? ctx.weaponByKey[ref.key] : null;
     if (!weapon) return { error: "not_a_weapon" };
-    const abilityMod = weaponAttackAbilityMod(weapon.properties, weapon.isRanged, ctx.sheet.abilities.str.mod, ctx.sheet.abilities.dex.mod);
-    const modifier = abilityMod + ctx.sheet.proficiencyBonus;
+    const ability = weaponAttackAbility(weapon.properties, weapon.isRanged, ctx.sheet.abilities.str.mod, ctx.sheet.abilities.dex.mod);
+    // V3.1-156 (ADR 0074) : les bonus des règles du personnage, comme `rollWeaponAttack`.
+    const extra = rollBonus(ctx.sheet, { roll: "attack", kind: "weapon" });
+    const modifier = ctx.sheet.abilities[ability].mod + ctx.sheet.proficiencyBonus + extra.value;
     const what = `Attaque — ${itemLabel(item)}`;
-    return { kind: "weapon_attack", action_id: choice.actionId, dc: null, die_max: 20, modifier, chips: [{ label: what, value: modifier }], what };
+    return { kind: "weapon_attack", action_id: choice.actionId, dc: null, die_max: 20, modifier, chips: [{ label: what, value: modifier }], what, bonus_dice: desDeBonus(extra.dice) };
   }
 
   if (choice.kind === "skill_check") {
@@ -582,6 +591,7 @@ function buildPendingBasis(
       modifier: result.mod,
       chips: result.sources,
       what: `${SKILL_LABELS_FR[choice.actionId]} — test de ${ABILITY_LABELS[SKILL_ABILITIES[choice.actionId]]}`,
+      bonus_dice: desDeBonus(result.dice),
     };
   }
 
@@ -596,6 +606,7 @@ function buildPendingBasis(
       modifier: result.mod,
       chips: result.sources,
       what: `Test de ${ABILITY_LABELS[choice.actionId]}`,
+      bonus_dice: desDeBonus(result.dice),
     };
   }
 
@@ -608,6 +619,7 @@ function buildPendingBasis(
     modifier: save.mod,
     chips: save.sources,
     what: `Sauvegarde de ${ABILITY_LABELS[choice.actionId]}`,
+    bonus_dice: desDeBonus(save.dice),
   };
 }
 
@@ -624,10 +636,15 @@ function buildDamageBasis(ctx: CharacterActionContext, itemId: string, critical:
   const ref = itemRef(item);
   const weapon = ref?.kind === "rule" ? ctx.weaponByKey[ref.key] : null;
   if (!weapon) return { error: "not_a_weapon" };
-  const abilityMod = weaponAttackAbilityMod(weapon.properties, weapon.isRanged, ctx.sheet.abilities.str.mod, ctx.sheet.abilities.dex.mod);
+  const ability = weaponAttackAbility(weapon.properties, weapon.isRanged, ctx.sheet.abilities.str.mod, ctx.sheet.abilities.dex.mod);
+  // V3.1-156 (ADR 0074) : la Rage et les bonus de dégâts d'arme, comme `rollWeaponDamage`.
+  const extra = rollBonus(ctx.sheet, { roll: "damage", kind: "weapon", ability, ...(weapon.damageType ? { damageType: weapon.damageType } : {}) });
+  const modifier = ctx.sheet.abilities[ability].mod + extra.value;
   const what = `Dégâts — ${itemLabel(item)}`;
   const dieMax = diceFormulaMax(weapon.damageDice) * (critical ? 2 : 1);
-  return { kind: "weapon_damage", action_id: itemId, dc: null, die_max: dieMax, modifier: abilityMod, chips: [{ label: what, value: abilityMod }], what };
+  // Les dés de bonus doublent au critique, comme les dés de l'arme.
+  const bonus = desDeBonus(extra.dice).map((d) => ({ ...d, count: d.count * (critical ? 2 : 1) }));
+  return { kind: "weapon_damage", action_id: itemId, dc: null, die_max: dieMax, modifier, chips: [{ label: what, value: modifier }], what, bonus_dice: bonus };
 }
 
 /**
@@ -780,11 +797,18 @@ async function finishResolution(
   natural: number,
   origin: RollOrigin
 ): Promise<ResolveIntentOutcome> {
-  const total = natural + pending.modifier;
   const originLabel = origin === "a_la_main" ? "annoncé" : origin === "volet" ? "volet de dés" : "depuis la fiche";
   const trace: TraceStep[] = [{ text: originLabel, value: natural }];
+  // V3.1-156 (ADR 0074) : les dés de bonus sont lancés ICI par le serveur, quelle que soit l'origine du naturel (règle 8).
+  let bonusDice = 0;
+  for (const d of pending.bonus_dice ?? []) {
+    const r = rollDice(d.count, d.faces, serverRng);
+    bonusDice += r.total;
+    trace.push({ text: `${d.count}d${d.faces} ${d.label} (${r.rolls.join(", ")})`, value: r.total });
+  }
+  const total = natural + pending.modifier + bonusDice;
   const ast = parseFormula(String(Math.max(0, total)));
-  const expression = `${natural} (${originLabel}) + ${pending.modifier}`;
+  const expression = `${natural} (${originLabel}) + ${pending.modifier}${(pending.bonus_dice ?? []).map((d) => ` + ${d.count}d${d.faces}`).join("")}`;
   const sessionId = await getOrOpenSessionForCampaign(supabase, params.campaignId);
 
   // V3.1-89 : nature du jet et d20 gardé. Un naturel annoncé à la main (vrai dé

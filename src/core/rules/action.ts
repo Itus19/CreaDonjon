@@ -3,6 +3,14 @@ import type { FormulaNode } from "../formula/ast";
 import { evaluate, type TraceStep } from "../formula/evaluate";
 import { formatFormulaNode } from "../formula/format";
 import { parseFormula } from "../formula/parser";
+import type { BonusDie } from "./sheet";
+
+/** V3.1-156 (ADR 0074) : les dés de bonus de la fiche, ajoutés à l'arbre du jet — lancés par le serveur, gardés au détail et dans l'historique. */
+function withBonusDice(ast: FormulaNode, dice: readonly BonusDie[] | undefined): FormulaNode {
+  let out = ast;
+  for (const d of dice ?? []) out = { op: "add", args: [out, { op: "dice", count: d.count, faces: d.faces }] };
+  return out;
+}
 
 /**
  * `resolveAction` (specs/fiche-personnage-interactive.md §2, specs/regles-couche.md
@@ -29,6 +37,10 @@ export interface AttackRollInput {
   /** Bonus fixe supplementaire (arme magique, etc.), 0 par defaut. */
   bonus?: number;
   advantage: AdvantageState;
+  /** V3.1-156 : dés de bonus de la fiche (Bénédiction). */
+  bonusDice?: readonly BonusDie[];
+  /** V3.1-156 : le plus petit d20 naturel qui fait un critique (20 par défaut). */
+  critRange?: number;
 }
 
 export interface AttackRollResult {
@@ -53,7 +65,7 @@ function d20Notation(advantage: AdvantageState): string {
  */
 export function resolveAttackRoll(input: AttackRollInput, rng: Rng): AttackRollResult {
   const modifier = input.abilityMod + (input.proficient ? input.proficiencyBonus : 0) + (input.bonus ?? 0);
-  const ast = parseFormula(`${d20Notation(input.advantage)} + {mod}`);
+  const ast = withBonusDice(parseFormula(`${d20Notation(input.advantage)} + {mod}`), input.bonusDice);
   const { value, trace } = evaluate(ast, { mod: modifier }, rng, "roll");
   // Le de d20 (garde=1 dans les deux cas d'avantage/desavantage) est
   // toujours le premier pas de trace, avant le modificateur : sa valeur EST
@@ -61,7 +73,7 @@ export function resolveAttackRoll(input: AttackRollInput, rng: Rng): AttackRollR
   const natural = trace[0]?.value ?? 0;
   return {
     total: value,
-    isCritical: natural === 20,
+    isCritical: natural >= (input.critRange ?? 20),
     isCriticalFail: natural === 1,
     trace,
     ast,
@@ -73,6 +85,8 @@ export interface CheckRollInput {
   /** Somme deja faite des `sources` de `sheet.ts` (caracteristique + maitrise/expertise le cas echeant) — ce module ne connait rien de leur provenance. */
   modifier: number;
   advantage: AdvantageState;
+  /** V3.1-156 : dés de bonus de la fiche (Bénédiction sur une sauvegarde). */
+  bonusDice?: readonly BonusDie[];
 }
 
 export interface CheckRollResult {
@@ -89,7 +103,7 @@ export interface CheckRollResult {
  * a ignorer `isCritical`/`isCriticalFail`, qui n'ont pas de sens ici.
  */
 export function resolveCheckRoll(input: CheckRollInput, rng: Rng): CheckRollResult {
-  const ast = parseFormula(`${d20Notation(input.advantage)} + {mod}`);
+  const ast = withBonusDice(parseFormula(`${d20Notation(input.advantage)} + {mod}`), input.bonusDice);
   const { value, trace } = evaluate(ast, { mod: input.modifier }, rng, "roll");
   return { total: value, trace, ast, expression: formatFormulaNode(ast) };
 }
@@ -101,6 +115,8 @@ export interface DamageRollInput {
   bonus?: number;
   /** Double le NOMBRE de des, jamais le modificateur — regle standard. */
   critical: boolean;
+  /** V3.1-156 : dés de bonus de la fiche ; doublés au critique comme les autres dés. */
+  bonusDice?: readonly BonusDie[];
 }
 
 export interface DamageRollResult {
@@ -135,7 +151,7 @@ function doubleDiceCounts(node: FormulaNode): FormulaNode {
 
 /** Jet de degats : la formule fournie (double sur critique), plus un modificateur fixe hors des des. */
 export function resolveDamageRoll(input: DamageRollInput, rng: Rng): DamageRollResult {
-  let ast = parseFormula(input.formula);
+  let ast = withBonusDice(parseFormula(input.formula), input.bonusDice);
   if (input.critical) ast = doubleDiceCounts(ast);
 
   const flatBonus = (input.abilityMod ?? 0) + (input.bonus ?? 0);
@@ -162,4 +178,18 @@ export function weaponAttackAbilityMod(
   if (isRanged) return dexMod;
   if (properties.includes("finesse")) return Math.max(strMod, dexMod);
   return strMod;
+}
+
+/** V3.1-156 : la caractéristique de l'attaque d'arme (même règle que `weaponAttackAbilityMod`) — `damage.weapon.str` (la Rage) en dépend. */
+export function weaponAttackAbility(properties: readonly string[], isRanged: boolean, strMod: number, dexMod: number): "str" | "dex" {
+  if (isRanged) return "dex";
+  if (properties.includes("finesse")) return dexMod > strMod ? "dex" : "str";
+  return "str";
+}
+
+/** V3.1-156 : l'avantage choisi au jet et celui que donne la fiche s'annulent s'ils s'opposent, jamais ne s'empilent. */
+export function combineAdvantage(choisi: AdvantageState, fiche: AdvantageState): AdvantageState {
+  if (fiche === "normal") return choisi;
+  if (choisi === "normal") return fiche;
+  return choisi === fiche ? choisi : "normal";
 }

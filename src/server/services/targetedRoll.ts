@@ -1,4 +1,5 @@
 import "server-only";
+import type { BonusDie } from "@/src/core/rules/sheet";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
 import type { Locale } from "@/src/i18n/request";
@@ -520,18 +521,19 @@ async function recordMonsterRoll(
 export async function targetSaveBonus(
   supabase: TypedClient,
   params: { target: CombatParticipantRow; isPc: boolean; ability: string; campaignId: string; worldId: string; locale: Locale }
-): Promise<{ bonus: number; hint: string | null }> {
+): Promise<{ bonus: number; hint: string | null; dice: BonusDie[] }> {
   const ability = params.ability.toLowerCase();
   if (params.target.entity_id && params.isPc) {
     const ctx = await resolveCharacterActionContext(supabase, params.target.entity_id, params.campaignId, params.locale);
     const save = ctx?.sheet.savingThrows[ability as keyof typeof ctx.sheet.savingThrows];
-    if (save) return { bonus: save.mod, hint: null };
+    // V3.1-156 (ADR 0074) : un PJ béni ajoute son 1d4, lancé par le serveur avec le d20.
+    if (save) return { bonus: save.mod, hint: null, dice: save.dice };
   }
   if (params.target.rule_key) {
     const monster = await loadMonsterBlocks(supabase, { worldId: params.worldId, ruleKey: params.target.rule_key, locale: params.locale });
-    if (monster?.statBlock) return { bonus: monsterSaveBonus(monster.statBlock, ability), hint: null };
+    if (monster?.statBlock) return { bonus: monsterSaveBonus(monster.statBlock, ability), hint: null, dice: [] };
   }
-  return { bonus: 0, hint: `Sauvegarde de ${params.target.label} sans fiche ni bloc de stats : bonus compté à 0.` };
+  return { bonus: 0, hint: `Sauvegarde de ${params.target.label} sans fiche ni bloc de stats : bonus compté à 0.`, dice: [] };
 }
 
 /**

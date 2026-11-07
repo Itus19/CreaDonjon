@@ -243,6 +243,8 @@ export interface TriggerActorState {
   /** Valeurs referencables par un `ref` de formule, ex. `save.con`, `hp.current`. */
   numbers: Readonly<Record<string, number>>;
   zone?: TriggerZone;
+  /** V3.1-156 (ADR 0074) : dés de bonus aux sauvegardes, par caractéristique (Bénédiction : `wis` → [1d4]). */
+  saveDice?: Readonly<Record<string, readonly { count: number; faces: number }[]>>;
 }
 
 export interface TriggerContext {
@@ -394,8 +396,12 @@ function resolveEffect(
       const dc = evalNumber(effect.dc, ctx, fired, rng);
       // Le de est lance ICI, par le moteur. Jamais par un modele (CLAUDE.md regle 8).
       const roll = rng.nextInt(20) + 1;
-      const bonus = actor(ctx, effect.who).numbers[`save.${effect.ability}`] ?? 0;
-      const total = roll + bonus;
+      const porteur = actor(ctx, effect.who);
+      const bonus = porteur.numbers[`save.${effect.ability}`] ?? 0;
+      // V3.1-156 : les dés de bonus de la cible, lancés ici aussi par le moteur.
+      let desBonus = 0;
+      for (const d of porteur.saveDice?.[effect.ability] ?? []) for (let i = 0; i < d.count; i++) desBonus += rng.nextInt(d.faces) + 1;
+      const total = roll + bonus + desBonus;
       const passed = total >= dc;
       return {
         resolved: { action: "saving_throw", who: effect.who, ability: effect.ability, dc, roll, total, passed },

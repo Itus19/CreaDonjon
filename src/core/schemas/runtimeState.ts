@@ -44,6 +44,12 @@ export const zPendingRequest = z.object({
   player_action_text: z.string(),
   /** Vrai seulement pour une demande de DÉGÂTS posée après une attaque qui a touché en critique — double les dés au moment d'encaisser. */
   critical: z.boolean(),
+  /**
+   * V3.1-156 (ADR 0074) : les dés de bonus de la fiche (Bénédiction), fixés à
+   * la pose comme `modifier`. Le serveur les lance à la résolution, quelle que
+   * soit l'origine du naturel (règle 8). Absent des demandes d'avant : aucun.
+   */
+  bonus_dice: z.array(z.object({ count: z.number().int().min(1), faces: z.number().int().min(1), label: z.string() })).optional(),
 });
 export type PendingRequest = z.infer<typeof zPendingRequest>;
 

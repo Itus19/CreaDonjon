@@ -146,7 +146,7 @@ Valeur de modificateur en formule ou en dé (+ mod. CHA, +1d4, 10 + DEX + CON), 
 
 *Fait le 7 novembre.* `src/core/formula` : opérateur « dés » entre deux facteurs, nombre et taille évalués puis bornés, un dé refusé dans le nombre de dés (`diceFormula.test.ts`). `zModifier.value` : nombre ou formule, dé refusé hors cible de jet (`isRollTarget`). `characterSheet()` : formules résolues en trois temps (caractéristiques, reste, vitesses spéciales), dés de bonus (`dice` sur sauvegardes, tests, compétences), CA sans armure (catégorie d'armure portée par les objets équipés), sens, vitesses, maîtrises accordées, `rollModifiers` et `rollBonus()` (attaque, dégâts, critique), cible `{choice:<clé>}` (`sheetComputedValues.test.ts`, 13 tests). Catalogue `modifierTargets.ts` et libellés `fr.ts` étendus.
 
-#### ☐ V3.1-156 — Les jets lancent les dés de bonus et lisent les nouvelles cibles · `M` · sans modèle IA — **prêt (Opus)**
+#### ☑ V3.1-156 — Les jets lancent les dés de bonus et lisent les nouvelles cibles · `M` · sans modèle IA — **prêt (Opus)**
 
 **Modèle conseillé : Opus** — déroulé des jets côté serveur (règle 8).
 **Dépend de** : 155.
@@ -158,10 +158,14 @@ Valeur de modificateur en formule ou en dé (+ mod. CHA, +1d4, 10 + DEX + CON), 
 - `attack*` et `damage*` s'ajoutent selon le genre du jet (arme ou sort, caractéristique d'attaque, type de dégâts du sort).
 
 **Critères d'acceptation**
-- [ ] Un personnage béni lance 1d20 + bonus + 1d4 en attaque et en sauvegarde ; le détail montre le d4 (test d'intégration).
-- [ ] Champion : un 19 naturel est un critique à l'arme, pas au sort (test).
-- [ ] Rage : +2 aux dégâts d'une attaque de Force, rien à l'arc (test).
-- [ ] Affinité élémentaire Feu : + mod. CHA aux dégâts d'un sort de feu, rien sur un sort de froid (test) — le critère reçu de V3.1-117.
+- [x] Un personnage béni lance 1d20 + bonus + 1d4 en attaque et en sauvegarde ; le détail montre le d4 (test d'intégration).
+- [x] Champion : un 19 naturel est un critique à l'arme, pas au sort (test).
+- [x] Rage : +2 aux dégâts d'une attaque de Force, rien à l'arc (test).
+- [x] Affinité élémentaire Feu : + mod. CHA aux dégâts d'un sort de feu, rien sur un sort de froid (test) — le critère reçu de V3.1-117.
+
+*Fait le 7 novembre.* `resolveAttackRoll`, `resolveCheckRoll` et `resolveDamageRoll` ajoutent les dés de bonus à l'arbre du jet (lancés par le serveur, gardés dans l'historique ; doublés au critique pour les dégâts) et lisent la plage de critique. Câblés depuis la fiche du serveur : attaques et dégâts d'arme et de sort (`characterActions`, avec `rollBonus` : Rage par la caractéristique d'attaque, Affinité élémentaire par le type de dégâts du sort), tests, compétences et sauvegardes (`checkRolls`), sauvegardes demandées et des cibles (`targetSaveBonus` rend les dés d'un PJ ; le moteur des déclencheurs les lance pour une cible d'activation), tour solo (la demande en attente garde ses dés, lancés par le serveur à la résolution quelle que soit l'origine du d20). Les jets ciblés passent par `rollWeaponAttack` et en profitent. Tests : `actionBonusDice.test.ts`, `triggers.test.ts` (sauvegarde bénie), `bonusDice.integration.test.ts` 3/3 ; critiques et Affinité élémentaire testés au noyau (`sheetComputedValues.test.ts`). Intégration des services touchés : 63/63.
+
+*Reste* : en mode « vrai dé de la table » d'une sauvegarde demandée, le joueur lance lui-même son d4 (le serveur ne l'ajoute pas).
 
 #### ☐ V3.1-157 — L'écran : dés de bonus, sens, vitesses, maîtrises ; l'éditeur suit · `M` · sans modèle IA — **prêt (Sonnet)**
 

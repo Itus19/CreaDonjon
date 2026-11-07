@@ -1,4 +1,5 @@
 import "server-only";
+import type { BonusDie } from "@/src/core/rules/sheet";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
 import type { Locale } from "@/src/i18n/request";
@@ -104,10 +105,14 @@ export async function answerSaveRequest(
       ? await resolveCharacterActionContext(supabase, request.target_entity_id, request.campaign_id, params.locale)
       : null;
   let bonus: number;
+  // V3.1-156 (ADR 0074) : les dés de bonus de la cible (Bénédiction), lancés par le serveur avec le d20.
+  let dice: readonly BonusDie[] = [];
   const hints: string[] = [];
   if (answeringAsTarget) {
     if (!ctx) return { ok: false, reason: "no_target" };
-    bonus = ctx.sheet.savingThrows[request.ability as keyof typeof ctx.sheet.savingThrows]?.mod ?? 0;
+    const save = ctx.sheet.savingThrows[request.ability as keyof typeof ctx.sheet.savingThrows];
+    bonus = save?.mod ?? 0;
+    dice = save?.dice ?? [];
   } else {
     const participant = request.target_kind === "participant" ? await getCombatParticipantById(supabase, request.target_id) : null;
     if (!participant) return { ok: false, reason: "no_target" };
@@ -120,6 +125,7 @@ export async function answerSaveRequest(
       locale: params.locale,
     });
     bonus = found.bonus;
+    dice = found.dice;
     if (found.hint) hints.push(found.hint);
   }
 
@@ -130,7 +136,7 @@ export async function answerSaveRequest(
   let ast: unknown;
   let trace: Json;
   if (params.input.mode === "roll") {
-    const roll = resolveCheckRoll({ modifier: bonus, advantage: "normal" }, serverRng);
+    const roll = resolveCheckRoll({ modifier: bonus, advantage: "normal", bonusDice: dice }, serverRng);
     natural = roll.trace[0]?.value ?? null;
     total = roll.total;
     expression = roll.expression;

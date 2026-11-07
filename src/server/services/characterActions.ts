@@ -8,6 +8,7 @@ import {
   ABILITIES,
   characterSheet,
   resolveHpGain,
+  rollBonus,
   type Ability,
   type CharacterBuild,
   type DerivedSheet,
@@ -24,7 +25,8 @@ import {
   resolveAttackRoll,
   resolveCheckRoll,
   resolveDamageRoll,
-  weaponAttackAbilityMod,
+  combineAdvantage,
+  weaponAttackAbility,
   type AdvantageState,
   type AttackRollResult,
   type DamageRollResult,
@@ -419,24 +421,30 @@ export async function rollWeaponAttack(
   const weapon = ref?.kind === "rule" ? ctx.weaponByKey[ref.key] : null;
   if (!weapon) return { error: "not_a_weapon" };
 
-  const abilityMod = weaponAttackAbilityMod(
-    weapon.properties,
-    weapon.isRanged,
-    ctx.sheet.abilities.str.mod,
-    ctx.sheet.abilities.dex.mod
-  );
+  const ability = weaponAttackAbility(weapon.properties, weapon.isRanged, ctx.sheet.abilities.str.mod, ctx.sheet.abilities.dex.mod);
+  const abilityMod = ctx.sheet.abilities[ability].mod;
+  // V3.1-156 (ADR 0074) : bonus, dés de bonus, avantage et plage de critique donnés par les règles du personnage.
+  const extra = rollBonus(ctx.sheet, { roll: "attack", kind: "weapon" });
   // Decision de perimetre (V1-B5) : aucune maitrise d'arme n'est modelisee
   // par classe aujourd'hui (seulement competences/JS, cf. sheet.ts) — le
   // bonus de maitrise est toujours applique aux attaques d'arme.
   const attack = resolveAttackRoll(
-    { abilityMod, proficiencyBonus: ctx.sheet.proficiencyBonus, proficient: true, advantage: params.advantage },
+    {
+      abilityMod,
+      proficiencyBonus: ctx.sheet.proficiencyBonus,
+      proficient: true,
+      advantage: combineAdvantage(params.advantage, extra.rollState),
+      bonus: extra.value,
+      bonusDice: extra.dice,
+      critRange: extra.critRange,
+    },
     serverRng
   );
 
   await recordRoll(supabase, params.campaignId, {
     expression: attack.expression,
     ast: attack.ast,
-    context: { mod: abilityMod + ctx.sheet.proficiencyBonus },
+    context: { mod: abilityMod + ctx.sheet.proficiencyBonus + extra.value },
     result: attack.total,
     attribution: { entityId: ctx.entityId, kind: "attack", naturalD20: naturalD20FromTrace(attack.trace) },
     detail: {
@@ -467,19 +475,17 @@ export async function rollWeaponDamage(
   if (!weapon) return { error: "not_a_weapon" };
 
   const formula = (params.versatile && weapon.versatileDamageDice) || weapon.damageDice;
-  const abilityMod = weaponAttackAbilityMod(
-    weapon.properties,
-    weapon.isRanged,
-    ctx.sheet.abilities.str.mod,
-    ctx.sheet.abilities.dex.mod
-  );
+  const ability = weaponAttackAbility(weapon.properties, weapon.isRanged, ctx.sheet.abilities.str.mod, ctx.sheet.abilities.dex.mod);
+  const abilityMod = ctx.sheet.abilities[ability].mod;
+  // V3.1-156 (ADR 0074) : la Rage (`damage.weapon.str`), un bonus de dégâts d'arme, des dés de bonus.
+  const extra = rollBonus(ctx.sheet, { roll: "damage", kind: "weapon", ability, ...(weapon.damageType ? { damageType: weapon.damageType } : {}) });
 
-  const damage = resolveDamageRoll({ formula, abilityMod, critical: params.critical }, serverRng);
+  const damage = resolveDamageRoll({ formula, abilityMod, bonus: extra.value, bonusDice: extra.dice, critical: params.critical }, serverRng);
 
   await recordRoll(supabase, params.campaignId, {
     expression: damage.expression,
     ast: damage.ast,
-    context: { mod: abilityMod },
+    context: { mod: abilityMod + extra.value },
     result: damage.total,
     attribution: { entityId: ctx.entityId, kind: "damage" },
     detail: {
@@ -514,15 +520,24 @@ export async function rollSpellAttack(
   }
   if (!ctx.sheet.spellcasting) return { error: "not_a_spellcaster" };
 
+  const extra = rollBonus(ctx.sheet, { roll: "attack", kind: "spell" });
   const attack = resolveAttackRoll(
-    { abilityMod: ctx.sheet.spellcasting.attackBonus, proficiencyBonus: 0, proficient: false, advantage: params.advantage },
+    {
+      abilityMod: ctx.sheet.spellcasting.attackBonus,
+      proficiencyBonus: 0,
+      proficient: false,
+      advantage: combineAdvantage(params.advantage, extra.rollState),
+      bonus: extra.value,
+      bonusDice: extra.dice,
+      critRange: extra.critRange,
+    },
     serverRng
   );
 
   await recordRoll(supabase, params.campaignId, {
     expression: attack.expression,
     ast: attack.ast,
-    context: { mod: ctx.sheet.spellcasting.attackBonus },
+    context: { mod: ctx.sheet.spellcasting.attackBonus + extra.value },
     result: attack.total,
     attribution: { entityId: ctx.entityId, kind: "spell", naturalD20: naturalD20FromTrace(attack.trace) },
     detail: {
@@ -606,11 +621,14 @@ export async function castSpell(
       const formulaText = scalingBlock
         ? resolveScaledFormulaText(scalingBlock.data as unknown as ScalingBlockData, params.slotLevel, effectsData, baseFormula)
         : formatFormulaNode(baseFormula);
-      damage = resolveDamageRoll({ formula: formulaText, critical: params.critical }, serverRng);
+      // V3.1-156 (ADR 0074) : l'Affinité élémentaire (`damage.spell.<type>`), un bonus de dégâts de sort, des dés de bonus.
+      const damageType = effectsData?.effects[0]?.damage_type;
+      const extra = rollBonus(ctx.sheet, { roll: "damage", kind: "spell", ...(damageType ? { damageType } : {}) });
+      damage = resolveDamageRoll({ formula: formulaText, bonus: extra.value, bonusDice: extra.dice, critical: params.critical }, serverRng);
       await recordRoll(supabase, params.campaignId, {
         expression: damage.expression,
         ast: damage.ast,
-        context: {},
+        context: extra.value !== 0 ? { mod: extra.value } : {},
         result: damage.total,
         // Les dégâts d'un sort comptent comme des dégâts (record), l'attaque de sort comme un sort (ADR 0064).
         attribution: { entityId: ctx.entityId, kind: "damage" },

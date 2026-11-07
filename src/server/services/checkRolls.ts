@@ -3,7 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
 import type { Locale } from "@/src/i18n/request";
-import { ABILITY_LABELS, SKILL_ABILITIES, type Ability, type Skill, type Source } from "@/src/core/rules/sheet";
+import { ABILITY_LABELS, SKILL_ABILITIES, type Ability, type BonusDie, type Skill, type Source } from "@/src/core/rules/sheet";
 import { SKILL_LABELS_FR } from "@/src/i18n/fr";
 import { resolveCheckRoll, type AdvantageState } from "@/src/core/rules/action";
 import type { TraceStep } from "@/src/core/formula/evaluate";
@@ -175,6 +175,8 @@ async function recordAndBuildOutcome(
     who: string;
     what: string;
     chips: Source[];
+    /** V3.1-156 (ADR 0074) : dés de bonus de la fiche (Bénédiction), lancés avec le d20. */
+    dice?: readonly BonusDie[];
     advantage: AdvantageState;
     dc: number | null;
     hidden: boolean;
@@ -194,7 +196,7 @@ async function recordAndBuildOutcome(
   }
 ): Promise<RollOutcome> {
   const modifier = params.chips.reduce((sum, c) => sum + c.value, 0);
-  const { total, ast, expression, trace } = resolveCheckRoll({ modifier, advantage: params.advantage }, serverRng);
+  const { total, ast, expression, trace } = resolveCheckRoll({ modifier, advantage: params.advantage, bonusDice: params.dice }, serverRng);
   const verdict = verdictFor(total, params.dc);
 
   // Les declencheurs partent AVANT l'enregistrement, pour que leur sortie
@@ -265,6 +267,7 @@ export async function rollAbilityCheck(
     who: check.entity.name,
     what: `Test de ${ABILITY_LABELS[params.ability]}` + (params.reroll ? REROLL_SUFFIX : ""),
     chips,
+    dice: ctx.sheet.abilityChecks[params.ability].dice,
     advantage: params.advantage,
     dc: params.dc,
     hidden: params.hidden,
@@ -299,6 +302,7 @@ export async function rollSkillCheck(
     who: check.entity.name,
     what: `${SKILL_LABELS_FR[params.skill]} — test de ${governingAbility}` + (params.reroll ? REROLL_SUFFIX : ""),
     chips: skillResult.sources,
+    dice: skillResult.dice,
     advantage: params.advantage,
     dc: params.dc,
     hidden: params.hidden,
@@ -340,6 +344,7 @@ export async function rollSavingThrow(
     who: check.entity.name,
     what: `Sauvegarde de ${ABILITY_LABELS[params.ability]}` + (params.reroll ? REROLL_SUFFIX : ""),
     chips: saveResult.sources,
+    dice: saveResult.dice,
     advantage: params.advantage,
     dc: params.dc,
     hidden: params.hidden,

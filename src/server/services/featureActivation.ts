@@ -1,5 +1,5 @@
 import "server-only";
-import { grantingClassLevel } from "@/src/core/rules/sheet";
+import { grantingClassLevel, type BonusDie } from "@/src/core/rules/sheet";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
 import type { Locale } from "@/src/i18n/request";
@@ -154,13 +154,18 @@ export async function activateFeature(
     const p = participants.find((x) => x.id === id)!;
     const isPc = p.entity_id !== null && pcEntityIds.has(p.entity_id);
     const numbers: Record<string, number> = {};
+    const saveDice: Record<string, BonusDie[]> = {};
     for (const ability of abilities) {
-      numbers[`save.${ability}`] = (await targetSaveBonus(supabase, { target: p, isPc, ability, campaignId: params.campaignId, worldId: campaign.worldId, locale: params.locale })).bonus;
+      const found = await targetSaveBonus(supabase, { target: p, isPc, ability, campaignId: params.campaignId, worldId: campaign.worldId, locale: params.locale });
+      numbers[`save.${ability}`] = found.bonus;
+      // V3.1-156 (ADR 0074) : un PJ béni lance son 1d4 avec sa sauvegarde.
+      if (found.dice.length > 0) saveDice[ability] = found.dice;
     }
     actors[`participant:${id}`] = {
       conditions: Array.isArray(p.conditions) ? p.conditions.filter((c): c is string => typeof c === "string") : [],
       features: [],
       numbers,
+      saveDice,
     };
   }
   const sceneCtx: TriggerContext = { actors };

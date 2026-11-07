@@ -114,6 +114,24 @@ describe("cas dore 1 : la concentration, en donnees seulement", () => {
     );
   });
 
+  it("V3.1-156 : les dés de bonus de la sauvegarde (Bénédiction) s'ajoutent, lancés par le moteur", () => {
+    // d20 = 2, + 3 (save.con), + 1d4 = 4 (nextInt(4) = 3) : 9 < 11, raté ; avec 2d4 = 8 : 13, réussi.
+    const rate = runTriggers({
+      event: { event: "damage_taken", subject: "self", data: { "event.damage": 22 } },
+      triggers: [concentration],
+      ctx: ctxWith({ saveDice: { con: [{ count: 1, faces: 4 }] } }),
+      rng: fixedRng([1, 3]),
+    });
+    expect(rate.effects.find((e) => e.action === "saving_throw")).toMatchObject({ total: 9, passed: false });
+    const reussi = runTriggers({
+      event: { event: "damage_taken", subject: "self", data: { "event.damage": 22 } },
+      triggers: [concentration],
+      ctx: ctxWith({ saveDice: { con: [{ count: 2, faces: 4 }] } }),
+      rng: fixedRng([1, 3, 3]),
+    });
+    expect(reussi.effects.find((e) => e.action === "saving_throw")).toMatchObject({ total: 13, passed: true });
+  });
+
   it("un jet reussi ne retire rien", () => {
     // nextInt(20) = 19 -> d20 = 20 ; 20 + 3 = 23 >= 11.
     const out = runTriggers({
