@@ -77,3 +77,18 @@ Ordre conseillé : 162 (les textes en données) avant 161 et 163 ; 167 (noyau) i
 - Vérifier la jouabilité de chaque aptitude dans l'application : ciblage, effets, ressources et leur recharge, avantages, sorts (l'Arnaqueur est un tiers-lanceur : sa progression d'emplacements doit exister). Ce qui n'est pas jouable devient un critère du chantier qui le couvre (135 intervenir sur un jet, 136 actions modifiées, 137 conditions de jeu) ou un ticket nouveau.
 
 **Critères.** Les trois sous-classes se choisissent à la création pour un PJ de la campagne ; chaque aptitude est jouable ou rattachée à un ticket nommé ; le compte rendu liste les briques manquantes de l'éditeur.
+
+### V3.1-180 — Textes français : recoller les phrases coupées par la mise en page du PDF (sans modèle IA)
+
+**Modèle conseillé : Opus** (script contre la vraie base, contenu officiel).
+
+**Constat** (relevé en dépliant les dons, V3.1-172). Dans les traductions françaises importées du SRD 5.2.1, une phrase coupée en fin de ligne par la mise en page du PDF garde son retour à la ligne : « **Deux sorts mineurs.** Vous apprenez deux sorts⏎mineurs de votre choix… ». Le rendu des textes de règle (`Prose`) fait de chaque retour un nouveau paragraphe : la phrase s'affiche en deux morceaux, sur la page de la règle comme dans l'assistant et la fiche. Mesuré le 7 novembre : **10 fiches** (des dons : `alert`, `magic-initiate`, `ability-score-improvement`, `boon-of-combat-prowess`…), **19 coupures** ; aucune dans le SRD 5.1.
+
+**À faire.**
+- Un script par clé, à blanc par défaut (`--write` pour écrire), dans la lignée de `scripts/fix-descriptions-fr-2024.ts` : dans les blocs des traductions françaises, remplacer un retour à la ligne pris entre deux morceaux de phrase (minuscule, virgule ou apostrophe avant ; minuscule, « ou ( après) par une espace. Les vrais retours (avant un intertitre en gras `**…**`, une liste, une nouvelle phrase en majuscule) restent.
+- Le passage à blanc liste chaque coupure avec son contexte, pour relecture avant d'écrire.
+- Chercher pourquoi l'import l'a laissé passer (`translate-rules-2024-fr.ts` et voisins) et le corriger, pour qu'une réimportation ne recrée pas le défaut.
+
+**Critères.** Aucune coupure de ce genre ne reste dans les traductions françaises des deux SRD (le script relancé à blanc n'en trouve plus) ; « Initié à la magie » se lit en paragraphes entiers sur la page de la règle et dans l'assistant ; les intertitres en gras gardent leur ligne.
+
+**Portée.** Le texte n'existe qu'à un endroit, la traduction de la fiche (`ruleset_entry_translations`) : la page de la règle, l'assistant, la fiche du personnage et le contexte du solo le lisent tous de là, donc une correction vaut partout. Seule exception : une fiche d'un ruleset personnel qui aurait **recopié** ce texte dans sa propre surcharge garde sa copie (aucune connue aujourd'hui).

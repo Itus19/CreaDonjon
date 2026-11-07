@@ -304,3 +304,4 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-177 | ☐ | sans | Aperçu : la colonne s'efface, la fiche s'affiche comme sur la fiche | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
 | V3.1-178 | ☑ | sans | Les valeurs passives : Perception, Intuition, Investigation | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-179 | ☐ | sans | Trois sous-classes pour « La Croisade des Ombres », saisies et jouables | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
+| V3.1-180 | ☐ | sans | Textes français : recoller les phrases coupées par la mise en page du PDF | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
