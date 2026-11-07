@@ -4,8 +4,7 @@ import { useTranslations } from "next-intl";
 import { ftToM } from "@/src/core/rules/encumbrance";
 import { lignesSensVitesses } from "@/lib/ui/valeursCalculees";
 import { squaresFromMeters } from "@/src/core/rules/gridSquares";
-import { PASSIVE_SKILLS, type DerivedSheet, type PassiveSkill } from "@/src/core/rules/sheet";
-import { SKILL_LABELS_FR } from "@/src/i18n/fr";
+import type { DerivedSheet } from "@/src/core/rules/sheet";
 import type { DeathSaves } from "@/src/core/rules/deathSaves";
 import type { Concentration } from "@/src/core/schemas/runtimeState";
 import type { EtatMourant } from "@/lib/ui/etatMourant";
@@ -28,44 +27,6 @@ import { useWorldRuleEntries } from "./useWorldRuleEntries";
  * variables selon que le libellé tenait sur une ou deux lignes.
  */
 /** `onClick` (V2-M11) : seule l'Initiative s'en sert aujourd'hui — un jet declenche depuis le volet de lancer de des, jamais un second calcul ici. */
-/** Libellés courts des valeurs passives (le nom complet est dans l'infobulle). */
-const PASSIVES_COURTS: Record<PassiveSkill, string> = { perception: "Percep.", insight: "Intuit.", investigation: "Invest." };
-
-/**
- * V3.1-178 : les trois valeurs passives (Perception, Intuition,
- * Investigation) en une seule tuile, au gabarit des autres (même hauteur,
- * même libellé au-dessus) mais deux fois plus large : trois badges de 72 px
- * auraient coupé « INVESTIGATION PASSIVE ». Les valeurs viennent du moteur.
- */
-export function PassivesBadge({ passives, chargement }: { passives: DerivedSheet["passives"]; chargement?: boolean }) {
-  if (chargement) {
-    return (
-      <div className="flex w-[9.5rem] shrink-0 flex-col items-center gap-1" aria-hidden="true">
-        <span className="flex h-8 items-end justify-center text-center text-xs font-bold uppercase leading-tight tracking-wide text-ink-muted">Passives</span>
-        <div className="h-14 w-full animate-pulse rounded-md border border-edge bg-panel-sunken" />
-      </div>
-    );
-  }
-  return (
-    <div className="flex w-[9.5rem] shrink-0 flex-col items-center gap-1">
-      <span className="flex h-8 items-end justify-center text-center text-xs font-bold uppercase leading-tight tracking-wide text-ink-muted">Passives</span>
-      <div className="grid h-14 w-full grid-cols-3 rounded-md border border-edge bg-panel-sunken">
-        {PASSIVE_SKILLS.map((p) => (
-          <span
-            key={p}
-            title={`${SKILL_LABELS_FR[p]} passive : ${passives[p].value}`}
-            aria-label={`${SKILL_LABELS_FR[p]} passive : ${passives[p].value}`}
-            className="flex flex-col items-center justify-center"
-          >
-            <span aria-hidden="true" className="text-base font-bold leading-none text-ink">{passives[p].value}</span>
-            <span aria-hidden="true" className="mt-0.5 text-xs leading-none text-ink-muted">{PASSIVES_COURTS[p]}</span>
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export function StatBadge({
   label,
   value,
@@ -436,7 +397,6 @@ export default function RangeeChiffree({
             sub={`${speedSquares} case${speedSquares > 1 ? "s" : ""}`}
             chargement={!pret}
           />
-          <PassivesBadge passives={sheet.passives} chargement={!pret} />
           <StatBadge label="Maîtrise" value={`+${sheet.proficiencyBonus}`} chargement={!pret} />
           {pret && onChangeHitDice && desDeVie && desDeVie.length > 0 ? (
             desDeVie.map((de) => (

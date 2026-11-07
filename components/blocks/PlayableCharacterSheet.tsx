@@ -7,7 +7,7 @@ import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData } from "@/src/core/schemas/blocks/inventory";
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
 import type { ResourcesBlockData } from "@/src/core/schemas/blocks/resources";
-import { ABILITY_LABELS as ABILITY_NAMES, SKILL_ABILITIES, type Ability } from "@/src/core/rules/sheet";
+import { ABILITY_LABELS as ABILITY_NAMES, PASSIVE_SKILLS, SKILL_ABILITIES, type Ability } from "@/src/core/rules/sheet";
 import { XP_LEVEL_THRESHOLDS, hasReachedNextLevel } from "@/src/core/rules/experience";
 import { applyDamageToHp } from "@/src/core/rules/tempHp";
 import { pvSousUnTiers } from "@/lib/ui/commandeE";
@@ -33,7 +33,7 @@ import { toggleChoice } from "./characterChoiceUtils";
 import CharacterCreatorWizard from "./CharacterCreatorWizard";
 import { useDiceRoll } from "@/components/shell/DiceRollPanel";
 import { chargerFicheCalculee, type SheetApiResponse } from "./ficheCalculee";
-import { ABILITY_LABELS, SORTED_SKILLS } from "./sheetLabels";
+import { ABILITY_LABELS, PASSIVES_COURTS, SORTED_SKILLS } from "./sheetLabels";
 import TuileCaracteristique from "./TuileCaracteristique";
 import { commandesDeLaFiche, type CommandesFiche } from "@/lib/ui/commandesFiche";
 import { useJetsDeLaFiche } from "./useJetsDeLaFiche";
@@ -588,6 +588,24 @@ export default function PlayableCharacterSheet({
                   />
                 );
               })}
+            </div>
+          </div>
+
+          {/* V3.1-178 (esquisse, solution A) : les trois valeurs passives sous les caractéristiques, avant les compétences. */}
+          <div className="flex flex-col gap-2">
+            <span className="text-xs font-bold uppercase tracking-widest text-ink-muted">Valeurs passives</span>
+            <div className="grid grid-cols-3 gap-1.5">
+              {PASSIVE_SKILLS.map((p) => (
+                <div
+                  key={p}
+                  title={`${SKILL_LABELS_FR[p]} passive : ${sheet.passives[p].value}`}
+                  aria-label={`${SKILL_LABELS_FR[p]} passive : ${sheet.passives[p].value}`}
+                  className="flex flex-col items-center gap-0.5 rounded-lg border border-edge/60 bg-panel-raised px-1 py-2 text-center"
+                >
+                  <span aria-hidden="true" className="text-lg font-bold leading-none text-ink">{sheet.passives[p].value}</span>
+                  <span aria-hidden="true" className="text-xs text-ink-muted">{PASSIVES_COURTS[p]}</span>
+                </div>
+              ))}
             </div>
           </div>
 

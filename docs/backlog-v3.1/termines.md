@@ -5775,7 +5775,7 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
 
 **Fait le 7 novembre** (Opus seul). L'affichage d'après l'esquisse (A, B, C) : **A choisie par l'auteur**.
 - **Noyau** (tests d'abord, 7 cas) : `characterSheet` rend `passives` (10 + compétence, +5 avec l'avantage, −5 avec le désavantage, avantage et désavantage s'annulent, bonus d'une règle sur la nouvelle cible `passive.<compétence>`, catégorie « Valeur passive », « ajouter » seulement). Rien n'est stocké.
-- **Fiche** : une tuile « Passives » à la place du badge « Perception passive », deux fois plus large, trois valeurs abrégées (nom complet au survol). **Assistant** : l'aperçu porte « Valeurs passives : Perception · Intuition · Investigation » ; l'étape Caractéristiques lit la Perception passive du moteur.
-- Vérifié au navigateur (Testeuse A) : la tuile montre 13, 13, 10.
+- **Fiche** : d'abord une tuile « Passives » dans la rangée du haut (proposition A), puis, à la demande de l'auteur (esquisse « Les passives sous les caractéristiques », solution A), **trois petites cases sous les six caractéristiques**, avant les compétences, au style des tuiles de caractéristique (valeur en grand, nom court, nom complet au survol) ; le badge « Perception passive » quitte la rangée du haut. **Assistant** : l'aperçu porte « Valeurs passives : Perception · Intuition · Investigation » ; l'étape Caractéristiques lit la Perception passive du moteur.
+- Vérifié au navigateur (Testeuse A, 1400 et 390 px) : 13, 13, 10 sous les caractéristiques, la rangée du haut sans tuile de passives.
 
 *Restes* : l'outil Table du MJ et la fiche de créature n'affichent pas de valeurs passives (la créature garde celle de son bloc de stats) ; « Vigilant » n'en donne pas en 2024, contrairement à ce que disait le critère.

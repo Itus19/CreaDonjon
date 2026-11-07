@@ -20,3 +20,6 @@ export const ABILITY_LABELS: Record<Ability, string> = {
 
 /** Compétences triées par libellé FR (V1-C4 suite) — même ordre que la référence visuelle fournie par l'utilisateur. Partagée par la fiche et l'assistant de création (V2-G1) — même esthétique, jamais un deuxième tri recalculé. */
 export const SORTED_SKILLS = [...SKILLS].sort((a, b) => SKILL_LABELS_FR[a].localeCompare(SKILL_LABELS_FR[b]));
+
+/** V3.1-178 : libellés courts des valeurs passives (le nom complet est dans l'infobulle). */
+export const PASSIVES_COURTS: Record<"perception" | "insight" | "investigation", string> = { perception: "Percep.", insight: "Intuit.", investigation: "Invest." };
