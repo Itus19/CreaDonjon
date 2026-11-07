@@ -269,7 +269,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-155 | ☑ | sans | Le noyau : modificateurs en formule et en dé, dés en formule, nouvelles cibles | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
 | V3.1-156 | ☑ | sans | Les jets lancent les dés de bonus et lisent les nouvelles cibles | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
 | V3.1-157 | ☐ | sans | L'écran : dés de bonus, sens, vitesses, maîtrises ; l'éditeur suit | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
-| V3.1-158 | ☐ | sans | Les données : les règles du SRD que ce chantier rend jouables | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
+| V3.1-158 | ☑ | sans | Les données : les règles du SRD que ce chantier rend jouables | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
 | V3.1-135 | ☐ | sans | Intervenir sur un jet | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
 | V3.1-136 | ☐ | sans | Les actions modifiées | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
 | V3.1-137 | ☐ | sans | Les conditions de jeu et les distances réelles | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |

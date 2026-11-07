@@ -182,7 +182,7 @@ Valeur de modificateur en formule ou en dé (+ mod. CHA, +1d4, 10 + DEX + CON), 
 - [ ] Bénédiction se saisit à l'éditeur sans JSON (jusqu'à 3 cibles, concentration 1 minute, +1d4 aux attaques et sauvegardes) et se voit sur la fiche des cibles.
 - [ ] Au téléphone, « +3 + 1d4 » tient sur la ligne de la sauvegarde.
 
-#### ☐ V3.1-158 — Les données : les règles du SRD que ce chantier rend jouables · `S` · sans modèle IA — **prêt (Opus)**
+#### ☑ V3.1-158 — Les données : les règles du SRD que ce chantier rend jouables · `S` · sans modèle IA — **prêt (Opus)**
 
 **Modèle conseillé : Opus** — données de règles officielles, import.
 **Dépend de** : 155, 156.
@@ -193,7 +193,11 @@ Valeur de modificateur en formule ou en dé (+ mod. CHA, +1d4, 10 + DEX + CON), 
 - Réimport, scripts d'auteur rejoués.
 
 **Critères d'acceptation**
-- [ ] Après réimport, Aura de protection, Défense sans armure, Critique amélioré, Bénédiction et Affinité élémentaire sont « Jouable » et se jouent sur une fiche de test.
+- [x] Après réimport, Aura de protection, Défense sans armure, Critique amélioré, Bénédiction et Affinité élémentaire sont « Jouable » et se jouent sur une fiche de test. *Nuance* : Défense sans armure (Barbare, Moine) et Critique amélioré sont « Jouable » ; Aura de protection, Affinité élémentaire et Rage se jouent pour ce qu'ils ont de calculé et s'affichent « Partielle » (alliés à 3 m, résistances : V3.1-137) ; **Bénédiction et Arme sacrée ne se font pas ici** : un sort ne se joue pas encore comme une activation, et Arme sacrée s'ouvre « en prenant l'action Attaque » — reportés au chantier 136 (actions modifiées, lancer un sort). Le noyau les sait déjà (`sheetComputedValues.test.ts`, `bonusDice.integration.test.ts`).
+
+*Fait le 7 novembre.* `modifiers-2024.json` : Défense sans armure (`ac.unarmored`, `ac.unarmored_no_shield`), Aura de protection (`save`, `max(1, {ability.cha})`), Critique amélioré (pour le badge de la fiche). `subclasses-2024.json` : Critique amélioré (l'effet), bonus de dégâts de l'Affinité élémentaire (`damage.spell.{choice:…}`). `playable-2024.json` : Rage (ressource selon la table, activation, effet qui dure : bonus de dégâts lu dans la table, avantage en Force) et `coverage` honnête (Rage, Aura, Affinité, Inspiration bardique avec sa ressource, Attaque sournoise). Noyau : un effet qui dure garde la règle qui l'a posé (`ruleKey`), ses formules lisent la table de la classe ; les choix du personnage passent à `characterSheet()` (serveur). Réimport fait (aucun échec), scripts d'auteur rejoués. Vérifié : `srdComputedValues.integration.test.ts` 5/5 (Barbare et Moine CA 15, Champion 19, Aura +3, Rage +3 et avantage).
+
+*Reste* : Souffle du drakéide (zone, remplace une attaque : 136, 137) ; le dé d'Inspiration bardique attend 135.
 
 ### ☐ V3.1-135 — Intervenir sur un jet · `L` · sans modèle IA — **à concevoir (Opus)**
 Réactions (une fenêtre de choix dans le déroulé d'un jet, côté serveur), opérations sur un jet en cours (ajouter ou soustraire un dé, relancer, fixer à 20, CA contre ce jet, diviser les dégâts), limite une fois par tour. Règles visées : 5, 9, 10, 19, 20, 27, 28, 33, 37, 39.
@@ -201,6 +205,8 @@ Réactions (une fenêtre de choix dans le déroulé d'un jet, côté serveur), o
 ### ☐ V3.1-136 — Les actions modifiées · `M` · sans modèle IA — **à concevoir (Opus)**
 Attaques multiples, action disponible en action bonus, temps d'incantation changé, attaque remplacée, budget réservé à un usage, accorder ou lancer un sort comme effet. Règles visées : 7, 13, 14, 16, 21, 24, 32, 33, 35, 39.
 
+
+*Reçu de V3.1-158 (7 novembre)* : Bénédiction (un sort joué comme une activation : jusqu'à 3 cibles, concentration, + 1d4 aux attaques et aux sauvegardes — le noyau le sait déjà) et Arme sacrée (« en prenant l'action Attaque », + mod. CHA aux attaques de l'arme).
 ### ☐ V3.1-137 — Les conditions de jeu et les distances réelles · `L` · sans modèle IA — **à concevoir (Opus)**
 Distances en mètres entre créatures (ADR 0059 §5), zones géométriques, auras, résistances et immunités, conditions sur l'équipement, règles qui en modifient d'autres, étiquettes d'arme sur `attack_hit`. Règles visées : 2, 3, 10, 12, 13, 17, 18, 24, 25, 26, 29, 32, 33, 36.
 
