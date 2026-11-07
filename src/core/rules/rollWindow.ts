@@ -179,12 +179,12 @@ function momentMatches(trigger: ActivationTrigger, roll: PendingRoll): boolean {
   }
 }
 
-function amount(node: FormulaNode, numbers: Readonly<Record<string, number>>, rng: Rng): number | null {
+/** Une formule qui ne s'évalue pas rend son erreur (jamais avalée) : l'appelant décide. */
+function amount(node: FormulaNode, numbers: Readonly<Record<string, number>>, rng: Rng): number | Error {
   try {
     return evaluate(node, numbers, rng, "roll").value;
-  } catch {
-    // Une formule qui ne s'évalue pas ne peut pas être payée : la réaction n'est pas proposée.
-    return null;
+  } catch (err) {
+    return err instanceof Error ? err : new Error(String(err));
   }
 }
 
@@ -192,7 +192,8 @@ function canPay(c: ReactionCandidate, numbers: Readonly<Record<string, number>>,
   const total: Record<string, number> = {};
   for (const r of c.activation.cost.resources) {
     const a = amount(r.amount, numbers, rng);
-    if (a === null) return false;
+    // Un coût illisible ne se paie pas : la réaction n'est pas proposée (le clic sur la fiche, lui, dit l'erreur).
+    if (a instanceof Error) return false;
     total[r.key] = (total[r.key] ?? 0) + a;
   }
   return Object.entries(total).every(([key, a]) => (c.used[key] ?? 0) + a <= (c.resources.find((r) => r.key === key)?.max ?? 0));
@@ -322,6 +323,14 @@ export function applyRollOperations(start: PendingRoll, applications: readonly R
   return { roll, steps };
 }
 
+function attempt<T>(f: () => T): T | Error {
+  try {
+    return f();
+  } catch (err) {
+    return err instanceof Error ? err : new Error(String(err));
+  }
+}
+
 const RANDOM_OPS: ReadonlySet<RollOperation["op"]> = new Set(["add_die", "reroll", "add_damage"]);
 
 /**
@@ -333,12 +342,8 @@ export function wouldChangeOutcome(roll: PendingRoll, operations: readonly RollO
   const before = outcomeOf(roll);
   if (before === null) return null;
   const noDice: Rng = { nextInt: () => 0 };
-  let after: RollOutcome | null;
-  try {
-    after = outcomeOf(applyRollOperations(roll, [{ actorId: roll.roller, operations, numbers }], noDice).roll);
-  } catch {
-    // Une formule qui ne s'évalue pas : le moteur ne sait pas, il ne devine pas.
-    return null;
-  }
-  return after === null ? null : after !== before;
+  const after = attempt(() => outcomeOf(applyRollOperations(roll, [{ actorId: roll.roller, operations, numbers }], noDice).roll));
+  // Une formule qui ne s'évalue pas : le moteur ne sait pas, il ne devine pas.
+  if (after instanceof Error || after === null) return null;
+  return after !== before;
 }
