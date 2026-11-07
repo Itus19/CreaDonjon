@@ -339,7 +339,7 @@ export default function AbilityScoreStep({
       <div className="flex justify-center gap-2 border-t border-edge/60 pt-3">
         <StatBadge label={t("ca")} value={String(sheet.ac.value)} />
         <StatBadge label={t("initiative")} value={signe(sheet.abilities.dex.mod)} />
-        <StatBadge label={t("perceptionPassive")} value={String(10 + sheet.skills.perception.mod)} />
+        <StatBadge label={t("perceptionPassive")} value={String(sheet.passives.perception.value)} />
       </div>
     </div>
   );

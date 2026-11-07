@@ -1,4 +1,4 @@
-import { ABILITIES, SENSES, SKILLS, SPECIAL_SPEEDS, type Ability, type ModifierOp, type Sense, type Skill, type SpecialSpeed } from "./sheet";
+import { ABILITIES, PASSIVE_SKILLS, SENSES, SKILLS, SPECIAL_SPEEDS, type Ability, type ModifierOp, type Sense, type Skill, type SpecialSpeed } from "./sheet";
 import { SPELL_DAMAGE_TYPES } from "./homebrewSpell";
 
 /**
@@ -25,7 +25,9 @@ export type ModifierTargetCategory =
   | "speed_special"
   | "sense"
   | "prof"
-  | "ac_unarmored";
+  | "ac_unarmored"
+  /** V3.1-167 : une valeur passive seule (Perception, Intuition, Investigation). */
+  | "passive";
 
 export interface ModifierTargetOption {
   target: string;
@@ -69,6 +71,7 @@ export const MODIFIER_TARGET_OPTIONS: readonly ModifierTargetOption[] = [
   { target: "prof.armor.shield", category: "prof" },
   { target: "ac.unarmored", category: "ac_unarmored" },
   { target: "ac.unarmored_no_shield", category: "ac_unarmored" },
+  ...PASSIVE_SKILLS.map((s): ModifierTargetOption => ({ target: `passive.${s}`, category: "passive", skill: s })),
 ];
 
 /** Effets valides pour une categorie de cible — ex. la maitrise/l'expertise n'ont de sens que sur une sauvegarde ou une competence, jamais sur la CA. */
@@ -86,6 +89,8 @@ export const OPS_BY_TARGET_CATEGORY: Record<ModifierTargetCategory, readonly Mod
   sense: ["set", "max"],
   prof: ["proficiency"],
   ac_unarmored: ["set"],
+  // L'avantage et le désavantage passent par la compétence (`skill.<clé>`), qui les répercute en ±5.
+  passive: ["add"],
 };
 
 /** `add`/`set`/`min`/`max` portent un montant ; les quatre autres (avantage, desavantage, maitrise, expertise) sont des drapeaux, jamais de valeur associee (meme distinction que `Modifier.value` dans sheet.ts, optionnel). */

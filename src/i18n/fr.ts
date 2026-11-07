@@ -182,6 +182,7 @@ export const MODIFIER_TARGET_CATEGORY_LABELS_FR: Record<ModifierTargetCategory, 
   sense: "Sens",
   prof: "Maîtrise",
   ac_unarmored: "CA sans armure",
+  passive: "Valeur passive",
 };
 
 /** V3.1-155 : libellés des cibles nouvelles, quand la catégorie ne suffit pas. */

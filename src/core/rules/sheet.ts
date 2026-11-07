@@ -337,6 +337,22 @@ export interface SkillResult {
   dice: BonusDie[];
 }
 
+/**
+ * V3.1-167 — les valeurs passives des règles 2024. Perception, Intuition,
+ * Investigation : 10 + modificateur de la compétence, ±5 selon l'état du jet,
+ * puis les bonus posés sur `passive.<compétence>`.
+ */
+export const PASSIVE_SKILLS = ["perception", "insight", "investigation"] as const;
+export type PassiveSkill = (typeof PASSIVE_SKILLS)[number];
+const PASSIVE_SKILL_LABELS: Record<PassiveSkill, string> = { perception: "Perception", insight: "Intuition", investigation: "Investigation" };
+
+export interface PassiveResult {
+  value: number;
+  /** L'état du jet de la compétence (avantage : +5, désavantage : −5). */
+  rollState: RollState;
+  sources: Source[];
+}
+
 export interface DerivedSheet {
   abilities: Record<Ability, AbilityResult>;
   proficiencyBonus: number;
@@ -345,6 +361,8 @@ export interface DerivedSheet {
   /** V3.1-46 : les six jets de caractéristique. */
   abilityChecks: Record<Ability, AbilityCheckResult>;
   skills: Record<Skill, SkillResult>;
+  /** V3.1-167 : Perception, Intuition et Investigation passives. */
+  passives: Record<PassiveSkill, PassiveResult>;
   hitPoints: { max: number; hitDice: string; sources: Source[] };
   speed: { value: number; sources: Source[] };
   features: ResolvedFeature[];
@@ -847,6 +865,23 @@ export function characterSheet(
     };
   }
 
+  // V3.1-167 : chaque valeur passive part du jet actif de sa compétence
+  // (maîtrise, expertise, bonus compris), puis l'avantage vaut +5, le
+  // désavantage −5, et une règle peut viser la valeur passive seule.
+  const passives = {} as Record<PassiveSkill, PassiveResult>;
+  for (const skill of PASSIVE_SKILLS) {
+    const actif = skills[skill];
+    const rollState = resolveRollState([`passive.${skill}`, `skill.${skill}`, `check.${SKILL_ABILITIES[skill]}`], allModifiers);
+    const ajustement = rollState === "advantage" ? 5 : rollState === "disadvantage" ? -5 : 0;
+    const baseSources: Source[] = [
+      { label: "Base", value: 10 },
+      { label: PASSIVE_SKILL_LABELS[skill], value: actif.mod },
+    ];
+    if (ajustement !== 0) baseSources.push({ label: ajustement > 0 ? "Avantage" : "Désavantage", value: ajustement });
+    const { value, sources } = stackOnto(`passive.${skill}`, allModifiers, 10 + actif.mod + ajustement, baseSources);
+    passives[skill] = { value, rollState, sources };
+  }
+
   const hitPoints = computeHitPoints(build, ruleset, abilities.con.mod, allModifiers);
   const speed = resolveTargetStack("speed", allModifiers, 30, "Vitesse de base");
 
@@ -917,7 +952,7 @@ export function characterSheet(
   const resources = computeResources({ build, ruleset, features, equipment, abilities, proficiencyBonus, totalLevel, spellSaveDc: spellcasting?.saveDc, warnings });
 
   return {
-    abilities, proficiencyBonus, ac, savingThrows, abilityChecks, skills, hitPoints, speed, features, spellcasting, grantedSpells, resources, warnings, encumbrance,
+    abilities, proficiencyBonus, ac, savingThrows, abilityChecks, skills, passives, hitPoints, speed, features, spellcasting, grantedSpells, resources, warnings, encumbrance,
     senses, speeds, grantedProficiencies, rollModifiers,
   };
 }
