@@ -314,7 +314,7 @@ Attaques multiples, action disponible en action bonus, temps d'incantation chang
 
 *Fait le 7 novembre.* `playable.ts` : `cost.slot`, `cost.action: "attack"`, `cast_options` (`zCastOption`) ; effet `cast_spell` dans le vocabulaire (le tour le rapporte « ignoré », l'éditeur le garde tel quel jusqu'au 166). `planActivation` lit `slot.level` et refuse `slot_too_low` avant tout dé. `sheet.ts` : `attacksPerAction` (le plus grand `set`/`max` de `attacks_per_action`, 1 par défaut), `bonusActionOptions` (`action_as_bonus.<action>`) ; cibles et libellés au catalogue des modificateurs. `turnBudget.ts` : `ownTurnStamp`, `budgetForTurn` (neuf quand le tour du participant change), `spendTurnBudget` (l'action Attaque ouverte par la première attaque), `grantTurnBudget` (action « pas pour la Magie »), `applyCastOption`. `turn_usage.budget` (noyau et changement signé ; la base l'accepte au 165) ; `recordUse` garde le budget. Tests : `actionsModifiees.test.ts` 12/12.
 
-#### ☐ V3.1-165 — La migration et le service : lancer un sort par son activation, compter le budget · `M` · sans modèle IA — **prêt (Opus)**
+#### ☑ V3.1-165 — La migration et le service : lancer un sort par son activation, compter le budget · `M` · sans modèle IA — **prêt (Opus)**
 
 **Modèle conseillé : Opus** — migration, service, sécurité.
 **Dépend de** : 164.
@@ -325,8 +325,12 @@ Attaques multiples, action disponible en action bonus, temps d'incantation chang
 - Réactions (ADR 0075) : un sort préparé à déclencheur est candidat (Bouclier), jouer la réaction dépense l'emplacement.
 
 **Critères d'acceptation**
-- [ ] Intégration : Clerc 3 lance Bénédiction au niveau 2 sur 4 alliés (emplacement dépensé, concentration, +1d4 sur leurs fiches) ; un Guerrier 5 attaque deux fois pour une action, la troisième attaque est signalée.
-- [ ] Bouclier : un gobelin touche un Magicien 1 à 15 contre CA 12, « utiliser » → raté, emplacement de niveau 1 dépensé, +5 CA jusqu'au début de son tour.
+- [x] Intégration : Clerc 3 lance Bénédiction au niveau 2 sur 4 alliés (emplacement dépensé, concentration, +1d4 sur leurs fiches) ; un Guerrier 5 attaque deux fois pour une action, la troisième attaque est signalée. *Bénédiction n'est pas dans le SRD 2024 importé : le test joue un sort de concentration de même forme (Bouclier de la foi, activation de test sur une variante, cibles `3 + slot.level − 1`).*
+- [x] Bouclier : un gobelin touche un Magicien 1 à 15 contre CA 12, « utiliser » → raté, emplacement de niveau 1 dépensé, +5 CA jusqu'au début de son tour. *L'effet qui dure est d'un round (« jusqu'au début de votre prochain tour » n'existe pas encore comme durée).*
+
+*Fait le 7 novembre.* Migration `20261107140000_turn_budget` (appliquée, vérifiée par le test : la joueuse écrit son budget en changement signé). `activateFeature` accepte un sort (`spell` : connu ou accordé ; emplacement ordinaire puis pacte, dépensé avec les ressources en une écriture ; option de lancement ; `slot.level`), refus `spell_not_known`, `no_slot_available`, `unknown_cast_option` ; route Zod. `turnBudgetWrite.ts` compte le budget en combat (activations, attaques d'arme ciblées y compris d'un monstre ; Sursaut d'action « pas pour la Magie » par `grant_budget.not_magic`) ; une réaction jouée par sa fenêtre ne le touche pas. Les sorts de réaction préparés sont candidats aux fenêtres (une lecture groupée par personnage) et dépensent le plus petit emplacement libre à la reprise. L'effet `cast_spell` joue l'activation du sort nommé (sans emplacement si gratuit, sans chaîne). Correctif du noyau trouvé au test : une attaque en dépassement n'ouvre plus d'action Attaque. Vérifié : `actionsModifiees.integration.test.ts` 4/4.
+
+*Reste* : la durée « jusqu'au début de votre prochain tour » ; un sort mineur de réaction ; le coût de `gatherReactors` (une fiche par PJ du combat à chaque attaque d'un monstre, ~2 s à trois PJ) — à mettre en cache si la table le sent (docs/QUOTAS.md).
 
 #### ☐ V3.1-166 — Les écrans : budget du tour, lancer un sort par son activation ; l'éditeur suit · `M` · sans modèle IA — **prêt (Sonnet)**
 

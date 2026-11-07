@@ -62,7 +62,8 @@ export function spendTurnBudget(budget: TurnBudget, kind: TurnSpend, attacksPerA
     case "attack": {
       if (budget.attacks > 0) return { budget: { ...budget, attacks: budget.attacks - 1 }, over: false };
       const r = payAction(budget);
-      return { budget: { ...r.budget, attacks: Math.max(0, attacksPerAction - 1) }, over: r.over };
+      // En dépassement, aucune action Attaque ne s'ouvre : chaque attaque de plus reste signalée.
+      return { budget: { ...r.budget, attacks: r.over ? 0 : Math.max(0, attacksPerAction - 1) }, over: r.over };
     }
   }
 }

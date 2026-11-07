@@ -63,6 +63,9 @@ describe("le budget du tour (compté en combat, sans écriture au passage de tou
     expect(r.over).toBe(true);
     b = r.budget;
     expect(b.action).toBe(-1);
+    // En dépassement, aucune action Attaque ne s'ouvre : la quatrième est signalée aussi.
+    expect(b.attacks).toBe(0);
+    expect(spendTurnBudget(b, "attack", 2).over).toBe(true);
   });
 
   it("Sursaut d'action : une action de plus, mais pas pour l'action Magie", () => {
