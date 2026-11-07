@@ -16,6 +16,8 @@ import {
   type InfosCombatJoueur,
   type VueCombatJoueur,
 } from "@/lib/ui/combatJoueur";
+import { budgetAffiche } from "@/lib/ui/budgetTour";
+import type { TurnBudget } from "@/src/core/rules/turnBudget";
 import InvitationInitiative from "./InvitationInitiative";
 import { useCombatJoueur } from "./useCombatJoueur";
 import { conditionLabel } from "@/src/core/rules/weaponMastery";
@@ -67,7 +69,7 @@ function ModeCombat({ combat, participants, entityId }: { combat: InfosCombatJou
   return (
     <section className="@container flex flex-col gap-3" data-testid="combat-joueur">
       <OrdreDuTour combat={combat} participants={participants} moiId={moi?.id ?? null} />
-      {moi && <Economie combat={combat} rang={moi.order} />}
+      {moi && <Economie combat={combat} rang={moi.order} budget={moi.budget} />}
     </section>
   );
 }
@@ -133,11 +135,13 @@ const CASES: { quelle: keyof EconomieAction; cle: string }[] = [
 ];
 
 /** Trois cases locales (rien n'est enregistré) : remises à zéro quand le tour revient à la joueuse. */
-function Economie({ combat, rang }: { combat: InfosCombatJoueur; rang: number }) {
+function Economie({ combat, rang, budget }: { combat: InfosCombatJoueur; rang: number; budget: TurnBudget | null }) {
   const t = useTranslations("combatJoueur");
   const [etat, setEtat] = useState<EconomieDuTour | null>(null);
   const cle = cleDuCycle(combat, rang);
   const utilisee = economieAffichee(etat, cle);
+  // V3.1-166 : ce que le serveur a compté ce tour-ci. La fiche (attaques par action) n'est pas connue ici : pas de total.
+  const reste = budgetAffiche({ budget, combat, rang, attaquesParAction: null });
   return (
     <div className={`${CARTE} p-3`}>
       <h2 className="mb-2 font-chrome text-sm font-semibold text-ink">{t("economieTitre")}</h2>
@@ -156,6 +160,15 @@ function Economie({ combat, rang }: { combat: InfosCombatJoueur; rang: number })
           </button>
         ))}
       </div>
+      <p className="mt-2 text-xs text-ink-muted" data-testid="budget-tour">
+        {t("budgetReste", { action: reste.action, bonus: reste.bonus })}
+        {reste.attaques && ` · ${t("budgetAttaques", { restantes: reste.attaques.restantes })}`}
+      </p>
+      {reste.depasse && (
+        <p role="status" className="mt-1 text-xs text-accent">
+          {t("budgetDepasse")}
+        </p>
+      )}
     </div>
   );
 }

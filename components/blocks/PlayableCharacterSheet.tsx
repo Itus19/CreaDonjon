@@ -23,6 +23,7 @@ import { SKILL_LABELS_FR } from "@/src/i18n/fr";
 import CharacterSheetHeader from "./CharacterSheetHeader";
 import ActionsTab, { type PreparedSpellView } from "./ActionsTab";
 import type { ActivationsPanelProps } from "./ActivationsPanel";
+import { sortsJouables } from "@/lib/ui/lancerSort";
 import { nombresDeLaFiche } from "@/lib/ui/activationFiche";
 import MagicTab, { type KnownSpellView } from "./MagicTab";
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
@@ -440,6 +441,11 @@ export default function PlayableCharacterSheet({
   const levelIndex = Math.min(totalLevel, XP_LEVEL_THRESHOLDS.length) - 1;
   // V3.1-131 : ressources calculées, capacités jouables et effets viennent de la fiche calculée par le serveur (déjà chargée) ; rien de plus à l'ouverture.
   const fiche = remote?.sheet;
+  /** Le nom d'un sort pour sa carte : celui du sort connu, sinon l'aptitude qui l'accorde, sinon sa clé. */
+  const nomDuSort = (cle: string): string =>
+    sortedKnownSpells.find((k) => k.known.ref.kind === "rule" && k.known.ref.key === cle)?.label ??
+    sheet.grantedSpells.find((g) => g.key === cle)?.label ??
+    cle;
   const activations: ActivationsPanelProps | null = fiche
     ? {
         entityId,
@@ -462,6 +468,14 @@ export default function PlayableCharacterSheet({
           ddDeSort: fiche.spellcasting?.saveDc ?? null,
         }),
         effets: remote?.effects ?? [],
+        sorts: sortsJouables(remote?.spellActivations, nomDuSort),
+        emplacements: {
+          totaux: fiche.spellcasting?.slots ?? {},
+          depenses: runtimeState?.spell_slots_used ?? {},
+          pacte: fiche.spellcasting?.pactSlots ?? null,
+          pacteDepense: runtimeState?.pact_slots_used ?? 0,
+        },
+        actionsBonus: fiche.bonusActionOptions,
         apresActivation: reloadRemote,
         busy,
       }

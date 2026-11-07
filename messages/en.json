@@ -271,7 +271,8 @@
         "move": "Movement",
         "grant_budget": "Action budget",
         "roll": "Free roll",
-        "narrate_hint": "Hint for the narrator"
+        "narrate_hint": "Hint for the narrator",
+        "cast_spell": "Cast a spell"
       },
       "effet": {
         "saving_throw": "Saving throw",
@@ -287,6 +288,7 @@
         "move": "Movement",
         "roll": "Free roll",
         "narrate_hint": "Hint for the narrator",
+        "cast_spell": "Cast a spell",
         "opaque": "Effect kept ({action})"
       },
       "monter": "Up",
@@ -424,12 +426,26 @@
         "reaction": "Reaction",
         "magic": "Magic",
         "free": "Free",
-        "none": "None"
+        "none": "None",
+        "attack": "One attack"
       },
       "choisirRessource": "Choose a resource",
       "ressourceDepensee": "Resource spent",
       "quantite": "Amount (formula)",
       "ajouterDepense": "+ Add a cost",
+      "emplacementDeSort": "Slot cost (base level)",
+      "sansEmplacement": "None (not a spell)",
+      "sortMineur": "Cantrip",
+      "niveauDeSort": "Level {niveau}",
+      "optionsLancement": "Cast options",
+      "optionsLancementAide": "For a feature that changes how a spell is cast (Quickened Spell): each option has a label, a cost and another casting time.",
+      "nouvelleOptionLancement": "New option",
+      "libelleOption": "Option label",
+      "tempsIncantation": "Casting time",
+      "tempsInchange": "Unchanged",
+      "ajouterOptionLancement": "+ Add a cast option",
+      "cleDuSort": "Spell key",
+      "sortGratuit": "No slot (free)",
       "libelleUtilisation": "Use label",
       "retirerUtilisation": "Remove the use",
       "cibles": "Targets",
@@ -1726,7 +1742,10 @@
     "economieTitre": "Action economy",
     "action": "Action",
     "actionBonus": "Bonus action",
-    "reaction": "Reaction"
+    "reaction": "Reaction",
+    "budgetReste": "Left: {action} action, {bonus} bonus action",
+    "budgetAttaques": "{restantes} attack(s) left",
+    "budgetDepasse": "The turn budget is exceeded. The GM decides."
   },
   "reactions": {
     "titreBandeau": "Reaction available",
@@ -1776,6 +1795,19 @@
   "fiche": {
     "activation": {
       "reaction": "Reaction: offered during the roll",
+      "enActionBonus": "As a bonus action: {actions}",
+      "sorts": "Spells",
+      "emplacementDeNiveau": "level {niveau} slot or higher",
+      "sortMineur": "cantrip",
+      "emplacement": "Slot",
+      "choixEmplacement": "Slot for {nom}",
+      "niveauRestants": "Lv {niveau} ({restants})",
+      "aucunEmplacement": "No slot available for this spell.",
+      "optionsLancement": "Cast option",
+      "choixOption": "Cast option for {nom}",
+      "sansOption": "None",
+      "depasseBudget": "The turn budget is exceeded. The GM decides.",
+      "actionBonus": {"dash": "Dash", "disengage": "Disengage", "hide": "Hide", "search": "Search", "use_object": "Use an Object", "dodge": "Dodge"},
       "limiteTour": "once per turn",
       "limiteRound": "once per round",
       "ressources": "Resources · computed from the rules",
@@ -1796,7 +1828,8 @@
         "reaction": "Reaction",
         "magic": "Magic",
         "free": "Free",
-        "none": "No action"
+        "none": "No action",
+        "attack": "One attack"
       },
       "cibles": "up to {n, plural, one {# target} other {# targets}}",
       "surSoi": "on self",

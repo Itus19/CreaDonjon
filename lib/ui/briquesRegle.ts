@@ -25,6 +25,7 @@ import {
   zCoverageBlockData,
   zRuleResourcesBlockData,
   type ActivationBlockData,
+  type CastOption,
   type CoverageBlockData,
   type DurableEffect,
   type DurableEffectDuration,
@@ -90,6 +91,8 @@ export interface BrouillonDepense {
 export interface BrouillonCout {
   action: TypeAction;
   depenses: BrouillonDepense[];
+  /** V3.1-166 : un sort, son niveau de base (0 : sort mineur) ; `null` : pas un coût en emplacement. */
+  emplacement: number | null;
   passage: string | null;
 }
 
@@ -142,6 +145,8 @@ export type CorpsEffet =
   | { type: "move"; zone: TriggerZone }
   | { type: "roll"; libelle: string; formule: string }
   | { type: "narrate_hint"; texte: string }
+  /** V3.1-166 : « Lancer un sort » par son activation (clé du sort) ; `gratuit` : sans emplacement. */
+  | { type: "cast_spell"; sort: string; gratuit: boolean }
   /** Un effet hors du formulaire (dépense de ressource, inspiration) : conservé tel quel. */
   | { type: "opaque"; effet: EffectNode };
 
@@ -178,6 +183,17 @@ export type BrouillonOperation = { uid: string } & (
 );
 export type GenreOperation = RollOperation["op"];
 
+/** V3.1-166 : une option de lancement offerte par une aptitude (Sort accéléré) : un identifiant, un libellé, un coût en ressources, un temps d'incantation changé. */
+export interface BrouillonOptionLancement {
+  uid: string;
+  id: string;
+  label: string;
+  labelOrig: Localise;
+  depenses: BrouillonDepense[];
+  /** `""` : le temps d'incantation ne change pas. */
+  action: "" | NonNullable<CastOption["changes"]["action"]>;
+}
+
 export interface BrouillonVariante {
   uid: string;
   id: string;
@@ -206,6 +222,8 @@ export interface BrouillonActivation {
   operations: BrouillonOperation[];
   /** « Une fois par tour / par round » ; `null` : sans limite. */
   limite: LimiteReaction | null;
+  /** V3.1-166 : les options que cette aptitude offre au lancer d'un sort. */
+  optionsLancement: BrouillonOptionLancement[];
 }
 
 export interface BrouillonLacune {
@@ -268,7 +286,7 @@ export function nouvelleRessource(): BrouillonRessource {
 }
 
 export function nouveauCout(): BrouillonCout {
-  return { action: "action", depenses: [], passage: null };
+  return { action: "action", depenses: [], emplacement: null, passage: null };
 }
 
 export function nouvellesCibles(): BrouillonCibles {
@@ -297,7 +315,12 @@ export function nouvelleActivation(b: Brouillon): BrouillonActivation {
     declencheur: null,
     operations: [],
     limite: null,
+    optionsLancement: [],
   };
+}
+
+export function nouvelleOptionLancement(a: BrouillonActivation): BrouillonOptionLancement {
+  return { uid: nouvelUid(), id: idLibre("option", new Set(a.optionsLancement.map((o) => o.id))), label: "", labelOrig: {}, depenses: [], action: "" };
 }
 
 export function nouvelleVariante(a: BrouillonActivation): BrouillonVariante {
@@ -385,6 +408,7 @@ export const ENTREES_AJOUT = [
   "grant_budget",
   "roll",
   "narrate_hint",
+  "cast_spell",
 ] as const;
 export type EntreeAjout = (typeof ENTREES_AJOUT)[number];
 
@@ -461,6 +485,8 @@ export function nouvelEffet(entree: EntreeAjout, b: Brouillon): BrouillonEffet {
       return { ...base, who: "self", type: "roll", libelle: "", formule: "1d20" };
     case "narrate_hint":
       return { ...base, who: "self", type: "narrate_hint", texte: "" };
+    case "cast_spell":
+      return { ...base, who: "self", type: "cast_spell", sort: "", gratuit: false };
   }
 }
 
@@ -493,7 +519,11 @@ export function deplacerA<T>(liste: readonly T[], i: number, delta: number): T[]
 // --- Blocs -> brouillon ------------------------------------------------------
 
 function coutVersBrouillon(c: ActivationBlockData["activations"][number]["cost"], passage: string | null): BrouillonCout {
-  return { action: c.action, depenses: c.resources.map((r) => ({ cle: r.key, quantite: formatFormulaNode(r.amount) })), passage };
+  return { action: c.action, depenses: depensesVersBrouillon(c.resources), emplacement: c.slot?.level ?? null, passage };
+}
+
+function depensesVersBrouillon(ressources: readonly { key: string; amount: FormulaNode }[]): BrouillonDepense[] {
+  return ressources.map((r) => ({ cle: r.key, quantite: formatFormulaNode(r.amount) }));
 }
 
 function dureeVersBrouillon(d: DurableEffectDuration): BrouillonDuree {
@@ -601,9 +631,8 @@ function effetVersBrouillon(e: EffectNode, chemin: string, ctx: CtxLecture): Bro
       return { ...base, who: "self", type: "roll", libelle: e.label, formule: formatFormulaNode(e.formula) };
     case "narrate_hint":
       return { ...base, who: "self", type: "narrate_hint", texte: e.text };
-    // V3.1-164 : « lancer un sort » se saisira au 166 ; d'ici là il est gardé tel quel, jamais perdu.
     case "cast_spell":
-      return { ...base, who: e.who, type: "opaque", effet: e };
+      return { ...base, who: e.who, type: "cast_spell", sort: e.spell, gratuit: e.free };
     case "apply_effect": {
       const d = ctx.durables.get(e.effect);
       if (!d) return { ...base, who: e.who, type: "opaque", effet: e };
@@ -702,6 +731,14 @@ export function blocsVersBrouillon(blocs: readonly { blockType: string; data: un
         declencheur: a.trigger ? declencheurVersBrouillon(a.trigger) : null,
         operations: (a.roll_operations ?? []).map(operationVersBrouillon),
         limite: a.limit?.per ?? null,
+        optionsLancement: (a.cast_options ?? []).map((o) => ({
+          uid: nouvelUid(),
+          id: o.id,
+          label: libelleFr(o.label),
+          labelOrig: o.label,
+          depenses: depensesVersBrouillon(o.cost.resources),
+          action: o.changes.action ?? "",
+        })),
       };
     });
     b.durablesConserves = [...conserves.values()];
@@ -745,13 +782,29 @@ function nombrePositif(texte: string, contexte: string, ctx: CtxEcriture): numbe
   return n;
 }
 
+function depensesEcrites(depenses: readonly BrouillonDepense[], contexte: string, ctx: CtxEcriture): { key: string; amount: FormulaNode }[] {
+  return depenses.map((d) => {
+    if (d.cle === "") ctx.erreurs.push(`${contexte} : choisis la ressource dépensée`);
+    return { key: d.cle || "?", amount: formule(d.quantite, `${contexte}, quantité`, ctx) };
+  });
+}
+
 function coutEcrit(c: BrouillonCout, contexte: string, ctx: CtxEcriture): ActivationBlockData["activations"][number]["cost"] {
   return {
     action: c.action,
-    resources: c.depenses.map((d) => {
-      if (d.cle === "") ctx.erreurs.push(`${contexte} : choisis la ressource dépensée`);
-      return { key: d.cle || "?", amount: formule(d.quantite, `${contexte}, quantité`, ctx) };
-    }),
+    resources: depensesEcrites(c.depenses, contexte, ctx),
+    ...(c.emplacement !== null ? { slot: { level: c.emplacement } } : {}),
+  };
+}
+
+function optionLancementEcrite(o: BrouillonOptionLancement, contexte: string, ctx: CtxEcriture): CastOption {
+  const nom = o.label.trim();
+  if (nom === "") ctx.erreurs.push(`${contexte} : donne-lui un libellé`);
+  return {
+    id: o.id,
+    label: localise(o.labelOrig, nom),
+    cost: { resources: depensesEcrites(o.depenses, `${contexte}, coût`, ctx) },
+    changes: o.action !== "" ? { action: o.action } : {},
   };
 }
 
@@ -890,6 +943,9 @@ function effetEcrit(e: BrouillonEffet, contexte: string, activationId: string, c
     case "narrate_hint":
       if (e.texte.trim() === "") ctx.erreurs.push(`${ou} : écris l'indication`);
       return { action: "narrate_hint", text: e.texte.trim() || "?" };
+    case "cast_spell":
+      if (e.sort.trim() === "") ctx.erreurs.push(`${ou} : donne la clé du sort`);
+      return { action: "cast_spell", who: e.who, spell: e.sort.trim() || "?", free: e.gratuit };
     case "opaque":
       return e.effet;
   }
@@ -969,6 +1025,9 @@ export function brouillonVersBlocs(b: Brouillon, nomsEtats: Readonly<Record<stri
       ...(a.declencheur ? { trigger: declencheurEcrit(a.declencheur, `${nomAct}, déclencheur`, ctx) } : {}),
       ...(a.declencheur && a.operations.length > 0 ? { roll_operations: a.operations.map((o, k) => operationEcrite(o, `${nomAct}, opération ${k + 1}`, ctx)) } : {}),
       ...(a.limite ? { limit: { per: a.limite } } : {}),
+      ...(a.optionsLancement.length > 0
+        ? { cast_options: a.optionsLancement.map((o, k) => optionLancementEcrite(o, `${nomAct}, option de lancement ${o.label.trim() || k + 1}`, ctx)) }
+        : {}),
       ...(Object.keys(passages).length > 0 ? { passages } : {}),
     };
   });

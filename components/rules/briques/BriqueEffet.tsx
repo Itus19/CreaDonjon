@@ -193,6 +193,15 @@ function ChampsEffet({ effet, maj }: { effet: BrouillonEffet; maj: (c: Partial<C
           <ChampTexte libelle={t("indication")} valeur={effet.texte} onChange={(texte) => maj({ texte })} />
         </div>
       );
+    case "cast_spell":
+      return (
+        <>
+          <ChampTexte libelle={t("cleDuSort")} valeur={effet.sort} onChange={(sort) => maj({ sort })} mecanique />
+          <div className="sm:pt-5">
+            <Checkbox checked={effet.gratuit} onChange={() => maj({ gratuit: !effet.gratuit })} label={t("sortGratuit")} />
+          </div>
+        </>
+      );
     case "opaque":
       return <p className="text-xs text-ink-muted sm:col-span-2 lg:col-span-3">{t("effetOpaque")}</p>;
   }

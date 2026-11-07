@@ -34,7 +34,7 @@ function abjuration(): Brouillon {
   const a = nouvelleActivation(b);
   a.id = "abjure";
   a.label = "Abjuration d'ennemis";
-  a.cout = { action: "magic", depenses: [{ cle: "channel-divinity", quantite: "1" }], passage: "l'action Magie" };
+  a.cout = { action: "magic", depenses: [{ cle: "channel-divinity", quantite: "1" }], emplacement: null, passage: "l'action Magie" };
   a.cibles = { kind: "creature", nombre: "max(1, {ability.cha})", portee: "18", doitVoir: true, passage: "cibler un nombre de créatures" };
   const sauvegarde = nouvelEffet("saving_throw", b);
   if (sauvegarde.type !== "saving_throw") throw new Error("type inattendu");
@@ -240,7 +240,7 @@ function benediction(): Brouillon {
   const a = nouvelleActivation(b);
   a.id = "benediction";
   a.label = "Bénédiction";
-  a.cout = { action: "action", depenses: [], passage: null };
+  a.cout = { action: "action", depenses: [], emplacement: null, passage: null };
   a.cibles = { kind: "creature", nombre: "3", portee: "9", doitVoir: false, passage: null };
   const boost = nouvelEffet("apply_modifier", b);
   if (boost.type !== "apply_boost") throw new Error("type inattendu");
@@ -355,7 +355,7 @@ describe("réactions à un jet (V3.1-161)", () => {
     let a = nouvelleActivation(b);
     a.id = "esquive-instinctive";
     a.label = "Esquive instinctive";
-    a.cout = { action: "reaction", depenses: [], passage: null };
+    a.cout = { action: "reaction", depenses: [], emplacement: null, passage: null };
     a.cibles = { ...a.cibles, kind: "self" };
     a = avecDeclencheur(a, { jet: "damage", sujet: "attack_against_self", moment: "rolled" });
     a = { ...a, operations: [nouvelleOperation("damage_multiplier")] };
@@ -445,5 +445,79 @@ describe("réactions à un jet (V3.1-161)", () => {
     c.activations = [avecDeclencheur({ ...nouvelleActivation(c), label: "Chance" }, { jet: "d20", moment: "natural", naturel: "25" })];
     const r2 = brouillonVersBlocs(c, NOMS_VIDES);
     expect(r2.ok).toBe(false);
+  });
+});
+
+const NOMS_VIDES = {};
+
+describe("V3.1-166 : sort, options de lancement, lancer un sort", () => {
+  it("Bénédiction se saisit sur la fiche du sort : niveau de base 1, aller-retour sans perte", () => {
+    const b = benediction();
+    b.activations[0].cout = { ...b.activations[0].cout, emplacement: 1 };
+    const r = brouillonVersBlocs(b, NOMS_VIDES);
+    expect(r.ok).toBe(true);
+    if (!r.ok || !r.activation) return;
+    expect(r.activation.activations[0].cost.slot).toEqual({ level: 1 });
+    expect(zActivationBlockData.safeParse(r.activation).success).toBe(true);
+    const relu = blocsVersBrouillon([{ blockType: "activation", data: r.activation }]);
+    expect(relu.activations[0].cout.emplacement).toBe(1);
+    const r2 = brouillonVersBlocs(relu, NOMS_VIDES);
+    expect(r2.ok && r2.activation).toEqual(r.activation);
+  });
+
+  it("un sort mineur garde le niveau 0 ; sans emplacement, aucun slot n'est écrit", () => {
+    const b = benediction();
+    b.activations[0].cout = { ...b.activations[0].cout, emplacement: 0 };
+    const mineur = brouillonVersBlocs(b, NOMS_VIDES);
+    expect(mineur.ok && mineur.activation?.activations[0].cost.slot).toEqual({ level: 0 });
+    const sans = brouillonVersBlocs(benediction(), NOMS_VIDES);
+    expect(sans.ok && sans.activation?.activations[0].cost).not.toHaveProperty("slot");
+  });
+
+  it("le coût « une attaque » s'écrit et se relit", () => {
+    const b = benediction();
+    b.activations[0].cout = { ...b.activations[0].cout, action: "attack" };
+    const r = brouillonVersBlocs(b, NOMS_VIDES);
+    expect(r.ok && r.activation?.activations[0].cost.action).toBe("attack");
+    if (!r.ok) return;
+    expect(blocsVersBrouillon([{ blockType: "activation", data: r.activation }]).activations[0].cout.action).toBe("attack");
+  });
+
+  it("une option de lancement (Sort accéléré) fait l'aller-retour : coût en ressources et temps d'incantation changé", () => {
+    const b = benediction();
+    b.activations[0].optionsLancement = [
+      { uid: "o1", id: "twinned", label: "Sort accéléré", labelOrig: { fr: "Sort accéléré", en: "Quickened Spell" }, depenses: [{ cle: "sorcery-points", quantite: "2" }], action: "bonus" },
+    ];
+    const r = brouillonVersBlocs(b, NOMS_VIDES);
+    expect(r.ok).toBe(true);
+    if (!r.ok || !r.activation) return;
+    const o = r.activation.activations[0].cast_options?.[0];
+    expect(o?.changes).toEqual({ action: "bonus" });
+    expect(o?.label.en).toBe("Quickened Spell");
+    const relu = blocsVersBrouillon([{ blockType: "activation", data: r.activation }]);
+    expect(relu.activations[0].optionsLancement[0]).toMatchObject({ id: "twinned", label: "Sort accéléré", action: "bonus", depenses: [{ cle: "sorcery-points", quantite: "2" }] });
+    const r2 = brouillonVersBlocs(relu, NOMS_VIDES);
+    expect(r2.ok && r2.activation).toEqual(r.activation);
+  });
+
+  it("une option sans libellé est refusée avec un message d'écran", () => {
+    const b = benediction();
+    b.activations[0].optionsLancement = [{ uid: "o1", id: "x", label: "", labelOrig: {}, depenses: [], action: "" }];
+    const r = brouillonVersBlocs(b, NOMS_VIDES);
+    expect(r.ok).toBe(false);
+  });
+
+  it("« Lancer un sort » a son formulaire (clé, gratuit) et ne passe plus par le brouillon opaque", () => {
+    const b = brouillonVide();
+    const a = { ...nouvelleActivation(b), label: "Appeler le compagnon" };
+    const e = nouvelEffet("cast_spell", b);
+    expect(e).toMatchObject({ type: "cast_spell", sort: "", gratuit: false });
+    expect(brouillonVersBlocs({ ...b, activations: [{ ...a, effets: [e] }] }, NOMS_VIDES).ok).toBe(false);
+    if (e.type !== "cast_spell") return;
+    const ok = brouillonVersBlocs({ ...b, activations: [{ ...a, effets: [{ ...e, sort: "summon-beast", gratuit: true }] }] }, NOMS_VIDES);
+    expect(ok.ok && ok.activation?.activations[0].effects[0]).toEqual({ action: "cast_spell", who: "self", spell: "summon-beast", free: true });
+    if (!ok.ok) return;
+    const relu = blocsVersBrouillon([{ blockType: "activation", data: ok.activation }]);
+    expect(relu.activations[0].effets[0]).toMatchObject({ type: "cast_spell", sort: "summon-beast", gratuit: true });
   });
 });

@@ -18,6 +18,7 @@ import {
   corpsEnregistrement,
   decouperTexte,
   nouvelEffet,
+  nouvelleOptionLancement,
   nouvelleActivation,
   nouvelleLacune,
   nouvelleRessource,
@@ -383,6 +384,16 @@ function CoutEditeur({ cout, onChange, uid, avecCitation }: { cout: BrouillonCou
         options={ACTIVATION_COSTS.map((a) => ({ value: a, label: t(`actions.${a}`) }))}
         onChange={(v) => onChange({ ...cout, action: (ACTIVATION_COSTS.find((a) => a === v) ?? cout.action) as TypeAction })}
       />
+      <ChampListe
+        libelle={t("emplacementDeSort")}
+        valeur={cout.emplacement === null ? "" : String(cout.emplacement)}
+        options={[
+          { value: "", label: t("sansEmplacement") },
+          { value: "0", label: t("sortMineur") },
+          ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => ({ value: String(n), label: t("niveauDeSort", { niveau: n }) })),
+        ]}
+        onChange={(v) => onChange({ ...cout, emplacement: v === "" ? null : Number(v) })}
+      />
       {cout.depenses.map((d, i) => {
         const options = [{ value: "", label: t("choisirRessource") }, ...ressources];
         if (d.cle !== "" && !ressources.some((r) => r.value === d.cle)) options.push({ value: d.cle, label: d.cle });
@@ -471,18 +482,80 @@ function CarteActivation({ activation: a, onChange, onRemove }: { activation: Br
         </div>
       </div>
 
+      <OptionsLancement activation={a} onChange={onChange} />
+
       <Apercu activation={a} />
     </div>
   );
 }
+
+/** V3.1-166 : les options de lancement qu'une aptitude offre quand on lance un sort (Sort accéléré) : id, libellé, coût, temps d'incantation. */
+function OptionsLancement({ activation: a, onChange }: { activation: BrouillonActivation; onChange: (a: BrouillonActivation) => void }) {
+  const t = useTranslations("regles.briques");
+  const { ressources } = useContexteBriques();
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-xs font-medium uppercase tracking-wide text-ink-muted">{t("optionsLancement")}</span>
+      {a.optionsLancement.length === 0 && <p className="text-xs text-ink-muted">{t("optionsLancementAide")}</p>}
+      {a.optionsLancement.map((o, k) => {
+        const maj = (n: typeof o) => onChange({ ...a, optionsLancement: remplacerA(a.optionsLancement, k, n) });
+        return (
+          <CarteBrique
+            key={o.uid}
+            uid={o.uid}
+            titre={o.label.trim() || t("nouvelleOptionLancement")}
+            actions={
+              <BoutonPetit onClick={() => onChange({ ...a, optionsLancement: retirerA(a.optionsLancement, k) })} danger>
+                {t("retirer")}
+              </BoutonPetit>
+            }
+          >
+            <ChampTexte libelle={t("libelleOption")} valeur={o.label} onChange={(label) => maj({ ...o, label })} />
+            <ChampListe
+              libelle={t("tempsIncantation")}
+              valeur={o.action}
+              options={[{ value: "", label: t("tempsInchange") }, ...OPTIONS_TEMPS.map((x) => ({ value: x, label: t(`actions.${x}`) }))]}
+              onChange={(v) => maj({ ...o, action: OPTIONS_TEMPS.find((x) => x === v) ?? "" })}
+            />
+            {o.depenses.map((d, i) => {
+              const options = [{ value: "", label: t("choisirRessource") }, ...ressources];
+              if (d.cle !== "" && !ressources.some((r) => r.value === d.cle)) options.push({ value: d.cle, label: d.cle });
+              return (
+                <div key={i} className="grid items-start gap-3 sm:grid-cols-[1fr_1fr_auto]">
+                  <ChampListe libelle={t("ressourceDepensee")} valeur={d.cle} options={options} onChange={(cle) => maj({ ...o, depenses: remplacerA(o.depenses, i, { ...d, cle }) })} />
+                  <ChampFormule libelle={t("quantite")} valeur={d.quantite} onChange={(quantite) => maj({ ...o, depenses: remplacerA(o.depenses, i, { ...d, quantite }) })} />
+                  <div className="sm:pt-5">
+                    <BoutonPetit onClick={() => maj({ ...o, depenses: retirerA(o.depenses, i) })} danger>
+                      {t("retirer")}
+                    </BoutonPetit>
+                  </div>
+                </div>
+              );
+            })}
+            <div className="w-fit">
+              <BoutonPetit onClick={() => maj({ ...o, depenses: [...o.depenses, { cle: "", quantite: "1" }] })}>{t("ajouterDepense")}</BoutonPetit>
+            </div>
+          </CarteBrique>
+        );
+      })}
+      <div className="w-fit">
+        <BoutonPetit onClick={() => onChange({ ...a, optionsLancement: [...a.optionsLancement, nouvelleOptionLancement(a)] })}>{t("ajouterOptionLancement")}</BoutonPetit>
+      </div>
+    </div>
+  );
+}
+
+const OPTIONS_TEMPS = ["action", "bonus", "reaction", "magic"] as const;
 
 /** L'aperçu du bouton, tel qu'il apparaîtra sur la fiche (planche « Éditeur »). */
 function Apercu({ activation }: { activation: BrouillonActivation }) {
   const t = useTranslations("regles.briques");
   const { ressources } = useContexteBriques();
   const p = apercuBouton(activation);
+  const emplacement = activation.cout.emplacement;
   const morceaux = [
     t(`actions.${p.action}`),
+    ...(emplacement === null ? [] : [emplacement === 0 ? t("sortMineur") : t("niveauDeSort", { niveau: emplacement })]),
     ...p.depenses.filter((d) => d.cle !== "").map((d) => `${d.quantite} ${ressources.find((r) => r.value === d.cle)?.label ?? d.cle}`),
     p.nombre !== "" ? t("apercuCibles", { nombre: p.nombre }) : t(`genresCible.${p.genre}`),
     ...(p.portee !== "" ? [`${p.portee} m`] : []),
