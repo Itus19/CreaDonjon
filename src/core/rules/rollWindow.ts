@@ -59,13 +59,14 @@ export function outcomeOf(roll: PendingRoll): RollOutcome | null {
 
 /** Stocké sur `combat_participants.turn_usage` (V3.1-160). */
 export const zTurnUsage = z.object({
-  reaction_spent: z.boolean(),
+  /** `"<round>:<turn_index>"` de la dernière réaction dépensée ; elle revient au début du tour suivant du participant. */
+  reaction_at: z.string().nullable(),
   /** `"<règle>:<activation>"` → `"<round>:<turn_index>"` du dernier usage. */
   once: z.record(z.string(), z.string()),
 });
 export type TurnUsage = z.infer<typeof zTurnUsage>;
 
-export const EMPTY_TURN_USAGE: TurnUsage = { reaction_spent: false, once: {} };
+export const EMPTY_TURN_USAGE: TurnUsage = { reaction_at: null, once: {} };
 
 export function turnStamp(round: number, turnIndex: number): string {
   return `${round}:${turnIndex}`;
@@ -84,17 +85,33 @@ function limitAllows(usage: TurnUsage, key: string, per: "turn" | "round", stamp
   return last.split(":")[0] !== stamp.split(":")[0];
 }
 
-/** Note un usage : la réaction dépensée, et la date de l'usage limité. */
+/** Note un usage : la date de la réaction dépensée, et celle de l'usage limité. Hors combat (stamp null), rien. */
 export function recordUse(usage: TurnUsage, p: { key: string | null; reaction: boolean; stamp: string | null }): TurnUsage {
+  if (p.stamp === null) return usage;
   return {
-    reaction_spent: usage.reaction_spent || p.reaction,
-    once: p.key && p.stamp ? { ...usage.once, [p.key]: p.stamp } : usage.once,
+    reaction_at: p.reaction ? p.stamp : usage.reaction_at,
+    once: p.key ? { ...usage.once, [p.key]: p.stamp } : usage.once,
   };
 }
 
-/** Au début de son tour, on retrouve sa réaction ; les usages datés restent (ils se comparent au tour). */
-export function resetReaction(usage: TurnUsage): TurnUsage {
-  return { ...usage, reaction_spent: false };
+function parseStamp(stamp: string): [number, number] {
+  const [r, t] = stamp.split(":").map(Number);
+  return [r, t];
+}
+
+/**
+ * La réaction est-elle revenue ? Elle revient au début du prochain tour du
+ * participant (`ownTurnIndex`) ; s'il n'a pas de place dans l'ordre, au round
+ * suivant. Calculé, jamais remis à zéro par une écriture : le passage de tour
+ * et son annulation n'ont rien à faire.
+ */
+export function reactionAvailable(usage: TurnUsage, stamp: string | null, ownTurnIndex: number | null): boolean {
+  if (stamp === null || usage.reaction_at === null) return true;
+  const [r, t] = parseStamp(usage.reaction_at);
+  const [R, T] = parseStamp(stamp);
+  const own = ownTurnIndex ?? 0;
+  const back: [number, number] = ownTurnIndex !== null && own > t ? [r, own] : [r + 1, own];
+  return R > back[0] || (R === back[0] && T >= back[1]);
 }
 
 // --- qui peut réagir -----------------------------------------------------------
@@ -108,6 +125,8 @@ export interface ReactionCandidate {
   resources: readonly { key: string; max: number }[];
   used: Readonly<Record<string, number>>;
   usage: TurnUsage;
+  /** Sa place dans l'ordre du combat (`turn_index`) ; `null` hors de l'ordre. */
+  ownTurnIndex: number | null;
 }
 
 export interface EligibleReaction {
@@ -202,7 +221,7 @@ export function eligibleReactions(p: {
     if (!requirementMet(c.activation, p.ctx, c.actorId, p.rng)) continue;
     const reaction = c.activation.cost.action === "reaction";
     // Hors combat (stamp null), la réaction n'est pas comptée : il n'y a pas de round.
-    if (reaction && p.stamp !== null && c.usage.reaction_spent) continue;
+    if (reaction && !reactionAvailable(c.usage, p.stamp, c.ownTurnIndex)) continue;
     const key = c.activation.limit ? limitKey(c.ruleKey, c.activation.id) : null;
     if (key && c.activation.limit && !limitAllows(c.usage, key, c.activation.limit.per, p.stamp)) continue;
     if (!canPay(c, numbers, p.rng)) continue;

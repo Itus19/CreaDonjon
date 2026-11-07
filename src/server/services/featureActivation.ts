@@ -1,12 +1,11 @@
 import "server-only";
-import { grantingClassLevel, type BonusDie } from "@/src/core/rules/sheet";
+import type { BonusDie } from "@/src/core/rules/sheet";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
 import type { Locale } from "@/src/i18n/request";
 import { planActivation, type ActivationRefusal } from "@/src/core/rules/activation";
 import { effectToRow, type ActiveDurableEffect } from "@/src/core/rules/durableEffects";
 import type { EffectNode, ResolvedEffect, TriggerActorState, TriggerContext } from "@/src/core/rules/triggers";
-import { ABILITIES } from "@/src/core/rules/abilities";
 import { zActivationBlockData, type ActivationBlockData } from "@/src/core/schemas/rule-blocks/playable";
 import { orderParticipants } from "@/src/server/services/combats";
 import { getActiveCombatForCampaign, listCombatParticipants, type CombatParticipantRow } from "@/src/server/repos/combats";
@@ -22,6 +21,7 @@ import { expireFeatureEffects } from "@/src/server/services/effectExpiry";
 import { applySignedEngineChange, readCombatParticipantsSigned, type EngineChangeLine } from "@/src/server/services/engineSigning";
 import { applyResolvedEffects, targetSaveBonus } from "@/src/server/services/targetedRoll";
 import { serverRng } from "@/src/server/services/rng";
+import { actorNumbersFor } from "@/src/server/services/actorNumbers";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -133,19 +133,7 @@ export async function activateFeature(
 
   // Les nombres de celui qui active : ce que ses formules lisent.
   const sheet = ctx.sheet;
-  // V3.1-133 : `class.level` est le niveau dans la classe qui accorde la règle (Second souffle : « 1d10 + votre niveau de Guerrier »).
-  const classesDuPerso = ctx.characterData.classes.flatMap((c) => (c.class.kind === "rule" ? [{ key: c.class.key, level: c.level }] : []));
-  const source = sheet.features.find((f) => f.key === params.ruleKey)?.source ?? "";
-  const actorNumbers: Record<string, number> = {
-    level: ctx.characterData.classes.reduce((s, c) => s + c.level, 0),
-    "class.level": grantingClassLevel(source, classesDuPerso),
-    proficiency: sheet.proficiencyBonus,
-    ...(sheet.spellcasting ? { spell_save_dc: sheet.spellcasting.saveDc } : {}),
-  };
-  for (const a of ABILITIES) {
-    actorNumbers[`ability.${a}`] = sheet.abilities[a].mod;
-    actorNumbers[`save.${a}`] = sheet.savingThrows[a].mod;
-  }
+  const actorNumbers = actorNumbersFor(ctx, params.ruleKey);
   const actors: Record<string, TriggerActorState> = {
     [params.entityId]: { conditions: [...state.conditions], features: sheet.features.map((f) => f.key), numbers: actorNumbers },
   };

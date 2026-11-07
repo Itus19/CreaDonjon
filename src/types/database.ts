@@ -946,6 +946,7 @@ export type Database = {
           rule_key: string | null
           source_kind: string
           temp_hp: number
+          turn_usage: Json
         }
         Insert: {
           ac?: number | null
@@ -965,6 +966,7 @@ export type Database = {
           rule_key?: string | null
           source_kind: string
           temp_hp?: number
+          turn_usage?: Json
         }
         Update: {
           ac?: number | null
@@ -984,6 +986,7 @@ export type Database = {
           rule_key?: string | null
           source_kind?: string
           temp_hp?: number
+          turn_usage?: Json
         }
         Relationships: [
           {
@@ -2404,6 +2407,54 @@ export type Database = {
           },
         ]
       }
+      roll_windows: {
+        Row: {
+          answers: Json
+          author_user_id: string
+          campaign_id: string
+          choices: Json
+          closed_at: string | null
+          combat_id: string | null
+          created_at: string
+          id: string
+          kind: string
+          label: string
+          resumed_at: string | null
+          status: string
+          view: Json
+        }
+        Insert: {
+          answers?: Json
+          author_user_id: string
+          campaign_id: string
+          choices: Json
+          closed_at?: string | null
+          combat_id?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          label: string
+          resumed_at?: string | null
+          status?: string
+          view: Json
+        }
+        Update: {
+          answers?: Json
+          author_user_id?: string
+          campaign_id?: string
+          choices?: Json
+          closed_at?: string | null
+          combat_id?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          label?: string
+          resumed_at?: string | null
+          status?: string
+          view?: Json
+        }
+        Relationships: []
+      }
       save_requests: {
         Row: {
           ability: string
@@ -2959,6 +3010,10 @@ export type Database = {
         Args: { p_handle_name: string }
         Returns: undefined
       }
+      answer_roll_window: {
+        Args: { p_index: number; p_use: boolean; p_window: string }
+        Returns: Json
+      }
       answer_save_request: {
         Args: { p_natural: number | null; p_request: string; p_total: number }
         Returns: Json
@@ -2971,9 +3026,21 @@ export type Database = {
         Args: { p_payload: string; p_signature: string }
         Returns: Database["public"]["Tables"]["combat_participants"]["Row"][]
       }
+      close_roll_window: {
+        Args: { p_window: string }
+        Returns: Json
+      }
+      engine_open_roll_window: {
+        Args: { p_payload: string; p_signature: string }
+        Returns: string
+      }
       engine_read_combat_effects: {
         Args: { p_payload: string; p_signature: string }
         Returns: Database["public"]["Tables"]["entity_active_effects"]["Row"][]
+      }
+      engine_resume_roll_window: {
+        Args: { p_payload: string; p_signature: string }
+        Returns: Json
       }
       next_session_event_seq: {
         Args: { p_session: string }

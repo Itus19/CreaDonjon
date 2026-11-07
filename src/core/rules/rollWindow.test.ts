@@ -7,8 +7,8 @@ import {
   applyRollOperations,
   eligibleReactions,
   outcomeOf,
+  reactionAvailable,
   recordUse,
-  resetReaction,
   turnStamp,
   wouldChangeOutcome,
   EMPTY_TURN_USAGE,
@@ -108,7 +108,7 @@ const ctx: TriggerContext = {
 const equipes = { gobelin: "monstres", lia: "pj", barde: "pj", guerrier: "pj" };
 
 function candidat(actorId: string, act: Activation, ressources: { key: string; max: number }[] = [], used: Record<string, number> = {}): ReactionCandidate {
-  return { actorId, ruleKey: act.id, activation: act, resources: ressources, used, usage: EMPTY_TURN_USAGE };
+  return { actorId, ruleKey: act.id, activation: act, resources: ressources, used, usage: EMPTY_TURN_USAGE, ownTurnIndex: 2 };
 }
 
 const eligibles = (roll: PendingRoll, candidats: ReactionCandidate[], stamp: string | null = "1:0") =>
@@ -161,7 +161,7 @@ describe("eligibleReactions : qui peut réagir", () => {
   });
 
   it("une réaction déjà dépensée dans le round : plus éligible ; une activation sans coût de réaction l'est encore", () => {
-    const depensee = { ...EMPTY_TURN_USAGE, reaction_spent: true };
+    const depensee = { ...EMPTY_TURN_USAGE, reaction_at: "1:0" };
     expect(eligibles(attaque(), [{ ...candidat("lia", BOUCLIER), usage: depensee }]).choices).toEqual([]);
     const sauv: PendingRoll = { ...attaque(), roller: "guerrier", kind: "save", target: null, ac: null, dc: 15, total: 10 };
     const res = [{ key: "indomitable", max: 1 }];
@@ -246,10 +246,18 @@ describe("wouldChangeOutcome", () => {
 });
 
 describe("le compte de la réaction et du « une fois par tour »", () => {
-  it("dépenser la réaction, puis la retrouver au début de son tour ; les usages par tour restent datés", () => {
+  it("dépenser la réaction la date ; elle revient au début du prochain tour du participant, sans écriture", () => {
     const u = recordUse(EMPTY_TURN_USAGE, { key: "shield:shield", reaction: true, stamp: turnStamp(2, 1) });
-    expect(u).toEqual({ reaction_spent: true, once: { "shield:shield": "2:1" } });
-    expect(resetReaction(u)).toEqual({ reaction_spent: false, once: { "shield:shield": "2:1" } });
+    expect(u).toEqual({ reaction_at: "2:1", once: { "shield:shield": "2:1" } });
+    // Son tour est le 3e (index 2) : dépensée au tour 1 du round 2, elle revient au tour 2 du même round.
+    expect(reactionAvailable(u, "2:1", 2)).toBe(false);
+    expect(reactionAvailable(u, "2:2", 2)).toBe(true);
+    // Son tour est le 1er (index 0) : elle revient au round suivant.
+    expect(reactionAvailable(u, "2:4", 0)).toBe(false);
+    expect(reactionAvailable(u, "3:0", 0)).toBe(true);
+    // Hors combat : rien n'est compté.
+    expect(recordUse(EMPTY_TURN_USAGE, { key: "x", reaction: true, stamp: null })).toEqual(EMPTY_TURN_USAGE);
+    expect(reactionAvailable(u, null, 0)).toBe(true);
   });
 });
 

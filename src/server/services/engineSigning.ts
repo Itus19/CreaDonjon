@@ -3,8 +3,8 @@ import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
-import { canonicalJson, zEngineChange, zEngineReadRequest, type EngineChange } from "@/src/core/rules/engineChange";
-import { applyEngineChange, readCombatEffectsSigned, readCombatSigned, type CombatParticipantRow } from "@/src/server/repos/engineChanges";
+import { canonicalJson, zEngineChange, zEngineReadRequest, zEngineWindowOpen, zEngineWindowResume, type EngineChange } from "@/src/core/rules/engineChange";
+import { applyEngineChange, openRollWindowSigned, readCombatEffectsSigned, readCombatSigned, resumeRollWindowSigned, type CombatParticipantRow } from "@/src/server/repos/engineChanges";
 import type { ActiveEffectRow } from "@/src/server/repos/activeEffects";
 
 type TypedClient = SupabaseClient<Database>;
@@ -66,6 +66,30 @@ export function signEngineRead(params: { campaignId: string; combatId: string; n
   });
   const payload = canonicalJson(request);
   return { payload, signature: createHmac("sha256", key.secret).update(payload, "utf8").digest("hex") };
+}
+
+function signBody(body: unknown, key: EngineSigningKey): { payload: string; signature: string } {
+  const payload = canonicalJson(body);
+  return { payload, signature: createHmac("sha256", key.secret).update(payload, "utf8").digest("hex") };
+}
+
+/** V3.1-160 (ADR 0075) — ouvre une fenêtre de réaction : partie lisible et état figé, signés ensemble. Rend son identifiant. */
+export async function openRollWindow(
+  supabase: TypedClient,
+  params: { campaignId: string; window: { combat_id: string | null; kind: "attack" | "save" | "check" | "damage"; label: string; view: Record<string, unknown>; choices: ({ user_id: string | null } & Record<string, unknown>)[]; state: Record<string, unknown> } },
+): Promise<string> {
+  const key = engineSigningKeyFromEnv();
+  const body = zEngineWindowOpen.parse({ key_id: key.id, nonce: randomUUID(), issued_at: new Date().toISOString(), campaign_id: params.campaignId, window: params.window });
+  const { payload, signature } = signBody(body, key);
+  return openRollWindowSigned(supabase, payload, signature);
+}
+
+/** V3.1-160 — l'état figé d'une fenêtre fermée, une seule fois, pour l'auteur du jet. */
+export async function resumeRollWindowState(supabase: TypedClient, params: { campaignId: string; windowId: string }): Promise<unknown> {
+  const key = engineSigningKeyFromEnv();
+  const body = zEngineWindowResume.parse({ key_id: key.id, nonce: randomUUID(), issued_at: new Date().toISOString(), campaign_id: params.campaignId, window_id: params.windowId });
+  const { payload, signature } = signBody(body, key);
+  return resumeRollWindowSigned(supabase, payload, signature);
 }
 
 /** Lit les participants d'un combat au nom d'un joueur : la base ne les rend qu'à une demande signée. */

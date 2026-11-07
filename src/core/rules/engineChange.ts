@@ -40,7 +40,16 @@ const zEffectAdd = z
 /** V3.1-130 : retirer un effet (ligne de `entity_active_effects`) de la campagne. */
 const zEffectRemove = z.object({ kind: z.literal("effect_remove"), id: z.string().uuid() }).strict();
 
-const zChange = z.union([zStateChange, zEffectAdd, zEffectRemove]);
+/** V3.1-160 (ADR 0075) : le compte de tour d'un participant (réaction datée, usages « une fois par tour »). */
+const zTurnUsageChange = z
+  .object({
+    kind: z.literal("turn_usage"),
+    id: z.string().uuid(),
+    turn_usage: z.object({ reaction_at: z.string().max(40).nullable(), once: z.record(z.string().max(300), z.string().max(40)) }).strict(),
+  })
+  .strict();
+
+const zChange = z.union([zStateChange, zEffectAdd, zEffectRemove, zTurnUsageChange]);
 
 export const zEngineChange = z
   .object({
@@ -83,3 +92,38 @@ export function canonicalJson(value: unknown): string {
   }
   return JSON.stringify(value);
 }
+
+/**
+ * V3.1-160 (ADR 0075) — ouvrir une fenêtre de réaction : la partie lisible et
+ * l'état figé, signés ensemble. La base les range sans rien recalculer ; une
+ * joueuse ne peut ni fabriquer ni retoucher un jet suspendu.
+ */
+export const zEngineWindowOpen = z
+  .object({
+    key_id: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
+    nonce: z.string().uuid(),
+    issued_at: z.string().datetime(),
+    campaign_id: z.string().uuid(),
+    window: z
+      .object({
+        combat_id: z.string().uuid().nullable(),
+        kind: z.enum(["attack", "save", "check", "damage"]),
+        label: z.string().min(1).max(300),
+        view: z.record(z.string(), z.unknown()),
+        choices: z.array(z.object({ user_id: z.string().uuid().nullable() }).passthrough()).min(1).max(20),
+        state: z.record(z.string(), z.unknown()),
+      })
+      .strict(),
+  })
+  .strict();
+
+/** V3.1-160 : reprendre une fenêtre fermée (lire son état figé, une fois). */
+export const zEngineWindowResume = z
+  .object({
+    key_id: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
+    nonce: z.string().uuid(),
+    issued_at: z.string().datetime(),
+    campaign_id: z.string().uuid(),
+    window_id: z.string().uuid(),
+  })
+  .strict();
