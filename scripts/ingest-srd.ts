@@ -49,6 +49,17 @@ interface ConversionFailure {
  * que l'import recree ; ils se rejouent donc apres chaque import (rappel
  * affiche en fin de script).
  */
+/**
+ * V3.1-173 : `--only=Skills,Conditions` n'importe que ces catégories. Rien
+ * d'autre n'est écrit : ni la fiche des règles de personnage, ni la purge
+ * des fiches obsolètes (elle supprimerait tout ce qui n'est pas dans le lot).
+ * Sert à ajouter une catégorie sans réécrire tout le SRD contre la vraie base.
+ */
+const ONLY_CATEGORIES: Set<string> | null = (() => {
+  const arg = process.argv.find((a) => a.startsWith("--only="));
+  return arg ? new Set(arg.slice("--only=".length).split(",").map((c) => c.trim()).filter(Boolean)) : null;
+})();
+
 const CLES_ECRITES_HORS_IMPORT = ["encounter-budget", "commerce", "lifestyle-expenses"];
 const SCRIPTS_A_REJOUER = [
   "scripts/write-encounter-budget-2024.ts",
@@ -416,7 +427,8 @@ const SKIPPED_CATEGORIES = new Set([
   "Levels", // consomme via Classes pour class_progression, pas importe seul
   "Magic-Schools",
   "Proficiencies",
-  "Skills",
+  // V3.1-173 : « Skills » est importé (fiches de règle `skill-<clé>`), pour
+  // que l'assistant de création et la fiche expliquent chaque compétence.
 ]);
 
 // --------------------------------------------------------------------
@@ -1984,6 +1996,7 @@ const CATEGORY_ENTRY_TYPE: Record<string, EntryType> = {
   Traits: "feature",
   "Weapon-Properties": "feature",
   "Weapon-Mastery-Properties": "feature",
+  Skills: "rule",
   Monsters: "monster",
   Conditions: "condition",
   Rules: "rule",
@@ -2170,7 +2183,10 @@ function transformEntry(
       ? `weapon-property-${String(entry.index)}`
       : category === "Weapon-Mastery-Properties"
         ? `weapon-mastery-${String(entry.index)}`
-        : String(entry.index);
+        : // V3.1-173 : même motif — « perception » ou « religion » percuteraient d'autres fiches.
+          category === "Skills"
+          ? `skill-${String(entry.index)}`
+          : String(entry.index);
 
   return {
     entry_key: entryKey,
@@ -2283,6 +2299,7 @@ async function importSrdVersion(config: SrdVersionConfig): Promise<ImportResult>
 
   for (const [category, items] of Object.entries(raw)) {
     if (SKIPPED_CATEGORIES.has(category)) continue;
+    if (ONLY_CATEGORIES && !ONLY_CATEGORIES.has(category)) continue;
     if (!Array.isArray(items)) continue;
     const isMapped = category === "Equipment" || category in CATEGORY_ENTRY_TYPE;
     if (!isMapped) continue;
@@ -2340,15 +2357,21 @@ async function importSrdVersion(config: SrdVersionConfig): Promise<ImportResult>
   }
 
   // V3.1-110 : toute restriction saisie a trouve son sort, avant d'ecrire quoi que ce soit.
-  assertSpellTargetsMerged(config.baseSystem);
-  assertStandardArrayMerged(config.baseSystem);
+  // (Pas avec `--only` : ces contrôles exigent les sorts et les classes du lot entier.)
+  if (!ONLY_CATEGORIES) {
+    assertSpellTargetsMerged(config.baseSystem);
+    assertStandardArrayMerged(config.baseSystem);
+  }
 
   // V3.1-115 : la fiche des regles de personnage, absente du JSON du SRD.
-  const characterRules = characterRulesEntry(config.baseSystem, config.sourceAttribution);
-  seenKeys.add(characterRules.entry_key);
-  counts.rule = (counts.rule ?? 0) + 1;
-  blocksTotal += characterRules.blocks.length;
-  byCategory.push({ category: "CharacterRules", entries: [characterRules] });
+  // V3.1-173 : pas avec `--only`, qui n'écrit que les catégories demandées.
+  if (!ONLY_CATEGORIES) {
+    const characterRules = characterRulesEntry(config.baseSystem, config.sourceAttribution);
+    seenKeys.add(characterRules.entry_key);
+    counts.rule = (counts.rule ?? 0) + 1;
+    blocksTotal += characterRules.blocks.length;
+    byCategory.push({ category: "CharacterRules", entries: [characterRules] });
+  }
 
   for (const { category, entries } of byCategory) {
     if (entries.length === 0) continue;
@@ -2359,6 +2382,13 @@ async function importSrdVersion(config: SrdVersionConfig): Promise<ImportResult>
     if (error) {
       throw new Error(`import_srd_entries (${config.file}, ${category}) : ${error.message}`);
     }
+  }
+
+  // V3.1-173 : avec `--only`, on s'arrête là — surtout pas de purge, qui
+  // supprimerait toutes les fiches absentes de ce lot partiel.
+  if (ONLY_CATEGORIES) {
+    console.log(`  --only : ${[...ONLY_CATEGORIES].join(", ")} ; ni règles de personnage, ni purge.`);
+    return { counts: counts as Record<EntryType, number>, blocksTotal, refsTotal, failures };
   }
 
   // V3.1-115 : nom francais de la fiche des regles de personnage (le SRD ne la nomme pas).
