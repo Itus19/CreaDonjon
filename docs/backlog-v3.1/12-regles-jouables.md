@@ -96,7 +96,7 @@
 
 ---
 
-### ☐ V3.1-133 — Les données : le quotidien du SRD rendu jouable · `M` · sans modèle IA — **prêt (Opus)**
+### ☑ V3.1-133 — Les données : le quotidien du SRD rendu jouable · `M` · sans modèle IA — **prêt (Opus)**
 
 **Modèle conseillé : Opus** — données de règles officielles, import.
 **Dépend de** : 129.
@@ -107,7 +107,11 @@
 - Les règles qui demandent un chantier suivant reçoivent un bloc `coverage` honnête plutôt qu'une activation incomplète.
 
 **Critères d'acceptation**
-- [ ] Après réimport, les trois règles sont « jouables » et se jouent sur une fiche de test (`docs/TESTS.md`, comptes de test).
+- [x] Après réimport, les trois règles sont « jouables » et se jouent sur une fiche de test (`docs/TESTS.md`, comptes de test). *Nuance* : les trois se jouent de bout en bout ; Second souffle porte le badge « Jouable », Fougue et Abjuration d'ennemis « Partielle », parce qu'elles déclarent honnêtement ce qui reste en texte (pas l'action Magie, une fois par tour ; une seule chose par tour pour la cible), comme le demande la seconde puce.
+
+*Fait le 7 novembre.* `data/srd/playable-2024.json` (même motif que `triggers-2024.json`, ADR 0050) : Second souffle (ressource selon la table, soin `1d10 + class.level`), Fougue (`min(2, 1 + floor(niveau / 17))`, +1 action), Conduit divin du Paladin et du Clerc (ressource selon la table ; Perception divine, Étincelle divine et Renvoi des morts-vivants en `coverage`, renvoyés à 134, 137 et 138), Abjuration d'ennemis (activation complète, Effrayé qui dure). `ingest-srd` les lit et les valide (SRD 2024 seulement) ; test de données `srdPlayableData.test.ts` (blocs valides, clés du SRD, citations présentes mot pour mot dans le texte français, usages conformes aux tables). Le contexte d'activation gagne `class.level` (`grantingClassLevel`, partagé avec les maximums de ressources). Réimport fait (1 905 règles, aucun échec), scripts d'auteur rejoués. Vérifié : `srdPlayable.integration.test.ts` 4/4 (monde sur l'officiel, sans variante) ; au navigateur, Brunhild (Guerrière 5, Testeuse A) joue Second souffle et Fougue, Aldric (Paladin 9, MJ) joue Abjuration contre deux gobelins. Corrigé en vérifiant : le résultat d'une capacité sur soi était vide (il affiche maintenant « Brunhild : 26 → 33 PV (Soins : 7) »).
+
+*Reste* : Fougue n'ajoute l'action qu'au journal, la table ne tenant pas de budget d'action en base (choix du 130 ; la boucle du solo le tient) ; sur la page joueur, le MJ ne voit pas les chiffres des sauvegardes de son propre personnage (il les a dans son journal).
 
 ---
 

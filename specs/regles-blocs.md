@@ -142,6 +142,8 @@ Porté par **une** fiche par ruleset, `character-rules` (type `rule`), surcharg�
 
 Chaque brique peut citer le passage du texte de la règle dont elle vient (V3.1-132) : `passage` sur une ressource et sur un effet qui dure, `passages` sur une activation, indexés par le chemin de la brique (`cost`, `targets`, `effects.0`, `effects.0.on_fail.0`, `variants.1.effects.0` — `brickPaths`). Facultatif ; un passage qui ne désigne aucune brique est refusé. L'éditeur écrit ces trois blocs en surcharge dans la variante active du monde (`replace_block` si la règle d'en dessous a le bloc, sinon `add_block` ; `remove_block` pour le retirer), jamais dans l'officielle.
 
+Pour le SRD 2024, ces trois blocs s'écrivent à la main dans `data/srd/playable-2024.json` (V3.1-133), lu et validé par `ingest-srd` comme les déclencheurs : une règle qui attend un chantier suivant y reçoit un bloc `coverage` plutôt qu'une activation incomplète.
+
 Un effet qui dure s'écrit dans `entity_active_effects` (SCHEMA.md §12.2) : par le PJ, ou par l'instance de combat pour toute autre créature (ADR 0073).
 
 ### Blocs requis par type d'entrée

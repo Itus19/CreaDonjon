@@ -5733,3 +5733,17 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Noyau et serveur 
 - **Vérifié** : `rulePlayableBlocks.integration.test.ts` 3/3 ; au navigateur, Abjuration d'ennemis saisie par le MJ et jouée par la Testeuse A.
 
 *Restes* : l'aperçu du bouton montre les formules brutes ; `apply_modifier` ignoré par le tour du moteur (V3.1-134) ; condition d'accès, jetons et modificateurs d'un effet qui dure conservés mais pas saisissables.
+
+---
+
+### V3.1-133 — Les données : le quotidien du SRD rendu jouable (7 novembre)
+
+Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
+
+- **Données** : `data/srd/playable-2024.json` — Second souffle, Fougue, Conduit divin (Paladin, Clerc), Abjuration d'ennemis ; ce qui attend 134, 135, 136, 137 ou 138 va en `coverage`.
+- **Import** : `ingest-srd` lit et valide les trois blocs (SRD 2024 seulement) ; réimport fait, aucun échec.
+- **Moteur** : `class.level` dans le contexte d'activation (`grantingClassLevel`).
+- **Écran** : le résultat d'une capacité sur soi dit ce qui a changé.
+- **Vérifié** : `srdPlayableData.test.ts`, `srdPlayable.integration.test.ts` 4/4, et au navigateur (Testeuse A et MJ, monde isolé sur l'officiel).
+
+*Restes* : Fougue n'ajoute l'action qu'au journal (pas de budget d'action en base à la table) ; Fougue et Abjuration s'affichent « Partielle », honnêtement.

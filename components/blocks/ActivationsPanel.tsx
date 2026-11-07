@@ -338,6 +338,13 @@ function ResultatActivation({
           ×
         </button>
       </div>
+      {/* V3.1-133 : une capacité sur soi (Second souffle, Fougue) dit ce qu'elle a changé ; sans cible, ces phrases ne parlent que du personnage. */}
+      {reponse.targets.length === 0 &&
+        reponse.changes.map((c, i) => (
+          <p key={`c${i}`} className="text-sm text-ink">
+            {c}
+          </p>
+        ))}
       {reponse.targets.length === 0 &&
         reponse.applied.map((a, i) => (
           <p key={i} className="text-sm text-ink">
