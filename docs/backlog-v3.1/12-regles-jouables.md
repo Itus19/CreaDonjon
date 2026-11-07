@@ -249,6 +249,7 @@ Réactions (une fenêtre de choix dans le déroulé d'un jet, côté serveur), o
 - `rollWeaponAttack` sans cible : seulement les réactions sur son propre jet (Chance, automatique ; les autres n'ont pas d'issue sans CA).
 - La boucle du solo : `pending_request` de genre `reaction`, budget de la scène, portée lue dans les zones.
 - `zRollWindowState.origin` gagne `save`, `check`.
+- Reçu du 162 : les activations des aptitudes de sous-classe (Mots cinglants, `lore-cutting-words` : deux activations, dégâts lancés et attaque qui touche, `add_die` négatif du dé `column.class_specific_bardic_inspiration_die`, portée 18 m) et des traits d'espèce (Chance, `luck` : automatique, relance d'un 1) arrivent sur la fiche ; une activation accordée par un jeton (le dé d'Inspiration bardique) est candidate à une réaction. Les formules d'une réaction lisent aussi les colonnes de la classe (`column.*`), comme les ressources.
 
 **Critères d'acceptation**
 - [ ] Intégration : Guerrier 9 rate une sauvegarde demandée → fenêtre ; Indomptable → relance + 9, usage dépensé.
@@ -270,7 +271,7 @@ Réactions (une fenêtre de choix dans le déroulé d'un jet, côté serveur), o
 - [ ] Au téléphone, le bandeau tient à 390 px, ses deux boutons au pouce.
 - [ ] Esquive instinctive se saisit à l'éditeur sans JSON.
 
-#### ☐ V3.1-162 — Les données : les réactions du SRD · `S` · sans modèle IA — **prêt (Opus)**
+#### ☑ V3.1-162 — Les données : les réactions du SRD · `S` · sans modèle IA — **prêt (Opus)**
 
 **Modèle conseillé : Opus** — données officielles, import.
 **Dépend de** : 159, 160.
@@ -278,7 +279,11 @@ Réactions (une fenêtre de choix dans le déroulé d'un jet, côté serveur), o
 - `playable-2024.json` : Esquive instinctive, Mots cinglants, Chance (halfelin), Indomptable, Coup de chance, l'usage du dé d'Inspiration bardique (jeton), Attaque sournoise (au choix sur une touche, une fois par tour). Bouclier attend 136 (un sort joué comme une activation). Réimport, scripts d'auteur rejoués.
 
 **Critères d'acceptation**
-- [ ] Après réimport, ces règles sont « Jouable » (ou « Partielle » pour la seule portée, jusqu'au 137) et se jouent sur une fiche de test.
+- [x] Après réimport, ces règles sont « Jouable » (ou « Partielle » pour la seule portée, jusqu'au 137) et se jouent sur une fiche de test. *Nuance ci-dessous.*
+
+*Fait le 7 novembre.* `playable-2024.json` : Esquive instinctive (réaction, moitié des dégâts ; « Partielle » : « que vous voyez » attend 138), Attaque sournoise (au choix sur ses dégâts, `ceil(niveau / 2)d6`, une fois par tour ; « Partielle » : les conditions d'arme, d'avantage et d'allié au contact attendent 137, la joueuse choisit), Inflexible (ressource 1 → 2 → 3 selon le niveau, relance + niveau de Guerrier) et Coup de chance (un test d20 raté devient 20) — ces deux-là « Jouable », mais ne se déclenchent qu'avec V3.1-163 (sauvegardes et tests). Réimport fait (une relance après un délai dépassé de la base), scripts d'auteur rejoués. Vérifié : `srdReactions.integration.test.ts` 4/4 (les deux réactions sur la fiche d'une Roublarde 5, Esquive instinctive divise les dégâts d'un gobelin, Attaque sournoise ajoute 3d6 une fois par tour, couvertures).
+
+*Reste, passé au V3.1-163* : **Mots cinglants** (une aptitude de sous-classe n'arrive sur la fiche que si elle porte modificateurs ou sorts : `subclassFeatures` ne lui attache pas son bloc d'activation), **Chance** du halfelin (trait d'espèce, même vérification à faire), et **le dé d'Inspiration bardique** reçu (une activation accordée par un jeton n'est pas encore candidate à une réaction). Bouclier attend 136.
 
 ### ☐ V3.1-136 — Les actions modifiées · `M` · sans modèle IA — **à concevoir (Opus)**
 Attaques multiples, action disponible en action bonus, temps d'incantation changé, attaque remplacée, budget réservé à un usage, accorder ou lancer un sort comme effet. Règles visées : 7, 13, 14, 16, 21, 24, 32, 33, 35, 39.
