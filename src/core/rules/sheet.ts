@@ -20,6 +20,7 @@ import { rollDice } from "../dice/roll";
 import { computeSpellSlots } from "./spellSlots";
 import type { Rng } from "../dice/rng";
 import type { ActivationBlockData, RuleResource } from "../schemas/rule-blocks/playable";
+import type { ForcedSaveFailuresBlockData } from "../schemas/rule-blocks/blocks";
 import { evaluate } from "../formula/evaluate";
 import type { FormulaNode } from "../formula/ast";
 import { additiveTerms, containsDice } from "../formula/inspect";
@@ -169,6 +170,8 @@ export interface ResolvedFeature {
   resources?: RuleResource[];
   /** V3.1-131 : « cette règle se joue » (bloc `activation`), pour l'onglet Actions — lu avec les blocs déjà chargés. */
   activation?: ActivationBlockData;
+  /** V3.1-186 : sauvegardes qui échouent d'office contre ses sorts (bloc `forced_save_failures`). */
+  forcedSaveFailures?: ForcedSaveFailuresBlockData["failures"];
 }
 
 /** Un sort accordé par une aptitude, sur la fiche calculée (V3.1-116). DD et attaque se calculent avec SA caractéristique, pas celle de la classe. */

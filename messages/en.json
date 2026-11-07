@@ -251,7 +251,8 @@
           "set_natural": "Set the d20 value",
           "ac_bonus": "AC bonus against the attack",
           "damage_multiplier": "Multiply the damage",
-          "add_damage": "Add damage"
+          "add_damage": "Add damage",
+          "attacker_save": "Attacker's save, or the attack misses"
         },
         "signe": "Direction",
         "ajoute": "Adds",

@@ -192,6 +192,8 @@ export type BrouillonOperation = { uid: string } & (
   | { op: "ac_bonus"; valeur: string }
   | { op: "damage_multiplier"; facteur: string }
   | { op: "add_damage"; formule: string; typeDegats: string }
+  /** V3.1-186 : l'assaillant sauvegarde contre `dd` (formule), sinon l'attaque rate. */
+  | { op: "attacker_save"; carac: "str" | "dex" | "con" | "int" | "wis" | "cha"; dd: string }
 );
 export type GenreOperation = RollOperation["op"];
 
@@ -340,6 +342,7 @@ const MODELES_OPERATIONS: readonly RollOperation[] = [
   { op: "ac_bonus", value: { op: "num", value: 1 } },
   { op: "damage_multiplier", factor: 1 },
   { op: "add_damage", formula: { op: "num", value: 1 } },
+  { op: "attacker_save", ability: "cha", dc: { op: "num", value: 10 } },
 ];
 
 /** Les opérations qui ont un sens sur le jet visé (le noyau en décide : `rollOperationProblems`). */
@@ -372,6 +375,8 @@ export function nouvelleOperation(op: GenreOperation): BrouillonOperation {
       return { ...base, op, facteur: "0.5" };
     case "add_damage":
       return { ...base, op, formule: "1d6", typeDegats: "" };
+    case "attacker_save":
+      return { ...base, op, carac: "cha", dd: "{spell_save_dc}" };
   }
 }
 
@@ -586,6 +591,8 @@ function operationVersBrouillon(o: RollOperation): BrouillonOperation {
       return { ...base, op: "damage_multiplier", facteur: String(o.factor) };
     case "add_damage":
       return { ...base, op: "add_damage", formule: formatFormulaNode(o.formula), typeDegats: o.damage_type ?? "" };
+    case "attacker_save":
+      return { ...base, op: "attacker_save", carac: o.ability, dd: formatFormulaNode(o.dc) };
   }
 }
 
@@ -852,6 +859,8 @@ function operationEcrite(o: BrouillonOperation, contexte: string, ctx: CtxEcritu
       return { op: "damage_multiplier", factor: nombrePositif(o.facteur, `${contexte}, facteur`, ctx) };
     case "add_damage":
       return { op: "add_damage", formula: formule(o.formule, `${contexte}, dégâts`, ctx), ...(o.typeDegats.trim() !== "" ? { damage_type: o.typeDegats.trim() } : {}) };
+    case "attacker_save":
+      return { op: "attacker_save", ability: o.carac, dc: formule(o.dd, `${contexte}, DD`, ctx) };
   }
 }
 

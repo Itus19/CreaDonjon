@@ -124,6 +124,8 @@ export const zRollOperation = z.discriminatedUnion("op", [
   z.object({ op: z.literal("ac_bonus"), value: zFormulaNode }),
   z.object({ op: z.literal("damage_multiplier"), factor: z.number().positive() }),
   z.object({ op: z.literal("add_damage"), formula: zFormulaNode, damage_type: z.string().min(1).optional() }),
+  /** V3.1-186 : l'assaillant fait une sauvegarde contre `dc` ; échec : l'attaque rate (Majesté souveraine). */
+  z.object({ op: z.literal("attacker_save"), ability: z.enum(["str", "dex", "con", "int", "wis", "cha"]), dc: zFormulaNode }),
 ]);
 export type RollOperation = z.infer<typeof zRollOperation>;
 
@@ -135,6 +137,7 @@ const OPERATION_ROLLS: Record<RollOperation["op"], readonly (typeof REACTION_ROL
   ac_bonus: ["attack"],
   damage_multiplier: ["damage"],
   add_damage: ["damage"],
+  attacker_save: ["attack"],
 };
 
 /** V3.1-159 : le refus d'une opération qui n'a pas de sens sur le jet visé (`ac_bonus` sur une sauvegarde). */

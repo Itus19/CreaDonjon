@@ -1,6 +1,13 @@
 import "server-only";
 import { zCharacterRulesBlockData, type CharacterRules, type MulticlassPrerequisites } from "@/src/core/schemas/rule-blocks/characterRules";
-import { zClassBasicsBlockData, zModifiersBlockData, zSubclassFeaturesBlockData, zSubclassSpellcastingBlockData } from "@/src/core/schemas/rule-blocks/blocks";
+import {
+  zClassBasicsBlockData,
+  zForcedSaveFailuresBlockData,
+  zModifiersBlockData,
+  zSubclassFeaturesBlockData,
+  zSubclassSpellcastingBlockData,
+  type ForcedSaveFailuresBlockData,
+} from "@/src/core/schemas/rule-blocks/blocks";
 import { classSpellcastingWithSubclass, subclassSpellcasting } from "@/src/core/rules/subclassSpellcasting";
 import type { ClassSpellcasting } from "@/src/core/rules/sheet";
 import { subclassFeatureEntryKey, subclassFeatures, type SubclassFeatureData } from "@/src/core/rules/subclass";
@@ -236,6 +243,17 @@ interface BatchEntry {
   /** V3.1-163 : ce qu'un trait d'espèce déclare de jouable (Chance du halfelin), pour en faire une aptitude de la fiche. */
   activation?: ActivationBlockData;
   resources?: RuleResource[];
+}
+
+/** V3.1-186 : bloc `forced_save_failures`, validé. Mal formé : aucune règle, mais journalisé. */
+function declaredForcedSaveFailures(data: unknown): ForcedSaveFailuresBlockData["failures"] {
+  if (data === undefined || data === null) return [];
+  const parsed = zForcedSaveFailuresBlockData.safeParse(data);
+  if (!parsed.success) {
+    console.error("Bloc forced_save_failures mal forme, ignore", parsed.error.issues);
+    return [];
+  }
+  return parsed.data.failures;
 }
 
 /** V3.1-185 : bloc `subclass_spellcasting`, validé. Mal formé : ignoré mais journalisé. */
@@ -1005,9 +1023,10 @@ export async function assembleResolvedRuleset(
       // V3.1-129 : ressources déclarées (Conduit divin…), déjà lues avec les blocs de l'aptitude : aucune requête de plus.
       const resources = declaredResources(resolvedFeatureBlocks.get(fk)?.blocksByType.get("resources"));
       const activation = declaredActivation(resolvedFeatureBlocks.get(fk)?.blocksByType.get("activation"));
-      const jouable = { ...(resources.length > 0 ? { resources } : {}), ...(activation ? { activation } : {}) };
+      const echecs = declaredForcedSaveFailures(resolvedFeatureBlocks.get(fk)?.blocksByType.get("forced_save_failures"));
+      const jouable = { ...(resources.length > 0 ? { resources } : {}), ...(activation ? { activation } : {}), ...(echecs.length > 0 ? { forcedSaveFailures: echecs } : {}) };
       // V3.1-163 : une aptitude de sous-classe lue pour ses briques, et qui n'en a pas : rien à ajouter.
-      if (playableOnlyKeys.has(fk) && !activation && resources.length === 0) continue;
+      if (playableOnlyKeys.has(fk) && !activation && resources.length === 0 && echecs.length === 0) continue;
       // V3.1-49 : une aptitude de classe ouvre ses choix au niveau de SA classe (Expertise du roublard au niveau 6 de roublard).
       const featureClassKey = source.startsWith("class:") ? source.slice(6) : undefined;
       addChoices(

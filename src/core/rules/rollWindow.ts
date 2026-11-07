@@ -40,6 +40,10 @@ export interface PendingRoll {
   acBonus: number;
   /** Dégâts : la somme lancée, puis le facteur (Esquive instinctive : ½), arrondi à l'inférieur. */
   damage: { base: number; multiplier: number } | null;
+  /** V3.1-186 : les bonus de sauvegarde de l'auteur du jet, quand une réaction lui en impose une (`attacker_save`). Absent : +0. */
+  rollerSaves?: Partial<Record<"str" | "dex" | "con" | "int" | "wis" | "cha", number>>;
+  /** V3.1-186 : l'attaque rate quoi qu'en dise le dé (sauvegarde de l'assaillant ratée). */
+  forcedMiss?: boolean;
 }
 
 export type RollOutcome = "hit" | "miss" | "success" | "failure";
@@ -47,6 +51,7 @@ export type RollOutcome = "hit" | "miss" | "success" | "failure";
 /** L'issue du jet, refaite par les règles existantes ; `null` si elle ne se sait pas (pas de CA, pas de DD, des dégâts). */
 export function outcomeOf(roll: PendingRoll): RollOutcome | null {
   if (roll.kind === "attack") {
+    if (roll.forcedMiss) return "miss";
     const natural = roll.natural ?? 0;
     const v = attackVerdict({ total: roll.total, isCritical: natural >= roll.critRange, isCriticalFail: natural === 1 }, roll.ac === null ? null : roll.ac + roll.acBonus);
     return v;
@@ -318,6 +323,15 @@ export function applyRollOperations(start: PendingRoll, applications: readonly R
           steps.push({ actorId: a.actorId, op: op.op, value: r.value, dice: [] });
           break;
         }
+        case "attacker_save": {
+          if (roll.kind !== "attack") break;
+          const d = rollDie(20, rng);
+          const total = d + (roll.rollerSaves?.[op.ability] ?? 0);
+          const dc = evaluate(op.dc, a.numbers, rng, "roll").value;
+          if (total < dc) roll = { ...roll, forcedMiss: true };
+          steps.push({ actorId: a.actorId, op: op.op, value: total, dice: [d] });
+          break;
+        }
       }
     }
   }
@@ -332,7 +346,7 @@ function attempt<T>(f: () => T): T | Error {
   }
 }
 
-const RANDOM_OPS: ReadonlySet<RollOperation["op"]> = new Set(["add_die", "reroll", "add_damage"]);
+const RANDOM_OPS: ReadonlySet<RollOperation["op"]> = new Set(["add_die", "reroll", "add_damage", "attacker_save"]);
 
 /**
  * La réaction changerait-elle l'issue ? Seulement quand rien n'est laissé au

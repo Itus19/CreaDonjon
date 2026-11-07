@@ -161,7 +161,17 @@ export async function resumeRollWindow(supabase: TypedClient, params: { windowId
     preset:
       roll.kind === "damage"
         ? { damage: { total: roll.total, ...(resume.damageType ? { type: resume.damageType } : {}) } }
-        : { attack: { total: roll.total, natural: roll.natural ?? 0, critRange: roll.critRange, acBonus: roll.acBonus, label: resume.preset?.label ?? "", expression: resume.preset?.expression ?? "1d20" } },
+        : {
+            attack: {
+              total: roll.total,
+              natural: roll.natural ?? 0,
+              critRange: roll.critRange,
+              acBonus: roll.acBonus,
+              label: resume.preset?.label ?? "",
+              expression: resume.preset?.expression ?? "1d20",
+              ...(roll.forcedMiss ? { forcedMiss: true } : {}),
+            },
+          },
   });
   return { origin: "targeted", result };
 }

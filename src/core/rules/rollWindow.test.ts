@@ -270,3 +270,32 @@ describe("le schéma refuse une opération hors de propos", () => {
     expect(bloc({ trigger: { on: "roll", roll: "save", subject: "self", when: "hit" }, roll_operations: [] }).success).toBe(false);
   });
 });
+
+describe("V3.1-186 — « sauvegarde ou l'attaque rate » (Majesté souveraine)", () => {
+  const MAJESTE = [{ op: "attacker_save" as const, ability: "cha" as const, dc: ref("spell_save_dc") }];
+
+  it("l'assaillant rate sa sauvegarde : la touche devient un raté", () => {
+    // d20 = 5, Cha +1 → 6 contre DD 15.
+    const r = applyRollOperations(attaque({ rollerSaves: { cha: 1 } }), [{ actorId: "lia", operations: MAJESTE, numbers: { spell_save_dc: 15 } }], des(4));
+    expect(r.roll.forcedMiss).toBe(true);
+    expect(outcomeOf(r.roll)).toBe("miss");
+    expect(r.steps).toEqual([{ actorId: "lia", op: "attacker_save", value: 6, dice: [5] }]);
+  });
+
+  it("l'assaillant réussit : l'attaque garde son issue", () => {
+    // d20 = 18, Cha +1 → 19 contre DD 15.
+    const r = applyRollOperations(attaque({ rollerSaves: { cha: 1 } }), [{ actorId: "lia", operations: MAJESTE, numbers: { spell_save_dc: 15 } }], des(17));
+    expect(r.roll.forcedMiss).toBeFalsy();
+    expect(outcomeOf(r.roll)).toBe("hit");
+  });
+
+  it("le dé décide : le moteur ne prédit pas l'issue", () => {
+    expect(wouldChangeOutcome(attaque(), MAJESTE, { spell_save_dc: 15 })).toBeNull();
+  });
+
+  it("n'a de sens que sur une attaque", () => {
+    const r = applyRollOperations({ ...attaque(), kind: "save", dc: 12, ac: null }, [{ actorId: "lia", operations: MAJESTE, numbers: { spell_save_dc: 15 } }], des(0));
+    expect(r.roll.forcedMiss).toBeFalsy();
+    expect(r.steps).toEqual([]);
+  });
+});

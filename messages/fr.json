@@ -252,7 +252,8 @@
           "set_natural": "Fixer la valeur du d20",
           "ac_bonus": "Bonus de CA contre l'attaque",
           "damage_multiplier": "Multiplier les dégâts",
-          "add_damage": "Ajouter des dégâts"
+          "add_damage": "Ajouter des dégâts",
+          "attacker_save": "Sauvegarde de l'assaillant, sinon l'attaque rate"
         },
         "signe": "Sens",
         "ajoute": "Ajoute",

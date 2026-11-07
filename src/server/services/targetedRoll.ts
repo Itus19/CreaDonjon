@@ -11,7 +11,9 @@ import { resolveAttackRoll, resolveDamageRoll, weaponAttackAbilityMod, type Atta
 import type { FiredEvent, ResolvedEffect } from "@/src/core/rules/triggers";
 import { attackVerdict, damageAfterSave, isOutOfFight, monsterSaveBonus, type AttackVerdict } from "@/src/core/rules/targeting";
 import { creatureTypeOf, isValidTarget, type TargetProfile, type TargetRefusal } from "@/src/core/rules/targetRestriction";
-import { zSaveRequestEffect, type SaveRequestEffect } from "@/src/core/rules/saveRequest";
+import { effectsForSaveOutcome, zSaveRequestEffect, type SaveRequestEffect } from "@/src/core/rules/saveRequest";
+import { conditionsWithSource, saveAutomaticallyFails } from "@/src/core/rules/forcedSaveFailure";
+import { listFeatureEffectsForBearers } from "@/src/server/repos/activeEffects";
 import { insertSaveRequest } from "@/src/server/repos/saveRequests";
 import { naturalD20FromTrace } from "@/src/core/dice/rollAttribution";
 import { formatFormulaNode } from "@/src/core/formula/format";
@@ -486,6 +488,8 @@ export interface PresetAttack {
   acBonus: number;
   label: string;
   expression: string;
+  /** V3.1-186 : la sauvegarde de l'assaillant a été ratée pendant la fenêtre : l'attaque rate. */
+  forcedMiss?: boolean;
 }
 
 function attackFromPreset(p: PresetAttack): AttackRollResult {
@@ -737,6 +741,7 @@ export async function resolveTargetedRoll(
     hintsBefore.push(...marques.notes);
     let critRange = 20;
     let acBonus = 0;
+    let attaqueRatee = false;
     if (params.preset?.attack) {
       attack = attackFromPreset(params.preset.attack);
       label = params.preset.attack.label;
@@ -774,6 +779,19 @@ export async function resolveTargetedRoll(
         damage: null,
       };
       const pool = await reactorPool();
+      // V3.1-186 : une réaction impose une sauvegarde à l'assaillant (Majesté souveraine) : ses bonus, lus seulement alors.
+      const sauvegardesImposees = new Set(
+        pool.candidates.flatMap((c) => (c.activation.roll_operations ?? []).flatMap((o) => (o.op === "attacker_save" ? [o.ability] : [])))
+      );
+      if (sauvegardesImposees.size > 0) {
+        const bonus: NonNullable<PendingRoll["rollerSaves"]> = {};
+        for (const carac of sauvegardesImposees) {
+          if (ctx) bonus[carac] = ctx.sheet.savingThrows[carac].mod;
+          else if (actorParticipant)
+            bonus[carac] = (await targetSaveBonus(supabase, { target: actorParticipant, isPc: false, ability: carac, campaignId: params.campaignId, worldId: campaign.worldId, locale: params.locale })).bonus;
+        }
+        roll.rollerSaves = bonus;
+      }
       const r = await interveneOnRoll(supabase, {
         campaignId: params.campaignId,
         combat,
@@ -789,9 +807,13 @@ export async function resolveTargetedRoll(
         acBonus = r.roll.acBonus;
         fait(`${r.automatic.map((e) => e.ruleKey).join(", ")} : le jet devient ${attack.total}.`);
       }
+      if (r.roll.forcedMiss) attaqueRatee = true;
     }
+    if (params.preset?.attack?.forcedMiss) attaqueRatee = true;
     const caEffective = target.ac === null ? null : target.ac + acBonus;
-    verdict = attackVerdict(attack, caEffective);
+    // V3.1-186 : sauvegarde de l'assaillant ratée : l'attaque rate, quoi qu'en dise le dé.
+    verdict = attaqueRatee ? "miss" : attackVerdict(attack, caEffective);
+    if (attaqueRatee) fait(`${actorName} rate sa sauvegarde : l'attaque rate.`);
     fait(
       `${actorName} attaque ${target.label} (${label}) : ${attack.total}` +
         (target.ac === null ? " — CA inconnue, la table tranche" : ` contre CA ${target.ac} — ${verdict === "hit" ? "touché" : "raté"}`) +
@@ -960,11 +982,33 @@ export async function resolveTargetedRoll(
         }),
       };
       amount = cast.damage ? rolledDamage : null;
-      fait(
-        `${actorName} lance ${spellName} sur ${target.label} : sauvegarde ${ability.toUpperCase()} DD ${dc} demandée` +
-          (cast.damage ? ` (dégâts lancés : ${rolledDamage})` : "") +
-          "."
-      );
+      // V3.1-186 : une sauvegarde qui échoue d'office (Mante de majesté : charmée par la lanceuse, contre son injonction).
+      const echecsImposes = ctx.sheet.features.flatMap((f) => f.forcedSaveFailures ?? []);
+      let echecAutomatique = false;
+      if (echecsImposes.length > 0 && !joueur) {
+        const effetsCible = await listFeatureEffectsForBearers(supabase, {
+          campaignId: params.campaignId,
+          entityIds: target.entity_id ? [target.entity_id] : [],
+          participantIds: [target.id],
+        });
+        const etatsCible = Array.isArray(target.conditions) ? target.conditions.filter((c): c is string => typeof c === "string") : [];
+        echecAutomatique = saveAutomaticallyFails(echecsImposes, {
+          spellKey: action.spellKey,
+          casterId: ctx.entityId,
+          targetConditions: conditionsWithSource(etatsCible, effetsCible),
+        });
+      }
+      if (echecAutomatique) {
+        effects.push(...effectsForSaveOutcome(pendingSave.effect, false, targetKey));
+        fait(`${actorName} lance ${spellName} sur ${target.label} : la sauvegarde échoue d'office.` + (cast.damage ? ` Dégâts : ${rolledDamage}.` : ""));
+        pendingSave = null;
+      } else {
+        fait(
+          `${actorName} lance ${spellName} sur ${target.label} : sauvegarde ${ability.toUpperCase()} DD ${dc} demandée` +
+            (cast.damage ? ` (dégâts lancés : ${rolledDamage})` : "") +
+            "."
+        );
+      }
     } else {
       if (!mechanics?.hasFormula) return { ok: false, reason: "no_formula" };
       const cast = await castSpell(supabase, { ...castBase, critical: false });

@@ -44,6 +44,8 @@ export const BLOCK_TYPES = [
   "subclass_features",
   // V3.1-185 : une sous-classe qui lance des sorts (tiers de lanceur).
   "subclass_spellcasting",
+  // V3.1-186 : une sauvegarde qui échoue d'office (Mante de majesté).
+  "forced_save_failures",
   "species_traits",
   "class_equipment",
   "modifiers",
@@ -502,6 +504,22 @@ export const zSubclassSpellcastingBlockData = z.object({
 });
 export type SubclassSpellcastingBlockData = z.infer<typeof zSubclassSpellcastingBlockData>;
 
+// --- forced_save_failures (V3.1-186) ------------------------------------
+// « Une créature Charmée par vous rate automatiquement son jet de sauvegarde
+// contre toute injonction que vous lancez » : des sorts (clés), l'état que
+// porte la cible, et s'il doit venir de la lanceuse. Porté par la fiche de
+// l'aptitude ; le moteur le lit quand la lanceuse impose une sauvegarde.
+export const zForcedSaveFailuresBlockData = z.object({
+  failures: z.array(
+    z.object({
+      spells: z.array(z.string().min(1)).min(1),
+      target_condition: z.string().min(1),
+      imposed_by_caster: z.boolean(),
+    })
+  ),
+});
+export type ForcedSaveFailuresBlockData = z.infer<typeof zForcedSaveFailuresBlockData>;
+
 // --- species_traits (layout: key_values, V1-D7) --------------------------
 // Traits d'une espece, ou d'une sous-espece (ascendance/lignee/heritage
 // choisis au sein d'une espece, ex. "Ascendance draconique (Noir)") : la
@@ -597,6 +615,7 @@ const DATA_SCHEMA_BY_BLOCK_TYPE = {
   condition_effects: zConditionEffectsBlockData,
   subclass_features: zSubclassFeaturesBlockData,
   subclass_spellcasting: zSubclassSpellcastingBlockData,
+  forced_save_failures: zForcedSaveFailuresBlockData,
   species_traits: zSpeciesTraitsBlockData,
   class_equipment: zClassEquipmentBlockData,
   modifiers: zModifiersBlockData,
