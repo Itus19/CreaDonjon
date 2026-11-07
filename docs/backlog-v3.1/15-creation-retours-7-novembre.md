@@ -87,6 +87,7 @@ Ordre conseillé : 162 (les textes en données) avant 161 et 163 ; 167 (noyau) i
 **À faire.**
 - Un script par clé, à blanc par défaut (`--write` pour écrire), dans la lignée de `scripts/fix-descriptions-fr-2024.ts` : dans les blocs des traductions françaises, remplacer un retour à la ligne pris entre deux morceaux de phrase (minuscule, virgule ou apostrophe avant ; minuscule, « ou ( après) par une espace. Les vrais retours (avant un intertitre en gras `**…**`, une liste, une nouvelle phrase en majuscule) restent.
 - Le passage à blanc liste chaque coupure avec son contexte, pour relecture avant d'écrire.
+- Même famille, relevée en préparant V3.1-174 : un texte qui **déborde sur la section suivante** du livre. « Défense de chasseur supérieure » (`hunter-superior-hunters-defense`) contient, après sa dernière phrase, tout le début du chapitre du Roublard (« Roublard Traits de base du Roublard… »). Recenser les textes qui débordent ainsi (fin de chapitre de classe, de section) et les couper à leur dernière phrase.
 - Chercher pourquoi l'import l'a laissé passer (`translate-rules-2024-fr.ts` et voisins) et le corriger, pour qu'une réimportation ne recrée pas le défaut.
 
 **Critères.** Aucune coupure de ce genre ne reste dans les traductions françaises des deux SRD (le script relancé à blanc n'en trouve plus) ; « Initié à la magie » se lit en paragraphes entiers sur la page de la règle et dans l'assistant ; les intertitres en gras gardent leur ligne.
