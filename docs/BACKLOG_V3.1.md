@@ -305,3 +305,9 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-178 | ☑ | sans | Les valeurs passives : Perception, Intuition, Investigation | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-179 | ☐ | sans | Trois sous-classes pour « La Croisade des Ombres », saisies et jouables | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
 | V3.1-180 | ☐ | sans | Textes français : recoller les phrases coupées par la mise en page du PDF | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
+| V3.1-181 | ☐ | sans | Sous-classe maison : rendre jouable chacune de ses aptitudes | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
+| V3.1-182 | ☐ | sans | Formulaire de sous-classe : sorts toujours préparés et lancés sans emplacement | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
+| V3.1-183 | ☐ | sans | Briques : des PV temporaires, et regagner une utilisation en dépensant autre chose | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
+| V3.1-184 | ☐ | sans | Une utilisation proposée après un sort lancé | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
+| V3.1-185 | ☐ | sans | Une sous-classe qui lance des sorts : sa progression d'emplacements | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
+| V3.1-186 | ☐ | sans | « Sauvegarde ou l'attaque rate », et l'échec automatique d'une créature charmée | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
