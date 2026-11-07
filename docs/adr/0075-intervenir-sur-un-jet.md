@@ -73,7 +73,7 @@ Les dés sont lancés par le serveur (règle 8). Le verdict est refait par les f
 
 ### Le compte (combat, à la table)
 
-Une colonne `combat_participants.turn_usage jsonb` contient `{ reaction_spent: boolean, once: { "<règle>:<activation>": "<round>:<turn_index>" } }`. La réaction revient au début du tour du participant : le passage de tour la remet à zéro. Un usage « une fois par tour » compte jusqu'au changement de tour. Les joueurs ne l'écrivent pas : le serveur l'écrit par le changement signé, étendu à ce champ.
+Une colonne `combat_participants.turn_usage jsonb` contient `{ reaction_at: "<round>:<turn_index>" | null, once: { "<règle>:<activation>": "<round>:<turn_index>" } }`. La réaction revient au début du prochain tour du participant : c'est **calculé** depuis la date de la réaction dépensée (`reactionAvailable`), jamais remis à zéro par une écriture, si bien que le passage de tour et son annulation n'ont rien à faire. Un usage « une fois par tour » compte jusqu'au changement de tour. Les joueurs ne l'écrivent pas : le MJ directement, sinon le changement signé, étendu à ce champ.
 
 ## Conséquences
 
@@ -82,3 +82,12 @@ Une colonne `combat_participants.turn_usage jsonb` contient `{ reaction_spent: b
 - **Temps réel** : `roll_windows` est publiée, et écoutée sur le canal unique de la page qui écoute déjà les sauvegardes demandées (`SauvegardesProvider`). Pas de connexion de plus.
 - **Bouclier** est un sort : il attend que lancer un sort soit une activation (136). La brique `ac_bonus` est faite ici.
 - **Découpé** en V3.1-159 (noyau), 160 (migration et service), 161 (écrans et éditeur), 162 (données du SRD).
+
+## Réalisation (V3.1-159 et 160, 7 novembre)
+
+- **La reprise est faite par l'auteur du jet**, pas par le dernier à répondre : la suite s'applique avec les droits qu'il a déjà (le MJ pour l'attaque d'un monstre ; la joueuse pour son propre jet). Ceux qui réagissent n'écrivent que leur réponse. Si l'auteur n'est pas celui qui ferme la fenêtre, son écran la reprend en voyant qu'elle s'est fermée (route `POST …/roll-windows/[id]`, `action: "resume"`).
+- **L'état figé n'est jamais lu par un client** : il vit dans `app_private.roll_window_states`, entre par `engine_open_roll_window` et sort par `engine_resume_roll_window`, deux demandes signées ; la reprise n'a lieu qu'une fois (`resumed_at`). La partie lisible (`roll_windows`) n'a aucune politique d'écriture.
+- **Une réaction utilisée est jouée comme une activation** (`activateFeature` : coûts, ressources, effets, journal), puis ses opérations modifient le jet ; la résolution d'origine est rejouée avec le jet modifié (`preset` de `resolveTargetedRoll`), sans relancer aucun dé ni rouvrir de fenêtre.
+- **Ceux qui peuvent réagir** : chez le MJ, tous les PJ du combat ; chez une joueuse (son attaque ciblée), ses seules fiches.
+- **Branché** : les jets ciblés (attaque, dégâts). Les sauvegardes demandées, les tests, l'attaque sans cible et la boucle du solo passent au V3.1-163.
+

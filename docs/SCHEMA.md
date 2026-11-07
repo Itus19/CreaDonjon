@@ -808,6 +808,23 @@ create table save_requests (
 RLS : lecture par l'auteur, le joueur de la cible et le MJ ; création par le MJ seulement, à son nom (les joueurs ne ciblent pas avant V3.1-104) ; modification et suppression par le MJ. La réponse passe par `public.answer_save_request(p_request, p_natural, p_total)` : le joueur de la cible ou le MJ, une seule fois, n'écrit que le résultat. `public.set_own_participant_vitals(p_participant, p_hp_current, p_temp_hp, p_conditions)` laisse un joueur recopier sur la ligne de combat de SON PJ les PV, PV temporaires et états qu'il change déjà sur sa fiche ; elle renvoie avant/après pour le journal du combat.
 
 **Temps réel (V3.1-112, migration `20261024120000_save_requests_realtime`).** `save_requests` est dans la publication `supabase_realtime`, RLS respectée : chacun reçoit les lignes qu'il peut lire (auteur, joueur de la cible, MJ). Un seul canal par page, filtré sur la campagne (`SauvegardesProvider`) : il tient la liste en attente (pastille du dé encoché, bandeau de la cible, listes du MJ) et l'issue revenue à l'auteur. « Laisser le MJ saisir » n'écrit rien : le bandeau se replie chez la joueuse ; le MJ voit toujours toutes les demandes en attente et peut répondre à chacune.
+
+**Fenêtres de réaction (V3.1-160, ADR 0075, migration `20261107120000_roll_windows`).** Le jet suspendu : si quelqu'un peut réagir, le serveur fige le jet et attend les réponses.
+
+```sql
+create table roll_windows (            -- la partie LISIBLE, sans CA ni DD d'un adversaire
+  id, campaign_id, combat_id null, author_user_id,
+  kind ('attack'|'save'|'check'|'damage'), label (1-300),
+  view jsonb,                          -- { total, natural, outcome } : ce que tout répondant lit
+  choices jsonb,                       -- [{ user_id (null : le MJ), actor_label, rule_key, activation_id, label, changes_outcome }]
+  answers jsonb default '{}',          -- { "<index>": { use, by, at } }
+  status ('pending'|'closed'), created_at, closed_at null, resumed_at null
+);
+create table app_private.roll_window_states (window_id, state jsonb);  -- l'état figé (zRollWindowState), aucun droit client
+alter table combat_participants add column turn_usage jsonb;           -- { reaction_at: "<round>:<turn_index>" | null, once: { "<règle>:<activation>": "<round>:<turn_index>" } }
+```
+
+RLS de `roll_windows` : lecture par l'auteur, les répondants (`choices[].user_id`) et le MJ ; **aucune écriture directe**. Ouverture par `public.engine_open_roll_window` (demande signée, ADR 0041 : partie lisible et état figé entrent ensemble ; l'appelant doit être membre de la campagne). Réponse par `public.answer_roll_window(p_window, p_index, p_use)` (sa propre ligne ; le MJ pour celles d'un participant ; une fois). Fermeture par `public.close_roll_window` (tout le monde a répondu, ou le MJ : « Continuer »). Reprise par `public.engine_resume_roll_window` (demande signée, fenêtre fermée, **auteur du jet seulement, une fois** : `resumed_at`). La réaction revient au début du prochain tour du participant : calculée depuis `reaction_at` (`reactionAvailable`), jamais remise à zéro par une écriture. `turn_usage` s'écrit par le MJ, ou par le changement signé `turn_usage` (`apply_engine_change`). `roll_windows` est publiée en temps réel.
 - Les routes `/api/campaigns/[id]/combats/**` vérifient la même chose avant toute lecture ou écriture (`guardCombatRoute`).
 - En solo, le joueur est propriétaire du monde, donc administrateur : rien ne change pour lui.
 

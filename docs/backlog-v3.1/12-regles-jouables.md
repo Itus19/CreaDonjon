@@ -221,7 +221,7 @@ Réactions (une fenêtre de choix dans le déroulé d'un jet, côté serveur), o
 
 *Fait le 7 novembre.* `playable.ts` : `trigger`, `roll_operations` (activation et variantes), `limit` ; `rollOperationProblems` refuse une opération hors de propos dans la validation du bloc. `src/core/rules/rollWindow.ts` : `PendingRoll`, `outcomeOf` (par `attackVerdict`, plage de critique comprise), `eligibleReactions` (déclencheur, sujet vu du réacteur et de son camp, moment, `requires` via `requirementMet` exporté d'`activation.ts`, ressources, réaction du round, limite), `applyRollOperations` (ordre donné par l'appelant ; dégâts arrondis à l'inférieur après le facteur), `wouldChangeOutcome` (`null` dès qu'un dé décide), `zTurnUsage`, `recordUse`, `resetReaction`, `turnStamp`. `rollWindow.test.ts` : 17 tests. *Reste pour 161* : l'éditeur de briques ne sait pas encore écrire ni relire `trigger`, `roll_operations` et `limit`.
 
-#### ☐ V3.1-160 — La migration et le service : le jet suspendu · `L` · sans modèle IA — **prêt (Opus)**
+#### ☑ V3.1-160 — La migration et le service : le jet suspendu · `L` · sans modèle IA — **prêt (Opus)**
 
 **Modèle conseillé : Opus** — migration, RLS, sécurité (signature).
 **Dépend de** : 159.
@@ -231,9 +231,30 @@ Réactions (une fenêtre de choix dans le déroulé d'un jet, côté serveur), o
 - Routes : `GET /api/campaigns/[campaignId]/roll-windows`, `POST …/roll-windows/[windowId]/answer` (Zod).
 
 **Critères d'acceptation**
-- [ ] Sans réaction possible, un jet s'applique comme avant (les tests existants passent sans changement).
-- [ ] Intégration, base réelle : un monstre touche un Roublard 5 → fenêtre ; « utiliser » Esquive instinctive → moitié des dégâts, réaction dépensée, seconde attaque du round sans fenêtre.
-- [ ] Une joueuse qui retouche l'état figé d'une fenêtre est refusée (signature) ; elle ne lit ni CA ni DD d'un adversaire.
+- [x] Sans réaction possible, un jet s'applique comme avant (les tests existants passent sans changement).
+- [x] Intégration, base réelle : un monstre touche un Roublard 5 → fenêtre ; « utiliser » Esquive instinctive → moitié des dégâts, réaction dépensée, seconde attaque du round sans fenêtre.
+- [x] Une joueuse qui retouche l'état figé d'une fenêtre est refusée (signature) ; elle ne lit ni CA ni DD d'un adversaire.
+
+*Fait le 7 novembre.* Migration `20261107120000_roll_windows` (appliquée et vérifiée) : `roll_windows` (partie lisible, sans écriture directe), `app_private.roll_window_states` (état figé, aucun droit client), `engine_open_roll_window` et `engine_resume_roll_window` (demandes signées ; reprise par l'auteur seulement, une fois), `answer_roll_window`, `close_roll_window`, `combat_participants.turn_usage`, `apply_engine_change` étendu à `turn_usage`, publication temps réel. **Écart avec l'ADR** : l'état figé n'est pas signé dans la ligne, il n'est simplement jamais accessible à un client ; et la reprise est faite par l'auteur du jet (avec ses droits d'aujourd'hui), pas par le dernier à répondre. Le compte de la réaction est daté et son retour calculé (aucune remise à zéro au passage de tour). Service : `rollWindows.ts` (ouverture, ceux qui peuvent réagir), `rollWindowResume.ts` (réponse, « Continuer », reprise : chaque réaction jouée par `activateFeature`, puis `resolveTargetedRoll` rejoué avec le jet modifié) ; `actorNumbers.ts` partagé avec l'activation au clic. Routes `GET …/roll-windows`, `POST …/roll-windows/[windowId]` (`answer`, `continue`, `resume`). Vérifié : `rollWindows.integration.test.ts` 3/3. Docs : `SCHEMA.md`, `SECURITE.md` (registre), `ARCHITECTURE.md`.
+
+*Reste* : seuls les jets ciblés (attaque, dégâts) passent par le point de décision. Les sauvegardes demandées, les tests, l'attaque sans cible et la boucle du solo : V3.1-163.
+
+#### ☐ V3.1-163 — Les autres jets passent par la fenêtre : sauvegardes, tests, attaque sans cible, solo · `M` · sans modèle IA — **prêt (Opus)**
+
+**Modèle conseillé : Opus** — déroulé des jets côté serveur.
+**Dépend de** : 160.
+
+- `answerSaveRequest` : point de décision après le d20 de la sauvegarde (Indomptable, Inspiration bardique reçue, Mots cinglants du MJ sur un monstre… seulement les PJ). La reprise rejoue la réponse avec le jet modifié.
+- `rollAbilityCheck`, `rollSkillCheck` : idem (Coup de chance, Chance). Hors combat : rien n'est compté.
+- `rollWeaponAttack` sans cible : seulement les réactions sur son propre jet (Chance, automatique ; les autres n'ont pas d'issue sans CA).
+- La boucle du solo : `pending_request` de genre `reaction`, budget de la scène, portée lue dans les zones.
+- `zRollWindowState.origin` gagne `save`, `check`.
+
+**Critères d'acceptation**
+- [ ] Intégration : Guerrier 9 rate une sauvegarde demandée → fenêtre ; Indomptable → relance + 9, usage dépensé.
+- [ ] Chance (automatique) relance un 1 naturel sur un test sans fenêtre.
+- [ ] Solo : une réaction se propose dans le tour, et le budget de la scène la compte.
+
 
 #### ☐ V3.1-161 — Les écrans : le bandeau de réaction ; l'éditeur suit · `M` · sans modèle IA — **prêt (Sonnet)**
 
