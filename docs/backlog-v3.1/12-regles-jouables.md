@@ -208,7 +208,7 @@ Réactions (une fenêtre de choix dans le déroulé d'un jet, côté serveur), o
 
 *Conçu le 7 novembre* : [ADR 0075](../adr/0075-intervenir-sur-un-jet.md). Deux choix de l'auteur : le **jet suspendu** (si quelqu'un peut réagir, le serveur fige le jet et attend les réponses ou « Continuer » du MJ ; sinon rien ne change) ; le moteur **compte** la réaction et le « une fois par tour » en combat. Découpé ci-dessous.
 
-#### ☐ V3.1-159 — Le noyau : déclencheur de réaction, opérations sur le jet, une fois par tour · `M` · sans modèle IA — **prêt (Opus)**
+#### ☑ V3.1-159 — Le noyau : déclencheur de réaction, opérations sur le jet, une fois par tour · `M` · sans modèle IA — **prêt (Opus)**
 
 **Modèle conseillé : Opus** — noyau du moteur. Tests d'abord.
 
@@ -217,7 +217,9 @@ Réactions (une fenêtre de choix dans le déroulé d'un jet, côté serveur), o
 - `turnUsage` : lecture et écriture de `{ reaction_spent, once }`, remise à zéro au début du tour du participant.
 
 **Critères d'acceptation**
-- [ ] Tests : Chance relance un 1 sans fenêtre ; Indomptable relance une sauvegarde ratée avec + niveau ; Coup de chance change un test raté en 20 ; Esquive instinctive divise les dégâts ; Mots cinglants retire le dé à un jet ennemi et non allié ; Bouclier (`ac_bonus 5`) change une touche à 17 contre CA 15 en échec, et le dit (`wouldChangeOutcome`) ; une seconde réaction dans le round n'est pas éligible ; Attaque sournoise ne l'est qu'une fois par tour.
+- [x] Tests : Chance relance un 1 sans fenêtre ; Indomptable relance une sauvegarde ratée avec + niveau ; Coup de chance change un test raté en 20 ; Esquive instinctive divise les dégâts ; Mots cinglants retire le dé à un jet ennemi et non allié ; Bouclier (`ac_bonus 5`) change une touche à 17 contre CA 15 en échec, et le dit (`wouldChangeOutcome`) ; une seconde réaction dans le round n'est pas éligible ; Attaque sournoise ne l'est qu'une fois par tour.
+
+*Fait le 7 novembre.* `playable.ts` : `trigger`, `roll_operations` (activation et variantes), `limit` ; `rollOperationProblems` refuse une opération hors de propos dans la validation du bloc. `src/core/rules/rollWindow.ts` : `PendingRoll`, `outcomeOf` (par `attackVerdict`, plage de critique comprise), `eligibleReactions` (déclencheur, sujet vu du réacteur et de son camp, moment, `requires` via `requirementMet` exporté d'`activation.ts`, ressources, réaction du round, limite), `applyRollOperations` (ordre donné par l'appelant ; dégâts arrondis à l'inférieur après le facteur), `wouldChangeOutcome` (`null` dès qu'un dé décide), `zTurnUsage`, `recordUse`, `resetReaction`, `turnStamp`. `rollWindow.test.ts` : 17 tests. *Reste pour 161* : l'éditeur de briques ne sait pas encore écrire ni relire `trigger`, `roll_operations` et `limit`.
 
 #### ☐ V3.1-160 — La migration et le service : le jet suspendu · `L` · sans modèle IA — **prêt (Opus)**
 

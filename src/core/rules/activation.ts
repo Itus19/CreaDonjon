@@ -118,6 +118,21 @@ function conditionRemplie(node: ConditionNode, ctx: TriggerContext, actorId: str
   }
 }
 
+/**
+ * V3.1-159 — `requires` d'une activation, lu avec les nombres de celui qui
+ * active. Une formule invalide ne remplit pas la condition (le refus de
+ * `planActivation` le dira au clic).
+ */
+export function requirementMet(activation: Pick<Activation, "requires">, ctx: TriggerContext, actorId: string, rng: Rng): boolean {
+  if (!activation.requires) return true;
+  try {
+    return conditionRemplie(activation.requires, ctx, actorId, rng);
+  } catch (err) {
+    if (err instanceof Refus) return false;
+    throw err;
+  }
+}
+
 export function planActivation(p: {
   block: ActivationBlockData;
   activationId: string;
