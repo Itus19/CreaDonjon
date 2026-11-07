@@ -24,3 +24,17 @@ export function rechargeTrackers(
   }
   return next;
 }
+
+/**
+ * Ce qu'un repos recharge : les compteurs du bloc `resources` de l'entité, et
+ * les ressources que déclarent les règles (briques « ressource » : Inspiration
+ * bardique, Magie envoûtante…), qui vivent dans le même `runtime_state.resources`.
+ * Sur une même clé, le compteur de l'entité l'emporte.
+ */
+export function trackersForRest(
+  trackers: readonly { id: string; recharge: RechargeKind }[],
+  ruleResources: readonly { key: string; recharge: RechargeKind }[]
+): { id: string; recharge: RechargeKind }[] {
+  const ids = new Set(trackers.map((t) => t.id));
+  return [...trackers, ...ruleResources.filter((r) => !ids.has(r.key)).map((r) => ({ id: r.key, recharge: r.recharge }))];
+}

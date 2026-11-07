@@ -55,7 +55,7 @@ import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
 import { insertDiceRoll, type DiceRollAttribution } from "@/src/server/repos/diceRolls";
 import { listBlocksForRulesetEntry, type RulesetEntryRow } from "@/src/server/repos/rules";
 import { entryNameFrom, findEntryInRulesetChain } from "@/src/server/services/rules";
-import { rechargeTrackers } from "@/src/core/rules/resourceRecharge";
+import { rechargeTrackers, trackersForRest } from "@/src/core/rules/resourceRecharge";
 import { naturalD20FromTrace } from "@/src/core/dice/rollAttribution";
 import { parseFormula } from "@/src/core/formula";
 import { assembleResolvedRuleset, resolveCharacterChoices, resolveEquipmentData, type RemainingChoice } from "@/src/server/services/resolvedRuleset";
@@ -844,7 +844,7 @@ export async function takeShortRest(
     hit_dice: nextHitDice,
     ...healedByRest(state, maxHp, Math.min(maxHp, state.hp.current + hpHealed)),
     // V3.1-113 : une utilisation des `short_rest_one`, et la réserve de pacte entière.
-    resources: rechargeTrackers(ctx.resourcesData?.trackers ?? [], state.resources, "short"),
+    resources: rechargeTrackers(trackersForRest(ctx.resourcesData?.trackers ?? [], ctx.sheet.resources), state.resources, "short"),
     pact_slots_used: 0,
     // V3.1-119 : les choix que ce repos rouvre ; la fiche propose de les refaire, l'ancienne réponse reste.
     choices_to_refresh: [...new Set([...state.choices_to_refresh, ...choicesToRefresh(ctx.openChoices, "short_rest")])],
@@ -915,7 +915,7 @@ export async function takeLongRest(
     // Chaque niveau consomme remis a 0 : `{}` ne remettait rien, la fusion
     // se faisant cle par cle (`clearedSpellSlots`).
     spell_slots_used: clearedSpellSlots(state.spell_slots_used),
-    resources: rechargeTrackers(ctx.resourcesData?.trackers ?? [], state.resources, "long"),
+    resources: rechargeTrackers(trackersForRest(ctx.resourcesData?.trackers ?? [], ctx.sheet.resources), state.resources, "long"),
     pact_slots_used: 0,
     // V3.1-119 : les choix que ce repos rouvre ; la fiche propose de les refaire, l'ancienne réponse reste.
     choices_to_refresh: [...new Set([...state.choices_to_refresh, ...choicesToRefresh(ctx.openChoices, "long_rest")])],

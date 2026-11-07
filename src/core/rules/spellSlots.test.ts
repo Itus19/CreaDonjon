@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { computeSpellSlots, type CastingClass } from "./spellSlots";
-import { rechargeTrackers } from "./resourceRecharge";
+import { rechargeTrackers, trackersForRest } from "./resourceRecharge";
 import { characterSheet, type CharacterBuild, type ClassSpellcasting, type ResolvedRuleset } from "./sheet";
 
 /** Table « Incantateur multiclassé » du SRD 5.2.1, telle que `data/srd/character-rules.json` la porte. */
@@ -121,5 +121,29 @@ describe("recharge des compteurs au repos (V3.1-113)", () => {
 
   it("une Rage déjà entière reste à zéro utilisation", () => {
     expect(rechargeTrackers(trackers, { rage: 0 }, "short").rage).toBe(0);
+  });
+});
+
+describe("ce qu'un repos recharge : compteurs de la fiche et ressources des règles", () => {
+  it("les ressources déclarées par briques se rechargent aussi (Inspiration bardique au repos long)", () => {
+    const liste = trackersForRest(
+      [{ id: "wand", recharge: "dawn" }],
+      [
+        { key: "bardic-inspiration", recharge: "long_rest" },
+        { key: "magie-envoutante", recharge: "long_rest" },
+      ]
+    );
+    expect(rechargeTrackers(liste, { wand: 1, "bardic-inspiration": 1, "magie-envoutante": 1 }, "long")).toEqual({
+      wand: 1,
+      "bardic-inspiration": 0,
+      "magie-envoutante": 0,
+    });
+    expect(rechargeTrackers(liste, { "bardic-inspiration": 1 }, "short")["bardic-inspiration"]).toBe(1);
+  });
+
+  it("une même clé n'est comptée qu'une fois : le compteur de la fiche l'emporte", () => {
+    expect(trackersForRest([{ id: "rage", recharge: "short_rest_one" }], [{ key: "rage", recharge: "long_rest" }])).toEqual([
+      { id: "rage", recharge: "short_rest_one" },
+    ]);
   });
 });
