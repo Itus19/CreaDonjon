@@ -16,5 +16,24 @@
   "bard-jack-of-all-trades": {
     "_regle": "Touche-a-tout (barde, niveau 2) : la moitie du bonus de maitrise, arrondie vers le bas, s'ajoute a tout jet de caracteristique qui n'inclut pas deja la maitrise (V3.1-46).",
     "modifiers": [{ "target": "check", "op": "half_proficiency" }]
+  },
+  "barbarian-unarmored-defense": {
+    "_regle": "Defense sans armure (barbare, niveau 1) : sans armure, CA de base = 10 + DEX + CON ; le bouclier reste permis (V3.1-158, ADR 0074).",
+    "modifiers": [{ "target": "ac.unarmored", "op": "set", "value": { "op": "add", "args": [{ "op": "add", "args": [{ "op": "num", "value": 10 }, { "op": "ref", "name": "ability.dex" }] }, { "op": "ref", "name": "ability.con" }] } }]
+  },
+
+  "monk-unarmored-defense": {
+    "_regle": "Defense sans armure (moine, niveau 1) : sans armure ni bouclier, CA de base = 10 + DEX + SAG (V3.1-158, ADR 0074).",
+    "modifiers": [{ "target": "ac.unarmored_no_shield", "op": "set", "value": { "op": "add", "args": [{ "op": "add", "args": [{ "op": "num", "value": 10 }, { "op": "ref", "name": "ability.dex" }] }, { "op": "ref", "name": "ability.wis" }] } }]
+  },
+
+  "paladin-aura-of-protection": {
+    "_regle": "Aura de protection (paladin, niveau 6) : + mod. CHA (minimum +1) aux jets de sauvegarde. Sur le paladin seulement : les allies a 3 m attendent les auras (V3.1-137), voir playable-2024.json.",
+    "modifiers": [{ "target": "save", "op": "add", "value": { "op": "max", "args": [{ "op": "num", "value": 1 }, { "op": "ref", "name": "ability.cha" }] } }]
+  },
+
+  "champion-improved-critical": {
+    "_regle": "Critique ameliore (Champion, niveau 3) : critique sur 19-20 aux attaques d'arme et a mains nues. L'effet vit dans subclasses-2024.json (aptitude de sous-classe) ; ce bloc dit seulement, sur la fiche de regle, que la regle est jouable (`set` : le doublon est sans effet).",
+    "modifiers": [{ "target": "crit_range.weapon", "op": "set", "value": 19 }]
   }
 }

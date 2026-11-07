@@ -42,6 +42,8 @@ export interface ActiveDurableEffect {
   tokenUsesLeft: number;
   /** Round de pose (journal) ; `null` hors combat. */
   startedRound: number | null;
+  /** V3.1-158 : la clé de la règle qui l'a posé (`source_key`) — ses formules lisent la table de la classe qui accorde cette règle. */
+  ruleKey?: string;
 }
 
 /** Le libellé dans la langue demandée, sinon le français, sinon le premier venu. */
@@ -180,7 +182,12 @@ export function consumeToken(effects: readonly ActiveDurableEffect[], p: { insta
 export function activeEffectsForSheet(effects: readonly ActiveDurableEffect[], bearer: string): ActiveEffect[] {
   return effects
     .filter((e) => e.bearer === bearer)
-    .map((e) => ({ key: e.instanceId, label: e.label, modifiers: resolveDeclaredModifiers(e.modifiers, `effect:${e.instanceId}`, e.label, 7) }));
+    .map((e) => ({
+      key: e.instanceId,
+      label: e.label,
+      modifiers: resolveDeclaredModifiers(e.modifiers, `effect:${e.instanceId}`, e.label, 7),
+      ...(e.ruleKey ? { ruleKey: e.ruleKey } : {}),
+    }));
 }
 
 // ---------------------------------------------------------------------------
@@ -213,6 +220,7 @@ export const zStoredEffectPayload = z.object({
 export interface StoredEffectRow {
   id: string;
   label: string;
+  source_key?: string | null;
   modifiers: unknown;
   duration: unknown;
   payload: unknown;
@@ -249,6 +257,7 @@ export function effectFromRow(row: StoredEffectRow, bearer: string): ActiveDurab
     instanceId: row.id,
     label: row.label,
     bearer,
+    ...(row.source_key ? { ruleKey: row.source_key } : {}),
     modifiers: modifiers.data,
     ...duration.data,
     ...payload.data,

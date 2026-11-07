@@ -161,3 +161,20 @@ describe("nouvelles cibles", () => {
     expect(rollBonus(characterSheet(build("paladin", 6, { cha: 16 }, ["aff"]), rs, [], []), { roll: "damage", kind: "spell", damageType: "fire" }).value).toBe(0);
   });
 });
+
+describe("V3.1-158 : un effet posé par une règle du personnage", () => {
+  it("lit la table de la classe qui accorde la règle (bonus de dégâts de la Rage)", () => {
+    const rs = ruleset({ "barbarian-rage": { source: "class:barbarian", modifiers: [] } });
+    const rage = { key: "fx", label: "Rage", ruleKey: "barbarian-rage", modifiers: resolveDeclaredModifiers([{ target: "damage.weapon.str", op: "add", value: f("{column.class_specific_rage_damage_bonus}") }], "effect:fx", "Rage", 7) };
+    expect(rollBonus(characterSheet(build("barbarian", 9, {}, ["barbarian-rage"]), rs, [], [rage]), { roll: "damage", kind: "weapon", ability: "str" }).value).toBe(3);
+    // Sans la règle (effet venu d'ailleurs) : pas de table, la formule est incalculable et compte 0.
+    const s = characterSheet(build("barbarian", 9, {}, []), rs, [], [rage]);
+    expect(rollBonus(s, { roll: "damage", kind: "weapon", ability: "str" }).value).toBe(0);
+    expect(s.warnings.some((w) => w.kind === "modifier_formula")).toBe(true);
+  });
+
+  it("une réponse de choix en liste se lit aussi", () => {
+    const rs = ruleset({ aff: { source: "class:paladin", modifiers: [{ target: "damage.spell.{choice:k}", op: "add", value: 2 }] } });
+    expect(rollBonus(characterSheet(build("paladin", 6, {}, ["aff"], { k: ["fire"] }), rs, [], []), { roll: "damage", kind: "spell", damageType: "fire" }).value).toBe(2);
+  });
+});

@@ -4,7 +4,7 @@
     "Cle : l'`index` de la sous-classe, puis le debut exact du nom de l'aptitude dans le SRD. `name` remplace un nom mal decoupe par le JSON source.",
     "DONNEE, jamais code : ingest-srd.ts la fusionne dans le bloc `subclass_features`, valide. Suivi par Git (SRD sous CC-BY-4.0, NOTICE.md).",
     "Les niveaux des sorts sont des niveaux de CLASSE.",
-    "Pas encore exprimable (V3.1-134 valeurs calculees, V3.1-137 resistances) : la resistance et le bonus de degats de l'Affinite elementaire, la resistance de la Resilience fielonne, les effets de Proie du chasseur et Tactiques defensives. Le choix est enregistre, l'effet attend son vocabulaire."
+    "Pas encore exprimable (V3.1-137 resistances) : la resistance de l'Affinite elementaire (son bonus de degats est fait, V3.1-158), la resistance de la Resilience fielonne, les effets de Proie du chasseur et Tactiques defensives. Le choix est enregistre, l'effet attend son vocabulaire."
   ],
   "circle-of-the-land": {
     "_regle": "Sorts du Cercle de la Terre : un terrain choisi a chaque repos long, ses sorts toujours prepares selon le niveau de druide.",
@@ -186,7 +186,7 @@
     }
   },
   "draconic-sorcery": {
-    "_regle": "Affinite elementaire : un type de degats parmi acide, froid, feu, foudre, poison, choisi une fois.",
+    "_regle": "Affinite elementaire : un type de degats parmi acide, froid, feu, foudre, poison, choisi une fois ; + mod. CHA aux degats d'un sort de ce type (V3.1-158). La resistance attend V3.1-137.",
     "features": {
       "Elemental Affinity": {
         "grants": [
@@ -205,6 +205,16 @@
                 "lightning",
                 "poison"
               ]
+            }
+          }
+        ],
+        "modifiers": [
+          {
+            "target": "damage.spell.{choice:draconic-sorcery.elemental-affinity.damage-type}",
+            "op": "add",
+            "value": {
+              "op": "ref",
+              "name": "ability.cha"
             }
           }
         ]
@@ -356,6 +366,20 @@
               "max_level": 2,
               "school": "evocation"
             }
+          }
+        ]
+      }
+    }
+  },
+  "champion": {
+    "_regle": "Critique ameliore : critique sur 19 ou 20 aux attaques d'arme et a mains nues (V3.1-158, ADR 0074).",
+    "features": {
+      "Improved Critical": {
+        "modifiers": [
+          {
+            "target": "crit_range.weapon",
+            "op": "set",
+            "value": 19
           }
         ]
       }

@@ -293,6 +293,8 @@ export interface ActiveEffect {
   key: string;
   label: string;
   modifiers: Modifier[];
+  /** V3.1-158 : la règle qui a posé l'effet ; si le personnage la possède, ses formules lisent la table de sa classe (bonus de dégâts de la Rage). */
+  ruleKey?: string;
 }
 
 // --- Fiche derivee (§B7) ----------------------------------------------------
@@ -587,7 +589,9 @@ type Refs = Record<string, number>;
 function resolveChoiceTarget(target: string, choices: CharacterBuild["choices"]): string | null {
   const m = /\{choice:([^}]+)\}/.exec(target);
   if (!m) return target;
-  const v = choices?.[m[1]];
+  // Une réponse est une clé, ou une liste de clés (même lecture que `asKeyList`, choices.ts) : la première compte.
+  const brut = choices?.[m[1]];
+  const v = Array.isArray(brut) ? brut.find((x): x is string => typeof x === "string") : brut;
   return typeof v === "string" && v !== "" ? target.replace(m[0], v.toLowerCase()) : null;
 }
 
@@ -711,7 +715,10 @@ export function characterSheet(
     ...features.flatMap((f) => f.modifiers.map((m): Brut => ({ m, origin: f.source }))),
     ...savingThrowProficiencyMods.map((m): Brut => ({ m })),
     ...equipment.filter((e) => e.equipped).flatMap((e) => e.modifiers.map((m): Brut => ({ m }))),
-    ...activeEffects.flatMap((e) => e.modifiers.map((m): Brut => ({ m }))),
+    ...activeEffects.flatMap((e) => {
+      const origin = e.ruleKey ? features.find((f) => f.key === e.ruleKey)?.source : undefined;
+      return e.modifiers.map((m): Brut => (origin ? { m, origin } : { m }));
+    }),
   ].flatMap((b) => {
     const target = resolveChoiceTarget(b.m.target, build.choices);
     return target === null ? [] : [target === b.m.target ? b : { ...b, m: { ...b.m, target } }];

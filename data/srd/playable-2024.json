@@ -8,15 +8,20 @@
     "La cle est l'`index` de l'entree SRD. Une regle qui attend un chantier suivant recoit un bloc `coverage`",
     "honnete plutot qu'une activation incomplete. Les passages citent le texte francais en base, mot pour mot."
   ],
-
   "fighter-second-wind": {
     "_regle": "Second souffle : action Bonus, recupere 1d10 + niveau de Guerrier PV ; utilisations selon la table (2, 3 au niveau 4, 4 au niveau 10) ; une au repos court, toutes au repos long.",
     "resources": {
       "resources": [
         {
           "key": "second-wind",
-          "label": { "fr": "Second souffle", "en": "Second Wind" },
-          "max": { "op": "ref", "name": "column.class_specific_second_wind_uses" },
+          "label": {
+            "fr": "Second souffle",
+            "en": "Second Wind"
+          },
+          "max": {
+            "op": "ref",
+            "name": "column.class_specific_second_wind_uses"
+          },
           "recharge": "short_rest_one",
           "passage": "Vous en regagnez une utilisation lorsque vous terminez un Repos court, et récupérez tout le quota en terminant un Repos long."
         }
@@ -26,14 +31,43 @@
       "activations": [
         {
           "id": "second-wind",
-          "label": { "fr": "Second souffle", "en": "Second Wind" },
-          "cost": { "action": "bonus", "resources": [{ "key": "second-wind", "amount": { "op": "num", "value": 1 } }] },
-          "targets": { "kind": "self" },
+          "label": {
+            "fr": "Second souffle",
+            "en": "Second Wind"
+          },
+          "cost": {
+            "action": "bonus",
+            "resources": [
+              {
+                "key": "second-wind",
+                "amount": {
+                  "op": "num",
+                  "value": 1
+                }
+              }
+            ]
+          },
+          "targets": {
+            "kind": "self"
+          },
           "effects": [
             {
               "action": "heal",
               "who": "self",
-              "amount": { "op": "add", "args": [{ "op": "dice", "count": 1, "faces": 10 }, { "op": "ref", "name": "class.level" }] }
+              "amount": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "dice",
+                    "count": 1,
+                    "faces": 10
+                  },
+                  {
+                    "op": "ref",
+                    "name": "class.level"
+                  }
+                ]
+              }
             }
           ],
           "variants": null,
@@ -46,19 +80,50 @@
       "durable_effects": []
     }
   },
-
   "fighter-action-surge": {
     "_regle": "Fougue : a votre tour, une action supplementaire, hormis l'action Magie ; une utilisation (deux au niveau 17, une seule par tour) ; tout au repos court ou long.",
     "resources": {
       "resources": [
         {
           "key": "action-surge",
-          "label": { "fr": "Fougue", "en": "Action Surge" },
+          "label": {
+            "fr": "Fougue",
+            "en": "Action Surge"
+          },
           "max": {
             "op": "min",
             "args": [
-              { "op": "num", "value": 2 },
-              { "op": "add", "args": [{ "op": "num", "value": 1 }, { "op": "floor", "args": [{ "op": "div", "args": [{ "op": "ref", "name": "class.level" }, { "op": "num", "value": 17 }] }] }] }
+              {
+                "op": "num",
+                "value": 2
+              },
+              {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "num",
+                    "value": 1
+                  },
+                  {
+                    "op": "floor",
+                    "args": [
+                      {
+                        "op": "div",
+                        "args": [
+                          {
+                            "op": "ref",
+                            "name": "class.level"
+                          },
+                          {
+                            "op": "num",
+                            "value": 17
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
             ]
           },
           "recharge": "short_rest",
@@ -70,32 +135,71 @@
       "activations": [
         {
           "id": "action-surge",
-          "label": { "fr": "Fougue", "en": "Action Surge" },
-          "cost": { "action": "free", "resources": [{ "key": "action-surge", "amount": { "op": "num", "value": 1 } }] },
-          "targets": { "kind": "self" },
-          "effects": [{ "action": "grant_budget", "who": "self", "kind": "action", "amount": { "op": "num", "value": 1 } }],
+          "label": {
+            "fr": "Fougue",
+            "en": "Action Surge"
+          },
+          "cost": {
+            "action": "free",
+            "resources": [
+              {
+                "key": "action-surge",
+                "amount": {
+                  "op": "num",
+                  "value": 1
+                }
+              }
+            ]
+          },
+          "targets": {
+            "kind": "self"
+          },
+          "effects": [
+            {
+              "action": "grant_budget",
+              "who": "self",
+              "kind": "action",
+              "amount": {
+                "op": "num",
+                "value": 1
+              }
+            }
+          ],
           "variants": null,
-          "passages": { "effects.0": "À votre tour, vous pouvez entreprendre une action supplémentaire" }
+          "passages": {
+            "effects.0": "À votre tour, vous pouvez entreprendre une action supplémentaire"
+          }
         }
       ],
       "durable_effects": []
     },
     "coverage": {
       "gaps": [
-        { "text": "hormis l’action Magie", "missing": "Une action accordée réservée à un usage (pas l'action Magie) — chantier des actions modifiées (V3.1-136)." },
-        { "text": "mais seulement une fois par tour", "missing": "Une limite d'usage par tour — chantier « Intervenir sur un jet » (V3.1-135)." }
+        {
+          "text": "hormis l’action Magie",
+          "missing": "Une action accordée réservée à un usage (pas l'action Magie) — chantier des actions modifiées (V3.1-136)."
+        },
+        {
+          "text": "mais seulement une fois par tour",
+          "missing": "Une limite d'usage par tour — chantier « Intervenir sur un jet » (V3.1-135)."
+        }
       ]
     }
   },
-
   "paladin-channel-divinity": {
     "_regle": "Conduit divin (Paladin) : deux utilisations (trois au niveau 11) ; une au repos court, toutes au repos long. Perception divine : action Bonus, 10 minutes, detecte Celestes, Fiélons et Morts-vivants a 18 m.",
     "resources": {
       "resources": [
         {
           "key": "channel-divinity",
-          "label": { "fr": "Conduit divin", "en": "Channel Divinity" },
-          "max": { "op": "ref", "name": "column.class_specific_channel_divinity_charges" },
+          "label": {
+            "fr": "Conduit divin",
+            "en": "Channel Divinity"
+          },
+          "max": {
+            "op": "ref",
+            "name": "column.class_specific_channel_divinity_charges"
+          },
           "recharge": "short_rest_one",
           "passage": "Vous en regagnez une utilisation lorsque vous terminez un Repos court, et récupérez toutes ses utilisations en terminant un Repos long."
         }
@@ -103,19 +207,27 @@
     },
     "coverage": {
       "gaps": [
-        { "text": "vous savez où se trouve toute créature des types précités dans un rayon de 18 m", "missing": "Perception divine : savoir où sont les créatures d'un type — chantier du modèle du monde (V3.1-138)." }
+        {
+          "text": "vous savez où se trouve toute créature des types précités dans un rayon de 18 m",
+          "missing": "Perception divine : savoir où sont les créatures d'un type — chantier du modèle du monde (V3.1-138)."
+        }
       ]
     }
   },
-
   "cleric-channel-divinity": {
     "_regle": "Conduit divin (Clerc) : utilisations selon la table (2, 3 au niveau 6, 4 au niveau 18) ; une au repos court, toutes au repos long. Etincelle divine et Renvoi des morts-vivants.",
     "resources": {
       "resources": [
         {
           "key": "channel-divinity",
-          "label": { "fr": "Conduit divin", "en": "Channel Divinity" },
-          "max": { "op": "ref", "name": "column.class_specific_channel_divinity_charges" },
+          "label": {
+            "fr": "Conduit divin",
+            "en": "Channel Divinity"
+          },
+          "max": {
+            "op": "ref",
+            "name": "column.class_specific_channel_divinity_charges"
+          },
           "recharge": "short_rest_one",
           "passage": "Vous en regagnez une utilisation lorsque vous terminez un Repos court, et récupérez tout le quota en terminant un Repos long."
         }
@@ -123,24 +235,58 @@
     },
     "coverage": {
       "gaps": [
-        { "text": "Vous ajoutez un d8 lorsque vous atteignez les niveaux 7 (2d8), 13 (3d8) et 18 (4d8) de Clerc.", "missing": "Étincelle divine : un nombre de dés qui dépend du niveau — chantier des valeurs calculées (V3.1-134)." },
-        { "text": "Chaque Mort-vivant de votre choix dans un rayon de 9 m effectue un jet de sauvegarde de Sagesse.", "missing": "Renvoi des morts-vivants : des cibles filtrées par type de créature — chantier des conditions de jeu (V3.1-137)." }
+        {
+          "text": "Vous ajoutez un d8 lorsque vous atteignez les niveaux 7 (2d8), 13 (3d8) et 18 (4d8) de Clerc.",
+          "missing": "Étincelle divine : un nombre de dés qui dépend du niveau — chantier des valeurs calculées (V3.1-134)."
+        },
+        {
+          "text": "Chaque Mort-vivant de votre choix dans un rayon de 9 m effectue un jet de sauvegarde de Sagesse.",
+          "missing": "Renvoi des morts-vivants : des cibles filtrées par type de créature — chantier des conditions de jeu (V3.1-137)."
+        }
       ]
     }
   },
-
   "paladin-abjure-foes": {
     "_regle": "Abjuration d'ennemis : action Magie et une utilisation de Conduit divin ; max(1, mod. CHA) creatures vues a 18 m ; JS de Sagesse contre le DD des sorts, sinon Effraye 1 minute ou jusqu'a des degats ; une seule chose par tour tant qu'Effrayee.",
     "activation": {
       "activations": [
         {
           "id": "abjure-foes",
-          "label": { "fr": "Abjuration d’ennemis", "en": "Abjure Foes" },
-          "cost": { "action": "magic", "resources": [{ "key": "channel-divinity", "amount": { "op": "num", "value": 1 } }] },
+          "label": {
+            "fr": "Abjuration d’ennemis",
+            "en": "Abjure Foes"
+          },
+          "cost": {
+            "action": "magic",
+            "resources": [
+              {
+                "key": "channel-divinity",
+                "amount": {
+                  "op": "num",
+                  "value": 1
+                }
+              }
+            ]
+          },
           "targets": {
             "kind": "creature",
-            "count": { "op": "max", "args": [{ "op": "num", "value": 1 }, { "op": "ref", "name": "ability.cha" }] },
-            "range": { "value": 18, "unit": "m" },
+            "count": {
+              "op": "max",
+              "args": [
+                {
+                  "op": "num",
+                  "value": 1
+                },
+                {
+                  "op": "ref",
+                  "name": "ability.cha"
+                }
+              ]
+            },
+            "range": {
+              "value": 18,
+              "unit": "m"
+            },
             "must_see": true
           },
           "effects": [
@@ -148,8 +294,17 @@
               "action": "saving_throw",
               "who": "target",
               "ability": "wis",
-              "dc": { "op": "ref", "name": "spell_save_dc" },
-              "on_fail": [{ "action": "apply_effect", "who": "target", "effect": "abjure-foes-frightened" }]
+              "dc": {
+                "op": "ref",
+                "name": "spell_save_dc"
+              },
+              "on_fail": [
+                {
+                  "action": "apply_effect",
+                  "who": "target",
+                  "effect": "abjure-foes-frightened"
+                }
+              ]
             }
           ],
           "variants": null,
@@ -163,12 +318,25 @@
       "durable_effects": [
         {
           "id": "abjure-foes-frightened",
-          "label": { "fr": "Effrayé (Abjuration d’ennemis)", "en": "Frightened (Abjure Foes)" },
-          "conditions": ["frightened"],
+          "label": {
+            "fr": "Effrayé (Abjuration d’ennemis)",
+            "en": "Frightened (Abjure Foes)"
+          },
+          "conditions": [
+            "frightened"
+          ],
           "modifiers": [],
-          "duration": { "unit": "minute", "amount": 1 },
+          "duration": {
+            "unit": "minute",
+            "amount": 1
+          },
           "concentration": false,
-          "ends_on": [{ "event": "damage_taken", "subject": "bearer" }],
+          "ends_on": [
+            {
+              "event": "damage_taken",
+              "subject": "bearer"
+            }
+          ],
           "token": null,
           "passage": "subir l’état Effrayé pendant 1 minute ou jusqu’à ce qu’elle subisse des dégâts"
         }
@@ -176,7 +344,201 @@
     },
     "coverage": {
       "gaps": [
-        { "text": "la cible ne peut faire qu’une seule des choses suivantes à son tour : se déplacer, entreprendre une action ou une action Bonus", "missing": "Restreindre le tour d'une créature à une seule chose — chantier des actions modifiées (V3.1-136). Rappelée sur la cible ; le MJ l'applique." }
+        {
+          "text": "la cible ne peut faire qu’une seule des choses suivantes à son tour : se déplacer, entreprendre une action ou une action Bonus",
+          "missing": "Restreindre le tour d'une créature à une seule chose — chantier des actions modifiées (V3.1-136). Rappelée sur la cible ; le MJ l'applique."
+        }
+      ]
+    }
+  },
+  "barbarian-rage": {
+    "_regle": "Rage (barbare, niveau 1) : action Bonus, usages selon la table (une au repos court, toutes au repos long) ; bonus de degats de la table aux attaques de Force, avantage aux tests et sauvegardes de Force, 10 minutes au plus.",
+    "resources": {
+      "resources": [
+        {
+          "key": "rage",
+          "label": {
+            "fr": "Rage",
+            "en": "Rage"
+          },
+          "max": {
+            "op": "ref",
+            "name": "column.class_specific_rage_count"
+          },
+          "recharge": "short_rest_one",
+          "passage": "Vous en regagnez une utilisation lorsque vous terminez un Repos court, et récupérez tout le quota en terminant un Repos long."
+        }
+      ]
+    },
+    "activation": {
+      "activations": [
+        {
+          "id": "rage",
+          "label": {
+            "fr": "Rage",
+            "en": "Rage"
+          },
+          "cost": {
+            "action": "bonus",
+            "resources": [
+              {
+                "key": "rage",
+                "amount": {
+                  "op": "num",
+                  "value": 1
+                }
+              }
+            ]
+          },
+          "targets": {
+            "kind": "self"
+          },
+          "effects": [
+            {
+              "action": "apply_effect",
+              "who": "self",
+              "effect": "rage"
+            }
+          ],
+          "variants": null,
+          "passages": {
+            "cost": "Vous pouvez entrer en Rage, par une action Bonus"
+          }
+        }
+      ],
+      "durable_effects": [
+        {
+          "id": "rage",
+          "label": {
+            "fr": "Rage",
+            "en": "Rage"
+          },
+          "conditions": [],
+          "modifiers": [
+            {
+              "target": "damage.weapon.str",
+              "op": "add",
+              "value": {
+                "op": "ref",
+                "name": "column.class_specific_rage_damage_bonus"
+              }
+            },
+            {
+              "target": "check.str",
+              "op": "advantage"
+            },
+            {
+              "target": "save.str",
+              "op": "advantage"
+            }
+          ],
+          "duration": {
+            "unit": "minute",
+            "amount": 10
+          },
+          "concentration": false,
+          "ends_on": [
+            {
+              "event": "dismissed"
+            }
+          ],
+          "token": null,
+          "passage": "Vous avez l’Avantage aux tests de Force et aux jets de sauvegarde de Force."
+        }
+      ]
+    },
+    "coverage": {
+      "gaps": [
+        {
+          "text": "Vous bénéficiez de la Résistance aux dégâts contondants, perforants et tranchants.",
+          "missing": "Résistances aux dégâts — chantier des conditions de jeu (V3.1-137)."
+        },
+        {
+          "text": "La Rage persiste jusqu’à la fin de votre tour suivant",
+          "missing": "Une durée prolongée de tour en tour par une attaque — l'effet dure 10 minutes au plus et se retire au choix (V3.1-136)."
+        },
+        {
+          "text": "Vous ne pouvez pas maintenir votre Concentration ni lancer de sorts.",
+          "missing": "Interdire une action (sorts, concentration) — chantier des actions modifiées (V3.1-136)."
+        },
+        {
+          "text": "si vous ne portez pas d’armure lourde",
+          "missing": "Une condition sur l'équipement (et la fin en enfilant une armure lourde) — V3.1-137."
+        }
+      ]
+    }
+  },
+  "paladin-aura-of-protection": {
+    "_regle": "Aura de protection : le bonus du paladin lui-meme est dans modifiers-2024.json ; ses allies a 3 m attendent les auras.",
+    "coverage": {
+      "gaps": [
+        {
+          "text": "Vous-même et vos alliés dans l’aura recevez un bonus aux jets de sauvegarde égal à votre modificateur de Charisme",
+          "missing": "Le bonus aux alliés dans un rayon de 3 m — chantier des auras et distances (V3.1-137). Le paladin reçoit le sien."
+        },
+        {
+          "text": "Cette aura est inactive tant que vous subissez l’état Neutralisé.",
+          "missing": "Une condition qui suspend un modificateur — V3.1-137."
+        }
+      ]
+    }
+  },
+  "draconic-sorcery-elemental-affinity": {
+    "_regle": "Affinite elementaire : le bonus de degats (+ mod. CHA, type choisi) est dans subclasses-2024.json ; la resistance attend V3.1-137.",
+    "coverage": {
+      "gaps": [
+        {
+          "text": "Vous avez la Résistance à ce type de dégâts",
+          "missing": "Résistance à un type de dégâts — V3.1-137."
+        }
+      ]
+    }
+  },
+  "bard-bardic-inspiration": {
+    "_regle": "Inspiration bardique : usages = mod. CHA (minimum 1), au repos long ; donner le de et l'ajouter a un test rate attendent V3.1-135.",
+    "resources": {
+      "resources": [
+        {
+          "key": "bardic-inspiration",
+          "label": {
+            "fr": "Inspiration bardique",
+            "en": "Bardic Inspiration"
+          },
+          "max": {
+            "op": "max",
+            "args": [
+              {
+                "op": "num",
+                "value": 1
+              },
+              {
+                "op": "ref",
+                "name": "ability.cha"
+              }
+            ]
+          },
+          "recharge": "long_rest",
+          "passage": "Vous pouvez conférer l’Inspiration bardique autant de fois que votre modificateur de Charisme (minimum d’une fois)"
+        }
+      ]
+    },
+    "coverage": {
+      "gaps": [
+        {
+          "text": "lorsque la créature rate un Test d20, elle peut lancer le dé d’Inspiration bardique pour en ajouter le résultat au Test d20",
+          "missing": "Donner un dé à un allié, qu'il ajoute à un test raté — chantier « Intervenir sur un jet » (V3.1-135). Le dé s'écrit déjà 1d{column.class_specific_bardic_inspiration_die}."
+        }
+      ]
+    }
+  },
+  "rogue-sneak-attack": {
+    "_regle": "Attaque sournoise : ceil(niveau / 2)d6 de plus, une fois par tour, arme de finesse ou a distance, avec l'avantage ou un allie au contact.",
+    "coverage": {
+      "gaps": [
+        {
+          "text": "Une fois par tour et à condition que l’attaque soit portée avec une arme dotée de la propriété Finesse ou À distance",
+          "missing": "Des dégâts ceil({class.level} / 2)d6 sous condition (arme, avantage, allié au contact), une fois par tour — V3.1-135 et V3.1-137."
+        }
       ]
     }
   }

@@ -282,6 +282,8 @@ export async function resolveCharacterActionContext(
       })),
     abilities: { assigned: characterData.abilities.base },
     featureKeys: [...Object.keys(assembled.ruleset.features), ...choiceFeatureKeys],
+    // V3.1-158 : un type de dégâts choisi (Affinité élémentaire) vise sa cible `damage.spell.{choice:…}`.
+    choices: characterData.choices,
   };
 
   const activeEffects = effectRows.flatMap((row) => {
@@ -1148,6 +1150,7 @@ export async function applyLevelUp(
       })),
     abilities: { assigned: next.abilities.base },
     featureKeys: [...Object.keys(assembled.ruleset.features), ...choiceFeatureKeys],
+    choices: next.choices,
   };
   // Sans `characterRules` : la fiche candidate ne PLAFONNE pas les scores, qu'on
   // compare ensuite nous-memes au plafond du ruleset (un choix qui le depasserait

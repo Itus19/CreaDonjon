@@ -147,7 +147,8 @@ describe("forme stockée (V3.1-130, ADR 0073)", () => {
     const ligne = effectToRow(e, "channel-divinity-paladin");
     expect(ligne.source_key).toBe("channel-divinity-paladin");
     const relu = effectFromRow({ id: "row-1", ...ligne }, "g1");
-    expect(relu).toEqual({ ...e, instanceId: "row-1" });
+    // V3.1-158 : la relecture garde aussi la règle qui l'a posé.
+    expect(relu).toEqual({ ...e, instanceId: "row-1", ruleKey: "channel-divinity-paladin" });
   });
 
   it("une ligne mal formée est écartée (null), jamais devinée", () => {
