@@ -1,6 +1,7 @@
 import { resolveDeclaredModifiers, type DeclaredModifier, type FeatureSpell, type ResolvedFeature } from "./sheet";
 import type { ChoiceSource } from "./choices";
 import type { ChoiceGrant, GrantedSpellData } from "../schemas/rule-blocks/choices";
+import { slugify } from "../slug/slug";
 
 /**
  * Les aptitudes d'une sous-classe (V3.1-117, ADR 0046). Elles vivent dans le
@@ -23,12 +24,21 @@ export interface SubclassInfo {
   classLevel: number;
 }
 
-/** Identifiant stable d'une aptitude d'après son nom (« Elemental Affinity » → `elemental-affinity`). Il entre dans la clé des choix stockés. */
+/**
+ * Identifiant stable d'une aptitude d'après son nom (« Elemental Affinity » →
+ * `elemental-affinity`). Il entre dans la clé des choix stockés et dans celle
+ * de la fiche à briques de l'aptitude (`<sous-classe>-<identifiant>`).
+ * V3.1-181 : les accents sont retirés avant le reste (`slugify`), au lieu de
+ * couper le mot (« Magie envoûtante » → `magie-envoutante`, pas
+ * `magie-envo-tante`) ; un nom anglais, sans accent, garde sa clé d'avant.
+ */
 export function subclassFeatureSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
+  return slugify(name);
+}
+
+/** La clé de la fiche qui porte les briques jouables d'une aptitude de sous-classe (V3.1-163, V3.1-181) — celle que lit le ruleset résolu. */
+export function subclassFeatureEntryKey(subclassKey: string, featureName: string): string {
+  return `${subclassKey}-${subclassFeatureSlug(featureName)}`;
 }
 
 /**

@@ -1,7 +1,7 @@
 import "server-only";
 import { zCharacterRulesBlockData, type CharacterRules, type MulticlassPrerequisites } from "@/src/core/schemas/rule-blocks/characterRules";
 import { zClassBasicsBlockData, zModifiersBlockData, zSubclassFeaturesBlockData } from "@/src/core/schemas/rule-blocks/blocks";
-import { subclassFeatureSlug, subclassFeatures, type SubclassFeatureData } from "@/src/core/rules/subclass";
+import { subclassFeatureEntryKey, subclassFeatures, type SubclassFeatureData } from "@/src/core/rules/subclass";
 import { zChoicesBlockData, type ChoiceGrant, type ChoicesBlockData } from "@/src/core/schemas/rule-blocks/choices";
 import { resolveChoices, simpleGrantChoices, type ChoiceSource, type FeatChoiceData, type ResolvedChoices, type SpellMeta } from "@/src/core/rules/choices";
 import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
@@ -797,7 +797,7 @@ export async function assembleResolvedRuleset(
       // ensuite si elle n'apporte rien de jouable (pas de doublon dans l'onglet Traits).
       for (const entry of subclassEntry.subclassFeatures) {
         if (entry.level > cl.level) continue;
-        const ruleKey = `${cl.subclass}-${subclassFeatureSlug(entry.name)}`;
+        const ruleKey = subclassFeatureEntryKey(cl.subclass, entry.name);
         if (!extraFeatureKeys.has(ruleKey)) {
           extraFeatureKeys.set(ruleKey, `class:${cl.key}`);
           playableOnlyKeys.add(ruleKey);

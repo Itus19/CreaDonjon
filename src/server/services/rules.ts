@@ -25,12 +25,14 @@ import {
   type WeaponBlockData,
   zAddEntryPayload,
   zBlockDisplay,
+  zSubclassFeaturesBlockData,
 } from "@/src/core/schemas/rule-blocks";
 import { generateScalingTable, resolveScalingTarget } from "@/src/core/rules/scaling";
 import { computeProgressionRows } from "@/src/core/rules/progression";
 import { missingRequiredBlocks } from "@/src/core/rules/requiredBlocks";
 import { nextSlugCandidate, slugify } from "@/src/core/slug/slug";
 import { buildHomebrewSubclassEntry, subclassSlotWrite, type HomebrewSubclassInput } from "@/src/core/rules/homebrewSubclass";
+import { subclassFeatureEntryKey } from "@/src/core/rules/subclass";
 import { buildHomebrewSpellEntry, HomebrewSpellError, type HomebrewSpellInput } from "@/src/core/rules/homebrewSpell";
 import { blockTypesToRemove } from "@/src/core/rules/homebrewEdit";
 import { ruleEntryForPlayer } from "@/src/core/rules/ruleForReader";
@@ -2246,6 +2248,51 @@ export async function createRulesetFromImport(
 export type CreateHomebrewSubclassResult =
   | { ok: true; entryKey: string; rulesetId: string; slotUpdated: boolean }
   | { ok: false; reason: "unknown_class" | "invalid" | "not_found" | "parent_changed"; message?: string };
+
+export type EnsureSubclassFeatureEntryResult =
+  | { ok: true; entryKey: string; rulesetId: string; created: boolean }
+  | { ok: false; reason: "not_subclass" | "no_feature" | "invalid"; message?: string };
+
+/**
+ * V3.1-181 — La fiche qui porte les briques jouables d'une aptitude de
+ * sous-classe (`<sous-classe>-<aptitude>`, celle que lit le ruleset résolu,
+ * V3.1-163). Une sous-classe maison n'en a pas : elle naît ici, dans la
+ * variante, par le chemin d'écriture des fiches maison (`importRulesetEntries`,
+ * la RPC refuse une base officielle ou la variante d'un autre) ; une qui
+ * existe déjà (une aptitude du SRD, ou une seconde demande) est simplement
+ * rendue. L'aptitude se désigne par sa POSITION dans le bloc résolu, jamais
+ * par son nom affiché (traduit pour une sous-classe du SRD) : la clé vient
+ * du nom stocké, celui que lit le moteur.
+ */
+export async function ensureSubclassFeatureEntry(
+  supabase: TypedClient,
+  params: { rulesetId: string; subclassKey: string; featureIndex: number }
+): Promise<EnsureSubclassFeatureEntryResult> {
+  const subclass = await resolveEntryBlocksInRuleset(supabase, params.rulesetId, params.subclassKey);
+  if (!subclass || subclass.entryType !== "subclass") return { ok: false, reason: "not_subclass" };
+  const lu = zSubclassFeaturesBlockData.safeParse(subclass.blocksByType.get("subclass_features"));
+  const feature = lu.success ? lu.data.features[params.featureIndex] : undefined;
+  if (!feature) return { ok: false, reason: "no_feature" };
+
+  const entryKey = subclassFeatureEntryKey(params.subclassKey, feature.name);
+  const existing = await resolveEntryBlocksInRuleset(supabase, params.rulesetId, entryKey);
+  if (existing?.entryType) return { ok: true, entryKey, rulesetId: params.rulesetId, created: false };
+
+  const description = feature.description.trim();
+  const imported = await importRulesetEntries(supabase, {
+    rulesetId: params.rulesetId,
+    entries: [
+      {
+        entry_key: entryKey,
+        name: feature.name,
+        entry_type: "feature",
+        blocks: description ? [{ block_type: "description", data: { segments: [{ text: description }] } }] : [],
+      },
+    ],
+  });
+  if (imported.errors.length > 0 || imported.imported.length === 0) return { ok: false, reason: "invalid", message: imported.errors[0]?.message };
+  return { ok: true, entryKey, rulesetId: imported.rulesetId, created: true };
+}
 
 /**
  * Cree une sous-classe maison (V2-N1) dans la variante `rulesetId` — la

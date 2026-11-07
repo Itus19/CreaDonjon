@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { subclassFeatures, type SubclassFeatureData } from "./subclass";
+import { subclassFeatureEntryKey, subclassFeatureSlug, subclassFeatures, type SubclassFeatureData } from "./subclass";
 import { resolveChoices } from "./choices";
 import { characterSheet, type CharacterBuild, type ResolvedFeature, type ResolvedRuleset } from "./sheet";
 
@@ -167,5 +167,26 @@ describe("une aptitude de sous-classe sur la fiche", () => {
     const r = subclassFeatures({ key: "draconic-sorcery", label: "Sorcellerie draconique", classKey: "sorcerer", classLevel: 3 }, ELEMENTAL_AFFINITY);
     const without = sheetFor("sorcerer", 3, []);
     expect(sheetFor("sorcerer", 3, r.features).hitPoints.max).toBe(without.hitPoints.max + 3);
+  });
+});
+
+describe("V3.1-181 — la clé d'une aptitude de sous-classe", () => {
+  it("un nom anglais du SRD garde sa clé d'avant (choix stockés et fiches à briques inchangés)", () => {
+    expect(subclassFeatureSlug("Hunter's Prey")).toBe("hunter-s-prey");
+    expect(subclassFeatureSlug("Improved Critical")).toBe("improved-critical");
+    expect(subclassFeatureSlug("Elemental Affinity")).toBe("elemental-affinity");
+  });
+
+  it("un nom français garde ses lettres accentuées, sans accent (« envoûtante » ne se coupe plus en deux)", () => {
+    expect(subclassFeatureSlug("Magie envoûtante")).toBe("magie-envoutante");
+    expect(subclassFeatureSlug("Mante de majesté")).toBe("mante-de-majeste");
+    expect(subclassFeatureSlug("Majesté souveraine")).toBe("majeste-souveraine");
+  });
+});
+
+describe("V3.1-181 — la fiche à briques d'une aptitude", () => {
+  it("sa clé : celle de la sous-classe, un tiret, celle de l'aptitude", () => {
+    expect(subclassFeatureEntryKey("college-de-la-seduction", "Magie envoûtante")).toBe("college-de-la-seduction-magie-envoutante");
+    expect(subclassFeatureEntryKey("champion", "Improved Critical")).toBe("champion-improved-critical");
   });
 });

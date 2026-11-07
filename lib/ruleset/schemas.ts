@@ -172,3 +172,10 @@ export const replaceHomebrewEntrySchema = z.object({
   entryKey: z.string().min(1).max(80).regex(/^[a-z0-9_-]+$/),
   entry: zImportEntry.omit({ entry_key: true }),
 });
+
+/** V3.1-181 — rendre jouable une aptitude de sous-classe : sa position dans le bloc `subclass_features` de la sous-classe. */
+export const ensureSubclassFeatureEntrySchema = z.object({
+  rulesetId: z.string().uuid(),
+  subclassKey: z.string().trim().min(1).max(80).regex(/^[a-z0-9_-]+$/),
+  featureIndex: z.number().int().min(0).max(50),
+});

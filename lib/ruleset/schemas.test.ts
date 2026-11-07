@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createHomebrewSpellSchema, createHomebrewSubclassSchema } from "./schemas";
+import { ensureSubclassFeatureEntrySchema, createHomebrewSpellSchema, createHomebrewSubclassSchema } from "./schemas";
 
 describe("createHomebrewSubclassSchema (V2-N1)", () => {
   const valid = {
@@ -78,5 +78,17 @@ describe("createHomebrewSpellSchema (V2-N2)", () => {
   it("exige une formule quand un effet chiffre est ouvert", () => {
     const effect = { kind: "none", ability: "dex", attackRange: "ranged", formula: " ", damageType: "force", onSuccess: "half" };
     expect(createHomebrewSpellSchema.safeParse({ ...valid, effect }).success).toBe(false);
+  });
+});
+
+describe("ensureSubclassFeatureEntrySchema (V3.1-181)", () => {
+  const ok = { rulesetId: "0e2b6e26-4303-4938-b1c9-14b6f4bb74e2", subclassKey: "college-de-la-seduction", featureIndex: 0 };
+  it("une sous-classe et la position d'une aptitude", () => {
+    expect(ensureSubclassFeatureEntrySchema.safeParse(ok).success).toBe(true);
+  });
+  it("refuse une clé qui n'est pas un identifiant, ou une position négative", () => {
+    expect(ensureSubclassFeatureEntrySchema.safeParse({ ...ok, subclassKey: "Collège ; drop" }).success).toBe(false);
+    expect(ensureSubclassFeatureEntrySchema.safeParse({ ...ok, featureIndex: -1 }).success).toBe(false);
+    expect(ensureSubclassFeatureEntrySchema.safeParse({ ...ok, featureIndex: 1.5 }).success).toBe(false);
   });
 });
