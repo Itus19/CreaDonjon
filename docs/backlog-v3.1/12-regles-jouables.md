@@ -167,7 +167,7 @@ Valeur de modificateur en formule ou en dé (+ mod. CHA, +1d4, 10 + DEX + CON), 
 
 *Reste* : en mode « vrai dé de la table » d'une sauvegarde demandée, le joueur lance lui-même son d4 (le serveur ne l'ajoute pas).
 
-#### ☐ V3.1-157 — L'écran : dés de bonus, sens, vitesses, maîtrises ; l'éditeur suit · `M` · sans modèle IA — **prêt (Sonnet)**
+#### ☑ V3.1-157 — L'écran : dés de bonus, sens, vitesses, maîtrises ; l'éditeur suit · `M` · sans modèle IA — **prêt (Sonnet)**
 
 **Modèle conseillé : Sonnet**, une fois 155 fait ; Opus relit.
 **Dépend de** : 155.
@@ -179,8 +179,12 @@ Valeur de modificateur en formule ou en dé (+ mod. CHA, +1d4, 10 + DEX + CON), 
 - Éditeur des modificateurs d'une fiche de règle (bloc `modifiers`) : même champ de formule.
 
 **Critères d'acceptation**
-- [ ] Bénédiction se saisit à l'éditeur sans JSON (jusqu'à 3 cibles, concentration 1 minute, +1d4 aux attaques et sauvegardes) et se voit sur la fiche des cibles.
-- [ ] Au téléphone, « +3 + 1d4 » tient sur la ligne de la sauvegarde.
+- [x] Bénédiction se saisit à l'éditeur sans JSON (jusqu'à 3 cibles, concentration 1 minute, +1d4 aux attaques et sauvegardes) et se voit sur la fiche des cibles.
+- [x] Au téléphone, « +3 + 1d4 » tient sur la ligne de la sauvegarde.
+
+*Fait le 7 novembre* (codé par `dev-sonnet`, relu et corrigé par Opus). Fiche : dés de bonus et source au survol sur les sauvegardes, tests, compétences et l'onglet Actions (`lib/ui/valeursCalculees.ts`), ligne des sens et vitesses spéciales, maîtrises accordées avec leur source (`lib/ui/modificateursFiche.ts`). Éditeur : brique « Effet qui dure porteur de modificateurs » (`apply_boost`, un effet qui dure au sens de l'ADR 0074), champ de formule qui refuse les dés hors cible de jet, nouvelles cibles dans les listes ; formulaire de don en formule. Correctifs d'Opus : une valeur en formule se relit en texte dans le formulaire de don ; la fiche du navigateur reçoit les choix du personnage ; **la fiche ouverte avec sa page reçoit les effets portés** (défaut du 131 : une Bénédiction restait invisible jusqu'à la première action) ; **relancer un effet encore actif le rafraîchit** au lieu de l'empiler (deux Rages faisaient +6). Vérifié : Bénédiction saisie par l'éditeur (`briquesRegle.test.ts`), puis portée par un Barbare 9 au navigateur : « Sauv. +7 + 1d4 », attaque « 1d20+3+4+1d4 », Rage relancée par l'interface → une seule ligne d'effet, dégâts « 1d12+6 » ; à 390 px les sauvegardes « +7 + 1d4 » tiennent (aucune coupure, aucun débordement) ; `srdComputedValues.integration.test.ts` 5/5.
+
+*Reste* : la fiche jouable du mode solo (`FicheJouableSolo`) et l'aperçu de l'assistant ne montrent pas encore les dés de bonus ; convertir une ancienne brique `apply_modifier` en `apply_boost` perd `source`, `layer` et `stacking` (valeurs par défaut reprises).
 
 #### ☑ V3.1-158 — Les données : les règles du SRD que ce chantier rend jouables · `S` · sans modèle IA — **prêt (Opus)**
 
