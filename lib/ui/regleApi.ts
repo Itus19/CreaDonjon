@@ -66,3 +66,23 @@ export async function enregistrerBriques(worldSlug: string, corps: Record<string
     message: typeof erreur?.error === "string" ? erreur.error : "Impossible d'enregistrer les briques.",
   };
 }
+
+/**
+ * V3.1-181 — « Rendre jouable » une aptitude de sous-classe : crée (ou
+ * retrouve) sa fiche à briques dans la variante active du monde et rend sa
+ * clé. Deux appels, au clic seulement : la variante active, puis la création.
+ */
+export async function rendreAptitudeJouable(worldSlug: string, subclassKey: string, featureIndex: number): Promise<ResultatGeste<{ entryKey: string }>> {
+  const variante = await fetch(`/api/worlds/${worldSlug}/ruleset`);
+  if (!variante.ok) return { ok: false, message: await messageDuServeur(variante, "Variante active introuvable.") };
+  const { current } = (await variante.json()) as { current: string | null };
+  if (!current) return { ok: false, message: "Ce monde n'a pas de variante active." };
+  const res = await fetch(`/api/rulesets/${current}/subclasses/${encodeURIComponent(subclassKey)}/features`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ featureIndex }),
+  });
+  if (!res.ok) return { ok: false, message: await messageDuServeur(res, "Impossible de rendre cette aptitude jouable.") };
+  const corps = (await res.json()) as { entryKey: string };
+  return { ok: true, valeur: { entryKey: corps.entryKey } };
+}

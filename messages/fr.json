@@ -205,6 +205,16 @@
     "maitrisesAccordees": "Accordées par une règle"
   },
   "regles": {
+    "aptitudesJouables": {
+      "titre": "Aptitudes jouables",
+      "aide": "Chaque aptitude de cette sous-classe peut recevoir ses briques (ressources, utilisations, effets) : elles apparaîtront sur la fiche au niveau de l'aptitude.",
+      "niveau": "Niv. {n}",
+      "jouable": "jouable",
+      "texteSeul": "texte seul",
+      "rendreJouable": "Rendre jouable",
+      "modifierBriques": "Modifier les briques",
+      "enCours": "Ouverture…"
+    },
     "briques": {
       "reaction": {
         "declenchement": "Déclenchement",

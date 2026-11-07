@@ -204,6 +204,16 @@
     "maitrisesAccordees": "Granted by a rule"
   },
   "regles": {
+    "aptitudesJouables": {
+      "titre": "Playable features",
+      "aide": "Each feature of this subclass can receive its bricks (resources, uses, effects): they appear on the sheet at the feature's level.",
+      "niveau": "Lvl {n}",
+      "jouable": "playable",
+      "texteSeul": "text only",
+      "rendreJouable": "Make playable",
+      "modifierBriques": "Edit bricks",
+      "enCours": "Opening…"
+    },
     "briques": {
       "reaction": {
         "declenchement": "Trigger mode",
