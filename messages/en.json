@@ -278,7 +278,8 @@
         "ddSorts": "Spell save DC",
         "niveau": "Character level",
         "niveauClasse": "Class level",
-        "maitrise": "Proficiency bonus"
+        "maitrise": "Proficiency bonus",
+        "deLance": "Result of the die rolled just before"
       },
       "citer": "Quote",
       "citerAide": "First select a passage in the rule text.",
@@ -339,7 +340,7 @@
       "regainQuelleRessource": "Resource spent",
       "regainNiveauMin": "Minimum slot level (1 to 9)",
       "regainQuantite": "Amount spent (whole number)",
-      "aidePvTemporaires": "“{event.last_roll}”: the result of the die rolled just before (“Free roll” brick). Temporary HP don't stack: the higher value is kept.",
+      "aidePvTemporaires": "“'{'event.last_roll'}'”: the result of the die rolled just before (“Free roll” brick). Temporary HP don't stack: the higher value is kept.",
       "etat": "Condition",
       "effetConserve": "This lasting effect (\"{id}\") has a shape the form cannot enter: it is kept as it is.",
       "effetOpaque": "This effect has no form here: it is kept as it is.",

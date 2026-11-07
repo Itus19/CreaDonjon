@@ -279,7 +279,8 @@
         "ddSorts": "DD de sauvegarde des sorts",
         "niveau": "Niveau du personnage",
         "niveauClasse": "Niveau dans la classe",
-        "maitrise": "Bonus de maîtrise"
+        "maitrise": "Bonus de maîtrise",
+        "deLance": "Résultat du dé lancé juste avant"
       },
       "citer": "Citer",
       "citerAide": "Sélectionne d'abord un passage dans le texte de la règle.",
@@ -340,7 +341,7 @@
       "regainQuelleRessource": "Ressource dépensée",
       "regainNiveauMin": "Niveau minimal de l'emplacement (1 à 9)",
       "regainQuantite": "Quantité dépensée (entier)",
-      "aidePvTemporaires": "« {event.last_roll} » : le résultat du dé lancé juste avant (brique « Jet libre »). Les PV temporaires ne s'additionnent pas : on garde le plus grand des deux.",
+      "aidePvTemporaires": "« '{'event.last_roll'}' » : le résultat du dé lancé juste avant (brique « Jet libre »). Les PV temporaires ne s'additionnent pas : on garde le plus grand des deux.",
       "etat": "État",
       "effetConserve": "Cet effet qui dure (« {id} ») a une forme que le formulaire ne saisit pas : il est conservé tel quel.",
       "effetOpaque": "Cet effet n'a pas de formulaire ici : il est conservé tel quel.",

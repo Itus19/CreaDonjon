@@ -154,7 +154,7 @@ function ChampsEffet({ effet, maj }: { effet: BrouillonEffet; maj: (c: Partial<C
       return (
         <>
           <ChampFormule libelle={t("montantPvTemporaires")} valeur={effet.montant} onChange={(montant) => maj({ montant })} />
-          <p className="text-xs text-ink-muted">{t("aidePvTemporaires")}</p>
+          <p className="col-span-full text-xs text-ink-muted">{t("aidePvTemporaires")}</p>
         </>
       );
     case "apply_condition":

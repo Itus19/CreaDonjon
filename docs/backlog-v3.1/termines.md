@@ -5763,6 +5763,51 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
 - `AbilityScoreStep.tsx` : une seule ligne de chiffres par case (« 15 +2 »), le détail complet au survol ; la légende sous les six cases (cinq couleurs de la charte). Les sources viennent toujours de la fiche du moteur.
 - Vérifié au navigateur (Testeur MJ, Humain Rôdeur, tableau standard) : les six cases sur une ligne, plus aucun texte qui déborde ; la légende « Valeur attribuée ». Le cas avec bonus (l'Acolyte +1) est montré sur la planche « Création » du catalogue ; la sous-étape de répartition de l'historique n'a pas été pilotée au navigateur.
 
+### V3.1-181 — Sous-classe maison : rendre jouable chacune de ses aptitudes (7 novembre)
+
+**Modèle conseillé : Opus** (serveur des surcharges, clé des aptitudes).
+
+**Constat** (relevé de V3.1-179). Une aptitude de sous-classe devient jouable par une fiche séparée qui porte ses briques, de clé `<sous-classe>-<aptitude>` (V3.1-163 ; le Champion en a une par aptitude). Pour une sous-classe maison, aucun écran ne crée cette fiche : le formulaire « Créer une sous-classe » n'écrit que le bloc des aptitudes, et l'éditeur de briques ne s'ouvre que sur une fiche existante. De plus `subclassFeatureSlug` jette les lettres accentuées (« Magie envoûtante » → `magie-envo-tante`).
+
+**À faire.** Sur la page d'une sous-classe maison, chaque aptitude a un bouton « Rendre jouable » qui crée (ou rouvre) sa fiche à briques sous la bonne clé, dans la même variante, et ouvre l'éditeur de briques. La clé tient les accents (normalisation avant de retirer le reste), sans changer celles des aptitudes du SRD (noms anglais, sans accent) ni les choix déjà stockés.
+
+**Critères.** Une aptitude du Collège de la séduction reçoit une ressource et une utilisation par l'écran seul ; elles apparaissent sur la fiche d'un barde de ce collège au bon niveau, pas avant ; tests de la clé (accents, SRD inchangé).
+
+**Fait le 7 novembre** (Opus seul ; esquisse, solution A choisie par l'auteur).
+- Noyau : `subclassFeatureSlug` passe par `slugify` (« Magie envoûtante » → `magie-envoutante`) ; les clés du SRD, en anglais, ne changent pas (tests). `subclassFeatureEntryKey` donne la clé de la fiche à briques, la même que lit le ruleset résolu.
+- Serveur : `ensureSubclassFeatureEntry` et `POST /api/rulesets/[id]/subclasses/[clé]/features` créent ou retrouvent la fiche, par le chemin d'écriture des fiches maison (la RPC refuse la variante d'un autre). Test d'intégration (variante temporaire, nettoyée) : création, idempotence, refus pour un autre compte.
+- Écran : « Aptitudes jouables » sur la page d'une sous-classe maison (état, « Rendre jouable » / « Modifier les briques »), et `?briques=1` ouvre l'éditeur à l'arrivée.
+- Vérifié au navigateur (monde et variante temporaires du Testeur MJ, supprimés ensuite) : la sous-classe créée par le formulaire, « Rendre jouable » ouvre l'éditeur sur `college-de-verification-mante-de-majeste`, l'aptitude passe « jouable » une fois ses briques enregistrées.
+
+### V3.1-182 — Formulaire de sous-classe : sorts toujours préparés et lancés sans emplacement (7 novembre)
+
+**Modèle conseillé : Sonnet**, schéma déjà prêt (`spells` d'une aptitude : `always_prepared`, `free_cast`).
+
+**Constat.** « Les sorts *charme-personne* et *image miroir* sont toujours préparés » (Magie envoûtante), « *injonction* est toujours préparé ; vous pouvez le lancer sans dépenser d'emplacement, une fois par repos long » (Mante de majesté) : le moteur les sait (`zSubclassFeatureEntry.spells`), le formulaire ne les propose pas.
+
+**À faire.** Sous chaque aptitude du formulaire, « Sorts accordés » : un sélecteur de sorts du monde, avec « toujours préparé » et « lancer sans emplacement (n par repos) ». La relecture en modification les retrouve.
+
+**Critères.** Le Collège de la séduction déclare ses trois sorts par l'écran ; ils sont préparés sur la fiche d'un barde de niveau 3 (injonction au 6) ; le lancer gratuit se décompte et revient au repos long.
+
+**Fait le 7 novembre** (Opus seul). Sous chaque aptitude du formulaire, le repli « Sorts accordés (n) » : le sort (recherche dans les sorts du monde : `Dropdown` n'a pas de recherche et la charte écarte le `<select>`), « toujours préparé », « lancer sans emplacement » 1 à 3 fois par repos court ou long. Écrit dans `subclass_features.spells` (que le moteur lit déjà), relu en modification ; un sort qui n'apporte rien est écarté (tests). Vérifié au navigateur : *Injonction*, toujours préparé, une fois par repos long, enregistré tel quel.
+
+### V3.1-183 — Briques : des PV temporaires, et regagner une utilisation en dépensant autre chose (7 novembre)
+
+**Modèle conseillé : Opus** (vocabulaire fermé des effets, ADR si l'on ajoute une action).
+
+**Constat.** Mante d'inspiration donne « autant de PV temporaires que le double du nombre obtenu sur le dé d'Inspiration bardique » : les effets savent soigner (`heal`), pas donner des PV temporaires. Magie envoûtante se récupère « en dépensant une Inspiration bardique », Mante de majesté « en dépensant un emplacement du 3e niveau ou supérieur » : une ressource ne se recharge qu'au repos.
+
+**À faire.** Un effet « gagne N PV temporaires » (formule, la règle 5e du plus grand des deux) ; et, sur une ressource, « regagner une utilisation en dépensant… » (une autre ressource, ou un emplacement d'un niveau minimal), proposé sur la fiche quand la ressource est vide.
+
+**Critères.** Mante d'inspiration se joue de bout en bout (dépense, jet du dé par le serveur, PV temporaires ×2 aux cibles choisies) ; Magie envoûtante vide se recharge contre une Inspiration bardique ; tests du noyau.
+
+**Fait le 7 novembre** (Opus seul ; ADR 0076).
+- **PV temporaires** : l'effet `temp_hp` rejoint le vocabulaire fermé, appliqué avec `grantTempHp` (le plus grand des deux) ; le serveur l'écrit comme tout changement de PV. Le dé d'une brique « Jet libre » se relit dans les effets qui suivent (`event.last_roll`, proposé dans « Insérer une référence »). Tests du noyau.
+- **Regagner en dépensant** : une ressource peut porter `regain` (une autre ressource et sa quantité, ou un emplacement d'un niveau minimal). `planResourceRegain` (pur, 7 tests) ; la route `resource-regain` n'accepte qu'une intention et vérifie le coût côté serveur ; la fiche montre « Regagner (− 1 Inspiration bardique) » sur une ressource entamée ; l'éditeur le saisit sur la carte de la ressource (aller-retour testé).
+- Vérifié au navigateur (monde temporaire) : la ressource « Mante de majesté » avec regain contre un emplacement de niveau 3, et une utilisation « PV temporaires = 2 × {event.last_roll} », enregistrées et relues.
+
+*Restes* : le bouton « Regagner » de la fiche n'a pas été joué sur une vraie fiche (il faudrait un barde de ce collège dans une campagne) ; sa route est couverte par la fonction pure et le schéma.
+
 ### V3.1-177 — Aperçu : la colonne s'efface, la fiche s'affiche comme sur la fiche (7 novembre)
 
 **Modèle conseillé : Sonnet.**

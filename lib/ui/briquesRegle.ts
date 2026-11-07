@@ -69,6 +69,8 @@ export const REFERENCES_FORMULE: readonly { cle: string; texte: string }[] = [
   { cle: "niveau", texte: "{level}" },
   { cle: "niveauClasse", texte: "{class.level}" },
   { cle: "maitrise", texte: "{proficiency}" },
+  /** ADR 0076 (V3.1-183) : le résultat du dé lancé par une brique « Jet libre » plus haut dans la même utilisation. */
+  { cle: "deLance", texte: "{event.last_roll}" },
 ];
 
 // --- Le brouillon ------------------------------------------------------------

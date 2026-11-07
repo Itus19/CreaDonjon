@@ -34,36 +34,6 @@ Ordre conseillé : 162 (les textes en données) avant 161 et 163 ; 167 (noyau) i
 - **Collège de la séduction** : texte fourni (Manuel des joueurs 2024, p. 66, PDF de l'auteur). Le formulaire « Créer une sous-classe » couvre la fiche et ses quatre aptitudes en texte. **Un obstacle d'accès** : « DnD 2024 » appartient au compte de l'auteur ; une session ne peut écrire qu'au nom d'un compte de test, qui n'a pas la main sur ce ruleset.
 - **Ce que l'éditeur ne sait pas faire pour cette sous-classe** : rendre jouable une aptitude d'une sous-classe maison (**V3.1-181**) ; ses sorts toujours préparés et lancés sans emplacement (**V3.1-182**) ; des PV temporaires, et regagner une utilisation en dépensant autre chose (**V3.1-183**) ; une utilisation qui se propose après un sort lancé (**V3.1-184**) ; « sauvegarde ou l'attaque rate » et l'échec automatique d'une créature charmée (**V3.1-186**, avec 135 et 163).
 
-### V3.1-181 — Sous-classe maison : rendre jouable chacune de ses aptitudes (sans modèle IA)
-
-**Modèle conseillé : Opus** (serveur des surcharges, clé des aptitudes).
-
-**Constat** (relevé de V3.1-179). Une aptitude de sous-classe devient jouable par une fiche séparée qui porte ses briques, de clé `<sous-classe>-<aptitude>` (V3.1-163 ; le Champion en a une par aptitude). Pour une sous-classe maison, aucun écran ne crée cette fiche : le formulaire « Créer une sous-classe » n'écrit que le bloc des aptitudes, et l'éditeur de briques ne s'ouvre que sur une fiche existante. De plus `subclassFeatureSlug` jette les lettres accentuées (« Magie envoûtante » → `magie-envo-tante`).
-
-**À faire.** Sur la page d'une sous-classe maison, chaque aptitude a un bouton « Rendre jouable » qui crée (ou rouvre) sa fiche à briques sous la bonne clé, dans la même variante, et ouvre l'éditeur de briques. La clé tient les accents (normalisation avant de retirer le reste), sans changer celles des aptitudes du SRD (noms anglais, sans accent) ni les choix déjà stockés.
-
-**Critères.** Une aptitude du Collège de la séduction reçoit une ressource et une utilisation par l'écran seul ; elles apparaissent sur la fiche d'un barde de ce collège au bon niveau, pas avant ; tests de la clé (accents, SRD inchangé).
-
-### V3.1-182 — Formulaire de sous-classe : sorts toujours préparés et lancés sans emplacement (sans modèle IA)
-
-**Modèle conseillé : Sonnet**, schéma déjà prêt (`spells` d'une aptitude : `always_prepared`, `free_cast`).
-
-**Constat.** « Les sorts *charme-personne* et *image miroir* sont toujours préparés » (Magie envoûtante), « *injonction* est toujours préparé ; vous pouvez le lancer sans dépenser d'emplacement, une fois par repos long » (Mante de majesté) : le moteur les sait (`zSubclassFeatureEntry.spells`), le formulaire ne les propose pas.
-
-**À faire.** Sous chaque aptitude du formulaire, « Sorts accordés » : un sélecteur de sorts du monde, avec « toujours préparé » et « lancer sans emplacement (n par repos) ». La relecture en modification les retrouve.
-
-**Critères.** Le Collège de la séduction déclare ses trois sorts par l'écran ; ils sont préparés sur la fiche d'un barde de niveau 3 (injonction au 6) ; le lancer gratuit se décompte et revient au repos long.
-
-### V3.1-183 — Briques : des PV temporaires, et regagner une utilisation en dépensant autre chose (sans modèle IA)
-
-**Modèle conseillé : Opus** (vocabulaire fermé des effets, ADR si l'on ajoute une action).
-
-**Constat.** Mante d'inspiration donne « autant de PV temporaires que le double du nombre obtenu sur le dé d'Inspiration bardique » : les effets savent soigner (`heal`), pas donner des PV temporaires. Magie envoûtante se récupère « en dépensant une Inspiration bardique », Mante de majesté « en dépensant un emplacement du 3e niveau ou supérieur » : une ressource ne se recharge qu'au repos.
-
-**À faire.** Un effet « gagne N PV temporaires » (formule, la règle 5e du plus grand des deux) ; et, sur une ressource, « regagner une utilisation en dépensant… » (une autre ressource, ou un emplacement d'un niveau minimal), proposé sur la fiche quand la ressource est vide.
-
-**Critères.** Mante d'inspiration se joue de bout en bout (dépense, jet du dé par le serveur, PV temporaires ×2 aux cibles choisies) ; Magie envoûtante vide se recharge contre une Inspiration bardique ; tests du noyau.
-
 ### V3.1-184 — Une utilisation proposée après un sort lancé (sans modèle IA)
 
 **Modèle conseillé : Opus** (déclencheurs, ADR 0075).
