@@ -132,7 +132,23 @@ export function subclassFormValues(blocks: readonly EditableBlock[]): SubclassFo
   const features = zSubclassFeaturesBlockData.safeParse(dataOf(blocks, "subclass_features"));
   return {
     ...descriptionOf(blocks),
-    features: features.success ? features.data.features.map((f) => ({ name: f.name, level: f.level, description: f.description })) : [],
+    features: features.success
+      ? features.data.features.map((f) => ({
+          name: f.name,
+          level: f.level,
+          description: f.description,
+          // V3.1-182 : les sorts accordés, au format du formulaire ; absents si l'aptitude n'en a pas.
+          ...(f.spells && f.spells.length > 0
+            ? {
+                spells: f.spells.map((sp) => ({
+                  key: sp.key,
+                  alwaysPrepared: sp.always_prepared === true,
+                  ...(sp.free_cast && typeof sp.free_cast.uses === "number" ? { freeCast: { uses: sp.free_cast.uses, refresh: sp.free_cast.refresh } } : {}),
+                })),
+              }
+            : {}),
+        }))
+      : [],
   };
 }
 

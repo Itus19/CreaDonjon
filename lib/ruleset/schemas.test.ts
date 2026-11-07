@@ -92,3 +92,15 @@ describe("ensureSubclassFeatureEntrySchema (V3.1-181)", () => {
     expect(ensureSubclassFeatureEntrySchema.safeParse({ ...ok, featureIndex: 1.5 }).success).toBe(false);
   });
 });
+
+describe("createHomebrewSubclassSchema — sorts accordés (V3.1-182)", () => {
+  const base = { rulesetId: "0e2b6e26-4303-4938-b1c9-14b6f4bb74e2", name: "Collège", parentClassKey: "bard", features: [{ name: "Mante de majesté", level: 6, description: "" }] };
+  it("accepte un sort toujours préparé, lancé sans emplacement une fois par repos long", () => {
+    const r = createHomebrewSubclassSchema.safeParse({ ...base, features: [{ ...base.features[0], spells: [{ key: "command", alwaysPrepared: true, freeCast: { uses: 1, refresh: "long_rest" } }] }] });
+    expect(r.success).toBe(true);
+  });
+  it("refuse une clé de sort qui n'est pas un identifiant, ou un repos inconnu", () => {
+    expect(createHomebrewSubclassSchema.safeParse({ ...base, features: [{ ...base.features[0], spells: [{ key: "Injonction !", alwaysPrepared: true }] }] }).success).toBe(false);
+    expect(createHomebrewSubclassSchema.safeParse({ ...base, features: [{ ...base.features[0], spells: [{ key: "command", alwaysPrepared: true, freeCast: { uses: 1, refresh: "dawn" } }] }] }).success).toBe(false);
+  });
+});

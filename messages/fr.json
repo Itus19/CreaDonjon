@@ -205,6 +205,20 @@
     "maitrisesAccordees": "Accordées par une règle"
   },
   "regles": {
+    "sortsAccordes": {
+      "titre": "Sorts accordés ({n})",
+      "chercher": "Chercher un sort…",
+      "changer": "changer",
+      "toujoursPrepare": "toujours préparé",
+      "sansEmplacement": "Lancer sans emplacement :",
+      "jamais": "jamais",
+      "par": "par",
+      "repos": "Repos",
+      "reposLong": "repos long",
+      "reposCourt": "repos court",
+      "retirer": "retirer",
+      "ajouter": "+ Ajouter un sort"
+    },
     "aptitudesJouables": {
       "titre": "Aptitudes jouables",
       "aide": "Chaque aptitude de cette sous-classe peut recevoir ses briques (ressources, utilisations, effets) : elles apparaîtront sur la fiche au niveau de l'aptitude.",

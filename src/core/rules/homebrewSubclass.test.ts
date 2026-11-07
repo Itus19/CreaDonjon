@@ -105,3 +105,43 @@ describe("subclassSlotWrite", () => {
     expect(resolved?.blocks[0].data).toEqual({ label: "Archétype", chosen_at_level: 3, options: [thief, { kind: "rule", key: "arcane-trickster" }] });
   });
 });
+
+describe("V3.1-182 — les sorts accordés d'une aptitude", () => {
+  const seduction = {
+    name: "Collège de la séduction",
+    parentClassKey: "bard",
+    description: "",
+    pageRef: "Manuel des joueurs 2024, p. 66",
+    features: [
+      {
+        name: "Magie envoûtante",
+        level: 3,
+        description: "",
+        spells: [
+          { key: "charm-person", alwaysPrepared: true },
+          { key: "mirror-image", alwaysPrepared: true },
+        ],
+      },
+      { name: "Mante de majesté", level: 6, description: "", spells: [{ key: "command", alwaysPrepared: true, freeCast: { uses: 1, refresh: "long_rest" as const } }] },
+      { name: "Majesté souveraine", level: 14, description: "" },
+    ],
+  };
+
+  it("chaque sort va dans l'aptitude, toujours préparé, avec son lancer sans emplacement", () => {
+    const features = (buildHomebrewSubclassEntry(seduction).blocks.find((b) => b.block_type === "subclass_features")?.data as { features: unknown[] }).features;
+    expect(features[0]).toMatchObject({ spells: [{ key: "charm-person", always_prepared: true }, { key: "mirror-image", always_prepared: true }] });
+    expect(features[1]).toMatchObject({ spells: [{ key: "command", always_prepared: true, free_cast: { uses: 1, refresh: "long_rest" } }] });
+  });
+
+  it("une aptitude sans sort n'en porte pas ; un sort sans clé est écarté", () => {
+    const entry = buildHomebrewSubclassEntry({ ...seduction, features: [{ name: "Majesté souveraine", level: 14, description: "", spells: [{ key: " ", alwaysPrepared: true }] }] });
+    const features = (entry.blocks.find((b) => b.block_type === "subclass_features")?.data as { features: Record<string, unknown>[] }).features;
+    expect(features[0].spells).toBeUndefined();
+  });
+
+  it("un sort ni préparé ni gratuit n'apporte rien : il est écarté", () => {
+    const entry = buildHomebrewSubclassEntry({ ...seduction, features: [{ name: "A", level: 3, description: "", spells: [{ key: "command", alwaysPrepared: false }] }] });
+    const features = (entry.blocks.find((b) => b.block_type === "subclass_features")?.data as { features: Record<string, unknown>[] }).features;
+    expect(features[0].spells).toBeUndefined();
+  });
+});

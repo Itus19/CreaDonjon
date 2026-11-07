@@ -11,10 +11,26 @@ import type { OverrideAction } from "./resolve";
  * Merge Patch REMPLACE en entier au lieu d'y ajouter.
  */
 
+/** V3.1-182 : un sort qu'une aptitude accorde — toujours préparé, et/ou lancé sans emplacement n fois par repos. */
+export interface HomebrewGrantedSpellInput {
+  key: string;
+  alwaysPrepared: boolean;
+  freeCast?: { uses: number; refresh: "short_rest" | "long_rest" };
+}
+
 export interface HomebrewSubclassFeatureInput {
   name: string;
   level: number;
   description: string;
+  spells?: HomebrewGrantedSpellInput[];
+}
+
+/** Les sorts d'une aptitude au format du bloc (`zGrantedSpell`) ; un sort sans clé, ou qui n'apporte rien (ni préparé ni gratuit), est écarté. */
+function sortsDuBloc(spells: readonly HomebrewGrantedSpellInput[] | undefined) {
+  return (spells ?? [])
+    .map((s) => ({ ...s, key: s.key.trim() }))
+    .filter((s) => s.key !== "" && (s.alwaysPrepared || s.freeCast !== undefined))
+    .map((s) => ({ key: s.key, ...(s.alwaysPrepared ? { always_prepared: true } : {}), ...(s.freeCast ? { free_cast: s.freeCast } : {}) }));
 }
 
 export interface HomebrewSubclassInput {
@@ -45,7 +61,10 @@ export function buildHomebrewSubclassEntry(input: HomebrewSubclassInput): Homebr
   const description = input.description.trim();
   const pageRef = input.pageRef.trim();
   const features = input.features
-    .map((f) => ({ name: f.name.trim(), level: f.level, description: f.description.trim() }))
+    .map((f) => {
+      const spells = sortsDuBloc(f.spells);
+      return { name: f.name.trim(), level: f.level, description: f.description.trim(), ...(spells.length > 0 ? { spells } : {}) };
+    })
     .filter((f) => f.name.length > 0)
     .sort((a, b) => a.level - b.level);
 

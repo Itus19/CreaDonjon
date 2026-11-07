@@ -107,6 +107,25 @@ describe("subclassFormValues (V3.1-2)", () => {
   });
 });
 
+describe("subclassFormValues — sorts accordés (V3.1-182)", () => {
+  it("relit les sorts d'une aptitude, préparés et gratuits ; une aptitude sans sort n'a pas la clé", () => {
+    const entry = buildHomebrewSubclassEntry({
+      name: "Collège de la séduction",
+      parentClassKey: "bard",
+      description: "",
+      pageRef: "",
+      features: [
+        { name: "Mante de majesté", level: 6, description: "", spells: [{ key: "command", alwaysPrepared: true, freeCast: { uses: 1, refresh: "long_rest" } }] },
+        { name: "Majesté souveraine", level: 14, description: "" },
+      ],
+    });
+    expect(subclassFormValues(asBlocks(entry.blocks)).features).toEqual([
+      { name: "Mante de majesté", level: 6, description: "", spells: [{ key: "command", alwaysPrepared: true, freeCast: { uses: 1, refresh: "long_rest" } }] },
+      { name: "Majesté souveraine", level: 14, description: "" },
+    ]);
+  });
+});
+
 describe("featureFormValues (V3.1-2)", () => {
   it("relit description, prerequis, modificateurs et declencheurs", () => {
     const trigger = { id: "t1", when: { event: "check_failed" }, then: [{ action: "narrate_hint", text: "Relance." }] };

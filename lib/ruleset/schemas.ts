@@ -112,6 +112,17 @@ export const createHomebrewSubclassSchema = z.object({
         name: z.string().max(120, "120 caractères maximum."),
         level: z.number().int().min(1, "Niveau entre 1 et 20.").max(20, "Niveau entre 1 et 20."),
         description: z.string().max(2000, "2 000 caractères maximum."),
+        /** V3.1-182 : les sorts que l'aptitude accorde (toujours préparés, lancés sans emplacement). */
+        spells: z
+          .array(
+            z.object({
+              key: z.string().trim().min(1).max(80).regex(/^[a-z0-9_-]+$/),
+              alwaysPrepared: z.boolean(),
+              freeCast: z.object({ uses: z.number().int().min(1).max(9), refresh: z.enum(["short_rest", "long_rest"]) }).optional(),
+            })
+          )
+          .max(12, "12 sorts maximum par aptitude.")
+          .optional(),
       })
     )
     .max(30, "30 aptitudes maximum.")

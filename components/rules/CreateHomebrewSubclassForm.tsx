@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import Dropdown from "@/components/shared/Dropdown";
+import Checkbox from "@/components/shared/Checkbox";
 import { clearWorldRuleEntriesCache, useWorldRuleEntries } from "@/components/blocks/useWorldRuleEntries";
 import { subclassFormValues } from "@/src/core/rules/homebrewEdit";
 import { useHomebrewEntryForEdit } from "@/components/rules/useHomebrewEntryForEdit";
@@ -16,13 +17,67 @@ interface SelectableRuleset {
   content_origin: string;
 }
 
+/** V3.1-182 : un sort accordé par l'aptitude, en brouillon d'écran. `gratuit` : combien de fois sans emplacement (« 0 » : jamais). */
+interface SortDraft {
+  key: string;
+  alwaysPrepared: boolean;
+  gratuit: string;
+  repos: "short_rest" | "long_rest";
+}
+
 interface FeatureDraft {
   name: string;
   level: string;
   description: string;
+  spells: SortDraft[];
 }
 
-const EMPTY_FEATURE: FeatureDraft = { name: "", level: "3", description: "" };
+const EMPTY_FEATURE: FeatureDraft = { name: "", level: "3", description: "", spells: [] };
+const EMPTY_SORT: SortDraft = { key: "", alwaysPrepared: true, gratuit: "0", repos: "long_rest" };
+
+/**
+ * V3.1-182 — Le choix d'un sort parmi ceux du monde (plusieurs centaines) :
+ * un champ de recherche et quelques propositions dessous. La charte écarte le
+ * `<select>` natif et `Dropdown` n'a pas de recherche ; le nom choisi
+ * s'affiche, la clé part au serveur.
+ */
+function ChoixSort({ sorts, value, onChange }: { sorts: readonly { key: string; name: string }[]; value: string; onChange: (key: string) => void }) {
+  const t = useTranslations("regles");
+  const [requete, setRequete] = useState("");
+  const choisi = sorts.find((s) => s.key === value);
+  if (choisi) {
+    return (
+      <span className="flex items-center gap-2">
+        <span className="rounded-md border border-edge px-2 py-1 text-sm text-ink">{choisi.name}</span>
+        <button type="button" onClick={() => onChange("")} className="text-xs text-ink-muted hover:text-ink">
+          {t("sortsAccordes.changer")}
+        </button>
+      </span>
+    );
+  }
+  const q = requete.trim().toLocaleLowerCase("fr");
+  const propositions = q.length < 2 ? [] : sorts.filter((s) => s.name.toLocaleLowerCase("fr").includes(q)).slice(0, 6);
+  return (
+    <span className="flex min-w-48 flex-col gap-1">
+      <input
+        value={requete}
+        onChange={(e) => setRequete(e.target.value)}
+        placeholder={t("sortsAccordes.chercher")}
+        aria-label={t("sortsAccordes.chercher")}
+        className="rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
+      />
+      {propositions.length > 0 && (
+        <span className="flex flex-wrap gap-1">
+          {propositions.map((s) => (
+            <button key={s.key} type="button" onClick={() => onChange(s.key)} className="rounded-full border border-edge px-2.5 py-0.5 text-xs text-ink hover:bg-panel-raised">
+              {s.name}
+            </button>
+          ))}
+        </span>
+      )}
+    </span>
+  );
+}
 
 /**
  * Formulaire dedie « Creer une sous-classe » (V2-N1) — meme famille que
@@ -51,7 +106,11 @@ export default function CreateHomebrewSubclassForm({
 }) {
   const t = useTranslations("regles");
   const router = useRouter();
-  const classes = useWorldRuleEntries(worldSlug).filter((e) => e.entryType === "class");
+  const reglesDuMonde = useWorldRuleEntries(worldSlug);
+  const classes = reglesDuMonde.filter((e) => e.entryType === "class");
+  const sortsDuMonde = reglesDuMonde.filter((e) => e.entryType === "spell").map((e) => ({ key: e.key, name: e.name }));
+  // V3.1-182 : les aptitudes dont le repli « Sorts accordés » est ouvert (par position).
+  const [sortsOuverts, setSortsOuverts] = useState<ReadonlySet<number>>(() => new Set());
 
   const [loading, setLoading] = useState(true);
   const [currentRuleset, setCurrentRuleset] = useState<SelectableRuleset | null>(null);
@@ -90,7 +149,16 @@ export default function CreateHomebrewSubclassForm({
     setParentClassKey(editEntry.parentClassKey ?? "");
     setDescription(v.description);
     setPageRef(v.pageRef);
-    setFeatures(v.features.length > 0 ? v.features.map((f) => ({ name: f.name, level: String(f.level), description: f.description })) : [EMPTY_FEATURE]);
+    setFeatures(
+      v.features.length > 0
+        ? v.features.map((f) => ({
+            name: f.name,
+            level: String(f.level),
+            description: f.description,
+            spells: (f.spells ?? []).map((sp) => ({ key: sp.key, alwaysPrepared: sp.alwaysPrepared, gratuit: String(sp.freeCast?.uses ?? 0), repos: sp.freeCast?.refresh ?? "long_rest" })),
+          }))
+        : [EMPTY_FEATURE]
+    );
   }
 
   function updateFeature(index: number, patch: Partial<FeatureDraft>) {
@@ -115,7 +183,14 @@ export default function CreateHomebrewSubclassForm({
         parentClassKey,
         description,
         pageRef,
-        features: features.map((f) => ({ name: f.name, level: Number(f.level) || 1, description: f.description })),
+        features: features.map((f) => ({
+          name: f.name,
+          level: Number(f.level) || 1,
+          description: f.description,
+          spells: f.spells
+            .filter((sp) => sp.key !== "")
+            .map((sp) => ({ key: sp.key, alwaysPrepared: sp.alwaysPrepared, ...(Number(sp.gratuit) > 0 ? { freeCast: { uses: Number(sp.gratuit), refresh: sp.repos } } : {}) })),
+        })),
         ...(edit ? { entryKey: edit.entryKey } : {}),
       }),
     });
@@ -270,6 +345,20 @@ export default function CreateHomebrewSubclassForm({
                 {t("retirerAptitude")}
               </button>
             )}
+            <SortsAccordes
+              ouvert={sortsOuverts.has(index)}
+              onBasculer={() =>
+                setSortsOuverts((avant) => {
+                  const apres = new Set(avant);
+                  if (apres.has(index)) apres.delete(index);
+                  else apres.add(index);
+                  return apres;
+                })
+              }
+              sorts={feature.spells}
+              sortsDuMonde={sortsDuMonde}
+              onChange={(spells) => updateFeature(index, { spells })}
+            />
           </div>
         ))}
         <button
@@ -298,5 +387,76 @@ export default function CreateHomebrewSubclassForm({
         )}
       </div>
     </form>
+  );
+}
+
+/**
+ * V3.1-182 — Sous une aptitude, le repli « Sorts accordés (n) » : une ligne par
+ * sort — le sort, « toujours préparé », et combien de fois il se lance sans
+ * emplacement, jusqu'à quel repos. Le moteur lit déjà ces sorts
+ * (`subclass_features.spells`) ; l'écran les rend saisissables.
+ */
+function SortsAccordes({
+  ouvert,
+  onBasculer,
+  sorts,
+  sortsDuMonde,
+  onChange,
+}: {
+  ouvert: boolean;
+  onBasculer: () => void;
+  sorts: SortDraft[];
+  sortsDuMonde: readonly { key: string; name: string }[];
+  onChange: (sorts: SortDraft[]) => void;
+}) {
+  const t = useTranslations("regles.sortsAccordes");
+  const maj = (i: number, patch: Partial<SortDraft>) => onChange(sorts.map((s, j) => (j === i ? { ...s, ...patch } : s)));
+  return (
+    <div className="flex basis-full flex-col gap-1.5">
+      <button type="button" aria-expanded={ouvert} onClick={onBasculer} className="w-fit text-xs font-medium text-accent hover:underline">
+        {ouvert ? "▴" : "▾"} {t("titre", { n: sorts.length })}
+      </button>
+      {ouvert && (
+        <div className="flex flex-col gap-2 rounded-r-md border-l-[3px] border-accent bg-panel-raised px-2.5 py-2">
+          {sorts.map((s, i) => (
+            <div key={i} className="flex flex-wrap items-center gap-2 text-xs text-ink-soft">
+              <ChoixSort sorts={sortsDuMonde} value={s.key} onChange={(key) => maj(i, { key })} />
+              <Checkbox checked={s.alwaysPrepared} onChange={() => maj(i, { alwaysPrepared: !s.alwaysPrepared })} label={t("toujoursPrepare")} />
+              <span>{t("sansEmplacement")}</span>
+              <Dropdown
+                value={s.gratuit}
+                options={["0", "1", "2", "3"].map((n) => ({ value: n, label: n === "0" ? t("jamais") : n }))}
+                onChange={(gratuit) => maj(i, { gratuit })}
+                aria-label={t("sansEmplacement")}
+              />
+              {s.gratuit !== "0" && (
+                <>
+                  <span>{t("par")}</span>
+                  <Dropdown
+                    value={s.repos}
+                    options={[
+                      { value: "long_rest", label: t("reposLong") },
+                      { value: "short_rest", label: t("reposCourt") },
+                    ]}
+                    onChange={(repos) => maj(i, { repos: repos === "short_rest" ? "short_rest" : "long_rest" })}
+                    aria-label={t("repos")}
+                  />
+                </>
+              )}
+              <button type="button" onClick={() => onChange(sorts.filter((_, j) => j !== i))} className="text-xs text-danger hover:underline">
+                {t("retirer")}
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => onChange([...sorts, EMPTY_SORT])}
+            className="w-fit rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel"
+          >
+            {t("ajouter")}
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
