@@ -3,8 +3,8 @@ import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import type { Locale } from "@/src/i18n/request";
-import { zActivationBlockData, zRollOperation, type Activation } from "@/src/core/schemas/rule-blocks/playable";
-import { resolveEntryBlocksInRulesetBatch } from "@/src/server/services/rules";
+import { zRollOperation, type Activation } from "@/src/core/schemas/rule-blocks/playable";
+import { loadSpellActivations } from "@/src/server/services/spellActivations";
 import {
   applyRollOperations,
   eligibleReactions,
@@ -307,18 +307,8 @@ export async function selfReactorPool(
 
 /** V3.1-165 : les sorts connus du personnage qui portent une activation à déclencheur (une lecture groupée). */
 async function reactionSpells(supabase: TypedClient, ctx: CharacterActionContext): Promise<{ key: string; activation: Activation }[]> {
-  const cles = [
-    ...new Set([...(ctx.spellcastingData?.known ?? []).flatMap((k) => (k.ref.kind === "rule" ? [k.ref.key] : [])), ...ctx.sheet.grantedSpells.map((g) => g.key)]),
-  ];
-  if (cles.length === 0) return [];
-  const blocs = await resolveEntryBlocksInRulesetBatch(supabase, ctx.rulesetId, cles);
-  const out: { key: string; activation: Activation }[] = [];
-  for (const cle of cles) {
-    const lu = zActivationBlockData.safeParse(blocs.get(cle)?.blocksByType.get("activation"));
-    if (!lu.success) continue;
-    for (const a of lu.data.activations) if (a.trigger) out.push({ key: cle, activation: a });
-  }
-  return out;
+  const blocs = await loadSpellActivations(supabase, ctx);
+  return Object.entries(blocs).flatMap(([key, b]) => b.activations.filter((a) => a.trigger).map((activation) => ({ key, activation })));
 }
 
 /** Le plus petit emplacement libre d'au moins `base` (ordinaire, puis la réserve de pacte) ; `null` s'il n'y en a plus. */

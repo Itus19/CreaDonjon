@@ -1,3 +1,4 @@
+import type { TurnBudget } from "./turnBudget";
 import { sortByInitiative } from "./combat";
 
 /**
@@ -27,6 +28,8 @@ export interface PlayerCombatRow {
   hp: { current: number | null; max: number | null; temp: number } | null;
   /** Adversaire seulement ; `null` si le MJ n'a pas saisi ses PV. */
   wound: WoundState | null;
+  /** V3.1-166 (ADR 0076) : le budget du tour d'un allié tel que la base le garde (daté) ; `null` pour un adversaire ou s'il n'a encore rien dépensé. */
+  budget: TurnBudget | null;
 }
 
 export interface PlayerCombatParticipant extends PlayerCombatRow {

@@ -2914,6 +2914,7 @@ export type Database = {
           side: string
           temp_hp: number | null
           wound: string | null
+          budget: Json | null
         }[]
       }
       claim_shared_note_grant: { Args: { p_entity_id: string }; Returns: boolean }

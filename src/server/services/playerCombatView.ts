@@ -1,3 +1,4 @@
+import { zTurnBudget, type TurnBudget } from "@/src/core/rules/turnBudget";
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
@@ -23,6 +24,12 @@ export type PlayerCombatViewResult =
 
 const WOUNDS: readonly WoundState[] = ["unhurt", "hurt", "bloodied", "down"];
 
+/** Un budget mal formé (ou absent) se lit comme « rien de dépensé » : la fiche affiche un budget neuf. */
+function budgetOf(value: Json | null | undefined): TurnBudget | null {
+  const lu = zTurnBudget.safeParse(value);
+  return lu.success ? lu.data : null;
+}
+
 function toConditions(value: Json): string[] {
   return Array.isArray(value) ? value.filter((c): c is string => typeof c === "string") : [];
 }
@@ -40,6 +47,7 @@ function toRow(row: PlayerCombatViewRow): PlayerCombatRow {
     conditions: toConditions(row.conditions),
     hp: ally ? { current: row.hp_current, max: row.hp_max, temp: row.temp_hp ?? 0 } : null,
     wound: !ally && WOUNDS.includes(row.wound as WoundState) ? (row.wound as WoundState) : null,
+    budget: ally ? budgetOf(row.budget) : null,
   };
 }
 

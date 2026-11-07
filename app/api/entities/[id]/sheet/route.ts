@@ -7,6 +7,7 @@ import type { Locale } from "@/src/i18n/request";
 import { entityCampaignQuerySchema, searchParamsToObject } from "@/lib/queryParams/schemas";
 import { canUserEditEntityById } from "@/src/server/services/permissions";
 import { loadSheetControls } from "@/src/server/services/sheetActionAccess";
+import { loadSpellActivations } from "@/src/server/services/spellActivations";
 
 const zEntityIdParams = z.object({ id: z.string().uuid() });
 
@@ -54,16 +55,18 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ error: "Fiche de personnage introuvable ou sans ruleset résolvable." }, { status: 404 });
   }
 
-  const [canEdit, controls] = await Promise.all([
+  // V3.1-166 : les activations des sorts connus, dans la même vague (une lecture groupée).
+  const [canEdit, controls, spellActivations] = await Promise.all([
     canUserEditEntityById(supabase, { entityId, userId: user.id }),
     loadSheetControls(supabase, { worldId: ctx.worldId, campaignId, userId: user.id }),
+    loadSpellActivations(supabase, ctx),
   ]);
   const runtimeState = await getOrInitializeRuntimeState(supabase, ctx, { persist: canEdit });
 
   // V3.1-109 : `controls` dit à la fiche quelles commandes montrer à CET appelant.
   return NextResponse.json(
     // V3.1-131 : les effets que porte le personnage (onglet Actions, « Sur la scène ») — déjà lus pour la fiche.
-    { sheet: ctx.sheet, hitDiceTotals: ctx.hitDiceTotals, runtimeState, controls, effects: ctx.activeEffects },
+    { sheet: ctx.sheet, hitDiceTotals: ctx.hitDiceTotals, runtimeState, controls, effects: ctx.activeEffects, spellActivations },
     { status: 200 }
   );
 }
