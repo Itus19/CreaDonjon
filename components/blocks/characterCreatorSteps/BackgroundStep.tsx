@@ -5,10 +5,11 @@ import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/blocks/inventory";
 import { useTranslations } from "next-intl";
 import type { BackgroundBlockData, BackgroundEquipmentOption } from "@/src/core/schemas/rule-blocks";
-import { ABILITIES, ABILITY_LABELS as ABILITY_NAMES, type Ability, type Skill } from "@/src/core/rules/sheet";
+import { ABILITIES, ABILITY_LABELS as ABILITY_NAMES, SKILLS, type Ability, type Skill } from "@/src/core/rules/sheet";
 import { parseBackgroundAbilityBonusChoice, type BackgroundAbilityBonusChoice } from "@/src/core/rules/backgroundAbilityBonus";
 import { CURRENCY_LABELS_FR, SKILL_LABELS_FR } from "@/src/i18n/fr";
 import { libelleMaitrise } from "@/lib/ui/maitrises";
+import { cleRegleCompetence } from "@/lib/ui/texteRegle";
 import type { SousEtape } from "@/lib/ui/cheminCreation";
 import FicheSelection, { type LigneFiche } from "../characterCreator/FicheSelection";
 import ValeursHistorique from "../characterCreator/ValeursHistorique";
@@ -35,8 +36,12 @@ function withoutAbilityBonusChoice(choices: CharacterBlockData["choices"]): Char
 
 interface BackgroundCardInfo {
   featName: string | null;
+  /** V3.1-172 : les clés à déplier dans la fiche (le don, l'outil, les compétences). */
+  featKey: string | null;
   abilities: Ability[];
   toolLine: string | null;
+  toolKey: string | null;
+  skills: Skill[];
   skillsLine: string | null;
 }
 
@@ -53,8 +58,11 @@ function backgroundCardInfo(blocks: RuleEntryBlockData[] | undefined): Backgroun
   if (!data) return null;
   return {
     featName: data.feat_name ?? null,
+    featKey: data.feat?.key ?? null,
     abilities: data.ability_scores.filter((a): a is Ability => (ABILITIES as readonly string[]).includes(a)),
     toolLine: data.tool_proficiency ? libelleMaitrise({ key: data.tool_proficiency, name: data.tool_proficiency }) : null,
+    toolKey: data.tool_proficiency ?? null,
+    skills: data.skill_proficiencies.filter((s): s is Skill => (SKILLS as readonly string[]).includes(s)),
     skillsLine: data.skill_proficiencies.map((s) => SKILL_LABELS_FR[s as Skill] ?? s).join(", "),
   };
 }
@@ -203,9 +211,15 @@ export default function BackgroundStep({
 
   const ligneFiche: LigneFiche[] = currentInfo
     ? [
-        ...(currentInfo.featName ? [{ nom: t("don"), texte: currentInfo.featName }] : []),
-        ...(currentInfo.skillsLine ? [{ nom: t("competences"), texte: currentInfo.skillsLine }] : []),
-        ...(currentInfo.toolLine ? [{ nom: t("outil"), texte: currentInfo.toolLine }] : []),
+        ...(currentInfo.featName
+          ? [{ nom: t("don"), texte: currentInfo.featName, ...(currentInfo.featKey ? { fiches: [{ cle: currentInfo.featKey }] } : {}) }]
+          : []),
+        ...(currentInfo.skillsLine
+          ? [{ nom: t("competences"), texte: currentInfo.skillsLine, fiches: currentInfo.skills.map((s) => ({ cle: cleRegleCompetence(s), nom: SKILL_LABELS_FR[s] })) }]
+          : []),
+        ...(currentInfo.toolLine
+          ? [{ nom: t("outil"), texte: currentInfo.toolLine, ...(currentInfo.toolKey ? { fiches: [{ cle: currentInfo.toolKey }] } : {}) }]
+          : []),
       ]
     : [];
 
@@ -234,6 +248,8 @@ export default function BackgroundStep({
 
       {currentKey && (
         <FicheSelection
+          key={currentKey}
+          worldSlug={worldSlug}
           titre={entries.find((e) => e.key === currentKey)?.name ?? currentKey}
           resume={currentInfo && currentInfo.abilities.length > 0 ? t("valeursPossibles", { liste: currentInfo.abilities.map((a) => ABILITY_NAMES[a]).join(", ") }) : null}
           lignes={ligneFiche}

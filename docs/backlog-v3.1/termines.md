@@ -5763,6 +5763,24 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
 - `AbilityScoreStep.tsx` : une seule ligne de chiffres par case (« 15 +2 »), le détail complet au survol ; la légende sous les six cases (cinq couleurs de la charte). Les sources viennent toujours de la fiche du moteur.
 - Vérifié au navigateur (Testeur MJ, Humain Rôdeur, tableau standard) : les six cases sur une ligne, plus aucun texte qui déborde ; la légende « Valeur attribuée ». Le cas avec bonus (l'Acolyte +1) est montré sur la planche « Création » du catalogue ; la sous-étape de répartition de l'historique n'a pas été pilotée au navigateur.
 
+### V3.1-172 — Espèce, don d'origine, historique : le texte entier, sans quitter l'écran (7 novembre)
+
+**Modèle conseillé : Sonnet**, après 162 pour la mise en forme des textes. Revient sur « traits en une ligne chacun » (décision du 5 octobre).
+
+**Constat.** La fiche de la sélection ne garde que la première phrase de chaque trait (`premierePhrase`, `SpeciesStep.tsx`) sur une ligne coupée (`truncate`) : « Ingénieux — Vous recevez l'Inspiration héroïque chaque fois que vous terminez… ». Le don d'origine est coupé à une longueur fixe (`ChoixDon.tsx`). Les traits d'historique n'ont pas d'explication.
+
+**À faire.** Chaque trait garde sa ligne courte et **se déplie** sur place (le texte entier, gras et listes compris), sans quitter l'écran ; « Tout déplier » pour la fiche. Même composant pour Espèce, Don d'origine et Historique. Sur téléphone, le dépliage reste dans la carte.
+
+**Critères.** Aucun texte de trait, de don ou d'historique n'est tronqué sans moyen de le lire ; un seul composant ; planche du catalogue.
+
+**Fait le 7 novembre** (Opus seul). D'après l'esquisse, choix de l'auteur : **A** pour les traits, **B** pour le don.
+- **Espèce et historique** (A) : chaque ligne de la fiche de la sélection (`FicheSelection`, un seul composant) se déplie sur place et montre le texte entier, gras et listes compris (rendu de la page de règle) ; « Tout déplier » en tête de fiche ; ouverte, la ligne d'un trait n'écrit plus que son nom. Historique : « Don » déplie le texte du don, « Compétences » la phrase de chacune (`skill-<index>`, V3.1-173), « Outil » sa fiche. Les traits d'espèce arrivent déjà résolus ; le don, les compétences et l'outil ne sont demandés qu'au dépliage (une requête, en cache). Sur téléphone, le dépliage reste dans la carte.
+- **Don d'origine** (B) : les cartes de don (tout choix de don) ne disent plus que le nom, la catégorie et les prérequis ; le don touché, ou à défaut le choisi, s'affiche en entier sous la grille. Plus d'extrait coupé à 160 caractères.
+- **Données corrigées** (`scripts/fix-descriptions-fr-2024.ts`, par clé, à blanc par défaut) : le trait « Polyvalent » de l'Humain (`versatile`) portait le texte de la propriété d'arme Polyvalente (V3.1-116 n'avait corrigé que le nom) ; son texte est relu dans la source française. « Vigilant » et les deux « Défense » gardaient le titre de la section suivante (« Dons généraux », « Dons de faveur épique ») : retiré. Quatre lignes écrites, revérifiées.
+- Vérifié au navigateur (Testeur MJ, 1400 et 390 px) : Humain (« Polyvalent » juste, déplié), Don d'origine (Vigilant en entier, sans le titre parasite), Acolyte (« Tout déplier »).
+
+*Restes* : dans les textes français importés, une ligne coupée par la mise en page du PDF après un intertitre en gras (« **Deux sorts mineurs.** Vous apprenez deux sorts / mineurs… ») s'affiche en deux paragraphes, ici comme sur la page de la règle ; à reprendre dans un ticket de nettoyage des textes.
+
 ### V3.1-173 — Expliquer compétences, bottes d'armes et aptitudes de classe (7 novembre)
 
 **Modèle conseillé : Opus** pour les données (import du SRD), **Sonnet** pour l'affichage.

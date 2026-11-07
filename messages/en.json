@@ -2833,6 +2833,10 @@
       "lignees": "Lineages"
     },
     "fiche": {
+      "toutDeplier": "Expand all",
+      "toutReplier": "Collapse all",
+      "chargement": "Loading the text…",
+      "sansTexte": "This entry has no text yet.",
       "naissent": "What comes of it"
     },
     "historique": {

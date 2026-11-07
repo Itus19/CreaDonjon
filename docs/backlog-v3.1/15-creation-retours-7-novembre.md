@@ -38,16 +38,6 @@ Ordre conseillé : 162 (les textes en données) avant 161 et 163 ; 167 (noyau) i
 
 **Sous-tâches Haiku.** Recenser les champs et boutons de l'assistant et leurs classes ; planche du catalogue.
 
-### V3.1-172 — Espèce, don d'origine, historique : le texte entier, sans quitter l'écran (sans modèle IA)
-
-**Modèle conseillé : Sonnet**, après 162 pour la mise en forme des textes. Revient sur « traits en une ligne chacun » (décision du 5 octobre).
-
-**Constat.** La fiche de la sélection ne garde que la première phrase de chaque trait (`premierePhrase`, `SpeciesStep.tsx`) sur une ligne coupée (`truncate`) : « Ingénieux — Vous recevez l'Inspiration héroïque chaque fois que vous terminez… ». Le don d'origine est coupé à une longueur fixe (`ChoixDon.tsx`). Les traits d'historique n'ont pas d'explication.
-
-**À faire.** Chaque trait garde sa ligne courte et **se déplie** sur place (le texte entier, gras et listes compris), sans quitter l'écran ; « Tout déplier » pour la fiche. Même composant pour Espèce, Don d'origine et Historique. Sur téléphone, le dépliage reste dans la carte.
-
-**Critères.** Aucun texte de trait, de don ou d'historique n'est tronqué sans moyen de le lire ; un seul composant ; planche du catalogue.
-
 ### V3.1-174 — La sous-classe en sous-étape, ses choix expliqués (sans modèle IA)
 
 **Modèle conseillé : Sonnet**, après 162. Revient sur « la sous-classe en pastille de la progression » (V3.1-51).

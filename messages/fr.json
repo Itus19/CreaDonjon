@@ -2834,6 +2834,10 @@
       "lignees": "Lignées"
     },
     "fiche": {
+      "toutDeplier": "Tout déplier",
+      "toutReplier": "Tout replier",
+      "chargement": "Chargement du texte…",
+      "sansTexte": "Cette fiche n'a pas encore de texte.",
       "naissent": "Ce qui en naît"
     },
     "historique": {

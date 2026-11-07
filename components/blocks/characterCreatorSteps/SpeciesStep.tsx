@@ -52,7 +52,7 @@ function speciesCardInfo(blocks: RuleEntryBlockData[] | undefined): SpeciesCardI
     if (data.sizes && data.sizes.length > 0) statsParts.push(data.sizes.map((s) => SIZE_LABELS_FR[s.label] ?? s.label).join("/"));
     if (data.speed?.value !== undefined) statsParts.push(`${ftToM(data.speed.value)} m`);
     lifespan = data.lifespan ?? null;
-    for (const tr of data.traits as unknown as TraitResolu[]) traits.push({ nom: tr.resolved_name ?? tr.key, texte: premierePhrase(tr.resolved_description) });
+    for (const tr of data.traits as unknown as TraitResolu[]) traits.push({ nom: tr.resolved_name ?? tr.key, texte: premierePhrase(tr.resolved_description), entier: tr.resolved_description || undefined });
   }
 
   if (table) {
@@ -126,6 +126,8 @@ export default function SpeciesStep({
     if (!entry) return null;
     return (
       <FicheSelection
+        key={key}
+        worldSlug={worldSlug}
         titre={entry.name}
         resume={[info?.statsLine, info?.lifespan].filter(Boolean).join(" · ") || null}
         lignes={info?.traits ?? []}

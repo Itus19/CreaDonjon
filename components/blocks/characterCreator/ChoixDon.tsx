@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { renderBlockData } from "@/components/rules/blockContentRenderer";
 import type { SousEtape } from "@/lib/ui/cheminCreation";
 import { toggleChoice } from "@/components/blocks/characterChoiceUtils";
 import { ASI_FEAT_KEY } from "@/src/core/rules/abilityScoreImprovement";
@@ -22,26 +24,6 @@ export interface ContexteAmelioration {
   nomClasse: (classKey: string) => string;
 }
 
-const LONGUEUR_EXTRAIT = 160;
-
-function extraitDescription(
-  blocs: RuleEntryBlockData[] | undefined,
-): string | null {
-  const bloc = blocs?.find((b) => b.blockType === "description");
-  const segments = (
-    bloc?.data as { segments?: { text?: unknown }[] } | undefined
-  )?.segments;
-  const texte = segments?.find(
-    (s) => typeof s.text === "string" && s.text.trim() !== "",
-  )?.text;
-  if (typeof texte !== "string") return null;
-  // Le texte du SRD porte du gras Markdown (`**Frappe…**`) : l'extrait le montre en texte simple.
-  const propre = texte.replace(/\*\*/g, "").replace(/\s+/g, " ").trim();
-  return propre.length > LONGUEUR_EXTRAIT
-    ? `${propre.slice(0, LONGUEUR_EXTRAIT).trimEnd()}…`
-    : propre;
-}
-
 function prerequis(blocs: RuleEntryBlockData[] | undefined): string[] {
   const bloc = blocs?.find((b) => b.blockType === "prerequisites");
   const items = (bloc?.data as { items?: unknown } | undefined)?.items;
@@ -52,7 +34,9 @@ function prerequis(blocs: RuleEntryBlockData[] | undefined): string[] {
 
 /**
  * V3.1-118 — Le sélecteur d'un choix de don : une carte par don proposé (nom,
- * catégorie, prérequis, début de sa description). Les blocs des dons viennent
+ * catégorie, prérequis). V3.1-172 (esquisse, solution B) : plus d'extrait
+ * coupé sur la carte ; le don touché s'affiche en entier sous la grille, comme
+ * la fiche de l'espèce ou de l'historique. Les blocs des dons viennent
  * d'UNE requête (`useRuleEntryBlocks`), limitée aux dons de ce choix. Un don
  * déjà acquis ailleurs reste visible, grisé. Si le don choisi est
  * « Amélioration de caractéristique » d'un niveau de classe, le +2 / +1+1 de CE
@@ -78,6 +62,8 @@ export default function ChoixDon({
     worldSlug,
     sous.options.map((o) => o.cle),
   );
+  // Le don dont la fiche s'affiche sous la grille : le dernier touché, sinon le premier choisi.
+  const [touche, setTouche] = useState<string | null>(null);
 
   if (sous.impose) {
     return (
@@ -124,7 +110,6 @@ export default function ChoixDon({
           const bloque = acquis || (!choisi && complet && sous.nombre > 1);
           const categorie = dons[o.cle]?.category;
           const conditions = prerequis(blocs[o.cle]);
-          const extrait = extraitDescription(blocs[o.cle]);
           return (
             <button
               key={o.cle}
@@ -132,6 +117,7 @@ export default function ChoixDon({
               aria-pressed={choisi}
               aria-disabled={bloque}
               onClick={() => {
+                setTouche(o.cle);
                 if (bloque) return;
                 onChoisir(
                   sous.nombre === 1
@@ -158,11 +144,6 @@ export default function ChoixDon({
                   {t("choixDon.prerequis", { liste: conditions.join(", ") })}
                 </span>
               )}
-              {extrait && (
-                <span className="text-xs font-normal text-ink-soft">
-                  {extrait}
-                </span>
-              )}
               {acquis && (
                 <span className="text-xs font-normal text-ink-muted">
                   {t("dejaAcquis")}
@@ -172,6 +153,28 @@ export default function ChoixDon({
           );
         })}
       </div>
+
+      {(() => {
+        const vu = sous.options.find((o) => o.cle === (touche ?? sous.choisis[0]));
+        if (!vu) return null;
+        const description = blocs[vu.cle]?.find((b) => b.blockType === "description");
+        const categorie = dons[vu.cle]?.category;
+        return (
+          <article aria-label={vu.libelle ?? vu.cle} className="flex flex-col gap-1.5 rounded-md border border-edge/60 bg-panel-sunken p-3">
+            <header className="flex flex-col gap-0.5">
+              <h3 className="font-display text-base font-bold text-ink">{vu.libelle ?? vu.cle}</h3>
+              {categorie && <p className="text-xs text-ink-muted">{t("choixDon.categorie", { nom: nomCategorie(categorie) })}</p>}
+            </header>
+            {blocs[vu.cle] === undefined ? (
+              <p className="text-xs text-ink-muted">{t("fiche.chargement")}</p>
+            ) : description ? (
+              <div className="text-sm text-ink-soft">{renderBlockData("description", description.data, worldSlug)}</div>
+            ) : (
+              <p className="text-xs text-ink-muted">{t("fiche.sansTexte")}</p>
+            )}
+          </article>
+        );
+      })()}
 
       {afficherAmelioration && niveauDeClasse && (
         <AsiStep
