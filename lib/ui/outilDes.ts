@@ -153,6 +153,8 @@ export interface SortieJet {
   sansTotal?: boolean;
   /** V3.1-112 : la sauvegarde demandée par ce jet ; l'outil affiche « En attente… », puis le verdict quand il revient. */
   sauvegardeId?: string;
+  /** V3.1-163 (ADR 0075) : une fenêtre de réaction est ouverte sur ce jet ; ni verdict ni total tant qu'elle n'est pas reprise. */
+  rollWindowId?: string;
 }
 
 /** Un geste proposé après un jet : son libellé, et le jet qu'il lance (même forme qu'un `lancer`). */
@@ -301,6 +303,8 @@ export interface JetAffiche {
   createdAt: string;
   /** V3.1-106 : pas de total à montrer (voir `SortieJet.sansTotal`). */
   sansTotal?: boolean;
+  /** V3.1-163 : une fenêtre de réaction est ouverte ; l'outil écrit « En attente des réactions » à la place du verdict. */
+  enAttenteReactions?: boolean;
 }
 
 /** Ce que `jetDepuisLigne` lit d'une ligne `dice_rolls` : `DiceRollRow` (repo serveur) y entre sans que ce fichier importe le serveur. */

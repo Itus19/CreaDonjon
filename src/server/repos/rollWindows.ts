@@ -19,9 +19,19 @@ export async function getRollWindow(supabase: TypedClient, id: string): Promise<
   return data;
 }
 
-/** Les fenêtres ouvertes de la campagne que l'appelant voit (RLS : auteur, répondants, MJ). */
+/**
+ * Les fenêtres ouvertes de la campagne que l'appelant voit (RLS : auteur,
+ * répondants, MJ), plus celles fermées et pas encore reprises : l'écran de
+ * l'auteur les reprend, même après un rechargement entre les deux.
+ */
 export async function listPendingRollWindows(supabase: TypedClient, campaignId: string): Promise<RollWindowRow[]> {
-  const { data, error } = await supabase.from("roll_windows").select(COLUMNS).eq("campaign_id", campaignId).eq("status", "pending").order("created_at", { ascending: true }).limit(20);
+  const { data, error } = await supabase
+    .from("roll_windows")
+    .select(COLUMNS)
+    .eq("campaign_id", campaignId)
+    .or("status.eq.pending,and(status.eq.closed,resumed_at.is.null)")
+    .order("created_at", { ascending: true })
+    .limit(20);
   if (error) throw new Error(error.message);
   return data ?? [];
 }

@@ -24,14 +24,14 @@ export default function BandeauSauvegarde({ campaignId, worldSlug }: { campaignI
   const { aRepondre } = useSauvegardes();
   // Côté MJ, la liste vit dans les outils Initiative et Table, pas dans un bandeau.
   const horsMj = !pathname.startsWith(`/m/${worldSlug}/mj`);
-  const [retenue, setRetenue] = useState<{ demande: DemandeSauvegarde; issue: IssueSauvegarde; changes: string[] } | null>(null);
+  const [retenue, setRetenue] = useState<{ demande: DemandeSauvegarde; issue: IssueSauvegarde; changes: string[]; enAttenteReactions: boolean } | null>(null);
 
   const courante = aRepondre[0];
   if (!campaignId || !horsMj) return null;
   // Le verdict reste affiché même si le signal temps réel a déjà retiré la demande.
   if (retenue) return <CadreVerdict retenue={retenue} onFini={() => setRetenue(null)} />;
   if (!courante) return null;
-  return <Reponse key={courante.id} campaignId={campaignId} demande={courante} onRepondue={(issue, changes) => setRetenue({ demande: courante, issue, changes })} />;
+  return <Reponse key={courante.id} campaignId={campaignId} demande={courante} onRepondue={(issue, changes, enAttenteReactions) => setRetenue({ demande: courante, issue, changes, enAttenteReactions })} />;
 }
 
 function Cadre({ children, labelledBy }: { children: React.ReactNode; labelledBy: string }) {
@@ -53,7 +53,7 @@ function Reponse({
 }: {
   campaignId: string;
   demande: DemandeSauvegarde;
-  onRepondue: (issue: IssueSauvegarde, changes: string[]) => void;
+  onRepondue: (issue: IssueSauvegarde, changes: string[], enAttenteReactions: boolean) => void;
 }) {
   const t = useTranslations("sauvegardes");
   const { laisserAuMj } = useSauvegardes();
@@ -73,7 +73,7 @@ function Reponse({
       return;
     }
     const reponse: ReponseSauvegarde = res.reponse;
-    onRepondue(issueDepuisReponse(reponse, demande.dc), reponse.changes);
+    onRepondue(issueDepuisReponse(reponse, demande.dc), reponse.changes, !!reponse.rollWindowId);
   }
 
   const occupe = phase === "envoi";
@@ -137,7 +137,7 @@ function CadreVerdict({
   retenue,
   onFini,
 }: {
-  retenue: { demande: DemandeSauvegarde; issue: IssueSauvegarde; changes: string[] };
+  retenue: { demande: DemandeSauvegarde; issue: IssueSauvegarde; changes: string[]; enAttenteReactions: boolean };
   onFini: () => void;
 }) {
   const t = useTranslations("sauvegardes");
@@ -150,13 +150,17 @@ function CadreVerdict({
     if (reste === 0) onFini();
   }, [reste, onFini]);
 
-  const { issue, demande, changes } = retenue;
+  const { issue, demande, changes, enAttenteReactions } = retenue;
   const verdict = issue.reussie ? t("reussie") : t("ratee");
   return (
     <Cadre labelledBy={`verdict-${demande.id}`}>
       <div role="status">
-        <h2 id={`verdict-${demande.id}`} className={`font-chrome text-base font-semibold ${issue.reussie ? "text-success" : "text-danger"}`}>
-          {t("verdict", { verdict, total: issue.total, dd: issue.dc })}
+        {/* V3.1-163 : une fenêtre de réaction est ouverte, pas encore de verdict (le serveur n'a rien écrit). */}
+        <h2
+          id={`verdict-${demande.id}`}
+          className={`font-chrome text-base font-semibold ${enAttenteReactions ? "text-ink" : issue.reussie ? "text-success" : "text-danger"}`}
+        >
+          {enAttenteReactions ? t("enAttenteReactions") : t("verdict", { verdict, total: issue.total, dd: issue.dc })}
         </h2>
         <p className="text-xs text-ink-muted">{demande.label}</p>
         {changes.length > 0 && (

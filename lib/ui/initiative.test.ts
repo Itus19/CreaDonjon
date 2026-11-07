@@ -278,6 +278,19 @@ describe("sortieDepuisJetCible : sauvegarde demandée (V3.1-112)", () => {
   });
 });
 
+describe("sortieDepuisJetCible : fenêtre de réaction (V3.1-161)", () => {
+  const libelle = (cle: string, cible: string) => `${cle} — ${cible}`;
+  const base = { ok: true as const, verdict: null, amount: null, facts: [], changes: [], hints: [], ignored: [], targetOutOfFight: false, chained: null, rollEventId: null, rollWindowId: "w1", saveRequestId: null, dice: null };
+  it("un jet en attente des réactions n'a ni verdict ni total, et ne plante pas sans événement", () => {
+    const sortie = sortieDepuisJetCible(base, "attack", { acteur: "Worg", cible: "Léonie", libelle });
+    expect(sortie).toMatchObject({ what: "attenteReactions — Léonie", verdict: null, sansTotal: true });
+  });
+  it("sans fenêtre, le verdict reste celui du jet", () => {
+    const sortie = sortieDepuisJetCible({ ...base, rollWindowId: null, rollEventId: "r", verdict: "hit" }, "attack", { acteur: "Worg", cible: "Léonie", libelle });
+    expect(sortie.verdict).toBe("success");
+  });
+});
+
 describe("jets ciblés : dés, avantage, suite (V3.1-38 suite)", () => {
   const libelle = (cle: string, cible: string) => `${cle} — ${cible}`;
   const base = { ok: true as const, verdict: null, amount: null, facts: [], changes: [], hints: [], ignored: [], targetOutOfFight: false, chained: null, rollEventId: "r", saveRequestId: null, dice: null };

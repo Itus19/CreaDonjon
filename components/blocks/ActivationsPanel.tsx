@@ -170,6 +170,10 @@ function CarteCapacite(
     else morceaux.push(t(`duree.${d.unit}`, { n: d.amount }));
   }
 
+  // V3.1-161 (ADR 0075) : une activation à déclencheur ne se joue pas au clic ; elle se propose pendant le jet (bandeau de réaction).
+  const reaction = activation.trigger !== undefined;
+  if (activation.limit) morceaux.push(t(activation.limit.per === "turn" ? "limiteTour" : "limiteRound"));
+
   const nomCapacite = localized(activation.label, locale);
   const visePersonne = activation.targets.kind !== "self";
   const max = resume.cibles?.max ?? null;
@@ -223,7 +227,7 @@ function CarteCapacite(
           <span className="break-words text-sm font-semibold text-ink">{nomCapacite}</span>
           <span className="break-words text-xs text-ink-muted">{morceaux.join(" · ")}</span>
         </div>
-        {!ouvert && (
+        {!ouvert && !reaction && (
           <button
             type="button"
             className={BOUTON_PRINCIPAL}
@@ -234,6 +238,8 @@ function CarteCapacite(
           </button>
         )}
       </div>
+
+      {reaction && <p className="text-xs text-accent">{t("reaction")}</p>}
 
       {variantes.length > 1 && (
         <div className="flex flex-wrap gap-1" role="group" aria-label={t("variante", { nom: nomCapacite })}>

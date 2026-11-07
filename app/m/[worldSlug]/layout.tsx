@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { countUnreadChatMessages } from "@/src/server/services/chat";
 import { listMyPendingSaveRequests } from "@/src/server/services/saveRequests";
+import { listPendingRollWindows } from "@/src/server/repos/rollWindows";
+import { fenetresDepuisLignes } from "@/lib/ui/reactions";
 import { getCalendar, getWorldBySlug } from "@/src/server/services/worlds";
 import { listCampaigns } from "@/src/server/services/campaigns";
 import AppShell from "@/components/shell/AppShell";
@@ -41,7 +43,8 @@ export default async function WorldLayout({
   // par un appel `/api` apres l'affichage.
   // V3.1-112 : les sauvegardes en attente (pastille du dé encoché, bandeau de
   // la cible) arrivent de même, dans la même vague ; le temps réel suit.
-  const [initialUnreadCount, initialSaveRequests] =
+  // V3.1-161 : les fenêtres de réaction ouvertes arrivent au même endroit (docs/CABLAGE.md, C1).
+  const [initialUnreadCount, initialSaveRequests, initialRollWindows] =
     campaignId && user
       ? await Promise.all([
           countUnreadChatMessages(supabase, {
@@ -50,8 +53,9 @@ export default async function WorldLayout({
             userId: user.id,
           }),
           listMyPendingSaveRequests(supabase, campaignId),
+          listPendingRollWindows(supabase, campaignId).then(fenetresDepuisLignes),
         ])
-      : [null, []];
+      : [null, [], []];
 
   return (
     // Etat des fenetres du MJ (ADR-0011, ADR-0066), partage par Monde et Regles
@@ -66,6 +70,7 @@ export default async function WorldLayout({
           initialUnreadCount={initialUnreadCount}
           userId={user?.id ?? null}
           initialSaveRequests={initialSaveRequests}
+          initialRollWindows={initialRollWindows}
           overlay={<VoletsLayer worldSlug={world.slug} />}
         >
           <WorldCalendarProvider calendar={calendar}>

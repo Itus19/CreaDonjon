@@ -108,6 +108,7 @@
     "total": "Total {total}"
   },
   "outilDes": {
+    "enAttenteReactions": "En attente des réactions",
     "titreLibre": "Jet libre",
     "secret": "Secret",
     "secretAide": "Seuls vous et le MJ voyez ce jet.",
@@ -205,6 +206,43 @@
   },
   "regles": {
     "briques": {
+      "reaction": {
+        "declenchement": "Déclenchement",
+        "auClic": "Au clic",
+        "enReaction": "En réaction à un jet",
+        "declencheur": "Déclencheur",
+        "jetVise": "Jet visé",
+        "deQui": "De qui",
+        "quand": "Quand",
+        "jets": { "attack": "Une attaque", "save": "Une sauvegarde", "check": "Un test", "d20": "Un d20 (attaque, sauvegarde ou test)", "damage": "Des dégâts" },
+        "sujets": { "self": "Moi", "attack_against_self": "Une attaque contre moi", "ally": "Un allié", "enemy": "Un ennemi", "any": "N'importe qui" },
+        "moments": { "rolled": "Le dé est lancé", "hit": "L'attaque touche", "failed": "Le jet est raté", "natural": "Le d20 donne une valeur précise" },
+        "valeurDuD20": "Valeur du d20 (1 à 20)",
+        "automatique": "S'applique d'office, sans fenêtre",
+        "operations": "Opérations sur le jet",
+        "ajouterOperation": "Ajouter une opération",
+        "retirer": "Retirer",
+        "op": {
+          "add_die": "Ajouter un dé au jet",
+          "reroll": "Relancer le d20",
+          "set_natural": "Fixer la valeur du d20",
+          "ac_bonus": "Bonus de CA contre l'attaque",
+          "damage_multiplier": "Multiplier les dégâts",
+          "add_damage": "Ajouter des dégâts"
+        },
+        "signe": "Sens",
+        "ajoute": "Ajoute",
+        "retranche": "Retranche",
+        "nombreDeDes": "Nombre de dés",
+        "facesDuDe": "Faces",
+        "bonusApresRelance": "Bonus après la relance (facultatif)",
+        "bonusDeCa": "Bonus de CA",
+        "facteur": "Facteur (0,5 : moitié des dégâts)",
+        "degatsEnPlus": "Dégâts en plus",
+        "typeDeDegats": "Type de dégâts (facultatif)",
+        "limite": "Limite",
+        "limites": { "aucune": "Aucune", "turn": "Une fois par tour", "round": "Une fois par round" }
+      },
       "insererReference": "Insérer une référence",
       "insererReferenceAria": "Insérer une référence dans « {champ} »",
       "reference": {
@@ -1537,6 +1575,7 @@
     }
   },
   "initiative": {
+    "jetAttenteReactions": "En attente des réactions — {cible}",
     "titre": "Initiative",
     "description": "Suivez l'ordre du tour, les points de vie et les états d'un combat.",
     "aucuneCampagne": "Aucune campagne dans ce monde — créez-en une dans l'onglet Campagnes.",
@@ -1688,7 +1727,27 @@
     "actionBonus": "Action bonus",
     "reaction": "Réaction"
   },
+  "reactions": {
+    "titreBandeau": "Réaction possible",
+    "jetAvecIssue": "Total {total} · {issue}",
+    "jetSansIssue": "Total {total}",
+    "enAttenteDesAutres": "En attente des autres réponses…",
+    "changeraitLIssue": "Changerait l'issue",
+    "utiliser": "Utiliser",
+    "passer": "Passer",
+    "continuer": "Continuer",
+    "erreurEnvoi": "La réponse n'a pas pu être envoyée.",
+    "erreurReprise": "Le jet n'a pas pu être repris.",
+    "fermer": "Fermer",
+    "issueTitre": "Résultat du jet",
+    "seReferme": "se referme dans {secondes} s…",
+    "jetTestReussi": "{what} : {total}, réussi",
+    "jetTestRate": "{what} : {total}, raté",
+    "jetTestSansVerdict": "{what} : {total}"
+  },
   "sauvegardes": {
+    "pastilleReactions": "{n, plural, one {# réaction à répondre} other {# réactions à répondre}}",
+    "enAttenteReactions": "En attente des réactions…",
     "titreBandeau": "Sauvegarde demandée",
     "resiste": "Résiste à {label}",
     "lancer": "Lancer",
@@ -1715,6 +1774,9 @@
   },
   "fiche": {
     "activation": {
+      "reaction": "Réaction : se propose pendant le jet",
+      "limiteTour": "une fois par tour",
+      "limiteRound": "une fois par round",
       "ressources": "Ressources · calculées depuis les règles",
       "capacites": "Capacités",
       "surLaScene": "Sur la scène",

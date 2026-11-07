@@ -25,7 +25,7 @@ import { ErreurLancer, sortieSansDes, type CibleDeJet, type PreReglage, type Sor
 
 /** Les textes, déjà traduits par l'appelant (ce fichier ne connaît pas next-intl). */
 export interface TextesJetCible {
-  libelle: (cle: "touche" | "rate" | "attaque" | "degats" | "sauvegarde" | "soin", cible: string) => string;
+  libelle: (cle: "touche" | "rate" | "attaque" | "degats" | "sauvegarde" | "soin" | "attenteReactions", cible: string) => string;
   erreurJet: string;
   allie: string;
   adversaire: string;

@@ -5,11 +5,14 @@ import DiceRollProvider from "./DiceRollPanel";
 import ChatUnreadProvider from "./useChatUnread";
 import SauvegardesProvider from "./SauvegardesProvider";
 import type { DemandeSauvegarde } from "@/lib/ui/sauvegardes";
+import type { FenetreReaction } from "@/lib/ui/reactions";
+import BandeauReaction from "./reaction/BandeauReaction";
 import BandeauSauvegarde from "./sauvegarde/BandeauSauvegarde";
 import BarreTelephoneMj from "./BarreTelephoneMj";
 
 /** Une seule référence : le fournisseur repart de la liste quand elle change. */
 const AUCUNE_SAUVEGARDE: DemandeSauvegarde[] = [];
+const AUCUNE_FENETRE: FenetreReaction[] = [];
 
 /**
  * Coquille commune aux trois sections (Monde/Règles/MJ). Elle n'a plus
@@ -30,6 +33,7 @@ export default function AppShell({
   initialUnreadCount = null,
   userId = null,
   initialSaveRequests = AUCUNE_SAUVEGARDE,
+  initialRollWindows = AUCUNE_FENETRE,
   children,
   overlay,
 }: {
@@ -42,6 +46,8 @@ export default function AppShell({
   userId?: string | null;
   /** V3.1-112 : les sauvegardes en attente, lues par le layout avec la page. */
   initialSaveRequests?: DemandeSauvegarde[];
+  /** V3.1-161 : les fenêtres de réaction ouvertes, lues par le layout avec la page. */
+  initialRollWindows?: FenetreReaction[];
   children: React.ReactNode;
   /**
    * Emplacement pour un contenu monte une seule fois, HORS du flux flex de
@@ -58,7 +64,7 @@ export default function AppShell({
   const pathname = usePathname();
   const isMj = pathname.startsWith(`/m/${worldSlug}/mj`);
   return (
-    <SauvegardesProvider campaignId={campaignId} userId={userId} isMj={isMj} initiales={initialSaveRequests}>
+    <SauvegardesProvider campaignId={campaignId} userId={userId} isMj={isMj} initiales={initialSaveRequests} fenetresInitiales={initialRollWindows}>
       <DiceRollProvider campaignId={campaignId} isGm={isMj}>
         <ChatUnreadProvider
           campaignId={campaignId}
@@ -91,6 +97,9 @@ export default function AppShell({
 
           {/* V3.1-112 : le bandeau de la cible d'une sauvegarde demandée (hors section MJ). */}
           <BandeauSauvegarde campaignId={campaignId} worldSlug={worldSlug} />
+
+          {/* V3.1-161 : le bandeau de réaction à un jet (partout, section MJ comprise : le MJ y continue). */}
+          <BandeauReaction campaignId={campaignId} userId={userId} isMj={isMj} />
 
           {overlay}
         </ChatUnreadProvider>
