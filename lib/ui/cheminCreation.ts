@@ -41,8 +41,8 @@ export interface SousEtape {
   nombre: number;
   choisis: string[];
   options: OptionChoix[];
-  /** `groupe` (V3.1-50) : le don d'un historique, ses choix réunis en `sections`. */
-  genre: ChoiceFrom["kind"] | "weapon_mastery" | "groupe";
+  /** `groupe` (V3.1-50) : le don d'un historique, ses choix réunis en `sections`. `subclass` (V3.1-174) : le choix de la sous-classe d'une classe. */
+  genre: ChoiceFrom["kind"] | "weapon_mastery" | "groupe" | "subclass";
   /** La réponse est imposée par une autre fiche (Argot des voleurs) : acquise, rien à choisir. */
   impose: boolean;
   fait: boolean;
@@ -55,6 +55,19 @@ export interface SousEtape {
   /** V3.1-51 : le niveau qui ouvre le choix (de SA classe si `classKey`), pour le placer sur sa ligne de progression. */
   niveau: number;
   classKey?: string;
+  /** V3.1-174 : la sous-classe dont ce choix vient (`hunter` pour la Proie du chasseur) ; il se range sous elle. */
+  sousClasse?: string;
+}
+
+/** V3.1-174 — Le choix de la sous-classe d'une classe, au niveau où elle l'accorde (l'assistant connaît le niveau et les sous-classes du monde). */
+export interface SousClasseAChoisir {
+  classKey: string;
+  libelle: string;
+  source: string;
+  niveau: number;
+  options: readonly OptionChoix[];
+  /** La sous-classe choisie, ou `null`. */
+  choisie: string | null;
 }
 
 export interface Etape {
@@ -91,6 +104,8 @@ export interface EntreeChemin {
   dons: Readonly<Record<string, FeatChoiceData>>;
   /** Les sorts du monde, pour un choix de sort. Absent : aucune option tant que le catalogue n'est pas là. */
   sorts?: readonly SortCandidat[];
+  /** V3.1-174 : les sous-classes à choisir (classes qui ont atteint le niveau de leur sous-classe). */
+  sousClasses?: readonly SousClasseAChoisir[];
 }
 
 const ORDRE_ETAPES: readonly CleEtape[] = ["ident", "espece", "classe", "carac", "pv", "histo", "equip", "sorts", "apercu"];
@@ -224,6 +239,7 @@ export function construireChemin(entree: EntreeChemin): Chemin {
   }
 
   regrouperDonsDHistorique(sous, racineDe, entree.ouverts);
+  rangerSousClasses(sous, entree.sousClasses ?? []);
 
   const etapes: Etape[] = ORDRE_ETAPES.filter((cle) => (cle !== "pv" || entree.avecPointsDeVie) && (cle !== "sorts" || entree.avecSorts)).map((cle) => {
     const ici = sous.filter((s) => s.etape === cle);
@@ -320,3 +336,43 @@ function regrouperDonsDHistorique(sous: SousEtape[], racineDe: ReadonlyMap<strin
   }
 }
 
+
+/**
+ * V3.1-174 — Chaque sous-classe à choisir devient une sous-étape de Classe,
+ * après les autres choix de sa classe ; une fois choisie, les choix qu'elle
+ * accorde (leur clé commence par la sienne, `hunter.…`) la suivent, marqués
+ * `sousClasse`.
+ */
+function rangerSousClasses(sous: SousEtape[], aChoisir: readonly SousClasseAChoisir[]): void {
+  for (const sc of aChoisir) {
+    const etape: SousEtape = {
+      cle: `sousclasse:${sc.classKey}`,
+      etape: "classe",
+      libelle: sc.libelle,
+      source: sc.source,
+      nombre: 1,
+      choisis: sc.choisie ? [sc.choisie] : [],
+      options: [...sc.options],
+      genre: "subclass",
+      impose: false,
+      fait: sc.choisie !== null,
+      attend: false,
+      expertise: false,
+      niveau: sc.niveau,
+      classKey: sc.classKey,
+    };
+    const siens = sc.choisie ? sous.filter((s) => s.cle.startsWith(`${sc.choisie}.`)) : [];
+    for (const s of siens) sous.splice(sous.indexOf(s), 1);
+    // Après le dernier choix de sa classe ; sinon après le dernier choix de Classe ; sinon en fin de liste.
+    const deSaClasse = (s: SousEtape) => s.etape === "classe" && (s.classKey === sc.classKey || s.cle.startsWith(`${sc.classKey}.`));
+    let dernier = sous.findLastIndex(deSaClasse);
+    if (dernier === -1) dernier = sous.findLastIndex((s) => s.etape === "classe");
+    const position = dernier === -1 ? sous.length : dernier + 1;
+    // L'en-tête de ces choix nomme la sous-classe en français (le moteur, lui, porte le nom anglais de l'aptitude).
+    const nomSousClasse = sc.options.find((o) => o.cle === sc.choisie)?.libelle;
+    const marques = sc.choisie
+      ? siens.map((s) => ({ ...s, sousClasse: sc.choisie as string, ...(nomSousClasse ? { source: `${nomSousClasse} — ${s.libelle}` } : {}) }))
+      : [];
+    sous.splice(position, 0, etape, ...marques);
+  }
+}

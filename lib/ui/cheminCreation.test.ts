@@ -288,3 +288,67 @@ describe("le don de niveau (V3.1-118) : l'amélioration n'est faite qu'avec son 
     expect(sousDuDon({ "fighter.l4.feat": [ASI_FEAT_KEY], "fighter.l4.asi": { kind: "asi", increases: { str: 1, con: 1 } } }).fait).toBe(true);
   });
 });
+
+describe("la sous-classe en sous-étape (V3.1-174)", () => {
+  const PROIE: ChoiceSource = {
+    key: "hunter.hunter-s-prey",
+    label: "Chasseur — Proie du chasseur",
+    layer: 3,
+    origin: "class",
+    classKey: "ranger",
+    grants: [
+      {
+        id: "option",
+        label: { fr: "Proie du chasseur" },
+        from: {
+          kind: "option",
+          options: [
+            { id: "colossus-slayer", label: { fr: "Goût du sang" } },
+            { id: "horde-breaker", label: { fr: "Briseur de hordes" } },
+          ],
+        },
+      },
+    ],
+  };
+  const COMPETENCES_RODEUR: RemainingChoiceView = { id: "ranger.skills", label: "Rôdeur — compétences", count: 3, options: ["nature", "survival", "stealth"], kind: "skill", origin: "class" };
+  const SOUS_CLASSE = {
+    classKey: "ranger",
+    libelle: "Rôdeur — sous-classe",
+    source: "Rôdeur, niveau 3",
+    niveau: 3,
+    options: [{ cle: "hunter", libelle: "Chasseur" }],
+  };
+
+  function cheminRodeur(choisie: string | null, sources: ChoiceSource[]) {
+    const resolu = resolveChoices({ sources, choices: {}, presets: {}, characterLevel: 3, classLevels: { ranger: 3 }, feats: FEATS, otherFeatures: [] });
+    return construireChemin({
+      restants: [COMPETENCES_RODEUR],
+      ouverts: resolu.open,
+      sources,
+      reponses: {},
+      avecPointsDeVie: false,
+      avecSorts: false,
+      langues: [],
+      competencesMaitrisees: [],
+      dons: FEATS,
+      sousClasses: [{ ...SOUS_CLASSE, choisie }],
+    });
+  }
+
+  it("au niveau qui l'accorde, une sous-étape « sous-classe » naît sous Classe, à faire tant que rien n'est choisi", () => {
+    const c = cheminRodeur(null, []);
+    const sous = c.etapes.find((e) => e.cle === "classe")?.sous.find((s) => s.cle === "sousclasse:ranger");
+    expect(sous).toMatchObject({ genre: "subclass", libelle: "Rôdeur — sous-classe", source: "Rôdeur, niveau 3", nombre: 1, choisis: [], fait: false, niveau: 3, classKey: "ranger" });
+    expect(sous?.options).toEqual([{ cle: "hunter", libelle: "Chasseur" }]);
+  });
+
+  it("choisie, elle est faite, et les choix de la sous-classe se rangent juste après elle, marqués comme siens", () => {
+    const c = cheminRodeur("hunter", [PROIE]);
+    const classe = c.etapes.find((e) => e.cle === "classe")?.sous ?? [];
+    expect(classe.map((s) => s.cle)).toEqual(["ranger.skills", "sousclasse:ranger", "hunter.hunter-s-prey.option"]);
+    expect(classe[1]).toMatchObject({ fait: true, choisis: ["hunter"] });
+    expect(classe[2].sousClasse).toBe("hunter");
+    expect(classe[2].source).toBe("Chasseur — Proie du chasseur");
+    expect(classe[0].sousClasse).toBeUndefined();
+  });
+});

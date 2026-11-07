@@ -9,7 +9,6 @@ import type {
   BlockType,
   ClassBasicsBlockData,
   ClassEquipmentBlockData,
-  SubclassSlotBlockData,
 } from "@/src/core/schemas/rule-blocks";
 import { exceedsLevelCap } from "@/src/core/rules/characterRules";
 import { renderBlockData, type EquipmentCardInteraction } from "@/components/rules/blockContentRenderer";
@@ -51,8 +50,6 @@ const STYLE_LIGNE: Record<LigneProgression["etat"], { ligne: string; numero: str
   nouveau: { ligne: "border-accent bg-accent/10 text-ink", numero: "text-accent" },
   avenir: { ligne: "border-edge text-ink-soft opacity-50", numero: "text-ink-muted" },
 };
-
-type Panneau = { genre: "sousclasse" };
 
 /**
  * Etape Classe (V3.1-51, specs/wiki-liens-et-personnages.md §B8 etendue au
@@ -106,20 +103,15 @@ export default function LevelClassesStep({
   const tCreation = useTranslations("creation");
   const entries = useWorldRuleEntries(worldSlug);
   const classEntries = entries.filter((e) => e.entryType === "class");
-  const subclassEntries = entries.filter((e) => e.entryType === "subclass");
 
-  const selectedSubclassKeys = character.classes
-    .map((c) => (c.subclass?.kind === "rule" ? c.subclass.key : null))
-    .filter((k): k is string => Boolean(k));
-  const neededKeys = [...new Set([...classEntries.map((e) => e.key), ...selectedSubclassKeys])];
+  const neededKeys = classEntries.map((e) => e.key);
   const blocksByKey = useRuleEntryBlocks(worldSlug, neededKeys);
 
   const totalLevel = character.classes.reduce((sum, c) => sum + c.level, 0);
   const montee = niveauxAvant !== undefined;
 
-  // Emplacement ouvert, panneau ouvert sous la progression (sous-classe, amelioration) et grille des classes.
+  // Emplacement ouvert et grille des classes. V3.1-174 : la sous-classe n'a plus de panneau ici, c'est une sous-étape.
   const [selectionBrute, setSelection] = useState(0);
-  const [panneau, setPanneau] = useState<Panneau | null>(null);
   const [grilleOuverte, setGrilleOuverte] = useState(false);
   // V3.1-173 : les niveaux dépliés de la progression (`<classe>:<niveau>`), leur texte chargé au dépliage.
   const [deplies, setDeplies] = useState<ReadonlySet<string>>(() => new Set());
@@ -145,19 +137,16 @@ export default function LevelClassesStep({
   function removeSlot(index: number) {
     patchCharacter({ classes: character.classes.filter((_, i) => i !== index) });
     setSelection(0);
-    setPanneau(null);
   }
 
   function addSlot() {
     patchCharacter({ classes: [...character.classes, { class: { kind: "rule", key: "" }, level: 1, subclass: null, hp_rolls: [] }] });
     setSelection(character.classes.length);
-    setPanneau(null);
     setGrilleOuverte(true);
   }
 
   function ouvrirEmplacement(index: number) {
     setSelection(index);
-    setPanneau(null);
     setGrilleOuverte(false);
   }
 
@@ -254,10 +243,6 @@ export default function LevelClassesStep({
   const niveauAvant = verrouille ? (niveauxAvant?.get(classKey) ?? 0) : 0;
   const progression = progressions[selection] ?? null;
   const classBlocks = blocksByKey[classKey];
-  const subclassSlot = findBlock<SubclassSlotBlockData>(classBlocks, "subclass_slot");
-  const availableSubclasses = subclassEntries.filter((e) => e.parentClassKey === classKey);
-  const subclassKey = slot?.subclass?.kind === "rule" ? slot.subclass.key : "";
-  const subclassBlocks = blocksByKey[subclassKey];
 
   // Bornes du niveau de cette classe : jamais sous le niveau d'avant, jamais au-dela du plafond de la classe
   // ni de ce que le plafond du ruleset laisse au personnage une fois les autres classes comptees.
@@ -270,14 +255,14 @@ export default function LevelClassesStep({
     if (!slot) return;
     const borne = Math.max(niveauMin, Math.min(niveauMax, niveau));
     if (borne !== slot.level) updateSlot(selection, { level: borne });
-    setPanneau(null);
   }
 
   const niveauxRapides = [...new Set([...NIVEAUX_RAPIDES, niveauMaxClasse])].filter((n) => n >= niveauMin && n <= niveauMax).sort((a, b) => a - b);
 
   function surPastille(genre: "choix" | "sousclasse" | "amelioration", cle: string, niveau: number) {
     if (genre === "choix") onAller(`c:${cle}`);
-    else if (genre === "sousclasse") setPanneau((p) => (p?.genre === "sousclasse" ? null : { genre: "sousclasse" }));
+    // V3.1-174 : la sous-classe se choisit dans sa sous-étape.
+    else if (genre === "sousclasse") onAller(`c:sousclasse:${classKey}`);
     // V3.1-118 : l'amélioration vit dans la sous-étape du don de ce niveau (`<classe>.l<n>.feat`).
     else onAller(`c:${classKey}.l${niveau}.feat`);
   }
@@ -428,7 +413,6 @@ export default function LevelClassesStep({
                       onClick={() => {
                         selectClass(selection, e.key, classKey);
                         setGrilleOuverte(false);
-                        setPanneau(null);
                       }}
                       className={`flex flex-col items-start gap-0.5 rounded-lg border px-2.5 py-2 text-left transition-colors ${
                         isSelected ? "border-accent bg-accent/10" : "border-edge/60 bg-panel-raised hover:bg-panel"
@@ -545,40 +529,6 @@ export default function LevelClassesStep({
               </ol>
             </div>
           )}
-
-          {panneau?.genre === "sousclasse" && subclassSlot && (
-            <div className="flex flex-col gap-2 rounded-md border border-edge/40 bg-panel-sunken p-2.5">
-              <p className="text-sm font-medium text-ink">{subclassSlot.label}</p>
-              {availableSubclasses.length > 0 ? (
-                <div className="flex flex-wrap gap-1.5">
-                  {availableSubclasses.map((e) => (
-                    <button
-                      key={e.key}
-                      type="button"
-                      onClick={() => updateSlot(selection, { subclass: { kind: "rule", key: e.key } })}
-                      className={`rounded-full border px-2.5 py-1 text-xs transition-colors ${
-                        e.key === subclassKey ? "border-accent bg-accent/10 text-accent" : "border-edge text-ink-muted hover:bg-panel-raised"
-                      }`}
-                    >
-                      {e.name}
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-ink-muted">{t("aucuneSousClasse")}</p>
-              )}
-              {subclassKey && subclassBlocks && subclassBlocks.length > 0 && (
-                <div className="flex flex-col gap-2 text-sm text-ink">
-                  {subclassBlocks
-                    .filter((b) => b.blockType === "description" || b.blockType === "subclass_features")
-                    .map((b, i) => (
-                      <div key={i}>{renderBlockData(b.blockType as BlockType, b.data, worldSlug)}</div>
-                    ))}
-                </div>
-              )}
-            </div>
-          )}
-
 
           {classKey && classBlocks && classBlocks.length > 0 && (
             <div className="flex flex-col gap-2 rounded-md border border-edge/40 bg-panel-sunken p-2.5 text-sm text-ink">

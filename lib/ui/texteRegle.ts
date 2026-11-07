@@ -30,3 +30,30 @@ export function texteDescription(blocs: readonly BlocFiche[] | undefined): strin
     .filter((t) => t !== "")
     .join(" ");
 }
+
+function echapper(texte: string): string {
+  return texte.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * V3.1-174 — Le texte d'une option nommée (« Briseur de hordes » de la Proie
+ * du chasseur) : la donnée ne le porte pas à part, il est dans la description
+ * de l'aptitude qui accorde le choix, en paragraphe qui commence par le nom
+ * de l'option (« **Briseur de hordes.** … » en français, « Horde Breaker. … »
+ * en anglais). Vide si aucune description ne le contient.
+ */
+export function texteOption(descriptions: readonly string[], libelle: string): string {
+  const motif = new RegExp(`^\\s*(?:\\*\\*)?${echapper(libelle)}\\.(?:\\*\\*)?\\s*(.+)$`, "m");
+  for (const d of descriptions) {
+    const trouve = motif.exec(d);
+    if (trouve) return trouve[1].trim();
+  }
+  return "";
+}
+
+/** La première phrase d'un texte, sans le gras du SRD : la ligne fermée d'une fiche (V3.1-50, V3.1-174). */
+export function premierePhrase(texte: string): string {
+  const propre = texte.replace(/\*\*/g, "").trim();
+  const fin = propre.search(/[.!?](\s|$)/);
+  return (fin === -1 ? propre : propre.slice(0, fin + 1)).trim();
+}

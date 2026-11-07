@@ -102,7 +102,8 @@ export function progressionsPersonnage(e: EntreeProgressions): { parEmplacement:
         const choix = parseAsiChoice(e.reponses[cleAmelioration(classKey, niveau)]);
         return { niveau, fait: choix !== null && isValidAsiChoice(choix), libelle: e.libelleAmelioration };
       }),
-      choix: sousEtapes.filter((s) => s.classKey === classKey),
+      // V3.1-174 : la sous-étape de sous-classe a déjà sa pastille (`sousClasse`) ; elle n'en fait pas une seconde.
+      choix: sousEtapes.filter((s) => s.classKey === classKey && s.genre !== "subclass"),
     });
 
     let lignes = resultat.lignes;

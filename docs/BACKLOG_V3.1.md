@@ -298,7 +298,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-171 | ☐ | sans | Identité : des champs à la même taille, et « le Commun est acquis » | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
 | V3.1-172 | ☑ | sans | Espèce, don d'origine, historique : le texte entier, sans quitter l'écran | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-173 | ☑ | sans | Expliquer compétences, bottes d'armes et aptitudes de classe | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-174 | ☐ | sans | La sous-classe en sous-étape, ses choix expliqués | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
+| V3.1-174 | ☑ | sans | La sous-classe en sous-étape, ses choix expliqués | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-175 | ☑ | sans | Caractéristiques : des cases lisibles (esquisse d'abord) | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-176 | ☐ | sans | Points de vie : « Maximum » en plus de la moyenne et du jet | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
 | V3.1-177 | ☐ | sans | Aperçu : la colonne s'efface, la fiche s'affiche comme sur la fiche | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |

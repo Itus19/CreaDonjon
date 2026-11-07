@@ -5763,6 +5763,23 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
 - `AbilityScoreStep.tsx` : une seule ligne de chiffres par case (« 15 +2 »), le détail complet au survol ; la légende sous les six cases (cinq couleurs de la charte). Les sources viennent toujours de la fiche du moteur.
 - Vérifié au navigateur (Testeur MJ, Humain Rôdeur, tableau standard) : les six cases sur une ligne, plus aucun texte qui déborde ; la légende « Valeur attribuée ». Le cas avec bonus (l'Acolyte +1) est montré sur la planche « Création » du catalogue ; la sous-étape de répartition de l'historique n'a pas été pilotée au navigateur.
 
+### V3.1-174 — La sous-classe en sous-étape, ses choix expliqués (7 novembre)
+
+**Modèle conseillé : Sonnet**, après 162. Revient sur « la sous-classe en pastille de la progression » (V3.1-51).
+
+**Constat.** Le choix de sous-classe n'est pas clair. Ses choix internes non plus : Rôdeur, Chasseur, « Proie du chasseur » propose deux options sans dire ce qu'elles font.
+
+**À faire.** Au niveau où la classe l'accorde, une sous-étape « Sous-classe » sous Classe, au même titre que compétences et maîtrises d'armes : les sous-classes du ruleset en cartes, la fiche de la sélection (aptitudes par niveau, texte dépliable comme 161), puis ses propres choix en sous-étapes, chaque option avec son texte. La pastille de la progression mène à cette sous-étape.
+
+**Critères.** Rôdeur 3 : la sous-étape apparaît, le Chasseur s'explique, « Proie du chasseur » montre le texte de chaque option ; une sous-classe d'un ruleset personnel s'y range comme une officielle ; planche du catalogue.
+
+**Fait le 7 novembre** (Opus seul). D'après l'esquisse : la sous-étape telle que décrite, et pour les choix de la sous-classe la **solution B** (choix de l'auteur : « un seul geste partout », celui du don d'origine).
+- **Chemin** (`lib/ui/cheminCreation.ts`, tests d'abord) : chaque classe qui atteint `subclass_slot.chosen_at_level` fait naître une sous-étape « <Classe> — sous-classe » (`genre: "subclass"`) après ses autres choix ; une fois choisie, les choix que la sous-classe accorde (clé `hunter.…`) la suivent, marqués `sousClasse`, et leur en-tête la nomme en français (« Chasseur — Proie du chasseur »). En montée de niveau, seulement si le niveau est franchi maintenant. La progression n'en fait pas une seconde pastille ; la pastille « Sous-classe de … » mène à la sous-étape, et le panneau du bas de l'étape Classe disparaît. La liste des étapes montre la sous-classe et ses choix (en retrait) à tout niveau, sans les compter deux fois.
+- **Écran** (`ChoixSousClasse.tsx`) : les sous-classes du monde pour cette classe en cartes courtes (nom, première phrase ; une sous-classe d'un ruleset personnel s'y range comme une officielle, elles viennent de la même liste), la fiche de la touchée dessous (`FicheSelection`, V3.1-172 : description, aptitudes « Niv. n · nom » dépliables, ses choix en pastilles). Les choix entre options nommées (tous, pas seulement ceux d'une sous-classe) passent au même geste : cartes courtes, texte de l'option touchée dessous. Le texte vient de l'option, ou de son paragraphe dans l'aptitude qui l'accorde (`texteOption`, « **Briseur de hordes.** … »).
+- Vérifié au navigateur (Testeur MJ, 1400 et 390 px) : Rôdeur 3, la sous-étape apparaît, le Chasseur se déplie, « Proie du chasseur » naît dessous et montre le texte de Goût du sang et de Briseur de hordes.
+
+*Restes* : la ligne 3 de la progression du Rôdeur annonce déjà « Savoir du Chasseur, Proie du chasseur » avant tout choix (donnée de la progression importée) ; le texte de « Défense de chasseur supérieure » déborde sur le chapitre du Roublard (V3.1-180).
+
 ### V3.1-172 — Espèce, don d'origine, historique : le texte entier, sans quitter l'écran (7 novembre)
 
 **Modèle conseillé : Sonnet**, après 162 pour la mise en forme des textes. Revient sur « traits en une ligne chacun » (décision du 5 octobre).

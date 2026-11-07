@@ -10,6 +10,7 @@ import type { SousEtape } from "@/lib/ui/cheminCreation";
 import { useWorldRuleEntries } from "../useWorldRuleEntries";
 import { useRuleEntryBlocks, type RuleEntryBlockData } from "../useRuleEntryBlocks";
 import FicheSelection, { type LigneFiche } from "../characterCreator/FicheSelection";
+import { premierePhrase } from "@/lib/ui/texteRegle";
 
 const ABILITY_LABELS: Record<string, string> = { str: "FOR", dex: "DEX", con: "CON", int: "INT", wis: "SAG", cha: "CHA" };
 
@@ -20,13 +21,6 @@ interface SpeciesCardInfo {
 }
 
 type TraitResolu = { key: string; resolved_name?: string; resolved_description?: string };
-
-/** La première phrase, pour tenir sur une ligne. */
-function premierePhrase(texte: string | undefined): string | undefined {
-  if (!texte) return undefined;
-  const fin = texte.search(/[.!?](\s|$)/);
-  return (fin === -1 ? texte : texte.slice(0, fin + 1)).trim();
-}
 
 /**
  * Type, taille, vitesse, bonus de caracteristique, esperance de vie et
@@ -52,7 +46,7 @@ function speciesCardInfo(blocks: RuleEntryBlockData[] | undefined): SpeciesCardI
     if (data.sizes && data.sizes.length > 0) statsParts.push(data.sizes.map((s) => SIZE_LABELS_FR[s.label] ?? s.label).join("/"));
     if (data.speed?.value !== undefined) statsParts.push(`${ftToM(data.speed.value)} m`);
     lifespan = data.lifespan ?? null;
-    for (const tr of data.traits as unknown as TraitResolu[]) traits.push({ nom: tr.resolved_name ?? tr.key, texte: premierePhrase(tr.resolved_description), entier: tr.resolved_description || undefined });
+    for (const tr of data.traits as unknown as TraitResolu[]) traits.push({ nom: tr.resolved_name ?? tr.key, texte: tr.resolved_description ? premierePhrase(tr.resolved_description) : undefined, entier: tr.resolved_description || undefined });
   }
 
   if (table) {

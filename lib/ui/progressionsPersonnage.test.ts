@@ -79,6 +79,13 @@ describe("les progressions du personnage", () => {
     expect(r.aFaireAuDelaDuPremier).toBe(3);
   });
 
+  it("V3.1-174 : la sous-étape de sous-classe ne fait pas une seconde pastille ; celle de la sous-classe suffit", () => {
+    const sc: SousEtape = { ...sous("sousclasse:cleric", 3), genre: "subclass" };
+    const r = progressionsPersonnage({ ...entree, classes: classes(3), chemin: chemin(sc) });
+    expect(r.parEmplacement[0]?.lignes[2].pastilles.map((p) => p.genre)).toEqual(["sousclasse", "amelioration"]);
+    expect(r.aFaireAuDelaDuPremier).toBe(2);
+  });
+
   it("une amélioration valide est faite", () => {
     const reponses = { [cleAmelioration("cleric", 3)]: { kind: "asi", increases: { str: 2 } } };
     const r = progressionsPersonnage({ ...entree, reponses, classes: classes(3), chemin: chemin() });

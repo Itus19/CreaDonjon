@@ -2867,6 +2867,12 @@
       "druidic": "Druidic"
     },
     "choixDeNiveau": "Level choices",
+    "sousClasse": {
+      "titre": "{classe} — subclass",
+      "source": "{classe}, level {n}",
+      "aucune": "No subclass to offer for this class.",
+      "niveau": "Lvl {n}"
+    },
     "classe": {
       "niveauTotal": "Character level: {n}",
       "surPlafond": "(cap {plafond})",
@@ -2898,7 +2904,6 @@
       "sansTexte": "This entry has no text yet.",
       "aVenir": "Coming: {liste}",
       "verrouille": "(gained level, locked)",
-      "aucuneSousClasse": "No subclass to offer for this class.",
       "amelioration": "Ability score improvement"
     },
     "pv": {

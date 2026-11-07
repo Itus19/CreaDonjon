@@ -2868,6 +2868,12 @@
       "druidic": "Druidique"
     },
     "choixDeNiveau": "Choix de niveau",
+    "sousClasse": {
+      "titre": "{classe} — sous-classe",
+      "source": "{classe}, niveau {n}",
+      "aucune": "Aucune sous-classe à proposer pour cette classe.",
+      "niveau": "Niv. {n}"
+    },
     "classe": {
       "niveauTotal": "Niveau du personnage : {n}",
       "surPlafond": "(plafond {plafond})",
@@ -2899,7 +2905,6 @@
       "sansTexte": "Cette fiche n'a pas encore de texte.",
       "aVenir": "À venir : {liste}",
       "verrouille": "(niveau acquis, verrouillé)",
-      "aucuneSousClasse": "Aucune sous-classe à proposer pour cette classe.",
       "amelioration": "Amélioration de caractéristique"
     },
     "pv": {

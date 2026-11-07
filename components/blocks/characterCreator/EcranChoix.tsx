@@ -14,12 +14,13 @@ import type { FeatChoiceData } from "@/src/core/rules/choices";
 import { useRuleEntryBlocks, type RuleEntryBlockData } from "../useRuleEntryBlocks";
 import NomDeRegle from "../NomDeRegle";
 import { toggleChoice } from "@/components/blocks/characterChoiceUtils";
-import { cleRegleBotte } from "@/lib/ui/texteRegle";
+import { cleRegleBotte, texteOption } from "@/lib/ui/texteRegle";
 import ChoixDon, { type ContexteAmelioration } from "./ChoixDon";
 import ChoixGenerique from "./ChoixGenerique";
 import SelecteurSorts, { type CandidatSort } from "./SelecteurSorts";
 import FicheSort from "./FicheSort";
 import { ChoixCaracIncantation, ChoixCompetence, TableauOptions } from "./ChoixExpliques";
+import { aptitudesDeSousClasse, ChoixOptionAvecFiche, ChoixSousClasse } from "./ChoixSousClasse";
 
 function niveauDuSort(blocs: RuleEntryBlockData[] | undefined): number | null {
   const table = blocs?.find((b) => b.blockType === "custom_table");
@@ -43,6 +44,11 @@ export interface ContexteEcranChoix {
   dons: Readonly<Record<string, FeatChoiceData>>;
   /** V3.1-118 : de quoi régler le +2 / +1+1 sous le don « Amélioration de caractéristique ». */
   amelioration: ContexteAmelioration;
+  /** V3.1-174 : choisir (ou retirer) la sous-classe d'une classe. */
+  onChoisirSousClasse: (classKey: string, cle: string | null) => void;
+  /** V3.1-174 : toutes les sous-étapes du chemin (ce que fait naître une sous-classe) et le moyen d'y aller. */
+  sousEtapes: readonly SousEtape[];
+  onAller: (position: string) => void;
 }
 
 /**
@@ -96,6 +102,19 @@ function Choix({
   const libelleOption = ctx.libelleOption(sous);
   const onChoisir = (valeurs: string[]) => ctx.onChoisir(sous.cle, valeurs);
   const from = ouvert?.from;
+
+  if (sous.genre === "subclass" && sous.classKey) {
+    const classKey = sous.classKey;
+    return (
+      <ChoixSousClasse
+        worldSlug={ctx.worldSlug}
+        sous={sous}
+        naissent={(sousClasse) => ctx.sousEtapes.filter((s) => s.sousClasse === sousClasse)}
+        onAller={ctx.onAller}
+        onChoisir={(cle) => ctx.onChoisirSousClasse(classKey, cle)}
+      />
+    );
+  }
 
   if (!sous.impose && sous.options.length > 0) {
     if (sous.genre === "spell") {
@@ -153,6 +172,10 @@ function Choix({
 
     if (estTableauComparatif(from)) {
       return <TableauOptions sous={sous} colonnes={colonnesComparatives(from.options, ctx.nomSort)} onChoisir={onChoisir} />;
+    }
+
+    if (sous.genre === "option") {
+      return <ChoixOption sous={sous} ctx={ctx} libelleOption={libelleOption} onChoisir={onChoisir} />;
     }
   }
 
@@ -231,5 +254,33 @@ function ChoixMaitrise({
         })}
       </div>
     </div>
+  );
+}
+
+/**
+ * V3.1-174 — Un choix entre options nommées, au geste unique (V3.1-172) :
+ * cartes courtes, texte de l'option touchée dessous. Le texte est celui que
+ * porte l'option ; sinon, pour un choix accordé par une sous-classe (sa clé
+ * commence par celle de la sous-classe, `hunter.…`), son paragraphe dans la
+ * description des aptitudes de la sous-classe (une requête, en cache).
+ */
+function ChoixOption({
+  sous,
+  ctx,
+  libelleOption,
+  onChoisir,
+}: {
+  sous: SousEtape;
+  ctx: ContexteEcranChoix;
+  libelleOption: (cle: string) => string;
+  onChoisir: (valeurs: string[]) => void;
+}) {
+  const sousClasse = sous.sousClasse ?? ctx.sousEtapes.find((s) => s.genre === "subclass" && s.choisis[0] && sous.cle.startsWith(`${s.choisis[0]}.`))?.choisis[0];
+  const blocs = useRuleEntryBlocks(ctx.worldSlug, sousClasse ? [sousClasse] : []);
+  const descriptions = sousClasse ? aptitudesDeSousClasse(blocs[sousClasse]).map((a) => a.texte) : [];
+  const textes: Record<string, string> = {};
+  for (const o of sous.options) textes[o.cle] = o.description || texteOption(descriptions, o.libelle ?? libelleOption(o.cle));
+  return (
+    <ChoixOptionAvecFiche worldSlug={ctx.worldSlug} sous={sous} textes={textes} libelleOption={libelleOption} dejaAcquis={ctx.dejaAcquis(sous)} onChoisir={onChoisir} />
   );
 }

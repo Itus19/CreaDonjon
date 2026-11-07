@@ -63,20 +63,20 @@ export default function FicheSelection({
 
   return (
     <article aria-label={titre} className="flex flex-col gap-2 rounded-md border border-edge/60 bg-panel-sunken p-3">
-      <header className="flex items-start justify-between gap-2">
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <h3 className="font-display text-base font-bold text-ink">{titre}</h3>
-          {resume && <p className="text-xs text-ink-muted">{resume}</p>}
+      <header className="flex flex-col gap-0.5">
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="min-w-0 font-display text-base font-bold text-ink">{titre}</h3>
+          {aDeplier.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setOuvertes(toutOuvert ? new Set() : new Set(aDeplier))}
+              className="shrink-0 text-xs font-medium text-accent hover:underline"
+            >
+              {toutOuvert ? t("toutReplier") : t("toutDeplier")}
+            </button>
+          )}
         </div>
-        {aDeplier.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setOuvertes(toutOuvert ? new Set() : new Set(aDeplier))}
-            className="shrink-0 text-xs font-medium text-accent hover:underline"
-          >
-            {toutOuvert ? t("toutReplier") : t("toutDeplier")}
-          </button>
-        )}
+        {resume && <p className="text-xs text-ink-muted">{resume}</p>}
       </header>
 
       {lignes.length > 0 && (

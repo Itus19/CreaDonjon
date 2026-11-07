@@ -38,16 +38,6 @@ Ordre conseillé : 162 (les textes en données) avant 161 et 163 ; 167 (noyau) i
 
 **Sous-tâches Haiku.** Recenser les champs et boutons de l'assistant et leurs classes ; planche du catalogue.
 
-### V3.1-174 — La sous-classe en sous-étape, ses choix expliqués (sans modèle IA)
-
-**Modèle conseillé : Sonnet**, après 162. Revient sur « la sous-classe en pastille de la progression » (V3.1-51).
-
-**Constat.** Le choix de sous-classe n'est pas clair. Ses choix internes non plus : Rôdeur, Chasseur, « Proie du chasseur » propose deux options sans dire ce qu'elles font.
-
-**À faire.** Au niveau où la classe l'accorde, une sous-étape « Sous-classe » sous Classe, au même titre que compétences et maîtrises d'armes : les sous-classes du ruleset en cartes, la fiche de la sélection (aptitudes par niveau, texte dépliable comme 161), puis ses propres choix en sous-étapes, chaque option avec son texte. La pastille de la progression mène à cette sous-étape.
-
-**Critères.** Rôdeur 3 : la sous-étape apparaît, le Chasseur s'explique, « Proie du chasseur » montre le texte de chaque option ; une sous-classe d'un ruleset personnel s'y range comme une officielle ; planche du catalogue.
-
 ### V3.1-176 — Points de vie : « Maximum » en plus de la moyenne et du jet (sans modèle IA)
 
 **Modèle conseillé : Opus** (noyau : `HpGainChoice`, `sheet.ts`).

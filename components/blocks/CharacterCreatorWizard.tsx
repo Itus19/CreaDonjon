@@ -26,7 +26,7 @@ import AvantApres, { resumeFiche } from "./characterCreator/AvantApres";
 import { ABILITY_LABELS as ABILITY_ABBR } from "./sheetLabels";
 import EcranChoix from "./characterCreator/EcranChoix";
 import ApercuDirect from "./characterCreator/ApercuDirect";
-import { construireChemin, etapeDe, positionValide, voisin, type CleEtape, type SousEtape } from "@/lib/ui/cheminCreation";
+import { construireChemin, etapeDe, positionValide, voisin, type CleEtape, type SousClasseAChoisir, type SousEtape } from "@/lib/ui/cheminCreation";
 import { sousEtapesNouvelles } from "@/lib/ui/progressionClasse";
 import { cheminMontee, progressionsPersonnage } from "@/lib/ui/progressionsPersonnage";
 import { checkMulticlassEntry, exceedsLevelCap } from "@/src/core/rules/characterRules";
@@ -296,6 +296,28 @@ export default function CharacterCreatorWizard({
 
   const entryName = new Map(allEntries.map((e) => [e.key, e.name]));
   const languesFixes = new Set(languages.map((l) => l.key));
+  // V3.1-174 : la sous-classe de chaque classe qui atteint son niveau (`subclass_slot.chosen_at_level`) devient une sous-étape de Classe.
+  // Montée de niveau : seulement si ce niveau est franchi maintenant (une sous-classe déjà choisie ne se rouvre pas).
+  const sousClasses: SousClasseAChoisir[] = character.classes.flatMap((c) => {
+    if (c.class.kind !== "rule" || !c.class.key) return [];
+    const classKey = c.class.key;
+    const emplacement = classBlocksByKey[classKey]?.find((b) => b.blockType === "subclass_slot")?.data as { chosen_at_level?: number } | undefined;
+    const niveau = emplacement?.chosen_at_level;
+    if (typeof niveau !== "number" || c.level < niveau) return [];
+    if (montee && (niveauxAvant.get(classKey) ?? 0) >= niveau) return [];
+    const classe = ruleset.classes[classKey]?.label ?? entryName.get(classKey) ?? classKey;
+    return [
+      {
+        classKey,
+        libelle: t("sousClasse.titre", { classe }),
+        source: t("sousClasse.source", { classe, n: niveau }),
+        niveau,
+        options: allEntries.filter((e) => e.entryType === "subclass" && e.parentClassKey === classKey).map((e) => ({ cle: e.key, libelle: e.name })),
+        choisie: c.subclass?.kind === "rule" ? c.subclass.key : null,
+      },
+    ];
+  });
+
   const cheminComplet = construireChemin({
     restants: remainingChoices,
     ouverts: openChoices,
@@ -306,6 +328,7 @@ export default function CharacterCreatorWizard({
     langues: SRD_LANGUAGES.filter((l) => !languesFixes.has(l)),
     competencesMaitrisees: proficientSkills,
     dons: featCatalog,
+    sousClasses,
     sorts: allEntries
       .filter((e) => e.entryType === "spell")
       .map((e) => {
@@ -358,6 +381,13 @@ export default function CharacterCreatorWizard({
 
   function choisir(cle: string, valeurs: string[]) {
     patchCharacter({ choices: { ...character.choices, [cle]: valeurs } });
+  }
+
+  /** V3.1-174 : la sous-classe vit dans l'emplacement de sa classe, pas dans `choices`. */
+  function choisirSousClasse(classKey: string, cle: string | null) {
+    patchCharacter({
+      classes: character.classes.map((c) => (c.class.kind === "rule" && c.class.key === classKey ? { ...c, subclass: cle ? { kind: "rule", key: cle } : null } : c)),
+    });
   }
 
   function libelleOption(sous: SousEtape) {
@@ -672,6 +702,9 @@ export default function CharacterCreatorWizard({
                 libelleOption,
                 dejaAcquis,
                 onChoisir: choisir,
+                onChoisirSousClasse: choisirSousClasse,
+                sousEtapes: chemin.etapes.flatMap((e) => e.sous),
+                onAller: aller,
                 dons: featCatalog,
                 amelioration: { character, patchCharacter, sheet, abilityScoreCap: ruleset.characterRules?.ability_score_cap, nomClasse },
               }}
