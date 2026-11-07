@@ -154,6 +154,8 @@ export default function TriggerSandbox() {
         return `${effect.label} : ${effect.value}`;
       case "narrate_hint":
         return `Souffler au narrateur : « ${effect.text} »`;
+      case "cast_spell":
+        return `${effect.who} lance « ${effect.spell} »${effect.free ? " sans emplacement" : ""}`;
     }
   }
 

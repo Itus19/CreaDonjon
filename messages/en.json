@@ -507,6 +507,8 @@
         "indication": "Hint for the narrator",
         "depense": "Spends {montant} {cle}",
         "inspiration": "Grants Heroic Inspiration",
+        "lancerSort": "Casts the spell “{sort}”",
+        "sansEmplacement": "without a spell slot",
         "effetQuiDure": "lasting effect",
         "siEchec": "if the target fails",
         "siReussite": "if the target succeeds",

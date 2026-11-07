@@ -300,7 +300,7 @@ Attaques multiples, action disponible en action bonus, temps d'incantation chang
 *Reçu de V3.1-158 (7 novembre)* : Bénédiction (un sort joué comme une activation : jusqu'à 3 cibles, concentration, + 1d4 aux attaques et aux sauvegardes — le noyau le sait déjà) et Arme sacrée (« en prenant l'action Attaque », + mod. CHA aux attaques de l'arme).
 *Conçu le 7 novembre* : [ADR 0076](../adr/0076-les-actions-modifiees.md). Deux choix de l'auteur : un sort porte le **même bloc `activation`** qu'une aptitude (coût en emplacement, `slot.level` dans les formules) ; le moteur **compte** l'économie d'action en combat (action, action bonus, attaques restantes), sans bloquer. Découpé ci-dessous.
 
-#### ☐ V3.1-164 — Le noyau : coût en emplacement, coût « une attaque », attaques par action, options de lancement, lancer un sort comme effet · `M` · sans modèle IA — **prêt (Opus)**
+#### ☑ V3.1-164 — Le noyau : coût en emplacement, coût « une attaque », attaques par action, options de lancement, lancer un sort comme effet · `M` · sans modèle IA — **prêt (Opus)**
 
 **Modèle conseillé : Opus** — noyau du moteur. Tests d'abord.
 
@@ -310,7 +310,9 @@ Attaques multiples, action disponible en action bonus, temps d'incantation chang
 - `planActivation` lit `slot.level` et refuse un emplacement trop bas.
 
 **Critères d'acceptation**
-- [ ] Tests : Attaque supplémentaire, deux attaques pour une action, la troisième dépasse ; le tour suivant, budget neuf ; Bénédiction au niveau 2 vise 4 cibles ; un coût `attack` consomme une attaque restante, sinon ouvre l'action Attaque ; Sort accéléré change le temps d'incantation et coûte 2 points.
+- [x] Tests : Attaque supplémentaire, deux attaques pour une action, la troisième dépasse ; le tour suivant, budget neuf ; Bénédiction au niveau 2 vise 4 cibles ; un coût `attack` consomme une attaque restante, sinon ouvre l'action Attaque ; Sort accéléré change le temps d'incantation et coûte 2 points.
+
+*Fait le 7 novembre.* `playable.ts` : `cost.slot`, `cost.action: "attack"`, `cast_options` (`zCastOption`) ; effet `cast_spell` dans le vocabulaire (le tour le rapporte « ignoré », l'éditeur le garde tel quel jusqu'au 166). `planActivation` lit `slot.level` et refuse `slot_too_low` avant tout dé. `sheet.ts` : `attacksPerAction` (le plus grand `set`/`max` de `attacks_per_action`, 1 par défaut), `bonusActionOptions` (`action_as_bonus.<action>`) ; cibles et libellés au catalogue des modificateurs. `turnBudget.ts` : `ownTurnStamp`, `budgetForTurn` (neuf quand le tour du participant change), `spendTurnBudget` (l'action Attaque ouverte par la première attaque), `grantTurnBudget` (action « pas pour la Magie »), `applyCastOption`. `turn_usage.budget` (noyau et changement signé ; la base l'accepte au 165) ; `recordUse` garde le budget. Tests : `actionsModifiees.test.ts` 12/12.
 
 #### ☐ V3.1-165 — La migration et le service : lancer un sort par son activation, compter le budget · `M` · sans modèle IA — **prêt (Opus)**
 

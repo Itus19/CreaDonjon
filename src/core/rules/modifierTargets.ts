@@ -1,4 +1,4 @@
-import { ABILITIES, SENSES, SKILLS, SPECIAL_SPEEDS, type Ability, type ModifierOp, type Sense, type Skill, type SpecialSpeed } from "./sheet";
+import { ABILITIES, BONUS_ACTION_OPTIONS, SENSES, SKILLS, SPECIAL_SPEEDS, type Ability, type ModifierOp, type Sense, type Skill, type SpecialSpeed } from "./sheet";
 import { SPELL_DAMAGE_TYPES } from "./homebrewSpell";
 
 /**
@@ -25,7 +25,10 @@ export type ModifierTargetCategory =
   | "speed_special"
   | "sense"
   | "prof"
-  | "ac_unarmored";
+  | "ac_unarmored"
+  /** V3.1-164 (ADR 0076) : attaques par action, actions permises en action bonus. */
+  | "attacks"
+  | "bonus_action";
 
 export interface ModifierTargetOption {
   target: string;
@@ -69,6 +72,8 @@ export const MODIFIER_TARGET_OPTIONS: readonly ModifierTargetOption[] = [
   { target: "prof.armor.shield", category: "prof" },
   { target: "ac.unarmored", category: "ac_unarmored" },
   { target: "ac.unarmored_no_shield", category: "ac_unarmored" },
+  { target: "attacks_per_action", category: "attacks" },
+  ...BONUS_ACTION_OPTIONS.map((a): ModifierTargetOption => ({ target: `action_as_bonus.${a}`, category: "bonus_action" })),
 ];
 
 /** Effets valides pour une categorie de cible — ex. la maitrise/l'expertise n'ont de sens que sur une sauvegarde ou une competence, jamais sur la CA. */
@@ -86,6 +91,8 @@ export const OPS_BY_TARGET_CATEGORY: Record<ModifierTargetCategory, readonly Mod
   sense: ["set", "max"],
   prof: ["proficiency"],
   ac_unarmored: ["set"],
+  attacks: ["set", "max"],
+  bonus_action: ["set"],
 };
 
 /** `add`/`set`/`min`/`max` portent un montant ; les quatre autres (avantage, desavantage, maitrise, expertise) sont des drapeaux, jamais de valeur associee (meme distinction que `Modifier.value` dans sheet.ts, optionnel). */

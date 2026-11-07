@@ -120,6 +120,8 @@ export type EffectNode =
    * (`activation.ts`) qui l'instancie avec son porteur et sa source.
    */
   | { action: "apply_effect"; who: string; effect: string }
+  /** V3.1-164 (ADR 0076) — lance un sort par son activation ; sans emplacement si `free` (Compagnon sauvage). Le service le joue. */
+  | { action: "cast_spell"; who: string; spell: string; free: boolean }
   | { action: "roll"; label: string; formula: FormulaNode }
   | { action: "narrate_hint"; text: string };
 
@@ -136,6 +138,7 @@ export type ResolvedEffect =
   | { action: "grant_budget"; who: string; kind: BudgetKind; amount: number }
   | { action: "grant_inspiration"; who: string }
   | { action: "apply_effect"; who: string; effect: string }
+  | { action: "cast_spell"; who: string; spell: string; free: boolean }
   | { action: "roll"; label: string; value: number }
   | { action: "narrate_hint"; text: string };
 
@@ -220,6 +223,7 @@ export const zEffect: z.ZodType<EffectNode> = z.lazy(() =>
     }),
     z.object({ action: z.literal("grant_inspiration"), who: z.string().min(1) }),
     z.object({ action: z.literal("apply_effect"), who: z.string().min(1), effect: z.string().min(1) }),
+    z.object({ action: z.literal("cast_spell"), who: z.string().min(1), spell: z.string().min(1), free: z.boolean() }),
     z.object({ action: z.literal("roll"), label: z.string().min(1), formula: zFormulaNode }),
     z.object({ action: z.literal("narrate_hint"), text: z.string().min(1) }),
   ]),

@@ -182,6 +182,8 @@ export const MODIFIER_TARGET_CATEGORY_LABELS_FR: Record<ModifierTargetCategory, 
   sense: "Sens",
   prof: "Maîtrise",
   ac_unarmored: "CA sans armure",
+  attacks: "Attaques par action",
+  bonus_action: "Action bonus",
 };
 
 /** V3.1-155 : libellés des cibles nouvelles, quand la catégorie ne suffit pas. */
@@ -195,6 +197,13 @@ const MODIFIER_TARGET_DETAIL_FR: Record<string, string> = {
   "damage.spell": "Dégâts — sort",
   crit_range: "Critique à partir de — toute attaque",
   "crit_range.weapon": "Critique à partir de — arme",
+  attacks_per_action: "Attaques par action Attaque",
+  "action_as_bonus.dash": "Foncer en action bonus",
+  "action_as_bonus.disengage": "Se désengager en action bonus",
+  "action_as_bonus.hide": "Se cacher en action bonus",
+  "action_as_bonus.search": "Chercher en action bonus",
+  "action_as_bonus.use_object": "Utiliser un objet en action bonus",
+  "action_as_bonus.dodge": "Esquiver en action bonus",
   "speed.fly": "Vitesse de vol",
   "speed.swim": "Vitesse de nage",
   "speed.climb": "Vitesse d'escalade",

@@ -601,6 +601,9 @@ function effetVersBrouillon(e: EffectNode, chemin: string, ctx: CtxLecture): Bro
       return { ...base, who: "self", type: "roll", libelle: e.label, formule: formatFormulaNode(e.formula) };
     case "narrate_hint":
       return { ...base, who: "self", type: "narrate_hint", texte: e.text };
+    // V3.1-164 : « lancer un sort » se saisira au 166 ; d'ici là il est gardé tel quel, jamais perdu.
+    case "cast_spell":
+      return { ...base, who: e.who, type: "opaque", effet: e };
     case "apply_effect": {
       const d = ctx.durables.get(e.effect);
       if (!d) return { ...base, who: e.who, type: "opaque", effet: e };

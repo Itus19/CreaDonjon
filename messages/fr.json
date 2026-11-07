@@ -508,6 +508,8 @@
         "indication": "Indication au narrateur",
         "depense": "Dépense {montant} {cle}",
         "inspiration": "Accorde l'Inspiration héroïque",
+        "lancerSort": "Lance le sort « {sort} »",
+        "sansEmplacement": "sans emplacement",
         "effetQuiDure": "effet qui dure",
         "siEchec": "si la cible échoue",
         "siReussite": "si la cible réussit",

@@ -29,7 +29,9 @@ export type ActivationRefusal =
   | "too_many_targets"
   | "unknown_target"
   | "unknown_effect"
-  | "invalid_formula";
+  | "invalid_formula"
+  /** V3.1-164 : un sort lancé sans emplacement, ou avec un emplacement plus bas que son niveau. */
+  | "slot_too_low";
 
 export interface ActivationPlan {
   activationId: string;
@@ -57,6 +59,8 @@ const BUDGET_DU_COUT: Record<Activation["cost"]["action"], BudgetKind | null> = 
   reaction: "reaction",
   free: "free",
   none: null,
+  // V3.1-164 : hors combat compté (le solo), remplacer une attaque se paie sur l'action ; la table compte par `turnBudget.ts`.
+  attack: "action",
 };
 
 class Refus extends Error {
@@ -151,6 +155,8 @@ export function planActivation(p: {
   round: number | null;
   rng: Rng;
   locale?: string;
+  /** V3.1-164 (ADR 0076) : le niveau de l'emplacement dépensé pour un sort (`slot.level` dans les formules). */
+  slotLevel?: number;
 }): ActivationResult {
   try {
     const activation = p.block.activations.find((a) => a.id === p.activationId);
@@ -162,7 +168,9 @@ export function planActivation(p: {
 
     const actor = p.ctx.actors[p.actorId];
     if (!actor) throw new Refus("unknown_target", p.actorId);
-    const refs = actor.numbers;
+    // V3.1-164 : un sort demande un emplacement d'au moins son niveau, AVANT le moindre dé.
+    if (cost.slot && (p.slotLevel === undefined || p.slotLevel < cost.slot.level)) throw new Refus("slot_too_low");
+    const refs = p.slotLevel === undefined ? actor.numbers : { ...actor.numbers, "slot.level": p.slotLevel };
 
     if (activation.requires && !conditionRemplie(activation.requires, p.ctx, p.actorId, p.rng)) throw new Refus("requires_not_met");
 

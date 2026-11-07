@@ -267,6 +267,16 @@ export function applyEffects(state: TurnState, effects: readonly ResolvedEffect[
         });
         break;
 
+      case "cast_spell":
+        // V3.1-164 (ADR 0076) : lancer un sort se fait par son activation, côté service ; le tour ne le joue pas.
+        changes.push({
+          kind: "ignored",
+          action: effect.action,
+          who: effect.who,
+          reason: `Sort « ${effect.spell} » non lancé par le tour : seul le service de lancer le joue (ADR 0076).`,
+        });
+        break;
+
       case "apply_modifier":
         // V3-A6 a compte ce manque parmi les cinq : un effet QUI DURE n'a
         // aucune ecriture — `entity_active_effects` existe depuis la Phase 0

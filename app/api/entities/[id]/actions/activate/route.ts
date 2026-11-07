@@ -21,6 +21,7 @@ const MESSAGES: Record<ActivateFeatureFailure, string> = {
   unknown_variant: "Variante inconnue pour cette activation.",
   requires_not_met: "Les conditions de cette activation ne sont pas remplies.",
   not_enough_resource: "Ressource insuffisante.",
+  slot_too_low: "Il faut un emplacement d'au moins le niveau du sort.",
   no_target: "Choisissez au moins une cible.",
   too_many_targets: "Trop de cibles pour cette activation.",
   unknown_target: "Cible inconnue.",
