@@ -532,14 +532,284 @@
     }
   },
   "rogue-sneak-attack": {
-    "_regle": "Attaque sournoise : ceil(niveau / 2)d6 de plus, une fois par tour, arme de finesse ou a distance, avec l'avantage ou un allie au contact.",
+    "_regle": "Attaque sournoise : ceil(niveau / 2)d6 de plus, une fois par tour, au choix sur une touche. Conditions (arme, avantage, allie au contact) : V3.1-137. V3.1-162.",
+    "activation": {
+      "activations": [
+        {
+          "id": "sneak-attack",
+          "label": {
+            "fr": "Attaque sournoise",
+            "en": "Sneak Attack"
+          },
+          "cost": {
+            "action": "none",
+            "resources": []
+          },
+          "targets": {
+            "kind": "self"
+          },
+          "effects": [],
+          "variants": null,
+          "trigger": {
+            "on": "roll",
+            "roll": "damage",
+            "subject": "self",
+            "when": "rolled"
+          },
+          "roll_operations": [
+            {
+              "op": "add_damage",
+              "formula": {
+                "op": "dice",
+                "count": {
+                  "op": "ceil",
+                  "args": [
+                    {
+                      "op": "div",
+                      "args": [
+                        {
+                          "op": "ref",
+                          "name": "class.level"
+                        },
+                        {
+                          "op": "num",
+                          "value": 2
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "faces": 6
+              }
+            }
+          ],
+          "limit": {
+            "per": "turn"
+          }
+        }
+      ],
+      "durable_effects": []
+    },
     "coverage": {
       "gaps": [
         {
           "text": "Une fois par tour et à condition que l’attaque soit portée avec une arme dotée de la propriété Finesse ou À distance",
-          "missing": "Des dégâts ceil({class.level} / 2)d6 sous condition (arme, avantage, allié au contact), une fois par tour — V3.1-135 et V3.1-137."
+          "missing": "Les conditions (arme de finesse ou à distance, avantage ou allié au contact) attendent les conditions d'équipement et les distances (V3.1-137) : la joueuse choisit de l'appliquer. Le dé, la touche et « une fois par tour » sont joués."
         }
       ]
+    }
+  },
+  "rogue-uncanny-dodge": {
+    "_regle": "Esquive instinctive : Reaction quand un assaillant vous touche, moitie des degats de cette attaque (arrondi a l'inferieur). V3.1-162.",
+    "activation": {
+      "activations": [
+        {
+          "id": "uncanny-dodge",
+          "label": {
+            "fr": "Esquive instinctive",
+            "en": "Uncanny Dodge"
+          },
+          "cost": {
+            "action": "reaction",
+            "resources": []
+          },
+          "targets": {
+            "kind": "self"
+          },
+          "effects": [],
+          "variants": null,
+          "trigger": {
+            "on": "roll",
+            "roll": "damage",
+            "subject": "attack_against_self",
+            "when": "rolled"
+          },
+          "roll_operations": [
+            {
+              "op": "damage_multiplier",
+              "factor": 0.5
+            }
+          ],
+          "passages": {
+            "cost": "vous pouvez jouer votre Réaction pour réduire de moitié les dégâts de cette attaque (arrondir à l’inférieur)"
+          }
+        }
+      ],
+      "durable_effects": []
+    },
+    "coverage": {
+      "gaps": [
+        {
+          "text": "Lorsqu’un assaillant que vous voyez vous touche",
+          "missing": "« que vous voyez » : la perception attend le modèle du monde (V3.1-138) ; la réaction est proposée sans le vérifier."
+        }
+      ]
+    }
+  },
+  "fighter-indomitable": {
+    "_regle": "Inflexible : rejouer une sauvegarde ratee avec + niveau de Guerrier ; 1 au repos long, 2 au niveau 13, 3 au niveau 17. Branche aux sauvegardes demandees par V3.1-163. V3.1-162.",
+    "resources": {
+      "resources": [
+        {
+          "key": "indomitable",
+          "label": {
+            "fr": "Inflexible",
+            "en": "Indomitable"
+          },
+          "max": {
+            "op": "max",
+            "args": [
+              {
+                "op": "num",
+                "value": 1
+              },
+              {
+                "op": "min",
+                "args": [
+                  {
+                    "op": "num",
+                    "value": 3
+                  },
+                  {
+                    "op": "floor",
+                    "args": [
+                      {
+                        "op": "div",
+                        "args": [
+                          {
+                            "op": "sub",
+                            "args": [
+                              {
+                                "op": "ref",
+                                "name": "class.level"
+                              },
+                              {
+                                "op": "num",
+                                "value": 5
+                              }
+                            ]
+                          },
+                          {
+                            "op": "num",
+                            "value": 4
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "recharge": "long_rest",
+          "passage": "vous devez ensuite terminer un Repos long avant de pouvoir recourir de nouveau à cette aptitude"
+        }
+      ]
+    },
+    "activation": {
+      "activations": [
+        {
+          "id": "indomitable",
+          "label": {
+            "fr": "Inflexible",
+            "en": "Indomitable"
+          },
+          "cost": {
+            "action": "none",
+            "resources": [
+              {
+                "key": "indomitable",
+                "amount": {
+                  "op": "num",
+                  "value": 1
+                }
+              }
+            ]
+          },
+          "targets": {
+            "kind": "self"
+          },
+          "effects": [],
+          "variants": null,
+          "trigger": {
+            "on": "roll",
+            "roll": "save",
+            "subject": "self",
+            "when": "failed"
+          },
+          "roll_operations": [
+            {
+              "op": "reroll",
+              "bonus": {
+                "op": "ref",
+                "name": "class.level"
+              }
+            }
+          ]
+        }
+      ],
+      "durable_effects": []
+    }
+  },
+  "rogue-stroke-of-luck": {
+    "_regle": "Coup de chance : un Test d20 rate devient un 20 ; une fois par repos court. V3.1-162.",
+    "resources": {
+      "resources": [
+        {
+          "key": "stroke-of-luck",
+          "label": {
+            "fr": "Coup de chance",
+            "en": "Stroke of Luck"
+          },
+          "max": {
+            "op": "num",
+            "value": 1
+          },
+          "recharge": "short_rest",
+          "passage": "vous devez terminer un Repos court ou long pour pouvoir y recourir de nouveau"
+        }
+      ]
+    },
+    "activation": {
+      "activations": [
+        {
+          "id": "stroke-of-luck",
+          "label": {
+            "fr": "Coup de chance",
+            "en": "Stroke of Luck"
+          },
+          "cost": {
+            "action": "none",
+            "resources": [
+              {
+                "key": "stroke-of-luck",
+                "amount": {
+                  "op": "num",
+                  "value": 1
+                }
+              }
+            ]
+          },
+          "targets": {
+            "kind": "self"
+          },
+          "effects": [],
+          "variants": null,
+          "trigger": {
+            "on": "roll",
+            "roll": "d20",
+            "subject": "self",
+            "when": "failed"
+          },
+          "roll_operations": [
+            {
+              "op": "set_natural",
+              "value": 20
+            }
+          ]
+        }
+      ],
+      "durable_effects": []
     }
   }
 }
