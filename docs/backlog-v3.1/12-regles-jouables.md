@@ -119,10 +119,75 @@
 
 Chacun commence par un ADR, puis se découpe en tickets prêts. Les règles visées viennent de l'étude.
 
-### ☐ V3.1-134 — Les valeurs calculées · `M` · sans modèle IA — **à concevoir (Opus)**
+### ☑ V3.1-134 — Les valeurs calculées · `M` · sans modèle IA — **conçu le 7 novembre ([ADR 0074](../adr/0074-les-valeurs-calculees.md)), découpé en V3.1-155 à 158**
 Valeur de modificateur en formule ou en dé (+ mod. CHA, +1d4, 10 + DEX + CON), nombre et taille des dés en formule dans l'AST, nouvelles cibles (`crit_range`, sens, vitesses, lumière, maîtrises). Règles visées : 2, 3, 5, 11, 12, 13, 23, 24, 25, 32.
 
 *Reçu de V3.1-117 (13 octobre)* : le bonus de dégâts de l'Affinité élémentaire (+ mod. CHA à un jet de dégâts d'un sort du type choisi). Critère : « Affinité élémentaire Feu : bonus de dégâts appliqué (test) ». Le type choisi est déjà enregistré (`<sous-classe>.elemental-affinity.damage-type`).
+
+*Conçu le 7 novembre* : [ADR 0074](../adr/0074-les-valeurs-calculees.md). Deux choix de l'auteur : la Défense sans armure entre dans ce chantier par deux cibles de CA dédiées (sans attendre 137) ; la lumière émise part au 138. Découpé ci-dessous.
+
+#### ☐ V3.1-155 — Le noyau : modificateurs en formule et en dé, dés en formule, nouvelles cibles · `M` · sans modèle IA — **prêt (Opus)**
+
+**Modèle conseillé : Opus** — noyau du moteur, tests d'abord.
+**Dépend de** : 129, 133 (`grantingClassLevel`).
+
+**Sous-tâches Haiku** (`aide-haiku`) : vérifications et résumé des échecs.
+
+- `src/core/formula` : le nœud `dice` accepte une formule pour `count` et `faces` (parseur `ceil({class.level} / 2)d6`, `{proficiency}d10`, `1d{…}` ; formateur à l'aller-retour exact ; bornes de `limits.ts` ; Zod).
+- `zModifier.value` : `number | formule`. Un dé n'est permis que sur une cible de jet (refus Zod sur CA, vitesse, PV, caractéristique, sens).
+- `characterSheet()` : évalue les formules avec les références de la règle (mêmes que les ressources) ; un dé reste un **dé de bonus**, porté à côté du nombre de chaque jet (`dice: { count, faces, label, source }[]` sur sauvegardes, tests, compétences, et un nouveau `rolls.attack` / `rolls.damage` par genre) ; avertissement si incalculable.
+- Cibles nouvelles (`modifierTargets.ts` et lecture dans `characterSheet()`) : `attack*`, `damage*` (dont `damage.weapon.<car>` et `damage.spell.<type>` / `{choice:<clé>}`), `save`, `crit_range*`, `speed.fly|swim|climb|burrow`, `sense.*`, `prof.weapon|armor|tool.*`, `ac.unarmored`, `ac.unarmored_no_shield` (meilleure base de CA retenue ; bouclier selon la cible).
+
+**Critères d'acceptation**
+- [ ] Aura de protection `max(1, {ability.cha})` sur `save` : +3 aux six sauvegardes d'un Paladin CHA 16 (test).
+- [ ] Barbare DEX 14 CON 16 sans armure : CA 15, 17 avec bouclier ; avec une armure de cuir, la base de l'armure (test). Moine : `ac.unarmored_no_shield` ignorée avec un bouclier (test).
+- [ ] Bénédiction : `save` reçoit le dé de bonus 1d4 sans changer le nombre affiché (test) ; un dé sur `ac` est refusé par Zod (test).
+- [ ] `ceil({class.level} / 2)d6` vaut 3d6 au niveau 5 ; aller-retour texte ↔ arbre exact (tests).
+
+#### ☐ V3.1-156 — Les jets lancent les dés de bonus et lisent les nouvelles cibles · `M` · sans modèle IA — **prêt (Opus)**
+
+**Modèle conseillé : Opus** — déroulé des jets côté serveur (règle 8).
+**Dépend de** : 155.
+
+**Sous-tâches Haiku** (`aide-haiku`) : recensement des sites de jet ; vérifications.
+
+- `resolveAttackRoll`, `resolveCheckRoll`, `resolveDamageRoll` reçoivent les dés de bonus et la plage de critique ; le détail du jet liste chaque dé de bonus avec sa source.
+- Câblage, un point par service, depuis la fiche du serveur jamais depuis le client : attaques d'arme et de sort (`characterActions`), tests et sauvegardes (`checkRolls`), sauvegardes demandées (`saveRequests`), sauvegardes des cibles d'une activation (`featureActivation`, `targetSaveBonus`), jets ciblés (`targetedRoll`), tour solo (`turnIntent`).
+- `attack*` et `damage*` s'ajoutent selon le genre du jet (arme ou sort, caractéristique d'attaque, type de dégâts du sort).
+
+**Critères d'acceptation**
+- [ ] Un personnage béni lance 1d20 + bonus + 1d4 en attaque et en sauvegarde ; le détail montre le d4 (test d'intégration).
+- [ ] Champion : un 19 naturel est un critique à l'arme, pas au sort (test).
+- [ ] Rage : +2 aux dégâts d'une attaque de Force, rien à l'arc (test).
+- [ ] Affinité élémentaire Feu : + mod. CHA aux dégâts d'un sort de feu, rien sur un sort de froid (test) — le critère reçu de V3.1-117.
+
+#### ☐ V3.1-157 — L'écran : dés de bonus, sens, vitesses, maîtrises ; l'éditeur suit · `M` · sans modèle IA — **prêt (Sonnet)**
+
+**Modèle conseillé : Sonnet**, une fois 155 fait ; Opus relit.
+**Dépend de** : 155.
+
+**Sous-tâches Haiku** (`aide-haiku`) : libellés ; planche du catalogue ; vérifications.
+
+- Fiche : « +3 + 1d4 » et la source au survol, sur les sauvegardes, tests, compétences et l'onglet Actions ; sens et vitesses spéciales dans l'en-tête ou l'onglet Traits ; maîtrises accordées par une règle dans l'onglet Maîtrises, avec leur source.
+- Éditeur de briques : les nouvelles cibles dans les listes ; « valeur » devient un champ de formule (dés permis selon la cible) ; « Modificateur temporaire » et « Avantage / désavantage » écrivent un **effet qui dure** porteur de modificateurs (ADR 0074), plus `apply_modifier`.
+- Éditeur des modificateurs d'une fiche de règle (bloc `modifiers`) : même champ de formule.
+
+**Critères d'acceptation**
+- [ ] Bénédiction se saisit à l'éditeur sans JSON (jusqu'à 3 cibles, concentration 1 minute, +1d4 aux attaques et sauvegardes) et se voit sur la fiche des cibles.
+- [ ] Au téléphone, « +3 + 1d4 » tient sur la ligne de la sauvegarde.
+
+#### ☐ V3.1-158 — Les données : les règles du SRD que ce chantier rend jouables · `S` · sans modèle IA — **prêt (Opus)**
+
+**Modèle conseillé : Opus** — données de règles officielles, import.
+**Dépend de** : 155, 156.
+
+**Sous-tâches Haiku** (`aide-haiku`) : vérifications et résumé des échecs.
+
+- Dans `data/srd/playable-2024.json` et `modifiers-2024.json` (test de données comme au 133) : Rage (bonus de dégâts lu dans la table, avantage aux tests et sauvegardes de Force ; résistances et prolongation en `coverage`, 137), Aura de protection, Défense sans armure (Barbare, Moine), Critique amélioré, Bénédiction, Arme sacrée (« si on lâche l'arme » en `coverage`), Affinité élémentaire. Attaque sournoise, Inspiration bardique et Souffle reçoivent leurs dés en formule et un `coverage` honnête (135, 137).
+- Réimport, scripts d'auteur rejoués.
+
+**Critères d'acceptation**
+- [ ] Après réimport, Aura de protection, Défense sans armure, Critique amélioré, Bénédiction et Affinité élémentaire sont « Jouable » et se jouent sur une fiche de test.
 
 ### ☐ V3.1-135 — Intervenir sur un jet · `L` · sans modèle IA — **à concevoir (Opus)**
 Réactions (une fenêtre de choix dans le déroulé d'un jet, côté serveur), opérations sur un jet en cours (ajouter ou soustraire un dé, relancer, fixer à 20, CA contre ce jet, diviser les dégâts), limite une fois par tour. Règles visées : 5, 9, 10, 19, 20, 27, 28, 33, 37, 39.
@@ -138,6 +203,8 @@ Distances en mètres entre créatures (ADR 0059 §5), zones géométriques, aura
 ### ☐ V3.1-138 — Le modèle du monde · `L` · sans modèle IA — **à concevoir (Opus)**
 Perception et visibilité (invisible, caché, sens), lumière, étiquettes de magie (divination, capteurs), immunités et restrictions de ciblage, et les cas uniques : transformation, invocation, PV temporaires en effet (sur V3.1-24), redirection, jauge qui monte, recharge sur événement, quantité choisie, consommables, choix contraints pour les règles ouvertes. Règles visées : 8, 15, 16, 22, 29, 34, 35, 38.
 
+
+*Reçu de V3.1-134 (7 novembre, choix de l'auteur, ADR 0074)* : la lumière émise par une créature ou un objet (Aasimar, Arme sacrée) — une cible de modificateur qui n'a de sens qu'avec la lumière par zone de ce chantier.
 ### ☐ V3.1-139 — L'inventaire et la couverture du SRD · `L` · sans modèle IA — **après la fondation**
 Mesurer la couverture de tout ce qui entre en jeu (sorts, aptitudes, espèces, dons, objets magiques, monstres avec leurs actions et traits), lister les lacunes par brique, et tenir le compte jusqu'à 100 %.
 
