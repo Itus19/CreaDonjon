@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/blocks/inventory";
@@ -15,7 +15,7 @@ import { exceedsLevelCap } from "@/src/core/rules/characterRules";
 import { renderBlockData, type EquipmentCardInteraction } from "@/components/rules/blockContentRenderer";
 import Checkbox from "@/components/shared/Checkbox";
 import type { ProgressionEmplacement } from "@/lib/ui/progressionsPersonnage";
-import type { LigneProgression } from "@/lib/ui/progressionClasse";
+import type { AptitudeNiveau, LigneProgression } from "@/lib/ui/progressionClasse";
 import { useWorldRuleEntries } from "../useWorldRuleEntries";
 import { useRuleEntryBlocks, type RuleEntryBlockData } from "../useRuleEntryBlocks";
 
@@ -121,6 +121,8 @@ export default function LevelClassesStep({
   const [selectionBrute, setSelection] = useState(0);
   const [panneau, setPanneau] = useState<Panneau | null>(null);
   const [grilleOuverte, setGrilleOuverte] = useState(false);
+  // V3.1-173 : les niveaux dépliés de la progression (`<classe>:<niveau>`), leur texte chargé au dépliage.
+  const [deplies, setDeplies] = useState<ReadonlySet<string>>(() => new Set());
   const selection = Math.min(selectionBrute, Math.max(0, character.classes.length - 1));
 
   // Equipement de depart : seule la PREMIERE classe en accorde a la
@@ -447,49 +449,97 @@ export default function LevelClassesStep({
 
           {classKey !== "" && progression && (
             <div className="flex flex-col gap-1.5">
-              <p className="text-xs text-ink-muted">{montee ? t("legendeMontee") : t("legende")}</p>
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <p className="text-xs text-ink-muted">{montee ? t("legendeMontee") : t("legende")}</p>
+                {(() => {
+                  const depliables = progression.lignes.filter((l) => l.aptitudes.some((a) => a.cle)).map((l) => `${classKey}:${l.niveau}`);
+                  if (depliables.length === 0) return null;
+                  const tout = depliables.every((c) => deplies.has(c));
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => setDeplies(tout ? new Set() : new Set(depliables))}
+                      className="text-xs font-medium text-accent hover:underline"
+                    >
+                      {tout ? t("toutReplier") : t("toutDeplier")}
+                    </button>
+                  );
+                })()}
+              </div>
               <ol className="flex flex-col">
                 {progression.lignes.map((l) => {
                   const style = STYLE_LIGNE[l.etat];
                   const modifiable = l.niveau >= niveauMin && l.niveau <= niveauMax;
+                  const cleLigne = `${classKey}:${l.niveau}`;
+                  const depliable = l.aptitudes.some((a) => a.cle);
+                  const deplie = depliable && deplies.has(cleLigne);
+                  const noms = l.aptitudes.length > 0 ? l.aptitudes.map((a) => a.nom).join(", ") : <span className="text-ink-muted">—</span>;
                   return (
-                    <li key={l.niveau} className={`grid grid-cols-[2.5rem_1fr_auto] items-center gap-2 border-l-[3px] px-2 py-1 text-sm ${style.ligne}`}>
-                      {modifiable ? (
-                        <button
-                          type="button"
-                          aria-label={t("niveauRapide", { n: l.niveau })}
-                          onClick={() => reglerNiveau(l.niveau)}
-                          className={`text-left font-display text-base font-bold ${style.numero}`}
-                        >
-                          {l.niveau}
-                        </button>
-                      ) : (
-                        <span className={`font-display text-base font-bold ${style.numero}`}>{l.niveau}</span>
-                      )}
-                      <span className="min-w-0">
-                        {l.aptitudes.length > 0 ? l.aptitudes.join(", ") : <span className="text-ink-muted">—</span>}
-                        {l.etat === "avenir" && l.aVenir.length > 0 && (
-                          <span className="block text-xs text-ink-muted">{t("aVenir", { liste: l.aVenir.join(", ") })}</span>
-                        )}
-                        {l.etat === "acquis" && montee && <span className="sr-only"> {t("verrouille")}</span>}
-                      </span>
-                      <span className="flex flex-wrap justify-end gap-1">
-                        {l.pastilles.map((p) => (
+                    <Fragment key={l.niveau}>
+                      <li className={`grid grid-cols-[2.5rem_1fr_auto] items-center gap-2 border-l-[3px] px-2 py-1 text-sm ${style.ligne}`}>
+                        {modifiable ? (
                           <button
-                            key={`${p.genre}:${p.cle}`}
                             type="button"
-                            onClick={() => surPastille(p.genre, p.cle, l.niveau)}
-                            className={`whitespace-nowrap rounded-full border px-2 py-0.5 text-xs transition-colors ${
-                              p.fait ? "border-edge text-ink-muted hover:bg-panel-raised" : "border-accent/60 bg-accent/10 text-accent hover:bg-accent/20"
-                            }`}
+                            aria-label={t("niveauRapide", { n: l.niveau })}
+                            onClick={() => reglerNiveau(l.niveau)}
+                            className={`text-left font-display text-base font-bold ${style.numero}`}
                           >
-                            {p.fait ? "✓ " : ""}
-                            {p.libelle}
-                            <span className="sr-only"> {p.fait ? tCreation("fait") : tCreation("aFaireUn")}</span>
+                            {l.niveau}
                           </button>
-                        ))}
-                      </span>
-                    </li>
+                        ) : (
+                          <span className={`font-display text-base font-bold ${style.numero}`}>{l.niveau}</span>
+                        )}
+                        <span className="min-w-0">
+                          {depliable ? (
+                            <button
+                              type="button"
+                              aria-expanded={deplie}
+                              onClick={() =>
+                                setDeplies((avant) => {
+                                  const apres = new Set(avant);
+                                  if (apres.has(cleLigne)) apres.delete(cleLigne);
+                                  else apres.add(cleLigne);
+                                  return apres;
+                                })
+                              }
+                              className="inline-flex items-baseline gap-2 text-left hover:text-ink"
+                            >
+                              <span>{noms}</span>
+                              <span aria-hidden="true" className="text-xs text-ink-muted">
+                                {deplie ? "▴" : "▾"}
+                              </span>
+                            </button>
+                          ) : (
+                            noms
+                          )}
+                          {l.etat === "avenir" && l.aVenir.length > 0 && (
+                            <span className="block text-xs text-ink-muted">{t("aVenir", { liste: l.aVenir.join(", ") })}</span>
+                          )}
+                          {l.etat === "acquis" && montee && <span className="sr-only"> {t("verrouille")}</span>}
+                        </span>
+                        <span className="flex flex-wrap justify-end gap-1">
+                          {l.pastilles.map((p) => (
+                            <button
+                              key={`${p.genre}:${p.cle}`}
+                              type="button"
+                              onClick={() => surPastille(p.genre, p.cle, l.niveau)}
+                              className={`whitespace-nowrap rounded-full border px-2 py-0.5 text-xs transition-colors ${
+                                p.fait ? "border-edge text-ink-muted hover:bg-panel-raised" : "border-accent/60 bg-accent/10 text-accent hover:bg-accent/20"
+                              }`}
+                            >
+                              {p.fait ? "✓ " : ""}
+                              {p.libelle}
+                              <span className="sr-only"> {p.fait ? tCreation("fait") : tCreation("aFaireUn")}</span>
+                            </button>
+                          ))}
+                        </span>
+                      </li>
+                      {deplie && (
+                        <li className={`border-l-[3px] pb-2 pl-12 pr-2 pt-1 ${style.ligne.split(" ").filter((c) => c.startsWith("border-")).join(" ")}`}>
+                          <TexteAptitudes worldSlug={worldSlug} aptitudes={l.aptitudes} />
+                        </li>
+                      )}
+                    </Fragment>
                   );
                 })}
               </ol>
@@ -580,6 +630,42 @@ export default function LevelClassesStep({
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * V3.1-173 — Le texte entier des aptitudes d'un niveau déplié, lu dans leur
+ * fiche de règle et rendu comme sur la page de la règle (`renderBlockData`,
+ * gras et listes compris). Monté au dépliage seulement : le texte n'est
+ * demandé qu'à ce moment, et « Tout déplier » réunit les clés en une requête
+ * (`useRuleEntryBlocks`, chargeur par lots ; docs/CABLAGE.md, C1-C2).
+ */
+function TexteAptitudes({ worldSlug, aptitudes }: { worldSlug: string; aptitudes: readonly AptitudeNiveau[] }) {
+  const t = useTranslations("creation.classe");
+  const avecFiche = aptitudes.filter((a): a is AptitudeNiveau & { cle: string } => a.cle !== null);
+  const fiches = useRuleEntryBlocks(
+    worldSlug,
+    avecFiche.map((a) => a.cle)
+  );
+  return (
+    <div className="flex flex-col gap-2">
+      {avecFiche.map((a) => {
+        const blocs = fiches[a.cle];
+        const description = blocs?.find((b) => b.blockType === "description");
+        return (
+          <div key={a.cle} className="flex flex-col gap-0.5">
+            <span className="text-sm font-semibold text-ink">{a.nom}</span>
+            {blocs === undefined ? (
+              <span className="text-xs text-ink-muted">{t("texteChargement")}</span>
+            ) : description ? (
+              <div className="text-sm text-ink-soft">{renderBlockData("description", description.data, worldSlug)}</div>
+            ) : (
+              <span className="text-xs text-ink-muted">{t("sansTexte")}</span>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

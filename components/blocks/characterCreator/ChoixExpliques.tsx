@@ -5,7 +5,11 @@ import type { SousEtape } from "@/lib/ui/cheminCreation";
 import type { ColonneOption } from "@/lib/ui/optionsAvecEffets";
 import { NIVEAUX_TABLEAU } from "@/lib/ui/optionsAvecEffets";
 import type { SkillChoiceEffect, SpellAbilityEffect } from "@/src/core/rules/choiceEffects";
+import { SKILL_ABILITIES } from "@/src/core/rules/sheet";
+import { cleRegleCompetence, texteDescription } from "@/lib/ui/texteRegle";
 import { toggleChoice } from "@/components/blocks/characterChoiceUtils";
+import { ABILITY_LABELS } from "@/components/blocks/sheetLabels";
+import { useRuleEntryBlocks } from "../useRuleEntryBlocks";
 
 /** Un clic : à une seule valeur il remplace ou retire, à plusieurs il remplit jusqu'au compte. */
 function apresClic(sous: SousEtape, cle: string): string[] {
@@ -76,16 +80,21 @@ export function ChoixCaracIncantation({
 }
 
 /**
- * V3.1-50 — Un choix de compétence (Sens aiguisés, Compétent) : ce que
- * couvre chaque compétence, le total qu'elle donnerait, et — quand une autre
- * source la rend déjà maîtrisée — que ce choix ne donnerait rien de plus.
+ * V3.1-50 — Un choix de compétence (compétences de classe, Sens aiguisés,
+ * Compétent) : ce que couvre chaque compétence, le total qu'elle donnerait,
+ * et — quand une autre source la rend déjà maîtrisée — que ce choix ne
+ * donnerait rien de plus. V3.1-173 : ce qu'elle couvre est la phrase de sa
+ * fiche de règle (`skill-<index>`, importée du SRD), avec la caractéristique
+ * du jet ; une seule requête pour les compétences proposées.
  */
 export function ChoixCompetence({
+  worldSlug,
   sous,
   effets,
   libelleOption,
   onChoisir,
 }: {
+  worldSlug: string;
   sous: SousEtape;
   effets: readonly SkillChoiceEffect[];
   libelleOption: (cle: string) => string;
@@ -93,6 +102,10 @@ export function ChoixCompetence({
 }) {
   const t = useTranslations("creation.competence");
   const tc = useTranslations("creation");
+  const fiches = useRuleEntryBlocks(
+    worldSlug,
+    effets.map((e) => cleRegleCompetence(e.skill))
+  );
   return (
     <div className="flex flex-col gap-2">
       <p className="text-xs text-ink-muted">
@@ -112,8 +125,11 @@ export function ChoixCompetence({
               onClick={() => onChoisir(apresClic(sous, e.skill))}
               className={`${classeCarte(choisi)} ${e.alreadyFrom && !choisi ? "opacity-70" : ""}`}
             >
-              <span className="font-semibold">{libelleOption(e.skill)}</span>
-              <span className="text-xs font-normal text-ink-muted">{t.has(`couvre.${e.skill}`) ? t(`couvre.${e.skill}`) : ""}</span>
+              <span className="flex items-baseline justify-between gap-2">
+                <span className="font-semibold">{libelleOption(e.skill)}</span>
+                <span className="text-xs font-bold tracking-widest text-accent">{ABILITY_LABELS[SKILL_ABILITIES[e.skill]]}</span>
+              </span>
+              <span className="text-xs font-normal text-ink-muted">{texteDescription(fiches[cleRegleCompetence(e.skill)])}</span>
               <span className="text-xs font-normal text-ink">{t("total", { total: signe(e.ifChosen) })}</span>
               {e.alreadyFrom && <span className="text-xs font-normal text-accent">{t("dejaMaitrisee", { source: e.alreadyFrom })}</span>}
             </button>

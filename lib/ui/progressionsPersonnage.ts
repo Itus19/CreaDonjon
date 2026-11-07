@@ -2,7 +2,7 @@ import { isValidAsiChoice, parseAsiChoice } from "@/src/core/rules/abilityScoreI
 import { zClassProgressionBlockData } from "@/src/core/schemas/rule-blocks/blocks";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { Chemin, Etape, SousEtape } from "./cheminCreation";
-import { progressionClasse, type LigneProgression } from "./progressionClasse";
+import { progressionClasse, type AptitudeNiveau, type LigneProgression } from "./progressionClasse";
 
 /**
  * V3.1-51 — Ce que l'étape Classe montre de chaque emplacement : la
@@ -23,26 +23,27 @@ const NIVEAU_MAX_PAR_DEFAUT = 20;
  * colonnes de genre `grants` listent soit une aptitude (`feature`, nommée par
  * `nomDe`), soit un choix libre (`choice`, son texte). Un bloc illisible ne
  * donne aucune aptitude (la progression reste affichée, sans détail).
+ * V3.1-173 : une aptitude garde sa clé, pour que l'étape Classe déplie son texte.
  */
-export function aptitudesParNiveau(donnees: unknown, nomDe: (cle: string) => string): { maxNiveau: number; parNiveau: Record<number, string[]> } {
+export function aptitudesParNiveau(donnees: unknown, nomDe: (cle: string) => string): { maxNiveau: number; parNiveau: Record<number, AptitudeNiveau[]> } {
   const lu = zClassProgressionBlockData.safeParse(donnees);
   if (!lu.success) return { maxNiveau: NIVEAU_MAX_PAR_DEFAUT, parNiveau: {} };
   const bloc = lu.data;
   const colonneNiveau = bloc.columns.find((c) => c.kind === "level")?.key ?? "level";
   const colonnesAptitudes = bloc.columns.filter((c) => c.kind === "grants");
-  const parNiveau: Record<number, string[]> = {};
+  const parNiveau: Record<number, AptitudeNiveau[]> = {};
   for (const ligne of bloc.rows) {
     const niveau = Number(ligne[colonneNiveau]);
     if (!Number.isInteger(niveau) || niveau < 1) continue;
-    const noms: string[] = [];
+    const noms: AptitudeNiveau[] = [];
     for (const colonne of colonnesAptitudes) {
       const accordees = ligne[colonne.key];
       if (!Array.isArray(accordees)) continue;
       for (const a of accordees) {
         if (!a || typeof a !== "object") continue;
         const { feature, choice } = a as { feature?: unknown; choice?: unknown };
-        if (typeof feature === "string") noms.push(nomDe(feature));
-        else if (typeof choice === "string") noms.push(choice);
+        if (typeof feature === "string") noms.push({ nom: nomDe(feature), cle: feature });
+        else if (typeof choice === "string") noms.push({ nom: choice, cle: null });
       }
     }
     parNiveau[niveau] = noms;

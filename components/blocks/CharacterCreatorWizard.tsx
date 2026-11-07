@@ -489,7 +489,7 @@ export default function CharacterCreatorWizard({
       (n, p) => n + (p?.lignes.filter((l) => l.etat === "nouveau").reduce((m, l) => m + l.pastilles.filter((x) => x.genre !== "choix" && !x.fait).length, 0) ?? 0),
       0
     );
-  const nouveautes = progressions.parEmplacement.flatMap((p) => p?.lignes.filter((l) => l.etat === "nouveau").flatMap((l) => l.aptitudes) ?? []);
+  const nouveautes = progressions.parEmplacement.flatMap((p) => p?.lignes.filter((l) => l.etat === "nouveau").flatMap((l) => l.aptitudes.map((a) => a.nom)) ?? []);
   const apercuMontee = montee ? (
     <AvantApres
       avant={resumeFiche(avant.sheet, niveauAvantTotal)}

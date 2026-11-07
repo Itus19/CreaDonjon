@@ -21,10 +21,16 @@ export interface PastilleNiveau {
   fait: boolean;
 }
 
+/** V3.1-173 : une aptitude d'un niveau ; `cle` est sa fiche de règle, `null` pour un choix libre. */
+export interface AptitudeNiveau {
+  nom: string;
+  cle: string | null;
+}
+
 export interface LigneProgression {
   niveau: number;
   etat: "acquis" | "atteint" | "nouveau" | "avenir";
-  aptitudes: string[];
+  aptitudes: AptitudeNiveau[];
   pastilles: PastilleNiveau[];
   /** Ligne à venir : ce que le niveau apportera (sous-classe, amélioration). */
   aVenir: string[];
@@ -35,7 +41,7 @@ export interface EntreeProgression {
   /** Montée de niveau : le niveau de la classe avant. Absent : création. */
   niveauAvant?: number;
   maxNiveau: number;
-  aptitudesParNiveau: Readonly<Record<number, readonly string[]>>;
+  aptitudesParNiveau: Readonly<Record<number, readonly AptitudeNiveau[]>>;
   sousClasse: { niveau: number; choisie: boolean; libelle: string } | null;
   /** Améliorations de caractéristique et dons épiques, aux niveaux que la progression accorde. */
   ameliorations: readonly { niveau: number; fait: boolean; libelle: string }[];

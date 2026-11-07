@@ -41,9 +41,17 @@ describe("les aptitudes de chaque niveau", () => {
   it("lit les aptitudes nommées et les choix libres de la progression", () => {
     const r = aptitudesParNiveau(bloc, (cle) => cle.toUpperCase());
     expect(r.maxNiveau).toBe(3);
-    expect(r.parNiveau[1]).toEqual(["RAGE", "Maîtrise d'arme"]);
+    expect(r.parNiveau[1]).toEqual([
+      { nom: "RAGE", cle: "rage" },
+      { nom: "Maîtrise d'arme", cle: null },
+    ]);
     expect(r.parNiveau[2]).toEqual([]);
-    expect(r.parNiveau[3]).toEqual(["SENS-DU-DANGER"]);
+    expect(r.parNiveau[3]).toEqual([{ nom: "SENS-DU-DANGER", cle: "sens-du-danger" }]);
+  });
+
+  it("V3.1-173 : une aptitude garde sa clé de règle (pour ouvrir son texte), un choix libre n'en a pas", () => {
+    const r = aptitudesParNiveau(bloc, (cle) => cle);
+    expect(r.parNiveau[1].map((a) => a.cle)).toEqual(["rage", null]);
   });
 
   it("un bloc illisible ne donne aucune aptitude, sans casser l'écran", () => {

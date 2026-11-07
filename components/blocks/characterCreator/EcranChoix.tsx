@@ -12,6 +12,9 @@ import type { CustomTableBlockData, WeaponBlockData } from "@/src/core/schemas/r
 import { WEAPON_MASTERY_LABELS_FR } from "@/src/i18n/fr";
 import type { FeatChoiceData } from "@/src/core/rules/choices";
 import { useRuleEntryBlocks, type RuleEntryBlockData } from "../useRuleEntryBlocks";
+import NomDeRegle from "../NomDeRegle";
+import { toggleChoice } from "@/components/blocks/characterChoiceUtils";
+import { cleRegleBotte } from "@/lib/ui/texteRegle";
 import ChoixDon, { type ContexteAmelioration } from "./ChoixDon";
 import ChoixGenerique from "./ChoixGenerique";
 import SelecteurSorts, { type CandidatSort } from "./SelecteurSorts";
@@ -134,9 +137,18 @@ function Choix({
       );
     }
 
-    if (from?.kind === "skill" && from.expertise !== true) {
+    // V3.1-173 : aussi les compétences de la classe (un choix « restant », sans `from`), pas seulement celles d'un don ou d'un trait.
+    if (sous.genre === "skill" && !sous.expertise && (from === undefined || (from.kind === "skill" && from.expertise !== true))) {
       const competences = sous.options.map((o) => o.cle).filter((c): c is Skill => (SKILLS as readonly string[]).includes(c));
-      return <ChoixCompetence sous={sous} effets={skillChoiceEffects(ctx.sheet, competences, `choice:${sous.cle}`)} libelleOption={libelleOption} onChoisir={onChoisir} />;
+      return (
+        <ChoixCompetence
+          worldSlug={ctx.worldSlug}
+          sous={sous}
+          effets={skillChoiceEffects(ctx.sheet, competences, `choice:${sous.cle}`)}
+          libelleOption={libelleOption}
+          onChoisir={onChoisir}
+        />
+      );
     }
 
     if (estTableauComparatif(from)) {
@@ -152,9 +164,12 @@ function Choix({
 }
 
 /**
- * V3.1-118 — Les maîtrises d'armes : le sélecteur générique, chaque arme avec
- * sa botte (lue dans le bloc `weapon` de sa fiche, une seule requête pour les
- * armes proposées).
+ * V3.1-118 — Les maîtrises d'armes : chaque arme avec sa botte (lue dans le
+ * bloc `weapon` de sa fiche, une seule requête pour les armes proposées).
+ * V3.1-173 : la botte est un nom de règle (celui de la fiche, V3.1-32) qui
+ * ouvre sa fiche — fenêtre sur ordinateur, feuille du bas sur téléphone. Le
+ * lien est hors du bouton qui choisit l'arme (pas d'élément actif dans un
+ * autre) ; la carte les réunit.
  */
 function ChoixMaitrise({
   sous,
@@ -172,10 +187,49 @@ function ChoixMaitrise({
     ctx.worldSlug,
     sous.options.map((o) => o.cle)
   );
-  const options = sous.options.map((o) => {
-    const arme = blocs[o.cle]?.find((b) => b.blockType === "weapon");
-    const botte = arme ? weaponDataFromBlock(arme.data as WeaponBlockData).masteryKey : null;
-    return botte ? { ...o, description: t("equip.fiche.botte", { nom: WEAPON_MASTERY_LABELS_FR[botte] ?? botte }) } : o;
-  });
-  return <ChoixGenerique sous={{ ...sous, options }} libelleOption={libelleOption} dejaAcquis={ctx.dejaAcquis(sous)} onChoisir={onChoisir} />;
+  if (sous.options.length === 0) return <ChoixGenerique sous={sous} libelleOption={libelleOption} dejaAcquis={ctx.dejaAcquis(sous)} onChoisir={onChoisir} />;
+
+  const dejaAcquis = ctx.dejaAcquis(sous);
+  const complet = sous.choisis.length >= sous.nombre;
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-xs text-ink-muted">
+        {sous.nombre > 1 ? t("choisirN", { n: sous.nombre }) : t("choisirUn")}{" "}
+        <span className="font-semibold text-accent">{t("compte", { fait: sous.choisis.length, total: sous.nombre })}</span>
+      </p>
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(11rem,1fr))] gap-2">
+        {sous.options.map((o) => {
+          const arme = blocs[o.cle]?.find((b) => b.blockType === "weapon");
+          const botte = arme ? weaponDataFromBlock(arme.data as WeaponBlockData).masteryKey : null;
+          const choisi = sous.choisis.includes(o.cle);
+          const acquis = !choisi && dejaAcquis.has(o.cle);
+          const bloque = acquis || (!choisi && complet && sous.nombre > 1);
+          return (
+            <div
+              key={o.cle}
+              className={`flex flex-col gap-0.5 rounded-lg border px-3 py-2 text-sm transition-colors ${
+                choisi ? "border-accent bg-accent/10" : "border-edge bg-panel-sunken hover:bg-panel-raised"
+              } ${bloque ? "opacity-45" : ""}`}
+            >
+              <button
+                type="button"
+                aria-pressed={choisi}
+                disabled={bloque}
+                onClick={() => onChoisir(sous.nombre === 1 ? (choisi ? [] : [o.cle]) : toggleChoice(sous.choisis, o.cle, sous.nombre))}
+                className={`text-left disabled:cursor-not-allowed ${choisi ? "font-semibold text-accent" : "text-ink"}`}
+              >
+                {o.libelle ?? libelleOption(o.cle)}
+                {acquis && <span className="block text-xs font-normal text-ink-muted">{t("dejaAcquis")}</span>}
+              </button>
+              {botte && (
+                <NomDeRegle worldSlug={ctx.worldSlug} ruleKey={cleRegleBotte(botte)} className="w-fit text-xs">
+                  {WEAPON_MASTERY_LABELS_FR[botte] ?? botte}
+                </NomDeRegle>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }

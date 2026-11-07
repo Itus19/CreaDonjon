@@ -2761,27 +2761,7 @@
     },
     "competence": {
       "total": "total {total}",
-      "dejaMaitrisee": "already proficient ({source}): this choice would add nothing",
-      "couvre": {
-        "acrobatics": "Balance, tumbling, staying on your feet.",
-        "animal_handling": "Calm, ride, read the intent of an animal.",
-        "arcana": "Lore on magic, spells and the planes.",
-        "athletics": "Climbing, jumping, swimming, grappling.",
-        "deception": "Lie, bluff, pass for someone else.",
-        "history": "Lore on events, peoples and kingdoms.",
-        "insight": "Read intentions and spot lies.",
-        "intimidation": "Threaten, overawe, force a hand.",
-        "investigation": "Search, deduce, piece a clue together.",
-        "medicine": "Stabilize the dying, diagnose an ailment.",
-        "nature": "Lore on terrain, plants and beasts.",
-        "perception": "Spot, hear, notice the ambush.",
-        "performance": "Sing, play, hold an audience.",
-        "persuasion": "Convince with tact and good faith.",
-        "religion": "Lore on gods, rites and the undead.",
-        "sleight_of_hand": "Pick pockets, palm, tamper discreetly.",
-        "stealth": "Hide, move without a sound.",
-        "survival": "Track, hunt, find your way in the wild."
-      }
+      "dejaMaitrisee": "already proficient ({source}): this choice would add nothing"
     },
     "tableau": {
       "niveau": "Level {n}",
@@ -2846,6 +2826,10 @@
       "sauvegardes": "Saves {liste}",
       "legende": "Gained in green, current level in gold, the rest faded with what is to come.",
       "legendeMontee": "Gained levels are locked; new levels are in gold.",
+      "toutDeplier": "Expand all",
+      "toutReplier": "Collapse all",
+      "texteChargement": "Loading the text…",
+      "sansTexte": "This entry has no text yet.",
       "aVenir": "Coming: {liste}",
       "verrouille": "(gained level, locked)",
       "aucuneSousClasse": "No subclass to offer for this class.",

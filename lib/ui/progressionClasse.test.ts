@@ -21,7 +21,7 @@ const sous = (cle: string, niveau: number, fait = false): SousEtape => ({
 
 const base = {
   maxNiveau: 20,
-  aptitudesParNiveau: { 1: ["Expertise", "Attaque sournoise"], 3: ["Archétype"], 4: ["Amélioration"] },
+  aptitudesParNiveau: { 1: [{ nom: "Expertise", cle: "expertise" }, { nom: "Attaque sournoise", cle: "sneak-attack" }], 3: [{ nom: "Archétype", cle: null }], 4: [{ nom: "Amélioration", cle: null }] },
   sousClasse: { niveau: 3, choisie: false, libelle: "Sous-classe" },
   ameliorations: [
     { niveau: 4, fait: false, libelle: "Amélioration de caractéristique" },
@@ -34,7 +34,8 @@ describe("la progression d'une classe (V3.1-51)", () => {
     const p = progressionClasse({ ...base, niveau: 3, choix: [] });
     expect(p.lignes).toHaveLength(20);
     expect(p.lignes.slice(0, 4).map((l) => l.etat)).toEqual(["acquis", "acquis", "atteint", "avenir"]);
-    expect(p.lignes[0].aptitudes).toEqual(["Expertise", "Attaque sournoise"]);
+    expect(p.lignes[0].aptitudes.map((a) => a.nom)).toEqual(["Expertise", "Attaque sournoise"]);
+    expect(p.lignes[0].aptitudes[1].cle).toBe("sneak-attack");
   });
 
   it("chaque choix d'un niveau atteint est une pastille sur sa ligne ; la suite annonce ce qui viendra", () => {

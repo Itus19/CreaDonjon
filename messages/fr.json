@@ -2762,27 +2762,7 @@
     },
     "competence": {
       "total": "total {total}",
-      "dejaMaitrisee": "déjà maîtrisée ({source}) : ce choix ne donnerait rien de plus",
-      "couvre": {
-        "acrobatics": "Équilibre, acrobaties, éviter une chute.",
-        "animal_handling": "Calmer, monter, deviner les intentions d'un animal.",
-        "arcana": "Savoir sur la magie, les sorts, les plans.",
-        "athletics": "Escalade, saut, natation, lutte.",
-        "deception": "Mentir, bluffer, se faire passer pour un autre.",
-        "history": "Savoir sur les événements, les peuples, les royaumes.",
-        "insight": "Percevoir les intentions et les mensonges.",
-        "intimidation": "Menacer, impressionner, forcer la main.",
-        "investigation": "Fouiller, déduire, reconstituer un indice.",
-        "medicine": "Stabiliser un mourant, diagnostiquer un mal.",
-        "nature": "Savoir sur le terrain, les plantes, les bêtes.",
-        "perception": "Repérer, entendre, remarquer l'embuscade.",
-        "performance": "Chanter, jouer, captiver un public.",
-        "persuasion": "Convaincre avec tact et bonne foi.",
-        "religion": "Savoir sur les dieux, les rites, les morts-vivants.",
-        "sleight_of_hand": "Chaparder, escamoter, manipuler discrètement.",
-        "stealth": "Se cacher, se déplacer sans bruit.",
-        "survival": "Pister, chasser, s'orienter, survivre en pleine nature."
-      }
+      "dejaMaitrisee": "déjà maîtrisée ({source}) : ce choix ne donnerait rien de plus"
     },
     "tableau": {
       "niveau": "Niveau {n}",
@@ -2847,6 +2827,10 @@
       "sauvegardes": "Sauv. {liste}",
       "legende": "Acquis en vert, niveau atteint en doré, la suite estompée avec ce qui viendra.",
       "legendeMontee": "Les niveaux acquis sont verrouillés ; les nouveaux niveaux sont en doré.",
+      "toutDeplier": "Tout déplier",
+      "toutReplier": "Tout replier",
+      "texteChargement": "Chargement du texte…",
+      "sansTexte": "Cette fiche n'a pas encore de texte.",
       "aVenir": "À venir : {liste}",
       "verrouille": "(niveau acquis, verrouillé)",
       "aucuneSousClasse": "Aucune sous-classe à proposer pour cette classe.",
