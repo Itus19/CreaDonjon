@@ -106,6 +106,17 @@ describe.skipIf(!hasCreds)("valeurs calculées du SRD (V3.1-158, integration, ba
     expect(rollBonus(apres, { roll: "damage", kind: "weapon", ability: "str" }).value).toBe(3);
     expect(rollBonus(apres, { roll: "damage", kind: "weapon", ability: "dex" }).value).toBe(0);
     expect(apres.savingThrows.str.rollState).toBe("advantage");
+
+    // Relancée tant qu'elle dure : un usage de plus, mais la Rage est rafraîchie, jamais empilée (+3, pas +6).
+    const r2 = await activateFeature(client(), {
+      entityId: ids.grom, campaignId, ruleKey: "barbarian-rage", activationId: "rage", variantId: null,
+      targetParticipantIds: [], callerId: gm.id, callerIsGm: true, locale: "fr",
+    });
+    if (!r2.ok) throw new Error(r2.reason);
+    expect(r2.used).toEqual({ rage: 2 });
+    expect(rollBonus(await fiche("grom"), { roll: "damage", kind: "weapon", ability: "str" }).value).toBe(3);
+    const { count } = await admin.from("entity_active_effects").select("id", { count: "exact", head: true }).eq("entity_id", ids.grom).eq("source_key", "barbarian-rage");
+    expect(count).toBe(1);
   });
 
   it("la couverture se lit sur les fiches officielles", async () => {

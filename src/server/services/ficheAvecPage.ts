@@ -1,4 +1,5 @@
 import "server-only";
+import type { ActiveDurableEffect } from "@/src/core/rules/durableEffects";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import type { Locale } from "@/src/i18n/request";
@@ -30,7 +31,7 @@ type TypedClient = SupabaseClient<Database>;
  */
 export interface FicheAvecPage {
   /** `controls` (V3.1-109) : les commandes que la fiche montre à cet appelant pour cette campagne. */
-  remote: { sheet: DerivedSheet; hitDiceTotals: Record<string, number>; runtimeState: RuntimeStateView; controls: Record<PlayerEditableField, boolean> } | null;
+  remote: { sheet: DerivedSheet; hitDiceTotals: Record<string, number>; runtimeState: RuntimeStateView; controls: Record<PlayerEditableField, boolean>; effects: ActiveDurableEffect[] } | null;
   ruleset: { cleSelection: string; vue: Awaited<ReturnType<typeof buildResolvedRulesetView>> } | null;
 }
 
@@ -58,7 +59,8 @@ export async function chargerFicheAvecPage(
       loadSheetControls(supabase, { worldId: ctx.worldId, campaignId: params.campaignId ?? null, userId: params.userId }),
     ]);
     const runtimeState = await getOrInitializeRuntimeState(supabase, ctx, { persist: canEdit });
-    return { sheet: ctx.sheet, hitDiceTotals: ctx.hitDiceTotals, runtimeState, controls };
+    // V3.1-157 : les effets portés partent avec la page, comme avec la route `/sheet` (sinon la fiche les ignore jusqu'à la première action).
+    return { sheet: ctx.sheet, hitDiceTotals: ctx.hitDiceTotals, runtimeState, controls, effects: ctx.activeEffects };
   })();
 
   const rulesetPromise = selectionHasAnything(selection)

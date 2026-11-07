@@ -11,7 +11,7 @@ import { zActivationBlockData, type ActivationBlockData } from "@/src/core/schem
 import { orderParticipants } from "@/src/server/services/combats";
 import { getActiveCombatForCampaign, listCombatParticipants, type CombatParticipantRow } from "@/src/server/repos/combats";
 import { listCampaignCharacters } from "@/src/server/repos/campaigns";
-import { insertFeatureEffect } from "@/src/server/repos/activeEffects";
+import { deleteFeatureEffect, insertFeatureEffect, listFeatureEffectsForBearers } from "@/src/server/repos/activeEffects";
 import { resolveCharacterActionContext } from "@/src/server/services/characterActions";
 import { resolveEntryBlocksInRuleset } from "@/src/server/services/rules";
 import { getCampaign } from "@/src/server/services/campaigns";
@@ -239,6 +239,27 @@ export async function activateFeature(
   }
 
   // 4. Les effets qui durent : par PJ (son entité) ou par instance de combat (ADR 0073).
+  // V3.1-157 : relancer un effet encore actif le RAFRAÎCHIT (même règle, même
+  // effet, même porteur), jamais ne l'empile — deux Rages ne font pas +6.
+  // Seulement là où l'appelant écrit directement ; le chemin signé d'un joueur
+  // vers un monstre ne lit pas les effets de l'instance (ADR 0073).
+  const porteursDirects = plan.plan.applied
+    .map((effet) => ({ effet, porteur: bearerOf(effet, participants, pcEntityIds) }))
+    .filter(({ porteur }) => params.callerIsGm || ("entityId" in porteur && porteur.entityId === params.entityId));
+  if (porteursDirects.length > 0) {
+    const existants = await listFeatureEffectsForBearers(supabase, {
+      campaignId: params.campaignId,
+      entityIds: porteursDirects.flatMap(({ porteur }) => ("entityId" in porteur ? [porteur.entityId] : [])),
+      participantIds: porteursDirects.flatMap(({ porteur }) => ("participantId" in porteur ? [porteur.participantId] : [])),
+    });
+    for (const { effet, porteur } of porteursDirects) {
+      for (const row of existants) {
+        const memePorteur = "entityId" in porteur ? row.entity_id === porteur.entityId : row.combat_participant_id === porteur.participantId;
+        const memeEffet = (row.payload as { effectId?: unknown } | null)?.effectId === effet.effectId;
+        if (memePorteur && memeEffet && row.source_key === params.ruleKey) await deleteFeatureEffect(supabase, row.id);
+      }
+    }
+  }
   const signes: EngineChangeLine[] = [];
   for (const effet of plan.plan.applied) {
     const porteur = bearerOf(effet, participants, pcEntityIds);
