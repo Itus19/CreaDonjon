@@ -12,6 +12,8 @@ export type Token =
   | { type: "(" }
   | { type: ")" }
   | { type: "," }
+  /** V3.1-155 : l'opérateur « dés » entre deux facteurs (`ceil(x)d6`, `{p}d10`, `1d{x}`). */
+  | { type: "D" }
   | { type: "eof" };
 
 function isDigit(c: string | undefined): c is string {
@@ -72,6 +74,14 @@ export function tokenize(input: string): Token[] {
 
       const count = parseInt(input.slice(i, j), 10);
 
+      // V3.1-155 : `1d{x}` ou `1d(x)` — un nombre, puis l'opérateur « dés ».
+      if (input[j] === "d" && (input[j + 1] === "{" || input[j + 1] === "(")) {
+        tokens.push({ type: "number", value: count });
+        tokens.push({ type: "D" });
+        i = j + 1;
+        continue;
+      }
+
       if (input[j] === "d" && isDigit(input[j + 1])) {
         let k = j + 1;
         while (isDigit(input[k])) k++;
@@ -100,6 +110,19 @@ export function tokenize(input: string): Token[] {
       i = j;
       continue;
     }
+    // V3.1-155 : `d` collé derrière `)` ou `}`, et suivi d'un facteur : l'opérateur « dés ».
+    const precedent = tokens[tokens.length - 1];
+    if (
+      c === "d" &&
+      (input[i - 1] === ")" || input[i - 1] === "}") &&
+      (precedent?.type === ")" || precedent?.type === "ref") &&
+      (isDigit(input[i + 1]) || input[i + 1] === "{" || input[i + 1] === "(")
+    ) {
+      tokens.push({ type: "D" });
+      i++;
+      continue;
+    }
+
     if (isAlpha(c)) {
       let j = i;
       while (isAlphaNum(input[j])) j++;

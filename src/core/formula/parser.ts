@@ -1,5 +1,6 @@
 import type { FormulaNode } from "./ast";
 import { FormulaLimitError, FormulaParseError } from "./errors";
+import { containsDice } from "./inspect";
 import { tokenize, type Token } from "./lexer";
 import { FORMULA_LIMITS } from "./limits";
 
@@ -66,14 +67,14 @@ class Parser {
     return node;
   }
 
-  // terme ::= facteur (('*' | '/') facteur)*
+  // terme ::= des (('*' | '/') des)*
   private parseTerm(depth: number): FormulaNode {
-    let node = this.parseFactor(depth);
+    let node = this.parseDice(depth);
     for (;;) {
       const t = this.peek();
       if (t.type === "*" || t.type === "/") {
         this.advance();
-        const right = this.parseFactor(depth);
+        const right = this.parseDice(depth);
         this.countNode();
         node = { op: t.type === "*" ? "mul" : "div", args: [node, right] };
       } else {
@@ -81,6 +82,24 @@ class Parser {
       }
     }
     return node;
+  }
+
+  // des ::= facteur ('D' facteur)?  — V3.1-155 (ADR 0074) : nombre et taille en formule.
+  private parseDice(depth: number): FormulaNode {
+    const left = this.parseFactor(depth);
+    if (this.peek().type !== "D") return left;
+    this.advance();
+    const right = this.parseFactor(depth);
+    if (containsDice(left) || containsDice(right)) {
+      throw new FormulaParseError("Le nombre et la taille des des ne peuvent pas contenir de des");
+    }
+    for (const [cote, n] of [["nombre", left], ["taille", right]] as const) {
+      if (n.op === "num" && (!Number.isInteger(n.value) || n.value <= 0)) {
+        throw new FormulaLimitError(`La ${cote} des des doit etre un entier positif`);
+      }
+    }
+    this.countNode();
+    return { op: "dice", count: left.op === "num" ? left.value : left, faces: right.op === "num" ? right.value : right };
   }
 
   // facteur ::= nombre | de | reference | fonction | '(' formule ')'

@@ -175,7 +175,44 @@ export const MODIFIER_TARGET_CATEGORY_LABELS_FR: Record<ModifierTargetCategory, 
   ability: "Caractéristique",
   save: "Jet de sauvegarde",
   skill: "Compétence",
+  attack: "Jet d'attaque",
+  damage: "Dégâts",
+  crit: "Critique à partir de",
+  speed_special: "Vitesse",
+  sense: "Sens",
+  prof: "Maîtrise",
+  ac_unarmored: "CA sans armure",
 };
+
+/** V3.1-155 : libellés des cibles nouvelles, quand la catégorie ne suffit pas. */
+const MODIFIER_TARGET_DETAIL_FR: Record<string, string> = {
+  save: "Jets de sauvegarde — tous",
+  attack: "Jets d'attaque — tous",
+  "attack.weapon": "Jets d'attaque — arme",
+  "attack.spell": "Jets d'attaque — sort",
+  damage: "Dégâts — tous",
+  "damage.weapon": "Dégâts — arme",
+  "damage.spell": "Dégâts — sort",
+  crit_range: "Critique à partir de — toute attaque",
+  "crit_range.weapon": "Critique à partir de — arme",
+  "speed.fly": "Vitesse de vol",
+  "speed.swim": "Vitesse de nage",
+  "speed.climb": "Vitesse d'escalade",
+  "speed.burrow": "Vitesse de fouissement",
+  "sense.darkvision": "Vision dans le noir (m)",
+  "sense.blindsight": "Perception aveugle (m)",
+  "sense.tremorsense": "Perception des vibrations (m)",
+  "sense.truesight": "Vision véritable (m)",
+  "prof.weapon.simple": "Maîtrise — armes courantes",
+  "prof.weapon.martial": "Maîtrise — armes de guerre",
+  "prof.armor.light": "Maîtrise — armures légères",
+  "prof.armor.medium": "Maîtrise — armures intermédiaires",
+  "prof.armor.heavy": "Maîtrise — armures lourdes",
+  "prof.armor.shield": "Maîtrise — boucliers",
+  "ac.unarmored": "CA sans armure (bouclier permis)",
+  "ac.unarmored_no_shield": "CA sans armure ni bouclier",
+};
+
 
 /** Etiquette d'effet pour un modificateur declare — les cinq derniers sont des drapeaux (`modifierOpNeedsValue`), jamais suivis d'un montant. */
 export const MODIFIER_OP_LABELS_FR: Record<ModifierOp, string> = {
@@ -194,7 +231,12 @@ export const MODIFIER_OP_LABELS_FR: Record<ModifierOp, string> = {
 export function modifierTargetLabel(target: string): string {
   const option = modifierTargetOption(target);
   if (!option) return target;
+  const detail = MODIFIER_TARGET_DETAIL_FR[target];
+  if (detail) return detail;
   const category = MODIFIER_TARGET_CATEGORY_LABELS_FR[option.category];
+  // V3.1-155 : dégâts d'une attaque faite avec une caractéristique (la Rage), ou d'un sort d'un type.
+  if (option.category === "damage" && option.ability) return `Dégâts — arme de ${ABILITY_LABELS[option.ability]}`;
+  if (option.category === "damage" && option.damageType) return `Dégâts — sort (${(DAMAGE_TYPE_LABELS_FR[option.damageType] ?? option.damageType).toLowerCase()})`;
   if (option.ability) return `${category} — ${ABILITY_LABELS[option.ability]}`;
   if (option.skill) return `${category} — ${SKILL_LABELS_FR[option.skill]}`;
   return category;

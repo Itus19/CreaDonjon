@@ -1032,7 +1032,8 @@ function Modifiers({ data }: { data: ModifiersBlockData }) {
     label: modifierTargetLabel(m.target),
     value: modifierOpNeedsValue(m.op) ? (
       // V3.1-121 : « +1 par niveau » (Ténacité naine), jamais « +1 » seul, qui mentirait au-dela du niveau 1.
-      <span className="mech">{`${m.op === "set" ? "= " : m.value !== undefined && m.value >= 0 ? "+" : ""}${m.value ?? 0}${m.per_level ? " par niveau" : ""}`}</span>
+      // V3.1-155 : une valeur en formule s'affiche telle quelle (« + max(1, {ability.cha}) », « + 1d4 »).
+      <span className="mech">{`${m.op === "set" ? "= " : typeof m.value !== "number" || m.value >= 0 ? "+" : ""}${typeof m.value === "number" || m.value === undefined ? (m.value ?? 0) : formatFormulaNode(m.value)}${m.per_level ? " par niveau" : ""}`}</span>
     ) : (
       MODIFIER_OP_LABELS_FR[m.op]
     ),

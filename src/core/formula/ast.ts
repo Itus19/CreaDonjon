@@ -9,7 +9,12 @@ export interface DiceKeepSpec {
  */
 export type FormulaNode =
   | { op: "num"; value: number }
-  | { op: "dice"; count: number; faces: number; keep?: DiceKeepSpec }
+  /**
+   * V3.1-155 (ADR 0074) : `count` et `faces` sont un nombre, ou une formule
+   * sans dé (`ceil({class.level} / 2)d6`, `1d{column.x}`). `keep` n'existe
+   * qu'avec un nombre de dés fixe.
+   */
+  | { op: "dice"; count: number | FormulaNode; faces: number | FormulaNode; keep?: DiceKeepSpec }
   | { op: "ref"; name: string }
   | { op: "add"; args: [FormulaNode, FormulaNode] }
   | { op: "sub"; args: [FormulaNode, FormulaNode] }

@@ -1,7 +1,8 @@
 import type { Rng } from "../dice/rng";
 import { averageDiceValue, extremeDice, rollDice } from "../dice/roll";
 import type { FormulaNode } from "./ast";
-import { UnknownReferenceError } from "./errors";
+import { FormulaLimitError, UnknownReferenceError } from "./errors";
+import { FORMULA_LIMITS } from "./limits";
 
 export type EvalMode = "roll" | "average" | "min" | "max";
 
@@ -29,6 +30,16 @@ function diceLabel(count: number, faces: number, keep?: { mode: "kh" | "kl"; cou
   return `${count}d${faces}${keep ? keep.mode + keep.count : ""}`;
 }
 
+function diceSideValue(side: number | FormulaNode, ctx: Readonly<Record<string, number>>, rng: Rng, cote: "nombre" | "taille"): number {
+  const v = typeof side === "number" ? side : Math.floor(evalNode(side, ctx, rng, "roll").value);
+  const max = cote === "nombre" ? FORMULA_LIMITS.maxDiceCount : FORMULA_LIMITS.maxDiceFaces;
+  const min = cote === "nombre" ? 0 : 1;
+  if (!Number.isFinite(v) || v < min || v > max) {
+    throw new FormulaLimitError(`La ${cote} des des (${v}) est hors des bornes (${min} a ${max})`);
+  }
+  return v;
+}
+
 function evalNode(
   node: FormulaNode,
   ctx: Readonly<Record<string, number>>,
@@ -48,17 +59,20 @@ function evalNode(
     }
 
     case "dice": {
-      const label = diceLabel(node.count, node.faces, node.keep);
+      // V3.1-155 : nombre et taille en formule, évalués (sans dé) puis arrondis vers le bas et bornés.
+      const count = diceSideValue(node.count, ctx, rng, "nombre");
+      const faces = diceSideValue(node.faces, ctx, rng, "taille");
+      const label = diceLabel(count, faces, node.keep);
 
       if (mode === "average") {
-        const value = averageDiceValue(node.count, node.faces, node.keep);
+        const value = averageDiceValue(count, faces, node.keep);
         return { value, trace: [{ text: `${label} (moyenne) = ${value}`, value }] };
       }
 
       const result =
         mode === "min" || mode === "max"
-          ? extremeDice(node.count, node.faces, mode, node.keep)
-          : rollDice(node.count, node.faces, rng, node.keep);
+          ? extremeDice(count, faces, mode, node.keep)
+          : rollDice(count, faces, rng, node.keep);
 
       return {
         value: result.total,

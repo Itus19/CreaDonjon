@@ -21,6 +21,8 @@ import { computeSpellSlots } from "./spellSlots";
 import type { Rng } from "../dice/rng";
 import type { ActivationBlockData, RuleResource } from "../schemas/rule-blocks/playable";
 import { evaluate } from "../formula/evaluate";
+import type { FormulaNode } from "../formula/ast";
+import { additiveTerms, containsDice } from "../formula/inspect";
 
 // --- Vocabulaire de base -------------------------------------------------
 
@@ -64,6 +66,21 @@ export interface Modifier {
   stacking?: StackingRule;
   /** V3.1-121 : `value` est par niveau de personnage (toutes classes), multipliee par `characterSheet()` (Ténacité naine : +1 PV max par niveau). */
   perLevel?: boolean;
+  /**
+   * V3.1-155 (ADR 0074) : la valeur DÉCLARÉE en formule (`max(1, {ability.cha})`, `1d4`).
+   * `characterSheet()` la résout : le nombre va dans `value`, les dés dans `dice`.
+   */
+  formula?: FormulaNode;
+  /** V3.1-155 : les dés de bonus, jamais réduits à un nombre ; lancés par le serveur à chaque jet concerné. */
+  dice?: BonusDie[];
+}
+
+/** V3.1-155 (ADR 0074) : un dé de bonus (« + 1d4 », Bénédiction), avec sa source. */
+export interface BonusDie {
+  count: number;
+  faces: number;
+  label: string;
+  source: string;
 }
 
 export interface Source {
@@ -75,7 +92,8 @@ export interface Source {
 export interface DeclaredModifier {
   target: string;
   op: ModifierOp;
-  value?: number;
+  /** V3.1-155 (ADR 0074) : un nombre, ou une formule évaluée par `characterSheet()`. */
+  value?: number | FormulaNode;
   /** V3.1-121 : `value` est par niveau de personnage. Cle `snake_case` : c'est une donnee de fiche (bloc `modifiers`). */
   per_level?: boolean;
 }
@@ -107,7 +125,15 @@ export function resolveDeclaredModifiers(
   label: string,
   layer: Layer
 ): Modifier[] {
-  return declared.map((d) => ({ target: d.target, op: d.op, value: d.value, source, label, layer, ...(d.per_level ? { perLevel: true } : {}) }));
+  return declared.map((d) => ({
+    target: d.target,
+    op: d.op,
+    ...(typeof d.value === "number" ? { value: d.value } : d.value !== undefined ? { formula: d.value } : {}),
+    source,
+    label,
+    layer,
+    ...(d.per_level ? { perLevel: true } : {}),
+  }));
 }
 
 // --- Prerequis (§B5) ------------------------------------------------------
@@ -165,7 +191,9 @@ export type Warning =
   /** V3.1-115 : le ruleset n'a pas de fiche de règles de personnage ; plafond et charge ne sont pas appliqués. */
   | { kind: "missing_character_rules"; message: string }
   /** V3.1-129 : le maximum d'une ressource n'a pas pu se calculer (référence inconnue) ; elle compte pour 0. */
-  | { kind: "resource_formula"; message: string; featureKey: string };
+  | { kind: "resource_formula"; message: string; featureKey: string }
+  /** V3.1-155 : la valeur d'un modificateur en formule n'a pas pu se calculer ; il compte pour 0. */
+  | { kind: "modifier_formula"; message: string; source: string };
 
 /** V3.1-129 (ADR 0060 §1) : une ressource du personnage, calculée depuis ses fiches — jamais stockée. */
 export interface SheetResource {
@@ -257,6 +285,8 @@ export interface EquippedItem {
   resources?: RuleResource[];
   requiresAttunement?: boolean;
   attuned?: boolean;
+  /** V3.1-155 : la catégorie d'armure de l'objet (`Shield` pour un bouclier) — la CA sans armure en dépend. */
+  armorCategory?: "Light" | "Medium" | "Heavy" | "Shield";
 }
 
 export interface ActiveEffect {
@@ -280,6 +310,8 @@ export interface SavingThrowResult {
   proficient: boolean;
   rollState: RollState;
   sources: Source[];
+  /** V3.1-155 : dés de bonus (Bénédiction), lancés à chaque jet. */
+  dice: BonusDie[];
 }
 
 /** V3.1-46 : un jet de caractéristique (Force, Dextérité…), hors compétence. */
@@ -289,6 +321,8 @@ export interface AbilityCheckResult {
   halfProficiency: boolean;
   rollState: RollState;
   sources: Source[];
+  /** V3.1-155 : dés de bonus (Bénédiction), lancés à chaque jet. */
+  dice: BonusDie[];
 }
 
 export interface SkillResult {
@@ -297,6 +331,8 @@ export interface SkillResult {
   proficiency: "none" | "half" | "proficient" | "expertise";
   rollState: RollState;
   sources: Source[];
+  /** V3.1-155 : dés de bonus (Bénédiction), lancés à chaque jet. */
+  dice: BonusDie[];
 }
 
 export interface DerivedSheet {
@@ -324,7 +360,20 @@ export interface DerivedSheet {
   resources: SheetResource[];
   warnings: Warning[];
   encumbrance: EncumbranceResult;
+  /** V3.1-155 (ADR 0074) : sens (en mètres), présents seulement s'ils valent plus que 0. */
+  senses: Partial<Record<Sense, { value: number; sources: Source[] }>>;
+  /** V3.1-155 : vitesses spéciales (même unité que `speed`), présentes seulement si plus que 0. */
+  speeds: Partial<Record<SpecialSpeed, { value: number; sources: Source[] }>>;
+  /** V3.1-155 : maîtrises d'arme, d'armure ou d'outil accordées par une règle (`prof.weapon.martial`…). */
+  grantedProficiencies: { target: string; label: string }[];
+  /** V3.1-155 : les modificateurs résolus des cibles de jet (attaque, dégâts, critique), lus par `rollBonus`. */
+  rollModifiers: Modifier[];
 }
+
+export const SENSES = ["darkvision", "blindsight", "tremorsense", "truesight"] as const;
+export type Sense = (typeof SENSES)[number];
+export const SPECIAL_SPEEDS = ["fly", "swim", "climb", "burrow"] as const;
+export type SpecialSpeed = (typeof SPECIAL_SPEEDS)[number];
 
 // --- Empilement generique (§B4 regles 1-5) ---------------------------------
 
@@ -345,8 +394,9 @@ function resolveTargetStack(
   base: number,
   baseLabel: string | null,
 ): { value: number; sources: Source[] } {
+  // V3.1-155 : un modificateur fait seulement de dés n'a pas de nombre — ses dés vivent à part (`dice`).
   const relevant = modifiers.filter(
-    (m) => m.target === target && (m.op === "add" || m.op === "set" || m.op === "min" || m.op === "max"),
+    (m) => m.target === target && m.value !== undefined && (m.op === "add" || m.op === "set" || m.op === "min" || m.op === "max"),
   );
 
   let value = base;
@@ -531,6 +581,105 @@ function scaleByLevel(m: Modifier, totalLevel: number): Modifier {
   return m.perLevel && m.value !== undefined ? { ...m, value: m.value * totalLevel } : m;
 }
 
+type Refs = Record<string, number>;
+
+/** V3.1-155 (ADR 0074) : `…{choice:<clé>}` prend la réponse du personnage ; sans réponse, la cible ne vise rien. */
+function resolveChoiceTarget(target: string, choices: CharacterBuild["choices"]): string | null {
+  const m = /\{choice:([^}]+)\}/.exec(target);
+  if (!m) return target;
+  const v = choices?.[m[1]];
+  return typeof v === "string" && v !== "" ? target.replace(m[0], v.toLowerCase()) : null;
+}
+
+function evalSide(side: number | FormulaNode, refs: Refs): number {
+  return typeof side === "number" ? side : Math.floor(evaluate(side, refs, SANS_DE, "average").value);
+}
+
+/**
+ * V3.1-155 (ADR 0074) — la valeur d'un modificateur en formule, résolue :
+ * le nombre dans `value`, les dés de bonus dans `dice` (« 1d4 + 1 » → 1 et
+ * 1d4). Une formule incalculable compte 0 et lève un avertissement.
+ */
+function materializeModifier(m: Modifier, refs: Refs, warnings: Warning[]): Modifier {
+  if (!m.formula) return m;
+  const { formula, ...rest } = m;
+  let value = 0;
+  let hasNumber = false;
+  const dice: BonusDie[] = [];
+  try {
+    for (const term of additiveTerms(formula)) {
+      if (!containsDice(term)) {
+        value += evaluate(term, refs, SANS_DE, "average").value;
+        hasNumber = true;
+        continue;
+      }
+      if (term.op !== "dice") throw new Error("un dé de bonus s'écrit seul, ou ajouté à un nombre (« 1d4 + 1 »)");
+      const count = evalSide(term.count, refs);
+      const faces = evalSide(term.faces, refs);
+      if (faces < 1 || count < 0) throw new Error(`dé invalide (${count}d${faces})`);
+      if (count > 0) dice.push({ count, faces, label: m.label, source: m.source });
+    }
+  } catch (err) {
+    warnings.push({ kind: "modifier_formula", source: m.source, message: `${m.label} : ${err instanceof Error ? err.message : String(err)}` });
+    return { ...rest, value: 0 };
+  }
+  return { ...rest, ...(hasNumber || dice.length === 0 ? { value: Math.floor(value) } : {}), ...(dice.length > 0 ? { dice } : {}) };
+}
+
+/** Les dés de bonus d'un jet : une règle `unique` ne compte qu'une fois par source. */
+function collectDice(targets: readonly string[], modifiers: readonly Modifier[]): BonusDie[] {
+  const out: BonusDie[] = [];
+  const vus = new Set<string>();
+  for (const m of modifiers) {
+    if (!targets.includes(m.target) || m.op !== "add" || !m.dice) continue;
+    if (m.stacking === "unique" || m.stacking === "highest") {
+      if (vus.has(m.source)) continue;
+      vus.add(m.source);
+    }
+    out.push(...m.dice);
+  }
+  return out;
+}
+
+export type RollQuery =
+  | { roll: "attack"; kind: "weapon" | "spell" }
+  | { roll: "damage"; kind: "weapon" | "spell"; ability?: Ability; damageType?: string };
+
+export interface RollBonusResult {
+  value: number;
+  dice: BonusDie[];
+  sources: Source[];
+  rollState: RollState;
+  /** Le plus petit d20 naturel qui fait un critique (20 par défaut, 19 pour le Critique amélioré). */
+  critRange: number;
+}
+
+/**
+ * V3.1-155 (ADR 0074) — ce qu'un jet d'attaque ou de dégâts reçoit des
+ * règles du personnage : bonus chiffré, dés de bonus, avantage, plage de
+ * critique. `damage.<genre>.<car>` vise une attaque faite avec cette
+ * caractéristique (la Rage) ; `damage.<genre>.<type>`, un type de dégâts.
+ */
+export function rollBonus(sheet: Pick<DerivedSheet, "rollModifiers">, q: RollQuery): RollBonusResult {
+  const targets =
+    q.roll === "attack"
+      ? ["attack", `attack.${q.kind}`]
+      : ["damage", `damage.${q.kind}`, ...(q.ability ? [`damage.${q.kind}.${q.ability}`] : []), ...(q.damageType ? [`damage.${q.kind}.${q.damageType.toLowerCase()}`] : [])];
+  const matched = sheet.rollModifiers.filter((m) => targets.includes(m.target)).map((m) => ({ ...m, target: "roll" }));
+  const { value, sources } = resolveTargetStack("roll", matched, 0, null);
+  const crits =
+    q.roll === "attack"
+      ? sheet.rollModifiers.filter((m) => (m.target === "crit_range" || m.target === `crit_range.${q.kind}`) && m.op === "set" && m.value !== undefined).map((m) => m.value!)
+      : [];
+  return {
+    value,
+    dice: collectDice(["roll"], matched),
+    sources,
+    rollState: q.roll === "attack" ? resolveRollState("roll", matched) : "normal",
+    critRange: Math.min(20, ...crits),
+  };
+}
+
 export function characterSheet(
   build: CharacterBuild,
   ruleset: ResolvedRuleset,
@@ -555,12 +704,33 @@ export function characterSheet(
     layer: 3,
   }));
 
-  const allModifiers: Modifier[] = [
-    ...features.flatMap((f) => f.modifiers),
-    ...savingThrowProficiencyMods,
-    ...equipment.filter((e) => e.equipped).flatMap((e) => e.modifiers),
-    ...activeEffects.flatMap((e) => e.modifiers),
-  ].map((m) => scaleByLevel(m, totalLevel));
+  // V3.1-155 (ADR 0074) : chaque modificateur garde la provenance de sa règle
+  // (`class:<clé>`) pour ses formules : `class.level` et `column.*` en dépendent.
+  type Brut = { m: Modifier; origin?: string };
+  const bruts: Brut[] = [
+    ...features.flatMap((f) => f.modifiers.map((m): Brut => ({ m, origin: f.source }))),
+    ...savingThrowProficiencyMods.map((m): Brut => ({ m })),
+    ...equipment.filter((e) => e.equipped).flatMap((e) => e.modifiers.map((m): Brut => ({ m }))),
+    ...activeEffects.flatMap((e) => e.modifiers.map((m): Brut => ({ m }))),
+  ].flatMap((b) => {
+    const target = resolveChoiceTarget(b.m.target, build.choices);
+    return target === null ? [] : [target === b.m.target ? b : { ...b, m: { ...b.m, target } }];
+  });
+  const formulaWarnings: Warning[] = [];
+  const refsFor = (origin: string | undefined, extra: Refs): Refs => {
+    const classLevel = grantingClassLevel(origin ?? "", build.classes);
+    const refs: Refs = { level: totalLevel, proficiency: proficiencyBonus, "class.level": classLevel, ...extra };
+    if (origin?.startsWith("class:")) {
+      for (const [k, v] of Object.entries(progressionAt(ruleset.classes[origin.slice("class:".length)]?.progression, classLevel))) refs[`column.${k}`] = v;
+    }
+    return refs;
+  };
+  const materialize = (liste: readonly Brut[], extra: Refs): Modifier[] =>
+    liste.map((b) => scaleByLevel(materializeModifier(b.m, refsFor(b.origin, extra), formulaWarnings), totalLevel));
+  // Temps 1 : les caractéristiques — leurs formules ne lisent pas les caractéristiques.
+  const pourCaracteristiques = (b: Brut) => b.m.target.startsWith("ability.");
+  const pourVitessesSpeciales = (b: Brut) => b.m.target.startsWith("speed.");
+  const allModifiers: Modifier[] = materialize(bruts.filter(pourCaracteristiques), {});
 
   // Couche 1 : caracteristiques attribuees, plus couches 2/5 (espece, ASI/dons).
   const abilities = {} as Record<Ability, AbilityResult>;
@@ -578,6 +748,13 @@ export function characterSheet(
     abilities[ability] = { score, mod: abilityModifier(score), sources };
   }
 
+  // Temps 2 : le reste, qui lit les caractéristiques (et le DD des sorts de la première classe incantatrice).
+  const abilityRefs: Refs = {};
+  for (const a of ABILITIES) abilityRefs[`ability.${a}`] = abilities[a].mod;
+  const casterAbility = build.classes.map((cl) => ruleset.classes[cl.key]).find((k) => k?.spellcasting)?.spellcasting?.ability;
+  if (casterAbility) abilityRefs.spell_save_dc = spellNumbers(abilities[casterAbility].mod, proficiencyBonus).saveDc;
+  allModifiers.push(...materialize(bruts.filter((b) => !pourCaracteristiques(b) && !pourVitessesSpeciales(b)), abilityRefs));
+
   // Encombrement (couche 6) : depend du score de Force resolu ci-dessus,
   // ajoute donc ses propres modificateurs (vitesse, desavantage) apres coup
   // plutot que d'etre precalcule avec le reste — n'affecte jamais ability.*,
@@ -588,19 +765,35 @@ export function characterSheet(
   allModifiers.push(...encumbranceModifiers(encumbrance, "encumbrance", "Encombrement"));
 
   // Classe d'armure : base 10 + Dex, ecrasee par un "set" d'armure lourde le cas echeant.
-  const acBase = 10 + abilities.dex.mod;
-  const ac = resolveTargetStack("ac", allModifiers, acBase, "Base (10 + Dex)");
+  // V3.1-155 (ADR 0074) : sans armure, une CA « sans armure » (Barbare, Moine)
+  // peut remplacer la base ; la meilleure l'emporte (une seule base à la fois).
+  const porteArmure = equipment.some((e) => e.equipped && e.armorCategory !== undefined && e.armorCategory !== "Shield");
+  const porteBouclier = equipment.some((e) => e.equipped && e.armorCategory === "Shield");
+  let acBase = 10 + abilities.dex.mod;
+  let acLabel = "Base (10 + Dex)";
+  if (!porteArmure) {
+    for (const m of allModifiers) {
+      const vise = m.target === "ac.unarmored" || (m.target === "ac.unarmored_no_shield" && !porteBouclier);
+      if (vise && m.op === "set" && m.value !== undefined && m.value > acBase) {
+        acBase = m.value;
+        acLabel = m.label;
+      }
+    }
+  }
+  const ac = resolveTargetStack("ac", allModifiers, acBase, acLabel);
 
   const savingThrows = {} as Record<Ability, SavingThrowResult>;
   for (const ability of ABILITIES) {
     const target = `save.${ability}`;
-    const proficient = allModifiers.some((m) => m.target === target && m.op === "proficiency");
+    // V3.1-155 : `save` vise les six sauvegardes (Aura de protection, Bénédiction).
+    const saveMods = allModifiers.map((m) => (m.target === "save" ? { ...m, target } : m));
+    const proficient = saveMods.some((m) => m.target === target && m.op === "proficiency");
     const base = abilities[ability].mod + (proficient ? proficiencyBonus : 0);
     const baseSources: Source[] = [{ label: ABILITY_LABELS[ability], value: abilities[ability].mod }];
     if (proficient) baseSources.push({ label: "Maitrise", value: proficiencyBonus });
     // Les bonus chiffrés (« +1 aux sauvegardes ») passent par la même pile que la CA.
-    const { value: mod, sources } = stackOnto(target, allModifiers, base, baseSources);
-    savingThrows[ability] = { mod, proficient, rollState: resolveRollState(target, allModifiers), sources };
+    const { value: mod, sources } = stackOnto(target, saveMods, base, baseSources);
+    savingThrows[ability] = { mod, proficient, rollState: resolveRollState(target, saveMods), sources, dice: collectDice([target], saveMods) };
   }
 
   // V3.1-46 : la moitié de la maîtrise (Touche-à-tout) sur les jets de caractéristique sans maîtrise.
@@ -620,6 +813,7 @@ export function characterSheet(
       halfProficiency: half,
       rollState: resolveRollState(`check.${ability}`, allModifiers),
       sources,
+      dice: collectDice([`check.${ability}`, "check"], allModifiers),
     };
   }
 
@@ -642,14 +836,37 @@ export function characterSheet(
       // Une compétence est un jet de sa caractéristique : un avantage sur la Force vaut pour l'Athlétisme.
       rollState: resolveRollState([target, `check.${governing}`], allModifiers),
       sources,
+      dice: collectDice([target, `check.${governing}`, "check"], allModifiers),
     };
   }
 
   const hitPoints = computeHitPoints(build, ruleset, abilities.con.mod, allModifiers);
   const speed = resolveTargetStack("speed", allModifiers, 30, "Vitesse de base");
 
+  // Temps 3 : les vitesses spéciales, qui peuvent lire la vitesse au sol (« vitesse de vol égale à votre vitesse »).
+  allModifiers.push(...materialize(bruts.filter(pourVitessesSpeciales), { ...abilityRefs, speed: speed.value }));
+  const speeds: DerivedSheet["speeds"] = {};
+  for (const sp of SPECIAL_SPEEDS) {
+    if (!allModifiers.some((m) => m.target === `speed.${sp}`)) continue;
+    const r = resolveTargetStack(`speed.${sp}`, allModifiers, 0, null);
+    if (r.value > 0) speeds[sp] = r;
+  }
+  const senses: DerivedSheet["senses"] = {};
+  for (const se of SENSES) {
+    if (!allModifiers.some((m) => m.target === `sense.${se}`)) continue;
+    const r = resolveTargetStack(`sense.${se}`, allModifiers, 0, null);
+    if (r.value > 0) senses[se] = r;
+  }
+  const grantedProficiencies: DerivedSheet["grantedProficiencies"] = [];
+  for (const m of allModifiers) {
+    if (m.op === "proficiency" && m.target.startsWith("prof.") && !grantedProficiencies.some((g) => g.target === m.target)) {
+      grantedProficiencies.push({ target: m.target, label: m.label });
+    }
+  }
+  const rollModifiers = allModifiers.filter((m) => /^(attack|damage|crit_range)(\.|$)/.test(m.target));
+
   const grantedFeatureKeys = new Set(build.featureKeys);
-  const warnings: Warning[] = features.flatMap((f) => checkPrerequisites(f, abilities, totalLevel, grantedFeatureKeys));
+  const warnings: Warning[] = [...features.flatMap((f) => checkPrerequisites(f, abilities, totalLevel, grantedFeatureKeys)), ...formulaWarnings];
   if (!ruleset.characterRules) {
     warnings.push({ kind: "missing_character_rules", message: "Ce ruleset n'a pas de règles de personnage : plafond de caractéristique et charge ne sont pas appliqués." });
   }
@@ -692,7 +909,10 @@ export function characterSheet(
 
   const resources = computeResources({ build, ruleset, features, equipment, abilities, proficiencyBonus, totalLevel, spellSaveDc: spellcasting?.saveDc, warnings });
 
-  return { abilities, proficiencyBonus, ac, savingThrows, abilityChecks, skills, hitPoints, speed, features, spellcasting, grantedSpells, resources, warnings, encumbrance };
+  return {
+    abilities, proficiencyBonus, ac, savingThrows, abilityChecks, skills, hitPoints, speed, features, spellcasting, grantedSpells, resources, warnings, encumbrance,
+    senses, speeds, grantedProficiencies, rollModifiers,
+  };
 }
 
 /** Un maximum ne lance jamais de dé : un `dice` dans la formule est une faute de donnée, signalée comme une référence inconnue. */

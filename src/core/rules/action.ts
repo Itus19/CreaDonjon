@@ -113,7 +113,8 @@ export interface DamageRollResult {
 function doubleDiceCounts(node: FormulaNode): FormulaNode {
   switch (node.op) {
     case "dice":
-      return { ...node, count: node.count * 2 };
+      // V3.1-155 : un nombre de dés en formule se double aussi (Attaque sournoise au critique).
+      return { ...node, count: typeof node.count === "number" ? node.count * 2 : { op: "mul", args: [node.count, { op: "num", value: 2 }] } };
     case "num":
     case "ref":
       return node;

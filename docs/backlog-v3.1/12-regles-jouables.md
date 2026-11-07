@@ -126,7 +126,7 @@ Valeur de modificateur en formule ou en dé (+ mod. CHA, +1d4, 10 + DEX + CON), 
 
 *Conçu le 7 novembre* : [ADR 0074](../adr/0074-les-valeurs-calculees.md). Deux choix de l'auteur : la Défense sans armure entre dans ce chantier par deux cibles de CA dédiées (sans attendre 137) ; la lumière émise part au 138. Découpé ci-dessous.
 
-#### ☐ V3.1-155 — Le noyau : modificateurs en formule et en dé, dés en formule, nouvelles cibles · `M` · sans modèle IA — **prêt (Opus)**
+#### ☑ V3.1-155 — Le noyau : modificateurs en formule et en dé, dés en formule, nouvelles cibles · `M` · sans modèle IA — **prêt (Opus)**
 
 **Modèle conseillé : Opus** — noyau du moteur, tests d'abord.
 **Dépend de** : 129, 133 (`grantingClassLevel`).
@@ -139,10 +139,12 @@ Valeur de modificateur en formule ou en dé (+ mod. CHA, +1d4, 10 + DEX + CON), 
 - Cibles nouvelles (`modifierTargets.ts` et lecture dans `characterSheet()`) : `attack*`, `damage*` (dont `damage.weapon.<car>` et `damage.spell.<type>` / `{choice:<clé>}`), `save`, `crit_range*`, `speed.fly|swim|climb|burrow`, `sense.*`, `prof.weapon|armor|tool.*`, `ac.unarmored`, `ac.unarmored_no_shield` (meilleure base de CA retenue ; bouclier selon la cible).
 
 **Critères d'acceptation**
-- [ ] Aura de protection `max(1, {ability.cha})` sur `save` : +3 aux six sauvegardes d'un Paladin CHA 16 (test).
-- [ ] Barbare DEX 14 CON 16 sans armure : CA 15, 17 avec bouclier ; avec une armure de cuir, la base de l'armure (test). Moine : `ac.unarmored_no_shield` ignorée avec un bouclier (test).
-- [ ] Bénédiction : `save` reçoit le dé de bonus 1d4 sans changer le nombre affiché (test) ; un dé sur `ac` est refusé par Zod (test).
-- [ ] `ceil({class.level} / 2)d6` vaut 3d6 au niveau 5 ; aller-retour texte ↔ arbre exact (tests).
+- [x] Aura de protection `max(1, {ability.cha})` sur `save` : +3 aux six sauvegardes d'un Paladin CHA 16 (test).
+- [x] Barbare DEX 14 CON 16 sans armure : CA 15, 17 avec bouclier ; avec une armure de cuir, la base de l'armure (test). Moine : `ac.unarmored_no_shield` ignorée avec un bouclier (test).
+- [x] Bénédiction : `save` reçoit le dé de bonus 1d4 sans changer le nombre affiché (test) ; un dé sur `ac` est refusé par Zod (test).
+- [x] `ceil({class.level} / 2)d6` vaut 3d6 au niveau 5 ; aller-retour texte ↔ arbre exact (tests).
+
+*Fait le 7 novembre.* `src/core/formula` : opérateur « dés » entre deux facteurs, nombre et taille évalués puis bornés, un dé refusé dans le nombre de dés (`diceFormula.test.ts`). `zModifier.value` : nombre ou formule, dé refusé hors cible de jet (`isRollTarget`). `characterSheet()` : formules résolues en trois temps (caractéristiques, reste, vitesses spéciales), dés de bonus (`dice` sur sauvegardes, tests, compétences), CA sans armure (catégorie d'armure portée par les objets équipés), sens, vitesses, maîtrises accordées, `rollModifiers` et `rollBonus()` (attaque, dégâts, critique), cible `{choice:<clé>}` (`sheetComputedValues.test.ts`, 13 tests). Catalogue `modifierTargets.ts` et libellés `fr.ts` étendus.
 
 #### ☐ V3.1-156 — Les jets lancent les dés de bonus et lisent les nouvelles cibles · `M` · sans modèle IA — **prêt (Opus)**
 

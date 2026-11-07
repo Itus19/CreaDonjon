@@ -378,8 +378,11 @@ export function extractLanguageChoice(fields: ParsedFields): LanguageChoice | nu
   return { count: raw.choose };
 }
 
+/** V3.1-155 : les catégories d'armure du SRD (la fiche en déduit si le personnage porte une armure, un bouclier). */
+export type ArmorCategory = "Light" | "Medium" | "Heavy" | "Shield";
+
 export interface ArmorData {
-  category: string;
+  category: ArmorCategory;
   base: number;
   dexBonus: boolean;
 }
@@ -391,9 +394,9 @@ export interface ArmorData {
  * `isRanged` dans `parseWeaponData`. Verifie contre les deux fichiers
  * (`data/srd/srd-2014.json` et `srd-2024.json`, ex. Chain Shirt).
  */
-function resolveArmorCategory(fields: ParsedFields): string | null {
+function resolveArmorCategory(fields: ParsedFields): ArmorCategory | null {
   const direct = fields.armor_category;
-  if (typeof direct === "string") return direct;
+  if (direct === "Light" || direct === "Medium" || direct === "Heavy" || direct === "Shield") return direct;
 
   const categories = fields.equipment_categories;
   if (Array.isArray(categories)) {
@@ -553,7 +556,7 @@ export function weaponDataFromBlock(data: WeaponBlockData): WeaponData {
 // "Medium"...) — le bloc dedie porte la meme information en minuscules
 // (`zArmorBlockData.category`), simple table de correspondance plutot que
 // de changer la comparaison des deux cotes.
-const ARMOR_CATEGORY_LABELS: Record<ArmorBlockData["category"], string> = {
+const ARMOR_CATEGORY_LABELS: Record<ArmorBlockData["category"], ArmorCategory> = {
   light: "Light",
   medium: "Medium",
   heavy: "Heavy",

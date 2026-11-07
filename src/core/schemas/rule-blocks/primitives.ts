@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { containsDice } from "../../formula/inspect";
 
 /**
  * Vocabulaire de primitives partage par tous les blocs de regles
@@ -22,8 +23,9 @@ export const zFormulaNode: z.ZodType<import("../../formula/ast").FormulaNode> = 
     z.object({ op: z.literal("num"), value: z.number() }),
     z.object({
       op: z.literal("dice"),
-      count: z.number().int().positive(),
-      faces: z.number().int().positive(),
+      // V3.1-155 (ADR 0074) : un nombre, ou une formule sans dé.
+      count: z.union([z.number().int().positive(), zFormulaNode]),
+      faces: z.union([z.number().int().positive(), zFormulaNode]),
       keep: z
         .object({ mode: z.enum(["kh", "kl"]), count: z.number().int().positive() })
         .optional(),
@@ -98,13 +100,29 @@ export type Choice = z.infer<typeof zChoice>;
  * sheet.ts) ne sait consommer que ca aujourd'hui, un `FormulaNode` accepte
  * ici serait une promesse non tenue.
  */
-export const zModifier = z.object({
-  target: z.string(),
-  op: z.enum(["add", "set", "min", "max", "advantage", "disadvantage", "proficiency", "expertise", "half_proficiency"]),
-  value: z.number().optional(),
-  /** V3.1-121 : `value` est par niveau de personnage (Ténacité naine : +1 PV max par niveau). */
-  per_level: z.boolean().optional(),
-});
+/**
+ * V3.1-155 (ADR 0074) : une cible « de jet » (attaque, dégâts, sauvegarde,
+ * test, compétence) peut recevoir un dé de bonus ; une cible fixe (CA,
+ * vitesse, PV, caractéristique, sens) jamais — un dé n'y aurait pas de sens.
+ */
+export function isRollTarget(target: string): boolean {
+  return /^(attack|damage|save|check)(\.|$)/.test(target) || target.startsWith("skill.");
+}
+
+export const zModifier = z
+  .object({
+    target: z.string(),
+    op: z.enum(["add", "set", "min", "max", "advantage", "disadvantage", "proficiency", "expertise", "half_proficiency"]),
+    /** V3.1-155 (ADR 0074) : un nombre, ou une formule (`max(1, {ability.cha})`, `1d4`), évaluée par `characterSheet()`. */
+    value: z.union([z.number(), zFormulaNode]).optional(),
+    /** V3.1-121 : `value` est par niveau de personnage (Ténacité naine : +1 PV max par niveau). */
+    per_level: z.boolean().optional(),
+  })
+  .superRefine((m, ctx) => {
+    if (m.value !== undefined && typeof m.value !== "number" && containsDice(m.value) && !isRollTarget(m.target)) {
+      ctx.addIssue({ code: "custom", message: `Un dé ne s'ajoute qu'à un jet (attaque, dégâts, sauvegarde, test) : pas à « ${m.target} ».` });
+    }
+  });
 export type Modifier = z.infer<typeof zModifier>;
 
 export const zLocalized = z.record(z.string(), z.string());

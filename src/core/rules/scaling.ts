@@ -78,7 +78,7 @@ export function resolveScaledFormulaText(
  * "9d6", pas "8d6 + 1d6 + 1d6...". Sans point commun, addition explicite.
  */
 function combine(a: FormulaNode, b: FormulaNode): FormulaNode {
-  if (a.op === "dice" && b.op === "dice" && a.faces === b.faces && !a.keep && !b.keep) {
+  if (a.op === "dice" && b.op === "dice" && typeof a.count === "number" && typeof b.count === "number" && typeof a.faces === "number" && a.faces === b.faces && !a.keep && !b.keep) {
     return { op: "dice", count: a.count + b.count, faces: a.faces };
   }
   if (a.op === "num" && b.op === "num") {

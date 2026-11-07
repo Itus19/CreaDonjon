@@ -398,17 +398,17 @@ describe("parseArmorData / armorAcModifier", () => {
   });
 
   it("armure legere (cuir) : Dex complete", () => {
-    const armor = { category: "Light", base: 11, dexBonus: true };
+    const armor = { category: "Light" as const, base: 11, dexBonus: true };
     expect(armorAcModifier(armor, 3, "item:i1", "Cuir")).toMatchObject({ op: "set", value: 14 });
   });
 
   it("armure medium : Dex plafonnee a +2", () => {
-    const armor = { category: "Medium", base: 13, dexBonus: true };
+    const armor = { category: "Medium" as const, base: 13, dexBonus: true };
     expect(armorAcModifier(armor, 4, "item:i1", "Demi-plate")).toMatchObject({ op: "set", value: 15 });
   });
 
   it("bouclier : s'ajoute, ne remplace rien", () => {
-    const armor = { category: "Shield", base: 2, dexBonus: false };
+    const armor = { category: "Shield" as const, base: 2, dexBonus: false };
     expect(armorAcModifier(armor, 3, "item:i1", "Bouclier")).toMatchObject({ op: "add", value: 2 });
   });
 

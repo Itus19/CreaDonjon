@@ -5,3 +5,4 @@ export { parseFormula } from "./parser";
 export { evaluate, formatTrace } from "./evaluate";
 export type { EvalMode, EvalResult, TraceStep } from "./evaluate";
 export { formatFormulaNode } from "./format";
+export { additiveTerms, containsDice } from "./inspect";

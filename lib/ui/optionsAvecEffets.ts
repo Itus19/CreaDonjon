@@ -1,3 +1,4 @@
+import { formatFormulaNode } from "@/src/core/formula";
 import type { ChoiceFrom, ChoiceOption } from "@/src/core/schemas/rule-blocks/choices";
 import { localizedLabel } from "@/src/core/rules/choices";
 import { MODIFIER_OP_LABELS_FR, modifierTargetLabel } from "@/src/i18n/fr";
@@ -34,6 +35,8 @@ function palier(niveau: number): NiveauTableau {
 
 export function texteModificateur(m: NonNullable<ChoiceOption["modifiers"]>[number]): string {
   const cible = modifierTargetLabel(m.target);
+  // V3.1-155 : une valeur en formule (« max(1, {ability.cha}) », « 1d4 ») se lit telle quelle.
+  if (m.value !== undefined && typeof m.value !== "number") return `${cible} ${m.op === "set" ? "= " : "+ "}${formatFormulaNode(m.value)}`;
   // Une vitesse est saisie en pieds dans les règles ; la table la lit en mètres, comme la fiche.
   if (m.op === "add" && m.value !== undefined && m.target.startsWith("speed")) {
     return `${cible} ${m.value >= 0 ? "+" : "−"}${String(ftToM(Math.abs(m.value))).replace(".", ",")} m`;

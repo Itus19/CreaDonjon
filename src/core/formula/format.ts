@@ -35,7 +35,7 @@ function formatNode(node: FormulaNode): string {
     case "ref":
       return `{${node.name}}`;
     case "dice":
-      return `${node.count}d${node.faces}${node.keep ? `${node.keep.mode}${node.keep.count}` : ""}`;
+      return `${diceSide(node.count)}d${diceSide(node.faces)}${node.keep ? `${node.keep.mode}${node.keep.count}` : ""}`;
     case "add":
       return formatBinary(node, "+");
     case "sub":
@@ -55,6 +55,13 @@ function formatNode(node: FormulaNode): string {
     case "round":
       return `round(${formatNode(node.args[0])})`;
   }
+}
+
+/** V3.1-155 : un côté des dés — nombre, référence ou fonction tels quels, le reste entre parenthèses. */
+function diceSide(side: number | FormulaNode): string {
+  if (typeof side === "number") return String(side);
+  if (side.op === "num" || side.op === "ref" || side.op === "min" || side.op === "max" || side.op === "floor" || side.op === "ceil" || side.op === "round") return formatNode(side);
+  return `(${formatNode(side)})`;
 }
 
 function formatBinary(node: { op: string; args: [FormulaNode, FormulaNode] }, symbol: string): string {

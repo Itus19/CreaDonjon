@@ -223,6 +223,8 @@ export async function resolveCharacterActionContext(
       label: itemLabel(item),
       equipped: item.equipped ?? false,
       modifiers: armor ? [armorAcModifier(armor, dexMod, `item:${item.id}`, itemLabel(item))] : [],
+      // V3.1-155 : la CA sans armure (Barbare, Moine) dépend de ce que le personnage porte.
+      ...(armor ? { armorCategory: armor.category } : {}),
     };
   });
 
