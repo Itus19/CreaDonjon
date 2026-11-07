@@ -41,6 +41,7 @@ import { TAB_LABELS, type Tab } from "./ongletsFiche";
 import ChoixRouverts from "./ChoixRouverts";
 import { relireBloc, repondreChoixRouvert } from "@/lib/ui/choixRouvertsApi";
 import { activeEffectsForSheet } from "@/src/core/rules/durableEffects";
+import { bonusAvecDes, complementDes, titreAvecDes } from "@/lib/ui/valeursCalculees";
 
 
 
@@ -539,12 +540,14 @@ export default function PlayableCharacterSheet({
             <div className="grid grid-cols-3 gap-1.5 @min-[40rem]:grid-cols-2 @min-[40rem]:gap-2">
               {(Object.keys(ABILITY_LABELS) as Ability[]).map((ability) => {
                 const save = sheet.savingThrows[ability];
+                const test = sheet.abilityChecks[ability];
                 return (
                   <TuileCaracteristique
                     key={ability}
                     abreviation={ABILITY_LABELS[ability]}
                     modificateur={`${sheet.abilities[ability].mod >= 0 ? "+" : ""}${sheet.abilities[ability].mod}`}
-                    titreTest={`Lancer un test de ${ABILITY_NAMES[ability]}`}
+                    titreTest={titreAvecDes(`Lancer un test de ${ABILITY_NAMES[ability]}`, test.dice)}
+                    desTest={test.dice.length > 0 ? complementDes(test.dice) : undefined}
                     libelleTest={`Test de ${ABILITY_NAMES[ability]}`}
                     onTest={() =>
                       rollAbility(entityId, ability, advantage, {
@@ -569,8 +572,9 @@ export default function PlayableCharacterSheet({
                         className="w-10 rounded-full border border-edge bg-panel-sunken px-1 py-0.5 text-center text-xs text-ink-muted outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                       />
                     }
-                    sauvegarde={`Sauv. ${save.mod >= 0 ? "+" : ""}${save.mod}`}
-                    titreSauvegarde={`Lancer une sauvegarde de ${ABILITY_NAMES[ability]}`}
+                    sauvegarde={`Sauv. ${bonusAvecDes(save.mod, save.dice)}`}
+                    sauvegardeEtroite={save.dice.length > 0 ? bonusAvecDes(save.mod, save.dice) : undefined}
+                    titreSauvegarde={titreAvecDes(`Lancer une sauvegarde de ${ABILITY_NAMES[ability]}`, save.dice)}
                     libelleSauvegarde={`Sauvegarde de ${ABILITY_NAMES[ability]}`}
                     maitrise={save.proficient}
                     onSauvegarde={() =>
@@ -698,7 +702,7 @@ export default function PlayableCharacterSheet({
                       )}
                       <button
                         type="button"
-                        title={`Lancer ${SKILL_LABELS_FR[skill]}`}
+                        title={titreAvecDes(`Lancer ${SKILL_LABELS_FR[skill]}`, result.dice)}
                         onClick={() =>
                           rollSkill(entityId, skill, advantage, {
                             label: `${SKILL_LABELS_FR[skill]} — test`,
@@ -711,10 +715,7 @@ export default function PlayableCharacterSheet({
                       >
                         <span className="flex-1 text-ink">{SKILL_LABELS_FR[skill]}</span>
                         <span className="text-[10px] uppercase text-ink-muted">{ABILITY_LABELS[SKILL_ABILITIES[skill]]}</span>
-                        <span className="w-8 text-right font-medium text-ink">
-                          {result.mod >= 0 ? "+" : ""}
-                          {result.mod}
-                        </span>
+                        <span className="min-w-8 shrink-0 whitespace-nowrap text-right font-medium text-ink">{bonusAvecDes(result.mod, result.dice)}</span>
                       </button>
                     </div>
                   );
@@ -773,6 +774,7 @@ export default function PlayableCharacterSheet({
                 allLanguages={allLanguages}
                 character={character}
                 patchCharacter={patchCharacter}
+                accordees={sheet.grantedProficiencies}
               />
             )}
 
@@ -789,6 +791,7 @@ export default function PlayableCharacterSheet({
                 strMod={sheet.abilities.str.mod}
                 dexMod={sheet.abilities.dex.mod}
                 proficiencyBonus={sheet.proficiencyBonus}
+                rollModifiers={sheet.rollModifiers}
                 isMonk={isMonk}
                 onAttack={(_item, arme) => jets.attaquerArme(arme, advantage)}
                 onDamage={(_item, versatile, arme) => jets.degatsArme(arme, versatile)}

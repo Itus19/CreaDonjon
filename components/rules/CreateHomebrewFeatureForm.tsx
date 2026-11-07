@@ -9,11 +9,15 @@ import { clearWorldRuleEntriesCache } from "@/components/blocks/useWorldRuleEntr
 import { MODIFIER_OP_LABELS_FR, modifierTargetLabel } from "@/src/i18n/fr";
 import { MODIFIER_TARGET_OPTIONS, OPS_BY_TARGET_CATEGORY, modifierOpNeedsValue, modifierTargetOption } from "@/src/core/rules/modifierTargets";
 import type { ModifierOp } from "@/src/core/rules/sheet";
+import { isRollTarget } from "@/src/core/schemas/rule-blocks/primitives";
 import { TRIGGER_EVENTS } from "@/src/core/rules/triggers";
 import { BUDGET_KINDS } from "@/src/core/rules/actionBudget";
 import type { Trigger } from "@/src/core/rules/triggers";
 import { draftToTrigger, emptyDraft, triggerToDraft, type ConditionKind, type EffectKind, type TriggerDraft } from "@/lib/triggers/draft";
 import { featureFormValues } from "@/src/core/rules/homebrewEdit";
+import type { FormulaNode } from "@/src/core/formula";
+import ChampFormule from "@/components/rules/briques/ChampFormule";
+import { modificateursDeLaFiche, texteVersValeur } from "@/lib/ui/modificateursFiche";
 import { useHomebrewEntryForEdit } from "@/components/rules/useHomebrewEntryForEdit";
 
 interface SelectableRuleset {
@@ -125,7 +129,8 @@ export default function CreateHomebrewFeatureForm({
     setName(editEntry.name);
     setDescription(v.description);
     setPrerequisites(v.prerequisites);
-    setModifiers(v.modifiers.map((m) => ({ target: m.target, op: m.op as ModifierOp, value: m.value })));
+    // La valeur peut être une formule : `featureFormValues` la rendrait en « [object Object] », la lecture se fait donc à part.
+    setModifiers(modificateursDeLaFiche(editEntry.blocks).map((m) => ({ target: m.target, op: m.op, value: m.value })));
     const drafts: TriggerDraft[] = [];
     const preserved: Trigger[] = [];
     for (const trigger of v.triggers) {
@@ -207,11 +212,21 @@ export default function CreateHomebrewFeatureForm({
       ...preservedTriggers,
     ];
 
-    const cleanModifiers = modifiers.map((m) => ({
-      target: m.target,
-      op: m.op,
-      ...(modifierOpNeedsValue(m.op) ? { value: Number(m.value) || 0 } : {}),
-    }));
+    // La valeur est une formule (ADR 0074) : un nombre reste un nombre, un dé n'est permis que sur une cible de jet.
+    const cleanModifiers: { target: string; op: ModifierOp; value?: number | FormulaNode }[] = [];
+    for (const m of modifiers) {
+      if (!modifierOpNeedsValue(m.op)) {
+        cleanModifiers.push({ target: m.target, op: m.op });
+        continue;
+      }
+      const valeur = texteVersValeur(m.value, m.target);
+      if (!valeur.ok) {
+        setError(`${modifierTargetLabel(m.target)} : ${valeur.erreur}`);
+        setSubmitting(false);
+        return;
+      }
+      cleanModifiers.push({ target: m.target, op: m.op, value: valeur.value });
+    }
 
     const entry = {
       name: name.trim(),
@@ -376,12 +391,14 @@ export default function CreateHomebrewFeatureForm({
                 triggerClassName="shrink-0 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
               />
               {needsValue && (
-                <input
-                  type="number"
-                  value={modifier.value}
-                  onChange={(e) => updateModifierValue(index, e.target.value)}
-                  className="w-16 shrink-0 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
-                />
+                <div className="w-full shrink-0 sm:w-56">
+                  <ChampFormule
+                    libelle={t("valeurDuModificateur")}
+                    valeur={modifier.value}
+                    onChange={(v) => updateModifierValue(index, v)}
+                    sansDes={!isRollTarget(modifier.target)}
+                  />
+                </div>
               )}
               <button type="button" onClick={() => removeModifier(index)} className="shrink-0 text-xs text-danger hover:underline">
                 {t("retirerOption")}

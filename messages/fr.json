@@ -185,6 +185,24 @@
     "resultats": "Résultats de la recherche",
     "nouvelleEntiteCourt": "Nouvelle entité"
   },
+  "valeursCalculees": {
+    "critique": "critique {plage}",
+    "metres": "{n} m",
+    "sensEtVitesses": "Sens et vitesses",
+    "vitesses": {
+      "fly": "Vol",
+      "swim": "Nage",
+      "climb": "Escalade",
+      "burrow": "Fouissement"
+    },
+    "sens": {
+      "darkvision": "Vision dans le noir",
+      "blindsight": "Perception aveugle",
+      "tremorsense": "Perception des vibrations",
+      "truesight": "Vision véritable"
+    },
+    "maitrisesAccordees": "Accordées par une règle"
+  },
   "regles": {
     "briques": {
       "insererReference": "Insérer une référence",
@@ -227,6 +245,7 @@
         "apply_state": "Appliquer un état",
         "existing_durable": "Effet qui dure conservé",
         "apply_modifier": "Modificateur",
+        "apply_boost": "Modificateur temporaire",
         "grant_budget": "Budget d'action",
         "move": "Déplacement",
         "roll": "Jet libre",
@@ -256,6 +275,9 @@
       "operation": "Effet",
       "valeur": "Valeur",
       "libelleModificateur": "Libellé du modificateur",
+      "nomEffet": "Nom de l'effet",
+      "ajouterModificateur": "+ Ajouter un modificateur",
+      "retirerModificateur": "Retirer ce modificateur",
       "genreBudget": "Budget",
       "budget": {
         "action": "Action",
@@ -643,6 +665,7 @@
     "effetsChiffres": "Effets chiffrés (optionnel)",
     "effetsChiffresAide": "Uniquement pour les effets qui correspondent vraiment à l'une de ces cibles — le reste du don se décrit dans le texte ci-dessus.",
     "ajouterEffetChiffre": "+ Ajouter un effet chiffré",
+    "valeurDuModificateur": "Valeur (nombre ou formule)",
     "cibleDuModificateur": "Cible du modificateur",
     "operationDuModificateur": "Opération du modificateur",
     "creerDon": "Créer le don",

@@ -22,6 +22,9 @@ import Egaliseur from "./Egaliseur";
 import { colonnesEgaliseur, type GesteColonne } from "@/lib/ui/egaliseur";
 import type { WeaponData } from "@/src/core/rules/srdMapping";
 import ActivationsPanel, { type ActivationsPanelProps } from "./ActivationsPanel";
+import { rollBonus, type Modifier } from "@/src/core/rules/sheet";
+import { complementDes, plageCritique, sourcesDesTexte } from "@/lib/ui/valeursCalculees";
+import { useTranslations } from "next-intl";
 
 function findBlock<T>(blocks: RuleEntryBlockData[] | undefined, blockType: string): T | null {
   const found = blocks?.find((b) => b.blockType === blockType);
@@ -89,6 +92,7 @@ function PreparedSpellCard({
   busy,
   onCast,
   onCastAttack,
+  rollModifiers,
 }: {
   worldSlug: string;
   spell: PreparedSpellView;
@@ -101,7 +105,10 @@ function PreparedSpellCard({
   busy: boolean;
   onCast: (spellKey: string, slotLevel: number, sort: SortFiche) => void;
   onCastAttack: (spellKey: string, sort: SortFiche) => void;
+  /** V3.1-157 : `sheet.rollModifiers` (bonus, dés et plage de critique que les règles ajoutent à l'attaque et aux dégâts du sort). */
+  rollModifiers: readonly Modifier[];
 }) {
+  const tv = useTranslations("valeursCalculees");
   const { ref, label, level } = spell;
   const isCantrip = level === 0;
   const validSlotLevels = isCantrip
@@ -124,8 +131,14 @@ function PreparedSpellCard({
       : formatFormulaNode(effect.formula)
     : null;
 
-  const attackResolved = withModifier("1d20", spellAttackBonus);
-  const attackDetail = `1d20+${spellAbilityLabel}+maîtrise`;
+  // V3.1-157 : même calcul que le serveur (`rollBonus`) pour l'attaque et les dégâts du sort.
+  const sheetRolls = { rollModifiers: [...rollModifiers] };
+  const bonusAttaque = rollBonus(sheetRolls, { roll: "attack", kind: "spell" });
+  const typeDegats = effect?.damage_type;
+  const bonusDegats = rollBonus(sheetRolls, { roll: "damage", kind: "spell", ...(typeDegats ? { damageType: typeDegats } : {}) });
+  const critique = plageCritique(bonusAttaque.critRange);
+  const attackResolved = withModifier("1d20", spellAttackBonus + bonusAttaque.value);
+  const attackDetail = `1d20+${spellAbilityLabel}+maîtrise${critique ? ` · ${tv("critique", { plage: critique })}` : ""}`;
   const preview = descriptionPreview(blocks);
 
   const available = !isCantrip ? Math.max(0, (spellSlots[String(castLevel)] ?? 0) - (spellSlotsUsed[String(castLevel)] ?? 0)) : Infinity;
@@ -170,6 +183,8 @@ function PreparedSpellCard({
           <ActionButton
             label="Attaquer"
             resolvedFormula={attackResolved}
+            complement={complementDes(bonusAttaque.dice)}
+            titre={sourcesDesTexte(bonusAttaque.dice) || undefined}
             detailFormula={attackDetail}
             busy={busy}
             primary
@@ -190,7 +205,9 @@ function PreparedSpellCard({
             )}
             <ActionButton
               label={resolvedDamage ? "Dégâts" : "Lancer"}
-              resolvedFormula={resolvedDamage ?? (isCantrip ? "Sort mineur" : `${available}/${spellSlots[String(castLevel)] ?? 0}`)}
+              resolvedFormula={resolvedDamage ? withModifier(resolvedDamage, bonusDegats.value) : isCantrip ? "Sort mineur" : `${available}/${spellSlots[String(castLevel)] ?? 0}`}
+              complement={resolvedDamage ? complementDes(bonusDegats.dice) : undefined}
+              titre={resolvedDamage ? sourcesDesTexte(bonusDegats.dice) || undefined : undefined}
               detailFormula={resolvedDamage ? "au niveau choisi" : isCantrip ? "sans emplacement" : "emplacements"}
               busy={busy || (!isCantrip && available === 0)}
               onClick={() => ref.kind === "rule" && onCast(ref.key, castLevel, sortFiche(ref.key))}
@@ -221,6 +238,7 @@ export default function ActionsTab({
   strMod,
   dexMod,
   proficiencyBonus,
+  rollModifiers = [],
   isMonk,
   onAttack,
   onDamage,
@@ -255,6 +273,8 @@ export default function ActionsTab({
   strMod: number;
   dexMod: number;
   proficiencyBonus: number;
+  /** V3.1-157 : `sheet.rollModifiers`, pour montrer bonus, dés de bonus et plage de critique sur les attaques. Absent : rien de plus qu'avant. */
+  rollModifiers?: readonly Modifier[];
   isMonk: boolean;
   /** `arme` : la description pour l'outil de dés (V3.1-106) ; l'écran du solo, qui a son propre circuit, l'ignore. */
   onAttack: (item: InventoryItem, arme: ArmeFiche) => void;
@@ -358,6 +378,7 @@ export default function ActionsTab({
               dexMod={dexMod}
               proficiencyBonus={proficiencyBonus}
               isMonk={isMonk}
+              rollModifiers={rollModifiers}
               masteryKey={masteryKey}
               showAttackInfo={true}
               collapsible={false}
@@ -392,6 +413,7 @@ export default function ActionsTab({
                   busy={busy}
                   onCast={onCast}
                   onCastAttack={onCastAttack}
+                  rollModifiers={rollModifiers}
                 />
               ))}
             </div>
@@ -413,6 +435,7 @@ export default function ActionsTab({
                   busy={busy}
                   onCast={onCast}
                   onCastAttack={onCastAttack}
+                  rollModifiers={rollModifiers}
                 />
               ))}
             </div>

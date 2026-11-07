@@ -5,7 +5,10 @@ import Link from "next/link";
 import NomDeRegle from "./NomDeRegle";
 import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/blocks/inventory";
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
-import { weaponAttackAbilityMod } from "@/src/core/rules/action";
+import { weaponAttackAbility, weaponAttackAbilityMod } from "@/src/core/rules/action";
+import { rollBonus, type Modifier } from "@/src/core/rules/sheet";
+import { complementDes, plageCritique, sourcesDesTexte } from "@/lib/ui/valeursCalculees";
+import { useTranslations } from "next-intl";
 import type { ArmorData, ItemCost, WeaponData } from "@/src/core/rules/srdMapping";
 import { lbToKg, ftToM } from "@/src/core/rules/encumbrance";
 import { CURRENCY_ORDER, depositCoins, spendCoins, type CoinType } from "@/src/core/rules/currency";
@@ -51,10 +54,16 @@ export function ActionButton({
   busy,
   primary,
   onClick,
+  complement,
+  titre,
 }: {
   label: string;
   resolvedFormula: string;
   detailFormula: string;
+  /** V3.1-157 : les dés de bonus à coller derrière la formule (« +1d4 »), hors de la détection de la taille du dé. */
+  complement?: string;
+  /** V3.1-157 : le survol (sources des dés de bonus). */
+  titre?: string;
   busy: boolean;
   /** Action principale de la carte (le jet d'attaque) : teintee pour se reperer dans une liste d'armes. Les autres restent neutres. */
   primary?: boolean;
@@ -66,6 +75,7 @@ export function ActionButton({
       type="button"
       disabled={busy}
       onClick={onClick}
+      title={titre}
       className={`flex min-h-11 w-full items-center gap-2 rounded-full border py-1.5 pl-2 pr-3 text-left text-ink transition-colors disabled:opacity-50 ${
         primary ? "border-accent bg-accent/10 hover:bg-accent/20" : "border-edge hover:bg-panel"
       }`}
@@ -88,6 +98,7 @@ export function ActionButton({
       </span>
       <span className="mech ml-auto shrink-0 pl-1" style={{ fontSize: "1rem" }}>
         {resolvedFormula}
+        {complement}
       </span>
     </button>
   );
@@ -146,6 +157,7 @@ export function ItemCard({
   onToggleEquipped,
   onChangeQty,
   onRemove,
+  rollModifiers,
 }: {
   worldSlug: string;
   item: InventoryItem;
@@ -170,7 +182,10 @@ export function ItemCard({
   onToggleEquipped?: () => void;
   onChangeQty?: (qty: number) => void;
   onRemove?: () => void;
+  /** V3.1-157 : les modificateurs d'attaque, de dégâts et de critique de la fiche (`sheet.rollModifiers`) ; absents hors fiche de personnage. */
+  rollModifiers?: readonly Modifier[];
 }) {
+  const tv = useTranslations("valeursCalculees");
   const [collapsed, setCollapsed] = useState(collapsible);
   const title = chip?.found ? chip.name : itemLabel(item);
 
@@ -248,9 +263,21 @@ export function ItemCard({
   // reellement utilisee au clic, jamais une supposition separee.
   const abilityMod = weapon ? weaponAttackAbilityMod(weapon.properties, weapon.isRanged, strMod, dexMod) : 0;
   const abilityLabel = weapon ? (weapon.isRanged || (weapon.properties.includes("finesse") && dexMod > strMod) ? "DEX" : "FOR") : "";
-  const attackResolved = withModifier(withModifier("1d20", abilityMod), proficiencyBonus);
-  const attackDetail = `1d20+${abilityLabel}+maîtrise`;
-  const damageResolved = (dice: string) => withModifier(dice, abilityMod);
+  // V3.1-157 : ce que les règles du personnage ajoutent à l'attaque et aux dégâts (même calcul que le serveur : `rollBonus`).
+  const sheetRolls = { rollModifiers: rollModifiers ? [...rollModifiers] : [] };
+  const bonusAttaque = rollBonus(sheetRolls, { roll: "attack", kind: "weapon" });
+  const bonusDegats = rollBonus(sheetRolls, {
+    roll: "damage",
+    kind: "weapon",
+    ability: weapon ? weaponAttackAbility(weapon.properties, weapon.isRanged, strMod, dexMod) : undefined,
+    ...(weapon?.damageType ? { damageType: weapon.damageType } : {}),
+  });
+  const critique = plageCritique(bonusAttaque.critRange);
+  const attackResolved = withModifier(withModifier(withModifier("1d20", abilityMod), proficiencyBonus), bonusAttaque.value);
+  const attackDetail = `1d20+${abilityLabel}+maîtrise${critique ? ` · ${tv("critique", { plage: critique })}` : ""}`;
+  const attackDes = complementDes(bonusAttaque.dice);
+  const damageDes = complementDes(bonusDegats.dice);
+  const damageResolved = (dice: string) => withModifier(dice, abilityMod + bonusDegats.value);
   const damageDetail = (dice: string) => (abilityMod !== 0 ? `${dice}+${abilityLabel}` : dice);
 
   // Independant des handlers (V1-C14) : le texte informatif de l'onglet
@@ -381,15 +408,17 @@ export function ItemCard({
             {!collapsible && weapon && (onAttack || onDamage) && (
               <div className="grid grid-cols-[repeat(auto-fit,minmax(15rem,1fr))] gap-2">
                 {onAttack && (
-                  <ActionButton label="Attaquer" resolvedFormula={attackResolved} detailFormula={attackDetail} busy={busy} primary onClick={onAttack} />
+                  <ActionButton label="Attaquer" resolvedFormula={attackResolved} complement={attackDes} titre={sourcesDesTexte(bonusAttaque.dice) || undefined} detailFormula={attackDetail} busy={busy} primary onClick={onAttack} />
                 )}
                 {onAttack && weapon.properties.includes("thrown") && (
-                  <ActionButton label="Lancer" resolvedFormula={attackResolved} detailFormula={attackDetail} busy={busy} onClick={onAttack} />
+                  <ActionButton label="Lancer" resolvedFormula={attackResolved} complement={attackDes} titre={sourcesDesTexte(bonusAttaque.dice) || undefined} detailFormula={attackDetail} busy={busy} onClick={onAttack} />
                 )}
                 {onDamage && (
                   <ActionButton
                     label="Dégâts"
                     resolvedFormula={damageResolved(weapon.damageDice)}
+                    complement={damageDes}
+                    titre={sourcesDesTexte(bonusDegats.dice) || undefined}
                     detailFormula={damageDetail(weapon.damageDice)}
                     busy={busy}
                     onClick={() => onDamage(false)}
@@ -399,6 +428,8 @@ export function ItemCard({
                   <ActionButton
                     label="Dégâts (2 mains)"
                     resolvedFormula={damageResolved(weapon.versatileDamageDice)}
+                    complement={damageDes}
+                    titre={sourcesDesTexte(bonusDegats.dice) || undefined}
                     detailFormula={damageDetail(weapon.versatileDamageDice)}
                     busy={busy}
                     onClick={() => onDamage(true)}

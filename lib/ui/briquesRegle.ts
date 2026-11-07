@@ -9,10 +9,11 @@
  *
  * Aucun effet ici : pas de réseau, pas de React.
  */
-import { formatFormulaNode, FormulaError, parseFormula, type FormulaNode } from "@/src/core/formula";
+import { containsDice, formatFormulaNode, FormulaError, parseFormula, type FormulaNode } from "@/src/core/formula";
 import { pruneOrphanDurableEffects } from "@/src/core/rules/activationEditor";
 import { OPS_BY_TARGET_CATEGORY, modifierOpNeedsValue, modifierTargetOption } from "@/src/core/rules/modifierTargets";
-import type { Modifier, ModifierOp } from "@/src/core/rules/sheet";
+import type { ModifierOp } from "@/src/core/rules/sheet";
+import { isRollTarget } from "@/src/core/schemas/rule-blocks/primitives";
 import type { BudgetKind } from "@/src/core/rules/actionBudget";
 import type { ConditionNode, EffectNode, TriggerZone } from "@/src/core/rules/triggers";
 import {
@@ -35,17 +36,20 @@ export type QuiBrique = "self" | "target";
 
 // --- Les formules, en texte --------------------------------------------------
 
-/** Pourquoi un texte n'est pas une formule valide ; `null` s'il l'est. Jamais d'exception pour l'écran. */
-export function erreurFormule(texte: string): string | null {
+/** Pourquoi un texte n'est pas une formule valide ; `null` s'il l'est. Jamais d'exception pour l'écran. `sansDes` : un dé y est refusé (cible fixe d'un modificateur, ADR 0074). */
+export function erreurFormule(texte: string, options?: { sansDes?: boolean }): string | null {
   if (texte.trim() === "") return "Formule vide.";
   try {
-    parseFormula(texte);
+    const noeud = parseFormula(texte);
+    if (options?.sansDes && containsDice(noeud)) return MESSAGE_DE_SUR_CIBLE_FIXE;
     return null;
   } catch (erreur) {
     if (erreur instanceof FormulaError) return erreur.message;
     throw erreur;
   }
 }
+
+const MESSAGE_DE_SUR_CIBLE_FIXE = "Un dé ne s'ajoute qu'à un jet (attaque, dégâts, sauvegarde, test) : pas à cette cible.";
 
 /** Les références que l'aide « insérer une référence » propose (clé de libellé dans `messages/`, texte à insérer). */
 export const REFERENCES_FORMULE: readonly { cle: string; texte: string }[] = [
@@ -105,6 +109,15 @@ export interface BrouillonFin {
   subject: "bearer" | "source";
 }
 
+export interface BrouillonModificateur {
+  uid: string;
+  cible: string;
+  op: ModifierOp;
+  /** Une formule en texte (`1d4`, `max(1, {ability.cha})`) ; vide pour un drapeau (avantage, maîtrise). */
+  valeur: string;
+  perLevel: boolean;
+}
+
 export type CorpsEffet =
   | { type: "saving_throw"; ability: string; dc: string; echec: BrouillonEffet[]; reussite: BrouillonEffet[] }
   | { type: "deal_damage"; montant: string; typeDegats: string }
@@ -115,7 +128,11 @@ export type CorpsEffet =
   | { type: "apply_state"; effectId: string; cle: string; labelOrig: Localise; duree: BrouillonDuree; concentration: boolean; finSi: BrouillonFin[] }
   /** Un effet qui dure que le formulaire ne sait pas saisir (modificateurs, jeton) : conservé tel quel, jamais perdu. */
   | { type: "existing_durable"; effectId: string }
-  | { type: "apply_modifier"; cible: string; op: ModifierOp; valeur: string; libelle: string; origine: Modifier | null }
+  /**
+   * « Modificateur temporaire » et « Avantage / désavantage » (ADR 0074) : UNE brique à l'écran, un `apply_effect`
+   * ET un effet qui dure porteur de modificateurs (Bénédiction : +1d4 aux attaques et aux sauvegardes, 1 minute, concentration).
+   */
+  | { type: "apply_boost"; effectId: string; nom: string; labelOrig: Localise; modificateurs: BrouillonModificateur[]; duree: BrouillonDuree; concentration: boolean; finSi: BrouillonFin[] }
   | { type: "grant_budget"; kind: BudgetKind; montant: string }
   | { type: "move"; zone: TriggerZone }
   | { type: "roll"; libelle: string; formule: string }
@@ -269,7 +286,7 @@ export function idsEffetsPris(b: Brouillon): Set<string> {
   const pris = new Set(b.durablesConserves.map((d) => d.id));
   const parcourir = (liste: readonly BrouillonEffet[]) => {
     for (const e of liste) {
-      if (e.type === "apply_state" || e.type === "existing_durable") pris.add(e.effectId);
+      if (e.type === "apply_state" || e.type === "apply_boost" || e.type === "existing_durable") pris.add(e.effectId);
       if (e.type === "saving_throw") {
         parcourir(e.echec);
         parcourir(e.reussite);
@@ -281,6 +298,25 @@ export function idsEffetsPris(b: Brouillon): Set<string> {
     for (const v of a.variantes) parcourir(v.effets);
   }
   return pris;
+}
+
+export function nouveauModificateur(cible: string, op: ModifierOp, valeur: string): BrouillonModificateur {
+  return { uid: nouvelUid(), cible, op, valeur, perLevel: false };
+}
+
+function nouveauBoost(base: { uid: string; passage: null }, b: Brouillon, premier: BrouillonModificateur): BrouillonEffet {
+  return {
+    ...base,
+    who: "target",
+    type: "apply_boost",
+    effectId: idLibre("effet", idsEffetsPris(b)),
+    nom: "",
+    labelOrig: {},
+    modificateurs: [premier],
+    duree: { unit: "minute", amount: "1", whose: "bearer", which: "next" },
+    concentration: false,
+    finSi: [],
+  };
 }
 
 export function nouvelEffet(entree: EntreeAjout, b: Brouillon): BrouillonEffet {
@@ -307,9 +343,9 @@ export function nouvelEffet(entree: EntreeAjout, b: Brouillon): BrouillonEffet {
     case "remove_condition":
       return { ...base, who: "target", type: "remove_condition", cle: "" };
     case "advantage":
-      return { ...base, who: "self", type: "apply_modifier", cible: "save.str", op: "advantage", valeur: "", libelle: "", origine: null };
+      return nouveauBoost(base, b, nouveauModificateur("save.str", "advantage", ""));
     case "apply_modifier":
-      return { ...base, who: "self", type: "apply_modifier", cible: "ac", op: "add", valeur: "1", libelle: "", origine: null };
+      return nouveauBoost(base, b, nouveauModificateur("ac", "add", "1"));
     case "move":
       return { ...base, who: "target", type: "move", zone: "far" };
     case "grant_budget":
@@ -369,7 +405,19 @@ function durableSaisissable(d: DurableEffect): boolean {
   return d.conditions.length === 1 && d.modifiers.length === 0 && d.token === null;
 }
 
+/** Un effet qui dure porteur de modificateurs seuls (ni état, ni jeton) : ce que « Modificateur temporaire » écrit. */
+function durableBoost(d: DurableEffect): boolean {
+  return d.conditions.length === 0 && d.modifiers.length > 0 && d.token === null;
+}
+
+function modificateurVersBrouillon(m: DurableEffect["modifiers"][number]): BrouillonModificateur {
+  const valeur = m.value === undefined ? "" : typeof m.value === "number" ? String(m.value) : formatFormulaNode(m.value);
+  return { uid: nouvelUid(), cible: m.target, op: m.op, valeur, perLevel: m.per_level === true };
+}
+
 interface CtxLecture {
+  /** Tous les identifiants d'effets pris (pour nommer l'effet d'un `apply_modifier` converti). */
+  pris: Set<string>;
   durables: Map<string, DurableEffect>;
   /** Identifiants déjà repris par une brique `apply_state`. */
   repris: Set<string>;
@@ -399,17 +447,23 @@ function effetVersBrouillon(e: EffectNode, chemin: string, ctx: CtxLecture): Bro
       return { ...base, who: e.who, type: "apply_condition", cle: e.key };
     case "remove_condition":
       return { ...base, who: e.who, type: "remove_condition", cle: e.key };
-    case "apply_modifier":
+    case "apply_modifier": {
+      // Un `apply_modifier` déjà enregistré se relit comme un effet qui dure d'une minute : cible, effet, valeur et libellé sont gardés.
+      const effectId = idLibre("effet", ctx.pris);
+      ctx.pris.add(effectId);
       return {
         ...base,
         who: e.who,
-        type: "apply_modifier",
-        cible: e.modifier.target,
-        op: e.modifier.op,
-        valeur: e.modifier.value === undefined ? "" : String(e.modifier.value),
-        libelle: e.modifier.label,
-        origine: e.modifier,
+        type: "apply_boost",
+        effectId,
+        nom: e.modifier.label,
+        labelOrig: {},
+        modificateurs: [{ uid: nouvelUid(), cible: e.modifier.target, op: e.modifier.op, valeur: e.modifier.value === undefined ? "" : String(e.modifier.value), perLevel: e.modifier.perLevel === true }],
+        duree: { unit: "minute", amount: "1", whose: "bearer", which: "next" },
+        concentration: false,
+        finSi: [],
       };
+    }
     case "grant_budget":
       return { ...base, who: e.who, type: "grant_budget", kind: e.kind, montant: formatFormulaNode(e.amount) };
     case "move":
@@ -431,6 +485,22 @@ function effetVersBrouillon(e: EffectNode, chemin: string, ctx: CtxLecture): Bro
           effectId: d.id,
           cle: d.conditions[0],
           labelOrig: d.label,
+          duree: dureeVersBrouillon(d.duration),
+          concentration: d.concentration,
+          finSi: d.ends_on.map(finVersBrouillon),
+        };
+      }
+      if (durableBoost(d) && !ctx.repris.has(d.id)) {
+        ctx.repris.add(d.id);
+        return {
+          ...base,
+          passage: base.passage ?? d.passage ?? null,
+          who: e.who,
+          type: "apply_boost",
+          effectId: d.id,
+          nom: libelleFr(d.label),
+          labelOrig: d.label,
+          modificateurs: d.modifiers.map(modificateurVersBrouillon),
           duree: dureeVersBrouillon(d.duration),
           concentration: d.concentration,
           finSi: d.ends_on.map(finVersBrouillon),
@@ -469,9 +539,10 @@ export function blocsVersBrouillon(blocs: readonly { blockType: string; data: un
     const data = act.data as ActivationBlockData;
     const durables = new Map(data.durable_effects.map((d) => [d.id, d]));
     const repris = new Set<string>();
+    const pris = new Set(data.durable_effects.map((d) => d.id));
     const conserves = new Map<string, DurableEffect>();
     b.activations = data.activations.map((a) => {
-      const ctx: CtxLecture = { durables, repris, conserves, passages: a.passages };
+      const ctx: CtxLecture = { pris, durables, repris, conserves, passages: a.passages };
       return {
         uid: nouvelUid(),
         id: a.id,
@@ -559,6 +630,17 @@ function finEcrite(f: BrouillonFin): DurableEffectEnd {
   return f.event === "dismissed" ? { event: "dismissed" } : ({ event: f.event, subject: f.subject } as DurableEffectEnd);
 }
 
+/** Un modificateur de l'écran vers le bloc : un nombre reste un nombre, le reste est une formule (dés permis sur une cible de jet seulement). */
+function modificateurEcrit(m: BrouillonModificateur, contexte: string, ctx: CtxEcriture): DurableEffect["modifiers"][number] {
+  let value: number | FormulaNode | undefined;
+  if (modifierOpNeedsValue(m.op)) {
+    const noeud = formule(m.valeur, `${contexte}, valeur`, ctx);
+    if (!isRollTarget(m.cible) && containsDice(noeud)) ctx.erreurs.push(`${contexte} : ${MESSAGE_DE_SUR_CIBLE_FIXE}`);
+    value = noeud.op === "num" ? noeud.value : noeud;
+  }
+  return { target: m.cible, op: m.op, ...(value !== undefined ? { value } : {}), ...(m.perLevel ? { per_level: true } : {}) };
+}
+
 function effetEcrit(e: BrouillonEffet, contexte: string, activationId: string, ctx: CtxEcriture): EffectNode {
   const ou = `${contexte}`;
   switch (e.type) {
@@ -605,21 +687,24 @@ function effetEcrit(e: BrouillonEffet, contexte: string, activationId: string, c
       if (d && !ctx.durables.some((x) => x.id === d.id)) ctx.durables.push(d);
       return { action: "apply_effect", who: e.who, effect: e.effectId };
     }
-    case "apply_modifier": {
-      const necessiteValeur = modifierOpNeedsValue(e.op);
-      const valeur = necessiteValeur ? Number(e.valeur.trim().replace(",", ".")) : undefined;
-      if (necessiteValeur && (e.valeur.trim() === "" || !Number.isFinite(valeur))) ctx.erreurs.push(`${ou} : une valeur numérique est attendue`);
-      const modifier: Modifier = {
-        target: e.cible,
-        op: e.op,
-        ...(valeur !== undefined && Number.isFinite(valeur) ? { value: valeur } : {}),
-        source: e.origine?.source ?? `activation:${activationId}`,
-        label: e.libelle.trim() || e.cible,
-        layer: e.origine?.layer ?? 7,
-        ...(e.origine?.stacking ? { stacking: e.origine.stacking } : {}),
-        ...(e.origine?.perLevel ? { perLevel: e.origine.perLevel } : {}),
-      };
-      return { action: "apply_modifier", who: e.who, modifier };
+    case "apply_boost": {
+      const nom = e.nom.trim();
+      if (nom === "") ctx.erreurs.push(`${ou} : donne un nom à l'effet`);
+      if (e.modificateurs.length === 0) ctx.erreurs.push(`${ou} : ajoute au moins un modificateur`);
+      if (!ctx.durables.some((d) => d.id === e.effectId)) {
+        ctx.durables.push({
+          id: e.effectId,
+          label: localise(e.labelOrig, nom || e.effectId),
+          conditions: [],
+          modifiers: e.modificateurs.map((m, k) => modificateurEcrit(m, `${ou}, modificateur ${k + 1}`, ctx)),
+          duration: dureeEcrite(e.duree, ou, ctx),
+          concentration: e.concentration,
+          ends_on: e.finSi.map(finEcrite),
+          token: null,
+          ...(e.passage ? { passage: e.passage } : {}),
+        });
+      }
+      return { action: "apply_effect", who: e.who, effect: e.effectId };
     }
     case "grant_budget":
       return { action: "grant_budget", who: e.who, kind: e.kind, amount: formule(e.montant, `${ou}, montant`, ctx) };
@@ -765,7 +850,7 @@ export interface Surlignage {
 
 function famille(e: BrouillonEffet): FamilleSurlignage {
   if (e.type === "saving_throw") return "sauvegarde";
-  if (e.type === "apply_state" || e.type === "apply_condition" || e.type === "existing_durable") return "etat";
+  if (e.type === "apply_state" || e.type === "apply_boost" || e.type === "apply_condition" || e.type === "existing_durable") return "etat";
   return "autre";
 }
 

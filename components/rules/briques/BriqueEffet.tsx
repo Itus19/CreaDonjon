@@ -7,17 +7,21 @@ import { ABILITY_LABELS } from "@/src/core/rules/abilities";
 import type { Ability } from "@/src/core/rules/sheet";
 import { SAVE_ABILITIES, SPELL_DAMAGE_TYPES } from "@/src/core/rules/homebrewSpell";
 import { MODIFIER_TARGET_OPTIONS, modifierOpNeedsValue } from "@/src/core/rules/modifierTargets";
+import { isRollTarget } from "@/src/core/schemas/rule-blocks/primitives";
 import { BUDGET_KINDS } from "@/src/core/rules/actionBudget";
 import { TRIGGER_EVENTS, TRIGGER_ZONES } from "@/src/core/rules/triggers";
 import { DAMAGE_TYPE_LABELS_FR, MODIFIER_OP_LABELS_FR, modifierTargetLabel } from "@/src/i18n/fr";
 import {
   ENTREES_AJOUT,
   deplacerA,
+  nouveauModificateur,
   opsPourCible,
   remplacerA,
   retirerA,
+  type BrouillonDuree,
   type BrouillonEffet,
   type BrouillonFin,
+  type BrouillonModificateur,
   type CorpsEffet,
 } from "@/lib/ui/briquesRegle";
 import ChampFormule from "@/components/rules/briques/ChampFormule";
@@ -153,27 +157,8 @@ function ChampsEffet({ effet, maj }: { effet: BrouillonEffet; maj: (c: Partial<C
       return <ChampsEtat effet={effet} maj={maj} options={options} />;
     case "existing_durable":
       return <p className="text-xs text-ink-muted sm:col-span-2 lg:col-span-3">{t("effetConserve", { id: effet.effectId })}</p>;
-    case "apply_modifier": {
-      const ops = opsPourCible(effet.cible);
-      return (
-        <>
-          <ChampListe
-            libelle={t("cibleModificateur")}
-            valeur={effet.cible}
-            options={MODIFIER_TARGET_OPTIONS.map((o) => ({ value: o.target, label: modifierTargetLabel(o.target) }))}
-            onChange={(cible) => maj({ cible, op: opsPourCible(cible).includes(effet.op) ? effet.op : opsPourCible(cible)[0] })}
-          />
-          <ChampListe
-            libelle={t("operation")}
-            valeur={effet.op}
-            options={ops.map((o) => ({ value: o, label: MODIFIER_OP_LABELS_FR[o] }))}
-            onChange={(op) => maj({ op: ops.find((o) => o === op) ?? ops[0] })}
-          />
-          {modifierOpNeedsValue(effet.op) && <ChampTexte libelle={t("valeur")} valeur={effet.valeur} onChange={(valeur) => maj({ valeur })} mecanique />}
-          <ChampTexte libelle={t("libelleModificateur")} valeur={effet.libelle} onChange={(libelle) => maj({ libelle })} />
-        </>
-      );
-    }
+    case "apply_boost":
+      return <ChampsBoost effet={effet} maj={maj} />;
     case "grant_budget":
       return (
         <>
@@ -234,12 +219,81 @@ function ChampsEtat({
   options: { value: string; label: string }[];
 }) {
   const t = useTranslations("regles.briques");
-  const d = effet.duree;
-  const avecMontant = d.unit === "round" || d.unit === "minute" || d.unit === "hour" || d.unit === "day";
-  const majFin = (i: number, f: BrouillonFin) => maj({ finSi: remplacerA(effet.finSi, i, f) });
   return (
     <>
       <ChampListe libelle={t("etat")} valeur={effet.cle} options={avecValeur(options, effet.cle)} onChange={(cle) => maj({ cle })} />
+      <ChampsDuree duree={effet.duree} concentration={effet.concentration} finSi={effet.finSi} maj={maj} />
+    </>
+  );
+}
+
+/**
+ * « Modificateur temporaire » et « Avantage / désavantage » : le nom de l'effet, ses modificateurs (cible, effet, valeur en formule),
+ * puis sa durée et sa concentration. Une brique à l'écran, un effet qui dure en base (ADR 0074).
+ */
+function ChampsBoost({ effet, maj }: { effet: Extract<BrouillonEffet, { type: "apply_boost" }>; maj: (c: Partial<CorpsEffet>) => void }) {
+  const t = useTranslations("regles.briques");
+  const majModificateur = (i: number, m: BrouillonModificateur) => maj({ modificateurs: remplacerA(effet.modificateurs, i, m) });
+  return (
+    <>
+      <ChampTexte libelle={t("nomEffet")} valeur={effet.nom} onChange={(nom) => maj({ nom })} />
+      <div className="flex flex-col gap-3 sm:col-span-2 lg:col-span-3">
+        {effet.modificateurs.map((m, i) => {
+          const ops = opsPourCible(m.cible);
+          return (
+            <div key={m.uid} className="grid gap-3 rounded-md border border-edge/60 p-2 sm:grid-cols-2 lg:grid-cols-3">
+              <ChampListe
+                libelle={t("cibleModificateur")}
+                valeur={m.cible}
+                options={avecValeur(MODIFIER_TARGET_OPTIONS.map((o) => ({ value: o.target, label: modifierTargetLabel(o.target) })), m.cible)}
+                onChange={(cible) => {
+                  const opsCible = opsPourCible(cible);
+                  majModificateur(i, { ...m, cible, op: opsCible.includes(m.op) ? m.op : opsCible[0] });
+                }}
+              />
+              <ChampListe
+                libelle={t("operation")}
+                valeur={m.op}
+                options={ops.map((o) => ({ value: o, label: MODIFIER_OP_LABELS_FR[o] }))}
+                onChange={(op) => majModificateur(i, { ...m, op: ops.find((o) => o === op) ?? ops[0] })}
+              />
+              {modifierOpNeedsValue(m.op) && (
+                <ChampFormule libelle={t("valeur")} valeur={m.valeur} onChange={(valeur) => majModificateur(i, { ...m, valeur })} sansDes={!isRollTarget(m.cible)} />
+              )}
+              <div className="flex items-end">
+                <BoutonPetit onClick={() => maj({ modificateurs: retirerA(effet.modificateurs, i) })} danger>
+                  {t("retirerModificateur")}
+                </BoutonPetit>
+              </div>
+            </div>
+          );
+        })}
+        <div className="w-fit">
+          <BoutonPetit onClick={() => maj({ modificateurs: [...effet.modificateurs, nouveauModificateur("ac", "add", "1")] })}>{t("ajouterModificateur")}</BoutonPetit>
+        </div>
+      </div>
+      <ChampsDuree duree={effet.duree} concentration={effet.concentration} finSi={effet.finSi} maj={maj} />
+    </>
+  );
+}
+
+/** La durée d'un effet qui dure, sa concentration et ce qui y met fin : commun à « Appliquer un état » et aux modificateurs temporaires. */
+function ChampsDuree({
+  duree: d,
+  concentration,
+  finSi,
+  maj,
+}: {
+  duree: BrouillonDuree;
+  concentration: boolean;
+  finSi: BrouillonFin[];
+  maj: (c: Partial<CorpsEffet>) => void;
+}) {
+  const t = useTranslations("regles.briques");
+  const avecMontant = d.unit === "round" || d.unit === "minute" || d.unit === "hour" || d.unit === "day";
+  const majFin = (i: number, f: BrouillonFin) => maj({ finSi: remplacerA(finSi, i, f) });
+  return (
+    <>
       <ChampListe
         libelle={t("duree")}
         valeur={d.unit}
@@ -264,11 +318,11 @@ function ChampsEtat({
         </>
       )}
       <div className="sm:col-span-2 lg:col-span-3">
-        <Checkbox checked={effet.concentration} onChange={() => maj({ concentration: !effet.concentration })} label={t("concentration")} />
+        <Checkbox checked={concentration} onChange={() => maj({ concentration: !concentration })} label={t("concentration")} />
       </div>
       <div className="flex flex-col gap-2 sm:col-span-2 lg:col-span-3">
         <span className="text-xs text-ink-soft">{t("priseFinSi")}</span>
-        {effet.finSi.map((f, i) => (
+        {finSi.map((f, i) => (
           <div key={i} className="flex flex-wrap items-end gap-2">
             <ChampListe
               libelle={t("evenement")}
@@ -284,13 +338,13 @@ function ChampsEtat({
                 onChange={(subject) => majFin(i, { ...f, subject: subject === "source" ? "source" : "bearer" })}
               />
             )}
-            <BoutonPetit onClick={() => maj({ finSi: retirerA(effet.finSi, i) })} danger>
+            <BoutonPetit onClick={() => maj({ finSi: retirerA(finSi, i) })} danger>
               {t("retirer")}
             </BoutonPetit>
           </div>
         ))}
         <div className="w-fit">
-          <BoutonPetit onClick={() => maj({ finSi: [...effet.finSi, { event: "damage_taken", subject: "bearer" }] })}>{t("ajouterFin")}</BoutonPetit>
+          <BoutonPetit onClick={() => maj({ finSi: [...finSi, { event: "damage_taken", subject: "bearer" }] })}>{t("ajouterFin")}</BoutonPetit>
         </div>
       </div>
     </>

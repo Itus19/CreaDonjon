@@ -1,8 +1,9 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import { SRD_LANGUAGES, type LanguageKey } from "@/src/core/rules/srdMapping";
-import { LANGUAGE_LABELS_FR } from "@/src/i18n/fr";
+import { LANGUAGE_LABELS_FR, modifierTargetLabel } from "@/src/i18n/fr";
 import type { RemainingChoiceView, TraitGrantView } from "./useResolvedRuleset";
 import type { ResolvedChipView } from "./useReferenceChips";
 import { toggleChoice } from "./characterChoiceUtils";
@@ -33,6 +34,7 @@ export default function MasteriesTab({
   allLanguages,
   character,
   patchCharacter,
+  accordees = [],
 }: {
   proficiencies: TraitGrantView[];
   /** Vide = aucune classe n'accorde de botte d'arme : la section entière disparaît, plutôt qu'un titre suivi d'un message d'absence. */
@@ -42,7 +44,10 @@ export default function MasteriesTab({
   allLanguages: TraitGrantView[];
   character: CharacterBlockData;
   patchCharacter: (fields: Partial<CharacterBlockData>) => void;
+  /** V3.1-157 : les maîtrises qu'une règle accorde par un modificateur (`sheet.grantedProficiencies`), avec la règle qui les accorde. */
+  accordees?: { target: string; label: string }[];
 }) {
+  const t = useTranslations("valeursCalculees");
   return (
     <div className="flex flex-col gap-1 pt-3 text-sm">
       <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Maîtrises</span>
@@ -61,6 +66,24 @@ export default function MasteriesTab({
         </div>
       ) : (
         <p className="text-sm text-ink-muted">Aucune maîtrise d&apos;armure/arme/outil pour l&apos;instant.</p>
+      )}
+
+      {accordees.length > 0 && (
+        <>
+          <span className="mt-3 text-[10px] font-bold uppercase tracking-widest text-ink-muted">{t("maitrisesAccordees")}</span>
+          <div className="flex flex-wrap gap-2">
+            {accordees.map((a) => (
+              <span
+                key={a.target}
+                title={`Source : ${a.label}`}
+                className="inline-flex items-center gap-1 rounded-full border border-edge px-2 py-0.5 text-sm text-ink"
+              >
+                {modifierTargetLabel(a.target).replace(/^Maîtrise — /, "").replace(/^./, (c) => c.toUpperCase())}
+                <span className="text-xs text-ink-muted">· {a.label}</span>
+              </span>
+            ))}
+          </div>
+        </>
       )}
 
       {masteryChoices.length > 0 && (

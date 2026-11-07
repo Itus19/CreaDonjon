@@ -13,6 +13,7 @@ import {
   idLibre,
   nouvelEffet,
   nouvelleActivation,
+  nouveauModificateur,
   nouvelleRessource,
   opsPourCible,
   retirerA,
@@ -226,5 +227,117 @@ describe("texteDeLaRegle", () => {
         { blockType: "activation", data: {} },
       ])
     ).toBe("Un.\n\nDeux.");
+  });
+});
+
+/** Bénédiction, saisie entièrement par l'éditeur : 3 cibles, concentration, 1 minute, +1d4 aux attaques et aux sauvegardes. */
+function benediction(): Brouillon {
+  const b = brouillonVide();
+  const a = nouvelleActivation(b);
+  a.id = "benediction";
+  a.label = "Bénédiction";
+  a.cout = { action: "action", depenses: [], passage: null };
+  a.cibles = { kind: "creature", nombre: "3", portee: "9", doitVoir: false, passage: null };
+  const boost = nouvelEffet("apply_modifier", b);
+  if (boost.type !== "apply_boost") throw new Error("type inattendu");
+  boost.nom = "Bénédiction";
+  boost.concentration = true;
+  boost.duree = { unit: "minute", amount: "1", whose: "bearer", which: "next" };
+  boost.modificateurs = [nouveauModificateur("attack", "add", "1d4"), nouveauModificateur("save", "add", "1d4")];
+  a.effets = [boost];
+  b.activations = [a];
+  return b;
+}
+
+describe("brouillonVersBlocs : Bénédiction (effet qui dure porteur de modificateurs)", () => {
+  it("écrit un apply_effect et un effet qui dure avec ses dés, sans apply_modifier", () => {
+    const r = brouillonVersBlocs(benediction(), {});
+    expect(r.ok).toBe(true);
+    if (!r.ok || !r.activation) return;
+    const a = r.activation.activations[0];
+    expect(a.targets.count).toEqual({ op: "num", value: 3 });
+    expect(a.effects[0]).toMatchObject({ action: "apply_effect", who: "target" });
+    const d = r.activation.durable_effects[0];
+    expect(d).toMatchObject({ label: { fr: "Bénédiction" }, conditions: [], concentration: true, duration: { unit: "minute", amount: 1 }, token: null });
+    expect(d.modifiers.map((m) => m.target)).toEqual(["attack", "save"]);
+    expect(d.modifiers[0].value).toMatchObject({ op: "dice" });
+  });
+
+  it("se relit en une seule brique et se réécrit à l'identique", () => {
+    const r = brouillonVersBlocs(benediction(), {});
+    if (!r.ok) throw new Error("écriture refusée");
+    const relu = blocsVersBrouillon([{ blockType: "activation", data: r.activation }]);
+    const e = relu.activations[0].effets[0];
+    expect(e.type).toBe("apply_boost");
+    if (e.type === "apply_boost") expect(e.modificateurs.map((m) => `${m.cible}:${m.valeur}`)).toEqual(["attack:1d4", "save:1d4"]);
+    expect(brouillonVersBlocs(relu, {})).toEqual(r);
+  });
+
+  it("refuse un dé sur une cible fixe, et le dit", () => {
+    const b = benediction();
+    const e = b.activations[0].effets[0];
+    if (e.type !== "apply_boost") throw new Error("type inattendu");
+    e.modificateurs = [nouveauModificateur("ac", "add", "1d4")];
+    const r = brouillonVersBlocs(b, {});
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.erreurs[0]).toContain("Un dé ne s'ajoute qu'à un jet");
+    expect(erreurFormule("1d4", { sansDes: true })).not.toBeNull();
+    expect(erreurFormule("1d4")).toBeNull();
+  });
+
+  it("demande un nom et au moins un modificateur", () => {
+    const b = benediction();
+    const e = b.activations[0].effets[0];
+    if (e.type !== "apply_boost") throw new Error("type inattendu");
+    e.nom = "";
+    e.modificateurs = [];
+    const r = brouillonVersBlocs(b, {});
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.erreurs.join(" ")).toContain("donne un nom");
+  });
+
+  it("garde une valeur en formule (max(1, mod. CHA)) et un drapeau sans valeur", () => {
+    const b = benediction();
+    const e = b.activations[0].effets[0];
+    if (e.type !== "apply_boost") throw new Error("type inattendu");
+    e.modificateurs = [nouveauModificateur("save", "add", "max(1, {ability.cha})"), nouveauModificateur("attack", "advantage", "")];
+    const r = brouillonVersBlocs(b, {});
+    expect(r.ok).toBe(true);
+    if (r.ok && r.activation) {
+      const [somme, avantage] = r.activation.durable_effects[0].modifiers;
+      expect(somme.value).toMatchObject({ op: "max" });
+      expect(avantage).toEqual({ target: "attack", op: "advantage" });
+    }
+  });
+});
+
+describe("un apply_modifier déjà enregistré", () => {
+  const donnees: ActivationBlockData = zActivationBlockData.parse({
+    activations: [
+      {
+        id: "a",
+        label: { fr: "Bouclier" },
+        cost: { action: "reaction", resources: [] },
+        targets: { kind: "self" },
+        effects: [{ action: "apply_modifier", who: "self", modifier: { target: "ac", op: "add", value: 5, source: "activation:a", label: "Bouclier", layer: 7 } }],
+        variants: null,
+      },
+    ],
+    durable_effects: [],
+  });
+
+  it("se relit en brique de modificateur temporaire sans perdre cible, valeur ni libellé", () => {
+    const b = blocsVersBrouillon([{ blockType: "activation", data: donnees }]);
+    const e = b.activations[0].effets[0];
+    expect(e.type).toBe("apply_boost");
+    if (e.type !== "apply_boost") return;
+    expect(e.nom).toBe("Bouclier");
+    expect(e.modificateurs.map((m) => [m.cible, m.op, m.valeur])).toEqual([["ac", "add", "5"]]);
+    const r = brouillonVersBlocs(b, {});
+    expect(r.ok).toBe(true);
+    if (r.ok && r.activation) {
+      expect(r.activation.activations[0].effects[0].action).toBe("apply_effect");
+      expect(r.activation.durable_effects[0].modifiers).toEqual([{ target: "ac", op: "add", value: 5 }]);
+    }
   });
 });

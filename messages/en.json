@@ -184,6 +184,24 @@
     "resultats": "Search results",
     "nouvelleEntiteCourt": "New entity"
   },
+  "valeursCalculees": {
+    "critique": "critical {plage}",
+    "metres": "{n} m",
+    "sensEtVitesses": "Senses and speeds",
+    "vitesses": {
+      "fly": "Fly",
+      "swim": "Swim",
+      "climb": "Climb",
+      "burrow": "Burrow"
+    },
+    "sens": {
+      "darkvision": "Darkvision",
+      "blindsight": "Blindsight",
+      "tremorsense": "Tremorsense",
+      "truesight": "Truesight"
+    },
+    "maitrisesAccordees": "Granted by a rule"
+  },
   "regles": {
     "briques": {
       "insererReference": "Insert a reference",
@@ -226,6 +244,7 @@
         "apply_state": "Apply a condition",
         "existing_durable": "Lasting effect kept",
         "apply_modifier": "Modifier",
+        "apply_boost": "Temporary modifier",
         "grant_budget": "Action budget",
         "move": "Movement",
         "roll": "Free roll",
@@ -255,6 +274,9 @@
       "operation": "Effect",
       "valeur": "Value",
       "libelleModificateur": "Modifier label",
+      "nomEffet": "Effect name",
+      "ajouterModificateur": "+ Add a modifier",
+      "retirerModificateur": "Remove this modifier",
       "genreBudget": "Budget",
       "budget": {
         "action": "Action",
@@ -642,6 +664,7 @@
     "effetsChiffres": "Numeric effects (optional)",
     "effetsChiffresAide": "Only for effects that truly match one of these targets — everything else about the feat belongs in the text above.",
     "ajouterEffetChiffre": "+ Add a numeric effect",
+    "valeurDuModificateur": "Value (number or formula)",
     "cibleDuModificateur": "Modifier target",
     "operationDuModificateur": "Modifier operation",
     "creerDon": "Create feat",

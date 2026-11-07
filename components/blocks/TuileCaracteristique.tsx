@@ -22,6 +22,8 @@ export default function TuileCaracteristique({
   libelleSauvegarde,
   maitrise,
   onSauvegarde,
+  desTest,
+  sauvegardeEtroite,
 }: {
   abreviation: string;
   /** « +4 », déjà formaté. */
@@ -36,6 +38,13 @@ export default function TuileCaracteristique({
   libelleSauvegarde: string;
   maitrise: boolean;
   onSauvegarde: () => void;
+  /** V3.1-157 : les dés de bonus du test (« +1d4 »), sous le modificateur. Absent sans dé. */
+  desTest?: string;
+  /**
+   * V3.1-157 : le texte du bouton du bas SOUS 40rem de fiche, quand des dés s'y ajoutent (« +3 + 1d4 ») : sans le mot « Sauv. », pour tenir
+   * dans une tuile de téléphone (trois par ligne). Au-delà, `sauvegarde` complet.
+   */
+  sauvegardeEtroite?: string;
 }) {
   return (
     <div className="flex flex-col items-center gap-1 rounded-lg border border-edge/60 bg-panel-raised px-2 py-2.5 text-center">
@@ -48,6 +57,7 @@ export default function TuileCaracteristique({
         className="min-h-9 min-w-12 text-xl font-bold text-ink hover:text-accent @min-[40rem]:min-h-0 @min-[40rem]:min-w-0"
       >
         {modificateur}
+        {desTest && <span className="block text-xs font-semibold leading-tight text-accent">{desTest}</span>}
       </button>
       {milieu}
       <button
@@ -60,7 +70,14 @@ export default function TuileCaracteristique({
         }`}
       >
         <span className={`h-1.5 w-1.5 rounded-full ${maitrise ? "bg-accent" : "bg-edge"}`} aria-hidden="true" />
-        {sauvegarde}
+        {sauvegardeEtroite ? (
+          <>
+            <span className="@min-[40rem]:hidden">{sauvegardeEtroite}</span>
+            <span className="hidden @min-[40rem]:inline">{sauvegarde}</span>
+          </>
+        ) : (
+          sauvegarde
+        )}
       </button>
     </div>
   );

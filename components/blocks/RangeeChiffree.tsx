@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { ftToM } from "@/src/core/rules/encumbrance";
+import { lignesSensVitesses } from "@/lib/ui/valeursCalculees";
 import { squaresFromMeters } from "@/src/core/rules/gridSquares";
 import type { DerivedSheet } from "@/src/core/rules/sheet";
 import type { DeathSaves } from "@/src/core/rules/deathSaves";
@@ -320,6 +321,9 @@ export default function RangeeChiffree({
   // (vérifié à la main, voir `gridSquares.test.ts` pour les vitesses standard).
   const speedMeters = Math.round(ftToM(sheet.speed.value));
   const speedSquares = squaresFromMeters(speedMeters);
+  // V3.1-157 : vitesses spéciales et sens accordés par les règles (rien tant que le personnage n'en a pas).
+  const tv = useTranslations("valeursCalculees");
+  const sensEtVitesses = lignesSensVitesses(sheet);
 
   return (
     <>
@@ -414,6 +418,16 @@ export default function RangeeChiffree({
 
       {/* V3.1-109 : la fiche montre ses dés de vie, mais le MJ les dépense (interrupteur coupé). */}
       {pret && !commandes.hit_dice && <p className="text-xs text-ink-muted">{t("leMjDepenseDes")}</p>}
+
+      {pret && sensEtVitesses.length > 0 && (
+        <p className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 text-xs text-ink-soft" aria-label={tv("sensEtVitesses")}>
+          {sensEtVitesses.map((l) => (
+            <span key={`${l.genre}.${l.cle}`} title={l.sources} className="whitespace-nowrap">
+              {tv(l.genre === "vitesse" ? `vitesses.${l.cle}` : `sens.${l.cle}`)} <span className="font-mech text-ink">{tv("metres", { n: l.metres })}</span>
+            </span>
+          ))}
+        </p>
+      )}
 
       {/* V3.1-32 — la concentration en cours, juste avant les états. Sur la fiche :
           affichage seul. Sur la Table (V3.1-34), le × la rompt. Le sort ouvre sa règle

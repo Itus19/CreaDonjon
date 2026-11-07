@@ -16,16 +16,19 @@ export default function ChampFormule({
   valeur,
   onChange,
   facultatif,
+  sansDes,
 }: {
   libelle: string;
   valeur: string;
   onChange: (v: string) => void;
   /** Un champ vide est alors permis (nombre de cibles : une seule par défaut). */
   facultatif?: boolean;
+  /** Un dé y est refusé (valeur d'un modificateur sur une cible fixe : CA, vitesse, PV, sens) ; l'erreur s'affiche sous le champ. */
+  sansDes?: boolean;
 }) {
   const t = useTranslations("regles.briques");
   const champ = useRef<HTMLInputElement>(null);
-  const erreur = facultatif && valeur.trim() === "" ? null : erreurFormule(valeur);
+  const erreur = facultatif && valeur.trim() === "" ? null : erreurFormule(valeur, { sansDes });
 
   function inserer(texte: string) {
     const el = champ.current;
