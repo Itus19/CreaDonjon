@@ -14,17 +14,6 @@ Ordre conseillé : 162 (les textes en données) avant 161 et 163 ; 167 (noyau) i
 
 ---
 
-### V3.1-171 — Identité : des champs à la même taille, et « le Commun est acquis » (sans modèle IA)
-
-**Modèle conseillé : Sonnet.**
-
-- Le sélecteur du mois de naissance n'a pas la hauteur des autres champs. Passer en revue **tous** les champs et boutons de l'assistant (chaque étape, 1440 et 390 px) : même hauteur, même rayon, mêmes recettes que la charte (`docs/CHARTE-UI.md`, champs et boutons).
-- Langues : entre le titre et la liste, une ligne « Le Commun est acquis d'office ; choisis-en deux autres. » (le nombre et la langue acquise viennent du ruleset, pas du texte).
-
-**Critères.** Aucun champ ni bouton de l'assistant hors gabarit (captures avant/après dans le compte rendu) ; la mention suit le ruleset.
-
-**Sous-tâches Haiku.** Recenser les champs et boutons de l'assistant et leurs classes ; planche du catalogue.
-
 ### V3.1-177 — Aperçu : la colonne s'efface, la fiche s'affiche comme sur la fiche (sans modèle IA)
 
 **Modèle conseillé : Sonnet.**

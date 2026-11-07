@@ -18,10 +18,13 @@ export default function PronomsField({
   value,
   onChange,
   className = "",
+  formulaire = false,
 }: {
   value: Pronouns | undefined;
   onChange: (next: Pronouns) => void;
   className?: string;
+  /** V3.1-171 : la saisie libre à la hauteur des champs de formulaire (assistant). */
+  formulaire?: boolean;
 }) {
   const courant: Pronouns = value ?? { sets: [] };
   const [autreOuvert, setAutreOuvert] = useState(Boolean(courant.custom));
@@ -58,7 +61,7 @@ export default function PronomsField({
             maxLength={80}
             placeholder="préciser…"
             aria-label="Pronoms, autre"
-            className="w-32 rounded-md border border-edge bg-transparent px-2 py-1 text-sm normal-case tracking-normal text-ink outline-none"
+            className={`w-32 rounded-md border border-edge bg-transparent px-2 ${formulaire ? "py-1.5" : "py-1"} text-sm normal-case tracking-normal text-ink outline-none`}
           />
         )}
       </div>

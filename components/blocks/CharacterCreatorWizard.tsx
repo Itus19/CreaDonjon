@@ -705,6 +705,7 @@ export default function CharacterCreatorWizard({
                 onChoisirSousClasse: choisirSousClasse,
                 sousEtapes: chemin.etapes.flatMap((e) => e.sous),
                 onAller: aller,
+                languesAcquises: languages.map((l) => LANGUAGE_LABELS_FR[l.key as LanguageKey] ?? l.name),
                 dons: featCatalog,
                 amelioration: { character, patchCharacter, sheet, abilityScoreCap: ruleset.characterRules?.ability_score_cap, nomClasse },
               }}

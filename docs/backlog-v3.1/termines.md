@@ -5763,6 +5763,22 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
 - `AbilityScoreStep.tsx` : une seule ligne de chiffres par case (« 15 +2 »), le détail complet au survol ; la légende sous les six cases (cinq couleurs de la charte). Les sources viennent toujours de la fiche du moteur.
 - Vérifié au navigateur (Testeur MJ, Humain Rôdeur, tableau standard) : les six cases sur une ligne, plus aucun texte qui déborde ; la légende « Valeur attribuée ». Le cas avec bonus (l'Acolyte +1) est montré sur la planche « Création » du catalogue ; la sous-étape de répartition de l'historique n'a pas été pilotée au navigateur.
 
+### V3.1-171 — Identité : des champs à la même taille, et « le Commun est acquis » (7 novembre)
+
+**Modèle conseillé : Sonnet.**
+
+- Le sélecteur du mois de naissance n'a pas la hauteur des autres champs. Passer en revue **tous** les champs et boutons de l'assistant (chaque étape, 1440 et 390 px) : même hauteur, même rayon, mêmes recettes que la charte (`docs/CHARTE-UI.md`, champs et boutons).
+- Langues : entre le titre et la liste, une ligne « Le Commun est acquis d'office ; choisis-en deux autres. » (le nombre et la langue acquise viennent du ruleset, pas du texte).
+
+**Critères.** Aucun champ ni bouton de l'assistant hors gabarit (captures avant/après dans le compte rendu) ; la mention suit le ruleset.
+
+**Sous-tâches Haiku.** Recenser les champs et boutons de l'assistant et leurs classes ; planche du catalogue.
+
+**Fait le 7 novembre** (Opus seul, recensement fait à la main plutôt que délégué : quelques fichiers déjà chargés).
+- **Cause** : le mois passait par `Dropdown` en taille `sm` (le genre, juste au-dessus, en `md`) ; Prénom, Nom, Âge, Année, Jour et les saisies « préciser… » étaient en `py-1`, la charte dit `py-1.5`. Ces champs sont partagés avec l'en-tête dense de la fiche : une option `formulaire` (que seul l'assistant passe) leur donne la hauteur de formulaire, la fiche garde la sienne.
+- **Mesure** (navigateur, 1440 et 390 px) : dans l'Identité, les 6 champs et les 2 listes font 34 px (le mois était plus petit avant : capture `26-pronoms`) ; dans chaque étape, les boutons-pastilles font 26 px. Seule l'étape Aperçu garde des hauteurs mêlées (30, 24, 22, 20 px) : c'est la fiche du personnage, dense, que V3.1-177 remplace.
+- **Langues** : au-dessus du choix des langues du personnage, « Acquis d'office : Commun ; choisissez-en deux autres. » La langue vient des langues fixes du ruleset (`languages`), le nombre du choix lui-même ; rien n'est écrit en dur.
+
 ### V3.1-170 — Pronoms : une liste à choix multiples, lue pour accorder (7 novembre)
 
 **Modèle conseillé : Opus** (forme des données d'un bloc, lecture par le solo).

@@ -24,7 +24,7 @@ export default function IdentityStep({
     <div className="flex flex-col gap-3">
       <p className="text-sm text-ink-muted">Qui est ce personnage ? Rien n&apos;est obligatoire ici : tout se complète plus tard sur la fiche.</p>
       <div className="flex flex-wrap items-start gap-3">
-        <NameFields character={character} patchCharacter={patchCharacter} className="w-40" />
+        <NameFields character={character} patchCharacter={patchCharacter} className="w-40" formulaire />
         <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-ink-muted">
           Genre
           <Dropdown
@@ -47,13 +47,13 @@ export default function IdentityStep({
               onChange={(e) => patchCharacter({ gender: { custom: e.target.value } })}
               placeholder="préciser…"
               aria-label="Genre personnalisé"
-              className="w-32 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none"
+              className="w-32 rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none"
             />
           )}
         </label>
-        <PronomsField value={character.pronouns} onChange={(pronouns) => patchCharacter({ pronouns })} />
+        <PronomsField value={character.pronouns} onChange={(pronouns) => patchCharacter({ pronouns })} formulaire />
       </div>
-      <BirthFields character={character} patchCharacter={patchCharacter} className="w-24" />
+      <BirthFields character={character} patchCharacter={patchCharacter} className="w-24" formulaire />
     </div>
   );
 }

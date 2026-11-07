@@ -2868,6 +2868,7 @@
       "druidic": "Druidique"
     },
     "choixDeNiveau": "Choix de niveau",
+    "languesAcquises": "Acquis d'office : {liste} ; choisissez-en {n, plural, one {une autre} =2 {deux autres} =3 {trois autres} other {# autres}}.",
     "sousClasse": {
       "titre": "{classe} — sous-classe",
       "source": "{classe}, niveau {n}",

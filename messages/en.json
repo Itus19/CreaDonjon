@@ -2867,6 +2867,7 @@
       "druidic": "Druidic"
     },
     "choixDeNiveau": "Level choices",
+    "languesAcquises": "Known from the start: {liste}; choose {n, plural, one {one more} other {# more}}.",
     "sousClasse": {
       "titre": "{classe} — subclass",
       "source": "{classe}, level {n}",

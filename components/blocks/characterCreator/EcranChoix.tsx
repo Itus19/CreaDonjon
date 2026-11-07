@@ -49,6 +49,8 @@ export interface ContexteEcranChoix {
   /** V3.1-174 : toutes les sous-étapes du chemin (ce que fait naître une sous-classe) et le moyen d'y aller. */
   sousEtapes: readonly SousEtape[];
   onAller: (position: string) => void;
+  /** V3.1-171 : les langues acquises d'office (le Commun), déjà traduites, rappelées au-dessus du choix des langues du personnage. */
+  languesAcquises: readonly string[];
 }
 
 /**
@@ -183,7 +185,32 @@ function Choix({
     return <ChoixMaitrise sous={sous} ctx={ctx} libelleOption={libelleOption} onChoisir={onChoisir} />;
   }
 
+  if (sous.cle === "character.languages" && ctx.languesAcquises.length > 0) {
+    return <ChoixLangues sous={sous} ctx={ctx} libelleOption={libelleOption} onChoisir={onChoisir} />;
+  }
+
   return <ChoixGenerique sous={sous} libelleOption={libelleOption} dejaAcquis={ctx.dejaAcquis(sous)} onChoisir={onChoisir} />;
+}
+
+/** V3.1-171 — Les langues du personnage : ce qui est acquis d'office (lu dans le ruleset, pas écrit ici), puis le choix des autres. */
+function ChoixLangues({
+  sous,
+  ctx,
+  libelleOption,
+  onChoisir,
+}: {
+  sous: SousEtape;
+  ctx: ContexteEcranChoix;
+  libelleOption: (cle: string) => string;
+  onChoisir: (valeurs: string[]) => void;
+}) {
+  const t = useTranslations("creation");
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-sm text-ink-soft">{t("languesAcquises", { liste: ctx.languesAcquises.join(", "), n: sous.nombre })}</p>
+      <ChoixGenerique sous={sous} libelleOption={libelleOption} dejaAcquis={ctx.dejaAcquis(sous)} onChoisir={onChoisir} />
+    </div>
+  );
 }
 
 /**

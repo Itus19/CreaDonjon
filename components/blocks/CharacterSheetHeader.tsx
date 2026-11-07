@@ -55,10 +55,13 @@ export function AgeInput({
   age,
   onChange,
   className,
+  formulaire = false,
 }: {
   age: number | undefined;
   onChange: (age: number | undefined) => void;
   className?: string;
+  /** V3.1-171 : voir `NameFields`. */
+  formulaire?: boolean;
 }) {
   return (
     <input
@@ -75,7 +78,7 @@ export function AgeInput({
       }}
       placeholder="—"
       aria-label="Âge"
-      className={`rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none ${className ?? ""}`}
+      className={`rounded-md border border-edge bg-transparent px-2 ${formulaire ? "py-1.5" : "py-1"} text-sm text-ink outline-none ${className ?? ""}`}
     />
   );
 }
@@ -89,11 +92,15 @@ export function NameFields({
   character,
   patchCharacter,
   className,
+  formulaire = false,
 }: {
   character: CharacterBlockData;
   patchCharacter: (fields: Partial<CharacterBlockData>) => void;
   className?: string;
+  /** V3.1-171 : la hauteur des champs de formulaire de la charte (assistant) ; sinon celle, dense, de l'en-tête de la fiche. */
+  formulaire?: boolean;
 }) {
+  const pad = formulaire ? "py-1.5" : "py-1";
   return (
     <>
       <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-ink-muted">
@@ -101,7 +108,7 @@ export function NameFields({
         <input
           value={character.given_name ?? ""}
           onChange={(e) => patchCharacter({ given_name: e.target.value })}
-          className={`rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none ${className ?? ""}`}
+          className={`rounded-md border border-edge bg-transparent px-2 ${pad} text-sm text-ink outline-none ${className ?? ""}`}
         />
       </label>
       <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-ink-muted">
@@ -109,7 +116,7 @@ export function NameFields({
         <input
           value={character.family_name ?? ""}
           onChange={(e) => patchCharacter({ family_name: e.target.value })}
-          className={`rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none ${className ?? ""}`}
+          className={`rounded-md border border-edge bg-transparent px-2 ${pad} text-sm text-ink outline-none ${className ?? ""}`}
         />
       </label>
     </>
@@ -127,11 +134,15 @@ export function BirthFields({
   character,
   patchCharacter,
   className,
+  formulaire = false,
 }: {
   character: CharacterBlockData;
   patchCharacter: (fields: Partial<CharacterBlockData>) => void;
   className?: string;
+  /** V3.1-171 : voir `NameFields`. */
+  formulaire?: boolean;
 }) {
+  const pad = formulaire ? "py-1.5" : "py-1";
   const calendar = useWorldCalendarContext();
   const today = calendar.currentDate;
   const birth = character.birth;
@@ -179,9 +190,9 @@ export function BirthFields({
         <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-ink-muted">
           Âge
           {today ? (
-            <AgeInput age={age} onChange={onAgeChange} className={className} />
+            <AgeInput age={age} onChange={onAgeChange} className={className} formulaire={formulaire} />
           ) : (
-            <input value="—" readOnly aria-label="Âge" title="L'âge attend la date du jour du monde (Calendrier)" className={`rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink-muted outline-none ${className ?? ""}`} />
+            <input value="—" readOnly aria-label="Âge" title="L'âge attend la date du jour du monde (Calendrier)" className={`rounded-md border border-edge bg-transparent px-2 ${pad} text-sm text-ink-muted outline-none ${className ?? ""}`} />
           )}
         </label>
         {!today && (
@@ -197,7 +208,7 @@ export function BirthFields({
                 const n = Number(raw);
                 if (Number.isInteger(n)) writeBirth(n, birth?.month ?? null, birth?.day ?? null);
               }}
-              className={`rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none ${className ?? ""}`}
+              className={`rounded-md border border-edge bg-transparent px-2 ${pad} text-sm text-ink outline-none ${className ?? ""}`}
             />
           </label>
         )}
@@ -215,7 +226,7 @@ export function BirthFields({
               if (Number.isInteger(n) && n >= 1 && n <= maxDay) onMonthDayChange(birth?.month ?? null, n);
             }}
             aria-label="Jour de naissance"
-            className="w-16 rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none disabled:opacity-50"
+            className={`w-16 rounded-md border border-edge bg-transparent px-2 ${pad} text-sm text-ink outline-none disabled:opacity-50`}
           />
         </label>
         <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-ink-muted">
@@ -225,6 +236,7 @@ export function BirthFields({
             options={monthOptions}
             onChange={(v) => onMonthDayChange(v === "" ? null : Number(v), v === "" ? null : (birth?.day ?? 1))}
             aria-label="Mois de naissance"
+            size={formulaire ? "md" : "sm"}
           />
         </label>
       </div>
