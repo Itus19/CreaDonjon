@@ -1,5 +1,5 @@
 import "server-only";
-import type { BonusDie } from "@/src/core/rules/sheet";
+import { rollBonus, type BonusDie } from "@/src/core/rules/sheet";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
 import type { Locale } from "@/src/i18n/request";
@@ -54,6 +54,9 @@ import { ABILITY_LABELS, type Ability } from "@/src/core/rules/abilities";
 import { serverRng } from "@/src/server/services/rng";
 import type { TargetedRollInput } from "@/lib/combats/schemas";
 import { expireFeatureEffects } from "@/src/server/services/effectExpiry";
+import { parseFormula } from "@/src/core/formula/parser";
+import type { PendingRoll } from "@/src/core/rules/rollWindow";
+import { gatherReactors, interveneOnRoll, type ReactorPool } from "@/src/server/services/rollWindows";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -451,7 +454,10 @@ export type TargetedRollResult =
       ignored: string[];
       targetOutOfFight: boolean;
       chained: ChainedDamage | null;
-      rollEventId: string;
+      /** `null` : le jet attend des réactions (`rollWindowId`), rien n'est encore journalisé ni appliqué. */
+      rollEventId: string | null;
+      /** V3.1-160 (ADR 0075) : la fenêtre de réaction ouverte sur ce jet ; la suite viendra à sa reprise. */
+      rollWindowId: string | null;
       /** V3.1-111 : un sort à sauvegarde ne s'applique pas ici — la cible répond à cette demande. */
       saveRequestId: string | null;
       /** V3.1-38 (suite) : le jet tel que l'outil de dés le montre (attaque, ou dégâts) ; `null` sans dés à montrer. */
@@ -472,6 +478,46 @@ interface MonsterBlocks {
  * bloc brut (« Bite ») : aucune attaque de monstre ciblée n'aboutissait en
  * français.
  */
+/** V3.1-160 : une attaque déjà lancée, modifiée par les réactions. */
+export interface PresetAttack {
+  total: number;
+  natural: number;
+  critRange: number;
+  acBonus: number;
+  label: string;
+  expression: string;
+}
+
+function attackFromPreset(p: PresetAttack): AttackRollResult {
+  return {
+    total: p.total,
+    isCritical: p.natural >= p.critRange,
+    isCriticalFail: p.natural === 1,
+    trace: [{ text: `d20 = ${p.natural}`, value: p.natural }],
+    ast: parseFormula(p.expression),
+    expression: p.expression,
+  };
+}
+
+/** Le résultat d'un jet suspendu : rien n'est encore appliqué. */
+function pendingResult(windowId: string, facts: string[], shown: { total: number; trace: TraceStep[] }[]): TargetedRollResult {
+  return {
+    ok: true,
+    verdict: null,
+    amount: null,
+    facts,
+    changes: [],
+    hints: ["En attente des réactions."],
+    ignored: [],
+    targetOutOfFight: false,
+    chained: null,
+    rollEventId: null,
+    rollWindowId: windowId,
+    saveRequestId: null,
+    dice: rollsForDisplay(shown),
+  };
+}
+
 async function loadMonsterBlocks(supabase: TypedClient, params: { worldId: string; ruleKey: string; locale: Locale }): Promise<MonsterBlocks | null> {
   const entry = await getRuleEntryForWorld(supabase, params.worldId, params.ruleKey, params.locale);
   if (!entry) return null;
@@ -581,6 +627,12 @@ export async function resolveTargetedRoll(
     };
     /** V3.1-104 : `false` pour un joueur — ce qui n'est pas à lui s'écrit par un changement signé. Absent : le MJ, écriture directe. */
     callerIsGm?: boolean;
+    /**
+     * V3.1-160 (ADR 0075) : la reprise d'une fenêtre de réaction rejoue ce
+     * chemin avec le jet déjà lancé, modifié par les réactions — aucun dé
+     * n'est relancé, aucune fenêtre ne se rouvre.
+     */
+    preset?: { attack?: PresetAttack; damage?: { total: number; type?: string } };
   }
 ): Promise<TargetedRollResult> {
   const { input } = params;
@@ -619,6 +671,8 @@ export async function resolveTargetedRoll(
   const pcEntityIds = new Set(campaignCharacters.map((c) => c.entity_id));
   const targetKey = `participant:${target.id}`;
   const targetIsPc = target.entity_id !== null && pcEntityIds.has(target.entity_id);
+  // V3.1-160 : les clés des réactions — un PJ par sa fiche, un autre participant par sa ligne.
+  const targetReactKey = targetIsPc && target.entity_id ? target.entity_id : targetKey;
 
   // L'acteur : un personnage (sa fiche), ou un participant du combat (un monstre et son bloc de stats).
   let ctx: CharacterActionContext | null = null;
@@ -634,6 +688,19 @@ export async function resolveTargetedRoll(
   }
   const actorName = ctx?.entityName ?? actorParticipant?.label ?? "?";
   const actorTriggerKey = ctx ? ctx.entityId : null;
+  // V3.1-160 : ceux qui pourraient réagir — tous les PJ du combat chez le MJ ; chez une joueuse, ses seules fiches.
+  let pool: ReactorPool | null = null;
+  const reactorPool = async (): Promise<ReactorPool> => {
+    pool ??= await gatherReactors(supabase, {
+      campaignId: params.campaignId,
+      participants: participantsSignes ?? (await listCombatParticipants(supabase, combat.id)),
+      pcs: campaignCharacters,
+      ...(joueur && ctx ? { only: new Set([ctx.entityId]) } : {}),
+      loaded: ctx ? [ctx] : [],
+      locale: params.locale,
+    });
+    return pool;
+  };
 
   const facts: string[] = [];
   // V3.1-149 : ce que les joueurs lisent au journal (sans CA ni chiffres cachés) ; `facts` est la vue de l'appelant.
@@ -668,12 +735,21 @@ export async function resolveTargetedRoll(
     if (attaquant) for (const key of marques.removeFromAttacker) effects.push({ action: "remove_condition", who: `participant:${attaquant.id}`, key });
     for (const key of marques.removeFromTarget) effects.push({ action: "remove_condition", who: targetKey, key });
     hintsBefore.push(...marques.notes);
-    if (action.kind === "weapon" && ctx) {
+    let critRange = 20;
+    let acBonus = 0;
+    if (params.preset?.attack) {
+      attack = attackFromPreset(params.preset.attack);
+      label = params.preset.attack.label;
+      critRange = params.preset.attack.critRange;
+      acBonus = params.preset.attack.acBonus;
+      shown.push(attack);
+    } else if (action.kind === "weapon" && ctx) {
       const rolled = await rollWeaponAttack(supabase, { entityId: ctx.entityId, campaignId: params.campaignId, itemId: action.itemId, advantage: avantage, locale: params.locale });
       if ("error" in rolled) return { ok: false, reason: rolled.error };
       if (!rolled.attack) return { ok: false, reason: "not_a_weapon" };
       attack = rolled.attack;
       label = rolled.weaponLabel;
+      critRange = rollBonus(ctx.sheet, { roll: "attack", kind: "weapon" }).critRange;
       shown.push(attack);
     } else if (action.kind === "monster_action" && monsterAction && monsterAction.attack_bonus !== undefined) {
       attack = resolveAttackRoll({ abilityMod: 0, proficiencyBonus: monsterAction.attack_bonus, proficient: true, advantage: avantage }, serverRng);
@@ -683,7 +759,39 @@ export async function resolveTargetedRoll(
     } else {
       return { ok: false, reason: action.kind === "monster_action" ? "no_attack" : "invalid_action" };
     }
-    verdict = attackVerdict(attack, target.ac);
+    // V3.1-160 (ADR 0075) : le d20 est connu, rien n'est appliqué — quelqu'un peut-il réagir ?
+    if (!params.preset && target.ac !== null) {
+      const roll: PendingRoll = {
+        kind: "attack",
+        roller: ctx ? ctx.entityId : `participant:${actorParticipant?.id ?? ""}`,
+        target: targetReactKey,
+        natural: attack.trace[0]?.value ?? 0,
+        total: attack.total,
+        critRange,
+        ac: target.ac,
+        dc: null,
+        acBonus: 0,
+        damage: null,
+      };
+      const pool = await reactorPool();
+      const r = await interveneOnRoll(supabase, {
+        campaignId: params.campaignId,
+        combat,
+        roll,
+        pool,
+        label: `${actorName} attaque ${target.label} (${label}) : ${attack.total}`,
+        resume: { input: params.input, callerIsGm: params.callerIsGm ?? true, preset: { label, expression: attack.expression, critRange } },
+        locale: params.locale,
+      });
+      if (r.kind === "window") return pendingResult(r.windowId, [`${actorName} attaque ${target.label} (${label}) : ${attack.total} — en attente des réactions.`], shown);
+      if (r.automatic.length > 0) {
+        attack = attackFromPreset({ total: r.roll.total, natural: r.roll.natural ?? 0, critRange, acBonus: r.roll.acBonus, label, expression: attack.expression });
+        acBonus = r.roll.acBonus;
+        fait(`${r.automatic.map((e) => e.ruleKey).join(", ")} : le jet devient ${attack.total}.`);
+      }
+    }
+    const caEffective = target.ac === null ? null : target.ac + acBonus;
+    verdict = attackVerdict(attack, caEffective);
     fait(
       `${actorName} attaque ${target.label} (${label}) : ${attack.total}` +
         (target.ac === null ? " — CA inconnue, la table tranche" : ` contre CA ${target.ac} — ${verdict === "hit" ? "touché" : "raté"}`) +
@@ -691,7 +799,7 @@ export async function resolveTargetedRoll(
         ".",
       attackFactForPlayer({ actor: actorName, target: target.label, label, total: attack.total, verdict: target.ac === null ? null : verdict, critical: attack.isCritical, criticalFail: attack.isCriticalFail })
     );
-    if (actorTriggerKey && target.ac !== null) events = eventsForAttack({ attacker: actorTriggerKey, target: targetKey, result: attack, ac: target.ac });
+    if (actorTriggerKey && caEffective !== null) events = eventsForAttack({ attacker: actorTriggerKey, target: targetKey, result: attack, ac: caEffective });
     // V3.1-148 : la botte de l'arme, si elle est maîtrisée.
     // Seuls comptent les choix de maîtrise encore ouverts à la fiche (comme l'onglet Actions) : une classe retirée ne laisse pas sa maîtrise.
     const maitrises = (c: NonNullable<typeof ctx>) =>
@@ -744,7 +852,10 @@ export async function resolveTargetedRoll(
   } else if (input.kind === "damage") {
     let total: number;
     let damageType: string | undefined;
-    if (action.kind === "weapon" && ctx) {
+    if (params.preset?.damage) {
+      total = params.preset.damage.total;
+      damageType = params.preset.damage.type;
+    } else if (action.kind === "weapon" && ctx) {
       const rolled = await rollWeaponDamage(supabase, { entityId: ctx.entityId, campaignId: params.campaignId, itemId: action.itemId, critical: critique, versatile: false, locale: params.locale });
       if ("error" in rolled) return { ok: false, reason: rolled.error };
       if (!rolled.damage) return { ok: false, reason: "not_a_weapon" };
@@ -761,6 +872,33 @@ export async function resolveTargetedRoll(
       }
     } else {
       return { ok: false, reason: "no_formula" };
+    }
+    // V3.1-160 (ADR 0075) : les dégâts sont lancés, rien n'est écrit — quelqu'un peut-il réagir ?
+    if (!params.preset) {
+      const roll: PendingRoll = {
+        kind: "damage",
+        roller: ctx ? ctx.entityId : `participant:${actorParticipant?.id ?? ""}`,
+        target: targetReactKey,
+        natural: null,
+        total,
+        critRange: 20,
+        ac: null,
+        dc: null,
+        acBonus: 0,
+        damage: { base: total, multiplier: 1 },
+      };
+      const pool = await reactorPool();
+      const r = await interveneOnRoll(supabase, {
+        campaignId: params.campaignId,
+        combat,
+        roll,
+        pool,
+        label: `Dégâts sur ${target.label} : ${total}`,
+        resume: { input: params.input, callerIsGm: params.callerIsGm ?? true, damageType: damageType ?? null },
+        locale: params.locale,
+      });
+      if (r.kind === "window") return pendingResult(r.windowId, [`Dégâts sur ${target.label} : ${total} — en attente des réactions.`], shown);
+      total = r.roll.total;
     }
     amount = total;
     fait(`Dégâts sur ${target.label} : ${total}${critique ? " (critique)" : ""}.`);
@@ -889,6 +1027,7 @@ export async function resolveTargetedRoll(
       targetOutOfFight: false,
       chained: null,
       rollEventId: rollEvent.id,
+      rollWindowId: null,
       saveRequestId: request.id,
       dice: rollsForDisplay(shown),
     };
@@ -930,6 +1069,7 @@ export async function resolveTargetedRoll(
     targetOutOfFight,
     chained,
     rollEventId: rollEvent.id,
+    rollWindowId: null,
     saveRequestId: null,
     dice: rollsForDisplay(shown),
   };

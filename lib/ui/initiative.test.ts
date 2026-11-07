@@ -39,6 +39,7 @@ function participant(extra: Partial<CombatParticipantRow> & { id: string }): Com
     conditions: [],
     concentration: null,
     resources_used: {},
+    turn_usage: { reaction_at: null, once: {} },
     is_ally: false,
     display_order: 0,
     created_at: "2026-10-24T00:00:00Z",

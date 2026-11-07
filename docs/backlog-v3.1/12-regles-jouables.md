@@ -203,8 +203,87 @@ Valeur de modificateur en formule ou en dé (+ mod. CHA, +1d4, 10 + DEX + CON), 
 
 *Reste* : Souffle du drakéide (zone, remplace une attaque : 136, 137) ; le dé d'Inspiration bardique attend 135.
 
-### ☐ V3.1-135 — Intervenir sur un jet · `L` · sans modèle IA — **à concevoir (Opus)**
+### ☐ V3.1-135 — Intervenir sur un jet · `L` · sans modèle IA — **conçu le 7 novembre ([ADR 0075](../adr/0075-intervenir-sur-un-jet.md)), découpé en V3.1-159 à 162**
 Réactions (une fenêtre de choix dans le déroulé d'un jet, côté serveur), opérations sur un jet en cours (ajouter ou soustraire un dé, relancer, fixer à 20, CA contre ce jet, diviser les dégâts), limite une fois par tour. Règles visées : 5, 9, 10, 19, 20, 27, 28, 33, 37, 39.
+
+*Conçu le 7 novembre* : [ADR 0075](../adr/0075-intervenir-sur-un-jet.md). Deux choix de l'auteur : le **jet suspendu** (si quelqu'un peut réagir, le serveur fige le jet et attend les réponses ou « Continuer » du MJ ; sinon rien ne change) ; le moteur **compte** la réaction et le « une fois par tour » en combat. Découpé ci-dessous.
+
+#### ☑ V3.1-159 — Le noyau : déclencheur de réaction, opérations sur le jet, une fois par tour · `M` · sans modèle IA — **prêt (Opus)**
+
+**Modèle conseillé : Opus** — noyau du moteur. Tests d'abord.
+
+- `playable.ts` : `trigger` (on `roll`, `roll`, `subject`, `when`, `natural`, `range`, `automatic`), `roll_operations` (sur l'activation et ses variantes : `add_die`, `reroll`, `set_natural`, `ac_bonus`, `damage_multiplier`, `add_damage`), `limit { per }`. Une opération incompatible avec le jet visé est refusée par Zod (`ac_bonus` hors attaque, `set_natural` sur des dégâts).
+- `src/core/rules/rollWindow.ts`, pur : `PendingRoll` (genre, d20 et dés, modificateurs, total, CA ou DD, verdict, dégâts) ; `eligibleReactions(roll, candidats, usage)` (déclencheur, `requires`, ressources, réaction libre, limite) ; `applyRollOperations(roll, réponses ordonnées, rng)` qui refait le verdict par `attackVerdict` et la comparaison au DD ; `wouldChangeOutcome`.
+- `turnUsage` : lecture et écriture de `{ reaction_spent, once }`, remise à zéro au début du tour du participant.
+
+**Critères d'acceptation**
+- [x] Tests : Chance relance un 1 sans fenêtre ; Indomptable relance une sauvegarde ratée avec + niveau ; Coup de chance change un test raté en 20 ; Esquive instinctive divise les dégâts ; Mots cinglants retire le dé à un jet ennemi et non allié ; Bouclier (`ac_bonus 5`) change une touche à 17 contre CA 15 en échec, et le dit (`wouldChangeOutcome`) ; une seconde réaction dans le round n'est pas éligible ; Attaque sournoise ne l'est qu'une fois par tour.
+
+*Fait le 7 novembre.* `playable.ts` : `trigger`, `roll_operations` (activation et variantes), `limit` ; `rollOperationProblems` refuse une opération hors de propos dans la validation du bloc. `src/core/rules/rollWindow.ts` : `PendingRoll`, `outcomeOf` (par `attackVerdict`, plage de critique comprise), `eligibleReactions` (déclencheur, sujet vu du réacteur et de son camp, moment, `requires` via `requirementMet` exporté d'`activation.ts`, ressources, réaction du round, limite), `applyRollOperations` (ordre donné par l'appelant ; dégâts arrondis à l'inférieur après le facteur), `wouldChangeOutcome` (`null` dès qu'un dé décide), `zTurnUsage`, `recordUse`, `resetReaction`, `turnStamp`. `rollWindow.test.ts` : 17 tests. *Reste pour 161* : l'éditeur de briques ne sait pas encore écrire ni relire `trigger`, `roll_operations` et `limit`.
+
+#### ☑ V3.1-160 — La migration et le service : le jet suspendu · `L` · sans modèle IA — **prêt (Opus)**
+
+**Modèle conseillé : Opus** — migration, RLS, sécurité (signature).
+**Dépend de** : 159.
+
+- Migration : table `roll_windows` (campagne, combat, genre, auteur, cible, état figé signé, réactions possibles avec qui répond, réponses, statut, horodatages), RLS (lecture par l'auteur, les répondants et le MJ ; aucune écriture directe), `app.answer_roll_window` (sa propre réponse seulement ; « Continuer » pour le MJ), publication temps réel ; colonne `combat_participants.turn_usage`, remise à zéro au passage de tour ; changement signé (ADR 0041) étendu à `turn_usage`. `docs/SCHEMA.md`, `docs/SECURITE.md` §2.
+- Service `rollWindows.ts` : ouvrir (signer l'état), répondre, reprendre (vérifier la signature, appliquer dans l'ordre, dépenser coûts et réactions, écrire les `rule_application`, appliquer la suite par changement signé). Branché dans `resolveTargetedRoll` (verdict, dégâts), `answerSaveRequest`, `rollAbilityCheck`/`rollSkillCheck`, `rollWeaponAttack`, et la boucle du solo (`pending_request` de genre `reaction`, budget de la scène).
+- Routes : `GET /api/campaigns/[campaignId]/roll-windows`, `POST …/roll-windows/[windowId]/answer` (Zod).
+
+**Critères d'acceptation**
+- [x] Sans réaction possible, un jet s'applique comme avant (les tests existants passent sans changement).
+- [x] Intégration, base réelle : un monstre touche un Roublard 5 → fenêtre ; « utiliser » Esquive instinctive → moitié des dégâts, réaction dépensée, seconde attaque du round sans fenêtre.
+- [x] Une joueuse qui retouche l'état figé d'une fenêtre est refusée (signature) ; elle ne lit ni CA ni DD d'un adversaire.
+
+*Fait le 7 novembre.* Migration `20261107120000_roll_windows` (appliquée et vérifiée) : `roll_windows` (partie lisible, sans écriture directe), `app_private.roll_window_states` (état figé, aucun droit client), `engine_open_roll_window` et `engine_resume_roll_window` (demandes signées ; reprise par l'auteur seulement, une fois), `answer_roll_window`, `close_roll_window`, `combat_participants.turn_usage`, `apply_engine_change` étendu à `turn_usage`, publication temps réel. **Écart avec l'ADR** : l'état figé n'est pas signé dans la ligne, il n'est simplement jamais accessible à un client ; et la reprise est faite par l'auteur du jet (avec ses droits d'aujourd'hui), pas par le dernier à répondre. Le compte de la réaction est daté et son retour calculé (aucune remise à zéro au passage de tour). Service : `rollWindows.ts` (ouverture, ceux qui peuvent réagir), `rollWindowResume.ts` (réponse, « Continuer », reprise : chaque réaction jouée par `activateFeature`, puis `resolveTargetedRoll` rejoué avec le jet modifié) ; `actorNumbers.ts` partagé avec l'activation au clic. Routes `GET …/roll-windows`, `POST …/roll-windows/[windowId]` (`answer`, `continue`, `resume`). Vérifié : `rollWindows.integration.test.ts` 3/3. Docs : `SCHEMA.md`, `SECURITE.md` (registre), `ARCHITECTURE.md`.
+
+*Reste* : seuls les jets ciblés (attaque, dégâts) passent par le point de décision. Les sauvegardes demandées, les tests, l'attaque sans cible et la boucle du solo : V3.1-163.
+
+#### ☐ V3.1-163 — Les autres jets passent par la fenêtre : sauvegardes, tests, attaque sans cible, solo · `M` · sans modèle IA — **prêt (Opus)**
+
+**Modèle conseillé : Opus** — déroulé des jets côté serveur.
+**Dépend de** : 160.
+
+- `answerSaveRequest` : point de décision après le d20 de la sauvegarde (Indomptable, Inspiration bardique reçue, Mots cinglants du MJ sur un monstre… seulement les PJ). La reprise rejoue la réponse avec le jet modifié.
+- `rollAbilityCheck`, `rollSkillCheck` : idem (Coup de chance, Chance). Hors combat : rien n'est compté.
+- `rollWeaponAttack` sans cible : seulement les réactions sur son propre jet (Chance, automatique ; les autres n'ont pas d'issue sans CA).
+- La boucle du solo : `pending_request` de genre `reaction`, budget de la scène, portée lue dans les zones.
+- `zRollWindowState.origin` gagne `save`, `check`.
+- Reçu du 162 : les activations des aptitudes de sous-classe (Mots cinglants, `lore-cutting-words` : deux activations, dégâts lancés et attaque qui touche, `add_die` négatif du dé `column.class_specific_bardic_inspiration_die`, portée 18 m) et des traits d'espèce (Chance, `luck` : automatique, relance d'un 1) arrivent sur la fiche ; une activation accordée par un jeton (le dé d'Inspiration bardique) est candidate à une réaction. Les formules d'une réaction lisent aussi les colonnes de la classe (`column.*`), comme les ressources.
+
+**Critères d'acceptation**
+- [ ] Intégration : Guerrier 9 rate une sauvegarde demandée → fenêtre ; Indomptable → relance + 9, usage dépensé.
+- [ ] Chance (automatique) relance un 1 naturel sur un test sans fenêtre.
+- [ ] Solo : une réaction se propose dans le tour, et le budget de la scène la compte.
+
+
+#### ☐ V3.1-161 — Les écrans : le bandeau de réaction ; l'éditeur suit · `M` · sans modèle IA — **prêt (Sonnet)**
+
+**Modèle conseillé : Sonnet**, une fois 160 fait ; Opus relit.
+**Dépend de** : 160.
+
+**Sous-tâches Haiku** (`aide-haiku`) : libellés ; planche du catalogue ; vérifications.
+
+- Bandeau de réaction (joueuse, MJ, solo) : le jet, la règle, « changerait l'issue », « Utiliser » / « Passer » ; « Continuer » pour le MJ ; pastille du dé encoché. Sur le canal unique de `SauvegardesProvider` (docs/CABLAGE.md).
+- Éditeur de briques : un déclencheur « En réaction à un jet » et les opérations sur le jet ; la limite « une fois par tour ».
+
+**Critères d'acceptation**
+- [ ] Au téléphone, le bandeau tient à 390 px, ses deux boutons au pouce.
+- [ ] Esquive instinctive se saisit à l'éditeur sans JSON.
+
+#### ☑ V3.1-162 — Les données : les réactions du SRD · `S` · sans modèle IA — **prêt (Opus)**
+
+**Modèle conseillé : Opus** — données officielles, import.
+**Dépend de** : 159, 160.
+
+- `playable-2024.json` : Esquive instinctive, Mots cinglants, Chance (halfelin), Indomptable, Coup de chance, l'usage du dé d'Inspiration bardique (jeton), Attaque sournoise (au choix sur une touche, une fois par tour). Bouclier attend 136 (un sort joué comme une activation). Réimport, scripts d'auteur rejoués.
+
+**Critères d'acceptation**
+- [x] Après réimport, ces règles sont « Jouable » (ou « Partielle » pour la seule portée, jusqu'au 137) et se jouent sur une fiche de test. *Nuance ci-dessous.*
+
+*Fait le 7 novembre.* `playable-2024.json` : Esquive instinctive (réaction, moitié des dégâts ; « Partielle » : « que vous voyez » attend 138), Attaque sournoise (au choix sur ses dégâts, `ceil(niveau / 2)d6`, une fois par tour ; « Partielle » : les conditions d'arme, d'avantage et d'allié au contact attendent 137, la joueuse choisit), Inflexible (ressource 1 → 2 → 3 selon le niveau, relance + niveau de Guerrier) et Coup de chance (un test d20 raté devient 20) — ces deux-là « Jouable », mais ne se déclenchent qu'avec V3.1-163 (sauvegardes et tests). Réimport fait (une relance après un délai dépassé de la base), scripts d'auteur rejoués. Vérifié : `srdReactions.integration.test.ts` 4/4 (les deux réactions sur la fiche d'une Roublarde 5, Esquive instinctive divise les dégâts d'un gobelin, Attaque sournoise ajoute 3d6 une fois par tour, couvertures).
+
+*Reste, passé au V3.1-163* : **Mots cinglants** (une aptitude de sous-classe n'arrive sur la fiche que si elle porte modificateurs ou sorts : `subclassFeatures` ne lui attache pas son bloc d'activation), **Chance** du halfelin (trait d'espèce, même vérification à faire), et **le dé d'Inspiration bardique** reçu (une activation accordée par un jeton n'est pas encore candidate à une réaction). Bouclier attend 136.
 
 ### ☐ V3.1-136 — Les actions modifiées · `M` · sans modèle IA — **à concevoir (Opus)**
 Attaques multiples, action disponible en action bonus, temps d'incantation changé, attaque remplacée, budget réservé à un usage, accorder ou lancer un sort comme effet. Règles visées : 7, 13, 14, 16, 21, 24, 32, 33, 35, 39.

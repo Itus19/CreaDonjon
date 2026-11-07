@@ -94,13 +94,15 @@ export interface CombatParticipantRow {
   concentration: Json;
   /** V3.1-129 : usages consommés de l'instance (recharge d'une capacité de créature). */
   resources_used: Json;
+  /** V3.1-160 (ADR 0075) : réaction dépensée (datée) et usages « une fois par tour ». */
+  turn_usage: Json;
   is_ally: boolean;
   display_order: number;
   created_at: string;
 }
 
 const PARTICIPANT_COLUMNS =
-  "id, combat_id, source_kind, entity_id, rule_key, label, initiative, ac, hp_max, hp_current, temp_hp, conditions, concentration, resources_used, is_ally, display_order, created_at";
+  "id, combat_id, source_kind, entity_id, rule_key, label, initiative, ac, hp_max, hp_current, temp_hp, conditions, concentration, resources_used, turn_usage, is_ally, display_order, created_at";
 
 export async function listCombatParticipants(supabase: TypedClient, combatId: string): Promise<CombatParticipantRow[]> {
   const { data, error } = await supabase
@@ -165,6 +167,8 @@ export interface CombatParticipantPatch {
   concentration?: Json;
   /** V3.1-129 : usages consommés de l'instance (recharge d'une capacité), remplacés en entier. */
   resourcesUsed?: Json;
+  /** V3.1-160 : le compte de tour, remplacé en entier. */
+  turnUsage?: Json;
 }
 
 export async function updateCombatParticipant(
@@ -181,6 +185,7 @@ export async function updateCombatParticipant(
   if (patch.conditions !== undefined) update.conditions = patch.conditions;
   if (patch.concentration !== undefined) update.concentration = patch.concentration;
   if (patch.resourcesUsed !== undefined) update.resources_used = patch.resourcesUsed;
+  if (patch.turnUsage !== undefined) update.turn_usage = patch.turnUsage;
   const { data, error } = await supabase
     .from("combat_participants")
     .update(update)

@@ -57,12 +57,72 @@ const zActivationTargets = z.object({
 
 const zEffectList = z.array(zEffect);
 
+// --- réactions (V3.1-159, ADR 0075) ------------------------------------------
+
+/** `d20` : une attaque, une sauvegarde ou un test. */
+export const REACTION_ROLLS = ["attack", "save", "check", "d20", "damage"] as const;
+/** Qui a lancé le jet, vu de celui qui réagit. `attack_against_self` : une attaque (ou ses dégâts) qui le vise. */
+export const REACTION_SUBJECTS = ["self", "attack_against_self", "ally", "enemy", "any"] as const;
+/** `rolled` : le dé est connu, l'issue pas encore. `hit`, `failed` : l'issue est connue, rien n'est appliqué. */
+export const REACTION_MOMENTS = ["rolled", "hit", "failed", "natural"] as const;
+
+export const zActivationTrigger = z
+  .object({
+    on: z.literal("roll"),
+    roll: z.enum(REACTION_ROLLS),
+    subject: z.enum(REACTION_SUBJECTS),
+    when: z.enum(REACTION_MOMENTS),
+    /** Avec `when: "natural"` seulement : la valeur du d20 (Chance : 1). */
+    natural: z.number().int().min(1).max(20).optional(),
+    range: z.object({ value: z.number().positive(), unit: z.literal("m") }).optional(),
+    /** Sans fenêtre : s'applique d'office (Chance). */
+    automatic: z.boolean().optional(),
+  })
+  .superRefine((t, ctx) => {
+    if ((t.when === "natural") !== (t.natural !== undefined)) ctx.addIssue({ code: "custom", message: "« natural » va avec le moment « natural », et seulement avec lui." });
+    if (t.when === "hit" && t.roll !== "attack") ctx.addIssue({ code: "custom", message: "« touché » ne se dit que d'une attaque." });
+    if (t.roll === "damage" && t.when !== "rolled") ctx.addIssue({ code: "custom", message: "Un jet de dégâts n'a qu'un moment : quand il est lancé." });
+  });
+export type ActivationTrigger = z.infer<typeof zActivationTrigger>;
+
+/** Les opérations sur le jet en cours. Les dés sont lancés par le serveur (règle 8). */
+export const zRollOperation = z.discriminatedUnion("op", [
+  z.object({ op: z.literal("add_die"), count: zFormulaNode, faces: zFormulaNode, sign: z.union([z.literal(1), z.literal(-1)]) }),
+  z.object({ op: z.literal("reroll"), bonus: zFormulaNode.optional() }),
+  z.object({ op: z.literal("set_natural"), value: z.number().int().min(1).max(20) }),
+  z.object({ op: z.literal("ac_bonus"), value: zFormulaNode }),
+  z.object({ op: z.literal("damage_multiplier"), factor: z.number().positive() }),
+  z.object({ op: z.literal("add_damage"), formula: zFormulaNode, damage_type: z.string().min(1).optional() }),
+]);
+export type RollOperation = z.infer<typeof zRollOperation>;
+
+/** Les jets sur lesquels une opération a un sens. */
+const OPERATION_ROLLS: Record<RollOperation["op"], readonly (typeof REACTION_ROLLS)[number][]> = {
+  add_die: REACTION_ROLLS,
+  reroll: ["attack", "save", "check", "d20"],
+  set_natural: ["attack", "save", "check", "d20"],
+  ac_bonus: ["attack"],
+  damage_multiplier: ["damage"],
+  add_damage: ["damage"],
+};
+
+/** V3.1-159 : le refus d'une opération qui n'a pas de sens sur le jet visé (`ac_bonus` sur une sauvegarde). */
+export function rollOperationProblems(trigger: ActivationTrigger | undefined, ops: readonly RollOperation[]): string[] {
+  if (ops.length === 0) return [];
+  if (!trigger) return ["Une opération sur le jet demande un déclencheur « en réaction à un jet »."];
+  return ops.filter((o) => !OPERATION_ROLLS[o.op].includes(trigger.roll)).map((o) => `L'opération « ${o.op} » n'a pas de sens sur un jet « ${trigger.roll} ».`);
+}
+
+export const zActivationLimit = z.object({ per: z.enum(["turn", "round"]) });
+
 const zActivationVariant = z.object({
   id: z.string().min(1),
   label: zLocalized,
   effects: zEffectList,
   /** Absent : le coût de l'activation. */
   cost: zActivationCost.optional(),
+  /** V3.1-159 : absent, celles de l'activation. */
+  roll_operations: z.array(zRollOperation).optional(),
 });
 
 export const zActivation = z.object({
@@ -73,6 +133,12 @@ export const zActivation = z.object({
   targets: zActivationTargets,
   effects: zEffectList,
   variants: z.array(zActivationVariant).nullable(),
+  /** V3.1-159 (ADR 0075) : absent, l'activation se joue au clic ; présent, en réaction à un jet. */
+  trigger: zActivationTrigger.optional(),
+  /** V3.1-159 : ce que la réaction fait au jet en cours. */
+  roll_operations: z.array(zRollOperation).optional(),
+  /** V3.1-159 : une fois par tour ou par round (compté en combat seulement). */
+  limit: zActivationLimit.optional(),
   /** V3.1-132 : le passage dont vient chaque brique, par chemin (`brickPaths`) : `cost`, `targets`, `effects.0.on_fail.0`… */
   passages: z.record(z.string(), zPassage).optional(),
 });
@@ -151,6 +217,9 @@ export const zActivationBlockData = z
     const effets = new Set(d.durable_effects.map((e) => e.id));
     const activations = new Set(d.activations.map((a) => a.id));
     for (const a of d.activations) {
+      for (const ops of [a.roll_operations ?? [], ...(a.variants ?? []).map((v) => v.roll_operations ?? [])]) {
+        for (const message of rollOperationProblems(a.trigger, ops)) ctx.addIssue({ code: "custom", message: `« ${a.id} » : ${message}` });
+      }
       const listes = [a.effects, ...(a.variants ?? []).map((v) => v.effects)];
       for (const id of listes.flatMap(appliedEffectIds)) {
         if (!effets.has(id)) ctx.addIssue({ code: "custom", message: `L'activation « ${a.id} » pose l'effet « ${id} », que le bloc ne décrit pas.` });

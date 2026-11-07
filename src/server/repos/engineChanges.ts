@@ -34,3 +34,17 @@ export async function readCombatSigned(supabase: TypedClient, payload: string, s
   if (error) throw new Error(`Lecture du moteur refusée : ${error.message}`);
   return (data ?? []) as CombatParticipantRow[];
 }
+
+/** V3.1-160 (ADR 0075) — ouvre une fenêtre de réaction (demande signée). */
+export async function openRollWindowSigned(supabase: TypedClient, payload: string, signature: string): Promise<string> {
+  const { data, error } = await supabase.rpc("engine_open_roll_window", { p_payload: payload, p_signature: signature });
+  if (error || !data) throw new Error(`Ouverture de la fenêtre refusée : ${error?.message ?? "aucun identifiant"}`);
+  return data;
+}
+
+/** V3.1-160 — l'état figé d'une fenêtre fermée, une seule fois, pour l'auteur du jet. */
+export async function resumeRollWindowSigned(supabase: TypedClient, payload: string, signature: string): Promise<unknown> {
+  const { data, error } = await supabase.rpc("engine_resume_roll_window", { p_payload: payload, p_signature: signature });
+  if (error) throw new Error(`Reprise de la fenêtre refusée : ${error.message}`);
+  return data;
+}
