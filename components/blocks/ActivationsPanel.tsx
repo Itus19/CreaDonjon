@@ -1,5 +1,6 @@
 "use client";
 
+import { regagnerRessource } from "@/lib/ui/regainApi";
 import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import Checkbox from "@/components/shared/Checkbox";
@@ -77,7 +78,7 @@ export default function ActivationsPanel(props: ActivationsPanelProps) {
         <section className="flex flex-col gap-1.5" aria-label={t("ressources")}>
           <span className={ETIQUETTE}>{t("ressources")}</span>
           {ressources.map((r) => (
-            <LigneRessource key={r.key} ressource={r} utilises={props.utilises} />
+            <LigneRessource key={r.key} ressource={r} {...props} />
           ))}
         </section>
       )}
@@ -107,10 +108,32 @@ export default function ActivationsPanel(props: ActivationsPanelProps) {
 
 // --- ressources -------------------------------------------------------------
 
-function LigneRessource({ ressource, utilises }: { ressource: SheetResource; utilises: Readonly<Record<string, number>> }) {
+function LigneRessource({ ressource, ...p }: ActivationsPanelProps & { ressource: SheetResource }) {
   const t = useTranslations("fiche.activation");
   const locale = useLocale();
-  const { restants, max } = ressourceRestante(ressource, utilises);
+  const { restants, max } = ressourceRestante(ressource, p.utilises);
+  const [enCours, setEnCours] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+  // ADR 0076 (V3.1-183) : une ressource entamée qui se regagne contre autre chose montre son geste, et ce qu'il coûte.
+  const regain = ressource.regain;
+  const cout = regain
+    ? regain.kind === "resource"
+      ? (() => {
+          const autre = p.ressources.find((r) => r.key === regain.key);
+          return { libelle: t("regainRessource", { n: regain.amount, nom: autre ? localized(autre.label, locale) : regain.key }), payable: autre ? ressourceRestante(autre, p.utilises).restants >= regain.amount : false };
+        })()
+      : { libelle: t("regainEmplacement", { niveau: regain.min_level }), payable: true }
+    : null;
+
+  async function regagner() {
+    setEnCours(true);
+    setErreur(null);
+    const message = await regagnerRessource(p.entityId, { campaignId: p.campaignId, resourceKey: ressource.key });
+    setEnCours(false);
+    if (message) setErreur(message);
+    else p.apresActivation();
+  }
+
   return (
     <div className={`${CARTE} flex-row flex-wrap items-center gap-x-3`}>
       <span className="min-w-0 flex-1 text-sm text-ink">{localized(ressource.label, locale)}</span>
@@ -122,6 +145,17 @@ function LigneRessource({ ressource, utilises }: { ressource: SheetResource; uti
         </span>
       )}
       <span className="mech text-xs text-ink-muted">{t("restantes", { restants, max, recharge: t(`recharge.${ressource.recharge}`) })}</span>
+      {cout && restants < max && (
+        <button
+          type="button"
+          disabled={p.busy || enCours || !cout.payable}
+          onClick={() => void regagner()}
+          className="rounded-full border border-accent px-3 py-1 text-xs text-accent transition-colors hover:bg-accent/10 disabled:opacity-50"
+        >
+          {t("regagner", { cout: cout.libelle })}
+        </button>
+      )}
+      {erreur && <p className="basis-full text-xs text-danger">{erreur}</p>}
     </div>
   );
 }

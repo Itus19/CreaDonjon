@@ -447,3 +447,33 @@ describe("réactions à un jet (V3.1-161)", () => {
     expect(r2.ok).toBe(false);
   });
 });
+
+describe("ADR 0076 — le regain d'une ressource dans l'éditeur (V3.1-183)", () => {
+  const bloc = {
+    resources: [
+      { key: "magie-envoutante", label: { fr: "Magie envoûtante" }, max: { op: "num", value: 1 }, recharge: "long_rest", regain: { kind: "resource", key: "bardic-inspiration", amount: 1 } },
+      { key: "mante-de-majeste", label: { fr: "Mante de majesté" }, max: { op: "num", value: 1 }, recharge: "long_rest", regain: { kind: "slot", min_level: 3 } },
+      { key: "sans-regain", label: { fr: "Sans regain" }, max: { op: "num", value: 2 }, recharge: "short_rest" },
+    ],
+  };
+
+  it("se relit et se réécrit à l'identique (contre une ressource, contre un emplacement, sans)", () => {
+    const relu = blocsVersBrouillon([{ blockType: "resources", data: bloc }]);
+    expect(relu.ressources.map((r) => r.regain.genre)).toEqual(["resource", "slot", "aucun"]);
+    const r = brouillonVersBlocs(relu, NOMS);
+    if (!r.ok) throw new Error(r.erreurs.join(" ; "));
+    expect(r.resources).toEqual(bloc);
+    expect(zRuleResourcesBlockData.safeParse(r.resources).success).toBe(true);
+  });
+
+  it("une saisie incomplète est refusée, et l'erreur dit laquelle", () => {
+    const relu = blocsVersBrouillon([{ blockType: "resources", data: bloc }]);
+    relu.ressources[0].regain = { ...relu.ressources[0].regain, cle: "" };
+    relu.ressources[1].regain = { ...relu.ressources[1].regain, niveauMin: "12" };
+    const r = brouillonVersBlocs(relu, NOMS);
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.erreurs).toContain("Ressource Magie envoûtante : choisis la ressource dépensée pour la regagner");
+    expect(r.erreurs).toContain("Ressource Mante de majesté : le niveau minimal de l'emplacement va de 1 à 9");
+  });
+});

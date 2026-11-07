@@ -31,6 +31,7 @@ import {
   type DurableEffectEnd,
   type RollOperation,
   type RuleResourcesBlockData,
+  type ResourceRegain,
 } from "@/src/core/schemas/rule-blocks/playable";
 
 export type Localise = Record<string, string>;
@@ -79,8 +80,12 @@ export interface BrouillonRessource {
   labelOrig: Localise;
   max: string;
   recharge: RechargeRegle;
+  /** ADR 0076 (V3.1-183) : regagner une utilisation en dépensant autre chose ; « aucun » : seulement au repos. */
+  regain: { genre: "aucun" | "resource" | "slot"; cle: string; quantite: string; niveauMin: string };
   passage: string | null;
 }
+
+export const REGAIN_AUCUN: BrouillonRessource["regain"] = { genre: "aucun", cle: "", quantite: "1", niveauMin: "3" };
 
 export interface BrouillonDepense {
   cle: string;
@@ -266,7 +271,7 @@ export function brouillonVide(): Brouillon {
 }
 
 export function nouvelleRessource(): BrouillonRessource {
-  return { uid: nouvelUid(), key: "", label: "", labelOrig: {}, max: "1", recharge: "long_rest", passage: null };
+  return { uid: nouvelUid(), key: "", label: "", labelOrig: {}, max: "1", recharge: "long_rest", regain: REGAIN_AUCUN, passage: null };
 }
 
 export function nouveauCout(): BrouillonCout {
@@ -668,6 +673,11 @@ export function blocsVersBrouillon(blocs: readonly { blockType: string; data: un
       labelOrig: r.label,
       max: formatFormulaNode(r.max),
       recharge: r.recharge,
+      regain: !r.regain
+        ? REGAIN_AUCUN
+        : r.regain.kind === "resource"
+          ? { ...REGAIN_AUCUN, genre: "resource", cle: r.regain.key, quantite: String(r.regain.amount) }
+          : { ...REGAIN_AUCUN, genre: "slot", niveauMin: String(r.regain.min_level) },
       passage: r.passage ?? null,
     }));
   }
@@ -914,6 +924,24 @@ function passagesEffets(prefixe: string, liste: readonly BrouillonEffet[], sorti
   });
 }
 
+/** ADR 0076 : le regain d'une ressource, du brouillon au bloc ; une saisie incomplète est une erreur nommée, jamais un regain muet. */
+function regainVersBloc(r: BrouillonRessource, nom: string, ctx: CtxEcriture): { regain?: ResourceRegain } {
+  const g = r.regain;
+  if (g.genre === "aucun") return {};
+  if (g.genre === "resource") {
+    const quantite = Number(g.quantite);
+    if (g.cle.trim() === "") ctx.erreurs.push(`Ressource ${nom} : choisis la ressource dépensée pour la regagner`);
+    if (!Number.isInteger(quantite) || quantite < 1) ctx.erreurs.push(`Ressource ${nom} : la quantité dépensée pour la regagner est un entier d'au moins 1`);
+    return g.cle.trim() !== "" && Number.isInteger(quantite) && quantite >= 1 ? { regain: { kind: "resource", key: g.cle.trim(), amount: quantite } } : {};
+  }
+  const niveau = Number(g.niveauMin);
+  if (!Number.isInteger(niveau) || niveau < 1 || niveau > 9) {
+    ctx.erreurs.push(`Ressource ${nom} : le niveau minimal de l'emplacement va de 1 à 9`);
+    return {};
+  }
+  return { regain: { kind: "slot", min_level: niveau } };
+}
+
 /**
  * Le brouillon, prêt à envoyer : blocs validés par les schémas, effets qui
  * durent orphelins retirés (`pruneOrphanDurableEffects`). Ou la liste des
@@ -931,6 +959,7 @@ export function brouillonVersBlocs(b: Brouillon, nomsEtats: Readonly<Record<stri
       label: localise(r.labelOrig, nom),
       max: formule(r.max, `Ressource ${nom || i + 1}, maximum`, ctx),
       recharge: r.recharge,
+      ...regainVersBloc(r, nom || String(i + 1), ctx),
       ...(r.passage ? { passage: r.passage } : {}),
     };
   });

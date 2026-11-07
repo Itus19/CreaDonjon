@@ -271,7 +271,7 @@ export default function PlayableBricksEditor({
           </div>
 
           <div className="flex min-w-0 flex-1 flex-col gap-6">
-            <SectionRessources brouillon={brouillon} onChange={setBrouillon} />
+            <SectionRessources brouillon={brouillon} onChange={setBrouillon} ressources={ressources} />
             <section className="flex flex-col gap-3">
               <h3 className="block-title">{t("utilisations")}</h3>
               {brouillon.activations.map((a, i) => (
@@ -296,7 +296,16 @@ export default function PlayableBricksEditor({
   );
 }
 
-function SectionRessources({ brouillon, onChange }: { brouillon: Brouillon; onChange: (b: Brouillon) => void }) {
+function SectionRessources({
+  brouillon,
+  onChange,
+  ressources,
+}: {
+  brouillon: Brouillon;
+  onChange: (b: Brouillon) => void;
+  /** Les ressources dépensables (ruleset et cette fiche), pour le regain (ADR 0076). */
+  ressources: readonly { value: string; label: string }[];
+}) {
   const t = useTranslations("regles.briques");
   return (
     <section className="flex flex-col gap-3">
@@ -325,6 +334,33 @@ function SectionRessources({ brouillon, onChange }: { brouillon: Brouillon; onCh
                 options={RULE_RECHARGES.map((x) => ({ value: x, label: t(`recharges.${x}`) }))}
                 onChange={(v) => maj({ ...r, recharge: (RULE_RECHARGES.find((x) => x === v) ?? r.recharge) as RechargeRegle })}
               />
+            </div>
+            {/* ADR 0076 (V3.1-183) : regagner une utilisation en dépensant autre chose. */}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <ChampListe
+                libelle={t("regain")}
+                valeur={r.regain.genre}
+                options={[
+                  { value: "aucun", label: t("regainAucun") },
+                  { value: "resource", label: t("regainRessource") },
+                  { value: "slot", label: t("regainEmplacement") },
+                ]}
+                onChange={(v) => maj({ ...r, regain: { ...r.regain, genre: v === "resource" || v === "slot" ? v : "aucun" } })}
+              />
+              {r.regain.genre === "resource" && (
+                <>
+                  <ChampListe
+                    libelle={t("regainQuelleRessource")}
+                    valeur={r.regain.cle}
+                    options={[{ value: "", label: t("choisirRessource") }, ...ressources.filter((x) => x.value !== (r.key.trim() || cleDepuisLibelle(r.label)))]}
+                    onChange={(cle) => maj({ ...r, regain: { ...r.regain, cle } })}
+                  />
+                  <ChampTexte libelle={t("regainQuantite")} valeur={r.regain.quantite} onChange={(quantite) => maj({ ...r, regain: { ...r.regain, quantite } })} mecanique />
+                </>
+              )}
+              {r.regain.genre === "slot" && (
+                <ChampTexte libelle={t("regainNiveauMin")} valeur={r.regain.niveauMin} onChange={(niveauMin) => maj({ ...r, regain: { ...r.regain, niveauMin } })} mecanique />
+              )}
             </div>
             <Citation passage={r.passage} onChange={(passage) => maj({ ...r, passage })} />
           </CarteBrique>
