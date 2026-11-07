@@ -2697,6 +2697,7 @@
       "maitrise": "Maîtrise"
     },
     "competences": "Compétences",
+    "passives": "Valeurs passives :",
     "expertise": "expertise",
     "resume": {
       "langues": "Langues :",
@@ -2865,6 +2866,7 @@
     },
     "carac": {
       "methodeAria": "Méthode d'attribution des caractéristiques",
+      "legendeAria": "D'où viennent les valeurs",
       "methode": { "tableau": "Tableau standard", "achat": "Achat de points", "tirage": "Tirage" },
       "detail": {
         "achat": "{budget} points",

@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { legendeSources } from "@/lib/ui/sourcesCaracteristiques";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { Ability, DerivedSheet } from "@/src/core/rules/sheet";
 import { pointBuyCost } from "@/src/core/rules/characterRules";
@@ -19,6 +20,10 @@ type Methode = CharacterBlockData["abilities"]["method"];
 function signe(n: number): string {
   return `${n >= 0 ? "+" : ""}${n}`;
 }
+
+/** V3.1-164 : une couleur par source de bonus (jetons de la charte), dans l'ordre de `legendeSources`. */
+const TEXTE_BONUS = ["text-accent", "text-players", "text-link-rule", "text-gm", "text-link-entity"] as const;
+const FOND_BONUS = ["bg-accent", "bg-players", "bg-link-rule", "bg-gm", "bg-link-entity"] as const;
 
 /** Les deux listes contiennent-elles les mêmes valeurs, dans un ordre quelconque ? */
 function memesValeurs(a: readonly number[], b: readonly number[]): boolean {
@@ -187,6 +192,8 @@ export default function AbilityScoreStep({
     return "";
   };
 
+  const legende = legendeSources(Object.fromEntries(ABILITIES.map((a) => [a, sheet.abilities[a].sources])));
+
   /** Contenu d'une grande case : tout vient de la fiche du moteur. */
   function contenuCase(ability: Ability) {
     const r = sheet.abilities[ability];
@@ -195,9 +202,15 @@ export default function AbilityScoreStep({
         <span className="text-xs font-bold uppercase tracking-widest text-accent">{ABILITY_LABELS[ability]}</span>
         <span className="text-3xl font-bold leading-none text-ink">{r.score}</span>
         <span className="text-sm text-ink-soft">{signe(r.mod)}</span>
-        <span className="flex flex-col items-center text-xs text-ink-muted">
+        {/* V3.1-164 (proposition B) : une addition en couleurs, nommée par la légende sous les cases. */}
+        <span
+          title={r.sources.map((s, i) => (i === 0 ? `${s.label} ${s.value}` : `${s.label} ${signe(s.value)}`)).join(" · ")}
+          className="flex flex-wrap justify-center gap-x-1.5 text-xs font-semibold tabular-nums"
+        >
           {r.sources.map((s, i) => (
-            <span key={`${s.label}:${i}`}>{i === 0 ? t("source.base", { label: s.label, valeur: s.value }) : t("source.ajout", { label: s.label, valeur: signe(s.value) })}</span>
+            <span key={`${s.label}:${i}`} className={i === 0 ? "text-ink-soft" : TEXTE_BONUS[legende.couleurDe(s.label)]}>
+              {i === 0 ? s.value : signe(s.value)}
+            </span>
           ))}
         </span>
       </>
@@ -326,6 +339,23 @@ export default function AbilityScoreStep({
             );
           })}
         </div>
+      )}
+
+      {method !== null && (
+        <ul aria-label={t("legendeAria")} className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-ink-soft">
+          {legende.bases.map((label) => (
+            <li key={`base:${label}`} className="flex items-center gap-2">
+              <span aria-hidden="true" className="h-2.5 w-2.5 rounded-sm bg-ink-soft" />
+              {label}
+            </li>
+          ))}
+          {legende.bonus.map((b) => (
+            <li key={`bonus:${b.label}`} className="flex items-center gap-2">
+              <span aria-hidden="true" className={`h-2.5 w-2.5 rounded-sm ${FOND_BONUS[b.couleur]}`} />
+              {b.label}
+            </li>
+          ))}
+        </ul>
       )}
 
       {method !== null && (

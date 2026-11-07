@@ -2696,6 +2696,7 @@
       "maitrise": "Proficiency"
     },
     "competences": "Skills",
+    "passives": "Passive scores:",
     "expertise": "expertise",
     "resume": {
       "langues": "Languages:",
@@ -2864,6 +2865,7 @@
     },
     "carac": {
       "methodeAria": "Ability score method",
+      "legendeAria": "Where the scores come from",
       "methode": { "tableau": "Standard array", "achat": "Point buy", "tirage": "Roll" },
       "detail": {
         "achat": "{budget} points",
