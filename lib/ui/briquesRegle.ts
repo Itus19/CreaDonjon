@@ -127,6 +127,8 @@ export type CorpsEffet =
   | { type: "saving_throw"; ability: string; dc: string; echec: BrouillonEffet[]; reussite: BrouillonEffet[] }
   | { type: "deal_damage"; montant: string; typeDegats: string }
   | { type: "heal"; montant: string }
+  /** ADR 0076 (V3.1-183). */
+  | { type: "temp_hp"; montant: string }
   | { type: "apply_condition"; cle: string }
   | { type: "remove_condition"; cle: string }
   /** « Appliquer un état » : UNE brique à l'écran, un `apply_effect` ET son effet qui dure (ADR 0060 §3). */
@@ -377,6 +379,7 @@ export const ENTREES_AJOUT = [
   "saving_throw",
   "deal_damage",
   "heal",
+  "temp_hp",
   "apply_state",
   "remove_condition",
   "advantage",
@@ -435,6 +438,9 @@ export function nouvelEffet(entree: EntreeAjout, b: Brouillon): BrouillonEffet {
       return { ...base, who: "target", type: "deal_damage", montant: "1d6", typeDegats: "" };
     case "heal":
       return { ...base, who: "self", type: "heal", montant: "1d6" };
+    case "temp_hp":
+      // « 2 × le dé lancé juste avant » : le cas de Mante d'inspiration ; l'auteur l'ajuste.
+      return { ...base, who: "target", type: "temp_hp", montant: "2 * {event.last_roll}" };
     case "apply_state":
       return {
         ...base,
@@ -572,6 +578,8 @@ function effetVersBrouillon(e: EffectNode, chemin: string, ctx: CtxLecture): Bro
       return { ...base, who: e.who, type: "deal_damage", montant: formatFormulaNode(e.amount), typeDegats: e.damage_type ?? "" };
     case "heal":
       return { ...base, who: e.who, type: "heal", montant: formatFormulaNode(e.amount) };
+    case "temp_hp":
+      return { ...base, who: e.who, type: "temp_hp", montant: formatFormulaNode(e.amount) };
     case "apply_condition":
       return { ...base, who: e.who, type: "apply_condition", cle: e.key };
     case "remove_condition":
@@ -831,6 +839,8 @@ function effetEcrit(e: BrouillonEffet, contexte: string, activationId: string, c
       return { action: "deal_damage", who: e.who, amount: formule(e.montant, `${ou}, dégâts`, ctx), ...(e.typeDegats ? { damage_type: e.typeDegats } : {}) };
     case "heal":
       return { action: "heal", who: e.who, amount: formule(e.montant, `${ou}, soins`, ctx) };
+    case "temp_hp":
+      return { action: "temp_hp", who: e.who, amount: formule(e.montant, `${ou}, PV temporaires`, ctx) };
     case "apply_condition":
     case "remove_condition":
       if (e.cle === "") ctx.erreurs.push(`${ou} : choisis l'état`);

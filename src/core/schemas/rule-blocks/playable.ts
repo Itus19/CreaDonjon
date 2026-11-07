@@ -18,6 +18,17 @@ export const zPassage = z.string().trim().min(1).max(2000);
 /** Même vocabulaire que les compteurs du personnage (`resourceRecharge.ts`). */
 export const RULE_RECHARGES = ["short_rest", "short_rest_one", "long_rest", "dawn", "never"] as const;
 
+/**
+ * ADR 0076 (V3.1-183) — regagner une utilisation en dépensant autre chose :
+ * une autre ressource (Magie envoûtante contre une Inspiration bardique), ou
+ * un emplacement de sort d'un niveau minimal (Mante de majesté, niveau 3+).
+ */
+export const zResourceRegain = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("resource"), key: z.string().min(1), amount: z.number().int().min(1).max(20) }),
+  z.object({ kind: z.literal("slot"), min_level: z.number().int().min(1).max(9) }),
+]);
+export type ResourceRegain = z.infer<typeof zResourceRegain>;
+
 export const zRuleResource = z.object({
   /** Unique dans le ruleset : d'autres fiches la dépensent par cette clé (Abjuration d'ennemis dépense `channel-divinity`). */
   key: z.string().min(1),
@@ -25,6 +36,8 @@ export const zRuleResource = z.object({
   /** Formule : `column.<clé>` (progression de la classe qui accorde la fiche), `class.level`, `level`, `ability.*`, `proficiency`. */
   max: zFormulaNode,
   recharge: z.enum(RULE_RECHARGES),
+  /** ADR 0076 : regagner une utilisation en dépensant autre chose. Absent : seulement au repos. */
+  regain: zResourceRegain.optional(),
   /** V3.1-132 : le passage du texte de la règle dont vient la brique (surligné à côté de l'éditeur). */
   passage: zPassage.optional(),
 });

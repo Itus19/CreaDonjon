@@ -201,6 +201,8 @@ export interface SheetResource {
   label: Record<string, string>;
   max: number;
   recharge: RuleResource["recharge"];
+  /** ADR 0076 (V3.1-183) : regagner une utilisation en dépensant autre chose. */
+  regain?: RuleResource["regain"];
   /** Clé de la fiche (ou de l'objet) qui la déclare. */
   source: string;
 }
@@ -1044,7 +1046,7 @@ function computeResources(p: {
         });
       }
       const existing = byKey.get(r.key);
-      if (!existing || max > existing.max) byKey.set(r.key, { key: r.key, label: r.label, max, recharge: r.recharge, source: src.key });
+      if (!existing || max > existing.max) byKey.set(r.key, { key: r.key, label: r.label, max, recharge: r.recharge, ...(r.regain ? { regain: r.regain } : {}), source: src.key });
     }
   }
   return [...byKey.values()];

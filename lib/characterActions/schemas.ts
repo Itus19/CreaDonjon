@@ -188,6 +188,14 @@ export const resourceUsageSchema = z.object({
   delta: z.number().int(),
 });
 
+/** ADR 0076 (V3.1-183) — regagner une utilisation en dépensant autre chose : une INTENTION, le serveur vérifie le coût et l'écrit. */
+export const resourceRegainSchema = z.object({
+  campaignId: campaignIdField,
+  resourceKey: z.string().min(1).max(80),
+  /** Le niveau d'emplacement choisi, pour un regain contre un emplacement ; absent : le plus petit qui convient. */
+  slotLevel: z.number().int().min(1).max(9).optional(),
+});
+
 /**
  * V3.1-114 — dépenser (`delta` > 0) ou rendre (< 0) un emplacement à la main,
  * depuis l'égaliseur : un sort lancé hors de l'application, une erreur à

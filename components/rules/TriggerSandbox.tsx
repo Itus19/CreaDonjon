@@ -138,6 +138,8 @@ export default function TriggerSandbox() {
         return `${effect.who} subit ${effect.amount} dégâts`;
       case "heal":
         return `${effect.who} récupère ${effect.amount} points de vie`;
+      case "temp_hp":
+        return `${effect.who} reçoit ${effect.amount} PV temporaires`;
       case "grant_budget":
         return `${effect.who} — budget « ${effect.kind} » ${effect.amount >= 0 ? "+" : ""}${effect.amount}`;
       case "apply_modifier":

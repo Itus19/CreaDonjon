@@ -107,6 +107,8 @@ export type EffectNode =
   | { action: "remove_condition"; who: string; key: string }
   | { action: "deal_damage"; who: string; amount: FormulaNode; damage_type?: string }
   | { action: "heal"; who: string; amount: FormulaNode }
+  /** ADR 0076 (V3.1-183) — des PV temporaires : on garde le plus grand des deux, jamais la somme. */
+  | { action: "temp_hp"; who: string; amount: FormulaNode }
   | { action: "spend_resource"; who: string; key: string; amount: FormulaNode }
   | { action: "move"; who: string; zone: TriggerZone }
   /** ADR 0029 — accorde (montant positif) ou retire (negatif) du budget d'action. */
@@ -131,6 +133,7 @@ export type ResolvedEffect =
   | { action: "remove_condition"; who: string; key: string }
   | { action: "deal_damage"; who: string; amount: number; damage_type?: string; /** V3.1-105 : un coup critique — deux échecs pour un PJ déjà à 0 PV. */ critical?: boolean }
   | { action: "heal"; who: string; amount: number }
+  | { action: "temp_hp"; who: string; amount: number }
   | { action: "spend_resource"; who: string; key: string; amount: number }
   | { action: "move"; who: string; zone: TriggerZone }
   | { action: "grant_budget"; who: string; kind: BudgetKind; amount: number }
@@ -205,6 +208,7 @@ export const zEffect: z.ZodType<EffectNode> = z.lazy(() =>
       damage_type: z.string().min(1).optional(),
     }),
     z.object({ action: z.literal("heal"), who: z.string().min(1), amount: zFormulaNode }),
+    z.object({ action: z.literal("temp_hp"), who: z.string().min(1), amount: zFormulaNode }),
     z.object({
       action: z.literal("spend_resource"),
       who: z.string().min(1),
@@ -420,6 +424,8 @@ function resolveEffect(
       };
     case "heal":
       return { resolved: { action: "heal", who: effect.who, amount: evalNumber(effect.amount, ctx, fired, rng) }, branch: [] };
+    case "temp_hp":
+      return { resolved: { action: "temp_hp", who: effect.who, amount: Math.max(0, evalNumber(effect.amount, ctx, fired, rng)) }, branch: [] };
     case "spend_resource":
       return {
         resolved: {
@@ -459,9 +465,13 @@ function resolveEffect(
 export function resolveEffectList(effects: readonly EffectNode[], ctx: TriggerContext, fired: FiredEvent, rng: Rng): ResolvedEffect[] {
   const out: ResolvedEffect[] = [];
   const pending: EffectNode[] = [...effects];
+  // ADR 0076 (V3.1-183) : le résultat d'un dé lancé se relit dans les effets qui suivent (`event.last_roll`) —
+  // « le double du nombre obtenu sur le dé ». Le dé est lancé une fois, par le générateur injecté (règle 8).
+  let courant = fired;
   while (pending.length > 0) {
-    const { resolved, branch } = resolveEffect(pending.shift()!, ctx, fired, rng);
+    const { resolved, branch } = resolveEffect(pending.shift()!, ctx, courant, rng);
     out.push(resolved);
+    if (resolved.action === "roll") courant = { ...courant, data: { ...(courant.data ?? {}), "event.last_roll": resolved.value } };
     pending.unshift(...branch);
   }
   return out;

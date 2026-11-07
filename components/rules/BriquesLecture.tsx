@@ -39,6 +39,8 @@ function decrire(e: EffectNode, durables: ReadonlyMap<string, DurableEffect>, t:
       return { titre: t("lecture.degats", { montant: formatFormulaNode(e.amount) }), detail: e.damage_type };
     case "heal":
       return { titre: t("lecture.soins", { montant: formatFormulaNode(e.amount) }) };
+    case "temp_hp":
+      return { titre: t("lecture.pvTemporaires", { montant: formatFormulaNode(e.amount) }) };
     case "apply_condition":
       return { titre: t("lecture.appliquerEtat", { etat: e.key }) };
     case "remove_condition":

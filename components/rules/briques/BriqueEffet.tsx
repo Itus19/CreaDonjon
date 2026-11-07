@@ -150,6 +150,13 @@ function ChampsEffet({ effet, maj }: { effet: BrouillonEffet; maj: (c: Partial<C
       );
     case "heal":
       return <ChampFormule libelle={t("montantSoins")} valeur={effet.montant} onChange={(montant) => maj({ montant })} />;
+    case "temp_hp":
+      return (
+        <>
+          <ChampFormule libelle={t("montantPvTemporaires")} valeur={effet.montant} onChange={(montant) => maj({ montant })} />
+          <p className="text-xs text-ink-muted">{t("aidePvTemporaires")}</p>
+        </>
+      );
     case "apply_condition":
     case "remove_condition":
       return <ChampListe libelle={t("etat")} valeur={effet.cle} options={avecValeur(options, effet.cle)} onChange={(cle) => maj({ cle })} />;

@@ -1,4 +1,5 @@
 import "server-only";
+import { planResourceRegain } from "@/src/core/rules/resourceRegain";
 import type { OpenChoice, ResolvedChoices } from "@/src/core/rules/choices";
 import { choicesToRefresh, isValidRefreshAnswer, withoutRefresh } from "@/src/core/rules/choiceRefresh";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -1557,6 +1558,48 @@ export async function changeSpellSlotUsage(
         ? { pact_slots_used: next }
         : { spell_slots_used: { ...state.spell_slots_used, [String(params.level)]: next } },
     note: `${params.pool === "pact" ? "Emplacement de pacte" : `Emplacement de niveau ${params.level}`} ${next > current ? "dépensé" : "rendu"} à la main`,
+    sessionId,
+    actor: "player",
+    actorUserId: params.actorUserId,
+  });
+  return { ok: true };
+}
+
+/**
+ * ADR 0076 (V3.1-183) — Regagner une utilisation d'une ressource en dépensant
+ * autre chose (une Inspiration bardique, un emplacement de niveau 3+). Le
+ * client n'envoie qu'une intention ; le coût se vérifie ici, sur la fiche
+ * calculée par le serveur et l'état de jeu relu (`planResourceRegain`), et les
+ * deux compteurs s'écrivent ensemble, en un seul changement.
+ */
+export async function regainResource(
+  supabase: TypedClient,
+  params: { entityId: string; campaignId: string | null; resourceKey: string; slotLevel?: number; actorUserId: string; locale: Locale }
+): Promise<{ ok: true } | { error: "not_found" | "no_regain" | "full" | "cannot_pay" }> {
+  const ctx = await resolveCharacterActionContext(supabase, params.entityId, params.campaignId, params.locale);
+  if (!ctx) return { error: "not_found" };
+  const state = await getEntityRuntimeState(supabase, params.entityId, params.campaignId);
+  const plan = planResourceRegain({
+    resourceKey: params.resourceKey,
+    resources: ctx.sheet.resources,
+    used: state.resources,
+    slots: { totals: ctx.sheet.spellcasting?.slots ?? {}, used: state.spell_slots_used },
+    ...(params.slotLevel !== undefined ? { slotLevel: params.slotLevel } : {}),
+  });
+  if (!plan.ok) return { error: plan.reason };
+
+  const label = ctx.sheet.resources.find((r) => r.key === params.resourceKey)?.label;
+  const nom = label ? (label.fr ?? Object.values(label)[0] ?? params.resourceKey) : params.resourceKey;
+  const cout = plan.spent.kind === "slot" ? `un emplacement de niveau ${plan.spent.level}` : `${plan.spent.amount} × ${plan.spent.key}`;
+  const sessionId = params.campaignId ? await getOrOpenSessionForCampaign(supabase, params.campaignId) : null;
+  await applyRuntimeStateChange(supabase, {
+    entityId: params.entityId,
+    campaignId: params.campaignId,
+    patch: {
+      resources: { ...state.resources, ...plan.resources },
+      ...(plan.spellSlotsUsed ? { spell_slots_used: plan.spellSlotsUsed } : {}),
+    },
+    note: `${nom} : une utilisation regagnée contre ${cout}`,
     sessionId,
     actor: "player",
     actorUserId: params.actorUserId,

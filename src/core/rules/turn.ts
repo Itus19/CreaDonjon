@@ -2,7 +2,7 @@ import { z } from "zod";
 import { grantToBudget, zActionBudget, type ActionBudget, type BudgetKind } from "./actionBudget";
 import { moveToZone, sceneZoneOf, type SceneState } from "./scene";
 import type { ResolvedEffect, TriggerZone } from "./triggers";
-import { applyDamageToHp } from "./tempHp";
+import { applyDamageToHp, grantTempHp } from "./tempHp";
 import { applyDamageWithDeath, applyHealing, type DeathSaves } from "./deathSaves";
 
 /**
@@ -151,6 +151,20 @@ export function applyEffects(state: TurnState, effects: readonly ResolvedEffect[
         for (const key of actor.conditions.filter((c) => !updated.conditions.includes(c))) {
           changes.push({ kind: "condition", who: effect.who, key, added: false });
         }
+        break;
+      }
+
+      case "temp_hp": {
+        // ADR 0076 : les PV temporaires ne s'additionnent pas — on garde le plus grand des deux.
+        const actor = next.actors[effect.who];
+        if (!actor) {
+          missing(effect, effect.who);
+          break;
+        }
+        const from = actor.hp;
+        const to = { ...from, temp: grantTempHp(from.temp, effect.amount) };
+        next = withActor(next, effect.who, { ...actor, hp: to });
+        changes.push({ kind: "hp", who: effect.who, from, to, note: `PV temporaires : ${effect.amount}` });
         break;
       }
 
