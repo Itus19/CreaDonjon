@@ -346,7 +346,7 @@ Attaques multiples, action disponible en action bonus, temps d'incantation chang
 - [ ] Au téléphone, la carte d'un sort tient à 390 px avec son choix d'emplacement.
 - [ ] Bénédiction se saisit à l'éditeur sur la fiche du sort, sans JSON.
 
-#### ☐ V3.1-167 — Les données : sorts et actions modifiées du SRD · `S` · sans modèle IA — **prêt (Opus)**
+#### ☑ V3.1-167 — Les données : sorts et actions modifiées du SRD · `S` · sans modèle IA — **prêt (Opus)**
 
 **Modèle conseillé : Opus** — données officielles, import.
 **Dépend de** : 164, 165.
@@ -354,7 +354,11 @@ Attaques multiples, action disponible en action bonus, temps d'incantation chang
 - Bénédiction, Bouclier, Arme sacrée (« en prenant l'action Attaque » : tranché ici), Attaque supplémentaire (Guerrier, Paladin, Rôdeur, Barbare, Moine), Action rusée, Sort accéléré, Sursaut d'action (« pas l'action Magie »). Le Souffle du drakéide attend les zones (137). Réimport, scripts d'auteur rejoués.
 
 **Critères d'acceptation**
-- [ ] Après réimport, ces règles sont « Jouable » (ou « Partielle » pour ce qui attend 137 ou 138) et se jouent sur une fiche de test.
+- [x] Après réimport, ces règles sont « Jouable » (ou « Partielle » pour ce qui attend 137 ou 138) et se jouent sur une fiche de test.
+
+*Fait le 7 novembre.* `modifiers-2024.json` : Attaque supplémentaire (`extra-attack`, la clé que l'import fusionne entre Guerrier, Paladin, Rôdeur, Barbare et Moine : 2 attaques), Guerrier 11 (3) et 20 (4), Action rusée (Foncer, Se désengager, Se cacher en action bonus). `playable-2024.json` : Bouclier (index `shield` des sorts, rangé `shield-spell` ; réaction, emplacement 1, +5 CA contre le jet, effet d'un round), Fougue (l'action accordée ne paie plus l'action Magie), Réserve arcanique (points de Sorcellerie), Métamagie (Sort accéléré en option de lancement), Arme sacrée (Conduit divin, + mod. CHA min. 1 aux attaques d'arme, 10 minutes). Import : les briques jouables ne se posent plus sur l'**équipement** (l'index `shield` désigne aussi l'armure). Tests de données : une aptitude fusionnée entre classes se vise par sa clé fusionnée. Réimport fait, scripts d'auteur rejoués. Vérifié : `srdActionsModifiees.integration.test.ts` 5/5.
+
+*Reste* : **Bénédiction n'est pas dans le SRD 2024 importé** (seulement en 2014) : elle se saisit à l'éditeur sur une variante ; Sort accéléré est proposé sans vérifier qu'il fait partie des options de Métamagie choisies ; « en prenant l'action Attaque » (Arme sacrée) et « jusqu'au début de votre tour suivant » (Bouclier) ne sont pas vérifiés ; le Souffle du drakéide attend les zones (137).
 
 ### ☐ V3.1-137 — Les conditions de jeu et les distances réelles · `L` · sans modèle IA — **à concevoir (Opus)**
 Distances en mètres entre créatures (ADR 0059 §5), zones géométriques, auras, résistances et immunités, conditions sur l'équipement, règles qui en modifient d'autres, étiquettes d'arme sur `attack_hit`. Règles visées : 2, 3, 10, 12, 13, 17, 18, 24, 25, 26, 29, 32, 33, 36.

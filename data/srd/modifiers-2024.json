@@ -7,33 +7,168 @@
     "Suivi par Git parce que le SRD est sous CC-BY-4.0 (voir NOTICE.md), comme triggers-2024.json.",
     "La cle est l'`index` de l'entree SRD. Chaque bloc est valide a l'import."
   ],
-
   "dwarven-toughness": {
     "_regle": "Tenacite naine (trait nain) : vos PV max augmentent de 1, puis de 1 a chaque niveau gagne.",
-    "modifiers": [{ "target": "hp.max", "op": "add", "value": 1, "per_level": true }]
+    "modifiers": [
+      {
+        "target": "hp.max",
+        "op": "add",
+        "value": 1,
+        "per_level": true
+      }
+    ]
   },
-
   "bard-jack-of-all-trades": {
     "_regle": "Touche-a-tout (barde, niveau 2) : la moitie du bonus de maitrise, arrondie vers le bas, s'ajoute a tout jet de caracteristique qui n'inclut pas deja la maitrise (V3.1-46).",
-    "modifiers": [{ "target": "check", "op": "half_proficiency" }]
+    "modifiers": [
+      {
+        "target": "check",
+        "op": "half_proficiency"
+      }
+    ]
   },
   "barbarian-unarmored-defense": {
     "_regle": "Defense sans armure (barbare, niveau 1) : sans armure, CA de base = 10 + DEX + CON ; le bouclier reste permis (V3.1-158, ADR 0074).",
-    "modifiers": [{ "target": "ac.unarmored", "op": "set", "value": { "op": "add", "args": [{ "op": "add", "args": [{ "op": "num", "value": 10 }, { "op": "ref", "name": "ability.dex" }] }, { "op": "ref", "name": "ability.con" }] } }]
+    "modifiers": [
+      {
+        "target": "ac.unarmored",
+        "op": "set",
+        "value": {
+          "op": "add",
+          "args": [
+            {
+              "op": "add",
+              "args": [
+                {
+                  "op": "num",
+                  "value": 10
+                },
+                {
+                  "op": "ref",
+                  "name": "ability.dex"
+                }
+              ]
+            },
+            {
+              "op": "ref",
+              "name": "ability.con"
+            }
+          ]
+        }
+      }
+    ]
   },
-
   "monk-unarmored-defense": {
     "_regle": "Defense sans armure (moine, niveau 1) : sans armure ni bouclier, CA de base = 10 + DEX + SAG (V3.1-158, ADR 0074).",
-    "modifiers": [{ "target": "ac.unarmored_no_shield", "op": "set", "value": { "op": "add", "args": [{ "op": "add", "args": [{ "op": "num", "value": 10 }, { "op": "ref", "name": "ability.dex" }] }, { "op": "ref", "name": "ability.wis" }] } }]
+    "modifiers": [
+      {
+        "target": "ac.unarmored_no_shield",
+        "op": "set",
+        "value": {
+          "op": "add",
+          "args": [
+            {
+              "op": "add",
+              "args": [
+                {
+                  "op": "num",
+                  "value": 10
+                },
+                {
+                  "op": "ref",
+                  "name": "ability.dex"
+                }
+              ]
+            },
+            {
+              "op": "ref",
+              "name": "ability.wis"
+            }
+          ]
+        }
+      }
+    ]
   },
-
   "paladin-aura-of-protection": {
     "_regle": "Aura de protection (paladin, niveau 6) : + mod. CHA (minimum +1) aux jets de sauvegarde. Sur le paladin seulement : les allies a 3 m attendent les auras (V3.1-137), voir playable-2024.json.",
-    "modifiers": [{ "target": "save", "op": "add", "value": { "op": "max", "args": [{ "op": "num", "value": 1 }, { "op": "ref", "name": "ability.cha" }] } }]
+    "modifiers": [
+      {
+        "target": "save",
+        "op": "add",
+        "value": {
+          "op": "max",
+          "args": [
+            {
+              "op": "num",
+              "value": 1
+            },
+            {
+              "op": "ref",
+              "name": "ability.cha"
+            }
+          ]
+        }
+      }
+    ]
   },
-
   "champion-improved-critical": {
     "_regle": "Critique ameliore (Champion, niveau 3) : critique sur 19-20 aux attaques d'arme et a mains nues. L'effet vit dans subclasses-2024.json (aptitude de sous-classe) ; ce bloc dit seulement, sur la fiche de regle, que la regle est jouable (`set` : le doublon est sans effet).",
-    "modifiers": [{ "target": "crit_range.weapon", "op": "set", "value": 19 }]
+    "modifiers": [
+      {
+        "target": "crit_range.weapon",
+        "op": "set",
+        "value": 19
+      }
+    ]
+  },
+  "extra-attack": {
+    "_regle": "Attaque supplementaire (Guerrier, Paladin, Rodeur, Barbare, Moine 5) : deux attaques par action Attaque. V3.1-167.",
+    "modifiers": [
+      {
+        "target": "attacks_per_action",
+        "op": "set",
+        "value": 2
+      }
+    ]
+  },
+  "fighter-two-extra-attacks": {
+    "_regle": "Deux attaques supplementaires (Guerrier 11) : trois attaques. V3.1-167.",
+    "modifiers": [
+      {
+        "target": "attacks_per_action",
+        "op": "set",
+        "value": 3
+      }
+    ]
+  },
+  "fighter-three-extra-attacks": {
+    "_regle": "Trois attaques supplementaires (Guerrier 20) : quatre attaques. V3.1-167.",
+    "modifiers": [
+      {
+        "target": "attacks_per_action",
+        "op": "set",
+        "value": 4
+      }
+    ]
+  },
+  "rogue-cunning-action": {
+    "_regle": "Action rusee (Roublard 2) : Foncer, Se desengager, Se cacher en action Bonus. Leurs effets propres : V3.1-137, 138. V3.1-167.",
+    "modifiers": [
+      {
+        "target": "action_as_bonus.dash",
+        "op": "set",
+        "value": 1
+      },
+      {
+        "target": "action_as_bonus.disengage",
+        "op": "set",
+        "value": 1
+      },
+      {
+        "target": "action_as_bonus.hide",
+        "op": "set",
+        "value": 1
+      }
+    ]
   }
 }

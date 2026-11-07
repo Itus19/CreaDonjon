@@ -1124,8 +1124,9 @@ const PLAYABLE_DISPLAY = {
   coverage: { label: "Couverture", order: 230 },
 } as const;
 
-function playableBlocks(entryIndex: string, baseSystem: string): EntryBlock[] {
-  if (baseSystem !== "dnd_srd_52" || entryIndex.startsWith("_")) return [];
+function playableBlocks(category: string, entryIndex: string, baseSystem: string): EntryBlock[] {
+  // V3.1-167 : un index peut désigner un sort ET un équipement (« shield ») ; l'équipement ordinaire ne se joue pas.
+  if (baseSystem !== "dnd_srd_52" || entryIndex.startsWith("_") || category === "Equipment") return [];
   const authored = SRD_PLAYABLE[entryIndex];
   if (!authored) return [];
   const blocks: EntryBlock[] = [];
@@ -2305,7 +2306,7 @@ async function importSrdVersion(config: SrdVersionConfig): Promise<ImportResult>
         );
         const choices = choicesBlock(category, String(item.index), config.baseSystem);
         if (choices) t.blocks.push(choices);
-        t.blocks.push(...playableBlocks(String(item.index), config.baseSystem));
+        t.blocks.push(...playableBlocks(category, String(item.index), config.baseSystem));
         mergeSubclassMechanics(category, String(item.index), config.baseSystem, t.blocks);
         mergeClassSpellcasting(category, String(item.index), config.baseSystem, t.blocks);
         mergeStandardArray(category, String(item.index), config.baseSystem, t.blocks);
