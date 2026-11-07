@@ -151,7 +151,7 @@ export function featureFormValues(blocks: readonly EditableBlock[]): FeatureForm
   return {
     description: descriptionOf(blocks).description,
     prerequisites: prerequisites.success ? prerequisites.data.items : [],
-    modifiers: modifiers.success ? modifiers.data.modifiers.map((m) => ({ target: m.target, op: m.op, value: String(m.value ?? 1) })) : [],
+    modifiers: modifiers.success ? modifiers.data.modifiers.map((m) => ({ target: m.target, op: m.op, value: m.value === undefined ? "1" : typeof m.value === "number" ? String(m.value) : formatFormulaNode(m.value) })) : [],
     triggers: triggers.success ? triggers.data.triggers : [],
   };
 }

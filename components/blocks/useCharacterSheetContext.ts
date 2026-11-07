@@ -267,6 +267,8 @@ export function useCharacterSheetContext(
       })),
     abilities: { assigned: abilitiesBase },
     featureKeys: [...Object.keys(ruleset.features), ...choiceFeatureKeys],
+    // V3.1-158 : un type de dégâts choisi (Affinité élémentaire) vise sa cible, comme côté serveur.
+    ...(character?.choices ? { choices: character.choices } : {}),
   };
 
   const sheet = characterSheet(

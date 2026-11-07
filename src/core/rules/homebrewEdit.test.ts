@@ -129,6 +129,16 @@ describe("featureFormValues (V3.1-2)", () => {
     });
   });
 
+  it("V3.1-157 : une valeur en formule se relit en texte, jamais « [object Object] »", () => {
+    const v = featureFormValues(
+      asBlocks([
+        { block_type: "description", data: { segments: [{ text: "Aura." }] } },
+        { block_type: "modifiers", data: { modifiers: [{ target: "save", op: "add", value: { op: "max", args: [{ op: "num", value: 1 }, { op: "ref", name: "ability.cha" }] } }] } },
+      ])
+    );
+    expect(v.modifiers).toEqual([{ target: "save", op: "add", value: "max(1, {ability.cha})" }]);
+  });
+
   it("rend des listes vides pour un don sans bloc optionnel", () => {
     expect(featureFormValues(asBlocks([{ block_type: "description", data: { segments: [{ text: "Simple." }] } }]))).toEqual({
       description: "Simple.",
