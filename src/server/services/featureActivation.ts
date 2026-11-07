@@ -1,4 +1,5 @@
 import "server-only";
+import { grantingClassLevel } from "@/src/core/rules/sheet";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
 import type { Locale } from "@/src/i18n/request";
@@ -132,8 +133,12 @@ export async function activateFeature(
 
   // Les nombres de celui qui active : ce que ses formules lisent.
   const sheet = ctx.sheet;
+  // V3.1-133 : `class.level` est le niveau dans la classe qui accorde la règle (Second souffle : « 1d10 + votre niveau de Guerrier »).
+  const classesDuPerso = ctx.characterData.classes.flatMap((c) => (c.class.kind === "rule" ? [{ key: c.class.key, level: c.level }] : []));
+  const source = sheet.features.find((f) => f.key === params.ruleKey)?.source ?? "";
   const actorNumbers: Record<string, number> = {
     level: ctx.characterData.classes.reduce((s, c) => s + c.level, 0),
+    "class.level": grantingClassLevel(source, classesDuPerso),
     proficiency: sheet.proficiencyBonus,
     ...(sheet.spellcasting ? { spell_save_dc: sheet.spellcasting.saveDc } : {}),
   };

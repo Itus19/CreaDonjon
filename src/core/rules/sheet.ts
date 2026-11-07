@@ -722,6 +722,19 @@ function progressionAt(progression: ResolvedClass["progression"], level: number)
  * `proficiency`, `ability.<car>` (modificateur), `spell_save_dc`. Deux fiches
  * qui déclarent la même clé : une seule ligne, le plus grand maximum.
  */
+/**
+ * V3.1-133 — le niveau « de la classe » d'une règle (`class.level` dans ses
+ * formules) : le niveau dans la classe qui l'accorde (`source` « class:<clé> »),
+ * sinon le niveau total. Partagé par les maximums de ressources et par
+ * l'activation (« 1d10 + votre niveau de Guerrier »).
+ */
+export function grantingClassLevel(source: string, classes: readonly { key: string; level: number }[]): number {
+  const total = classes.reduce((s, c) => s + c.level, 0);
+  if (!source.startsWith("class:")) return total;
+  const cle = source.slice("class:".length);
+  return classes.find((c) => c.key === cle)?.level ?? 0;
+}
+
 function computeResources(p: {
   build: CharacterBuild;
   ruleset: ResolvedRuleset;
@@ -747,7 +760,7 @@ function computeResources(p: {
   const byKey = new Map<string, SheetResource>();
   for (const src of sources) {
     if (src.resources.length === 0) continue;
-    const classLevel = src.classKey ? (p.build.classes.find((c) => c.key === src.classKey)?.level ?? 0) : p.totalLevel;
+    const classLevel = src.classKey ? grantingClassLevel(`class:${src.classKey}`, p.build.classes) : p.totalLevel;
     const refs: Record<string, number> = { ...base, "class.level": classLevel };
     if (src.classKey) {
       for (const [k, v] of Object.entries(progressionAt(p.ruleset.classes[src.classKey]?.progression, classLevel))) refs[`column.${k}`] = v;

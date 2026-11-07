@@ -1109,6 +1109,37 @@ function choicesBlock(category: string, entryIndex: string, baseSystem: string):
 }
 
 /**
+ * V3.1-133 (ADR 0059, 0060) — Briques jouables ecrites a la main
+ * (`data/srd/playable-2024.json`) : ressources declarees, activation, et ce
+ * qui reste en texte (`coverage`). Meme raison que les declencheurs : le SRD
+ * ne dit qu'en prose ce qu'une aptitude coute et produit, et un bloc pose
+ * hors import serait efface au prochain passage. Propres au SRD 2024.
+ */
+const SRD_PLAYABLE: Record<string, { resources?: unknown; activation?: unknown; coverage?: unknown }> = JSON.parse(
+  readFileSync(resolve(process.cwd(), "data/srd/playable-2024.json"), "utf-8")
+);
+const PLAYABLE_DISPLAY = {
+  resources: { label: "Ressources", order: 210 },
+  activation: { label: "Activations", order: 220 },
+  coverage: { label: "Couverture", order: 230 },
+} as const;
+
+function playableBlocks(entryIndex: string, baseSystem: string): EntryBlock[] {
+  if (baseSystem !== "dnd_srd_52" || entryIndex.startsWith("_")) return [];
+  const authored = SRD_PLAYABLE[entryIndex];
+  if (!authored) return [];
+  const blocks: EntryBlock[] = [];
+  for (const type of ["resources", "activation", "coverage"] as const) {
+    const data = authored[type];
+    if (data === undefined) continue;
+    // Valide ICI : une brique mal ecrite arrete l'import (meme regle que les declencheurs).
+    const valide = validateBlockData(type, data) as SrdRecord;
+    blocks.push({ block_type: type, display: { label: PLAYABLE_DISPLAY[type].label, layout: "key_values" }, data: valide, display_order: PLAYABLE_DISPLAY[type].order });
+  }
+  return blocks;
+}
+
+/**
  * V3.1-113 — Incantation des classes (`data/srd/class-spellcasting.json`,
  * ADR 0045) : poids dans la table du multiclasse et magie de pacte, par
  * `base_system` (l'arrondi des demi-lanceurs differe entre 2014 et 2024).
@@ -2274,6 +2305,7 @@ async function importSrdVersion(config: SrdVersionConfig): Promise<ImportResult>
         );
         const choices = choicesBlock(category, String(item.index), config.baseSystem);
         if (choices) t.blocks.push(choices);
+        t.blocks.push(...playableBlocks(String(item.index), config.baseSystem));
         mergeSubclassMechanics(category, String(item.index), config.baseSystem, t.blocks);
         mergeClassSpellcasting(category, String(item.index), config.baseSystem, t.blocks);
         mergeStandardArray(category, String(item.index), config.baseSystem, t.blocks);
