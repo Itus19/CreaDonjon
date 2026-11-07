@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import type { DerivedSheet } from "@/src/core/rules/sheet";
+import { PASSIVE_SKILLS, type DerivedSheet } from "@/src/core/rules/sheet";
 import { ABILITIES } from "@/src/core/rules/abilities";
 import { ftToM } from "@/src/core/rules/encumbrance";
 import { SKILL_LABELS_FR } from "@/src/i18n/fr";
@@ -89,6 +89,11 @@ export default function ApercuDirect({
             );
           })}
         </ul>
+        {/* V3.1-167 : les trois valeurs passives, calculées par le moteur. */}
+        <p className="text-ink-muted">
+          {t("passives")}{" "}
+          <span className="text-ink-soft">{PASSIVE_SKILLS.map((p) => `${SKILL_LABELS_FR[p]} ${sheet.passives[p].value}`).join(" · ")}</span>
+        </p>
       </div>
       {(
         [
