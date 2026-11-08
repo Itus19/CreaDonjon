@@ -854,7 +854,7 @@
     "classesAutorisees": "Classes qui peuvent l'apprendre",
     "classesAutoriseesAide": "C'est ce qui le fait proposer à l'étape Sorts de la création de personnage, pour ces classes, à ce niveau.",
     "effetChiffre": "Effet chiffré (optionnel)",
-    "effetChiffreAide": "Uniquement pour les effets qui correspondent vraiment à des dégâts lancés — la plupart des sorts n'en ont aucun : ils se décrivent dans le texte ou par leur page.",
+    "effetChiffreAide": "Uniquement pour les effets qui correspondent vraiment à des dégâts lancés — la plupart des sorts n'en ont aucun : ils se décrivent dans le texte ou par leur page. Un sort à sauvegarde sans dégâts (Injonction) : choisis « Jet de sauvegarde » et laisse les dégâts vides.",
     "ajouterEffetChiffreSort": "Ajouter un effet chiffré",
     "retirerEffetChiffre": "Retirer l'effet chiffré",
     "typeEffet": "Type d'effet",

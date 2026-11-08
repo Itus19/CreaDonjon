@@ -853,7 +853,7 @@
     "classesAutorisees": "Classes that can learn it",
     "classesAutoriseesAide": "This is what offers it at the Spells step of character creation, for these classes, at this level.",
     "effetChiffre": "Numeric effect (optional)",
-    "effetChiffreAide": "Only for effects that really are rolled damage — most spells have none: describe them in the text or by their page.",
+    "effetChiffreAide": "Only for effects that really are rolled damage — most spells have none: describe them in the text or by their page. A saving-throw spell with no damage (Command): pick “Saving throw” and leave damage empty.",
     "ajouterEffetChiffreSort": "Add a numeric effect",
     "retirerEffetChiffre": "Remove the numeric effect",
     "typeEffet": "Effect type",

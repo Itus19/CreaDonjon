@@ -76,6 +76,20 @@ describe("buildHomebrewSpellEntry", () => {
     });
   });
 
+  it("V3.1-198 : une sauvegarde sans dégâts (Injonction) : la sauvegarde seule, ni formule, ni type, ni montée en puissance", () => {
+    const entry = buildHomebrewSpellEntry({
+      ...base,
+      effect: { kind: "save", ability: "wis", attackRange: "ranged", formula: "  ", damageType: "fire", onSuccess: "none" },
+      scaling: [{ level: 3, formula: "2d6" }],
+    });
+    expect(block(entry, "effects")?.data).toEqual({ effects: [{ id: "e1", save: { ability: "wis", effect_on_success: "none" } }] });
+    expect(block(entry, "scaling")).toBeUndefined();
+  });
+
+  it("V3.1-198 : une attaque ou un effet sans sauvegarde demandent toujours leur formule", () => {
+    expect(() => buildHomebrewSpellEntry({ ...base, effect: { kind: "attack", ability: "dex", attackRange: "ranged", formula: "", damageType: "fire", onSuccess: "half" } })).toThrow(HomebrewSpellError);
+  });
+
   it("un effet a jet d'attaque porte la portee, jamais de sauvegarde", () => {
     const entry = buildHomebrewSpellEntry({
       ...base,

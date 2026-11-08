@@ -45,6 +45,13 @@ describe("spellFormValues (V3.1-2)", () => {
     classes: [{ key: "wizard", name: "Magicien" }],
   };
 
+  it("V3.1-198 : une école stockée en français (import FR) revient en clé du schéma, sinon la version maison est refusée", () => {
+    const blocs = asBlocks(buildHomebrewSpellEntry(input).blocks).map((b) =>
+      b.blockType === "spell_casting" ? { ...b, data: { ...(b.data as object), school: "Enchantement" } } : b
+    );
+    expect(spellFormValues(blocs).school).toBe("Enchantment");
+  });
+
   it("relit exactement ce que le formulaire avait ecrit", () => {
     const values = spellFormValues(asBlocks(buildHomebrewSpellEntry(input).blocks));
     expect(values).toEqual({

@@ -144,7 +144,8 @@ export default function CreateHomebrewSpellForm({
     range.trim() !== "" &&
     duration.trim() !== "" &&
     classKeys.length > 0 &&
-    (effect === null || effect.formula.trim() !== "");
+    // V3.1-198 : une sauvegarde peut se passer de dégâts (Injonction).
+    (effect === null || effect.kind === "save" || effect.formula.trim() !== "");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

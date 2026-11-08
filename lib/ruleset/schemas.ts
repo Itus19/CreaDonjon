@@ -180,10 +180,12 @@ export const createHomebrewSpellSchema = z.object({
       kind: z.enum(["save", "attack", "none"]),
       ability: z.enum(SAVE_ABILITIES),
       attackRange: z.enum(["melee", "ranged"]),
-      formula: z.string().trim().min(1, "Formule de dégâts requise.").max(60),
+      // V3.1-198 : vide pour une sauvegarde sans dégâts ; requise pour une attaque ou un effet sans jet.
+      formula: z.string().trim().max(60),
       damageType: z.enum(SPELL_DAMAGE_TYPES),
       onSuccess: z.enum(["none", "half", "other"]),
     })
+    .refine((e) => e.kind === "save" || e.formula.length > 0, { message: "Formule de dégâts requise.", path: ["formula"] })
     .nullable(),
   scaling: z
     .array(z.object({ level: z.number().int().min(1).max(20), formula: z.string().max(60) }))

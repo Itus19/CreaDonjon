@@ -74,3 +74,14 @@ Le moteur connaît le jeton d'un effet durable (une activation accordée tant qu
 **Fait le 8 novembre** (esquisse approuvée : « vas-y »). `briquesRegle.ts` : brique `grant_token` (lecture d'un effet porteur d'un jeton seul, écriture vérifiée : nom, utilisation existante et autre qu'elle-même), `jsRepete` sur `apply_state`, `accordeesParJeton`. `BriqueEffet.tsx` (champs ; le JS répété reprend par défaut la caractéristique et le DD du jet parent), mention « Accordée par » sur la carte d'utilisation, lecture de la fiche (`BriquesLecture`). Vérifié au navigateur dans un monde de test : Majesté souveraine et Magie envoûtante saisies et enregistrées (PUT 200), relues sur la fiche de règle. Planche OutilsMJ à jour.
 
 **Critères.** La brique « Accorder une utilisation » et la case « Nouveau JS à la fin de chacun de ses tours » se saisissent, se relisent et s'enregistrent par l'éditeur, validées par les schémas ; esquisse approuvée avant le code (canevas, planche « V3.1-197 ») ; planche du catalogue à jour.
+
+---
+
+### V3.1-198 — Le formulaire de sort : une sauvegarde sans dégâts, et la version maison d'un sort de l'import FR (sans modèle IA)
+
+**Modèle conseillé : Opus** (trouvé en saisissant le Collège de la séduction).
+
+- Le formulaire de sort exigeait une formule de dégâts : un sort à sauvegarde sans dégâts (Injonction, Immobilisation de personne) ne pouvait pas déclarer sa sauvegarde. Une sauvegarde peut désormais laisser les dégâts vides : le bloc `effects` porte alors la sauvegarde seule, sans formule ni montée en puissance. Une attaque ou un effet sans jet demandent toujours leur formule (schéma, construction et bouton du formulaire).
+- La version maison d'un sort de l'import FR était refusée (400) : son école est stockée en français (« Enchantement »), et le formulaire la renvoyait telle quelle au schéma, qui attend les clés (`Enchantment`). `spellFormValues` la ramène à sa clé (`canonicalSchool`).
+
+**Fait le 8 novembre.** Tests du noyau (`homebrewSpell.test.ts`, `homebrewEdit.test.ts`). Vérifié au navigateur : la version maison d'Injonction (Sauvegarde de Sagesse, aucun dégât) s'enregistre, et le bandeau « bloc manquant : effects » disparaît.

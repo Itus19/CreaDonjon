@@ -1,3 +1,4 @@
+import { canonicalSchool } from "./afterSpell";
 import {
   zBackgroundBlockData,
   zDescriptionBlockData,
@@ -108,7 +109,8 @@ export function spellFormValues(blocks: readonly EditableBlock[]): SpellFormValu
 
   return {
     level: c?.level ?? 1,
-    school: c?.school ?? "Evocation",
+    // V3.1-198 : l'import FR stocke « Enchantement » ; le formulaire et son schéma parlent en clés.
+    school: canonicalSchool(c?.school ?? null) ?? "Evocation",
     castingTime: c?.casting_time ?? "",
     range: c?.range ?? "",
     components: c?.components ?? [],

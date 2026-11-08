@@ -134,7 +134,10 @@ export function buildHomebrewSpellEntry(input: HomebrewSpellInput): HomebrewSpel
     },
   });
 
-  if (input.effect) {
+  // V3.1-198 : une sauvegarde sans dégâts (Injonction, Immobilisation de personne) : la sauvegarde seule.
+  if (input.effect && input.effect.kind === "save" && input.effect.formula.trim() === "") {
+    blocks.push({ block_type: "effects", data: { effects: [{ id: "e1", save: { ability: input.effect.ability, effect_on_success: input.effect.onSuccess } }] } });
+  } else if (input.effect) {
     const formula = parseDamageFormula(input.effect.formula, "Formule de dégâts");
     blocks.push({
       block_type: "effects",
