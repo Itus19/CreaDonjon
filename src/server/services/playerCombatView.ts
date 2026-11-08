@@ -48,6 +48,7 @@ function toRow(row: PlayerCombatViewRow): PlayerCombatRow {
     hp: ally ? { current: row.hp_current, max: row.hp_max, temp: row.temp_hp ?? 0 } : null,
     wound: !ally && WOUNDS.includes(row.wound as WoundState) ? (row.wound as WoundState) : null,
     budget: ally ? budgetOf(row.budget) : null,
+    position: row.pos_x != null && row.pos_y != null ? { x: Number(row.pos_x), y: Number(row.pos_y) } : null,
   };
 }
 

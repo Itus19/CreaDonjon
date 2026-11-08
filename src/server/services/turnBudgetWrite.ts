@@ -2,7 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
 import { EMPTY_TURN_USAGE, zTurnUsage } from "@/src/core/rules/rollWindow";
-import { budgetForTurn, grantTurnBudget, ownTurnStamp, spendTurnBudget, type TurnBudget, type TurnSpend } from "@/src/core/rules/turnBudget";
+import { budgetForTurn, grantTurnBudget, ownTurnStamp, spendMovement, spendTurnBudget, type TurnBudget, type TurnSpend } from "@/src/core/rules/turnBudget";
 import { getActiveCombatForCampaign, listCombatParticipants, updateCombatParticipant } from "@/src/server/repos/combats";
 import { orderParticipants } from "@/src/server/services/combats";
 import { applySignedEngineChange, readCombatParticipantsSigned } from "@/src/server/services/engineSigning";
@@ -27,6 +27,38 @@ export async function spendTurnBudgetFor(
     callerIsGm: boolean;
   },
 ): Promise<{ over: boolean; budget: TurnBudget } | null> {
+  return updateTurnBudgetFor(supabase, params, (initial) => {
+    let budget = initial;
+    for (const g of params.grants ?? []) budget = grantTurnBudget(budget, g);
+    return spendTurnBudget(budget, params.kind, params.attacksPerAction);
+  });
+}
+
+/**
+ * V3.1-169 (ADR 0077) — dépenser le mouvement : seulement pendant le tour du
+ * participant (un déplacement hors de son tour ne compte pas). `null` hors
+ * combat, hors de son tour, ou s'il n'est pas dans le combat.
+ */
+export async function spendMovementFor(
+  supabase: TypedClient,
+  params: { campaignId: string; actor: { participantId: string }; metres: number; speedMetres: number; callerIsGm: boolean },
+): Promise<{ over: boolean; moved: number; budget: TurnBudget } | null> {
+  let moved = 0;
+  const r = await updateTurnBudgetFor(supabase, params, (budget, ctx) => {
+    if (!ctx.ownTurn) return null;
+    const spent = spendMovement(budget, params.metres, params.speedMetres);
+    moved = spent.moved;
+    return spent;
+  });
+  return r ? { ...r, moved } : null;
+}
+
+/** Lire le compte de tour d'un participant, le transformer (`null` : ne rien écrire), le réécrire. */
+async function updateTurnBudgetFor(
+  supabase: TypedClient,
+  params: { campaignId: string; actor: { entityId: string } | { participantId: string }; callerIsGm: boolean },
+  transform: (budget: TurnBudget, ctx: { ownTurn: boolean }) => { budget: TurnBudget; over: boolean } | null,
+): Promise<{ over: boolean; budget: TurnBudget } | null> {
   const combat = await getActiveCombatForCampaign(supabase, params.campaignId);
   if (!combat || combat.status !== "running") return null;
   const participants = params.callerIsGm
@@ -38,9 +70,9 @@ export async function spendTurnBudgetFor(
   const ownIndex = Math.max(0, ordre.findIndex((o) => o.id === row.id));
   const lu = zTurnUsage.safeParse(row.turn_usage);
   const usage = lu.success ? lu.data : EMPTY_TURN_USAGE;
-  let budget = budgetForTurn(usage.budget, ownTurnStamp({ round: combat.round, turnIndex: combat.turn_index }, ownIndex));
-  for (const g of params.grants ?? []) budget = grantTurnBudget(budget, g);
-  const spent = spendTurnBudget(budget, params.kind, params.attacksPerAction);
+  const budget = budgetForTurn(usage.budget, ownTurnStamp({ round: combat.round, turnIndex: combat.turn_index }, ownIndex));
+  const spent = transform(budget, { ownTurn: combat.turn_index === ownIndex });
+  if (!spent) return null;
   const next = { ...usage, budget: spent.budget };
   if (params.callerIsGm) await updateCombatParticipant(supabase, row.id, { turnUsage: next as unknown as Json });
   else await applySignedEngineChange(supabase, { campaignId: params.campaignId, changes: [{ kind: "turn_usage", id: row.id, turn_usage: next }] });

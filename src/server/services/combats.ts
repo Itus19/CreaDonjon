@@ -815,6 +815,8 @@ export async function undoLastCombatAction(supabase: TypedClient, combatId: stri
       concentration: before.concentration,
       // V3.1-129 : un journal d'avant la colonne n'a pas `resources_used` : on n'y touche alors pas.
       ...(before.resources_used !== undefined ? { resourcesUsed: before.resources_used } : {}),
+      // V3.1-169 : un déplacement sur le plan se défait aussi ; un journal d'avant les positions n'y touche pas.
+      ...(before.pos_x !== undefined ? { position: before.pos_x !== null && before.pos_y !== null ? { x: Number(before.pos_x), y: Number(before.pos_y) } : null } : {}),
     });
     const participant = await getCombatParticipantById(supabase, last.payload.targetId);
     if (participant?.source_kind === "entity" && participant.entity_id) {
