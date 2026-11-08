@@ -13,7 +13,7 @@
  * directement motive par ce critere — pas une extension gratuite.
  */
 
-import type { Aura, EquipmentCondition, Patch } from "../schemas/rule-blocks/primitives";
+import { wieldingAllows, type Aura, type EquipmentCondition, type Patch } from "../schemas/rule-blocks/primitives";
 import { applyPatches } from "./patches";
 import { computeEncumbrance, encumbranceModifiers, type EncumbranceResult } from "./encumbrance";
 import type { CharacterRules, MulticlassPrerequisites } from "../schemas/rule-blocks/characterRules";
@@ -699,7 +699,7 @@ export function rollBonus(sheet: Pick<DerivedSheet, "rollModifiers">, q: RollQue
   const matched = sheet.rollModifiers
     .filter((m) => targets.includes(m.target))
     // V3.1-168 : « avec une arme de finesse » ne compte que si l'arme du jet l'est.
-    .filter((m) => !m.when?.wielding || (q.properties ?? []).map((x) => x.toLowerCase()).includes(m.when.wielding.toLowerCase()))
+    .filter((m) => !m.when?.wielding || wieldingAllows(m.when.wielding, q.properties ?? []))
     .map((m) => ({ ...m, target: "roll" }));
   const { value, sources } = resolveTargetStack("roll", matched, 0, null);
   const crits =

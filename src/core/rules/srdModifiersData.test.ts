@@ -12,7 +12,7 @@ import { validateBlockData } from "../schemas/rule-blocks/blocks";
 
 const RAW = JSON.parse(readFileSync(resolve(process.cwd(), "data/srd/modifiers-2024.json"), "utf-8")) as Record<
   string,
-  { _regle?: string; modifiers?: unknown[] }
+  { _regle?: string; modifiers?: unknown[]; auras?: unknown[]; patches?: unknown[] }
 >;
 
 const SRD = JSON.parse(readFileSync(resolve(process.cwd(), "data/srd/srd-2024.json"), "utf-8")) as Record<
@@ -23,11 +23,19 @@ const SRD = JSON.parse(readFileSync(resolve(process.cwd(), "data/srd/srd-2024.js
 const entrees = Object.entries(RAW).filter(([k]) => !k.startsWith("_"));
 
 describe("les effets passifs SRD écrits à la main", () => {
-  it("chaque bloc produit est un bloc `modifiers` valide, non vide", () => {
+  it("chaque bloc produit est un bloc `modifiers` valide, non vide (modificateurs, auras ou retouches, V3.1-171)", () => {
     for (const [key, value] of entrees) {
-      expect(value.modifiers?.length, key).toBeGreaterThan(0);
-      expect(() => validateBlockData("modifiers", { modifiers: value.modifiers }), key).not.toThrow();
+      const taille = (value.modifiers?.length ?? 0) + (value.auras?.length ?? 0) + (value.patches?.length ?? 0);
+      expect(taille, key).toBeGreaterThan(0);
+      const bloc = { modifiers: value.modifiers ?? [], ...(value.auras ? { auras: value.auras } : {}), ...(value.patches ? { patches: value.patches } : {}) };
+      expect(() => validateBlockData("modifiers", bloc), key).not.toThrow();
     }
+  });
+
+  it("V3.1-171 : Résistance naine, Aura de protection à 3 m, Aura étendue à 9 m", () => {
+    expect(RAW["dwarven-resilience"].modifiers).toEqual([{ target: "resist.poison", op: "add", value: 1 }]);
+    expect(RAW["paladin-aura-of-protection"].auras).toMatchObject([{ radius: 3, affects: "allies", self: false }]);
+    expect(RAW["paladin-aura-expansion"].patches).toEqual([{ rule: "paladin-aura-of-protection", field: "aura.radius", value: 9 }]);
   });
 
   it("chaque clé désigne une VRAIE entrée du SRD 2024", () => {

@@ -1074,14 +1074,21 @@ function triggersBlock(entryKey: string): EntryBlock | null {
  * dit qu'en prose, et un bloc pose hors import serait efface au prochain
  * passage.
  */
-const SRD_MODIFIERS: Record<string, { modifiers?: unknown[] }> = JSON.parse(
+const SRD_MODIFIERS: Record<string, { modifiers?: unknown[]; auras?: unknown[]; patches?: unknown[] }> = JSON.parse(
   readFileSync(resolve(process.cwd(), "data/srd/modifiers-2024.json"), "utf-8")
 );
 
 function modifiersBlock(entryKey: string): EntryBlock | null {
   const authored = SRD_MODIFIERS[entryKey];
-  if (!authored?.modifiers || authored.modifiers.length === 0) return null;
-  const data = { modifiers: authored.modifiers };
+  if (!authored) return null;
+  const vide = (l: unknown[] | undefined) => !l || l.length === 0;
+  if (vide(authored.modifiers) && vide(authored.auras) && vide(authored.patches)) return null;
+  // V3.1-171 (ADR 0077) : les auras et retouches voyagent dans le même bloc que les modificateurs.
+  const data = {
+    modifiers: authored.modifiers ?? [],
+    ...(vide(authored.auras) ? {} : { auras: authored.auras }),
+    ...(vide(authored.patches) ? {} : { patches: authored.patches }),
+  };
   validateBlockData("modifiers", data);
   return { block_type: "modifiers", display: { label: "Modificateurs", layout: "key_values" }, data, display_order: 190 };
 }

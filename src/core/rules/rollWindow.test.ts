@@ -281,3 +281,25 @@ describe("V3.1-169 (ADR 0077) — la portée d'une réaction sur le plan", () =>
     expect(avec({ barde: { x: 0, y: 0 } }).choices).toHaveLength(1);
   });
 });
+
+describe("V3.1-171 (ADR 0077) — une réaction conditionnée par l'arme du jet (Attaque sournoise)", () => {
+  const SOURNOISE_ARME = { ...SOURNOISE, when: { wielding: ["finesse", "ranged"] } };
+  const degats = (weaponProperties?: string[]): PendingRoll => ({
+    ...attaque(),
+    kind: "damage",
+    roller: "lia",
+    natural: null,
+    total: 6,
+    ac: null,
+    damage: { base: 6, multiplier: 1 },
+    ...(weaponProperties ? { weaponProperties } : {}),
+  });
+  const avec = (roll: PendingRoll) => eligibleReactions({ roll, candidates: [candidat("lia", SOURNOISE_ARME)], ctx, teams: equipes, stamp: "1:0", rng: des() });
+
+  it("avec une rapière (finesse) ou un arc (à distance) : proposée ; avec une hache : écartée ; arme inconnue : proposée", () => {
+    expect(avec(degats(["finesse", "light"])).choices).toHaveLength(1);
+    expect(avec(degats(["ammunition", "ranged"])).choices).toHaveLength(1);
+    expect(avec(degats(["heavy", "two-handed"])).choices).toHaveLength(0);
+    expect(avec(degats()).choices).toHaveLength(1);
+  });
+});

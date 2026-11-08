@@ -55,6 +55,8 @@ const zPendingRoll = z.object({
   dc: z.number().int().nullable(),
   acBonus: z.number(),
   damage: z.object({ base: z.number(), multiplier: z.number() }).nullable(),
+  /** V3.1-171 : l'arme du jet (Attaque sournoise). */
+  weaponProperties: z.array(z.string().max(40)).max(20).optional(),
 });
 
 const zWindowChoice = z.object({

@@ -118,10 +118,18 @@ export const zEquipmentCondition = z
   .object({
     armor: z.array(z.enum(["none", "light", "medium", "heavy"])).min(1).optional(),
     shield: z.boolean().optional(),
-    wielding: z.string().min(1).max(40).optional(),
+    /** Une propriété, ou une liste dont l'une suffit (« Finesse ou À distance », V3.1-171). */
+    wielding: z.union([z.string().min(1).max(40), z.array(z.string().min(1).max(40)).min(1).max(10)]).optional(),
   })
   .strict();
 export type EquipmentCondition = z.infer<typeof zEquipmentCondition>;
+
+/** V3.1-171 : l'arme du jet satisfait-elle `wielding` ? Sans condition : oui. Arme inconnue (`undefined`) : on ne refuse pas, le joueur tranche. */
+export function wieldingAllows(wielding: EquipmentCondition["wielding"], properties: readonly string[] | undefined): boolean {
+  if (wielding === undefined || properties === undefined) return true;
+  const voulues = (Array.isArray(wielding) ? wielding : [wielding]).map((w) => w.toLowerCase());
+  return properties.some((p) => voulues.includes(p.toLowerCase()));
+}
 
 export const zModifier = z
   .object({

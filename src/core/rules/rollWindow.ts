@@ -1,4 +1,5 @@
 import { distance, type Point } from "./geometry";
+import { wieldingAllows } from "../schemas/rule-blocks/primitives";
 import { z } from "zod";
 import type { Rng } from "../dice/rng";
 import { evaluate } from "../formula/evaluate";
@@ -42,6 +43,8 @@ export interface PendingRoll {
   acBonus: number;
   /** Dégâts : la somme lancée, puis le facteur (Esquive instinctive : ½), arrondi à l'inférieur. */
   damage: { base: number; multiplier: number } | null;
+  /** V3.1-171 (ADR 0077) : les propriétés de l'arme du jet (attaque, dégâts) ; absent : arme inconnue ou sans arme. */
+  weaponProperties?: string[];
 }
 
 export type RollOutcome = "hit" | "miss" | "success" | "failure";
@@ -235,6 +238,7 @@ export function eligibleReactions(p: {
     const id = `${c.actorId}|${c.ruleKey}|${c.activation.id}`;
     if (seen.has(id)) continue;
     if (!rollMatches(t, p.roll.kind) || !subjectMatches(t, p.roll, c.actorId, p.teams) || !momentMatches(t, p.roll)) continue;
+    if (c.activation.when?.wielding !== undefined && !wieldingAllows(c.activation.when.wielding, p.roll.weaponProperties)) continue;
     if (t.range && !withinRange(p.positions?.[c.actorId], p.positions?.[p.roll.roller], t.range.value)) continue;
     const numbers = p.ctx.actors[c.actorId]?.numbers ?? {};
     if (!requirementMet(c.activation, p.ctx, c.actorId, p.rng)) continue;

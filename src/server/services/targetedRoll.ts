@@ -831,6 +831,7 @@ export async function resolveTargetedRoll(
         dc: null,
         acBonus: 0,
         damage: null,
+        ...(armeDuJet ? { weaponProperties: armeDuJet.properties } : {}),
       };
       const pool = await reactorPool();
       const r = await interveneOnRoll(supabase, {
@@ -945,6 +946,7 @@ export async function resolveTargetedRoll(
         dc: null,
         acBonus: 0,
         damage: { base: total, multiplier: 1 },
+        ...(armeDuJet ? { weaponProperties: armeDuJet.properties } : {}),
       };
       const pool = await reactorPool();
       const r = await interveneOnRoll(supabase, {

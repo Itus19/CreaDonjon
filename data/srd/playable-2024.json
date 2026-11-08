@@ -353,7 +353,7 @@
     }
   },
   "barbarian-rage": {
-    "_regle": "Rage (barbare, niveau 1) : action Bonus, usages selon la table (une au repos court, toutes au repos long) ; bonus de degats de la table aux attaques de Force, avantage aux tests et sauvegardes de Force, 10 minutes au plus.",
+    "_regle": "Rage (barbare, niveau 1) : action Bonus, usages selon la table (une au repos court, toutes au repos long) ; bonus de degats de la table aux attaques de Force, avantage aux tests et sauvegardes de Force, Resistance aux degats contondants, perforants et tranchants, rien en armure lourde (V3.1-171), 10 minutes au plus.",
     "resources": {
       "resources": [
         {
@@ -422,15 +422,72 @@
               "value": {
                 "op": "ref",
                 "name": "column.class_specific_rage_damage_bonus"
+              },
+              "when": {
+                "armor": [
+                  "none",
+                  "light",
+                  "medium"
+                ]
               }
             },
             {
               "target": "check.str",
-              "op": "advantage"
+              "op": "advantage",
+              "when": {
+                "armor": [
+                  "none",
+                  "light",
+                  "medium"
+                ]
+              }
             },
             {
               "target": "save.str",
-              "op": "advantage"
+              "op": "advantage",
+              "when": {
+                "armor": [
+                  "none",
+                  "light",
+                  "medium"
+                ]
+              }
+            },
+            {
+              "target": "resist.bludgeoning",
+              "op": "add",
+              "value": 1,
+              "when": {
+                "armor": [
+                  "none",
+                  "light",
+                  "medium"
+                ]
+              }
+            },
+            {
+              "target": "resist.piercing",
+              "op": "add",
+              "value": 1,
+              "when": {
+                "armor": [
+                  "none",
+                  "light",
+                  "medium"
+                ]
+              }
+            },
+            {
+              "target": "resist.slashing",
+              "op": "add",
+              "value": 1,
+              "when": {
+                "armor": [
+                  "none",
+                  "light",
+                  "medium"
+                ]
+              }
             }
           ],
           "duration": {
@@ -451,35 +508,23 @@
     "coverage": {
       "gaps": [
         {
-          "text": "Vous bénéficiez de la Résistance aux dégâts contondants, perforants et tranchants.",
-          "missing": "Résistances aux dégâts — chantier des conditions de jeu (V3.1-137)."
-        },
-        {
           "text": "La Rage persiste jusqu’à la fin de votre tour suivant",
           "missing": "Une durée prolongée de tour en tour par une attaque — l'effet dure 10 minutes au plus et se retire au choix (V3.1-136)."
         },
         {
           "text": "Vous ne pouvez pas maintenir votre Concentration ni lancer de sorts.",
           "missing": "Interdire une action (sorts, concentration) — chantier des actions modifiées (V3.1-136)."
-        },
-        {
-          "text": "si vous ne portez pas d’armure lourde",
-          "missing": "Une condition sur l'équipement (et la fin en enfilant une armure lourde) — V3.1-137."
         }
       ]
     }
   },
   "paladin-aura-of-protection": {
-    "_regle": "Aura de protection : le bonus du paladin lui-meme est dans modifiers-2024.json ; ses allies a 3 m attendent les auras.",
+    "_regle": "Aura de protection : le bonus du paladin et l'aura de 3 m (allies, eteinte quand il est Neutralise) sont dans modifiers-2024.json (V3.1-171). Les auras ne se lisent qu'aux jets de sauvegarde, sur le plan.",
     "coverage": {
       "gaps": [
         {
           "text": "Vous-même et vos alliés dans l’aura recevez un bonus aux jets de sauvegarde égal à votre modificateur de Charisme",
-          "missing": "Le bonus aux alliés dans un rayon de 3 m — chantier des auras et distances (V3.1-137). Le paladin reçoit le sien."
-        },
-        {
-          "text": "Cette aura est inactive tant que vous subissez l’état Neutralisé.",
-          "missing": "Une condition qui suspend un modificateur — V3.1-137."
+          "missing": "Joué : le bonus du paladin, et celui des alliés posés sur le plan à 3 m (9 m avec Aura étendue) quand ils sauvegardent. Le bonus ne s'affiche pas sur la fiche d'un allié (calculé au jet)."
         }
       ]
     }
@@ -533,7 +578,7 @@
     }
   },
   "rogue-sneak-attack": {
-    "_regle": "Attaque sournoise : ceil(niveau / 2)d6 de plus, une fois par tour, au choix sur une touche. Conditions (arme, avantage, allie au contact) : V3.1-137. V3.1-162.",
+    "_regle": "Attaque sournoise : ceil(niveau / 2)d6 de plus, une fois par tour, au choix sur une touche, avec une arme de Finesse ou a distance (V3.1-171). L'avantage ou l'allie au contact restent a la joueuse. V3.1-162.",
     "activation": {
       "activations": [
         {
@@ -586,6 +631,12 @@
           ],
           "limit": {
             "per": "turn"
+          },
+          "when": {
+            "wielding": [
+              "finesse",
+              "ranged"
+            ]
           }
         }
       ],
@@ -595,7 +646,7 @@
       "gaps": [
         {
           "text": "Une fois par tour et à condition que l’attaque soit portée avec une arme dotée de la propriété Finesse ou À distance",
-          "missing": "Les conditions (arme de finesse ou à distance, avantage ou allié au contact) attendent les conditions d'équipement et les distances (V3.1-137) : la joueuse choisit de l'appliquer. Le dé, la touche et « une fois par tour » sont joués."
+          "missing": "Joué : l'arme (Finesse ou À distance), le dé, la touche et « une fois par tour ». L'Avantage ou l'allié au contact de la cible restent au choix de la joueuse."
         }
       ]
     }
@@ -1299,6 +1350,1856 @@
         {
           "text": "ou que le sort projectile magique vous cible",
           "missing": "Le déclenchement par Projectile magique et l'immunité à ses dégâts attendent les restrictions de ciblage (V3.1-138)."
+        }
+      ]
+    }
+  },
+  "draconic-breath-weapon-acid": {
+    "_regle": "Souffle du drakeide (acid) : remplace une attaque de l'action Attaque ; cone de 4,5 m ou ligne de 9 m sur 1,5 m, au choix ; JS Dex DD 8 + CON + maitrise ; 1d10 (2d10 au niveau 5, 3d10 au 11, 4d10 au 17), moitie sur une reussite ; usages = bonus de maitrise, au repos long (V3.1-171, ADR 0077).",
+    "resources": {
+      "resources": [
+        {
+          "key": "breath-weapon",
+          "label": {
+            "fr": "Souffle",
+            "en": "Breath Weapon"
+          },
+          "max": {
+            "op": "ref",
+            "name": "proficiency"
+          },
+          "recharge": "long_rest",
+          "passage": "Vous pouvez recourir à ce Souffle autant de fois que votre bonus de maîtrise, et récupérez ce quota en terminant un Repos long."
+        }
+      ]
+    },
+    "activation": {
+      "activations": [
+        {
+          "id": "souffle-cone",
+          "label": {
+            "fr": "Souffle (cône)",
+            "en": "Breath Weapon (cone)"
+          },
+          "cost": {
+            "action": "attack",
+            "resources": [
+              {
+                "key": "breath-weapon",
+                "amount": {
+                  "op": "num",
+                  "value": 1
+                }
+              }
+            ]
+          },
+          "targets": {
+            "kind": "area",
+            "area": {
+              "shape": "cone",
+              "size": 4.5,
+              "origin": "self"
+            }
+          },
+          "effects": [
+            {
+              "action": "saving_throw",
+              "who": "target",
+              "ability": "dex",
+              "dc": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "add",
+                    "args": [
+                      {
+                        "op": "num",
+                        "value": 8
+                      },
+                      {
+                        "op": "ref",
+                        "name": "ability.con"
+                      }
+                    ]
+                  },
+                  {
+                    "op": "ref",
+                    "name": "proficiency"
+                  }
+                ]
+              },
+              "on_fail": [
+                {
+                  "action": "deal_damage",
+                  "who": "target",
+                  "amount": {
+                    "op": "dice",
+                    "count": {
+                      "op": "add",
+                      "args": [
+                        {
+                          "op": "floor",
+                          "args": [
+                            {
+                              "op": "div",
+                              "args": [
+                                {
+                                  "op": "add",
+                                  "args": [
+                                    {
+                                      "op": "ref",
+                                      "name": "level"
+                                    },
+                                    {
+                                      "op": "num",
+                                      "value": 1
+                                    }
+                                  ]
+                                },
+                                {
+                                  "op": "num",
+                                  "value": 6
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "op": "num",
+                          "value": 1
+                        }
+                      ]
+                    },
+                    "faces": 10
+                  },
+                  "damage_type": "acid"
+                }
+              ],
+              "on_pass": [
+                {
+                  "action": "deal_damage",
+                  "who": "target",
+                  "amount": {
+                    "op": "floor",
+                    "args": [
+                      {
+                        "op": "div",
+                        "args": [
+                          {
+                            "op": "dice",
+                            "count": {
+                              "op": "add",
+                              "args": [
+                                {
+                                  "op": "floor",
+                                  "args": [
+                                    {
+                                      "op": "div",
+                                      "args": [
+                                        {
+                                          "op": "add",
+                                          "args": [
+                                            {
+                                              "op": "ref",
+                                              "name": "level"
+                                            },
+                                            {
+                                              "op": "num",
+                                              "value": 1
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "op": "num",
+                                          "value": 6
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "op": "num",
+                                  "value": 1
+                                }
+                              ]
+                            },
+                            "faces": 10
+                          },
+                          {
+                            "op": "num",
+                            "value": 2
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "damage_type": "acid"
+                }
+              ]
+            }
+          ],
+          "variants": null,
+          "passages": {
+            "cost": "vous pouvez remplacer l’une de vos attaques par une expiration d’énergie magique"
+          }
+        },
+        {
+          "id": "souffle-ligne",
+          "label": {
+            "fr": "Souffle (ligne)",
+            "en": "Breath Weapon (line)"
+          },
+          "cost": {
+            "action": "attack",
+            "resources": [
+              {
+                "key": "breath-weapon",
+                "amount": {
+                  "op": "num",
+                  "value": 1
+                }
+              }
+            ]
+          },
+          "targets": {
+            "kind": "area",
+            "area": {
+              "shape": "line",
+              "size": 9,
+              "width": 1.5,
+              "origin": "self"
+            }
+          },
+          "effects": [
+            {
+              "action": "saving_throw",
+              "who": "target",
+              "ability": "dex",
+              "dc": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "add",
+                    "args": [
+                      {
+                        "op": "num",
+                        "value": 8
+                      },
+                      {
+                        "op": "ref",
+                        "name": "ability.con"
+                      }
+                    ]
+                  },
+                  {
+                    "op": "ref",
+                    "name": "proficiency"
+                  }
+                ]
+              },
+              "on_fail": [
+                {
+                  "action": "deal_damage",
+                  "who": "target",
+                  "amount": {
+                    "op": "dice",
+                    "count": {
+                      "op": "add",
+                      "args": [
+                        {
+                          "op": "floor",
+                          "args": [
+                            {
+                              "op": "div",
+                              "args": [
+                                {
+                                  "op": "add",
+                                  "args": [
+                                    {
+                                      "op": "ref",
+                                      "name": "level"
+                                    },
+                                    {
+                                      "op": "num",
+                                      "value": 1
+                                    }
+                                  ]
+                                },
+                                {
+                                  "op": "num",
+                                  "value": 6
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "op": "num",
+                          "value": 1
+                        }
+                      ]
+                    },
+                    "faces": 10
+                  },
+                  "damage_type": "acid"
+                }
+              ],
+              "on_pass": [
+                {
+                  "action": "deal_damage",
+                  "who": "target",
+                  "amount": {
+                    "op": "floor",
+                    "args": [
+                      {
+                        "op": "div",
+                        "args": [
+                          {
+                            "op": "dice",
+                            "count": {
+                              "op": "add",
+                              "args": [
+                                {
+                                  "op": "floor",
+                                  "args": [
+                                    {
+                                      "op": "div",
+                                      "args": [
+                                        {
+                                          "op": "add",
+                                          "args": [
+                                            {
+                                              "op": "ref",
+                                              "name": "level"
+                                            },
+                                            {
+                                              "op": "num",
+                                              "value": 1
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "op": "num",
+                                          "value": 6
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "op": "num",
+                                  "value": 1
+                                }
+                              ]
+                            },
+                            "faces": 10
+                          },
+                          {
+                            "op": "num",
+                            "value": 2
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "damage_type": "acid"
+                }
+              ]
+            }
+          ],
+          "variants": null,
+          "passages": {
+            "cost": "vous pouvez remplacer l’une de vos attaques par une expiration d’énergie magique"
+          }
+        }
+      ],
+      "durable_effects": []
+    },
+    "coverage": {
+      "gaps": [
+        {
+          "text": "En cas de réussite, elle ne subit que la moitié de ces dégâts.",
+          "missing": "Un seul jet de dégâts pour toute la zone n'existe pas encore : chaque créature a son jet, et la moitié d'un jet à part sur une réussite."
+        }
+      ]
+    }
+  },
+  "draconic-breath-weapon-cold": {
+    "_regle": "Souffle du drakeide (cold) : remplace une attaque de l'action Attaque ; cone de 4,5 m ou ligne de 9 m sur 1,5 m, au choix ; JS Dex DD 8 + CON + maitrise ; 1d10 (2d10 au niveau 5, 3d10 au 11, 4d10 au 17), moitie sur une reussite ; usages = bonus de maitrise, au repos long (V3.1-171, ADR 0077).",
+    "resources": {
+      "resources": [
+        {
+          "key": "breath-weapon",
+          "label": {
+            "fr": "Souffle",
+            "en": "Breath Weapon"
+          },
+          "max": {
+            "op": "ref",
+            "name": "proficiency"
+          },
+          "recharge": "long_rest",
+          "passage": "Vous pouvez recourir à ce Souffle autant de fois que votre bonus de maîtrise, et récupérez ce quota en terminant un Repos long."
+        }
+      ]
+    },
+    "activation": {
+      "activations": [
+        {
+          "id": "souffle-cone",
+          "label": {
+            "fr": "Souffle (cône)",
+            "en": "Breath Weapon (cone)"
+          },
+          "cost": {
+            "action": "attack",
+            "resources": [
+              {
+                "key": "breath-weapon",
+                "amount": {
+                  "op": "num",
+                  "value": 1
+                }
+              }
+            ]
+          },
+          "targets": {
+            "kind": "area",
+            "area": {
+              "shape": "cone",
+              "size": 4.5,
+              "origin": "self"
+            }
+          },
+          "effects": [
+            {
+              "action": "saving_throw",
+              "who": "target",
+              "ability": "dex",
+              "dc": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "add",
+                    "args": [
+                      {
+                        "op": "num",
+                        "value": 8
+                      },
+                      {
+                        "op": "ref",
+                        "name": "ability.con"
+                      }
+                    ]
+                  },
+                  {
+                    "op": "ref",
+                    "name": "proficiency"
+                  }
+                ]
+              },
+              "on_fail": [
+                {
+                  "action": "deal_damage",
+                  "who": "target",
+                  "amount": {
+                    "op": "dice",
+                    "count": {
+                      "op": "add",
+                      "args": [
+                        {
+                          "op": "floor",
+                          "args": [
+                            {
+                              "op": "div",
+                              "args": [
+                                {
+                                  "op": "add",
+                                  "args": [
+                                    {
+                                      "op": "ref",
+                                      "name": "level"
+                                    },
+                                    {
+                                      "op": "num",
+                                      "value": 1
+                                    }
+                                  ]
+                                },
+                                {
+                                  "op": "num",
+                                  "value": 6
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "op": "num",
+                          "value": 1
+                        }
+                      ]
+                    },
+                    "faces": 10
+                  },
+                  "damage_type": "cold"
+                }
+              ],
+              "on_pass": [
+                {
+                  "action": "deal_damage",
+                  "who": "target",
+                  "amount": {
+                    "op": "floor",
+                    "args": [
+                      {
+                        "op": "div",
+                        "args": [
+                          {
+                            "op": "dice",
+                            "count": {
+                              "op": "add",
+                              "args": [
+                                {
+                                  "op": "floor",
+                                  "args": [
+                                    {
+                                      "op": "div",
+                                      "args": [
+                                        {
+                                          "op": "add",
+                                          "args": [
+                                            {
+                                              "op": "ref",
+                                              "name": "level"
+                                            },
+                                            {
+                                              "op": "num",
+                                              "value": 1
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "op": "num",
+                                          "value": 6
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "op": "num",
+                                  "value": 1
+                                }
+                              ]
+                            },
+                            "faces": 10
+                          },
+                          {
+                            "op": "num",
+                            "value": 2
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "damage_type": "cold"
+                }
+              ]
+            }
+          ],
+          "variants": null,
+          "passages": {
+            "cost": "vous pouvez remplacer l’une de vos attaques par une expiration d’énergie magique"
+          }
+        },
+        {
+          "id": "souffle-ligne",
+          "label": {
+            "fr": "Souffle (ligne)",
+            "en": "Breath Weapon (line)"
+          },
+          "cost": {
+            "action": "attack",
+            "resources": [
+              {
+                "key": "breath-weapon",
+                "amount": {
+                  "op": "num",
+                  "value": 1
+                }
+              }
+            ]
+          },
+          "targets": {
+            "kind": "area",
+            "area": {
+              "shape": "line",
+              "size": 9,
+              "width": 1.5,
+              "origin": "self"
+            }
+          },
+          "effects": [
+            {
+              "action": "saving_throw",
+              "who": "target",
+              "ability": "dex",
+              "dc": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "add",
+                    "args": [
+                      {
+                        "op": "num",
+                        "value": 8
+                      },
+                      {
+                        "op": "ref",
+                        "name": "ability.con"
+                      }
+                    ]
+                  },
+                  {
+                    "op": "ref",
+                    "name": "proficiency"
+                  }
+                ]
+              },
+              "on_fail": [
+                {
+                  "action": "deal_damage",
+                  "who": "target",
+                  "amount": {
+                    "op": "dice",
+                    "count": {
+                      "op": "add",
+                      "args": [
+                        {
+                          "op": "floor",
+                          "args": [
+                            {
+                              "op": "div",
+                              "args": [
+                                {
+                                  "op": "add",
+                                  "args": [
+                                    {
+                                      "op": "ref",
+                                      "name": "level"
+                                    },
+                                    {
+                                      "op": "num",
+                                      "value": 1
+                                    }
+                                  ]
+                                },
+                                {
+                                  "op": "num",
+                                  "value": 6
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "op": "num",
+                          "value": 1
+                        }
+                      ]
+                    },
+                    "faces": 10
+                  },
+                  "damage_type": "cold"
+                }
+              ],
+              "on_pass": [
+                {
+                  "action": "deal_damage",
+                  "who": "target",
+                  "amount": {
+                    "op": "floor",
+                    "args": [
+                      {
+                        "op": "div",
+                        "args": [
+                          {
+                            "op": "dice",
+                            "count": {
+                              "op": "add",
+                              "args": [
+                                {
+                                  "op": "floor",
+                                  "args": [
+                                    {
+                                      "op": "div",
+                                      "args": [
+                                        {
+                                          "op": "add",
+                                          "args": [
+                                            {
+                                              "op": "ref",
+                                              "name": "level"
+                                            },
+                                            {
+                                              "op": "num",
+                                              "value": 1
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "op": "num",
+                                          "value": 6
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "op": "num",
+                                  "value": 1
+                                }
+                              ]
+                            },
+                            "faces": 10
+                          },
+                          {
+                            "op": "num",
+                            "value": 2
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "damage_type": "cold"
+                }
+              ]
+            }
+          ],
+          "variants": null,
+          "passages": {
+            "cost": "vous pouvez remplacer l’une de vos attaques par une expiration d’énergie magique"
+          }
+        }
+      ],
+      "durable_effects": []
+    },
+    "coverage": {
+      "gaps": [
+        {
+          "text": "En cas de réussite, elle ne subit que la moitié de ces dégâts.",
+          "missing": "Un seul jet de dégâts pour toute la zone n'existe pas encore : chaque créature a son jet, et la moitié d'un jet à part sur une réussite."
+        }
+      ]
+    }
+  },
+  "draconic-breath-weapon-fire": {
+    "_regle": "Souffle du drakeide (fire) : remplace une attaque de l'action Attaque ; cone de 4,5 m ou ligne de 9 m sur 1,5 m, au choix ; JS Dex DD 8 + CON + maitrise ; 1d10 (2d10 au niveau 5, 3d10 au 11, 4d10 au 17), moitie sur une reussite ; usages = bonus de maitrise, au repos long (V3.1-171, ADR 0077).",
+    "resources": {
+      "resources": [
+        {
+          "key": "breath-weapon",
+          "label": {
+            "fr": "Souffle",
+            "en": "Breath Weapon"
+          },
+          "max": {
+            "op": "ref",
+            "name": "proficiency"
+          },
+          "recharge": "long_rest",
+          "passage": "Vous pouvez recourir à ce Souffle autant de fois que votre bonus de maîtrise, et récupérez ce quota en terminant un Repos long."
+        }
+      ]
+    },
+    "activation": {
+      "activations": [
+        {
+          "id": "souffle-cone",
+          "label": {
+            "fr": "Souffle (cône)",
+            "en": "Breath Weapon (cone)"
+          },
+          "cost": {
+            "action": "attack",
+            "resources": [
+              {
+                "key": "breath-weapon",
+                "amount": {
+                  "op": "num",
+                  "value": 1
+                }
+              }
+            ]
+          },
+          "targets": {
+            "kind": "area",
+            "area": {
+              "shape": "cone",
+              "size": 4.5,
+              "origin": "self"
+            }
+          },
+          "effects": [
+            {
+              "action": "saving_throw",
+              "who": "target",
+              "ability": "dex",
+              "dc": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "add",
+                    "args": [
+                      {
+                        "op": "num",
+                        "value": 8
+                      },
+                      {
+                        "op": "ref",
+                        "name": "ability.con"
+                      }
+                    ]
+                  },
+                  {
+                    "op": "ref",
+                    "name": "proficiency"
+                  }
+                ]
+              },
+              "on_fail": [
+                {
+                  "action": "deal_damage",
+                  "who": "target",
+                  "amount": {
+                    "op": "dice",
+                    "count": {
+                      "op": "add",
+                      "args": [
+                        {
+                          "op": "floor",
+                          "args": [
+                            {
+                              "op": "div",
+                              "args": [
+                                {
+                                  "op": "add",
+                                  "args": [
+                                    {
+                                      "op": "ref",
+                                      "name": "level"
+                                    },
+                                    {
+                                      "op": "num",
+                                      "value": 1
+                                    }
+                                  ]
+                                },
+                                {
+                                  "op": "num",
+                                  "value": 6
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "op": "num",
+                          "value": 1
+                        }
+                      ]
+                    },
+                    "faces": 10
+                  },
+                  "damage_type": "fire"
+                }
+              ],
+              "on_pass": [
+                {
+                  "action": "deal_damage",
+                  "who": "target",
+                  "amount": {
+                    "op": "floor",
+                    "args": [
+                      {
+                        "op": "div",
+                        "args": [
+                          {
+                            "op": "dice",
+                            "count": {
+                              "op": "add",
+                              "args": [
+                                {
+                                  "op": "floor",
+                                  "args": [
+                                    {
+                                      "op": "div",
+                                      "args": [
+                                        {
+                                          "op": "add",
+                                          "args": [
+                                            {
+                                              "op": "ref",
+                                              "name": "level"
+                                            },
+                                            {
+                                              "op": "num",
+                                              "value": 1
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "op": "num",
+                                          "value": 6
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "op": "num",
+                                  "value": 1
+                                }
+                              ]
+                            },
+                            "faces": 10
+                          },
+                          {
+                            "op": "num",
+                            "value": 2
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "damage_type": "fire"
+                }
+              ]
+            }
+          ],
+          "variants": null,
+          "passages": {
+            "cost": "vous pouvez remplacer l’une de vos attaques par une expiration d’énergie magique"
+          }
+        },
+        {
+          "id": "souffle-ligne",
+          "label": {
+            "fr": "Souffle (ligne)",
+            "en": "Breath Weapon (line)"
+          },
+          "cost": {
+            "action": "attack",
+            "resources": [
+              {
+                "key": "breath-weapon",
+                "amount": {
+                  "op": "num",
+                  "value": 1
+                }
+              }
+            ]
+          },
+          "targets": {
+            "kind": "area",
+            "area": {
+              "shape": "line",
+              "size": 9,
+              "width": 1.5,
+              "origin": "self"
+            }
+          },
+          "effects": [
+            {
+              "action": "saving_throw",
+              "who": "target",
+              "ability": "dex",
+              "dc": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "add",
+                    "args": [
+                      {
+                        "op": "num",
+                        "value": 8
+                      },
+                      {
+                        "op": "ref",
+                        "name": "ability.con"
+                      }
+                    ]
+                  },
+                  {
+                    "op": "ref",
+                    "name": "proficiency"
+                  }
+                ]
+              },
+              "on_fail": [
+                {
+                  "action": "deal_damage",
+                  "who": "target",
+                  "amount": {
+                    "op": "dice",
+                    "count": {
+                      "op": "add",
+                      "args": [
+                        {
+                          "op": "floor",
+                          "args": [
+                            {
+                              "op": "div",
+                              "args": [
+                                {
+                                  "op": "add",
+                                  "args": [
+                                    {
+                                      "op": "ref",
+                                      "name": "level"
+                                    },
+                                    {
+                                      "op": "num",
+                                      "value": 1
+                                    }
+                                  ]
+                                },
+                                {
+                                  "op": "num",
+                                  "value": 6
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "op": "num",
+                          "value": 1
+                        }
+                      ]
+                    },
+                    "faces": 10
+                  },
+                  "damage_type": "fire"
+                }
+              ],
+              "on_pass": [
+                {
+                  "action": "deal_damage",
+                  "who": "target",
+                  "amount": {
+                    "op": "floor",
+                    "args": [
+                      {
+                        "op": "div",
+                        "args": [
+                          {
+                            "op": "dice",
+                            "count": {
+                              "op": "add",
+                              "args": [
+                                {
+                                  "op": "floor",
+                                  "args": [
+                                    {
+                                      "op": "div",
+                                      "args": [
+                                        {
+                                          "op": "add",
+                                          "args": [
+                                            {
+                                              "op": "ref",
+                                              "name": "level"
+                                            },
+                                            {
+                                              "op": "num",
+                                              "value": 1
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "op": "num",
+                                          "value": 6
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "op": "num",
+                                  "value": 1
+                                }
+                              ]
+                            },
+                            "faces": 10
+                          },
+                          {
+                            "op": "num",
+                            "value": 2
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "damage_type": "fire"
+                }
+              ]
+            }
+          ],
+          "variants": null,
+          "passages": {
+            "cost": "vous pouvez remplacer l’une de vos attaques par une expiration d’énergie magique"
+          }
+        }
+      ],
+      "durable_effects": []
+    },
+    "coverage": {
+      "gaps": [
+        {
+          "text": "En cas de réussite, elle ne subit que la moitié de ces dégâts.",
+          "missing": "Un seul jet de dégâts pour toute la zone n'existe pas encore : chaque créature a son jet, et la moitié d'un jet à part sur une réussite."
+        }
+      ]
+    }
+  },
+  "draconic-breath-weapon-lightning": {
+    "_regle": "Souffle du drakeide (lightning) : remplace une attaque de l'action Attaque ; cone de 4,5 m ou ligne de 9 m sur 1,5 m, au choix ; JS Dex DD 8 + CON + maitrise ; 1d10 (2d10 au niveau 5, 3d10 au 11, 4d10 au 17), moitie sur une reussite ; usages = bonus de maitrise, au repos long (V3.1-171, ADR 0077).",
+    "resources": {
+      "resources": [
+        {
+          "key": "breath-weapon",
+          "label": {
+            "fr": "Souffle",
+            "en": "Breath Weapon"
+          },
+          "max": {
+            "op": "ref",
+            "name": "proficiency"
+          },
+          "recharge": "long_rest",
+          "passage": "Vous pouvez recourir à ce Souffle autant de fois que votre bonus de maîtrise, et récupérez ce quota en terminant un Repos long."
+        }
+      ]
+    },
+    "activation": {
+      "activations": [
+        {
+          "id": "souffle-cone",
+          "label": {
+            "fr": "Souffle (cône)",
+            "en": "Breath Weapon (cone)"
+          },
+          "cost": {
+            "action": "attack",
+            "resources": [
+              {
+                "key": "breath-weapon",
+                "amount": {
+                  "op": "num",
+                  "value": 1
+                }
+              }
+            ]
+          },
+          "targets": {
+            "kind": "area",
+            "area": {
+              "shape": "cone",
+              "size": 4.5,
+              "origin": "self"
+            }
+          },
+          "effects": [
+            {
+              "action": "saving_throw",
+              "who": "target",
+              "ability": "dex",
+              "dc": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "add",
+                    "args": [
+                      {
+                        "op": "num",
+                        "value": 8
+                      },
+                      {
+                        "op": "ref",
+                        "name": "ability.con"
+                      }
+                    ]
+                  },
+                  {
+                    "op": "ref",
+                    "name": "proficiency"
+                  }
+                ]
+              },
+              "on_fail": [
+                {
+                  "action": "deal_damage",
+                  "who": "target",
+                  "amount": {
+                    "op": "dice",
+                    "count": {
+                      "op": "add",
+                      "args": [
+                        {
+                          "op": "floor",
+                          "args": [
+                            {
+                              "op": "div",
+                              "args": [
+                                {
+                                  "op": "add",
+                                  "args": [
+                                    {
+                                      "op": "ref",
+                                      "name": "level"
+                                    },
+                                    {
+                                      "op": "num",
+                                      "value": 1
+                                    }
+                                  ]
+                                },
+                                {
+                                  "op": "num",
+                                  "value": 6
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "op": "num",
+                          "value": 1
+                        }
+                      ]
+                    },
+                    "faces": 10
+                  },
+                  "damage_type": "lightning"
+                }
+              ],
+              "on_pass": [
+                {
+                  "action": "deal_damage",
+                  "who": "target",
+                  "amount": {
+                    "op": "floor",
+                    "args": [
+                      {
+                        "op": "div",
+                        "args": [
+                          {
+                            "op": "dice",
+                            "count": {
+                              "op": "add",
+                              "args": [
+                                {
+                                  "op": "floor",
+                                  "args": [
+                                    {
+                                      "op": "div",
+                                      "args": [
+                                        {
+                                          "op": "add",
+                                          "args": [
+                                            {
+                                              "op": "ref",
+                                              "name": "level"
+                                            },
+                                            {
+                                              "op": "num",
+                                              "value": 1
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "op": "num",
+                                          "value": 6
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "op": "num",
+                                  "value": 1
+                                }
+                              ]
+                            },
+                            "faces": 10
+                          },
+                          {
+                            "op": "num",
+                            "value": 2
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "damage_type": "lightning"
+                }
+              ]
+            }
+          ],
+          "variants": null,
+          "passages": {
+            "cost": "vous pouvez remplacer l’une de vos attaques par une expiration d’énergie magique"
+          }
+        },
+        {
+          "id": "souffle-ligne",
+          "label": {
+            "fr": "Souffle (ligne)",
+            "en": "Breath Weapon (line)"
+          },
+          "cost": {
+            "action": "attack",
+            "resources": [
+              {
+                "key": "breath-weapon",
+                "amount": {
+                  "op": "num",
+                  "value": 1
+                }
+              }
+            ]
+          },
+          "targets": {
+            "kind": "area",
+            "area": {
+              "shape": "line",
+              "size": 9,
+              "width": 1.5,
+              "origin": "self"
+            }
+          },
+          "effects": [
+            {
+              "action": "saving_throw",
+              "who": "target",
+              "ability": "dex",
+              "dc": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "add",
+                    "args": [
+                      {
+                        "op": "num",
+                        "value": 8
+                      },
+                      {
+                        "op": "ref",
+                        "name": "ability.con"
+                      }
+                    ]
+                  },
+                  {
+                    "op": "ref",
+                    "name": "proficiency"
+                  }
+                ]
+              },
+              "on_fail": [
+                {
+                  "action": "deal_damage",
+                  "who": "target",
+                  "amount": {
+                    "op": "dice",
+                    "count": {
+                      "op": "add",
+                      "args": [
+                        {
+                          "op": "floor",
+                          "args": [
+                            {
+                              "op": "div",
+                              "args": [
+                                {
+                                  "op": "add",
+                                  "args": [
+                                    {
+                                      "op": "ref",
+                                      "name": "level"
+                                    },
+                                    {
+                                      "op": "num",
+                                      "value": 1
+                                    }
+                                  ]
+                                },
+                                {
+                                  "op": "num",
+                                  "value": 6
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "op": "num",
+                          "value": 1
+                        }
+                      ]
+                    },
+                    "faces": 10
+                  },
+                  "damage_type": "lightning"
+                }
+              ],
+              "on_pass": [
+                {
+                  "action": "deal_damage",
+                  "who": "target",
+                  "amount": {
+                    "op": "floor",
+                    "args": [
+                      {
+                        "op": "div",
+                        "args": [
+                          {
+                            "op": "dice",
+                            "count": {
+                              "op": "add",
+                              "args": [
+                                {
+                                  "op": "floor",
+                                  "args": [
+                                    {
+                                      "op": "div",
+                                      "args": [
+                                        {
+                                          "op": "add",
+                                          "args": [
+                                            {
+                                              "op": "ref",
+                                              "name": "level"
+                                            },
+                                            {
+                                              "op": "num",
+                                              "value": 1
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "op": "num",
+                                          "value": 6
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "op": "num",
+                                  "value": 1
+                                }
+                              ]
+                            },
+                            "faces": 10
+                          },
+                          {
+                            "op": "num",
+                            "value": 2
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "damage_type": "lightning"
+                }
+              ]
+            }
+          ],
+          "variants": null,
+          "passages": {
+            "cost": "vous pouvez remplacer l’une de vos attaques par une expiration d’énergie magique"
+          }
+        }
+      ],
+      "durable_effects": []
+    },
+    "coverage": {
+      "gaps": [
+        {
+          "text": "En cas de réussite, elle ne subit que la moitié de ces dégâts.",
+          "missing": "Un seul jet de dégâts pour toute la zone n'existe pas encore : chaque créature a son jet, et la moitié d'un jet à part sur une réussite."
+        }
+      ]
+    }
+  },
+  "draconic-breath-weapon-poison": {
+    "_regle": "Souffle du drakeide (poison) : remplace une attaque de l'action Attaque ; cone de 4,5 m ou ligne de 9 m sur 1,5 m, au choix ; JS Dex DD 8 + CON + maitrise ; 1d10 (2d10 au niveau 5, 3d10 au 11, 4d10 au 17), moitie sur une reussite ; usages = bonus de maitrise, au repos long (V3.1-171, ADR 0077).",
+    "resources": {
+      "resources": [
+        {
+          "key": "breath-weapon",
+          "label": {
+            "fr": "Souffle",
+            "en": "Breath Weapon"
+          },
+          "max": {
+            "op": "ref",
+            "name": "proficiency"
+          },
+          "recharge": "long_rest",
+          "passage": "Vous pouvez recourir à ce Souffle autant de fois que votre bonus de maîtrise, et récupérez ce quota en terminant un Repos long."
+        }
+      ]
+    },
+    "activation": {
+      "activations": [
+        {
+          "id": "souffle-cone",
+          "label": {
+            "fr": "Souffle (cône)",
+            "en": "Breath Weapon (cone)"
+          },
+          "cost": {
+            "action": "attack",
+            "resources": [
+              {
+                "key": "breath-weapon",
+                "amount": {
+                  "op": "num",
+                  "value": 1
+                }
+              }
+            ]
+          },
+          "targets": {
+            "kind": "area",
+            "area": {
+              "shape": "cone",
+              "size": 4.5,
+              "origin": "self"
+            }
+          },
+          "effects": [
+            {
+              "action": "saving_throw",
+              "who": "target",
+              "ability": "dex",
+              "dc": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "add",
+                    "args": [
+                      {
+                        "op": "num",
+                        "value": 8
+                      },
+                      {
+                        "op": "ref",
+                        "name": "ability.con"
+                      }
+                    ]
+                  },
+                  {
+                    "op": "ref",
+                    "name": "proficiency"
+                  }
+                ]
+              },
+              "on_fail": [
+                {
+                  "action": "deal_damage",
+                  "who": "target",
+                  "amount": {
+                    "op": "dice",
+                    "count": {
+                      "op": "add",
+                      "args": [
+                        {
+                          "op": "floor",
+                          "args": [
+                            {
+                              "op": "div",
+                              "args": [
+                                {
+                                  "op": "add",
+                                  "args": [
+                                    {
+                                      "op": "ref",
+                                      "name": "level"
+                                    },
+                                    {
+                                      "op": "num",
+                                      "value": 1
+                                    }
+                                  ]
+                                },
+                                {
+                                  "op": "num",
+                                  "value": 6
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "op": "num",
+                          "value": 1
+                        }
+                      ]
+                    },
+                    "faces": 10
+                  },
+                  "damage_type": "poison"
+                }
+              ],
+              "on_pass": [
+                {
+                  "action": "deal_damage",
+                  "who": "target",
+                  "amount": {
+                    "op": "floor",
+                    "args": [
+                      {
+                        "op": "div",
+                        "args": [
+                          {
+                            "op": "dice",
+                            "count": {
+                              "op": "add",
+                              "args": [
+                                {
+                                  "op": "floor",
+                                  "args": [
+                                    {
+                                      "op": "div",
+                                      "args": [
+                                        {
+                                          "op": "add",
+                                          "args": [
+                                            {
+                                              "op": "ref",
+                                              "name": "level"
+                                            },
+                                            {
+                                              "op": "num",
+                                              "value": 1
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "op": "num",
+                                          "value": 6
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "op": "num",
+                                  "value": 1
+                                }
+                              ]
+                            },
+                            "faces": 10
+                          },
+                          {
+                            "op": "num",
+                            "value": 2
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "damage_type": "poison"
+                }
+              ]
+            }
+          ],
+          "variants": null,
+          "passages": {
+            "cost": "vous pouvez remplacer l’une de vos attaques par une expiration d’énergie magique"
+          }
+        },
+        {
+          "id": "souffle-ligne",
+          "label": {
+            "fr": "Souffle (ligne)",
+            "en": "Breath Weapon (line)"
+          },
+          "cost": {
+            "action": "attack",
+            "resources": [
+              {
+                "key": "breath-weapon",
+                "amount": {
+                  "op": "num",
+                  "value": 1
+                }
+              }
+            ]
+          },
+          "targets": {
+            "kind": "area",
+            "area": {
+              "shape": "line",
+              "size": 9,
+              "width": 1.5,
+              "origin": "self"
+            }
+          },
+          "effects": [
+            {
+              "action": "saving_throw",
+              "who": "target",
+              "ability": "dex",
+              "dc": {
+                "op": "add",
+                "args": [
+                  {
+                    "op": "add",
+                    "args": [
+                      {
+                        "op": "num",
+                        "value": 8
+                      },
+                      {
+                        "op": "ref",
+                        "name": "ability.con"
+                      }
+                    ]
+                  },
+                  {
+                    "op": "ref",
+                    "name": "proficiency"
+                  }
+                ]
+              },
+              "on_fail": [
+                {
+                  "action": "deal_damage",
+                  "who": "target",
+                  "amount": {
+                    "op": "dice",
+                    "count": {
+                      "op": "add",
+                      "args": [
+                        {
+                          "op": "floor",
+                          "args": [
+                            {
+                              "op": "div",
+                              "args": [
+                                {
+                                  "op": "add",
+                                  "args": [
+                                    {
+                                      "op": "ref",
+                                      "name": "level"
+                                    },
+                                    {
+                                      "op": "num",
+                                      "value": 1
+                                    }
+                                  ]
+                                },
+                                {
+                                  "op": "num",
+                                  "value": 6
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "op": "num",
+                          "value": 1
+                        }
+                      ]
+                    },
+                    "faces": 10
+                  },
+                  "damage_type": "poison"
+                }
+              ],
+              "on_pass": [
+                {
+                  "action": "deal_damage",
+                  "who": "target",
+                  "amount": {
+                    "op": "floor",
+                    "args": [
+                      {
+                        "op": "div",
+                        "args": [
+                          {
+                            "op": "dice",
+                            "count": {
+                              "op": "add",
+                              "args": [
+                                {
+                                  "op": "floor",
+                                  "args": [
+                                    {
+                                      "op": "div",
+                                      "args": [
+                                        {
+                                          "op": "add",
+                                          "args": [
+                                            {
+                                              "op": "ref",
+                                              "name": "level"
+                                            },
+                                            {
+                                              "op": "num",
+                                              "value": 1
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "op": "num",
+                                          "value": 6
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "op": "num",
+                                  "value": 1
+                                }
+                              ]
+                            },
+                            "faces": 10
+                          },
+                          {
+                            "op": "num",
+                            "value": 2
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  "damage_type": "poison"
+                }
+              ]
+            }
+          ],
+          "variants": null,
+          "passages": {
+            "cost": "vous pouvez remplacer l’une de vos attaques par une expiration d’énergie magique"
+          }
+        }
+      ],
+      "durable_effects": []
+    },
+    "coverage": {
+      "gaps": [
+        {
+          "text": "En cas de réussite, elle ne subit que la moitié de ces dégâts.",
+          "missing": "Un seul jet de dégâts pour toute la zone n'existe pas encore : chaque créature a son jet, et la moitié d'un jet à part sur une réussite."
         }
       ]
     }

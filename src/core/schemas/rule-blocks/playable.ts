@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { zAura, zFormulaNode, zLocalized, zModifier } from "./primitives";
+import { zAura, zEquipmentCondition, zFormulaNode, zLocalized, zModifier } from "./primitives";
 import { TRIGGER_EVENTS, zCondition, zEffect, type EffectNode } from "../../rules/triggers";
 
 /**
@@ -160,6 +160,8 @@ export const zActivation = z.object({
   limit: zActivationLimit.optional(),
   /** V3.1-164 : les options que cette aptitude offre au lancer d'un sort (Métamagie). */
   cast_options: z.array(zCastOption).optional(),
+  /** V3.1-171 (ADR 0077) : une réaction qui exige une arme (Attaque sournoise : Finesse ou À distance), lue sur l'arme du jet. */
+  when: zEquipmentCondition.optional(),
   /** V3.1-132 : le passage dont vient chaque brique, par chemin (`brickPaths`) : `cost`, `targets`, `effects.0.on_fail.0`… */
   passages: z.record(z.string(), zPassage).optional(),
 });
