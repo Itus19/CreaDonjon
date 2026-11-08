@@ -332,7 +332,8 @@
         "move": "Déplacement",
         "grant_budget": "Budget d'action",
         "roll": "Jet libre",
-        "narrate_hint": "Indication au narrateur"
+        "narrate_hint": "Indication au narrateur",
+        "cast_spell": "Lancer un sort"
       },
       "effet": {
         "saving_throw": "Jet de sauvegarde",
@@ -349,6 +350,7 @@
         "move": "Déplacement",
         "roll": "Jet libre",
         "narrate_hint": "Indication au narrateur",
+        "cast_spell": "Lancer un sort",
         "opaque": "Effet conservé ({action})"
       },
       "monter": "Monter",
@@ -495,12 +497,26 @@
         "reaction": "Réaction",
         "magic": "Magie",
         "free": "Gratuit",
-        "none": "Aucun"
+        "none": "Aucun",
+        "attack": "Une attaque"
       },
       "choisirRessource": "Choisir une ressource",
       "ressourceDepensee": "Ressource dépensée",
       "quantite": "Quantité (formule)",
       "ajouterDepense": "+ Ajouter une dépense",
+      "emplacementDeSort": "Coût en emplacement (niveau de base)",
+      "sansEmplacement": "Aucun (pas un sort)",
+      "sortMineur": "Sort mineur",
+      "niveauDeSort": "Niveau {niveau}",
+      "optionsLancement": "Options de lancement",
+      "optionsLancementAide": "Pour une aptitude qui change la façon de lancer un sort (Sort accéléré) : chaque option propose un libellé, un coût et un autre temps d'incantation.",
+      "nouvelleOptionLancement": "Nouvelle option",
+      "libelleOption": "Libellé de l'option",
+      "tempsIncantation": "Temps d'incantation",
+      "tempsInchange": "Inchangé",
+      "ajouterOptionLancement": "+ Ajouter une option de lancement",
+      "cleDuSort": "Clé du sort",
+      "sortGratuit": "Sans emplacement (gratuit)",
       "libelleUtilisation": "Libellé de l'utilisation",
       "retirerUtilisation": "Retirer l'utilisation",
       "cibles": "Cibles",
@@ -579,6 +595,8 @@
         "indication": "Indication au narrateur",
         "depense": "Dépense {montant} {cle}",
         "inspiration": "Accorde l'Inspiration héroïque",
+        "lancerSort": "Lance le sort « {sort} »",
+        "sansEmplacement": "sans emplacement",
         "effetQuiDure": "effet qui dure",
         "siEchec": "si la cible échoue",
         "siReussite": "si la cible réussit",
@@ -1796,7 +1814,10 @@
     "economieTitre": "Économie d'action",
     "action": "Action",
     "actionBonus": "Action bonus",
-    "reaction": "Réaction"
+    "reaction": "Réaction",
+    "budgetReste": "Reste : {action} action, {bonus} action bonus",
+    "budgetAttaques": "{restantes} attaque(s) restante(s)",
+    "budgetDepasse": "Le budget du tour est dépassé. Le MJ tranche."
   },
   "reactions": {
     "titreBandeau": "Réaction possible",
@@ -1847,6 +1868,19 @@
     "activation": {
       "apresSort": {"libelle": "Aussitôt après : {action} ({aptitude})", "passer": "Passer", "passe": "Passé : rien n'est utilisé.", "utilisee": "Utilisée.", "erreur": "L'utilisation n'a pas pu être jouée."},
       "reaction": "Réaction : se propose pendant le jet",
+      "enActionBonus": "En action bonus : {actions}",
+      "sorts": "Sorts",
+      "emplacementDeNiveau": "emplacement de niveau {niveau} ou plus",
+      "sortMineur": "sort mineur",
+      "emplacement": "Emplacement",
+      "choixEmplacement": "Emplacement pour {nom}",
+      "niveauRestants": "Niv. {niveau} ({restants})",
+      "aucunEmplacement": "Aucun emplacement disponible pour ce sort.",
+      "optionsLancement": "Option de lancement",
+      "choixOption": "Option de lancement pour {nom}",
+      "sansOption": "Aucune",
+      "depasseBudget": "Le budget du tour est dépassé. Le MJ tranche.",
+      "actionBonus": {"dash": "Foncer", "disengage": "Se désengager", "hide": "Se cacher", "search": "Chercher", "use_object": "Utiliser un objet", "dodge": "Esquiver"},
       "limiteTour": "une fois par tour",
       "limiteRound": "une fois par round",
       "ressources": "Ressources · calculées depuis les règles",
@@ -1870,7 +1904,8 @@
         "reaction": "Réaction",
         "magic": "Magie",
         "free": "Gratuit",
-        "none": "Sans action"
+        "none": "Sans action",
+        "attack": "Une attaque"
       },
       "cibles": "jusqu'à {n, plural, one {# cible} other {# cibles}}",
       "surSoi": "sur soi",

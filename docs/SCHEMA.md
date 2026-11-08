@@ -825,6 +825,8 @@ alter table combat_participants add column turn_usage jsonb;           -- { reac
 ```
 
 RLS de `roll_windows` : lecture par l'auteur, les répondants (`choices[].user_id`) et le MJ ; **aucune écriture directe**. Ouverture par `public.engine_open_roll_window` (demande signée, ADR 0041 : partie lisible et état figé entrent ensemble ; l'appelant doit être membre de la campagne). Réponse par `public.answer_roll_window(p_window, p_index, p_use)` (sa propre ligne ; le MJ pour celles d'un participant ; une fois). Fermeture par `public.close_roll_window` (tout le monde a répondu, ou le MJ : « Continuer »). Reprise par `public.engine_resume_roll_window` (demande signée, fenêtre fermée, **auteur du jet seulement, une fois** : `resumed_at`). La réaction revient au début du prochain tour du participant : calculée depuis `reaction_at` (`reactionAvailable`), jamais remise à zéro par une écriture. `turn_usage` s'écrit par le MJ, ou par le changement signé `turn_usage` (`apply_engine_change`). `roll_windows` est publiée en temps réel.
+
+**Budget du tour (V3.1-165, ADR 0076, migration `20261107140000_turn_budget`).** `turn_usage.budget` = `{ at, action, bonus, attacks, extraNotMagic }`, daté du dernier tour du participant (`ownTurnStamp`) : un tour nouveau le rend neuf, sans écriture au passage de tour. Écrit par le MJ, ou par le changement signé `turn_usage` (la fonction accepte la clé `budget` et n'y admet que ces cinq champs). Jamais bloquant : un dépassement est signalé (ADR 0029).
 - Les routes `/api/campaigns/[id]/combats/**` vérifient la même chose avant toute lecture ou écriture (`guardCombatRoute`).
 - En solo, le joueur est propriétaire du monde, donc administrateur : rien ne change pour lui.
 

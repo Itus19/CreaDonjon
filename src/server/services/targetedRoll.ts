@@ -59,6 +59,7 @@ import { expireFeatureEffects } from "@/src/server/services/effectExpiry";
 import { parseFormula } from "@/src/core/formula/parser";
 import type { PendingRoll } from "@/src/core/rules/rollWindow";
 import { gatherReactors, interveneOnRoll, type ReactorPool } from "@/src/server/services/rollWindows";
+import { spendTurnBudgetFor } from "@/src/server/services/turnBudgetWrite";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -763,6 +764,18 @@ export async function resolveTargetedRoll(
       await recordMonsterRoll(supabase, { campaignId: params.campaignId, entityId: actorParticipant?.entity_id ?? null, kind: "attack", secret: input.secret, roll: attack, who: actorName, what: `Attaque — ${label}` });
     } else {
       return { ok: false, reason: action.kind === "monster_action" ? "no_attack" : "invalid_action" };
+    }
+    // V3.1-165 (ADR 0076) : une attaque d'arme ou de monstre se paie sur l'action Attaque (la première l'ouvre,
+    // Attaque supplémentaire en donne d'autres) ; jamais à la reprise d'une fenêtre, déjà payée au premier passage.
+    if (!params.preset) {
+      const budget = await spendTurnBudgetFor(supabase, {
+        campaignId: params.campaignId,
+        actor: ctx ? { entityId: ctx.entityId } : { participantId: actorParticipant?.id ?? "" },
+        kind: "attack",
+        attacksPerAction: ctx?.sheet.attacksPerAction ?? 1,
+        callerIsGm: !joueur,
+      });
+      if (budget?.over) hintsBefore.push(`${actorName} n'a plus d'attaque ce tour : le MJ tranche.`);
     }
     // V3.1-160 (ADR 0075) : le d20 est connu, rien n'est appliqué — quelqu'un peut-il réagir ?
     if (!params.preset && target.ac !== null) {

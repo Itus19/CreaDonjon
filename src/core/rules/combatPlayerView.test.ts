@@ -3,7 +3,7 @@ import { orderPlayerCombatView, type PlayerCombatRow } from "./combatPlayerView"
 
 /** V3.1-102 (ADR 0040) : la vue des joueurs suit EXACTEMENT l'ordre de l'écran du MJ (`turn_index` désigne le même participant). */
 function row(id: string, initiative: number | null, displayOrder: number): PlayerCombatRow {
-  return { id, label: id, initiative, displayOrder, side: "enemy", entityId: null, conditions: [], hp: null, wound: "hurt" };
+  return { id, label: id, initiative, displayOrder, side: "enemy", entityId: null, conditions: [], hp: null, wound: "hurt", budget: null };
 }
 
 describe("orderPlayerCombatView", () => {

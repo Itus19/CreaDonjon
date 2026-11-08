@@ -105,7 +105,7 @@ describe("buildTurnContext — V3-B4, varier la narration", () => {
   });
 });
 
-describe("V3.1-170 — les pronoms d'un PNJ présent", () => {
+describe("V3.1-193 — les pronoms d'un PNJ présent", () => {
   it("la ligne du PNJ dit comment l'accorder, dans l'encadrement des PNJ présents", () => {
     const out = buildTurnContext(input({ npcs: [{ id: "npc-1", name: "Bram", attitudeLabel: "cordial", zone: "near", pronouns: "il et elle, en alternance (il/le/lui ; elle/la/elle)" }] }));
     const debut = out.indexOf('<donnee source="pnjs-presents">');

@@ -97,7 +97,7 @@ valables ; celui-ci les relie.
 | **8 · Règles et Chronologie** | ~~93~~ → ~~94~~ → ~~95~~ ; ~~96~~ → ~~97~~ → ~~98~~ → ~~99~~ | Les règles s'appuient sur les fenêtres à volets (20) ; la Chronologie sur la pastille (64) et les dates de naissance (74). |
 | **À côté, quand on veut** | 13 (attend le texte des manuels de l'auteur) ; 145 (les tests d'intégration se suppriment les mondes entre eux : dette technique) ; vérifications en direct de 1, 2, 4, 5, 12, 17, 18 | Codés ; il ne reste que l'œil de l'auteur. | |
 | **Étape 4, avec 105** | ~~104~~ (ADR 0041, option B) → ~~107~~ (ADR 0069) → ~~149~~ (faille du journal relevée en concevant 107) | Le joueur qui cible : écritures et lectures signées par le serveur, et un journal qui ne lui montre que ce qu'il a le droit de voir. | Après 105. |
-| **Étape 9 · Les règles jouables** | ~~129~~ → ~~130~~ → ~~131~~, ~~132~~ ; ~~133~~ ; ~~134~~ (conçu, ADR 0074) → ~~155~~ → ~~156~~, ~~157~~ → ~~158~~ ; 135 (conçu, ADR 0075) → ~~159~~ → ~~160~~ → ~~161~~, ~~162~~, 163 (en partie) ; puis 136 à 138, un ADR chacun ; 139, 140 ; 141 (monnaie en données) quand on veut | La clé de voûte du solo : toute règle en jeu est jouable à 100 % par le moteur, sans qu'un modèle la lise (ADR 0059). **La fondation est faite** (129 à 133, du 3 au 7 novembre) : une règle se saisit dans l'éditeur de briques et se joue sur la fiche ; Second souffle, Fougue, Conduit divin et Abjuration d'ennemis le font avec les données du SRD. Le 134 est conçu (ADR 0074) et fait par 155 à 158 (7 novembre) : formules et dés de bonus dans les modificateurs, Rage, Défense sans armure, Critique amélioré, Aura de protection ; 135 à 138 commencent chacun par un ADR. |
+| **Étape 9 · Les règles jouables** | ~~129~~ → ~~130~~ → ~~131~~, ~~132~~ ; ~~133~~ ; ~~134~~ (conçu, ADR 0074) → ~~155~~ → ~~156~~, ~~157~~ → ~~158~~ ; 135 (conçu, ADR 0075) → ~~159~~ → ~~160~~ → ~~161~~, ~~162~~, 163 (en partie) ; 136 (conçu, ADR 0076) → ~~164~~ → ~~165~~ → ~~166~~, ~~167~~ ; puis 137, 138, un ADR chacun ; 139, 140 ; 141 (monnaie en données) quand on veut | La clé de voûte du solo : toute règle en jeu est jouable à 100 % par le moteur, sans qu'un modèle la lise (ADR 0059). **La fondation est faite** (129 à 133, du 3 au 7 novembre) : une règle se saisit dans l'éditeur de briques et se joue sur la fiche ; Second souffle, Fougue, Conduit divin et Abjuration d'ennemis le font avec les données du SRD. Le 134 est conçu (ADR 0074) et fait par 155 à 158 (7 novembre) : formules et dés de bonus dans les modificateurs, Rage, Défense sans armure, Critique amélioré, Aura de protection ; 135 à 138 commencent chacun par un ADR. |
 | **Fin de V3.1 · L'audit** | 144, en dernier | Les retouches d'affichage relevées en vérifiant les tickets, en une seule passe (une session au navigateur). Chaque défaut vu en chemin, qu'aucun ticket prévu ne couvre, s'ajoute au ticket 144. | Après tout le reste. |
 
 **Règle** : un ticket Opus « à concevoir » ne se code pas ; il se conçoit
@@ -129,7 +129,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 - [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) — Les règles jouables : fondation et chantiers (V3.1-129 à 141, 13 octobre)
 - [`13-audit-de-fin.md`](backlog-v3.1/13-audit-de-fin.md) — L'audit de fin de V3.1 : les retouches d'affichage relevées en chemin, V3.1-144
 - [`14-rugosites-novembre.md`](backlog-v3.1/14-rugosites-novembre.md) — Rugosités de novembre : ce qu'on a constaté en jouant (V3.1-150 à 154, terminés)
-- [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) — La Création de personnage : retours du 7 novembre (V3.1-170 à 168)
+- [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) — La Création de personnage : retours du 7 novembre (V3.1-172 à 189, 193 et 194)
 - [`termines.md`](backlog-v3.1/termines.md) — Tickets terminés (☑)
 
 | Ticket | État | Modèle IA | Titre | Fichier |
@@ -277,7 +277,11 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-161 | ☑ | sans | Les écrans : le bandeau de réaction ; l'éditeur suit | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
 | V3.1-162 | ☑ | sans | Les données : les réactions du SRD | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
 | V3.1-163 | ☐ | sans | Les autres jets passent par la fenêtre : sauvegardes, tests, attaque sans cible, solo | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
-| V3.1-136 | ☐ | sans | Les actions modifiées | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
+| V3.1-136 | ☑ | sans | Les actions modifiées | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
+| V3.1-164 | ☑ | sans | Le noyau : coût en emplacement, coût « une attaque », attaques par action, options de lancement, lancer un sort comme effet | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
+| V3.1-165 | ☑ | sans | La migration et le service : lancer un sort par son activation, compter le budget | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
+| V3.1-166 | ☑ | sans | Les écrans : budget du tour, lancer un sort par son activation ; l'éditeur suit | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
+| V3.1-167 | ☑ | sans | Les données : sorts et actions modifiées du SRD | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
 | V3.1-137 | ☐ | sans | Les conditions de jeu et les distances réelles | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
 | V3.1-138 | ☐ | sans | Le modèle du monde | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
 | V3.1-139 | ☐ | sans | L'inventaire et la couverture du SRD | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
@@ -294,8 +298,8 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-152 | ☑ | sans | « Lier tout » dans « Détecter des liens » | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-153 | ☑ | sans | Le badge « Prochaine session » couché rail déplié, debout rail replié | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-154 | ☑ | sans | PJ attribué sans fiche : sa carte et « Créer la fiche de … » | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-170 | ☑ | sans | Pronoms : une liste à choix multiples, lue pour accorder | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-171 | ☑ | sans | Identité : des champs à la même taille, et « le Commun est acquis » | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-193 | ☑ | sans | Pronoms : une liste à choix multiples, lue pour accorder | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-194 | ☑ | sans | Identité : des champs à la même taille, et « le Commun est acquis » | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-172 | ☑ | sans | Espèce, don d'origine, historique : le texte entier, sans quitter l'écran | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-173 | ☑ | sans | Expliquer compétences, bottes d'armes et aptitudes de classe | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-174 | ☑ | sans | La sous-classe en sous-étape, ses choix expliqués | [`termines.md`](backlog-v3.1/termines.md) |

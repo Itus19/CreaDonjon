@@ -155,7 +155,7 @@ export function applyEffects(state: TurnState, effects: readonly ResolvedEffect[
       }
 
       case "temp_hp": {
-        // ADR 0076 : les PV temporaires ne s'additionnent pas — on garde le plus grand des deux.
+        // ADR 0078 : les PV temporaires ne s'additionnent pas — on garde le plus grand des deux.
         const actor = next.actors[effect.who];
         if (!actor) {
           missing(effect, effect.who);
@@ -278,6 +278,16 @@ export function applyEffects(state: TurnState, effects: readonly ResolvedEffect[
           action: effect.action,
           who: effect.who,
           reason: `Effet qui dure « ${effect.effect} » non posé par le tour : seule une activation le pose (ADR 0060).`,
+        });
+        break;
+
+      case "cast_spell":
+        // V3.1-164 (ADR 0076) : lancer un sort se fait par son activation, côté service ; le tour ne le joue pas.
+        changes.push({
+          kind: "ignored",
+          action: effect.action,
+          who: effect.who,
+          reason: `Sort « ${effect.spell} » non lancé par le tour : seul le service de lancer le joue (ADR 0076).`,
         });
         break;
 

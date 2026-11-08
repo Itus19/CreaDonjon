@@ -17,6 +17,8 @@ export interface DemandeActivation {
   variantId: string | null;
   /** Vide pour une activation qui vise celui qui la joue. */
   targetParticipantIds: string[];
+  /** V3.1-166 : `ruleKey` est un sort ; l'emplacement dépensé et l'option de lancement d'une aptitude. */
+  spell?: { slotLevel: number; castOption?: { ruleKey: string; optionId: string } };
 }
 
 export interface ReponseActivation {
@@ -25,6 +27,8 @@ export interface ReponseActivation {
   changes: string[];
   applied: { bearer: string; label: string }[];
   used: Record<string, number>;
+  /** V3.1-166 : le budget du tour est dépassé ; un avertissement, jamais un blocage (ADR 0029). */
+  overBudget?: boolean;
 }
 
 export async function activerRegle(entityId: string, demande: DemandeActivation, parDefaut: string): Promise<ReponseActivation> {

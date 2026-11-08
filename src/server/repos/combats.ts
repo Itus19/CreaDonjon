@@ -220,6 +220,8 @@ export interface PlayerCombatViewRow {
   hp_max: number | null;
   temp_hp: number | null;
   wound: string | null;
+  /** V3.1-166 (ADR 0076) : le budget du tour d'un allié ; absent avant la migration du 166, `null` pour un adversaire. */
+  budget?: Json | null;
 }
 
 /**

@@ -8,7 +8,7 @@ const ACTIVE = "border-accent bg-accent/10 text-accent";
 const INACTIVE = "border-edge text-ink-muted hover:bg-panel-raised";
 
 /**
- * V3.1-170 — Les pronoms d'une entité : des pastilles à cocher, plusieurs
+ * V3.1-193 — Les pronoms d'une entité : des pastilles à cocher, plusieurs
  * possibles, dans l'ordre où on les coche (l'ordre dit l'alternance au mode
  * solo), et « Autre… » pour une saisie libre. La liste vient du noyau
  * (`PRONOUN_SETS`). Le même champ sert à l'Identité de l'assistant et au
@@ -24,10 +24,10 @@ export default function PronomsField({
   value: Pronouns | string | undefined;
   onChange: (next: Pronouns) => void;
   className?: string;
-  /** V3.1-171 : la saisie libre à la hauteur des champs de formulaire (assistant). */
+  /** V3.1-194 : la saisie libre à la hauteur des champs de formulaire (assistant). */
   formulaire?: boolean;
 }) {
-  // Relue ici, comme le fait le schéma du bloc : un ancien texte devient une saisie libre (V3.1-170), rien ne casse.
+  // Relue ici, comme le fait le schéma du bloc : un ancien texte devient une saisie libre (V3.1-193), rien ne casse.
   const lu = zPronouns.safeParse(value ?? { sets: [] });
   const courant: Pronouns = lu.success ? lu.data : { sets: [] };
   const [autreOuvert, setAutreOuvert] = useState(Boolean(courant.custom));

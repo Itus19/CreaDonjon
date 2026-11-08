@@ -45,7 +45,14 @@ const zTurnUsageChange = z
   .object({
     kind: z.literal("turn_usage"),
     id: z.string().uuid(),
-    turn_usage: z.object({ reaction_at: z.string().max(40).nullable(), once: z.record(z.string().max(300), z.string().max(40)) }).strict(),
+    turn_usage: z
+      .object({
+        reaction_at: z.string().max(40).nullable(),
+        once: z.record(z.string().max(300), z.string().max(40)),
+        // V3.1-165 (ADR 0076) : le budget du tour ; la base l'accepte depuis la migration du 165.
+        budget: z.object({ at: z.string().max(40), action: z.number().int(), bonus: z.number().int(), attacks: z.number().int(), extraNotMagic: z.number().int() }).strict().optional(),
+      })
+      .strict(),
   })
   .strict();
 

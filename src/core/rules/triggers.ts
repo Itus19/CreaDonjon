@@ -107,12 +107,12 @@ export type EffectNode =
   | { action: "remove_condition"; who: string; key: string }
   | { action: "deal_damage"; who: string; amount: FormulaNode; damage_type?: string }
   | { action: "heal"; who: string; amount: FormulaNode }
-  /** ADR 0076 (V3.1-183) — des PV temporaires : on garde le plus grand des deux, jamais la somme. */
+  /** ADR 0078 (V3.1-183) — des PV temporaires : on garde le plus grand des deux, jamais la somme. */
   | { action: "temp_hp"; who: string; amount: FormulaNode }
   | { action: "spend_resource"; who: string; key: string; amount: FormulaNode }
   | { action: "move"; who: string; zone: TriggerZone }
   /** ADR 0029 — accorde (montant positif) ou retire (negatif) du budget d'action. */
-  | { action: "grant_budget"; who: string; kind: BudgetKind; amount: FormulaNode }
+  | { action: "grant_budget"; who: string; kind: BudgetKind; amount: FormulaNode; /** V3.1-165 (ADR 0076) : une action qui ne paie pas l'action Magie (Sursaut d'action). */ not_magic?: boolean }
   /** ADR 0050 — accorde une Inspiration heroique, dans la limite du maximum (« Ingenieux », V3.1-5). */
   | { action: "grant_inspiration"; who: string }
   /**
@@ -122,6 +122,8 @@ export type EffectNode =
    * (`activation.ts`) qui l'instancie avec son porteur et sa source.
    */
   | { action: "apply_effect"; who: string; effect: string }
+  /** V3.1-164 (ADR 0076) — lance un sort par son activation ; sans emplacement si `free` (Compagnon sauvage). Le service le joue. */
+  | { action: "cast_spell"; who: string; spell: string; free: boolean }
   | { action: "roll"; label: string; formula: FormulaNode }
   | { action: "narrate_hint"; text: string };
 
@@ -136,9 +138,10 @@ export type ResolvedEffect =
   | { action: "temp_hp"; who: string; amount: number }
   | { action: "spend_resource"; who: string; key: string; amount: number }
   | { action: "move"; who: string; zone: TriggerZone }
-  | { action: "grant_budget"; who: string; kind: BudgetKind; amount: number }
+  | { action: "grant_budget"; who: string; kind: BudgetKind; amount: number; not_magic?: boolean }
   | { action: "grant_inspiration"; who: string }
   | { action: "apply_effect"; who: string; effect: string }
+  | { action: "cast_spell"; who: string; spell: string; free: boolean }
   | { action: "roll"; label: string; value: number }
   | { action: "narrate_hint"; text: string };
 
@@ -221,9 +224,11 @@ export const zEffect: z.ZodType<EffectNode> = z.lazy(() =>
       who: z.string().min(1),
       kind: z.enum(BUDGET_KINDS),
       amount: zFormulaNode,
+      not_magic: z.boolean().optional(),
     }),
     z.object({ action: z.literal("grant_inspiration"), who: z.string().min(1) }),
     z.object({ action: z.literal("apply_effect"), who: z.string().min(1), effect: z.string().min(1) }),
+    z.object({ action: z.literal("cast_spell"), who: z.string().min(1), spell: z.string().min(1), free: z.boolean() }),
     z.object({ action: z.literal("roll"), label: z.string().min(1), formula: zFormulaNode }),
     z.object({ action: z.literal("narrate_hint"), text: z.string().min(1) }),
   ]),
@@ -443,6 +448,7 @@ function resolveEffect(
           who: effect.who,
           kind: effect.kind,
           amount: evalNumber(effect.amount, ctx, fired, rng),
+          ...(effect.not_magic ? { not_magic: true } : {}),
         },
         branch: [],
       };
@@ -465,7 +471,7 @@ function resolveEffect(
 export function resolveEffectList(effects: readonly EffectNode[], ctx: TriggerContext, fired: FiredEvent, rng: Rng): ResolvedEffect[] {
   const out: ResolvedEffect[] = [];
   const pending: EffectNode[] = [...effects];
-  // ADR 0076 (V3.1-183) : le résultat d'un dé lancé se relit dans les effets qui suivent (`event.last_roll`) —
+  // ADR 0078 (V3.1-183) : le résultat d'un dé lancé se relit dans les effets qui suivent (`event.last_roll`) —
   // « le double du nombre obtenu sur le dé ». Le dé est lancé une fois, par le générateur injecté (règle 8).
   let courant = fired;
   while (pending.length > 0) {

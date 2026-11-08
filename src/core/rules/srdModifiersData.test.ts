@@ -36,6 +36,10 @@ describe("les effets passifs SRD écrits à la main", () => {
       if (!Array.isArray(liste)) continue;
       for (const e of liste) if (e?.index) connues.add(e.index);
     }
+    // V3.1-167 : une aptitude fusionnée entre classes par l'import (« Extra Attack ») se vise par sa clé fusionnée.
+    const noms = new Map<string, number>();
+    for (const f of (SRD.Features ?? []) as { name?: string }[]) if (f?.name) noms.set(f.name, (noms.get(f.name) ?? 0) + 1);
+    for (const [nom, n] of noms) if (n > 1) connues.add(nom.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""));
     for (const [key] of entrees) expect(connues.has(key), `clé inconnue du SRD : ${key}`).toBe(true);
   });
 

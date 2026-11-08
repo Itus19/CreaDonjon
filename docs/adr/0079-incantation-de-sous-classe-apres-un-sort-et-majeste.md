@@ -1,4 +1,4 @@
-# 0077 — Incantation d'une sous-classe, « après un sort lancé », sauvegarde de l'assaillant et échec d'office
+# 0079 — Incantation d'une sous-classe, « après un sort lancé », sauvegarde de l'assaillant et échec d'office
 
 **Date :** 2026-11-07
 **Statut :** acceptée (V3.1-184 à 186 ; écrans choisis par l'auteur : 185 A, 184 A)

@@ -69,6 +69,8 @@ function decrire(e: EffectNode, durables: ReadonlyMap<string, DurableEffect>, t:
       return { titre: t("lecture.depense", { montant: formatFormulaNode(e.amount), cle: e.key }) };
     case "grant_inspiration":
       return { titre: t("lecture.inspiration") };
+    case "cast_spell":
+      return { titre: t("lecture.lancerSort", { sort: e.spell }), ...(e.free ? { detail: t("lecture.sansEmplacement") } : {}) };
   }
 }
 

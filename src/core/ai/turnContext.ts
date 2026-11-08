@@ -46,7 +46,7 @@ export interface TurnContextNpc {
   zone: "engaged" | "near" | "far";
   /** V3-C2 — le trait tiré au générateur pour une esquisse (aucune fiche, donc aucune attitude suivie). `undefined` pour un PNJ réel. */
   note?: string;
-  /** V3.1-170 — comment l'accorder (`pronounGuidance` de son bloc `character`) ; absent quand rien n'est choisi. */
+  /** V3.1-193 — comment l'accorder (`pronounGuidance` de son bloc `character`) ; absent quand rien n'est choisi. */
   pronouns?: string;
 }
 

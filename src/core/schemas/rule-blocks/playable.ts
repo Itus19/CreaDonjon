@@ -20,7 +20,7 @@ export const zPassage = z.string().trim().min(1).max(2000);
 export const RULE_RECHARGES = ["short_rest", "short_rest_one", "long_rest", "dawn", "never"] as const;
 
 /**
- * ADR 0076 (V3.1-183) — regagner une utilisation en dépensant autre chose :
+ * ADR 0078 (V3.1-183) — regagner une utilisation en dépensant autre chose :
  * une autre ressource (Magie envoûtante contre une Inspiration bardique), ou
  * un emplacement de sort d'un niveau minimal (Mante de majesté, niveau 3+).
  */
@@ -37,7 +37,7 @@ export const zRuleResource = z.object({
   /** Formule : `column.<clé>` (progression de la classe qui accorde la fiche), `class.level`, `level`, `ability.*`, `proficiency`. */
   max: zFormulaNode,
   recharge: z.enum(RULE_RECHARGES),
-  /** ADR 0076 : regagner une utilisation en dépensant autre chose. Absent : seulement au repos. */
+  /** ADR 0078 : regagner une utilisation en dépensant autre chose. Absent : seulement au repos. */
   regain: zResourceRegain.optional(),
   /** V3.1-132 : le passage du texte de la règle dont vient la brique (surligné à côté de l'éditeur). */
   passage: zPassage.optional(),
@@ -51,14 +51,29 @@ export type RuleResourcesBlockData = z.infer<typeof zRuleResourcesBlockData>;
 
 // --- activation ------------------------------------------------------------
 
-/** ADR 0060 §2 : `magic` est l'action « Magie » (elle se paie sur l'action du tour) ; `none`, rien. */
-export const ACTIVATION_COSTS = ["action", "bonus", "reaction", "magic", "free", "none"] as const;
+/**
+ * ADR 0060 §2 : `magic` est l'action « Magie » (elle se paie sur l'action du tour) ; `none`, rien.
+ * V3.1-164 (ADR 0076) : `attack` remplace une attaque de l'action Attaque (Souffle).
+ */
+export const ACTIVATION_COSTS = ["action", "bonus", "reaction", "magic", "free", "none", "attack"] as const;
 export const ACTIVATION_TARGET_KINDS = ["self", "creature", "ally", "enemy", "point"] as const;
 
 const zActivationCost = z.object({
   action: z.enum(ACTIVATION_COSTS),
   resources: z.array(z.object({ key: z.string().min(1), amount: zFormulaNode })),
+  /** V3.1-164 (ADR 0076) : un sort, son niveau de base (0 : sort mineur). Les formules lisent `slot.level`, le niveau dépensé. */
+  slot: z.object({ level: z.number().int().min(0).max(9) }).optional(),
 });
+export type ActivationCost = z.infer<typeof zActivationCost>;
+
+/** V3.1-164 (ADR 0076) : une option de lancement déclarée par une aptitude (Sort accéléré), choisie au moment de lancer un sort. */
+export const zCastOption = z.object({
+  id: z.string().min(1),
+  label: zLocalized,
+  cost: z.object({ resources: z.array(z.object({ key: z.string().min(1), amount: zFormulaNode })) }),
+  changes: z.object({ action: z.enum(["action", "bonus", "reaction", "magic"]).optional() }),
+});
+export type CastOption = z.infer<typeof zCastOption>;
 
 const zActivationTargets = z.object({
   kind: z.enum(ACTIVATION_TARGET_KINDS),
@@ -173,6 +188,8 @@ export const zActivation = z.object({
   roll_operations: z.array(zRollOperation).optional(),
   /** V3.1-159 : une fois par tour ou par round (compté en combat seulement). */
   limit: zActivationLimit.optional(),
+  /** V3.1-164 : les options que cette aptitude offre au lancer d'un sort (Métamagie). */
+  cast_options: z.array(zCastOption).optional(),
   /** V3.1-132 : le passage dont vient chaque brique, par chemin (`brickPaths`) : `cost`, `targets`, `effects.0.on_fail.0`… */
   passages: z.record(z.string(), zPassage).optional(),
 });

@@ -81,7 +81,7 @@
     }
   },
   "fighter-action-surge": {
-    "_regle": "Fougue : a votre tour, une action supplementaire, hormis l'action Magie ; une utilisation (deux au niveau 17, une seule par tour) ; tout au repos court ou long.",
+    "_regle": "Fougue : a votre tour, une action supplementaire, hormis l'action Magie ; une utilisation (deux au niveau 17, une seule par tour) ; tout au repos court ou long. V3.1-167 : l'action accordée ne paie pas l'action Magie (not_magic).",
     "resources": {
       "resources": [
         {
@@ -162,7 +162,8 @@
               "amount": {
                 "op": "num",
                 "value": 1
-              }
+              },
+              "not_magic": true
             }
           ],
           "variants": null,
@@ -1043,6 +1044,261 @@
         {
           "text": "Lorsqu’une créature que vous voyez dans un rayon de 18 m",
           "missing": "La portée (18 m) et « que vous voyez » attendent les distances réelles et la perception (V3.1-137, 138) : la réaction est proposée sans les vérifier."
+        }
+      ]
+    }
+  },
+  "sorcerer-font-of-magic": {
+    "_regle": "Source de magie : points de sorcellerie selon la table, recuperes au repos long. V3.1-167 (pour la Metamagie).",
+    "resources": {
+      "resources": [
+        {
+          "key": "sorcery-points",
+          "label": {
+            "fr": "Points de sorcellerie",
+            "en": "Sorcery Points"
+          },
+          "max": {
+            "op": "ref",
+            "name": "column.class_specific_sorcery_points"
+          },
+          "recharge": "long_rest",
+          "passage": "Vous récupérez tous les points de Sorcellerie dépensés en terminant un Repos long."
+        }
+      ]
+    },
+    "coverage": {
+      "gaps": [
+        {
+          "text": "Vous pouvez utiliser vos points de Sorcellerie pour alimenter les options ci-dessous",
+          "missing": "Convertir des emplacements en points de Sorcellerie (et l'inverse) se fait à la main pour l'instant."
+        }
+      ]
+    }
+  },
+  "sorcerer-metamagic": {
+    "_regle": "Metamagie : Sort accelere (2 points : le temps d'incantation passe a l'action Bonus). Les autres options : texte. V3.1-167.",
+    "activation": {
+      "activations": [
+        {
+          "id": "metamagic",
+          "label": {
+            "fr": "Métamagie",
+            "en": "Metamagic"
+          },
+          "cost": {
+            "action": "none",
+            "resources": []
+          },
+          "targets": {
+            "kind": "self"
+          },
+          "effects": [],
+          "variants": null,
+          "cast_options": [
+            {
+              "id": "quickened",
+              "label": {
+                "fr": "Sort accéléré",
+                "en": "Quickened Spell"
+              },
+              "cost": {
+                "resources": [
+                  {
+                    "key": "sorcery-points",
+                    "amount": {
+                      "op": "num",
+                      "value": 2
+                    }
+                  }
+                ]
+              },
+              "changes": {
+                "action": "bonus"
+              }
+            }
+          ]
+        }
+      ],
+      "durable_effects": []
+    },
+    "coverage": {
+      "gaps": [
+        {
+          "text": "vous recevez deux options de Métamagie au choix",
+          "missing": "Sort accéléré est proposé sans vérifier qu'il fait partie des options choisies ; les autres options restent en texte."
+        }
+      ]
+    }
+  },
+  "devotion-sacred-weapon": {
+    "_regle": "Arme sacree (Devotion 3) : en prenant l'action Attaque, Conduit divin, 10 minutes : + mod. CHA (min. 1) aux attaques avec l'arme. V3.1-167.",
+    "activation": {
+      "activations": [
+        {
+          "id": "sacred-weapon",
+          "label": {
+            "fr": "Arme sacrée",
+            "en": "Sacred Weapon"
+          },
+          "cost": {
+            "action": "none",
+            "resources": [
+              {
+                "key": "channel-divinity",
+                "amount": {
+                  "op": "num",
+                  "value": 1
+                }
+              }
+            ]
+          },
+          "targets": {
+            "kind": "self"
+          },
+          "effects": [
+            {
+              "action": "apply_effect",
+              "who": "self",
+              "effect": "sacred-weapon"
+            }
+          ],
+          "variants": null
+        }
+      ],
+      "durable_effects": [
+        {
+          "id": "sacred-weapon",
+          "label": {
+            "fr": "Arme sacrée",
+            "en": "Sacred Weapon"
+          },
+          "conditions": [],
+          "modifiers": [
+            {
+              "target": "attack.weapon",
+              "op": "add",
+              "value": {
+                "op": "max",
+                "args": [
+                  {
+                    "op": "num",
+                    "value": 1
+                  },
+                  {
+                    "op": "ref",
+                    "name": "ability.cha"
+                  }
+                ]
+              }
+            }
+          ],
+          "duration": {
+            "unit": "minute",
+            "amount": 10
+          },
+          "concentration": false,
+          "ends_on": [
+            {
+              "event": "dismissed"
+            }
+          ],
+          "token": null
+        }
+      ]
+    },
+    "coverage": {
+      "gaps": [
+        {
+          "text": "Lorsque vous effectuez l’action Attaque",
+          "missing": "« En prenant l'action Attaque » n'est pas vérifié : l'activation ne coûte rien et se joue au moment voulu."
+        },
+        {
+          "text": "lâchez l’arme",
+          "missing": "La fin si l'arme est lâchée et la lumière émise attendent les conditions d'équipement et la lumière (V3.1-137, 138)."
+        }
+      ]
+    }
+  },
+  "shield": {
+    "_regle": "Bouclier (sort, niveau 1 ; index « shield » des sorts, rangé en base sous « shield-spell » : l'import ne pose ces briques que sur le sort) : Reaction quand une attaque vous touche ; +5 a la CA contre elle et jusqu'au debut de votre prochain tour. V3.1-167.",
+    "activation": {
+      "activations": [
+        {
+          "id": "shield",
+          "label": {
+            "fr": "Bouclier",
+            "en": "Shield"
+          },
+          "cost": {
+            "action": "reaction",
+            "resources": [],
+            "slot": {
+              "level": 1
+            }
+          },
+          "targets": {
+            "kind": "self"
+          },
+          "effects": [
+            {
+              "action": "apply_effect",
+              "who": "self",
+              "effect": "shielded"
+            }
+          ],
+          "variants": null,
+          "trigger": {
+            "on": "roll",
+            "roll": "attack",
+            "subject": "attack_against_self",
+            "when": "hit"
+          },
+          "roll_operations": [
+            {
+              "op": "ac_bonus",
+              "value": {
+                "op": "num",
+                "value": 5
+              }
+            }
+          ]
+        }
+      ],
+      "durable_effects": [
+        {
+          "id": "shielded",
+          "label": {
+            "fr": "Bouclier",
+            "en": "Shield"
+          },
+          "conditions": [],
+          "modifiers": [
+            {
+              "target": "ac",
+              "op": "add",
+              "value": 5
+            }
+          ],
+          "duration": {
+            "unit": "round",
+            "amount": 1
+          },
+          "concentration": false,
+          "ends_on": [],
+          "token": null
+        }
+      ]
+    },
+    "coverage": {
+      "gaps": [
+        {
+          "text": "Jusqu’au début de votre tour suivant, vous recevez un bonus de +5 à la CA",
+          "missing": "La durée « jusqu'au début de votre tour suivant » n'existe pas encore : l'effet dure un round."
+        },
+        {
+          "text": "ou que le sort projectile magique vous cible",
+          "missing": "Le déclenchement par Projectile magique et l'immunité à ses dégâts attendent les restrictions de ciblage (V3.1-138)."
         }
       ]
     }

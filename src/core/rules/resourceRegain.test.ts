@@ -3,7 +3,7 @@ import { planResourceRegain } from "./resourceRegain";
 import type { SheetResource } from "./sheet";
 
 /**
- * ADR 0076 (V3.1-183) — regagner une utilisation d'une ressource en dépensant
+ * ADR 0078 (V3.1-183) — regagner une utilisation d'une ressource en dépensant
  * autre chose. Pur : décide si c'est possible et rend le changement d'état de
  * jeu ; le serveur l'applique (le client n'envoie qu'une intention).
  */

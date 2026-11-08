@@ -1,4 +1,4 @@
-# ADR 0076 — PV temporaires, dé relu, et regain d'une ressource contre une autre dépense
+# ADR 0078 — PV temporaires, dé relu, et regain d'une ressource contre une autre dépense
 
 **Date** : 7 novembre 2026 · **Ticket** : V3.1-183 · **Statut** : accepté
 

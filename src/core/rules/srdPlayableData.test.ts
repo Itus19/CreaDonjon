@@ -20,6 +20,13 @@ const SRD = JSON.parse(readFileSync(resolve(process.cwd(), "data/srd/srd-2024.js
 const FR = readFileSync(resolve(process.cwd(), "data/srd/fr-source/srd-5.2.1-fr.txt"), "utf-8");
 
 const entrees = Object.entries(RAW).filter(([k]) => !k.startsWith("_"));
+
+/** Les clés fusionnées par l'import (`dedupeFeatures`) : une aptitude du même nom présente pour plusieurs classes reçoit le slug de son nom. */
+function clesFusionnees(): string[] {
+  const noms = new Map<string, number>();
+  for (const f of (SRD.Features ?? []) as { name?: string }[]) if (f?.name) noms.set(f.name, (noms.get(f.name) ?? 0) + 1);
+  return [...noms].filter(([, n]) => n > 1).map(([nom]) => nom.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""));
+}
 const TYPES = ["resources", "activation", "coverage"] as const;
 
 /** Le texte du PDF est coupé en lignes : on compare espaces confondus. */
@@ -73,6 +80,8 @@ describe("les règles jouables du SRD écrites à la main", () => {
       if (!Array.isArray(liste)) continue;
       for (const e of liste as { index?: string }[]) if (e?.index) connues.add(e.index);
     }
+    // V3.1-167 : une aptitude que l'import fusionne entre classes (même nom, même texte : « Extra Attack ») se vise par sa clé fusionnée.
+    for (const k of clesFusionnees()) connues.add(k);
     for (const [key] of entrees) expect(connues.has(key), `clé inconnue du SRD : ${key}`).toBe(true);
   });
 

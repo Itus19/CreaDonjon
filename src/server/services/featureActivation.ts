@@ -22,6 +22,8 @@ import { applySignedEngineChange, readCombatParticipantsSigned, type EngineChang
 import { applyResolvedEffects, targetSaveBonus } from "@/src/server/services/targetedRoll";
 import { serverRng } from "@/src/server/services/rng";
 import { actorNumbersFor } from "@/src/server/services/actorNumbers";
+import { spendTurnBudgetFor } from "@/src/server/services/turnBudgetWrite";
+import { applyCastOption } from "@/src/core/rules/turnBudget";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -48,7 +50,11 @@ export type ActivateFeatureFailure =
   | "feature_not_owned"
   | "no_activation_block"
   | "no_combat"
-  | "target_not_found";
+  | "target_not_found"
+  /** V3.1-165 (ADR 0076) : un sort que le personnage ne connaît pas, un emplacement épuisé, une option de lancement inconnue. */
+  | "spell_not_known"
+  | "no_slot_available"
+  | "unknown_cast_option";
 
 export interface ActivateFeatureSuccess {
   ok: true;
@@ -58,6 +64,8 @@ export interface ActivateFeatureSuccess {
   applied: { bearer: string; label: string }[];
   /** Usages consommés après l'activation. */
   used: Record<string, number>;
+  /** V3.1-165 (ADR 0076) : le budget du tour est dépassé (en combat) ; signalé, jamais bloquant (ADR 0029). */
+  overBudget: boolean;
   /**
    * V3.1-131 : le résultat par cible, pour la carte de l'onglet Actions. Une
    * joueuse n'en reçoit que le verdict (ADR 0070 : les chiffres d'un monstre
@@ -91,19 +99,46 @@ export async function activateFeature(
     /** Le MJ écrit directement ; un joueur écrit par changement signé ce qui n'est pas à lui (ADR 0041). */
     callerIsGm: boolean;
     locale: Locale;
+    /**
+     * V3.1-165 (ADR 0076) : `ruleKey` est un SORT que le personnage connaît ;
+     * l'emplacement dépensé (`slot.level` des formules), et l'option de lancement
+     * offerte par l'une de ses aptitudes (Sort accéléré).
+     */
+    spell?: { slotLevel: number; castOption?: { ruleKey: string; optionId: string }; /** Lancé par un effet `cast_spell` gratuit : aucun emplacement. */ free?: boolean };
+    /** V3.1-165 : déjà payé ailleurs (une réaction jouée par sa fenêtre) : le budget du tour n'est pas touché. */
+    skipBudget?: boolean;
   }
 ): Promise<ActivateFeatureSuccess | { ok: false; reason: ActivateFeatureFailure; detail?: string }> {
   const ctx = await resolveCharacterActionContext(supabase, params.entityId, params.campaignId, params.locale);
   if (!ctx) return { ok: false, reason: "not_found" };
-  // Une règle ne se joue que si le personnage la possède : jamais par sa seule clé.
-  if (!ctx.sheet.features.some((f) => f.key === params.ruleKey)) return { ok: false, reason: "feature_not_owned" };
+  // Une règle ne se joue que si le personnage la possède : jamais par sa seule clé. Un sort : connu, ou accordé par une aptitude.
+  // Un sort lancé par un effet gratuit (`cast_spell`) n'a pas à être connu : c'est l'aptitude qui l'accorde.
+  if (params.spell && !params.spell.free) {
+    const connu =
+      (ctx.spellcastingData?.known ?? []).some((k) => k.ref.kind === "rule" && k.ref.key === params.ruleKey) || ctx.sheet.grantedSpells.some((g) => g.key === params.ruleKey);
+    if (!connu) return { ok: false, reason: "spell_not_known" };
+  } else if (!params.spell && !ctx.sheet.features.some((f) => f.key === params.ruleKey)) {
+    return { ok: false, reason: "feature_not_owned" };
+  }
 
   const resolved = await resolveEntryBlocksInRuleset(supabase, ctx.rulesetId, params.ruleKey);
   const lu = zActivationBlockData.safeParse(resolved?.blocksByType.get("activation"));
   if (!lu.success) return { ok: false, reason: "no_activation_block" };
-  const block: ActivationBlockData = lu.data;
-  const activation = block.activations.find((a) => a.id === params.activationId);
-  if (!activation) return { ok: false, reason: "unknown_activation" };
+  let block: ActivationBlockData = lu.data;
+  const found = block.activations.find((a) => a.id === params.activationId);
+  if (!found) return { ok: false, reason: "unknown_activation" };
+  // V3.1-165 : l'option de lancement (Sort accéléré) change le coût du sort : son temps, et ses ressources s'ajoutent.
+  let activation = found;
+  if (params.spell?.castOption) {
+    const ref = params.spell.castOption;
+    const option = ctx.sheet.features
+      .find((f) => f.key === ref.ruleKey)
+      ?.activation?.activations.flatMap((a) => a.cast_options ?? [])
+      .find((o) => o.id === ref.optionId);
+    if (!option) return { ok: false, reason: "unknown_cast_option" };
+    activation = { ...found, cost: applyCastOption(found.cost, option) };
+    block = { ...block, activations: block.activations.map((a) => (a.id === found.id ? activation : a)) };
+  }
   const variant = params.variantId ? activation.variants?.find((v) => v.id === params.variantId) : undefined;
   const effectNodes = variant ? variant.effects : activation.effects;
 
@@ -173,20 +208,32 @@ export async function activateFeature(
     round,
     rng: serverRng,
     locale: params.locale,
+    ...(params.spell ? { slotLevel: params.spell.slotLevel } : {}),
   });
   if (!plan.ok) return { ok: false, reason: plan.reason, ...(plan.detail ? { detail: plan.detail } : {}) };
+
+  // V3.1-165 : l'emplacement du sort (un sort mineur n'en dépense pas) — ordinaire d'abord, puis la réserve de pacte de ce niveau (ADR 0045).
+  let slotPatch: { spell_slots_used?: Record<string, number>; pact_slots_used?: number } = {};
+  const niveau = params.spell?.slotLevel ?? 0;
+  if (params.spell && !params.spell.free && activation.cost.slot && niveau > 0) {
+    const used = state.spell_slots_used[String(niveau)] ?? 0;
+    const pact = sheet.spellcasting?.pactSlots;
+    if (used < (sheet.spellcasting?.slots[niveau] ?? 0)) slotPatch = { spell_slots_used: { ...state.spell_slots_used, [String(niveau)]: used + 1 } };
+    else if (pact && pact.slotLevel === niveau && state.pact_slots_used < pact.count) slotPatch = { pact_slots_used: state.pact_slots_used + 1 };
+    else return { ok: false, reason: "no_slot_available" };
+  }
 
   const label = activation.label[params.locale] ?? activation.label.fr ?? activation.id;
   const note = `Activation — ${label} (${ctx.entityName})`;
   const sessionId = await getOrOpenSessionForCampaign(supabase, params.campaignId);
 
-  // 1. Les usages : l'état de jeu du personnage, le sien (droit vérifié par la route).
-  if (plan.plan.spend.length > 0) {
+  // 1. Les usages (et l'emplacement d'un sort) : l'état de jeu du personnage, le sien (droit vérifié par la route), en une écriture.
+  if (plan.plan.spend.length > 0 || Object.keys(slotPatch).length > 0) {
     await applyRuntimeStateChange(supabase, {
       entityId: params.entityId,
       campaignId: params.campaignId,
-      patch: { resources: plan.plan.used },
-      note: `${note} : ${plan.plan.spend.map((s) => `${s.key} −${s.amount}`).join(", ")}`,
+      patch: { ...(plan.plan.spend.length > 0 ? { resources: plan.plan.used } : {}), ...slotPatch },
+      note: `${note} : ${[...plan.plan.spend.map((s) => `${s.key} −${s.amount}`), ...(Object.keys(slotPatch).length > 0 ? [`emplacement niveau ${niveau}`] : [])].join(", ")}`,
       sessionId,
       actor: "player",
       actorUserId: params.callerId,
@@ -286,12 +333,47 @@ export async function activateFeature(
     };
   });
 
+  // V3.1-165 (ADR 0076) : « lancer un sort » (Compagnon sauvage) joue l'activation du sort nommé, sur soi,
+  // sans payer le budget une seconde fois ; un sort lancé ainsi n'en lance pas d'autre (pas de chaîne).
+  const lances: string[] = [];
+  if (!params.spell?.free) {
+    for (const e of plan.plan.effects) {
+      if (e.action !== "cast_spell" || e.who !== params.entityId) continue;
+      const blocs = await resolveEntryBlocksInRuleset(supabase, ctx.rulesetId, e.spell);
+      const sort = zActivationBlockData.safeParse(blocs?.blocksByType.get("activation"));
+      const premiere = sort.success ? sort.data.activations[0] : undefined;
+      if (!premiere) {
+        lances.push(`Le sort « ${e.spell} » ne se joue pas encore (aucune activation) : à jouer à la main.`);
+        continue;
+      }
+      const r = await activateFeature(supabase, {
+        ...params,
+        ruleKey: e.spell,
+        activationId: premiere.id,
+        variantId: null,
+        targetParticipantIds: [],
+        skipBudget: true,
+        spell: { slotLevel: premiere.cost.slot?.level ?? 0, free: e.free },
+      });
+      lances.push(...(r.ok ? r.changes : [`Le sort « ${e.spell} » n'a pas pu être lancé (${r.reason}).`]));
+    }
+  }
+
+  // V3.1-165 (ADR 0076) : le budget du tour, en combat — le coût de l'activation, et ce qu'elle accorde (Sursaut d'action).
+  const accorde = plan.plan.effects.flatMap((e) =>
+    e.action === "grant_budget" && e.who === params.entityId && (e.kind === "action" || e.kind === "bonus") ? [{ kind: e.kind, amount: e.amount, ...(e.not_magic ? { notMagic: true } : {}) }] : []
+  );
+  const budget = params.skipBudget
+    ? null
+    : await spendTurnBudgetFor(supabase, { campaignId: params.campaignId, actor: { entityId: params.entityId }, kind: activation.cost.action, attacksPerAction: sheet.attacksPerAction, grants: accorde, callerIsGm: params.callerIsGm });
+
   return {
     ok: true,
     targets,
-    changes: outcome.changes,
+    changes: [...outcome.changes, ...lances, ...(budget?.over ? ["Budget du tour dépassé : le MJ tranche."] : [])],
     applied: plan.plan.applied.map((a) => ({ bearer: a.bearer, label: a.label })),
     used: plan.plan.used,
+    overBudget: budget?.over ?? false,
   };
 }
 

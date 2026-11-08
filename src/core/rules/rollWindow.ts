@@ -5,6 +5,7 @@ import type { FormulaNode } from "../formula/ast";
 import type { Activation, RollOperation, RollTrigger } from "../schemas/rule-blocks/playable";
 import { requirementMet } from "./activation";
 import { attackVerdict } from "./targeting";
+import { zTurnBudget } from "./turnBudget";
 import type { TriggerContext } from "./triggers";
 
 /**
@@ -68,6 +69,8 @@ export const zTurnUsage = z.object({
   reaction_at: z.string().nullable(),
   /** `"<règle>:<activation>"` → `"<round>:<turn_index>"` du dernier usage. */
   once: z.record(z.string(), z.string()),
+  /** V3.1-164 (ADR 0076) : le budget du dernier tour du participant (`turnBudget.ts`). */
+  budget: zTurnBudget.optional(),
 });
 export type TurnUsage = z.infer<typeof zTurnUsage>;
 
@@ -94,6 +97,8 @@ function limitAllows(usage: TurnUsage, key: string, per: "turn" | "round", stamp
 export function recordUse(usage: TurnUsage, p: { key: string | null; reaction: boolean; stamp: string | null }): TurnUsage {
   if (p.stamp === null) return usage;
   return {
+    // Le reste du compte (le budget du tour, V3.1-164) est gardé tel quel.
+    ...usage,
     reaction_at: p.reaction ? p.stamp : usage.reaction_at,
     once: p.key ? { ...usage.once, [p.key]: p.stamp } : usage.once,
   };

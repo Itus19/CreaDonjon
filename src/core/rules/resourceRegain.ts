@@ -1,7 +1,7 @@
 import type { SheetResource } from "./sheet";
 
 /**
- * ADR 0076 (V3.1-183) — Regagner une utilisation d'une ressource en dépensant
+ * ADR 0078 (V3.1-183) — Regagner une utilisation d'une ressource en dépensant
  * autre chose : une autre ressource (« vous pouvez récupérer cette
  * utilisation en dépensant l'une de vos Inspirations bardiques »), ou un
  * emplacement de sort d'un niveau minimal (« en dépensant un emplacement du

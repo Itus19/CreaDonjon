@@ -1,5 +1,7 @@
 import "server-only";
 import type { ActiveDurableEffect } from "@/src/core/rules/durableEffects";
+import type { ActivationBlockData } from "@/src/core/schemas/rule-blocks/playable";
+import { loadSpellActivations } from "@/src/server/services/spellActivations";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import type { Locale } from "@/src/i18n/request";
@@ -31,7 +33,7 @@ type TypedClient = SupabaseClient<Database>;
  */
 export interface FicheAvecPage {
   /** `controls` (V3.1-109) : les commandes que la fiche montre à cet appelant pour cette campagne. */
-  remote: { sheet: DerivedSheet; hitDiceTotals: Record<string, number>; runtimeState: RuntimeStateView; controls: Record<PlayerEditableField, boolean>; effects: ActiveDurableEffect[] } | null;
+  remote: { sheet: DerivedSheet; hitDiceTotals: Record<string, number>; runtimeState: RuntimeStateView; controls: Record<PlayerEditableField, boolean>; effects: ActiveDurableEffect[]; spellActivations: Record<string, ActivationBlockData> } | null;
   ruleset: { cleSelection: string; vue: Awaited<ReturnType<typeof buildResolvedRulesetView>> } | null;
 }
 
@@ -60,7 +62,9 @@ export async function chargerFicheAvecPage(
     ]);
     const runtimeState = await getOrInitializeRuntimeState(supabase, ctx, { persist: canEdit });
     // V3.1-157 : les effets portés partent avec la page, comme avec la route `/sheet` (sinon la fiche les ignore jusqu'à la première action).
-    return { sheet: ctx.sheet, hitDiceTotals: ctx.hitDiceTotals, runtimeState, controls, effects: ctx.activeEffects };
+    // V3.1-166 : les activations des sorts connus (un sort jouable se lance par sa carte), en une lecture groupée.
+    const spellActivations = await loadSpellActivations(supabase, ctx);
+    return { sheet: ctx.sheet, hitDiceTotals: ctx.hitDiceTotals, runtimeState, controls, effects: ctx.activeEffects, spellActivations };
   })();
 
   const rulesetPromise = selectionHasAnything(selection)

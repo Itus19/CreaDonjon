@@ -188,7 +188,7 @@ export const resourceUsageSchema = z.object({
   delta: z.number().int(),
 });
 
-/** ADR 0076 (V3.1-183) — regagner une utilisation en dépensant autre chose : une INTENTION, le serveur vérifie le coût et l'écrit. */
+/** ADR 0078 (V3.1-183) — regagner une utilisation en dépensant autre chose : une INTENTION, le serveur vérifie le coût et l'écrit. */
 export const resourceRegainSchema = z.object({
   campaignId: campaignIdField,
   resourceKey: z.string().min(1).max(80),
@@ -244,4 +244,11 @@ export const activateFeatureSchema = z.object({
   activationId: z.string().min(1).max(100),
   variantId: z.string().min(1).max(100).nullable().default(null),
   targetParticipantIds: z.array(z.string().uuid()).max(20).default([]),
+  /** V3.1-165 (ADR 0076) : `ruleKey` est un sort ; l'emplacement dépensé, et l'option de lancement d'une aptitude. */
+  spell: z
+    .object({
+      slotLevel: z.number().int().min(0).max(9),
+      castOption: z.object({ ruleKey: z.string().min(1).max(200), optionId: z.string().min(1).max(100) }).optional(),
+    })
+    .optional(),
 });

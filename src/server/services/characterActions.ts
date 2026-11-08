@@ -1567,7 +1567,7 @@ export async function changeSpellSlotUsage(
 }
 
 /**
- * ADR 0076 (V3.1-183) — Regagner une utilisation d'une ressource en dépensant
+ * ADR 0078 (V3.1-183) — Regagner une utilisation d'une ressource en dépensant
  * autre chose (une Inspiration bardique, un emplacement de niveau 3+). Le
  * client n'envoie qu'une intention ; le coût se vérifie ici, sur la fiche
  * calculée par le serveur et l'état de jeu relu (`planResourceRegain`), et les

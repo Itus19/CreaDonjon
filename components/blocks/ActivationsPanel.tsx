@@ -7,7 +7,7 @@ import Checkbox from "@/components/shared/Checkbox";
 import { useTextesJetCible } from "@/components/shell/useTextesJetCible";
 import type { ActiveDurableEffect } from "@/src/core/rules/durableEffects";
 import { localized } from "@/src/core/rules/durableEffects";
-import type { ResolvedFeature, SheetResource } from "@/src/core/rules/sheet";
+import type { BonusActionOption, ResolvedFeature, SheetResource } from "@/src/core/rules/sheet";
 import type { Activation, ActivationBlockData } from "@/src/core/schemas/rule-blocks/playable";
 import {
   activationsVisibles,
@@ -21,6 +21,7 @@ import {
   tempsRestant,
 } from "@/lib/ui/activationFiche";
 import { activerRegle, type ReponseActivation } from "@/lib/ui/activationApi";
+import { emplacementsOfferts, optionsDeLancement, type SortJouable } from "@/lib/ui/lancerSort";
 import { lireCombatEnCours, lireCombatEnCoursJoueur } from "@/lib/ui/ficheDesApi";
 import { SEUIL_COMPTEUR } from "@/lib/ui/egaliseur";
 import { ErreurLancer, type CibleDeJet } from "@/lib/ui/outilDes";
@@ -57,6 +58,17 @@ export interface ActivationsPanelProps {
   /** Les nombres que lisent les formules (`nombresDeLaFiche`). */
   nombres: Readonly<Record<string, number>>;
   effets: readonly ActiveDurableEffect[];
+  /** V3.1-166 : les sorts connus qui portent une activation (une carte chacun, avec le choix de l'emplacement). */
+  sorts?: readonly SortJouable[];
+  /** V3.1-166 : les emplacements que la fiche affiche déjà (totaux, dépensés, réserve de pacte). */
+  emplacements?: {
+    totaux: Readonly<Record<number, number>>;
+    depenses: Readonly<Record<string, number>>;
+    pacte: { count: number; slotLevel: number } | null;
+    pacteDepense: number;
+  };
+  /** V3.1-166 : les actions permises en action bonus (`bonusActionOptions` de la fiche). */
+  actionsBonus?: readonly BonusActionOption[];
   /** Après une activation réussie : la fiche se relit (même mécanisme que les autres actions). */
   apresActivation: () => void;
   busy: boolean;
@@ -70,7 +82,12 @@ export default function ActivationsPanel(props: ActivationsPanelProps) {
     f.activation ? activationsVisibles(f.activation, effets).map((activation) => ({ feature: f, bloc: f.activation as ActivationBlockData, activation })) : []
   );
 
-  if (ressources.length === 0 && capacites.length === 0 && effets.length === 0) return null;
+  const sorts = (props.sorts ?? []).flatMap((s) =>
+    activationsVisibles(s.bloc, effets).map((activation) => ({ sort: s, activation }))
+  );
+  const actionsBonus = props.actionsBonus ?? [];
+
+  if (ressources.length === 0 && capacites.length === 0 && effets.length === 0 && sorts.length === 0 && actionsBonus.length === 0) return null;
 
   return (
     <div className="flex flex-col gap-4">
@@ -83,11 +100,26 @@ export default function ActivationsPanel(props: ActivationsPanelProps) {
         </section>
       )}
 
+      {actionsBonus.length > 0 && (
+        <p className="text-xs text-ink-muted" data-testid="actions-bonus">
+          {t("enActionBonus", { actions: actionsBonus.map((a) => t(`actionBonus.${a}`)).join(", ") })}
+        </p>
+      )}
+
       {capacites.length > 0 && (
         <section className="flex flex-col gap-1.5" aria-label={t("capacites")}>
           <span className={ETIQUETTE}>{t("capacites")}</span>
           {capacites.map(({ feature, bloc, activation }) => (
             <CarteCapacite key={`${feature.key}:${activation.id}`} {...props} ruleKey={feature.key} nomRegle={feature.label} bloc={bloc} activation={activation} />
+          ))}
+        </section>
+      )}
+
+      {sorts.length > 0 && (
+        <section className="flex flex-col gap-1.5" aria-label={t("sorts")}>
+          <span className={ETIQUETTE}>{t("sorts")}</span>
+          {sorts.map(({ sort, activation }) => (
+            <CarteCapacite key={`${sort.cle}:${activation.id}`} {...props} ruleKey={sort.cle} nomRegle={sort.nom} bloc={sort.bloc} activation={activation} sort />
           ))}
         </section>
       )}
@@ -114,7 +146,7 @@ function LigneRessource({ ressource, ...p }: ActivationsPanelProps & { ressource
   const { restants, max } = ressourceRestante(ressource, p.utilises);
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
-  // ADR 0076 (V3.1-183) : une ressource entamée qui se regagne contre autre chose montre son geste, et ce qu'il coûte.
+  // ADR 0078 (V3.1-183) : une ressource entamée qui se regagne contre autre chose montre son geste, et ce qu'il coûte.
   const regain = ressource.regain;
   const cout = regain
     ? regain.kind === "resource"
@@ -163,7 +195,7 @@ function LigneRessource({ ressource, ...p }: ActivationsPanelProps & { ressource
 // --- une capacité -----------------------------------------------------------
 
 function CarteCapacite(
-  p: ActivationsPanelProps & { ruleKey: string; nomRegle: string; bloc: ActivationBlockData; activation: Activation }
+  p: ActivationsPanelProps & { ruleKey: string; nomRegle: string; bloc: ActivationBlockData; activation: Activation; sort?: boolean }
 ) {
   const { activation, bloc, campaignId, estMj, nombres, ressources, utilises } = p;
   const t = useTranslations("fiche.activation");
@@ -178,6 +210,16 @@ function CarteCapacite(
   const [erreur, setErreur] = useState<string | null>(null);
   const [envoi, setEnvoi] = useState(false);
 
+  // V3.1-166 : un sort se lance avec un emplacement (niveau de base ou plus) et, au choix, une option de lancement d'une aptitude.
+  const niveauDeBase = activation.cost.slot?.level ?? 0;
+  const offerts = p.sort && p.emplacements ? emplacementsOfferts({ base: niveauDeBase, ...p.emplacements }) : [];
+  const options = p.sort ? optionsDeLancement(p.features) : [];
+  const [niveauChoisi, setNiveauChoisi] = useState<number | null>(null);
+  const [optionChoisie, setOptionChoisie] = useState<string | null>(null);
+  const niveauEffectif = offerts.some((o) => o.niveau === niveauChoisi) ? niveauChoisi : (offerts[0]?.niveau ?? null);
+  const optionLancement = options.find((o) => `${o.ruleKey}:${o.optionId}` === optionChoisie);
+  const sansEmplacement = p.sort === true && niveauDeBase > 0 && niveauEffectif === null;
+
   const resume = resumeActivation(bloc, activation, nombres, varianteId);
   const manquante = ressourceManquante(resume.couts, ressources, utilises);
   const nomRessource = (cle: string) => {
@@ -186,6 +228,7 @@ function CarteCapacite(
   };
 
   const morceaux: string[] = [t(`action.${resume.action}`)];
+  if (p.sort) morceaux.push(niveauDeBase > 0 ? t("emplacementDeNiveau", { niveau: niveauDeBase }) : t("sortMineur"));
   for (const c of resume.couts) morceaux.push(`${c.montant} ${nomRessource(c.cle)}`);
   if (resume.cibles && resume.cibles.max !== null) morceaux.push(t("cibles", { n: resume.cibles.max }));
   const libelleSauvegarde = resume.sauvegarde ? (ABILITY_LABELS[resume.sauvegarde.caracteristique as Ability] ?? resume.sauvegarde.caracteristique.toUpperCase()) : "";
@@ -219,7 +262,18 @@ function CarteCapacite(
     try {
       const reponse = await activerRegle(
         p.entityId,
-        { campaignId, ruleKey: p.ruleKey, activationId: activation.id, variantId: varianteId, targetParticipantIds: ciblesVisees },
+        { campaignId, ruleKey: p.ruleKey, activationId: activation.id,
+          variantId: varianteId,
+          targetParticipantIds: ciblesVisees,
+          ...(p.sort
+            ? {
+                spell: {
+                  slotLevel: niveauDeBase > 0 ? (niveauEffectif ?? niveauDeBase) : 0,
+                  ...(optionLancement ? { castOption: { ruleKey: optionLancement.ruleKey, optionId: optionLancement.optionId } } : {}),
+                },
+              }
+            : {}),
+        },
         t("erreur")
       );
       setResultat(reponse);
@@ -252,7 +306,7 @@ function CarteCapacite(
 
   const ouvert = cibles !== null;
   const occupe = p.busy || envoi || cibles === "lecture";
-  const bloque = campaignId === null || manquante !== null;
+  const bloque = campaignId === null || manquante !== null || sansEmplacement;
 
   return (
     <div className={CARTE}>
@@ -288,6 +342,56 @@ function CarteCapacite(
               {localized(v.label, locale)}
             </button>
           ))}
+        </div>
+      )}
+
+      {p.sort && !reaction && offerts.length > 0 && (
+        <div className="flex flex-col gap-1">
+          <span className={ETIQUETTE}>{t("emplacement")}</span>
+          <div className="flex flex-wrap gap-1" role="group" aria-label={t("choixEmplacement", { nom: nomCapacite })}>
+            {offerts.map((o) => (
+              <button
+                key={o.niveau}
+                type="button"
+                aria-pressed={niveauEffectif === o.niveau}
+                onClick={() => setNiveauChoisi(o.niveau)}
+                className={`min-h-11 rounded-full border px-3 py-1 text-xs ${niveauEffectif === o.niveau ? "border-accent text-accent" : "border-edge text-ink-muted"}`}
+              >
+                {t("niveauRestants", { niveau: o.niveau, restants: o.restants })}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {sansEmplacement && !reaction && <p className="text-xs text-ink-muted">{t("aucunEmplacement")}</p>}
+
+      {p.sort && !reaction && options.length > 0 && (
+        <div className="flex flex-col gap-1">
+          <span className={ETIQUETTE}>{t("optionsLancement")}</span>
+          <div className="flex flex-wrap gap-1" role="group" aria-label={t("choixOption", { nom: nomCapacite })}>
+            <button
+              type="button"
+              aria-pressed={optionChoisie === null}
+              onClick={() => setOptionChoisie(null)}
+              className={`min-h-11 rounded-full border px-3 py-1 text-xs ${optionChoisie === null ? "border-accent text-accent" : "border-edge text-ink-muted"}`}
+            >
+              {t("sansOption")}
+            </button>
+            {options.map((o) => {
+              const id = `${o.ruleKey}:${o.optionId}`;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  aria-pressed={optionChoisie === id}
+                  onClick={() => setOptionChoisie(id)}
+                  className={`min-h-11 rounded-full border px-3 py-1 text-xs ${optionChoisie === id ? "border-accent text-accent" : "border-edge text-ink-muted"}`}
+                >
+                  {localized(o.label, locale)}
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -372,6 +476,11 @@ function ResultatActivation({
   const t = useTranslations("fiche.activation");
   return (
     <div className="flex flex-col gap-1.5 rounded-md bg-panel p-2.5" aria-live="polite">
+      {reponse.overBudget && (
+        <p role="status" className="text-xs text-accent">
+          {t("depasseBudget")}
+        </p>
+      )}
       <div className="flex items-center gap-2">
         <span className={`${ETIQUETTE} min-w-0 flex-1`}>{t("resultat", { nom })}</span>
         <button type="button" onClick={onFermer} className="rounded-full px-2 py-0.5 text-xs text-ink-muted hover:text-ink" aria-label={t("fermerResultat")}>

@@ -293,11 +293,77 @@ Réactions (une fenêtre de choix dans le déroulé d'un jet, côté serveur), o
 
 *Reste, passé au V3.1-163* : **Mots cinglants** (une aptitude de sous-classe n'arrive sur la fiche que si elle porte modificateurs ou sorts : `subclassFeatures` ne lui attache pas son bloc d'activation), **Chance** du halfelin (trait d'espèce, même vérification à faire), et **le dé d'Inspiration bardique** reçu (une activation accordée par un jeton n'est pas encore candidate à une réaction). Bouclier attend 136.
 
-### ☐ V3.1-136 — Les actions modifiées · `M` · sans modèle IA — **à concevoir (Opus)**
+### ☑ V3.1-136 — Les actions modifiées · `M` · sans modèle IA — **conçu le 7 novembre ([ADR 0076](../adr/0076-les-actions-modifiees.md)), découpé en V3.1-164 à 167**
 Attaques multiples, action disponible en action bonus, temps d'incantation changé, attaque remplacée, budget réservé à un usage, accorder ou lancer un sort comme effet. Règles visées : 7, 13, 14, 16, 21, 24, 32, 33, 35, 39.
 
 
 *Reçu de V3.1-158 (7 novembre)* : Bénédiction (un sort joué comme une activation : jusqu'à 3 cibles, concentration, + 1d4 aux attaques et aux sauvegardes — le noyau le sait déjà) et Arme sacrée (« en prenant l'action Attaque », + mod. CHA aux attaques de l'arme).
+*Conçu le 7 novembre* : [ADR 0076](../adr/0076-les-actions-modifiees.md). Deux choix de l'auteur : un sort porte le **même bloc `activation`** qu'une aptitude (coût en emplacement, `slot.level` dans les formules) ; le moteur **compte** l'économie d'action en combat (action, action bonus, attaques restantes), sans bloquer. Découpé ci-dessous.
+
+#### ☑ V3.1-164 — Le noyau : coût en emplacement, coût « une attaque », attaques par action, options de lancement, lancer un sort comme effet · `M` · sans modèle IA — **prêt (Opus)**
+
+**Modèle conseillé : Opus** — noyau du moteur. Tests d'abord.
+
+- `playable.ts` : `cost.slot { level }` ; `cost.action` gagne `attack` ; `cast_options` sur une activation d'aptitude ; effet `cast_spell { spell, free }` (dans `zEffect`).
+- `sheet.ts` : `attacksPerAction` (cible `attacks_per_action`, défaut 1) ; `bonusActionOptions` (cibles `action_as_bonus.<action>`).
+- `src/core/rules/turnBudget.ts`, pur : le budget du tour d'un participant dans `turn_usage.budget` (neuf si son tour a changé), dépenser une action, une action bonus, une attaque (la première ouvre l'action Attaque), signaler le dépassement sans bloquer.
+- `planActivation` lit `slot.level` et refuse un emplacement trop bas.
+
+**Critères d'acceptation**
+- [x] Tests : Attaque supplémentaire, deux attaques pour une action, la troisième dépasse ; le tour suivant, budget neuf ; Bénédiction au niveau 2 vise 4 cibles ; un coût `attack` consomme une attaque restante, sinon ouvre l'action Attaque ; Sort accéléré change le temps d'incantation et coûte 2 points.
+
+*Fait le 7 novembre.* `playable.ts` : `cost.slot`, `cost.action: "attack"`, `cast_options` (`zCastOption`) ; effet `cast_spell` dans le vocabulaire (le tour le rapporte « ignoré », l'éditeur le garde tel quel jusqu'au 166). `planActivation` lit `slot.level` et refuse `slot_too_low` avant tout dé. `sheet.ts` : `attacksPerAction` (le plus grand `set`/`max` de `attacks_per_action`, 1 par défaut), `bonusActionOptions` (`action_as_bonus.<action>`) ; cibles et libellés au catalogue des modificateurs. `turnBudget.ts` : `ownTurnStamp`, `budgetForTurn` (neuf quand le tour du participant change), `spendTurnBudget` (l'action Attaque ouverte par la première attaque), `grantTurnBudget` (action « pas pour la Magie »), `applyCastOption`. `turn_usage.budget` (noyau et changement signé ; la base l'accepte au 165) ; `recordUse` garde le budget. Tests : `actionsModifiees.test.ts` 12/12.
+
+#### ☑ V3.1-165 — La migration et le service : lancer un sort par son activation, compter le budget · `M` · sans modèle IA — **prêt (Opus)**
+
+**Modèle conseillé : Opus** — migration, service, sécurité.
+**Dépend de** : 164.
+
+- Migration : `apply_engine_change` accepte `budget` dans `turn_usage`.
+- Service `castSpellActivation` : sort connu ou préparé, emplacement (ordinaire puis pacte), option de lancement, puis le même chemin que `activateFeature`. Route Zod.
+- Le budget compté dans `resolveTargetedRoll` (attaques d'arme), `activateFeature` et le lancer ; « pas l'action Magie » du Sursaut d'action.
+- Réactions (ADR 0075) : un sort préparé à déclencheur est candidat (Bouclier), jouer la réaction dépense l'emplacement.
+
+**Critères d'acceptation**
+- [x] Intégration : Clerc 3 lance Bénédiction au niveau 2 sur 4 alliés (emplacement dépensé, concentration, +1d4 sur leurs fiches) ; un Guerrier 5 attaque deux fois pour une action, la troisième attaque est signalée. *Bénédiction n'est pas dans le SRD 2024 importé : le test joue un sort de concentration de même forme (Bouclier de la foi, activation de test sur une variante, cibles `3 + slot.level − 1`).*
+- [x] Bouclier : un gobelin touche un Magicien 1 à 15 contre CA 12, « utiliser » → raté, emplacement de niveau 1 dépensé, +5 CA jusqu'au début de son tour. *L'effet qui dure est d'un round (« jusqu'au début de votre prochain tour » n'existe pas encore comme durée).*
+
+*Fait le 7 novembre.* Migration `20261107140000_turn_budget` (appliquée, vérifiée par le test : la joueuse écrit son budget en changement signé). `activateFeature` accepte un sort (`spell` : connu ou accordé ; emplacement ordinaire puis pacte, dépensé avec les ressources en une écriture ; option de lancement ; `slot.level`), refus `spell_not_known`, `no_slot_available`, `unknown_cast_option` ; route Zod. `turnBudgetWrite.ts` compte le budget en combat (activations, attaques d'arme ciblées y compris d'un monstre ; Sursaut d'action « pas pour la Magie » par `grant_budget.not_magic`) ; une réaction jouée par sa fenêtre ne le touche pas. Les sorts de réaction préparés sont candidats aux fenêtres (une lecture groupée par personnage) et dépensent le plus petit emplacement libre à la reprise. L'effet `cast_spell` joue l'activation du sort nommé (sans emplacement si gratuit, sans chaîne). Correctif du noyau trouvé au test : une attaque en dépassement n'ouvre plus d'action Attaque. Vérifié : `actionsModifiees.integration.test.ts` 4/4.
+
+*Reste* : la durée « jusqu'au début de votre prochain tour » ; un sort mineur de réaction ; le coût de `gatherReactors` (une fiche par PJ du combat à chaque attaque d'un monstre, ~2 s à trois PJ) — à mettre en cache si la table le sent (docs/QUOTAS.md).
+
+#### ☑ V3.1-166 — Les écrans : budget du tour, lancer un sort par son activation ; l'éditeur suit · `M` · sans modèle IA — **prêt (Sonnet)**
+
+**Modèle conseillé : Sonnet**, une fois 165 fait ; Opus relit.
+**Dépend de** : 165.
+
+**Sous-tâches Haiku** (`aide-haiku`) : libellés ; planche du catalogue ; vérifications.
+
+- Fiche : le budget du tour (action, action bonus, attaques restantes) sur la carte « Économie d'action » ; un sort qui porte une activation se lance par une carte (choix de l'emplacement, options de lancement) ; les actions permises en action bonus.
+- Éditeur de briques : le coût en emplacement et le coût « une attaque » ; les options de lancement d'une aptitude ; l'effet « lancer un sort ».
+
+**Critères d'acceptation**
+- [x] Au téléphone, la carte d'un sort tient à 390 px avec son choix d'emplacement.
+- [x] Bénédiction se saisit à l'éditeur sur la fiche du sort, sans JSON. *Prouvé par l'aller-retour de l'éditeur (`briquesRegle.test.ts`) ; Bénédiction n'est pas dans le SRD 2024 importé.*
+
+*Fait le 7 novembre* (codé par `dev-sonnet`, relu par Opus). Sonnet s'est arrêté avant de coder : deux chargements manquaient ; Opus les a ajoutés côté serveur — `combat_player_view` rend le budget du tour des alliés (migration `20261107160000_combat_player_view_budget`), et la fiche reçoit `spellActivations` (une lecture groupée, page et route `/sheet`, `loadSpellActivations` partagé avec les fenêtres de réaction). Écrans : `lib/ui/budgetTour.ts` (ce qui reste, testé), ligne « Reste » sous les cases de la carte « Économie d'action » (les cases locales restent pour la réaction), avertissement de dépassement ; « En action bonus : … » en tête de l'onglet Actions ; section « Sorts » (carte d'activation réutilisée, pastilles d'emplacement, options de lancement, un sort à déclencheur garde sa mention « Réaction ») ; `lib/ui/lancerSort.ts` (testé). Éditeur : coût en emplacement, coût « Une attaque », options de lancement, effet « Lancer un sort », aller-retour testé. Vérifié au navigateur : Mira (Clerc 5) lance Bouclier de la foi depuis la fiche à 390 px (pastilles qui passent à la ligne, aucun débordement) → emplacement de niveau 1 dépensé, concentration, effet posé.
+
+*Reste* : la planche du catalogue ; le total « 1 / 2 » des attaques (la carte de combat ne connaît pas la fiche) ; les pastilles fusionnent emplacement ordinaire et de pacte du même niveau.
+
+#### ☑ V3.1-167 — Les données : sorts et actions modifiées du SRD · `S` · sans modèle IA — **prêt (Opus)**
+
+**Modèle conseillé : Opus** — données officielles, import.
+**Dépend de** : 164, 165.
+
+- Bénédiction, Bouclier, Arme sacrée (« en prenant l'action Attaque » : tranché ici), Attaque supplémentaire (Guerrier, Paladin, Rôdeur, Barbare, Moine), Action rusée, Sort accéléré, Sursaut d'action (« pas l'action Magie »). Le Souffle du drakéide attend les zones (137). Réimport, scripts d'auteur rejoués.
+
+**Critères d'acceptation**
+- [x] Après réimport, ces règles sont « Jouable » (ou « Partielle » pour ce qui attend 137 ou 138) et se jouent sur une fiche de test.
+
+*Fait le 7 novembre.* `modifiers-2024.json` : Attaque supplémentaire (`extra-attack`, la clé que l'import fusionne entre Guerrier, Paladin, Rôdeur, Barbare et Moine : 2 attaques), Guerrier 11 (3) et 20 (4), Action rusée (Foncer, Se désengager, Se cacher en action bonus). `playable-2024.json` : Bouclier (index `shield` des sorts, rangé `shield-spell` ; réaction, emplacement 1, +5 CA contre le jet, effet d'un round), Fougue (l'action accordée ne paie plus l'action Magie), Réserve arcanique (points de Sorcellerie), Métamagie (Sort accéléré en option de lancement), Arme sacrée (Conduit divin, + mod. CHA min. 1 aux attaques d'arme, 10 minutes). Import : les briques jouables ne se posent plus sur l'**équipement** (l'index `shield` désigne aussi l'armure). Tests de données : une aptitude fusionnée entre classes se vise par sa clé fusionnée. Réimport fait, scripts d'auteur rejoués. Vérifié : `srdActionsModifiees.integration.test.ts` 5/5.
+
+*Reste* : **Bénédiction n'est pas dans le SRD 2024 importé** (seulement en 2014) : elle se saisit à l'éditeur sur une variante ; Sort accéléré est proposé sans vérifier qu'il fait partie des options de Métamagie choisies ; « en prenant l'action Attaque » (Arme sacrée) et « jusqu'au début de votre tour suivant » (Bouclier) ne sont pas vérifiés ; le Souffle du drakéide attend les zones (137).
+
 ### ☐ V3.1-137 — Les conditions de jeu et les distances réelles · `L` · sans modèle IA — **à concevoir (Opus)**
 Distances en mètres entre créatures (ADR 0059 §5), zones géométriques, auras, résistances et immunités, conditions sur l'équipement, règles qui en modifient d'autres, étiquettes d'arme sur `attack_hit`. Règles visées : 2, 3, 10, 12, 13, 17, 18, 24, 25, 26, 29, 32, 33, 36.
 

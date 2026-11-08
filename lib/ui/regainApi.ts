@@ -1,5 +1,5 @@
 /**
- * ADR 0076 (V3.1-183) — appel réseau du bouton « Regagner » d'une ressource,
+ * ADR 0078 (V3.1-183) — appel réseau du bouton « Regagner » d'une ressource,
  * sorti du composant : aucun effet de montage ici (docs/CABLAGE.md §6). Une
  * intention seulement ; le serveur vérifie le coût et l'écrit.
  */

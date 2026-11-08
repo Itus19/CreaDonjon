@@ -204,7 +204,7 @@ export interface SheetResource {
   label: Record<string, string>;
   max: number;
   recharge: RuleResource["recharge"];
-  /** ADR 0076 (V3.1-183) : regagner une utilisation en dépensant autre chose. */
+  /** ADR 0078 (V3.1-183) : regagner une utilisation en dépensant autre chose. */
   regain?: RuleResource["regain"];
   /** Clé de la fiche (ou de l'objet) qui la déclare. */
   source: string;
@@ -393,7 +393,15 @@ export interface DerivedSheet {
   grantedProficiencies: { target: string; label: string }[];
   /** V3.1-155 : les modificateurs résolus des cibles de jet (attaque, dégâts, critique), lus par `rollBonus`. */
   rollModifiers: Modifier[];
+  /** V3.1-164 (ADR 0076) : attaques par action Attaque (cible `attacks_per_action`, Attaque supplémentaire), 1 par défaut. */
+  attacksPerAction: number;
+  /** V3.1-164 : les actions que la fiche peut prendre en action bonus (cibles `action_as_bonus.<action>`, Action rusée). */
+  bonusActionOptions: BonusActionOption[];
 }
+
+/** V3.1-164 : les actions standard qu'une règle peut rendre disponibles en action bonus. */
+export const BONUS_ACTION_OPTIONS = ["dash", "disengage", "hide", "search", "use_object", "dodge"] as const;
+export type BonusActionOption = (typeof BONUS_ACTION_OPTIONS)[number];
 
 export const SENSES = ["darkvision", "blindsight", "tremorsense", "truesight"] as const;
 export type Sense = (typeof SENSES)[number];
@@ -915,6 +923,9 @@ export function characterSheet(
     }
   }
   const rollModifiers = allModifiers.filter((m) => /^(attack|damage|crit_range)(\.|$)/.test(m.target));
+  // V3.1-164 (ADR 0076) : le plus grand nombre d'attaques l'emporte (Attaque supplémentaire, puis au niveau 11).
+  const attacksPerAction = Math.max(1, ...allModifiers.filter((m) => m.target === "attacks_per_action" && m.value !== undefined && (m.op === "set" || m.op === "max")).map((m) => m.value!));
+  const bonusActionOptions = BONUS_ACTION_OPTIONS.filter((a) => allModifiers.some((m) => m.target === `action_as_bonus.${a}` && (m.value ?? 0) > 0));
 
   const grantedFeatureKeys = new Set(build.featureKeys);
   const warnings: Warning[] = [...features.flatMap((f) => checkPrerequisites(f, abilities, totalLevel, grantedFeatureKeys)), ...formulaWarnings];
@@ -962,7 +973,7 @@ export function characterSheet(
 
   return {
     abilities, proficiencyBonus, ac, savingThrows, abilityChecks, skills, passives, hitPoints, speed, features, spellcasting, grantedSpells, resources, warnings, encumbrance,
-    senses, speeds, grantedProficiencies, rollModifiers,
+    senses, speeds, grantedProficiencies, rollModifiers, attacksPerAction, bonusActionOptions,
   };
 }
 

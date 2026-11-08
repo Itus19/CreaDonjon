@@ -13,7 +13,7 @@ const ERROR_MESSAGES: Record<"not_found" | "no_regain" | "full" | "cannot_pay", 
 };
 
 /**
- * ADR 0076 (V3.1-183) — regagner une utilisation d'une ressource en dépensant
+ * ADR 0078 (V3.1-183) — regagner une utilisation d'une ressource en dépensant
  * autre chose. Même barrière que la dépense d'une ressource
  * (`guardSheetActionRoute` : Zod, session, droit d'agir) ; le coût se vérifie
  * côté serveur, jamais sur la foi du client.

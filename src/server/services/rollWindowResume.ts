@@ -119,6 +119,9 @@ export async function resumeRollWindow(supabase: TypedClient, params: { windowId
       callerId: params.callerId,
       callerIsGm: authorIsGm,
       locale: params.locale,
+      // La réaction se compte à part (ADR 0075) ; un sort de réaction dépense son emplacement (ADR 0076).
+      skipBudget: true,
+      ...(c.spellSlot ? { spell: { slotLevel: c.spellSlot } } : {}),
     });
     if (!played.ok) continue;
     used.push(c);

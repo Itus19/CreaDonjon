@@ -49,7 +49,7 @@ export interface ContexteEcranChoix {
   /** V3.1-174 : toutes les sous-étapes du chemin (ce que fait naître une sous-classe) et le moyen d'y aller. */
   sousEtapes: readonly SousEtape[];
   onAller: (position: string) => void;
-  /** V3.1-171 : les langues acquises d'office (le Commun), déjà traduites, rappelées au-dessus du choix des langues du personnage. */
+  /** V3.1-194 : les langues acquises d'office (le Commun), déjà traduites, rappelées au-dessus du choix des langues du personnage. */
   languesAcquises: readonly string[];
 }
 
@@ -192,7 +192,7 @@ function Choix({
   return <ChoixGenerique sous={sous} libelleOption={libelleOption} dejaAcquis={ctx.dejaAcquis(sous)} onChoisir={onChoisir} />;
 }
 
-/** V3.1-171 — Les langues du personnage : ce qui est acquis d'office (lu dans le ruleset, pas écrit ici), puis le choix des autres. */
+/** V3.1-194 — Les langues du personnage : ce qui est acquis d'office (lu dans le ruleset, pas écrit ici), puis le choix des autres. */
 function ChoixLangues({
   sous,
   ctx,

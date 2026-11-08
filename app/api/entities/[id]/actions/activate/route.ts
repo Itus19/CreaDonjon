@@ -21,6 +21,7 @@ const MESSAGES: Record<ActivateFeatureFailure, string> = {
   unknown_variant: "Variante inconnue pour cette activation.",
   requires_not_met: "Les conditions de cette activation ne sont pas remplies.",
   not_enough_resource: "Ressource insuffisante.",
+  slot_too_low: "Il faut un emplacement d'au moins le niveau du sort.",
   no_target: "Choisissez au moins une cible.",
   too_many_targets: "Trop de cibles pour cette activation.",
   unknown_target: "Cible inconnue.",
@@ -28,6 +29,9 @@ const MESSAGES: Record<ActivateFeatureFailure, string> = {
   invalid_formula: "Une formule de cette règle n'a pas pu se calculer.",
   no_combat: "Aucun combat en cours pour viser ces cibles.",
   target_not_found: "Cette cible n'est pas dans le combat en cours.",
+  spell_not_known: "Ce personnage ne connaît pas ce sort.",
+  no_slot_available: "Plus d'emplacement de ce niveau.",
+  unknown_cast_option: "Cette option de lancement n'existe pas pour ce personnage.",
 };
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -50,6 +54,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     callerId: userId,
     callerIsGm,
     locale,
+    ...(body.spell ? { spell: body.spell } : {}),
   });
   if (!result.ok) {
     const message = MESSAGES[result.reason];

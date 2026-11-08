@@ -4,7 +4,7 @@ import { applyEffects, type TurnState } from "./turn";
 import type { Rng } from "../dice/rng";
 
 /**
- * V3.1-183 (ADR 0076) — l'effet « PV temporaires », et le résultat du dé
+ * V3.1-183 (ADR 0078) — l'effet « PV temporaires », et le résultat du dé
  * qu'une utilisation vient de lancer, relu par les effets qui suivent
  * (`event.last_roll`). Mante d'inspiration : « autant de PV temporaires que
  * le double du nombre obtenu sur le dé d'Inspiration bardique ».

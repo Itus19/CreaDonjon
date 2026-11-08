@@ -61,7 +61,7 @@ export const zCharacterBlockData = z
     hp_method: z.enum(["fixed", "rolled"]),
     portrait_asset_id: z.string().nullable(),
     gender: zGender.optional(),
-    /** V3.1-170 : des jeux connus et une saisie libre ; un ancien texte se relit comme saisie libre (`zPronouns`). */
+    /** V3.1-193 : des jeux connus et une saisie libre ; un ancien texte se relit comme saisie libre (`zPronouns`). */
     pronouns: zPronouns.optional(),
     /** Ancien champ (V3-Z1), garde en LECTURE pour les fiches anterieures a V3.1-48 : l'age affiche vient de `birth` quand il existe (regle 16, ADR 0063). */
     age: z.number().int().nonnegative().optional(),

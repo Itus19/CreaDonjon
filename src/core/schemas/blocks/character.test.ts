@@ -53,7 +53,7 @@ describe("zCharacterBlockData", () => {
     expect(unspecified.gender).not.toEqual(neutral.gender);
   });
 
-  it("V3.1-170 : un ancien texte de pronoms se relit comme saisie libre ; la forme nouvelle passe telle quelle", () => {
+  it("V3.1-193 : un ancien texte de pronoms se relit comme saisie libre ; la forme nouvelle passe telle quelle", () => {
     expect(zCharacterBlockData.parse({ ...valid, pronouns: "iel" }).pronouns).toEqual({ sets: [], custom: "iel" });
     expect(zCharacterBlockData.parse({ ...valid, pronouns: { sets: ["he", "she"] } }).pronouns).toEqual({ sets: ["he", "she"] });
   });

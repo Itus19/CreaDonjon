@@ -61,7 +61,7 @@ async function resolvePresentNpcs(
   const others = params.present.filter((p) => p.entityId !== params.playerEntityId);
   if (others.length === 0) return [];
 
-  // V3.1-170 : les blocs `character` des présents, en UNE requête avec le reste (client du joueur : la RLS ne rend que ce qu'il peut voir).
+  // V3.1-193 : les blocs `character` des présents, en UNE requête avec le reste (client du joueur : la RLS ne rend que ce qu'il peut voir).
   const [entities, knownAs, characterBlocks] = await Promise.all([
     listEntitiesByIds(supabase, others.map((p) => p.entityId)),
     knownAsByTarget(supabase, params.playerEntityId),

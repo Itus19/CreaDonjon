@@ -5801,7 +5801,7 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
 
 **Critères.** Mante d'inspiration se joue de bout en bout (dépense, jet du dé par le serveur, PV temporaires ×2 aux cibles choisies) ; Magie envoûtante vide se recharge contre une Inspiration bardique ; tests du noyau.
 
-**Fait le 7 novembre** (Opus seul ; ADR 0076).
+**Fait le 7 novembre** (Opus seul ; ADR 0078).
 - **PV temporaires** : l'effet `temp_hp` rejoint le vocabulaire fermé, appliqué avec `grantTempHp` (le plus grand des deux) ; le serveur l'écrit comme tout changement de PV. Le dé d'une brique « Jet libre » se relit dans les effets qui suivent (`event.last_roll`, proposé dans « Insérer une référence »). Tests du noyau.
 - **Regagner en dépensant** : une ressource peut porter `regain` (une autre ressource et sa quantité, ou un emplacement d'un niveau minimal). `planResourceRegain` (pur, 7 tests) ; la route `resource-regain` n'accepte qu'une intention et vérifie le coût côté serveur ; la fiche montre « Regagner (− 1 Inspiration bardique) » sur une ressource entamée ; l'éditeur le saisit sur la carte de la ressource (aller-retour testé).
 - Vérifié au navigateur (monde temporaire) : la ressource « Mante de majesté » avec regain contre un emplacement de niveau 3, et une utilisation « PV temporaires = 2 × {event.last_roll} », enregistrées et relues.
@@ -5820,10 +5820,10 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
 - **La fiche elle-même** : l'étape Aperçu affiche `PlayableCharacterSheet` — le composant du bloc Personnage — en mode `apercu` : rien n'est chargé ni envoyé au serveur (le personnage n'existe pas encore), les champs de build, les repos, l'export, la montée de niveau et les avertissements (l'assistant les montre dessous) disparaissent ; tout ce qui agit (jets, attaques, inventaire, choix de compétences) reste visible mais éteint (`fieldset disabled`) ; onglets et liens de règle restent utilisables. La fiche s'y montre comme si tout était permis (`TOUTES_LES_COMMANDES`), jamais « le MJ s'en charge ». L'ancien aperçu (`PreviewStep.tsx`, une copie qui avait dérivé : ni colonne des caractéristiques ni valeurs passives) est supprimé.
 - **La colonne** : à l'Aperçu de la création, elle se replie (largeur, marge, opacité, 300 ms, coupées sous mouvement réduit, `inert` une fois repliée) et revient en quittant l'étape. La montée de niveau garde son avant → après ; tablette et téléphone n'ont pas de colonne.
 - **Cycle d'import** : la fiche ouvrait l'assistant (montée de niveau) et l'assistant affiche maintenant la fiche. La montée vit désormais dans `FicheAvecMontee.tsx`, qui réunit les deux ; `EntityBlocks` et `ParticipantCharacterSheet` passent par lui (docs/ARCHITECTURE.md).
-- **Bogue de V3.1-170 trouvé ici et corrigé** : la fiche passe le bloc tel qu'il est stocké, sans le relire par le schéma ; un personnage ancien y porte encore des pronoms en texte, et le champ plantait. `PronomsField` relit désormais la valeur par `zPronouns`.
+- **Bogue de V3.1-193 trouvé ici et corrigé** : la fiche passe le bloc tel qu'il est stocké, sans le relire par le schéma ; un personnage ancien y porte encore des pronoms en texte, et le champ plantait. `PronomsField` relit désormais la valeur par `zPronouns`.
 - Vérifié au navigateur : la colonne mesure 288 px, 46 px à 120 ms, puis 0, et 288 px au retour ; aucune requête vers une entité pendant l'aperçu ; la fiche du PJ de Testeuse A se charge (passives 13, 13, 10).
 
-### V3.1-171 — Identité : des champs à la même taille, et « le Commun est acquis » (7 novembre)
+### V3.1-194 — Identité : des champs à la même taille, et « le Commun est acquis » (7 novembre)
 
 **Modèle conseillé : Sonnet.**
 
@@ -5839,7 +5839,7 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
 - **Mesure** (navigateur, 1440 et 390 px) : dans l'Identité, les 6 champs et les 2 listes font 34 px (le mois était plus petit avant : capture `26-pronoms`) ; dans chaque étape, les boutons-pastilles font 26 px. Seule l'étape Aperçu garde des hauteurs mêlées (30, 24, 22, 20 px) : c'est la fiche du personnage, dense, que V3.1-177 remplace.
 - **Langues** : au-dessus du choix des langues du personnage, « Acquis d'office : Commun ; choisissez-en deux autres. » La langue vient des langues fixes du ruleset (`languages`), le nombre du choix lui-même ; rien n'est écrit en dur.
 
-### V3.1-170 — Pronoms : une liste à choix multiples, lue pour accorder (7 novembre)
+### V3.1-193 — Pronoms : une liste à choix multiples, lue pour accorder (7 novembre)
 
 **Modèle conseillé : Opus** (forme des données d'un bloc, lecture par le solo).
 
@@ -5962,7 +5962,7 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
 
 **Critères.** Après *charme-personne* lancé par un emplacement, la fiche propose Magie envoûtante ; pas après un sort mineur ni un sort d'une autre école.
 
-**Fait le 7 novembre** (Opus seul ; écran : solution A, choix de l'auteur). ADR 0077.
+**Fait le 7 novembre** (Opus seul ; écran : solution A, choix de l'auteur). ADR 0079.
 - **Noyau** (tests d'abord) : `trigger` devient une union — `on: "roll"` (ADR 0075) ou `on: "spell_cast"` (`schools`, `with_slot`) ; `spellCastMatches` et `proposalsAfterSpell` ; l'école se reconnaît en anglais comme en français (les traductions écrivent « Enchantement »).
 - **Éditeur** : « Déclenchement » propose « Après un sort lancé », les huit écoles à cocher et « par un emplacement ». Un seul déclencheur par utilisation.
 - **Fiche** : après « Lancer », le résultat de l'outil de dés propose « Aussitôt après : Envoûter (Magie envoûtante) » et « Passer » ; « Utiliser » passe par la route d'activation (le serveur vérifie et dépense).
@@ -5981,7 +5981,7 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
 
 **Critères.** Un Arnaqueur 3 a deux emplacements du 1er niveau, son DD et son attaque de sort ; tests du noyau (tiers de lanceur seul, multiclassé).
 
-**Fait le 7 novembre** (Opus seul ; écran : solution A, choix de l'auteur). ADR 0077.
+**Fait le 7 novembre** (Opus seul ; écran : solution A, choix de l'auteur). ADR 0079.
 - **Noyau** (tests d'abord) : bloc `subclass_spellcasting` ; `subclassSpellcasting` déroule la table (la dernière ligne atteinte vaut) ; poids `third` dans le multiclassage (arrondi à l'inférieur) ; la sous-classe prête son incantation à une classe qui n'en a pas.
 - **Formulaire de sous-classe** : « Cette sous-classe lance des sorts », caractéristique, multiclassage, table par niveau de classe (« + Une ligne », « + Un niveau d'emplacement ») ; relue à la modification. La page de la règle montre la section « Incantation ».
 - Vérifié au navigateur : un « Arnaqueur de test » saisi par le formulaire, un Roublard 3 créé par l'assistant a ses emplacements dans l'aperçu.
@@ -5998,7 +5998,7 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
 
 **Critères.** Sous Majesté souveraine, une attaque qui touche la barde déclenche la sauvegarde ; un échec la fait rater ; une *injonction* contre une créature charmée par elle échoue d'office.
 
-**Fait le 7 novembre** (Opus seul ; écrans approuvés tels qu'esquissés). ADR 0077.
+**Fait le 7 novembre** (Opus seul ; écrans approuvés tels qu'esquissés). ADR 0079.
 - **Majesté souveraine** : opération de réaction `attacker_save { ability, dc }` sur une attaque ; le serveur lance la sauvegarde avec les bonus de l'assaillant (lus seulement si une réaction en a besoin), un échec pose `forcedMiss` et l'attaque rate ; voyage dans le jet suspendu signé. Saisie dans « Opérations sur le jet ».
 - **Mante de majesté** : bloc `forced_save_failures` (sorts, état, imposé par la lanceuse), brique « Échec automatique d'une sauvegarde » de l'éditeur ; quand le MJ cible avec ce sort une créature charmée par la lanceuse, la sauvegarde n'est pas demandée et l'échec s'applique.
 - Vérifié : tests du noyau (sauvegarde ratée ou réussie, échec d'office selon la source de l'état) ; l'éditeur enregistre la brique (navigateur). **Le combat lui-même n'a pas été joué au navigateur.**

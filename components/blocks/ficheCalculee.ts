@@ -2,6 +2,7 @@
 
 import type { DerivedSheet } from "@/src/core/rules/sheet";
 import type { ActiveDurableEffect } from "@/src/core/rules/durableEffects";
+import type { ActivationBlockData } from "@/src/core/schemas/rule-blocks/playable";
 import type { RuntimeState } from "@/src/core/schemas/runtimeState";
 import type { PlayerEditableField } from "@/src/core/campaigns/tableSettings";
 import { creerChargeurParLots } from "@/lib/chargement/chargeurParLots";
@@ -15,6 +16,8 @@ export interface SheetApiResponse {
   controls: Record<PlayerEditableField, boolean>;
   /** V3.1-131 : les effets qui durent et que porte ce personnage (états, jetons), pour « Sur la scène ». */
   effects?: ActiveDurableEffect[];
+  /** V3.1-166 : les blocs `activation` des sorts connus ou accordés, par clé de sort (lus en une fois par le serveur). */
+  spellActivations?: Record<string, ActivationBlockData>;
 }
 
 /**

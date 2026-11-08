@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { PRONOUN_SETS, pronounGuidance, zPronouns } from "./pronouns";
 
 /**
- * V3.1-170 — Les pronoms d'une entité : des jeux connus (plusieurs
+ * V3.1-193 — Les pronoms d'une entité : des jeux connus (plusieurs
  * possibles) plus une saisie libre. Une ancienne valeur texte se relit comme
  * saisie libre, sans migration. Une fonction pure dit comment accorder.
  */

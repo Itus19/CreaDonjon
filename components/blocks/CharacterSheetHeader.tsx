@@ -60,7 +60,7 @@ export function AgeInput({
   age: number | undefined;
   onChange: (age: number | undefined) => void;
   className?: string;
-  /** V3.1-171 : voir `NameFields`. */
+  /** V3.1-194 : voir `NameFields`. */
   formulaire?: boolean;
 }) {
   return (
@@ -97,7 +97,7 @@ export function NameFields({
   character: CharacterBlockData;
   patchCharacter: (fields: Partial<CharacterBlockData>) => void;
   className?: string;
-  /** V3.1-171 : la hauteur des champs de formulaire de la charte (assistant) ; sinon celle, dense, de l'en-tête de la fiche. */
+  /** V3.1-194 : la hauteur des champs de formulaire de la charte (assistant) ; sinon celle, dense, de l'en-tête de la fiche. */
   formulaire?: boolean;
 }) {
   const pad = formulaire ? "py-1.5" : "py-1";
@@ -139,7 +139,7 @@ export function BirthFields({
   character: CharacterBlockData;
   patchCharacter: (fields: Partial<CharacterBlockData>) => void;
   className?: string;
-  /** V3.1-171 : voir `NameFields`. */
+  /** V3.1-194 : voir `NameFields`. */
   formulaire?: boolean;
 }) {
   const pad = formulaire ? "py-1.5" : "py-1";

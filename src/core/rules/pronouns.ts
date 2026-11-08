@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /**
- * V3.1-170 — Les pronoms d'une entité (bloc `character`) : des jeux connus,
+ * V3.1-193 — Les pronoms d'une entité (bloc `character`) : des jeux connus,
  * plusieurs possibles (une personne genrée au masculin ET au féminin), plus
  * une saisie libre. La liste vit ici, une seule fois : l'écran la propose en
  * pastilles, le mode solo la lit pour accorder (`pronounGuidance`).
@@ -33,7 +33,7 @@ const zPronounsObject = z.object({
 });
 
 /**
- * La forme stockée. Une ancienne valeur texte (avant V3.1-170, le champ était
+ * La forme stockée. Une ancienne valeur texte (avant V3.1-193, le champ était
  * un texte libre) se relit comme saisie libre : la donnée vit dans le JSON
  * du bloc, aucune migration SQL. Un jeu répété ne compte qu'une fois, une
  * saisie libre vide disparaît.
