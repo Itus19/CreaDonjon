@@ -413,7 +413,9 @@ Distances en mètres entre créatures (ADR 0059 §5), zones géométriques, aura
 
 **Critères d'acceptation**
 - [ ] Au téléphone, le plan se déplace et se zoome au doigt, un jeton se pose sans tomber à côté.
-- [ ] L'Aura de protection se saisit à l'éditeur sans JSON.
+- [x] L'Aura de protection se saisit à l'éditeur sans JSON (test de l'aller-retour brouillon → bloc → brouillon).
+
+*Codé le 8 novembre (Sonnet, relu par Opus).* `lib/ui/planCombat.ts` (30 tests), `PlanCombat.tsx` (SVG, pan et zoom au doigt et à la molette, jetons de 44 px, une requête au lâcher, distance au survol ou à deux touchers, mouvement du tour, retour du jeton sur refus), bascule Liste / Plan chez le MJ (« Retirer du plan »), carte « Plan du combat » chez la joueuse (son seul jeton), `PoseZone.tsx` (aperçu des cibles par `areaTargets`, le MJ décoche), éditeur : cible zone, `when` (modificateur et activation), auras et retouches (la route `rules/playable` accepte désormais le bloc `modifiers`, ouvert par Opus). *Reste* : la vérification au téléphone (premier critère), et un déplacement des jetons au clavier, à décider (une requête par touche contredirait QUOTAS).
 
 #### ☑ V3.1-171 — Les données : zones, auras, défenses et conditions du SRD · `M` · sans modèle IA — **prêt (Opus)**
 
@@ -429,11 +431,74 @@ Distances en mètres entre créatures (ADR 0059 §5), zones géométriques, aura
 
 *Reste* : les **défenses des monstres** (le JSON du SRD 2024 n'en porte que deux ; les reprendre du texte français est un ticket à part) ; le **Souffle et la résistance du drakéide** n'atteignent pas une fiche (ils sont rattachés à l'ascendance, une sous-espèce, que le modèle de personnage ne connaît pas encore) ; un **seul jet de dégâts pour toute une zone** (chaque créature lance le sien, la moitié d'un jet à part sur une réussite) ; Défense sans armure reste sur sa cible `ac.unarmored`, qui fait déjà le travail.
 
-### ☐ V3.1-138 — Le modèle du monde · `L` · sans modèle IA — **à concevoir (Opus)**
+### ☐ V3.1-138 — Le modèle du monde · `L` · sans modèle IA — **conçu (ADR 0078), découpé en 180 à 185**
 Perception et visibilité (invisible, caché, sens), lumière, étiquettes de magie (divination, capteurs), immunités et restrictions de ciblage, et les cas uniques : transformation, invocation, PV temporaires en effet (sur V3.1-24), redirection, jauge qui monte, recharge sur événement, quantité choisie, consommables, choix contraints pour les règles ouvertes. Règles visées : 8, 15, 16, 22, 29, 34, 35, 38.
 
 
 *Reçu de V3.1-134 (7 novembre, choix de l'auteur, ADR 0074)* : la lumière émise par une créature ou un objet (Aasimar, Arme sacrée) — une cible de modificateur qui n'a de sens qu'avec la lumière par zone de ce chantier.
+*Conçu le 8 novembre* : [ADR 0078](../adr/0078-le-modele-du-monde.md). Deux choix de l'auteur : **le moteur calcule qui voit qui** (lumière ambiante et sources, sens, Invisible, Caché, Aveuglé ; la vue des joueuses masque côté serveur, par un drapeau d'accès recalculé) ; **le moteur joue formes et invocations** (profil sur la ligne de combat ; créature invoquée = participant piloté par sa joueuse). Découpé ci-dessous.
+
+#### ☐ V3.1-180 — Le noyau de la perception : lumière, sens, qui voit qui · `M` · sans modèle IA — **prêt (Opus)**
+
+**Modèle conseillé : Opus** — noyau du moteur. Tests d'abord.
+
+- `src/core/rules/perception.ts` : `lightAt(point, ambiante, sources)`, `canSee(observateur, cible, monde)` → `clear | obscured | unseen` (Aveuglé, Invisible, Caché avec son total, ténèbres et vision dans le noir, vision véritable, perception aveugle, portées).
+- Cibles de modificateur `light.bright`, `light.dim` (mètres) ; `untargetable.<étiquette>`, `immune.spell.<clé>` (M15).
+- Avantage et désavantage d'attaque selon qui voit qui ; `targets.must_see` et `trigger.must_see` vérifiés.
+
+**Critères d'acceptation**
+- [ ] Tests : un gobelin Invisible n'est pas vu, sauf par vision véritable à portée ; dans les ténèbres, un nain (vision dans le noir 36 m) voit à 30 m comme en lumière faible et pas à 40 m ; la lumière de l'Aasimar (3 m vive, 3 m faible au-delà) éclaire ; une attaque contre une cible non vue a le désavantage.
+
+#### ☐ V3.1-181 — La migration et le service de la perception · `L` · sans modèle IA — **prêt (Opus)**
+
+**Modèle conseillé : Opus** — migration, RLS, sécurité. **Dépend de** : 180.
+
+- Migration : `combats.lighting` ; `combat_participants.hidden_from_players` ; `combat_player_view` masque la position et l'état d'une ligne masquée (la ligne reste dans l'ordre du tour, « Quelqu'un »). `docs/SCHEMA.md`, `docs/SECURITE.md`.
+- Service : recalcul du masquage après déplacement, état, lumière, effet ; le MJ le force ; Se cacher (test de Discrétion lancé par le serveur, état Caché avec son total) ; avantage/désavantage et `must_see` branchés dans le jet ciblé, l'activation et les réactions.
+
+**Critères d'acceptation**
+- [ ] Intégration : un monstre Invisible disparaît de la vue d'une joueuse (appel direct de la fonction compris) et revient quand l'état tombe ; un PJ caché attaque avec avantage.
+
+#### ☐ V3.1-182 — Le noyau des formes, des invocations et des cas uniques · `L` · sans modèle IA — **prêt (Opus)**
+
+**Modèle conseillé : Opus** — noyau. Tests d'abord.
+
+- Effets `transform { form, mode: overlay | replace }`, `summon { creature, count? }`, `grant_temp_hp`, `gain_resource`, `restore_resource` ; `amount: { max }` sur une activation ; coût `consume_item` ; opération de réaction `redirect`.
+- Le profil d'une forme (`overlay` : CA, vitesse, FOR/DEX/CON, attaques de la bête ; `replace` : PV à part, retour au profil à 0).
+
+**Critères d'acceptation**
+- [ ] Tests : Forme sauvage (overlay) garde les PV du druide et donne ses PV temporaires ; Métamorphose (replace) rend le profil à 0 PV de la forme, le reste des dégâts perdu ; Imposition des mains borne le montant à la réserve.
+
+#### ☐ V3.1-183 — La migration et le service des formes et invocations · `L` · sans modèle IA — **prêt (Opus)**
+
+**Modèle conseillé : Opus** — migration, sécurité. **Dépend de** : 182.
+
+- Migration : `combat_participants.form`, `summoned_by`, `controlled_by`, `effect_instance_id` ; une joueuse fait agir la créature qu'elle pilote (revérifié en base). `docs/SCHEMA.md`, `docs/SECURITE.md`.
+- Service : l'effet `summon` ajoute le participant, sa fin le retire ; `transform` pose la forme sur la ligne, sa fin la retire ; jets ciblés avec la créature pilotée.
+
+**Critères d'acceptation**
+- [ ] Intégration : une joueuse invoque un familier, le fait agir, pas celui d'une autre ; la fin de l'effet le retire du combat.
+
+#### ☐ V3.1-184 — Les écrans : lumière, Caché, formes, créatures pilotées · `L` · sans modèle IA — **prêt (Sonnet)**
+
+**Modèle conseillé : Sonnet**, une fois 181 et 183 faits ; Opus relit. **Sous-tâches Haiku** : libellés ; planche ; vérifications.
+
+- Plan : lumière ambiante (réglée par le MJ) et halos des sources ; jetons Caché et Invisible (pour le MJ) ; « Quelqu'un » chez la joueuse.
+- Ligne de combat : la forme portée ; la créature invoquée, que sa joueuse fait agir.
+- Éditeur : effets nouveaux, quantité choisie, consommable.
+
+**Critères d'acceptation**
+- [ ] La joueuse ne voit pas sur son plan le monstre que son groupe ne voit pas ; le MJ, si.
+
+#### ☐ V3.1-185 — Les données : lumière, Se cacher, Forme sauvage, Compagnon sauvage, cas uniques du SRD · `M` · sans modèle IA — **prêt (Opus)**
+
+**Modèle conseillé : Opus** — données officielles, import. **Dépend de** : 180 à 183.
+
+- Lumière de l'Aasimar et de l'Arme sacrée ; Se cacher ; Forme sauvage (formes connues, PV temporaires) ; Compagnon sauvage (Appel de familier) ; Imposition des mains (quantité) ; Restauration magique ; Rage persistante (recharge à l'initiative) ; Abjuration d'ennemis (une seule chose par tour). Réimport.
+
+**Critères d'acceptation**
+- [ ] Après réimport, ces règles perdent leur lacune et se jouent sur une fiche de test.
+
 ### ☐ V3.1-139 — L'inventaire et la couverture du SRD · `L` · sans modèle IA — **après la fondation**
 Mesurer la couverture de tout ce qui entre en jeu (sorts, aptitudes, espèces, dons, objets magiques, monstres avec leurs actions et traits), lister les lacunes par brique, et tenir le compte jusqu'à 100 %.
 
