@@ -450,6 +450,15 @@ export interface WeaponData {
 }
 
 /**
+ * V3.1-169 (ADR 0077) — les propriétés d'une arme telles que les lisent
+ * `when.wielding` et les étiquettes `property:` : ses propriétés, plus
+ * `ranged` pour une arme à distance.
+ */
+export function weaponRollProperties(weapon: Pick<WeaponData, "properties" | "isRanged">): string[] {
+  return weapon.isRanged ? [...weapon.properties, "ranged"] : [...weapon.properties];
+}
+
+/**
  * `null` si l'entree n'a pas de donnees d'arme exploitables (ex. une
  * armure). Contrairement a l'armure, aucun bloc `weapon` dedie n'est jamais
  * ecrit a l'import (`scripts/ingest-srd.ts` n'a pas de `weaponBlocks()`) :

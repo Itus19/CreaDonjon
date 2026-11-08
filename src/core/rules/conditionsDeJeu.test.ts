@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { distance, feetToPlanMetres, inArea, zoneFromDistance, type Point } from "./geometry";
+import { areaTargets, distance, feetToPlanMetres, inArea, rangeCheck, zoneFromDistance, type Point } from "./geometry";
 import { EMPTY_TURN_BUDGET, spendMovement } from "./turnBudget";
-import { adjustDamage, applyEffects, type TurnState } from "./turn";
+import { adjustDamage, applyEffects, defensesFromStatBlock, type TurnState } from "./turn";
 import { aurasCovering } from "./auras";
 import { applyPatches } from "./patches";
 import { characterSheet, resolveDeclaredModifiers, rollBonus, type CharacterBuild, type DeclaredModifier, type EquippedItem, type ResolvedFeature, type ResolvedRuleset } from "./sheet";
@@ -170,5 +170,55 @@ describe("V3.1-169 — le mouvement du tour", () => {
     const b = spendMovement(a.budget, 4.5, 9);
     expect(b).toMatchObject({ over: true, moved: 10.5 });
     expect(b.budget.at).toBe("1:0");
+  });
+});
+
+describe("V3.1-169 — les défenses d'un bloc de stats", () => {
+  it("lit les types connus, en anglais ou en français, et ignore ce qui est conditionnel", () => {
+    expect(
+      defensesFromStatBlock({
+        damage_resistances: ["Fire", "tranchant", "bludgeoning, piercing, and slashing from nonmagical attacks"],
+        damage_immunities: ["Poison"],
+        damage_vulnerabilities: undefined,
+      }),
+    ).toEqual({ resist: ["fire", "slashing"], vulnerable: [], immune: ["poison"] });
+  });
+
+  it("un gobelin qui résiste au feu prend la moitié", () => {
+    const d = defensesFromStatBlock({ damage_resistances: ["fire"] });
+    expect(adjustDamage(9, "fire", d)).toEqual({ amount: 4, reason: "resist" });
+  });
+});
+
+describe("V3.1-169 — les cibles d'une zone et la portée", () => {
+  const lanceur = { id: "drake", pos: { x: 0, y: 0 } };
+  const autres = [
+    { id: "g1", pos: { x: 3, y: 0 } },
+    { id: "g2", pos: { x: 4, y: 1 } },
+    { id: "g3", pos: { x: -3, y: 0 } },
+    { id: "pas-pose", pos: null },
+  ];
+
+  it("un cône depuis soi, vers l'est : les deux gobelins devant, pas celui derrière ni le lanceur", () => {
+    const r = areaTargets({ area: { shape: "cone", size: 4.5, origin: "self" }, caster: lanceur, aim: { x: 1, y: 0 }, others: [lanceur, ...autres] });
+    expect(r).toEqual({ ok: true, ids: ["g1", "g2"] });
+  });
+
+  it("une sphère posée à un point : à portée, elle prend qui est dedans ; trop loin, refusée", () => {
+    const boule = { shape: "sphere" as const, size: 6, origin: "point" as const };
+    expect(areaTargets({ area: boule, caster: lanceur, point: { x: 30, y: 0 }, range: 45, others: autres })).toEqual({ ok: true, ids: [] });
+    expect(areaTargets({ area: boule, caster: lanceur, point: { x: 3, y: 0 }, range: 45, others: [lanceur, ...autres] })).toEqual({ ok: true, ids: ["drake", "g1", "g2", "g3"] });
+    expect(areaTargets({ area: boule, caster: lanceur, point: { x: 50, y: 0 }, range: 45, others: autres })).toEqual({ ok: false, reason: "out_of_range" });
+  });
+
+  it("sans position du lanceur, une zone depuis soi ne se calcule pas ; un cône sans direction non plus", () => {
+    expect(areaTargets({ area: { shape: "cone", size: 4.5, origin: "self" }, caster: { id: "drake", pos: null }, aim: { x: 1, y: 0 }, others: autres })).toEqual({ ok: false, reason: "no_position" });
+    expect(areaTargets({ area: { shape: "cone", size: 4.5, origin: "self" }, caster: lanceur, others: autres })).toEqual({ ok: false, reason: "no_aim" });
+  });
+
+  it("la portée d'une cible : vérifiée si les deux sont posés, sinon non vérifiée", () => {
+    expect(rangeCheck({ x: 0, y: 0 }, { x: 9, y: 0 }, 9)).toBe("ok");
+    expect(rangeCheck({ x: 0, y: 0 }, { x: 9.5, y: 0 }, 9)).toBe("out_of_range");
+    expect(rangeCheck(null, { x: 9.5, y: 0 }, 9)).toBe("unverified");
   });
 });

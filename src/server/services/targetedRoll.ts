@@ -1,11 +1,12 @@
 import "server-only";
+import { weaponRollProperties } from "@/src/core/rules/srdMapping";
 import { rollBonus, type BonusDie } from "@/src/core/rules/sheet";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
 import type { Locale } from "@/src/i18n/request";
 import { budgetOf, type SceneState } from "@/src/core/rules/scene";
 import { spendFromBudget, type BudgetKind } from "@/src/core/rules/actionBudget";
-import { applyEffects, type ApplyResult, type TurnActor, type TurnChange } from "@/src/core/rules/turn";
+import { applyEffects, defensesFromStatBlock, type ApplyResult, type TurnActor, type TurnChange } from "@/src/core/rules/turn";
 import { eventsForAttack, eventsForDamage } from "@/src/core/rules/gameEvents";
 import { resolveAttackRoll, resolveDamageRoll, weaponAttackAbilityMod, type AttackRollResult } from "@/src/core/rules/action";
 import type { FiredEvent, ResolvedEffect } from "@/src/core/rules/triggers";
@@ -47,6 +48,8 @@ import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
 import { getCampaign } from "@/src/server/services/campaigns";
 import { getCombatById, getCombatParticipantById, listCombatParticipants, updateCombat, type CombatParticipantRow } from "@/src/server/repos/combats";
 import { listCampaignCharacters } from "@/src/server/repos/campaigns";
+import { listBlocksByTypeForEntities } from "@/src/server/repos/blocks";
+import { zStatblockBlockData } from "@/src/core/schemas/blocks/statblock";
 import { insertSessionEvent, nextEventSeq } from "@/src/server/repos/sessions";
 import { insertDiceRoll } from "@/src/server/repos/diceRolls";
 import { getRuleEntryForWorld } from "@/src/server/services/rules";
@@ -58,6 +61,7 @@ import { parseFormula } from "@/src/core/formula/parser";
 import type { PendingRoll } from "@/src/core/rules/rollWindow";
 import { gatherReactors, interveneOnRoll, type ReactorPool } from "@/src/server/services/rollWindows";
 import { spendTurnBudgetFor } from "@/src/server/services/turnBudgetWrite";
+import { withReceivedAuras } from "@/src/server/services/combatAuras";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -219,6 +223,8 @@ export async function applyResolvedEffects(
     participants?: CombatParticipantRow[];
     /** V3.1-149 : l'appelant est le MJ d'une table : le journal reçoit les phrases des joueurs, les chiffres vont à part. */
     gmJournal?: boolean;
+    /** V3.1-169 (ADR 0077) : défenses aux dégâts par clé d'acteur, appliquées d'office aux dégâts typés. */
+    defenses?: Readonly<Record<string, TurnActor["defenses"]>>;
   }
 ): Promise<ApplyEffectsOutcome> {
   const participants = params.participants ?? (params.combatId ? await listCombatParticipants(supabase, params.combatId) : []);
@@ -249,6 +255,9 @@ export async function applyResolvedEffects(
       ...(isPc && p.entity_id ? { deathSaves: { ...(await getEntityRuntimeState(supabase, p.entity_id, params.campaignId)).death_saves } } : {}),
     };
     names[key] = p.label;
+  }
+  for (const [who, d] of Object.entries(params.defenses ?? {})) {
+    if (actors[who] && d) actors[who] = { ...actors[who], defenses: d };
   }
 
   if (params.actor && params.spend !== null) {
@@ -571,7 +580,9 @@ export async function targetSaveBonus(
 ): Promise<{ bonus: number; hint: string | null; dice: BonusDie[] }> {
   const ability = params.ability.toLowerCase();
   if (params.target.entity_id && params.isPc) {
-    const ctx = await resolveCharacterActionContext(supabase, params.target.entity_id, params.campaignId, params.locale);
+    const brute = await resolveCharacterActionContext(supabase, params.target.entity_id, params.campaignId, params.locale);
+    // V3.1-169 (ADR 0077) : les auras reçues sur le plan (Aura de protection) comptent pour la sauvegarde.
+    const ctx = brute ? await withReceivedAuras(supabase, brute, { campaignId: params.campaignId, locale: params.locale, callerIsGm: true }) : null;
     const save = ctx?.sheet.savingThrows[ability as keyof typeof ctx.sheet.savingThrows];
     // V3.1-156 (ADR 0074) : un PJ béni ajoute son 1d4, lancé par le serveur avec le d20.
     if (save) return { bonus: save.mod, hint: null, dice: save.dice };
@@ -597,6 +608,32 @@ async function targetProfileFor(supabase: TypedClient, params: { target: CombatP
     }
   }
   return { creatureType: null, conditionImmunities: [] };
+}
+
+/**
+ * V3.1-169 (ADR 0077) — les défenses aux dégâts d'une cible : un PJ par sa
+ * fiche (la Rage en pose), un monstre par son bloc de stats (règle ou wiki),
+ * une saisie libre n'en a aucune. Appelé seulement quand un dégât TYPÉ la
+ * vise : une fiche de plus, jamais à chaque jet.
+ */
+export async function targetDamageDefenses(
+  supabase: TypedClient,
+  params: { target: CombatParticipantRow; isPc: boolean; campaignId: string; worldId: string; locale: Locale },
+): Promise<TurnActor["defenses"]> {
+  if (params.target.entity_id && params.isPc) {
+    const ctx = await resolveCharacterActionContext(supabase, params.target.entity_id, params.campaignId, params.locale);
+    return ctx?.sheet.damageDefenses;
+  }
+  if (params.target.rule_key) {
+    const monster = await loadMonsterBlocks(supabase, { worldId: params.worldId, ruleKey: params.target.rule_key, locale: params.locale });
+    return monster?.statBlock ? defensesFromStatBlock(monster.statBlock) : undefined;
+  }
+  if (params.target.source_kind === "entity" && params.target.entity_id) {
+    const [bloc] = await listBlocksByTypeForEntities(supabase, [params.target.entity_id], "statblock");
+    const lu = bloc ? zStatblockBlockData.safeParse(bloc.data) : null;
+    return lu?.success && lu.data.defenses ? defensesFromStatBlock(lu.data.defenses) : undefined;
+  }
+  return undefined;
 }
 
 /**
@@ -723,6 +760,15 @@ export async function resolveTargetedRoll(
   const action = input.action;
   const monsterAction = action.kind === "monster_action" ? (monster?.actions.find((a) => a.name === action.name) ?? null) : null;
 
+  // V3.1-169 (ADR 0077) : l'arme du jet, pour `when.wielding` et les étiquettes `weapon:` / `property:` des événements.
+  const armeDuJet = (() => {
+    if (action.kind !== "weapon" || !ctx) return null;
+    const objet = ctx.inventoryData?.items.find((i) => i.id === action.itemId);
+    const ref = objet ? ((objet as { ref?: { kind: "rule"; key: string } | { kind: "entity"; id: string } }).ref ?? null) : null;
+    const donnees = ref?.kind === "rule" ? ctx.weaponByKey[ref.key] : null;
+    return ref?.kind === "rule" && donnees ? { key: ref.key, properties: weaponRollProperties(donnees) } : null;
+  })();
+
   if (input.kind === "attack") {
     let attack: AttackRollResult;
     let label: string;
@@ -750,7 +796,7 @@ export async function resolveTargetedRoll(
       if (!rolled.attack) return { ok: false, reason: "not_a_weapon" };
       attack = rolled.attack;
       label = rolled.weaponLabel;
-      critRange = rollBonus(ctx.sheet, { roll: "attack", kind: "weapon" }).critRange;
+      critRange = rollBonus(ctx.sheet, { roll: "attack", kind: "weapon", ...(armeDuJet ? { properties: armeDuJet.properties } : {}) }).critRange;
       shown.push(attack);
     } else if (action.kind === "monster_action" && monsterAction && monsterAction.attack_bonus !== undefined) {
       attack = resolveAttackRoll({ abilityMod: 0, proficiencyBonus: monsterAction.attack_bonus, proficient: true, advantage: avantage }, serverRng);
@@ -812,7 +858,7 @@ export async function resolveTargetedRoll(
         ".",
       attackFactForPlayer({ actor: actorName, target: target.label, label, total: attack.total, verdict: target.ac === null ? null : verdict, critical: attack.isCritical, criticalFail: attack.isCriticalFail })
     );
-    if (actorTriggerKey && caEffective !== null) events = eventsForAttack({ attacker: actorTriggerKey, target: targetKey, result: attack, ac: caEffective });
+    if (actorTriggerKey && caEffective !== null) events = eventsForAttack({ attacker: actorTriggerKey, target: targetKey, result: attack, ac: caEffective, ...(armeDuJet ? { weapon: armeDuJet } : {}) });
     // V3.1-148 : la botte de l'arme, si elle est maîtrisée.
     // Seuls comptent les choix de maîtrise encore ouverts à la fiche (comme l'onglet Actions) : une classe retirée ne laisse pas sa maîtrise.
     const maitrises = (c: NonNullable<typeof ctx>) =>
@@ -1050,12 +1096,19 @@ export async function resolveTargetedRoll(
     effects.push(...(await fireActorTriggers(supabase, { ctx, actorEntityId: actorTriggerKey, campaignId: params.campaignId, events, scene: null })));
   }
 
+  // V3.1-169 (ADR 0077) : un dégât typé sur la cible ? Ses défenses s'appliquent d'office.
+  const degatTypeSurCible = effects.some((e) => e.action === "deal_damage" && e.who === targetKey && e.damage_type);
+  const defensesCible = degatTypeSurCible
+    ? await targetDamageDefenses(supabase, { target, isPc: targetIsPc, campaignId: params.campaignId, worldId: campaign.worldId, locale: params.locale })
+    : undefined;
+
   const outcome = await applyResolvedEffects(supabase, {
     campaignId: params.campaignId,
     callerId: params.callerId,
     actor: ctx ? { entityId: ctx.entityId, name: ctx.entityName, hpMax: ctx.sheet.hitPoints.max, speed: ctx.sheet.speed.value } : null,
     scene: null,
     spend: null,
+    ...(defensesCible ? { defenses: { [targetKey]: defensesCible } } : {}),
     effects,
     note: `Cibler — ${facts[0] ?? input.kind}`,
     fromEventId: rollEvent.id,

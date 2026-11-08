@@ -69,3 +69,51 @@ export function inArea(area: AreaSpec, origin: Point, aim: Point, p: Point): boo
   if (area.shape === "line") return across <= (area.width ?? CONTACT_METRES) / 2 + EPS;
   return across <= along / 2 + EPS;
 }
+
+/**
+ * V3.1-169 (ADR 0077) — la portée d'une cible : `unverified` quand l'un des
+ * deux n'est pas posé (le MJ tranche, comme avant le plan).
+ */
+export function rangeCheck(from: Point | null | undefined, to: Point | null | undefined, metres: number): "ok" | "out_of_range" | "unverified" {
+  if (!from || !to) return "unverified";
+  return distance(from, to) <= metres + EPS ? "ok" : "out_of_range";
+}
+
+export interface AreaPlacement extends AreaSpec {
+  /** `self` : la zone part du lanceur ; `point` : elle est posée à un point (à portée). */
+  origin: "self" | "point";
+}
+
+/**
+ * V3.1-169 (ADR 0077) — qui est dans une zone posée sur le plan. Depuis soi,
+ * le lanceur n'est jamais pris ; posée à un point, il l'est s'il est dedans
+ * (une Boule de feu à ses pieds). Un cône ou une ligne demande une direction
+ * (`aim`, un point vers lequel viser). Les jetons non posés ne sont jamais
+ * dedans. Rendus dans l'ordre de `others`.
+ */
+export function areaTargets(p: {
+  area: AreaPlacement;
+  caster: { id: string; pos: Point | null };
+  point?: Point;
+  aim?: Point;
+  /** Portée en mètres d'une zone posée à un point. */
+  range?: number;
+  others: readonly { id: string; pos: Point | null }[];
+}): { ok: true; ids: string[] } | { ok: false; reason: "no_position" | "no_point" | "no_aim" | "out_of_range" } {
+  let origin: Point;
+  if (p.area.origin === "self") {
+    if (!p.caster.pos) return { ok: false, reason: "no_position" };
+    origin = p.caster.pos;
+  } else {
+    if (!p.point) return { ok: false, reason: "no_point" };
+    if (p.range !== undefined && rangeCheck(p.caster.pos, p.point, p.range) === "out_of_range") return { ok: false, reason: "out_of_range" };
+    origin = p.point;
+  }
+  const directionnelle = p.area.shape === "cone" || p.area.shape === "line";
+  if (directionnelle && (!p.aim || distance(p.aim, origin) === 0)) return { ok: false, reason: "no_aim" };
+  const aim = p.aim ?? origin;
+  const ids = p.others
+    .filter((o) => o.pos !== null && !(p.area.origin === "self" && o.id === p.caster.id) && inArea(p.area, origin, aim, o.pos))
+    .map((o) => o.id);
+  return { ok: true, ids };
+}

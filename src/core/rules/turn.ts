@@ -74,6 +74,39 @@ export function adjustDamage(
   return { amount, reason: null };
 }
 
+/** Les treize types de dégâts, et leurs noms du SRD français. */
+const TYPES_DE_DEGATS: Record<string, string> = {
+  acid: "acid", acide: "acid",
+  bludgeoning: "bludgeoning", contondant: "bludgeoning",
+  cold: "cold", froid: "cold",
+  fire: "fire", feu: "fire",
+  force: "force",
+  lightning: "lightning", foudre: "lightning",
+  necrotic: "necrotic", "nécrotique": "necrotic", necrotique: "necrotic",
+  piercing: "piercing", perforant: "piercing",
+  poison: "poison",
+  psychic: "psychic", psychique: "psychic",
+  radiant: "radiant",
+  slashing: "slashing", tranchant: "slashing",
+  thunder: "thunder", tonnerre: "thunder",
+};
+
+/**
+ * V3.1-169 (ADR 0077) — les défenses d'un bloc de stats (règle ou wiki), en
+ * clés de types. Seul un type nommé seul compte : « contondant, perforant et
+ * tranchant d'attaques non magiques » est conditionnel, le moteur ne le
+ * devine pas (le MJ tranche).
+ */
+export function defensesFromStatBlock(lists: {
+  damage_resistances?: readonly string[];
+  damage_vulnerabilities?: readonly string[];
+  damage_immunities?: readonly string[];
+}): NonNullable<TurnActor["defenses"]> {
+  const lire = (l: readonly string[] | undefined) =>
+    [...new Set((l ?? []).map((v) => TYPES_DE_DEGATS[v.trim().toLowerCase()]).filter((t): t is string => t !== undefined))].sort();
+  return { resist: lire(lists.damage_resistances), vulnerable: lire(lists.damage_vulnerabilities), immune: lire(lists.damage_immunities) };
+}
+
 const RAISON_FR = { resist: "résiste", vulnerable: "est vulnérable", immune: "est immunisé" } as const;
 
 export interface TurnState {

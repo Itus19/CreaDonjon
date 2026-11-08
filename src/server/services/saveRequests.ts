@@ -13,7 +13,7 @@ import {
   setOwnParticipantVitals,
   type SaveRequestRow,
 } from "@/src/server/repos/saveRequests";
-import { getCombatById, getCombatParticipantById, listPlayerCombatViewRows } from "@/src/server/repos/combats";
+import { getCombatById, getCombatParticipantById, listPlayerCombatViewRows, type CombatParticipantRow } from "@/src/server/repos/combats";
 import { insertDiceRoll } from "@/src/server/repos/diceRolls";
 import { insertSessionEvent, nextEventSeq } from "@/src/server/repos/sessions";
 import { getCampaign } from "@/src/server/services/campaigns";
@@ -21,7 +21,8 @@ import { resolveCharacterActionContext } from "@/src/server/services/characterAc
 import { journalCombatEvent } from "@/src/server/services/combats";
 import { interveneOnRoll, selfReactorPool } from "@/src/server/services/rollWindows";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
-import { applyResolvedEffects, targetSaveBonus } from "@/src/server/services/targetedRoll";
+import { applyResolvedEffects, targetDamageDefenses, targetSaveBonus } from "@/src/server/services/targetedRoll";
+import { withReceivedAuras } from "@/src/server/services/combatAuras";
 import { serverRng } from "@/src/server/services/rng";
 import type { AnswerSaveRequestInput } from "@/lib/saveRequests/schemas";
 
@@ -119,14 +120,18 @@ export async function answerSaveRequest(
 
   // Le bonus de sauvegarde : la fiche du PJ pour son joueur ; sinon (le MJ)
   // la cible telle que le combat la porte (fiche, bloc de stats, ou 0).
-  const ctx =
+  const brute =
     answeringAsTarget && request.target_entity_id
       ? await resolveCharacterActionContext(supabase, request.target_entity_id, request.campaign_id, params.locale)
       : null;
+  // V3.1-169 (ADR 0077) : les auras reçues sur le plan (Aura de protection) comptent pour la sauvegarde.
+  const ctx = brute ? await withReceivedAuras(supabase, brute, { campaignId: request.campaign_id, locale: params.locale, callerIsGm: false }) : null;
   let bonus: number;
   // V3.1-156 (ADR 0074) : les dés de bonus de la cible (Bénédiction), lancés par le serveur avec le d20.
   let dice: readonly BonusDie[] = [];
   const hints: string[] = [];
+  // V3.1-169 : la cible telle que le combat la porte (MJ), pour ses défenses aux dégâts.
+  let cibleParticipant: CombatParticipantRow | null = null;
   if (answeringAsTarget) {
     if (!ctx) return { ok: false, reason: "no_target" };
     const save = ctx.sheet.savingThrows[request.ability as keyof typeof ctx.sheet.savingThrows];
@@ -135,6 +140,7 @@ export async function answerSaveRequest(
   } else {
     const participant = request.target_kind === "participant" ? await getCombatParticipantById(supabase, request.target_id) : null;
     if (!participant) return { ok: false, reason: "no_target" };
+    cibleParticipant = participant;
     const found = await targetSaveBonus(supabase, {
       target: participant,
       isPc: request.target_user_id !== null,
@@ -261,6 +267,8 @@ export async function answerSaveRequest(
       scene: null,
       spend: null,
       effects: effectsForSaveOutcome(effect.data, passed, request.target_entity_id),
+      // V3.1-169 (ADR 0077) : ses défenses aux dégâts, d'office sur un dégât typé.
+      defenses: { [request.target_entity_id]: ctx.sheet.damageDefenses },
       note,
       fromEventId: saveEvent.id,
       combatId: null,
@@ -293,13 +301,19 @@ export async function answerSaveRequest(
   }
 
   // Le MJ : la cible telle que le combat la porte, par le cœur commun.
+  const effetsMj = effectsForSaveOutcome(effect.data, passed, `participant:${request.target_id}`);
+  const defensesCible =
+    cibleParticipant && effetsMj.some((e) => e.action === "deal_damage" && e.damage_type)
+      ? await targetDamageDefenses(supabase, { target: cibleParticipant, isPc: request.target_user_id !== null, campaignId: request.campaign_id, worldId: campaign.worldId, locale: params.locale })
+      : undefined;
   const outcome = await applyResolvedEffects(supabase, {
     campaignId: request.campaign_id,
     callerId: params.callerId,
     actor: null,
     scene: null,
     spend: null,
-    effects: effectsForSaveOutcome(effect.data, passed, `participant:${request.target_id}`),
+    effects: effetsMj,
+    ...(defensesCible ? { defenses: { [`participant:${request.target_id}`]: defensesCible } } : {}),
     note,
     fromEventId: saveEvent.id,
     combatId: request.combat_id,
