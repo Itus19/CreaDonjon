@@ -247,7 +247,8 @@ describe.skipIf(!hasCreds)("cibler : le cœur commun de résolution (integration
     // Le jet d'un monstre est enregistré et attribué (V3.1-89).
     const { data: rolls } = await admin.from("dice_rolls").select("detail").eq("campaign_id", campaignId).eq("rolled_by", "gm");
     expect(rolls?.some((r) => (r.detail as { kind?: string }).kind === "damage")).toBe(true);
-  });
+  // Une dizaine de jets et d'écritures enchaînés, plus les défenses de la cible depuis V3.1-169 : au-delà des 30 s par défaut sous la charge de toute la suite.
+  }, 120000);
 
   it("soins par le cœur commun : un PJ relevé perd Inconscient et ses jets repartent à zéro", async () => {
     const outcome = await applyResolvedEffects(gm.client, {
@@ -392,7 +393,8 @@ describe.skipIf(!hasCreds)("cibler : le cœur commun de résolution (integration
     expect((await participant(p["Gobelin 2"])).conditions).toEqual([vexe]);
     await advanceCombatTurn(gm.client, { combatId, actorUserId: gm.id });
     expect((await participant(p["Gobelin 2"])).conditions).toEqual([]);
-  });
+  // Une dizaine de jets et d'écritures enchaînés, plus les défenses de la cible depuis V3.1-169 : au-delà des 30 s par défaut sous la charge de toute la suite.
+  }, 120000);
 
   it("hors d'un combat en cours : refusé", async () => {
     await admin.from("combats").update({ status: "draft" }).eq("id", combatId);
