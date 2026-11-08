@@ -6027,3 +6027,18 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
 - Vérifié au navigateur (Banc d'essai) : « Initié à la magie » en paragraphes entiers, intertitres sur leur ligne ; « Défense de chasseur supérieure » s'arrête à sa dernière phrase.
 
 *Restes* : le script d'import qui avait écrit ces descriptions (dons, aptitudes) n'est pas dans le dépôt (passe ponctuelle d'une session antérieure) : la prévention, c'est de relancer `fix-coupures-fr.ts` après une réimportation. Une quarantaine de descriptions portent encore un **tableau aplati en texte** (Corne du Valhalla, Bourse à malices, sorts de domaine…), autre défaut, pour un ticket à part.
+
+### V3.1-187 — Textes français : les tableaux aplatis redeviennent des tableaux, une puce par ligne (8 novembre)
+
+**Modèle conseillé : Opus** (script contre la vraie base, contenu officiel ; rendu des textes de règle).
+
+**Constat** (relevé pendant V3.1-180). Dans les traductions françaises du SRD 5.2.1, 40 descriptions finissent par un tableau du PDF aplati en une phrase (« 1d10 Type de dégâts 1d10 Type de dégâts 1 Acide 6 Nécrotiques… ») : 27 objets magiques, 9 aptitudes, 4 sorts. La dernière rangée manque souvent (l'import a perdu la dernière ligne de chaque fiche). Des listes à puces sont aussi écrites sur une seule ligne (« • a • b »).
+
+**Fait le 8 novembre** (Opus seul ; solution B de l'esquisse « Tableaux aplatis », choix de l'auteur, et une puce par ligne).
+- **Noyau** (tests d'abord) : `src/core/text/tableauxPdf.ts` — `lireBloc` relit un tableau dans la source française, où chaque rangée tient sur sa ligne (bruits de page sautés, cellule longue sur plusieurs lignes recollée, deux ou trois tableaux côte à côte remis en une colonne, nombre de rangées vérifié : un tableau qui ne se lit pas exactement est refusé) ; `blocEnTexte` l'écrit en lignes « a | b » ; `puceParLigne` ; `decouperLignesEtTableaux` pour le rendu.
+- **Rendu** : le texte d'une règle (`Prose`) apprend un seul motif de plus, fermé : deux lignes « a | b » ou plus forment un tableau (la première est l'en-tête), affiché par la mise en page `Table`. Les tableaux anglais déjà écrits ainsi (« Cleric Level | Prepared Spells ») s'affichent aussi en tableau.
+- **Script** `scripts/fix-tableaux-fr.ts`, à blanc par défaut (chaque tableau reconstruit est affiché), `--write`, relançable : il ne contient aucun texte de règle, seulement les repères de chaque tableau dans la source (titre, en-tête, ligne qui le suit) et la découpe d'une rangée. **26 tableaux** (dont des groupes : quatre tables du Cercle de la Terre, trois sacs à malices, trois tables de *contrôle du climat*, un profil de créature) remis dans **37 fiches**, les rangées perdues retrouvées ; puces remises sur leur ligne dans **14 autres** (*rage*, *téléportation*, *cercle magique*…). 51 fiches au total. Relancé à blanc : 0. Les traductions d'avant ont été sauvegardées hors du dépôt avant l'écriture.
+- Vérifié au navigateur (Banc d'essai) : Cor du Valhalla, Sorts du Domaine de la Vie, Mouche d'ébène (profil : lignes, tableau des caractéristiques, FP retrouvé), Robe du camelot (tableau et puces).
+
+*Restes* : quelques descriptions **commencent** au milieu d'une phrase (Cor du Valhalla : « (bronze) ou légendaire (fer) Souffler… ») — l'import a aussi perdu leur début ; *divination* finit par l'en-tête d'un autre sort (« Durée : instantanée ») ; « Autrache » est une coquille de la source, gardée telle quelle.
+

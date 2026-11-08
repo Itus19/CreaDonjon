@@ -311,3 +311,4 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-184 | ☑ | sans | Une utilisation proposée après un sort lancé | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-185 | ☑ | sans | Une sous-classe qui lance des sorts : sa progression d'emplacements | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-186 | ☑ | sans | « Sauvegarde ou l'attaque rate », et l'échec automatique d'une créature charmée | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-187 | ☑ | sans | Textes français : les tableaux aplatis redeviennent des tableaux, une puce par ligne | [`termines.md`](backlog-v3.1/termines.md) |

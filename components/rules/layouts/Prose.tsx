@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { decouperLignesEtTableaux } from "@/src/core/text/tableauxPdf";
+import Table from "./Table";
 
 /**
  * Quatre marques INLINE reconnues, chacune avec sa propre paire de
@@ -56,7 +58,12 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
  * partout ailleurs dans le texte.
  */
 export function renderMarkdownBoldText(text: string, keyPrefix: string): ReactNode[] {
-  return text.split("\n").flatMap((paragraph, i) => {
+  // Tableaux aplatis : deux lignes « a | b » ou plus deviennent un tableau (`decouperLignesEtTableaux`).
+  return decouperLignesEtTableaux(text).flatMap((bloc, i) => {
+    if (bloc.type === "tableau") {
+      return [<Table key={`${keyPrefix}-${i}-table`} columns={bloc.colonnes} rows={bloc.rangees.map((r) => Object.fromEntries(bloc.colonnes.map((c, k) => [c, r[k]])))} />];
+    }
+    const paragraph = bloc.texte;
     const leadingBold = paragraph.match(/^\*\*([^*]+)\*\*\s*([\s\S]*)$/);
     if (leadingBold) {
       const [, title, rest] = leadingBold;
