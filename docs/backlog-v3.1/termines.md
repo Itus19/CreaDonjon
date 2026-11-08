@@ -6004,3 +6004,26 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
 - Vérifié : tests du noyau (sauvegarde ratée ou réussie, échec d'office selon la source de l'état) ; l'éditeur enregistre la brique (navigateur). **Le combat lui-même n'a pas été joué au navigateur.**
 
 *Restes* : « pour la première fois d'un tour » se compte une fois par tour pour la barde, pas par assaillant ; un état posé à la main par le MJ n'a pas de source, il ne suffit pas quand « par vous » est coché ; la condition « sous Mante de majesté » d'une réaction ne se saisit pas encore dans l'éditeur.
+
+### V3.1-180 — Textes français : recoller les phrases coupées par la mise en page du PDF (8 novembre)
+
+**Modèle conseillé : Opus** (script contre la vraie base, contenu officiel).
+
+**Constat** (relevé en dépliant les dons, V3.1-172). Dans les traductions françaises importées du SRD 5.2.1, une phrase coupée en fin de ligne par la mise en page du PDF garde son retour à la ligne : « **Deux sorts mineurs.** Vous apprenez deux sorts⏎mineurs de votre choix… ». Le rendu des textes de règle (`Prose`) fait de chaque retour un nouveau paragraphe : la phrase s'affiche en deux morceaux, sur la page de la règle comme dans l'assistant et la fiche. Mesuré le 7 novembre : **10 fiches** (des dons : `alert`, `magic-initiate`, `ability-score-improvement`, `boon-of-combat-prowess`…), **19 coupures** ; aucune dans le SRD 5.1.
+
+**À faire.**
+- Un script par clé, à blanc par défaut (`--write` pour écrire), dans la lignée de `scripts/fix-descriptions-fr-2024.ts` : dans les blocs des traductions françaises, remplacer un retour à la ligne pris entre deux morceaux de phrase (minuscule, virgule ou apostrophe avant ; minuscule, « ou ( après) par une espace. Les vrais retours (avant un intertitre en gras `**…**`, une liste, une nouvelle phrase en majuscule) restent.
+- Le passage à blanc liste chaque coupure avec son contexte, pour relecture avant d'écrire.
+- Même famille, relevée en préparant V3.1-174 : un texte qui **déborde sur la section suivante** du livre. « Défense de chasseur supérieure » (`hunter-superior-hunters-defense`) contient, après sa dernière phrase, tout le début du chapitre du Roublard (« Roublard Traits de base du Roublard… »). Recenser les textes qui débordent ainsi (fin de chapitre de classe, de section) et les couper à leur dernière phrase.
+- Chercher pourquoi l'import l'a laissé passer (`translate-rules-2024-fr.ts` et voisins) et le corriger, pour qu'une réimportation ne recrée pas le défaut.
+
+**Critères.** Aucune coupure de ce genre ne reste dans les traductions françaises des deux SRD (le script relancé à blanc n'en trouve plus) ; « Initié à la magie » se lit en paragraphes entiers sur la page de la règle et dans l'assistant ; les intertitres en gras gardent leur ligne.
+
+**Portée.** Le texte n'existe qu'à un endroit, la traduction de la fiche (`ruleset_entry_translations`) : la page de la règle, l'assistant, la fiche du personnage et le contexte du solo le lisent tous de là, donc une correction vaut partout. Seule exception : une fiche d'un ruleset personnel qui aurait **recopié** ce texte dans sa propre surcharge garde sa copie (aucune connue aujourd'hui).
+
+**Fait le 8 novembre** (Opus seul).
+- **Noyau** (tests d'abord, 8 cas) : `src/core/text/coupuresPdf.ts` — `recollerCoupures` (une ligne finie au milieu d'une phrase, suivie d'une minuscule, « ( ou d'un nombre ; une majuscule seulement après un petit mot de liaison : « valeur de⏎Force ») et `couperDebordement` (« <Classe> Traits de base du <Classe>… », et les titres relevés à la fin d'un texte : « Glossaire de règles », « Épée mordante »). Les vrais retours restent : fin de phrase, intertitre en gras, liste ; « caractère⏎Tel personnage… » (nouvelle phrase) n'est pas recollé.
+- **Script** `scripts/fix-coupures-fr.ts`, à blanc par défaut (chaque correction listée avec son contexte), `--write` pour écrire, relançable après toute réimportation : **29 fiches** du SRD 5.2.1 corrigées — 23 coupures recollées (dons et faveurs épiques, dont trois que le premier relevé manquait : « de⏎Force », « sur⏎18 m », « au⏎4e ») et 18 débordements coupés (fin de chaque chapitre de classe, dont « de l'Ensorceleur » et « de l'Occultiste », *zone de vérité*, *épée dansante*). SRD 5.1 : rien. Relancé à blanc : 0 dans les deux.
+- Vérifié au navigateur (Banc d'essai) : « Initié à la magie » en paragraphes entiers, intertitres sur leur ligne ; « Défense de chasseur supérieure » s'arrête à sa dernière phrase.
+
+*Restes* : le script d'import qui avait écrit ces descriptions (dons, aptitudes) n'est pas dans le dépôt (passe ponctuelle d'une session antérieure) : la prévention, c'est de relancer `fix-coupures-fr.ts` après une réimportation. Une quarantaine de descriptions portent encore un **tableau aplati en texte** (Corne du Valhalla, Bourse à malices, sorts de domaine…), autre défaut, pour un ticket à part.
