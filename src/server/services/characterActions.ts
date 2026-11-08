@@ -71,6 +71,7 @@ import type { Concentration } from "@/src/core/schemas/runtimeState";
 import { expireFeatureEffects } from "@/src/server/services/effectExpiry";
 import { listFeatureEffectsForEntity } from "@/src/server/repos/activeEffects";
 import { activeEffectsForSheet, effectFromRow, type ActiveDurableEffect } from "@/src/core/rules/durableEffects";
+import { sameGameDate } from "@/src/core/calendar/sameGameDate";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -1022,7 +1023,7 @@ export async function applyLevelUp(
     old.portrait_asset_id !== next.portrait_asset_id ||
     (old.gender ?? null) !== (next.gender ?? null) ||
     (old.pronouns ?? "") !== (next.pronouns ?? "") ||
-    JSON.stringify(old.birth ?? null) !== JSON.stringify(next.birth ?? null) ||
+    !sameGameDate(old.birth, next.birth) ||
     (old.given_name ?? "") !== (next.given_name ?? "") ||
     (old.family_name ?? "") !== (next.family_name ?? "")
   ) {
