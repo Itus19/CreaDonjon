@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { distance, inArea, zoneFromDistance, type Point } from "./geometry";
+import { distance, feetToPlanMetres, inArea, zoneFromDistance, type Point } from "./geometry";
+import { EMPTY_TURN_BUDGET, spendMovement } from "./turnBudget";
 import { adjustDamage, applyEffects, type TurnState } from "./turn";
 import { aurasCovering } from "./auras";
 import { applyPatches } from "./patches";
@@ -154,5 +155,20 @@ describe("les étiquettes d'arme d'une attaque", () => {
   it("attack_hit porte weapon:<clé> et property:<propriété>", () => {
     const ev = eventsForAttack({ attacker: "lia", target: "gob", result: { total: 18, isCritical: false, isCriticalFail: false, trace: [], ast: f("1d20"), expression: "1d20" }, ac: 12, weapon: { key: "rapier", properties: ["finesse"] } });
     expect(ev[0]).toMatchObject({ event: "attack_hit", tags: ["weapon:rapier", "property:finesse"] });
+  });
+});
+
+describe("V3.1-169 — le mouvement du tour", () => {
+  it("30 pieds font 9 m sur le plan", () => {
+    expect(feetToPlanMetres(30)).toBe(9);
+    expect(feetToPlanMetres(25)).toBe(7.5);
+  });
+
+  it("les déplacements s'additionnent ; au-delà de la vitesse, c'est signalé, jamais bloqué", () => {
+    const a = spendMovement({ ...EMPTY_TURN_BUDGET, at: "1:0" }, 6, 9);
+    expect(a).toMatchObject({ over: false, moved: 6 });
+    const b = spendMovement(a.budget, 4.5, 9);
+    expect(b).toMatchObject({ over: true, moved: 10.5 });
+    expect(b.budget.at).toBe("1:0");
   });
 });

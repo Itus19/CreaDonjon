@@ -23,6 +23,14 @@ export interface AreaSpec {
 export const CONTACT_METRES = 1.5;
 export const PROCHE_METRES = 9;
 
+/**
+ * Une vitesse en pieds (unité native du SRD) lue en mètres du plan, selon la
+ * convention du SRD français : 1,5 m pour 5 pieds (9 m pour 30 pieds).
+ */
+export function feetToPlanMetres(ft: number): number {
+  return Math.round(ft * 0.3 * 100) / 100;
+}
+
 export function distance(a: Point, b: Point): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }

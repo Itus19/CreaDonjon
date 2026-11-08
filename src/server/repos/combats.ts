@@ -99,10 +99,13 @@ export interface CombatParticipantRow {
   is_ally: boolean;
   display_order: number;
   created_at: string;
+  /** V3.1-169 (ADR 0077) : position sur le plan, en mètres ; `null` tant que le jeton n'est pas posé. */
+  pos_x: number | null;
+  pos_y: number | null;
 }
 
 const PARTICIPANT_COLUMNS =
-  "id, combat_id, source_kind, entity_id, rule_key, label, initiative, ac, hp_max, hp_current, temp_hp, conditions, concentration, resources_used, turn_usage, is_ally, display_order, created_at";
+  "id, combat_id, source_kind, entity_id, rule_key, label, initiative, ac, hp_max, hp_current, temp_hp, conditions, concentration, resources_used, turn_usage, is_ally, display_order, created_at, pos_x, pos_y";
 
 export async function listCombatParticipants(supabase: TypedClient, combatId: string): Promise<CombatParticipantRow[]> {
   const { data, error } = await supabase
@@ -169,6 +172,8 @@ export interface CombatParticipantPatch {
   resourcesUsed?: Json;
   /** V3.1-160 : le compte de tour, remplacé en entier. */
   turnUsage?: Json;
+  /** V3.1-169 : la position sur le plan (les deux ensemble, `null` pour retirer le jeton). */
+  position?: { x: number; y: number } | null;
 }
 
 export async function updateCombatParticipant(
@@ -186,6 +191,10 @@ export async function updateCombatParticipant(
   if (patch.concentration !== undefined) update.concentration = patch.concentration;
   if (patch.resourcesUsed !== undefined) update.resources_used = patch.resourcesUsed;
   if (patch.turnUsage !== undefined) update.turn_usage = patch.turnUsage;
+  if (patch.position !== undefined) {
+    update.pos_x = patch.position?.x ?? null;
+    update.pos_y = patch.position?.y ?? null;
+  }
   const { data, error } = await supabase
     .from("combat_participants")
     .update(update)
@@ -222,6 +231,9 @@ export interface PlayerCombatViewRow {
   wound: string | null;
   /** V3.1-166 (ADR 0076) : le budget du tour d'un allié ; absent avant la migration du 166, `null` pour un adversaire. */
   budget?: Json | null;
+  /** V3.1-169 (ADR 0077) : position sur le plan ; absente avant la migration du 169. */
+  pos_x?: number | null;
+  pos_y?: number | null;
 }
 
 /**
@@ -237,4 +249,20 @@ export async function listPlayerCombatViewRows(supabase: TypedClient, combatId: 
     throw new Error(error.message);
   }
   return data;
+}
+
+/**
+ * V3.1-169 (ADR 0077) — une joueuse déplace SON PJ. `public.set_own_position`
+ * refait toutes les vérifications (PJ réclamé par l'appelant, combat en cours,
+ * bornes) et rend `null` sinon. Rend la ligne avant et après, pour le journal.
+ */
+export async function setOwnPosition(
+  supabase: TypedClient,
+  params: { participantId: string; x: number; y: number }
+): Promise<{ before: unknown; after: unknown } | null> {
+  const { data, error } = await supabase.rpc("set_own_position", { p_participant: params.participantId, p_x: params.x, p_y: params.y });
+  if (error) throw new Error(error.message);
+  if (data === null || typeof data !== "object" || Array.isArray(data)) return null;
+  const written = data as { before?: unknown; after?: unknown };
+  return { before: written.before, after: written.after };
 }

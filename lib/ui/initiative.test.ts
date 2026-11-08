@@ -43,6 +43,8 @@ function participant(extra: Partial<CombatParticipantRow> & { id: string }): Com
     is_ally: false,
     display_order: 0,
     created_at: "2026-10-24T00:00:00Z",
+    pos_x: null,
+    pos_y: null,
     ...extra,
   };
 }
