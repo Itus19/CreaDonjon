@@ -161,7 +161,8 @@ export async function answerSaveRequest(
     ast = parseFormula(String(Math.max(0, total)));
     trace = [{ text: "après réaction", value: natural ?? total }] as unknown as Json;
   } else if (params.input.mode === "roll") {
-    const roll = resolveCheckRoll({ modifier: bonus, advantage: "normal", bonusDice: dice }, serverRng);
+    // V3.1-191 : une règle de la lanceuse impose le désavantage (Embuscade magique), figé dans la demande.
+    const roll = resolveCheckRoll({ modifier: bonus, advantage: effect.data.roll_mode === "disadvantage" ? "disadvantage" : "normal", bonusDice: dice }, serverRng);
     natural = roll.trace[0]?.value ?? null;
     total = roll.total;
     expression = roll.expression;

@@ -519,13 +519,21 @@ export type SubclassSpellcastingBlockData = z.infer<typeof zSubclassSpellcasting
 // contre toute injonction que vous lancez » : des sorts (clés), l'état que
 // porte la cible, et s'il doit venir de la lanceuse. Porté par la fiche de
 // l'aptitude ; le moteur le lit quand la lanceuse impose une sauvegarde.
+// V3.1-191 : la règle s'élargit (Embuscade magique) — `outcome` : échec d'office
+// (défaut, les règles déjà écrites) ou désavantage ; la condition porte sur la
+// cible (`target_condition`, « par vous » avec `imposed_by_caster`) ou sur la
+// lanceuse (`caster_condition`) ; sans `spells`, tous les sorts de la lanceuse.
 export const zForcedSaveFailuresBlockData = z.object({
   failures: z.array(
-    z.object({
-      spells: z.array(z.string().min(1)).min(1),
-      target_condition: z.string().min(1),
-      imposed_by_caster: z.boolean(),
-    })
+    z
+      .object({
+        spells: z.array(z.string().min(1)).min(1).optional(),
+        target_condition: z.string().min(1).optional(),
+        caster_condition: z.string().min(1).optional(),
+        imposed_by_caster: z.boolean(),
+        outcome: z.enum(["fail", "disadvantage"]).optional(),
+      })
+      .refine((r) => r.target_condition !== undefined || r.caster_condition !== undefined, { message: "Une condition est requise : un état de la cible ou de la lanceuse." })
   ),
 });
 export type ForcedSaveFailuresBlockData = z.infer<typeof zForcedSaveFailuresBlockData>;

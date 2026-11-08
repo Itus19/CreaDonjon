@@ -12,7 +12,7 @@ import type { FiredEvent, ResolvedEffect } from "@/src/core/rules/triggers";
 import { attackVerdict, damageAfterSave, isOutOfFight, monsterSaveBonus, type AttackVerdict } from "@/src/core/rules/targeting";
 import { creatureTypeOf, isValidTarget, type TargetProfile, type TargetRefusal } from "@/src/core/rules/targetRestriction";
 import { effectsForSaveOutcome, zSaveRequestEffect, type SaveRequestEffect } from "@/src/core/rules/saveRequest";
-import { conditionsWithSource, saveAutomaticallyFails } from "@/src/core/rules/forcedSaveFailure";
+import { conditionsWithSource, saveRuleOutcome } from "@/src/core/rules/forcedSaveFailure";
 import { listFeatureEffectsForBearers } from "@/src/server/repos/activeEffects";
 import { insertSaveRequest } from "@/src/server/repos/saveRequests";
 import { naturalD20FromTrace } from "@/src/core/dice/rollAttribution";
@@ -996,22 +996,30 @@ export async function resolveTargetedRoll(
       };
       amount = cast.damage ? rolledDamage : null;
       // V3.1-186 : une sauvegarde qui échoue d'office (Mante de majesté : charmée par la lanceuse, contre son injonction).
+      // V3.1-191 : ou qui se fait avec le désavantage (Embuscade magique : la lanceuse est Invisible).
       const echecsImposes = ctx.sheet.features.flatMap((f) => f.forcedSaveFailures ?? []);
-      let echecAutomatique = false;
+      let issueImposee: "fail" | "disadvantage" | null = null;
       if (echecsImposes.length > 0 && !joueur) {
-        const effetsCible = await listFeatureEffectsForBearers(supabase, {
+        const etats = (row: CombatParticipantRow | undefined) => (Array.isArray(row?.conditions) ? row.conditions.filter((c): c is string => typeof c === "string") : []);
+        const lanceuse = (participantsSignes ?? (await listCombatParticipants(supabase, combat.id))).find((p) => p.entity_id === ctx.entityId);
+        const effets = await listFeatureEffectsForBearers(supabase, {
           campaignId: params.campaignId,
-          entityIds: target.entity_id ? [target.entity_id] : [],
-          participantIds: [target.id],
+          entityIds: [...(target.entity_id ? [target.entity_id] : []), ctx.entityId],
+          participantIds: [target.id, ...(lanceuse ? [lanceuse.id] : [])],
         });
-        const etatsCible = Array.isArray(target.conditions) ? target.conditions.filter((c): c is string => typeof c === "string") : [];
-        echecAutomatique = saveAutomaticallyFails(echecsImposes, {
+        const surCible = effets.filter((e) => (e.entity_id !== null && e.entity_id === target.entity_id) || e.combat_participant_id === target.id);
+        const surLanceuse = effets.filter((e) => e.entity_id === ctx.entityId || (lanceuse !== undefined && e.combat_participant_id === lanceuse.id));
+        issueImposee = saveRuleOutcome(echecsImposes, {
           spellKey: action.spellKey,
           casterId: ctx.entityId,
-          targetConditions: conditionsWithSource(etatsCible, effetsCible),
+          targetConditions: conditionsWithSource(etats(target), surCible),
+          casterConditions: conditionsWithSource(etats(lanceuse), surLanceuse).map((c) => c.key),
         });
       }
-      if (echecAutomatique) {
+      if (issueImposee === "disadvantage") {
+        pendingSave = { ...pendingSave, label: `${pendingSave.label} · désavantage`, effect: { ...pendingSave.effect, roll_mode: "disadvantage" } };
+      }
+      if (issueImposee === "fail") {
         effects.push(...effectsForSaveOutcome(pendingSave.effect, false, targetKey));
         fait(`${actorName} lance ${spellName} sur ${target.label} : la sauvegarde échoue d'office.` + (cast.damage ? ` Dégâts : ${rolledDamage}.` : ""));
         pendingSave = null;

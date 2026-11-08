@@ -953,16 +953,21 @@ function SubclassSpellcasting({ data }: { data: SubclassSpellcastingBlockData })
   );
 }
 
-/** V3.1-186 : les sauvegardes qui échouent d'office contre les sorts de la lanceuse. */
+/** V3.1-186, V3.1-191 : ce que les règles de la lanceuse font aux sauvegardes contre ses sorts. */
 function ForcedSaveFailures({ data }: { data: ForcedSaveFailuresBlockData }) {
   return (
     <ul className="flex flex-col gap-1 text-sm text-ink">
-      {data.failures.map((f, i) => (
-        <li key={i}>
-          Contre {f.spells.join(", ")} : une cible {conditionLabel(f.target_condition).toLowerCase()}
-          {f.imposed_by_caster ? " par la lanceuse" : ""} rate sa sauvegarde d&apos;office.
-        </li>
-      ))}
+      {data.failures.map((f, i) => {
+        const contre = f.spells ? `Contre ${f.spells.join(", ")}` : "Contre tous ses sorts";
+        const quand = f.target_condition
+          ? `une cible ${conditionLabel(f.target_condition).toLowerCase()}${f.imposed_by_caster ? " par la lanceuse" : ""}`
+          : `quand la lanceuse est ${conditionLabel(f.caster_condition ?? "").toLowerCase()}, la cible`;
+        return (
+          <li key={i}>
+            {contre} : {quand} {f.outcome === "disadvantage" ? "a le désavantage à sa sauvegarde." : "rate sa sauvegarde d’office."}
+          </li>
+        );
+      })}
     </ul>
   );
 }

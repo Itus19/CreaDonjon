@@ -18,6 +18,8 @@ const zSaveOutcome = z.object({
 export const zSaveRequestEffect = z.object({
   on_fail: zSaveOutcome,
   on_success: zSaveOutcome,
+  /** V3.1-191 : la sauvegarde se fait avec le désavantage (Embuscade magique) ; absent : normale. */
+  roll_mode: z.literal("disadvantage").optional(),
 });
 export type SaveRequestEffect = z.infer<typeof zSaveRequestEffect>;
 

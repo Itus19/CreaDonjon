@@ -254,12 +254,18 @@ export interface BrouillonLacune {
   manque: string;
 }
 
-/** V3.1-186 : une sauvegarde qui échoue d'office (Mante de majesté) : les sorts (clés), l'état de la cible, et s'il vient de vous. */
+/**
+ * V3.1-186, élargi en V3.1-191 : une sauvegarde contre vos sorts — échec
+ * d'office (Mante de majesté) ou désavantage (Embuscade magique) ; l'état
+ * porté par la cible (« par vous » si coché) ou par vous ; `sorts` vide : tous.
+ */
 export interface BrouillonEchec {
   uid: string;
   sorts: string[];
   etat: string;
   parMoi: boolean;
+  porteur: "cible" | "lanceuse";
+  resultat: "fail" | "disadvantage";
 }
 
 export interface Brouillon {
@@ -321,7 +327,7 @@ export function brouillonVide(): Brouillon {
 }
 
 export function nouvelEchec(): BrouillonEchec {
-  return { uid: nouvelUid(), sorts: [], etat: "charmed", parMoi: true };
+  return { uid: nouvelUid(), sorts: [], etat: "charmed", parMoi: true, porteur: "cible", resultat: "fail" };
 }
 
 export function nouvelleRessource(): BrouillonRessource {
@@ -752,7 +758,15 @@ export function blocsVersBrouillon(blocs: readonly { blockType: string; data: un
   b.existait = { resources: !!res, activation: !!act, coverage: !!cov, forced_save_failures: !!ech };
   if (ech) {
     const lu = zForcedSaveFailuresBlockData.safeParse(ech.data);
-    if (lu.success) b.echecs = lu.data.failures.map((f) => ({ uid: nouvelUid(), sorts: [...f.spells], etat: f.target_condition, parMoi: f.imposed_by_caster }));
+    if (lu.success)
+      b.echecs = lu.data.failures.map((f) => ({
+        uid: nouvelUid(),
+        sorts: [...(f.spells ?? [])],
+        etat: f.target_condition ?? f.caster_condition ?? "",
+        parMoi: f.imposed_by_caster,
+        porteur: f.target_condition === undefined && f.caster_condition !== undefined ? "lanceuse" : "cible",
+        resultat: f.outcome ?? "fail",
+      }));
   }
 
   if (res) {
@@ -1148,9 +1162,13 @@ export function brouillonVersBlocs(b: Brouillon, nomsEtats: Readonly<Record<stri
   });
 
   const echecs = b.echecs.map((e, i) => {
-    if (e.sorts.length === 0) ctx.erreurs.push(`Échec automatique ${i + 1} : au moins un sort est requis`);
-    if (e.etat.trim() === "") ctx.erreurs.push(`Échec automatique ${i + 1} : l'état de la cible est requis`);
-    return { spells: e.sorts, target_condition: e.etat.trim(), imposed_by_caster: e.parMoi };
+    if (e.etat.trim() === "") ctx.erreurs.push(`Sauvegarde contre vos sorts ${i + 1} : l'état est requis`);
+    return {
+      ...(e.sorts.length > 0 ? { spells: e.sorts } : {}),
+      ...(e.porteur === "lanceuse" ? { caster_condition: e.etat.trim() } : { target_condition: e.etat.trim() }),
+      imposed_by_caster: e.porteur === "cible" && e.parMoi,
+      ...(e.resultat === "disadvantage" ? { outcome: "disadvantage" as const } : {}),
+    };
   });
 
   if (ctx.erreurs.length > 0) return { ok: false, erreurs: ctx.erreurs };

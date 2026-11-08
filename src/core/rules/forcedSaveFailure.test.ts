@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { conditionsWithSource, saveAutomaticallyFails } from "./forcedSaveFailure";
+import { conditionsWithSource, saveAutomaticallyFails, saveRuleOutcome } from "./forcedSaveFailure";
 import { zForcedSaveFailuresBlockData } from "../schemas/rule-blocks/blocks";
 
 /**
@@ -57,5 +57,30 @@ describe("les états de la cible, avec leur source", () => {
 
   it("un effet mal formé est ignoré, sans faire tomber la lecture", () => {
     expect(conditionsWithSource(["charmed"], [{ payload: { n_importe: "quoi" } }])).toEqual([{ key: "charmed", sourceId: null }]);
+  });
+});
+
+describe("V3.1-191 — une sauvegarde contre vos sorts : désavantage, état de la lanceuse (Embuscade magique)", () => {
+  // « Si vous jouissez de l'état Invisible quand vous lancez un sort sur une créature, cette créature est Désavantagée à ses jets de sauvegarde contre ce sort. »
+  const EMBUSCADE = zForcedSaveFailuresBlockData.parse({ failures: [{ caster_condition: "invisible", imposed_by_caster: false, outcome: "disadvantage" }] });
+  const tout = (sur: Partial<Parameters<typeof saveRuleOutcome>[1]>) => ({ spellKey: "hold-person", casterId: "rufus", targetConditions: [], casterConditions: [], ...sur });
+
+  it("lanceuse invisible : désavantage, contre tous ses sorts (aucun sort nommé)", () => {
+    expect(saveRuleOutcome(EMBUSCADE.failures, tout({ casterConditions: ["invisible"] }))).toBe("disadvantage");
+    expect(saveRuleOutcome(EMBUSCADE.failures, tout({ spellKey: "fireball", casterConditions: ["invisible"] }))).toBe("disadvantage");
+  });
+
+  it("lanceuse visible : rien", () => {
+    expect(saveRuleOutcome(EMBUSCADE.failures, tout({}))).toBeNull();
+  });
+
+  it("l'échec d'office l'emporte sur le désavantage ; une règle ancienne (sans « outcome ») reste un échec d'office", () => {
+    const deux = [...EMBUSCADE.failures, ...MANTE.failures];
+    expect(saveRuleOutcome(deux, tout({ spellKey: "command", casterConditions: ["invisible"], targetConditions: [{ key: "charmed", sourceId: "rufus" }] }))).toBe("fail");
+    expect(saveRuleOutcome(MANTE.failures, { spellKey: "command", casterId: "lyra", targetConditions: [{ key: "charmed", sourceId: "lyra" }], casterConditions: [] })).toBe("fail");
+  });
+
+  it("le schéma exige au moins une condition, sur la cible ou sur la lanceuse", () => {
+    expect(zForcedSaveFailuresBlockData.safeParse({ failures: [{ imposed_by_caster: false, outcome: "disadvantage" }] }).success).toBe(false);
   });
 });

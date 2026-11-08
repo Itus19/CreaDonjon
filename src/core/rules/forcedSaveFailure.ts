@@ -14,12 +14,30 @@ export interface SaveAgainstSpell {
   targetConditions: readonly { key: string; sourceId: string | null }[];
 }
 
+/** Une règle s'applique-t-elle à cette sauvegarde ? Toutes ses conditions doivent tenir. */
+function sApplique(r: ForcedSaveFailuresBlockData["failures"][number], save: SaveAgainstSpell & { casterConditions?: readonly string[] }): boolean {
+  if (r.spells && !r.spells.includes(save.spellKey)) return false;
+  if (r.target_condition !== undefined && !save.targetConditions.some((c) => c.key === r.target_condition && (!r.imposed_by_caster || c.sourceId === save.casterId))) return false;
+  if (r.caster_condition !== undefined && !(save.casterConditions ?? []).includes(r.caster_condition)) return false;
+  return true;
+}
+
 export function saveAutomaticallyFails(rules: ForcedSaveFailuresBlockData["failures"], save: SaveAgainstSpell): boolean {
-  return rules.some(
-    (r) =>
-      r.spells.includes(save.spellKey) &&
-      save.targetConditions.some((c) => c.key === r.target_condition && (!r.imposed_by_caster || c.sourceId === save.casterId))
-  );
+  return saveRuleOutcome(rules, { ...save, casterConditions: [] }) === "fail";
+}
+
+/**
+ * V3.1-191 — ce que les règles de la lanceuse font à une sauvegarde contre son
+ * sort : échec d'office (Mante de majesté), désavantage (Embuscade magique :
+ * la lanceuse est Invisible), ou rien. L'échec l'emporte sur le désavantage.
+ */
+export function saveRuleOutcome(
+  rules: ForcedSaveFailuresBlockData["failures"],
+  save: SaveAgainstSpell & { casterConditions: readonly string[] }
+): "fail" | "disadvantage" | null {
+  const appliquees = rules.filter((r) => sApplique(r, save));
+  if (appliquees.some((r) => (r.outcome ?? "fail") === "fail")) return "fail";
+  return appliquees.length > 0 ? "disadvantage" : null;
 }
 
 /**
