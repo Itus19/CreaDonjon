@@ -44,6 +44,7 @@ describe("couperDebordement", () => {
   it("coupe un titre de section laissé à la fin (Glossaire de règles, le titre de l'objet suivant)", () => {
     expect(couperDebordement("doit rester vrai dans son esprit. Glossaire de règles").texte).toBe("doit rester vrai dans son esprit.");
     expect(couperDebordement("à plus de 9 m d’elle. Épée mordante").texte).toBe("à plus de 9 m d’elle.");
+    expect(couperDebordement("ou un minimum de 3 m chacun. Épée voleuse de vie").texte).toBe("ou un minimum de 3 m chacun.");
   });
 
   it("ne touche pas un texte qui ne déborde pas, ni une classe qui se nomme elle-même", () => {

@@ -49,7 +49,7 @@ export function recollerCoupures(texte: string): { texte: string; coupures: Coup
 }
 
 /** Titres de section relevés collés à la fin d'un texte (recensement du 8 novembre). */
-const TITRES_FINAUX = ["Glossaire de règles", "Épée mordante"];
+const TITRES_FINAUX = ["Glossaire de règles", "Épée mordante", "Épée voleuse de vie"];
 const CHAPITRE_DE_CLASSE = /\s+(\S+) Traits de base (?:du |de la |de l’|de l'|des )(\S+)/;
 
 export function couperDebordement(texte: string): { texte: string; coupe: string | null } {
