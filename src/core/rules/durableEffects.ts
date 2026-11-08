@@ -171,6 +171,23 @@ function step(e: ActiveDurableEffect, ev: ExpiryEvent): { next: ActiveDurableEff
   }
 }
 
+/**
+ * V3.1-197 — une activation qu'un effet durable accorde par son jeton
+ * (`token.grants`) n'existe que tant qu'un effet actif DE LA MÊME RÈGLE en
+ * porte le jeton (Majesté souveraine : la réaction, pendant la présence ; Mante
+ * de majesté : Injonction à chaque tour, pendant 1 minute). Les autres sont
+ * toujours là. Lu par la fiche, les réactions et le serveur des activations.
+ */
+export function activationUnlocked(
+  bloc: { durable_effects: readonly { token: { grants: string } | null }[] },
+  activationId: string,
+  effects: readonly ActiveDurableEffect[],
+  ruleKey: string,
+): boolean {
+  if (!bloc.durable_effects.some((d) => d.token?.grants === activationId)) return true;
+  return effects.some((e) => e.tokenGrants === activationId && e.tokenUsesLeft > 0 && (e.ruleKey === undefined || e.ruleKey === ruleKey));
+}
+
 /** V3.1-195 — les effets dont le porteur `actor` finit son tour et qui demandent un JS répété. */
 export function effectsDueForRepeatSave(effects: readonly ActiveDurableEffect[], actor: string): ActiveDurableEffect[] {
   return effects.filter((e) => e.bearer === actor && e.repeatSave !== undefined);

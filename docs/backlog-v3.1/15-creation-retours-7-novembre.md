@@ -63,10 +63,12 @@ Seul Bouclier a une activation parmi les sorts importés : l'effet « Lancer un 
 
 ---
 
-### V3.1-197 — L'éditeur de briques saisit le jeton, la condition d'accès et le JS répété (sans modèle IA)
+### V3.1-197 — L'éditeur de briques saisit le jeton et le JS répété (sans modèle IA)
 
 **Modèle conseillé : Opus** (écran ; esquisse d'abord).
 
 Le moteur connaît le jeton d'un effet durable (une activation accordée tant qu'il dure), la condition d'accès d'une activation (`requires`) et désormais `repeat_save` ; l'éditeur n'en saisit aucun. Il faut les trois pour le Collège de la séduction : Mante de majesté (Injonction par une action Bonus à chaque tour, pendant 1 minute), Majesté souveraine (la réaction seulement pendant la présence majestueuse), Magie envoûtante (le JS à chaque fin de tour).
 
-**Critères.** Les trois se saisissent, se relisent et s'enregistrent par l'éditeur, validés par les schémas ; esquisse approuvée avant le code ; planche du catalogue à jour.
+**Décision.** La condition d'accès n'est pas nécessaire : la réaction de Majesté souveraine est une utilisation accordée par le jeton de la « Présence majestueuse » (ADR 0090 §3). Le moteur respecte désormais le jeton partout : fiche, serveur, réactions (fait le 8 novembre, `activationUnlocked`).
+
+**Critères.** La brique « Accorder une utilisation » et la case « Nouveau JS à la fin de chacun de ses tours » se saisissent, se relisent et s'enregistrent par l'éditeur, validées par les schémas ; esquisse approuvée avant le code (canevas, planche « V3.1-197 ») ; planche du catalogue à jour.

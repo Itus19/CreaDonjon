@@ -25,6 +25,8 @@ import { orderParticipants } from "@/src/server/services/combats";
 import { openRollWindow, readCombatParticipantsSigned } from "@/src/server/services/engineSigning";
 import { actorNumbersFor } from "@/src/server/services/actorNumbers";
 import { serverRng } from "@/src/server/services/rng";
+import { activationUnlocked, effectFromRow } from "@/src/core/rules/durableEffects";
+import { listFeatureEffectsForBearers } from "@/src/server/repos/activeEffects";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -142,10 +144,20 @@ export async function gatherReactors(
     const state = await getEntityRuntimeState(supabase, pc.entity_id, params.campaignId);
     const usage = zTurnUsage.safeParse(p?.turn_usage);
     const numbersByRule: Record<string, Record<string, number>> = {};
+    // V3.1-197 : une réaction qu'un jeton accorde (Majesté souveraine) n'est candidate que tant que l'effet dure.
+    // Lus seulement s'il y en a une : aucune lecture de plus dans le cas ordinaire (QUOTAS Q1).
+    const aJeton = features.some((f) => f.activation!.durable_effects.some((d) => d.token));
+    const effetsActifs = aJeton
+      ? (await listFeatureEffectsForBearers(supabase, { campaignId: params.campaignId, entityIds: [pc.entity_id], participantIds: [] })).flatMap((row) => {
+          const e = effectFromRow(row, pc.entity_id);
+          return e ? [e] : [];
+        })
+      : [];
     for (const f of features) {
       numbersByRule[f.key] = actorNumbersFor(ctx, f.key);
       for (const a of f.activation!.activations) {
         if (a.trigger?.on !== "roll") continue;
+        if (!activationUnlocked(f.activation!, a.id, effetsActifs, f.key)) continue;
         pool.candidates.push({
           actorId: pc.entity_id,
           ruleKey: f.key,

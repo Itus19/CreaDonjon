@@ -4,7 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
 import type { Locale } from "@/src/i18n/request";
 import { planActivation, type ActivationRefusal } from "@/src/core/rules/activation";
-import { effectToRow, type ActiveDurableEffect } from "@/src/core/rules/durableEffects";
+import { activationUnlocked, effectFromRow, effectToRow, type ActiveDurableEffect } from "@/src/core/rules/durableEffects";
 import type { EffectNode, ResolvedEffect, TriggerActorState, TriggerContext } from "@/src/core/rules/triggers";
 import { zActivationBlockData, type ActivationBlockData } from "@/src/core/schemas/rule-blocks/playable";
 import { zSpellCastingBlockData } from "@/src/core/schemas/rule-blocks";
@@ -55,7 +55,9 @@ export type ActivateFeatureFailure =
   /** V3.1-165 (ADR 0076) : un sort que le personnage ne connaît pas, un emplacement épuisé, une option de lancement inconnue. */
   | "spell_not_known"
   | "no_slot_available"
-  | "unknown_cast_option";
+  | "unknown_cast_option"
+  /** V3.1-197 : une activation qu'un jeton accorde, sans effet actif qui le porte. */
+  | "token_required";
 
 export interface ActivateFeatureSuccess {
   ok: true;
@@ -128,6 +130,16 @@ export async function activateFeature(
   let block: ActivationBlockData = lu.data;
   const found = block.activations.find((a) => a.id === params.activationId);
   if (!found) return { ok: false, reason: "unknown_activation" };
+  // V3.1-197 : accordée par un jeton (la réaction de Majesté souveraine, l'Injonction de Mante de majesté) :
+  // seulement tant qu'un effet actif de cette règle en porte le jeton. La fiche la cache ; le serveur tranche.
+  if (block.durable_effects.some((d) => d.token?.grants === found.id)) {
+    const lignes = await listFeatureEffectsForBearers(supabase, { campaignId: params.campaignId, entityIds: [params.entityId], participantIds: [] });
+    const actifs = lignes.flatMap((row) => {
+      const e = effectFromRow(row, params.entityId);
+      return e ? [e] : [];
+    });
+    if (!activationUnlocked(block, found.id, actifs, params.ruleKey)) return { ok: false, reason: "token_required" };
+  }
   // V3.1-165 : l'option de lancement (Sort accéléré) change le coût du sort : son temps, et ses ressources s'ajoutent.
   let activation = found;
   if (params.spell?.castOption) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activeEffectsForSheet, consumeToken, effectFromRow, effectToRow, effectsDueForRepeatSave, expireEffects, instantiateDurableEffect, rollRepeatSave, type ActiveDurableEffect } from "./durableEffects";
+import { activeEffectsForSheet, consumeToken, effectFromRow, activationUnlocked, effectToRow, effectsDueForRepeatSave, expireEffects, instantiateDurableEffect, rollRepeatSave, type ActiveDurableEffect } from "./durableEffects";
 import type { DurableEffect } from "../schemas/rule-blocks/playable";
 
 /**
@@ -199,5 +199,33 @@ describe("V3.1-195 — le JS répété à la fin de chaque tour du porteur", () 
     expect(effectFromRow({ id: "r", ...effectToRow(e, "magie-envoutante") }, "g1")?.repeatSave).toEqual({ ability: "wis", dc: 14 });
     const ancienne = effectToRow(effraye("g1"), "x");
     expect(effectFromRow({ id: "r", ...ancienne }, "g1")?.repeatSave).toBeUndefined();
+  });
+});
+
+describe("V3.1-197 — une activation qu'un jeton accorde n'existe que tant que l'effet dure", () => {
+  const bloc = {
+    activations: [{ id: "utilisation" }, { id: "utilisation-2" }],
+    durable_effects: [{ token: { uses: 1, grants: "utilisation-2" } }, { token: null }],
+  };
+  const presence = (over: Partial<ActiveDurableEffect> = {}): ActiveDurableEffect => ({
+    ...effraye("barde"),
+    tokenGrants: "utilisation-2",
+    tokenUsesLeft: 1,
+    ruleKey: "majeste-souveraine",
+    ...over,
+  });
+
+  it("une activation sans jeton est toujours là", () => {
+    expect(activationUnlocked(bloc, "utilisation", [], "majeste-souveraine")).toBe(true);
+  });
+
+  it("l'activation accordée attend un effet actif qui en porte le jeton", () => {
+    expect(activationUnlocked(bloc, "utilisation-2", [], "majeste-souveraine")).toBe(false);
+    expect(activationUnlocked(bloc, "utilisation-2", [presence()], "majeste-souveraine")).toBe(true);
+    expect(activationUnlocked(bloc, "utilisation-2", [presence({ tokenUsesLeft: 0 })], "majeste-souveraine")).toBe(false);
+  });
+
+  it("le jeton d'une AUTRE règle ne l'ouvre pas, même avec le même identifiant d'activation", () => {
+    expect(activationUnlocked(bloc, "utilisation-2", [presence({ ruleKey: "autre-aptitude" })], "majeste-souveraine")).toBe(false);
   });
 });

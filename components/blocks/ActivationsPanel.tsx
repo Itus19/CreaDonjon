@@ -79,11 +79,11 @@ export default function ActivationsPanel(props: ActivationsPanelProps) {
   const t = useTranslations("fiche.activation");
 
   const capacites = features.flatMap((f) =>
-    f.activation ? activationsVisibles(f.activation, effets).map((activation) => ({ feature: f, bloc: f.activation as ActivationBlockData, activation })) : []
+    f.activation ? activationsVisibles(f.activation, effets, f.key).map((activation) => ({ feature: f, bloc: f.activation as ActivationBlockData, activation })) : []
   );
 
   const sorts = (props.sorts ?? []).flatMap((s) =>
-    activationsVisibles(s.bloc, effets).map((activation) => ({ sort: s, activation }))
+    activationsVisibles(s.bloc, effets, s.cle).map((activation) => ({ sort: s, activation }))
   );
   const actionsBonus = props.actionsBonus ?? [];
 

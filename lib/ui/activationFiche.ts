@@ -1,6 +1,6 @@
 import { evaluate } from "@/src/core/formula/evaluate";
 import type { FormulaNode } from "@/src/core/formula/ast";
-import type { ActiveDurableEffect } from "@/src/core/rules/durableEffects";
+import { activationUnlocked, type ActiveDurableEffect } from "@/src/core/rules/durableEffects";
 import type { SheetResource } from "@/src/core/rules/sheet";
 import type { EffectNode } from "@/src/core/rules/triggers";
 import type { Activation, ActivationBlockData, DurableEffectDuration } from "@/src/core/schemas/rule-blocks/playable";
@@ -121,10 +121,9 @@ export function resumeActivation(
  * Les activations à montrer. Celles qu'un jeton accorde (`token.grants`) ne se
  * montrent que tant qu'un effet actif en porte le jeton.
  */
-export function activationsVisibles(bloc: ActivationBlockData, effets: readonly ActiveDurableEffect[]): Activation[] {
-  const accordees = new Set(bloc.durable_effects.flatMap((e) => (e.token ? [e.token.grants] : [])));
-  const jetons = new Set(effets.flatMap((e) => (e.tokenGrants && e.tokenUsesLeft > 0 ? [e.tokenGrants] : [])));
-  return bloc.activations.filter((a) => !accordees.has(a.id) || jetons.has(a.id));
+export function activationsVisibles(bloc: ActivationBlockData, effets: readonly ActiveDurableEffect[], ruleKey: string): Activation[] {
+  // V3.1-197 : la règle est celle du noyau, partagée avec le serveur ; le jeton doit venir de la même règle.
+  return bloc.activations.filter((a) => activationUnlocked(bloc, a.id, effets, ruleKey));
 }
 
 // --- ressources ------------------------------------------------------------

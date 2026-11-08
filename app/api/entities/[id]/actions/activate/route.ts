@@ -32,6 +32,7 @@ const MESSAGES: Record<ActivateFeatureFailure, string> = {
   spell_not_known: "Ce personnage ne connaît pas ce sort.",
   no_slot_available: "Plus d'emplacement de ce niveau.",
   unknown_cast_option: "Cette option de lancement n'existe pas pour ce personnage.",
+  token_required: "Cette utilisation n'existe que tant que l'effet qui l'accorde dure.",
 };
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

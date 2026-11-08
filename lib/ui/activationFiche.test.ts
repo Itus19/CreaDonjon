@@ -150,16 +150,16 @@ describe("resumeActivation", () => {
 
 describe("activationsVisibles", () => {
   it("cache l'activation qu'un jeton accorde tant qu'aucun effet n'en porte le jeton", () => {
-    expect(activationsVisibles(bloc, []).map((a) => a.id)).toEqual(["abjure"]);
+    expect(activationsVisibles(bloc, [], "x").map((a) => a.id)).toEqual(["abjure"]);
   });
 
   it("la montre tant qu'un effet actif a des usages de jeton", () => {
-    const ids = activationsVisibles(bloc, [effet({ tokenGrants: "extra", tokenUsesLeft: 1 })]).map((a) => a.id);
+    const ids = activationsVisibles(bloc, [effet({ tokenGrants: "extra", tokenUsesLeft: 1 })], "x").map((a) => a.id);
     expect(ids).toEqual(["abjure", "extra"]);
   });
 
   it("la cache quand le jeton est épuisé", () => {
-    expect(activationsVisibles(bloc, [effet({ tokenGrants: "extra", tokenUsesLeft: 0 })]).map((a) => a.id)).toEqual(["abjure"]);
+    expect(activationsVisibles(bloc, [effet({ tokenGrants: "extra", tokenUsesLeft: 0 })], "x").map((a) => a.id)).toEqual(["abjure"]);
   });
 });
 
