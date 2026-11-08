@@ -58,3 +58,13 @@ export function conditionsWithSource(
   }
   return conditions.map((key) => ({ key, sourceId: sources.get(key) ?? null }));
 }
+
+/**
+ * V3.1-199 — la créature est-elle charmée PAR l'une de ces clés (la cible
+ * qu'elle vise : son entité ou son instance de combat) ? En règle, un charmé
+ * ne peut pas attaquer celle qui le charme ; le moteur le signale, le MJ
+ * tranche. Un Charmé posé à la main (source inconnue) ne dit rien.
+ */
+export function isCharmedBy(conditions: readonly string[], effects: readonly { payload: unknown }[], cibleIds: readonly string[]): boolean {
+  return conditionsWithSource(conditions, effects).some((c) => c.key === "charmed" && c.sourceId !== null && cibleIds.includes(c.sourceId));
+}

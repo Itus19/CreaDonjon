@@ -19,7 +19,7 @@ import { insertSessionEvent, nextEventSeq } from "@/src/server/repos/sessions";
 import { getCampaign } from "@/src/server/services/campaigns";
 import { resolveCharacterActionContext } from "@/src/server/services/characterActions";
 import { journalCombatEvent } from "@/src/server/services/combats";
-import { interveneOnRoll, selfReactorPool } from "@/src/server/services/rollWindows";
+import { interveneOnRoll, nomsDesReactions, selfReactorPool } from "@/src/server/services/rollWindows";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
 import { applyResolvedEffects, targetSaveBonus } from "@/src/server/services/targetedRoll";
 import { serverRng } from "@/src/server/services/rng";
@@ -201,7 +201,7 @@ export async function answerSaveRequest(
     if (r.automatic.length > 0) {
       natural = r.roll.natural;
       total = r.roll.total;
-      hints.push(`${r.automatic.map((e) => e.ruleKey).join(", ")} : la sauvegarde devient ${total}.`);
+      hints.push(`${nomsDesReactions(pool, r.automatic)} : la sauvegarde devient ${total}.`);
     }
   }
 

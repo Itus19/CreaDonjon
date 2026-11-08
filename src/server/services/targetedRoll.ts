@@ -12,7 +12,7 @@ import type { FiredEvent, ResolvedEffect } from "@/src/core/rules/triggers";
 import { attackVerdict, damageAfterSave, isOutOfFight, type AttackVerdict } from "@/src/core/rules/targeting";
 import { creatureTypeOf, isValidTarget, type TargetProfile, type TargetRefusal } from "@/src/core/rules/targetRestriction";
 import { effectsForSaveOutcome, zSaveRequestEffect, type SaveRequestEffect } from "@/src/core/rules/saveRequest";
-import { conditionsWithSource, saveRuleOutcome } from "@/src/core/rules/forcedSaveFailure";
+import { conditionsWithSource, isCharmedBy, saveRuleOutcome } from "@/src/core/rules/forcedSaveFailure";
 import { listFeatureEffectsForBearers } from "@/src/server/repos/activeEffects";
 import { insertSaveRequest } from "@/src/server/repos/saveRequests";
 import { naturalD20FromTrace } from "@/src/core/dice/rollAttribution";
@@ -60,7 +60,7 @@ import type { TargetedRollInput } from "@/lib/combats/schemas";
 import { expireFeatureEffects } from "@/src/server/services/effectExpiry";
 import { parseFormula } from "@/src/core/formula/parser";
 import type { PendingRoll } from "@/src/core/rules/rollWindow";
-import { gatherReactors, interveneOnRoll, type ReactorPool } from "@/src/server/services/rollWindows";
+import { gatherReactors, interveneOnRoll, nomsDesReactions, type ReactorPool } from "@/src/server/services/rollWindows";
 import { spendTurnBudgetFor } from "@/src/server/services/turnBudgetWrite";
 
 type TypedClient = SupabaseClient<Database>;
@@ -710,6 +710,17 @@ export async function resolveTargetedRoll(
     if (attaquant) for (const key of marques.removeFromAttacker) effects.push({ action: "remove_condition", who: `participant:${attaquant.id}`, key });
     for (const key of marques.removeFromTarget) effects.push({ action: "remove_condition", who: targetKey, key });
     hintsBefore.push(...marques.notes);
+    // V3.1-199 : un charmé n'attaque pas celle qui le charme. Le moteur le dit, le MJ tranche ; lu seulement
+    // si l'attaquant est charmé (aucune lecture de plus sinon), et pour le MJ (les effets d'un monstre lui sont réservés).
+    if (attaquant && !joueur && etats(attaquant).includes("charmed")) {
+      const effetsAttaquant = await listFeatureEffectsForBearers(supabase, {
+        campaignId: params.campaignId,
+        entityIds: attaquant.entity_id ? [attaquant.entity_id] : [],
+        participantIds: [attaquant.id],
+      });
+      const cles = [targetKey, ...(target.entity_id ? [target.entity_id] : [])];
+      if (isCharmedBy(etats(attaquant), effetsAttaquant, cles)) hintsBefore.push(`${actorName} est charmé par ${target.label} : en règle, il ne peut pas l'attaquer. Le MJ tranche.`);
+    }
     let critRange = 20;
     let acBonus = 0;
     let attaqueRatee = false;
@@ -786,9 +797,12 @@ export async function resolveTargetedRoll(
       });
       if (r.kind === "window") return pendingResult(r.windowId, [`${actorName} attaque ${target.label} (${label}) : ${attack.total} — en attente des réactions.`], shown);
       if (r.automatic.length > 0) {
+        const totalAvant = attack.total;
         attack = attackFromPreset({ total: r.roll.total, natural: r.roll.natural ?? 0, critRange, acBonus: r.roll.acBonus, label, expression: attack.expression });
         acBonus = r.roll.acBonus;
-        fait(`${r.automatic.map((e) => e.ruleKey).join(", ")} : le jet devient ${attack.total}.`);
+        // V3.1-199 : le nom de la réaction et de qui la joue, jamais la clé de la règle ; le total seulement s'il change.
+        const noms = nomsDesReactions(pool, r.automatic);
+        fait(attack.total !== totalAvant ? `${noms} : le jet devient ${attack.total}.` : `Réaction : ${noms}.`);
       }
       if (r.roll.forcedMiss) attaqueRatee = true;
     }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { subclassFeatureEntryKey, subclassFeatureSlug, subclassFeatures, type SubclassFeatureData } from "./subclass";
+import { belongsToAnotherSubclass, subclassFeatureEntryKey, subclassFeatureSlug, subclassFeatures, type SubclassFeatureData } from "./subclass";
 import { resolveChoices } from "./choices";
 import { characterSheet, type CharacterBuild, type ResolvedFeature, type ResolvedRuleset } from "./sheet";
 
@@ -188,5 +188,20 @@ describe("V3.1-181 — la fiche à briques d'une aptitude", () => {
   it("sa clé : celle de la sous-classe, un tiret, celle de l'aptitude", () => {
     expect(subclassFeatureEntryKey("college-de-la-seduction", "Magie envoûtante")).toBe("college-de-la-seduction-magie-envoutante");
     expect(subclassFeatureEntryKey("champion", "Improved Critical")).toBe("champion-improved-critical");
+  });
+});
+
+describe("V3.1-199 — une aptitude de la progression de classe qui appartient à une sous-classe", () => {
+  const lore = { subclass: { index: "college-of-lore" }, class: { index: "bard" } };
+
+  it("est écartée si la sous-classe choisie est une autre, ou si aucune n'est choisie", () => {
+    expect(belongsToAnotherSubclass(lore, "college-de-la-seduction")).toBe(true);
+    expect(belongsToAnotherSubclass(lore, undefined)).toBe(true);
+  });
+
+  it("reste pour la sous-classe qu'elle désigne, et une aptitude de classe ordinaire reste toujours", () => {
+    expect(belongsToAnotherSubclass(lore, "college-of-lore")).toBe(false);
+    expect(belongsToAnotherSubclass({ class: { index: "bard" } }, "college-de-la-seduction")).toBe(false);
+    expect(belongsToAnotherSubclass(null, undefined)).toBe(false);
   });
 });

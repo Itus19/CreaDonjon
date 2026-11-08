@@ -304,7 +304,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-196 | ☑ | sans | « Lancer un sort » d'un sort sans activation | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
 | V3.1-197 | ☑ | sans | L'éditeur de briques saisit le jeton et le JS répété | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
 | V3.1-198 | ☑ | sans | Le formulaire de sort : une sauvegarde sans dégâts, et la version maison d'un sort de l'import FR | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
-| V3.1-199 | ☐ | sans | Combat de test du Collège : deux défauts corrigés, six à reprendre | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
+| V3.1-199 | ☑ | sans | Combat de test du Collège : les défauts trouvés, corrigés | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
 | V3.1-172 | ☑ | sans | Espèce, don d'origine, historique : le texte entier, sans quitter l'écran | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-173 | ☑ | sans | Expliquer compétences, bottes d'armes et aptitudes de classe | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-174 | ☑ | sans | La sous-classe en sous-étape, ses choix expliqués | [`termines.md`](backlog-v3.1/termines.md) |

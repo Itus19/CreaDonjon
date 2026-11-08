@@ -261,7 +261,8 @@ export async function activateFeature(
     actor: { entityId: params.entityId, name: ctx.entityName, hpMax: sheet.hitPoints.max, speed: sheet.speed.value },
     scene: null,
     spend: null,
-    effects: [...plan.plan.effects.filter((e) => e.action !== "apply_effect"), ...etats],
+    // V3.1-199 : « lancer un sort » se joue plus bas, par le service du lancer : pas ici (sinon le journal le disait « non lancé »).
+    effects: [...plan.plan.effects.filter((e) => e.action !== "apply_effect" && e.action !== "cast_spell"), ...etats],
     note,
     fromEventId: null,
     combatId,

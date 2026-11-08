@@ -25,7 +25,7 @@ import { orderParticipants } from "@/src/server/services/combats";
 import { openRollWindow, readCombatParticipantsSigned } from "@/src/server/services/engineSigning";
 import { actorNumbersFor } from "@/src/server/services/actorNumbers";
 import { serverRng } from "@/src/server/services/rng";
-import { activationUnlocked, effectFromRow } from "@/src/core/rules/durableEffects";
+import { activationUnlocked, effectFromRow, localized } from "@/src/core/rules/durableEffects";
 import { listFeatureEffectsForBearers } from "@/src/server/repos/activeEffects";
 
 type TypedClient = SupabaseClient<Database>;
@@ -192,6 +192,22 @@ export async function gatherReactors(
     pool.ctx = { actors: { ...pool.ctx.actors, [pc.entity_id]: actor } };
   }
   return pool;
+}
+
+/**
+ * V3.1-199 — les réactions jouées d'office, nommées pour le journal : le libellé
+ * de l'activation et qui la joue (« Majesté : l'attaque rate (Lyra) »), jamais
+ * la clé technique de la règle.
+ */
+export function nomsDesReactions(pool: ReactorPool, reactions: readonly Pick<EligibleReaction, "actorId" | "ruleKey" | "activationId">[]): string {
+  return reactions
+    .map((e) => {
+      const c = pool.candidates.find((x) => x.actorId === e.actorId && x.ruleKey === e.ruleKey && x.activation.id === e.activationId);
+      const quoi = c ? localized(c.activation.label) : e.ruleKey;
+      const qui = pool.meta[e.actorId]?.name;
+      return qui ? `${quoi} (${qui})` : quoi;
+    })
+    .join(", ");
 }
 
 export type InterveneResult =

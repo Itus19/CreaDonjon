@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { conditionsWithSource, saveAutomaticallyFails, saveRuleOutcome } from "./forcedSaveFailure";
+import { conditionsWithSource, saveAutomaticallyFails, saveRuleOutcome, isCharmedBy } from "./forcedSaveFailure";
 import { zForcedSaveFailuresBlockData } from "../schemas/rule-blocks/blocks";
 
 /**
@@ -82,5 +82,19 @@ describe("V3.1-191 — une sauvegarde contre vos sorts : désavantage, état de 
 
   it("le schéma exige au moins une condition, sur la cible ou sur la lanceuse", () => {
     expect(zForcedSaveFailuresBlockData.safeParse({ failures: [{ imposed_by_caster: false, outcome: "disadvantage" }] }).success).toBe(false);
+  });
+});
+
+describe("V3.1-199 — un charmé n'attaque pas celle qui le charme", () => {
+  const charme = { payload: { effectId: "e", activationId: "a", source: "lyra", conditions: ["charmed"], endsOn: [], concentration: false, tokenGrants: null, tokenUsesLeft: 0, startedRound: 1 } };
+
+  it("charmé par la cible visée (l'une de ses clés) : vrai", () => {
+    expect(isCharmedBy(["charmed"], [charme], ["participant:p1", "lyra"])).toBe(true);
+  });
+
+  it("charmé par quelqu'un d'autre, charmé à la main (source inconnue), ou pas charmé : faux", () => {
+    expect(isCharmedBy(["charmed"], [charme], ["participant:p2"])).toBe(false);
+    expect(isCharmedBy(["charmed"], [], ["lyra"])).toBe(false);
+    expect(isCharmedBy([], [charme], ["lyra"])).toBe(false);
   });
 });

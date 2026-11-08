@@ -48,7 +48,7 @@ import { isWorldAdmin } from "@/src/server/services/permissions";
 import { decideCombatAccess, type CombatAccess } from "@/src/core/permissions/combatAccess";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
 import { getEntityRuntimeState } from "@/src/server/services/runtimeState";
-import { resolveCharacterActionContext } from "@/src/server/services/characterActions";
+import { getOrInitializeRuntimeState, resolveCharacterActionContext } from "@/src/server/services/characterActions";
 import type { Locale } from "@/src/i18n/request";
 import { expireFeatureEffects } from "@/src/server/services/effectExpiry";
 
@@ -250,10 +250,9 @@ export async function addEntityParticipant(
   supabase: TypedClient,
   params: { combatId: string; entityId: string; campaignId: string; locale: Locale; isAlly: boolean }
 ): Promise<CombatParticipantRow | null> {
-  const [entity, ctx, state] = await Promise.all([
+  const [entity, ctx] = await Promise.all([
     getEntityById(supabase, params.entityId),
     resolveCharacterActionContext(supabase, params.entityId, params.campaignId, params.locale),
-    getEntityRuntimeState(supabase, params.entityId, params.campaignId),
   ]);
   if (!entity) return null;
 
@@ -288,7 +287,9 @@ export async function addEntityParticipant(
     label: entity.name,
     ac: ctx.sheet.ac.value,
     hpMax: ctx.sheet.hitPoints.max,
-    hpCurrent: state.hp.current,
+    // V3.1-199 : une fiche jamais ouverte dans cette campagne n'a pas encore d'état de jeu ; le lire brut
+    // donnait 0 PV (« Hors de combat » à l'entrée). Il s'initialise ici comme à la première ouverture.
+    hpCurrent: (await getOrInitializeRuntimeState(supabase, ctx, { persist: true })).state.hp.current,
     isAlly: params.isAlly,
     displayOrder: await nextDisplayOrder(supabase, params.combatId),
   });

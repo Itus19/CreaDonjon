@@ -10,7 +10,7 @@ import {
 } from "@/src/core/schemas/rule-blocks/blocks";
 import { classSpellcastingWithSubclass, subclassSpellcasting } from "@/src/core/rules/subclassSpellcasting";
 import type { ClassSpellcasting } from "@/src/core/rules/sheet";
-import { subclassFeatureEntryKey, subclassFeatures, type SubclassFeatureData } from "@/src/core/rules/subclass";
+import { belongsToAnotherSubclass, subclassFeatureEntryKey, subclassFeatures, type SubclassFeatureData } from "@/src/core/rules/subclass";
 import { zChoicesBlockData, type ChoiceGrant, type ChoicesBlockData } from "@/src/core/schemas/rule-blocks/choices";
 import { resolveChoices, simpleGrantChoices, type ChoiceSource, type FeatChoiceData, type ResolvedChoices, type SpellMeta } from "@/src/core/rules/choices";
 import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
@@ -496,7 +496,17 @@ async function fetchChipsWithNames(
   keys: string[],
   locale: Locale
 ): Promise<{ chips: Awaited<ReturnType<typeof listRulesetEntryChipsByKeys>>; nameByChipEntryId: Map<string, string> }> {
-  const chips = await listRulesetEntryChipsByKeys(supabase, rulesetId, keys);
+  // V3.1-199 : toute la chaîne, la plus proche l'emporte — une variante (« DnD 2024 ») n'a presque pas
+  // d'entrées à elle : sans cela, ses aptitudes héritées perdaient sous-classe, prérequis et nom traduit.
+  const chips: Awaited<ReturnType<typeof listRulesetEntryChipsByKeys>> = [];
+  let manquantes = keys;
+  for (const link of await walkRulesetChain(supabase, rulesetId)) {
+    if (manquantes.length === 0) break;
+    const lues = await listRulesetEntryChipsByKeys(supabase, link.rulesetId, manquantes);
+    chips.push(...lues);
+    const trouvees = new Set(lues.map((c) => c.entry_key));
+    manquantes = manquantes.filter((k) => !trouvees.has(k));
+  }
   const nameByChipEntryId = new Map<string, string>();
   if (locale !== "en" && chips.length > 0) {
     const translations = await listTranslationsForEntries(supabase, chips.map((c) => c.id), locale);
@@ -645,6 +655,8 @@ export async function assembleResolvedRuleset(
   const extraFeatureKeys = new Map<string, string>();
   /** V3.1-163 : clés lues seulement pour leurs briques jouables (aptitudes de sous-classe). */
   const playableOnlyKeys = new Set<string>();
+  /** V3.1-199 : la sous-classe choisie, par classe. */
+  const subclassByClass = new Map(selection.classes.flatMap((c) => (c.subclass ? [[c.key, c.subclass] as const] : [])));
   const proficiencies: TraitGrant[] = [];
   const languages: TraitGrant[] = [];
   const asiGrantedLevels: Record<string, number[]> = {};
@@ -1027,6 +1039,9 @@ export async function assembleResolvedRuleset(
       const jouable = { ...(resources.length > 0 ? { resources } : {}), ...(activation ? { activation } : {}), ...(echecs.length > 0 ? { forcedSaveFailures: echecs } : {}) };
       // V3.1-163 : une aptitude de sous-classe lue pour ses briques, et qui n'en a pas : rien à ajouter.
       if (playableOnlyKeys.has(fk) && !activation && resources.length === 0 && echecs.length === 0) continue;
+      // V3.1-199 : la progression du SRD liste les aptitudes de la sous-classe d'exemple (Mots cinglants
+      // du Collège du Savoir) : elles ne reviennent qu'à qui a choisi cette sous-classe.
+      if (source.startsWith("class:") && chip && belongsToAnotherSubclass(chip.source_raw, subclassByClass.get(source.slice(6)))) continue;
       // V3.1-49 : une aptitude de classe ouvre ses choix au niveau de SA classe (Expertise du roublard au niveau 6 de roublard).
       const featureClassKey = source.startsWith("class:") ? source.slice(6) : undefined;
       addChoices(

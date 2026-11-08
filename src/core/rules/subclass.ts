@@ -73,3 +73,17 @@ export function subclassFeatures(sub: SubclassInfo, entries: readonly SubclassFe
   }
   return { features, sources };
 }
+
+/**
+ * V3.1-199 — la table de progression d'une classe du SRD liste aussi les
+ * aptitudes de sa sous-classe d'exemple (le Barde : `lore-cutting-words`,
+ * Collège du Savoir). Une telle aptitude (`source_raw.subclass.index`) ne
+ * revient qu'au personnage qui a choisi CETTE sous-classe.
+ */
+export function belongsToAnotherSubclass(sourceRaw: unknown, chosenSubclass: string | undefined): boolean {
+  if (typeof sourceRaw !== "object" || sourceRaw === null) return false;
+  const sub = (sourceRaw as { subclass?: unknown }).subclass;
+  if (typeof sub !== "object" || sub === null) return false;
+  const index = (sub as { index?: unknown }).index;
+  return typeof index === "string" && index !== chosenSubclass;
+}

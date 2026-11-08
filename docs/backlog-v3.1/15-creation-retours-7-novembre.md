@@ -100,11 +100,12 @@ Le moteur connaît le jeton d'un effet durable (une activation accordée tant qu
 - L'initiative et l'outil Rencontres ne listaient que les monstres du ruleset de la campagne, pas ceux qu'il hérite : vide pour toute variante (« DnD 2024 »). Même défaut pour la liste des états du combat. `listChainEntries` (services/rules) lit toute la chaîne, la plus proche l'emporte.
 - La lecture d'un sort au lancer (`readSpellMechanics`, `castSpell`) ignorait les surcharges de la variante : une version maison (la sauvegarde d'Injonction, des dégâts changés) était invisible. Elle lit désormais la fiche résolue (`resolveEntryBlocksInRuleset`).
 
-**Reste à faire (relevé pendant le combat).**
-- L'assistant crée une fiche à 0 PV courants (« Hors de combat » à l'entrée en combat) : un repos long l'a remise à 87/87.
-- « Mots cinglants » (Collège du Savoir) apparaît sur la fiche d'un barde du Collège de la séduction.
-- La fiche ne se rafraîchit pas après une activation qui pose un effet (la réaction accordée n'apparaît qu'au rechargement).
-- Le message d'une réaction d'office affiche la clé technique (« college-de-la-seduction-majeste-souveraine : le jet devient 17 ») au lieu du nom, et une ligne inutile quand le jet ne change pas.
-- Rien ne signale qu'un charmé attaque celle qui le charme.
-- Le journal montre « Sort « command » non lancé par le tour : seul le service de lancer le joue » en plus du vrai lancer : bruit.
-- Une joueuse ne peut pas lancer un sort à sauvegarde sur une cible (connu) : Mante de majesté se joue par le MJ, depuis « Fiche ▸ » dans l'initiative.
+**Les six défauts relevés, repris le 8 novembre.**
+- *Fiche à 0 PV en combat* : l'état de jeu d'une fiche jamais ouverte dans la campagne s'initialise à l'entrée en combat (`addEntityParticipant` passe par `getOrInitializeRuntimeState`), comme à la première ouverture. Vérifié : Lyra recréée entre à 87/87.
+- *Mots cinglants sur un barde d'une autre sous-classe* : la progression du SRD liste les aptitudes de la sous-classe d'exemple. `belongsToAnotherSubclass` (noyau, testé) les écarte sauf pour la sous-classe qu'elles désignent. Il fallait aussi que les données des aptitudes (sous-classe, prérequis, nom traduit) soient lues sur toute la chaîne d'héritage : une variante ne les trouvait pas (`fetchChipsWithNames`). Vérifié : plus de Mots cinglants sur Lyra.
+- *Fiche non rafraîchie après une activation* : pas un défaut. La fiche se recharge après chaque activation ; le script de test avait compté avant la réponse du serveur (6 s).
+- *Clé technique dans le message d'une réaction d'office* : `nomsDesReactions` (rollWindows) donne le libellé de l'activation et qui la joue, pour les attaques, les sauvegardes et les tests ; le total n'est cité que s'il change.
+- *Un charmé qui attaque sa charmeuse* : le jet ciblé du MJ le signale (« … est charmé par … : en règle, il ne peut pas l'attaquer. Le MJ tranche. »), d'après la source de l'effet Charmé (`isCharmedBy`, noyau, testé). Lu seulement si l'attaquant est charmé.
+- *Ligne parasite au journal* : les effets « Lancer un sort » ne passent plus par l'application générique des effets, qui les disait « non lancés ».
+
+Reste connu : une joueuse ne lance pas de sort à sauvegarde sur une cible (Mante de majesté se joue par le MJ, depuis « Fiche ▸ » dans l'initiative).

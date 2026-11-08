@@ -25,7 +25,7 @@ import { getCampaignById, getClaimedCharacterEntityId } from "@/src/server/repos
 import { insertDiceRoll, type DiceRollVisibility } from "@/src/server/repos/diceRolls";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
 import { serverRng } from "@/src/server/services/rng";
-import { interveneOnRoll, selfReactorPool } from "@/src/server/services/rollWindows";
+import { interveneOnRoll, nomsDesReactions, selfReactorPool } from "@/src/server/services/rollWindows";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -256,7 +256,7 @@ async function recordAndBuildOutcome(
     }
     if (r.automatic.length > 0) {
       total = r.roll.total;
-      trace = [...trace, { text: `${r.automatic.map((e) => e.ruleKey).join(", ")} : d20 ${r.roll.natural ?? "?"}`, value: total }];
+      trace = [...trace, { text: `${nomsDesReactions(pool, r.automatic)} : d20 ${r.roll.natural ?? "?"}`, value: total }];
     }
   }
   const verdict = verdictFor(total, params.dc);
