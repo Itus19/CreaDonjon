@@ -14,10 +14,9 @@ import {
   getOfficialBaseRulesetId,
   getRulesetEntryByKey,
   listBlocksForRulesetEntry,
-  listRulesetEntries,
   listTranslationsForEntries,
 } from "@/src/server/repos/rules";
-import { entryNameFrom } from "@/src/server/services/rules";
+import { entryNameFrom, listChainEntries } from "@/src/server/services/rules";
 import { getCampaign } from "@/src/server/services/campaigns";
 import {
   insertCampaignEncounter,
@@ -129,7 +128,8 @@ export async function listMonstersForRuleset(
   rulesetId: string,
   locale: Locale
 ): Promise<EncounterMonsterSummary[]> {
-  const monsters = await listRulesetEntries(supabase, rulesetId, { entryTypes: ["monster"] });
+  // Toute la chaîne : une variante hérite des monstres de sa base.
+  const monsters = await listChainEntries(supabase, rulesetId, ["monster"]);
   if (monsters.length === 0) return [];
 
   const translationByEntryId = new Map<string, string>();

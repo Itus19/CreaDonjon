@@ -76,6 +76,7 @@ import {
   type DeleteRulesetOutcome,
   type SelectableRulesetRow,
   type RulesetEntryRow,
+  type RulesetEntrySummaryRow,
   type RulesetOverrideRow,
 } from "@/src/server/repos/rules";
 import { getWorldDefaultRulesetId, setWorldDefaultRuleset } from "@/src/server/repos/worlds";
@@ -161,6 +162,24 @@ export function walkRulesetChain(supabase: TypedClient, startRulesetId: string):
   // atteint toujours l'appelant par `chain`, jamais avalee.
   chain.then(undefined, () => memory.delete(startRulesetId));
   return chain;
+}
+
+/**
+ * Les entrées d'un type sur TOUTE la chaîne d'héritage d'un ruleset : la plus
+ * proche l'emporte à clé égale (comme `fetchWeaponPool`). Une variante
+ * personnelle (« DnD 2024 ») n'a presque pas d'entrées à elle : lire le seul
+ * ruleset de la campagne laissait vides les monstres et les états du combat.
+ * Une lecture paginée par maillon (la chaîne est mémorisée par requête).
+ */
+export async function listChainEntries(supabase: TypedClient, rulesetId: string, entryTypes: readonly string[]): Promise<RulesetEntrySummaryRow[]> {
+  const chain = await walkRulesetChain(supabase, rulesetId);
+  const parCle = new Map<string, RulesetEntrySummaryRow>();
+  for (const link of chain) {
+    for (const e of await listRulesetEntries(supabase, link.rulesetId, { entryTypes })) {
+      if (!parCle.has(e.entry_key)) parCle.set(e.entry_key, e);
+    }
+  }
+  return [...parCle.values()];
 }
 
 /**

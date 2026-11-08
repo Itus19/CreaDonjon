@@ -29,8 +29,8 @@ import {
   type CombatParticipantRow,
   type CombatRow,
 } from "@/src/server/repos/combats";
-import { getRulesetEntryByKey, listBlocksForRulesetEntry, listRulesetEntries, listTranslationsForEntries } from "@/src/server/repos/rules";
-import { entryNameFrom, getRuleEntryForWorld } from "@/src/server/services/rules";
+import { getRulesetEntryByKey, listBlocksForRulesetEntry, listTranslationsForEntries } from "@/src/server/repos/rules";
+import { entryNameFrom, getRuleEntryForWorld, listChainEntries } from "@/src/server/services/rules";
 import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
 import { fireTriggersForCombatTurn } from "@/src/server/services/combatTriggers";
 import { getEntityById } from "@/src/server/repos/entities";
@@ -874,7 +874,8 @@ export async function undoLastCombatAction(supabase: TypedClient, combatId: stri
 
 /** Catalogue des conditions du ruleset (entry_type "condition"), traduites — le menu deroulant "+ Condition" de l'ecran d'initiative, jamais une liste figee en dur (les deux SRD n'ont pas exactement les memes noms). */
 export async function listConditionNames(supabase: TypedClient, rulesetId: string, locale: Locale): Promise<string[]> {
-  const conditions = await listRulesetEntries(supabase, rulesetId, { entryTypes: ["condition"] });
+  // Toute la chaîne : une variante hérite des états de sa base.
+  const conditions = await listChainEntries(supabase, rulesetId, ["condition"]);
   const translationByEntryId = new Map<string, string>();
   if (locale !== "en") {
     const translations = await listTranslationsForEntries(supabase, conditions.map((e) => e.id), locale);

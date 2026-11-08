@@ -87,3 +87,24 @@ Le moteur connaît le jeton d'un effet durable (une activation accordée tant qu
 - La version maison d'un sort de l'import FR était refusée (400) : son école est stockée en français (« Enchantement »), et le formulaire la renvoyait telle quelle au schéma, qui attend les clés (`Enchantment`). `spellFormValues` la ramène à sa clé (`canonicalSchool`).
 
 **Fait le 8 novembre.** Tests du noyau (`homebrewSpell.test.ts`, `homebrewEdit.test.ts`). Vérifié au navigateur : la version maison d'Injonction (Sauvegarde de Sagesse, aucun dégât) s'enregistre, et le bandeau « bloc manquant : effects » disparaît.
+
+---
+
+### V3.1-199 — Combat de test du Collège : ce qui a cassé, et le reste à faire (sans modèle IA)
+
+**Modèle conseillé : Opus.** Combat joué le 8 novembre dans une table temporaire (variante du SRD 5.2.1 + le Collège recopié de « DnD 2024 »), par l'application : Testeur MJ comme MJ, Testeuse A comme joueuse. Lyra, Barde 14 Collège de la séduction (créée par l'assistant), contre un Sbire gobelin.
+
+**Ce qui a marché.** Majesté souveraine (action Bonus) pose la Présence majestueuse et rend disponible la réaction ; l'attaque du gobelin contre Lyra déclenche d'office le JS de Charisme imposé (raté : l'attaque rate). Charme-personne propose « Aussitôt après : Envoûter » ; Envoûter (Charmer) fait rater le JS de Sagesse du gobelin, Charmé avec JS répété DD 15. À la fin du tour du gobelin, le journal dit « refait son JS de Sagesse (Charmé) : 2 contre DD 15, raté ». Mante de majesté (par le MJ) pose l'effet qui accorde « Injonction (action Bonus) » ; celle-ci lance Injonction sans emplacement, et la sauvegarde du gobelin charmé échoue d'office. Le budget du tour signale la seconde action Bonus.
+
+**Corrigé le 8 novembre.**
+- L'initiative et l'outil Rencontres ne listaient que les monstres du ruleset de la campagne, pas ceux qu'il hérite : vide pour toute variante (« DnD 2024 »). Même défaut pour la liste des états du combat. `listChainEntries` (services/rules) lit toute la chaîne, la plus proche l'emporte.
+- La lecture d'un sort au lancer (`readSpellMechanics`, `castSpell`) ignorait les surcharges de la variante : une version maison (la sauvegarde d'Injonction, des dégâts changés) était invisible. Elle lit désormais la fiche résolue (`resolveEntryBlocksInRuleset`).
+
+**Reste à faire (relevé pendant le combat).**
+- L'assistant crée une fiche à 0 PV courants (« Hors de combat » à l'entrée en combat) : un repos long l'a remise à 87/87.
+- « Mots cinglants » (Collège du Savoir) apparaît sur la fiche d'un barde du Collège de la séduction.
+- La fiche ne se rafraîchit pas après une activation qui pose un effet (la réaction accordée n'apparaît qu'au rechargement).
+- Le message d'une réaction d'office affiche la clé technique (« college-de-la-seduction-majeste-souveraine : le jet devient 17 ») au lieu du nom, et une ligne inutile quand le jet ne change pas.
+- Rien ne signale qu'un charmé attaque celle qui le charme.
+- Le journal montre « Sort « command » non lancé par le tour : seul le service de lancer le joue » en plus du vrai lancer : bruit.
+- Une joueuse ne peut pas lancer un sort à sauvegarde sur une cible (connu) : Mante de majesté se joue par le MJ, depuis « Fiche ▸ » dans l'initiative.

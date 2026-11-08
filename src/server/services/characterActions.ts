@@ -53,8 +53,8 @@ import { getRuntimeState as getRuntimeStateRow } from "@/src/server/repos/runtim
 import { getCampaignById } from "@/src/server/repos/campaigns";
 import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
 import { insertDiceRoll, type DiceRollAttribution } from "@/src/server/repos/diceRolls";
-import { listBlocksForRulesetEntry, type RulesetEntryRow } from "@/src/server/repos/rules";
-import { entryNameFrom, findEntryInRulesetChain } from "@/src/server/services/rules";
+import type { RulesetEntryRow } from "@/src/server/repos/rules";
+import { resolveEntryBlocksInRuleset } from "@/src/server/services/rules";
 import { rechargeTrackers, trackersForRest } from "@/src/core/rules/resourceRecharge";
 import { canCastSpell } from "@/src/core/rules/castableSpells";
 import { naturalD20FromTrace } from "@/src/core/dice/rollAttribution";
@@ -617,16 +617,16 @@ export async function castSpell(
   // V3.1-24 : un sort de concentration la pose. `spell_casting.concentration`
   // est lu avec les blocs deja charges pour les degats — aucune lecture de plus.
   let concentrationToStart: Concentration | null = null;
-  const entry = await findEntryInRulesetChain(supabase, ctx.rulesetId, params.spellKey);
-  if (entry) {
-    const spellBlocks = await listBlocksForRulesetEntry(supabase, entry.id);
-    const casting = zSpellCastingBlockData.safeParse(spellBlocks.find((b) => b.block_type === "spell_casting")?.data);
+  // V3.1-199 : la fiche résolue, version maison comprise (concentration, dégâts, montée en puissance).
+  const resolved = await resolveEntryBlocksInRuleset(supabase, ctx.rulesetId, params.spellKey);
+  if (resolved) {
+    const casting = zSpellCastingBlockData.safeParse(resolved.blocksByType.get("spell_casting"));
     if (casting.success && casting.data.concentration) {
-      concentrationToStart = { spell_key: params.spellKey, label: entryNameFrom(entry) };
+      concentrationToStart = { spell_key: params.spellKey, label: resolved.name ?? params.spellKey };
     }
-    const effectsBlock = spellBlocks.find((b) => b.block_type === "effects");
-    const scalingBlock = spellBlocks.find((b) => b.block_type === "scaling");
-    const effectsData = effectsBlock?.data as unknown as EffectsBlockData | undefined;
+    const scalingData = resolved.blocksByType.get("scaling");
+    const scalingBlock = scalingData === undefined ? undefined : { data: scalingData };
+    const effectsData = resolved.blocksByType.get("effects") as EffectsBlockData | undefined;
     const baseFormula = effectsData?.effects[0]?.formula;
     if (baseFormula && params.rollDamage !== false) {
       const formulaText = scalingBlock
@@ -701,10 +701,11 @@ export async function readSpellMechanics(
   supabase: TypedClient,
   params: { rulesetId: string; spellKey: string }
 ): Promise<{ save: { ability: string; effectOnSuccess?: string } | null; hasFormula: boolean; target: EffectTarget | null } | null> {
-  const entry = await findEntryInRulesetChain(supabase, params.rulesetId, params.spellKey);
-  if (!entry) return null;
-  const blocks = await listBlocksForRulesetEntry(supabase, entry.id);
-  const effectsData = blocks.find((b) => b.block_type === "effects")?.data as unknown as EffectsBlockData | undefined;
+  // V3.1-199 : la fiche RÉSOLUE (surcharges de la variante comprises) — sinon la version maison
+  // d'un sort (Injonction, sa sauvegarde ajoutée par le formulaire) était ignorée.
+  const resolved = await resolveEntryBlocksInRuleset(supabase, params.rulesetId, params.spellKey);
+  if (!resolved) return null;
+  const effectsData = resolved.blocksByType.get("effects") as EffectsBlockData | undefined;
   const first = effectsData?.effects[0];
   return {
     save: first?.save ? { ability: first.save.ability, effectOnSuccess: first.save.effect_on_success } : null,
