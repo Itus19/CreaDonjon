@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activeEffectsForSheet, consumeToken, effectFromRow, effectToRow, expireEffects, instantiateDurableEffect, type ActiveDurableEffect } from "./durableEffects";
+import { activeEffectsForSheet, consumeToken, effectFromRow, effectToRow, effectsDueForRepeatSave, expireEffects, instantiateDurableEffect, rollRepeatSave, type ActiveDurableEffect } from "./durableEffects";
 import type { DurableEffect } from "../schemas/rule-blocks/playable";
 
 /**
@@ -153,5 +153,51 @@ describe("forme stockée (V3.1-130, ADR 0073)", () => {
 
   it("une ligne mal formée est écartée (null), jamais devinée", () => {
     expect(effectFromRow({ id: "x", label: "X", modifiers: [], duration: {}, payload: {} }, "g1")).toBeNull();
+  });
+});
+
+describe("V3.1-195 — le JS répété à la fin de chaque tour du porteur", () => {
+  const CHARME: DurableEffect = {
+    id: "charme-envoutant",
+    label: { fr: "Charmé (Magie envoûtante)" },
+    conditions: ["charmed"],
+    modifiers: [],
+    duration: { unit: "minute", amount: 1 },
+    concentration: false,
+    ends_on: [],
+    token: null,
+    repeat_save: { ability: "wis", dc: { op: "ref", name: "spell_save_dc" } },
+  };
+  const charme = (bearer = "g1") =>
+    instantiateDurableEffect(CHARME, { bearer, source: "barde", activationId: "envoutement", round: 1, currentTurn: "barde", repeatSaveDc: 14 });
+
+  it("l'instance garde la caractéristique et le DD, déjà calculé à la pose", () => {
+    expect(charme().repeatSave).toEqual({ ability: "wis", dc: 14 });
+    expect(effraye().repeatSave).toBeUndefined();
+  });
+
+  it("seuls les effets du porteur qui finit son tour sont à rejouer", () => {
+    expect(effectsDueForRepeatSave([charme("g1"), charme("g2"), effraye("g1")], "g1").map((e) => e.bearer)).toEqual(["g1"]);
+  });
+
+  it("le jet : d20 + bonus + dés de bonus contre le DD ; égal au DD, c'est réussi", () => {
+    const rng = { nextInt: (max: number) => (max === 20 ? 11 : 1) }; // d20 = 12, d4 = 2
+    expect(rollRepeatSave(charme(), { bonus: 0, dice: [] }, rng)).toEqual({ roll: 12, total: 12, dc: 14, passed: false });
+    expect(rollRepeatSave(charme(), { bonus: 0, dice: [{ count: 1, faces: 4 }] }, rng)).toEqual({ roll: 12, total: 14, dc: 14, passed: true });
+  });
+
+  it("une sauvegarde réussie retire l'effet, pour cette instance seulement", () => {
+    const a = { ...charme("g1"), instanceId: "a" };
+    const b = { ...charme("g2"), instanceId: "b" };
+    const r = expireEffects([a, b], { kind: "save_passed", effectInstanceId: "a" });
+    expect(r.kept).toEqual([b]);
+    expect(r.expired).toEqual([{ effect: a, reason: "save" }]);
+  });
+
+  it("la forme stockée le garde ; une ancienne ligne sans lui se relit", () => {
+    const e = charme("g1");
+    expect(effectFromRow({ id: "r", ...effectToRow(e, "magie-envoutante") }, "g1")?.repeatSave).toEqual({ ability: "wis", dc: 14 });
+    const ancienne = effectToRow(effraye("g1"), "x");
+    expect(effectFromRow({ id: "r", ...ancienne }, "g1")?.repeatSave).toBeUndefined();
   });
 });

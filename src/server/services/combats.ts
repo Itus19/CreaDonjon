@@ -567,6 +567,24 @@ async function moveTurn(
     }
   }
 
+  // V3.1-195 (ADR 0090) : à la fin de son tour, le sortant refait ses JS
+  // répétés ; une réussite retire l'effet. Import différé : le service des
+  // jets ciblés importe celui-ci. Une panne n'emporte pas la bascule.
+  let participantsApresJets = participants;
+  if (params.direction === "next") {
+    const sortant = orderParticipants(participants)[combat.turn_index];
+    if (sortant) {
+      try {
+        const { rollRepeatSavesAtTurnEnd } = await import("@/src/server/services/repeatSaves");
+        const jets = await rollRepeatSavesAtTurnEnd(supabase, { campaignId: combat.campaign_id, combatId: combat.id, ending: sortant, actorUserId: params.actorUserId });
+        // Un état retiré : les lignes relues, pour que l'expiration qui suit ne le remette pas.
+        if (jets.some((j) => j.passed)) participantsApresJets = await listCombatParticipants(supabase, combat.id);
+      } catch (err) {
+        console.error("JS répété à la fin du tour impossible", sortant.id, err);
+      }
+    }
+  }
+
   // V3.1-130 (ADR 0060 §3) : les effets qui durent suivent la bascule — fin du
   // tour qui s'achève, fin de round, début du tour qui commence. En avant
   // seulement ; une panne n'emporte pas la bascule, mais se voit.
@@ -580,7 +598,7 @@ async function moveTurn(
       ...(entrant ? [{ kind: "turn_start" as const, actor: `participant:${entrant.id}` }] : []),
     ];
     try {
-      await expireFeatureEffects(supabase, { campaignId: combat.campaign_id, events, callerId: params.actorUserId, callerIsGm: true, combatId: combat.id, participants });
+      await expireFeatureEffects(supabase, { campaignId: combat.campaign_id, events, callerId: params.actorUserId, callerIsGm: true, combatId: combat.id, participants: participantsApresJets });
     } catch (err) {
       console.error("Expiration des effets à la bascule impossible", combat.id, err);
     }

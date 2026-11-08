@@ -225,8 +225,18 @@ export function planActivation(p: {
       if (e.action !== "apply_effect") continue;
       const def = p.block.durable_effects.find((d) => d.id === e.effect);
       if (!def) throw new Refus("unknown_effect", e.effect);
+      // V3.1-195 : le DD du JS répété se calcule ICI, avec les nombres de la source, et se fige.
+      const repeatSaveDc = def.repeat_save ? nombre(def.repeat_save.dc, refs, p.rng) : undefined;
       applied.push(
-        instantiateDurableEffect(def, { bearer: e.who, source: p.actorId, activationId: activation.id, round: p.round, currentTurn: p.currentTurn, locale: p.locale }),
+        instantiateDurableEffect(def, {
+          bearer: e.who,
+          source: p.actorId,
+          activationId: activation.id,
+          round: p.round,
+          currentTurn: p.currentTurn,
+          locale: p.locale,
+          ...(repeatSaveDc !== undefined ? { repeatSaveDc } : {}),
+        }),
       );
     }
 

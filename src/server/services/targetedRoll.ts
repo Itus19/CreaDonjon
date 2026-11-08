@@ -1,5 +1,5 @@
 import "server-only";
-import { rollBonus, type BonusDie } from "@/src/core/rules/sheet";
+import { rollBonus } from "@/src/core/rules/sheet";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
 import type { Locale } from "@/src/i18n/request";
@@ -9,7 +9,7 @@ import { applyEffects, type ApplyResult, type TurnActor, type TurnChange } from 
 import { eventsForAttack, eventsForDamage } from "@/src/core/rules/gameEvents";
 import { resolveAttackRoll, resolveDamageRoll, weaponAttackAbilityMod, type AttackRollResult } from "@/src/core/rules/action";
 import type { FiredEvent, ResolvedEffect } from "@/src/core/rules/triggers";
-import { attackVerdict, damageAfterSave, isOutOfFight, monsterSaveBonus, type AttackVerdict } from "@/src/core/rules/targeting";
+import { attackVerdict, damageAfterSave, isOutOfFight, type AttackVerdict } from "@/src/core/rules/targeting";
 import { creatureTypeOf, isValidTarget, type TargetProfile, type TargetRefusal } from "@/src/core/rules/targetRestriction";
 import { effectsForSaveOutcome, zSaveRequestEffect, type SaveRequestEffect } from "@/src/core/rules/saveRequest";
 import { conditionsWithSource, saveRuleOutcome } from "@/src/core/rules/forcedSaveFailure";
@@ -19,7 +19,6 @@ import { naturalD20FromTrace } from "@/src/core/dice/rollAttribution";
 import { formatFormulaNode } from "@/src/core/formula/format";
 import type { TraceStep } from "@/src/core/formula/evaluate";
 import { rollsForDisplay, type RollDisplay } from "@/src/core/dice/diceTool";
-import { zActionsBlockData, zLegendaryActionsBlockData, zStatBlockBlockData, type StatBlockBlockData } from "@/src/core/schemas/rule-blocks";
 import {
   castSpell,
   readSpellMechanics,
@@ -54,6 +53,9 @@ import { insertDiceRoll } from "@/src/server/repos/diceRolls";
 import { getRuleEntryForWorld } from "@/src/server/services/rules";
 import { ABILITY_LABELS, type Ability } from "@/src/core/rules/abilities";
 import { serverRng } from "@/src/server/services/rng";
+import { loadMonsterBlocks, targetSaveBonus, type MonsterBlocks } from "@/src/server/services/participantSave";
+
+export { targetSaveBonus };
 import type { TargetedRollInput } from "@/lib/combats/schemas";
 import { expireFeatureEffects } from "@/src/server/services/effectExpiry";
 import { parseFormula } from "@/src/core/formula/parser";
@@ -468,10 +470,6 @@ export type TargetedRollResult =
     }
   | { ok: false; reason: TargetedRollErrorReason; detail?: { refusal: TargetRefusal; value: string } };
 
-interface MonsterBlocks {
-  statBlock: StatBlockBlockData | null;
-  actions: { name: string; attack_bonus?: number; damage?: { dice: Parameters<typeof formatFormulaNode>[0]; type?: string }[] }[];
-}
 
 /**
  * Les blocs d'un monstre, lus comme l'écran du MJ les lit (V3.1-106, relu par
@@ -523,18 +521,6 @@ function pendingResult(windowId: string, facts: string[], shown: { total: number
   };
 }
 
-async function loadMonsterBlocks(supabase: TypedClient, params: { worldId: string; ruleKey: string; locale: Locale }): Promise<MonsterBlocks | null> {
-  const entry = await getRuleEntryForWorld(supabase, params.worldId, params.ruleKey, params.locale);
-  if (!entry) return null;
-  const bloc = (type: string) => entry.blocks.find((b) => b.blockType === type)?.data;
-  const stat = zStatBlockBlockData.safeParse(bloc("stat_block"));
-  const actions = zActionsBlockData.safeParse(bloc("actions"));
-  const legendary = zLegendaryActionsBlockData.safeParse(bloc("legendary_actions"));
-  return {
-    statBlock: stat.success ? stat.data : null,
-    actions: [...(actions.success ? actions.data.actions : []), ...(legendary.success ? legendary.data.actions : [])],
-  };
-}
 
 /** Un jet du MJ pour un monstre : enregistré (V3.1-89), caché s'il est secret. */
 async function recordMonsterRoll(
@@ -568,24 +554,6 @@ async function recordMonsterRoll(
   });
 }
 
-/** Le bonus de sauvegarde d'une cible : un PJ par sa fiche, un monstre par son bloc de stats, sinon 0 (et on le dit). */
-export async function targetSaveBonus(
-  supabase: TypedClient,
-  params: { target: CombatParticipantRow; isPc: boolean; ability: string; campaignId: string; worldId: string; locale: Locale }
-): Promise<{ bonus: number; hint: string | null; dice: BonusDie[] }> {
-  const ability = params.ability.toLowerCase();
-  if (params.target.entity_id && params.isPc) {
-    const ctx = await resolveCharacterActionContext(supabase, params.target.entity_id, params.campaignId, params.locale);
-    const save = ctx?.sheet.savingThrows[ability as keyof typeof ctx.sheet.savingThrows];
-    // V3.1-156 (ADR 0074) : un PJ béni ajoute son 1d4, lancé par le serveur avec le d20.
-    if (save) return { bonus: save.mod, hint: null, dice: save.dice };
-  }
-  if (params.target.rule_key) {
-    const monster = await loadMonsterBlocks(supabase, { worldId: params.worldId, ruleKey: params.target.rule_key, locale: params.locale });
-    if (monster?.statBlock) return { bonus: monsterSaveBonus(monster.statBlock, ability), hint: null, dice: [] };
-  }
-  return { bonus: 0, hint: `Sauvegarde de ${params.target.label} sans fiche ni bloc de stats : bonus compté à 0.`, dice: [] };
-}
 
 /**
  * V3.1-110 — le profil d'une cible pour `isValidTarget` : un PJ est humanoïde
@@ -638,6 +606,8 @@ export async function resolveTargetedRoll(
      * n'est relancé, aucune fenêtre ne se rouvre.
      */
     preset?: { attack?: PresetAttack; damage?: { total: number; type?: string } };
+    /** V3.1-196 (ADR 0090) : un sort lancé par l'effet gratuit d'une aptitude — passé par le service des activations seul, jamais par une route. */
+    freeCast?: boolean;
   }
 ): Promise<TargetedRollResult> {
   const { input } = params;
@@ -949,7 +919,7 @@ export async function resolveTargetedRoll(
       const check = isValidTarget({ target: mechanics.target }, profile);
       if (!check.ok) return { ok: false, reason: "invalid_target", detail: { refusal: check.reason, value: check.detail } };
     }
-    const castBase = { entityId: ctx.entityId, campaignId: params.campaignId, spellKey: action.spellKey, slotLevel: action.slotLevel, actorUserId: params.callerId, locale: params.locale };
+    const castBase = { entityId: ctx.entityId, campaignId: params.campaignId, spellKey: action.spellKey, slotLevel: action.slotLevel, actorUserId: params.callerId, locale: params.locale, ...(params.freeCast ? { free: true } : {}) };
 
     if (input.kind === "spell_attack") {
       const rolled = await rollSpellAttack(supabase, { entityId: ctx.entityId, campaignId: params.campaignId, spellKey: action.spellKey, advantage: input.advantage, locale: params.locale });

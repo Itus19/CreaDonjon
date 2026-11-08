@@ -129,7 +129,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 - [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) — Les règles jouables : fondation et chantiers (V3.1-129 à 141, 13 octobre)
 - [`13-audit-de-fin.md`](backlog-v3.1/13-audit-de-fin.md) — L'audit de fin de V3.1 : les retouches d'affichage relevées en chemin, V3.1-144
 - [`14-rugosites-novembre.md`](backlog-v3.1/14-rugosites-novembre.md) — Rugosités de novembre : ce qu'on a constaté en jouant (V3.1-150 à 154, terminés)
-- [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) — La Création de personnage : retours du 7 novembre (V3.1-172 à 189, 193 et 194)
+- [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) — La Création de personnage : retours du 7 novembre (V3.1-172 à 189, 193 à 197)
 - [`termines.md`](backlog-v3.1/termines.md) — Tickets terminés (☑)
 
 | Ticket | État | Modèle IA | Titre | Fichier |
@@ -300,6 +300,9 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-154 | ☑ | sans | PJ attribué sans fiche : sa carte et « Créer la fiche de … » | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-193 | ☑ | sans | Pronoms : une liste à choix multiples, lue pour accorder | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-194 | ☑ | sans | Identité : des champs à la même taille, et « le Commun est acquis » | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-195 | ☑ | sans | Le JS répété à la fin de chaque tour du porteur | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
+| V3.1-196 | ☑ | sans | « Lancer un sort » d'un sort sans activation | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
+| V3.1-197 | ☐ | sans | L'éditeur de briques saisit le jeton, la condition d'accès et le JS répété | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
 | V3.1-172 | ☑ | sans | Espèce, don d'origine, historique : le texte entier, sans quitter l'écran | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-173 | ☑ | sans | Expliquer compétences, bottes d'armes et aptitudes de classe | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-174 | ☑ | sans | La sous-classe en sous-étape, ses choix expliqués | [`termines.md`](backlog-v3.1/termines.md) |

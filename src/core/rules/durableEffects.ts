@@ -42,8 +42,15 @@ export interface ActiveDurableEffect {
   tokenUsesLeft: number;
   /** Round de pose (journal) ; `null` hors combat. */
   startedRound: number | null;
+  /** V3.1-195 : le JS que le porteur refait à la fin de chacun de ses tours (DD figé à la pose). */
+  repeatSave?: RepeatSave;
   /** V3.1-158 : la clé de la règle qui l'a posé (`source_key`) — ses formules lisent la table de la classe qui accorde cette règle. */
   ruleKey?: string;
+}
+
+export interface RepeatSave {
+  ability: "str" | "dex" | "con" | "int" | "wis" | "cha";
+  dc: number;
 }
 
 /** Le libellé dans la langue demandée, sinon le français, sinon le premier venu. */
@@ -58,7 +65,16 @@ export function localized(label: Readonly<Record<string, string>>, locale = "fr"
  */
 export function instantiateDurableEffect(
   def: DurableEffect,
-  at: { bearer: string; source: string; activationId: string; round: number | null; currentTurn: string | null; locale?: string },
+  at: {
+    bearer: string;
+    source: string;
+    activationId: string;
+    round: number | null;
+    currentTurn: string | null;
+    locale?: string;
+    /** V3.1-195 : le DD du JS répété, déjà calculé avec les nombres de la source (`repeat_save.dc`). */
+    repeatSaveDc?: number;
+  },
 ): ActiveDurableEffect {
   const d = def.duration;
   let remainingRounds: number | null = null;
@@ -86,6 +102,7 @@ export function instantiateDurableEffect(
     tokenGrants: def.token?.grants ?? null,
     tokenUsesLeft: def.token?.uses ?? 0,
     startedRound: at.round,
+    ...(def.repeat_save && at.repeatSaveDc !== undefined ? { repeatSave: { ability: def.repeat_save.ability, dc: at.repeatSaveDc } } : {}),
   };
 }
 
@@ -98,9 +115,11 @@ export type ExpiryEvent =
   | { kind: "time"; minutes: number }
   | { kind: "game_event"; event: TriggerEvent; subject: string }
   | { kind: "dismissed"; by: string; effectInstanceId: string }
-  | { kind: "concentration_broken"; source: string };
+  | { kind: "concentration_broken"; source: string }
+  /** V3.1-195 : le porteur a réussi son JS répété contre CETTE instance. */
+  | { kind: "save_passed"; effectInstanceId: string };
 
-export type ExpiryReason = "duration" | "rest" | "concentration" | "dismissed" | "token_used" | `ends_on:${TriggerEvent}`;
+export type ExpiryReason = "duration" | "rest" | "concentration" | "dismissed" | "token_used" | "save" | `ends_on:${TriggerEvent}`;
 
 export interface ExpiryResult {
   kept: ActiveDurableEffect[];
@@ -147,7 +166,32 @@ function step(e: ActiveDurableEffect, ev: ExpiryEvent): { next: ActiveDurableEff
     }
     case "concentration_broken":
       return e.concentration && e.source === ev.source ? { reason: "concentration" } : { next: e };
+    case "save_passed":
+      return e.instanceId === ev.effectInstanceId && e.repeatSave ? { reason: "save" } : { next: e };
   }
+}
+
+/** V3.1-195 — les effets dont le porteur `actor` finit son tour et qui demandent un JS répété. */
+export function effectsDueForRepeatSave(effects: readonly ActiveDurableEffect[], actor: string): ActiveDurableEffect[] {
+  return effects.filter((e) => e.bearer === actor && e.repeatSave !== undefined);
+}
+
+/**
+ * V3.1-195 — le JS répété, lancé par le `Rng` du serveur (règle 8) :
+ * d20 + bonus de sauvegarde + dés de bonus (Bénédiction), contre le DD figé
+ * à la pose. Égal au DD : réussi.
+ */
+export function rollRepeatSave(
+  e: ActiveDurableEffect,
+  save: { bonus: number; dice: readonly { count: number; faces: number }[] },
+  rng: { nextInt(max: number): number },
+): { roll: number; total: number; dc: number; passed: boolean } {
+  const dc = e.repeatSave?.dc ?? 0;
+  const roll = rng.nextInt(20) + 1;
+  let des = 0;
+  for (const d of save.dice) for (let i = 0; i < d.count; i++) des += rng.nextInt(d.faces) + 1;
+  const total = roll + save.bonus + des;
+  return { roll, total, dc, passed: total >= dc };
 }
 
 /** Applique un événement à tous les effets actifs : ce qui reste (décompté), ce qui part et pourquoi. */
@@ -215,6 +259,8 @@ export const zStoredEffectPayload = z.object({
   tokenGrants: z.string().min(1).nullable(),
   tokenUsesLeft: z.number().int().nonnegative(),
   startedRound: z.number().int().nullable(),
+  /** V3.1-195 : absent des lignes antérieures. */
+  repeatSave: z.object({ ability: z.enum(["str", "dex", "con", "int", "wis", "cha"]), dc: z.number().int() }).optional(),
 });
 
 export interface StoredEffectRow {
@@ -243,6 +289,7 @@ export function effectToRow(e: ActiveDurableEffect, sourceKey: string) {
       tokenGrants: e.tokenGrants,
       tokenUsesLeft: e.tokenUsesLeft,
       startedRound: e.startedRound,
+      ...(e.repeatSave ? { repeatSave: e.repeatSave } : {}),
     },
   };
 }

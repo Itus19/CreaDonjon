@@ -223,6 +223,8 @@ export const zDurableEffect = z.object({
   ends_on: z.array(zEndsOn),
   /** Jeton : tant que l'effet dure, son porteur dispose de l'activation `grants` ; un usage épuisé retire l'effet. */
   token: z.object({ uses: z.number().int().positive(), grants: z.string().min(1) }).nullable(),
+  /** V3.1-195 : à la fin de chacun de ses tours, le porteur refait ce JS ; une réussite retire l'effet. Le DD se calcule à la pose. */
+  repeat_save: z.object({ ability: z.enum(["str", "dex", "con", "int", "wis", "cha"]), dc: zFormulaNode }).optional(),
   /** V3.1-132 : le passage dont vient l'effet. */
   passage: zPassage.optional(),
 });

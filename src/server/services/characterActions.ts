@@ -579,11 +579,17 @@ export async function castSpell(
     locale: Locale;
     /** V3.1-105 : `false` pour une attaque de sort ratée — l'emplacement est dépensé, aucun dé de dégâts n'est lancé. Vrai par défaut. */
     rollDamage?: boolean;
+    /**
+     * V3.1-196 (ADR 0090) : lancé par l'effet gratuit d'une aptitude (`cast_spell` `free`) :
+     * le sort n'a pas à être connu, aucun emplacement n'est dépensé. Jamais lu d'une entrée
+     * de route : seul le service des activations le passe.
+     */
+    free?: boolean;
   }
 ): Promise<CastSpellOutcome | { error: ActionErrorReason | "no_slot_available" }> {
   const ctx = await resolveCharacterActionContext(supabase, params.entityId, params.campaignId, params.locale);
   if (!ctx) return { error: "not_found" };
-  if (!canCastSpell(ctx.spellcastingData?.known, ctx.sheet.grantedSpells, params.spellKey)) {
+  if (!params.free && !canCastSpell(ctx.spellcastingData?.known, ctx.sheet.grantedSpells, params.spellKey)) {
     return { error: "item_not_found" };
   }
 
@@ -591,7 +597,8 @@ export async function castSpell(
   // consomme jamais d'emplacement (regle 2024, toujours disponible) — ni
   // verification de disponibilite, ni decompte d'etat d'execution, seul le
   // jet de degats eventuel (identique a un sort normal) s'applique plus bas.
-  const isCantrip = params.slotLevel === 0;
+  // Un sort gratuit (V3.1-196) se traite comme un sort mineur pour l'emplacement : rien n'est dépensé.
+  const isCantrip = params.slotLevel === 0 || params.free === true;
   let used = 0;
   let state: Awaited<ReturnType<typeof getEntityRuntimeState>> | null = null;
   // V3.1-113 (ADR 0045) : un emplacement ordinaire d'abord ; sinon, la réserve

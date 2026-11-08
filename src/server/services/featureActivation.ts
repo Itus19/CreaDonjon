@@ -7,11 +7,12 @@ import { planActivation, type ActivationRefusal } from "@/src/core/rules/activat
 import { effectToRow, type ActiveDurableEffect } from "@/src/core/rules/durableEffects";
 import type { EffectNode, ResolvedEffect, TriggerActorState, TriggerContext } from "@/src/core/rules/triggers";
 import { zActivationBlockData, type ActivationBlockData } from "@/src/core/schemas/rule-blocks/playable";
+import { zSpellCastingBlockData } from "@/src/core/schemas/rule-blocks";
 import { orderParticipants } from "@/src/server/services/combats";
 import { getActiveCombatForCampaign, listCombatParticipants, type CombatParticipantRow } from "@/src/server/repos/combats";
 import { listCampaignCharacters } from "@/src/server/repos/campaigns";
 import { deleteFeatureEffect, insertFeatureEffect, listFeatureEffectsForBearers } from "@/src/server/repos/activeEffects";
-import { resolveCharacterActionContext } from "@/src/server/services/characterActions";
+import { readSpellMechanics, resolveCharacterActionContext } from "@/src/server/services/characterActions";
 import { resolveEntryBlocksInRuleset } from "@/src/server/services/rules";
 import { getCampaign } from "@/src/server/services/campaigns";
 import { applyRuntimeStateChange, getEntityRuntimeState } from "@/src/server/services/runtimeState";
@@ -19,7 +20,7 @@ import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
 import { setConcentration } from "@/src/server/services/concentration";
 import { expireFeatureEffects } from "@/src/server/services/effectExpiry";
 import { applySignedEngineChange, readCombatParticipantsSigned, type EngineChangeLine } from "@/src/server/services/engineSigning";
-import { applyResolvedEffects, targetSaveBonus } from "@/src/server/services/targetedRoll";
+import { applyResolvedEffects, resolveTargetedRoll, targetSaveBonus } from "@/src/server/services/targetedRoll";
 import { serverRng } from "@/src/server/services/rng";
 import { actorNumbersFor } from "@/src/server/services/actorNumbers";
 import { spendTurnBudgetFor } from "@/src/server/services/turnBudgetWrite";
@@ -343,7 +344,7 @@ export async function activateFeature(
       const sort = zActivationBlockData.safeParse(blocs?.blocksByType.get("activation"));
       const premiere = sort.success ? sort.data.activations[0] : undefined;
       if (!premiere) {
-        lances.push(`Le sort « ${e.spell} » ne se joue pas encore (aucune activation) : à jouer à la main.`);
+        lances.push(...(await castSpellWithoutActivation(supabase, { ...params, combatId, spellKey: e.spell, free: e.free, blocs: blocs?.blocksByType })));
         continue;
       }
       const r = await activateFeature(supabase, {
@@ -388,4 +389,62 @@ function bearerOf(
   const p = participants.find((x) => x.id === id);
   if (p?.entity_id && pcEntityIds.has(p.entity_id)) return { entityId: p.entity_id };
   return { participantId: id };
+}
+
+/**
+ * V3.1-196 (ADR 0090) — « lancer un sort » quand le sort n'a pas d'activation
+ * (presque tous les sorts importés) : il passe par le chemin ordinaire d'un sort
+ * à sauvegarde, le jet ciblé — DD de sorts du lanceur, demande de sauvegarde à
+ * la cible, échecs imposés (Mante de majesté) compris. Une fois par cible de
+ * l'aptitude. Gratuit si l'effet le dit : ni emplacement, ni sort connu exigé.
+ * Ce qui ne passe pas est dit, jamais tu.
+ */
+async function castSpellWithoutActivation(
+  supabase: TypedClient,
+  p: {
+    campaignId: string;
+    callerId: string;
+    callerIsGm: boolean;
+    locale: Locale;
+    entityId: string;
+    targetParticipantIds: readonly string[];
+    combatId: string | null;
+    spellKey: string;
+    free: boolean;
+    blocs: ReadonlyMap<string, unknown> | undefined;
+  }
+): Promise<string[]> {
+  const aLaMain = (pourquoi: string) => [`Le sort « ${p.spellKey} » est à jouer à la main : ${pourquoi}.`];
+  const ctx = await resolveCharacterActionContext(supabase, p.entityId, p.campaignId, p.locale);
+  if (!ctx) return aLaMain("fiche introuvable");
+  const mecanique = await readSpellMechanics(supabase, { rulesetId: ctx.rulesetId, spellKey: p.spellKey });
+  if (!mecanique?.save) return aLaMain("sa fiche ne déclare ni activation ni sauvegarde");
+  if (!p.combatId) return aLaMain("hors combat, aucune cible à faire sauvegarder");
+  if (p.targetParticipantIds.length === 0) return aLaMain("aucune cible choisie");
+  // Une sauvegarde demandée à une cible s'écrit par le MJ (le jet ciblé d'un joueur n'en ouvre pas).
+  if (!p.callerIsGm) return aLaMain("un sort à sauvegarde se lance par le MJ, depuis l'outil de dés");
+  const lu = zSpellCastingBlockData.safeParse(p.blocs?.get("spell_casting"));
+  const niveau = lu.success ? lu.data.level : 0;
+  const lignes: string[] = [];
+  for (const targetId of p.targetParticipantIds) {
+    const r = await resolveTargetedRoll(supabase, {
+      campaignId: p.campaignId,
+      combatId: p.combatId,
+      callerId: p.callerId,
+      locale: p.locale,
+      callerIsGm: true,
+      ...(p.free ? { freeCast: true } : {}),
+      input: {
+        kind: "spell_save",
+        actor: { kind: "character", entityId: p.entityId },
+        action: { kind: "spell", spellKey: p.spellKey, slotLevel: niveau },
+        targetId,
+        advantage: "normal",
+        critical: false,
+        secret: false,
+      },
+    });
+    lignes.push(...(r.ok ? [...r.facts, ...r.changes] : [`Le sort « ${p.spellKey} » n'a pas pu être lancé (${r.reason}).`]));
+  }
+  return lignes;
 }

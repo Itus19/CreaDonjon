@@ -195,3 +195,15 @@ describe("coverageState — l'état de couverture d'une fiche (ADR 0060 §4)", (
     expect(coverageState({ blockTypes: ["description"], gaps: [] })).toBe("unevaluated");
   });
 });
+
+describe("V3.1-195 — un effet à JS répété reçoit son DD à la pose", () => {
+  it("le DD est la formule de l'effet, lue avec les nombres de la source", () => {
+    const bloc: ActivationBlockData = zActivationBlockData.parse({
+      ...BLOC,
+      durable_effects: [{ ...BLOC.durable_effects[0], repeat_save: { ability: "wis", dc: { op: "ref", name: "spell_save_dc" } } }],
+    });
+    const r = planActivation({ ...base, block: bloc, targetIds: ["g1"], ctx: scene(), rng: d20s(4) });
+    if (!r.ok) throw new Error(r.reason);
+    expect(r.plan.applied[0].repeatSave).toEqual({ ability: "wis", dc: 15 });
+  });
+});
