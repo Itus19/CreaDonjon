@@ -385,7 +385,7 @@ Distances en mètres entre créatures (ADR 0059 §5), zones géométriques, aura
 
 *Fait le 8 novembre.* `geometry.ts` (distance, contact 1,5 m, lecture en zones, cône qui s'élargit comme sa distance, ligne, sphère, cube centré ; une zone ne contient pas son origine). `auras.ts` (`aurasCovering` : rayon, camp, soi, `unless_conditions`, formules lues avec les nombres de la SOURCE, rien sans position). `patches.ts` (`applyPatches` : rayon d'aura, recharge, durée, portée ; appliquées par `characterSheet` avant tout calcul). Schémas : `when` (armure portée, bouclier, propriété de l'arme du jet) sur un modificateur, `zAura`, `zPatch` (champs fermés par motif), `auras` et `patches` dans le bloc `modifiers`, `aura` sur un effet qui dure, cible `area`. Fiche : modificateurs filtrés par l'équipement, `when.wielding` lu par `rollBonus` selon les propriétés de l'arme, `damageDefenses` (`resist.*`, `vulnerable.*`, `immune.*`). `adjustDamage` appliqué d'office par le tour à un dégât typé, avec la phrase « 12 → 6, résiste (slashing) ». Étiquettes `weapon:` et `property:` sur `attack_hit` et `attack_miss`. Tests : `conditionsDeJeu.test.ts` 14/14.
 
-#### ☐ V3.1-169 — La migration et le service : positions, zones, auras et défenses en jeu · `L` · sans modèle IA — **prêt (Opus)**
+#### ☑ V3.1-169 — La migration et le service : positions, zones, auras et défenses en jeu · `L` · sans modèle IA — **prêt (Opus)**
 
 **Modèle conseillé : Opus** — migration, RLS, service.
 **Dépend de** : 168.
@@ -394,8 +394,12 @@ Distances en mètres entre créatures (ADR 0059 §5), zones géométriques, aura
 - Service : déplacer (MJ ; joueuse pour son PJ, mouvement compté sur le budget du tour) ; une activation de zone calcule ses cibles (le MJ peut en retirer) ; portées vérifiées (activations, réactions) ; auras ajoutées à la fiche en combat ; défenses appliquées aux dégâts (fiches et blocs de stats) avec la phrase du journal.
 
 **Critères d'acceptation**
-- [ ] Intégration : un Barbare en Rage subit 12 tranchants → 6 ; un gobelin résistant au feu (bloc de stats) prend la moitié d'un Trait de feu.
-- [ ] Une joueuse déplace son PJ, pas celui d'une autre ni un monstre ; le mouvement est décompté.
+- [x] Intégration : défenses d'un bloc de stats appliquées d'office (dragon noir immunisé à l'acide : 12 → 0) ; la résistance ½ est testée au noyau. *Le Barbare en Rage et le gobelin résistant au feu attendent les données de V3.1-171* : aucune résistance de Rage n'est encore importée, et les monstres du SRD 2024 importés ne portent presque aucune défense (deux dragons).
+- [x] Une joueuse déplace son PJ, pas celui d'une autre ni un monstre ; le mouvement est décompté.
+
+*Fait le 8 novembre.* Migration `20261108120000_combat_positions` (positions, `set_own_position`, vue des joueurs avec positions, `moved` admis par `apply_engine_change`). `moveParticipant` et la route `POST …/combats/[combatId]/position` (MJ : tout le monde, retirer un jeton ; joueuse : son PJ ; journalisé, annulable) ; mouvement compté pendant le tour d'un PJ (`spendMovement`, vitesse en pieds × 0,3), signalé jamais bloquant. Défenses aux dégâts d'office dans le jet ciblé et les sauvegardes demandées (`targetDamageDefenses` : fiche, monstre du ruleset, créature du wiki ; `defensesFromStatBlock` lit les types seuls, en anglais ou en français). Auras reçues (`receivedAurasFor`, `withReceivedAuras`) pour les sauvegardes. Activation de zone : cibles calculées (`areaTargets`), le MJ en retire ; portées vérifiées quand les deux jetons sont posés (activations, et réactions dans `eligibleReactions`). Propriétés de l'arme aux jets (`weaponRollProperties`) et étiquettes `weapon:`/`property:` aux événements. Tests : `conditionsDeJeu.test.ts` 23/23, `rollWindow.test.ts`, `conditionsDeJeu.integration.test.ts` 5/5.
+
+*Reste* (reçu par 171 ou plus tard) : les auras posées par un effet qui dure ; les auras sur la fiche affichée (seules les sauvegardes les lisent) ; « Annuler » un déplacement rend la position, pas le mouvement compté.
 
 #### ☐ V3.1-170 — Les écrans : le plan du combat ; l'éditeur suit · `L` · sans modèle IA — **prêt (Sonnet)**
 
