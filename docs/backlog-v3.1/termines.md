@@ -6055,3 +6055,16 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
 
 *Restes* : l'en-tête de 24 sorts est mal lu dans leurs traductions françaises (durée vide, composantes incomplètes : *divination* n'a ni durée ni composante M, *arrêt du temps*, *simulacre*…) — autre défaut, tâche à part.
 
+### V3.1-189 — Textes français : l'en-tête des sorts mal lu à l'import, relu dans la source (8 novembre)
+
+**Modèle conseillé : Opus** (script contre la vraie base, contenu officiel).
+
+**Constat** (relevé pendant V3.1-188). Dans les traductions françaises, le bloc `spell_casting` de plusieurs sorts a un en-tête mal lu : durée vide, composante matérielle perdue (*divination* : ni durée ni M), parfois une portée ou un matériau d'un autre sort. Cause : l'import d'origine (`translate-spell-descriptions-2024-fr.ts`) arrêtait une valeur dès qu'une ligne commençait par un chiffre (« M (encens d'une valeur minimale de⏎25 po…) »), et ne lisait plus la durée.
+
+**Fait le 8 novembre** (Opus seul).
+- **Noyau** (tests d'abord, 7 cas) : `src/core/text/enTeteSortPdf.ts` — `lireEnTeteDeSort` cherche le sort par son titre français **suivi de sa ligne d'école** (« Divination du 5e niveau (rituel) », « Sort mineur de transmutation » ; un titre dans une liste de sorts, suivi de l'en-tête d'un AUTRE sort, n'est pas pris), saute les pieds de page des deux éditions, et continue une valeur tant que ses parenthèses ne sont pas fermées, qu'elle finit sur un mot de liaison (« action (Embroussaillement) ou⏎8 heures ») ou que la ligne suivante commence par une minuscule. Rituel : dans le temps d'incantation (2024) ou sur la ligne d'école (2014).
+- **Script** `scripts/fix-entetes-sorts-fr.ts`, à blanc par défaut (chaque écart listé champ par champ), `--write`, relançable : niveau et école non touchés. **21 sorts** corrigés — 6 du SRD 5.1 (*lumières dansantes*, *globe d'invulnérabilité*, *métamorphose animale* : durée et concentration ; *double illusoire* : S seule ; *pattes d'araignée* : contact, bitume et araignée ; *contamination* : 18 m), 15 du 5.2.1 (*divination*, *arrêt du temps*, *simulacre*, *préméditation*, *coffre secret*, *convocations instantanées*, *mythes et légendes*, *création*, *protection contre le mal et le bien*, *lenteur*, *lumières dansantes*, *croissance végétale*, et les trois du 5.1). Tous les sorts des deux SRD sont retrouvés dans la source ; les autres concordent déjà (les sorts mineurs de 2014 à l'identique). Relancé à blanc : 0. Sauvegarde des traductions d'avant hors du dépôt.
+- Vérifié au navigateur (Banc d'essai) : *Divination* — « Durée : instantanée », « V, S, M (encens d'une valeur minimale de 25 po, que le sort détruit) ».
+
+*Restes* : l'écart avec le bloc anglais de base n'a pas servi de preuve (2014 et 2024 diffèrent : *message*, *coup au but*) ; si une donnée anglaise est fausse, c'est un autre ticket.
+
