@@ -31,3 +31,35 @@ export function classSpellcastingWithSubclass(
 ): ClassSpellcasting | undefined {
   return ofClass ?? ofSubclass;
 }
+
+export interface SubclassSpellBudget {
+  /** La liste de sorts où choisir (clé de classe). */
+  spellList: string;
+  ability: SubclassSpellcastingBlockData["ability"];
+  cantrips: number;
+  prepared: number;
+  /** Le plus haut niveau d'emplacement atteint : on ne prépare pas au-delà. */
+  maxSpellLevel: number;
+}
+
+/**
+ * V3.1-190 — combien de sorts une sous-classe lanceuse choisit au niveau de
+ * classe donné, et dans quelle liste. Chaque colonne (emplacements, sorts
+ * mineurs, sorts préparés) vaut sa dernière valeur atteinte. `null` avant la
+ * première ligne, ou sans liste de sorts déclarée.
+ */
+export function subclassSpellBudget(data: SubclassSpellcastingBlockData, classLevel: number): SubclassSpellBudget | null {
+  if (!data.spell_list) return null;
+  const atteintes = [...data.slots].filter((r) => r.level <= classLevel).sort((a, b) => a.level - b.level);
+  if (atteintes.length === 0) return null;
+  let cantrips = 0;
+  let prepared = 0;
+  let counts: number[] = [];
+  for (const r of atteintes) {
+    counts = r.counts;
+    if (r.cantrips !== undefined) cantrips = r.cantrips;
+    if (r.prepared !== undefined) prepared = r.prepared;
+  }
+  const maxSpellLevel = counts.reduce((m, n, i) => (n > 0 ? i + 1 : m), 0);
+  return { spellList: data.spell_list, ability: data.ability, cantrips, prepared, maxSpellLevel };
+}

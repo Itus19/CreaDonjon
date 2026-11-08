@@ -498,8 +498,18 @@ export type SubclassFeaturesBlockData = z.infer<typeof zSubclassFeaturesBlockDat
 export const zSubclassSpellcastingBlockData = z.object({
   ability: z.enum(["str", "dex", "con", "int", "wis", "cha"]),
   caster_weight: z.object({ fraction: z.enum(["full", "half", "third"]), rounding: z.enum(["up", "down"]) }),
+  /** V3.1-190 : la liste de sorts où choisir (clé de classe : « wizard » pour l'Arnaqueur arcanique). Absente : rien à choisir. */
+  spell_list: z.string().min(1).optional(),
   slots: z
-    .array(z.object({ level: z.number().int().min(1).max(20), counts: z.array(z.number().int().nonnegative()).max(9) }))
+    .array(
+      z.object({
+        level: z.number().int().min(1).max(20),
+        counts: z.array(z.number().int().nonnegative()).max(9),
+        /** V3.1-190 : sorts mineurs et sorts préparés à ce niveau ; absents : ceux de la ligne d'avant. */
+        cantrips: z.number().int().nonnegative().optional(),
+        prepared: z.number().int().nonnegative().optional(),
+      })
+    )
     .refine((rows) => new Set(rows.map((r) => r.level)).size === rows.length, { message: "Deux lignes pour le même niveau." }),
 });
 export type SubclassSpellcastingBlockData = z.infer<typeof zSubclassSpellcastingBlockData>;

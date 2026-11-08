@@ -12,6 +12,8 @@ import { useWorldRuleEntries } from "../useWorldRuleEntries";
 import { useRuleEntryBlocks, type RuleEntryBlockData } from "../useRuleEntryBlocks";
 import SelecteurSorts, { type CandidatSort } from "../characterCreator/SelecteurSorts";
 import FicheSort from "../characterCreator/FicheSort";
+import { zSubclassSpellcastingBlockData } from "@/src/core/schemas/rule-blocks/blocks";
+import { subclassSpellBudget } from "@/src/core/rules/subclassSpellcasting";
 
 function findBlock<T>(blocks: RuleEntryBlockData[] | undefined, blockType: string): T | null {
   const found = blocks?.find((b) => b.blockType === blockType);
@@ -26,6 +28,8 @@ function ruleKeyOf(ref: SpellcastingBlockData["known"][number]["ref"]): string |
 interface ClassSpellBudget {
   classKey: string;
   className: string;
+  /** V3.1-190 : la liste de sorts où choisir — celle de la classe, ou celle que déclare sa sous-classe (Arnaqueur arcanique : Magicien). */
+  spellList: string;
   ability: string;
   cantripsAllowed: number;
   spellsAllowed: number;
@@ -92,7 +96,20 @@ function computeBudget(
 
   if (cantripsAllowed === 0 && spellsAllowed === 0) return null;
 
-  return { classKey, className, ability: spellInfo.ability, cantripsAllowed, spellsAllowed, maxSpellLevel };
+  return { classKey, className, spellList: classKey, ability: spellInfo.ability, cantripsAllowed, spellsAllowed, maxSpellLevel };
+}
+
+/**
+ * V3.1-190 — une classe qui ne lance pas de sorts, mais dont la sous-classe
+ * oui (Roublard Arnaqueur arcanique) : le budget et la liste viennent du bloc
+ * `subclass_spellcasting` de la sous-classe (`subclassSpellBudget`).
+ */
+function computeSubclassBudget(classKey: string, className: string, level: number, blocks: RuleEntryBlockData[] | undefined): ClassSpellBudget | null {
+  const lu = zSubclassSpellcastingBlockData.safeParse(findBlock<unknown>(blocks, "subclass_spellcasting"));
+  if (!lu.success) return null;
+  const b = subclassSpellBudget(lu.data, level);
+  if (!b || (b.cantrips === 0 && b.prepared === 0)) return null;
+  return { classKey, className, spellList: b.spellList, ability: b.ability, cantripsAllowed: b.cantrips, spellsAllowed: b.prepared, maxSpellLevel: b.maxSpellLevel };
 }
 
 /** Exportée pour le chemin de création (V3.1-49) : un choix de sort s'y filtre par liste et par niveau. */
@@ -140,7 +157,8 @@ export default function SpellSelectionStep({
     worldSlug,
     spellEntries.map((e) => e.key)
   );
-  const classBlocksByKey = useRuleEntryBlocks(worldSlug, classKeys);
+  const subclassKeys = character.classes.flatMap((c) => (c.subclass?.kind === "rule" && c.subclass.key ? [c.subclass.key] : []));
+  const classBlocksByKey = useRuleEntryBlocks(worldSlug, [...classKeys, ...subclassKeys]);
   const blocksByKey = { ...spellBlocksByKey, ...classBlocksByKey };
 
   const budgets = character.classes
@@ -148,7 +166,8 @@ export default function SpellSelectionStep({
     .map((c) => {
       const key = (c.class as { kind: "rule"; key: string }).key;
       const name = entries.find((e) => e.key === key)?.name ?? key;
-      return computeBudget(key, name, c.level, character.abilities.base, blocksByKey[key]);
+      const sousClasse = c.subclass?.kind === "rule" ? c.subclass.key : null;
+      return computeBudget(key, name, c.level, character.abilities.base, blocksByKey[key]) ?? (sousClasse ? computeSubclassBudget(key, name, c.level, blocksByKey[sousClasse]) : null);
     })
     .filter((b): b is ClassSpellBudget => b !== null);
 
@@ -165,7 +184,7 @@ export default function SpellSelectionStep({
 
     const pool = spellEntries.filter((e) => {
       const { classes, level } = spellClassesAndLevel(blocksByKey[e.key]);
-      if (!classes.includes(budget.classKey)) return false;
+      if (!classes.includes(budget.spellList)) return false;
       return kind === "cantrip" ? level === 0 : level !== null && level >= 1 && level <= budget.maxSpellLevel;
     });
     const cap = kind === "cantrip" ? budget.cantripsAllowed : budget.spellsAllowed;
@@ -195,11 +214,11 @@ export default function SpellSelectionStep({
       {budgets.map((budget) => {
         const cantripPool = spellEntries.filter((e) => {
           const { classes, level } = spellClassesAndLevel(blocksByKey[e.key]);
-          return classes.includes(budget.classKey) && level === 0;
+          return classes.includes(budget.spellList) && level === 0;
         });
         const spellPool = spellEntries.filter((e) => {
           const { classes, level } = spellClassesAndLevel(blocksByKey[e.key]);
-          return classes.includes(budget.classKey) && level !== null && level >= 1 && level <= budget.maxSpellLevel;
+          return classes.includes(budget.spellList) && level !== null && level >= 1 && level <= budget.maxSpellLevel;
         });
         const knownCantrips = spellcasting.known.filter((k) => cantripPool.some((p) => p.key === ruleKeyOf(k.ref))).map((k) => ruleKeyOf(k.ref) ?? "");
         const knownSpells = spellcasting.known.filter((k) => spellPool.some((p) => p.key === ruleKeyOf(k.ref))).map((k) => ruleKeyOf(k.ref) ?? "");

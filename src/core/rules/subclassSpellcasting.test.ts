@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { classSpellcastingWithSubclass, subclassSpellcasting } from "./subclassSpellcasting";
+import { classSpellcastingWithSubclass, subclassSpellBudget, subclassSpellcasting } from "./subclassSpellcasting";
 import { computeSpellSlots } from "./spellSlots";
 import { characterSheet, type CharacterBuild, type ClassSpellcasting, type ResolvedRuleset } from "./sheet";
-import type { SubclassSpellcastingBlockData } from "../schemas/rule-blocks/blocks";
+import { zSubclassSpellcastingBlockData, type SubclassSpellcastingBlockData } from "../schemas/rule-blocks/blocks";
 
 /**
  * V3.1-185 — une sous-classe qui lance des sorts (Arnaqueur arcanique,
@@ -89,5 +89,34 @@ describe("l'incantation d'une sous-classe (V3.1-185)", () => {
     // 8 + maîtrise 2 + Int 3 ; attaque +5.
     expect(sheet.spellcasting?.saveDc).toBe(13);
     expect(sheet.spellcasting?.attackBonus).toBe(5);
+  });
+});
+
+describe("V3.1-190 — le budget de sorts d'une sous-classe lanceuse", () => {
+  const AVEC_BUDGET: SubclassSpellcastingBlockData = {
+    ...ARNAQUEUR,
+    spell_list: "wizard",
+    slots: [
+      { level: 3, counts: [2], cantrips: 2, prepared: 3 },
+      { level: 4, counts: [3], prepared: 4 },
+      { level: 7, counts: [4, 2], prepared: 5 },
+      { level: 10, counts: [4, 3], cantrips: 3, prepared: 7 },
+    ],
+  };
+
+  it("la dernière ligne atteinte vaut, colonne par colonne ; le niveau de sort maximal suit les emplacements", () => {
+    expect(subclassSpellBudget(AVEC_BUDGET, 2)).toBeNull();
+    expect(subclassSpellBudget(AVEC_BUDGET, 3)).toEqual({ spellList: "wizard", ability: "int", cantrips: 2, prepared: 3, maxSpellLevel: 1 });
+    expect(subclassSpellBudget(AVEC_BUDGET, 8)).toEqual({ spellList: "wizard", ability: "int", cantrips: 2, prepared: 5, maxSpellLevel: 2 });
+    expect(subclassSpellBudget(AVEC_BUDGET, 12)).toEqual({ spellList: "wizard", ability: "int", cantrips: 3, prepared: 7, maxSpellLevel: 2 });
+  });
+
+  it("sans liste de sorts déclarée, pas de budget (rien à proposer)", () => {
+    expect(subclassSpellBudget(ARNAQUEUR, 5)).toBeNull();
+  });
+
+  it("le schéma accepte les colonnes du budget, et les refuse négatives", () => {
+    expect(zSubclassSpellcastingBlockData.safeParse(AVEC_BUDGET).success).toBe(true);
+    expect(zSubclassSpellcastingBlockData.safeParse({ ...AVEC_BUDGET, slots: [{ level: 3, counts: [2], prepared: -1 }] }).success).toBe(false);
   });
 });

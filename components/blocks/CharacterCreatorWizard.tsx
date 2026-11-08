@@ -235,8 +235,12 @@ export default function CharacterCreatorWizard({
   // sans dupliquer son calcul de budget (qui depend du niveau et n'est pas
   // necessaire ici, juste "cette classe incante-t-elle un jour ?").
   const classKeys = character.classes.filter((c) => c.class.kind === "rule" && c.class.key).map((c) => (c.class as { kind: "rule"; key: string }).key);
-  const classBlocksByKey = useRuleEntryBlocks(worldSlug, classKeys);
-  const hasSpellcastingClass = classKeys.some((key) => classBlocksByKey[key]?.some((b) => b.blockType === "spellcasting_progression"));
+  // V3.1-190 : une sous-classe lanceuse (Arnaqueur arcanique) ouvre aussi l'étape — même lot de clés que `SpellSelectionStep` (cache partagé).
+  const subclassKeys = character.classes.flatMap((c) => (c.subclass?.kind === "rule" && c.subclass.key ? [c.subclass.key] : []));
+  const classBlocksByKey = useRuleEntryBlocks(worldSlug, [...classKeys, ...subclassKeys]);
+  const hasSpellcastingClass =
+    classKeys.some((key) => classBlocksByKey[key]?.some((b) => b.blockType === "spellcasting_progression")) ||
+    subclassKeys.some((key) => classBlocksByKey[key]?.some((b) => b.blockType === "subclass_spellcasting" && typeof (b.data as { spell_list?: unknown })?.spell_list === "string"));
 
   const {
     remainingChoices,
