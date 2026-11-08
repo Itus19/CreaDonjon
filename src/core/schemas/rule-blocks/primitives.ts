@@ -109,6 +109,20 @@ export function isRollTarget(target: string): boolean {
   return /^(attack|damage|save|check)(\.|$)/.test(target) || target.startsWith("skill.");
 }
 
+/**
+ * V3.1-168 (ADR 0077) — une condition d'équipement, vocabulaire fermé : la
+ * catégorie d'armure portée (`none` : sans armure), la présence d'un
+ * bouclier, une propriété de l'arme du jet (`finesse`, `ranged`…).
+ */
+export const zEquipmentCondition = z
+  .object({
+    armor: z.array(z.enum(["none", "light", "medium", "heavy"])).min(1).optional(),
+    shield: z.boolean().optional(),
+    wielding: z.string().min(1).max(40).optional(),
+  })
+  .strict();
+export type EquipmentCondition = z.infer<typeof zEquipmentCondition>;
+
 export const zModifier = z
   .object({
     target: z.string(),
@@ -117,6 +131,8 @@ export const zModifier = z
     value: z.union([z.number(), zFormulaNode]).optional(),
     /** V3.1-121 : `value` est par niveau de personnage (Ténacité naine : +1 PV max par niveau). */
     per_level: z.boolean().optional(),
+    /** V3.1-168 (ADR 0077) : ne s'applique que si l'équipement le permet (Défense sans armure, fin de la Rage en armure lourde). */
+    when: zEquipmentCondition.optional(),
   })
   .superRefine((m, ctx) => {
     if (m.value !== undefined && typeof m.value !== "number" && containsDice(m.value) && !isRollTarget(m.target)) {
@@ -127,3 +143,25 @@ export type Modifier = z.infer<typeof zModifier>;
 
 export const zLocalized = z.record(z.string(), z.string());
 export type Localized = z.infer<typeof zLocalized>;
+
+/**
+ * V3.1-168 (ADR 0077) — une aura : des modificateurs pour ceux que couvre son
+ * rayon, selon leur camp, tant que sa source ne porte aucun des états de
+ * `unless_conditions`. Ses formules se lisent avec les nombres de la SOURCE.
+ */
+export const zAura = z.object({
+  radius: z.number().positive().max(300),
+  affects: z.enum(["allies", "enemies", "all"]),
+  self: z.boolean(),
+  unless_conditions: z.array(z.string().min(1)).optional(),
+  modifiers: z.array(zModifier),
+});
+export type Aura = z.infer<typeof zAura>;
+
+/** V3.1-168 (ADR 0077) — une retouche d'une règle par une autre ; `field` est pris dans une liste fermée. */
+export const zPatch = z.object({
+  rule: z.string().min(1),
+  field: z.string().regex(/^(aura\.radius|resource\.[a-z0-9_-]+\.recharge|durable_effect\.[a-z0-9_-]+\.duration|activation\.[a-z0-9_-]+\.range)$/),
+  value: z.union([z.number(), z.string(), z.record(z.string(), z.unknown())]),
+});
+export type Patch = z.infer<typeof zPatch>;

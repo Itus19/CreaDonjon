@@ -371,7 +371,7 @@ Distances en mètres entre créatures (ADR 0059 §5), zones géométriques, aura
 
 *Conçu le 8 novembre* : [ADR 0077](../adr/0077-conditions-de-jeu-et-distances.md). Deux choix de l'auteur : un **plan sans grille** où l'on pose les jetons (positions en mètres, distances et géométrie calculées) ; les **résistances, vulnérabilités et immunités appliquées d'office** à tout dégât typé. Découpé ci-dessous.
 
-#### ☐ V3.1-168 — Le noyau : géométrie, zones, auras, défenses aux dégâts, conditions d'équipement, retouches · `L` · sans modèle IA — **prêt (Opus)**
+#### ☑ V3.1-168 — Le noyau : géométrie, zones, auras, défenses aux dégâts, conditions d'équipement, retouches · `L` · sans modèle IA — **prêt (Opus)**
 
 **Modèle conseillé : Opus** — noyau du moteur. Tests d'abord.
 
@@ -381,7 +381,9 @@ Distances en mètres entre créatures (ADR 0059 §5), zones géométriques, aura
 - `adjustDamage` dans `turn.ts` (dégât typé seulement) ; étiquettes `weapon:` et `property:` dans `eventsForAttack`.
 
 **Critères d'acceptation**
-- [ ] Tests : un cône de 4,5 m prend les deux gobelins devant et pas celui derrière ; Aura de protection à 3 m couvre l'allié à 3 m et pas celui à 4,5 m, et rien quand le paladin est Neutralisé ; Rage : 12 tranchants → 6, 12 feu → 12 ; résistance et vulnérabilité s'annulent ; Défense sans armure ignorée en armure ; Aura étendue porte le rayon à 9 m.
+- [x] Tests : un cône de 4,5 m prend les deux gobelins devant et pas celui derrière ; Aura de protection à 3 m couvre l'allié à 3 m et pas celui à 4,5 m, et rien quand le paladin est Neutralisé ; Rage : 12 tranchants → 6, 12 feu → 12 ; résistance et vulnérabilité s'annulent ; Défense sans armure ignorée en armure ; Aura étendue porte le rayon à 9 m.
+
+*Fait le 8 novembre.* `geometry.ts` (distance, contact 1,5 m, lecture en zones, cône qui s'élargit comme sa distance, ligne, sphère, cube centré ; une zone ne contient pas son origine). `auras.ts` (`aurasCovering` : rayon, camp, soi, `unless_conditions`, formules lues avec les nombres de la SOURCE, rien sans position). `patches.ts` (`applyPatches` : rayon d'aura, recharge, durée, portée ; appliquées par `characterSheet` avant tout calcul). Schémas : `when` (armure portée, bouclier, propriété de l'arme du jet) sur un modificateur, `zAura`, `zPatch` (champs fermés par motif), `auras` et `patches` dans le bloc `modifiers`, `aura` sur un effet qui dure, cible `area`. Fiche : modificateurs filtrés par l'équipement, `when.wielding` lu par `rollBonus` selon les propriétés de l'arme, `damageDefenses` (`resist.*`, `vulnerable.*`, `immune.*`). `adjustDamage` appliqué d'office par le tour à un dégât typé, avec la phrase « 12 → 6, résiste (slashing) ». Étiquettes `weapon:` et `property:` sur `attack_hit` et `attack_miss`. Tests : `conditionsDeJeu.test.ts` 14/14.
 
 #### ☐ V3.1-169 — La migration et le service : positions, zones, auras et défenses en jeu · `L` · sans modèle IA — **prêt (Opus)**
 

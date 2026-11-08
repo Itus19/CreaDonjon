@@ -49,7 +49,32 @@ export interface TurnActor {
    * les PV tombent a zero sans autre suite, comme avant.
    */
   deathSaves?: DeathSaves;
+  /** V3.1-168 (ADR 0077) : résistances, vulnérabilités, immunités aux types de dégâts ; appliquées d'office à un dégât typé. */
+  defenses?: { resist: readonly string[]; vulnerable: readonly string[]; immune: readonly string[] };
 }
+
+/**
+ * V3.1-168 (ADR 0077) — un dégât TYPÉ face aux défenses de sa cible :
+ * immunité 0 ; résistance ½ (arrondi à l'inférieur) ; vulnérabilité ×2 ;
+ * résistance et vulnérabilité s'annulent. Un dégât sans type n'est jamais
+ * modifié : on ne devine pas son type.
+ */
+export function adjustDamage(
+  amount: number,
+  type: string | undefined,
+  defenses: TurnActor["defenses"] | undefined
+): { amount: number; reason: "resist" | "vulnerable" | "immune" | null } {
+  if (!type || !defenses) return { amount, reason: null };
+  const t = type.toLowerCase();
+  if (defenses.immune.includes(t)) return { amount: 0, reason: "immune" };
+  const resiste = defenses.resist.includes(t);
+  const vulnerable = defenses.vulnerable.includes(t);
+  if (resiste && !vulnerable) return { amount: Math.floor(amount / 2), reason: "resist" };
+  if (vulnerable && !resiste) return { amount: amount * 2, reason: "vulnerable" };
+  return { amount, reason: null };
+}
+
+const RAISON_FR = { resist: "résiste", vulnerable: "est vulnérable", immune: "est immunisé" } as const;
 
 export interface TurnState {
   scene: SceneState;
@@ -136,12 +161,14 @@ export function applyEffects(state: TurnState, effects: readonly ResolvedEffect[
           break;
         }
         const from = actor.hp;
+        // V3.1-168 : les défenses de la cible, d'office, sur un dégât typé.
+        const ajuste = effect.action === "deal_damage" ? adjustDamage(effect.amount, effect.damage_type, actor.defenses) : { amount: effect.amount, reason: null };
         const updated =
-          effect.action === "deal_damage" ? damageActor(actor, effect.amount, effect.critical === true) : healActor(actor, effect.amount);
+          effect.action === "deal_damage" ? damageActor(actor, ajuste.amount, effect.critical === true) : healActor(actor, effect.amount);
         const to = updated.hp;
         const note =
           effect.action === "deal_damage"
-            ? `Dégâts : ${effect.amount}${effect.damage_type ? ` (${effect.damage_type})` : ""}`
+            ? `Dégâts : ${ajuste.reason ? `${effect.amount} → ${ajuste.amount}, ${RAISON_FR[ajuste.reason]} (${effect.damage_type})` : `${effect.amount}${effect.damage_type ? ` (${effect.damage_type})` : ""}`}`
             : `Soins : ${effect.amount}`;
         next = withActor(next, effect.who, updated);
         changes.push({ kind: "hp", who: effect.who, from, to, note });

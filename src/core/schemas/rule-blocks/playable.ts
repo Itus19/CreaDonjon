@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { zFormulaNode, zLocalized, zModifier } from "./primitives";
+import { zAura, zFormulaNode, zLocalized, zModifier } from "./primitives";
 import { TRIGGER_EVENTS, zCondition, zEffect, type EffectNode } from "../../rules/triggers";
 
 /**
@@ -42,7 +42,7 @@ export type RuleResourcesBlockData = z.infer<typeof zRuleResourcesBlockData>;
  * V3.1-164 (ADR 0076) : `attack` remplace une attaque de l'action Attaque (Souffle).
  */
 export const ACTIVATION_COSTS = ["action", "bonus", "reaction", "magic", "free", "none", "attack"] as const;
-export const ACTIVATION_TARGET_KINDS = ["self", "creature", "ally", "enemy", "point"] as const;
+export const ACTIVATION_TARGET_KINDS = ["self", "creature", "ally", "enemy", "point", "area"] as const;
 
 const zActivationCost = z.object({
   action: z.enum(ACTIVATION_COSTS),
@@ -68,7 +68,11 @@ const zActivationTargets = z.object({
   /** En mètres : se mesure aux distances réelles de l'ADR 0059, et d'ici là à leur lecture en zones. */
   range: z.object({ value: z.number().positive(), unit: z.literal("m") }).optional(),
   must_see: z.boolean().optional(),
-});
+  /** V3.1-168 (ADR 0077) : avec `kind: "area"`, la zone que pose le joueur sur le plan ; le moteur calcule qui est dedans. */
+  area: z
+    .object({ shape: z.enum(["cone", "line", "sphere", "cube"]), size: z.number().positive().max(300), width: z.number().positive().max(60).optional(), origin: z.enum(["self", "point"]) })
+    .optional(),
+}).refine((t) => (t.kind === "area") === (t.area !== undefined), { message: "Une cible « zone » décrit sa zone, et seulement elle." });
 
 const zEffectList = z.array(zEffect);
 
@@ -191,6 +195,8 @@ export const zDurableEffect = z.object({
   token: z.object({ uses: z.number().int().positive(), grants: z.string().min(1) }).nullable(),
   /** V3.1-132 : le passage dont vient l'effet. */
   passage: zPassage.optional(),
+  /** V3.1-168 (ADR 0077) : tant qu'il dure, son porteur étend cette aura. */
+  aura: zAura.optional(),
 });
 export type DurableEffect = z.infer<typeof zDurableEffect>;
 
