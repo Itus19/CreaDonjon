@@ -26,8 +26,12 @@ export interface Coupure {
   apres: string;
 }
 
+/** Une rangée de tableau (« a | b », V3.1-187) : jamais recollée à sa voisine. */
+const RANGEE_DE_TABLEAU = /\s\|\s/;
+
 function seRecolle(ligne: string, suivante: string): boolean {
   if (suivante === "" || DEBUT_RETOUR_VRAI.test(suivante) || !FIN_SANS_PONCTUATION.test(ligne)) return false;
+  if (RANGEE_DE_TABLEAU.test(ligne) || RANGEE_DE_TABLEAU.test(suivante)) return false;
   if (SUITE.test(suivante)) return true;
   const dernierMot = ligne.split(/\s+/).pop()?.toLowerCase() ?? "";
   return /^[A-ZÀ-ÝŒ]/.test(suivante) && LIAISONS.has(dernierMot);

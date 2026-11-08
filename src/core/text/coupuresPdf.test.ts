@@ -30,6 +30,11 @@ describe("recollerCoupures", () => {
     expect(recollerCoupures(t).texte).toBe("Fin de phrase.\nNouvelle phrase.\n**Intertitre.** Texte\n**Autre.** Texte\n- un point de liste");
   });
 
+  it("les rangées d'un tableau (« a | b », V3.1-187) ne se recollent pas, même finies en minuscule et suivies d'un nombre", () => {
+    const t = "Niveau | Sorts\n5 | aide, zone de vérité\n9 | dissipation de la magie";
+    expect(recollerCoupures(t)).toEqual({ texte: t, coupures: [] });
+  });
+
   it("un texte sans coupure revient identique", () => {
     expect(recollerCoupures("Rien à faire.")).toEqual({ texte: "Rien à faire.", coupures: [] });
   });

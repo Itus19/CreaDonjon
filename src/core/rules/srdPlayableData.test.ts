@@ -113,6 +113,14 @@ describe("les règles jouables du SRD écrites à la main", () => {
     }
   });
 
+  it("V3.1-192 : Frappe malicieuse propose ses trois effets, avec le DD 8 + Dex + maîtrise", () => {
+    const fm = zActivationBlockData.parse(RAW["rogue-cunning-strike"].activation).activations[0];
+    expect(fm.variants?.map((v) => v.id)).toEqual(["trip", "poison", "withdraw"]);
+    const effet = fm.variants?.[0].effects[0];
+    if (effet?.action !== "saving_throw") throw new Error("sauvegarde attendue");
+    expect(evaluate(effet.dc, { "ability.dex": 4, proficiency: 3 }, { nextInt: () => 0 }, "average").value).toBe(15);
+  });
+
   it("couverture : Second souffle est jouable ; Fougue et Abjuration le sont en partie, et le disent", () => {
     const etat = (k: string) =>
       coverageSummary(TYPES.filter((t) => RAW[k][t] !== undefined).map((t) => ({ blockType: t, data: validateBlockData(t, RAW[k][t]) }))).state;

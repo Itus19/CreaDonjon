@@ -600,6 +600,150 @@
       ]
     }
   },
+  "rogue-cunning-strike": {
+    "_regle": "Frappe malicieuse : sur des dégâts d'Attaque sournoise, un effet au choix contre 1d6 de ses dés ; JS contre 8 + mod. Dex + maîtrise. Croc-en-jambe (Dex, sinon À terre), Poison (Con, sinon Empoisonné 1 minute), Repli (moitié de la Vitesse sans attaque d'opportunité). V3.1-192.",
+    "activation": {
+      "activations": [
+        {
+          "id": "cunning-strike",
+          "label": {
+            "fr": "Frappe malicieuse",
+            "en": "Cunning Strike"
+          },
+          "cost": {
+            "action": "none",
+            "resources": []
+          },
+          "targets": {
+            "kind": "creature"
+          },
+          "effects": [],
+          "variants": [
+            {
+              "id": "trip",
+              "label": {
+                "fr": "Croc-en-jambe",
+                "en": "Trip"
+              },
+              "effects": [
+                {
+                  "action": "saving_throw",
+                  "who": "target",
+                  "ability": "dex",
+                  "dc": {
+                    "op": "add",
+                    "args": [
+                      {
+                        "op": "add",
+                        "args": [
+                          {
+                            "op": "num",
+                            "value": 8
+                          },
+                          {
+                            "op": "ref",
+                            "name": "ability.dex"
+                          }
+                        ]
+                      },
+                      {
+                        "op": "ref",
+                        "name": "proficiency"
+                      }
+                    ]
+                  },
+                  "on_fail": [
+                    {
+                      "action": "apply_condition",
+                      "who": "target",
+                      "key": "prone"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "poison",
+              "label": {
+                "fr": "Poison",
+                "en": "Poison"
+              },
+              "effects": [
+                {
+                  "action": "saving_throw",
+                  "who": "target",
+                  "ability": "con",
+                  "dc": {
+                    "op": "add",
+                    "args": [
+                      {
+                        "op": "add",
+                        "args": [
+                          {
+                            "op": "num",
+                            "value": 8
+                          },
+                          {
+                            "op": "ref",
+                            "name": "ability.dex"
+                          }
+                        ]
+                      },
+                      {
+                        "op": "ref",
+                        "name": "proficiency"
+                      }
+                    ]
+                  },
+                  "on_fail": [
+                    {
+                      "action": "apply_condition",
+                      "who": "target",
+                      "key": "poisoned"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "withdraw",
+              "label": {
+                "fr": "Repli",
+                "en": "Withdraw"
+              },
+              "effects": [
+                {
+                  "action": "narrate_hint",
+                  "text": "Aussitôt après l'attaque, vous vous déplacez de la moitié de votre Vitesse sans provoquer d'attaques d'Opportunité."
+                }
+              ]
+            }
+          ],
+          "passages": {
+            "variants.0.effects.0": "elle doit réussir un jet de sauvegarde de Dextérité sous peine de subir l’état À terre",
+          "variants.1.effects.0": "contraignant la cible à effectuer un jet de sauvegarde de Constitution"
+          }
+        }
+      ],
+      "durable_effects": []
+    },
+    "coverage": {
+      "gaps": [
+        {
+          "text": "au nombre de dés d’Attaque sournoise auquel vous renoncez pour ajouter cet effet",
+          "missing": "Le dé auquel on renonce n'est pas retiré du jet d'Attaque sournoise : la joueuse le retire en lançant (la Frappe malicieuse se joue au clic, après la touche)."
+        },
+        {
+          "text": "Si la cible est une de taille G ou inférieure",
+          "missing": "La taille de la cible n'est pas vérifiée : la table tranche."
+        },
+        {
+          "text": "La cible réitère le JS à la fin de chacun de ses tours",
+          "missing": "L'état Empoisonné est posé sans sa sauvegarde répétée ni sa durée d'une minute : le MJ le retire."
+        }
+      ]
+    }
+  },
   "rogue-uncanny-dodge": {
     "_regle": "Esquive instinctive : Reaction quand un assaillant vous touche, moitie des degats de cette attaque (arrondi a l'inferieur). V3.1-162.",
     "activation": {
