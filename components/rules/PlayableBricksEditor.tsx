@@ -10,7 +10,9 @@ import { ACTIVATION_COSTS, ACTIVATION_TARGET_KINDS } from "@/src/core/schemas/ru
 import { ABILITY_LABELS } from "@/src/core/rules/abilities";
 import type { Ability } from "@/src/core/rules/sheet";
 import {
+  FORMES_ZONE,
   apercuBouton,
+  avecGenreCible,
   blocsVersBrouillon,
   brouillonVersBlocs,
   citationDepuisSelection,
@@ -38,6 +40,7 @@ import {
 } from "@/lib/ui/briquesRegle";
 import { chargerRessourcesDeclarees, enregistrerBriques, type RessourceDeclaree } from "@/lib/ui/regleApi";
 import ChampFormule from "@/components/rules/briques/ChampFormule";
+import ConditionEquipement from "@/components/rules/briques/ConditionEquipement";
 import ReactionEditeur from "@/components/rules/briques/BriqueReaction";
 import { ListeEffets } from "@/components/rules/briques/BriqueEffet";
 import {
@@ -433,6 +436,8 @@ function CarteActivation({ activation: a, onChange, onRemove }: { activation: Br
 
       <ReactionEditeur activation={a} onChange={onChange} />
 
+      <ConditionEquipement condition={a.quand} onChange={(quand) => onChange({ ...a, quand })} />
+
       <CoutEditeur cout={a.cout} onChange={(cout) => onChange({ ...a, cout })} uid={`${a.uid}:cout`} avecCitation />
 
       <CarteBrique uid={`${a.uid}:cibles`} titre={t("cibles")}>
@@ -441,11 +446,47 @@ function CarteActivation({ activation: a, onChange, onRemove }: { activation: Br
             libelle={t("qui")}
             valeur={cibles.kind}
             options={ACTIVATION_TARGET_KINDS.map((k) => ({ value: k, label: t(`genresCible.${k}`) }))}
-            onChange={(v) => onChange({ ...a, cibles: { ...cibles, kind: (ACTIVATION_TARGET_KINDS.find((k) => k === v) ?? cibles.kind) as GenreCible } })}
+            onChange={(v) => onChange({ ...a, cibles: avecGenreCible(cibles, (ACTIVATION_TARGET_KINDS.find((k) => k === v) ?? cibles.kind) as GenreCible) })}
           />
           <ChampFormule facultatif libelle={t("nombreCibles")} valeur={cibles.nombre} onChange={(nombre) => onChange({ ...a, cibles: { ...cibles, nombre } })} />
           <ChampTexte libelle={t("portee")} valeur={cibles.portee} onChange={(portee) => onChange({ ...a, cibles: { ...cibles, portee } })} mecanique />
         </div>
+        {cibles.zone && (
+          <div className="grid gap-3 rounded-md border border-edge/60 p-2 sm:grid-cols-2 lg:grid-cols-4" data-testid="editeur-zone">
+            <ChampListe
+              libelle={t("zone.forme")}
+              valeur={cibles.zone.forme}
+              options={FORMES_ZONE.map((f) => ({ value: f, label: t(`zone.formes.${f}`) }))}
+              onChange={(v) => {
+                const forme = FORMES_ZONE.find((f) => f === v);
+                if (forme && cibles.zone) onChange({ ...a, cibles: { ...cibles, zone: { ...cibles.zone, forme } } });
+              }}
+            />
+            <ChampTexte
+              libelle={cibles.zone.forme === "sphere" ? t("zone.rayon") : cibles.zone.forme === "cube" ? t("zone.cote") : t("zone.longueur")}
+              valeur={cibles.zone.taille}
+              onChange={(taille) => cibles.zone && onChange({ ...a, cibles: { ...cibles, zone: { ...cibles.zone, taille } } })}
+              mecanique
+            />
+            {cibles.zone.forme === "line" && (
+              <ChampTexte
+                libelle={t("zone.largeur")}
+                valeur={cibles.zone.largeur}
+                onChange={(largeur) => cibles.zone && onChange({ ...a, cibles: { ...cibles, zone: { ...cibles.zone, largeur } } })}
+                mecanique
+              />
+            )}
+            <ChampListe
+              libelle={t("zone.origine")}
+              valeur={cibles.zone.origine}
+              options={[
+                { value: "self", label: t("zone.depuisSoi") },
+                { value: "point", label: t("zone.enUnPoint") },
+              ]}
+              onChange={(v) => cibles.zone && onChange({ ...a, cibles: { ...cibles, zone: { ...cibles.zone, origine: v === "point" ? "point" : "self" } } })}
+            />
+          </div>
+        )}
         <Checkbox checked={cibles.doitVoir} onChange={() => onChange({ ...a, cibles: { ...cibles, doitVoir: !cibles.doitVoir } })} label={t("doitVoir")} />
         <Citation passage={cibles.passage} onChange={(passage) => onChange({ ...a, cibles: { ...cibles, passage } })} />
       </CarteBrique>

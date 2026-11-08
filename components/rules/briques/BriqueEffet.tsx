@@ -25,6 +25,7 @@ import {
   type CorpsEffet,
 } from "@/lib/ui/briquesRegle";
 import ChampFormule from "@/components/rules/briques/ChampFormule";
+import ConditionEquipement from "@/components/rules/briques/ConditionEquipement";
 import { BoutonPetit, CarteBrique, ChampListe, ChampTexte, Citation, useContexteBriques } from "@/components/rules/briques/ContexteBriques";
 
 const UNITES_DUREE = ["round", "minute", "hour", "day", "until_turn_end", "until_rest", "permanent"] as const;
@@ -269,6 +270,7 @@ function ChampsBoost({ effet, maj }: { effet: Extract<BrouillonEffet, { type: "a
               {modifierOpNeedsValue(m.op) && (
                 <ChampFormule libelle={t("valeur")} valeur={m.valeur} onChange={(valeur) => majModificateur(i, { ...m, valeur })} sansDes={!isRollTarget(m.cible)} />
               )}
+              <ConditionEquipement condition={m.quand} onChange={(quand) => majModificateur(i, { ...m, quand })} />
               <div className="flex items-end">
                 <BoutonPetit onClick={() => maj({ modificateurs: retirerA(effet.modificateurs, i) })} danger>
                   {t("retirerModificateur")}

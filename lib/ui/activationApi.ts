@@ -17,6 +17,8 @@ export interface DemandeActivation {
   variantId: string | null;
   /** Vide pour une activation qui vise celui qui la joue. */
   targetParticipantIds: string[];
+  /** V3.1-170 (ADR 0077) : la zone posée sur le plan (mètres) ; le serveur en calcule les cibles. */
+  area?: { point?: { x: number; y: number }; aim?: { x: number; y: number } };
   /** V3.1-166 : `ruleKey` est un sort ; l'emplacement dépensé et l'option de lancement d'une aptitude. */
   spell?: { slotLevel: number; castOption?: { ruleKey: string; optionId: string } };
 }

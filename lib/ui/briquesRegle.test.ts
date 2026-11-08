@@ -24,6 +24,10 @@ import {
   surlignagesDuBrouillon,
   texteDeLaRegle,
   type Brouillon,
+  avecGenreCible,
+  conditionEcrite,
+  conditionVersBrouillon,
+  basculerDans,
 } from "./briquesRegle";
 
 const NOMS = { frightened: "Effrayé" };
@@ -35,7 +39,7 @@ function abjuration(): Brouillon {
   a.id = "abjure";
   a.label = "Abjuration d'ennemis";
   a.cout = { action: "magic", depenses: [{ cle: "channel-divinity", quantite: "1" }], emplacement: null, passage: "l'action Magie" };
-  a.cibles = { kind: "creature", nombre: "max(1, {ability.cha})", portee: "18", doitVoir: true, passage: "cibler un nombre de créatures" };
+  a.cibles = { kind: "creature", zone: null, nombre: "max(1, {ability.cha})", portee: "18", doitVoir: true, passage: "cibler un nombre de créatures" };
   const sauvegarde = nouvelEffet("saving_throw", b);
   if (sauvegarde.type !== "saving_throw") throw new Error("type inattendu");
   const etat = nouvelEffet("apply_state", b);
@@ -241,7 +245,7 @@ function benediction(): Brouillon {
   a.id = "benediction";
   a.label = "Bénédiction";
   a.cout = { action: "action", depenses: [], emplacement: null, passage: null };
-  a.cibles = { kind: "creature", nombre: "3", portee: "9", doitVoir: false, passage: null };
+  a.cibles = { kind: "creature", zone: null, nombre: "3", portee: "9", doitVoir: false, passage: null };
   const boost = nouvelEffet("apply_modifier", b);
   if (boost.type !== "apply_boost") throw new Error("type inattendu");
   boost.nom = "Bénédiction";
@@ -519,5 +523,64 @@ describe("V3.1-166 : sort, options de lancement, lancer un sort", () => {
     if (!ok.ok) return;
     const relu = blocsVersBrouillon([{ blockType: "activation", data: ok.activation }]);
     expect(relu.activations[0].effets[0]).toMatchObject({ type: "cast_spell", sort: "summon-beast", gratuit: true });
+  });
+  it("V3.1-170 : une cible « zone » (cône de 4,5 m depuis soi) fait l'aller-retour sans JSON", () => {
+    const b = brouillonVide();
+    const a = { ...nouvelleActivation(b), label: "Souffle" };
+    a.cibles = avecGenreCible(a.cibles, "area");
+    expect(a.cibles.zone).toMatchObject({ forme: "cone", origine: "self" });
+    const r = brouillonVersBlocs({ ...b, activations: [a] }, NOMS_VIDES);
+    expect(r.ok).toBe(true);
+    if (!r.ok || !r.activation) return;
+    expect(r.activation.activations[0].targets.area).toEqual({ shape: "cone", size: 4.5, origin: "self" });
+    const relu = blocsVersBrouillon([{ blockType: "activation", data: r.activation }]);
+    expect(relu.activations[0].cibles.zone).toEqual({ forme: "cone", taille: "4.5", largeur: "", origine: "self" });
+    // Quitter « zone » retire la zone ; elle ne s'écrit plus.
+    expect(avecGenreCible(a.cibles, "creature").zone).toBeNull();
+  });
+
+  it("V3.1-170 : une ligne garde sa largeur, une taille invalide est refusée avec un message", () => {
+    const b = brouillonVide();
+    const a = { ...nouvelleActivation(b), label: "Souffle" };
+    a.cibles = { ...avecGenreCible(a.cibles, "area"), zone: { forme: "line", taille: "9", largeur: "1.5", origine: "point" } };
+    const r = brouillonVersBlocs({ ...b, activations: [a] }, NOMS_VIDES);
+    expect(r.ok && r.activation?.activations[0].targets.area).toEqual({ shape: "line", size: 9, width: 1.5, origin: "point" });
+    a.cibles = { ...a.cibles, zone: { forme: "sphere", taille: "", largeur: "", origine: "point" } };
+    const mauvais = brouillonVersBlocs({ ...b, activations: [a] }, NOMS_VIDES);
+    expect(mauvais.ok).toBe(false);
+  });
+
+  it("V3.1-170 : la condition d'équipement d'un modificateur (armure, bouclier, arme) fait l'aller-retour", () => {
+    const b = brouillonVide();
+    const a = { ...nouvelleActivation(b), label: "Rage" };
+    const boost = nouvelEffet("apply_modifier", b);
+    if (boost.type !== "apply_boost") throw new Error("type inattendu");
+    boost.nom = "Rage";
+    boost.modificateurs[0].quand = { armures: ["none", "light"], bouclier: "non", armes: ["finesse", "ranged"] };
+    const r = brouillonVersBlocs({ ...b, activations: [{ ...a, effets: [boost] }] }, NOMS_VIDES);
+    expect(r.ok).toBe(true);
+    if (!r.ok || !r.activation) return;
+    expect(r.activation.durable_effects[0].modifiers[0].when).toEqual({ armor: ["none", "light"], shield: false, wielding: ["finesse", "ranged"] });
+    const relu = blocsVersBrouillon([{ blockType: "activation", data: r.activation }]);
+    const e = relu.activations[0].effets[0];
+    expect(e.type === "apply_boost" && e.modificateurs[0].quand).toEqual({ armures: ["none", "light"], bouclier: "non", armes: ["finesse", "ranged"] });
+  });
+
+  it("V3.1-170 : une seule propriété d'arme s'écrit en chaîne ; rien de coché n'écrit aucun « when »", () => {
+    expect(conditionEcrite({ armures: [], bouclier: "oui", armes: ["finesse"] })).toEqual({ shield: true, wielding: "finesse" });
+    expect(conditionEcrite({ armures: [], bouclier: "", armes: [] })).toBeUndefined();
+    expect(conditionVersBrouillon({ wielding: "ranged" })).toEqual({ armures: [], bouclier: "", armes: ["ranged"] });
+    expect(basculerDans(["a"], "b")).toEqual(["a", "b"]);
+    expect(basculerDans(["a", "b"], "a")).toEqual(["b"]);
+  });
+
+  it("V3.1-170 : la condition d'une activation est écrite et relue", () => {
+    const b = brouillonVide();
+    const a = { ...nouvelleActivation(b), label: "Frappe" };
+    a.quand = { armures: [], bouclier: "", armes: ["finesse", "ranged"] };
+    const r = brouillonVersBlocs({ ...b, activations: [a] }, NOMS_VIDES);
+    expect(r.ok && r.activation?.activations[0].when).toEqual({ wielding: ["finesse", "ranged"] });
+    if (!r.ok) return;
+    expect(blocsVersBrouillon([{ blockType: "activation", data: r.activation }]).activations[0].quand.armes).toEqual(["finesse", "ranged"]);
   });
 });
