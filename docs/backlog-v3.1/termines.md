@@ -6042,3 +6042,16 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
 
 *Restes* : quelques descriptions **commencent** au milieu d'une phrase (Cor du Valhalla : « (bronze) ou légendaire (fer) Souffler… ») — l'import a aussi perdu leur début ; *divination* finit par l'en-tête d'un autre sort (« Durée : instantanée ») ; « Autrache » est une coquille de la source, gardée telle quelle.
 
+### V3.1-188 — Textes français : le sous-titre des objets magiques remis en tête, le texte de *divination* retrouvé (8 novembre)
+
+**Modèle conseillé : Opus** (script contre la vraie base, contenu officiel).
+
+**Constat** (relevé pendant V3.1-187). 56 descriptions d'objets magiques (23 du SRD 5.1, 33 du 5.2.1) commencent par la fin de leur sous-titre, glissée là par l'extraction du PDF : « (bronze) ou légendaire (fer) Souffler dans le cor… », « (Harmonisation requise avec un Paladin) Vous recevez… ». *Divination* (5.2.1) n'a pour description que la fin de son en-tête (« 25 po, que le sort détruit) Durée : instantanée ») : son texte, dans la source, a été déplacé par la mise en page au milieu de *domination de monstre*.
+
+**Fait le 8 novembre** (Opus seul).
+- **Noyau** (tests d'abord) : `src/core/text/sousTitresPdf.ts` — `fragmentDeSousTitre` (parenthèses et mots de rareté en tête, suivis d'une majuscule), `retrouverSousTitre` (relit le sous-titre entier dans la source, **sous le titre de l'objet** : deux objets commencent parfois par la même phrase, et sans le titre *voleuse de neuf vies* aurait pris le sous-titre d'un bâton), `paragraphesDeLaSource` (un passage déplacé, un paragraphe par phrase finie).
+- **Script** `scripts/fix-debuts-fr.ts`, à blanc par défaut, `--write`, relançable : le sous-titre entier remis en tête de 56 descriptions, en italique (« *Objet merveilleux, rare (argent ou airain), très rare (bronze) ou légendaire (fer)* ») — garder le sous-titre plutôt que couper le fragment conserve une précision (« avec un Paladin », les armes admises) ; le texte de *divination* relu dans la source. 57 fiches, aucun refus ; relancé à blanc : 0. Sauvegarde des traductions d'avant hors du dépôt.
+- Vérifié au navigateur (Banc d'essai) : Cor du Valhalla (sous-titre en tête, puis le tableau de V3.1-187), *Divination* (deux paragraphes).
+
+*Restes* : l'en-tête de 24 sorts est mal lu dans leurs traductions françaises (durée vide, composantes incomplètes : *divination* n'a ni durée ni composante M, *arrêt du temps*, *simulacre*…) — autre défaut, tâche à part.
+
