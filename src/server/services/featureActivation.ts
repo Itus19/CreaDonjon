@@ -1,4 +1,5 @@
 import "server-only";
+import { areaTargets, rangeCheck } from "@/src/core/rules/geometry";
 import type { BonusDie } from "@/src/core/rules/sheet";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
@@ -54,7 +55,11 @@ export type ActivateFeatureFailure =
   /** V3.1-165 (ADR 0076) : un sort que le personnage ne connaît pas, un emplacement épuisé, une option de lancement inconnue. */
   | "spell_not_known"
   | "no_slot_available"
-  | "unknown_cast_option";
+  | "unknown_cast_option"
+  /** V3.1-169 (ADR 0077) : sur le plan, une cible ou une zone hors de portée ; une zone qui ne se pose pas (lanceur non posé, sans point, sans direction) ; une cible retirée qui n'était pas dans la zone. */
+  | "out_of_range"
+  | "area_unplaced"
+  | "target_out_of_area";
 
 export interface ActivateFeatureSuccess {
   ok: true;
@@ -107,6 +112,13 @@ export async function activateFeature(
     spell?: { slotLevel: number; castOption?: { ruleKey: string; optionId: string }; /** Lancé par un effet `cast_spell` gratuit : aucun emplacement. */ free?: boolean };
     /** V3.1-165 : déjà payé ailleurs (une réaction jouée par sa fenêtre) : le budget du tour n'est pas touché. */
     skipBudget?: boolean;
+    /**
+     * V3.1-169 (ADR 0077) : une activation de zone posée sur le plan — le
+     * point où elle est posée, et vers où vise un cône ou une ligne. Ses cibles
+     * sont calculées ici ; `targetParticipantIds` dit alors, pour le MJ
+     * seulement, celles qu'il garde (il en retire, n'en ajoute jamais).
+     */
+    area?: { point?: { x: number; y: number }; aim?: { x: number; y: number } };
   }
 ): Promise<ActivateFeatureSuccess | { ok: false; reason: ActivateFeatureFailure; detail?: string }> {
   const ctx = await resolveCharacterActionContext(supabase, params.entityId, params.campaignId, params.locale);
@@ -150,7 +162,8 @@ export async function activateFeature(
   let participants: CombatParticipantRow[] = [];
   let round: number | null = null;
   let currentTurn: string | null = null;
-  if (params.targetParticipantIds.length > 0) {
+  const deZone = activation.targets.kind === "area" && activation.targets.area !== undefined;
+  if (params.targetParticipantIds.length > 0 || deZone) {
     const combat = await getActiveCombatForCampaign(supabase, params.campaignId);
     if (!combat || combat.status !== "running") return { ok: false, reason: "no_combat" };
     combatId = combat.id;
@@ -163,6 +176,38 @@ export async function activateFeature(
   const absente = params.targetParticipantIds.find((id) => !participants.some((p) => p.id === id));
   if (absente) return { ok: false, reason: "target_not_found", detail: absente };
 
+  // V3.1-169 (ADR 0077) : le plan. Une zone calcule ses cibles ; une portée se vérifie quand les deux sont posés.
+  const posDe = (p: CombatParticipantRow | undefined) => (p && p.pos_x !== null && p.pos_y !== null ? { x: Number(p.pos_x), y: Number(p.pos_y) } : null);
+  const lanceur = participants.find((p) => p.entity_id === params.entityId);
+  const portee = activation.targets.range?.value;
+  const avertissements: string[] = [];
+  let cibles: string[] = [...params.targetParticipantIds];
+  if (deZone && activation.targets.area) {
+    const zone = areaTargets({
+      area: activation.targets.area,
+      caster: { id: lanceur?.id ?? "", pos: posDe(lanceur) },
+      ...(params.area?.point ? { point: params.area.point } : {}),
+      ...(params.area?.aim ? { aim: params.area.aim } : {}),
+      ...(portee !== undefined ? { range: portee } : {}),
+      others: participants.map((p) => ({ id: p.id, pos: posDe(p) })),
+    });
+    if (!zone.ok) return { ok: false, reason: zone.reason === "out_of_range" ? "out_of_range" : "area_unplaced", detail: zone.reason };
+    if (params.callerIsGm && params.targetParticipantIds.length > 0) {
+      const hors = params.targetParticipantIds.find((id) => !zone.ids.includes(id));
+      if (hors) return { ok: false, reason: "target_out_of_area", detail: hors };
+    } else {
+      cibles = zone.ids;
+    }
+  } else if (portee !== undefined && cibles.length > 0) {
+    for (const id of cibles) {
+      const cible = participants.find((p) => p.id === id);
+      const verdict = rangeCheck(posDe(lanceur), posDe(cible), portee);
+      if (verdict === "out_of_range") return { ok: false, reason: "out_of_range", detail: cible?.label ?? id };
+      // Sans plan (moins de deux jetons posés), rien à dire : la table joue comme avant.
+      if (verdict === "unverified" && participants.filter((p) => posDe(p)).length >= 2) avertissements.push(`Portée non vérifiée pour ${cible?.label ?? id} : le MJ tranche.`);
+    }
+  }
+
   const pcEntityIds = new Set((await listCampaignCharacters(supabase, params.campaignId)).filter((c) => c.is_pc).map((c) => c.entity_id));
   const state = await getEntityRuntimeState(supabase, params.entityId, params.campaignId);
 
@@ -173,7 +218,7 @@ export async function activateFeature(
     [params.entityId]: { conditions: [...state.conditions], features: sheet.features.map((f) => f.key), numbers: actorNumbers },
   };
   const abilities = savedAbilities(effectNodes);
-  for (const id of params.targetParticipantIds) {
+  for (const id of cibles) {
     const p = participants.find((x) => x.id === id)!;
     const isPc = p.entity_id !== null && pcEntityIds.has(p.entity_id);
     const numbers: Record<string, number> = {};
@@ -198,7 +243,7 @@ export async function activateFeature(
     activationId: params.activationId,
     variantId: params.variantId,
     actorId: params.entityId,
-    targetIds: params.targetParticipantIds.map((id) => `participant:${id}`),
+    targetIds: cibles.map((id) => `participant:${id}`),
     ctx: sceneCtx,
     resources: sheet.resources,
     used: state.resources,
@@ -321,7 +366,7 @@ export async function activateFeature(
   }
   if (signes.length > 0) await applySignedEngineChange(supabase, { campaignId: params.campaignId, changes: signes });
 
-  const targets = params.targetParticipantIds.map((id) => {
+  const targets = cibles.map((id) => {
     const key = `participant:${id}`;
     const sauvegarde = plan.plan.effects.find((e): e is Extract<ResolvedEffect, { action: "saving_throw" }> => e.action === "saving_throw" && e.who === key);
     return {
@@ -370,7 +415,7 @@ export async function activateFeature(
   return {
     ok: true,
     targets,
-    changes: [...outcome.changes, ...lances, ...(budget?.over ? ["Budget du tour dépassé : le MJ tranche."] : [])],
+    changes: [...avertissements, ...outcome.changes, ...lances, ...(budget?.over ? ["Budget du tour dépassé : le MJ tranche."] : [])],
     applied: plan.plan.applied.map((a) => ({ bearer: a.bearer, label: a.label })),
     used: plan.plan.used,
     overBudget: budget?.over ?? false,

@@ -188,6 +188,11 @@ export function planActivation(p: {
     let cibles: string[];
     if (activation.targets.kind === "self") {
       cibles = [p.actorId];
+    } else if (activation.targets.kind === "area") {
+      // V3.1-169 (ADR 0077) : les cibles d'une zone sont calculées par le serveur sur le plan (`areaTargets`) : ni plafond, ni minimum.
+      const absente = p.targetIds.find((t) => !p.ctx.actors[t]);
+      if (absente) throw new Refus("unknown_target", absente);
+      cibles = [...p.targetIds];
     } else {
       if (p.targetIds.length === 0) throw new Refus("no_target");
       const max = activation.targets.count ? nombre(activation.targets.count, refs, p.rng) : 1;

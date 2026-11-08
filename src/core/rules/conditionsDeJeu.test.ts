@@ -7,6 +7,7 @@ import { applyPatches } from "./patches";
 import { characterSheet, resolveDeclaredModifiers, rollBonus, type CharacterBuild, type DeclaredModifier, type EquippedItem, type ResolvedFeature, type ResolvedRuleset } from "./sheet";
 import { eventsForAttack } from "./gameEvents";
 import { zActivationBlockData } from "../schemas/rule-blocks/playable";
+import { planActivation } from "./activation";
 import { zModifier } from "../schemas/rule-blocks/primitives";
 import { parseFormula } from "../formula";
 
@@ -220,5 +221,31 @@ describe("V3.1-169 — les cibles d'une zone et la portée", () => {
     expect(rangeCheck({ x: 0, y: 0 }, { x: 9, y: 0 }, 9)).toBe("ok");
     expect(rangeCheck({ x: 0, y: 0 }, { x: 9.5, y: 0 }, 9)).toBe("out_of_range");
     expect(rangeCheck(null, { x: 9.5, y: 0 }, 9)).toBe("unverified");
+  });
+});
+
+describe("V3.1-169 — une activation de zone", () => {
+  const souffle = zActivationBlockData.parse({
+    activations: [
+      {
+        id: "souffle",
+        label: { fr: "Souffle" },
+        cost: { action: "attack", resources: [] },
+        targets: { kind: "area", area: { shape: "cone", size: 4.5, origin: "self" } },
+        effects: [],
+        variants: null,
+      },
+    ],
+  });
+  const plan = (cibles: string[]) =>
+    planActivation({
+      block: souffle, activationId: "souffle", actorId: "drake", targetIds: cibles,
+      ctx: { actors: Object.fromEntries(["drake", "g1", "g2", "g3"].map((k) => [k, { conditions: [], features: [], numbers: {} }])) },
+      resources: [], used: {}, budget: null, currentTurn: null, round: null, rng: { nextInt: () => 0 },
+    });
+
+  it("prend toutes les cibles calculées, sans plafond ; une zone vide se joue quand même", () => {
+    expect(plan(["g1", "g2", "g3"]).ok).toBe(true);
+    expect(plan([]).ok).toBe(true);
   });
 });
