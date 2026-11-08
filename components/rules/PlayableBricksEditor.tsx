@@ -28,6 +28,7 @@ import {
   remplacerA,
   retirerA,
   surlignagesDuBrouillon,
+  accordeesParJeton,
   texteDeLaRegle,
   type Brouillon,
   type BrouillonActivation,
@@ -136,6 +137,7 @@ export default function PlayableBricksEditor({
   }, [brouillon.activations]);
 
   const surlignages = useMemo(() => surlignagesDuBrouillon(brouillon), [brouillon]);
+  const accordees = useMemo(() => accordeesParJeton(brouillon), [brouillon]);
   const fragments = useMemo(() => decouperTexte(texte, surlignages), [texte, surlignages]);
 
   const contexte: ContexteBriquesValeur = {
@@ -146,6 +148,7 @@ export default function PlayableBricksEditor({
     ressources,
     numeros,
     creerEffet: (entree) => nouvelEffet(entree, brouillon),
+    utilisations: brouillon.activations.map((a) => ({ value: a.id, label: a.label.trim() || a.id })),
   };
 
   function capturerSelection() {
@@ -281,6 +284,7 @@ export default function PlayableBricksEditor({
                 <CarteActivation
                   key={a.uid}
                   activation={a}
+                  accordeePar={accordees.get(a.id)}
                   onChange={(n) => majActivation(i, n)}
                   onRemove={() => setBrouillon({ ...brouillon, activations: retirerA(brouillon.activations, i) })}
                 />
@@ -558,7 +562,18 @@ function CoutEditeur({ cout, onChange, uid, avecCitation }: { cout: BrouillonCou
   );
 }
 
-function CarteActivation({ activation: a, onChange, onRemove }: { activation: BrouillonActivation; onChange: (a: BrouillonActivation) => void; onRemove: () => void }) {
+function CarteActivation({
+  activation: a,
+  accordeePar,
+  onChange,
+  onRemove,
+}: {
+  activation: BrouillonActivation;
+  /** V3.1-197 : le nom de l'effet dont le jeton accorde cette utilisation ; `undefined` : toujours là. */
+  accordeePar?: string;
+  onChange: (a: BrouillonActivation) => void;
+  onRemove: () => void;
+}) {
   const t = useTranslations("regles.briques");
   const cibles = a.cibles;
   return (
@@ -571,6 +586,10 @@ function CarteActivation({ activation: a, onChange, onRemove }: { activation: Br
           {t("retirerUtilisation")}
         </BoutonPetit>
       </div>
+
+      {accordeePar && (
+        <span className="w-fit rounded-full bg-link-rule/15 px-3 py-1 text-xs text-link-rule">{t("accordeePar", { nom: accordeePar })}</span>
+      )}
 
       <ReactionEditeur activation={a} onChange={onChange} />
 

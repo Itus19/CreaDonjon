@@ -30,7 +30,16 @@ import { BoutonPetit, CarteBrique, ChampListe, ChampTexte, Citation, useContexte
 const UNITES_DUREE = ["round", "minute", "hour", "day", "until_turn_end", "until_rest", "permanent"] as const;
 
 /** Une liste d'effets ordonnée, avec la liste « Ajouter une brique ». Récursive : une sauvegarde porte deux listes. */
-export function ListeEffets({ effets, onChange }: { effets: BrouillonEffet[]; onChange: (l: BrouillonEffet[]) => void }) {
+export function ListeEffets({
+  effets,
+  onChange,
+  sauvegardeParente,
+}: {
+  effets: BrouillonEffet[];
+  onChange: (l: BrouillonEffet[]) => void;
+  /** V3.1-197 : le JS dont cette liste est une branche (le JS répété le reprend par défaut). */
+  sauvegardeParente?: SauvegardeParente;
+}) {
   const t = useTranslations("regles.briques");
   const { creerEffet } = useContexteBriques();
   return (
@@ -44,6 +53,7 @@ export function ListeEffets({ effets, onChange }: { effets: BrouillonEffet[]; on
           onMove={(d) => onChange(deplacerA(effets, i, d))}
           peutMonter={i > 0}
           peutDescendre={i < effets.length - 1}
+          sauvegardeParente={sauvegardeParente}
         />
       ))}
       <div className="w-fit">
@@ -68,7 +78,9 @@ function BriqueEffet({
   onMove,
   peutMonter,
   peutDescendre,
+  sauvegardeParente,
 }: {
+  sauvegardeParente?: SauvegardeParente;
   effet: BrouillonEffet;
   onChange: (e: BrouillonEffet) => void;
   onRemove: () => void;
@@ -103,14 +115,14 @@ function BriqueEffet({
     >
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {aUnQui && <ChampListe libelle={t("qui")} valeur={effet.who} options={[{ value: "self", label: t("quiSelf") }, { value: "target", label: t("quiTarget") }]} onChange={(who) => maj({ who })} />}
-        <ChampsEffet effet={effet} maj={maj} />
+        <ChampsEffet effet={effet} maj={maj} sauvegardeParente={sauvegardeParente} />
       </div>
       {effet.type === "saving_throw" && (
         <div className="flex flex-col gap-3 border-l-2 border-dashed border-edge pl-3">
           <span className="text-xs font-medium text-ink-soft">{t("siEchec")}</span>
-          <ListeEffets effets={effet.echec} onChange={(echec) => onChange({ ...effet, echec })} />
+          <ListeEffets effets={effet.echec} onChange={(echec) => onChange({ ...effet, echec })} sauvegardeParente={{ ability: effet.ability, dc: effet.dc }} />
           <span className="text-xs font-medium text-ink-soft">{t("siReussite")}</span>
-          <ListeEffets effets={effet.reussite} onChange={(reussite) => onChange({ ...effet, reussite })} />
+          <ListeEffets effets={effet.reussite} onChange={(reussite) => onChange({ ...effet, reussite })} sauvegardeParente={{ ability: effet.ability, dc: effet.dc }} />
         </div>
       )}
       {effet.type !== "opaque" && <Citation passage={effet.passage} onChange={(passage) => maj({ passage })} />}
@@ -118,7 +130,9 @@ function BriqueEffet({
   );
 }
 
-function ChampsEffet({ effet, maj }: { effet: BrouillonEffet; maj: (c: Partial<CorpsEffet>) => void }) {
+type SauvegardeParente = { ability: string; dc: string };
+
+function ChampsEffet({ effet, maj, sauvegardeParente }: { effet: BrouillonEffet; maj: (c: Partial<CorpsEffet>) => void; sauvegardeParente?: SauvegardeParente }) {
   const t = useTranslations("regles.briques");
   const { etats } = useContexteBriques();
   const options = etats.length === 0 ? [{ value: "", label: t("aucunEtat") }] : [{ value: "", label: t("choisirEtat") }, ...etats];
@@ -161,11 +175,13 @@ function ChampsEffet({ effet, maj }: { effet: BrouillonEffet; maj: (c: Partial<C
     case "remove_condition":
       return <ChampListe libelle={t("etat")} valeur={effet.cle} options={avecValeur(options, effet.cle)} onChange={(cle) => maj({ cle })} />;
     case "apply_state":
-      return <ChampsEtat effet={effet} maj={maj} options={options} />;
+      return <ChampsEtat effet={effet} maj={maj} options={options} sauvegardeParente={sauvegardeParente} />;
     case "existing_durable":
       return <p className="text-xs text-ink-muted sm:col-span-2 lg:col-span-3">{t("effetConserve", { id: effet.effectId })}</p>;
     case "apply_boost":
       return <ChampsBoost effet={effet} maj={maj} />;
+    case "grant_token":
+      return <ChampsJeton effet={effet} maj={maj} />;
     case "grant_budget":
       return (
         <>
@@ -229,15 +245,66 @@ function ChampsEtat({
   effet,
   maj,
   options,
+  sauvegardeParente,
 }: {
   effet: Extract<BrouillonEffet, { type: "apply_state" }>;
   maj: (c: Partial<CorpsEffet>) => void;
   options: { value: string; label: string }[];
+  sauvegardeParente?: SauvegardeParente;
 }) {
   const t = useTranslations("regles.briques");
   return (
     <>
       <ChampListe libelle={t("etat")} valeur={effet.cle} options={avecValeur(options, effet.cle)} onChange={(cle) => maj({ cle })} />
+      <ChampsDuree duree={effet.duree} concentration={effet.concentration} finSi={effet.finSi} maj={maj} />
+      {/* V3.1-197 (ADR 0090) : la cible refait son JS à la fin de chacun de ses tours ; par défaut, celui du jet au-dessus. */}
+      <div className="sm:col-span-2 lg:col-span-3">
+        <Checkbox
+          checked={effet.jsRepete !== null}
+          onChange={() => maj({ jsRepete: effet.jsRepete ? null : { carac: caracDuJet(sauvegardeParente), dd: sauvegardeParente?.dc ?? "{spell_save_dc}" } })}
+          label={t("jsRepete")}
+        />
+      </div>
+      {effet.jsRepete && (
+        <>
+          <ChampListe
+            libelle={t("caracteristique")}
+            valeur={effet.jsRepete.carac}
+            options={SAVE_ABILITIES.map((a) => ({ value: a, label: ABILITY_LABELS[a as Ability] }))}
+            onChange={(carac) => effet.jsRepete && maj({ jsRepete: { ...effet.jsRepete, carac: caracDuJet({ ability: carac }) } })}
+          />
+          <ChampFormule libelle={t("ddJsRepete")} valeur={effet.jsRepete.dd} onChange={(dd) => effet.jsRepete && maj({ jsRepete: { ...effet.jsRepete, dd } })} />
+        </>
+      )}
+    </>
+  );
+}
+
+const CARACS_JS = ["str", "dex", "con", "int", "wis", "cha"] as const;
+
+/** La caractéristique d'un JS, ramenée aux six clés du moteur ; Sagesse à défaut (le cas des charmes). */
+function caracDuJet(jet: { ability: string } | null | undefined): (typeof CARACS_JS)[number] {
+  const a = jet?.ability.toLowerCase();
+  return CARACS_JS.find((c) => c === a) ?? "wis";
+}
+
+/**
+ * V3.1-197 (ADR 0090 §3) : « Accorder une utilisation » — le nom de l'effet, l'utilisation qu'il accorde tant
+ * qu'il dure (une autre de cette aptitude), puis sa durée, sa concentration et ses fins.
+ */
+function ChampsJeton({ effet, maj }: { effet: Extract<BrouillonEffet, { type: "grant_token" }>; maj: (c: Partial<CorpsEffet>) => void }) {
+  const t = useTranslations("regles.briques");
+  const { utilisations } = useContexteBriques();
+  return (
+    <>
+      <ChampTexte libelle={t("nomEffet")} valeur={effet.nom} onChange={(nom) => maj({ nom })} />
+      <ChampListe
+        libelle={t("utilisationAccordee")}
+        valeur={effet.accorde}
+        options={avecValeur([{ value: "", label: t("choisirUtilisation") }, ...utilisations], effet.accorde)}
+        onChange={(accorde) => maj({ accorde })}
+      />
+      <p className="text-xs text-ink-muted sm:col-span-2 lg:col-span-3">{t("aideJeton")}</p>
       <ChampsDuree duree={effet.duree} concentration={effet.concentration} finSi={effet.finSi} maj={maj} />
     </>
   );

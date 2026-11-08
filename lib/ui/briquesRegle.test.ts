@@ -134,7 +134,8 @@ describe("blocsVersBrouillon", () => {
       },
     ],
     durable_effects: [
-      { id: "jeton", label: { fr: "Jeton" }, conditions: [], modifiers: [], duration: { unit: "permanent" }, concentration: false, ends_on: [], token: { uses: 1, grants: "a" } },
+      // Un jeton ET un modificateur : ce que le formulaire ne saisit pas (un jeton seul, si : « Accorder une utilisation »).
+      { id: "jeton", label: { fr: "Jeton" }, conditions: [], modifiers: [{ target: "ac", op: "add", value: 1 }], duration: { unit: "permanent" }, concentration: false, ends_on: [], token: { uses: 1, grants: "a" } },
       { id: "orphelin", label: { fr: "Orphelin" }, conditions: ["x"], modifiers: [], duration: { unit: "permanent" }, concentration: false, ends_on: [], token: null },
     ],
   });
@@ -626,5 +627,71 @@ describe("V3.1-191 — Embuscade magique dans l'éditeur", () => {
     const relu = blocsVersBrouillon([{ blockType: "forced_save_failures", data: r.forced_save_failures }]);
     const encore = brouillonVersBlocs(relu, {});
     expect(encore.ok && encore.forced_save_failures).toEqual(r.forced_save_failures);
+  });
+});
+
+describe("V3.1-197 — « Accorder une utilisation » et le JS répété dans l'éditeur", () => {
+  /** Majesté souveraine : la présence (action Bonus) accorde la réaction tant qu'elle dure. */
+  function majeste(): Brouillon {
+    const b = brouillonVide();
+    const presence = nouvelleActivation(b);
+    presence.label = "Majesté souveraine";
+    presence.cout = { action: "bonus", depenses: [], emplacement: null, passage: null };
+    presence.cibles = { ...presence.cibles, kind: "self" };
+    b.activations.push(presence);
+    const reaction = nouvelleActivation(b);
+    reaction.label = "Majesté : l'attaque rate";
+    reaction.cout = { action: "none", depenses: [], emplacement: null, passage: null };
+    b.activations.push(reaction);
+    const jeton = nouvelEffet("grant_token", b);
+    if (jeton.type !== "grant_token") throw new Error("brique attendue");
+    presence.effets.push({ ...jeton, who: "self", nom: "Présence majestueuse", accorde: reaction.id, concentration: true });
+    return b;
+  }
+
+  it("la brique pose un effet porteur du jeton, sans état ni modificateur, et se relit telle quelle", () => {
+    const b = majeste();
+    const r = brouillonVersBlocs(b, {});
+    if (!r.ok) throw new Error(r.erreurs.join(" ; "));
+    expect(r.activation?.durable_effects).toEqual([
+      expect.objectContaining({ label: { fr: "Présence majestueuse" }, conditions: [], modifiers: [], concentration: true, token: { uses: 1, grants: "utilisation-2" }, duration: { unit: "minute", amount: 1 } }),
+    ]);
+    expect(r.activation?.activations[0].effects).toEqual([{ action: "apply_effect", who: "self", effect: expect.any(String) }]);
+    const relu = blocsVersBrouillon([{ blockType: "activation", data: r.activation }]);
+    expect(relu.activations[0].effets[0]).toMatchObject({ type: "grant_token", nom: "Présence majestueuse", accorde: "utilisation-2", concentration: true });
+    expect(relu.durablesConserves).toEqual([]);
+  });
+
+  it("sans nom, sans utilisation choisie, ou une utilisation qui n'existe pas (ou elle-même) : refusé", () => {
+    for (const changer of [
+      (e: { nom: string; accorde: string }) => (e.nom = ""),
+      (e: { nom: string; accorde: string }) => (e.accorde = ""),
+      (e: { nom: string; accorde: string }) => (e.accorde = "inconnue"),
+      (e: { nom: string; accorde: string }) => (e.accorde = "utilisation"),
+    ]) {
+      const b = majeste();
+      const e = b.activations[0].effets[0];
+      if (e.type !== "grant_token") throw new Error("brique attendue");
+      changer(e);
+      expect(brouillonVersBlocs(b, {}).ok).toBe(false);
+    }
+  });
+
+  it("« Appliquer un état » écrit et relit le JS répété ; décoché, rien n'est écrit", () => {
+    const b = brouillonVide();
+    const a = nouvelleActivation(b);
+    a.label = "Magie envoûtante";
+    b.activations.push(a);
+    const etat = nouvelEffet("apply_state", b);
+    if (etat.type !== "apply_state") throw new Error("brique attendue");
+    expect(etat.jsRepete).toBeNull();
+    a.effets.push({ ...etat, cle: "charmed", jsRepete: { carac: "wis", dd: "{spell_save_dc}" } });
+    const r = brouillonVersBlocs(b, { charmed: "Charmé" });
+    if (!r.ok) throw new Error(r.erreurs.join(" ; "));
+    expect(r.activation?.durable_effects[0].repeat_save).toEqual({ ability: "wis", dc: { op: "ref", name: "spell_save_dc" } });
+    const relu = blocsVersBrouillon([{ blockType: "activation", data: r.activation }]);
+    expect(relu.activations[0].effets[0]).toMatchObject({ type: "apply_state", jsRepete: { carac: "wis", dd: "{spell_save_dc}" } });
+    const sans = brouillonVersBlocs({ ...b, activations: [{ ...a, effets: [{ ...etat, cle: "charmed" }] }] }, {});
+    expect(sans.ok && sans.activation?.durable_effects[0].repeat_save).toBeUndefined();
   });
 });

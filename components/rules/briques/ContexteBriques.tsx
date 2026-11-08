@@ -19,6 +19,8 @@ export interface ContexteBriquesValeur {
   ressources: DropdownOption[];
   numeros: Map<string, number>;
   creerEffet: (entree: EntreeAjout) => BrouillonEffet;
+  /** V3.1-197 : les utilisations de l'aptitude (identifiant, libellé), pour « Accorder une utilisation ». */
+  utilisations: DropdownOption[];
 }
 
 const Contexte = createContext<ContexteBriquesValeur | null>(null);

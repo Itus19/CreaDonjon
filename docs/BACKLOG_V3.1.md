@@ -302,7 +302,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-194 | ☑ | sans | Identité : des champs à la même taille, et « le Commun est acquis » | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-195 | ☑ | sans | Le JS répété à la fin de chaque tour du porteur | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
 | V3.1-196 | ☑ | sans | « Lancer un sort » d'un sort sans activation | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
-| V3.1-197 | ☐ | sans | L'éditeur de briques saisit le jeton et le JS répété | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
+| V3.1-197 | ☑ | sans | L'éditeur de briques saisit le jeton et le JS répété | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
 | V3.1-172 | ☑ | sans | Espèce, don d'origine, historique : le texte entier, sans quitter l'écran | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-173 | ☑ | sans | Expliquer compétences, bottes d'armes et aptitudes de classe | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-174 | ☑ | sans | La sous-classe en sous-étape, ses choix expliqués | [`termines.md`](backlog-v3.1/termines.md) |

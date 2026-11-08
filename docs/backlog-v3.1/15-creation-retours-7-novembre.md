@@ -71,4 +71,6 @@ Le moteur connaît le jeton d'un effet durable (une activation accordée tant qu
 
 **Décision.** La condition d'accès n'est pas nécessaire : la réaction de Majesté souveraine est une utilisation accordée par le jeton de la « Présence majestueuse » (ADR 0090 §3). Le moteur respecte désormais le jeton partout : fiche, serveur, réactions (fait le 8 novembre, `activationUnlocked`).
 
+**Fait le 8 novembre** (esquisse approuvée : « vas-y »). `briquesRegle.ts` : brique `grant_token` (lecture d'un effet porteur d'un jeton seul, écriture vérifiée : nom, utilisation existante et autre qu'elle-même), `jsRepete` sur `apply_state`, `accordeesParJeton`. `BriqueEffet.tsx` (champs ; le JS répété reprend par défaut la caractéristique et le DD du jet parent), mention « Accordée par » sur la carte d'utilisation, lecture de la fiche (`BriquesLecture`). Vérifié au navigateur dans un monde de test : Majesté souveraine et Magie envoûtante saisies et enregistrées (PUT 200), relues sur la fiche de règle. Planche OutilsMJ à jour.
+
 **Critères.** La brique « Accorder une utilisation » et la case « Nouveau JS à la fin de chacun de ses tours » se saisissent, se relisent et s'enregistrent par l'éditeur, validées par les schémas ; esquisse approuvée avant le code (canevas, planche « V3.1-197 ») ; planche du catalogue à jour.

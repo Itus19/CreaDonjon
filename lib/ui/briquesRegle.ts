@@ -127,6 +127,12 @@ export interface BrouillonFin {
   subject: "bearer" | "source";
 }
 
+export interface BrouillonJsRepete {
+  carac: "str" | "dex" | "con" | "int" | "wis" | "cha";
+  /** Une formule en texte (`{spell_save_dc}`). */
+  dd: string;
+}
+
 export interface BrouillonModificateur {
   uid: string;
   cible: string;
@@ -145,7 +151,22 @@ export type CorpsEffet =
   | { type: "apply_condition"; cle: string }
   | { type: "remove_condition"; cle: string }
   /** « Appliquer un état » : UNE brique à l'écran, un `apply_effect` ET son effet qui dure (ADR 0060 §3). */
-  | { type: "apply_state"; effectId: string; cle: string; labelOrig: Localise; duree: BrouillonDuree; concentration: boolean; finSi: BrouillonFin[] }
+  | {
+      type: "apply_state";
+      effectId: string;
+      cle: string;
+      labelOrig: Localise;
+      duree: BrouillonDuree;
+      concentration: boolean;
+      finSi: BrouillonFin[];
+      /** V3.1-197 (ADR 0090) : la cible refait ce JS à la fin de chacun de ses tours ; `null` : non. */
+      jsRepete: BrouillonJsRepete | null;
+    }
+  /**
+   * V3.1-197 (ADR 0090 §3) : « Accorder une utilisation » — un effet qui dure, sans état ni modificateur,
+   * dont le jeton accorde une autre utilisation de la même aptitude tant qu'il dure (Majesté souveraine).
+   */
+  | { type: "grant_token"; effectId: string; nom: string; labelOrig: Localise; accorde: string; usages: number; duree: BrouillonDuree; concentration: boolean; finSi: BrouillonFin[] }
   /** Un effet qui dure que le formulaire ne sait pas saisir (modificateurs, jeton) : conservé tel quel, jamais perdu. */
   | { type: "existing_durable"; effectId: string }
   /**
@@ -348,6 +369,25 @@ export function nouvelleLacune(texte = ""): BrouillonLacune {
   return { uid: nouvelUid(), texte, manque: "" };
 }
 
+/** V3.1-197 : les utilisations qu'un jeton accorde, et le nom de l'effet qui les accorde (« Accordée par … »). */
+export function accordeesParJeton(b: Brouillon): Map<string, string> {
+  const sortie = new Map<string, string>();
+  const parcourir = (liste: readonly BrouillonEffet[]) => {
+    for (const e of liste) {
+      if (e.type === "grant_token" && e.accorde !== "") sortie.set(e.accorde, e.nom.trim() || e.effectId);
+      if (e.type === "saving_throw") {
+        parcourir(e.echec);
+        parcourir(e.reussite);
+      }
+    }
+  };
+  for (const a of b.activations) {
+    parcourir(a.effets);
+    for (const v of a.variantes) parcourir(v.effets);
+  }
+  return sortie;
+}
+
 export function toutesLesActivationsIds(b: Brouillon): Set<string> {
   return new Set(b.activations.map((a) => a.id));
 }
@@ -468,6 +508,7 @@ export const ENTREES_AJOUT = [
   "heal",
   "temp_hp",
   "apply_state",
+  "grant_token",
   "remove_condition",
   "advantage",
   "apply_modifier",
@@ -484,7 +525,7 @@ export function idsEffetsPris(b: Brouillon): Set<string> {
   const pris = new Set(b.durablesConserves.map((d) => d.id));
   const parcourir = (liste: readonly BrouillonEffet[]) => {
     for (const e of liste) {
-      if (e.type === "apply_state" || e.type === "apply_boost" || e.type === "existing_durable") pris.add(e.effectId);
+      if (e.type === "apply_state" || e.type === "apply_boost" || e.type === "grant_token" || e.type === "existing_durable") pris.add(e.effectId);
       if (e.type === "saving_throw") {
         parcourir(e.echec);
         parcourir(e.reussite);
@@ -537,6 +578,21 @@ export function nouvelEffet(entree: EntreeAjout, b: Brouillon): BrouillonEffet {
         effectId: idLibre("effet", idsEffetsPris(b)),
         cle: "",
         labelOrig: {},
+        duree: { unit: "minute", amount: "1", whose: "bearer", which: "next" },
+        concentration: false,
+        finSi: [],
+        jsRepete: null,
+      };
+    case "grant_token":
+      return {
+        ...base,
+        who: "self",
+        type: "grant_token",
+        effectId: idLibre("effet", idsEffetsPris(b)),
+        nom: "",
+        labelOrig: {},
+        accorde: "",
+        usages: 1,
         duree: { unit: "minute", amount: "1", whose: "bearer", which: "next" },
         concentration: false,
         finSi: [],
@@ -605,6 +661,11 @@ function dureeVersBrouillon(d: DurableEffectDuration): BrouillonDuree {
 
 function finVersBrouillon(f: DurableEffectEnd): BrouillonFin {
   return f.event === "dismissed" ? { event: "dismissed", subject: "bearer" } : { event: f.event, subject: f.subject };
+}
+
+/** V3.1-197 : un effet qui dure porteur d'un jeton seul (ni état, ni modificateur) : ce que « Accorder une utilisation » écrit. */
+function durableJeton(d: DurableEffect): boolean {
+  return d.conditions.length === 0 && d.modifiers.length === 0 && d.token !== null && d.repeat_save === undefined;
 }
 
 /** Un effet qui dure que le formulaire sait saisir : un seul état, ni modificateur ni jeton. */
@@ -720,6 +781,24 @@ function effetVersBrouillon(e: EffectNode, chemin: string, ctx: CtxLecture): Bro
           effectId: d.id,
           cle: d.conditions[0],
           labelOrig: d.label,
+          duree: dureeVersBrouillon(d.duration),
+          concentration: d.concentration,
+          finSi: d.ends_on.map(finVersBrouillon),
+          jsRepete: d.repeat_save ? { carac: d.repeat_save.ability, dd: formatFormulaNode(d.repeat_save.dc) } : null,
+        };
+      }
+      if (durableJeton(d) && d.token && !ctx.repris.has(d.id)) {
+        ctx.repris.add(d.id);
+        return {
+          ...base,
+          passage: base.passage ?? d.passage ?? null,
+          who: e.who,
+          type: "grant_token",
+          effectId: d.id,
+          nom: libelleFr(d.label),
+          labelOrig: d.label,
+          accorde: d.token.grants,
+          usages: d.token.uses,
           duree: dureeVersBrouillon(d.duration),
           concentration: d.concentration,
           finSi: d.ends_on.map(finVersBrouillon),
@@ -861,6 +940,8 @@ interface CtxEcriture {
   durables: DurableEffect[];
   conserves: Map<string, DurableEffect>;
   nomsEtats: Readonly<Record<string, string>>;
+  /** V3.1-197 : les utilisations du brouillon, pour vérifier ce qu'un jeton accorde. */
+  activationIds: ReadonlySet<string>;
 }
 
 function formule(texte: string, contexte: string, ctx: CtxEcriture): FormulaNode {
@@ -1008,6 +1089,28 @@ function effetEcrit(e: BrouillonEffet, contexte: string, activationId: string, c
           concentration: e.concentration,
           ends_on: e.finSi.map(finEcrite),
           token: null,
+          ...(e.jsRepete ? { repeat_save: { ability: e.jsRepete.carac, dc: formule(e.jsRepete.dd, `${ou}, DD du JS répété`, ctx) } } : {}),
+          ...(e.passage ? { passage: e.passage } : {}),
+        });
+      }
+      return { action: "apply_effect", who: e.who, effect: e.effectId };
+    }
+    case "grant_token": {
+      const nom = e.nom.trim();
+      if (nom === "") ctx.erreurs.push(`${ou} : donne un nom à l'effet`);
+      if (e.accorde === "") ctx.erreurs.push(`${ou} : choisis l'utilisation accordée`);
+      else if (e.accorde === activationId) ctx.erreurs.push(`${ou} : une utilisation ne peut pas s'accorder elle-même`);
+      else if (!ctx.activationIds.has(e.accorde)) ctx.erreurs.push(`${ou} : l'utilisation accordée n'existe plus`);
+      if (!ctx.durables.some((d) => d.id === e.effectId)) {
+        ctx.durables.push({
+          id: e.effectId,
+          label: localise(e.labelOrig, nom || e.effectId),
+          conditions: [],
+          modifiers: [],
+          duration: dureeEcrite(e.duree, ou, ctx),
+          concentration: e.concentration,
+          ends_on: e.finSi.map(finEcrite),
+          token: { uses: Math.max(1, e.usages), grants: e.accorde || "?" },
           ...(e.passage ? { passage: e.passage } : {}),
         });
       }
@@ -1092,7 +1195,7 @@ function regainVersBloc(r: BrouillonRessource, nom: string, ctx: CtxEcriture): {
  * existait, sinon reste `null` (rien à envoyer : l'appelant ne l'inclut pas).
  */
 export function brouillonVersBlocs(b: Brouillon, nomsEtats: Readonly<Record<string, string>>): ResultatBlocs {
-  const ctx: CtxEcriture = { erreurs: [], durables: [], conserves: new Map(b.durablesConserves.map((d) => [d.id, d])), nomsEtats };
+  const ctx: CtxEcriture = { erreurs: [], durables: [], conserves: new Map(b.durablesConserves.map((d) => [d.id, d])), nomsEtats, activationIds: toutesLesActivationsIds(b) };
 
   const ressources = b.ressources.map((r, i) => {
     const nom = r.label.trim();
@@ -1245,7 +1348,7 @@ export interface Surlignage {
 
 function famille(e: BrouillonEffet): FamilleSurlignage {
   if (e.type === "saving_throw") return "sauvegarde";
-  if (e.type === "apply_state" || e.type === "apply_boost" || e.type === "apply_condition" || e.type === "existing_durable") return "etat";
+  if (e.type === "apply_state" || e.type === "apply_boost" || e.type === "grant_token" || e.type === "apply_condition" || e.type === "existing_durable") return "etat";
   return "autre";
 }
 

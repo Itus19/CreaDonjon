@@ -339,7 +339,8 @@
         "grant_budget": "Action budget",
         "roll": "Free roll",
         "narrate_hint": "Hint for the narrator",
-        "cast_spell": "Cast a spell"
+        "cast_spell": "Cast a spell",
+        "grant_token": "Grant a use"
       },
       "effet": {
         "saving_throw": "Saving throw",
@@ -357,6 +358,7 @@
         "roll": "Free roll",
         "narrate_hint": "Hint for the narrator",
         "cast_spell": "Cast a spell",
+        "grant_token": "Grant a use",
         "opaque": "Effect kept ({action})"
       },
       "monter": "Up",
@@ -523,6 +525,12 @@
       "ajouterOptionLancement": "+ Add a cast option",
       "cleDuSort": "Spell key",
       "sortGratuit": "No slot (free)",
+      "utilisationAccordee": "Granted use",
+      "choisirUtilisation": "Choose a use",
+      "aideJeton": "While this effect lasts, the chosen use exists; without it, the sheet hides it and the engine refuses it. Create the use to grant first.",
+      "accordeePar": "Granted by “{nom}”: only while it lasts",
+      "jsRepete": "New save at the end of each of its turns",
+      "ddJsRepete": "Repeated save DC",
       "libelleUtilisation": "Use label",
       "retirerUtilisation": "Remove the use",
       "cibles": "Targets",
@@ -593,6 +601,8 @@
         "appliquerEtat": "Applies the {etat} condition",
         "retirerEtat": "Removes the {etat} condition",
         "priseFin": "ends if {quand}",
+        "jsRepete": "new {carac} save at the end of each turn",
+        "accorde": "grants: {utilisation}",
         "dureeDe": "Duration: {duree}",
         "modificateur": "Modifier: {libelle}",
         "budget": "{genre}: {montant}",

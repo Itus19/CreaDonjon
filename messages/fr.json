@@ -340,7 +340,8 @@
         "grant_budget": "Budget d'action",
         "roll": "Jet libre",
         "narrate_hint": "Indication au narrateur",
-        "cast_spell": "Lancer un sort"
+        "cast_spell": "Lancer un sort",
+        "grant_token": "Accorder une utilisation"
       },
       "effet": {
         "saving_throw": "Jet de sauvegarde",
@@ -358,6 +359,7 @@
         "roll": "Jet libre",
         "narrate_hint": "Indication au narrateur",
         "cast_spell": "Lancer un sort",
+        "grant_token": "Accorder une utilisation",
         "opaque": "Effet conservé ({action})"
       },
       "monter": "Monter",
@@ -524,6 +526,12 @@
       "ajouterOptionLancement": "+ Ajouter une option de lancement",
       "cleDuSort": "Clé du sort",
       "sortGratuit": "Sans emplacement (gratuit)",
+      "utilisationAccordee": "Utilisation accordée",
+      "choisirUtilisation": "Choisir une utilisation",
+      "aideJeton": "Tant que cet effet dure, l’utilisation choisie existe ; sans lui, la fiche la cache et le moteur la refuse. Créez d’abord l’utilisation à accorder.",
+      "accordeePar": "Accordée par « {nom} » : seulement tant qu’il dure",
+      "jsRepete": "Nouveau JS à la fin de chacun de ses tours",
+      "ddJsRepete": "DD du JS répété",
       "libelleUtilisation": "Libellé de l'utilisation",
       "retirerUtilisation": "Retirer l'utilisation",
       "cibles": "Cibles",
@@ -594,6 +602,8 @@
         "appliquerEtat": "Applique l'état {etat}",
         "retirerEtat": "Retire l'état {etat}",
         "priseFin": "prend fin si {quand}",
+        "jsRepete": "nouveau JS de {carac} à chaque fin de tour",
+        "accorde": "accorde : {utilisation}",
         "dureeDe": "Durée : {duree}",
         "modificateur": "Modificateur : {libelle}",
         "budget": "{genre} : {montant}",

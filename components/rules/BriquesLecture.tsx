@@ -31,7 +31,7 @@ function finTexte(f: DurableEffect["ends_on"][number], t: Traduire): string {
   return f.event === "dismissed" ? t("evenements.dismissed") : `${t(`evenements.${f.event}`)} (${t(`sujet.${f.subject}`)})`;
 }
 
-function decrire(e: EffectNode, durables: ReadonlyMap<string, DurableEffect>, t: Traduire): { titre: string; detail?: string; dure?: boolean } {
+function decrire(e: EffectNode, durables: ReadonlyMap<string, DurableEffect>, t: Traduire, nomsUtilisations: ReadonlyMap<string, string> = new Map()): { titre: string; detail?: string; dure?: boolean } {
   switch (e.action) {
     case "saving_throw":
       return { titre: t("lecture.sauvegarde", { carac: ABILITY_LABELS[e.ability as Ability] ?? e.ability }), detail: t("lecture.dd", { dd: formatFormulaNode(e.dc) }) };
@@ -49,9 +49,12 @@ function decrire(e: EffectNode, durables: ReadonlyMap<string, DurableEffect>, t:
       const d = durables.get(e.effect);
       if (!d) return { titre: t("lecture.appliquerEtat", { etat: e.effect }) };
       const fin = d.ends_on.length > 0 ? ` · ${t("lecture.priseFin", { quand: d.ends_on.map((f) => finTexte(f, t)).join(", ") })}` : "";
+      // V3.1-197 : le JS répété, et l'utilisation qu'accorde le jeton (par son libellé).
+      const js = d.repeat_save ? ` · ${t("lecture.jsRepete", { carac: ABILITY_LABELS[d.repeat_save.ability as Ability] })}` : "";
+      const jeton = d.token ? ` · ${t("lecture.accorde", { utilisation: nomsUtilisations.get(d.token.grants) ?? d.token.grants })}` : "";
       return {
         titre: t("lecture.appliquerEtat", { etat: libelleFr(d.label) }),
-        detail: `${t("lecture.dureeDe", { duree: dureeTexte(d.duration, t) })}${d.concentration ? ` · ${t("concentration")}` : ""}${fin}`,
+        detail: `${t("lecture.dureeDe", { duree: dureeTexte(d.duration, t) })}${d.concentration ? ` · ${t("concentration")}` : ""}${fin}${js}${jeton}`,
         dure: true,
       };
     }
@@ -90,8 +93,8 @@ function numeroter(listes: readonly (readonly EffectNode[])[]): Map<EffectNode, 
   return numeros;
 }
 
-function LigneEffet({ numero, effet, durables, t }: { numero: number; effet: EffectNode; durables: ReadonlyMap<string, DurableEffect>; t: Traduire }) {
-  const d = decrire(effet, durables, t);
+function LigneEffet({ numero, effet, durables, t, noms }: { numero: number; effet: EffectNode; durables: ReadonlyMap<string, DurableEffect>; t: Traduire; noms?: ReadonlyMap<string, string> }) {
+  const d = decrire(effet, durables, t, noms);
   return (
     <div className="flex items-center gap-3 rounded-lg border border-edge bg-panel-sunken p-3">
       <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-edge font-mech text-xs text-ink-soft">{numero}</span>
@@ -105,24 +108,37 @@ function LigneEffet({ numero, effet, durables, t }: { numero: number; effet: Eff
 }
 
 /** Les effets numérotés à travers les branches de sauvegarde : « si la cible échoue », « si elle réussit ». */
-function ListeLecture({ effets, numeros, durables, t }: { effets: readonly EffectNode[]; numeros: ReadonlyMap<EffectNode, number>; durables: ReadonlyMap<string, DurableEffect>; t: Traduire }) {
+function ListeLecture({
+  effets,
+  numeros,
+  durables,
+  t,
+  noms,
+}: {
+  effets: readonly EffectNode[];
+  numeros: ReadonlyMap<EffectNode, number>;
+  durables: ReadonlyMap<string, DurableEffect>;
+  t: Traduire;
+  /** V3.1-197 : le libellé de chaque utilisation, pour dire ce qu'un jeton accorde. */
+  noms?: ReadonlyMap<string, string>;
+}) {
   return (
     <div className="flex flex-col gap-2">
       {effets.map((e, i) => {
         const numero = numeros.get(e) ?? 0;
         return (
           <div key={i} className="flex flex-col gap-2">
-            <LigneEffet numero={numero} effet={e} durables={durables} t={t} />
+            <LigneEffet numero={numero} effet={e} durables={durables} t={t} noms={noms} />
             {e.action === "saving_throw" && e.on_fail && e.on_fail.length > 0 && (
               <div className="ml-6 flex flex-col gap-2 border-l-2 border-dashed border-edge pl-4">
                 <Etiquette>{t("lecture.siEchec")}</Etiquette>
-                <ListeLecture effets={e.on_fail} numeros={numeros} durables={durables} t={t} />
+                <ListeLecture effets={e.on_fail} numeros={numeros} durables={durables} t={t} noms={noms} />
               </div>
             )}
             {e.action === "saving_throw" && e.on_pass && e.on_pass.length > 0 && (
               <div className="ml-6 flex flex-col gap-2 border-l-2 border-dashed border-edge pl-4">
                 <Etiquette>{t("lecture.siReussite")}</Etiquette>
-                <ListeLecture effets={e.on_pass} numeros={numeros} durables={durables} t={t} />
+                <ListeLecture effets={e.on_pass} numeros={numeros} durables={durables} t={t} noms={noms} />
               </div>
             )}
           </div>
@@ -148,6 +164,7 @@ function Cout({ cout, t }: { cout: ActivationBlockData["activations"][number]["c
 
 function LectureActivation({ data, t }: { data: ActivationBlockData; t: Traduire }) {
   const durables = new Map(data.durable_effects.map((d) => [d.id, d]));
+  const noms = new Map(data.activations.map((a) => [a.id, libelleFr(a.label)]));
   return (
     <div className="flex flex-col gap-5">
       {data.activations.map((a) => {
@@ -171,14 +188,14 @@ function LectureActivation({ data, t }: { data: ActivationBlockData; t: Traduire
             {a.effects.length > 0 && (
               <div className="flex flex-col gap-2">
                 <Etiquette>{t("lecture.effetsSurCible")}</Etiquette>
-                <ListeLecture effets={a.effects} numeros={numeros} durables={durables} t={t} />
+                <ListeLecture effets={a.effects} numeros={numeros} durables={durables} t={t} noms={noms} />
               </div>
             )}
             {(a.variants ?? []).map((v) => (
               <div key={v.id} className="flex flex-col gap-2 rounded-lg border border-edge p-3">
                 <span className="text-sm font-medium text-ink">{t("lecture.variante", { nom: libelleFr(v.label) })}</span>
                 {v.cost && <Cout cout={v.cost} t={t} />}
-                <ListeLecture effets={v.effects} numeros={numeros} durables={durables} t={t} />
+                <ListeLecture effets={v.effects} numeros={numeros} durables={durables} t={t} noms={noms} />
               </div>
             ))}
           </div>
