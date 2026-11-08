@@ -415,7 +415,7 @@ Distances en mètres entre créatures (ADR 0059 §5), zones géométriques, aura
 - [ ] Au téléphone, le plan se déplace et se zoome au doigt, un jeton se pose sans tomber à côté.
 - [ ] L'Aura de protection se saisit à l'éditeur sans JSON.
 
-#### ☐ V3.1-171 — Les données : zones, auras, défenses et conditions du SRD · `M` · sans modèle IA — **prêt (Opus)**
+#### ☑ V3.1-171 — Les données : zones, auras, défenses et conditions du SRD · `M` · sans modèle IA — **prêt (Opus)**
 
 **Modèle conseillé : Opus** — données officielles, import.
 **Dépend de** : 168, 169.
@@ -423,7 +423,11 @@ Distances en mètres entre créatures (ADR 0059 §5), zones géométriques, aura
 - Rage (résistances, fin en armure lourde), Résistance naine, Affinité élémentaire (résistance choisie), Aura de protection (rayon 3 m) et Aura étendue (9 m), Souffle du drakéide (cône ou ligne au choix, remplace une attaque), Attaque sournoise (arme de finesse ou à distance), Défense sans armure (déjà là : passe par `when`), monstres (défenses de leurs blocs). Réimport, scripts d'auteur rejoués.
 
 **Critères d'acceptation**
-- [ ] Après réimport, ces règles perdent la lacune « attend 137 » et se jouent sur une fiche de test.
+- [x] Après réimport, ces règles perdent la lacune « attend 137 » et se jouent sur une fiche de test.
+
+*Fait le 8 novembre.* Données : Rage (résistances contondant, perforant, tranchant ; tous ses bonus coupés en armure lourde par `when`), Résistance naine (poison), Résistance aux dégâts du drakéide (une par ascendance), Affinité élémentaire et Résilience fiélonne (résistance au type choisi, `resist.{choice:…}`), Aura de protection (aura de 3 m pour les alliés, éteinte par « incapacitated » ou « Neutralisé » ; le bonus du paladin lui-même reste permanent), Aura étendue (retouche du rayon à 9 m), Souffle du drakéide (cinq traits, cône 4,5 m ou ligne 9 m × 1,5 m, à la place d'une attaque, JS Dex, 1d10 à 4d10, usages = maîtrise), Attaque sournoise (`when: { wielding: ["finesse", "ranged"] }`). Moteur : `wielding` accepte une liste (l'une suffit), une activation porte `when`, une fenêtre de réaction connaît l'arme du jet (`weaponProperties`) ; les auras et retouches du bloc `modifiers` montent jusqu'à la fiche (`resolvedRuleset`) et l'import les écrit. Réimport et scripts d'auteur rejoués. Tests : `srdConditionsDeJeu.integration.test.ts` 5/5 (Rage 12 → 6, nain, rayons 3 et 9 m, aura à 3 m oui et à 4,5 m non, Attaque sournoise).
+
+*Reste* : les **défenses des monstres** (le JSON du SRD 2024 n'en porte que deux ; les reprendre du texte français est un ticket à part) ; le **Souffle et la résistance du drakéide** n'atteignent pas une fiche (ils sont rattachés à l'ascendance, une sous-espèce, que le modèle de personnage ne connaît pas encore) ; un **seul jet de dégâts pour toute une zone** (chaque créature lance le sien, la moitié d'un jet à part sur une réussite) ; Défense sans armure reste sur sa cible `ac.unarmored`, qui fait déjà le travail.
 
 ### ☐ V3.1-138 — Le modèle du monde · `L` · sans modèle IA — **à concevoir (Opus)**
 Perception et visibilité (invisible, caché, sens), lumière, étiquettes de magie (divination, capteurs), immunités et restrictions de ciblage, et les cas uniques : transformation, invocation, PV temporaires en effet (sur V3.1-24), redirection, jauge qui monte, recharge sur événement, quantité choisie, consommables, choix contraints pour les règles ouvertes. Règles visées : 8, 15, 16, 22, 29, 34, 35, 38.
