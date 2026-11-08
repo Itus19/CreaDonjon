@@ -43,7 +43,7 @@ import {
 
 /** Cible de toucher d'un jeton : 44 px de diamètre au moins (charte, §4). */
 const RAYON_TOUCHER = 22;
-const RAYON_JETON = 15;
+const RAYON_JETON = 16;
 /** En dessous de ce déplacement (pixels), un appui est un toucher, pas un glissé. */
 const SEUIL_GLISSE = 6;
 
@@ -97,7 +97,7 @@ export default function PlanCombat({ jetons, deplacables, onDeplacer, retirable 
   const pointeurs = useRef(new Map<number, Point>());
   const cadrageFait = useRef(false);
 
-  const [cadre, setCadre] = useState<Cadre>(cadreRef.current);
+  const [cadre, setCadre] = useState<Cadre>({ largeur: 320, hauteur: 320 });
   const [vue, setVue] = useState<VuePlan>(VUE_DEPART);
   const [surcharges, setSurcharges] = useState<Record<string, Surcharge>>({});
   const [glisse, setGlisse] = useState<Glisse | null>(null);
@@ -107,10 +107,13 @@ export default function PlanCombat({ jetons, deplacables, onDeplacer, retirable 
   const [erreur, setErreur] = useState<string | null>(null);
   const [mouvement, setMouvement] = useState<{ nom: string; deplace: number; vitesse: number; depasse: boolean } | null>(null);
 
+  // Les gestes lisent la vue et les jetons les plus récents sans se réabonner : copies tenues à jour après chaque rendu.
   const vueRef = useRef(vue);
-  vueRef.current = vue;
   const jetonsRef = useRef<readonly JetonPlan[]>(jetons);
-  jetonsRef.current = jetons;
+  useEffect(() => {
+    vueRef.current = vue;
+    jetonsRef.current = jetons;
+  });
 
   // Les jetons tels qu'on les montre : la surcharge optimiste, puis le jeton en cours de glissé.
   const affiches: JetonPlan[] = jetons.map((j) => {
@@ -179,10 +182,7 @@ export default function PlanCombat({ jetons, deplacables, onDeplacer, retirable 
       setMouvement(mv ? { nom: jeton.label, ...mv } : null);
     } catch (e) {
       // Refus ou réseau : le jeton revient où il était, et la raison s'affiche telle que la route l'a donnée.
-      setSurcharges((s) => {
-        const { [id]: _retire, ...reste } = s;
-        return reste;
-      });
+      setSurcharges((s) => Object.fromEntries(Object.entries(s).filter(([cle]) => cle !== id)));
       setErreur(e instanceof Error ? e.message : t("erreurDeplacement"));
     }
   }
@@ -396,10 +396,10 @@ export default function PlanCombat({ jetons, deplacables, onDeplacer, retirable 
                 {dedans.has(j.id) && <circle r={RAYON_JETON + 5} className="fill-none stroke-success" strokeWidth={3} />}
                 {choisi === j.id && <circle r={RAYON_JETON + 8} className="fill-none stroke-ink-soft" strokeWidth={1.5} strokeDasharray="3 3" />}
                 <circle r={enGlisse ? RAYON_JETON + 3 : RAYON_JETON} className={c.rond} strokeWidth={j.id === moiId ? 3 : 1} />
-                <text textAnchor="middle" dominantBaseline="central" className={`${c.texte} pointer-events-none text-[11px] font-semibold`}>
+                <text textAnchor="middle" dominantBaseline="central" className={`${c.texte} pointer-events-none text-xs font-semibold`}>
                   {initiales(j.label)}
                 </text>
-                <text y={RAYON_JETON + 13} textAnchor="middle" className="pointer-events-none fill-ink text-[11px]">
+                <text y={RAYON_JETON + 13} textAnchor="middle" className="pointer-events-none fill-ink text-xs">
                   {j.label}
                 </text>
               </g>

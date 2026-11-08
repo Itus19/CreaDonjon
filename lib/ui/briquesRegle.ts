@@ -13,7 +13,8 @@ import { containsDice, formatFormulaNode, FormulaError, parseFormula, type Formu
 import { pruneOrphanDurableEffects } from "@/src/core/rules/activationEditor";
 import { OPS_BY_TARGET_CATEGORY, modifierOpNeedsValue, modifierTargetOption } from "@/src/core/rules/modifierTargets";
 import type { ModifierOp } from "@/src/core/rules/sheet";
-import { isRollTarget, type EquipmentCondition } from "@/src/core/schemas/rule-blocks/primitives";
+import { isRollTarget, type Aura, type EquipmentCondition, type Modifier, type Patch } from "@/src/core/schemas/rule-blocks/primitives";
+import { zModifiersBlockData, type ModifiersBlockData } from "@/src/core/schemas/rule-blocks/blocks";
 import type { BudgetKind } from "@/src/core/rules/actionBudget";
 import type { ConditionNode, EffectNode, TriggerZone } from "@/src/core/rules/triggers";
 import {
@@ -300,14 +301,50 @@ export interface BrouillonLacune {
   manque: string;
 }
 
+/** V3.1-170 (ADR 0077) : une aura — des modificateurs pour ceux que couvre son rayon (en mètres), tant que sa source n'a aucun des états qui l'éteignent. */
+export interface BrouillonAura {
+  uid: string;
+  rayon: string;
+  camp: Aura["affects"];
+  soi: boolean;
+  /** Des mots (clés d'états : `incapacitated`…), séparés par des virgules ou des espaces. */
+  eteintePar: string;
+  modificateurs: BrouillonModificateur[];
+}
+
+export const CAMPS_AURA: readonly Aura["affects"][] = ["allies", "enemies", "all"];
+export const GENRES_RETOUCHE = ["aura", "resource", "durable_effect", "activation"] as const;
+export type GenreRetouche = (typeof GENRES_RETOUCHE)[number];
+export const UNITES_DUREE_RETOUCHE = ["round", "minute", "hour", "day"] as const;
+
+/** V3.1-170 : la retouche d'une AUTRE règle, dans la liste fermée de `zPatch`. */
+export interface BrouillonRetouche {
+  uid: string;
+  /** La clé de la règle retouchée. */
+  regle: string;
+  genre: GenreRetouche;
+  /** L'identifiant de la ressource, de l'effet qui dure ou de l'activation ; vide pour le rayon d'une aura. */
+  cible: string;
+  /** Un nombre (rayon, portée, durée), ou une recharge (`long_rest`…). */
+  valeur: string;
+  /** Pour une durée seulement. */
+  unite: string;
+}
+
 export interface Brouillon {
   ressources: BrouillonRessource[];
+  /** V3.1-170 : les auras et retouches du bloc `modifiers` ; sa liste de modificateurs reste telle quelle. */
+  auras: BrouillonAura[];
+  retouches: BrouillonRetouche[];
+  modificateursConserves: Modifier[];
+  /** Les auras et retouches tels que lus : `modifiers` n'est envoyé que s'ils ont changé. */
+  signatureAuras: string;
   activations: BrouillonActivation[];
   /** Les effets qui durent hors formulaire, gardés pour être réécrits. */
   durablesConserves: DurableEffect[];
   lacunes: BrouillonLacune[];
   /** Les blocs existaient déjà : les retirer s'envoie `null`. */
-  existait: { resources: boolean; activation: boolean; coverage: boolean };
+  existait: { resources: boolean; activation: boolean; coverage: boolean; modifiers: boolean };
 }
 
 let compteur = 0;
@@ -346,7 +383,59 @@ export function cleDepuisLibelle(libelle: string): string {
 // --- Brouillon vide et nouvelles briques ------------------------------------
 
 export function brouillonVide(): Brouillon {
-  return { ressources: [], activations: [], durablesConserves: [], lacunes: [], existait: { resources: false, activation: false, coverage: false } };
+  const b: Brouillon = {
+    ressources: [],
+    auras: [],
+    retouches: [],
+    modificateursConserves: [],
+    signatureAuras: "",
+    activations: [],
+    durablesConserves: [],
+    lacunes: [],
+    existait: { resources: false, activation: false, coverage: false, modifiers: false },
+  };
+  b.signatureAuras = signatureAuras(b);
+  return b;
+}
+
+/** Les auras et retouches sans leurs identifiants d'écran : de quoi savoir s'ils ont changé. */
+export function signatureAuras(b: Pick<Brouillon, "auras" | "retouches">): string {
+  return JSON.stringify({ a: b.auras, r: b.retouches }, (cle, v) => (cle === "uid" ? undefined : v));
+}
+
+export function nouvelleAura(): BrouillonAura {
+  return { uid: nouvelUid(), rayon: "3", camp: "allies", soi: false, eteintePar: "", modificateurs: [nouveauModificateur("ac", "add", "1")] };
+}
+
+export function nouvelleRetouche(): BrouillonRetouche {
+  return { uid: nouvelUid(), regle: "", genre: "aura", cible: "", valeur: "", unite: "minute" };
+}
+
+function motsDe(texte: string): string[] {
+  return texte.split(/[,\s]+/).filter((m) => m !== "");
+}
+
+function auraVersBrouillon(a: Aura): BrouillonAura {
+  return {
+    uid: nouvelUid(),
+    rayon: String(a.radius),
+    camp: a.affects,
+    soi: a.self,
+    eteintePar: (a.unless_conditions ?? []).join(", "),
+    modificateurs: a.modifiers.map(modificateurVersBrouillon),
+  };
+}
+
+function retoucheVersBrouillon(p: Patch): BrouillonRetouche {
+  const [genre, cible = ""] = p.field.split(".");
+  const base = { uid: nouvelUid(), regle: p.rule, unite: "minute" };
+  if (genre === "resource") return { ...base, genre, cible, valeur: String(p.value) };
+  if (genre === "durable_effect") {
+    const d = p.value as { unit?: unknown; amount?: unknown };
+    return { ...base, genre, cible, valeur: String(d.amount ?? ""), unite: typeof d.unit === "string" ? d.unit : "minute" };
+  }
+  if (genre === "activation") return { ...base, genre, cible, valeur: String(p.value) };
+  return { ...base, genre: "aura", cible: "", valeur: String(p.value) };
 }
 
 export function nouvelleRessource(): BrouillonRessource {
@@ -751,7 +840,14 @@ export function blocsVersBrouillon(blocs: readonly { blockType: string; data: un
   const res = blocs.find((x) => x.blockType === "resources");
   const act = blocs.find((x) => x.blockType === "activation");
   const cov = blocs.find((x) => x.blockType === "coverage");
-  b.existait = { resources: !!res, activation: !!act, coverage: !!cov };
+  const mod = blocs.find((x) => x.blockType === "modifiers");
+  b.existait = { resources: !!res, activation: !!act, coverage: !!cov, modifiers: !!mod };
+  if (mod) {
+    const donnees = mod.data as ModifiersBlockData;
+    b.modificateursConserves = donnees.modifiers;
+    b.auras = (donnees.auras ?? []).map(auraVersBrouillon);
+    b.retouches = (donnees.patches ?? []).map(retoucheVersBrouillon);
+  }
 
   if (res) {
     b.ressources = (res.data as RuleResourcesBlockData).resources.map((r) => ({
@@ -820,13 +916,14 @@ export function blocsVersBrouillon(blocs: readonly { blockType: string; data: un
   if (cov) {
     b.lacunes = (cov.data as CoverageBlockData).gaps.map((g) => ({ uid: nouvelUid(), texte: g.text, manque: g.missing }));
   }
+  b.signatureAuras = signatureAuras(b);
   return b;
 }
 
 // --- Brouillon -> blocs ------------------------------------------------------
 
 export type ResultatBlocs =
-  | { ok: true; resources: RuleResourcesBlockData | null; activation: ActivationBlockData | null; coverage: CoverageBlockData | null }
+  | { ok: true; resources: RuleResourcesBlockData | null; activation: ActivationBlockData | null; coverage: CoverageBlockData | null; modifiers: ModifiersBlockData | null }
   | { ok: false; erreurs: string[] };
 
 interface CtxEcriture {
@@ -914,6 +1011,28 @@ function zoneEcrite(z: BrouillonZone | null, contexte: string, ctx: CtxEcriture)
     ...(zone.forme === "line" && largeur !== "" ? { width: nombrePositif(largeur, `${contexte}, largeur`, ctx) } : {}),
     origin: zone.origine,
   };
+}
+
+function auraEcrite(a: BrouillonAura, contexte: string, ctx: CtxEcriture): Aura {
+  const eteintePar = motsDe(a.eteintePar);
+  return {
+    radius: nombrePositif(a.rayon, `${contexte}, rayon`, ctx),
+    affects: a.camp,
+    self: a.soi,
+    ...(eteintePar.length > 0 ? { unless_conditions: eteintePar } : {}),
+    modifiers: a.modificateurs.map((m, k) => modificateurEcrit(m, `${contexte}, modificateur ${k + 1}`, ctx)),
+  };
+}
+
+function retoucheEcrite(r: BrouillonRetouche, contexte: string, ctx: CtxEcriture): Patch {
+  if (r.regle.trim() === "") ctx.erreurs.push(`${contexte} : indique la règle retouchée`);
+  const rule = r.regle.trim() || "?";
+  const cible = r.cible.trim();
+  if (r.genre !== "aura" && cible === "") ctx.erreurs.push(`${contexte} : indique l'identifiant visé`);
+  if (r.genre === "aura") return { rule, field: "aura.radius", value: nombrePositif(r.valeur, `${contexte}, rayon`, ctx) };
+  if (r.genre === "activation") return { rule, field: `activation.${cible}.range`, value: nombrePositif(r.valeur, `${contexte}, portée`, ctx) };
+  if (r.genre === "resource") return { rule, field: `resource.${cible}.recharge`, value: r.valeur.trim() };
+  return { rule, field: `durable_effect.${cible}.duration`, value: { unit: r.unite, amount: nombrePositif(r.valeur, `${contexte}, durée`, ctx) } };
 }
 
 function entierDansBornes(texte: string, contexte: string, ctx: CtxEcriture): number {
@@ -1125,6 +1244,9 @@ export function brouillonVersBlocs(b: Brouillon, nomsEtats: Readonly<Record<stri
     return { text: g.texte.trim() || "?", missing: g.manque.trim() || "?" };
   });
 
+  const auras = b.auras.map((a, i) => auraEcrite(a, `Aura ${i + 1}`, ctx));
+  const retouches = b.retouches.map((r, i) => retoucheEcrite(r, `Retouche ${i + 1}`, ctx));
+
   if (ctx.erreurs.length > 0) return { ok: false, erreurs: ctx.erreurs };
 
   let resources: RuleResourcesBlockData | null = null;
@@ -1147,15 +1269,31 @@ export function brouillonVersBlocs(b: Brouillon, nomsEtats: Readonly<Record<stri
     if (!r.success) return { ok: false, erreurs: [r.error.issues[0]?.message ?? "Passages invalides."] };
     coverage = r.data;
   }
-  return { ok: true, resources, activation, coverage };
+
+  let modifiers: ModifiersBlockData | null = null;
+  if (auras.length > 0 || retouches.length > 0 || b.modificateursConserves.length > 0) {
+    const r = zModifiersBlockData.safeParse({
+      modifiers: b.modificateursConserves,
+      ...(auras.length > 0 ? { auras } : {}),
+      ...(retouches.length > 0 ? { patches: retouches } : {}),
+    });
+    if (!r.success) return { ok: false, erreurs: [r.error.issues[0]?.message ?? "Auras ou retouches invalides."] };
+    modifiers = r.data;
+  }
+  return { ok: true, resources, activation, coverage, modifiers };
 }
 
 /** Le corps du PUT : absent = inchangé, `null` = retiré (seulement si le bloc existait). */
 export function corpsEnregistrement(
   b: Brouillon,
-  blocs: { resources: RuleResourcesBlockData | null; activation: ActivationBlockData | null; coverage: CoverageBlockData | null }
-): { resources?: RuleResourcesBlockData | null; activation?: ActivationBlockData | null; coverage?: CoverageBlockData | null } {
-  const corps: { resources?: RuleResourcesBlockData | null; activation?: ActivationBlockData | null; coverage?: CoverageBlockData | null } = {};
+  blocs: { resources: RuleResourcesBlockData | null; activation: ActivationBlockData | null; coverage: CoverageBlockData | null; modifiers?: ModifiersBlockData | null }
+): { resources?: RuleResourcesBlockData | null; activation?: ActivationBlockData | null; coverage?: CoverageBlockData | null; modifiers?: ModifiersBlockData | null } {
+  const corps: { resources?: RuleResourcesBlockData | null; activation?: ActivationBlockData | null; coverage?: CoverageBlockData | null; modifiers?: ModifiersBlockData | null } = {};
+  // `modifiers` n'est envoyé que si les auras ou retouches ont changé ; le bloc part entier (sa liste de modificateurs reste telle quelle).
+  if (signatureAuras(b) !== b.signatureAuras) {
+    if (blocs.modifiers) corps.modifiers = blocs.modifiers;
+    else if (b.existait.modifiers) corps.modifiers = null;
+  }
   if (blocs.resources || b.existait.resources) corps.resources = blocs.resources;
   if (blocs.activation || b.existait.activation) corps.activation = blocs.activation;
   if (blocs.coverage || b.existait.coverage) corps.coverage = blocs.coverage;

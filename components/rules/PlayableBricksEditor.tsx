@@ -10,7 +10,10 @@ import { ACTIVATION_COSTS, ACTIVATION_TARGET_KINDS } from "@/src/core/schemas/ru
 import { ABILITY_LABELS } from "@/src/core/rules/abilities";
 import type { Ability } from "@/src/core/rules/sheet";
 import {
+  CAMPS_AURA,
   FORMES_ZONE,
+  GENRES_RETOUCHE,
+  UNITES_DUREE_RETOUCHE,
   apercuBouton,
   avecGenreCible,
   blocsVersBrouillon,
@@ -22,6 +25,8 @@ import {
   nouvelEffet,
   nouvelleOptionLancement,
   nouvelleActivation,
+  nouvelleAura,
+  nouvelleRetouche,
   nouvelleLacune,
   nouvelleRessource,
   nouvelleVariante,
@@ -33,6 +38,7 @@ import {
   type Brouillon,
   type BrouillonActivation,
   type BrouillonCout,
+  type GenreRetouche,
   type FamilleSurlignage,
   type GenreCible,
   type RechargeRegle,
@@ -42,7 +48,7 @@ import { chargerRessourcesDeclarees, enregistrerBriques, type RessourceDeclaree 
 import ChampFormule from "@/components/rules/briques/ChampFormule";
 import ConditionEquipement from "@/components/rules/briques/ConditionEquipement";
 import ReactionEditeur from "@/components/rules/briques/BriqueReaction";
-import { ListeEffets } from "@/components/rules/briques/BriqueEffet";
+import { EditeurModificateurs, ListeEffets } from "@/components/rules/briques/BriqueEffet";
 import {
   BoutonPetit,
   CarteBrique,
@@ -292,6 +298,7 @@ export default function PlayableBricksEditor({
                 </BoutonPetit>
               </div>
             </section>
+            <SectionAuras brouillon={brouillon} onChange={setBrouillon} />
             <SectionLacunes brouillon={brouillon} onChange={setBrouillon} />
           </div>
         </div>
@@ -336,6 +343,97 @@ function SectionRessources({ brouillon, onChange }: { brouillon: Brouillon; onCh
       })}
       <div className="w-fit">
         <BoutonPetit onClick={() => onChange({ ...brouillon, ressources: [...brouillon.ressources, nouvelleRessource()] })}>{t("ajouterRessource")}</BoutonPetit>
+      </div>
+    </section>
+  );
+}
+
+/** V3.1-170 (ADR 0077) : les auras que la règle étend et les retouches qu'elle apporte à d'autres règles. */
+function SectionAuras({ brouillon, onChange }: { brouillon: Brouillon; onChange: (b: Brouillon) => void }) {
+  const t = useTranslations("regles.briques");
+  return (
+    <section className="flex flex-col gap-3" data-testid="section-auras">
+      <h3 className="block-title">{t("auras.titre")}</h3>
+      <p className="text-xs text-ink-muted">{t("auras.aide")}</p>
+      {brouillon.auras.map((a, i) => {
+        const maj = (n: typeof a) => onChange({ ...brouillon, auras: remplacerA(brouillon.auras, i, n) });
+        return (
+          <CarteBrique
+            key={a.uid}
+            uid={a.uid}
+            titre={t("auras.uneAura", { n: i + 1 })}
+            actions={
+              <BoutonPetit onClick={() => onChange({ ...brouillon, auras: retirerA(brouillon.auras, i) })} danger>
+                {t("retirer")}
+              </BoutonPetit>
+            }
+          >
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <ChampTexte libelle={t("auras.rayon")} valeur={a.rayon} onChange={(rayon) => maj({ ...a, rayon })} mecanique />
+              <ChampListe
+                libelle={t("auras.camp")}
+                valeur={a.camp}
+                options={CAMPS_AURA.map((c) => ({ value: c, label: t(`auras.camps.${c}`) }))}
+                onChange={(v) => maj({ ...a, camp: CAMPS_AURA.find((c) => c === v) ?? a.camp })}
+              />
+              <ChampTexte libelle={t("auras.eteintePar")} valeur={a.eteintePar} onChange={(eteintePar) => maj({ ...a, eteintePar })} mecanique />
+            </div>
+            <Checkbox checked={a.soi} onChange={() => maj({ ...a, soi: !a.soi })} label={t("auras.soi")} />
+            <EditeurModificateurs modificateurs={a.modificateurs} onChange={(modificateurs) => maj({ ...a, modificateurs })} />
+          </CarteBrique>
+        );
+      })}
+      <div className="w-fit">
+        <BoutonPetit onClick={() => onChange({ ...brouillon, auras: [...brouillon.auras, nouvelleAura()] })}>{t("auras.ajouterAura")}</BoutonPetit>
+      </div>
+
+      <h3 className="block-title">{t("auras.retouchesTitre")}</h3>
+      {brouillon.retouches.map((r, i) => {
+        const maj = (n: typeof r) => onChange({ ...brouillon, retouches: remplacerA(brouillon.retouches, i, n) });
+        return (
+          <CarteBrique
+            key={r.uid}
+            uid={r.uid}
+            titre={t("auras.uneRetouche", { n: i + 1 })}
+            actions={
+              <BoutonPetit onClick={() => onChange({ ...brouillon, retouches: retirerA(brouillon.retouches, i) })} danger>
+                {t("retirer")}
+              </BoutonPetit>
+            }
+          >
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <ChampTexte libelle={t("auras.regle")} valeur={r.regle} onChange={(regle) => maj({ ...r, regle })} mecanique />
+              <ChampListe
+                libelle={t("auras.champ")}
+                valeur={r.genre}
+                options={GENRES_RETOUCHE.map((g) => ({ value: g, label: t(`auras.champs.${g}`) }))}
+                onChange={(v) => maj({ ...r, genre: (GENRES_RETOUCHE.find((g) => g === v) ?? r.genre) as GenreRetouche, valeur: "" })}
+              />
+              {r.genre !== "aura" && <ChampTexte libelle={t(`auras.cible.${r.genre}`)} valeur={r.cible} onChange={(cible) => maj({ ...r, cible })} mecanique />}
+              {r.genre === "resource" ? (
+                <ChampListe
+                  libelle={t("auras.valeurRecharge")}
+                  valeur={r.valeur}
+                  options={[{ value: "", label: t("auras.choisir") }, ...RULE_RECHARGES.map((x) => ({ value: x, label: t(`recharges.${x}`) }))]}
+                  onChange={(valeur) => maj({ ...r, valeur })}
+                />
+              ) : (
+                <ChampTexte libelle={t(`auras.valeur.${r.genre}`)} valeur={r.valeur} onChange={(valeur) => maj({ ...r, valeur })} mecanique />
+              )}
+              {r.genre === "durable_effect" && (
+                <ChampListe
+                  libelle={t("auras.unite")}
+                  valeur={r.unite}
+                  options={UNITES_DUREE_RETOUCHE.map((u) => ({ value: u, label: t(`auras.unites.${u}`) }))}
+                  onChange={(unite) => maj({ ...r, unite })}
+                />
+              )}
+            </div>
+          </CarteBrique>
+        );
+      })}
+      <div className="w-fit">
+        <BoutonPetit onClick={() => onChange({ ...brouillon, retouches: [...brouillon.retouches, nouvelleRetouche()] })}>{t("auras.ajouterRetouche")}</BoutonPetit>
       </div>
     </section>
   );
@@ -454,34 +552,34 @@ function CarteActivation({ activation: a, onChange, onRemove }: { activation: Br
         {cibles.zone && (
           <div className="grid gap-3 rounded-md border border-edge/60 p-2 sm:grid-cols-2 lg:grid-cols-4" data-testid="editeur-zone">
             <ChampListe
-              libelle={t("zone.forme")}
+              libelle={t("zoneCible.forme")}
               valeur={cibles.zone.forme}
-              options={FORMES_ZONE.map((f) => ({ value: f, label: t(`zone.formes.${f}`) }))}
+              options={FORMES_ZONE.map((f) => ({ value: f, label: t(`zoneCible.formes.${f}`) }))}
               onChange={(v) => {
                 const forme = FORMES_ZONE.find((f) => f === v);
                 if (forme && cibles.zone) onChange({ ...a, cibles: { ...cibles, zone: { ...cibles.zone, forme } } });
               }}
             />
             <ChampTexte
-              libelle={cibles.zone.forme === "sphere" ? t("zone.rayon") : cibles.zone.forme === "cube" ? t("zone.cote") : t("zone.longueur")}
+              libelle={cibles.zone.forme === "sphere" ? t("zoneCible.rayon") : cibles.zone.forme === "cube" ? t("zoneCible.cote") : t("zoneCible.longueur")}
               valeur={cibles.zone.taille}
               onChange={(taille) => cibles.zone && onChange({ ...a, cibles: { ...cibles, zone: { ...cibles.zone, taille } } })}
               mecanique
             />
             {cibles.zone.forme === "line" && (
               <ChampTexte
-                libelle={t("zone.largeur")}
+                libelle={t("zoneCible.largeur")}
                 valeur={cibles.zone.largeur}
                 onChange={(largeur) => cibles.zone && onChange({ ...a, cibles: { ...cibles, zone: { ...cibles.zone, largeur } } })}
                 mecanique
               />
             )}
             <ChampListe
-              libelle={t("zone.origine")}
+              libelle={t("zoneCible.origine")}
               valeur={cibles.zone.origine}
               options={[
-                { value: "self", label: t("zone.depuisSoi") },
-                { value: "point", label: t("zone.enUnPoint") },
+                { value: "self", label: t("zoneCible.depuisSoi") },
+                { value: "point", label: t("zoneCible.enUnPoint") },
               ]}
               onChange={(v) => cibles.zone && onChange({ ...a, cibles: { ...cibles, zone: { ...cibles.zone, origine: v === "point" ? "point" : "self" } } })}
             />

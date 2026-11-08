@@ -454,7 +454,56 @@
         "creature": "Creatures",
         "ally": "Allies",
         "enemy": "Enemies",
-        "point": "A point"
+        "point": "A point",
+        "area": "An area"
+      },
+      "zoneCible": {
+        "forme": "Area shape",
+        "formes": { "cone": "Cone", "line": "Line", "sphere": "Sphere", "cube": "Cube" },
+        "rayon": "Radius (metres)",
+        "cote": "Side (metres)",
+        "longueur": "Length (metres)",
+        "largeur": "Width (metres, 1.5 by default)",
+        "origine": "Starts from",
+        "depuisSoi": "Self",
+        "enUnPoint": "A point chosen on the plan"
+      },
+      "auras": {
+        "titre": "Auras and patches",
+        "aide": "An aura gives modifiers to everyone within its radius, as long as its bearer has none of the conditions that switch it off. A patch changes a field of another rule.",
+        "uneAura": "Aura {n}",
+        "rayon": "Radius (metres)",
+        "camp": "Who benefits",
+        "camps": { "allies": "Allies", "enemies": "Enemies", "all": "Everyone" },
+        "soi": "The bearer benefits too",
+        "eteintePar": "Conditions that switch it off (keys, comma-separated)",
+        "ajouterAura": "Add an aura",
+        "retouchesTitre": "Patches to other rules",
+        "uneRetouche": "Patch {n}",
+        "ajouterRetouche": "Add a patch",
+        "regle": "Key of the rule patched",
+        "champ": "Field patched",
+        "champs": { "aura": "Aura radius", "resource": "Resource recharge", "durable_effect": "Effect duration", "activation": "Use range" },
+        "cible": { "aura": "", "resource": "Resource key", "durable_effect": "Effect identifier", "activation": "Use identifier" },
+        "valeur": { "aura": "New radius (metres)", "resource": "", "durable_effect": "New duration", "activation": "New range (metres)" },
+        "valeurRecharge": "New recharge",
+        "choisir": "Choose…",
+        "unite": "Unit",
+        "unites": { "round": "Rounds", "minute": "Minutes", "hour": "Hours", "day": "Days" }
+      },
+      "condition": {
+        "titre": "Only if…",
+        "armure": "Armour worn (any of those ticked)",
+        "armures": { "none": "None", "light": "Light", "medium": "Medium", "heavy": "Heavy" },
+        "bouclier": "Shield",
+        "peuImporte": "Doesn't matter",
+        "avecBouclier": "With a shield",
+        "sansBouclier": "Without a shield",
+        "arme": "Property of the weapon held (any of those ticked)",
+        "proprietes": {
+          "finesse": "Finesse", "light": "Light", "heavy": "Heavy", "two-handed": "Two-handed", "versatile": "Versatile",
+          "thrown": "Thrown", "reach": "Reach", "ammunition": "Ammunition", "loading": "Loading", "ranged": "Ranged"
+        }
       },
       "nombreCibles": "Number of targets (formula)",
       "portee": "Range (in meters)",
@@ -1592,6 +1641,12 @@
     }
   },
   "initiative": {
+    "plan": {
+      "affichage": "Initiative display",
+      "liste": "List",
+      "plan": "Plan",
+      "erreurDeplacement": "The move could not be saved."
+    },
     "jetAttenteReactions": "Waiting for reactions — {cible}",
     "titre": "Initiative",
     "description": "Track the turn order, hit points and conditions of a combat.",
@@ -1717,7 +1772,42 @@
     "toutLeMondeALance": "Everyone has rolled.",
     "typeAjout": "Type of participant to add"
   },
+  "planCombat": {
+    "planTitre": "Combat plan",
+    "zoomer": "Zoom the plan in",
+    "dezoomer": "Zoom the plan out",
+    "recentrer": "Recentre",
+    "retirerDuPlan": "Remove {nom} from the plan",
+    "metres": "{n, number} m",
+    "planVide": "No token is placed. Place them from \"To place\".",
+    "aide": "Touch a token to choose it, then another to read the distance. Drag a token to move it.",
+    "distanceEntre": "{de} – {vers}: {n, number} m",
+    "mouvementTour": "{nom}: {deplace, number} m of {vitesse, number} m this turn.",
+    "mouvementDepasse": "Beyond speed: the GM decides.",
+    "erreurDeplacement": "The move could not be saved.",
+    "reserveTitre": "To place",
+    "poserAuCentre": "Place {nom} at the centre of the plan",
+    "etapesTitre": "What you are placing",
+    "poser": { "point": "Place the point", "aim": "Place the direction" },
+    "etape": { "point": "Touch the plan to place the area's point.", "aim": "Touch the plan to place the direction." },
+    "zonePosee": "Area placed. Touch \"Place the point\" or \"Place the direction\" to redo it.",
+    "zoneDepuisSoi": "It starts from your token.",
+    "manque": {
+      "no_position": "Place your token on the plan first.",
+      "no_point": "Place the area's point.",
+      "no_aim": "Place the area's direction.",
+      "out_of_range": "That point is out of range."
+    },
+    "dedansTitre": "In the area ({n})",
+    "personneDedans": "Nobody is in the area.",
+    "garderCible": "Keep {nom} in the area",
+    "garderUneCible": "Keep at least one target, or cancel.",
+    "validerZone": "Confirm the area",
+    "annulerZone": "Cancel"
+  },
   "combatJoueur": {
+    "planTitre": "Combat plan",
+    "planErreurDeplacement": "The move could not be saved.",
     "invitationTitre": "You enter combat",
     "invitationAide": "The GM is waiting for your initiative.",
     "lancer": "Roll initiative · d20",
@@ -1852,6 +1942,8 @@
       "choisirCiblesSansMax": "Chosen targets ({choisies})",
       "lectureCombat": "Reading the combat…",
       "aucunCombat": "No combat in progress: this ability targets other creatures and is played during initiative.",
+      "poserZone": "Place the area",
+      "aucunJeton": "Your character is not in the current combat.",
       "aucuneCible": "No creature of that kind in the current combat.",
       "cocherCible": "Target {nom}",
       "confirmer": "Confirm",
