@@ -423,21 +423,52 @@ function SectionEchecs({
               </BoutonPetit>
             }
           >
-            <div className="flex flex-wrap items-center gap-2 text-xs text-ink-soft">
-              <span>{t("contre")}</span>
-              {e.sorts.map((cle) => (
-                <span key={cle} className="flex items-center gap-1 rounded-full border border-edge px-2 py-0.5 text-xs text-ink">
-                  {sorts.find((s) => s.key === cle)?.name ?? cle}
-                  <button type="button" aria-label={t("retirerSort")} onClick={() => maj({ ...e, sorts: e.sorts.filter((k) => k !== cle) })} className="text-ink-muted hover:text-danger">
-                    ×
-                  </button>
-                </span>
-              ))}
-              {/* Une clé par nombre de sorts : le champ de recherche se vide après chaque choix. */}
-              <ChoixSort key={e.sorts.length} sorts={sorts.filter((s) => !e.sorts.includes(s.key))} value="" onChange={(cle) => cle && maj({ ...e, sorts: [...e.sorts, cle] })} />
+            {/* V3.1-191 : le résultat, qui porte l'état, et contre quels sorts. */}
+            <div className="grid gap-3 sm:grid-cols-3">
+              <ChampListe
+                libelle={t("resultat")}
+                valeur={e.resultat}
+                options={[
+                  { value: "fail", label: t("echecDOffice") },
+                  { value: "disadvantage", label: t("desavantage") },
+                ]}
+                onChange={(v) => maj({ ...e, resultat: v === "disadvantage" ? "disadvantage" : "fail" })}
+              />
+              <ChampListe
+                libelle={t("si")}
+                valeur={e.porteur}
+                options={[
+                  { value: "cible", label: t("laCible") },
+                  { value: "lanceuse", label: t("vous") },
+                ]}
+                onChange={(v) => maj({ ...e, porteur: v === "lanceuse" ? "lanceuse" : "cible" })}
+              />
+              <ChampListe libelle={e.porteur === "cible" ? t("estDansLEtat") : t("etesDansLEtat")} valeur={e.etat} options={etats.map((x) => ({ value: x.value, label: x.label }))} onChange={(etat) => maj({ ...e, etat })} />
             </div>
-            <ChampListe libelle={t("siLaCibleEst")} valeur={e.etat} options={etats.map((x) => ({ value: x.value, label: x.label }))} onChange={(etat) => maj({ ...e, etat })} />
-            <Checkbox checked={e.parMoi} onChange={() => maj({ ...e, parMoi: !e.parMoi })} label={t("parVous")} />
+            {e.porteur === "cible" && <Checkbox checked={e.parMoi} onChange={() => maj({ ...e, parMoi: !e.parMoi })} label={t("parVous")} />}
+            <ChampListe
+              libelle={t("contre")}
+              valeur={e.tous ? "tous" : "ces"}
+              options={[
+                { value: "tous", label: t("tousVosSorts") },
+                { value: "ces", label: t("cesSorts") },
+              ]}
+              onChange={(v) => maj({ ...e, tous: v === "tous" })}
+            />
+            {!e.tous && (
+              <div className="flex flex-wrap items-center gap-2 text-xs text-ink-soft">
+                {e.sorts.map((cle) => (
+                  <span key={cle} className="flex items-center gap-1 rounded-full border border-edge px-2 py-0.5 text-xs text-ink">
+                    {sorts.find((s) => s.key === cle)?.name ?? cle}
+                    <button type="button" aria-label={t("retirerSort")} onClick={() => maj({ ...e, sorts: e.sorts.filter((k) => k !== cle) })} className="text-ink-muted hover:text-danger">
+                      ×
+                    </button>
+                  </span>
+                ))}
+                {/* Une clé par nombre de sorts : le champ de recherche se vide après chaque choix. */}
+                <ChoixSort key={e.sorts.length} sorts={sorts.filter((s) => !e.sorts.includes(s.key))} value="" onChange={(cle) => cle && maj({ ...e, sorts: [...e.sorts, cle] })} />
+              </div>
+            )}
           </CarteBrique>
         );
       })}

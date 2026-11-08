@@ -137,7 +137,19 @@ export function subclassFormValues(blocks: readonly EditableBlock[]): SubclassFo
   return {
     ...descriptionOf(blocks),
     ...(incantation.success
-      ? { spellcasting: { ability: incantation.data.ability, fraction: incantation.data.caster_weight.fraction, rows: incantation.data.slots.map((r) => ({ level: r.level, counts: [...r.counts] })) } }
+      ? {
+          spellcasting: {
+            ability: incantation.data.ability,
+            fraction: incantation.data.caster_weight.fraction,
+            ...(incantation.data.spell_list ? { spellList: incantation.data.spell_list } : {}),
+            rows: incantation.data.slots.map((r) => ({
+              level: r.level,
+              counts: [...r.counts],
+              ...(r.cantrips !== undefined ? { cantrips: r.cantrips } : {}),
+              ...(r.prepared !== undefined ? { prepared: r.prepared } : {}),
+            })),
+          },
+        }
       : {}),
     features: features.success
       ? features.data.features.map((f) => ({

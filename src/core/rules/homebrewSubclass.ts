@@ -42,7 +42,10 @@ function sortsDuBloc(spells: readonly HomebrewGrantedSpellInput[] | undefined) {
 export interface HomebrewSubclassSpellcastingInput {
   ability: "str" | "dex" | "con" | "int" | "wis" | "cha";
   fraction: "full" | "half" | "third";
-  rows: { level: number; counts: number[] }[];
+  /** V3.1-190 : la liste où choisir les sorts (clé de classe) ; absente : rien à choisir. */
+  spellList?: string;
+  /** `cantrips`, `prepared` (V3.1-190) : absents, ceux de la ligne d'avant. */
+  rows: { level: number; counts: number[]; cantrips?: number; prepared?: number }[];
 }
 
 export interface HomebrewSubclassInput {
@@ -57,16 +60,27 @@ export interface HomebrewSubclassInput {
 /** Le bloc `subclass_spellcasting` ; `null` si la table ne donne aucun emplacement. Les zéros de fin d'une ligne tombent. */
 function incantationDuBloc(sc: HomebrewSubclassSpellcastingInput | undefined) {
   if (!sc) return null;
-  const slots = sc.rows
+  const triees = sc.rows
     .map((r) => {
       const counts = [...r.counts];
       while (counts.length > 0 && counts[counts.length - 1] === 0) counts.pop();
-      return { level: r.level, counts };
+      return { level: r.level, counts, ...(r.cantrips !== undefined ? { cantrips: r.cantrips } : {}), ...(r.prepared !== undefined ? { prepared: r.prepared } : {}) };
     })
-    .filter((r) => r.counts.length > 0)
     .sort((a, b) => a.level - b.level);
-  if (slots.length === 0) return null;
-  return { ability: sc.ability, caster_weight: { fraction: sc.fraction, rounding: sc.fraction === "half" ? "up" : "down" }, slots };
+  // V3.1-190 : une ligne qui ne change que le budget de sorts garde les emplacements de la ligne d'avant.
+  const slots: typeof triees = [];
+  for (const r of triees) {
+    const budget = r.cantrips !== undefined || r.prepared !== undefined;
+    if (r.counts.length === 0 && !budget) continue;
+    slots.push(r.counts.length === 0 ? { ...r, counts: [...(slots[slots.length - 1]?.counts ?? [])] } : r);
+  }
+  if (!slots.some((r) => r.counts.length > 0)) return null;
+  return {
+    ability: sc.ability,
+    caster_weight: { fraction: sc.fraction, rounding: sc.fraction === "half" ? "up" : "down" },
+    ...(sc.spellList ? { spell_list: sc.spellList } : {}),
+    slots,
+  };
 }
 
 export interface HomebrewSubclassEntry {

@@ -6068,3 +6068,33 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
 
 *Restes* : l'écart avec le bloc anglais de base n'a pas servi de preuve (2014 et 2024 diffèrent : *message*, *coup au but*) ; si une donnée anglaise est fausse, c'est un autre ticket.
 
+### V3.1-190 — Une sous-classe lanceuse : sa liste de sorts et son budget, choisis à la création (8 novembre)
+
+**Constat.** L'Arnaqueur arcanique avait ses emplacements (V3.1-185) mais ne pouvait choisir aucun sort : l'étape Sorts de l'assistant ne lit que la progression et la liste de la classe, et le Roublard n'en a pas.
+
+**Fait le 8 novembre** (Opus seul ; écran tel qu'esquissé). ADR 0080.
+- **Noyau** (tests d'abord) : `subclass_spellcasting` gagne `spell_list` et, par ligne, `cantrips` et `prepared` ; `subclassSpellBudget` ; `buildHomebrewSubclassEntry` garde les emplacements d'avant sur une ligne de budget seul.
+- **Assistant** : l'étape Sorts s'ouvre pour une sous-classe lanceuse et propose les sorts de sa liste, au bon nombre (sorts mineurs, sorts préparés jusqu'au plus haut emplacement).
+- **Formulaire de sous-classe** : « Sorts de : Magicien » et les colonnes « Mineurs » et « Préparés » ; la page de la règle les montre.
+- **« DnD 2024 »** : l'Arnaqueur arcanique déclare la liste du Magicien et le budget de sa table (2 sorts mineurs, 3 au niveau 10 ; 3 à 13 sorts préparés ; *main du mage*, accordée à part, ne compte pas).
+- Vérifié au navigateur (monde temporaire supprimé) : formulaire, page de la règle, étape Sorts d'un Roublard 3 (« Sorts mineurs 0 / 2 », liste du Magicien).
+
+### V3.1-191 — « Sauvegarde contre vos sorts » : désavantage, état de la lanceuse (8 novembre)
+
+**Constat.** Embuscade magique — la cible a le désavantage à sa sauvegarde si l'Arnaqueur est Invisible — ne s'écrivait pas : la règle de V3.1-186 ne savait qu'un échec d'office, selon un état de la cible.
+
+**Fait le 8 novembre** (Opus seul ; écran tel qu'esquissé). ADR 0080.
+- **Noyau** (tests d'abord) : `forced_save_failures` s'élargit (`outcome`, `caster_condition`, sorts facultatifs) ; `saveRuleOutcome` (l'échec l'emporte) ; les règles déjà écrites gardent leur sens.
+- **Serveur** : les états de la lanceuse (sa ligne de combat et ses effets) ; le désavantage part dans la demande de sauvegarde (`roll_mode`, libellé « · désavantage »), et le serveur lance avec.
+- **Éditeur** : la brique « Sauvegarde contre vos sorts » — Résultat, Si (la cible / vous) et l'état, Contre (tous vos sorts / ces sorts).
+- **« DnD 2024 »** : Embuscade magique écrite avec cette brique. Vérifié au navigateur : la brique saisie à l'écran s'enregistre (`caster_condition: invisible`, `outcome: disadvantage`).
+
+*Restes* : « pendant ce tour » n'est pas suivi ; le combat lui-même n'a pas été joué au navigateur (tests du noyau).
+
+### V3.1-192 — Frappe malicieuse du Roublard jouable, et Omniprésence (8 novembre)
+
+**Fait le 8 novembre** (Opus seul). ADR 0080.
+- **Données SRD** (`playable-2024.json`, réimport des aptitudes) : Frappe malicieuse — Croc-en-jambe (JS Dex, sinon À terre), Poison (JS Con, sinon Empoisonné), Repli —, JS contre 8 + Dex + maîtrise ; les manques dits (dé d'Attaque sournoise retiré à la main, taille, sauvegarde répétée du Poison). Test de la donnée.
+- **« DnD 2024 »** : Omniprésence devient une utilisation « Second croc-en-jambe » (mêmes briques) ; la distance à la main du mage attend le plan de combat.
+- En revérifiant les textes après le réimport : `recollerCoupures` (V3.1-180) aurait recollé les rangées des tableaux de V3.1-187 ; corrigé avant toute écriture.
+

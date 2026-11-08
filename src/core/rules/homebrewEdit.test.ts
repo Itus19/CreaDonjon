@@ -169,6 +169,48 @@ describe("subclassFormValues — incantation d'une sous-classe (V3.1-185)", () =
   });
 });
 
+describe("subclassFormValues — liste et budget de sorts (V3.1-190)", () => {
+  it("la liste et les colonnes mineurs/préparés s'écrivent et se relisent ; une ligne de budget seul garde les emplacements d'avant", () => {
+    const entry = buildHomebrewSubclassEntry({
+      name: "Arnaqueur arcanique",
+      parentClassKey: "rogue",
+      description: "",
+      pageRef: "",
+      features: [{ name: "Sorts", level: 3, description: "" }],
+      spellcasting: {
+        ability: "int",
+        fraction: "third",
+        spellList: "wizard",
+        rows: [
+          { level: 3, counts: [2], cantrips: 2, prepared: 3 },
+          { level: 4, counts: [3], prepared: 4 },
+          { level: 10, counts: [], cantrips: 3 },
+        ],
+      },
+    });
+    expect(entry.blocks.find((b) => b.block_type === "subclass_spellcasting")?.data).toEqual({
+      ability: "int",
+      caster_weight: { fraction: "third", rounding: "down" },
+      spell_list: "wizard",
+      slots: [
+        { level: 3, counts: [2], cantrips: 2, prepared: 3 },
+        { level: 4, counts: [3], prepared: 4 },
+        { level: 10, counts: [3], cantrips: 3 },
+      ],
+    });
+    expect(subclassFormValues(asBlocks(entry.blocks)).spellcasting).toEqual({
+      ability: "int",
+      fraction: "third",
+      spellList: "wizard",
+      rows: [
+        { level: 3, counts: [2], cantrips: 2, prepared: 3 },
+        { level: 4, counts: [3], prepared: 4 },
+        { level: 10, counts: [3], cantrips: 3 },
+      ],
+    });
+  });
+});
+
 describe("featureFormValues (V3.1-2)", () => {
   it("relit description, prerequis, modificateurs et declencheurs", () => {
     const trigger = { id: "t1", when: { event: "check_failed" }, then: [{ action: "narrate_hint", text: "Relance." }] };

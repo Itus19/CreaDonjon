@@ -206,6 +206,13 @@
   },
   "regles": {
     "incantationSousClasse": {
+      "listeDeSorts": "Sorts de :",
+      "aucuneListe": "aucune liste",
+      "listeDeSortsAide": "les sorts mineurs et préparés se choisissent dans cette liste.",
+      "mineurs": "Mineurs",
+      "prepares": "Préparés",
+      "mineursAuNiveau": "Sorts mineurs au niveau de classe {niveau}",
+      "preparesAuNiveau": "Sorts préparés au niveau de classe {niveau}",
       "lanceDesSorts": "Cette sous-classe lance des sorts",
       "aide": "Pour une sous-classe qui donne l'incantation à sa classe (Arnaqueur arcanique, Chevalier occulte). Seules les lignes qui changent : la dernière atteinte vaut jusqu'à la suivante.",
       "caracteristique": "Caractéristique :",
@@ -255,7 +262,7 @@
       "enCours": "Ouverture…"
     },
     "briques": {
-      "echecs": {"ajouter": "+ Échec automatique d'une sauvegarde", "titre": "Échecs automatiques", "aide": "Contre ces sorts, une cible qui porte cet état rate sa sauvegarde d'office : le MJ qui cible avec le sort n'a pas de sauvegarde à demander.", "brique": "Échec automatique d'une sauvegarde", "retirer": "Retirer", "contre": "Contre :", "retirerSort": "Retirer ce sort", "siLaCibleEst": "Si la cible est", "parVous": "… par vous (l'état vient de votre effet)", "ajouterAutre": "+ Un autre échec automatique"},
+      "echecs": {"ajouter": "+ Sauvegarde contre vos sorts", "titre": "Sauvegardes contre vos sorts", "aide": "Ce que vos règles font à la sauvegarde d'une cible contre votre sort : un échec d'office (Mante de majesté) ou le désavantage (Embuscade magique), selon un état de la cible ou le vôtre.", "brique": "Sauvegarde contre vos sorts", "retirer": "Retirer", "contre": "Contre", "retirerSort": "Retirer ce sort", "siLaCibleEst": "Si la cible est", "parVous": "… par vous (l'état vient de votre effet)", "ajouterAutre": "+ Une autre règle de sauvegarde", "resultat": "Résultat", "echecDOffice": "Échec d'office", "desavantage": "Désavantage", "si": "Si", "laCible": "la cible", "vous": "vous", "estDansLEtat": "est dans l'état", "etesDansLEtat": "êtes dans l'état", "tousVosSorts": "tous vos sorts", "cesSorts": "ces sorts…"},
       "reaction": {
         "declenchement": "Déclenchement",
         "auClic": "Au clic",

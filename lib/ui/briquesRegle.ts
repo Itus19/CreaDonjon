@@ -266,6 +266,8 @@ export interface BrouillonEchec {
   parMoi: boolean;
   porteur: "cible" | "lanceuse";
   resultat: "fail" | "disadvantage";
+  /** Contre tous vos sorts (`sorts` ignorés), ou seulement ceux nommés. */
+  tous: boolean;
 }
 
 export interface Brouillon {
@@ -327,7 +329,7 @@ export function brouillonVide(): Brouillon {
 }
 
 export function nouvelEchec(): BrouillonEchec {
-  return { uid: nouvelUid(), sorts: [], etat: "charmed", parMoi: true, porteur: "cible", resultat: "fail" };
+  return { uid: nouvelUid(), sorts: [], etat: "charmed", parMoi: true, porteur: "cible", resultat: "fail", tous: false };
 }
 
 export function nouvelleRessource(): BrouillonRessource {
@@ -766,6 +768,7 @@ export function blocsVersBrouillon(blocs: readonly { blockType: string; data: un
         parMoi: f.imposed_by_caster,
         porteur: f.target_condition === undefined && f.caster_condition !== undefined ? "lanceuse" : "cible",
         resultat: f.outcome ?? "fail",
+        tous: f.spells === undefined,
       }));
   }
 
@@ -1163,8 +1166,9 @@ export function brouillonVersBlocs(b: Brouillon, nomsEtats: Readonly<Record<stri
 
   const echecs = b.echecs.map((e, i) => {
     if (e.etat.trim() === "") ctx.erreurs.push(`Sauvegarde contre vos sorts ${i + 1} : l'état est requis`);
+    if (!e.tous && e.sorts.length === 0) ctx.erreurs.push(`Sauvegarde contre vos sorts ${i + 1} : choisis au moins un sort, ou « tous vos sorts »`);
     return {
-      ...(e.sorts.length > 0 ? { spells: e.sorts } : {}),
+      ...(!e.tous && e.sorts.length > 0 ? { spells: e.sorts } : {}),
       ...(e.porteur === "lanceuse" ? { caster_condition: e.etat.trim() } : { target_condition: e.etat.trim() }),
       imposed_by_caster: e.porteur === "cible" && e.parMoi,
       ...(e.resultat === "disadvantage" ? { outcome: "disadvantage" as const } : {}),

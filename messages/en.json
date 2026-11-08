@@ -205,6 +205,13 @@
   },
   "regles": {
     "incantationSousClasse": {
+      "listeDeSorts": "Spells from:",
+      "aucuneListe": "no list",
+      "listeDeSortsAide": "cantrips and prepared spells are chosen from this list.",
+      "mineurs": "Cantrips",
+      "prepares": "Prepared",
+      "mineursAuNiveau": "Cantrips at class level {niveau}",
+      "preparesAuNiveau": "Prepared spells at class level {niveau}",
       "lanceDesSorts": "This subclass casts spells",
       "aide": "For a subclass that grants spellcasting to its class (Arcane Trickster, Eldritch Knight). Only the rows that change: the last one reached applies until the next.",
       "caracteristique": "Ability:",
@@ -254,7 +261,7 @@
       "enCours": "Opening…"
     },
     "briques": {
-      "echecs": {"ajouter": "+ Automatic saving throw failure", "titre": "Automatic failures", "aide": "Against these spells, a target with this condition fails its save automatically: the GM targeting with the spell has no save to request.", "brique": "Automatic saving throw failure", "retirer": "Remove", "contre": "Against:", "retirerSort": "Remove this spell", "siLaCibleEst": "If the target is", "parVous": "… by you (the condition comes from your effect)", "ajouterAutre": "+ Another automatic failure"},
+      "echecs": {"ajouter": "+ Saving throw against your spells", "titre": "Saving throws against your spells", "aide": "What your rules do to a target's saving throw against your spell: an automatic failure (Mantle of Majesty) or disadvantage (Magical Ambush), depending on a condition of the target or yours.", "brique": "Saving throw against your spells", "retirer": "Remove", "contre": "Against", "retirerSort": "Remove this spell", "siLaCibleEst": "If the target is", "parVous": "… by you (the condition comes from your effect)", "ajouterAutre": "+ Another saving throw rule", "resultat": "Result", "echecDOffice": "Automatic failure", "desavantage": "Disadvantage", "si": "If", "laCible": "the target", "vous": "you", "estDansLEtat": "has the condition", "etesDansLEtat": "have the condition", "tousVosSorts": "all your spells", "cesSorts": "these spells…"},
       "reaction": {
         "declenchement": "Trigger mode",
         "auClic": "On click",

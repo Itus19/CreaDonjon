@@ -132,8 +132,17 @@ export const createHomebrewSubclassSchema = z.object({
     .object({
       ability: z.enum(["str", "dex", "con", "int", "wis", "cha"]),
       fraction: z.enum(["full", "half", "third"]),
+      /** V3.1-190 : la liste où choisir les sorts (clé de classe). */
+      spellList: z.string().trim().min(1).max(80).regex(/^[a-z0-9_-]+$/).optional(),
       rows: z
-        .array(z.object({ level: z.number().int().min(1, "Niveau entre 1 et 20.").max(20, "Niveau entre 1 et 20."), counts: z.array(z.number().int().min(0).max(9)).max(9) }))
+        .array(
+          z.object({
+            level: z.number().int().min(1, "Niveau entre 1 et 20.").max(20, "Niveau entre 1 et 20."),
+            counts: z.array(z.number().int().min(0).max(9)).max(9),
+            cantrips: z.number().int().min(0).max(20).optional(),
+            prepared: z.number().int().min(0).max(40).optional(),
+          })
+        )
         .max(20, "20 lignes maximum.")
         .refine((rows) => new Set(rows.map((r) => r.level)).size === rows.length, "Deux lignes pour le même niveau."),
     })

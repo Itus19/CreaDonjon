@@ -41,9 +41,12 @@ interface IncantationDraft {
   ability: Carac;
   fraction: Fraction;
   colonnes: number;
-  rows: { level: string; counts: string[] }[];
+  /** V3.1-190 : la liste où choisir les sorts (clé de classe) ; « » : aucune. */
+  spellList: string;
+  /** `cantrips`, `prepared` (V3.1-190) : « » pour « comme la ligne d'avant ». */
+  rows: { level: string; counts: string[]; cantrips: string; prepared: string }[];
 }
-const INCANTATION_VIDE: IncantationDraft = { active: false, ability: "int", fraction: "third", colonnes: 4, rows: [{ level: "3", counts: ["2", "", "", ""] }] };
+const INCANTATION_VIDE: IncantationDraft = { active: false, ability: "int", fraction: "third", colonnes: 4, spellList: "", rows: [{ level: "3", counts: ["2", "", "", ""], cantrips: "", prepared: "" }] };
 
 const EMPTY_FEATURE: FeatureDraft = { name: "", level: "3", description: "", spells: [] };
 const EMPTY_SORT: SortDraft = { key: "", alwaysPrepared: true, gratuit: "0", repos: "long_rest" };
@@ -137,7 +140,13 @@ export default function CreateHomebrewSubclassForm({
         ability: sc.ability,
         fraction: sc.fraction,
         colonnes,
-        rows: sc.rows.map((r) => ({ level: String(r.level), counts: Array.from({ length: colonnes }, (_, i) => (r.counts[i] ? String(r.counts[i]) : "")) })),
+        spellList: sc.spellList ?? "",
+        rows: sc.rows.map((r) => ({
+          level: String(r.level),
+          counts: Array.from({ length: colonnes }, (_, i) => (r.counts[i] ? String(r.counts[i]) : "")),
+          cantrips: r.cantrips === undefined ? "" : String(r.cantrips),
+          prepared: r.prepared === undefined ? "" : String(r.prepared),
+        })),
       });
     }
   }
@@ -177,9 +186,15 @@ export default function CreateHomebrewSubclassForm({
               spellcasting: {
                 ability: incantation.ability,
                 fraction: incantation.fraction,
+                ...(incantation.spellList ? { spellList: incantation.spellList } : {}),
                 rows: incantation.rows
                   .filter((r) => Number(r.level) >= 1)
-                  .map((r) => ({ level: Number(r.level), counts: r.counts.map((c) => Math.max(0, Math.trunc(Number(c) || 0))) })),
+                  .map((r) => ({
+                    level: Number(r.level),
+                    counts: r.counts.map((c) => Math.max(0, Math.trunc(Number(c) || 0))),
+                    ...(r.cantrips.trim() !== "" ? { cantrips: Math.max(0, Math.trunc(Number(r.cantrips) || 0)) } : {}),
+                    ...(r.prepared.trim() !== "" ? { prepared: Math.max(0, Math.trunc(Number(r.prepared) || 0)) } : {}),
+                  })),
               },
             }
           : {}),
@@ -362,7 +377,7 @@ export default function CreateHomebrewSubclassForm({
         </button>
       </div>
 
-      <IncantationSousClasse valeur={incantation} onChange={setIncantation} />
+      <IncantationSousClasse valeur={incantation} onChange={setIncantation} classes={classes.map((c) => ({ key: c.key, name: c.name }))} />
 
       {error && <p className="text-sm text-danger">{error}</p>}
 
@@ -464,7 +479,16 @@ const FRACTIONS: readonly Fraction[] = ["third", "half", "full"];
  * table de ses emplacements par niveau de classe. Seules les lignes qui
  * changent ; la dernière atteinte vaut (le moteur la déroule).
  */
-function IncantationSousClasse({ valeur, onChange }: { valeur: IncantationDraft; onChange: (v: IncantationDraft) => void }) {
+function IncantationSousClasse({
+  valeur,
+  onChange,
+  classes,
+}: {
+  valeur: IncantationDraft;
+  onChange: (v: IncantationDraft) => void;
+  /** V3.1-190 : les classes du monde, dont la liste de sorts peut servir. */
+  classes: readonly { key: string; name: string }[];
+}) {
   const t = useTranslations("regles.incantationSousClasse");
   const maj = (patch: Partial<IncantationDraft>) => onChange({ ...valeur, ...patch });
   const majLigne = (i: number, patch: Partial<IncantationDraft["rows"][number]>) => maj({ rows: valeur.rows.map((r, j) => (j === i ? { ...r, ...patch } : r)) });
@@ -482,6 +506,16 @@ function IncantationSousClasse({ valeur, onChange }: { valeur: IncantationDraft;
             <span>{t("multiclassage")}</span>
             <Dropdown value={valeur.fraction} options={FRACTIONS.map((f) => ({ value: f, label: t(`fraction.${f}`) }))} onChange={(f) => maj({ fraction: f as Fraction })} aria-label={t("multiclassage")} />
           </div>
+          <div className="flex flex-wrap items-center gap-2 text-xs text-ink-soft">
+            <span>{t("listeDeSorts")}</span>
+            <Dropdown
+              value={valeur.spellList}
+              options={[{ value: "", label: t("aucuneListe") }, ...classes.map((c) => ({ value: c.key, label: c.name }))]}
+              onChange={(spellList) => maj({ spellList })}
+              aria-label={t("listeDeSorts")}
+            />
+            <span className="text-ink-muted">{t("listeDeSortsAide")}</span>
+          </div>
           <div className="overflow-x-auto">
             <table className="text-sm text-ink">
               <thead>
@@ -492,6 +526,8 @@ function IncantationSousClasse({ valeur, onChange }: { valeur: IncantationDraft;
                       {t("niveauEmplacement", { n: i + 1 })}
                     </th>
                   ))}
+                  <th className="px-1 py-1 font-medium text-accent">{t("mineurs")}</th>
+                  <th className="px-1 py-1 font-medium text-accent">{t("prepares")}</th>
                   <th />
                 </tr>
               </thead>
@@ -515,6 +551,20 @@ function IncantationSousClasse({ valeur, onChange }: { valeur: IncantationDraft;
                         />
                       </td>
                     ))}
+                    {(["cantrips", "prepared"] as const).map((col) => (
+                      <td key={col} className="px-1 py-0.5">
+                        <input
+                          type="number"
+                          min={0}
+                          max={40}
+                          value={r[col]}
+                          placeholder="—"
+                          onChange={(e) => majLigne(i, { [col]: e.target.value })}
+                          aria-label={t(col === "cantrips" ? "mineursAuNiveau" : "preparesAuNiveau", { niveau: r.level })}
+                          className={`${champ} border-accent/60`}
+                        />
+                      </td>
+                    ))}
                     <td className="px-1 py-0.5">
                       <button type="button" onClick={() => maj({ rows: valeur.rows.filter((_, j) => j !== i) })} className="text-xs text-danger hover:underline">
                         {t("retirer")}
@@ -530,7 +580,7 @@ function IncantationSousClasse({ valeur, onChange }: { valeur: IncantationDraft;
               type="button"
               onClick={() => {
                 const dernier = Math.max(0, ...valeur.rows.map((r) => Number(r.level) || 0));
-                maj({ rows: [...valeur.rows, { level: String(Math.min(20, dernier + 1)), counts: colonnes.map(() => "") }] });
+                maj({ rows: [...valeur.rows, { level: String(Math.min(20, dernier + 1)), counts: colonnes.map(() => ""), cantrips: "", prepared: "" }] });
               }}
               className="w-fit rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel"
             >

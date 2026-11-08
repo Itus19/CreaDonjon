@@ -521,16 +521,18 @@ describe("V3.1-186 — l'échec automatique d'une sauvegarde dans l'éditeur", (
     expect(r.forced_save_failures).toEqual({ failures: [{ spells: ["command"], target_condition: "charmed", imposed_by_caster: true }] });
     expect(corpsEnregistrement(b, r).forced_save_failures).toEqual(r.forced_save_failures);
     const relu = blocsVersBrouillon([{ blockType: "forced_save_failures", data: r.forced_save_failures }]);
-    expect(relu.echecs.map(({ sorts, etat, parMoi, porteur, resultat }) => ({ sorts, etat, parMoi, porteur, resultat }))).toEqual([{ sorts: ["command"], etat: "charmed", parMoi: true, porteur: "cible", resultat: "fail" }]);
+    expect(relu.echecs.map(({ sorts, etat, parMoi, porteur, resultat, tous }) => ({ sorts, etat, parMoi, porteur, resultat, tous }))).toEqual([{ sorts: ["command"], etat: "charmed", parMoi: true, porteur: "cible", resultat: "fail", tous: false }]);
     expect(relu.existait.forced_save_failures).toBe(true);
   });
 
-  it("V3.1-191 : sans sort, la règle vaut pour tous ; sans état, refusée ; retirée alors qu'elle existait, elle part à null", () => {
+  it("V3.1-191 : « tous vos sorts » n'écrit aucun sort ; « ces sorts » sans sort est refusé ; sans état, refusé ; retiré, il part à null", () => {
     const vide = brouillonVide();
-    vide.echecs = [nouvelEchec()];
+    vide.echecs = [{ ...nouvelEchec(), tous: true }];
     const tous = brouillonVersBlocs(vide, {});
     expect(tous.ok && tous.forced_save_failures).toEqual({ failures: [{ target_condition: "charmed", imposed_by_caster: true }] });
-    vide.echecs = [{ ...nouvelEchec(), etat: "" }];
+    vide.echecs = [nouvelEchec()];
+    expect(brouillonVersBlocs(vide, {}).ok).toBe(false);
+    vide.echecs = [{ ...nouvelEchec(), tous: true, etat: "" }];
     expect(brouillonVersBlocs(vide, {}).ok).toBe(false);
     const existant = blocsVersBrouillon([{ blockType: "forced_save_failures", data: { failures: [{ spells: ["command"], target_condition: "charmed", imposed_by_caster: true }] } }]);
     existant.echecs = [];
@@ -617,7 +619,7 @@ describe("V3.1-166 : sort, options de lancement, lancer un sort", () => {
 describe("V3.1-191 — Embuscade magique dans l'éditeur", () => {
   it("désavantage quand la lanceuse est invisible, contre tous ses sorts : écrit, relu à l'identique", () => {
     const b = brouillonVide();
-    b.echecs = [{ ...nouvelEchec(), etat: "invisible", porteur: "lanceuse", resultat: "disadvantage" }];
+    b.echecs = [{ ...nouvelEchec(), etat: "invisible", porteur: "lanceuse", resultat: "disadvantage", tous: true }];
     const r = brouillonVersBlocs(b, {});
     if (!r.ok) throw new Error(r.erreurs.join(" ; "));
     expect(r.forced_save_failures).toEqual({ failures: [{ caster_condition: "invisible", imposed_by_caster: false, outcome: "disadvantage" }] });

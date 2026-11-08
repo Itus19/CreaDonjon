@@ -318,3 +318,6 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-187 | ☑ | sans | Textes français : les tableaux aplatis redeviennent des tableaux, une puce par ligne | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-188 | ☑ | sans | Textes français : le sous-titre des objets magiques remis en tête, le texte de *divination* retrouvé | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-189 | ☑ | sans | Textes français : l'en-tête des sorts mal lu à l'import, relu dans la source | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-190 | ☑ | sans | Une sous-classe lanceuse : sa liste de sorts et son budget, choisis à la création | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-191 | ☑ | sans | « Sauvegarde contre vos sorts » : désavantage, état de la lanceuse (Embuscade magique) | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-192 | ☑ | sans | Frappe malicieuse du Roublard jouable, et Omniprésence | [`termines.md`](backlog-v3.1/termines.md) |

@@ -934,11 +934,26 @@ const POIDS_MULTICLASSAGE: Record<SubclassSpellcastingBlockData["caster_weight"]
   third: "le tiers des niveaux",
 };
 
-/** V3.1-185 : l'incantation d'une sous-classe — caractéristique, poids au multiclassage, table d'emplacements. */
+/** Les classes du SRD, pour nommer une liste de sorts (V3.1-190) ; une classe maison garde sa clé. */
+const LISTES_DE_SORTS_FR: Record<string, string> = {
+  barbarian: "Barbare", bard: "Barde", cleric: "Clerc", druid: "Druide", fighter: "Guerrier", monk: "Moine",
+  paladin: "Paladin", ranger: "Rôdeur", rogue: "Roublard", sorcerer: "Ensorceleur", warlock: "Occultiste", wizard: "Magicien",
+};
+
+/** V3.1-185 : l'incantation d'une sous-classe — caractéristique, poids au multiclassage, table d'emplacements ; V3.1-190 : sa liste de sorts et son budget. */
 function SubclassSpellcasting({ data }: { data: SubclassSpellcastingBlockData }) {
   const largeur = Math.max(1, ...data.slots.map((r) => r.counts.length));
-  const colonnes = ["Niveau de classe", ...Array.from({ length: largeur }, (_, i) => (i === 0 ? "1er" : `${i + 1}e`))];
-  const rows = data.slots.map((r) => Object.fromEntries(colonnes.map((c, i) => [c, i === 0 ? String(r.level) : r.counts[i - 1] ? String(r.counts[i - 1]) : "—"])));
+  const budget = data.slots.some((r) => r.cantrips !== undefined || r.prepared !== undefined);
+  const colonnes = ["Niveau de classe", ...Array.from({ length: largeur }, (_, i) => (i === 0 ? "1er" : `${i + 1}e`)), ...(budget ? ["Sorts mineurs", "Sorts préparés"] : [])];
+  const rows = data.slots.map((r) =>
+    Object.fromEntries(
+      colonnes.map((c, i) => {
+        if (c === "Sorts mineurs") return [c, r.cantrips === undefined ? "—" : String(r.cantrips)];
+        if (c === "Sorts préparés") return [c, r.prepared === undefined ? "—" : String(r.prepared)];
+        return [c, i === 0 ? String(r.level) : r.counts[i - 1] ? String(r.counts[i - 1]) : "—"];
+      })
+    )
+  );
   const arrondi = data.caster_weight.fraction === "full" ? "" : data.caster_weight.rounding === "up" ? ", arrondi au supérieur" : ", arrondi à l'inférieur";
   return (
     <div className="flex flex-col gap-2">
@@ -946,6 +961,7 @@ function SubclassSpellcasting({ data }: { data: SubclassSpellcastingBlockData })
         items={[
           { label: "Caractéristique d'incantation", value: ABILITY_LABELS[data.ability] },
           { label: "Multiclassage", value: `${POIDS_MULTICLASSAGE[data.caster_weight.fraction]}${arrondi}` },
+          ...(data.spell_list ? [{ label: "Liste de sorts", value: LISTES_DE_SORTS_FR[data.spell_list] ?? data.spell_list }] : []),
         ]}
       />
       <Table columns={colonnes} rows={rows} />
