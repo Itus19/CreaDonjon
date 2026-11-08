@@ -364,10 +364,60 @@ Attaques multiples, action disponible en action bonus, temps d'incantation chang
 
 *Reste* : **Bénédiction n'est pas dans le SRD 2024 importé** (seulement en 2014) : elle se saisit à l'éditeur sur une variante ; Sort accéléré est proposé sans vérifier qu'il fait partie des options de Métamagie choisies ; « en prenant l'action Attaque » (Arme sacrée) et « jusqu'au début de votre tour suivant » (Bouclier) ne sont pas vérifiés ; le Souffle du drakéide attend les zones (137).
 
-### ☐ V3.1-137 — Les conditions de jeu et les distances réelles · `L` · sans modèle IA — **à concevoir (Opus)**
+### ☐ V3.1-137 — Les conditions de jeu et les distances réelles · `L` · sans modèle IA — **conçu le 8 novembre ([ADR 0077](../adr/0077-conditions-de-jeu-et-distances.md)), découpé en V3.1-168 à 171**
 Distances en mètres entre créatures (ADR 0059 §5), zones géométriques, auras, résistances et immunités, conditions sur l'équipement, règles qui en modifient d'autres, étiquettes d'arme sur `attack_hit`. Règles visées : 2, 3, 10, 12, 13, 17, 18, 24, 25, 26, 29, 32, 33, 36.
 
 *Reçu de V3.1-117 (13 octobre)* : les résistances choisies (Affinité élémentaire, Résilience fiélonne, héritages fiélons). Critère : « Affinité élémentaire Feu : résistance appliquée (test) ».
+
+*Conçu le 8 novembre* : [ADR 0077](../adr/0077-conditions-de-jeu-et-distances.md). Deux choix de l'auteur : un **plan sans grille** où l'on pose les jetons (positions en mètres, distances et géométrie calculées) ; les **résistances, vulnérabilités et immunités appliquées d'office** à tout dégât typé. Découpé ci-dessous.
+
+#### ☐ V3.1-168 — Le noyau : géométrie, zones, auras, défenses aux dégâts, conditions d'équipement, retouches · `L` · sans modèle IA — **prêt (Opus)**
+
+**Modèle conseillé : Opus** — noyau du moteur. Tests d'abord.
+
+- `src/core/rules/geometry.ts` : distance, contact, lecture en zones (`engaged`, `near`, `far`), qui est dans un cône, une ligne, une sphère, un cube.
+- `playable.ts` : `targets.kind: "area"` (forme, taille, largeur, origine) ; `aura` sur une fiche et un effet qui dure ; `when` (armure, bouclier, propriété de l'arme tenue) sur un modificateur déclaré et une activation ; `patches` (liste fermée de champs).
+- `sheet.ts` : cibles `resist.*`, `vulnerable.*`, `immune.*` → `damageDefenses` ; modificateurs conditionnés par l'équipement ; retouches appliquées avant le calcul ; auras reçues (couche 7) passées par l'appelant.
+- `adjustDamage` dans `turn.ts` (dégât typé seulement) ; étiquettes `weapon:` et `property:` dans `eventsForAttack`.
+
+**Critères d'acceptation**
+- [ ] Tests : un cône de 4,5 m prend les deux gobelins devant et pas celui derrière ; Aura de protection à 3 m couvre l'allié à 3 m et pas celui à 4,5 m, et rien quand le paladin est Neutralisé ; Rage : 12 tranchants → 6, 12 feu → 12 ; résistance et vulnérabilité s'annulent ; Défense sans armure ignorée en armure ; Aura étendue porte le rayon à 9 m.
+
+#### ☐ V3.1-169 — La migration et le service : positions, zones, auras et défenses en jeu · `L` · sans modèle IA — **prêt (Opus)**
+
+**Modèle conseillé : Opus** — migration, RLS, service.
+**Dépend de** : 168.
+
+- Migration : `combat_participants.pos_x`, `pos_y` ; `set_own_position` (son PJ, une écriture, journalisée) ; `combat_player_view` rend les positions visibles. `docs/SCHEMA.md`, `docs/SECURITE.md` §2.
+- Service : déplacer (MJ ; joueuse pour son PJ, mouvement compté sur le budget du tour) ; une activation de zone calcule ses cibles (le MJ peut en retirer) ; portées vérifiées (activations, réactions) ; auras ajoutées à la fiche en combat ; défenses appliquées aux dégâts (fiches et blocs de stats) avec la phrase du journal.
+
+**Critères d'acceptation**
+- [ ] Intégration : un Barbare en Rage subit 12 tranchants → 6 ; un gobelin résistant au feu (bloc de stats) prend la moitié d'un Trait de feu.
+- [ ] Une joueuse déplace son PJ, pas celui d'une autre ni un monstre ; le mouvement est décompté.
+
+#### ☐ V3.1-170 — Les écrans : le plan du combat ; l'éditeur suit · `L` · sans modèle IA — **prêt (Sonnet)**
+
+**Modèle conseillé : Sonnet**, une fois 169 fait ; Opus relit.
+**Dépend de** : 169.
+
+**Sous-tâches Haiku** (`aide-haiku`) : libellés ; planche du catalogue ; vérifications.
+
+- Le plan dans l'Initiative (MJ et joueuse) : jetons déplaçables au doigt et à la souris, échelle en mètres, distance affichée au survol ou au toucher, l'outil de zone (cône, ligne, sphère) qui montre qui est dedans avant de valider.
+- Éditeur de briques : cible « zone », aura, conditions d'équipement, retouches.
+
+**Critères d'acceptation**
+- [ ] Au téléphone, le plan se déplace et se zoome au doigt, un jeton se pose sans tomber à côté.
+- [ ] L'Aura de protection se saisit à l'éditeur sans JSON.
+
+#### ☐ V3.1-171 — Les données : zones, auras, défenses et conditions du SRD · `M` · sans modèle IA — **prêt (Opus)**
+
+**Modèle conseillé : Opus** — données officielles, import.
+**Dépend de** : 168, 169.
+
+- Rage (résistances, fin en armure lourde), Résistance naine, Affinité élémentaire (résistance choisie), Aura de protection (rayon 3 m) et Aura étendue (9 m), Souffle du drakéide (cône ou ligne au choix, remplace une attaque), Attaque sournoise (arme de finesse ou à distance), Défense sans armure (déjà là : passe par `when`), monstres (défenses de leurs blocs). Réimport, scripts d'auteur rejoués.
+
+**Critères d'acceptation**
+- [ ] Après réimport, ces règles perdent la lacune « attend 137 » et se jouent sur une fiche de test.
 
 ### ☐ V3.1-138 — Le modèle du monde · `L` · sans modèle IA — **à concevoir (Opus)**
 Perception et visibilité (invisible, caché, sens), lumière, étiquettes de magie (divination, capteurs), immunités et restrictions de ciblage, et les cas uniques : transformation, invocation, PV temporaires en effet (sur V3.1-24), redirection, jauge qui monte, recharge sur événement, quantité choisie, consommables, choix contraints pour les règles ouvertes. Règles visées : 8, 15, 16, 22, 29, 34, 35, 38.
