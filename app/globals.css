@@ -183,6 +183,14 @@ body {
   font-family: var(--font-narrative);
   color: var(--ink);
 }
+/* V3.1-189 : une image posee dans la phrase peut flotter ; le bloc de texte
+   (editeur comme lecture) contient alors son flottement au lieu de le laisser
+   deborder sur le bloc suivant. Seulement quand une image est la : `flow-root`
+   change la fusion des marges, on ne l'impose pas a tous les textes. */
+.rich-text-content:has(.inline-image) {
+  display: flow-root;
+}
+
 .rich-text-content > * + * {
   margin-top: 0.5em;
 }

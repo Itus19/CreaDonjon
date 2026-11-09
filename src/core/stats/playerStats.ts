@@ -4,7 +4,7 @@ import { TITLE_FAMILIES, TITLE_TEMPLATE_VARIABLES, type PlayerTitleTier, type Ti
 /**
  * V3.1-90 — Les statistiques d'une joueuse, calculées à la lecture : rien
  * n'est stocké (règle 16). Les jets viennent de `listRollsForStats` (V3.1-89,
- * ADR 0064) : ceux de SON personnage, publics, avec le d20 GARDÉ déjà choisi
+ * ADR 0079) : ceux de SON personnage, publics, avec le d20 GARDÉ déjà choisi
  * (avantage : le plus haut ; désavantage : le plus bas). Les paliers des
  * titres sont des données (`player_title_tiers`, `titleTiers.ts`).
  */
@@ -69,7 +69,7 @@ export function longestStreak(rolls: readonly StatsRoll[], face: number): number
 function actionKindOf(roll: StatsRoll): ActionKind | null {
   switch (roll.kind) {
     case "attack":
-      // L'attaque sournoise n'a pas de genre à elle (ADR 0064) : son libellé la distingue.
+      // L'attaque sournoise n'a pas de genre à elle (ADR 0079) : son libellé la distingue.
       return /sournoise|sneak attack/i.test(roll.what) ? "sneak_attack" : "attack";
     case "spell":
       return "spell";

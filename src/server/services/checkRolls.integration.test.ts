@@ -299,7 +299,7 @@ describe.skipIf(!hasCreds)("checkRolls (integration, base reelle)", () => {
     expect(empty).toEqual({ ok: false, reason: "invalid_pool" });
   });
 
-  // --- V3.1-89 (ADR 0064) : qui a lancé, pour quel personnage, quel d20 ---
+  // --- V3.1-89 (ADR 0079) : qui a lancé, pour quel personnage, quel d20 ---
 
   async function lastRoll() {
     const { data, error } = await admin

@@ -1,7 +1,7 @@
 import type { AnchorableBlock } from "./blockAnchor";
 
 /**
- * V3.1-189 (option B, ADR 0064) — une image posee DANS le texte d'un
+ * V3.1-189 (option B, ADR 0079) — une image posee DANS le texte d'un
  * paragraphe, a n'importe quel endroit d'une phrase.
  *
  * Le texte porte seulement la position : un noeud `{ t: "image", blockId }`

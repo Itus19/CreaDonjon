@@ -25,7 +25,7 @@ export interface DiceRollRow {
 const DICE_ROLL_COLUMNS = "id, session_id, campaign_id, expression, result, detail, rolled_by, visibility_level, created_at, entity_id";
 
 /**
- * V3.1-89 (ADR 0064) : ce que chaque jet dit de lui-même pour les
+ * V3.1-89 (ADR 0079) : ce que chaque jet dit de lui-même pour les
  * statistiques. OBLIGATOIRE à l'écriture : un chemin qui l'oublie ne compile
  * pas. Le compte qui lance (`rolled_by_user_id`) n'y est pas : la base le
  * pose elle-même (`default auth.uid()`) et refuse toute autre valeur.
@@ -106,7 +106,7 @@ export interface RollForStats {
 }
 
 /**
- * Les jets d'UN personnage pour ses statistiques (V3.1-89, ADR 0064) :
+ * Les jets d'UN personnage pour ses statistiques (V3.1-89, ADR 0079) :
  * seulement les jets PUBLICS. Ni les jets cachés du MJ, ni (V3.1-22) les jets
  * secrets d'un joueur, même lus par leur auteur : un secret ne se déduit pas
  * d'une moyenne. Les jets antérieurs (sans `entity_id`) n'y sont pas.
@@ -142,7 +142,7 @@ export async function listRollsForStats(
 /**
  * V3.1-91 — Les d20 gardés des personnages de la table, en UNE requête, pour
  * la moyenne de la table : seulement les jets publics (les secrets n'entrent
- * jamais dans une moyenne, ADR 0064) ; aucun autre champ n'est lu.
+ * jamais dans une moyenne, ADR 0079) ; aucun autre champ n'est lu.
  */
 export async function listTableD20(
   supabase: TypedClient,

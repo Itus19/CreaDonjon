@@ -10,6 +10,9 @@ import Underline from "@tiptap/extension-underline";
 import BubbleSelect from "./BubbleSelect";
 import RefLinkPopover, { type RefLinkTarget } from "./RefLinkPopover";
 import { SegmentParagraph, SegmentHeading, SegmentHorizontalRule, RefMention, Spoiler } from "./extensions";
+import { InlineImage, InlineImageBubble, InlineImagesProvider, selectedInlineImageId } from "./InlineImage";
+import type { ImageBlockData } from "@/src/core/schemas/blocks/image";
+import { useMatchMedia, WINDOWS_MOBILE_QUERY } from "@/components/shell/useMatchMedia";
 import { VISIBILITY_OPTIONS } from "@/components/shared/visibilityOptions";
 import { docToSegments, segmentsToDoc, type DocJSON } from "@/src/core/richtext/tiptapSync";
 import type { Segment } from "@/src/core/schemas/entities/segments";
@@ -85,6 +88,9 @@ export default function RichTextEditor({
   worldId,
   otherEntities,
   dropCap = false,
+  inlineImages,
+  onEditImage,
+  onOpenImageBlock,
 }: {
   segments: Segment[];
   onChange: (segments: Segment[]) => void;
@@ -96,6 +102,12 @@ export default function RichTextEditor({
   /** V2.1-1, "Créer comme Fiche" : `POST /api/entities` veut l'id du monde, pas son slug. */
   worldId?: string;
   otherEntities?: OtherEntityOption[];
+  /** V3.1-189 : les blocs image de la fiche, par identifiant — pour dessiner une image posee dans la phrase. Absent (cahier de notes) : le noeud est garde, rien ne se dessine. */
+  inlineImages?: Record<string, ImageBlockData>;
+  /** V3.1-189 : la bulle d'habillage ecrit sur le bloc image. */
+  onEditImage?: (blockId: string, data: ImageBlockData) => void;
+  /** V3.1-189 : « Bloc image » dans la bulle, pour la legende, la parallaxe et le fond. */
+  onOpenImageBlock?: (blockId: string) => void;
 }) {
   const [initialDoc] = useState<DocJSON>(() => segmentsToDoc(segments));
   const [, forceUpdate] = useState(0);
@@ -106,6 +118,8 @@ export default function RichTextEditor({
   const desktop = useDesktop();
   const router = useRouter();
   const ruleEntries = useWorldRuleEntries(worldSlug ?? "");
+  // Le seuil du telephone de l'app : pas de glisser au doigt dans un texte qui defile.
+  const estTelephone = useMatchMedia(WINDOWS_MOBILE_QUERY);
 
   const editor = useEditor({
     extensions: [
@@ -116,6 +130,10 @@ export default function RichTextEditor({
       SegmentHeading,
       SegmentHorizontalRule,
       RefMention,
+      // V3.1-189 : toujours charge, meme sans images a dessiner — sans lui,
+      // Tiptap jetterait le noeud au chargement et la sauvegarde suivante
+      // effacerait l'image du texte.
+      InlineImage,
       Underline,
       Spoiler,
     ],
@@ -463,12 +481,21 @@ export default function RichTextEditor({
     setSuggestions((prev) => prev.filter((x) => x !== s));
   }
 
+  const imageSelectionnee = selectedInlineImageId(editor);
+
   return (
+    <InlineImagesProvider value={{ images: inlineImages ?? {}, onEditImage }}>
     <div className="flex flex-col gap-1">
       <BubbleMenu
         editor={editor}
         className="flex items-center gap-0.5 rounded-lg border border-edge-strong bg-panel-raised px-1.5 py-1 shadow-2xl"
       >
+        {/* V3.1-189 : une image selectionnee dans la phrase remplace les boutons
+            de texte par ceux de son habillage, dans le meme cadre. */}
+        {imageSelectionnee ? (
+          <InlineImageBubble editor={editor} blockId={imageSelectionnee} showMoveButtons={estTelephone} onOpenImageBlock={onOpenImageBlock} />
+        ) : (
+        <>
         {worldSlug && otherEntities && isRefSelected && (
           <>
             {selectedRefBroken ? (
@@ -615,6 +642,8 @@ export default function RichTextEditor({
           onChange={setVisibilityForSelection}
           aria-label="Visibilité du passage"
         />
+        </>
+        )}
       </BubbleMenu>
       {/* V3.1-151 : sur une ligne vide (où la bulle, qui attend une
           sélection, ne s'ouvre pas), un petit bouton « — » apparaît au
@@ -686,5 +715,6 @@ export default function RichTextEditor({
         </div>
       )}
     </div>
+    </InlineImagesProvider>
   );
 }

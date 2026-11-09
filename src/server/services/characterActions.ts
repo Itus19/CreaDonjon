@@ -636,7 +636,7 @@ export async function castSpell(
         ast: damage.ast,
         context: extra.value !== 0 ? { mod: extra.value } : {},
         result: damage.total,
-        // Les dégâts d'un sort comptent comme des dégâts (record), l'attaque de sort comme un sort (ADR 0064).
+        // Les dégâts d'un sort comptent comme des dégâts (record), l'attaque de sort comme un sort (ADR 0079).
         attribution: { entityId: ctx.entityId, kind: "damage" },
         detail: {
           who: ctx.entityName,

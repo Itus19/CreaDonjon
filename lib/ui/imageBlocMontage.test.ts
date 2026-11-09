@@ -9,10 +9,11 @@ import messages from "@/messages/fr.json";
 /**
  * V3.1-67 — « un bloc ancien s'affiche à l'identique, sans qu'on écrive à son
  * ouverture ». Le montage est rendu côté serveur (pas de jsdom dans le dépôt) :
- * `onChange` ne doit pas être appelé, et l'aperçu doit montrer l'image et la
- * légende telles que la donnée les porte.
+ * `onChange` ne doit pas être appelé, et l'image et la légende s'affichent
+ * telles que la donnée les porte. V3.1-189 : l'aperçu dans le texte a quitté
+ * le bloc image (la place se choisit dans l'éditeur de texte).
  */
-function monter(donnee: unknown, onChange: () => void) {
+function monter(donnee: unknown, onChange: () => void, contenuDuSecond: unknown[] = [{ t: "text", v: "Second paragraphe." }]) {
   const data = zImageBlockData.parse(donnee);
   return renderToStaticMarkup(
     // Le typage de `NextIntlClientProvider` exige `children` dans les props quand on l'appelle par `createElement` sans JSX.
@@ -32,7 +33,7 @@ function monter(donnee: unknown, onChange: () => void) {
             data: {
               segments: [
                 { id: "s1", blockType: "paragraph", visibility: { level: "public", scopeId: null }, content: [{ t: "text", v: "Premier paragraphe." }], align: "left" },
-                { id: "s2", blockType: "paragraph", visibility: { level: "public", scopeId: null }, content: [{ t: "text", v: "Second paragraphe." }], align: "left" },
+                { id: "s2", blockType: "paragraph", visibility: { level: "public", scopeId: null }, content: contenuDuSecond, align: "left" },
               ],
             },
           },
@@ -51,20 +52,24 @@ describe("ImageBlockEditor au montage", () => {
     expect(html).toContain('value="Vue du bourg"');
   });
 
-  it("n'écrit rien pour un bloc ancré, et montre l'image dans le texte de l'hôte", () => {
+  it("n'écrit rien pour un bloc à l'ancien ancrage par paragraphe", () => {
     const onChange = vi.fn();
-    const html = monter(
-      { __v: 1, url: "/x.png", placement: "anchored", anchor: { blockId: "t1", segmentId: "s2", position: "before" } },
-      onChange,
-    );
+    monter({ __v: 1, url: "/x.png", placement: "anchored", anchor: { blockId: "t1", segmentId: "s2", position: "before" } }, onChange);
     expect(onChange).not.toHaveBeenCalled();
-    expect(html).toContain("Premier paragraphe.");
-    expect(html.indexOf("Premier paragraphe.")).toBeLessThan(html.indexOf('src="/x.png"'));
-    expect(html.indexOf('src="/x.png"')).toBeLessThan(html.indexOf("Second paragraphe."));
   });
 
-  it("garde la barre flottante fermée tant qu'on ne touche pas l'image", () => {
-    expect(monter({ __v: 1, url: "/x.png" }, vi.fn())).not.toContain('role="toolbar"');
+  it("V3.1-189 : une image posée dans un texte nomme son bloc texte, sans rien écrire à l'ouverture", () => {
+    const onChange = vi.fn();
+    const html = monter({ __v: 1, url: "/x.png" }, onChange, [{ t: "text", v: "Avant " }, { t: "image", blockId: "b1" }]);
+    expect(onChange).not.toHaveBeenCalled();
+    expect(html).toContain("Dans « Description »");
+    expect(html).toContain("Faites-la glisser dans le texte");
+  });
+
+  it("V3.1-189 : plus de curseur à crans ni de barre d'alignement dans le bloc image", () => {
+    const html = monter({ __v: 1, url: "/x.png" }, vi.fn(), [{ t: "image", blockId: "b1" }]);
+    expect(html).not.toContain('role="toolbar"');
+    expect(html).not.toContain("Position dans le bloc");
   });
 
   it("cache flou et fondu sans fond, les montre avec un fond", () => {

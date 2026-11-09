@@ -538,7 +538,7 @@ const getPublicVisibleBlocks = cache(async function getPublicVisibleBlocks(
     }))
     .sort((a, b) => a.displayOrder - b.displayOrder);
   // Une image cachee l'est partout, texte compris : retiree des phrases avant
-  // l'envoi, jamais seulement masquee (regle 5, ADR 0064).
+  // l'envoi, jamais seulement masquee (regle 5, ADR 0079).
   return applyInlineImageVisibility(rawInlineIds, visible);
 });
 

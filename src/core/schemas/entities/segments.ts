@@ -45,7 +45,7 @@ const zRefNode = z
     message: "kind='rule' necessite key, entity/asset necessitent id.",
   });
 
-// V3.1-189 (ADR 0064) : une image posee dans le texte, a n'importe quel
+// V3.1-189 (ADR 0079) : une image posee dans le texte, a n'importe quel
 // endroit d'une phrase. Le noeud ne porte que l'identifiant du bloc image de
 // la meme fiche : adresse, legende, habillage et taille vivent sur ce bloc,
 // qui garde sa propre visibilite. Une image que le lecteur ne voit pas est
