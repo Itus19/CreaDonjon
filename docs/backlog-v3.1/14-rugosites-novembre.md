@@ -60,13 +60,12 @@ Demande de l'auteur : l'aperçu de placement dans le bloc image (curseur à cran
 
 Demande de l'auteur : pouvoir lancer plusieurs demandes de dates de séance à la fois, et voir, côté MJ comme côté joueur, les demandes en cours et qui a répondu ou non (notifications).
 
-**Esquisses** (9 novembre, à valider) : planche « Calendrier réel, demandes multiples », quatre écrans.
-1. **MJ, toutes les demandes** : une carte par demande ouverte (« Prête à fixer » ou « En attente », réponses 4/4, 2/4, qui manque, meilleure date), « + Nouvelle demande », séances à venir, demandes closes.
-2. **MJ, une demande** : pastilles pour passer d'une demande à l'autre ; liste des réponses (répondu, avec la date, ou en attente) ; dates possibles classées, « Fixer cette date » ; la grille actuelle reste dessous.
-3. **Joueur, Prochaine session** : la liste des demandes (« À répondre », « ✓ Répondu », modifiable tant que la date n'est pas fixée), et la grille de la demande choisie.
-4. **Notifications** :
+**Esquisses** (9 novembre, refaites en écran complet à la demande de l'auteur, à valider) : planche « Calendrier réel, demandes multiples ».
+1. **MJ, écran Calendrier réel complet** : sous l'intro, une rangée « Demandes en cours » (une carte par demande : « Prête à fixer » ou « En attente », réponses 6/6, 3/6, 1/6) et « + Nouvelle demande ». La demande choisie garde l'écran d'aujourd'hui tel quel : en-tête (créneau, réponses, durée visée, « Annuler la demande »), grille horaire « Mes disponibilités / Toute la table » (avec, en plus, une ligne « Réponses : ✓ … » par joueuse), « Dates possibles » avec « Fixer cette date », puis « Régler une date à la main », « Séances à venir », « Déjà jouées ».
+2. **Joueur, écran Prochaine session complet** : la prochaine séance, la rangée « Demandes du MJ » (« À répondre », « ✓ Répondu »), puis pour la demande choisie : en-tête, « Aucune date ne me va », la même grille (une grille par demande), « Les dates qui se dessinent », « Séances à venir », « Déjà jouées ».
+3. **Notifications** :
    - joueur : le point rouge du rail devient le nombre de demandes sans réponse ;
-   - MJ : une pastille « N à fixer » sur l'outil Calendrier réel (demandes où tout le monde a répondu) ;
+   - MJ : une pastille « N à fixer » sur l'outil Calendrier réel ;
    - téléphone : la liste des demandes, une demande en pleine page.
 
 **Ce que le schéma impose (migration à écrire)** :
