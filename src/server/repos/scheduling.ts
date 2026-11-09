@@ -130,17 +130,6 @@ export async function listAvailabilitiesForRequest(supabase: TypedClient, reques
   return data;
 }
 
-/** Mes propres reponses a une ronde precise (retour utilisateur : jamais celles des autres) — sert aussi de verification "a-t-elle deja repondu" (V3.1-8, pastille). */
-export async function listAvailabilitiesForUserAndRequest(supabase: TypedClient, requestId: string, userId: string): Promise<AvailabilityRow[]> {
-  const { data, error } = await supabase
-    .from("real_session_availabilities")
-    .select(AVAILABILITY_COLUMNS)
-    .eq("request_id", requestId)
-    .eq("user_id", userId);
-  if (error) throw new Error(error.message);
-  return data;
-}
-
 export async function insertRealSession(
   supabase: TypedClient,
   params: { campaignId: string; scheduledDate: string; startsAt: string; durationMinutes: number; source: "availability" | "manual"; createdBy: string }

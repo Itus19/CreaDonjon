@@ -12,7 +12,6 @@ import {
   insertAvailabilityRequest,
   insertRealSession,
   listAvailabilitiesForRequest,
-  listAvailabilitiesForUserAndRequest,
   listDeclinesForRequests,
   listOpenAvailabilityRequests,
   listRealSessions,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { chargerProchaineSession } from "@/src/server/services/prochaineSession";
 import AvailabilityGrid from "./AvailabilityGrid";
 import { NextSessionCard, PossibleDates, RequestTabs, SessionsCard, type OpenRequestBoard, type RealSession } from "./SessionBoardParts";
@@ -19,10 +19,8 @@ import { NextSessionCard, PossibleDates, RequestTabs, SessionsCard, type OpenReq
  * 4. séances à venir et déjà jouées.
  */
 export default function NextSessionPanel({
-  worldSlug,
   initial,
 }: {
-  worldSlug: string;
   /**
    * V3.1-62, étape 3 (C1) : ce que la page a lu avec elle — `null` si le monde
    * n'a pas de campagne. Les relectures après un geste passent par la route
@@ -54,9 +52,6 @@ export default function NextSessionPanel({
     },
     [campaignId]
   );
-
-  // Le badge du rail est lu par le layout : il suit au prochain changement de page.
-  useEffect(() => setError(null), [worldSlug]);
 
   async function declineRequest(requestId: string) {
     if (!campaignId) return;
