@@ -134,7 +134,7 @@ Chaque page affichée fait deux appels `/api` de moins : c'est aussi du quota é
 
 **Après les corrections 7 et 8 (§7), le 11 octobre** :
 - **Messages non lus** : le compte arrive avec le layout du monde (`countUnreadChatMessages`, partagé avec la route). Plus aucun appel `/api` après l'affichage sur les accueils.
-- **La fiche avec la page (C1, ADR 0056)** : la page lance le calcul de la fiche sans l'attendre et le passe en promesse ; la fiche l'adopte à la place de `/sheet` et `/resolved-ruleset`. Ces deux appels ont disparu sur les trois pages qui affichent une fiche par `EditEntityForm`.
+- **La fiche avec la page (C1, ADR 0056)** : la page lance le calcul de la fiche sans l'attendre et le passe en promesse ; la fiche l'adopte à la place de `/sheet` et `/resolved-ruleset`. Ces deux appels ont disparu sur les pages qui affichent une fiche par `EditEntityForm` (le Wiki joueur n’en fait plus partie depuis le 9 novembre : il n’édite plus, l’édition vit dans l’onglet Édition).
 
 | Écran | Fin des chargements (chronologie) |
 |---|---|
@@ -210,7 +210,7 @@ Ce qui se charge, quand et où. Une carte à mettre à jour à chaque recâblage
 
 **Outil Table du MJ** (page `/mj/table` et fenêtre) : tout arrive avec la page ou la route ; les PJ se résolvent ensemble (`getTableParty`). Reste la liste des règles du monde, demandée par la rangée chiffrée pour relier les états à leur règle (un appel par onglet, hors du chemin critique).
 
-**Fiche de personnage** (MJ `/m/[monde]/f/[pj]`, joueuse `/joueur` et `/joueur/wiki/[pj]`) :
+**Fiche de personnage** (MJ `/m/[monde]/f/[pj]`, joueuse `/joueur` et `/joueur/fiche/[pj]`) :
 - avec la page : la coquille et les blocs ;
 - après l'affichage, en cascade :
   - `resolved-ruleset` ×6 ;
