@@ -729,10 +729,11 @@ create table campaign_encounters (
 
 `participants` n'est jamais recalculé depuis le ruleset à la lecture — une rencontre sauvegardée ne doit pas changer de composition si une traduction ou une entrée de ruleset est modifiée plus tard. RLS : même politique que `dice_rolls`/`entity_discoveries` (`app.is_world_member(app.campaign_world_id(campaign_id))`).
 
-**Calendrier réel — planification des séances** (migration `20260913140000_real_scheduling.sql`, V2.1-4 ; complétée par `20260929120000_availability_requests.sql`, V3.1-8) — distinct du calendrier ingame (dates fictives du monde, voir les outils MJ) :
+**Calendrier réel — planification des séances** (migration `20260913140000_real_scheduling.sql`, V2.1-4 ; complétée par `20260929120000_availability_requests.sql`, V3.1-8, et `20261109150000_availability_requests_multiples.sql`, V3.1-190) — distinct du calendrier ingame (dates fictives du monde, voir les outils MJ) :
 
 ```sql
 create table real_session_availabilities (
+  id          uuid primary key default gen_random_uuid(),               -- V3.1-190
   campaign_id uuid not null references campaigns(id) on delete cascade,
   user_id     uuid not null references auth.users(id) on delete cascade,
   date        date not null,
@@ -740,7 +741,7 @@ create table real_session_availabilities (
   ends_at     time not null,
   updated_at  timestamptz not null default now(),
   request_id  uuid references availability_requests(id) on delete cascade,  -- V3.1-8, nullable
-  primary key (campaign_id, user_id, date),
+  unique (request_id, user_id, date),                                    -- V3.1-190 (avant : clé (campaign_id, user_id, date))
   check (ends_at > starts_at)
 );
 
@@ -765,15 +766,27 @@ create table availability_requests (
   status          text not null default 'open' check (status in ('open', 'closed')),
   created_by      uuid not null references auth.users(id),
   created_at      timestamptz not null default now(),
-  check (cardinality(candidate_dates) > 0)
+  check (cardinality(candidate_dates) > 0),
+  unique (id, campaign_id)                                               -- V3.1-190, cible de la clé composée ci-dessous
+);
+
+create table availability_declines (                                     -- V3.1-190 : « aucune date ne me va »
+  request_id  uuid not null,
+  campaign_id uuid not null references campaigns(id) on delete cascade,
+  user_id     uuid not null references auth.users(id) on delete cascade,
+  created_at  timestamptz not null default now(),
+  primary key (request_id, user_id),
+  foreign key (request_id, campaign_id) references availability_requests(id, campaign_id) on delete cascade
 );
 ```
 
-`real_session_availabilities` : une seule plage par campagne/joueuse/jour (personne n'indique deux disponibilités disjointes le même soir). `real_sessions` : une ligne par séance confirmée, aucune limite par mois — `source` distingue une confirmation issue du classement d'un réglage manuel, jamais utilisé pour filtrer.
+`real_session_availabilities` : une seule plage par demande/joueuse/jour (personne n'indique deux disponibilités disjointes le même soir). V3.1-190 : la clé était le jour seul ; deux demandes qui proposent le même jour se seraient écrasées. `real_sessions` : une ligne par séance confirmée, aucune limite par mois — `source` distingue une confirmation issue du classement d'un réglage manuel, jamais utilisé pour filtrer.
 
-`availability_requests` (V3.1-8) porte la notion de **ronde de demande** : le MJ propose un ensemble de dates candidates (`candidate_dates`, résolu en dates concrètes côté assistant — que l'origine soit une sélection au clic ou un motif « jours de semaine sur une fenêtre » n'a plus d'importance une fois écrit) et une plage horaire suggérée. Une seule ronde `open` à la fois par campagne (`availability_requests_one_open_per_campaign`, index partiel). Une réponse (`real_session_availabilities.request_id`) répond toujours à une ronde précise ; les réponses antérieures à ce ticket (`request_id null`) restent lisibles pour l'historique mais ne sont rattachées à aucune ronde.
+`availability_requests` (V3.1-8) porte la notion de **ronde de demande** : le MJ propose un ensemble de dates candidates (`candidate_dates`, résolu en dates concrètes côté assistant — que l'origine soit une sélection au clic ou un motif « jours de semaine sur une fenêtre » n'a plus d'importance une fois écrit) et une plage horaire suggérée. V3.1-190 : **plusieurs demandes `open` à la fois** (l'index partiel « une seule ouverte » est retiré, ADR 0080) ; fixer une date ferme sa demande, les autres restent ouvertes. Une réponse (`real_session_availabilities.request_id`) répond toujours à une ronde précise ; les réponses antérieures à ce ticket (`request_id null`) restent lisibles pour l'historique mais ne sont rattachées à aucune ronde.
 
-RLS sur les trois tables, même motif que `combats` : lecture ouverte à tout membre du monde (`app.is_world_member`), écriture réservée au MJ (`app.is_world_admin`) sauf `real_session_availabilities` où chaque joueuse n'écrit que sa propre ligne.
+`availability_declines` (V3.1-190) : une joueuse sans aucune date disponible le dit, et compte comme ayant répondu. Répondre = au moins une date cochée, ou une ligne ici ; cocher une date efface cette ligne (service). La clé composée interdit un refus visant une demande d'une autre campagne.
+
+RLS sur les quatre tables, même motif que `combats` : lecture ouverte à tout membre du monde (`app.is_world_member`), écriture réservée au MJ (`app.is_world_admin`) sauf `real_session_availabilities` et `availability_declines`, où chaque joueuse n'écrit que sa propre ligne.
 
 
 ### Combats : `combats` et `combat_participants` (V1-E4, V3.1-101)

@@ -68,15 +68,19 @@ Demande de l'auteur : pouvoir lancer plusieurs demandes de dates de séance à l
    - MJ : une pastille « N à fixer » sur l'outil Calendrier réel ;
    - téléphone : la liste des demandes, une demande en pleine page.
 
-**Ce que le schéma impose (migration à écrire)** :
-- `availability_requests_one_open_per_campaign` (index unique partiel) interdit aujourd'hui une seconde demande ouverte : il faut le retirer.
-- `real_session_availabilities` a pour clé `(campaign_id, user_id, date)` : la réponse d'un joueur vaut pour une date, quelle que soit la demande. Deux demandes qui proposent la même date se marcheraient dessus. La clé doit inclure la demande ; les anciennes réponses sans demande (`request_id null`) restent lisibles.
-- « Répondu » doit exister même quand aucune date ne convient : aujourd'hui, une réponse n'existe que par ses dates cochées.
+**Décisions de l'auteur (9 novembre)** : les esquisses telles quelles. Donc « Aucune date ne me va » ; pastille MJ « N à fixer » (demandes où tout le monde a répondu) ; fixer une date ferme sa demande, les autres restent ouvertes. ADR 0080.
 
-**À décider par l'auteur** :
-- Le bouton « Aucune date ne me va » (esquisse 3), pour qu'un joueur sans aucune date disponible compte comme ayant répondu.
-- La pastille MJ : « demandes prêtes à fixer » (esquissé) ou « nouvelles réponses depuis ma dernière visite » (demande de retenir cette visite par compte).
-- Fixer une date ferme sa demande (esquissé) ; les autres demandes restent ouvertes.
+**Fait :**
+- **Migration** `20261109150000_availability_requests_multiples.sql` : index « une seule ouverte » retiré ; `real_session_availabilities` prend un `id`, unicité (demande, joueuse, jour) ; table `availability_declines` (RLS : lecture membres, écriture de sa propre ligne ; clé composée vers la demande et sa campagne). `SCHEMA.md` et `src/types/database.ts` (à la main) à jour.
+- **Noyau** (tests d'abord) : `src/core/scheduling/requestStatus.ts` (qui est attendu, qui a répondu, qui manque, « prête à fixer » ; nombre de demandes sans réponse).
+- **Service** : `getSchedulingBoard` (toutes les demandes et celle affichée, en un appel), `respondToRequest`, `clearAvailability`, `declineRequest`, `countUnansweredRequests`, `countRequestsReadyToFix` ; chaque geste vérifie que la demande est ouverte et de cette campagne. `createRealSession` ferme la demande nommée.
+- **Routes** : `requests/open?requestId=`, `availability` (POST avec `requestId`), `availability/[date]?requestId=`, `requests/[requestId]/decline` ; `worlds/[slug]/scheduling/open-request` retirée. Toutes validées par Zod.
+- **Écrans** : rangée des demandes (`RequestTabs`) côté MJ et joueur ; ligne « Réponses » côté MJ ; « Aucune date ne me va » côté joueur ; pastille chiffrée du rail joueur ; pastille « à fixer » de l'outil MJ (rail).
+- **Test d'intégration** `schedulingMultiRequests.integration.test.ts` (deux demandes ouvertes, même jour sans écrasement, « aucune date », RLS, demande close).
 
-**Sous-tâches Haiku** : libellés dans `messages/` ; planche du catalogue d'après le code écrit.
+**Reste :**
+- **Appliquer la migration** (l'auteur), puis lancer le test d'intégration, puis vérifier au navigateur (Testeur MJ, Testeuse A).
+- La barre du téléphone côté MJ ne porte pas la pastille « à fixer » (montée par `AppShell`, hors du layout MJ).
+- Planche du catalogue (rangée des demandes, pastilles) : sous-tâche Haiku.
 
+**Sous-tâches Haiku** : planche du catalogue d'après le code écrit.
