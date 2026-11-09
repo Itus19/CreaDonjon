@@ -50,7 +50,7 @@ Demande de l'auteur : l'aperçu de placement dans le bloc image (curseur à cran
   - en Testeuse A, l'image s'affiche dans la phrase ; bloc image passé en MJ seulement : légende et nœud absents du HTML reçu, le texte se referme (« …montées en une seule nuit… »).
 
 **Reste** :
-- Les boutons ▲ ▼ du téléphone n'ont pas été essayés au navigateur.
+- ~~Les boutons ▲ ▼ du téléphone~~ **vérifiés le 9 novembre** (iPhone 13 émulé, Banc d'essai) : la bulle les montre, ▼ pose l'image en tête du paragraphe suivant, enregistré en base.
 - ~~Planche du catalogue~~ **faite le 9 novembre** : section « Bloc Image et image dans le texte » de `WikiVisuel.dc.html` réécrite d'après le code (bulle d'habillage, bloc allégé), CSS du catalogue recompilé, planche publiée sur le canevas (hauteur mesurée : +130 px, 7 900 px, sous la limite).
 - Le cadre doré autour de l'éditeur pendant une sélection vient de la règle globale `:focus-visible`, antérieure à ce ticket (tous les éditeurs de texte l'ont).
 
@@ -79,7 +79,8 @@ Demande de l'auteur : pouvoir lancer plusieurs demandes de dates de séance à l
 - **Test d'intégration** `schedulingMultiRequests.integration.test.ts` (deux demandes ouvertes, même jour sans écrasement, « aucune date », RLS, demande close).
 
 **Reste :**
-- **Appliquer la migration** (l'auteur), puis lancer le test d'intégration, puis vérifier au navigateur (Testeur MJ, Testeuse A).
+- ~~Appliquer la migration~~ **appliquée par l'auteur le 9 novembre** ; test d'intégration 5/5, aucun monde de test resté.
+- **Vérifié au navigateur** (Banc d'essai, deux demandes d'essai supprimées ensuite) : rangée des demandes chez le MJ et chez Testeuse A ; pastille joueuse 2 puis 1 après « Aucune date ne me va » ; ligne « Réponses » à jour chez le MJ ; tout le monde répondu : carte « 3/3 · Prête à fixer » et pastille « 1 » sur Calendrier réel ; fixer la date ferme cette demande seule, l'autre reste ouverte (séance d'essai supprimée ensuite).
 - La barre du téléphone côté MJ ne porte pas la pastille « à fixer » (montée par `AppShell`, hors du layout MJ).
 - Planche du catalogue : la section « Calendrier réel » d'`OutilsMJ.dc.html` est à jour dans le dépôt (rangée des demandes, ligne « Réponses »), **pas encore publiée** : la version en ligne de cette planche porte des ajouts d'une autre session (V3.1-173 à 183, branche `claude/quirky-turing-hb12f2`) absents du dépôt, et le dépôt une section « plan-combat » absente de la version en ligne. À publier une fois les deux branches fusionnées.
 

@@ -310,5 +310,5 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-186 | ☑ | sans | Le quota de journaux ingérés de Supabase | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-187 | ☐ | sans | La montée de niveau refuse tout personnage qui a une date de naissance | [`14-rugosites-novembre.md`](backlog-v3.1/14-rugosites-novembre.md) |
 | V3.1-188 | ☐ | sans | Le Wiki du joueur ne s'ouvre plus en édition | [`14-rugosites-novembre.md`](backlog-v3.1/14-rugosites-novembre.md) |
-| V3.1-189 | ☐ | sans | Bloc image : le placer dans le texte, à la souris, comme dans Word | [`14-rugosites-novembre.md`](backlog-v3.1/14-rugosites-novembre.md) |
-| V3.1-190 | ☐ | sans | Calendrier réel : plusieurs demandes de dates en même temps | [`14-rugosites-novembre.md`](backlog-v3.1/14-rugosites-novembre.md) |
+| V3.1-189 | ☑ | sans | Bloc image : le placer dans le texte, à la souris, comme dans Word | [`14-rugosites-novembre.md`](backlog-v3.1/14-rugosites-novembre.md) |
+| V3.1-190 | ☑ | sans | Calendrier réel : plusieurs demandes de dates en même temps | [`14-rugosites-novembre.md`](backlog-v3.1/14-rugosites-novembre.md) |
