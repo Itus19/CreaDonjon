@@ -2307,6 +2307,8 @@
       "emplacement": "Emplacement",
       "autonome": "Seule, à sa place",
       "dansTexte": "Dans un bloc de texte",
+      "ancienPlacement": "Cette image est encore placée à l'ancienne, entre deux paragraphes : l'éditeur de texte ne la montre pas.",
+      "poserDansTexte": "Poser dans le texte",
       "glisserAide": "Faites-la glisser dans le texte pour la placer au milieu d'une phrase ; cliquez dessus pour l'habillage et la taille.",
       "allerAuBloc": "Aller au bloc « {bloc} »",
       "aucunBlocTexte": "Aucun bloc de texte dans cette fiche",

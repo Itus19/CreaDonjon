@@ -2306,6 +2306,8 @@
       "emplacement": "Placement",
       "autonome": "On its own, in place",
       "dansTexte": "In a text block",
+      "ancienPlacement": "This image still uses the old placement, between two paragraphs: the text editor does not show it.",
+      "poserDansTexte": "Place in the text",
       "glisserAide": "Drag it within the text to place it anywhere in a sentence; click it for wrapping and size.",
       "allerAuBloc": "Go to the “{bloc}” block",
       "aucunBlocTexte": "No text block in this page",

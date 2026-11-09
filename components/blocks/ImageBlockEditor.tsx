@@ -112,10 +112,22 @@ export default function ImageBlockEditor({
   }
 
   const textes = siblings.filter((b): b is ImageAnchorSibling & { data: TextBlockData } => b.blockType === "text");
-  // Le texte d'abord ; a defaut, l'ancien ancrage par paragraphe (V2.1-11),
-  // que le wiki rend encore dans ce bloc texte. Choisir un bloc l'ecrit alors
-  // dans le texte, au nouveau format.
-  const hoteId = textHostOf(textes, blockId) ?? (data.placement === "anchored" ? (data.anchor?.blockId ?? null) : null);
+  // Le texte d'abord. A defaut, un placement a l'ANCIENNE, que le wiki rend
+  // encore mais que l'editeur de texte ne dessine pas (retour de l'auteur, 9
+  // novembre) : l'ancrage par paragraphe (V2.1-11), ou « le texte du bloc
+  // suivant contourne » (`wrapMode: "wrap"`, avant V2.1-11). « Poser dans le
+  // texte » l'ecrit au nouveau format, a la meme place. Rien a l'ouverture.
+  const citeDans = textHostOf(textes, blockId);
+  const suivant = siblings[siblings.findIndex((b) => b.id === blockId) + 1];
+  const ancien =
+    citeDans !== null
+      ? null
+      : data.placement === "anchored" && data.anchor && textes.some((b) => b.id === data.anchor?.blockId)
+        ? { blockId: data.anchor.blockId, at: { segmentId: data.anchor.segmentId, position: data.anchor.position } }
+        : data.wrapMode === "wrap" && suivant?.blockType === "text"
+          ? { blockId: suivant.id, at: undefined }
+          : null;
+  const hoteId = citeDans ?? ancien?.blockId ?? null;
   const hote = textes.find((b) => b.id === hoteId);
   const fond = fondDe(data);
 
@@ -126,7 +138,9 @@ export default function ImageBlockEditor({
    */
   function choisirBlocTexte(cible: string | null) {
     if (!onEditSibling) return;
-    for (const change of placeImageInText(textes, blockId, cible, crypto.randomUUID())) onEditSibling(change.id, change.data);
+    // Vers le bloc de son ancien placement : a la meme place dans le texte.
+    const at = ancien && cible === ancien.blockId ? ancien.at : undefined;
+    for (const change of placeImageInText(textes, blockId, cible, crypto.randomUUID(), at)) onEditSibling(change.id, change.data);
     const habillage =
       cible !== null && data.anchorFlow !== "break" && data.align === "center"
         ? // Un flottement centre n'existe pas : l'image arrive a droite, texte a gauche.
@@ -207,7 +221,21 @@ export default function ImageBlockEditor({
                         className="w-full"
                         aria-label={t("bloc")}
                       />
-                      <span className="text-ink-muted">{t("glisserAide")}</span>
+                      {ancien ? (
+                        <span className="flex flex-wrap items-center gap-2 rounded-lg border border-accent/50 bg-accent/10 px-2.5 py-2 text-ink">
+                          {t("ancienPlacement")}
+                          <button
+                            type="button"
+                            onClick={() => choisirBlocTexte(ancien.blockId)}
+                            disabled={!onEditSibling}
+                            className="rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50"
+                          >
+                            {t("poserDansTexte")}
+                          </button>
+                        </span>
+                      ) : (
+                        <span className="text-ink-muted">{t("glisserAide")}</span>
+                      )}
                       {onOpenBlock && (
                         <button type="button" onClick={() => onOpenBlock(hote.id)} className="self-start text-accent hover:underline">
                           {t("allerAuBloc", { bloc: hote.display.label })}

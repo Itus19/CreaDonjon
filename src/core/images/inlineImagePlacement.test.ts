@@ -49,4 +49,20 @@ describe("placeImageInText", () => {
     const blocs = [texte("t1", [p("s1", [mot("a "), img("i1")])])];
     expect(placeImageInText(blocs, "i1", "t1", "neuf")).toEqual([]);
   });
+
+  it("ancien ancrage « avant tel paragraphe » : l'image se pose en tête de ce paragraphe", () => {
+    const blocs = [texte("t1", [p("s1", [mot("a")]), p("s2", [mot("b")])])];
+    expect(placeImageInText(blocs, "i1", "t1", "neuf", { segmentId: "s2", position: "before" })).toEqual([texte("t1", [p("s1", [mot("a")]), p("s2", [img("i1"), mot("b")])])]);
+  });
+
+  it("ancien ancrage « à la fin du bloc » : l'image se pose à la fin du dernier paragraphe", () => {
+    const blocs = [texte("t1", [p("s1", [mot("a")]), p("s2", [mot("b")])])];
+    expect(placeImageInText(blocs, "i1", "t1", "neuf", { segmentId: "s2", position: "after" })[0].data.segments[1].content).toEqual([mot("b"), img("i1")]);
+  });
+
+  it("ancien ancrage sur un trait ou un paragraphe disparu : repli en tête du bloc", () => {
+    const blocs = [texte("t1", [p("s1", [mot("a")]), trait("d")])];
+    expect(placeImageInText(blocs, "i1", "t1", "neuf", { segmentId: "d", position: "before" })[0].data.segments[0].content[0]).toEqual(img("i1"));
+    expect(placeImageInText(blocs, "i1", "t1", "neuf", { segmentId: "disparu", position: "before" })[0].data.segments[0].content[0]).toEqual(img("i1"));
+  });
 });

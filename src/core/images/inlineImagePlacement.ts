@@ -32,9 +32,24 @@ function withoutImage(segments: readonly Segment[], imageId: string): Segment[] 
   });
 }
 
-/** Pose l'image en tete du premier paragraphe ou titre ; sans aucun, un paragraphe neuf la porte. */
-function withImageAtStart(segments: readonly Segment[], imageId: string, newSegmentId: string): Segment[] {
+/** Ou poser l'image dans le bloc vise : l'ancien ancrage par paragraphe (V2.1-11), pour la garder a sa place en passant au nouveau format. */
+export interface LegacyAnchorTarget {
+  segmentId: string | null;
+  position: "before" | "after";
+}
+
+/**
+ * Pose l'image en tete du premier paragraphe ou titre ; sans aucun, un
+ * paragraphe neuf la porte. Avec un ancien ancrage : en tete du paragraphe
+ * vise (« avant »), ou a sa fin (« apres », le dernier cran) ; un paragraphe
+ * disparu, ou un trait, retombe en tete du bloc.
+ */
+function withImageAtStart(segments: readonly Segment[], imageId: string, newSegmentId: string, at?: LegacyAnchorTarget): Segment[] {
   const node = { t: "image" as const, blockId: imageId };
+  const vise = at?.segmentId ? segments.findIndex((s) => s.id === at.segmentId && s.blockType !== "divider") : -1;
+  if (vise !== -1) {
+    return segments.map((s, k) => (k === vise ? { ...s, content: at?.position === "after" ? [...s.content, node] : [node, ...s.content] } : s));
+  }
   const index = segments.findIndex((s) => s.blockType !== "divider");
   if (index === -1) {
     return [...segments, { id: newSegmentId, blockType: "paragraph", visibility: { level: "public", scopeId: null }, content: [node], align: "left" }];
@@ -48,13 +63,19 @@ function withImageAtStart(segments: readonly Segment[], imageId: string, newSegm
  * changent ; rien si l'image est deja dans le bloc vise (sa place fine,
  * choisie a la souris, est gardee).
  */
-export function placeImageInText(blocks: readonly TextBlockLike[], imageId: string, targetId: string | null, newSegmentId: string): TextBlockLike[] {
+export function placeImageInText(
+  blocks: readonly TextBlockLike[],
+  imageId: string,
+  targetId: string | null,
+  newSegmentId: string,
+  at?: LegacyAnchorTarget
+): TextBlockLike[] {
   if (targetId !== null && textHostOf(blocks, imageId) === targetId) return [];
   const changes: TextBlockLike[] = [];
   for (const block of blocks) {
     let segments = block.data.segments;
     if (cites(segments, imageId)) segments = withoutImage(segments, imageId);
-    if (block.id === targetId) segments = withImageAtStart(segments, imageId, newSegmentId);
+    if (block.id === targetId) segments = withImageAtStart(segments, imageId, newSegmentId, at);
     if (segments !== block.data.segments) changes.push({ id: block.id, data: { ...block.data, segments } });
   }
   return changes;
