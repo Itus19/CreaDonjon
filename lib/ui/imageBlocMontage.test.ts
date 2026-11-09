@@ -52,10 +52,17 @@ describe("ImageBlockEditor au montage", () => {
     expect(html).toContain('value="Vue du bourg"');
   });
 
-  it("n'écrit rien pour un bloc à l'ancien ancrage par paragraphe", () => {
+  it("ancien ancrage par paragraphe : signalé avec « Poser dans le texte », sans rien écrire à l'ouverture", () => {
     const onChange = vi.fn();
-    monter({ __v: 1, url: "/x.png", placement: "anchored", anchor: { blockId: "t1", segmentId: "s2", position: "before" } }, onChange);
+    const html = monter({ __v: 1, url: "/x.png", placement: "anchored", anchor: { blockId: "t1", segmentId: "s2", position: "before" } }, onChange);
     expect(onChange).not.toHaveBeenCalled();
+    expect(html).toContain("encore placée à l&#x27;ancienne");
+    expect(html).toContain("Poser dans le texte");
+  });
+
+  it("une image déjà posée dans le texte n'affiche pas l'avertissement d'ancien placement", () => {
+    const html = monter({ __v: 1, url: "/x.png" }, vi.fn(), [{ t: "image", blockId: "b1" }]);
+    expect(html).not.toContain("Poser dans le texte");
   });
 
   it("V3.1-189 : une image posée dans un texte nomme son bloc texte, sans rien écrire à l'ouverture", () => {

@@ -52,6 +52,7 @@ Demande de l'auteur : l'aperçu de placement dans le bloc image (curseur à cran
 **Reste** :
 - ~~Les boutons ▲ ▼ du téléphone~~ **vérifiés le 9 novembre** (iPhone 13 émulé, Banc d'essai) : la bulle les montre, ▼ pose l'image en tête du paragraphe suivant, enregistré en base.
 - ~~Planche du catalogue~~ **faite le 9 novembre** : section « Bloc Image et image dans le texte » de `WikiVisuel.dc.html` réécrite d'après le code (bulle d'habillage, bloc allégé), CSS du catalogue recompilé, planche publiée sur le canevas (hauteur mesurée : +130 px, 7 900 px, sous la limite).
+- **Correctif du 9 novembre (retour de l'auteur : « je ne vois pas l'image dans le bloc texte lié »)** : les images placées à l'ancienne (ancrage par paragraphe, ou « le texte du bloc suivant contourne ») restaient rendues dans le wiki mais invisibles dans l'éditeur de texte, et le bloc image les montrait déjà « Dans un bloc de texte » sans moyen de les faire passer au nouveau format (4 blocs sur 16 en base). Le bloc image les signale désormais, avec « Poser dans le texte », qui les écrit dans le texte à leur ancienne place (`placeImageInText`, cible `LegacyAnchorTarget`, testée). Rien n'est écrit à l'ouverture. Vérifié au navigateur.
 - Le cadre doré autour de l'éditeur pendant une sélection vient de la règle globale `:focus-visible`, antérieure à ce ticket (tous les éditeurs de texte l'ont).
 
 ### V3.1-190 — Calendrier réel : plusieurs demandes de dates en même temps (9 novembre)
