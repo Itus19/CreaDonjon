@@ -56,7 +56,31 @@ const zTurnUsageChange = z
   })
   .strict();
 
-const zChange = z.union([zStateChange, zEffectAdd, zEffectRemove, zTurnUsageChange]);
+/**
+ * V3.1-200 (ADR 0091) — une demande de sauvegarde au nom d'une joueuse (son
+ * sort à sauvegarde). `id` : la NOUVELLE demande, tirée par le serveur.
+ * Fermée : ni le compte qui répond ni la fiche de la cible, que la base
+ * déduit elle-même de la ligne de combat visée.
+ */
+const zSaveRequestChange = z
+  .object({
+    kind: z.literal("save_request"),
+    id: z.string().uuid(),
+    request: z
+      .object({
+        combat_id: z.string().uuid(),
+        target_id: z.string().uuid(),
+        label: z.string().min(1).max(300),
+        ability: z.enum(["str", "dex", "con", "int", "wis", "cha"]),
+        dc: z.number().int().min(1).max(40),
+        effect: z.record(z.string(), z.unknown()),
+        origin_roll_id: z.string().uuid().nullable(),
+      })
+      .strict(),
+  })
+  .strict();
+
+const zChange = z.union([zStateChange, zEffectAdd, zEffectRemove, zTurnUsageChange, zSaveRequestChange]);
 
 export const zEngineChange = z
   .object({

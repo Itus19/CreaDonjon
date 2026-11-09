@@ -299,12 +299,11 @@ export function demandeDegatsApres(reponse: ReponseJetCible): { demande: Demande
  * V3.1-107 : le corps de `POST …/player-targeted-roll`. Il décrit le jet d'un
  * PJ ; jamais de critique ni de secret (le critique des dégâts vient du jeton
  * que le serveur a signé à la touche, `damageToken`). Une demande hors de ce
- * que la route d'une joueuse accepte (monstre, sauvegarde de la cible) est une
+ * que la route d'une joueuse accepte (action de monstre) est une
  * erreur de programmation, pas une saisie.
  */
 export function corpsJetJoueur(demande: DemandeJetCible, options: { avantage?: AdvantageState; jeton?: string | null } = {}): PlayerTargetedRollInput {
   const { kind, acteur, action } = demande;
-  if (kind === "spell_save") throw new Error("Un sort à sauvegarde se résout par le MJ.");
   if (acteur.kind !== "character" || action.kind === "monster_action") throw new Error("Une joueuse n'agit qu'avec son personnage.");
   return {
     kind,

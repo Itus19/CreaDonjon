@@ -6,6 +6,7 @@ import {
   appliquerPv,
   classerSort,
   corpsJetCible,
+  corpsJetJoueur,
   demandeDegatsApres,
   desDeLaFormule,
   effetDesChanges,
@@ -372,5 +373,24 @@ describe("desDeLaFormule", () => {
   it("se replie sur un d6 quand la formule est illisible", () => {
     expect(desDeLaFormule(null)).toEqual({ dice: { d6: 1 }, modifier: 0 });
     expect(desDeLaFormule("1d7")).toEqual({ dice: { d6: 1 }, modifier: 0 });
+  });
+});
+
+describe("V3.1-200 (ADR 0091) — le jet ciblé d'une joueuse", () => {
+  const acteur = { kind: "character" as const, entityId: "9b2f8a64-1c1e-4f0a-8a55-0b9f2d1e6c11" };
+  const cibleId = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
+
+  it("un sort à sauvegarde se cible aussi : le corps décrit le jet, jamais son résultat", () => {
+    expect(corpsJetJoueur({ kind: "spell_save", acteur, action: { kind: "spell", spellKey: "command", slotLevel: 1 }, cibleId })).toEqual({
+      kind: "spell_save",
+      actor: acteur,
+      action: { kind: "spell", spellKey: "command", slotLevel: 1 },
+      targetId: cibleId,
+      advantage: "normal",
+    });
+  });
+
+  it("une action de monstre reste refusée", () => {
+    expect(() => corpsJetJoueur({ kind: "attack", acteur, action: { kind: "monster_action", name: "Dague" }, cibleId })).toThrow();
   });
 });

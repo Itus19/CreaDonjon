@@ -118,7 +118,8 @@ export type TargetedRollInput = z.infer<typeof targetedRollSchema>;
  */
 export const playerTargetedRollSchema = z
   .object({
-    kind: z.enum(["attack", "damage", "spell_attack", "heal"]),
+    // V3.1-200 (ADR 0091) : les sorts à sauvegarde aussi ; la demande s'écrit par un changement signé.
+    kind: z.enum(["attack", "damage", "spell_attack", "spell_save", "heal"]),
     actor: z.object({ kind: z.literal("character"), entityId: z.string().uuid() }).strict(),
     action: z.discriminatedUnion("kind", [
       z.object({ kind: z.literal("weapon"), itemId: z.string().min(1).max(200) }).strict(),

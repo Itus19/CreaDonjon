@@ -434,8 +434,6 @@ async function castSpellWithoutActivation(
   if (!mecanique?.save) return aLaMain("sa fiche ne déclare ni activation ni sauvegarde");
   if (!p.combatId) return aLaMain("hors combat, aucune cible à faire sauvegarder");
   if (p.targetParticipantIds.length === 0) return aLaMain("aucune cible choisie");
-  // Une sauvegarde demandée à une cible s'écrit par le MJ (le jet ciblé d'un joueur n'en ouvre pas).
-  if (!p.callerIsGm) return aLaMain("un sort à sauvegarde se lance par le MJ, depuis l'outil de dés");
   const lu = zSpellCastingBlockData.safeParse(p.blocs?.get("spell_casting"));
   const niveau = lu.success ? lu.data.level : 0;
   const lignes: string[] = [];
@@ -445,7 +443,8 @@ async function castSpellWithoutActivation(
       combatId: p.combatId,
       callerId: p.callerId,
       locale: p.locale,
-      callerIsGm: true,
+      // V3.1-200 (ADR 0091) : une joueuse aussi ; sa demande de sauvegarde passe par un changement signé.
+      callerIsGm: p.callerIsGm,
       ...(p.free ? { freeCast: true } : {}),
       input: {
         kind: "spell_save",

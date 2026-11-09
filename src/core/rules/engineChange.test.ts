@@ -33,3 +33,34 @@ describe("la demande de lecture signée (V3.1-107, ADR 0069)", () => {
     expect(zEngineChange.safeParse({ ...change, combat_id: lecture.combat_id }).success).toBe(false);
   });
 });
+
+describe("V3.1-200 (ADR 0091) — la demande de sauvegarde signée", () => {
+  const demande = {
+    kind: "save_request" as const,
+    id: "9b2f8a64-1c1e-4f0a-8a55-0b9f2d1e6c11",
+    request: {
+      combat_id: "0f5a3c1e-7d2b-4e8a-9c3f-2a1b4c5d6e7f",
+      target_id: "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+      label: "Injonction · JS Sagesse DD 15",
+      ability: "wis" as const,
+      dc: 15,
+      effect: { on_fail: { damage: 0, conditions: [] }, on_success: { damage: 0, conditions: [] } },
+      origin_roll_id: null,
+    },
+  };
+
+  it("passe, fermée", () => {
+    expect(zEngineChange.safeParse({ ...change, changes: [demande] }).success).toBe(true);
+  });
+
+  it("refuse ce qui donnerait un droit : le joueur qui répond ou la fiche de la cible (la base les déduit), un DD hors bornes, une clé de plus", () => {
+    for (const r of [
+      { ...demande.request, target_user_id: "7c9e6679-7425-40de-944b-e07fc1f90ae7" },
+      { ...demande.request, target_entity_id: "7c9e6679-7425-40de-944b-e07fc1f90ae7" },
+      { ...demande.request, dc: 41 },
+      { ...demande.request, ability: "luck" },
+    ]) {
+      expect(zEngineChange.safeParse({ ...change, changes: [{ ...demande, request: r }] }).success).toBe(false);
+    }
+  });
+});

@@ -109,3 +109,15 @@ Le moteur connaît le jeton d'un effet durable (une activation accordée tant qu
 - *Ligne parasite au journal* : les effets « Lancer un sort » ne passent plus par l'application générique des effets, qui les disait « non lancés ».
 
 Reste connu : une joueuse ne lance pas de sort à sauvegarde sur une cible (Mante de majesté se joue par le MJ, depuis « Fiche ▸ » dans l'initiative).
+
+---
+
+### V3.1-200 — Les sorts à sauvegarde d'une joueuse (sans modèle IA)
+
+**Modèle conseillé : Opus** (sécurité, migration, ADR 0091).
+
+Une joueuse ne pouvait lancer aucun sort à sauvegarde sur une cible : la demande de sauvegarde ne se créait que par le MJ (ADR 0044). Mante de majesté se jouait donc par le MJ, alors que la règle ne le dit pas. La demande d'une joueuse passe désormais par un changement signé du moteur (`save_request`), dont l'effet est calculé par le serveur ; la base déduit la cible, sa fiche et le compte qui répond.
+
+**Fait le 9 novembre.** Migration `20261108120000_player_save_requests` (`apply_engine_change` + genre `save_request`) ; `zSaveRequestChange` (noyau, testé) ; `resolveTargetedRoll` écrit la demande de la joueuse par changement signé et lit les échecs imposés par la lecture signée ; route joueuse et outil de dés ouverts au `spell_save` ; « Lancer un sort » d'une aptitude ne réserve plus le sort à sauvegarde au MJ. Le refus `save_gm_only` ne sert plus (il tombait après le lancer).
+
+**Reste.** L'auteur applique la migration (`supabase db push`), puis on vérifie au navigateur : Testeuse A lance Charme-personne sur un monstre (le MJ reçoit la demande), puis Mante de majesté sur une cible charmée (échec d'office). Test d'intégration à écrire avec la migration appliquée : un changement d'une autre campagne refusé, une insertion directe d'une joueuse refusée.

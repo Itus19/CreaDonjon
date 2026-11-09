@@ -33,6 +33,7 @@ import { applyRuntimeStateChange, getEntityRuntimeState } from "@/src/server/ser
 import {
   applySignedEngineChange,
   engineSigningKeyFromEnv,
+  readCombatEffectsForEngine,
   readCombatParticipantsSigned,
   signDamageToken,
   verifyDamageToken,
@@ -40,6 +41,7 @@ import {
   type JetonDegats,
 } from "@/src/server/services/engineSigning";
 import { canonicalJson } from "@/src/core/rules/engineChange";
+import { randomUUID } from "node:crypto";
 import { advantageFromMarkers, conditionLabel, isWeaponMastered, masteryOnAttack } from "@/src/core/rules/weaponMastery";
 import { rollDice } from "@/src/core/dice/roll";
 import { attackFactForPlayer, describeChangeForPlayer } from "@/src/core/rules/playerFacing";
@@ -983,14 +985,17 @@ export async function resolveTargetedRoll(
       // V3.1-191 : ou qui se fait avec le désavantage (Embuscade magique : la lanceuse est Invisible).
       const echecsImposes = ctx.sheet.features.flatMap((f) => f.forcedSaveFailures ?? []);
       let issueImposee: "fail" | "disadvantage" | null = null;
-      if (echecsImposes.length > 0 && !joueur) {
+      if (echecsImposes.length > 0) {
         const etats = (row: CombatParticipantRow | undefined) => (Array.isArray(row?.conditions) ? row.conditions.filter((c): c is string => typeof c === "string") : []);
         const lanceuse = (participantsSignes ?? (await listCombatParticipants(supabase, combat.id))).find((p) => p.entity_id === ctx.entityId);
-        const effets = await listFeatureEffectsForBearers(supabase, {
-          campaignId: params.campaignId,
-          entityIds: [...(target.entity_id ? [target.entity_id] : []), ctx.entityId],
-          participantIds: [target.id, ...(lanceuse ? [lanceuse.id] : [])],
-        });
+        // V3.1-200 (ADR 0091) : une joueuse ne lit pas les effets d'un monstre ; le moteur les lit pour elle (lecture signée, ADR 0073).
+        const effets = joueur
+          ? await readCombatEffectsForEngine(supabase, { campaignId: params.campaignId, combatId: combat.id })
+          : await listFeatureEffectsForBearers(supabase, {
+              campaignId: params.campaignId,
+              entityIds: [...(target.entity_id ? [target.entity_id] : []), ctx.entityId],
+              participantIds: [target.id, ...(lanceuse ? [lanceuse.id] : [])],
+            });
         const surCible = effets.filter((e) => (e.entity_id !== null && e.entity_id === target.entity_id) || e.combat_participant_id === target.id);
         const surLanceuse = effets.filter((e) => e.entity_id === ctx.entityId || (lanceuse !== undefined && e.combat_participant_id === lanceuse.id));
         issueImposee = saveRuleOutcome(echecsImposes, {
@@ -1049,7 +1054,44 @@ export async function resolveTargetedRoll(
     ...(rollPayload.mj ? { gmDetails: rollPayload.mj } : {}),
   });
 
-  if (pendingSave && joueur) return { ok: false, reason: "save_gm_only" };
+  if (pendingSave && joueur) {
+    // V3.1-200 (ADR 0091) : la demande d'une joueuse s'écrit par un changement signé. Le serveur a calculé
+    // l'effet ; la base déduit la fiche de la cible et le compte qui répond, et vérifie la campagne.
+    const requestId = randomUUID();
+    await applySignedEngineChange(supabase, {
+      campaignId: params.campaignId,
+      changes: [
+        {
+          kind: "save_request",
+          id: requestId,
+          request: {
+            combat_id: combat.id,
+            target_id: target.id,
+            label: pendingSave.label,
+            ability: abiliteDeSauvegarde(pendingSave.ability),
+            dc: pendingSave.dc,
+            effect: pendingSave.effect as unknown as Record<string, unknown>,
+            origin_roll_id: rollEvent.id,
+          },
+        },
+      ],
+    });
+    return {
+      ok: true,
+      verdict: null,
+      amount,
+      facts: factsPublics,
+      changes: [],
+      hints: hintsBefore,
+      ignored: [],
+      targetOutOfFight: false,
+      chained: null,
+      rollEventId: rollEvent.id,
+      rollWindowId: null,
+      saveRequestId: requestId,
+      dice: rollsForDisplay(shown),
+    };
+  }
   if (pendingSave) {
     const targetUserId = target.entity_id ? (campaignCharacters.find((c) => c.entity_id === target.entity_id)?.user_id ?? null) : null;
     const request = await insertSaveRequest(supabase, {
@@ -1122,4 +1164,12 @@ export async function resolveTargetedRoll(
     saveRequestId: null,
     dice: rollsForDisplay(shown),
   };
+}
+
+const ABILITES = ["str", "dex", "con", "int", "wis", "cha"] as const;
+/** La caractéristique d'une sauvegarde, en clé du moteur ; une valeur inattendue est une erreur, jamais devinée. */
+function abiliteDeSauvegarde(ability: string): (typeof ABILITES)[number] {
+  const a = ABILITES.find((x) => x === ability.toLowerCase());
+  if (!a) throw new Error(`Caractéristique de sauvegarde inconnue : ${ability}`);
+  return a;
 }

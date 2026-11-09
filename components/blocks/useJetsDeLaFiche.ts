@@ -263,13 +263,13 @@ export function useJetsDeLaFiche(params: {
               formule: sort.formuleDegats,
               touche: false,
             }),
-      // Un sort à sauvegarde se résout par le MJ (409) : la joueuse ne cible que le soin.
-      genre === "heal"
+      // V3.1-200 (ADR 0091) : la joueuse cible aussi un sort à sauvegarde ; sa demande s'écrit par un changement signé.
+      genre !== null
         ? (combat, campagne) =>
             cibleeJoueur(combat, campagne, sort.nom, {
               titre: sort.formuleDegats ? t("titreDegats", { nom: sort.nom }) : t("titreLancer", { nom: sort.nom }),
               titreDegats: t("titreDegats", { nom: sort.nom }),
-              kind: "heal",
+              kind: genre,
               action: { kind: "spell", spellKey: sort.spellKey, slotLevel: sort.niveauLance },
               formule: sort.formuleDegats,
               touche: false,
