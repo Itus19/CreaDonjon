@@ -27,7 +27,7 @@ export interface InlineNodeJSON {
   text?: string;
   marks?: { type: string }[];
   /** `id`/`key` : `null` possible (attribut Tiptap toujours present pour `refMention`, meme quand non utilise — voir `RefMention.addAttributes`, extensions.ts), jamais transmis tel quel a `SegmentContentNode` (optional, pas nullable). */
-  attrs?: { kind?: string; id?: string | null; key?: string | null; label?: string };
+  attrs?: { kind?: string; id?: string | null; key?: string | null; label?: string; blockId?: string | null };
 }
 
 export interface BlockNodeJSON {
@@ -113,6 +113,12 @@ export function docToSegments(doc: DocJSON): Segment[] {
             label: inline.attrs.label ?? "",
           };
         }
+        // V3.1-189 : une image posee dans la phrase. Sans bloc vise, le noeud
+        // ne designe rien : on l'ecarte plutot que d'ecrire un noeud invalide.
+        if (inline.type === "inlineImage") {
+          const blockId = inline.attrs?.blockId;
+          return blockId ? { t: "image", blockId } : null;
+        }
         return null;
       })
       .filter((n): n is SegmentContentNode => n !== null);
@@ -155,6 +161,7 @@ export function segmentsToDoc(segments: Segment[]): DocJSON {
               ...(node.marks && node.marks.length > 0 ? { marks: node.marks.map((m) => ({ type: m })) } : {}),
             };
           }
+          if (node.t === "image") return { type: "inlineImage", attrs: { blockId: node.blockId } };
           return { type: "refMention", attrs: { kind: node.kind, id: node.id, key: node.key, label: node.label } };
         })
         .filter((n): n is InlineNodeJSON => n !== null);

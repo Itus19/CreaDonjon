@@ -63,12 +63,15 @@ export default function ParallaxImage({
   src,
   alt,
   intensityPct,
+  inline = false,
 }: {
   src: string;
   alt: string;
   intensityPct: number;
+  /** V3.1-189 : image posee DANS un paragraphe — un `<div>` n'a pas le droit d'y entrer, le cadre devient un `<span>` en bloc. */
+  inline?: boolean;
 }) {
-  const cadreRef = useRef<HTMLDivElement>(null);
+  const cadreRef = useRef<HTMLDivElement & HTMLSpanElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
 
   useEffect(() => {
@@ -94,8 +97,11 @@ export default function ParallaxImage({
     return abonner(maj);
   }, [intensityPct]);
 
+  // Le meme cadre, la meme reference : seule la balise change selon l'endroit
+  // ou l'image se pose (un `<div>` n'a pas le droit d'entrer dans un `<p>`).
+  const Cadre = inline ? "span" : "div";
   return (
-    <div ref={cadreRef} className="parallax-frame relative w-full overflow-hidden rounded-md">
+    <Cadre ref={cadreRef} className={`parallax-frame relative ${inline ? "block" : ""} w-full overflow-hidden rounded-md`}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         ref={imageRef}
@@ -106,6 +112,6 @@ export default function ParallaxImage({
         className="parallax-image absolute inset-x-0 top-0 w-full object-cover"
         style={{ height: `calc(100% + ${intensityPct}%)` } as CSSProperties}
       />
-    </div>
+    </Cadre>
   );
 }

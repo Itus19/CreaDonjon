@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { ImageBlockData } from "@/src/core/schemas/blocks/image";
 import type { Segment } from "@/src/core/schemas/entities/segments";
+import { nodeText } from "@/src/core/richtext/nodeText";
 import Dropdown from "@/components/shared/Dropdown";
 import type { ImageBackgroundMode } from "@/src/core/images/backgroundMode";
 import {
@@ -38,7 +39,7 @@ const APERCU_LONGUEUR = 46;
 
 /** Le texte d'un segment, mentions comprises (leur libelle). */
 function texteDe(segment: Segment): string {
-  return segment.content.map((node) => (node.t === "text" ? node.v : node.label)).join("").trim();
+  return segment.content.map(nodeText).join("").trim();
 }
 
 /**

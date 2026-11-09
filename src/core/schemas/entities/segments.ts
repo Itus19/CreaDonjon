@@ -45,7 +45,26 @@ const zRefNode = z
     message: "kind='rule' necessite key, entity/asset necessitent id.",
   });
 
-export const zSegmentContentNode = z.union([zTextNode, zRefNode]);
+// V3.1-189 (ADR 0064) : une image posee dans le texte, a n'importe quel
+// endroit d'une phrase. Le noeud ne porte que l'identifiant du bloc image de
+// la meme fiche : adresse, legende, habillage et taille vivent sur ce bloc,
+// qui garde sa propre visibilite. Une image que le lecteur ne voit pas est
+// retiree du texte cote serveur avant l'envoi (`applyInlineImageVisibility`,
+// src/core/images/inlineImage.ts) — jamais seulement masquee.
+const zImageNode = z.object({
+  t: z.literal("image"),
+  blockId: z.string().min(1),
+});
+
+export const zSegmentContentNode = z.union([zTextNode, zRefNode, zImageNode]);
+
+/**
+ * Texte et mentions seulement, sans image : la forme d'une valeur d'infobox
+ * (V3.1-66), qui reutilisait `zSegmentContentNode` avant que l'image n'y
+ * entre. Une image n'a rien a faire dans une valeur d'une ligne.
+ */
+export const zMentionNode = z.union([zTextNode, zRefNode]);
+export type MentionNode = z.infer<typeof zMentionNode>;
 export type SegmentContentNode = z.infer<typeof zSegmentContentNode>;
 
 // `divider` (V2.1-14) : un trait de separation pose a un endroit choisi du

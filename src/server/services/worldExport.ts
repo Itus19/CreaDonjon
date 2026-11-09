@@ -4,6 +4,7 @@ import type { Database, Json } from "@/src/types/database";
 import { validateBlockData, type BlockType } from "@/src/core/schemas/blocks/registry";
 import { remapEntityIds } from "@/src/core/linker/remapEntityIds";
 import { remapAssetIds } from "@/src/core/images/remapAssetIds";
+import { remapBlockIds } from "@/src/core/linker/remapBlockIds";
 import { WORLD_EXPORT_FORMAT_VERSION, type WorldExport } from "@/src/core/schemas/worldExport";
 import {
   getOfficialBaseRulesetId,
@@ -137,6 +138,7 @@ async function lireMonde(supabase: TypedClient, worldId: string): Promise<MondeL
         : null,
     })),
     blocks: blocks.map((b) => ({
+      ref: b.id,
       entityRef: b.entity_id,
       blockType: b.block_type as BlockType,
       display: b.display,
@@ -247,12 +249,16 @@ async function importerMonde(supabase: TypedClient, params: ImportWorldParams & 
     idMap.set(entity.ref, inserted.id);
   }
 
+  // V3.1-189 : un nouvel id par bloc qui porte son id d'origine, choisi avant
+  // l'insertion — les references entre blocs se recalent ainsi en une passe.
+  const blockIdMap = new Map(data.blocks.flatMap((b) => (b.ref ? [[b.ref, crypto.randomUUID()] as const] : [])));
   const blockInputs = data.blocks.map((b) => {
     const entityId = idMap.get(b.entityRef);
     if (!entityId) throw new Error(`Bloc reference une entite inconnue (${b.entityRef}) : fichier corrompu.`);
-    const remappedData = remapAssetIds(remapEntityIds(b.data, idMap), assetIdMap) as Json;
+    const remappedData = remapBlockIds(remapAssetIds(remapEntityIds(b.data, idMap), assetIdMap), blockIdMap) as Json;
     validateBlockData(b.blockType, remappedData);
     return {
+      ...(b.ref ? { id: blockIdMap.get(b.ref) } : {}),
       entityId,
       blockType: b.blockType,
       display: b.display as Json,

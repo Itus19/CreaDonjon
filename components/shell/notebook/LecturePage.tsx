@@ -39,6 +39,9 @@ export default function LecturePage({
 }) {
   function noeud(n: SegmentContentNode, index: number): ReactNode {
     if (n.t === "text") return <span key={index}>{marquer(n)}</span>;
+    // V3.1-189 : une image posee dans le texte n'a de sens que dans une fiche
+    // qui porte son bloc image ; une page de notes n'en a pas.
+    if (n.t === "image") return null;
     if (n.kind === "entity" && n.id) {
       const fiche = otherEntities.find((e) => e.id === n.id);
       if (fiche) {

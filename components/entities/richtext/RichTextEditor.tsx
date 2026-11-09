@@ -325,7 +325,7 @@ export default function RichTextEditor({
       for (const node of segment.content) {
         if (node.t === "text") {
           text += node.v;
-        } else {
+        } else if (node.t === "ref") {
           const start = text.length;
           text += node.label;
           existingRanges.push({ start, end: text.length });

@@ -5,6 +5,7 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
 import { createShareLinkServiceClient } from "@/lib/supabase/service";
 import { filterBlocks, filterSegments, type VisibilityLevel } from "@/src/core/visibility";
+import { applyInlineImageVisibility, inlineImageIdsIn } from "@/src/core/images/inlineImage";
 import { verifySharePassword } from "@/src/core/shareLinks/password";
 import type { BlockDisplay } from "@/src/core/schemas/blocks/envelope";
 import { zTextBlockData } from "@/src/core/schemas/blocks/text";
@@ -518,7 +519,11 @@ const getPublicVisibleBlocks = cache(async function getPublicVisibleBlocks(
 
   const supabase = createShareLinkServiceClient();
   const rows = await listBlocksForEntity(supabase, entity.id);
-  return filterBlocks(rows.map(toVisibilityAware), { kind: "anonymous" })
+  // V3.1-189 : les images posees dans le texte, lues sur les blocs BRUTS —
+  // il faut savoir qu'une image vit dans un paragraphe meme quand ce
+  // paragraphe est retire au filtrage ci-dessous.
+  const rawInlineIds = inlineImageIdsIn(rows.map((row) => ({ id: row.id, blockType: row.block_type, data: row.data })));
+  const visible = filterBlocks(rows.map(toVisibilityAware), { kind: "anonymous" })
     .map((row) => ({
       id: row.id,
       blockType: row.block_type,
@@ -532,6 +537,9 @@ const getPublicVisibleBlocks = cache(async function getPublicVisibleBlocks(
       displayOrder: row.display_order,
     }))
     .sort((a, b) => a.displayOrder - b.displayOrder);
+  // Une image cachee l'est partout, texte compris : retiree des phrases avant
+  // l'envoi, jamais seulement masquee (regle 5, ADR 0064).
+  return applyInlineImageVisibility(rawInlineIds, visible);
 });
 
 /**

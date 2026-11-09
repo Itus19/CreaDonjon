@@ -13,6 +13,7 @@ import { serverRng } from "@/src/server/services/rng";
 import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
 import { zActionsBlockData } from "@/src/core/schemas/rule-blocks/blocks";
 import type { Segment } from "@/src/core/schemas/entities/segments";
+import { nodeText } from "@/src/core/richtext/nodeText";
 import type { TextBlockData } from "@/src/core/schemas/blocks/text";
 import { SPIKE_NPCS } from "@/src/core/ai/spikeSoloProposal";
 
@@ -48,7 +49,7 @@ const SPIKE_LOCATION_ID = "aaaaaaaa-0000-0000-0000-00000000a001";
 
 /** Rien de reutilisable trouve dans le depot pour aplatir des segments en texte brut — 5 lignes, jetable (spike). */
 function flattenSegmentsToText(segments: Segment[]): string {
-  return segments.map((s) => s.content.map((n) => (n.t === "text" ? n.v : n.label)).join("")).join("\n");
+  return segments.map((s) => s.content.map(nodeText).join("")).join("\n");
 }
 
 export interface SpikeSetup {

@@ -89,8 +89,20 @@ function renderNode(
   textRefs: Record<string, EntityRefPreview> | undefined,
   hrefBase: string,
   ruleHrefBase: string | undefined,
-  ruleRefs: Record<string, RuleRefPreview> | undefined
+  ruleRefs: Record<string, RuleRefPreview> | undefined,
+  inlineImages: Record<string, PublicBlock> | undefined
 ) {
+  // V3.1-189 : une image posee dans la phrase. Le serveur a deja retire celles
+  // que ce lecteur ne voit pas (`applyInlineImageVisibility`) ; un bloc absent
+  // ici ne laisse donc rien, comme si l'image n'avait jamais ete la. Une image
+  // en « fond seul » ne se montre pas non plus dans le texte.
+  if (node.t === "image") {
+    const imageBlock = inlineImages?.[node.blockId];
+    if (!imageBlock) return null;
+    const data = imageBlock.data as unknown as ImageBlockData;
+    if (!showsInPage(data)) return null;
+    return <PublicInlineImage key={key} data={data} />;
+  }
   if (node.t === "ref") {
     if (node.kind === "entity" && node.id) {
       const found = textRefs?.[node.id];
@@ -228,6 +240,7 @@ function PublicTextBlock({
   ruleHrefBase,
   ruleRefs,
   anchoredImages,
+  inlineImages,
 }: {
   data: TextBlockData;
   textRefs: Record<string, EntityRefPreview> | undefined;
@@ -235,6 +248,7 @@ function PublicTextBlock({
   ruleHrefBase: string | undefined;
   ruleRefs: Record<string, RuleRefPreview> | undefined;
   anchoredImages: AnchoredImage<PublicBlock>[];
+  inlineImages: Record<string, PublicBlock> | undefined;
 }) {
   const atHead = anchoredImages.filter((image) => image.segmentId === null);
   const around = new Map<string, { before: AnchoredImage<PublicBlock>[]; after: AnchoredImage<PublicBlock>[] }>();
@@ -265,7 +279,7 @@ function PublicTextBlock({
             : createElement(
                 tag,
                 { "data-align": segment.align, ...teinte },
-                segment.content.map((node, i) => renderNode(node, i, textRefs, hrefBase, ruleHrefBase, ruleRefs)),
+                segment.content.map((node, i) => renderNode(node, i, textRefs, hrefBase, ruleHrefBase, ruleRefs, inlineImages)),
               );
         if (!slot) return <Fragment key={segment.id}>{rendered}</Fragment>;
         return (
@@ -333,7 +347,7 @@ function PublicInfoboxBlock({
       {data.entries.map((entry, i) => (
         <div key={i} className="contents">
           <dt className="text-[10px] font-semibold uppercase tracking-wider text-ink-muted">{entry.label}</dt>
-          <dd>{infoboxValueNodes(entry.value).map((node, n) => renderNode(node, n, textRefs, hrefBase, ruleHrefBase, ruleRefs))}</dd>
+          <dd>{infoboxValueNodes(entry.value).map((node, n) => renderNode(node, n, textRefs, hrefBase, ruleHrefBase, ruleRefs, undefined))}</dd>
         </div>
       ))}
     </dl>
@@ -428,6 +442,46 @@ export function PublicImageBlock({ data, flow }: { data: ImageBlockData; flow?: 
   );
 }
 
+/**
+ * V3.1-189 — une image posee DANS une phrase. Que des `<span>` : un `<figure>`
+ * ou un `<div>` n'ont pas le droit d'entrer dans un `<p>`, et le navigateur
+ * couperait le paragraphe en deux pour les loger.
+ *
+ * Habillage lu sur le bloc image : `anchorFlow: "float"` fait couler le texte
+ * a cote (gauche ou droite selon `align`), `"break"` coupe la phrase (« haut
+ * et bas »), alignee a gauche, au centre ou a droite. Meme largeur de
+ * reference et meme repli du telephone que `PublicImageBlock`.
+ */
+export function PublicInlineImage({ data }: { data: ImageBlockData }) {
+  if (!data.url) return null;
+  const widthPx = (BASE_IMAGE_WIDTH_PX * data.sizePct) / 100;
+  const placement =
+    data.anchorFlow === "break"
+      ? `my-3 ${data.align === "left" ? "mr-auto" : data.align === "right" ? "ml-auto" : "mx-auto"}`
+      : `mb-3 mt-1 max-sm:float-none max-sm:mx-0 max-sm:w-full ${data.align === "left" ? "float-left mr-4 max-sm:mr-0" : "float-right ml-4 max-sm:ml-0"}`;
+  return (
+    <span
+      className={`inline-image flex w-[var(--img-w)] max-w-full flex-col gap-1.5 ${placement}`}
+      style={{ "--img-w": `${widthPx}px` } as CSSProperties & Record<`--${string}`, string>}
+    >
+      {data.parallaxPct > 0 ? (
+        <ParallaxImage src={data.url} alt={data.caption} intensityPct={data.parallaxPct} inline />
+      ) : (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img src={data.url} alt={data.caption} loading="lazy" decoding="async" className="block w-full rounded-md object-cover" />
+      )}
+      {data.caption && <span className="block text-xs italic text-ink-muted">{data.caption}</span>}
+    </span>
+  );
+}
+
+/** Le bloc texte contient-il une image posee dans ses phrases, et visible ici ? Sert au `flow-root` qui contient ses flottements. */
+function hasInlineImage(block: PublicBlock, inlineImages: Record<string, PublicBlock> | undefined): boolean {
+  if (block.blockType !== "text" || !inlineImages) return false;
+  const segments = (block.data as unknown as TextBlockData).segments ?? [];
+  return segments.some((segment) => segment.content.some((node) => node.t === "image" && inlineImages[node.blockId] !== undefined));
+}
+
 function PublicCustomTableBlock({ data }: { data: CustomTableBlockData }) {
   return (
     <div className="overflow-x-auto">
@@ -468,6 +522,7 @@ export default function PublicBlockView({
   hrefBase,
   ruleHrefBase,
   anchoredImages = [],
+  inlineImages,
   suppressBottomRule = false,
 }: {
   block: PublicBlock;
@@ -476,6 +531,8 @@ export default function PublicBlockView({
   ruleHrefBase?: string;
   /** V2.1-11 : images ancrees DANS ce bloc (`planImageAnchors`), a inserer entre ses segments — jamais a cote de lui. */
   anchoredImages?: AnchoredImage<PublicBlock>[];
+  /** V3.1-189 : les blocs image poses DANS le texte de la fiche (`planImageAnchors(...).inline`), par identifiant. */
+  inlineImages?: Record<string, PublicBlock>;
   /** V2.1-17 : le bloc SUIVANT ouvre sur un trait choisi, qui remplace le filet automatique de cette jonction au lieu de s'y ajouter (`hasLeadRule`, calcule par `PublicEntityBody` qui seul voit la suite). */
   suppressBottomRule?: boolean;
 }) {
@@ -505,7 +562,7 @@ export default function PublicBlockView({
     // texte ne deborde pas sur le bloc suivant. Pose sans condition, il
     // changerait la fusion des marges de TOUS les blocs.
     <div
-      className={`border-b border-edge/60 py-4 first:pt-0 last:border-b-0 ${suppressBottomRule ? "!border-b-0" : ""} ${imagesVisibles.length > 0 ? "flow-root" : ""}`}
+      className={`border-b border-edge/60 py-4 first:pt-0 last:border-b-0 ${suppressBottomRule ? "!border-b-0" : ""} ${imagesVisibles.length > 0 || hasInlineImage(block, inlineImages) ? "flow-root" : ""}`}
     >
       {/* V2.1-17 : un trait pose en tete d'un bloc texte se rend ICI, avant
           le titre — jamais entre le titre et le texte qu'il annonce (retour
@@ -524,6 +581,7 @@ export default function PublicBlockView({
           ruleHrefBase={ruleHrefBase}
           ruleRefs={block.ruleRefs}
           anchoredImages={imagesVisibles}
+          inlineImages={inlineImages}
         />
       )}
       {block.blockType === "infobox" && (
