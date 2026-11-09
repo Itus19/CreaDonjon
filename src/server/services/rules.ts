@@ -1498,6 +1498,32 @@ export async function listRuleEntryBlocksByKeys(
   // n'y apparait jamais. `resolveEntryBlocksInRuleset` est le meme moteur
   // que `getRuleEntryForWorld` (la page de la fiche elle-meme), donc
   // resout ces cles correctement — juste jamais applique ici avant.
+  // V3.1-200 : une fiche officielle que la variante surcharge (version maison d'Injonction, briques
+  // jouables ajoutées) — ses blocs surchargés viennent de la fiche RÉSOLUE ; les autres gardent leur
+  // traduction. Une version maison entière (`replace_entry`) remplace tout. Une requête pour toutes les clés.
+  const trouvees = entryKeys.filter((k) => !remaining.has(k));
+  if (trouvees.length > 0) {
+    const surcharges = await listOverridesAcrossRulesetsForKeys(supabase, chain.map((l) => l.rulesetId), trouvees);
+    const touchees = [...surcharges.keys()];
+    if (touchees.length > 0) {
+      const resolues = await resolveEntryBlocksInRulesetBatch(supabase, rulesetId, touchees);
+      for (const key of touchees) {
+        const resolved = resolues.get(key);
+        if (!resolved) continue;
+        const lignes = [...(surcharges.get(key)?.values() ?? [])].flat();
+        const entiere = lignes.some((l) => l.action === "replace_entry");
+        const types = new Set(lignes.flatMap((l) => (l.block_type ? [l.block_type] : [])));
+        const resoluesParType = [...resolved.blocksByType.entries()].map(([blockType, data]) => ({ blockType: blockType as BlockType, data }));
+        if (entiere) {
+          result[key] = resoluesParType;
+          continue;
+        }
+        const gardees = (result[key] ?? []).filter((b) => !types.has(b.blockType));
+        result[key] = [...gardees, ...resoluesParType.filter((b) => types.has(b.blockType))];
+      }
+    }
+  }
+
   if (remaining.size > 0) {
     const fallbackResults = await Promise.all(
       [...remaining].map(async (key) => [key, await resolveEntryBlocksInRuleset(supabase, rulesetId, key)] as const)

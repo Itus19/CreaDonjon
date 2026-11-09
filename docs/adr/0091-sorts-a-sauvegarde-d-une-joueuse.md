@@ -1,7 +1,7 @@
 # 0091 — Les sorts à sauvegarde d'une joueuse
 
 **Date :** 2026-11-09
-**Statut :** acceptée (V3.1-200) ; migration `20261108120000_player_save_requests` à appliquer par l'auteur
+**Statut :** acceptée (V3.1-200) ; migration `20261108120000_player_save_requests` appliquée et vérifiée le 9 nov.
 
 ## Contexte
 
@@ -20,4 +20,3 @@ Viser le PJ d'une autre joueuse reste possible, comme à la table : la demande v
 ## Conséquences
 
 - « Cibler » s'ouvre aux sorts à sauvegarde dans l'outil de dés de la joueuse ; « Lancer un sort » d'une aptitude (Mante de majesté) lance pour elle.
-- Tant que la migration n'est pas appliquée, la base refuse le genre `save_request` : le jet d'une joueuse finit en 503 (« Prévenez le MJ »), et le MJ garde son chemin.
