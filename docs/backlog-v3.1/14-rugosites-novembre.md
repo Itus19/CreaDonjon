@@ -30,11 +30,11 @@ Ce qu'on a constaté en jouant, à partir du 1ᵉʳ novembre. Même règle que l
 
 Demande de l'auteur : l'aperçu de placement dans le bloc image (curseur à crans + miniature) laisse place à un placement **dans le bloc texte lié**, par cliquer-glisser. Cliquer l'image dans le texte ouvre une bulle d'habillage, dans le style de la bulle de mise en forme (gras, spoiler…). Le bloc image dit seulement dans quel bloc texte l'image apparaît.
 
-**Esquisses** (9 novembre, à valider) : planche « Image dans le texte », quatre écrans — glisser dans le texte, la bulle d'habillage, le bloc image allégé, le résultat dans le wiki.
+**Esquisses validées par l'auteur** (9 novembre, « elles reflètent exactement ma vision ») : planche « Image dans le texte », quatre écrans — glisser dans le texte, la bulle d'habillage, le bloc image allégé, le résultat dans le wiki.
 
 **Ce qui existe déjà et sert tel quel** : `zImageBlockData` porte `placement: "anchored"`, `anchor { blockId, segmentId, position }`, `anchorFlow: "float" | "break"`, `align`, `sizePct` ; `planImageAnchors` (`src/core/images/blockAnchor.ts`) et `PublicEntityBody` rendent déjà une image accrochée à un paragraphe, avec ses replis (paragraphe supprimé ou caché → en tête du bloc).
 
-**Décision à prendre par l'auteur** :
+**Décision (9 novembre) : option A**, celle que montrent les esquisses validées. L'option B reste écrite pour mémoire :
 - **Option A, recommandée : entre deux paragraphes.** L'image se dépose entre deux segments, comme le curseur à crans d'aujourd'hui, mais à la souris dans le texte. Aucun changement de schéma, aucune migration : on change l'éditeur, pas les données. Limite : jamais au milieu d'une phrase.
 - **Option B : n'importe où dans le texte.** Un nœud image en ligne dans le contenu des segments. Change le schéma des segments (`zNarrativeContent`), `SCHEMA.md`, la synchronisation Tiptap, la détection de liens, l'export ; demande un ADR. Et une image au milieu d'un paragraphe caché à un joueur poserait la question de sa propre visibilité.
 
