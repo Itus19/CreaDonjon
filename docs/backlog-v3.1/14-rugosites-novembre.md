@@ -26,29 +26,30 @@ Ce qu'on a constaté en jouant, à partir du 1ᵉʳ novembre. Même règle que l
 
 ### V3.1-189 — Bloc image : le placer dans le texte, à la souris, comme dans Word (9 novembre)
 
-**Modèle conseillé : Opus** pour la conception et l'éditeur (Tiptap, glisser-déposer, décorations) ; **Sonnet** possible pour le bloc image allégé une fois la conception décidée.
+**Modèle conseillé : Opus** — fait par Opus seul (format du texte, visibilité, éditeur : contexte chargé, rien de délégable sans tout reprendre).
 
-Demande de l'auteur : l'aperçu de placement dans le bloc image (curseur à crans + miniature) laisse place à un placement **dans le bloc texte lié**, par cliquer-glisser. Cliquer l'image dans le texte ouvre une bulle d'habillage, dans le style de la bulle de mise en forme (gras, spoiler…). Le bloc image dit seulement dans quel bloc texte l'image apparaît.
+Demande de l'auteur : l'aperçu de placement dans le bloc image (curseur à crans + miniature) laisse place à un placement **dans le texte**, par cliquer-glisser. Cliquer l'image dans le texte ouvre une bulle d'habillage, dans le style de la bulle de mise en forme. Le bloc image dit seulement dans quel bloc texte l'image apparaît, et garde ses trois modes de fond, le flou, le fondu et la parallaxe.
 
-**Esquisses validées par l'auteur** (9 novembre, « elles reflètent exactement ma vision ») : planche « Image dans le texte », quatre écrans — glisser dans le texte, la bulle d'habillage, le bloc image allégé, le résultat dans le wiki.
+**Esquisses validées par l'auteur** (9 novembre, « elles reflètent exactement ma vision ») : planche « Image dans le texte ».
 
-**Ce qui existe déjà et sert tel quel** : `zImageBlockData` porte `placement: "anchored"`, `anchor { blockId, segmentId, position }`, `anchorFlow: "float" | "break"`, `align`, `sizePct` ; `planImageAnchors` (`src/core/images/blockAnchor.ts`) et `PublicEntityBody` rendent déjà une image accrochée à un paragraphe, avec ses replis (paragraphe supprimé ou caché → en tête du bloc).
+**Décision (9 novembre) : option B**, n'importe où dans une phrase (ADR 0079). Règle de visibilité de l'auteur : une image cachée à un lecteur l'est partout, texte compris ; le texte se comporte comme si elle n'était pas là.
 
-**Décision (9 novembre) : option A**, celle que montrent les esquisses validées. L'option B reste écrite pour mémoire :
-- **Option A, recommandée : entre deux paragraphes.** L'image se dépose entre deux segments, comme le curseur à crans d'aujourd'hui, mais à la souris dans le texte. Aucun changement de schéma, aucune migration : on change l'éditeur, pas les données. Limite : jamais au milieu d'une phrase.
-- **Option B : n'importe où dans le texte.** Un nœud image en ligne dans le contenu des segments. Change le schéma des segments (`zNarrativeContent`), `SCHEMA.md`, la synchronisation Tiptap, la détection de liens, l'export ; demande un ADR. Et une image au milieu d'un paragraphe caché à un joueur poserait la question de sa propre visibilité.
+**Fait :**
+- **Format** : nœud de segment `{ t: "image", blockId }` (`zSegmentContentNode`) ; les valeurs d'infobox gardent un format sans image (`zMentionNode`). `nodeText` remplace cinq aplatissements « paragraphe → texte ». `SCHEMA.md` §6.
+- **Noyau** (tests d'abord) : `src/core/images/inlineImage.ts` (images citées, visibilité), `inlineImagePlacement.ts` (choisir le bloc texte), `src/core/linker/remapBlockIds.ts` ; `planImageAnchors` sort du fil une image citée par le texte, qui prime sur l'ancien ancrage ; aller-retour Tiptap (`tiptapSync`).
+- **Serveur** : `applyInlineImageVisibility` sur le chemin joueur (`playerEntityDetail`) et le partage public (`publicShare`). Une image cachée est retirée du texte (paragraphe vide supprimé) ; une image posée dans un paragraphe caché disparaît avec lui ; une image de fond y reste un fond.
+- **Duplications** : fiche et monde recalent les blocs cités (et l'ancien `anchor.blockId`, qu'elles ne recalaient pas) ; l'export porte l'id d'origine du bloc (`ref`, facultatif).
+- **Lecture** : `PublicInlineImage` (que des `<span>`, valides dans un `<p>`), parallaxe comprise.
+- **Éditeur** : extension `inlineImage` (`components/entities/richtext/InlineImage.tsx`), toujours chargée ; glisser-déposer natif ; bulle d'habillage (texte à gauche, à droite, haut et bas + alignement, taille −/+, « Bloc image », « Retirer du texte » ; au téléphone, ▲ ▼ d'un paragraphe).
+- **Bloc image allégé** : « Seule, à sa place » / « Dans un bloc de texte » + liste des blocs texte ; curseur à crans, aperçu et barre retirés ; légende, parallaxe, fond, flou et fondu gardés.
 
-**Découpage (option A)** :
-1. **Éditeur de texte** (`RichTextEditor.tsx`) : afficher les images accrochées à ce bloc comme des widgets non éditables entre les paragraphes (décorations Tiptap, pas de nœud dans le document, donc rien dans les segments) ; glisser-déposer avec une ligne d'insertion dorée qui s'aimante entre deux paragraphes ; le dépôt écrit `anchor` sur le bloc image (une écriture, comme aujourd'hui).
-2. **Bulle d'habillage** à la sélection de l'image : texte à gauche (`float` + `left`), texte à droite (`float` + `right`), haut et bas (`break`, puis gauche/centre/droite) ; taille −/+ (`sizePct`, pas de 10, 50 à 200 %) ; « Légende » ; « Bloc image » (ouvre ses autres réglages) ; « Retirer du texte » (`placement: "flow"`). Même composant visuel que la bulle existante.
-3. **Bloc image allégé** (`ImageBlockEditor.tsx`) : « Où l'image apparaît » : seule, à sa place, ou dans un bloc texte (liste des blocs texte de la fiche) ; choisir un bloc sans glisser place l'image en tête. Le curseur à crans, l'aperçu, l'alignement et la taille quittent ce bloc. Parallaxe et fond de page restent.
-4. **Droits** : une image ne se glisse que si l'on peut éditer la fiche (`canEditEntity`, inchangé) ; jamais dans le Wiki joueur (V3.1-188).
+**Vérifié** :
+- typecheck, lint, tests unitaires.
+- **Au navigateur** (Banc d'essai, fiche d'essai supprimée ensuite) :
+  - en Testeur MJ, poser l'image depuis le bloc image, l'ouvrir dans la bulle, la glisser au milieu d'une phrase du second paragraphe, texte à gauche, 80 % : enregistré tel quel en base ;
+  - en Testeuse A, l'image s'affiche dans la phrase ; bloc image passé en MJ seulement : légende et nœud absents du HTML reçu, le texte se referme (« …montées en une seule nuit… »).
 
-**Critères d'acceptation** :
-- Faire glisser une image entre deux paragraphes la place là, en édition comme en lecture, sans rechargement.
-- La bulle change l'habillage et la taille ; le rendu public suit.
-- Un bloc image posé avant ce ticket s'affiche à l'identique (aucune réécriture en base).
-- Téléphone : le glisser est remplacé par « Monter » / « Descendre » dans la bulle (pas de glisser au doigt dans un texte qui défile).
-- Catalogue (`docs/catalogue/`) : planches de la bulle et du bloc image mises à jour.
-
-**Sous-tâches Haiku** : libellés dans `messages/` ; planche du catalogue d'après le code écrit ; recensement des usages de `cransDe` et de l'aperçu à retirer.
+**Reste** :
+- Les boutons ▲ ▼ du téléphone n'ont pas été essayés au navigateur.
+- Planche du catalogue (`docs/catalogue/`, bloc image et bulle) à refaire d'après le code : sous-tâche Haiku.
+- Le cadre doré autour de l'éditeur pendant une sélection vient de la règle globale `:focus-visible`, antérieure à ce ticket (tous les éditeurs de texte l'ont).

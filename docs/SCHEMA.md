@@ -290,6 +290,8 @@ Un champ de texte n'est jamais stocké comme du markdown brut dès lors qu'un ca
 
 Types de nœuds : `text`, `em`, `strong`, `code`, `ref`. Un `ref` cible une entité (par identifiant), une règle (par clé, pour survivre à la surcharge) ou un asset.
 
+**Image posée dans la phrase (V3.1-189, ADR 0079)** : `{ "t": "image", "blockId": "<id d'un bloc image de la même fiche>" }`. Le nœud ne porte que la position ; légende, habillage (`anchorFlow`), alignement et taille vivent sur le bloc image, qui garde sa visibilité. Une image que le lecteur ne voit pas est retirée du texte côté serveur avant l'envoi (`applyInlineImageVisibility`), et un paragraphe qui ne contenait qu'elle disparaît. Une valeur d'infobox n'accepte pas ce nœud (`zMentionNode`).
+
 **Le contenu est une liste de nœuds**, pas une chaîne balisée ni un texte accompagné de décalages de caractères. Aucun décalage à maintenir, aucun parsing à l'affichage, extraction des mentions triviale — et c'est nativement ce que produit un éditeur de texte riche. Justification complète en §A1 de `Spec_Wiki_Liens_et_Personnages_v0_1.md`.
 
 **Contraintes :**
