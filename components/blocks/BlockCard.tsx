@@ -26,6 +26,7 @@ const NIVEAUX_CHOIX = ["public", "players", "gm", "private"] as const;
  * conteneur sur la fiche, pas la largeur de l'écran).
  */
 export default function BlockCard({
+  blocId,
   cardRef,
   style,
   onBlur,
@@ -53,6 +54,8 @@ export default function BlockCard({
   erreurSauvegarde,
   children,
 }: {
+  /** V3.1-189 : pose `data-block-id`, pour qu'un autre bloc puisse y faire defiler (« Bloc image » dans la bulle d'une image du texte). */
+  blocId?: string;
   cardRef: React.Ref<HTMLDivElement>;
   style?: React.CSSProperties;
   onBlur: (e: React.FocusEvent<HTMLDivElement>) => void;
@@ -117,6 +120,7 @@ export default function BlockCard({
   return (
     <div
       ref={cardRef}
+      data-block-id={blocId}
       style={style}
       onBlur={onBlur}
       className={`@container/bloc relative mb-3 rounded-2xl border bg-panel backdrop-blur-[var(--blur)] ${

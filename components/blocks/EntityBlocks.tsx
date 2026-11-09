@@ -153,6 +153,18 @@ export const BLOCK_TYPE_LABELS: Record<string, string> = {
   session_journal_meta: "Séance",
 };
 
+/** V3.1-189 : les blocs image de la fiche, par identifiant, pour les images posees dans le texte. */
+function imagesDeLaFiche(siblings: BlockItem[]): Record<string, ImageBlockData> {
+  const images: Record<string, ImageBlockData> = {};
+  for (const b of siblings) if (b.blockType === "image") images[b.id] = b.data as ImageBlockData;
+  return images;
+}
+
+/** V3.1-189 : fait defiler jusqu'a un bloc de la fiche (`data-block-id`, `BlockCard`). */
+function allerAuBloc(blockId: string) {
+  document.querySelector(`[data-block-id="${window.CSS.escape(blockId)}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
 /**
  * V3.1-31 : exporte pour l'editeur plein ecran, qui montre CE meme aiguillage
  * type -> editeur sur son brouillon (donnee / `onChange`), sans le recopier.
@@ -172,6 +184,7 @@ export function BlockDataEditor({
   siblings,
   entityKind,
   onEnregistrer,
+  onEditSibling,
 }: {
   block: BlockItem;
   onChange: (data: unknown) => void;
@@ -202,11 +215,16 @@ export function BlockDataEditor({
   entityKind?: string;
   /** V3.1-68 : ecrit TOUT DE SUITE ce contenu par le chemin d'enregistrement du bloc, `true` si le serveur l'accepte (pastille de visibilite d'un evenement de la Chronologie). Absent dans l'editeur plein ecran. */
   onEnregistrer?: (data: unknown) => Promise<boolean>;
+  /** V3.1-189 : ecrit la donnee d'un AUTRE bloc de la fiche — l'habillage d'une image depuis le texte, ou le texte ou une image se pose depuis le bloc image. Absent : ces gestes sont en lecture seule. */
+  onEditSibling?: (blockId: string, data: unknown) => void;
 }) {
   switch (block.blockType) {
     case "text":
       return (
         <TextBlockEditor
+          inlineImages={imagesDeLaFiche(siblings)}
+          onEditImage={onEditSibling ? (id, d) => onEditSibling(id, d) : undefined}
+          onOpenImageBlock={allerAuBloc}
           data={block.data as TextBlockData}
           onChange={(d) => onChange(d)}
           entityId={block.entityId}
@@ -234,6 +252,8 @@ export function BlockDataEditor({
           data={block.data as ImageBlockData}
           onChange={(d) => onChange(d)}
           siblings={siblings}
+          onEditSibling={onEditSibling}
+          onOpenBlock={allerAuBloc}
         />
       );
     case "custom_table":
@@ -1371,6 +1391,7 @@ function SortableBlockCard({
 
   return (
     <BlockCard
+      blocId={block.id}
       cardRef={setNodeRef}
       style={style}
       onBlur={onBlur}
@@ -1490,6 +1511,10 @@ function SortableBlockCard({
               siblings={siblings}
               entityKind={entityKind}
               onEnregistrer={(data) => onSaveBlock(block.id, { data })}
+              onEditSibling={(id, data) => {
+                onPatchBlock(id, { data });
+                void onSaveBlock(id, { data });
+              }}
             />
           )
         )}

@@ -131,6 +131,8 @@ export class InsertBlockError extends Error {
 export async function insertBlock(
   supabase: TypedClient,
   params: {
+    /** V3.1-189 : fourni par une duplication, qui doit connaitre les nouveaux ids AVANT l'insertion pour recaler les references entre blocs (`remapBlockIds`). Absent : la base le genere. */
+    id?: string;
     entityId: string;
     blockType: string;
     display: Json;
@@ -144,6 +146,7 @@ export async function insertBlock(
   const { data, error } = await supabase
     .from("blocks")
     .insert({
+      ...(params.id ? { id: params.id } : {}),
       entity_id: params.entityId,
       block_type: params.blockType,
       display: params.display,

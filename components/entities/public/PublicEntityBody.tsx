@@ -55,7 +55,7 @@ export default function PublicEntityBody({
   // V2.1-11 : apres la musique, jamais avant — une image ancree a un bloc
   // musique viserait une cible qui n'existe plus dans le fil, et doit donc
   // retomber dans le flux comme n'importe quelle cible perdue.
-  const { contentBlocks, anchors } = planImageAnchors(afterMusic);
+  const { contentBlocks, anchors, inline } = planImageAnchors(afterMusic);
 
   const [firstBlock, ...afterFirst] = contentBlocks;
   const firstBlockWraps = firstBlock?.blockType === "text";
@@ -115,6 +115,7 @@ export default function PublicEntityBody({
             hrefBase={hrefBase}
             ruleHrefBase={ruleHrefBase}
             anchoredImages={anchors[firstBlock.id]}
+            inlineImages={inline}
             suppressBottomRule={hasLeadRule(restBlocks[0])}
           />
         )}
@@ -137,6 +138,7 @@ export default function PublicEntityBody({
               hrefBase={hrefBase}
               ruleHrefBase={ruleHrefBase}
               anchoredImages={anchors[block.id]}
+              inlineImages={inline}
               suppressBottomRule={hasLeadRule(restBlocks[i + 1])}
             />
           ))}

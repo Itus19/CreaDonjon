@@ -1,4 +1,5 @@
 import type { SegmentContentNode, SegmentBlockType } from "@/src/core/schemas/entities/segments";
+import { nodeText } from "@/src/core/richtext/nodeText";
 
 /**
  * La phrase d'une carte de PJ (V3.1-82, choix du personnage) : la première
@@ -19,7 +20,7 @@ const FIN_DE_PHRASE = /[.!?…](?=\s|$)/;
 
 function texteDuParagraphe(content: SegmentContentNode[]): string {
   return content
-    .map((node) => (node.t === "ref" ? node.label : node.marks?.includes("spoiler") ? "" : node.v))
+    .map((node) => (node.t === "text" && node.marks?.includes("spoiler") ? "" : nodeText(node)))
     .join("")
     .replace(/\s+/g, " ")
     .trim();

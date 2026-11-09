@@ -3,7 +3,7 @@
 import { useId, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { InfoboxValue } from "@/src/core/schemas/blocks/infobox";
-import type { SegmentContentNode } from "@/src/core/schemas/entities/segments";
+import type { MentionNode } from "@/src/core/schemas/entities/segments";
 import type { OtherEntityOption } from "@/components/entities/RelationsChips";
 import { insererMention, mentionEnCours, noeudsEditables, normaliserValeur, retirerMention, suggererFiches } from "@/lib/ui/mentionValeur";
 
@@ -35,7 +35,7 @@ export default function ValeurAvecMentions({
   const [enCours, setEnCours] = useState<{ index: number; debut: number; fin: number; requete: string; actif: number } | null>(null);
   const proposees = enCours ? suggererFiches(fiches, enCours.requete) : [];
 
-  function ecrire(suivants: SegmentContentNode[]) {
+  function ecrire(suivants: MentionNode[]) {
     onChange(normaliserValeur(suivants));
   }
 
@@ -47,7 +47,7 @@ export default function ValeurAvecMentions({
 
   function choisir(fiche: OtherEntityOption) {
     if (!enCours) return;
-    const mention: SegmentContentNode = { t: "ref", kind: "entity", id: fiche.id, label: fiche.name };
+    const mention: MentionNode = { t: "ref", kind: "entity", id: fiche.id, label: fiche.name };
     const suivants = insererMention(noeuds, enCours.index, { debut: enCours.debut, fin: enCours.fin }, mention);
     setEnCours(null);
     ecrire(suivants);

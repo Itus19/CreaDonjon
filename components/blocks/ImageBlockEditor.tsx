@@ -3,18 +3,11 @@
 import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { ImageBlockData } from "@/src/core/schemas/blocks/image";
-import type { Segment } from "@/src/core/schemas/entities/segments";
+import type { TextBlockData } from "@/src/core/schemas/blocks/text";
 import Dropdown from "@/components/shared/Dropdown";
 import type { ImageBackgroundMode } from "@/src/core/images/backgroundMode";
-import {
-  CHOIX_FOND,
-  appliquerControle,
-  appliquerFond,
-  estContourne,
-  fondDe,
-  reglagesFondVisibles,
-  type ControleBarre,
-} from "@/lib/ui/imageBloc";
+import { placeImageInText, textHostOf } from "@/src/core/images/inlineImagePlacement";
+import { CHOIX_FOND, appliquerFond, fondDe, reglagesFondVisibles } from "@/lib/ui/imageBloc";
 
 /** Forme minimale d'un bloc frere pour cet editeur — `BlockItem` (EntityBlocks) la satisfait. */
 export interface ImageAnchorSibling {
@@ -23,74 +16,6 @@ export interface ImageAnchorSibling {
   display: { label: string };
   data: unknown;
 }
-
-/** Un cran du curseur de position : ce qu'il ecrit, et ce qu'il affiche. */
-interface PositionStop {
-  segmentId: string | null;
-  position: "before" | "after";
-  label: string;
-}
-
-/** Traducteur des libelles de cran (`fiche.image.cran.*`) — le calcul des crans reste pur. */
-type TraduireCran = (cle: "enTete" | "avant" | "fin" | "trait" | "segmentVide", valeurs?: { texte: string }) => string;
-
-const APERCU_LONGUEUR = 46;
-
-/** Le texte d'un segment, mentions comprises (leur libelle). */
-function texteDe(segment: Segment): string {
-  return segment.content.map((node) => (node.t === "text" ? node.v : node.label)).join("").trim();
-}
-
-/**
- * Premiers mots d'un segment, pour nommer un cran du curseur. Deuxieme
- * occurrence de cet aplatissement dans le depot (la premiere est
- * `src/server/services/spikeSolo.ts`) — pas encore la troisieme, donc pas
- * encore une fonction partagee.
- */
-function apercuSegment(segment: Segment, cran: TraduireCran): string {
-  // Un `divider` (V2.1-14) n'a pas de contenu par construction : sans ce cas,
-  // il apparaitrait ici comme « (segment vide) », ce qui designe normalement
-  // une erreur de saisie.
-  if (segment.blockType === "divider") return cran("trait");
-  const texte = texteDe(segment);
-  if (texte.length === 0) return cran("segmentVide");
-  return texte.length > APERCU_LONGUEUR ? `${texte.slice(0, APERCU_LONGUEUR)}…` : texte;
-}
-
-function segmentsDe(block: ImageAnchorSibling | undefined): Segment[] {
-  const segments = (block?.data as { segments?: unknown } | null)?.segments;
-  return Array.isArray(segments) ? (segments as Segment[]) : [];
-}
-
-/**
- * N segments donnent N+1 crans : un avant chaque segment, plus « a la fin ».
- * Le premier cran ecrit `segmentId: null` plutot que l'id du premier segment
- * — meme position, mais elle survit a la suppression de ce segment.
- */
-function cransDe(segments: Segment[], cran: TraduireCran): PositionStop[] {
-  const stops: PositionStop[] = [{ segmentId: null, position: "before", label: cran("enTete") }];
-  segments.forEach((segment, i) => {
-    if (i > 0) {
-      stops.push({ segmentId: segment.id, position: "before", label: cran("avant", { texte: apercuSegment(segment, cran) }) });
-    }
-  });
-  const dernier = segments[segments.length - 1];
-  if (dernier) stops.push({ segmentId: dernier.id, position: "after", label: cran("fin") });
-  return stops;
-}
-
-function cranActuel(stops: PositionStop[], anchor: ImageBlockData["anchor"]): number {
-  if (!anchor || anchor.segmentId === null) return 0;
-  const exact = stops.findIndex((s) => s.segmentId === anchor.segmentId && s.position === anchor.position);
-  if (exact !== -1) return exact;
-  // Cote inattendu (ecrit par une version anterieure, ou segment devenu le
-  // dernier) : on retombe sur le meme segment, du cote « avant ».
-  const memeSegment = stops.findIndex((s) => s.segmentId === anchor.segmentId);
-  return memeSegment === -1 ? 0 : memeSegment;
-}
-
-/** Largeur de reference a 100 % — la meme que `PublicImageBlock` (`PublicBlockView.tsx`), pour que l'apercu soit a l'echelle du wiki. */
-const LARGEUR_IMAGE_BASE_PX = 480;
 
 /** Pastille de choix, recette « puces » de la planche : actif = contour et texte accent. */
 function Pastille({
@@ -122,39 +47,6 @@ function Pastille({
   );
 }
 
-/** Bouton de la barre flottante. */
-function BoutonBarre({
-  actif,
-  onClick,
-  disabled,
-  title,
-  label,
-  children,
-}: {
-  actif?: boolean;
-  onClick: () => void;
-  disabled?: boolean;
-  title?: string;
-  label?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={actif}
-      aria-label={label}
-      onClick={onClick}
-      disabled={disabled}
-      title={title}
-      className={`whitespace-nowrap rounded-lg px-2 py-1 text-xs transition-colors disabled:opacity-50 ${
-        actif ? "bg-accent/10 text-accent" : "text-ink-soft hover:text-ink"
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
 /**
  * Téléversement (V2-G12) : même patron que le portrait
  * (`components/entities/PortraitUpload.tsx`), mais par bloc — une fiche
@@ -162,36 +54,37 @@ function BoutonBarre({
  * l'entité. Le collage d'une URL externe reste possible (`data.url` ne
  * distingue jamais externe/téléversé, même champ dans les deux cas).
  *
- * V2.1-11 : l'emplacement de l'image est **explicite** — le bloc de texte
- * hôte et un curseur à crans pour la position dans ce bloc. Règle de forme
- * retenue avec l'auteur : **choix discret = liste, valeur continue =
- * curseur.**
- *
- * V3.1-67 (B) : toucher l'image fait paraître une barre flottante (alignement,
- * taille, « le texte contourne ») ; l'aperçu montre l'image dans le texte de
- * son bloc hôte, légende éditable sur place ; le reste (emplacement,
- * parallaxe, fond) est dans un encart dessous. Rien n'est écrit à l'ouverture :
- * tout passe par un geste de l'auteur. `wrapMode` reste lu seulement.
+ * V3.1-189 (option B, ADR 0079) : la place de l'image se choisit DANS le
+ * texte. Ce bloc ne dit plus que « seule, à sa place » ou « dans tel bloc
+ * texte » : choisir un bloc y pose l'image en tête (`placeImageInText`), puis
+ * l'auteur la fait glisser dans la phrase et règle habillage et taille dans
+ * la bulle de l'éditeur de texte. Le curseur à crans, l'aperçu et la barre
+ * d'alignement de V2.1-11 / V3.1-67 ont quitté ce bloc. Restent ici la
+ * légende, la parallaxe et tout le fond de page.
  */
 export default function ImageBlockEditor({
   blockId,
   data,
   onChange,
   siblings,
+  onEditSibling,
+  onOpenBlock,
 }: {
   blockId: string;
   data: ImageBlockData;
   onChange: (data: ImageBlockData) => void;
-  /** V2.1-11 : tous les blocs de la fiche, pour proposer les hôtes possibles. */
+  /** Tous les blocs de la fiche, pour proposer les blocs texte. */
   siblings: ImageAnchorSibling[];
+  /** V3.1-189 : écrit le texte d'un autre bloc (poser ou retirer l'image). Absent : le choix du bloc texte est en lecture seule. */
+  onEditSibling?: (blockId: string, data: unknown) => void;
+  /** V3.1-189 : fait défiler jusqu'au bloc texte qui porte l'image. */
+  onOpenBlock?: (blockId: string) => void;
 }) {
   const t = useTranslations("fiche.image");
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [barreOuverte, setBarreOuverte] = useState(false);
   const cacheBustRef = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
-  const imageRef = useRef<HTMLButtonElement>(null);
 
   async function upload(file: File) {
     setUploading(true);
@@ -218,59 +111,28 @@ export default function ImageBlockEditor({
     if (file) upload(file);
   }
 
-  const cran: TraduireCran = (cle, valeurs) => t(`cran.${cle}`, valeurs);
-
-  // Seul un bloc `text` peut heberger une image : c'est le seul type qui
-  // porte des segments, et l'ancrage vise un segment.
-  const hotes = siblings.filter((b) => b.blockType === "text" && b.id !== blockId);
-  const ancre = data.placement === "anchored" ? data.anchor : null;
-  const hote = ancre ? hotes.find((b) => b.id === ancre.blockId) : undefined;
-  const ancree = Boolean(ancre && hote);
-  const contourne = estContourne(data, ancree);
+  const textes = siblings.filter((b): b is ImageAnchorSibling & { data: TextBlockData } => b.blockType === "text");
+  // Le texte d'abord ; a defaut, l'ancien ancrage par paragraphe (V2.1-11),
+  // que le wiki rend encore dans ce bloc texte. Choisir un bloc l'ecrit alors
+  // dans le texte, au nouveau format.
+  const hoteId = textHostOf(textes, blockId) ?? (data.placement === "anchored" ? (data.anchor?.blockId ?? null) : null);
+  const hote = textes.find((b) => b.id === hoteId);
   const fond = fondDe(data);
 
-  const hoteOptions = [
-    ...hotes.map((b) => ({ value: b.id, label: t("blocOption", { bloc: b.display.label }) })),
-    // Cible perdue : jamais retiree en silence de la liste. Le rendu, lui,
-    // replie deja l'image dans le fil (`planImageAnchors`).
-    ...(ancre && !hote ? [{ value: ancre.blockId, label: t("blocSupprime") }] : []),
-  ];
-
-  const stops = cransDe(segmentsDe(hote), cran);
-  const cranCourant = cranActuel(stops, ancre);
-
-  function choisirEmplacement(value: string) {
-    if (value === "flow") {
-      onChange({ ...data, placement: "flow", anchor: null });
-      return;
-    }
-    onChange({
-      ...data,
-      placement: "anchored",
-      anchor: { blockId: value, segmentId: null, position: "before" },
-      // Une image qui contourne ne peut pas etre centree (un flottement
-      // centre n'existe pas en CSS) : on retombe a gauche plutot que de
-      // garder une valeur que le rendu ignorerait en silence.
-      align: data.anchorFlow !== "break" && data.align === "center" ? "left" : data.align,
-    });
-  }
-
-  function choisirCran(index: number) {
-    if (!ancre) return;
-    const stop = stops[index] ?? stops[0];
-    onChange({ ...data, anchor: { ...ancre, segmentId: stop.segmentId, position: stop.position } });
-  }
-
-  function barre(action: ControleBarre) {
-    onChange(appliquerControle(data, action, ancree));
-  }
-
-  function fermerSurEchap(e: React.KeyboardEvent) {
-    if (e.key === "Escape" && barreOuverte) {
-      e.stopPropagation();
-      setBarreOuverte(false);
-      imageRef.current?.focus();
-    }
+  /**
+   * Pose l'image dans `cible` (en tete), ou la retire de tout texte (`null`).
+   * L'ancien ancrage par paragraphe (V2.1-11) est efface au passage : le
+   * texte est desormais la seule source de la position.
+   */
+  function choisirBlocTexte(cible: string | null) {
+    if (!onEditSibling) return;
+    for (const change of placeImageInText(textes, blockId, cible, crypto.randomUUID())) onEditSibling(change.id, change.data);
+    const habillage =
+      cible !== null && data.anchorFlow !== "break" && data.align === "center"
+        ? // Un flottement centre n'existe pas : l'image arrive a droite, texte a gauche.
+          { align: "right" as const }
+        : {};
+    onChange({ ...data, placement: "flow", anchor: null, wrapMode: "intercalate", ...habillage });
   }
 
   const FOND_LIBELLES: Record<ImageBackgroundMode, string> = {
@@ -278,67 +140,6 @@ export default function ImageBlockEditor({
     also: t("fondAlso"),
     only: t("fondOnly"),
   };
-
-  const largeurPx = (LARGEUR_IMAGE_BASE_PX * data.sizePct) / 100;
-  const disposition = contourne
-    ? `mb-2 ${data.align === "right" ? "float-right ml-4" : "float-left mr-4"}`
-    : data.align === "left"
-      ? "my-2 items-start"
-      : data.align === "right"
-        ? "my-2 ml-auto items-end"
-        : "my-2 mx-auto items-center";
-
-  const figure = (
-    <figure
-      key="figure"
-      className={`flex w-[var(--img-w)] max-w-full flex-col gap-1.5 ${disposition}`}
-      style={{ "--img-w": `${largeurPx}px` } as React.CSSProperties & Record<`--${string}`, string>}
-    >
-      <button
-        ref={imageRef}
-        type="button"
-        aria-expanded={barreOuverte}
-        aria-label={t("regler")}
-        onClick={() => setBarreOuverte((ouverte) => !ouverte)}
-        className={`block w-full rounded-md ${barreOuverte ? "ring-2 ring-accent" : "hover:ring-1 hover:ring-edge-strong"}`}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={data.url} alt={data.caption} loading="lazy" decoding="async" className="block w-full rounded-md object-cover" />
-      </button>
-      <input
-        value={data.caption}
-        onChange={(e) => onChange({ ...data, caption: e.target.value })}
-        placeholder={t("legendePlaceholder")}
-        aria-label={t("legende")}
-        className="w-full border-b border-transparent bg-transparent px-0.5 text-xs italic text-ink-muted outline-none transition-colors placeholder:not-italic hover:border-edge focus:border-accent"
-      />
-    </figure>
-  );
-
-  // L'image dans le texte de son bloc hote, a son cran ; seule sinon.
-  const segments = segmentsDe(hote);
-  const dansLeTexte = ancree && fond !== "only" && segments.length > 0;
-  const contenu: React.ReactNode[] = [];
-  if (dansLeTexte) {
-    const stop = stops[cranCourant] ?? stops[0];
-    if (stop.segmentId === null) contenu.push(figure);
-    segments.forEach((segment) => {
-      if (stop.segmentId === segment.id && stop.position === "before") contenu.push(figure);
-      if (segment.blockType === "divider") {
-        contenu.push(<hr key={segment.id} className="my-2 border-edge" />);
-      } else {
-        const titre = segment.blockType !== "paragraph";
-        contenu.push(
-          <p key={segment.id} className={`my-1 line-clamp-3 text-sm ${titre ? "font-semibold text-ink" : "text-ink-soft"}`}>
-            {texteDe(segment)}
-          </p>,
-        );
-      }
-      if (stop.segmentId === segment.id && stop.position === "after") contenu.push(figure);
-    });
-  } else {
-    contenu.push(figure);
-  }
 
   return (
     <div className="flex flex-col gap-2">
@@ -364,51 +165,16 @@ export default function ImageBlockEditor({
 
       {data.url && (
         <>
-          <div className="flex flex-col gap-1.5 border-t border-edge/60 pt-2">
-            <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
-              {dansLeTexte && hote ? t("apercuDansBloc", { bloc: hote.display.label }) : t("apercuTitre")}
-            </span>
-            {/* La place de la barre est reservee en haut de l'apercu : elle
-                paraît et disparaît sans faire sauter le texte. */}
-            <div className="relative rounded-xl bg-panel-sunken p-3 pt-12" onKeyDown={fermerSurEchap}>
-              {barreOuverte && (
-                <div
-                  role="toolbar"
-                  aria-label={t("barre")}
-                  className="absolute left-3 top-2 z-10 flex flex-wrap items-center gap-0.5 rounded-xl border border-edge-strong bg-panel-raised p-0.5 shadow-2xl"
-                >
-                  <BoutonBarre actif={data.align === "left"} onClick={() => barre({ controle: "align", valeur: "left" })}>
-                    {t("gauche")}
-                  </BoutonBarre>
-                  <BoutonBarre actif={data.align === "center"} onClick={() => barre({ controle: "align", valeur: "center" })}>
-                    {t("centre")}
-                  </BoutonBarre>
-                  <BoutonBarre actif={data.align === "right"} onClick={() => barre({ controle: "align", valeur: "right" })}>
-                    {t("droite")}
-                  </BoutonBarre>
-                  <span aria-hidden="true" className="mx-1 h-4 w-px bg-edge" />
-                  <BoutonBarre label={t("moins")} onClick={() => barre({ controle: "taille", sens: -1 })}>
-                    −
-                  </BoutonBarre>
-                  <span className="px-1 text-xs text-ink-soft" aria-live="polite">
-                    {t("taille", { pct: data.sizePct })}
-                  </span>
-                  <BoutonBarre label={t("plus")} onClick={() => barre({ controle: "taille", sens: 1 })}>
-                    +
-                  </BoutonBarre>
-                  <span aria-hidden="true" className="mx-1 h-4 w-px bg-edge" />
-                  <BoutonBarre
-                    actif={contourne}
-                    disabled={!ancree}
-                    title={ancree ? undefined : t("contourneIndispo")}
-                    onClick={() => barre({ controle: "contourne" })}
-                  >
-                    {t("contourne")}
-                  </BoutonBarre>
-                </div>
-              )}
-              <div className="flow-root">{contenu}</div>
-            </div>
+          <div className="flex items-start gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={data.url} alt={data.caption} loading="lazy" decoding="async" className="block w-36 shrink-0 rounded-md object-cover" />
+            <input
+              value={data.caption}
+              onChange={(e) => onChange({ ...data, caption: e.target.value })}
+              placeholder={t("legendePlaceholder")}
+              aria-label={t("legende")}
+              className="w-full border-b border-edge bg-transparent px-0.5 py-1 text-xs italic text-ink-muted outline-none transition-colors placeholder:not-italic focus:border-accent"
+            />
           </div>
 
           <div className="flex flex-col gap-3 rounded-xl border border-edge bg-panel-sunken p-3 text-xs">
@@ -417,50 +183,39 @@ export default function ImageBlockEditor({
                 <div className="flex flex-col gap-1.5">
                   <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">{t("emplacement")}</span>
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <Pastille actif={!ancre} onClick={() => choisirEmplacement("flow")}>
+                    <Pastille actif={!hote} disabled={!onEditSibling} onClick={() => choisirBlocTexte(null)}>
                       {t("autonome")}
                     </Pastille>
                     <Pastille
-                      actif={Boolean(ancre)}
-                      disabled={hotes.length === 0}
-                      title={hotes.length === 0 ? t("aucunBlocTexte") : undefined}
+                      actif={Boolean(hote)}
+                      disabled={!onEditSibling || textes.length === 0}
+                      title={textes.length === 0 ? t("aucunBlocTexte") : undefined}
                       onClick={() => {
-                        if (!ancre && hotes[0]) choisirEmplacement(hotes[0].id);
+                        if (!hote && textes[0]) choisirBlocTexte(textes[0].id);
                       }}
                     >
                       {t("dansTexte")}
                     </Pastille>
                   </div>
-                  {ancre && (
-                    <Dropdown
-                      value={ancre.blockId}
-                      options={hoteOptions}
-                      onChange={choisirEmplacement}
-                      size="md"
-                      className="w-full"
-                      aria-label={t("bloc")}
-                    />
+                  {hote && (
+                    <>
+                      <Dropdown
+                        value={hote.id}
+                        options={textes.map((b) => ({ value: b.id, label: t("blocOption", { bloc: b.display.label }) }))}
+                        onChange={choisirBlocTexte}
+                        size="md"
+                        className="w-full"
+                        aria-label={t("bloc")}
+                      />
+                      <span className="text-ink-muted">{t("glisserAide")}</span>
+                      {onOpenBlock && (
+                        <button type="button" onClick={() => onOpenBlock(hote.id)} className="self-start text-accent hover:underline">
+                          {t("allerAuBloc", { bloc: hote.display.label })}
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
-
-                {ancree && (
-                  <div className="flex flex-col gap-1">
-                    <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">{t("position")}</span>
-                    <input
-                      type="range"
-                      min={0}
-                      max={Math.max(0, stops.length - 1)}
-                      step={1}
-                      value={cranCourant}
-                      onChange={(e) => choisirCran(Number(e.target.value))}
-                      aria-label={t("positionLabel")}
-                      className="w-full max-w-64"
-                    />
-                    {/* Le cran cite le texte reel du segment : personne n'a a
-                        compter les paragraphes pour savoir ou l'image tombera. */}
-                    <span className="italic text-ink-muted">{stops[cranCourant]?.label ?? t("cran.enTete")}</span>
-                  </div>
-                )}
 
                 {/* Pas de case a cocher a cote : `0` eteint l'effet, donc le
                     curseur EST l'interrupteur. */}

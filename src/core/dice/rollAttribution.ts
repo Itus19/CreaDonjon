@@ -2,7 +2,7 @@ import type { TraceStep } from "../formula/evaluate";
 
 /**
  * Ce que chaque jet enregistré dit de lui-même pour les statistiques
- * (V3.1-89, ADR 0064). Écrit par le serveur au moment du jet (règle 8),
+ * (V3.1-89, ADR 0079). Écrit par le serveur au moment du jet (règle 8),
  * jamais recalculé ensuite à partir d'un texte.
  */
 

@@ -3,6 +3,7 @@ import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
 import { filterBlocks, filterSegments, type VisibilityLevel } from "@/src/core/visibility";
+import { applyInlineImageVisibility, inlineImageIdsIn } from "@/src/core/images/inlineImage";
 import { buildViewerForWorld } from "@/src/server/services/visibility";
 import type { BlockDisplay } from "@/src/core/schemas/blocks/envelope";
 import { zTextBlockData } from "@/src/core/schemas/blocks/text";
@@ -159,7 +160,10 @@ const getPlayerVisibleBlocks = cache(async function getPlayerVisibleBlocks(
     viewerFor(supabase, worldId, userId),
   ]);
 
-  return filterBlocks(rows.map(toVisibilityAware), viewer)
+  // V3.1-189 : meme ordre que `getPublicVisibleBlocks` (publicShare.ts) — les
+  // images du texte se lisent sur les blocs BRUTS, avant le filtrage.
+  const rawInlineIds = inlineImageIdsIn(rows.map((row) => ({ id: row.id, blockType: row.block_type, data: row.data })));
+  const visible = filterBlocks(rows.map(toVisibilityAware), viewer)
     .map((row) => ({
       id: row.id,
       blockType: row.block_type,
@@ -172,6 +176,7 @@ const getPlayerVisibleBlocks = cache(async function getPlayerVisibleBlocks(
       displayOrder: row.display_order,
     }))
     .sort((a, b) => a.displayOrder - b.displayOrder);
+  return applyInlineImageVisibility(rawInlineIds, visible);
 });
 
 /**
