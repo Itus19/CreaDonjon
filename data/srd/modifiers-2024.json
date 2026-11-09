@@ -90,7 +90,7 @@
     ]
   },
   "paladin-aura-of-protection": {
-    "_regle": "Aura de protection (paladin, niveau 6) : + mod. CHA (minimum +1) aux jets de sauvegarde. Sur le paladin seulement : les allies a 3 m attendent les auras (V3.1-137), voir playable-2024.json.",
+    "_regle": "Aura de protection (paladin, niveau 6) : + mod. CHA (minimum +1) aux jets de sauvegarde, pour le paladin (toujours) et ses allies a 3 m sur le plan (aura, V3.1-171, ADR 0077), eteinte quand le paladin est Neutralise.",
     "modifiers": [
       {
         "target": "save",
@@ -108,6 +108,36 @@
             }
           ]
         }
+      }
+    ],
+    "auras": [
+      {
+        "radius": 3,
+        "affects": "allies",
+        "self": false,
+        "unless_conditions": [
+          "incapacitated",
+          "Neutralisé"
+        ],
+        "modifiers": [
+          {
+            "target": "save",
+            "op": "add",
+            "value": {
+              "op": "max",
+              "args": [
+                {
+                  "op": "num",
+                  "value": 1
+                },
+                {
+                  "op": "ref",
+                  "name": "ability.cha"
+                }
+              ]
+            }
+          }
+        ]
       }
     ]
   },
@@ -168,6 +198,77 @@
         "target": "action_as_bonus.hide",
         "op": "set",
         "value": 1
+      }
+    ]
+  },
+  "dwarven-resilience": {
+    "_regle": "Resistance naine (trait nain) : Resistance aux degats de poison (V3.1-171, ADR 0077). L'Avantage aux sauvegardes contre l'etat Empoisonne attend une sauvegarde ciblee par etat.",
+    "modifiers": [
+      {
+        "target": "resist.poison",
+        "op": "add",
+        "value": 1
+      }
+    ]
+  },
+  "draconic-damage-resistance-acid": {
+    "_regle": "Resistance aux degats (drakeide, ascendance acid) : Resistance a ce type (V3.1-171, ADR 0077).",
+    "modifiers": [
+      {
+        "target": "resist.acid",
+        "op": "add",
+        "value": 1
+      }
+    ]
+  },
+  "draconic-damage-resistance-cold": {
+    "_regle": "Resistance aux degats (drakeide, ascendance cold) : Resistance a ce type (V3.1-171, ADR 0077).",
+    "modifiers": [
+      {
+        "target": "resist.cold",
+        "op": "add",
+        "value": 1
+      }
+    ]
+  },
+  "draconic-damage-resistance-fire": {
+    "_regle": "Resistance aux degats (drakeide, ascendance fire) : Resistance a ce type (V3.1-171, ADR 0077).",
+    "modifiers": [
+      {
+        "target": "resist.fire",
+        "op": "add",
+        "value": 1
+      }
+    ]
+  },
+  "draconic-damage-resistance-lightning": {
+    "_regle": "Resistance aux degats (drakeide, ascendance lightning) : Resistance a ce type (V3.1-171, ADR 0077).",
+    "modifiers": [
+      {
+        "target": "resist.lightning",
+        "op": "add",
+        "value": 1
+      }
+    ]
+  },
+  "draconic-damage-resistance-poison": {
+    "_regle": "Resistance aux degats (drakeide, ascendance poison) : Resistance a ce type (V3.1-171, ADR 0077).",
+    "modifiers": [
+      {
+        "target": "resist.poison",
+        "op": "add",
+        "value": 1
+      }
+    ]
+  },
+  "paladin-aura-expansion": {
+    "_regle": "Aura etendue (paladin, niveau 18) : l'Aura de protection devient une Emanation de 9 m (retouche du rayon, V3.1-171, ADR 0077).",
+    "modifiers": [],
+    "patches": [
+      {
+        "rule": "paladin-aura-of-protection",
+        "field": "aura.radius",
+        "value": 9
       }
     ]
   }

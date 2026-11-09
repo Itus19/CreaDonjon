@@ -24,7 +24,14 @@ import {
   surlignagesDuBrouillon,
   texteDeLaRegle,
   type Brouillon,
+  avecGenreCible,
+  conditionEcrite,
+  conditionVersBrouillon,
+  basculerDans,
+  nouvelleAura,
+  nouvelleRetouche,
 } from "./briquesRegle";
+import { zModifiersBlockData } from "@/src/core/schemas/rule-blocks/blocks";
 
 const NOMS = { frightened: "Effrayé" };
 
@@ -35,7 +42,7 @@ function abjuration(): Brouillon {
   a.id = "abjure";
   a.label = "Abjuration d'ennemis";
   a.cout = { action: "magic", depenses: [{ cle: "channel-divinity", quantite: "1" }], emplacement: null, passage: "l'action Magie" };
-  a.cibles = { kind: "creature", nombre: "max(1, {ability.cha})", portee: "18", doitVoir: true, passage: "cibler un nombre de créatures" };
+  a.cibles = { kind: "creature", zone: null, nombre: "max(1, {ability.cha})", portee: "18", doitVoir: true, passage: "cibler un nombre de créatures" };
   const sauvegarde = nouvelEffet("saving_throw", b);
   if (sauvegarde.type !== "saving_throw") throw new Error("type inattendu");
   const etat = nouvelEffet("apply_state", b);
@@ -241,7 +248,7 @@ function benediction(): Brouillon {
   a.id = "benediction";
   a.label = "Bénédiction";
   a.cout = { action: "action", depenses: [], emplacement: null, passage: null };
-  a.cibles = { kind: "creature", nombre: "3", portee: "9", doitVoir: false, passage: null };
+  a.cibles = { kind: "creature", zone: null, nombre: "3", portee: "9", doitVoir: false, passage: null };
   const boost = nouvelEffet("apply_modifier", b);
   if (boost.type !== "apply_boost") throw new Error("type inattendu");
   boost.nom = "Bénédiction";
@@ -519,5 +526,148 @@ describe("V3.1-166 : sort, options de lancement, lancer un sort", () => {
     if (!ok.ok) return;
     const relu = blocsVersBrouillon([{ blockType: "activation", data: ok.activation }]);
     expect(relu.activations[0].effets[0]).toMatchObject({ type: "cast_spell", sort: "summon-beast", gratuit: true });
+  });
+  it("V3.1-170 : une cible « zone » (cône de 4,5 m depuis soi) fait l'aller-retour sans JSON", () => {
+    const b = brouillonVide();
+    const a = { ...nouvelleActivation(b), label: "Souffle" };
+    a.cibles = avecGenreCible(a.cibles, "area");
+    expect(a.cibles.zone).toMatchObject({ forme: "cone", origine: "self" });
+    const r = brouillonVersBlocs({ ...b, activations: [a] }, NOMS_VIDES);
+    expect(r.ok).toBe(true);
+    if (!r.ok || !r.activation) return;
+    expect(r.activation.activations[0].targets.area).toEqual({ shape: "cone", size: 4.5, origin: "self" });
+    const relu = blocsVersBrouillon([{ blockType: "activation", data: r.activation }]);
+    expect(relu.activations[0].cibles.zone).toEqual({ forme: "cone", taille: "4.5", largeur: "", origine: "self" });
+    // Quitter « zone » retire la zone ; elle ne s'écrit plus.
+    expect(avecGenreCible(a.cibles, "creature").zone).toBeNull();
+  });
+
+  it("V3.1-170 : une ligne garde sa largeur, une taille invalide est refusée avec un message", () => {
+    const b = brouillonVide();
+    const a = { ...nouvelleActivation(b), label: "Souffle" };
+    a.cibles = { ...avecGenreCible(a.cibles, "area"), zone: { forme: "line", taille: "9", largeur: "1.5", origine: "point" } };
+    const r = brouillonVersBlocs({ ...b, activations: [a] }, NOMS_VIDES);
+    expect(r.ok && r.activation?.activations[0].targets.area).toEqual({ shape: "line", size: 9, width: 1.5, origin: "point" });
+    a.cibles = { ...a.cibles, zone: { forme: "sphere", taille: "", largeur: "", origine: "point" } };
+    const mauvais = brouillonVersBlocs({ ...b, activations: [a] }, NOMS_VIDES);
+    expect(mauvais.ok).toBe(false);
+  });
+
+  it("V3.1-170 : la condition d'équipement d'un modificateur (armure, bouclier, arme) fait l'aller-retour", () => {
+    const b = brouillonVide();
+    const a = { ...nouvelleActivation(b), label: "Rage" };
+    const boost = nouvelEffet("apply_modifier", b);
+    if (boost.type !== "apply_boost") throw new Error("type inattendu");
+    boost.nom = "Rage";
+    boost.modificateurs[0].quand = { armures: ["none", "light"], bouclier: "non", armes: ["finesse", "ranged"] };
+    const r = brouillonVersBlocs({ ...b, activations: [{ ...a, effets: [boost] }] }, NOMS_VIDES);
+    expect(r.ok).toBe(true);
+    if (!r.ok || !r.activation) return;
+    expect(r.activation.durable_effects[0].modifiers[0].when).toEqual({ armor: ["none", "light"], shield: false, wielding: ["finesse", "ranged"] });
+    const relu = blocsVersBrouillon([{ blockType: "activation", data: r.activation }]);
+    const e = relu.activations[0].effets[0];
+    expect(e.type === "apply_boost" && e.modificateurs[0].quand).toEqual({ armures: ["none", "light"], bouclier: "non", armes: ["finesse", "ranged"] });
+  });
+
+  it("V3.1-170 : une seule propriété d'arme s'écrit en chaîne ; rien de coché n'écrit aucun « when »", () => {
+    expect(conditionEcrite({ armures: [], bouclier: "oui", armes: ["finesse"] })).toEqual({ shield: true, wielding: "finesse" });
+    expect(conditionEcrite({ armures: [], bouclier: "", armes: [] })).toBeUndefined();
+    expect(conditionVersBrouillon({ wielding: "ranged" })).toEqual({ armures: [], bouclier: "", armes: ["ranged"] });
+    expect(basculerDans(["a"], "b")).toEqual(["a", "b"]);
+    expect(basculerDans(["a", "b"], "a")).toEqual(["b"]);
+  });
+
+  it("V3.1-170 : la condition d'une activation est écrite et relue", () => {
+    const b = brouillonVide();
+    const a = { ...nouvelleActivation(b), label: "Frappe" };
+    a.quand = { armures: [], bouclier: "", armes: ["finesse", "ranged"] };
+    const r = brouillonVersBlocs({ ...b, activations: [a] }, NOMS_VIDES);
+    expect(r.ok && r.activation?.activations[0].when).toEqual({ wielding: ["finesse", "ranged"] });
+    if (!r.ok) return;
+    expect(blocsVersBrouillon([{ blockType: "activation", data: r.activation }]).activations[0].quand.armes).toEqual(["finesse", "ranged"]);
+  });
+  it("V3.1-170 : l'Aura de protection et une retouche se saisissent sans JSON et font l'aller-retour", () => {
+    const b = brouillonVide();
+    const aura = nouvelleAura();
+    aura.rayon = "3";
+    aura.camp = "allies";
+    aura.soi = false;
+    aura.eteintePar = "incapacitated, Neutralisé";
+    aura.modificateurs = [nouveauModificateur("save", "add", "max(1, {ability.cha})")];
+    const retouche = nouvelleRetouche();
+    retouche.regle = "paladin-aura-of-protection";
+    retouche.genre = "aura";
+    retouche.valeur = "9";
+    b.auras = [aura];
+    b.retouches = [retouche];
+
+    const r = brouillonVersBlocs(b, NOMS_VIDES);
+    expect(r.ok).toBe(true);
+    if (!r.ok || !r.modifiers) return;
+    expect(zModifiersBlockData.safeParse(r.modifiers).success).toBe(true);
+    expect(r.modifiers.auras?.[0]).toMatchObject({ radius: 3, affects: "allies", self: false, unless_conditions: ["incapacitated", "Neutralisé"] });
+    expect(r.modifiers.auras?.[0].modifiers[0]).toMatchObject({ target: "save", op: "add" });
+    expect(r.modifiers.patches).toEqual([{ rule: "paladin-aura-of-protection", field: "aura.radius", value: 9 }]);
+
+    const relu = blocsVersBrouillon([{ blockType: "modifiers", data: r.modifiers }]);
+    expect(relu.auras[0]).toMatchObject({ rayon: "3", camp: "allies", soi: false, eteintePar: "incapacitated, Neutralisé" });
+    expect(relu.auras[0].modificateurs[0]).toMatchObject({ cible: "save", op: "add", valeur: "max(1, {ability.cha})" });
+    expect(relu.retouches[0]).toMatchObject({ regle: "paladin-aura-of-protection", genre: "aura", valeur: "9" });
+    const r2 = brouillonVersBlocs(relu, NOMS_VIDES);
+    expect(r2.ok && r2.modifiers).toEqual(r.modifiers);
+  });
+
+  it("V3.1-170 : les autres retouches (recharge, durée, portée) s'écrivent dans la liste fermée", () => {
+    const b = brouillonVide();
+    const a = { ...nouvelleRetouche(), regle: "x", genre: "resource" as const, cible: "channel", valeur: "short_rest" };
+    const d = { ...nouvelleRetouche(), regle: "x", genre: "durable_effect" as const, cible: "rage", valeur: "10", unite: "minute" };
+    const p = { ...nouvelleRetouche(), regle: "x", genre: "activation" as const, cible: "breath", valeur: "18" };
+    b.retouches = [a, d, p];
+    const r = brouillonVersBlocs(b, NOMS_VIDES);
+    expect(r.ok && r.modifiers?.patches).toEqual([
+      { rule: "x", field: "resource.channel.recharge", value: "short_rest" },
+      { rule: "x", field: "durable_effect.rage.duration", value: { unit: "minute", amount: 10 } },
+      { rule: "x", field: "activation.breath.range", value: 18 },
+    ]);
+    if (!r.ok) return;
+    const relu = blocsVersBrouillon([{ blockType: "modifiers", data: r.modifiers }]);
+    expect(relu.retouches.map((x) => [x.genre, x.cible, x.valeur, x.unite])).toEqual([
+      ["resource", "channel", "short_rest", "minute"],
+      ["durable_effect", "rage", "10", "minute"],
+      ["activation", "breath", "18", "minute"],
+    ]);
+  });
+
+  it("V3.1-170 : `modifiers` ne part que si auras ou retouches ont changé, et garde la liste existante", () => {
+    const origine = { modifiers: [{ target: "ac", op: "add" as const, value: 1 }], auras: [{ radius: 3, affects: "allies" as const, self: false, modifiers: [] }] };
+    const intact = blocsVersBrouillon([{ blockType: "modifiers", data: origine }]);
+    const ri = brouillonVersBlocs(intact, NOMS_VIDES);
+    expect(ri.ok && corpsEnregistrement(intact, ri).modifiers).toBeUndefined();
+
+    const change = blocsVersBrouillon([{ blockType: "modifiers", data: origine }]);
+    change.auras[0].rayon = "9";
+    const rc = brouillonVersBlocs(change, NOMS_VIDES);
+    expect(rc.ok).toBe(true);
+    if (!rc.ok) return;
+    expect(corpsEnregistrement(change, rc).modifiers).toEqual({ modifiers: origine.modifiers, auras: [{ radius: 9, affects: "allies", self: false, modifiers: [] }] });
+
+    // Tout retiré, mais la liste de modificateurs reste : le bloc part avec elle seule.
+    change.auras = [];
+    const rv = brouillonVersBlocs(change, NOMS_VIDES);
+    expect(rv.ok && corpsEnregistrement(change, rv).modifiers).toEqual({ modifiers: origine.modifiers });
+
+    // Une aura seule, retirée : le bloc est retiré (null).
+    const seule = blocsVersBrouillon([{ blockType: "modifiers", data: { modifiers: [], auras: origine.auras } }]);
+    seule.auras = [];
+    const rs = brouillonVersBlocs(seule, NOMS_VIDES);
+    expect(rs.ok && corpsEnregistrement(seule, rs).modifiers).toBeNull();
+  });
+
+  it("V3.1-170 : une aura sans rayon valide ou une retouche sans règle est refusée avec un message", () => {
+    const b = brouillonVide();
+    b.auras = [{ ...nouvelleAura(), rayon: "" }];
+    b.retouches = [nouvelleRetouche()];
+    const r = brouillonVersBlocs(b, NOMS_VIDES);
+    expect(r.ok).toBe(false);
   });
 });

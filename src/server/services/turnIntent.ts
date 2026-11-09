@@ -1,5 +1,6 @@
 import type { DiceRollKind } from "@/src/core/dice/rollAttribution";
 import "server-only";
+import { weaponRollProperties } from "@/src/core/rules/srdMapping";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
 import { attackVerdict } from "@/src/core/rules/targeting";
@@ -575,7 +576,7 @@ function buildPendingBasis(
     if (!weapon) return { error: "not_a_weapon" };
     const ability = weaponAttackAbility(weapon.properties, weapon.isRanged, ctx.sheet.abilities.str.mod, ctx.sheet.abilities.dex.mod);
     // V3.1-156 (ADR 0074) : les bonus des règles du personnage, comme `rollWeaponAttack`.
-    const extra = rollBonus(ctx.sheet, { roll: "attack", kind: "weapon" });
+    const extra = rollBonus(ctx.sheet, { roll: "attack", kind: "weapon", properties: weaponRollProperties(weapon) });
     const modifier = ctx.sheet.abilities[ability].mod + ctx.sheet.proficiencyBonus + extra.value;
     const what = `Attaque — ${itemLabel(item)}`;
     return { kind: "weapon_attack", action_id: choice.actionId, dc: null, die_max: 20, modifier, chips: [{ label: what, value: modifier }], what, bonus_dice: desDeBonus(extra.dice) };
@@ -638,7 +639,7 @@ function buildDamageBasis(ctx: CharacterActionContext, itemId: string, critical:
   if (!weapon) return { error: "not_a_weapon" };
   const ability = weaponAttackAbility(weapon.properties, weapon.isRanged, ctx.sheet.abilities.str.mod, ctx.sheet.abilities.dex.mod);
   // V3.1-156 (ADR 0074) : la Rage et les bonus de dégâts d'arme, comme `rollWeaponDamage`.
-  const extra = rollBonus(ctx.sheet, { roll: "damage", kind: "weapon", ability, ...(weapon.damageType ? { damageType: weapon.damageType } : {}) });
+  const extra = rollBonus(ctx.sheet, { roll: "damage", kind: "weapon", ability, properties: weaponRollProperties(weapon), ...(weapon.damageType ? { damageType: weapon.damageType } : {}) });
   const modifier = ctx.sheet.abilities[ability].mod + extra.value;
   const what = `Dégâts — ${itemLabel(item)}`;
   const dieMax = diceFormulaMax(weapon.damageDice) * (critical ? 2 : 1);

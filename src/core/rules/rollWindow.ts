@@ -1,3 +1,5 @@
+import { distance, type Point } from "./geometry";
+import { wieldingAllows } from "../schemas/rule-blocks/primitives";
 import { z } from "zod";
 import type { Rng } from "../dice/rng";
 import { evaluate } from "../formula/evaluate";
@@ -41,6 +43,8 @@ export interface PendingRoll {
   acBonus: number;
   /** Dégâts : la somme lancée, puis le facteur (Esquive instinctive : ½), arrondi à l'inférieur. */
   damage: { base: number; multiplier: number } | null;
+  /** V3.1-171 (ADR 0077) : les propriétés de l'arme du jet (attaque, dégâts) ; absent : arme inconnue ou sans arme. */
+  weaponProperties?: string[];
 }
 
 export type RollOutcome = "hit" | "miss" | "success" | "failure";
@@ -193,6 +197,11 @@ function amount(node: FormulaNode, numbers: Readonly<Record<string, number>>, rn
   }
 }
 
+/** Sans l'une des deux positions, la portée n'est pas vérifiable : on laisse passer (le MJ tranche). */
+function withinRange(a: Point | undefined, b: Point | undefined, metres: number): boolean {
+  return !a || !b || distance(a, b) <= metres + 1e-9;
+}
+
 function canPay(c: ReactionCandidate, numbers: Readonly<Record<string, number>>, rng: Rng): boolean {
   const total: Record<string, number> = {};
   for (const r of c.activation.cost.resources) {
@@ -213,6 +222,12 @@ export function eligibleReactions(p: {
   /** `turnStamp` du tour en cours ; `null` hors combat. */
   stamp: string | null;
   rng: Rng;
+  /**
+   * V3.1-169 (ADR 0077) : les positions sur le plan, par acteur. Une réaction
+   * à portée (`trigger.range`) se mesure de celui qui réagit à celui qui a
+   * lancé le jet ; sans l'une des deux positions, elle reste proposée.
+   */
+  positions?: Readonly<Record<string, Point>>;
 }): { automatic: EligibleReaction[]; choices: EligibleReaction[] } {
   const automatic: EligibleReaction[] = [];
   const choices: EligibleReaction[] = [];
@@ -223,6 +238,8 @@ export function eligibleReactions(p: {
     const id = `${c.actorId}|${c.ruleKey}|${c.activation.id}`;
     if (seen.has(id)) continue;
     if (!rollMatches(t, p.roll.kind) || !subjectMatches(t, p.roll, c.actorId, p.teams) || !momentMatches(t, p.roll)) continue;
+    if (c.activation.when?.wielding !== undefined && !wieldingAllows(c.activation.when.wielding, p.roll.weaponProperties)) continue;
+    if (t.range && !withinRange(p.positions?.[c.actorId], p.positions?.[p.roll.roller], t.range.value)) continue;
     const numbers = p.ctx.actors[c.actorId]?.numbers ?? {};
     if (!requirementMet(c.activation, p.ctx, c.actorId, p.rng)) continue;
     const reaction = c.activation.cost.action === "reaction";

@@ -24,6 +24,9 @@ import { emplacementsOfferts, optionsDeLancement, type SortJouable } from "@/lib
 import { lireCombatEnCours, lireCombatEnCoursJoueur } from "@/lib/ui/ficheDesApi";
 import { SEUIL_COMPTEUR } from "@/lib/ui/egaliseur";
 import { ErreurLancer, type CibleDeJet } from "@/lib/ui/outilDes";
+import PoseZone from "./PoseZone";
+import { monParticipant } from "@/lib/ui/combatJoueur";
+import { jetonsDepuisLignes, jetonsDepuisVue, type JetonPlan, type Point } from "@/lib/ui/planCombat";
 import { ABILITY_LABELS } from "./sheetLabels";
 import type { Ability } from "@/src/core/rules/abilities";
 
@@ -175,6 +178,9 @@ function CarteCapacite(
   const [resultat, setResultat] = useState<ReponseActivation | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [envoi, setEnvoi] = useState(false);
+  // V3.1-170 : l'outil de zone ; le plan se lit AU TOUCHER de « Poser la zone », comme les cibles.
+  const [zone, setZone] = useState<{ jetons: JetonPlan[]; lanceurId: string } | "lecture" | "aucunCombat" | "aucunJeton" | null>(null);
+  const zoneActivation = activation.targets.kind === "area" ? activation.targets.area : undefined;
 
   // V3.1-166 : un sort se lance avec un emplacement (niveau de base ou plus) et, au choix, une option de lancement d'une aptitude.
   const niveauDeBase = activation.cost.slot?.level ?? 0;
@@ -221,7 +227,7 @@ function CarteCapacite(
   const visePersonne = activation.targets.kind !== "self";
   const max = resume.cibles?.max ?? null;
 
-  async function jouer(ciblesVisees: string[]) {
+  async function jouer(ciblesVisees: string[], area?: { point?: Point; aim?: Point }) {
     if (campaignId === null) return;
     setEnvoi(true);
     setErreur(null);
@@ -231,6 +237,7 @@ function CarteCapacite(
         { campaignId, ruleKey: p.ruleKey, activationId: activation.id,
           variantId: varianteId,
           targetParticipantIds: ciblesVisees,
+          ...(area ? { area } : {}),
           ...(p.sort
             ? {
                 spell: {
@@ -245,6 +252,7 @@ function CarteCapacite(
       setResultat(reponse);
       setCibles(null);
       setChoisies([]);
+      setZone(null);
       p.apresActivation();
     } catch (e) {
       if (e instanceof ErreurLancer) setErreur(e.message);
@@ -270,8 +278,30 @@ function CarteCapacite(
     setCibles(liste ?? "aucunCombat");
   }
 
+  /** V3.1-170 : lit le combat en cours avec les positions, et retrouve le jeton du lanceur. */
+  async function ouvrirZone() {
+    if (campaignId === null) return;
+    setResultat(null);
+    setErreur(null);
+    setZone("lecture");
+    if (estMj) {
+      const combat = await lireCombatEnCours(campaignId, t("erreur"));
+      const lanceur = combat?.participants.find((x) => x.entity_id === p.entityId);
+      if (!combat) setZone("aucunCombat");
+      else if (!lanceur) setZone("aucunJeton");
+      else setZone({ jetons: jetonsDepuisLignes(combat.participants, null), lanceurId: lanceur.id });
+      return;
+    }
+    const combat = await lireCombatEnCoursJoueur(campaignId);
+    const moi = combat ? monParticipant(combat.participants, p.entityId) : null;
+    if (!combat) setZone("aucunCombat");
+    else if (!moi) setZone("aucunJeton");
+    else setZone({ jetons: jetonsDepuisVue(combat.participants), lanceurId: moi.id });
+  }
+
   const ouvert = cibles !== null;
-  const occupe = p.busy || envoi || cibles === "lecture";
+  const zoneOuverte = zone !== null;
+  const occupe = p.busy || envoi || cibles === "lecture" || zone === "lecture";
   const bloque = campaignId === null || manquante !== null || sansEmplacement;
 
   return (
@@ -281,14 +311,14 @@ function CarteCapacite(
           <span className="break-words text-sm font-semibold text-ink">{nomCapacite}</span>
           <span className="break-words text-xs text-ink-muted">{morceaux.join(" · ")}</span>
         </div>
-        {!ouvert && !reaction && (
+        {!ouvert && !zoneOuverte && !reaction && (
           <button
             type="button"
             className={BOUTON_PRINCIPAL}
             disabled={occupe || bloque}
-            onClick={() => (visePersonne ? void ouvrirChoix() : void jouer([]))}
+            onClick={() => (zoneActivation ? void ouvrirZone() : visePersonne ? void ouvrirChoix() : void jouer([]))}
           >
-            {t("utiliser")}
+            {zoneActivation ? t("poserZone") : t("utiliser")}
           </button>
         )}
       </div>
@@ -363,6 +393,27 @@ function CarteCapacite(
 
       {campaignId === null && <p className="text-xs text-ink-muted">{t("sansCampagne")}</p>}
       {manquante !== null && <p className="text-xs text-ink-muted">{t("ressourceInsuffisante", { ressource: nomRessource(manquante) })}</p>}
+
+      {zone === "lecture" && <p className="text-xs text-ink-muted">{t("lectureCombat")}</p>}
+      {zone === "aucunCombat" && <p className="text-xs text-ink-muted">{t("aucunCombat")}</p>}
+      {zone === "aucunJeton" && <p className="text-xs text-ink-muted">{t("aucunJeton")}</p>}
+      {(zone === "aucunCombat" || zone === "aucunJeton") && (
+        <button type="button" className={`${BOUTON_SECONDAIRE} w-fit`} onClick={() => setZone(null)}>
+          {t("annuler")}
+        </button>
+      )}
+      {zoneActivation && zone !== null && typeof zone === "object" && (
+        <PoseZone
+          jetons={zone.jetons}
+          lanceurId={zone.lanceurId}
+          spec={zoneActivation}
+          portee={activation.targets.range?.value}
+          estMj={estMj}
+          envoi={envoi}
+          onValider={(area, retenues) => void jouer(retenues, area)}
+          onAnnuler={() => setZone(null)}
+        />
+      )}
 
       {ouvert && (
         <div className="flex flex-col gap-2 rounded-md bg-panel p-2.5">

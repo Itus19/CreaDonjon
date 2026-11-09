@@ -455,7 +455,56 @@
         "creature": "Créatures",
         "ally": "Alliés",
         "enemy": "Ennemis",
-        "point": "Un point"
+        "point": "Un point",
+        "area": "Une zone"
+      },
+      "zoneCible": {
+        "forme": "Forme de la zone",
+        "formes": { "cone": "Cône", "line": "Ligne", "sphere": "Sphère", "cube": "Cube" },
+        "rayon": "Rayon (en mètres)",
+        "cote": "Côté (en mètres)",
+        "longueur": "Longueur (en mètres)",
+        "largeur": "Largeur (en mètres, 1,5 par défaut)",
+        "origine": "Part de",
+        "depuisSoi": "Soi-même",
+        "enUnPoint": "Un point choisi sur le plan"
+      },
+      "auras": {
+        "titre": "Auras et retouches",
+        "aide": "Une aura donne des modificateurs à ceux que couvre son rayon, tant que son porteur n'a aucun des états qui l'éteignent. Une retouche change un champ d'une autre règle.",
+        "uneAura": "Aura {n}",
+        "rayon": "Rayon (en mètres)",
+        "camp": "Qui en profite",
+        "camps": { "allies": "Les alliés", "enemies": "Les ennemis", "all": "Tout le monde" },
+        "soi": "Le porteur en profite aussi",
+        "eteintePar": "États qui l'éteignent (clés, séparées par des virgules)",
+        "ajouterAura": "Ajouter une aura",
+        "retouchesTitre": "Retouches d'autres règles",
+        "uneRetouche": "Retouche {n}",
+        "ajouterRetouche": "Ajouter une retouche",
+        "regle": "Clé de la règle retouchée",
+        "champ": "Champ retouché",
+        "champs": { "aura": "Rayon de l'aura", "resource": "Recharge d'une ressource", "durable_effect": "Durée d'un effet", "activation": "Portée d'une utilisation" },
+        "cible": { "aura": "", "resource": "Clé de la ressource", "durable_effect": "Identifiant de l'effet", "activation": "Identifiant de l'utilisation" },
+        "valeur": { "aura": "Nouveau rayon (en mètres)", "resource": "", "durable_effect": "Nouvelle durée", "activation": "Nouvelle portée (en mètres)" },
+        "valeurRecharge": "Nouvelle recharge",
+        "choisir": "Choisir…",
+        "unite": "Unité",
+        "unites": { "round": "Rounds", "minute": "Minutes", "hour": "Heures", "day": "Jours" }
+      },
+      "condition": {
+        "titre": "Seulement si…",
+        "armure": "Armure portée (l'une des cochées)",
+        "armures": { "none": "Aucune", "light": "Légère", "medium": "Intermédiaire", "heavy": "Lourde" },
+        "bouclier": "Bouclier",
+        "peuImporte": "Peu importe",
+        "avecBouclier": "Avec un bouclier",
+        "sansBouclier": "Sans bouclier",
+        "arme": "Propriété de l'arme tenue (l'une des cochées)",
+        "proprietes": {
+          "finesse": "Finesse", "light": "Légère", "heavy": "Lourde", "two-handed": "À deux mains", "versatile": "Polyvalente",
+          "thrown": "Lancer", "reach": "Allonge", "ammunition": "Munitions", "loading": "Chargement", "ranged": "À distance"
+        }
       },
       "nombreCibles": "Nombre de cibles (formule)",
       "portee": "Portée (en mètres)",
@@ -1593,6 +1642,12 @@
     }
   },
   "initiative": {
+    "plan": {
+      "affichage": "Affichage de l'initiative",
+      "liste": "Liste",
+      "plan": "Plan",
+      "erreurDeplacement": "Le déplacement n'a pas pu être enregistré."
+    },
     "jetAttenteReactions": "En attente des réactions — {cible}",
     "titre": "Initiative",
     "description": "Suivez l'ordre du tour, les points de vie et les états d'un combat.",
@@ -1718,7 +1773,42 @@
     "toutLeMondeALance": "Tout le monde a lancé.",
     "typeAjout": "Type de participant à ajouter"
   },
+  "planCombat": {
+    "planTitre": "Plan du combat",
+    "zoomer": "Agrandir le plan",
+    "dezoomer": "Rétrécir le plan",
+    "recentrer": "Recentrer",
+    "retirerDuPlan": "Retirer {nom} du plan",
+    "metres": "{n, number} m",
+    "planVide": "Aucun jeton n'est posé. Pose-les depuis « À poser ».",
+    "aide": "Touche un jeton pour le choisir, puis un autre pour lire la distance. Glisse un jeton pour le déplacer.",
+    "distanceEntre": "{de} – {vers} : {n, number} m",
+    "mouvementTour": "{nom} : {deplace, number} m sur {vitesse, number} m ce tour-ci.",
+    "mouvementDepasse": "Au-delà de la vitesse : le MJ tranche.",
+    "erreurDeplacement": "Le déplacement n'a pas pu être enregistré.",
+    "reserveTitre": "À poser",
+    "poserAuCentre": "Poser {nom} au centre du plan",
+    "etapesTitre": "Ce que tu poses",
+    "poser": { "point": "Poser le point", "aim": "Poser la direction" },
+    "etape": { "point": "Touche le plan pour poser le point de la zone.", "aim": "Touche le plan pour poser la direction." },
+    "zonePosee": "Zone posée. Touche « Poser le point » ou « Poser la direction » pour la reprendre.",
+    "zoneDepuisSoi": "Elle part de ton jeton.",
+    "manque": {
+      "no_position": "Pose d'abord ton jeton sur le plan.",
+      "no_point": "Pose le point de la zone.",
+      "no_aim": "Pose la direction de la zone.",
+      "out_of_range": "Ce point est hors de portée."
+    },
+    "dedansTitre": "Dans la zone ({n})",
+    "personneDedans": "Personne n'est dans la zone.",
+    "garderCible": "Garder {nom} dans la zone",
+    "garderUneCible": "Garde au moins une cible, ou annule.",
+    "validerZone": "Valider la zone",
+    "annulerZone": "Annuler"
+  },
   "combatJoueur": {
+    "planTitre": "Plan du combat",
+    "planErreurDeplacement": "Le déplacement n'a pas pu être enregistré.",
     "invitationTitre": "Vous entrez en combat",
     "invitationAide": "Le MJ attend votre initiative.",
     "lancer": "Lancer l'initiative · d20",
@@ -1853,6 +1943,8 @@
       "choisirCiblesSansMax": "Cibles choisies ({choisies})",
       "lectureCombat": "Lecture du combat…",
       "aucunCombat": "Aucun combat en cours : cette capacité vise d'autres créatures, elle se joue pendant l'initiative.",
+      "poserZone": "Poser la zone",
+      "aucunJeton": "Ton personnage n'est pas dans le combat en cours.",
       "aucuneCible": "Aucune créature de ce genre dans le combat en cours.",
       "cocherCible": "Viser {nom}",
       "confirmer": "Confirmer",

@@ -243,4 +243,12 @@ export const activateFeatureSchema = z.object({
       castOption: z.object({ ruleKey: z.string().min(1).max(200), optionId: z.string().min(1).max(100) }).optional(),
     })
     .optional(),
+  /** V3.1-169 (ADR 0077) : une zone posée sur le plan (mètres) — son point, et vers où vise un cône ou une ligne. */
+  area: z
+    .object({
+      point: z.object({ x: z.number().finite().min(-1000).max(1000), y: z.number().finite().min(-1000).max(1000) }).strict().optional(),
+      aim: z.object({ x: z.number().finite().min(-1000).max(1000), y: z.number().finite().min(-1000).max(1000) }).strict().optional(),
+    })
+    .strict()
+    .optional(),
 });

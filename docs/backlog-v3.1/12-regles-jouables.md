@@ -364,16 +364,141 @@ Attaques multiples, action disponible en action bonus, temps d'incantation chang
 
 *Reste* : **Bénédiction n'est pas dans le SRD 2024 importé** (seulement en 2014) : elle se saisit à l'éditeur sur une variante ; Sort accéléré est proposé sans vérifier qu'il fait partie des options de Métamagie choisies ; « en prenant l'action Attaque » (Arme sacrée) et « jusqu'au début de votre tour suivant » (Bouclier) ne sont pas vérifiés ; le Souffle du drakéide attend les zones (137).
 
-### ☐ V3.1-137 — Les conditions de jeu et les distances réelles · `L` · sans modèle IA — **à concevoir (Opus)**
+### ☑ V3.1-137 — Les conditions de jeu et les distances réelles · `L` · sans modèle IA — **conçu le 8 novembre ([ADR 0077](../adr/0077-conditions-de-jeu-et-distances.md)), découpé en V3.1-168 à 171**
 Distances en mètres entre créatures (ADR 0059 §5), zones géométriques, auras, résistances et immunités, conditions sur l'équipement, règles qui en modifient d'autres, étiquettes d'arme sur `attack_hit`. Règles visées : 2, 3, 10, 12, 13, 17, 18, 24, 25, 26, 29, 32, 33, 36.
 
 *Reçu de V3.1-117 (13 octobre)* : les résistances choisies (Affinité élémentaire, Résilience fiélonne, héritages fiélons). Critère : « Affinité élémentaire Feu : résistance appliquée (test) ».
 
-### ☐ V3.1-138 — Le modèle du monde · `L` · sans modèle IA — **à concevoir (Opus)**
+*Conçu le 8 novembre* : [ADR 0077](../adr/0077-conditions-de-jeu-et-distances.md). Deux choix de l'auteur : un **plan sans grille** où l'on pose les jetons (positions en mètres, distances et géométrie calculées) ; les **résistances, vulnérabilités et immunités appliquées d'office** à tout dégât typé. Découpé ci-dessous.
+
+#### ☑ V3.1-168 — Le noyau : géométrie, zones, auras, défenses aux dégâts, conditions d'équipement, retouches · `L` · sans modèle IA — **prêt (Opus)**
+
+**Modèle conseillé : Opus** — noyau du moteur. Tests d'abord.
+
+- `src/core/rules/geometry.ts` : distance, contact, lecture en zones (`engaged`, `near`, `far`), qui est dans un cône, une ligne, une sphère, un cube.
+- `playable.ts` : `targets.kind: "area"` (forme, taille, largeur, origine) ; `aura` sur une fiche et un effet qui dure ; `when` (armure, bouclier, propriété de l'arme tenue) sur un modificateur déclaré et une activation ; `patches` (liste fermée de champs).
+- `sheet.ts` : cibles `resist.*`, `vulnerable.*`, `immune.*` → `damageDefenses` ; modificateurs conditionnés par l'équipement ; retouches appliquées avant le calcul ; auras reçues (couche 7) passées par l'appelant.
+- `adjustDamage` dans `turn.ts` (dégât typé seulement) ; étiquettes `weapon:` et `property:` dans `eventsForAttack`.
+
+**Critères d'acceptation**
+- [x] Tests : un cône de 4,5 m prend les deux gobelins devant et pas celui derrière ; Aura de protection à 3 m couvre l'allié à 3 m et pas celui à 4,5 m, et rien quand le paladin est Neutralisé ; Rage : 12 tranchants → 6, 12 feu → 12 ; résistance et vulnérabilité s'annulent ; Défense sans armure ignorée en armure ; Aura étendue porte le rayon à 9 m.
+
+*Fait le 8 novembre.* `geometry.ts` (distance, contact 1,5 m, lecture en zones, cône qui s'élargit comme sa distance, ligne, sphère, cube centré ; une zone ne contient pas son origine). `auras.ts` (`aurasCovering` : rayon, camp, soi, `unless_conditions`, formules lues avec les nombres de la SOURCE, rien sans position). `patches.ts` (`applyPatches` : rayon d'aura, recharge, durée, portée ; appliquées par `characterSheet` avant tout calcul). Schémas : `when` (armure portée, bouclier, propriété de l'arme du jet) sur un modificateur, `zAura`, `zPatch` (champs fermés par motif), `auras` et `patches` dans le bloc `modifiers`, `aura` sur un effet qui dure, cible `area`. Fiche : modificateurs filtrés par l'équipement, `when.wielding` lu par `rollBonus` selon les propriétés de l'arme, `damageDefenses` (`resist.*`, `vulnerable.*`, `immune.*`). `adjustDamage` appliqué d'office par le tour à un dégât typé, avec la phrase « 12 → 6, résiste (slashing) ». Étiquettes `weapon:` et `property:` sur `attack_hit` et `attack_miss`. Tests : `conditionsDeJeu.test.ts` 14/14.
+
+#### ☑ V3.1-169 — La migration et le service : positions, zones, auras et défenses en jeu · `L` · sans modèle IA — **prêt (Opus)**
+
+**Modèle conseillé : Opus** — migration, RLS, service.
+**Dépend de** : 168.
+
+- Migration : `combat_participants.pos_x`, `pos_y` ; `set_own_position` (son PJ, une écriture, journalisée) ; `combat_player_view` rend les positions visibles. `docs/SCHEMA.md`, `docs/SECURITE.md` §2.
+- Service : déplacer (MJ ; joueuse pour son PJ, mouvement compté sur le budget du tour) ; une activation de zone calcule ses cibles (le MJ peut en retirer) ; portées vérifiées (activations, réactions) ; auras ajoutées à la fiche en combat ; défenses appliquées aux dégâts (fiches et blocs de stats) avec la phrase du journal.
+
+**Critères d'acceptation**
+- [x] Intégration : défenses d'un bloc de stats appliquées d'office (dragon noir immunisé à l'acide : 12 → 0) ; la résistance ½ est testée au noyau. *Le Barbare en Rage et le gobelin résistant au feu attendent les données de V3.1-171* : aucune résistance de Rage n'est encore importée, et les monstres du SRD 2024 importés ne portent presque aucune défense (deux dragons).
+- [x] Une joueuse déplace son PJ, pas celui d'une autre ni un monstre ; le mouvement est décompté.
+
+*Fait le 8 novembre.* Migration `20261108120000_combat_positions` (positions, `set_own_position`, vue des joueurs avec positions, `moved` admis par `apply_engine_change`). `moveParticipant` et la route `POST …/combats/[combatId]/position` (MJ : tout le monde, retirer un jeton ; joueuse : son PJ ; journalisé, annulable) ; mouvement compté pendant le tour d'un PJ (`spendMovement`, vitesse en pieds × 0,3), signalé jamais bloquant. Défenses aux dégâts d'office dans le jet ciblé et les sauvegardes demandées (`targetDamageDefenses` : fiche, monstre du ruleset, créature du wiki ; `defensesFromStatBlock` lit les types seuls, en anglais ou en français). Auras reçues (`receivedAurasFor`, `withReceivedAuras`) pour les sauvegardes. Activation de zone : cibles calculées (`areaTargets`), le MJ en retire ; portées vérifiées quand les deux jetons sont posés (activations, et réactions dans `eligibleReactions`). Propriétés de l'arme aux jets (`weaponRollProperties`) et étiquettes `weapon:`/`property:` aux événements. Tests : `conditionsDeJeu.test.ts` 23/23, `rollWindow.test.ts`, `conditionsDeJeu.integration.test.ts` 5/5.
+
+*Reste* (reçu par 171 ou plus tard) : les auras posées par un effet qui dure ; les auras sur la fiche affichée (seules les sauvegardes les lisent) ; « Annuler » un déplacement rend la position, pas le mouvement compté.
+
+#### ☑ V3.1-170 — Les écrans : le plan du combat ; l'éditeur suit · `L` · sans modèle IA — **prêt (Sonnet)**
+
+**Modèle conseillé : Sonnet**, une fois 169 fait ; Opus relit.
+**Dépend de** : 169.
+
+**Sous-tâches Haiku** (`aide-haiku`) : libellés ; planche du catalogue ; vérifications.
+
+- Le plan dans l'Initiative (MJ et joueuse) : jetons déplaçables au doigt et à la souris, échelle en mètres, distance affichée au survol ou au toucher, l'outil de zone (cône, ligne, sphère) qui montre qui est dedans avant de valider.
+- Éditeur de briques : cible « zone », aura, conditions d'équipement, retouches.
+
+**Critères d'acceptation**
+- [x] Au téléphone, le plan se déplace et se zoome au doigt, un jeton se pose sans tomber à côté (vérifié le 9 novembre, 390 × 844, vrais événements tactiles : jeton posé sous le doigt, une seule requête au lâcher, gobelin non déplaçable par la joueuse, pincement qui zoome, distance à deux touchers, mouvement « 4,5 m sur 9 m » ; côté MJ, glissé d'un gobelin et « Retirer du plan »). Corrigé au passage : chez le MJ, un PJ s'affichait de la couleur des adversaires.
+- [x] L'Aura de protection se saisit à l'éditeur sans JSON (test de l'aller-retour brouillon → bloc → brouillon).
+
+*Codé le 8 novembre (Sonnet, relu par Opus).* `lib/ui/planCombat.ts` (30 tests), `PlanCombat.tsx` (SVG, pan et zoom au doigt et à la molette, jetons de 44 px, une requête au lâcher, distance au survol ou à deux touchers, mouvement du tour, retour du jeton sur refus), bascule Liste / Plan chez le MJ (« Retirer du plan »), carte « Plan du combat » chez la joueuse (son seul jeton), `PoseZone.tsx` (aperçu des cibles par `areaTargets`, le MJ décoche), éditeur : cible zone, `when` (modificateur et activation), auras et retouches (la route `rules/playable` accepte désormais le bloc `modifiers`, ouvert par Opus). *Reste* : un déplacement des jetons au clavier, à décider (une requête par touche contredirait QUOTAS).
+
+#### ☑ V3.1-171 — Les données : zones, auras, défenses et conditions du SRD · `M` · sans modèle IA — **prêt (Opus)**
+
+**Modèle conseillé : Opus** — données officielles, import.
+**Dépend de** : 168, 169.
+
+- Rage (résistances, fin en armure lourde), Résistance naine, Affinité élémentaire (résistance choisie), Aura de protection (rayon 3 m) et Aura étendue (9 m), Souffle du drakéide (cône ou ligne au choix, remplace une attaque), Attaque sournoise (arme de finesse ou à distance), Défense sans armure (déjà là : passe par `when`), monstres (défenses de leurs blocs). Réimport, scripts d'auteur rejoués.
+
+**Critères d'acceptation**
+- [x] Après réimport, ces règles perdent la lacune « attend 137 » et se jouent sur une fiche de test.
+
+*Fait le 8 novembre.* Données : Rage (résistances contondant, perforant, tranchant ; tous ses bonus coupés en armure lourde par `when`), Résistance naine (poison), Résistance aux dégâts du drakéide (une par ascendance), Affinité élémentaire et Résilience fiélonne (résistance au type choisi, `resist.{choice:…}`), Aura de protection (aura de 3 m pour les alliés, éteinte par « incapacitated » ou « Neutralisé » ; le bonus du paladin lui-même reste permanent), Aura étendue (retouche du rayon à 9 m), Souffle du drakéide (cinq traits, cône 4,5 m ou ligne 9 m × 1,5 m, à la place d'une attaque, JS Dex, 1d10 à 4d10, usages = maîtrise), Attaque sournoise (`when: { wielding: ["finesse", "ranged"] }`). Moteur : `wielding` accepte une liste (l'une suffit), une activation porte `when`, une fenêtre de réaction connaît l'arme du jet (`weaponProperties`) ; les auras et retouches du bloc `modifiers` montent jusqu'à la fiche (`resolvedRuleset`) et l'import les écrit. Réimport et scripts d'auteur rejoués. Tests : `srdConditionsDeJeu.integration.test.ts` 5/5 (Rage 12 → 6, nain, rayons 3 et 9 m, aura à 3 m oui et à 4,5 m non, Attaque sournoise).
+
+*Reste* : les **défenses des monstres** (le JSON du SRD 2024 n'en porte que deux ; les reprendre du texte français est un ticket à part) ; le **Souffle et la résistance du drakéide** n'atteignent pas une fiche (ils sont rattachés à l'ascendance, une sous-espèce, que le modèle de personnage ne connaît pas encore) ; un **seul jet de dégâts pour toute une zone** (chaque créature lance le sien, la moitié d'un jet à part sur une réussite) ; Défense sans armure reste sur sa cible `ac.unarmored`, qui fait déjà le travail.
+
+### ☐ V3.1-138 — Le modèle du monde · `L` · sans modèle IA — **conçu (ADR 0078), découpé en 180 à 185**
 Perception et visibilité (invisible, caché, sens), lumière, étiquettes de magie (divination, capteurs), immunités et restrictions de ciblage, et les cas uniques : transformation, invocation, PV temporaires en effet (sur V3.1-24), redirection, jauge qui monte, recharge sur événement, quantité choisie, consommables, choix contraints pour les règles ouvertes. Règles visées : 8, 15, 16, 22, 29, 34, 35, 38.
 
 
 *Reçu de V3.1-134 (7 novembre, choix de l'auteur, ADR 0074)* : la lumière émise par une créature ou un objet (Aasimar, Arme sacrée) — une cible de modificateur qui n'a de sens qu'avec la lumière par zone de ce chantier.
+*Conçu le 8 novembre* : [ADR 0078](../adr/0078-le-modele-du-monde.md). Deux choix de l'auteur : **le moteur calcule qui voit qui** (lumière ambiante et sources, sens, Invisible, Caché, Aveuglé ; la vue des joueuses masque côté serveur, par un drapeau d'accès recalculé) ; **le moteur joue formes et invocations** (profil sur la ligne de combat ; créature invoquée = participant piloté par sa joueuse). Découpé ci-dessous.
+
+#### ☐ V3.1-180 — Le noyau de la perception : lumière, sens, qui voit qui · `M` · sans modèle IA — **prêt (Opus)**
+
+**Modèle conseillé : Opus** — noyau du moteur. Tests d'abord.
+
+- `src/core/rules/perception.ts` : `lightAt(point, ambiante, sources)`, `canSee(observateur, cible, monde)` → `clear | obscured | unseen` (Aveuglé, Invisible, Caché avec son total, ténèbres et vision dans le noir, vision véritable, perception aveugle, portées).
+- Cibles de modificateur `light.bright`, `light.dim` (mètres) ; `untargetable.<étiquette>`, `immune.spell.<clé>` (M15).
+- Avantage et désavantage d'attaque selon qui voit qui ; `targets.must_see` et `trigger.must_see` vérifiés.
+
+**Critères d'acceptation**
+- [ ] Tests : un gobelin Invisible n'est pas vu, sauf par vision véritable à portée ; dans les ténèbres, un nain (vision dans le noir 36 m) voit à 30 m comme en lumière faible et pas à 40 m ; la lumière de l'Aasimar (3 m vive, 3 m faible au-delà) éclaire ; une attaque contre une cible non vue a le désavantage.
+
+#### ☐ V3.1-181 — La migration et le service de la perception · `L` · sans modèle IA — **prêt (Opus)**
+
+**Modèle conseillé : Opus** — migration, RLS, sécurité. **Dépend de** : 180.
+
+- Migration : `combats.lighting` ; `combat_participants.hidden_from_players` ; `combat_player_view` masque la position et l'état d'une ligne masquée (la ligne reste dans l'ordre du tour, « Quelqu'un »). `docs/SCHEMA.md`, `docs/SECURITE.md`.
+- Service : recalcul du masquage après déplacement, état, lumière, effet ; le MJ le force ; Se cacher (test de Discrétion lancé par le serveur, état Caché avec son total) ; avantage/désavantage et `must_see` branchés dans le jet ciblé, l'activation et les réactions.
+
+**Critères d'acceptation**
+- [ ] Intégration : un monstre Invisible disparaît de la vue d'une joueuse (appel direct de la fonction compris) et revient quand l'état tombe ; un PJ caché attaque avec avantage.
+
+#### ☐ V3.1-182 — Le noyau des formes, des invocations et des cas uniques · `L` · sans modèle IA — **prêt (Opus)**
+
+**Modèle conseillé : Opus** — noyau. Tests d'abord.
+
+- Effets `transform { form, mode: overlay | replace }`, `summon { creature, count? }`, `grant_temp_hp`, `gain_resource`, `restore_resource` ; `amount: { max }` sur une activation ; coût `consume_item` ; opération de réaction `redirect`.
+- Le profil d'une forme (`overlay` : CA, vitesse, FOR/DEX/CON, attaques de la bête ; `replace` : PV à part, retour au profil à 0).
+
+**Critères d'acceptation**
+- [ ] Tests : Forme sauvage (overlay) garde les PV du druide et donne ses PV temporaires ; Métamorphose (replace) rend le profil à 0 PV de la forme, le reste des dégâts perdu ; Imposition des mains borne le montant à la réserve.
+
+#### ☐ V3.1-183 — La migration et le service des formes et invocations · `L` · sans modèle IA — **prêt (Opus)**
+
+**Modèle conseillé : Opus** — migration, sécurité. **Dépend de** : 182.
+
+- Migration : `combat_participants.form`, `summoned_by`, `controlled_by`, `effect_instance_id` ; une joueuse fait agir la créature qu'elle pilote (revérifié en base). `docs/SCHEMA.md`, `docs/SECURITE.md`.
+- Service : l'effet `summon` ajoute le participant, sa fin le retire ; `transform` pose la forme sur la ligne, sa fin la retire ; jets ciblés avec la créature pilotée.
+
+**Critères d'acceptation**
+- [ ] Intégration : une joueuse invoque un familier, le fait agir, pas celui d'une autre ; la fin de l'effet le retire du combat.
+
+#### ☐ V3.1-184 — Les écrans : lumière, Caché, formes, créatures pilotées · `L` · sans modèle IA — **prêt (Sonnet)**
+
+**Modèle conseillé : Sonnet**, une fois 181 et 183 faits ; Opus relit. **Sous-tâches Haiku** : libellés ; planche ; vérifications.
+
+- Plan : lumière ambiante (réglée par le MJ) et halos des sources ; jetons Caché et Invisible (pour le MJ) ; « Quelqu'un » chez la joueuse.
+- Ligne de combat : la forme portée ; la créature invoquée, que sa joueuse fait agir.
+- Éditeur : effets nouveaux, quantité choisie, consommable.
+
+**Critères d'acceptation**
+- [ ] La joueuse ne voit pas sur son plan le monstre que son groupe ne voit pas ; le MJ, si.
+
+#### ☐ V3.1-185 — Les données : lumière, Se cacher, Forme sauvage, Compagnon sauvage, cas uniques du SRD · `M` · sans modèle IA — **prêt (Opus)**
+
+**Modèle conseillé : Opus** — données officielles, import. **Dépend de** : 180 à 183.
+
+- Lumière de l'Aasimar et de l'Arme sacrée ; Se cacher ; Forme sauvage (formes connues, PV temporaires) ; Compagnon sauvage (Appel de familier) ; Imposition des mains (quantité) ; Restauration magique ; Rage persistante (recharge à l'initiative) ; Abjuration d'ennemis (une seule chose par tour). Réimport.
+
+**Critères d'acceptation**
+- [ ] Après réimport, ces règles perdent leur lacune et se jouent sur une fiche de test.
+
 ### ☐ V3.1-139 — L'inventaire et la couverture du SRD · `L` · sans modèle IA — **après la fondation**
 Mesurer la couverture de tout ce qui entre en jeu (sorts, aptitudes, espèces, dons, objets magiques, monstres avec leurs actions et traits), lister les lacunes par brique, et tenir le compte jusqu'à 100 %.
 

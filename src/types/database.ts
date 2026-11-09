@@ -942,6 +942,8 @@ export type Database = {
           initiative: number | null
           is_ally: boolean
           label: string
+          pos_x: number | null
+          pos_y: number | null
           resources_used: Json
           rule_key: string | null
           source_kind: string
@@ -962,6 +964,8 @@ export type Database = {
           initiative?: number | null
           is_ally?: boolean
           label: string
+          pos_x?: number | null
+          pos_y?: number | null
           resources_used?: Json
           rule_key?: string | null
           source_kind: string
@@ -982,6 +986,8 @@ export type Database = {
           initiative?: number | null
           is_ally?: boolean
           label?: string
+          pos_x?: number | null
+          pos_y?: number | null
           resources_used?: Json
           rule_key?: string | null
           source_kind?: string
@@ -2915,6 +2921,8 @@ export type Database = {
           temp_hp: number | null
           wound: string | null
           budget: Json | null
+          pos_x: number | null
+          pos_y: number | null
         }[]
       }
       claim_shared_note_grant: { Args: { p_entity_id: string }; Returns: boolean }
@@ -3057,6 +3065,10 @@ export type Database = {
       }
       set_own_initiative: {
         Args: { p_participant: string; p_value: number }
+        Returns: Json
+      }
+      set_own_position: {
+        Args: { p_participant: string; p_x: number; p_y: number }
         Returns: Json
       }
       resolve_campaign_invite: {

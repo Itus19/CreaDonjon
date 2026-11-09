@@ -179,7 +179,9 @@ describe.skipIf(!hasCreds)("le jet suspendu (V3.1-160, integration, base reelle)
     if (!second.ok) throw new Error(second.reason);
     expect(second.rollWindowId).toBeNull();
     expect(await pv()).toBe(100 - Math.floor(total / 2) - second.amount!);
-  });
+    // Quatre allers-retours avec le serveur (attaque, réponse, reprise, seconde attaque), plus les défenses de la cible
+    // depuis V3.1-169 : au-delà des 30 s par défaut quand toute la suite tourne en parallèle.
+  }, 120000);
 
   it("une joueuse ne répond pas à la place d'une autre ligne, ni deux fois", async () => {
     await admin.from("combat_participants").update({ turn_usage: { reaction_at: null, once: {} } }).eq("id", liaLigne);

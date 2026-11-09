@@ -13,6 +13,8 @@
  * directement motive par ce critere — pas une extension gratuite.
  */
 
+import { wieldingAllows, type Aura, type EquipmentCondition, type Patch } from "../schemas/rule-blocks/primitives";
+import { applyPatches } from "./patches";
 import { computeEncumbrance, encumbranceModifiers, type EncumbranceResult } from "./encumbrance";
 import type { CharacterRules, MulticlassPrerequisites } from "../schemas/rule-blocks/characterRules";
 import type { FreeCast } from "../schemas/rule-blocks/choices";
@@ -73,6 +75,8 @@ export interface Modifier {
   formula?: FormulaNode;
   /** V3.1-155 : les dés de bonus, jamais réduits à un nombre ; lancés par le serveur à chaque jet concerné. */
   dice?: BonusDie[];
+  /** V3.1-168 (ADR 0077) : ne s'applique que si l'équipement le permet ; `wielding` se lit au jet (`rollBonus`), selon l'arme. */
+  when?: EquipmentCondition;
 }
 
 /** V3.1-155 (ADR 0074) : un dé de bonus (« + 1d4 », Bénédiction), avec sa source. */
@@ -96,6 +100,8 @@ export interface DeclaredModifier {
   value?: number | FormulaNode;
   /** V3.1-121 : `value` est par niveau de personnage. Cle `snake_case` : c'est une donnee de fiche (bloc `modifiers`). */
   per_level?: boolean;
+  /** V3.1-168 (ADR 0077) : condition d'équipement. */
+  when?: EquipmentCondition;
 }
 
 /**
@@ -133,6 +139,7 @@ export function resolveDeclaredModifiers(
     label,
     layer,
     ...(d.per_level ? { perLevel: true } : {}),
+    ...(d.when ? { when: d.when } : {}),
   }));
 }
 
@@ -169,6 +176,10 @@ export interface ResolvedFeature {
   resources?: RuleResource[];
   /** V3.1-131 : « cette règle se joue » (bloc `activation`), pour l'onglet Actions — lu avec les blocs déjà chargés. */
   activation?: ActivationBlockData;
+  /** V3.1-168 (ADR 0077) : les auras qu'étend la règle (bloc `modifiers`), appliquées aux autres par le serveur selon le plan. */
+  auras?: Aura[];
+  /** V3.1-168 : les retouches que cette règle apporte à d'autres (Aura étendue). */
+  patches?: Patch[];
 }
 
 /** Un sort accordé par une aptitude, sur la fiche calculée (V3.1-116). DD et attaque se calculent avec SA caractéristique, pas celle de la classe. */
@@ -374,6 +385,14 @@ export interface DerivedSheet {
   attacksPerAction: number;
   /** V3.1-164 : les actions que la fiche peut prendre en action bonus (cibles `action_as_bonus.<action>`, Action rusée). */
   bonusActionOptions: BonusActionOption[];
+  /** V3.1-168 (ADR 0077) : types de dégâts résistés, doublés, ignorés — appliqués d'office par le moteur à tout dégât typé. */
+  damageDefenses: DamageDefenses;
+}
+
+export interface DamageDefenses {
+  resist: string[];
+  vulnerable: string[];
+  immune: string[];
 }
 
 /** V3.1-164 : les actions standard qu'une règle peut rendre disponibles en action bonus. */
@@ -654,8 +673,8 @@ function collectDice(targets: readonly string[], modifiers: readonly Modifier[])
 }
 
 export type RollQuery =
-  | { roll: "attack"; kind: "weapon" | "spell" }
-  | { roll: "damage"; kind: "weapon" | "spell"; ability?: Ability; damageType?: string };
+  | { roll: "attack"; kind: "weapon" | "spell"; /** V3.1-168 : les propriétés de l'arme du jet (`finesse`…), pour les modificateurs `when.wielding`. */ properties?: readonly string[] }
+  | { roll: "damage"; kind: "weapon" | "spell"; ability?: Ability; damageType?: string; properties?: readonly string[] };
 
 export interface RollBonusResult {
   value: number;
@@ -677,7 +696,11 @@ export function rollBonus(sheet: Pick<DerivedSheet, "rollModifiers">, q: RollQue
     q.roll === "attack"
       ? ["attack", `attack.${q.kind}`]
       : ["damage", `damage.${q.kind}`, ...(q.ability ? [`damage.${q.kind}.${q.ability}`] : []), ...(q.damageType ? [`damage.${q.kind}.${q.damageType.toLowerCase()}`] : [])];
-  const matched = sheet.rollModifiers.filter((m) => targets.includes(m.target)).map((m) => ({ ...m, target: "roll" }));
+  const matched = sheet.rollModifiers
+    .filter((m) => targets.includes(m.target))
+    // V3.1-168 : « avec une arme de finesse » ne compte que si l'arme du jet l'est.
+    .filter((m) => !m.when?.wielding || wieldingAllows(m.when.wielding, q.properties ?? []))
+    .map((m) => ({ ...m, target: "roll" }));
   const { value, sources } = resolveTargetStack("roll", matched, 0, null);
   const crits =
     q.roll === "attack"
@@ -703,7 +726,14 @@ export function characterSheet(
   const totalLevel = build.classes.reduce((sum, c) => sum + c.level, 0);
   const proficiencyBonus = proficiencyBonusForLevel(totalLevel);
 
-  const features = build.featureKeys.map((k) => ruleset.features[k]).filter((f): f is ResolvedFeature => f != null);
+  // V3.1-168 (ADR 0077) : les retouches des aptitudes (Aura étendue) s'appliquent avant tout calcul.
+  const features = applyPatches(build.featureKeys.map((k) => ruleset.features[k]).filter((f): f is ResolvedFeature => f != null));
+  // V3.1-168 : ce que l'équipement permet (`when`) — la catégorie d'armure portée, un bouclier.
+  const armurePortee = equipment.find((e) => e.equipped && e.armorCategory !== undefined && e.armorCategory !== "Shield")?.armorCategory;
+  const categorie = armurePortee ? (armurePortee.toLowerCase() as "light" | "medium" | "heavy") : "none";
+  const avecBouclier = equipment.some((e) => e.equipped && e.armorCategory === "Shield");
+  const equipementPermet = (w: EquipmentCondition | undefined): boolean =>
+    !w || ((w.armor === undefined || w.armor.includes(categorie)) && (w.shield === undefined || w.shield === avecBouclier));
 
   // Regle de multiclassage : seule la premiere classe accorde des maitrises
   // de sauvegarde (§B4 layer 3).
@@ -727,7 +757,7 @@ export function characterSheet(
       const origin = e.ruleKey ? features.find((f) => f.key === e.ruleKey)?.source : undefined;
       return e.modifiers.map((m): Brut => (origin ? { m, origin } : { m }));
     }),
-  ].flatMap((b) => {
+  ].filter((b) => equipementPermet(b.m.when)).flatMap((b) => {
     const target = resolveChoiceTarget(b.m.target, build.choices);
     return target === null ? [] : [target === b.m.target ? b : { ...b, m: { ...b.m, target } }];
   });
@@ -878,7 +908,11 @@ export function characterSheet(
       grantedProficiencies.push({ target: m.target, label: m.label });
     }
   }
+  // V3.1-168 : un modificateur conditionné par l'arme tenue ne vaut que pour les jets (lu par `rollBonus`).
   const rollModifiers = allModifiers.filter((m) => /^(attack|damage|crit_range)(\.|$)/.test(m.target));
+  // V3.1-168 (ADR 0077) : résistances, vulnérabilités, immunités aux types de dégâts (la Rage en pose pendant qu'elle dure).
+  const defensesDe = (prefixe: string) => [...new Set(allModifiers.filter((m) => m.target.startsWith(prefixe) && (m.value ?? 1) > 0).map((m) => m.target.slice(prefixe.length)))].sort();
+  const damageDefenses = { resist: defensesDe("resist."), vulnerable: defensesDe("vulnerable."), immune: defensesDe("immune.") };
   // V3.1-164 (ADR 0076) : le plus grand nombre d'attaques l'emporte (Attaque supplémentaire, puis au niveau 11).
   const attacksPerAction = Math.max(1, ...allModifiers.filter((m) => m.target === "attacks_per_action" && m.value !== undefined && (m.op === "set" || m.op === "max")).map((m) => m.value!));
   const bonusActionOptions = BONUS_ACTION_OPTIONS.filter((a) => allModifiers.some((m) => m.target === `action_as_bonus.${a}` && (m.value ?? 0) > 0));
@@ -929,7 +963,7 @@ export function characterSheet(
 
   return {
     abilities, proficiencyBonus, ac, savingThrows, abilityChecks, skills, hitPoints, speed, features, spellcasting, grantedSpells, resources, warnings, encumbrance,
-    senses, speeds, grantedProficiencies, rollModifiers, attacksPerAction, bonusActionOptions,
+    senses, speeds, grantedProficiencies, rollModifiers, attacksPerAction, bonusActionOptions, damageDefenses,
   };
 }
 

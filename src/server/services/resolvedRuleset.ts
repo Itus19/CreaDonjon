@@ -984,7 +984,16 @@ export async function assembleResolvedRuleset(
       // V3.1-129 : ressources déclarées (Conduit divin…), déjà lues avec les blocs de l'aptitude : aucune requête de plus.
       const resources = declaredResources(resolvedFeatureBlocks.get(fk)?.blocksByType.get("resources"));
       const activation = declaredActivation(resolvedFeatureBlocks.get(fk)?.blocksByType.get("activation"));
-      const jouable = { ...(resources.length > 0 ? { resources } : {}), ...(activation ? { activation } : {}) };
+      // V3.1-171 (ADR 0077) : les auras et retouches du bloc `modifiers` (Aura de protection, Aura étendue).
+      const extras = zModifiersBlockData.safeParse(resolvedFeatureBlocks.get(fk)?.blocksByType.get("modifiers"));
+      const auras = extras.success ? (extras.data.auras ?? []) : [];
+      const patches = extras.success ? (extras.data.patches ?? []) : [];
+      const jouable = {
+        ...(resources.length > 0 ? { resources } : {}),
+        ...(activation ? { activation } : {}),
+        ...(auras.length > 0 ? { auras } : {}),
+        ...(patches.length > 0 ? { patches } : {}),
+      };
       // V3.1-163 : une aptitude de sous-classe lue pour ses briques, et qui n'en a pas : rien à ajouter.
       if (playableOnlyKeys.has(fk) && !activation && resources.length === 0) continue;
       // V3.1-49 : une aptitude de classe ouvre ses choix au niveau de SA classe (Expertise du roublard au niveau 6 de roublard).

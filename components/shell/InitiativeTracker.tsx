@@ -27,6 +27,9 @@ import { demandesDuCombat } from "@/lib/ui/sauvegardes";
 import LigneParticipant from "./initiative/LigneParticipant";
 import { detailsDepuisCaracteristiques, type DetailsParticipant } from "./initiative/ActionsParticipant";
 import { useCombatTempsReel } from "./initiative/useCombatTempsReel";
+import PlanCombat from "./combat/PlanCombat";
+import { jetonsDepuisLignes, type Point } from "@/lib/ui/planCombat";
+import { deplacerJeton } from "@/lib/ui/planCombatApi";
 
 /**
  * L'outil Initiative du MJ (V3.1-38, specs/outils-mj.md §5) : une ligne par
@@ -71,6 +74,8 @@ export default function InitiativeTracker({
   const [finRefusee, setFinRefusee] = useState(false);
   const [ouverts, setOuverts] = useState<Set<string>>(new Set());
   const [details, setDetails] = useState<Record<string, DetailsParticipant | "chargement" | "erreur">>({});
+  /** V3.1-170 : la liste du tour, ou le plan (jetons déplaçables). */
+  const [affichage, setAffichage] = useState<"liste" | "plan">("liste");
 
   const phase = combat ? phaseDe(combat.status) : "draft";
   const enCours = phase === "running";
@@ -324,6 +329,14 @@ export default function InitiativeTracker({
     });
   }
 
+  /** V3.1-170 : un jeton lâché (ou retiré) sur le plan ; la route répond avec le mouvement du tour. Un refus lève, le plan le montre. */
+  async function deplacerSurLePlan(id: string, position: Point | null) {
+    if (!combat) return null;
+    const reponse = await deplacerJeton(campaignId, combat.id, id, position, t("plan.erreurDeplacement"));
+    setParticipants((prev) => prev.map((x) => (x.id === id ? { ...x, pos_x: reponse.position?.x ?? null, pos_y: reponse.position?.y ?? null } : x)));
+    return reponse.movement;
+  }
+
   const dialogues = (
     <>
       <ConfirmDialog
@@ -423,7 +436,27 @@ export default function InitiativeTracker({
 
       {ajoutOuvert && <FormulaireAjout pcOptions={pcOptions} monsters={monsters} occupe={occupe} onAjouter={ajouter} />}
 
-      <section className="rounded-[18px] border border-edge bg-panel p-2 backdrop-blur-[var(--blur)]">
+      <div className="flex gap-1" role="group" aria-label={t("plan.affichage")}>
+        {(["liste", "plan"] as const).map((v) => (
+          <button
+            key={v}
+            type="button"
+            aria-pressed={affichage === v}
+            onClick={() => setAffichage(v)}
+            className={`min-h-11 rounded-full border px-4 py-1 text-sm ${affichage === v ? "border-accent text-accent" : "border-edge text-ink-muted"}`}
+          >
+            {t(`plan.${v}`)}
+          </button>
+        ))}
+      </div>
+
+      {affichage === "plan" && (
+        <section className="rounded-[18px] border border-edge bg-panel p-2 backdrop-blur-[var(--blur)]" data-testid="plan-mj">
+          <PlanCombat jetons={jetonsDepuisLignes(participants, actif?.id ?? null)} deplacables={() => true} onDeplacer={deplacerSurLePlan} retirable />
+        </section>
+      )}
+
+      <section className={`rounded-[18px] border border-edge bg-panel p-2 backdrop-blur-[var(--blur)] ${affichage === "plan" ? "hidden" : ""}`}>
         {participants.length === 0 ? (
           <p className="px-2 py-3 text-xs italic text-ink-muted">{t("aucunParticipant")}</p>
         ) : (

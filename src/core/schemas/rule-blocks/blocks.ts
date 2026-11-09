@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { zFormulaNode, zLocalized, zModifier, zQuantity, zReference } from "./primitives";
+import { zFormulaNode, zLocalized, zModifier, zQuantity, zReference, zAura, zPatch } from "./primitives";
 import { zCharacterRulesBlockData, zMulticlassPrerequisites } from "./characterRules";
 import { zChoiceGrant, zChoicesBlockData, zGrantedSpell } from "./choices";
 import { zTrigger } from "../../rules/triggers";
@@ -342,7 +342,12 @@ export type PrerequisitesBlockData = z.infer<typeof zPrerequisitesBlockData>;
 // vrais `Modifier[]` via `resolveDeclaredModifiers` (src/core/rules/sheet.ts),
 // qui attache source/etiquette/couche selon la provenance de la feature —
 // jamais stockes ici (`zModifier` ne porte que cible/effet/valeur).
-export const zModifiersBlockData = z.object({ modifiers: z.array(zModifier) });
+export const zModifiersBlockData = z.object({
+  modifiers: z.array(zModifier),
+  /** V3.1-168 (ADR 0077) : les auras qu'étend la règle (Aura de protection), et ses retouches d'autres règles (Aura étendue). */
+  auras: z.array(zAura).optional(),
+  patches: z.array(zPatch).optional(),
+});
 export type ModifiersBlockData = z.infer<typeof zModifiersBlockData>;
 
 // --- triggers (layout: key_values, V3-A2) --------------------------------

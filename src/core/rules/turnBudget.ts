@@ -18,6 +18,8 @@ export const zTurnBudget = z.object({
   attacks: z.number().int(),
   /** Actions accordées qui ne paient pas l'action Magie (Sursaut d'action). */
   extraNotMagic: z.number().int(),
+  /** V3.1-169 (ADR 0077) : mètres parcourus pendant le tour (absent : rien encore). */
+  moved: z.number().min(0).optional(),
 });
 export type TurnBudget = z.infer<typeof zTurnBudget>;
 
@@ -87,4 +89,15 @@ export function applyCastOption(cost: ActivationCost, option: CastOption): Activ
     action: option.changes.action ?? cost.action,
     resources: [...cost.resources, ...option.cost.resources],
   };
+}
+
+/**
+ * V3.1-169 (ADR 0077) — se déplacer pendant son tour dépense le mouvement :
+ * `metres` s'ajoute à ce qui est déjà parcouru, comparé à la vitesse (en
+ * mètres). Jamais bloquant : `over` le dit, le MJ tranche (Foncer double la
+ * vitesse, il le sait).
+ */
+export function spendMovement(budget: TurnBudget, metres: number, speedMetres: number): { budget: TurnBudget; over: boolean; moved: number } {
+  const moved = Math.round(((budget.moved ?? 0) + Math.max(0, metres)) * 100) / 100;
+  return { budget: { ...budget, moved }, over: moved > speedMetres + 1e-9, moved };
 }

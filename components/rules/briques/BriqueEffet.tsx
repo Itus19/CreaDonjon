@@ -25,6 +25,7 @@ import {
   type CorpsEffet,
 } from "@/lib/ui/briquesRegle";
 import ChampFormule from "@/components/rules/briques/ChampFormule";
+import ConditionEquipement from "@/components/rules/briques/ConditionEquipement";
 import { BoutonPetit, CarteBrique, ChampListe, ChampTexte, Citation, useContexteBriques } from "@/components/rules/briques/ContexteBriques";
 
 const UNITES_DUREE = ["round", "minute", "hour", "day", "until_turn_end", "until_rest", "permanent"] as const;
@@ -242,47 +243,56 @@ function ChampsEtat({
  */
 function ChampsBoost({ effet, maj }: { effet: Extract<BrouillonEffet, { type: "apply_boost" }>; maj: (c: Partial<CorpsEffet>) => void }) {
   const t = useTranslations("regles.briques");
-  const majModificateur = (i: number, m: BrouillonModificateur) => maj({ modificateurs: remplacerA(effet.modificateurs, i, m) });
   return (
     <>
       <ChampTexte libelle={t("nomEffet")} valeur={effet.nom} onChange={(nom) => maj({ nom })} />
-      <div className="flex flex-col gap-3 sm:col-span-2 lg:col-span-3">
-        {effet.modificateurs.map((m, i) => {
-          const ops = opsPourCible(m.cible);
-          return (
-            <div key={m.uid} className="grid gap-3 rounded-md border border-edge/60 p-2 sm:grid-cols-2 lg:grid-cols-3">
-              <ChampListe
-                libelle={t("cibleModificateur")}
-                valeur={m.cible}
-                options={avecValeur(MODIFIER_TARGET_OPTIONS.map((o) => ({ value: o.target, label: modifierTargetLabel(o.target) })), m.cible)}
-                onChange={(cible) => {
-                  const opsCible = opsPourCible(cible);
-                  majModificateur(i, { ...m, cible, op: opsCible.includes(m.op) ? m.op : opsCible[0] });
-                }}
-              />
-              <ChampListe
-                libelle={t("operation")}
-                valeur={m.op}
-                options={ops.map((o) => ({ value: o, label: MODIFIER_OP_LABELS_FR[o] }))}
-                onChange={(op) => majModificateur(i, { ...m, op: ops.find((o) => o === op) ?? ops[0] })}
-              />
-              {modifierOpNeedsValue(m.op) && (
-                <ChampFormule libelle={t("valeur")} valeur={m.valeur} onChange={(valeur) => majModificateur(i, { ...m, valeur })} sansDes={!isRollTarget(m.cible)} />
-              )}
-              <div className="flex items-end">
-                <BoutonPetit onClick={() => maj({ modificateurs: retirerA(effet.modificateurs, i) })} danger>
-                  {t("retirerModificateur")}
-                </BoutonPetit>
-              </div>
-            </div>
-          );
-        })}
-        <div className="w-fit">
-          <BoutonPetit onClick={() => maj({ modificateurs: [...effet.modificateurs, nouveauModificateur("ac", "add", "1")] })}>{t("ajouterModificateur")}</BoutonPetit>
-        </div>
-      </div>
+      <EditeurModificateurs modificateurs={effet.modificateurs} onChange={(modificateurs) => maj({ modificateurs })} />
       <ChampsDuree duree={effet.duree} concentration={effet.concentration} finSi={effet.finSi} maj={maj} />
     </>
+  );
+}
+
+/** Une liste de modificateurs (cible, effet, valeur en formule, condition d'équipement) : celle d'un effet temporaire, ou d'une aura. */
+export function EditeurModificateurs({ modificateurs, onChange }: { modificateurs: BrouillonModificateur[]; onChange: (m: BrouillonModificateur[]) => void }) {
+  const t = useTranslations("regles.briques");
+  const majModificateur = (i: number, m: BrouillonModificateur) => onChange(remplacerA(modificateurs, i, m));
+  return (
+    <div className="flex flex-col gap-3 sm:col-span-2 lg:col-span-3">
+      {modificateurs.map((m, i) => {
+        const ops = opsPourCible(m.cible);
+        return (
+          <div key={m.uid} className="grid gap-3 rounded-md border border-edge/60 p-2 sm:grid-cols-2 lg:grid-cols-3">
+            <ChampListe
+              libelle={t("cibleModificateur")}
+              valeur={m.cible}
+              options={avecValeur(MODIFIER_TARGET_OPTIONS.map((o) => ({ value: o.target, label: modifierTargetLabel(o.target) })), m.cible)}
+              onChange={(cible) => {
+                const opsCible = opsPourCible(cible);
+                majModificateur(i, { ...m, cible, op: opsCible.includes(m.op) ? m.op : opsCible[0] });
+              }}
+            />
+            <ChampListe
+              libelle={t("operation")}
+              valeur={m.op}
+              options={ops.map((o) => ({ value: o, label: MODIFIER_OP_LABELS_FR[o] }))}
+              onChange={(op) => majModificateur(i, { ...m, op: ops.find((o) => o === op) ?? ops[0] })}
+            />
+            {modifierOpNeedsValue(m.op) && (
+              <ChampFormule libelle={t("valeur")} valeur={m.valeur} onChange={(valeur) => majModificateur(i, { ...m, valeur })} sansDes={!isRollTarget(m.cible)} />
+            )}
+            <ConditionEquipement condition={m.quand} onChange={(quand) => majModificateur(i, { ...m, quand })} />
+            <div className="flex items-end">
+              <BoutonPetit onClick={() => onChange(retirerA(modificateurs, i))} danger>
+                {t("retirerModificateur")}
+              </BoutonPetit>
+            </div>
+          </div>
+        );
+      })}
+      <div className="w-fit">
+        <BoutonPetit onClick={() => onChange([...modificateurs, nouveauModificateur("ac", "add", "1")])}>{t("ajouterModificateur")}</BoutonPetit>
+      </div>
+    </div>
   );
 }
 
