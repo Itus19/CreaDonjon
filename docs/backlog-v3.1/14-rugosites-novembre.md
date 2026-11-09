@@ -53,3 +53,31 @@ Demande de l'auteur : l'aperçu de placement dans le bloc image (curseur à cran
 - Les boutons ▲ ▼ du téléphone n'ont pas été essayés au navigateur.
 - Planche du catalogue (`docs/catalogue/`, bloc image et bulle) à refaire d'après le code : sous-tâche Haiku.
 - Le cadre doré autour de l'éditeur pendant une sélection vient de la règle globale `:focus-visible`, antérieure à ce ticket (tous les éditeurs de texte l'ont).
+
+### V3.1-190 — Calendrier réel : plusieurs demandes de dates en même temps (9 novembre)
+
+**Modèle conseillé : Opus** — migration, RLS et service ; l'écran pourra aller à Sonnet une fois les esquisses validées.
+
+Demande de l'auteur : pouvoir lancer plusieurs demandes de dates de séance à la fois, et voir, côté MJ comme côté joueur, les demandes en cours et qui a répondu ou non (notifications).
+
+**Esquisses** (9 novembre, à valider) : planche « Calendrier réel, demandes multiples », quatre écrans.
+1. **MJ, toutes les demandes** : une carte par demande ouverte (« Prête à fixer » ou « En attente », réponses 4/4, 2/4, qui manque, meilleure date), « + Nouvelle demande », séances à venir, demandes closes.
+2. **MJ, une demande** : pastilles pour passer d'une demande à l'autre ; liste des réponses (répondu, avec la date, ou en attente) ; dates possibles classées, « Fixer cette date » ; la grille actuelle reste dessous.
+3. **Joueur, Prochaine session** : la liste des demandes (« À répondre », « ✓ Répondu », modifiable tant que la date n'est pas fixée), et la grille de la demande choisie.
+4. **Notifications** :
+   - joueur : le point rouge du rail devient le nombre de demandes sans réponse ;
+   - MJ : une pastille « N à fixer » sur l'outil Calendrier réel (demandes où tout le monde a répondu) ;
+   - téléphone : la liste des demandes, une demande en pleine page.
+
+**Ce que le schéma impose (migration à écrire)** :
+- `availability_requests_one_open_per_campaign` (index unique partiel) interdit aujourd'hui une seconde demande ouverte : il faut le retirer.
+- `real_session_availabilities` a pour clé `(campaign_id, user_id, date)` : la réponse d'un joueur vaut pour une date, quelle que soit la demande. Deux demandes qui proposent la même date se marcheraient dessus. La clé doit inclure la demande ; les anciennes réponses sans demande (`request_id null`) restent lisibles.
+- « Répondu » doit exister même quand aucune date ne convient : aujourd'hui, une réponse n'existe que par ses dates cochées.
+
+**À décider par l'auteur** :
+- Le bouton « Aucune date ne me va » (esquisse 3), pour qu'un joueur sans aucune date disponible compte comme ayant répondu.
+- La pastille MJ : « demandes prêtes à fixer » (esquissé) ou « nouvelles réponses depuis ma dernière visite » (demande de retenir cette visite par compte).
+- Fixer une date ferme sa demande (esquissé) ; les autres demandes restent ouvertes.
+
+**Sous-tâches Haiku** : libellés dans `messages/` ; planche du catalogue d'après le code écrit.
+

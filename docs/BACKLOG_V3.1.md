@@ -128,7 +128,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 - [`11-verification-11-octobre.md`](backlog-v3.1/11-verification-11-octobre.md) — Ce qu'a montré la vérification du 11 octobre : tri, rattachements, V3.1-121 et 125
 - [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) — Les règles jouables : fondation et chantiers (V3.1-129 à 141, 13 octobre)
 - [`13-audit-de-fin.md`](backlog-v3.1/13-audit-de-fin.md) — L'audit de fin de V3.1 : les retouches d'affichage relevées en chemin, V3.1-144
-- [`14-rugosites-novembre.md`](backlog-v3.1/14-rugosites-novembre.md) — Rugosités de novembre : ce qu'on a constaté en jouant (V3.1-150 à 154 et 186 terminés ; 187 à 189)
+- [`14-rugosites-novembre.md`](backlog-v3.1/14-rugosites-novembre.md) — Rugosités de novembre : ce qu'on a constaté en jouant (V3.1-150 à 154 et 186 terminés ; 187 à 190)
 - [`termines.md`](backlog-v3.1/termines.md) — Tickets terminés (☑)
 
 | Ticket | État | Modèle IA | Titre | Fichier |
@@ -311,3 +311,4 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-187 | ☐ | sans | La montée de niveau refuse tout personnage qui a une date de naissance | [`14-rugosites-novembre.md`](backlog-v3.1/14-rugosites-novembre.md) |
 | V3.1-188 | ☐ | sans | Le Wiki du joueur ne s'ouvre plus en édition | [`14-rugosites-novembre.md`](backlog-v3.1/14-rugosites-novembre.md) |
 | V3.1-189 | ☐ | sans | Bloc image : le placer dans le texte, à la souris, comme dans Word | [`14-rugosites-novembre.md`](backlog-v3.1/14-rugosites-novembre.md) |
+| V3.1-190 | ☐ | sans | Calendrier réel : plusieurs demandes de dates en même temps | [`14-rugosites-novembre.md`](backlog-v3.1/14-rugosites-novembre.md) |
