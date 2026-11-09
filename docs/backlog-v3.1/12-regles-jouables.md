@@ -364,7 +364,7 @@ Attaques multiples, action disponible en action bonus, temps d'incantation chang
 
 *Reste* : **Bénédiction n'est pas dans le SRD 2024 importé** (seulement en 2014) : elle se saisit à l'éditeur sur une variante ; Sort accéléré est proposé sans vérifier qu'il fait partie des options de Métamagie choisies ; « en prenant l'action Attaque » (Arme sacrée) et « jusqu'au début de votre tour suivant » (Bouclier) ne sont pas vérifiés ; le Souffle du drakéide attend les zones (137).
 
-### ☐ V3.1-137 — Les conditions de jeu et les distances réelles · `L` · sans modèle IA — **conçu le 8 novembre ([ADR 0077](../adr/0077-conditions-de-jeu-et-distances.md)), découpé en V3.1-168 à 171**
+### ☑ V3.1-137 — Les conditions de jeu et les distances réelles · `L` · sans modèle IA — **conçu le 8 novembre ([ADR 0077](../adr/0077-conditions-de-jeu-et-distances.md)), découpé en V3.1-168 à 171**
 Distances en mètres entre créatures (ADR 0059 §5), zones géométriques, auras, résistances et immunités, conditions sur l'équipement, règles qui en modifient d'autres, étiquettes d'arme sur `attack_hit`. Règles visées : 2, 3, 10, 12, 13, 17, 18, 24, 25, 26, 29, 32, 33, 36.
 
 *Reçu de V3.1-117 (13 octobre)* : les résistances choisies (Affinité élémentaire, Résilience fiélonne, héritages fiélons). Critère : « Affinité élémentaire Feu : résistance appliquée (test) ».
@@ -401,7 +401,7 @@ Distances en mètres entre créatures (ADR 0059 §5), zones géométriques, aura
 
 *Reste* (reçu par 171 ou plus tard) : les auras posées par un effet qui dure ; les auras sur la fiche affichée (seules les sauvegardes les lisent) ; « Annuler » un déplacement rend la position, pas le mouvement compté.
 
-#### ☐ V3.1-170 — Les écrans : le plan du combat ; l'éditeur suit · `L` · sans modèle IA — **prêt (Sonnet)**
+#### ☑ V3.1-170 — Les écrans : le plan du combat ; l'éditeur suit · `L` · sans modèle IA — **prêt (Sonnet)**
 
 **Modèle conseillé : Sonnet**, une fois 169 fait ; Opus relit.
 **Dépend de** : 169.
@@ -412,10 +412,10 @@ Distances en mètres entre créatures (ADR 0059 §5), zones géométriques, aura
 - Éditeur de briques : cible « zone », aura, conditions d'équipement, retouches.
 
 **Critères d'acceptation**
-- [ ] Au téléphone, le plan se déplace et se zoome au doigt, un jeton se pose sans tomber à côté.
+- [x] Au téléphone, le plan se déplace et se zoome au doigt, un jeton se pose sans tomber à côté (vérifié le 9 novembre, 390 × 844, vrais événements tactiles : jeton posé sous le doigt, une seule requête au lâcher, gobelin non déplaçable par la joueuse, pincement qui zoome, distance à deux touchers, mouvement « 4,5 m sur 9 m » ; côté MJ, glissé d'un gobelin et « Retirer du plan »). Corrigé au passage : chez le MJ, un PJ s'affichait de la couleur des adversaires.
 - [x] L'Aura de protection se saisit à l'éditeur sans JSON (test de l'aller-retour brouillon → bloc → brouillon).
 
-*Codé le 8 novembre (Sonnet, relu par Opus).* `lib/ui/planCombat.ts` (30 tests), `PlanCombat.tsx` (SVG, pan et zoom au doigt et à la molette, jetons de 44 px, une requête au lâcher, distance au survol ou à deux touchers, mouvement du tour, retour du jeton sur refus), bascule Liste / Plan chez le MJ (« Retirer du plan »), carte « Plan du combat » chez la joueuse (son seul jeton), `PoseZone.tsx` (aperçu des cibles par `areaTargets`, le MJ décoche), éditeur : cible zone, `when` (modificateur et activation), auras et retouches (la route `rules/playable` accepte désormais le bloc `modifiers`, ouvert par Opus). *Reste* : la vérification au téléphone (premier critère), et un déplacement des jetons au clavier, à décider (une requête par touche contredirait QUOTAS).
+*Codé le 8 novembre (Sonnet, relu par Opus).* `lib/ui/planCombat.ts` (30 tests), `PlanCombat.tsx` (SVG, pan et zoom au doigt et à la molette, jetons de 44 px, une requête au lâcher, distance au survol ou à deux touchers, mouvement du tour, retour du jeton sur refus), bascule Liste / Plan chez le MJ (« Retirer du plan »), carte « Plan du combat » chez la joueuse (son seul jeton), `PoseZone.tsx` (aperçu des cibles par `areaTargets`, le MJ décoche), éditeur : cible zone, `when` (modificateur et activation), auras et retouches (la route `rules/playable` accepte désormais le bloc `modifiers`, ouvert par Opus). *Reste* : un déplacement des jetons au clavier, à décider (une requête par touche contredirait QUOTAS).
 
 #### ☑ V3.1-171 — Les données : zones, auras, défenses et conditions du SRD · `M` · sans modèle IA — **prêt (Opus)**
 

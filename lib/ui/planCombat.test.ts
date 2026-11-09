@@ -139,9 +139,11 @@ describe("jetons", () => {
   it("depuis les lignes du MJ : camp, position, abattu, actif", () => {
     const jetons = jetonsDepuisLignes(
       [
-        { id: "p1", label: "Aela", is_ally: true, pos_x: 1, pos_y: 2, hp_max: 10, hp_current: 4 },
-        { id: "m1", label: "Gobelin", is_ally: false, pos_x: null, pos_y: null, hp_max: 7, hp_current: 0 },
-        { id: "m2", label: "Orc", is_ally: false, pos_x: 3, pos_y: null, hp_max: null, hp_current: null },
+        { id: "p1", label: "Aela", is_ally: true, source_kind: "statblock", pos_x: 1, pos_y: 2, hp_max: 10, hp_current: 4 },
+        { id: "m1", label: "Gobelin", is_ally: false, source_kind: "statblock", pos_x: null, pos_y: null, hp_max: 7, hp_current: 0 },
+        { id: "m2", label: "Orc", is_ally: false, source_kind: "statblock", pos_x: 3, pos_y: null, hp_max: null, hp_current: null },
+        // Un PJ n'a pas `is_ally` : il est allié par nature (même règle que `estUnPj` de l'écran du MJ).
+        { id: "pj", label: "Brunhild", is_ally: false, source_kind: "entity", pos_x: 0, pos_y: 0, hp_max: 20, hp_current: 20 },
       ],
       "p1"
     );
@@ -149,6 +151,7 @@ describe("jetons", () => {
     expect(jetons[1]).toMatchObject({ id: "m1", camp: "enemy", pos: null, abattu: true, actif: false });
     // Une moitié de position ne pose pas de jeton.
     expect(jetons[2].pos).toBeNull();
+    expect(jetons[3].camp).toBe("ally");
   });
 
   it("depuis la vue de la joueuse", () => {

@@ -120,7 +120,7 @@ export interface JetonPlan {
   actif: boolean;
 }
 
-export type LigneMj = Pick<CombatParticipantRow, "id" | "label" | "is_ally" | "pos_x" | "pos_y" | "hp_max" | "hp_current">;
+export type LigneMj = Pick<CombatParticipantRow, "id" | "label" | "is_ally" | "source_kind" | "pos_x" | "pos_y" | "hp_max" | "hp_current">;
 
 /** Une demi-position n'est pas une position : il faut les deux coordonnées. */
 export function jetonsDepuisLignes(lignes: readonly LigneMj[], actifId: string | null): JetonPlan[] {
@@ -128,7 +128,8 @@ export function jetonsDepuisLignes(lignes: readonly LigneMj[], actifId: string |
     id: l.id,
     label: l.label,
     pos: l.pos_x !== null && l.pos_y !== null ? { x: l.pos_x, y: l.pos_y } : null,
-    camp: l.is_ally ? "ally" : "enemy",
+    // Un PJ (ligne venue d'une entité, `estUnPj`) est allié sans porter `is_ally`.
+    camp: l.is_ally || l.source_kind === "entity" ? "ally" : "enemy",
     abattu: l.hp_max !== null && l.hp_current === 0,
     actif: l.id === actifId,
   }));
