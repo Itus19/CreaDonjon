@@ -1,14 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { clearAvailabilitySchema } from "@/lib/scheduling/schemas";
-import { deleteAvailability } from "@/src/server/services/scheduling";
+import { clearAvailabilitySchema, requestIdSchema } from "@/lib/scheduling/schemas";
+import { clearAvailability } from "@/src/server/services/scheduling";
 
-/** Efface ma disponibilité d'un jour précis. */
-export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ campaignId: string; date: string }> }) {
+/** Effacer ma plage d'un jour, pour une demande ouverte (V3.1-190 : `?requestId=`). */
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ campaignId: string; date: string }> }) {
   const { campaignId, date } = await params;
-  const parsed = clearAvailabilitySchema.safeParse({ date });
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Date invalide." }, { status: 400 });
+  const parsed = clearAvailabilitySchema.safeParse({ date, requestId: request.nextUrl.searchParams.get("requestId") });
+  if (!parsed.success || !requestIdSchema.safeParse(campaignId).success) {
+    return NextResponse.json({ error: "Date ou demande invalide." }, { status: 400 });
   }
 
   const supabase = await createClient();
@@ -19,6 +19,7 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
     return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
-  await deleteAvailability(supabase, { campaignId, userId: user.id, date });
+  const ok = await clearAvailability(supabase, { campaignId, userId: user.id, ...parsed.data });
+  if (!ok) return NextResponse.json({ error: "Cette demande de disponibilités n'est plus ouverte." }, { status: 409 });
   return new NextResponse(null, { status: 204 });
 }

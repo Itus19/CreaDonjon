@@ -220,7 +220,7 @@ function Step({ n, title, hint, children, aside }: { n: number; title: string; h
  * verront les joueuses** (`AvailabilityGrid` en mode `preview`) : chaque
  * date ajoutée devient une colonne, chaque demi-heure une ligne.
  */
-export default function RequestAvailabilityForm({ campaignId, onCreated, onCancel }: { campaignId: string; onCreated: () => void; onCancel?: () => void }) {
+export default function RequestAvailabilityForm({ campaignId, onCreated, onCancel }: { campaignId: string; /** V3.1-190 : l'identifiant de la demande créée, pour l'afficher aussitôt. */ onCreated: (requestId: string) => void; onCancel?: () => void }) {
   const [title, setTitle] = useState("");
   const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set());
   const [dateTab, setDateTab] = useState<"specific" | "weekday">("specific");
@@ -265,7 +265,8 @@ export default function RequestAvailabilityForm({ campaignId, onCreated, onCance
       setError(body?.error ?? "Échec de la création.");
       return;
     }
-    onCreated();
+    const created = (await res.json()) as { id: string };
+    onCreated(created.id);
   }
 
   const previewRequest = {

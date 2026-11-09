@@ -29,8 +29,6 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     endsAt: parsed.data.endsAt,
     createdBy: user.id,
   });
-  if (!result.ok) {
-    return NextResponse.json({ error: "Une demande est déjà ouverte pour cette campagne." }, { status: 409 });
-  }
-  return NextResponse.json(result.request, { status: 201 });
+  // V3.1-190 : plus de limite d'une demande ouverte à la fois.
+  return NextResponse.json(result, { status: 201 });
 }

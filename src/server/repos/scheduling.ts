@@ -51,7 +51,7 @@ export async function setTargetSessionMinutes(supabase: TypedClient, campaignId:
   if (error) throw new Error(error.message);
 }
 
-/** Une seule plage par (campagne, joueuse, jour) — `upsert` remplace la precedente si elle existe deja (cle primaire composite). Repond toujours a une ronde precise (V3.1-8) : `requestId` jamais laisse au hasard cote appelant. */
+/** Une seule plage par (demande, joueuse, jour) — `upsert` remplace la precedente si elle existe deja (V3.1-190 : contrainte `real_session_availabilities_request_user_date_key` ; avant, la cle etait le jour seul, et deux demandes se seraient ecrasees). */
 export async function upsertAvailability(
   supabase: TypedClient,
   params: { campaignId: string; userId: string; date: string; startsAt: string; endsAt: string; requestId: string }
@@ -67,7 +67,7 @@ export async function upsertAvailability(
         ends_at: params.endsAt,
         request_id: params.requestId,
       },
-      { onConflict: "campaign_id,user_id,date" }
+      { onConflict: "request_id,user_id,date" }
     )
     .select(AVAILABILITY_COLUMNS)
     .single();
@@ -75,13 +75,51 @@ export async function upsertAvailability(
   return data;
 }
 
-export async function deleteAvailability(supabase: TypedClient, params: { campaignId: string; userId: string; date: string }): Promise<void> {
+export async function deleteAvailability(supabase: TypedClient, params: { requestId: string; userId: string; date: string }): Promise<void> {
   const { error } = await supabase
     .from("real_session_availabilities")
     .delete()
-    .eq("campaign_id", params.campaignId)
+    .eq("request_id", params.requestId)
     .eq("user_id", params.userId)
     .eq("date", params.date);
+  if (error) throw new Error(error.message);
+}
+
+/** V3.1-190 — « Aucune date ne me va » efface d'abord les dates deja cochees pour cette demande. */
+export async function deleteAvailabilitiesForUserAndRequest(supabase: TypedClient, params: { requestId: string; userId: string }): Promise<void> {
+  const { error } = await supabase.from("real_session_availabilities").delete().eq("request_id", params.requestId).eq("user_id", params.userId);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * V3.1-190 — qui a coche au moins une date, pour plusieurs demandes en une
+ * requete : seulement `request_id` et `user_id` (docs/QUOTAS.md Q4), les
+ * cartes de l'ecran et les pastilles n'ont pas besoin des plages.
+ */
+export async function listRespondentsForRequests(supabase: TypedClient, requestIds: string[]): Promise<{ request_id: string; user_id: string }[]> {
+  if (requestIds.length === 0) return [];
+  const { data, error } = await supabase.from("real_session_availabilities").select("request_id, user_id").in("request_id", requestIds);
+  if (error) throw new Error(error.message);
+  return data.filter((r): r is { request_id: string; user_id: string } => r.request_id !== null);
+}
+
+/** V3.1-190 — les « aucune date ne me va » de plusieurs demandes, en une requete. */
+export async function listDeclinesForRequests(supabase: TypedClient, requestIds: string[]): Promise<{ request_id: string; user_id: string }[]> {
+  if (requestIds.length === 0) return [];
+  const { data, error } = await supabase.from("availability_declines").select("request_id, user_id").in("request_id", requestIds);
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function upsertDecline(supabase: TypedClient, params: { requestId: string; campaignId: string; userId: string }): Promise<void> {
+  const { error } = await supabase
+    .from("availability_declines")
+    .upsert({ request_id: params.requestId, campaign_id: params.campaignId, user_id: params.userId }, { onConflict: "request_id,user_id" });
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteDecline(supabase: TypedClient, params: { requestId: string; userId: string }): Promise<void> {
+  const { error } = await supabase.from("availability_declines").delete().eq("request_id", params.requestId).eq("user_id", params.userId);
   if (error) throw new Error(error.message);
 }
 
@@ -140,7 +178,7 @@ export async function listRealSessions(supabase: TypedClient, campaignId: string
   return data;
 }
 
-/** Cree une ronde de demande (V3.1-8) — l'unicite "une seule ouverte par campagne" est portee par l'index partiel en base, jamais revérifiée ici (course-safe). */
+/** Cree une demande (V3.1-8). Depuis V3.1-190, plusieurs peuvent etre ouvertes en meme temps. */
 export async function insertAvailabilityRequest(
   supabase: TypedClient,
   params: { campaignId: string; title: string; candidateDates: string[]; startsAt: string; endsAt: string; createdBy: string }
@@ -161,14 +199,14 @@ export async function insertAvailabilityRequest(
   return data;
 }
 
-/** La ronde ouverte d'une campagne, s'il y en a une — `null` sinon (jamais plus d'une, garanti par l'index partiel). */
-export async function getOpenAvailabilityRequest(supabase: TypedClient, campaignId: string): Promise<AvailabilityRequestRow | null> {
+/** V3.1-190 — les demandes ouvertes d'une campagne, la plus ancienne d'abord (l'ordre des cartes a l'ecran). */
+export async function listOpenAvailabilityRequests(supabase: TypedClient, campaignId: string): Promise<AvailabilityRequestRow[]> {
   const { data, error } = await supabase
     .from("availability_requests")
     .select(AVAILABILITY_REQUEST_COLUMNS)
     .eq("campaign_id", campaignId)
     .eq("status", "open")
-    .maybeSingle();
+    .order("created_at", { ascending: true });
   if (error) throw new Error(error.message);
   return data;
 }
