@@ -319,6 +319,42 @@ export type Database = {
           },
         ]
       }
+      availability_declines: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          request_id: string
+          user_id: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          request_id: string
+          user_id: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          request_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "availability_declines_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "availability_declines_request_id_campaign_id_fkey"
+            columns: ["request_id", "campaign_id"]
+            isOneToOne: false
+            referencedRelation: "availability_requests"
+            referencedColumns: ["id", "campaign_id"]
+          },
+        ]
+      }
       availability_requests: {
         Row: {
           campaign_id: string
@@ -2000,6 +2036,7 @@ export type Database = {
           campaign_id: string
           date: string
           ends_at: string
+          id: string
           request_id: string | null
           starts_at: string
           updated_at: string
@@ -2009,6 +2046,7 @@ export type Database = {
           campaign_id: string
           date: string
           ends_at: string
+          id?: string
           request_id?: string | null
           starts_at: string
           updated_at?: string
@@ -2018,6 +2056,7 @@ export type Database = {
           campaign_id?: string
           date?: string
           ends_at?: string
+          id?: string
           request_id?: string | null
           starts_at?: string
           updated_at?: string

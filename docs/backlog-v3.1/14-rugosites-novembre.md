@@ -50,6 +50,38 @@ Demande de l'auteur : l'aperçu de placement dans le bloc image (curseur à cran
   - en Testeuse A, l'image s'affiche dans la phrase ; bloc image passé en MJ seulement : légende et nœud absents du HTML reçu, le texte se referme (« …montées en une seule nuit… »).
 
 **Reste** :
-- Les boutons ▲ ▼ du téléphone n'ont pas été essayés au navigateur.
-- Planche du catalogue (`docs/catalogue/`, bloc image et bulle) à refaire d'après le code : sous-tâche Haiku.
+- ~~Les boutons ▲ ▼ du téléphone~~ **vérifiés le 9 novembre** (iPhone 13 émulé, Banc d'essai) : la bulle les montre, ▼ pose l'image en tête du paragraphe suivant, enregistré en base.
+- ~~Planche du catalogue~~ **faite le 9 novembre** : section « Bloc Image et image dans le texte » de `WikiVisuel.dc.html` réécrite d'après le code (bulle d'habillage, bloc allégé), CSS du catalogue recompilé, planche publiée sur le canevas (hauteur mesurée : +130 px, 7 900 px, sous la limite).
 - Le cadre doré autour de l'éditeur pendant une sélection vient de la règle globale `:focus-visible`, antérieure à ce ticket (tous les éditeurs de texte l'ont).
+
+### V3.1-190 — Calendrier réel : plusieurs demandes de dates en même temps (9 novembre)
+
+**Modèle conseillé : Opus** — migration, RLS et service ; l'écran pourra aller à Sonnet une fois les esquisses validées.
+
+Demande de l'auteur : pouvoir lancer plusieurs demandes de dates de séance à la fois, et voir, côté MJ comme côté joueur, les demandes en cours et qui a répondu ou non (notifications).
+
+**Esquisses** (9 novembre, refaites en écran complet à la demande de l'auteur, à valider) : planche « Calendrier réel, demandes multiples ».
+1. **MJ, écran Calendrier réel complet** : sous l'intro, une rangée « Demandes en cours » (une carte par demande : « Prête à fixer » ou « En attente », réponses 6/6, 3/6, 1/6) et « + Nouvelle demande ». La demande choisie garde l'écran d'aujourd'hui tel quel : en-tête (créneau, réponses, durée visée, « Annuler la demande »), grille horaire « Mes disponibilités / Toute la table » (avec, en plus, une ligne « Réponses : ✓ … » par joueuse), « Dates possibles » avec « Fixer cette date », puis « Régler une date à la main », « Séances à venir », « Déjà jouées ».
+2. **Joueur, écran Prochaine session complet** : la prochaine séance, la rangée « Demandes du MJ » (« À répondre », « ✓ Répondu »), puis pour la demande choisie : en-tête, « Aucune date ne me va », la même grille (une grille par demande), « Les dates qui se dessinent », « Séances à venir », « Déjà jouées ».
+3. **Notifications** :
+   - joueur : le point rouge du rail devient le nombre de demandes sans réponse ;
+   - MJ : une pastille « N à fixer » sur l'outil Calendrier réel ;
+   - téléphone : la liste des demandes, une demande en pleine page.
+
+**Décisions de l'auteur (9 novembre)** : les esquisses telles quelles. Donc « Aucune date ne me va » ; pastille MJ « N à fixer » (demandes où tout le monde a répondu) ; fixer une date ferme sa demande, les autres restent ouvertes. ADR 0080.
+
+**Fait :**
+- **Migration** `20261109150000_availability_requests_multiples.sql` : index « une seule ouverte » retiré ; `real_session_availabilities` prend un `id`, unicité (demande, joueuse, jour) ; table `availability_declines` (RLS : lecture membres, écriture de sa propre ligne ; clé composée vers la demande et sa campagne). `SCHEMA.md` et `src/types/database.ts` (à la main) à jour.
+- **Noyau** (tests d'abord) : `src/core/scheduling/requestStatus.ts` (qui est attendu, qui a répondu, qui manque, « prête à fixer » ; nombre de demandes sans réponse).
+- **Service** : `getSchedulingBoard` (toutes les demandes et celle affichée, en un appel), `respondToRequest`, `clearAvailability`, `declineRequest`, `countUnansweredRequests`, `countRequestsReadyToFix` ; chaque geste vérifie que la demande est ouverte et de cette campagne. `createRealSession` ferme la demande nommée.
+- **Routes** : `requests/open?requestId=`, `availability` (POST avec `requestId`), `availability/[date]?requestId=`, `requests/[requestId]/decline` ; `worlds/[slug]/scheduling/open-request` retirée. Toutes validées par Zod.
+- **Écrans** : rangée des demandes (`RequestTabs`) côté MJ et joueur ; ligne « Réponses » côté MJ ; « Aucune date ne me va » côté joueur ; pastille chiffrée du rail joueur ; pastille « à fixer » de l'outil MJ (rail).
+- **Test d'intégration** `schedulingMultiRequests.integration.test.ts` (deux demandes ouvertes, même jour sans écrasement, « aucune date », RLS, demande close).
+
+**Reste :**
+- ~~Appliquer la migration~~ **appliquée par l'auteur le 9 novembre** ; test d'intégration 5/5, aucun monde de test resté.
+- **Vérifié au navigateur** (Banc d'essai, deux demandes d'essai supprimées ensuite) : rangée des demandes chez le MJ et chez Testeuse A ; pastille joueuse 2 puis 1 après « Aucune date ne me va » ; ligne « Réponses » à jour chez le MJ ; tout le monde répondu : carte « 3/3 · Prête à fixer » et pastille « 1 » sur Calendrier réel ; fixer la date ferme cette demande seule, l'autre reste ouverte (séance d'essai supprimée ensuite).
+- La barre du téléphone côté MJ ne porte pas la pastille « à fixer » (montée par `AppShell`, hors du layout MJ).
+- Planche du catalogue : la section « Calendrier réel » d'`OutilsMJ.dc.html` est à jour dans le dépôt (rangée des demandes, ligne « Réponses »), **pas encore publiée** : la version en ligne de cette planche porte des ajouts d'une autre session (V3.1-173 à 183, branche `claude/quirky-turing-hb12f2`) absents du dépôt, et le dépôt une section « plan-combat » absente de la version en ligne. À publier une fois les deux branches fusionnées.
+
+**Sous-tâches Haiku** : planche du catalogue d'après le code écrit.

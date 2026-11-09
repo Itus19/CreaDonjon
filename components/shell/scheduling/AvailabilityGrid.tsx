@@ -184,9 +184,10 @@ export default function AvailabilityGrid({
           ? await fetch(`/api/campaigns/${campaignId}/scheduling/availability`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ date, startsAt: minutesToTime(range.startMinutes), endsAt: minutesToTime(range.endMinutes) }),
+              // V3.1-190 : la demande est nommée, plusieurs pouvant être ouvertes.
+              body: JSON.stringify({ requestId: request.id, date, startsAt: minutesToTime(range.startMinutes), endsAt: minutesToTime(range.endMinutes) }),
             })
-          : await fetch(`/api/campaigns/${campaignId}/scheduling/availability/${date}`, { method: "DELETE" });
+          : await fetch(`/api/campaigns/${campaignId}/scheduling/availability/${date}?requestId=${encodeURIComponent(request.id)}`, { method: "DELETE" });
         if (!res.ok) {
           failed = true;
           const body = await res.json().catch(() => null);

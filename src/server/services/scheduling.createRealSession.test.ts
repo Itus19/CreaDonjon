@@ -7,13 +7,17 @@ import type { Database } from "@/src/types/database";
  * main pendant une demande en cours fermait la demande — et les
  * disponibilités déjà cochées disparaissaient de l'écran. Le réglage à la
  * main est indépendant : seule une séance confirmée DEPUIS les
- * disponibilités répond à la demande et la ferme.
+ * disponibilités répond à la demande et la ferme. V3.1-190 : plusieurs
+ * demandes peuvent être ouvertes ; seule celle dont la date est fixée se
+ * ferme.
  */
 
 const closed: string[] = [];
 vi.mock("@/src/server/repos/scheduling", () => ({
   insertRealSession: async () => ({ id: "s1" }),
-  getOpenAvailabilityRequest: async () => ({ id: "demande-octobre" }),
+  // V3.1-190 : plusieurs demandes ouvertes ; la séance nomme la sienne.
+  getAvailabilityRequestById: async (_s: unknown, id: string) =>
+    id === "demande-autre-campagne" ? { id, campaign_id: "autre", status: "open" } : id === "demande-close" ? { id, campaign_id: "c", status: "closed" } : { id, campaign_id: "c", status: "open" },
   closeAvailabilityRequest: async (_s: unknown, id: string) => {
     closed.push(id);
   },
@@ -36,8 +40,19 @@ describe("createRealSession", () => {
     expect(closed).toEqual([]);
   });
 
-  it("une date confirmée depuis les disponibilités ferme la demande, comme avant", async () => {
-    await createRealSession(supabase, { ...base, source: "availability" });
+  it("une date réglée à la main ne ferme rien, même si une demande est nommée", async () => {
+    await createRealSession(supabase, { ...base, source: "manual", requestId: "demande-octobre" });
+    expect(closed).toEqual([]);
+  });
+
+  it("une date confirmée depuis les disponibilités ferme SA demande, et elle seule", async () => {
+    await createRealSession(supabase, { ...base, source: "availability", requestId: "demande-octobre" });
     expect(closed).toEqual(["demande-octobre"]);
+  });
+
+  it("ne ferme jamais une demande d'une autre campagne, ni une demande déjà close", async () => {
+    await createRealSession(supabase, { ...base, source: "availability", requestId: "demande-autre-campagne" });
+    await createRealSession(supabase, { ...base, source: "availability", requestId: "demande-close" });
+    expect(closed).toEqual([]);
   });
 });

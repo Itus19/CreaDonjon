@@ -1,7 +1,7 @@
 "use client";
 
 import { minutesToTime, type SessionCategory } from "@/src/core/scheduling/overlap";
-import type { GridHeatmap, GridRequest } from "./AvailabilityGrid";
+import type { GridHeatmap, GridRequest, GridResponse } from "./AvailabilityGrid";
 
 /** Ce que renvoie `/api/campaigns/[id]/scheduling/requests/open` (V3.1-16) — lu à l'identique par le MJ et la joueuse. */
 export interface RankedDay {
@@ -15,11 +15,29 @@ export interface RankedDay {
   people: { userId: string; name: string }[];
   respondentCount: number;
 }
+/** Une carte de la rangée des demandes (V3.1-190) — `RequestCard`, `src/server/services/scheduling.ts`. */
+export interface RequestCard {
+  id: string;
+  title: string;
+  candidateCount: number;
+  startsAt: string;
+  endsAt: string;
+  respondedCount: number;
+  expectedCount: number;
+  missingNames: string[];
+  ready: boolean;
+  viewerResponded: boolean;
+}
 export interface OpenRequestBoard {
+  /** V3.1-190 : toutes les demandes ouvertes ; `request` est celle affichée. */
+  requests: RequestCard[];
   request: GridRequest | null;
   days: RankedDay[];
   heatmap: GridHeatmap | null;
   expected: number;
+  responses: { userId: string; name: string; responded: boolean }[];
+  myResponses: GridResponse[];
+  declined: boolean;
   viewerId: string | null;
   targetMinutes: number;
 }
@@ -197,3 +215,106 @@ export function NextSessionCard({ session, loading }: { session: RealSession | n
     </section>
   );
 }
+
+/**
+ * V3.1-190 — la rangée des demandes ouvertes, en tête de l'écran : une carte
+ * par demande, celle affichée en doré. Côté MJ (« Demandes en cours ») : état
+ * « Prête à fixer » / « En attente » et la barre des réponses, plus « +
+ * Nouvelle demande ». Côté joueuse (« Demandes du MJ ») : « À répondre » ou
+ * « ✓ Répondu ».
+ */
+export function RequestTabs({
+  requests,
+  selectedId,
+  onSelect,
+  mode,
+  onNew,
+}: {
+  requests: RequestCard[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+  mode: "mj" | "joueur";
+  onNew?: () => void;
+}) {
+  // Sans demande ouverte, l'écran vide a déjà son bouton « Demander les disponibilités ».
+  if (requests.length === 0) return null;
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
+        {mode === "mj" ? "Demandes en cours" : "Demandes du MJ"} · {requests.length}
+      </span>
+      <div className="flex flex-wrap items-stretch gap-2.5">
+        {requests.map((r) => {
+          const choisie = r.id === selectedId;
+          const pourcent = r.expectedCount > 0 ? Math.round((r.respondedCount / r.expectedCount) * 100) : 0;
+          return (
+            <button
+              key={r.id}
+              type="button"
+              onClick={() => onSelect(r.id)}
+              aria-pressed={choisie}
+              title={mode === "mj" && r.missingNames.length > 0 ? `Manquent : ${r.missingNames.join(", ")}` : undefined}
+              className={`flex w-64 flex-col gap-1.5 rounded-[14px] border px-3.5 py-3 text-left transition-colors ${
+                choisie ? "border-accent bg-panel-raised" : "border-edge bg-panel hover:bg-panel-raised"
+              }`}
+            >
+              <span className="flex items-center justify-between gap-2">
+                <span className="truncate text-sm font-semibold text-ink">{r.title}</span>
+                {mode === "mj" ? (
+                  r.ready ? (
+                    <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-accent-ink">Prête à fixer</span>
+                  ) : (
+                    <span className="shrink-0 rounded-full border border-edge-strong px-2 py-0.5 text-xs text-ink-soft">En attente</span>
+                  )
+                ) : r.viewerResponded ? (
+                  <span className="shrink-0 rounded-full bg-success/20 px-2 py-0.5 text-xs font-semibold text-success">✓ Répondu</span>
+                ) : (
+                  <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 text-xs font-semibold text-accent-ink">À répondre</span>
+                )}
+              </span>
+              {mode === "mj" ? (
+                <span className="flex items-center gap-2">
+                  <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-panel-sunken">
+                    <span className={`block h-full rounded-full ${r.ready ? "bg-accent" : "bg-ink-muted"}`} style={{ width: `${pourcent}%` }} />
+                  </span>
+                  <span className="font-mono text-xs font-medium text-ink">
+                    {r.respondedCount}/{r.expectedCount}
+                  </span>
+                </span>
+              ) : (
+                <span className="text-xs text-ink-muted">
+                  {r.candidateCount} jours · {r.startsAt.slice(0, 5)} – {r.endsAt.slice(0, 5)}
+                </span>
+              )}
+            </button>
+          );
+        })}
+        {onNew && (
+          <button
+            type="button"
+            onClick={onNew}
+            className="rounded-[14px] border border-dashed border-edge-strong px-4 text-sm font-semibold text-accent transition-colors hover:bg-panel-raised"
+          >
+            + Nouvelle demande
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** V3.1-190 — la ligne « Réponses » du MJ : qui a répondu à la demande affichée, et qui manque. */
+export function ResponsesLine({ responses }: { responses: { userId: string; name: string; responded: boolean }[] }) {
+  if (responses.length === 0) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 text-xs">
+      <span className="text-ink-muted">Réponses :</span>
+      {responses.map((r) => (
+        <span key={r.userId} className={`rounded-full px-2 py-0.5 ${r.responded ? "bg-success/15 text-success" : "border border-edge text-ink-muted"}`}>
+          {r.responded ? `✓ ${r.name}` : `${r.name} · en attente`}
+        </span>
+      ))}
+    </div>
+  );
+}
+
