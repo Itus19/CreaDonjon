@@ -853,36 +853,47 @@ export async function listIncomingRefsForKey(
 export interface EntryBlockFactRow {
   entry_key: string;
   block_type: string;
-  /** Seulement pour `coverage` (le nombre de lacunes) ; `null` ailleurs. */
+  /** Seulement pour les types de `dataBlockTypes` (la donnée du bloc) ; `null` ailleurs. */
   data: Json | null;
 }
 
 /**
  * V3.1-132 — la vue « règles non jouables » : pour UN ruleset, les règles qui
- * portent un bloc d'un des types donnés, sans lire leurs données (sauf
- * `coverage`, petit). Paginée comme `listRulesetEntries` (plafond PostgREST).
+ * portent un bloc d'un des types donnés, sans lire leurs données — sauf pour
+ * `dataBlockTypes` (V3.1-215 : `coverage`, `species_traits`, `actions`,
+ * `traits`, petits), lus avec leur donnée. Paginée comme `listRulesetEntries`
+ * (plafond PostgREST).
  */
-export async function listEntryBlockFacts(supabase: TypedClient, rulesetId: string, blockTypes: readonly string[]): Promise<EntryBlockFactRow[]> {
-  if (blockTypes.length === 0) return [];
-  const toutes: EntryBlockFactRow[] = [];
-  for (let page = 0; page <= MAX_EXTRA_PAGES; page++) {
-    const from = page * LIST_PAGE_SIZE;
-    const { data, error } = await supabase
-      .from("ruleset_entry_blocks")
-      .select("id, block_type, ruleset_entries!inner(entry_key, ruleset_id)")
-      .eq("ruleset_entries.ruleset_id", rulesetId)
-      .in("block_type", [...blockTypes])
-      .order("id")
-      .range(from, from + LIST_PAGE_SIZE - 1);
-    if (error) throw new Error(error.message);
-    const lignes = (data ?? []) as unknown as { id: string; block_type: string; ruleset_entries: { entry_key: string } }[];
-    toutes.push(...lignes.map((l) => ({ entry_key: l.ruleset_entries.entry_key, block_type: l.block_type, data: null })));
-    if (lignes.length < LIST_PAGE_SIZE) break;
-  }
-  for (const l of await listEntryBlocksOfType(supabase, rulesetId, "coverage")) {
-    toutes.push({ entry_key: l.entry_key, block_type: "coverage", data: l.data });
-  }
-  return toutes;
+export async function listEntryBlockFacts(
+  supabase: TypedClient,
+  rulesetId: string,
+  blockTypes: readonly string[],
+  dataBlockTypes: readonly string[] = ["coverage"]
+): Promise<EntryBlockFactRow[]> {
+  const sansDonnee = async (): Promise<EntryBlockFactRow[]> => {
+    if (blockTypes.length === 0) return [];
+    const toutes: EntryBlockFactRow[] = [];
+    for (let page = 0; page <= MAX_EXTRA_PAGES; page++) {
+      const from = page * LIST_PAGE_SIZE;
+      const { data, error } = await supabase
+        .from("ruleset_entry_blocks")
+        .select("id, block_type, ruleset_entries!inner(entry_key, ruleset_id)")
+        .eq("ruleset_entries.ruleset_id", rulesetId)
+        .in("block_type", [...blockTypes])
+        .order("id")
+        .range(from, from + LIST_PAGE_SIZE - 1);
+      if (error) throw new Error(error.message);
+      const lignes = (data ?? []) as unknown as { id: string; block_type: string; ruleset_entries: { entry_key: string } }[];
+      toutes.push(...lignes.map((l) => ({ entry_key: l.ruleset_entries.entry_key, block_type: l.block_type, data: null })));
+      if (lignes.length < LIST_PAGE_SIZE) break;
+    }
+    return toutes;
+  };
+  const [types, ...avecDonnee] = await Promise.all([
+    sansDonnee(),
+    ...dataBlockTypes.map(async (t) => (await listEntryBlocksOfType(supabase, rulesetId, t)).map((l) => ({ entry_key: l.entry_key, block_type: t, data: l.data }))),
+  ]);
+  return [...types, ...avecDonnee.flat()];
 }
 
 export interface ChainOverrideRow {
@@ -914,14 +925,46 @@ export async function listOverridesForRulesets(supabase: TypedClient, rulesetIds
   return toutes;
 }
 
-/** V3.1-132 — les blocs d'UN type (petit : `coverage`, `resources`) des règles d'UN ruleset, avec leurs données. */
+/** V3.1-132 — les blocs d'UN type (petit : `coverage`, `resources`, `actions`) des règles d'UN ruleset, avec leurs données. Paginée (plafond PostgREST de 1 000 lignes). */
 export async function listEntryBlocksOfType(supabase: TypedClient, rulesetId: string, blockType: string): Promise<{ entry_key: string; data: Json }[]> {
-  const { data, error } = await supabase
-    .from("ruleset_entry_blocks")
-    .select("data, ruleset_entries!inner(entry_key, ruleset_id)")
-    .eq("ruleset_entries.ruleset_id", rulesetId)
-    .eq("block_type", blockType)
-    .limit(LIST_PAGE_SIZE);
-  if (error) throw new Error(error.message);
-  return ((data ?? []) as unknown as { data: Json; ruleset_entries: { entry_key: string } }[]).map((l) => ({ entry_key: l.ruleset_entries.entry_key, data: l.data }));
+  const toutes: { entry_key: string; data: Json }[] = [];
+  for (let page = 0; page <= MAX_EXTRA_PAGES; page++) {
+    const from = page * LIST_PAGE_SIZE;
+    const { data, error } = await supabase
+      .from("ruleset_entry_blocks")
+      .select("id, data, ruleset_entries!inner(entry_key, ruleset_id)")
+      .eq("ruleset_entries.ruleset_id", rulesetId)
+      .eq("block_type", blockType)
+      .order("id")
+      .range(from, from + LIST_PAGE_SIZE - 1);
+    if (error) throw new Error(error.message);
+    const lignes = (data ?? []) as unknown as { data: Json; ruleset_entries: { entry_key: string } }[];
+    toutes.push(...lignes.map((l) => ({ entry_key: l.ruleset_entries.entry_key, data: l.data })));
+    if (lignes.length < LIST_PAGE_SIZE) break;
+  }
+  return toutes;
+}
+
+/**
+ * V3.1-215 — pour la couverture d'une sous-classe : chaque aptitude (`feature`,
+ * `feat`) d'UN ruleset et la sous-classe que son `source_raw` désigne
+ * (`source_raw.subclass.index`). Seul ce champ est extrait (Q4), paginée.
+ */
+export async function listFeatureSubclassIndexes(supabase: TypedClient, rulesetId: string): Promise<{ entry_key: string; subclass_index: string }[]> {
+  const toutes: { entry_key: string; subclass_index: string }[] = [];
+  for (let page = 0; page <= MAX_EXTRA_PAGES; page++) {
+    const from = page * LIST_PAGE_SIZE;
+    const { data, error } = await supabase
+      .from("ruleset_entries")
+      .select("id, entry_key, raw_subclass:source_raw->subclass->index")
+      .eq("ruleset_id", rulesetId)
+      .in("entry_type", ["feature", "feat"])
+      .order("id")
+      .range(from, from + LIST_PAGE_SIZE - 1);
+    if (error) throw new Error(error.message);
+    const lignes = (data ?? []) as unknown as { entry_key: string; raw_subclass: Json }[];
+    for (const l of lignes) if (typeof l.raw_subclass === "string") toutes.push({ entry_key: l.entry_key, subclass_index: l.raw_subclass });
+    if (lignes.length < LIST_PAGE_SIZE) break;
+  }
+  return toutes;
 }

@@ -665,8 +665,11 @@
         "aide": "{n, plural, one {# rule} other {# rules}} of the active ruleset to make playable, or to finish.",
         "filtre": "Filter by name",
         "aucune": "No rule matches.",
+        "filtreBrique": "Filter by brick",
+        "toutesBriques": "All",
+        "categorie": {"feature": "Features", "spell": "Spells", "magic_item": "Magic items", "species": "Species", "subclass": "Subclasses", "monster": "Monsters"},
         "videTitre": "Everything is playable",
-        "videDescription": "Every feature, spell and magic item of this ruleset has its bricks."
+        "videDescription": "Every feature, spell, magic item, species, subclass and monster of this ruleset is playable."
       },
       "solo": {
         "titre": "{n, plural, one {# rule of your character is not fully playable} other {# rules of your character are not fully playable}}",

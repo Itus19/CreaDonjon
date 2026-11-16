@@ -113,11 +113,13 @@ describe("pruneOrphanDurableEffects", () => {
 });
 
 describe("applyOverrideFacts — la couverture de toute une variante", () => {
+  const faits = (types: string[], data: [string, unknown][] = []) => ({ types: new Set(types), data: new Map(data) });
   const base = () =>
     new Map([
-      ["a", { types: new Set(["description"]), gaps: 0 }],
-      ["b", { types: new Set(["description", "modifiers"]), gaps: 0 }],
+      ["a", faits(["description"])],
+      ["b", faits(["description", "modifiers"])],
     ]);
+  const LACUNES = { gaps: [{ text: "t", missing: "m", brick: "timing" }, { text: "u", missing: "n" }] };
 
   it("un add_block d'activation rend la règle jouable ; un remove_block la rend non évaluée", () => {
     const r = applyOverrideFacts(base(), [
@@ -128,9 +130,9 @@ describe("applyOverrideFacts — la couverture de toute une variante", () => {
     expect(coverageState({ blockTypes: [...r.get("b")!.types], gaps: [] })).toBe("unevaluated");
   });
 
-  it("un bloc coverage compte ses lacunes ; une fiche maison et une version maison se lisent ; une fiche retirée disparaît", () => {
+  it("un bloc coverage garde ses lacunes (texte, brique) ; une fiche maison et une version maison se lisent ; une fiche retirée disparaît", () => {
     const r = applyOverrideFacts(base(), [
-      { entryKey: "a", action: "add_block", blockType: "coverage", payload: { data: { gaps: [{ text: "t", missing: "m" }, { text: "u", missing: "n" }] } } },
+      { entryKey: "a", action: "add_block", blockType: "coverage", payload: { data: LACUNES } },
       { entryKey: "c", action: "add_entry", blockType: null, payload: {} },
       { entryKey: "c", action: "add_block", blockType: "triggers", payload: {} },
       { entryKey: "b", action: "replace_entry", blockType: null, payload: { blocks: [{ block_type: "description" }] } },
@@ -139,7 +141,27 @@ describe("applyOverrideFacts — la couverture de toute une variante", () => {
     expect(r.has("a")).toBe(false);
     expect([...r.get("c")!.types]).toEqual(["triggers"]);
     expect([...r.get("b")!.types]).toEqual(["description"]);
-    const g = applyOverrideFacts(base(), [{ entryKey: "a", action: "add_block", blockType: "coverage", payload: { data: { gaps: [{ text: "t", missing: "m" }] } } }]);
-    expect(g.get("a")!.gaps).toBe(1);
+    const g = applyOverrideFacts(base(), [{ entryKey: "a", action: "add_block", blockType: "coverage", payload: { data: LACUNES } }]);
+    expect(g.get("a")!.data.get("coverage")).toEqual(LACUNES);
+    expect(g.get("b")!.data.has("coverage")).toBe(false);
+  });
+
+  it("garde la donnée des blocs d'espèce, d'actions et de traits ; remove_block et replace_entry la remplacent", () => {
+    const depart = new Map([["m", faits(["actions", "traits"], [["actions", { actions: [{ name: "Griffe" }] }], ["traits", { traits: [] }]])]]);
+    const r = applyOverrideFacts(depart, [
+      { entryKey: "m", action: "replace_block", blockType: "traits", payload: { data: { traits: [{ name: "Vol" }] } } },
+      { entryKey: "m", action: "remove_block", blockType: "actions", payload: {} },
+    ]);
+    expect(r.get("m")!.data.get("traits")).toEqual({ traits: [{ name: "Vol" }] });
+    expect(r.get("m")!.data.has("actions")).toBe(false);
+    expect(r.get("m")!.types.has("actions")).toBe(false);
+    const m = applyOverrideFacts(depart, [{ entryKey: "m", action: "replace_entry", blockType: null, payload: { blocks: [{ block_type: "species_traits", data: { traits: [] } }, { block_type: "modifiers", data: {} }] } }]);
+    expect([...m.get("m")!.data.keys()]).toEqual(["species_traits"]);
+  });
+
+  it("n'altère pas le départ", () => {
+    const b = base();
+    applyOverrideFacts(b, [{ entryKey: "a", action: "add_block", blockType: "coverage", payload: { data: LACUNES } }]);
+    expect(b.get("a")!.data.size).toBe(0);
   });
 });

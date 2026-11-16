@@ -513,7 +513,7 @@ Perception et visibilité (invisible, caché, sens), lumière, étiquettes de ma
 
 *Fait le 16 novembre.* `data/srd/playable-2024.json` : lumière de l'Arme sacrée (6 m vive, 6 m faible) ; Forme sauvage (ressource, quatre formes recommandées en variantes, PV temporaires, forme superposée) ; Compagnon sauvage (utilisation de Forme sauvage ou emplacement, chouette invoquée) ; Imposition des mains (réserve 5 × niveau, quantité choisie, Empoisonné pour 5) ; Rage persistante (regain de toutes les Rages, une fois par repos long). Réimport fait. **Trouvé au passage et corrigé** : hors combat, une aptitude qui vise une créature ou un allié s'applique à soi (elle était refusée faute de cible) ; la réponse d'une activation rend les compteurs après un regain. Vérifié par `srdModeleDuMonde.integration.test.ts` 4/4. **Restent en lacune, dites sur leur fiche** : choix libre des formes connues ; durée de la Forme sauvage en formule (comptée 1 heure) ; fin du familier comptée 8 heures ; Rage persistante au clic (pas d'événement « jet d'Initiative ») ; Restauration magique (regain d'emplacements, à faire) ; Abjuration d'ennemis, une seule chose par tour. Pas d'Aasimar dans le SRD 5.2 ; Se cacher se joue par son bouton (184).
 
-### ☐ V3.1-139 — L'inventaire et la couverture du SRD · `L` · sans modèle IA — **conçu (ADR 0100), découpé en 212 à 215**
+### ☑ V3.1-139 — L'inventaire et la couverture du SRD · `L` · sans modèle IA — **fait (ADR 0100, 212 à 215, 16 novembre)**
 Mesurer la couverture de tout ce qui entre en jeu (sorts, aptitudes, espèces, dons, objets magiques, monstres avec leurs actions et traits), lister les lacunes par brique, et tenir le compte jusqu'à 100 %.
 
 **Conçu le 16 novembre (ADR 0100).** Deux choix de l'auteur : le compte vit dans un **rapport généré** (`docs/couverture-srd.md`, script en lecture seule, commité après chaque ticket de données) ; chaque lacune porte une **étiquette `brick`** dans un vocabulaire fermé. « Jouable » se définit par catégorie (`coverageOf`) : une espèce ou une sous-classe se joue par ses aptitudes, un monstre par ses actions chiffrées (ses traits en prose sont des lacunes), un état par le moteur ; le reste garde le critère du bloc mécanique. Mesure de départ (officiel) : sorts 73 jouables, 1 partiel, 265 non évalués ; aptitudes 33 jouables, 23 partielles, 555 non évaluées ; objets magiques 1 partiel, 302 non évalués ; armes, armures, classes toutes jouables ; espèces 33, sous-classes 12, états 15 et monstres 317 que le critère actuel ne sait pas compter.
@@ -555,14 +555,16 @@ Mesurer la couverture de tout ce qui entre en jeu (sorts, aptitudes, espèces, d
 
 *Fait le 16 novembre* (Sonnet, relu et corrigé par Opus). `scripts/couverture-srd.ts` (lecture seule, paginée, 40 à 60 requêtes), `src/core/rules/coverageReport.ts` (pur, `coverageReport.test.ts` 13/13), premier rapport `docs/couverture-srd.md`. Deux générations identiques hors la date. **Corrigé à la relecture** : les lacunes d'une espèce ou d'une sous-classe ne se recomptent plus par brique (elles sont celles de ses aptitudes). Premier compte : 225 jouables, 309 partielles, 1 159 non évaluées sur 1 693 fiches comptées (13 %) ; les monstres pèsent lourd (283 actions sans chiffre, 328 traits en prose) ; hors monstres, 38 lacunes déclarées.
 
-#### ☐ V3.1-215 — La vue du MJ étendue · `M` · sans modèle IA — **prêt (Sonnet)**
+#### ☑ V3.1-215 — La vue du MJ étendue · `M` · sans modèle IA — **prêt (Sonnet)**
 
 **Modèle conseillé : Sonnet**, une fois 212 et 213 faits ; Opus relit. **Sous-tâches Haiku** : libellés ; planche ; vérifications.
 
 - « Règles non jouables » passe par `coverageOf` : espèces et monstres en plus, la brique de chaque lacune, un filtre par brique. Toujours lue à la demande (QUOTAS).
 
 **Critères d'acceptation**
-- [ ] Une variante maison voit ses propres règles partielles avec leur brique ; une espèce dont une aptitude est partielle y figure, un monstre aux traits non joués aussi.
+- [x] Une variante maison voit ses propres règles partielles avec leur brique ; une espèce dont une aptitude est partielle y figure, un monstre aux traits non joués aussi.
+
+*Fait le 16 novembre* (Sonnet, relu et complété par Opus). La vue passe par `assembleCoverage`, le calcul du rapport : espèces, sous-classes et monstres en plus, la brique de chaque lacune en pastille, un filtre par brique (état local). `applyOverrideFacts` garde la donnée des blocs `coverage`, `species_traits`, `actions`, `traits` à travers les surcharges ; `listEntryBlocksOfType` est désormais paginé (il plafonnait à 1 000 lignes sans le dire) ; `listFeatureSubclassIndexes` ne lit que `source_raw->subclass->index`. Environ 12 requêtes (16 avec une variante), à la demande. **Ajouté à la relecture** : l'avertissement du solo garde ses catégories d'avant (aptitudes, sorts, objets magiques), sans doublon par l'espèce ; puces de filtre à 44 px au téléphone. Vérifié au navigateur sur le Banc d'essai (ordinateur et 360 px, filtre, aucune erreur). **Reste** : une espèce ou une sous-classe maison ne connaît pas ses aptitudes ajoutées en variante (seul le `source_raw` de la base est lu).
 
 ### ☐ V3.1-140 — La conversion assistée : du texte aux briques · `L` · **avec modèle IA** — **après la fondation**
 Le modèle lit le texte d'une fiche et propose des blocs (`resources`, `activation`, `coverage`), par `ai_proposals` : Zod, validation métier, relecture par l'auteur, application. Jamais d'écriture directe (règle absolue 9). Le texte de la règle entre dans le prompt comme donnée encadrée (règle 10).

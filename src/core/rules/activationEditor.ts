@@ -66,10 +66,19 @@ export function pruneOrphanDurableEffects(data: ActivationBlockData): Activation
   return { ...data, durable_effects: data.durable_effects.filter((e) => poses.has(e.id)) };
 }
 
-/** Ce qu'il faut savoir d'une règle pour son état de couverture : ses types de blocs et ses lacunes déclarées. */
+/**
+ * Les blocs dont on garde la DONNÉE pour la couverture (V3.1-215) : `coverage`
+ * (les lacunes déclarées), `species_traits` (les aptitudes d'une espèce),
+ * `actions` et `traits` (un monstre). Les autres blocs ne comptent que par leur type.
+ */
+export const COVERAGE_DATA_BLOCK_TYPES = ["coverage", "species_traits", "actions", "traits"] as const;
+
+const estDonneeDeCouverture = (t: string): boolean => (COVERAGE_DATA_BLOCK_TYPES as readonly string[]).includes(t);
+
+/** Ce qu'il faut savoir d'une règle pour son état de couverture : ses types de blocs, et la donnée de ceux de `COVERAGE_DATA_BLOCK_TYPES`. */
 export interface BlockFacts {
   types: Set<string>;
-  gaps: number;
+  data: Map<string, unknown>;
 }
 
 /** Une surcharge de la chaîne, dans l'ordre où `applyOverrides` l'appliquerait (racine vers feuille). */
@@ -80,18 +89,13 @@ export interface OverrideFact {
   payload: unknown;
 }
 
-function gapsOf(data: unknown): number {
-  const gaps = (data as { gaps?: unknown } | null)?.gaps;
-  return Array.isArray(gaps) ? gaps.length : 0;
-}
-
 /**
- * V3.1-132 — la vue « règles non jouables » d'un ruleset : les mêmes actions
- * que `applyOverrides`, réduites aux types de blocs et aux lacunes, pour
- * toutes les règles d'un coup (sans lire les données de chaque bloc).
+ * V3.1-132, étendue en V3.1-215 — la vue « règles non jouables » d'un ruleset :
+ * les mêmes actions que `applyOverrides`, réduites aux types de blocs et à la
+ * donnée des quatre blocs utiles à la couverture, pour toutes les règles d'un coup.
  */
 export function applyOverrideFacts(base: ReadonlyMap<string, BlockFacts>, overrides: readonly OverrideFact[]): Map<string, BlockFacts> {
-  const out = new Map([...base].map(([k, v]) => [k, { types: new Set(v.types), gaps: v.gaps }]));
+  const out = new Map([...base].map(([k, v]) => [k, { types: new Set(v.types), data: new Map(v.data) }]));
   for (const o of overrides) {
     if (o.action === "disable_entry") {
       out.delete(o.entryKey);
@@ -99,22 +103,28 @@ export function applyOverrideFacts(base: ReadonlyMap<string, BlockFacts>, overri
     }
     if (o.action === "replace_entry") {
       const blocks = (o.payload as { blocks?: { block_type?: unknown; data?: unknown }[] } | null)?.blocks ?? [];
-      const types = blocks.map((b) => b.block_type).filter((t): t is string => typeof t === "string");
-      out.set(o.entryKey, { types: new Set(types), gaps: gapsOf(blocks.find((b) => b.block_type === "coverage")?.data) });
+      const types = new Set<string>();
+      const data = new Map<string, unknown>();
+      for (const b of blocks) {
+        if (typeof b.block_type !== "string") continue;
+        types.add(b.block_type);
+        if (estDonneeDeCouverture(b.block_type)) data.set(b.block_type, b.data);
+      }
+      out.set(o.entryKey, { types, data });
       continue;
     }
     if (o.action === "add_entry") {
-      if (!out.has(o.entryKey)) out.set(o.entryKey, { types: new Set(), gaps: 0 });
+      if (!out.has(o.entryKey)) out.set(o.entryKey, { types: new Set(), data: new Map() });
       continue;
     }
     const f = out.get(o.entryKey);
     if (!f || !o.blockType) continue;
     if (o.action === "add_block" || o.action === "replace_block") {
       f.types.add(o.blockType);
-      if (o.blockType === "coverage") f.gaps = gapsOf((o.payload as { data?: unknown } | null)?.data);
+      if (estDonneeDeCouverture(o.blockType)) f.data.set(o.blockType, (o.payload as { data?: unknown } | null)?.data);
     } else if (o.action === "remove_block") {
       f.types.delete(o.blockType);
-      if (o.blockType === "coverage") f.gaps = 0;
+      f.data.delete(o.blockType);
     }
   }
   return out;

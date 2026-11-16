@@ -106,6 +106,12 @@ describe.skipIf(!hasCreds)("briques jouables d'une règle (V3.1-132, integration
     await savePlayableBlocks(client(), { worldId, entryKey: KEY, blocks: { coverage: { gaps: [{ text: "voir à 18 m", missing: "distances réelles" }] } } });
     expect((await getRuleEntryForWorld(client(), worldId, KEY, "fr"))?.coverage?.state).toBe("partial");
 
+    // V3.1-215 : la lacune ressort avec sa brique ; l'espèce de l'officielle figure.
+    await savePlayableBlocks(client(), { worldId, entryKey: KEY, blocks: { coverage: { gaps: [{ text: "voir à 18 m", missing: "distances réelles", brick: "scaling" }] } } });
+    const liste = (await listUnplayableRules(client(), { worldId, locale: "fr" })) ?? [];
+    expect(liste.find((r) => r.key === KEY)).toMatchObject({ category: "feature", state: "partial", gaps: [{ brick: "scaling", text: "voir à 18 m" }] });
+    expect(liste.some((r) => r.category === "species" && (r.state === "partial" || r.state === "unevaluated"))).toBe(true);
+
     expect(await savePlayableBlocks(client(), { worldId, entryKey: KEY, blocks: { activation: null, coverage: null } })).toMatchObject({ ok: true });
     expect((await getRuleEntryForWorld(client(), worldId, KEY, "fr"))?.coverage?.state).toBe("unevaluated");
   });

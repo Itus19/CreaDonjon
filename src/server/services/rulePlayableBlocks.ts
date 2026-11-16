@@ -4,14 +4,16 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
 import { validateBlockData } from "@/src/core/schemas/rule-blocks";
 import { zHouseVersionPayload } from "@/src/core/rules/houseVersion";
-import { applyOverrideFacts, COVERAGE_ENTRY_TYPES, pruneOrphanDurableEffects, type BlockFacts } from "@/src/core/rules/activationEditor";
-import { coverageState, MECHANICAL_BLOCK_TYPES, type CoverageState } from "@/src/core/rules/activation";
+import { applyOverrideFacts, COVERAGE_DATA_BLOCK_TYPES, pruneOrphanDurableEffects, type BlockFacts } from "@/src/core/rules/activationEditor";
+import { MECHANICAL_BLOCK_TYPES } from "@/src/core/rules/activation";
+import { coverageCategoryOf, type CoverageBrick, type CoverageCategory } from "@/src/core/rules/coverage";
+import { assembleCoverage, type ReportEntry } from "@/src/core/rules/coverageReport";
 import type { EntryType } from "@/src/core/schemas/rule-blocks";
 import type { Locale } from "@/src/i18n/request";
 import { zRuleResourcesBlockData, type ActivationBlockData } from "@/src/core/schemas/rule-blocks/playable";
 import type { ResolvableBlock } from "@/src/core/rules/resolve";
 import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
-import { listEntryBlockFacts, listEntryBlocksOfType, listOverridesForRuleset, listOverridesForRulesets, upsertRulesetOverride } from "@/src/server/repos/rules";
+import { listEntryBlockFacts, listEntryBlocksOfType, listFeatureSubclassIndexes, listOverridesForRuleset, listOverridesForRulesets, upsertRulesetOverride } from "@/src/server/repos/rules";
 import { DEFAULT_BLOCK_DISPLAY, listEntriesInRulesetChain, resolveEntryBlocksInRuleset, walkRulesetChain } from "@/src/server/services/rules";
 
 type TypedClient = SupabaseClient<Database>;
@@ -136,16 +138,28 @@ export interface UnplayableRule {
   key: string;
   name: string;
   entryType: EntryType;
-  state: Exclude<CoverageState, "playable">;
-  gaps: number;
+  category: CoverageCategory;
+  state: "partial" | "unevaluated";
+  /** Chaque lacune avec sa brique (V3.1-215). Pour une espèce ou une sous-classe : celles de ses aptitudes. */
+  gaps: { brick: CoverageBrick; text: string }[];
 }
 
+/** Les types de fiches que la vue liste (V3.1-215 : espèces, sous-classes et monstres en plus des aptitudes, sorts et objets magiques). */
+const LISTED_ENTRY_TYPES: readonly string[] = ["feature", "spell", "magic_item", "species", "subclass", "monster"];
+
 /**
- * V3.1-132 — la vue « règles non jouables » du ruleset actif d'un monde :
- * chaque aptitude, sort ou objet magique sans bloc mécanique (non évaluée) ou
- * avec des lacunes déclarées (partielle). Trois lectures : la liste (déjà celle
- * de la barre latérale), les types de blocs mécaniques de la base, les
- * surcharges des variantes. Rien n'est stocké (règle 16).
+ * V3.1-132, étendue en V3.1-215 (ADR 0100) — la vue « règles non jouables » du
+ * ruleset actif d'un monde : chaque aptitude, sort, objet magique, espèce,
+ * sous-classe ou monstre sans bloc mécanique (non évalué) ou avec des lacunes
+ * (partiel), calculé par `assembleCoverage`, le calcul que partage le rapport
+ * `scripts/couverture-srd.ts`. Rien n'est stocké (règle 16).
+ *
+ * Coût (docs/QUOTAS.md), lue à la demande seulement, jamais sondée : monde
+ * (1), chaîne de rulesets (1 à 3), liste des fiches (3 sur l'officielle, ~6
+ * avec une variante qui remonte), blocs de la base (types mécaniques 1 à 2
+ * pages + coverage, species_traits, actions, traits : 5 à 6), sous-classes de
+ * chaque aptitude (1), surcharges des variantes (1). Environ 12 requêtes sur
+ * une base officielle, 16 avec une variante ; aucune boucle par fiche.
  */
 export async function listUnplayableRules(supabase: TypedClient, params: { worldId: string; locale: Locale }): Promise<UnplayableRule[] | null> {
   const rulesetId = await getWorldDefaultRulesetId(supabase, params.worldId);
@@ -154,21 +168,22 @@ export async function listUnplayableRules(supabase: TypedClient, params: { world
   const base = chain.find((l) => l.isOfficialBase);
   const variantes = chain.filter((l) => !l.isOfficialBase);
 
-  const [entries, facts, overrides] = await Promise.all([
+  const [entries, facts, sousClasses, overrides] = await Promise.all([
     listEntriesInRulesetChain(supabase, rulesetId, params.locale),
-    base ? listEntryBlockFacts(supabase, base.rulesetId, [...MECHANICAL_BLOCK_TYPES]) : Promise.resolve([]),
+    base ? listEntryBlockFacts(supabase, base.rulesetId, [...MECHANICAL_BLOCK_TYPES], [...COVERAGE_DATA_BLOCK_TYPES]) : Promise.resolve([]),
+    base ? listFeatureSubclassIndexes(supabase, base.rulesetId) : Promise.resolve([]),
     listOverridesForRulesets(
       supabase,
       variantes.map((l) => l.rulesetId)
     ),
   ]);
 
-  const depart = new Map<string, BlockFacts>(entries.map((e) => [e.key, { types: new Set<string>(), gaps: 0 }]));
+  const depart = new Map<string, BlockFacts>(entries.map((e) => [e.key, { types: new Set<string>(), data: new Map<string, unknown>() }]));
   for (const f of facts) {
     const d = depart.get(f.entry_key);
     if (!d) continue;
     d.types.add(f.block_type);
-    if (f.block_type === "coverage") d.gaps = Array.isArray((f.data as { gaps?: unknown } | null)?.gaps) ? (f.data as { gaps: unknown[] }).gaps.length : 0;
+    if (f.data !== null) d.data.set(f.block_type, f.data);
   }
   // De la racine vers la feuille, comme `applyOverrides` : la chaîne va de la variante active à la base.
   const rang = new Map(chain.map((l, i) => [l.rulesetId, i]));
@@ -178,13 +193,37 @@ export async function listUnplayableRules(supabase: TypedClient, params: { world
     ordonnees.map((o) => ({ entryKey: o.entry_key, action: o.action, blockType: o.block_type, payload: o.payload }))
   );
 
-  const out: UnplayableRule[] = [];
+  const sousClasseDe = new Map(sousClasses.map((s) => [s.entry_key, s.subclass_index]));
+  const aAssembler: ReportEntry[] = [];
   for (const e of entries) {
-    if (!(COVERAGE_ENTRY_TYPES as readonly string[]).includes(e.entryType)) continue;
+    // Les aptitudes alimentent aussi les espèces et sous-classes ; les armes, classes, états : hors de la vue.
+    if (coverageCategoryOf(e.entryType) === "out_of_scope" || ["weapon", "armor", "class", "condition"].includes(e.entryType)) continue;
     const f = resolues.get(e.key);
     if (!f) continue;
-    const state = coverageState({ blockTypes: [...f.types], gaps: new Array(f.gaps) });
-    if (state !== "playable") out.push({ key: e.key, name: e.name, entryType: e.entryType, state, gaps: f.gaps });
+    const sousClasse = sousClasseDe.get(e.key);
+    aAssembler.push({
+      id: e.key,
+      key: e.key,
+      type: e.entryType,
+      name: e.name,
+      sourceRaw: sousClasse === undefined ? null : { subclass: { index: sousClasse } },
+      blocks: [...f.types].map((t) => ({ block_type: t, data: f.data.get(t) ?? null })),
+    });
+  }
+
+  const out: UnplayableRule[] = [];
+  for (const row of assembleCoverage(aAssembler)) {
+    if (!LISTED_ENTRY_TYPES.includes(row.type)) continue;
+    const state = row.result.state;
+    if (state !== "partial" && state !== "unevaluated") continue;
+    out.push({
+      key: row.key,
+      name: row.name,
+      entryType: row.type as EntryType,
+      category: row.category,
+      state,
+      gaps: row.result.gaps.map((g) => ({ brick: g.brick, text: g.text })),
+    });
   }
   return out.sort((a, b) => a.name.localeCompare(b.name, params.locale));
 }
@@ -198,7 +237,10 @@ export async function listUnplayableRules(supabase: TypedClient, params: { world
 export async function unplayableAmong(supabase: TypedClient, params: { worldId: string; keys: readonly string[]; locale: Locale }): Promise<UnplayableRule[]> {
   if (params.keys.length === 0) return [];
   const voulues = new Set(params.keys);
-  return ((await listUnplayableRules(supabase, { worldId: params.worldId, locale: params.locale })) ?? []).filter((r) => voulues.has(r.key));
+  // V3.1-215 : l'avertissement garde ses catégories d'avant (aptitudes, sorts, objets magiques) ; une espèce ou une
+  // sous-classe n'est incomplète qu'à travers ses aptitudes, déjà listées : la nommer en plus ferait doublon.
+  const avertissables: readonly CoverageCategory[] = ["feature", "spell", "magic_item"];
+  return ((await listUnplayableRules(supabase, { worldId: params.worldId, locale: params.locale })) ?? []).filter((r) => voulues.has(r.key) && avertissables.includes(r.category));
 }
 
 export interface DeclaredResource {

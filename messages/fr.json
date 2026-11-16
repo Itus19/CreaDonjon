@@ -666,8 +666,11 @@
         "aide": "{n, plural, one {# règle} other {# règles}} du ruleset actif à rendre jouable, ou à finir.",
         "filtre": "Filtrer par nom",
         "aucune": "Aucune règle ne correspond.",
+        "filtreBrique": "Filtrer par brique",
+        "toutesBriques": "Toutes",
+        "categorie": {"feature": "Aptitudes", "spell": "Sorts", "magic_item": "Objets magiques", "species": "Espèces", "subclass": "Sous-classes", "monster": "Monstres"},
         "videTitre": "Tout est jouable",
-        "videDescription": "Chaque aptitude, sort et objet magique de ce ruleset a ses briques."
+        "videDescription": "Chaque aptitude, sort, objet magique, espèce, sous-classe et monstre de ce ruleset est jouable."
       },
       "solo": {
         "titre": "{n, plural, one {# règle de ton personnage n'est pas entièrement jouable} other {# règles de ton personnage ne sont pas entièrement jouables}}",
