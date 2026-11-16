@@ -93,13 +93,15 @@ Chacun a une forme propre, tant qu'aucun troisième cas ne demande de générali
 
 | Cas | Forme |
 |---|---|
-| PV temporaires | effet `grant_temp_hp` |
+| PV temporaires | **déjà là** : l'effet `temp_hp` (ADR 0095, V3.1-204) ; la Forme sauvage s'en sert |
 | Jauge qui monte | effet `gain_resource` |
 | Recharge sur événement | déclencheur qui pose `restore_resource` |
 | Quantité choisie | `amount: { max }` sur une activation ; la joueuse saisit le nombre, le serveur le borne |
 | Consommable | coût `consume_item` (une unité de l'inventaire) |
 | Redirection | opération de réaction `redirect` (la cible devient le réagissant) |
 | Choix contraint | les options en données, présentées à la joueuse ou tirées sur une table par le serveur |
+
+Une activation accordée par un jeton (le dé d'Inspiration bardique reçu) existe déjà (V3.1-197).
 
 Pour **M15**, une fiche porte des étiquettes : `immune.spell.<clé>` et `untargetable.<étiquette>` (par exemple `divination`). Elles sont vérifiées au ciblage.
 

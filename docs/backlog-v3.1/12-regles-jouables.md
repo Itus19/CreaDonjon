@@ -463,7 +463,7 @@ Perception et visibilité (invisible, caché, sens), lumière, étiquettes de ma
 
 **Modèle conseillé : Opus** — noyau. Tests d'abord.
 
-- Effets `transform { form, mode: overlay | replace }`, `summon { creature, count? }`, `grant_temp_hp`, `gain_resource`, `restore_resource` ; `amount: { max }` sur une activation ; coût `consume_item` ; opération de réaction `redirect`.
+- Effets `transform { form, mode: overlay | replace }`, `summon { creature, count? }`, `gain_resource`, `restore_resource` (les PV temporaires existent déjà : `temp_hp`, ADR 0095) ; `amount: { max }` sur une activation ; coût `consume_item` ; opération de réaction `redirect`.
 - Le profil d'une forme (`overlay` : CA, vitesse, FOR/DEX/CON, attaques de la bête ; `replace` : PV à part, retour au profil à 0).
 
 **Critères d'acceptation**
