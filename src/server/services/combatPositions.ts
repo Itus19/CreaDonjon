@@ -7,6 +7,7 @@ import { getClaimedCharacterEntityId } from "@/src/server/repos/campaigns";
 import { checkCombatAccess, journalCombatEvent } from "@/src/server/services/combats";
 import { resolveCharacterActionContext } from "@/src/server/services/characterActions";
 import { spendMovementFor } from "@/src/server/services/turnBudgetWrite";
+import { recomputeMasking } from "@/src/server/services/combatPerception";
 import type { Locale } from "@/src/i18n/request";
 
 type TypedClient = SupabaseClient<Database>;
@@ -99,6 +100,9 @@ export async function moveParticipant(
     actorUserId: params.userId,
     actor: callerIsGm ? "gm" : "player",
   });
+
+  // V3.1-181 (ADR 0078) : un déplacement change qui voit qui (lumière, portée des sens).
+  await recomputeMasking(supabase, { campaignId: params.campaignId, combat, callerIsGm, locale: params.locale });
 
   return { ok: true, participantId: params.participantId, position: params.position, movement };
 }

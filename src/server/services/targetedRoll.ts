@@ -8,7 +8,9 @@ import { budgetOf, type SceneState } from "@/src/core/rules/scene";
 import { spendFromBudget, type BudgetKind } from "@/src/core/rules/actionBudget";
 import { applyEffects, defensesFromStatBlock, type ApplyResult, type TurnActor, type TurnChange } from "@/src/core/rules/turn";
 import { eventsForAttack, eventsForDamage } from "@/src/core/rules/gameEvents";
-import { resolveAttackRoll, resolveDamageRoll, weaponAttackAbilityMod, type AttackRollResult } from "@/src/core/rules/action";
+import { combineAdvantage, resolveAttackRoll, resolveDamageRoll, weaponAttackAbilityMod, type AttackRollResult } from "@/src/core/rules/action";
+import { perceptionConditions } from "@/src/core/rules/perception";
+import { attackSightFor, recomputeMasking, touchesPerception } from "@/src/server/services/combatPerception";
 import type { FiredEvent, ResolvedEffect } from "@/src/core/rules/triggers";
 import { attackVerdict, damageAfterSave, isOutOfFight, type AttackVerdict } from "@/src/core/rules/targeting";
 import { creatureTypeOf, isValidTarget, type TargetProfile, type TargetRefusal } from "@/src/core/rules/targetRestriction";
@@ -412,6 +414,13 @@ export async function applyResolvedEffects(
     applicationEventId = event.id;
   }
 
+  // V3.1-181 (ADR 0078) : un état qui touche la vue (Invisible, Caché, Aveuglé) a changé ? Le masquage des joueuses suit.
+  const etatsTouches = applied.changes.flatMap((c) => (c.kind === "condition" ? [c.key] : []));
+  if (params.combatId && touchesPerception(etatsTouches)) {
+    const combat = await getCombatById(supabase, params.combatId);
+    if (combat) await recomputeMasking(supabase, { campaignId: params.campaignId, combat, callerIsGm: !params.signedWrites, locale: "fr" });
+  }
+
   return { applied, persisted, changes, hints, ignored, applicationEventId };
 }
 
@@ -751,7 +760,20 @@ export async function resolveTargetedRoll(
       input.actor.kind === "participant" ? tousParticipants.find((p) => p.id === actorParticipant?.id) : tousParticipants.find((p) => p.entity_id !== null && p.entity_id === ctx?.entityId);
     const etats = (row: CombatParticipantRow | undefined) => (Array.isArray(row?.conditions) ? row.conditions.filter((c): c is string => typeof c === "string") : []);
     const marques = advantageFromMarkers({ attackerSource: attaquant?.id ?? "", attackerConditions: etats(attaquant), targetConditions: etats(target), chosen: input.advantage });
-    const avantage = marques.advantage;
+    // V3.1-181 (ADR 0078) : qui voit qui. Une cible qu'on ne voit pas : désavantage ; un attaquant que la cible ne voit pas : avantage.
+    // Rien n'est lu dans le cas courant (plein jour, personne d'Aveuglé, d'Invisible ni de Caché).
+    const vue = attaquant
+      ? await attackSightFor(supabase, {
+          combat, rows: tousParticipants, attacker: attaquant, target, campaignId: params.campaignId, worldId: campaign.worldId, locale: params.locale, pcEntityIds, ...(ctx ? { loaded: [ctx] } : {}),
+        })
+      : null;
+    const avantage = vue ? combineAdvantage(marques.advantage, vue.sight === "normal" ? "normal" : vue.sight) : marques.advantage;
+    if (vue?.attackerSees === "unseen") hintsBefore.push(`${target.label} n'est pas vu : désavantage.`);
+    if (vue?.targetSees === "unseen") hintsBefore.push(`${target.label} ne voit pas l'attaquant : avantage.`);
+    // Attaquer révèle un Caché.
+    if (attaquant) {
+      for (const key of etats(attaquant).filter((c) => perceptionConditions([c])[0] === "hidden")) effects.push({ action: "remove_condition", who: `participant:${attaquant.id}`, key });
+    }
     if (attaquant) for (const key of marques.removeFromAttacker) effects.push({ action: "remove_condition", who: `participant:${attaquant.id}`, key });
     for (const key of marques.removeFromTarget) effects.push({ action: "remove_condition", who: targetKey, key });
     hintsBefore.push(...marques.notes);

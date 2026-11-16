@@ -17,8 +17,10 @@ export const patchCombatSchema = z
   .object({
     name: z.string().trim().max(200).nullable().optional(),
     status: z.enum(["draft", "rolling", "running", "ended"]).optional(),
+    /** V3.1-181 (ADR 0078) : la lumière ambiante du combat. */
+    lighting: z.enum(["bright", "dim", "dark"]).optional(),
   })
-  .refine((data) => data.name !== undefined || data.status !== undefined, { message: "Rien à modifier." });
+  .refine((data) => data.name !== undefined || data.status !== undefined || data.lighting !== undefined, { message: "Rien à modifier." });
 
 export const turnSchema = z.object({
   direction: z.enum(["next", "previous"]),
@@ -97,6 +99,9 @@ export const moveParticipantSchema = z
   })
   .strict();
 export type MoveParticipantInput = z.infer<typeof moveParticipantSchema>;
+
+/** V3.1-181 (ADR 0078) — Se cacher : le participant qui se cache (le MJ : n'importe lequel ; une joueuse : son PJ). */
+export const hideParticipantSchema = z.object({ participantId: z.string().uuid() }).strict();
 
 /**
  * V3.1-105 (ADR 0042) — un jet ciblé contre un participant du combat en cours.

@@ -1,4 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { getLocale } from "next-intl/server";
+import { getCombatById } from "@/src/server/repos/combats";
+import { recomputeMasking } from "@/src/server/services/combatPerception";
+import type { Locale } from "@/src/i18n/request";
 import { guardCombatRoute } from "@/lib/combats/routeGuard";
 import { patchParticipantSchema } from "@/lib/combats/schemas";
 import { patchCombatParticipant, removeParticipant } from "@/src/server/services/combats";
@@ -35,6 +39,11 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   });
   if (!participant) {
     return NextResponse.json({ error: "Participant introuvable." }, { status: 404 });
+  }
+  // V3.1-181 (ADR 0078) : un état qui touche la vue (Invisible, Caché, Aveuglé) change ce que les joueuses voient.
+  if (parsed.data.conditions !== undefined) {
+    const combat = await getCombatById(supabase, participant.combat_id);
+    if (combat) await recomputeMasking(supabase, { campaignId: guard.params.campaignId, combat, callerIsGm: true, locale: (await getLocale()) as Locale });
   }
   return NextResponse.json(participant, { status: 200 });
 }

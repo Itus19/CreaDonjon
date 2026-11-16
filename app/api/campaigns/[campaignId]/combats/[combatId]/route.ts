@@ -1,4 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { getLocale } from "next-intl/server";
+import { setCombatLighting } from "@/src/server/services/combatPerception";
+import type { Locale } from "@/src/i18n/request";
 import { guardCombatRoute } from "@/lib/combats/routeGuard";
 import { patchCombatSchema } from "@/lib/combats/schemas";
 import { deleteCombatById, getCombatDetail, renameCombat, setCombatStatus } from "@/src/server/services/combats";
@@ -35,6 +38,9 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   }
   if (parsed.data.status !== undefined) {
     combat = await setCombatStatus(supabase, { combatId: p.combatId!, status: parsed.data.status, actorUserId: userId });
+  }
+  if (parsed.data.lighting !== undefined) {
+    combat = await setCombatLighting(supabase, { campaignId: p.campaignId, combatId: p.combatId!, lighting: parsed.data.lighting, actorUserId: userId, locale: (await getLocale()) as Locale });
   }
   return NextResponse.json(combat, { status: 200 });
 }

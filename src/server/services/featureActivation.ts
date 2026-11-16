@@ -10,7 +10,8 @@ import type { EffectNode, ResolvedEffect, TriggerActorState, TriggerContext } fr
 import { zActivationBlockData, type ActivationBlockData } from "@/src/core/schemas/rule-blocks/playable";
 import { zSpellCastingBlockData } from "@/src/core/schemas/rule-blocks";
 import { orderParticipants } from "@/src/server/services/combats";
-import { getActiveCombatForCampaign, listCombatParticipants, type CombatParticipantRow } from "@/src/server/repos/combats";
+import { getActiveCombatForCampaign, listCombatParticipants, type CombatParticipantRow, type CombatRow } from "@/src/server/repos/combats";
+import { attackSightFor } from "@/src/server/services/combatPerception";
 import { listCampaignCharacters } from "@/src/server/repos/campaigns";
 import { deleteFeatureEffect, insertFeatureEffect, listFeatureEffectsForBearers } from "@/src/server/repos/activeEffects";
 import { readSpellMechanics, resolveCharacterActionContext } from "@/src/server/services/characterActions";
@@ -62,7 +63,9 @@ export type ActivateFeatureFailure =
   /** V3.1-169 (ADR 0077) : sur le plan, une cible ou une zone hors de portée ; une zone qui ne se pose pas (lanceur non posé, sans point, sans direction) ; une cible retirée qui n'était pas dans la zone. */
   | "out_of_range"
   | "area_unplaced"
-  | "target_out_of_area";
+  | "target_out_of_area"
+  /** V3.1-181 (ADR 0078) : « une créature que vous voyez », et le lanceur ne la voit pas. */
+  | "target_unseen";
 
 export interface ActivateFeatureSuccess {
   ok: true;
@@ -172,6 +175,7 @@ export async function activateFeature(
 
   // Le combat en cours : seulement s'il y a des cibles à y lire.
   let combatId: string | null = null;
+  let combatRow: CombatRow | null = null;
   let participants: CombatParticipantRow[] = [];
   let round: number | null = null;
   let currentTurn: string | null = null;
@@ -180,6 +184,7 @@ export async function activateFeature(
     const combat = await getActiveCombatForCampaign(supabase, params.campaignId);
     if (!combat || combat.status !== "running") return { ok: false, reason: "no_combat" };
     combatId = combat.id;
+    combatRow = combat;
     round = combat.round;
     // V3.1-107 (ADR 0069) : un joueur ne lit pas les participants ; le moteur les lit par une demande signée.
     participants = params.callerIsGm ? await listCombatParticipants(supabase, combat.id) : await readCombatParticipantsSigned(supabase, { campaignId: params.campaignId, combatId: combat.id });
@@ -223,6 +228,16 @@ export async function activateFeature(
 
   const pcEntityIds = new Set((await listCampaignCharacters(supabase, params.campaignId)).filter((c) => c.is_pc).map((c) => c.entity_id));
   const state = await getEntityRuntimeState(supabase, params.entityId, params.campaignId);
+
+  // V3.1-181 (ADR 0078) : « une créature que vous voyez » — une cible non vue est refusée (rien n'est lu dans le cas courant).
+  if (activation.targets.must_see && combatRow && lanceur && !deZone) {
+    for (const id of cibles) {
+      const cible = participants.find((p) => p.id === id);
+      if (!cible || cible.id === lanceur.id) continue;
+      const vue = await attackSightFor(supabase, { combat: combatRow, rows: participants, attacker: lanceur, target: cible, campaignId: params.campaignId, worldId: campaign.worldId, locale: params.locale, pcEntityIds, loaded: [ctx] });
+      if (vue.attackerSees === "unseen") return { ok: false, reason: "target_unseen", detail: cible.label };
+    }
+  }
 
   // Les nombres de celui qui active : ce que ses formules lisent.
   const sheet = ctx.sheet;
