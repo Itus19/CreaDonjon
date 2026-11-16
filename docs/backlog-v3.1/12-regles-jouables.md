@@ -431,7 +431,7 @@ Distances en mètres entre créatures (ADR 0059 §5), zones géométriques, aura
 
 *Reste* : les **défenses des monstres** (le JSON du SRD 2024 n'en porte que deux ; les reprendre du texte français est un ticket à part) ; le **Souffle et la résistance du drakéide** n'atteignent pas une fiche (ils sont rattachés à l'ascendance, une sous-espèce, que le modèle de personnage ne connaît pas encore) ; un **seul jet de dégâts pour toute une zone** (chaque créature lance le sien, la moitié d'un jet à part sur une réussite) ; Défense sans armure reste sur sa cible `ac.unarmored`, qui fait déjà le travail.
 
-### ☐ V3.1-138 — Le modèle du monde · `L` · sans modèle IA — **conçu (ADR 0078), découpé en 180 à 185**
+### ☑ V3.1-138 — Le modèle du monde · `L` · sans modèle IA — **fait (ADR 0078, 180 à 185, 16 novembre)**
 Perception et visibilité (invisible, caché, sens), lumière, étiquettes de magie (divination, capteurs), immunités et restrictions de ciblage, et les cas uniques : transformation, invocation, PV temporaires en effet (sur V3.1-24), redirection, jauge qui monte, recharge sur événement, quantité choisie, consommables, choix contraints pour les règles ouvertes. Règles visées : 8, 15, 16, 22, 29, 34, 35, 38.
 
 
@@ -502,14 +502,16 @@ Perception et visibilité (invisible, caché, sens), lumière, étiquettes de ma
 
 *Fait le 16 novembre* (Sonnet, relu et complété par Opus). MJ : lumière Vive / Faible / Ténèbres (un geste, une requête), voile du plan selon la lumière, jeton Caché ou Invisible en pointillé, pastilles « Masqué aux joueuses », forme portée, « Invoquée par », « Se cacher » (test lancé par le serveur). Joueuse : « Quelqu'un » dans l'ordre du tour, absent du plan et de la réserve « À poser », voile de la lumière, « À toi » sur sa créature, « Se cacher », et **« Faire agir »** : une route à part (`…/participants/[id]/creature`, seulement si `controlled_by` est l'appelante) rend le bloc de stats, l'attaque passe par `player-targeted-roll` avec l'acteur `participant`. Éditeur : briques « Prendre une forme », « Invoquer », « Regagner une ressource », « Quantité choisie », « Consommer un objet », opération « S'interposer ». Vérifié au navigateur à 360 px (MJ et joueuse, aucun débordement). **Reste** : halos des sources de lumière (la lumière émise n'est pas dans les lignes côté client) ; clés de forme, créature et objet saisies en texte libre ; la colonne du nom de la ligne MJ est très étroite à 360 px (défaut antérieur, pastilles désormais tronquées sur une ligne).
 
-#### ☐ V3.1-185 — Les données : lumière, Se cacher, Forme sauvage, Compagnon sauvage, cas uniques du SRD · `M` · sans modèle IA — **prêt (Opus)**
+#### ☑ V3.1-185 — Les données : lumière, Se cacher, Forme sauvage, Compagnon sauvage, cas uniques du SRD · `M` · sans modèle IA — **prêt (Opus)**
 
 **Modèle conseillé : Opus** — données officielles, import. **Dépend de** : 180 à 183.
 
 - Lumière de l'Aasimar et de l'Arme sacrée ; Se cacher ; Forme sauvage (formes connues, PV temporaires) ; Compagnon sauvage (Appel de familier) ; Imposition des mains (quantité) ; Restauration magique ; Rage persistante (recharge à l'initiative) ; Abjuration d'ennemis (une seule chose par tour). Réimport.
 
 **Critères d'acceptation**
-- [ ] Après réimport, ces règles perdent leur lacune et se jouent sur une fiche de test.
+- [x] Après réimport, ces règles perdent leur lacune et se jouent sur une fiche de test.
+
+*Fait le 16 novembre.* `data/srd/playable-2024.json` : lumière de l'Arme sacrée (6 m vive, 6 m faible) ; Forme sauvage (ressource, quatre formes recommandées en variantes, PV temporaires, forme superposée) ; Compagnon sauvage (utilisation de Forme sauvage ou emplacement, chouette invoquée) ; Imposition des mains (réserve 5 × niveau, quantité choisie, Empoisonné pour 5) ; Rage persistante (regain de toutes les Rages, une fois par repos long). Réimport fait. **Trouvé au passage et corrigé** : hors combat, une aptitude qui vise une créature ou un allié s'applique à soi (elle était refusée faute de cible) ; la réponse d'une activation rend les compteurs après un regain. Vérifié par `srdModeleDuMonde.integration.test.ts` 4/4. **Restent en lacune, dites sur leur fiche** : choix libre des formes connues ; durée de la Forme sauvage en formule (comptée 1 heure) ; fin du familier comptée 8 heures ; Rage persistante au clic (pas d'événement « jet d'Initiative ») ; Restauration magique (regain d'emplacements, à faire) ; Abjuration d'ennemis, une seule chose par tour. Pas d'Aasimar dans le SRD 5.2 ; Se cacher se joue par son bouton (184).
 
 ### ☐ V3.1-139 — L'inventaire et la couverture du SRD · `L` · sans modèle IA — **après la fondation**
 Mesurer la couverture de tout ce qui entre en jeu (sorts, aptitudes, espèces, dons, objets magiques, monstres avec leurs actions et traits), lister les lacunes par brique, et tenir le compte jusqu'à 100 %.

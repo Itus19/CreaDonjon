@@ -277,7 +277,12 @@ export async function activateFeature(
     activationId: params.activationId,
     variantId: params.variantId,
     actorId: params.entityId,
-    targetIds: cibles.map((id) => `participant:${id}`),
+    // V3.1-185 : hors combat, personne à viser ; une aptitude qui vise une créature ou un allié s'applique à soi
+    // (Imposition des mains : « qui peut être vous-même »). Viser un adversaire reste refusé (`no_target`).
+    targetIds:
+      cibles.length === 0 && combatId === null && (activation.targets.kind === "creature" || activation.targets.kind === "ally")
+        ? [params.entityId]
+        : cibles.map((id) => `participant:${id}`),
     ctx: sceneCtx,
     resources: sheet.resources,
     used: state.resources,
@@ -504,7 +509,8 @@ export async function activateFeature(
     targets,
     changes: [...avertissements, ...outcome.changes, ...phrasesFormes, ...lances, ...(budget?.over ? ["Budget du tour dépassé : le MJ tranche."] : [])],
     applied: plan.plan.applied.map((a) => ({ bearer: a.bearer, label: a.label })),
-    used: plan.plan.used,
+    // Après un regain (Rage persistante), les compteurs écrits, pas ceux du plan.
+    used: usesApres,
     overBudget: budget?.over ?? false,
   };
 }
