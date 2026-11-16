@@ -451,7 +451,7 @@ Perception et visibilité (invisible, caché, sens), lumière, étiquettes de ma
 
 *Fait le 16 novembre.* `src/core/rules/perception.ts` : `lightAt` (la plus vive de l'ambiante et des sources ; une source n'assombrit jamais), `canSee` → `clear | obscured | unseen` (soi-même toujours vu ; Caché tant que la Perception n'atteint pas le total de Discrétion ; Aveuglé : perception aveugle ou des vibrations à portée ; Invisible : vision véritable ou perception aveugle à portée ; ténèbres et vision dans le noir → voilé ; lumière faible → voilé sauf vision dans le noir ; sans plan, seuls les états comptent), `attackSight`, `targetingRefusal` (M15), `perceptionConditions` (« Aveuglé », « Invisible », « Caché » du menu du MJ ramenés aux clés). Fiche : `light` (`light.bright`, `light.dim`), `untargetable`, `immuneSpells` ; `immune.spell.*` ne compte plus comme immunité aux dégâts. Catalogue des cibles de l'éditeur : défenses aux dégâts (manquaient depuis 168), lumière émise, « hors d'atteinte de la divination ». La vérification de `must_see` et l'avantage/désavantage branchés aux jets passent avec le service (181). Tests : `perception.test.ts` 15/15.
 
-#### ☐ V3.1-181 — La migration et le service de la perception · `L` · sans modèle IA — **prêt (Opus)**
+#### ☑ V3.1-181 — La migration et le service de la perception · `L` · sans modèle IA — **prêt (Opus)**
 
 **Modèle conseillé : Opus** — migration, RLS, sécurité. **Dépend de** : 180.
 
@@ -459,7 +459,11 @@ Perception et visibilité (invisible, caché, sens), lumière, étiquettes de ma
 - Service : recalcul du masquage après déplacement, état, lumière, effet ; le MJ le force ; Se cacher (test de Discrétion lancé par le serveur, état Caché avec son total) ; avantage/désavantage et `must_see` branchés dans le jet ciblé, l'activation et les réactions.
 
 **Critères d'acceptation**
-- [ ] Intégration : un monstre Invisible disparaît de la vue d'une joueuse (appel direct de la fonction compris) et revient quand l'état tombe ; un PJ caché attaque avec avantage.
+- [x] Intégration : un monstre Invisible disparaît de la vue d'une joueuse (appel direct de la fonction compris) et revient quand l'état tombe ; un PJ caché attaque avec avantage.
+
+*Fait le 16 novembre.* Migration `20261116120000_perception_et_mouvement` (lumière du combat, `hidden_from_players`, `stealth_total`, vue des joueuses qui masque ; elle réunit aussi deux versions d'`apply_engine_change` dont l'une avait effacé le mouvement). `combatPerception.ts` : `recomputeMasking` (rien à lire en plein jour sans état de vue ; sinon une fiche par PJ), `attackSightFor`, `setCombatLighting` ; masquage recalculé après un déplacement, un état posé par le MJ ou par le moteur, la lumière. `combatHide.ts` + route `…/combats/[combatId]/hide` (test de Discrétion côté serveur, DD 15, Caché avec son total ; le MJ pour tous, une joueuse pour son PJ, par changement signé). Jet ciblé : avantage/désavantage selon la vue, une attaque révèle un Caché. Activation : `targets.must_see` refuse une cible non vue (`target_unseen`). Lumière du combat dans le `PATCH` du combat. Tests : `perception.integration.test.ts` 3/3, `conditionsDeJeu.integration.test.ts` 5/5 (le mouvement d'une joueuse refonctionne).
+
+*Reste* : `trigger.must_see` des réactions (Mots cinglants : « que vous voyez ») ; la lumière émise par une créature (seuls les PJ en portent, par leur fiche) ; le masquage forcé par le MJ tient jusqu'au prochain recalcul.
 
 #### ☐ V3.1-182 — Le noyau des formes, des invocations et des cas uniques · `L` · sans modèle IA — **prêt (Opus)**
 
