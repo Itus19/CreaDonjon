@@ -135,6 +135,8 @@ export interface CharacterActionContext {
   characterData: CharacterBlockData;
   /** Ligne brute du bloc `character` (id/version/visibilite) — necessaire pour le repatcher (V2-G1, remise a zero de la maitrise d'armes au repos long), jamais pour son seul contenu deja porte par `characterData`. */
   characterBlockRow: BlockRow;
+  /** V3.1-183 : la ligne du bloc d'inventaire (pour retirer un consommable, avec le contrôle de version) ; absente sans inventaire. */
+  inventoryBlockRow: BlockRow | null;
   inventoryData: InventoryBlockData | undefined;
   spellcastingData: SpellcastingBlockData | undefined;
   resourcesData: ResourcesBlockData | undefined;
@@ -321,6 +323,7 @@ export async function resolveCharacterActionContext(
     campaignId,
     characterData,
     characterBlockRow: characterRow,
+    inventoryBlockRow: inventoryRow ?? null,
     inventoryData,
     spellcastingData,
     resourcesData,

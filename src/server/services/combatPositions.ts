@@ -69,7 +69,8 @@ export async function moveParticipant(
     const rows = await listPlayerCombatViewRows(supabase, combat.id);
     const row = rows?.find((r) => r.id === params.participantId);
     if (!row) return { ok: false, reason: "not_found" };
-    if (row.side !== "ally" || row.entity_id !== mine) return { ok: false, reason: "not_yours" };
+    // Son PJ, ou (V3.1-183) la créature qu'elle pilote ; la base le revérifie (`set_own_position`).
+    if (row.side !== "ally" || (row.entity_id !== mine && row.mine !== true)) return { ok: false, reason: "not_yours" };
     before = row.pos_x != null && row.pos_y != null ? { x: Number(row.pos_x), y: Number(row.pos_y) } : null;
     entityId = row.entity_id;
     label = row.label;

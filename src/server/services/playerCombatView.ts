@@ -49,6 +49,8 @@ function toRow(row: PlayerCombatViewRow): PlayerCombatRow {
     wound: !ally && WOUNDS.includes(row.wound as WoundState) ? (row.wound as WoundState) : null,
     budget: ally ? budgetOf(row.budget) : null,
     position: row.pos_x != null && row.pos_y != null ? { x: Number(row.pos_x), y: Number(row.pos_y) } : null,
+    mine: row.mine === true,
+    formLabel: ally && row.form && typeof row.form === "object" && !Array.isArray(row.form) && typeof (row.form as { label?: unknown }).label === "string" ? (row.form as { label: string }).label : null,
   };
 }
 

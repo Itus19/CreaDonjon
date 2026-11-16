@@ -251,6 +251,8 @@ export const activateFeatureSchema = z.object({
       castOption: z.object({ ruleKey: z.string().min(1).max(200), optionId: z.string().min(1).max(100) }).optional(),
     })
     .optional(),
+  /** V3.1-183 (ADR 0078) : la quantité choisie (Imposition des mains) ; le serveur la borne par l'activation. */
+  amount: z.number().int().min(1).max(1000).optional(),
   /** V3.1-169 (ADR 0077) : une zone posée sur le plan (mètres) — son point, et vers où vise un cône ou une ligne. */
   area: z
     .object({

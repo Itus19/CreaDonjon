@@ -289,3 +289,46 @@ export async function setOwnPosition(
   const written = data as { before?: unknown; after?: unknown };
   return { before: written.before, after: written.after };
 }
+
+/**
+ * V3.1-183 (ADR 0078) — une créature invoquée, ajoutée par le MJ (une joueuse
+ * passe par le changement signé `summon`). Alliée, à côté de celle qui invoque.
+ */
+export async function insertSummonedParticipant(
+  supabase: TypedClient,
+  params: {
+    id: string;
+    summoner: Pick<CombatParticipantRow, "id" | "combat_id" | "display_order" | "pos_x" | "pos_y">;
+    ruleKey: string;
+    label: string;
+    ac: number | null;
+    hpMax: number | null;
+    controlledBy: string | null;
+    sourceRuleKey: string | null;
+  }
+): Promise<CombatParticipantRow> {
+  const { data, error } = await supabase
+    .from("combat_participants")
+    .insert({
+      id: params.id,
+      combat_id: params.summoner.combat_id,
+      source_kind: "statblock",
+      entity_id: null,
+      rule_key: params.ruleKey,
+      label: params.label,
+      ac: params.ac,
+      hp_max: params.hpMax,
+      hp_current: params.hpMax,
+      is_ally: true,
+      display_order: Number(params.summoner.display_order) + 0.5,
+      summoned_by: params.summoner.id,
+      controlled_by: params.controlledBy,
+      source_rule_key: params.sourceRuleKey,
+      pos_x: params.summoner.pos_x,
+      pos_y: params.summoner.pos_y,
+    })
+    .select(PARTICIPANT_COLUMNS)
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}

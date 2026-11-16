@@ -95,7 +95,7 @@ function ModeCombat({
       <OrdreDuTour combat={combat} participants={participants} moiId={moiId} />
       <div className={`${CARTE} p-3`}>
         <h2 className="mb-2 font-chrome text-sm font-semibold text-ink">{t("planTitre")}</h2>
-        <PlanCombat jetons={jetonsDepuisVue(participants)} deplacables={(id) => id === moiId} onDeplacer={deplacer} moiId={moiId} />
+        <PlanCombat jetons={jetonsDepuisVue(participants)} deplacables={(id) => id === moiId || participants.some((p) => p.id === id && p.mine)} onDeplacer={deplacer} moiId={moiId} />
       </div>
       {moi && <Economie combat={combat} rang={moi.order} budget={moi.budget} attaquesParAction={attaquesParAction} />}
     </section>

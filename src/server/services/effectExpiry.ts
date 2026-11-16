@@ -1,4 +1,5 @@
 import "server-only";
+import { endFormsAndSummons } from "@/src/server/services/combatForms";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
 import { effectFromRow, expireEffects, type ActiveDurableEffect, type ExpiryEvent, type ExpiryReason } from "@/src/core/rules/durableEffects";
@@ -146,6 +147,18 @@ export async function expireFeatureEffects(
     for (const key of effect.conditions) {
       const tenu = effets.some((k) => k.bearer === effect.bearer && k.conditions.includes(key));
       if (!tenu) aRetirer.set(effect.bearer, new Set([...(aRetirer.get(effect.bearer) ?? []), key]));
+    }
+  }
+
+  // V3.1-183 (ADR 0078) : la fin d'un effet d'une règle ôte la forme qu'elle donnait et renvoie les créatures qu'elle avait invoquées.
+  if (combatId) {
+    for (const { effect } of partis) {
+      if (!effect.ruleKey) continue;
+      const ligne = effect.bearer.startsWith("participant:")
+        ? participants.find((x) => `participant:${x.id}` === effect.bearer)
+        : participants.find((x) => x.entity_id === effect.bearer);
+      if (!ligne) continue;
+      await endFormsAndSummons(supabase, { campaignId: params.campaignId, combatId, bearerParticipantId: ligne.id, sourceRuleKey: effect.ruleKey, callerIsGm: gm });
     }
   }
 

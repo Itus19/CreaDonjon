@@ -32,6 +32,10 @@ export interface PlayerCombatRow {
   budget: TurnBudget | null;
   /** V3.1-169 (ADR 0077) : la position sur le plan, en mètres ; `null` tant que le jeton n'est pas posé. */
   position: { x: number; y: number } | null;
+  /** V3.1-183 (ADR 0078) : la créature est pilotée par cette joueuse. */
+  mine: boolean;
+  /** V3.1-183 : le nom de la forme portée par un allié (Forme sauvage) ; `null` sinon. */
+  formLabel: string | null;
 }
 
 export interface PlayerCombatParticipant extends PlayerCombatRow {

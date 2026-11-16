@@ -12,6 +12,8 @@ import { zSpellCastingBlockData } from "@/src/core/schemas/rule-blocks";
 import { orderParticipants } from "@/src/server/services/combats";
 import { getActiveCombatForCampaign, listCombatParticipants, type CombatParticipantRow, type CombatRow } from "@/src/server/repos/combats";
 import { attackSightFor } from "@/src/server/services/combatPerception";
+import { playFormsAndSummons } from "@/src/server/services/combatForms";
+import { updateBlockWithVersionCheck } from "@/src/server/repos/blocks";
 import { listCampaignCharacters } from "@/src/server/repos/campaigns";
 import { deleteFeatureEffect, insertFeatureEffect, listFeatureEffectsForBearers } from "@/src/server/repos/activeEffects";
 import { readSpellMechanics, resolveCharacterActionContext } from "@/src/server/services/characterActions";
@@ -65,7 +67,9 @@ export type ActivateFeatureFailure =
   | "area_unplaced"
   | "target_out_of_area"
   /** V3.1-181 (ADR 0078) : « une créature que vous voyez », et le lanceur ne la voit pas. */
-  | "target_unseen";
+  | "target_unseen"
+  /** V3.1-183 : le consommable demandé n'est pas dans l'inventaire. */
+  | "item_not_held";
 
 export interface ActivateFeatureSuccess {
   ok: true;
@@ -118,6 +122,8 @@ export async function activateFeature(
     spell?: { slotLevel: number; castOption?: { ruleKey: string; optionId: string }; /** Lancé par un effet `cast_spell` gratuit : aucun emplacement. */ free?: boolean };
     /** V3.1-165 : déjà payé ailleurs (une réaction jouée par sa fenêtre) : le budget du tour n'est pas touché. */
     skipBudget?: boolean;
+    /** V3.1-183 (ADR 0078) : la quantité choisie (Imposition des mains), bornée par l'activation. */
+    amount?: number;
     /**
      * V3.1-169 (ADR 0077) : une activation de zone posée sur le plan — le
      * point où elle est posée, et vers où vise un cône ou une ligne. Ses cibles
@@ -282,6 +288,7 @@ export async function activateFeature(
     rng: serverRng,
     locale: params.locale,
     ...(params.spell ? { slotLevel: params.spell.slotLevel } : {}),
+    ...(params.amount !== undefined ? { amount: params.amount } : {}),
   });
   if (!plan.ok) return { ok: false, reason: plan.reason, ...(plan.detail ? { detail: plan.detail } : {}) };
 
@@ -296,16 +303,36 @@ export async function activateFeature(
     else return { ok: false, reason: "no_slot_available" };
   }
 
+  // V3.1-183 (ADR 0078) : un consommable (une fiole) se retire de l'inventaire ; sans l'objet, rien n'est joué.
+  let inventaireApres: { items: unknown[] } | null = null;
+  if (plan.plan.consume) {
+    const conso = plan.plan.consume;
+    const items = (ctx.inventoryData?.items ?? []) as { id: string; ref?: { kind: string; key?: string }; qty?: number }[];
+    const objet = items.find((i) => i.ref?.kind === "rule" && i.ref.key === conso.key && (i.qty ?? 1) >= conso.count);
+    if (!objet || !ctx.inventoryBlockRow || !ctx.inventoryData) return { ok: false, reason: "item_not_held", detail: conso.key };
+    const reste = (objet.qty ?? 1) - conso.count;
+    inventaireApres = { ...ctx.inventoryData, items: reste > 0 ? items.map((i) => (i.id === objet.id ? { ...i, qty: reste } : i)) : items.filter((i) => i.id !== objet.id) };
+  }
+
+  // V3.1-183 : regagner des utilisations (Rage persistante) — sur le compteur de celui qui active.
+  const usesApres: Record<string, number> = { ...plan.plan.used };
+  let regain = false;
+  for (const e of plan.plan.effects) {
+    if (e.action !== "restore_resource" || e.who !== params.entityId) continue;
+    usesApres[e.key] = e.all ? 0 : Math.max(0, (usesApres[e.key] ?? 0) - (e.amount ?? 0));
+    regain = true;
+  }
+
   const label = activation.label[params.locale] ?? activation.label.fr ?? activation.id;
   const note = `Activation — ${label} (${ctx.entityName})`;
   const sessionId = await getOrOpenSessionForCampaign(supabase, params.campaignId);
 
   // 1. Les usages (et l'emplacement d'un sort) : l'état de jeu du personnage, le sien (droit vérifié par la route), en une écriture.
-  if (plan.plan.spend.length > 0 || Object.keys(slotPatch).length > 0) {
+  if (plan.plan.spend.length > 0 || regain || Object.keys(slotPatch).length > 0) {
     await applyRuntimeStateChange(supabase, {
       entityId: params.entityId,
       campaignId: params.campaignId,
-      patch: { ...(plan.plan.spend.length > 0 ? { resources: plan.plan.used } : {}), ...slotPatch },
+      patch: { ...(plan.plan.spend.length > 0 || regain ? { resources: usesApres } : {}), ...slotPatch },
       note: `${note} : ${[...plan.plan.spend.map((s) => `${s.key} −${s.amount}`), ...(Object.keys(slotPatch).length > 0 ? [`emplacement niveau ${niveau}`] : [])].join(", ")}`,
       sessionId,
       actor: "player",
@@ -322,7 +349,11 @@ export async function activateFeature(
     scene: null,
     spend: null,
     // V3.1-199 : « lancer un sort » se joue plus bas, par le service du lancer : pas ici (sinon le journal le disait « non lancé »).
-    effects: [...plan.plan.effects.filter((e) => e.action !== "apply_effect" && e.action !== "cast_spell"), ...etats],
+    // V3.1-183 : formes, invocations et regain se jouent à part (plus bas, et sur le compteur ci-dessus).
+    effects: [
+      ...plan.plan.effects.filter((e) => e.action !== "apply_effect" && e.action !== "cast_spell" && e.action !== "transform" && e.action !== "summon" && e.action !== "restore_resource"),
+      ...etats,
+    ],
     note,
     fromEventId: null,
     combatId,
@@ -395,6 +426,33 @@ export async function activateFeature(
   }
   if (signes.length > 0) await applySignedEngineChange(supabase, { campaignId: params.campaignId, changes: signes });
 
+  // V3.1-183 : le consommable retiré, puis les formes et les invocations (le combat est relu s'il ne l'a pas été).
+  if (inventaireApres && ctx.inventoryBlockRow) {
+    const ecrit = await updateBlockWithVersionCheck(supabase, {
+      id: ctx.inventoryBlockRow.id,
+      expectedVersion: ctx.inventoryBlockRow.version,
+      display: ctx.inventoryBlockRow.display,
+      data: inventaireApres as unknown as Json,
+      visibilityLevel: ctx.inventoryBlockRow.visibility_level,
+      visibilityScopeId: ctx.inventoryBlockRow.visibility_scope_id,
+    });
+    if (!ecrit) console.error("Consommable : l'inventaire a changé entre-temps, l'objet n'a pas été retiré", { entityId: params.entityId });
+  }
+  let phrasesFormes: string[] = [];
+  if (plan.plan.effects.some((e) => e.action === "transform" || e.action === "summon")) {
+    if (!combatRow) {
+      const actif = await getActiveCombatForCampaign(supabase, params.campaignId);
+      if (actif && actif.status === "running") {
+        combatRow = actif;
+        participants = params.callerIsGm ? await listCombatParticipants(supabase, actif.id) : await readCombatParticipantsSigned(supabase, { campaignId: params.campaignId, combatId: actif.id });
+      }
+    }
+    phrasesFormes = await playFormsAndSummons(supabase, {
+      campaignId: params.campaignId, combat: combatRow, participants, effects: plan.plan.effects, casterEntityId: params.entityId,
+      ruleKey: params.ruleKey, callerIsGm: params.callerIsGm, worldId: campaign.worldId, locale: params.locale,
+    });
+  }
+
   const targets = cibles.map((id) => {
     const key = `participant:${id}`;
     const sauvegarde = plan.plan.effects.find((e): e is Extract<ResolvedEffect, { action: "saving_throw" }> => e.action === "saving_throw" && e.who === key);
@@ -444,7 +502,7 @@ export async function activateFeature(
   return {
     ok: true,
     targets,
-    changes: [...avertissements, ...outcome.changes, ...lances, ...(budget?.over ? ["Budget du tour dépassé : le MJ tranche."] : [])],
+    changes: [...avertissements, ...outcome.changes, ...phrasesFormes, ...lances, ...(budget?.over ? ["Budget du tour dépassé : le MJ tranche."] : [])],
     applied: plan.plan.applied.map((a) => ({ bearer: a.bearer, label: a.label })),
     used: plan.plan.used,
     overBudget: budget?.over ?? false,

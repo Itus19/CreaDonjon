@@ -38,6 +38,7 @@ const MESSAGES: Record<ActivateFeatureFailure, string> = {
   target_out_of_area: "Cette cible n'est pas dans la zone.",
   target_unseen: "Le lanceur ne voit pas cette cible.",
   amount_out_of_range: "Choisis une quantité entre 1 et le maximum permis.",
+  item_not_held: "L'objet à consommer n'est pas dans l'inventaire.",
 };
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -62,6 +63,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     locale,
     ...(body.spell ? { spell: body.spell } : {}),
     ...(body.area ? { area: body.area } : {}),
+    ...(body.amount !== undefined ? { amount: body.amount } : {}),
   });
   if (!result.ok) {
     const message = MESSAGES[result.reason];

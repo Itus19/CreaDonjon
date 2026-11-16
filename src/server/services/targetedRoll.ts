@@ -664,15 +664,19 @@ export async function resolveTargetedRoll(
   const participantsSignes = joueur ? await readCombatParticipantsSigned(supabase, { campaignId: params.campaignId, combatId: combat.id }) : null;
   const target = participantsSignes ? (participantsSignes.find((p) => p.id === input.targetId) ?? null) : await getCombatParticipantById(supabase, input.targetId);
   if (!target || target.combat_id !== combat.id) return { ok: false, reason: "target_not_found" };
-  if (joueur && input.actor.kind !== "character") return { ok: false, reason: "actor_not_found" };
+  // V3.1-183 (ADR 0078) : un joueur agit avec son PJ, ou avec une créature qu'il pilote (invoquée par son PJ).
+  if (joueur && input.actor.kind !== "character") {
+    const acteurId = input.actor.participantId;
+    const pilotee = participantsSignes?.find((p) => p.id === acteurId);
+    if (!pilotee || pilotee.controlled_by !== params.callerId) return { ok: false, reason: "actor_not_found" };
+  }
   // V3.1-107 : des dégâts au nom d'un joueur ne viennent que d'une attaque qui a touché (jeton signé), une seule fois.
   let jetonDegats: JetonDegats | null = null;
   if (joueur && input.kind === "damage") {
     jetonDegats = input.damageToken ? verifyDamageToken(input.damageToken, engineSigningKeyFromEnv()) : null;
     const memeAttaque =
       jetonDegats !== null &&
-      input.actor.kind === "character" &&
-      jetonDegats.actor === input.actor.entityId &&
+      jetonDegats.actor === (input.actor.kind === "character" ? input.actor.entityId : input.actor.participantId) &&
       jetonDegats.target === target.id &&
       jetonDegats.action === canonicalJson(input.action);
     if (!memeAttaque) return { ok: false, reason: "invalid_action" };
@@ -931,8 +935,8 @@ export async function resolveTargetedRoll(
         action,
         targetId: target.id,
         critical: attack.isCritical,
-        ...(joueur && input.actor.kind === "character"
-          ? { token: signDamageToken({ actorEntityId: input.actor.entityId, action, targetId: target.id, critical: attack.isCritical }, engineSigningKeyFromEnv()) }
+        ...(joueur
+          ? { token: signDamageToken({ actorEntityId: input.actor.kind === "character" ? input.actor.entityId : input.actor.participantId, action, targetId: target.id, critical: attack.isCritical }, engineSigningKeyFromEnv()) }
           : {}),
       };
     }

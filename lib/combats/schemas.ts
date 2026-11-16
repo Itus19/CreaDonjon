@@ -139,10 +139,15 @@ export const playerTargetedRollSchema = z
   .object({
     // V3.1-200 (ADR 0099) : les sorts à sauvegarde aussi ; la demande s'écrit par un changement signé.
     kind: z.enum(["attack", "damage", "spell_attack", "spell_save", "heal"]),
-    actor: z.object({ kind: z.literal("character"), entityId: z.string().uuid() }).strict(),
+    // V3.1-183 (ADR 0078) : ou une créature que la joueuse pilote (invoquée par son PJ), avec une action de son bloc de stats.
+    actor: z.discriminatedUnion("kind", [
+      z.object({ kind: z.literal("character"), entityId: z.string().uuid() }).strict(),
+      z.object({ kind: z.literal("participant"), participantId: z.string().uuid() }).strict(),
+    ]),
     action: z.discriminatedUnion("kind", [
       z.object({ kind: z.literal("weapon"), itemId: z.string().min(1).max(200) }).strict(),
       z.object({ kind: z.literal("spell"), spellKey: z.string().min(1).max(200), slotLevel: z.number().int().min(0).max(9) }).strict(),
+      z.object({ kind: z.literal("monster_action"), name: z.string().min(1).max(200) }).strict(),
     ]),
     targetId: z.string().uuid(),
     advantage: z.enum(["normal", "advantage", "disadvantage"]).default("normal"),

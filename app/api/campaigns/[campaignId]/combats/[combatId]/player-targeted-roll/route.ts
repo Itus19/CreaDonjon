@@ -29,9 +29,12 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
 
-  const { access } = await checkSheetActionAccess(supabase, { userId: user.id, entityId: parsed.data.actor.entityId, campaignId: adresse.data.campaignId });
-  if (access === "not_found") return NextResponse.json({ error: "Fiche ou campagne introuvable." }, { status: 404 });
-  if (access !== "ok") return NextResponse.json({ error: "Vous n'avez pas le droit d'agir avec cette fiche." }, { status: 403 });
+  // Avec son PJ : le droit d'agir avec la fiche. Avec une créature pilotée (V3.1-183) : le service vérifie qu'elle est à lui.
+  if (parsed.data.actor.kind === "character") {
+    const { access } = await checkSheetActionAccess(supabase, { userId: user.id, entityId: parsed.data.actor.entityId, campaignId: adresse.data.campaignId });
+    if (access === "not_found") return NextResponse.json({ error: "Fiche ou campagne introuvable." }, { status: 404 });
+    if (access !== "ok") return NextResponse.json({ error: "Vous n'avez pas le droit d'agir avec cette fiche." }, { status: 403 });
+  }
 
   try {
     const result = await resolveTargetedRoll(supabase, {
