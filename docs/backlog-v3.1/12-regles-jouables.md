@@ -513,8 +513,50 @@ Perception et visibilité (invisible, caché, sens), lumière, étiquettes de ma
 
 *Fait le 16 novembre.* `data/srd/playable-2024.json` : lumière de l'Arme sacrée (6 m vive, 6 m faible) ; Forme sauvage (ressource, quatre formes recommandées en variantes, PV temporaires, forme superposée) ; Compagnon sauvage (utilisation de Forme sauvage ou emplacement, chouette invoquée) ; Imposition des mains (réserve 5 × niveau, quantité choisie, Empoisonné pour 5) ; Rage persistante (regain de toutes les Rages, une fois par repos long). Réimport fait. **Trouvé au passage et corrigé** : hors combat, une aptitude qui vise une créature ou un allié s'applique à soi (elle était refusée faute de cible) ; la réponse d'une activation rend les compteurs après un regain. Vérifié par `srdModeleDuMonde.integration.test.ts` 4/4. **Restent en lacune, dites sur leur fiche** : choix libre des formes connues ; durée de la Forme sauvage en formule (comptée 1 heure) ; fin du familier comptée 8 heures ; Rage persistante au clic (pas d'événement « jet d'Initiative ») ; Restauration magique (regain d'emplacements, à faire) ; Abjuration d'ennemis, une seule chose par tour. Pas d'Aasimar dans le SRD 5.2 ; Se cacher se joue par son bouton (184).
 
-### ☐ V3.1-139 — L'inventaire et la couverture du SRD · `L` · sans modèle IA — **après la fondation**
+### ☐ V3.1-139 — L'inventaire et la couverture du SRD · `L` · sans modèle IA — **conçu (ADR 0100), découpé en 212 à 215**
 Mesurer la couverture de tout ce qui entre en jeu (sorts, aptitudes, espèces, dons, objets magiques, monstres avec leurs actions et traits), lister les lacunes par brique, et tenir le compte jusqu'à 100 %.
+
+**Conçu le 16 novembre (ADR 0100).** Deux choix de l'auteur : le compte vit dans un **rapport généré** (`docs/couverture-srd.md`, script en lecture seule, commité après chaque ticket de données) ; chaque lacune porte une **étiquette `brick`** dans un vocabulaire fermé. « Jouable » se définit par catégorie (`coverageOf`) : un sort se joue aussi par son bloc d'effets, une arme par ses données, un monstre par ses actions chiffrées, une espèce ou une classe par ses aptitudes. Mesure de départ (officiel, critère de V3.1-132) : aptitudes 22 jouables, 23 partielles, 566 non évaluées ; sorts 1 partiel, 338 non évalués (dont 153 jouables par leurs effets, que l'ancien critère ne voit pas) ; objets magiques 1 partiel, 302 non évalués ; 317 monstres.
+
+#### ☐ V3.1-212 — Le noyau de la couverture : `coverageOf` et les briques · `M` · sans modèle IA — **prêt (Opus)**
+
+**Modèle conseillé : Opus** — noyau, définition. Tests d'abord.
+
+- `src/core/rules/coverage.ts` : `coverageOf(catégorie, faits)` selon la table de l'ADR 0100 (`playable`, `partial`, `unevaluated`, `out_of_scope`, lacunes détaillées) ; agrégation d'une espèce, d'une classe, d'une sous-classe par ses aptitudes ; un monstre par ses actions et ses traits.
+- `COVERAGE_BRICKS` (vocabulaire fermé) ; le schéma du bloc `coverage` accepte `brick` facultatif.
+- La liste des états joués par le moteur, en une constante.
+
+**Critères d'acceptation**
+- [ ] Tests : un sort à bloc d'effets est jouable sans activation ; une arme est jouable ; un monstre dont une action n'a ni jet ni dégâts est partiel ; une espèce dont une aptitude est partielle est partielle ; une lacune sans brique compte dans `other`.
+
+#### ☐ V3.1-213 — Les lacunes étiquetées · `S` · sans modèle IA — **prêt (Opus)**
+
+**Modèle conseillé : Opus** — juger la brique de chaque lacune. **Dépend de** : 212. **Sous-tâches Haiku** : recenser les lacunes existantes ; vérifications.
+
+- Étiqueter chaque lacune de `data/srd/playable-2024.json` ; réimport.
+- L'éditeur de briques propose la brique d'une lacune (liste fermée, libellés dans `messages/`).
+
+**Critères d'acceptation**
+- [ ] Aucune lacune de l'officiel sans brique ; l'éditeur l'enregistre et la relit.
+
+#### ☐ V3.1-214 — Le rapport de couverture · `M` · sans modèle IA — **prêt (Sonnet)**
+
+**Modèle conseillé : Sonnet**, une fois 212 fait ; Opus relit. **Dépend de** : 212.
+
+- `scripts/couverture-srd.ts` : lecture seule, paginée, de l'officiel ; écrit `docs/couverture-srd.md` (compte par catégorie, lacunes par brique avec les règles concernées, règles fréquentes d'abord : aptitudes des niveaux 1 à 5, sorts 0 à 3). Coût écrit en tête du script (QUOTAS).
+- Le premier rapport est commité.
+
+**Critères d'acceptation**
+- [ ] Le rapport se régénère à l'identique sur une base inchangée ; ses comptes recoupent `coverageOf` sur un échantillon testé.
+
+#### ☐ V3.1-215 — La vue du MJ étendue · `M` · sans modèle IA — **prêt (Sonnet)**
+
+**Modèle conseillé : Sonnet**, une fois 212 et 213 faits ; Opus relit. **Sous-tâches Haiku** : libellés ; planche ; vérifications.
+
+- « Règles non jouables » passe par `coverageOf` : espèces et monstres en plus, la brique de chaque lacune, un filtre par brique. Toujours lue à la demande (QUOTAS).
+
+**Critères d'acceptation**
+- [ ] Une variante maison voit ses propres règles partielles avec leur brique ; un sort jouable par ses effets n'y figure plus.
 
 ### ☐ V3.1-140 — La conversion assistée : du texte aux briques · `L` · **avec modèle IA** — **après la fondation**
 Le modèle lit le texte d'une fiche et propose des blocs (`resources`, `activation`, `coverage`), par `ai_proposals` : Zod, validation métier, relecture par l'auteur, application. Jamais d'écriture directe (règle absolue 9). Le texte de la règle entre dans le prompt comme donnée encadrée (règle 10).
