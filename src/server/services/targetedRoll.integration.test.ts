@@ -379,7 +379,8 @@ describe.skipIf(!hasCreds)("cibler : le cœur commun de résolution (integration
     await toucher("i1");
     expect((await participant(p["Gobelin 1"])).conditions).toEqual([]);
     await admin.from("combat_participants").update({ ac: 15 }).eq("id", p["Gobelin 1"]);
-  });
+    // Plusieurs attaques contre la base hébergée : 27 à 37 s, avant comme après V3.1-181 (mesuré le 16 nov.).
+  }, 120000);
 
   it("bottes (V3.1-148) : Sapé tombe au début du tour suivant de son auteur ; Vexé à la fin de son prochain tour", async () => {
     await setHp(p["Gobelin 1"], null, 7);
