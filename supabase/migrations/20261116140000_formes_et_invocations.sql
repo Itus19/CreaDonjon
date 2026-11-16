@@ -2,8 +2,8 @@
 --
 -- 1. `combat_participants.form` (la forme portée : clé du bloc de stats, mode,
 --    nom), `summoned_by` (la ligne de celle qui invoque), `controlled_by` (la
---    joueuse qui pilote la créature), `effect_instance_id` (l'effet qui la fait
---    vivre : sa fin la retire).
+--    joueuse qui pilote la créature), `source_rule_key` (la règle qui l'a fait
+--    naître : la fin d'un effet de cette règle sur celle qui invoque la retire).
 -- 2. `apply_engine_change` gagne trois genres signés : `summon` (une joueuse
 --    invoque ; la base vérifie que celle qui invoque est SON PJ, dans un combat
 --    de la campagne nommée, et fait de l'appelant celle qui pilote), `unsummon`
@@ -16,7 +16,7 @@
 alter table combat_participants add column form jsonb check (form is null or jsonb_typeof(form) = 'object');
 alter table combat_participants add column summoned_by uuid references combat_participants(id) on delete cascade;
 alter table combat_participants add column controlled_by uuid references auth.users(id) on delete set null;
-alter table combat_participants add column effect_instance_id uuid;
+alter table combat_participants add column source_rule_key text check (source_rule_key is null or length(source_rule_key) between 1 and 200);
 
 create or replace function public.apply_engine_change(p_payload text, p_signature text)
 returns void
@@ -206,22 +206,22 @@ begin
          and exists (select 1 from combats c where c.id = cp.combat_id and c.campaign_id = v_campaign);
     elsif v_change ->> 'kind' = 'summon' then
       -- V3.1-183 (ADR 0078) : une créature invoquée, ajoutée au combat. `id` : la nouvelle ligne (tirée par le serveur).
-      -- `summon` = { summoner_id, rule_key, label, ac, hp_max, effect_instance_id }, rien d'autre. La base ne croit
+      -- `summon` = { summoner_id, rule_key, label, ac, hp_max, source_rule_key }, rien d'autre. La base ne croit
       -- pas le reste sur parole : celle qui invoque est un participant d'un combat de la campagne nommée, et c'est
       -- le PJ de l'appelant ; la créature est alliée, pilotée par l'appelant, au même combat.
       v_sum := v_change -> 'summon';
       if v_sum is null or jsonb_typeof(v_sum) <> 'object'
-         or exists (select 1 from jsonb_object_keys(v_sum) k where k not in ('summoner_id', 'rule_key', 'label', 'ac', 'hp_max', 'effect_instance_id'))
+         or exists (select 1 from jsonb_object_keys(v_sum) k where k not in ('summoner_id', 'rule_key', 'label', 'ac', 'hp_max', 'source_rule_key'))
          or jsonb_typeof(v_sum -> 'rule_key') <> 'string' or length(v_sum ->> 'rule_key') not between 1 and 200
          or jsonb_typeof(v_sum -> 'label') <> 'string' or length(v_sum ->> 'label') not between 1 and 200
          or jsonb_typeof(v_sum -> 'ac') not in ('number', 'null') or jsonb_typeof(v_sum -> 'hp_max') not in ('number', 'null')
          or coalesce((v_sum ->> 'hp_max')::int, 1) not between 1 and 2000 or coalesce((v_sum ->> 'ac')::int, 10) not between 0 and 40
-         or jsonb_typeof(v_sum -> 'effect_instance_id') not in ('string', 'null') then
+         or jsonb_typeof(v_sum -> 'source_rule_key') not in ('string', 'null') or length(coalesce(v_sum ->> 'source_rule_key', 'x')) > 200 then
         raise exception 'invocation invalide' using errcode = '22023';
       end if;
-      insert into combat_participants (id, combat_id, source_kind, entity_id, rule_key, label, ac, hp_max, hp_current, is_ally, display_order, summoned_by, controlled_by, effect_instance_id, pos_x, pos_y)
+      insert into combat_participants (id, combat_id, source_kind, entity_id, rule_key, label, ac, hp_max, hp_current, is_ally, display_order, summoned_by, controlled_by, source_rule_key, pos_x, pos_y)
       select v_id, s.combat_id, 'statblock', null, v_sum ->> 'rule_key', v_sum ->> 'label', (v_sum ->> 'ac')::int, (v_sum ->> 'hp_max')::int, (v_sum ->> 'hp_max')::int,
-             true, s.display_order + 0.5, s.id, auth.uid(), (v_sum ->> 'effect_instance_id')::uuid, s.pos_x, s.pos_y
+             true, s.display_order + 0.5, s.id, auth.uid(), v_sum ->> 'source_rule_key', s.pos_x, s.pos_y
         from combat_participants s join combats c on c.id = s.combat_id
        where s.id = (v_sum ->> 'summoner_id')::uuid
          and c.campaign_id = v_campaign
@@ -234,11 +234,11 @@ begin
        where cp.id = v_id and cp.summoned_by is not null and cp.controlled_by = auth.uid()
          and exists (select 1 from combats c where c.id = cp.combat_id and c.campaign_id = v_campaign);
     elsif v_change ->> 'kind' = 'form' then
-      -- V3.1-183 : la forme portée (Forme sauvage, Métamorphose) ; `form` = { rule_key, mode, label, effect_instance_id? } ou null.
+      -- V3.1-183 : la forme portée (Forme sauvage, Métamorphose) ; `form` = { rule_key, mode, label, source_rule_key? } ou null.
       v_form := v_change -> 'form';
       if v_form is null
          or (jsonb_typeof(v_form) = 'object' and (
-               exists (select 1 from jsonb_object_keys(v_form) k where k not in ('rule_key', 'mode', 'label', 'effect_instance_id'))
+               exists (select 1 from jsonb_object_keys(v_form) k where k not in ('rule_key', 'mode', 'label', 'source_rule_key'))
                or (v_form ->> 'mode') not in ('overlay', 'replace')
                or jsonb_typeof(v_form -> 'rule_key') <> 'string' or jsonb_typeof(v_form -> 'label') <> 'string'))
          or jsonb_typeof(v_form) not in ('object', 'null') then

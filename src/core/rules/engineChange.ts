@@ -89,7 +89,40 @@ const zPerceptionChange = z
   })
   .strict();
 
-const zChange = z.union([zStateChange, zEffectAdd, zEffectRemove, zTurnUsageChange, zSaveRequestChange, zPerceptionChange]);
+/** V3.1-183 (ADR 0078) : une créature invoquée par une joueuse ; la base vérifie que celle qui invoque est son PJ. */
+const zSummonChange = z
+  .object({
+    kind: z.literal("summon"),
+    id: z.string().uuid(),
+    summon: z
+      .object({
+        summoner_id: z.string().uuid(),
+        rule_key: z.string().min(1).max(200),
+        label: z.string().min(1).max(200),
+        ac: z.number().int().min(0).max(40).nullable(),
+        hp_max: z.number().int().min(1).max(2000).nullable(),
+        source_rule_key: z.string().min(1).max(200).nullable(),
+      })
+      .strict(),
+  })
+  .strict();
+
+/** V3.1-183 : retirer une créature que la joueuse pilote (fin de l'effet). */
+const zUnsummonChange = z.object({ kind: z.literal("unsummon"), id: z.string().uuid() }).strict();
+
+/** V3.1-183 : poser (ou ôter, `null`) la forme portée. */
+const zFormChange = z
+  .object({
+    kind: z.literal("form"),
+    id: z.string().uuid(),
+    form: z
+      .object({ rule_key: z.string().min(1).max(200), mode: z.enum(["overlay", "replace"]), label: z.string().min(1).max(200), source_rule_key: z.string().min(1).max(200).optional() })
+      .strict()
+      .nullable(),
+  })
+  .strict();
+
+const zChange = z.union([zStateChange, zEffectAdd, zEffectRemove, zTurnUsageChange, zSaveRequestChange, zPerceptionChange, zSummonChange, zUnsummonChange, zFormChange]);
 
 export const zEngineChange = z
   .object({

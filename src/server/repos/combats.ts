@@ -109,10 +109,15 @@ export interface CombatParticipantRow {
   hidden_from_players: boolean;
   /** V3.1-181 : total du test de Discrétion d'un Caché (lancé par le serveur). */
   stealth_total: number | null;
+  /** V3.1-183 (ADR 0078) : la forme portée (`{ rule_key, mode, label, source_rule_key? }`), la ligne de celle qui invoque, la joueuse qui pilote, la règle qui l'a fait naître. */
+  form: Json | null;
+  summoned_by: string | null;
+  controlled_by: string | null;
+  source_rule_key: string | null;
 }
 
 const PARTICIPANT_COLUMNS =
-  "id, combat_id, source_kind, entity_id, rule_key, label, initiative, ac, hp_max, hp_current, temp_hp, conditions, concentration, resources_used, turn_usage, is_ally, display_order, created_at, pos_x, pos_y, hidden_from_players, stealth_total";
+  "id, combat_id, source_kind, entity_id, rule_key, label, initiative, ac, hp_max, hp_current, temp_hp, conditions, concentration, resources_used, turn_usage, is_ally, display_order, created_at, pos_x, pos_y, hidden_from_players, stealth_total, form, summoned_by, controlled_by, source_rule_key";
 
 export async function listCombatParticipants(supabase: TypedClient, combatId: string): Promise<CombatParticipantRow[]> {
   const { data, error } = await supabase
@@ -184,6 +189,8 @@ export interface CombatParticipantPatch {
   /** V3.1-181 : le masquage (drapeau d'accès) et le total de Discrétion d'un Caché. */
   hiddenFromPlayers?: boolean;
   stealthTotal?: number | null;
+  /** V3.1-183 : la forme portée, `null` pour l'ôter. */
+  form?: Json | null;
 }
 
 export async function updateCombatParticipant(
@@ -203,6 +210,7 @@ export async function updateCombatParticipant(
   if (patch.turnUsage !== undefined) update.turn_usage = patch.turnUsage;
   if (patch.hiddenFromPlayers !== undefined) update.hidden_from_players = patch.hiddenFromPlayers;
   if (patch.stealthTotal !== undefined) update.stealth_total = patch.stealthTotal;
+  if (patch.form !== undefined) update.form = patch.form;
   if (patch.position !== undefined) {
     update.pos_x = patch.position?.x ?? null;
     update.pos_y = patch.position?.y ?? null;
@@ -246,6 +254,9 @@ export interface PlayerCombatViewRow {
   /** V3.1-169 (ADR 0077) : position sur le plan ; absente avant la migration du 169. */
   pos_x?: number | null;
   pos_y?: number | null;
+  /** V3.1-183 : la créature est pilotée par l'appelant ; la forme portée par un allié. */
+  mine?: boolean | null;
+  form?: Json | null;
 }
 
 /**

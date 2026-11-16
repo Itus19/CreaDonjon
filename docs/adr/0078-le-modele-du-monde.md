@@ -83,7 +83,7 @@ L'ADR 0077 a posé le plan : des positions en mètres, et « ce qui est posé es
   - `source_kind = statblock` et `is_ally` ;
   - `summoned_by`, la ligne de celui qui invoque ;
   - `controlled_by`, la joueuse qui le pilote ;
-  - `effect_instance_id`, l'effet qui le fait vivre.
+  - `source_rule_key`, la règle qui l'a fait naître : la fin d'un effet de cette règle sur celle qui invoque la retire (l'identifiant d'un effet n'est pas connu d'une joueuse au moment d'invoquer).
 - Le participant est retiré quand l'effet prend fin.
 - La joueuse le fait agir par les jets ciblés existants (acteur `participant`). Elle n'a ce droit que sur les créatures qu'elle pilote, revérifié en base comme `set_own_position`.
 
@@ -109,7 +109,7 @@ Pour **M15**, une fiche porte des étiquettes : `immune.spell.<clé>` et `untarg
 
 - **Deux migrations** :
   - la perception : `combats.lighting`, `hidden_from_players`, et `combat_player_view` qui masque ;
-  - les formes et invocations : `form`, `summoned_by`, `controlled_by`, `effect_instance_id`, plus le droit de jouer sa créature.
+  - les formes et invocations : `form`, `summoned_by`, `controlled_by`, `source_rule_key`, plus le droit de jouer sa créature.
 - **Coût** (QUOTAS) : recalculer le masquage demande les fiches des PJ du combat, à chaque écriture qui touche la perception. C'est borné, mais à mesurer.
 - **L'écran** :
   - la lumière (fond qui s'assombrit, halos des sources) ;

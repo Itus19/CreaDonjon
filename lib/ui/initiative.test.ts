@@ -48,6 +48,10 @@ function participant(extra: Partial<CombatParticipantRow> & { id: string }): Com
     pos_y: null,
     hidden_from_players: false,
     stealth_total: null,
+    form: null,
+    summoned_by: null,
+    controlled_by: null,
+    source_rule_key: null,
     ...extra,
   };
 }

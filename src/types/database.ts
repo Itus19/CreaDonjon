@@ -969,9 +969,12 @@ export type Database = {
           combat_id: string
           concentration: Json | null
           conditions: Json
+          controlled_by: string | null
           created_at: string
           display_order: number
+          source_rule_key: string | null
           entity_id: string | null
+          form: Json | null
           hp_current: number | null
           hidden_from_players: boolean
           hp_max: number | null
@@ -985,6 +988,7 @@ export type Database = {
           rule_key: string | null
           source_kind: string
           stealth_total: number | null
+          summoned_by: string | null
           temp_hp: number
           turn_usage: Json
         }
@@ -993,9 +997,12 @@ export type Database = {
           combat_id: string
           concentration?: Json | null
           conditions?: Json
+          controlled_by?: string | null
           created_at?: string
           display_order?: number
+          source_rule_key?: string | null
           entity_id?: string | null
+          form?: Json | null
           hp_current?: number | null
           hidden_from_players?: boolean
           hp_max?: number | null
@@ -1009,6 +1016,7 @@ export type Database = {
           rule_key?: string | null
           source_kind: string
           stealth_total?: number | null
+          summoned_by?: string | null
           temp_hp?: number
           turn_usage?: Json
         }
@@ -1017,9 +1025,12 @@ export type Database = {
           combat_id?: string
           concentration?: Json | null
           conditions?: Json
+          controlled_by?: string | null
           created_at?: string
           display_order?: number
+          source_rule_key?: string | null
           entity_id?: string | null
+          form?: Json | null
           hp_current?: number | null
           hidden_from_players?: boolean
           hp_max?: number | null
@@ -1033,6 +1044,7 @@ export type Database = {
           rule_key?: string | null
           source_kind?: string
           stealth_total?: number | null
+          summoned_by?: string | null
           temp_hp?: number
           turn_usage?: Json
         }
@@ -2971,6 +2983,8 @@ export type Database = {
           budget: Json | null
           pos_x: number | null
           pos_y: number | null
+          mine: boolean | null
+          form: Json | null
         }[]
       }
       claim_shared_note_grant: { Args: { p_entity_id: string }; Returns: boolean }

@@ -481,7 +481,7 @@ Perception et visibilité (invisible, caché, sens), lumière, étiquettes de ma
 
 **Modèle conseillé : Opus** — migration, sécurité. **Dépend de** : 182.
 
-- Migration : `combat_participants.form`, `summoned_by`, `controlled_by`, `effect_instance_id` ; une joueuse fait agir la créature qu'elle pilote (revérifié en base). `docs/SCHEMA.md`, `docs/SECURITE.md`.
+- Migration : `combat_participants.form`, `summoned_by`, `controlled_by`, `source_rule_key` ; une joueuse fait agir la créature qu'elle pilote (revérifié en base). `docs/SCHEMA.md`, `docs/SECURITE.md`.
 - Service : l'effet `summon` ajoute le participant, sa fin le retire ; `transform` pose la forme sur la ligne, sa fin la retire ; jets ciblés avec la créature pilotée.
 
 **Critères d'acceptation**
