@@ -438,7 +438,7 @@ Perception et visibilité (invisible, caché, sens), lumière, étiquettes de ma
 *Reçu de V3.1-134 (7 novembre, choix de l'auteur, ADR 0074)* : la lumière émise par une créature ou un objet (Aasimar, Arme sacrée) — une cible de modificateur qui n'a de sens qu'avec la lumière par zone de ce chantier.
 *Conçu le 8 novembre* : [ADR 0078](../adr/0078-le-modele-du-monde.md). Deux choix de l'auteur : **le moteur calcule qui voit qui** (lumière ambiante et sources, sens, Invisible, Caché, Aveuglé ; la vue des joueuses masque côté serveur, par un drapeau d'accès recalculé) ; **le moteur joue formes et invocations** (profil sur la ligne de combat ; créature invoquée = participant piloté par sa joueuse). Découpé ci-dessous.
 
-#### ☐ V3.1-180 — Le noyau de la perception : lumière, sens, qui voit qui · `M` · sans modèle IA — **prêt (Opus)**
+#### ☑ V3.1-180 — Le noyau de la perception : lumière, sens, qui voit qui · `M` · sans modèle IA — **prêt (Opus)**
 
 **Modèle conseillé : Opus** — noyau du moteur. Tests d'abord.
 
@@ -447,7 +447,9 @@ Perception et visibilité (invisible, caché, sens), lumière, étiquettes de ma
 - Avantage et désavantage d'attaque selon qui voit qui ; `targets.must_see` et `trigger.must_see` vérifiés.
 
 **Critères d'acceptation**
-- [ ] Tests : un gobelin Invisible n'est pas vu, sauf par vision véritable à portée ; dans les ténèbres, un nain (vision dans le noir 36 m) voit à 30 m comme en lumière faible et pas à 40 m ; la lumière de l'Aasimar (3 m vive, 3 m faible au-delà) éclaire ; une attaque contre une cible non vue a le désavantage.
+- [x] Tests : un gobelin Invisible n'est pas vu, sauf par vision véritable à portée ; dans les ténèbres, un nain (vision dans le noir 36 m) voit à 30 m comme en lumière faible et pas à 40 m ; la lumière de l'Aasimar (3 m vive, 3 m faible au-delà) éclaire ; une attaque contre une cible non vue a le désavantage.
+
+*Fait le 16 novembre.* `src/core/rules/perception.ts` : `lightAt` (la plus vive de l'ambiante et des sources ; une source n'assombrit jamais), `canSee` → `clear | obscured | unseen` (soi-même toujours vu ; Caché tant que la Perception n'atteint pas le total de Discrétion ; Aveuglé : perception aveugle ou des vibrations à portée ; Invisible : vision véritable ou perception aveugle à portée ; ténèbres et vision dans le noir → voilé ; lumière faible → voilé sauf vision dans le noir ; sans plan, seuls les états comptent), `attackSight`, `targetingRefusal` (M15), `perceptionConditions` (« Aveuglé », « Invisible », « Caché » du menu du MJ ramenés aux clés). Fiche : `light` (`light.bright`, `light.dim`), `untargetable`, `immuneSpells` ; `immune.spell.*` ne compte plus comme immunité aux dégâts. Catalogue des cibles de l'éditeur : défenses aux dégâts (manquaient depuis 168), lumière émise, « hors d'atteinte de la divination ». La vérification de `must_see` et l'avantage/désavantage branchés aux jets passent avec le service (181). Tests : `perception.test.ts` 15/15.
 
 #### ☐ V3.1-181 — La migration et le service de la perception · `L` · sans modèle IA — **prêt (Opus)**
 

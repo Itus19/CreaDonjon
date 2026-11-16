@@ -30,7 +30,12 @@ export type ModifierTargetCategory =
   | "passive"
   /** V3.1-164 (ADR 0076) : attaques par action, actions permises en action bonus. */
   | "attacks"
-  | "bonus_action";
+  | "bonus_action"
+  /** V3.1-168 (ADR 0077) : résistance, vulnérabilité, immunité à un type de dégâts. */
+  | "defense"
+  /** V3.1-180 (ADR 0078) : lumière émise (mètres) ; étiquettes qui ne peuvent pas viser (M15). */
+  | "light"
+  | "untargetable";
 
 export interface ModifierTargetOption {
   target: string;
@@ -77,6 +82,13 @@ export const MODIFIER_TARGET_OPTIONS: readonly ModifierTargetOption[] = [
   ...PASSIVE_SKILLS.map((s): ModifierTargetOption => ({ target: `passive.${s}`, category: "passive", skill: s })),
   { target: "attacks_per_action", category: "attacks" },
   ...BONUS_ACTION_OPTIONS.map((a): ModifierTargetOption => ({ target: `action_as_bonus.${a}`, category: "bonus_action" })),
+  ...(["resist", "vulnerable", "immune"] as const).flatMap((d) =>
+    SPELL_DAMAGE_TYPES.map((t): ModifierTargetOption => ({ target: `${d}.${t}`, category: "defense", damageType: t }))
+  ),
+  { target: "light.bright", category: "light" },
+  { target: "light.dim", category: "light" },
+  // `immune.spell.<clé>` vise un sort précis : il se saisit en données, pas dans cette liste fermée.
+  { target: "untargetable.divination", category: "untargetable" },
 ];
 
 /** Effets valides pour une categorie de cible — ex. la maitrise/l'expertise n'ont de sens que sur une sauvegarde ou une competence, jamais sur la CA. */
@@ -98,6 +110,9 @@ export const OPS_BY_TARGET_CATEGORY: Record<ModifierTargetCategory, readonly Mod
   passive: ["add"],
   attacks: ["set", "max"],
   bonus_action: ["set"],
+  defense: ["set"],
+  light: ["set", "max"],
+  untargetable: ["set"],
 };
 
 /** `add`/`set`/`min`/`max` portent un montant ; les quatre autres (avantage, desavantage, maitrise, expertise) sont des drapeaux, jamais de valeur associee (meme distinction que `Modifier.value` dans sheet.ts, optionnel). */

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { attackSight, canSee, lightAt, targetingRefusal, type Perceiver, type PerceptionWorld } from "./perception";
+import { attackSight, canSee, lightAt, perceptionConditions, targetingRefusal, type Perceiver, type PerceptionWorld } from "./perception";
+import { characterSheet } from "./sheet";
 
 /**
  * V3.1-180 (ADR 0078) — qui voit qui, en fonctions PURES : la lumière en un
@@ -93,5 +94,30 @@ describe("targetingRefusal : restrictions et immunités par étiquette (M15)", (
     expect(targetingRefusal(amulette, { tags: ["divination"], spellKey: "locate-creature" })).toBe("untargetable");
     expect(targetingRefusal(amulette, { tags: ["evocation"], spellKey: "fire-bolt" })).toBeNull();
     expect(targetingRefusal({ untargetable: [], immuneSpells: ["magic-missile"] }, { tags: [], spellKey: "magic-missile" })).toBe("immune_spell");
+  });
+});
+
+describe("la fiche : lumière émise, cibles interdites, immunité à un sort", () => {
+  const rs = { classes: { cleric: { key: "cleric", label: "Clerc", hitDie: 8, savingThrowProficiencies: ["wis", "cha"] as ("wis" | "cha")[] } }, features: {} };
+  const build = { species: "human", classes: [{ key: "cleric", level: 1 }], abilities: { assigned: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 } }, featureKeys: [] };
+  const effet = (target: string, value = 1) => ({ target, op: "set" as const, value, source: "effect:x", label: "X", layer: 7 as const });
+
+  it("la Lumière de l'Aasimar : 3 m de lumière vive, 3 m de faible ; sans source, aucune", () => {
+    const s = characterSheet(build, rs, [], [{ key: "lum", label: "Lumière", modifiers: [effet("light.bright", 3), effet("light.dim", 3)] }]);
+    expect(s.light).toEqual({ bright: 3, dim: 3 });
+    expect(characterSheet(build, rs, [], []).light).toBeNull();
+  });
+
+  it("untargetable.divination et immune.spell.<clé> ; une immunité à un sort n'est pas une immunité aux dégâts", () => {
+    const s = characterSheet(build, rs, [], [{ key: "amu", label: "Amulette", modifiers: [effet("untargetable.divination"), effet("immune.spell.magic-missile"), effet("immune.fire")] }]);
+    expect(s.untargetable).toEqual(["divination"]);
+    expect(s.immuneSpells).toEqual(["magic-missile"]);
+    expect(s.damageDefenses.immune).toEqual(["fire"]);
+  });
+});
+
+describe("perceptionConditions : un état posé par le moteur ou par le menu du MJ", () => {
+  it("« Aveuglé », « Invisible », « Caché » valent blinded, invisible, hidden ; le reste ne change pas", () => {
+    expect(perceptionConditions(["Aveuglé", "Invisible", "Caché", "prone", "Empoigné"])).toEqual(["blinded", "invisible", "hidden", "prone", "Empoigné"]);
   });
 });

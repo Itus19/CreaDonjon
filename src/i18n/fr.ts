@@ -185,6 +185,9 @@ export const MODIFIER_TARGET_CATEGORY_LABELS_FR: Record<ModifierTargetCategory, 
   passive: "Valeur passive",
   attacks: "Attaques par action",
   bonus_action: "Action bonus",
+  defense: "Défense aux dégâts",
+  light: "Lumière émise",
+  untargetable: "Hors d'atteinte",
 };
 
 /** V3.1-155 : libellés des cibles nouvelles, quand la catégorie ne suffit pas. */
@@ -221,6 +224,9 @@ const MODIFIER_TARGET_DETAIL_FR: Record<string, string> = {
   "prof.armor.shield": "Maîtrise — boucliers",
   "ac.unarmored": "CA sans armure (bouclier permis)",
   "ac.unarmored_no_shield": "CA sans armure ni bouclier",
+  "light.bright": "Lumière vive émise (m)",
+  "light.dim": "Lumière faible au-delà (m)",
+  "untargetable.divination": "Hors d'atteinte de la divination",
 };
 
 
@@ -246,6 +252,10 @@ export function modifierTargetLabel(target: string): string {
   const category = MODIFIER_TARGET_CATEGORY_LABELS_FR[option.category];
   // V3.1-155 : dégâts d'une attaque faite avec une caractéristique (la Rage), ou d'un sort d'un type.
   if (option.category === "damage" && option.ability) return `Dégâts — arme de ${ABILITY_LABELS[option.ability]}`;
+  if (option.category === "defense" && option.damageType) {
+    const genre = target.startsWith("resist.") ? "Résistance" : target.startsWith("vulnerable.") ? "Vulnérabilité" : "Immunité";
+    return `${genre} — ${(DAMAGE_TYPE_LABELS_FR[option.damageType] ?? option.damageType).toLowerCase()}`;
+  }
   if (option.category === "damage" && option.damageType) return `Dégâts — sort (${(DAMAGE_TYPE_LABELS_FR[option.damageType] ?? option.damageType).toLowerCase()})`;
   if (option.ability) return `${category} — ${ABILITY_LABELS[option.ability]}`;
   if (option.skill) return `${category} — ${SKILL_LABELS_FR[option.skill]}`;

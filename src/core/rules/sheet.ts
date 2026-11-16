@@ -410,6 +410,12 @@ export interface DerivedSheet {
   bonusActionOptions: BonusActionOption[];
   /** V3.1-168 (ADR 0077) : types de dégâts résistés, doublés, ignorés — appliqués d'office par le moteur à tout dégât typé. */
   damageDefenses: DamageDefenses;
+  /** V3.1-180 (ADR 0078) : la lumière que le personnage émet (`light.bright`, `light.dim`, en mètres) ; `null` s'il n'en émet pas. */
+  light: { bright: number; dim: number } | null;
+  /** V3.1-180 (M15) : les étiquettes qui ne peuvent pas le viser (`untargetable.divination`). */
+  untargetable: string[];
+  /** V3.1-180 (M15) : les sorts précis auxquels il est immunisé (`immune.spell.<clé>`). */
+  immuneSpells: string[];
 }
 
 export interface DamageDefenses {
@@ -956,7 +962,13 @@ export function characterSheet(
   const rollModifiers = allModifiers.filter((m) => /^(attack|damage|crit_range)(\.|$)/.test(m.target));
   // V3.1-168 (ADR 0077) : résistances, vulnérabilités, immunités aux types de dégâts (la Rage en pose pendant qu'elle dure).
   const defensesDe = (prefixe: string) => [...new Set(allModifiers.filter((m) => m.target.startsWith(prefixe) && (m.value ?? 1) > 0).map((m) => m.target.slice(prefixe.length)))].sort();
-  const damageDefenses = { resist: defensesDe("resist."), vulnerable: defensesDe("vulnerable."), immune: defensesDe("immune.") };
+  // `immune.spell.<clé>` est une immunité à un SORT (M15, plus bas), pas à un type de dégâts.
+  const damageDefenses = { resist: defensesDe("resist."), vulnerable: defensesDe("vulnerable."), immune: defensesDe("immune.").filter((t) => !t.startsWith("spell.")) };
+  // V3.1-180 (ADR 0078) : la lumière émise ; les cibles et sorts qui ne peuvent pas le viser.
+  const rayon = (cible: string) => (allModifiers.some((m) => m.target === cible) ? resolveTargetStack(cible, allModifiers, 0, null).value : 0);
+  const light = rayon("light.bright") > 0 || rayon("light.dim") > 0 ? { bright: rayon("light.bright"), dim: rayon("light.dim") } : null;
+  const untargetable = defensesDe("untargetable.");
+  const immuneSpells = defensesDe("immune.spell.");
   // V3.1-164 (ADR 0076) : le plus grand nombre d'attaques l'emporte (Attaque supplémentaire, puis au niveau 11).
   const attacksPerAction = Math.max(1, ...allModifiers.filter((m) => m.target === "attacks_per_action" && m.value !== undefined && (m.op === "set" || m.op === "max")).map((m) => m.value!));
   const bonusActionOptions = BONUS_ACTION_OPTIONS.filter((a) => allModifiers.some((m) => m.target === `action_as_bonus.${a}` && (m.value ?? 0) > 0));
@@ -1007,7 +1019,7 @@ export function characterSheet(
 
   return {
     abilities, proficiencyBonus, ac, savingThrows, abilityChecks, skills, passives, hitPoints, speed, features, spellcasting, grantedSpells, resources, warnings, encumbrance,
-    senses, speeds, grantedProficiencies, rollModifiers, attacksPerAction, bonusActionOptions, damageDefenses,
+    senses, speeds, grantedProficiencies, rollModifiers, attacksPerAction, bonusActionOptions, damageDefenses, light, untargetable, immuneSpells,
   };
 }
 
