@@ -772,7 +772,7 @@
           ],
           "passages": {
             "variants.0.effects.0": "elle doit réussir un jet de sauvegarde de Dextérité sous peine de subir l’état À terre",
-          "variants.1.effects.0": "contraignant la cible à effectuer un jet de sauvegarde de Constitution"
+            "variants.1.effects.0": "contraignant la cible à effectuer un jet de sauvegarde de Constitution"
           }
         }
       ],
@@ -1386,6 +1386,22 @@
                   }
                 ]
               }
+            },
+            {
+              "op": "add",
+              "value": {
+                "op": "num",
+                "value": 6
+              },
+              "target": "light.bright"
+            },
+            {
+              "op": "add",
+              "value": {
+                "op": "num",
+                "value": 6
+              },
+              "target": "light.dim"
             }
           ],
           "duration": {
@@ -1405,12 +1421,12 @@
     "coverage": {
       "gaps": [
         {
-          "text": "Lorsque vous effectuez l’action Attaque",
+          "text": "Lorsque vous entreprenez l’action Attaque",
           "missing": "« En prenant l'action Attaque » n'est pas vérifié : l'activation ne coûte rien et se joue au moment voulu."
         },
         {
-          "text": "lâchez l’arme",
-          "missing": "La fin si l'arme est lâchée et la lumière émise attendent les conditions d'équipement et la lumière (V3.1-137, 138)."
+          "text": "L’effet cesse également si vous cessez de porter l’arme.",
+          "missing": "La fin quand l'arme n'est plus portée attend une condition d'équipement sur un effet qui dure : on met fin à l'effet à la main. La lumière émise, elle, est jouée (V3.1-185)."
         }
       ]
     }
@@ -3344,6 +3360,526 @@
         {
           "text": "En cas de réussite, elle ne subit que la moitié de ces dégâts.",
           "missing": "Un seul jet de dégâts pour toute la zone n'existe pas encore : chaque créature a son jet, et la moitié d'un jet à part sur une réussite."
+        }
+      ]
+    }
+  },
+  "druid-wild-shape": {
+    "_regle": "Forme sauvage : action Bonus, une utilisation (2, colonne de la classe ; une au repos court, toutes au repos long) ; la forme d'une Bête connue (profil superposé : CA, vitesse, FOR, DEX, CON et attaques de la bête) et autant de PV temporaires que le niveau de Druide ; fin au choix (action Bonus) ou à l'expiration.",
+    "resources": {
+      "resources": [
+        {
+          "key": "wild-shape",
+          "label": {
+            "fr": "Forme sauvage",
+            "en": "Wild Shape"
+          },
+          "max": {
+            "op": "ref",
+            "name": "column.class_specific_wild_shape_uses"
+          },
+          "recharge": "short_rest_one",
+          "passage": "Vous en regagnez une utilisation lorsque vous terminez un Repos court, et récupérez tout le quota en terminant un Repos long."
+        }
+      ]
+    },
+    "activation": {
+      "activations": [
+        {
+          "id": "wild-shape",
+          "label": {
+            "fr": "Forme sauvage",
+            "en": "Wild Shape"
+          },
+          "cost": {
+            "action": "bonus",
+            "resources": [
+              {
+                "key": "wild-shape",
+                "amount": {
+                  "op": "num",
+                  "value": 1
+                }
+              }
+            ]
+          },
+          "targets": {
+            "kind": "self"
+          },
+          "effects": [],
+          "variants": [
+            {
+              "id": "wild-shape-spider",
+              "label": {
+                "fr": "Araignée",
+                "en": "Spider"
+              },
+              "effects": [
+                {
+                  "action": "transform",
+                  "who": "self",
+                  "form": "spider",
+                  "mode": "overlay"
+                },
+                {
+                  "action": "temp_hp",
+                  "who": "self",
+                  "amount": {
+                    "op": "ref",
+                    "name": "class.level"
+                  }
+                },
+                {
+                  "action": "apply_effect",
+                  "who": "self",
+                  "effect": "wild-shape-form"
+                }
+              ]
+            },
+            {
+              "id": "wild-shape-riding-horse",
+              "label": {
+                "fr": "Cheval de selle",
+                "en": "Riding Horse"
+              },
+              "effects": [
+                {
+                  "action": "transform",
+                  "who": "self",
+                  "form": "riding-horse",
+                  "mode": "overlay"
+                },
+                {
+                  "action": "temp_hp",
+                  "who": "self",
+                  "amount": {
+                    "op": "ref",
+                    "name": "class.level"
+                  }
+                },
+                {
+                  "action": "apply_effect",
+                  "who": "self",
+                  "effect": "wild-shape-form"
+                }
+              ]
+            },
+            {
+              "id": "wild-shape-wolf",
+              "label": {
+                "fr": "Loup",
+                "en": "Wolf"
+              },
+              "effects": [
+                {
+                  "action": "transform",
+                  "who": "self",
+                  "form": "wolf",
+                  "mode": "overlay"
+                },
+                {
+                  "action": "temp_hp",
+                  "who": "self",
+                  "amount": {
+                    "op": "ref",
+                    "name": "class.level"
+                  }
+                },
+                {
+                  "action": "apply_effect",
+                  "who": "self",
+                  "effect": "wild-shape-form"
+                }
+              ]
+            },
+            {
+              "id": "wild-shape-rat",
+              "label": {
+                "fr": "Rat",
+                "en": "Rat"
+              },
+              "effects": [
+                {
+                  "action": "transform",
+                  "who": "self",
+                  "form": "rat",
+                  "mode": "overlay"
+                },
+                {
+                  "action": "temp_hp",
+                  "who": "self",
+                  "amount": {
+                    "op": "ref",
+                    "name": "class.level"
+                  }
+                },
+                {
+                  "action": "apply_effect",
+                  "who": "self",
+                  "effect": "wild-shape-form"
+                }
+              ]
+            }
+          ],
+          "passages": {
+            "cost": "Par une action Bonus, vous vous métamorphosez en Bête, forme apprise par le biais de cette aptitude"
+          }
+        }
+      ],
+      "durable_effects": [
+        {
+          "id": "wild-shape-form",
+          "label": {
+            "fr": "Forme sauvage",
+            "en": "Wild Shape"
+          },
+          "conditions": [],
+          "modifiers": [],
+          "duration": {
+            "unit": "hour",
+            "amount": 1
+          },
+          "concentration": false,
+          "ends_on": [
+            {
+              "event": "dismissed"
+            }
+          ],
+          "token": null,
+          "passage": "Vous restez sous cette forme autant d’heures que la moitié de votre niveau de Druide"
+        }
+      ]
+    },
+    "coverage": {
+      "gaps": [
+        {
+          "text": "Vous connaissez quatre formes de Bête pour cette aptitude",
+          "missing": "Les formes connues ne se choisissent pas encore sur la fiche : l'activation propose les quatre formes recommandées (araignée, cheval de selle, loup, rat). Une autre forme se pose par le MJ."
+        },
+        {
+          "text": "autant d’heures que la moitié de votre niveau de Druide",
+          "missing": "La durée est comptée 1 heure (juste aux niveaux 2 et 3) : une durée en formule n'existe pas encore. Au-delà, on met fin à la forme à la main."
+        },
+        {
+          "text": "subissez l’état Neutralisé ou mourez",
+          "missing": "La fin à l'état Neutralisé ou à la mort n'est pas jouée : le MJ retire la forme."
+        }
+      ]
+    }
+  },
+  "druid-wild-companion": {
+    "_regle": "Compagnon sauvage : action Magie, une utilisation de Forme sauvage ou un emplacement ; lance appel de familier (une Fée) ; le familier disparaît au repos long.",
+    "activation": {
+      "activations": [
+        {
+          "id": "wild-companion",
+          "label": {
+            "fr": "Compagnon sauvage",
+            "en": "Wild Companion"
+          },
+          "cost": {
+            "action": "magic",
+            "resources": [
+              {
+                "key": "wild-shape",
+                "amount": {
+                  "op": "num",
+                  "value": 1
+                }
+              }
+            ]
+          },
+          "targets": {
+            "kind": "self"
+          },
+          "effects": [],
+          "variants": [
+            {
+              "id": "wild-companion-wild-shape",
+              "label": {
+                "fr": "Par une utilisation de Forme sauvage",
+                "en": "With a Wild Shape use"
+              },
+              "effects": [
+                {
+                  "action": "summon",
+                  "who": "self",
+                  "creature": "owl"
+                },
+                {
+                  "action": "apply_effect",
+                  "who": "self",
+                  "effect": "wild-companion-familiar"
+                }
+              ]
+            },
+            {
+              "id": "wild-companion-slot",
+              "label": {
+                "fr": "Par un emplacement de sort",
+                "en": "With a spell slot"
+              },
+              "cost": {
+                "action": "magic",
+                "resources": [],
+                "slot": {
+                  "level": 1
+                }
+              },
+              "effects": [
+                {
+                  "action": "summon",
+                  "who": "self",
+                  "creature": "owl"
+                },
+                {
+                  "action": "apply_effect",
+                  "who": "self",
+                  "effect": "wild-companion-familiar"
+                }
+              ]
+            }
+          ],
+          "passages": {
+            "cost": "Au prix de l’action Magie, vous pouvez dépenser un emplacement ou une utilisation de Forme sauvage pour lancer le sort appel de familier sans composantes matérielles."
+          }
+        }
+      ],
+      "durable_effects": [
+        {
+          "id": "wild-companion-familiar",
+          "label": {
+            "fr": "Familier (Compagnon sauvage)",
+            "en": "Familiar (Wild Companion)"
+          },
+          "conditions": [],
+          "modifiers": [],
+          "duration": {
+            "unit": "hour",
+            "amount": 8
+          },
+          "concentration": false,
+          "ends_on": [
+            {
+              "event": "dismissed"
+            }
+          ],
+          "token": null,
+          "passage": "le familier est une Fée et disparaît lorsque vous terminez un Repos long"
+        }
+      ]
+    },
+    "coverage": {
+      "gaps": [
+        {
+          "text": "qui adopte une forme animale",
+          "missing": "Le familier prend la forme d'une chouette ; une autre forme d'appel de familier se change par le MJ."
+        },
+        {
+          "text": "disparaît lorsque vous terminez un Repos long",
+          "missing": "La fin est comptée 8 heures (la durée d'un Repos long) : un Repos court ne la retire pas, huit heures de jeu si."
+        }
+      ]
+    }
+  },
+  "paladin-lay-on-hands": {
+    "_regle": "Imposition des mains : réserve de 5 × niveau de Paladin (repos long) ; action Bonus, au contact, rendre la quantité choisie de PV ; ou 5 points pour retirer Empoisonné.",
+    "resources": {
+      "resources": [
+        {
+          "key": "lay-on-hands",
+          "label": {
+            "fr": "Imposition des mains",
+            "en": "Lay On Hands"
+          },
+          "max": {
+            "op": "mul",
+            "args": [
+              {
+                "op": "num",
+                "value": 5
+              },
+              {
+                "op": "ref",
+                "name": "class.level"
+              }
+            ]
+          },
+          "recharge": "long_rest",
+          "passage": "Cette réserve vous permet de restituer un total de points de vie égal à cinq fois votre niveau de Paladin."
+        }
+      ]
+    },
+    "activation": {
+      "activations": [
+        {
+          "id": "lay-on-hands",
+          "label": {
+            "fr": "Imposition des mains",
+            "en": "Lay On Hands"
+          },
+          "cost": {
+            "action": "bonus",
+            "resources": [
+              {
+                "key": "lay-on-hands",
+                "amount": {
+                  "op": "ref",
+                  "name": "amount"
+                }
+              }
+            ]
+          },
+          "targets": {
+            "kind": "creature",
+            "range": {
+              "value": 1.5,
+              "unit": "m"
+            }
+          },
+          "effects": [
+            {
+              "action": "heal",
+              "who": "target",
+              "amount": {
+                "op": "ref",
+                "name": "amount"
+              }
+            }
+          ],
+          "variants": null,
+          "amount": {
+            "max": {
+              "op": "mul",
+              "args": [
+                {
+                  "op": "num",
+                  "value": 5
+                },
+                {
+                  "op": "ref",
+                  "name": "class.level"
+                }
+              ]
+            },
+            "label": {
+              "fr": "Points de vie rendus",
+              "en": "Hit points restored"
+            }
+          },
+          "passages": {
+            "cost": "Par une action Bonus, vous pouvez puiser tout ou partie de cette réserve",
+            "effects.0": "restituer autant de points de vie à une créature (qui peut être vous-même)"
+          }
+        },
+        {
+          "id": "lay-on-hands-poison",
+          "label": {
+            "fr": "Imposition des mains : Empoisonné",
+            "en": "Lay On Hands: Poisoned"
+          },
+          "cost": {
+            "action": "bonus",
+            "resources": [
+              {
+                "key": "lay-on-hands",
+                "amount": {
+                  "op": "num",
+                  "value": 5
+                }
+              }
+            ]
+          },
+          "targets": {
+            "kind": "creature",
+            "range": {
+              "value": 1.5,
+              "unit": "m"
+            }
+          },
+          "effects": [
+            {
+              "action": "remove_condition",
+              "who": "target",
+              "key": "poisoned"
+            }
+          ],
+          "variants": null,
+          "passages": {
+            "effects.0": "dépenser 5 points de vie de la réserve de puissance curatrice pour supprimer l’état Empoisonné affectant la créature"
+          }
+        }
+      ],
+      "durable_effects": []
+    }
+  },
+  "barbarian-persistent-rage": {
+    "_regle": "Rage persistante : en jouant l'Initiative, récupérer toutes les utilisations de Rage, une fois par repos long.",
+    "resources": {
+      "resources": [
+        {
+          "key": "persistent-rage",
+          "label": {
+            "fr": "Rage persistante",
+            "en": "Persistent Rage"
+          },
+          "max": {
+            "op": "num",
+            "value": 1
+          },
+          "recharge": "long_rest",
+          "passage": "vous devez terminer un Repos long pour pouvoir le refaire"
+        }
+      ]
+    },
+    "activation": {
+      "activations": [
+        {
+          "id": "persistent-rage",
+          "label": {
+            "fr": "Rage persistante",
+            "en": "Persistent Rage"
+          },
+          "cost": {
+            "action": "none",
+            "resources": [
+              {
+                "key": "persistent-rage",
+                "amount": {
+                  "op": "num",
+                  "value": 1
+                }
+              }
+            ]
+          },
+          "targets": {
+            "kind": "self"
+          },
+          "effects": [
+            {
+              "action": "restore_resource",
+              "who": "self",
+              "key": "rage",
+              "all": true
+            }
+          ],
+          "variants": null,
+          "passages": {
+            "effects.0": "vous pouvez récupérer toutes vos utilisations de Rage"
+          }
+        }
+      ],
+      "durable_effects": []
+    },
+    "coverage": {
+      "gaps": [
+        {
+          "text": "Lorsque vous jouez l’Initiative",
+          "missing": "Le moment n'est pas vérifié : l'activation se propose au clic, à faire au jet d'Initiative."
+        },
+        {
+          "text": "votre Rage est si féroce qu’elle persiste désormais 10 minutes",
+          "missing": "La durée de la Rage n'est pas allongée par cette aptitude : la Rage garde sa propre durée."
         }
       ]
     }
