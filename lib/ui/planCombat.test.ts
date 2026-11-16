@@ -159,10 +159,14 @@ describe("jetons", () => {
   it("depuis la vue de la joueuse", () => {
     const jetons = jetonsDepuisVue([
       { id: "p1", label: "Aela", side: "ally", position: { x: 1, y: 1 }, wound: "unhurt", isCurrent: true },
-      { id: "m1", label: "Gobelin", side: "enemy", position: null, wound: "down", isCurrent: false },
+      { id: "m1", label: "Gobelin", side: "enemy", position: { x: 4, y: 1 }, wound: "down", isCurrent: false },
+      { id: "m2", label: "Quelqu'un", side: "enemy", position: null, wound: null, isCurrent: false },
+      { id: "p2", label: "Chouette", side: "ally", position: null, wound: null, isCurrent: false },
     ]);
     expect(jetons[0]).toMatchObject({ camp: "ally", actif: true, pos: { x: 1, y: 1 } });
-    expect(jetons[1]).toMatchObject({ camp: "enemy", abattu: true, pos: null });
+    expect(jetons[1]).toMatchObject({ camp: "enemy", abattu: true, pos: { x: 4, y: 1 } });
+    // V3.1-184 : un adversaire sans position (masqué ou pas encore posé) n'entre pas dans la réserve de la joueuse ; un allié, si.
+    expect(jetons.map((j) => j.id)).toEqual(["p1", "m1", "p2"]);
   });
 });
 

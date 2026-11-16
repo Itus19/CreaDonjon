@@ -136,10 +136,16 @@ export default function LigneParticipant({
             {repereLigne && (
               <span className="flex flex-wrap gap-1 pt-0.5">
                 {horsCombat && <span className="rounded-full border border-danger px-1.5 text-xs text-danger">{t("horsDeCombat")}</span>}
-                {p.hidden_from_players && <span className="rounded-full border border-dashed border-gm px-1.5 text-xs text-gm">{t("masqueAuxJoueuses")}</span>}
-                {forme && <span className="rounded-full border border-accent/60 px-1.5 text-xs text-accent">{forme}</span>}
+                {p.hidden_from_players && (
+                  <span title={t("masqueAuxJoueuses")} className="max-w-full truncate whitespace-nowrap rounded-full border border-dashed border-gm px-1.5 text-xs text-gm">
+                    {t("masqueAuxJoueuses")}
+                  </span>
+                )}
+                {forme && <span title={forme} className="max-w-full truncate whitespace-nowrap rounded-full border border-accent/60 px-1.5 text-xs text-accent">{forme}</span>}
                 {p.summoned_by !== null && (
-                  <span className="rounded-full border border-edge px-1.5 text-xs text-ink-soft">{invocateur ? t("invoqueePar", { nom: invocateur }) : t("invoqueePar", { nom: "…" })}</span>
+                  <span title={t("invoqueePar", { nom: invocateur ?? "…" })} className="max-w-full truncate whitespace-nowrap rounded-full border border-edge px-1.5 text-xs text-ink-soft">
+                    {t("invoqueePar", { nom: invocateur ?? "…" })}
+                  </span>
                 )}
                 {etats.map((e) => (
                   <span key={e} className="rounded-full border border-gm px-1.5 text-xs text-gm">

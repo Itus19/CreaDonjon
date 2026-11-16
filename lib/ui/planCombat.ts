@@ -161,7 +161,9 @@ export function jetonsDepuisLignes(lignes: readonly LigneMj[], actifId: string |
 export type LigneJoueuse = Pick<PlayerCombatParticipant, "id" | "label" | "side" | "position" | "wound" | "isCurrent">;
 
 export function jetonsDepuisVue(participants: readonly LigneJoueuse[]): JetonPlan[] {
-  return participants.map((p) => ({
+  // V3.1-184 : un adversaire sans position n'a rien à faire dans la réserve « À poser » de la joueuse (elle ne le pose
+  // jamais), et une ligne masquée (« Quelqu'un ») arrive sans position : elle n'y apparaît donc pas non plus.
+  return participants.filter((p) => p.side !== "enemy" || p.position !== null).map((p) => ({
     id: p.id,
     label: p.label,
     pos: p.position,

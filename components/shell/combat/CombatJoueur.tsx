@@ -187,7 +187,11 @@ function LigneParticipant({ participant: p, moi }: { participant: PlayerCombatPa
         {p.label}
         {moi && <span className="ml-1.5 rounded-full border border-accent/60 px-1.5 py-px text-xs font-semibold text-accent">{t("vous")}</span>}
         {p.mine && <span className="ml-1.5 rounded-full border border-accent/60 px-1.5 py-px text-xs font-semibold text-accent">{t("aToi")}</span>}
-        {p.formLabel && <span className="ml-1.5 rounded-full border border-edge px-1.5 py-px text-xs text-ink-soft">{t("forme", { nom: p.formLabel })}</span>}
+        {p.formLabel && (
+          <span title={t("forme", { nom: p.formLabel })} className="ml-1.5 rounded-full border border-edge px-1.5 py-px text-xs text-ink-soft">
+            {p.formLabel}
+          </span>
+        )}
       </span>
       {p.side === "ally" && p.hp ? (
         <span className="shrink-0 font-mech text-xs text-ink">{t("pv", { courant: p.hp.current ?? "—", max: p.hp.max ?? "—" })}</span>
