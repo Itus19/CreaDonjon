@@ -7,18 +7,21 @@ type Initial = ComponentProps<typeof NextSessionPanel>["initial"];
 
 /** Une demande ouverte et deux séances à venir : de quoi faire apparaître tout outil MJ s'il y en avait un. */
 const initial = {
-  openData: {
-    campaignId: "c1",
-    request: { id: "r1", title: "Séance d'octobre", candidate_dates: ["2026-10-17", "2026-10-18"], starts_at: "14:00:00", ends_at: "22:00:00" },
-    hasResponded: false,
-    myResponses: [],
-  },
+  campaignId: "c1",
   board: {
+    // V3.1-190 : deux demandes ouvertes, la première affichée.
+    requests: [
+      { id: "r1", title: "Séance d'octobre", candidateCount: 2, startsAt: "14:00:00", endsAt: "22:00:00", respondedCount: 2, expectedCount: 4, missingNames: [], ready: false, viewerResponded: false },
+      { id: "r2", title: "One-shot de Noël", candidateCount: 3, startsAt: "20:00:00", endsAt: "23:00:00", respondedCount: 4, expectedCount: 4, missingNames: [], ready: true, viewerResponded: true },
+    ],
     request: { id: "r1", title: "Séance d'octobre", candidate_dates: ["2026-10-17", "2026-10-18"], starts_at: "14:00:00", ends_at: "22:00:00" },
     // Un jour complet : côté MJ, c'est lui qui porte un « Confirmer » plein.
     days: [{ date: "2026-10-17", count: 4, expected: 4, start: 840, end: 1320, durationMinutes: 480, category: "full", people: [], respondentCount: 4 }],
     heatmap: null,
     expected: 4,
+    responses: [],
+    myResponses: [],
+    declined: false,
     viewerId: "u1",
     targetMinutes: 300,
   },
@@ -30,13 +33,21 @@ const initial = {
 } as unknown as Initial;
 
 describe("NextSessionPanel (joueuse)", () => {
-  const html = renderToStaticMarkup(createElement(NextSessionPanel, { worldSlug: "faerun", initial }));
+  const html = renderToStaticMarkup(createElement(NextSessionPanel, { initial }));
 
   it("montre la demande ouverte et les séances", () => {
     expect(html).toContain("Séance d&#x27;octobre");
     expect(html).toContain("Séances à venir");
     expect(html).toContain("Déjà jouées");
     expect(html).toContain("Les dates qui se dessinent");
+  });
+
+  it("V3.1-190 : liste les demandes du MJ, chacune « À répondre » ou « ✓ Répondu », et propose « Aucune date ne me va »", () => {
+    expect(html).toContain("Demandes du MJ");
+    expect(html).toContain("One-shot de Noël");
+    expect(html).toContain("À répondre");
+    expect(html).toContain("✓ Répondu");
+    expect(html).toContain("Aucune date ne me va");
   });
 
   it("ne contient aucun outil MJ", () => {

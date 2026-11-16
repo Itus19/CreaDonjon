@@ -1,4 +1,5 @@
 import type { ImageBlockData } from "@/src/core/schemas/blocks/image";
+import { inlineImageIdsIn } from "./inlineImage";
 
 /**
  * V2.1-11 — un bloc `image` ancre sort du fil des blocs et va s'inserer DANS
@@ -45,6 +46,13 @@ export interface ImageAnchorPlan<T extends AnchorableBlock> {
   contentBlocks: T[];
   /** Indexe par identifiant de bloc HOTE, chaque liste dans l'ordre de la fiche. */
   anchors: Record<string, AnchoredImage<T>[]>;
+  /**
+   * V3.1-189 : les images posees DANS le texte (`inlineImage.ts`), indexees
+   * par identifiant de bloc image — le rendu d'un paragraphe y lit leurs
+   * reglages. Elles ne sont ni dans le fil, ni dans `anchors` : le texte
+   * prime sur un ancien ancrage par paragraphe.
+   */
+  inline: Record<string, T>;
 }
 
 /**
@@ -122,10 +130,16 @@ export function planImageAnchors<T extends AnchorableBlock>(blocks: T[]): ImageA
 
   const contentBlocks: T[] = [];
   const anchors: Record<string, AnchoredImage<T>[]> = {};
+  const inline: Record<string, T> = {};
+  const citedInText = inlineImageIdsIn(blocks);
 
   blocks.forEach((block, index) => {
     if (block.blockType !== "image") {
       contentBlocks.push(block);
+      return;
+    }
+    if (citedInText.has(block.id)) {
+      inline[block.id] = block;
       return;
     }
     const resolved = resolveAnchor(block, index, blocks, hostSegments);
@@ -137,5 +151,5 @@ export function planImageAnchors<T extends AnchorableBlock>(blocks: T[]): ImageA
     list.push({ block, segmentId: resolved.segmentId, position: resolved.position, flow: resolved.flow });
   });
 
-  return { contentBlocks, anchors };
+  return { contentBlocks, anchors, inline };
 }

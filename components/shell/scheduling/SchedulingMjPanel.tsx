@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { minutesToTime, timeToMinutes } from "@/src/core/scheduling/overlap";
 import RequestAvailabilityForm from "./RequestAvailabilityForm";
-import AvailabilityGrid, { type GridResponse } from "./AvailabilityGrid";
-import { NextSessionCard, PossibleDates, SessionsCard, formatHours, respondentCount, type OpenRequestBoard, type RankedDay, type RealSession } from "./SessionBoardParts";
+import AvailabilityGrid from "./AvailabilityGrid";
+import { NextSessionCard, PossibleDates, RequestTabs, ResponsesLine, SessionsCard, formatHours, type OpenRequestBoard, type RankedDay, type RealSession } from "./SessionBoardParts";
 
 /**
  * Calendrier réel côté MJ (V2.1-4, refondu V3.1-8, redessiné V3.1-16 d'après
@@ -17,6 +17,12 @@ import { NextSessionCard, PossibleDates, SessionsCard, formatHours, respondentCo
  * avec l'aperçu en direct de la grille) à la place de la grille. Tous les
  * gestes d'avant restent : durée visée, annuler la demande, confirmer, régler
  * à la main, annuler une séance.
+ *
+ * V3.1-190 : plusieurs demandes peuvent être ouvertes. Une rangée « Demandes
+ * en cours » (`RequestTabs`) choisit celle affichée ; tout le reste de
+ * l'écran est celui de cette demande, plus la ligne « Réponses » (qui a
+ * répondu) au-dessus de la grille. Un seul appel lit tout (`requests/open`,
+ * `myResponses` compris).
  */
 const DURATION_MIN = 60;
 const DURATION_MAX = 840;
@@ -24,10 +30,6 @@ const DURATION_STEP = 30;
 
 export default function SchedulingMjPanel({ campaignId }: { campaignId: string }) {
   const [board, setBoard] = useState<OpenRequestBoard | "loading" | "error">("loading");
-  // `null` tant que non chargé — la grille initialise son état peint UNE
-  // SEULE fois au montage : la rendre avant que la vraie réponse du MJ soit
-  // connue la figerait sur « rien peint ».
-  const [myAvailabilities, setMyAvailabilities] = useState<GridResponse[] | null>(null);
   const [upcoming, setUpcoming] = useState<RealSession[]>([]);
   const [past, setPast] = useState<RealSession[]>([]);
   const [manualDate, setManualDate] = useState("");
@@ -42,26 +44,19 @@ export default function SchedulingMjPanel({ campaignId }: { campaignId: string }
 
   const manualDuration = timeToMinutes(manualEndTime) - timeToMinutes(manualTime);
 
-  function loadBoard() {
-    fetch(`/api/campaigns/${campaignId}/scheduling/requests/open`)
+  /** La demande affichée (V3.1-190) ; `null` : la plus ancienne. Le serveur retombe sur celle-là si la demande visée a été fermée. */
+  const demandeVisee = useRef<string | null>(null);
+
+  function loadBoard(requestId: string | null = demandeVisee.current) {
+    demandeVisee.current = requestId;
+    const query = requestId ? `?requestId=${encodeURIComponent(requestId)}` : "";
+    fetch(`/api/campaigns/${campaignId}/scheduling/requests/open${query}`)
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error())))
       .then((body: OpenRequestBoard) => {
         setBoard(body);
         setDurationDraft(body.targetMinutes);
       })
       .catch(() => setBoard("error"));
-  }
-
-  function loadMyAvailabilities() {
-    // Le MJ répond aussi (V3.1-8) — même endpoint que côté joueuse, il
-    // renvoie toujours les réponses de l'appelant authentifié.
-    fetch(`/api/campaigns/${campaignId}/scheduling/availability`)
-      .then((res) => (res.ok ? res.json() : Promise.reject(new Error())))
-      .then((body: { availabilities: GridResponse[] }) => setMyAvailabilities(body.availabilities))
-      .catch((erreur) => {
-        console.error("Chargement de mes disponibilités impossible", erreur);
-        setMyAvailabilities([]);
-      });
   }
 
   function loadSessions() {
@@ -76,7 +71,6 @@ export default function SchedulingMjPanel({ campaignId }: { campaignId: string }
 
   useEffect(() => {
     loadBoard();
-    loadMyAvailabilities();
     loadSessions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campaignId]);
@@ -87,16 +81,17 @@ export default function SchedulingMjPanel({ campaignId }: { campaignId: string }
     fetch(`/api/campaigns/${campaignId}/scheduling/sessions`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ date: day.date, startsAt: minutesToTime(day.start), durationMinutes: duration, source: "availability" }),
+      // V3.1-190 : fixer la date ferme CETTE demande ; les autres restent ouvertes.
+      body: JSON.stringify({ date: day.date, startsAt: minutesToTime(day.start), durationMinutes: duration, source: "availability", requestId: board.request?.id }),
     }).then(() => {
       loadSessions();
-      loadBoard();
+      loadBoard(null);
     });
   }
 
   function cancelRequest() {
     if (board === "loading" || board === "error" || !board.request) return;
-    fetch(`/api/campaigns/${campaignId}/scheduling/requests/${board.request.id}/close`, { method: "POST" }).then(loadBoard);
+    fetch(`/api/campaigns/${campaignId}/scheduling/requests/${board.request.id}/close`, { method: "POST" }).then(() => loadBoard(null));
   }
 
   function confirmManual() {
@@ -121,7 +116,7 @@ export default function SchedulingMjPanel({ campaignId }: { campaignId: string }
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ minutes }),
-    }).then(loadBoard);
+    }).then(() => loadBoard());
   }
 
   /** − / + : pas de 30 min entre 1 h et 14 h, enregistré 500 ms après le dernier clic. */
@@ -145,23 +140,34 @@ export default function SchedulingMjPanel({ campaignId }: { campaignId: string }
     return (
       <div className="flex items-center gap-3 text-sm text-danger">
         Impossible de charger le calendrier.
-        <button type="button" onClick={loadBoard} className="rounded-full border border-edge px-3 py-1 text-xs text-ink hover:bg-panel-raised">
+        <button type="button" onClick={() => loadBoard()} className="rounded-full border border-edge px-3 py-1 text-xs text-ink hover:bg-panel-raised">
           Réessayer
         </button>
       </div>
     );
 
-  const request = board.request;
+  const request = showForm ? null : board.request;
+  const carte = board.requests.find((r) => r.id === board.request?.id);
   const inputClass = "rounded-md border border-edge bg-transparent px-2 py-1.5 text-sm text-ink outline-none";
 
   return (
     <div className="@container flex flex-col gap-5">
+      <RequestTabs
+        requests={board.requests}
+        selectedId={showForm ? null : (board.request?.id ?? null)}
+        onSelect={(id) => {
+          setShowForm(false);
+          loadBoard(id);
+        }}
+        mode="mj"
+        onNew={() => setShowForm(true)}
+      />
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="font-display text-2xl text-ink">{request ? request.title : showForm ? "Demander les disponibilités" : "Prochaine séance"}</h2>
           {request && (
             <div className="mt-1 text-xs text-ink-muted">
-              Créneau proposé · {request.starts_at.slice(0, 5)} – {request.ends_at.slice(0, 5)} · {request.candidate_dates.length} jours · {respondentCount(board.heatmap)} réponses sur {board.expected}
+              Créneau proposé · {request.starts_at.slice(0, 5)} – {request.ends_at.slice(0, 5)} · {request.candidate_dates.length} jours · {carte?.respondedCount ?? 0} réponses sur {carte?.expectedCount ?? board.expected}
             </div>
           )}
         </div>
@@ -201,20 +207,17 @@ export default function SchedulingMjPanel({ campaignId }: { campaignId: string }
       {request ? (
         <>
           <section className="flex flex-col gap-3 rounded-[18px] border border-edge bg-panel backdrop-blur-[var(--blur)] p-4">
-            {myAvailabilities === null ? (
-              <p className="text-xs italic text-ink-muted">Chargement…</p>
-            ) : (
-              <AvailabilityGrid
-                key={request.id}
-                campaignId={campaignId}
-                request={request}
-                myResponses={myAvailabilities}
-                heatmap={board.heatmap}
-                expected={board.expected}
-                viewerId={board.viewerId}
-                onSaved={loadBoard}
-              />
-            )}
+            <ResponsesLine responses={board.responses} />
+            <AvailabilityGrid
+              key={request.id}
+              campaignId={campaignId}
+              request={request}
+              myResponses={board.myResponses}
+              heatmap={board.heatmap}
+              expected={board.expected}
+              viewerId={board.viewerId}
+              onSaved={() => loadBoard()}
+            />
           </section>
           <PossibleDates
             title="Dates possibles"
@@ -227,9 +230,9 @@ export default function SchedulingMjPanel({ campaignId }: { campaignId: string }
       ) : showForm ? (
         <RequestAvailabilityForm
           campaignId={campaignId}
-          onCreated={() => {
+          onCreated={(id) => {
             setShowForm(false);
-            loadBoard();
+            loadBoard(id);
           }}
           onCancel={() => setShowForm(false)}
         />

@@ -556,6 +556,7 @@ export default function EditeurPleinEcran({
                       hideAiAssist={hideAiAssist}
                       siblings={brouillon}
                       entityKind={identite.entityKind}
+                      onEditSibling={(id, data) => patchBrouillon(id, { data })}
                     />
                     <div className="flex items-center justify-end gap-3 text-xs text-ink-muted">
                       <button

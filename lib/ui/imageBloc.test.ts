@@ -2,9 +2,7 @@ import { describe, expect, it } from "vitest";
 import { zImageBlockData, type ImageBlockData } from "@/src/core/schemas/blocks/image";
 import {
   CHOIX_FOND,
-  appliquerControle,
   appliquerFond,
-  estContourne,
   fondDe,
   reglagesFondVisibles,
   tailleSuivante,
@@ -25,42 +23,6 @@ describe("tailleSuivante", () => {
     expect(tailleSuivante(105, 1)).toBe(110);
     expect(tailleSuivante(105, -1)).toBe(100);
     expect(tailleSuivante(55, -1)).toBe(50);
-  });
-});
-
-describe("appliquerControle", () => {
-  it("Gauche / Centre / Droite écrit align", () => {
-    expect(appliquerControle(base, { controle: "align", valeur: "left" }, false).align).toBe("left");
-    expect(appliquerControle(base, { controle: "align", valeur: "right" }, false).align).toBe("right");
-    expect(appliquerControle(base, { controle: "align", valeur: "center" }, false).align).toBe("center");
-  });
-
-  it("− et + écrivent sizePct", () => {
-    expect(appliquerControle(base, { controle: "taille", sens: 1 }, false).sizePct).toBe(110);
-    expect(appliquerControle(base, { controle: "taille", sens: -1 }, false).sizePct).toBe(90);
-  });
-
-  it("« Le texte contourne » écrit anchorFlow float / break", () => {
-    const coupe = { ...base, anchorFlow: "break" as const };
-    expect(appliquerControle(coupe, { controle: "contourne" }, true).anchorFlow).toBe("float");
-    expect(appliquerControle(base, { controle: "contourne" }, true).anchorFlow).toBe("break");
-  });
-
-  it("allumer « contourne » sur une image centrée la passe à gauche", () => {
-    const centre = { ...base, anchorFlow: "break" as const, align: "center" as const };
-    const r = appliquerControle(centre, { controle: "contourne" }, true);
-    expect(r).toMatchObject({ anchorFlow: "float", align: "left" });
-  });
-
-  it("choisir Centre quand le texte contourne le fait couper", () => {
-    const r = appliquerControle({ ...base, align: "left" }, { controle: "align", valeur: "center" }, true);
-    expect(r).toMatchObject({ align: "center", anchorFlow: "break" });
-  });
-
-  it("« contourne » ne fait rien sans ancrage, et Centre n'y touche pas anchorFlow", () => {
-    expect(appliquerControle(base, { controle: "contourne" }, false)).toBe(base);
-    expect(appliquerControle(base, { controle: "align", valeur: "center" }, false).anchorFlow).toBe("float");
-    expect(estContourne(base, false)).toBe(false);
   });
 });
 

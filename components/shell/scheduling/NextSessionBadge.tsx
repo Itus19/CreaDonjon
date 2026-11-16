@@ -7,8 +7,8 @@ import { usePathname } from "next/navigation";
 export interface ProchaineSession {
   /** Date de la prochaine seance (`YYYY-MM-DD`), `null` si aucune n'est fixee. */
   date: string | null;
-  /** Une ronde de demande de disponibilites est ouverte et la joueuse n'y a pas repondu. */
-  demandeEnAttente: boolean;
+  /** V3.1-190 : le nombre de demandes de disponibilites ouvertes qui attendent sa reponse. */
+  demandesEnAttente: number;
 }
 
 function formatSessionDate(dateStr: string): string {
@@ -45,9 +45,15 @@ function CalendarIcon() {
  * sont posées l'une sur l'autre et se croisent en fondu pendant que le
  * rail change de largeur : le texte ne pivote jamais, il reste lisible.
  *
- * Pastille (V3.1-8) : dès qu'une ronde de demande est ouverte pour la
- * campagne et que la joueuse n'y a pas encore répondu.
+ * Pastille (V3.1-8) : dès qu'une demande attend sa réponse. V3.1-190 : un
+ * nombre (plusieurs demandes peuvent être ouvertes), même recette que la
+ * pastille de la barre du bas (`BarreFlottante`).
  */
+function Pastille({ n }: { n: number }) {
+  if (n <= 0) return null;
+  return <span className="absolute -right-2 -top-1.5 rounded-full bg-accent px-1 text-xs font-semibold leading-tight text-accent-ink">{n}</span>;
+}
+
 export default function NextSessionBadge({
   worldSlug,
   prochaineSession,
@@ -64,7 +70,8 @@ export default function NextSessionBadge({
 
   if (!prochaineSession) return null;
 
-  const showBadge = prochaineSession.demandeEnAttente;
+  const enAttente = prochaineSession.demandesEnAttente;
+  const libelleAttente = enAttente === 1 ? "une demande de disponibilités attend ta réponse" : `${enAttente} demandes de disponibilités attendent ta réponse`;
   const dateLongue = prochaineSession.date ? formatSessionDate(prochaineSession.date) : "à définir";
   const dateMoyenne = prochaineSession.date ? formatSessionDate(prochaineSession.date).replace(/^(\p{L}{3})\p{L}*/u, "$1.") : "à définir";
   const dateCourte = prochaineSession.date ? formatSessionDateCourte(prochaineSession.date) : "à définir";
@@ -79,14 +86,15 @@ export default function NextSessionBadge({
       >
         <span className="relative block h-5 w-5 shrink-0">
           <CalendarIcon />
-          {showBadge && <span aria-label="Une demande de disponibilités attend une réponse" className="absolute -right-1.5 -top-1.5 h-2 w-2 rounded-full bg-danger" />}
+          {enAttente > 0 && <span className="sr-only">{libelleAttente}</span>}
+          <Pastille n={enAttente} />
         </span>
         Session
       </Link>
 
       <Link
         href={href}
-        aria-label={`Prochaine session : ${dateLongue}${showBadge ? " — une demande de disponibilités attend ta réponse" : ""}`}
+        aria-label={`Prochaine session : ${dateLongue}${enAttente > 0 ? ` — ${libelleAttente}` : ""}`}
         title={replie ? `Prochaine session : ${dateLongue}` : undefined}
         aria-current={active ? "page" : undefined}
         className={`relative hidden w-full rounded-xl text-ink-soft transition-colors hover:bg-panel-raised hover:text-ink md:block ${active ? "bg-panel-raised" : ""}`}
@@ -100,7 +108,7 @@ export default function NextSessionBadge({
         >
           <span className="relative block h-[18px] w-[18px] shrink-0 text-accent">
             <CalendarIcon />
-            {showBadge && <span className="absolute -right-1.5 -top-1.5 h-2 w-2 rounded-full bg-danger" />}
+            <Pastille n={enAttente} />
           </span>
           <span className="flex min-w-0 flex-col whitespace-nowrap">
             <span className="text-[12.5px]">Prochaine session</span>
@@ -116,7 +124,7 @@ export default function NextSessionBadge({
         >
           <span className="relative block h-[18px] w-[18px] shrink-0 text-accent">
             <CalendarIcon />
-            {showBadge && <span className="absolute -right-1.5 -top-1.5 h-2 w-2 rounded-full bg-danger" />}
+            <Pastille n={enAttente} />
           </span>
           <span style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }} className="whitespace-nowrap text-xs font-semibold text-accent">
             {dateCourte}

@@ -26,6 +26,7 @@ function participant(partiel: Partial<PlayerCombatParticipant>): PlayerCombatPar
     hp: null,
     wound: null,
     budget: null,
+    position: null,
     order: 1,
     isCurrent: false,
     ...partiel,

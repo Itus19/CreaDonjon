@@ -1,4 +1,5 @@
 import type { Segment } from "@/src/core/schemas/entities/segments";
+import { nodeText } from "./nodeText";
 import { CHIP_SUMMARY_MAX_LENGTH } from "@/src/core/rules/chipSummary";
 
 /**
@@ -38,7 +39,7 @@ export function excerptFromSegments(segments: readonly Segment[]): string | null
  * aucun sens hors de son paragraphe.
  */
 function flatten(content: Segment["content"]): string | null {
-  const raw = content.map((node) => (node.t === "ref" ? node.label : node.v)).join("");
+  const raw = content.map(nodeText).join("");
   const normalized = raw.replace(/\s+/g, " ").trim();
   return normalized.length > 0 ? normalized : null;
 }

@@ -79,9 +79,12 @@ export default function MjSidebar({
   worldSlug,
   worldName,
   campaignName,
+  demandesAFixer = 0,
 }: {
   worldSlug: string;
   worldName: string;
+  /** V3.1-190 : demandes de disponibilités où tout le monde a répondu, lues par le layout MJ — la pastille de « Calendrier réel ». */
+  demandesAFixer?: number;
   /** Seule section a l'afficher, comme le faisait l'en-tete avant V2.1-16 — `null` si le monde n'a pas encore de campagne. */
   campaignName: string | null;
 }) {
@@ -90,6 +93,9 @@ export default function MjSidebar({
   const pathname = usePathname();
   const { unreadCount } = useChatUnread();
   const { replie, basculer } = useRailReplie();
+
+  // V3.1-190 : chaque outil peut porter une pastille (chat : non lus ; calendrier réel : demandes à fixer).
+  const badgeDe = (key: MjToolKey) => (key === "chat" ? unreadCount : key === "calendrier-reel" ? demandesAFixer : undefined);
 
   const tools: { key: MjToolKey; label: string }[] = [
     { key: "notes", label: t("blocNotes") },
@@ -144,7 +150,7 @@ export default function MjSidebar({
               <RailRow
                 icone={<IconeRail nom="outils" />}
                 libelle={tShell("outils")}
-                badge={unreadCount}
+                badge={unreadCount + demandesAFixer}
                 actif={tools.some((tool) => pathname === mjToolHref(worldSlug, tool.key))}
                 menu={(fermer) =>
                   tools.map((tool) => (
@@ -154,7 +160,7 @@ export default function MjSidebar({
                       toolKey={tool.key}
                       label={tool.label}
                       active={pathname === mjToolHref(worldSlug, tool.key)}
-                      badge={tool.key === "chat" ? unreadCount : undefined}
+                      badge={badgeDe(tool.key)}
                       onNavigate={fermer}
                       dansMenu
                     />
@@ -169,7 +175,7 @@ export default function MjSidebar({
                   toolKey={tool.key}
                   label={tool.label}
                   active={pathname === mjToolHref(worldSlug, tool.key)}
-                  badge={tool.key === "chat" ? unreadCount : undefined}
+                  badge={badgeDe(tool.key)}
                 />
               ))
             )}

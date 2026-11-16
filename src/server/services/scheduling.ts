@@ -3,16 +3,20 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import {
   closeAvailabilityRequest as closeAvailabilityRequestRow,
+  deleteAvailabilitiesForUserAndRequest,
   deleteAvailability as deleteAvailabilityRow,
+  deleteDecline,
   deleteRealSession as deleteRealSessionRow,
   getAvailabilityRequestById,
-  getOpenAvailabilityRequest,
   getTargetSessionMinutes,
   insertAvailabilityRequest,
   insertRealSession,
   listAvailabilitiesForRequest,
-  listAvailabilitiesForUserAndRequest,
+  listDeclinesForRequests,
+  listOpenAvailabilityRequests,
   listRealSessions,
+  listRespondentsForRequests,
+  upsertDecline,
   setTargetSessionMinutes as setTargetSessionMinutesRow,
   upsertAvailability as upsertAvailabilityRow,
   type AvailabilityRequestRow,
@@ -23,12 +27,12 @@ import { listCampaignMembers, listCampaignCharacters } from "@/src/server/repos/
 import { listEntitiesByIds } from "@/src/server/repos/entities";
 import { classifySession, timeToMinutes, minutesToTime, type SessionCategory } from "@/src/core/scheduling/overlap";
 import { buildHeatmap, generateSlots, type SlotResponse } from "@/src/core/scheduling/availabilityGrid";
-import { bestWindowForDay, expectedAtTable, rankBestDays } from "@/src/core/scheduling/bestWindow";
+import { bestWindowForDay, rankBestDays } from "@/src/core/scheduling/bestWindow";
+import { summarizeRequest, unansweredCount, type RequestSummary } from "@/src/core/scheduling/requestStatus";
 import { getDisplayNamesForUsers } from "@/src/server/repos/activityJournal";
 
 type TypedClient = SupabaseClient<Database>;
 
-export { deleteAvailabilityRow as deleteAvailability };
 export type { AvailabilityRow, RealSessionRow, AvailabilityRequestRow };
 
 /**
@@ -73,82 +77,133 @@ function formatDateFr(date: string): string {
   return new Date(`${date}T00:00:00`).toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
 }
 
-export type OpenRequestResult = { ok: true; request: AvailabilityRequestRow } | { ok: false; reason: "already_open" };
-
 /**
- * Ouvre une ronde de demande (V3.1-8) — titre généré si laissé vide (« Séance
- * du <première date candidate> »). L'unicité "une seule ouverte par
- * campagne" est portée par l'index partiel en base
- * (`availability_requests_one_open_per_campaign`) : cette fonction ne
- * revérifie rien avant d'écrire, elle capture juste le conflit si la
- * contrainte le déclenche (course-safe, plutôt qu'un aller-retour
- * lire-puis-écrire qui laisserait une fenêtre entre les deux).
+ * Ouvre une demande (V3.1-8) — titre généré si laissé vide (« Séance du
+ * <première date candidate> »). V3.1-190 : plusieurs demandes peuvent être
+ * ouvertes en même temps ; la RLS réserve l'écriture au MJ du monde.
  */
 export async function openAvailabilityRequest(
   supabase: TypedClient,
   params: { campaignId: string; title: string | null; candidateDates: string[]; startsAt: string; endsAt: string; createdBy: string }
-): Promise<OpenRequestResult> {
+): Promise<AvailabilityRequestRow> {
   const sortedDates = [...params.candidateDates].sort();
   const title = params.title?.trim() ? params.title.trim() : `Séance du ${formatDateFr(sortedDates[0])}`;
-  try {
-    const request = await insertAvailabilityRequest(supabase, {
-      campaignId: params.campaignId,
-      title,
-      candidateDates: sortedDates,
-      startsAt: params.startsAt,
-      endsAt: params.endsAt,
-      createdBy: params.createdBy,
-    });
-    return { ok: true, request };
-  } catch (error) {
-    if (error instanceof Error && /availability_requests_one_open_per_campaign/.test(error.message)) {
-      return { ok: false, reason: "already_open" };
-    }
-    throw error;
-  }
+  return insertAvailabilityRequest(supabase, {
+    campaignId: params.campaignId,
+    title,
+    candidateDates: sortedDates,
+    startsAt: params.startsAt,
+    endsAt: params.endsAt,
+    createdBy: params.createdBy,
+  });
 }
 
-export async function getOpenRequest(supabase: TypedClient, campaignId: string): Promise<AvailabilityRequestRow | null> {
-  return getOpenAvailabilityRequest(supabase, campaignId);
-}
-
-/** A-t-elle déjà répondu à cette ronde (V3.1-8, pastille) — au moins une date renseignée compte comme une réponse, pas besoin d'avoir couvert toutes les dates candidates. */
-export async function hasRespondedToRequest(supabase: TypedClient, requestId: string, userId: string): Promise<boolean> {
-  const rows = await listAvailabilitiesForUserAndRequest(supabase, requestId, userId);
-  return rows.length > 0;
-}
-
-export async function getMyResponsesForRequest(supabase: TypedClient, requestId: string, userId: string): Promise<AvailabilityRow[]> {
-  return listAvailabilitiesForUserAndRequest(supabase, requestId, userId);
+/**
+ * La demande visée, si elle est ouverte ET appartient à cette campagne — la
+ * seule porte des gestes d'une joueuse (répondre, effacer, « aucune date ») :
+ * jamais un `requestId` du client pris tel quel.
+ */
+async function openRequestOfCampaign(supabase: TypedClient, campaignId: string, requestId: string): Promise<AvailabilityRequestRow | null> {
+  const request = await getAvailabilityRequestById(supabase, requestId);
+  return request && request.campaign_id === campaignId && request.status === "open" ? request : null;
 }
 
 export type RespondResult = { ok: true; availability: AvailabilityRow } | { ok: false; reason: "no_open_request" | "date_not_candidate" };
 
 /**
- * Répond à la ronde ouverte d'une campagne (V3.1-8) — résout et valide la
- * ronde côté serveur (jamais un `requestId` transmis tel quel par le
- * client) : la date doit faire partie des dates candidates de la ronde
- * actuellement ouverte, sinon la joueuse répondrait à une question qui ne
- * lui a jamais été posée (ronde déjà fermée entre-temps, ou date hors
- * proposition).
+ * Répond à une demande ouverte (V3.1-8, V3.1-190) : la date doit faire partie
+ * de ses dates candidates. Cocher une date retire un « aucune date ne me va »
+ * posé avant.
  */
-export async function respondToOpenRequest(
+export async function respondToRequest(
   supabase: TypedClient,
-  params: { campaignId: string; userId: string; date: string; startsAt: string; endsAt: string }
+  params: { campaignId: string; requestId: string; userId: string; date: string; startsAt: string; endsAt: string }
 ): Promise<RespondResult> {
-  const request = await getOpenAvailabilityRequest(supabase, params.campaignId);
+  const request = await openRequestOfCampaign(supabase, params.campaignId, params.requestId);
   if (!request) return { ok: false, reason: "no_open_request" };
   if (!request.candidate_dates.includes(params.date)) return { ok: false, reason: "date_not_candidate" };
 
-  const availability = await upsertAvailabilityRow(supabase, {
-    campaignId: params.campaignId,
-    userId: params.userId,
-    date: params.date,
-    startsAt: params.startsAt,
-    endsAt: params.endsAt,
-    requestId: request.id,
-  });
+  const [availability] = await Promise.all([
+    upsertAvailabilityRow(supabase, {
+      campaignId: params.campaignId,
+      userId: params.userId,
+      date: params.date,
+      startsAt: params.startsAt,
+      endsAt: params.endsAt,
+      requestId: request.id,
+    }),
+    deleteDecline(supabase, { requestId: request.id, userId: params.userId }),
+  ]);
   return { ok: true, availability };
+}
+
+/** Efface une date cochée pour une demande ouverte de cette campagne. */
+export async function clearAvailability(
+  supabase: TypedClient,
+  params: { campaignId: string; requestId: string; userId: string; date: string }
+): Promise<boolean> {
+  const request = await openRequestOfCampaign(supabase, params.campaignId, params.requestId);
+  if (!request) return false;
+  await deleteAvailabilityRow(supabase, { requestId: request.id, userId: params.userId, date: params.date });
+  return true;
+}
+
+/**
+ * V3.1-190 — « Aucune date ne me va » : efface les dates cochées pour cette
+ * demande et note la réponse, pour que la joueuse compte comme ayant répondu.
+ */
+export async function declineRequest(supabase: TypedClient, params: { campaignId: string; requestId: string; userId: string }): Promise<boolean> {
+  const request = await openRequestOfCampaign(supabase, params.campaignId, params.requestId);
+  if (!request) return false;
+  await deleteAvailabilitiesForUserAndRequest(supabase, { requestId: request.id, userId: params.userId });
+  await upsertDecline(supabase, { requestId: request.id, campaignId: params.campaignId, userId: params.userId });
+  return true;
+}
+
+interface OpenRequestsState {
+  requests: AvailabilityRequestRow[];
+  members: Awaited<ReturnType<typeof listCampaignMembers>>;
+  summaries: Map<string, RequestSummary>;
+  declinedBy: Map<string, Set<string>>;
+}
+
+/**
+ * V3.1-190 — les demandes ouvertes et leur état, en quatre lectures au plus
+ * quelle que soit leur nombre : demandes, membres, puis qui a coché et qui a
+ * décliné pour toutes à la fois (`in`). Sert l'écran et les deux pastilles.
+ */
+async function loadOpenRequestsState(supabase: TypedClient, campaignId: string): Promise<OpenRequestsState> {
+  const [requests, members] = await Promise.all([listOpenAvailabilityRequests(supabase, campaignId), listCampaignMembers(supabase, campaignId)]);
+  const ids = requests.map((r) => r.id);
+  const [respondents, declines] = await Promise.all([listRespondentsForRequests(supabase, ids), listDeclinesForRequests(supabase, ids)]);
+  const summaries = new Map<string, RequestSummary>();
+  const declinedBy = new Map<string, Set<string>>();
+  for (const request of requests) {
+    const declined = declines.filter((d) => d.request_id === request.id).map((d) => d.user_id);
+    declinedBy.set(request.id, new Set(declined));
+    summaries.set(
+      request.id,
+      summarizeRequest({
+        members,
+        creatorId: request.created_by,
+        availabilityUserIds: respondents.filter((r) => r.request_id === request.id).map((r) => r.user_id),
+        declinedUserIds: declined,
+      })
+    );
+  }
+  return { requests, members, summaries, declinedBy };
+}
+
+/** V3.1-190 — la pastille du rail joueur : les demandes ouvertes qui attendent sa réponse. */
+export async function countUnansweredRequests(supabase: TypedClient, campaignId: string, userId: string): Promise<number> {
+  const { summaries } = await loadOpenRequestsState(supabase, campaignId);
+  return unansweredCount([...summaries.values()], userId);
+}
+
+/** V3.1-190 — la pastille MJ « N à fixer » : les demandes ouvertes où tout le monde a répondu. */
+export async function countRequestsReadyToFix(supabase: TypedClient, campaignId: string): Promise<number> {
+  const { summaries } = await loadOpenRequestsState(supabase, campaignId);
+  return [...summaries.values()].filter((s) => s.ready).length;
 }
 
 const HEATMAP_STEP_MINUTES = 30;
@@ -173,23 +228,18 @@ export interface RequestBoard {
 }
 
 /**
- * Tout ce que la grille et les dates possibles affichent pour une ronde de
- * demande (V3.1-16), en une seule lecture des réponses : la carte de chaleur
- * par demi-heure (`buildHeatmap`), puis, par jour, son meilleur créneau
- * (`bestWindowForDay`), classés (`rankBestDays`). Les réponses déjà déposées
- * sont lues telles quelles : rien ne change dans leur forme (une plage par
- * jour et par personne), seul le calcul du classement change.
+ * Tout ce que la grille et les dates possibles affichent pour une demande
+ * (V3.1-16), à partir de ses réponses : la carte de chaleur par demi-heure
+ * (`buildHeatmap`), puis, par jour, son meilleur créneau
+ * (`bestWindowForDay`), classés (`rankBestDays`).
  */
-export async function getRequestBoard(supabase: TypedClient, campaignId: string, request: AvailabilityRequestRow): Promise<RequestBoard> {
-  const [availabilities, members, targetMinutes] = await Promise.all([
-    listAvailabilitiesForRequest(supabase, request.id),
-    listCampaignMembers(supabase, campaignId),
-    getTargetSessionMinutes(supabase, campaignId),
-  ]);
-  const expectedIds = expectedAtTable(members, request.created_by, availabilities.map((a) => a.user_id));
-  const names = await resolveSchedulingNames(supabase, expectedIds);
-  const nameOf = (userId: string) => names.get(userId) ?? "Sans nom";
-
+function buildRequestBoard(
+  request: AvailabilityRequestRow,
+  availabilities: AvailabilityRow[],
+  expectedIds: string[],
+  nameOf: (userId: string) => string,
+  targetMinutes: number
+): RequestBoard {
   const slots = generateSlots(timeToMinutes(request.starts_at), timeToMinutes(request.ends_at), HEATMAP_STEP_MINUTES);
   const responses: SlotResponse[] = availabilities.map((r) => ({
     date: r.date,
@@ -223,10 +273,96 @@ export async function getRequestBoard(supabase: TypedClient, campaignId: string,
   };
 }
 
-/** Confirme une séance, depuis le classement de disponibilités ou manuellement (retour utilisateur : "le MJ doit pouvoir mettre manuellement la prochaine date... sans passer par l'outil") — même écriture, `source` ne fait que changer l'étiquette affichée ensuite. Aucune limite au nombre de séances par mois (retour utilisateur). Ferme la ronde ouverte de la campagne **seulement pour une séance confirmée depuis les disponibilités** (V3.1-8, étape 6 : elle répond alors à la question posée). Une date réglée à la main est indépendante de la demande en cours et la laisse ouverte (bug rapporté le 1ᵉʳ octobre, V3.1-16 : la fermer faisait disparaître de l'écran les disponibilités déjà cochées). */
+/** Une carte de la rangée « Demandes en cours » (MJ) / « Demandes du MJ » (joueur). */
+export interface RequestCard {
+  id: string;
+  title: string;
+  candidateCount: number;
+  startsAt: string;
+  endsAt: string;
+  respondedCount: number;
+  expectedCount: number;
+  missingNames: string[];
+  ready: boolean;
+  viewerResponded: boolean;
+}
+
+export interface SchedulingBoard {
+  requests: RequestCard[];
+  /** La demande affichée : celle demandée si elle est ouverte, sinon la plus ancienne ; `null` sans demande. */
+  request: AvailabilityRequestRow | null;
+  days: RankedDay[];
+  heatmap: Heatmap | null;
+  expected: number;
+  /** Qui a répondu à la demande affichée (la ligne « Réponses » du MJ). */
+  responses: { userId: string; name: string; responded: boolean }[];
+  myResponses: AvailabilityRow[];
+  /** Ce compte a dit « aucune date ne me va » pour la demande affichée. */
+  declined: boolean;
+  viewerId: string;
+  targetMinutes: number;
+}
+
+/**
+ * V3.1-190 — tout l'écran Calendrier réel (MJ) et Prochaine session
+ * (joueur), en une fois : les cartes de toutes les demandes ouvertes, puis,
+ * pour la demande affichée, la grille, les dates possibles, qui a répondu et
+ * mes propres réponses. Deux vagues de lectures, puis une troisième pour la
+ * demande affichée (ses plages, les noms, la durée visée).
+ */
+export async function getSchedulingBoard(
+  supabase: TypedClient,
+  params: { campaignId: string; userId: string; requestId: string | null }
+): Promise<SchedulingBoard> {
+  const state = await loadOpenRequestsState(supabase, params.campaignId);
+  const selected = state.requests.find((r) => r.id === params.requestId) ?? state.requests[0] ?? null;
+
+  const everyone = [...new Set([...state.summaries.values()].flatMap((s) => s.expected))];
+  const [names, targetMinutes, availabilities] = await Promise.all([
+    resolveSchedulingNames(supabase, everyone),
+    getTargetSessionMinutes(supabase, params.campaignId),
+    selected ? listAvailabilitiesForRequest(supabase, selected.id) : Promise.resolve([] as AvailabilityRow[]),
+  ]);
+  const nameOf = (userId: string) => names.get(userId) ?? "Sans nom";
+
+  const requests: RequestCard[] = state.requests.map((r) => {
+    const summary = state.summaries.get(r.id)!;
+    return {
+      id: r.id,
+      title: r.title,
+      candidateCount: r.candidate_dates.length,
+      startsAt: r.starts_at,
+      endsAt: r.ends_at,
+      respondedCount: summary.responded.length,
+      expectedCount: summary.expected.length,
+      missingNames: summary.missing.map(nameOf),
+      ready: summary.ready,
+      viewerResponded: summary.responded.includes(params.userId),
+    };
+  });
+
+  if (!selected) {
+    return { requests, request: null, days: [], heatmap: null, expected: 0, responses: [], myResponses: [], declined: false, viewerId: params.userId, targetMinutes };
+  }
+
+  const summary = state.summaries.get(selected.id)!;
+  const board = buildRequestBoard(selected, availabilities, summary.expected, nameOf, targetMinutes);
+  return {
+    requests,
+    request: selected,
+    ...board,
+    responses: summary.expected.map((userId) => ({ userId, name: nameOf(userId), responded: summary.responded.includes(userId) })),
+    myResponses: availabilities.filter((a) => a.user_id === params.userId),
+    declined: state.declinedBy.get(selected.id)?.has(params.userId) ?? false,
+    viewerId: params.userId,
+    targetMinutes,
+  };
+}
+
+/** Confirme une séance, depuis le classement de disponibilités ou manuellement (retour utilisateur : "le MJ doit pouvoir mettre manuellement la prochaine date... sans passer par l'outil") — même écriture, `source` ne fait que changer l'étiquette affichée ensuite. Aucune limite au nombre de séances par mois (retour utilisateur). Ferme **la demande dont la date est fixée** (`requestId`), seulement pour une séance confirmée depuis les disponibilités (V3.1-8, étape 6) ; les autres demandes restent ouvertes (V3.1-190). Une date réglée à la main ne ferme rien (bug rapporté le 1ᵉʳ octobre, V3.1-16). */
 export async function createRealSession(
   supabase: TypedClient,
-  params: { campaignId: string; date: string; startsAt: string; durationMinutes: number; source: "availability" | "manual"; createdBy: string }
+  params: { campaignId: string; date: string; startsAt: string; durationMinutes: number; source: "availability" | "manual"; createdBy: string; requestId?: string | null }
 ): Promise<RealSessionRow> {
   const session = await insertRealSession(supabase, {
     campaignId: params.campaignId,
@@ -236,9 +372,9 @@ export async function createRealSession(
     source: params.source,
     createdBy: params.createdBy,
   });
-  if (params.source === "availability") {
-    const openRequest = await getOpenAvailabilityRequest(supabase, params.campaignId);
-    if (openRequest) await closeAvailabilityRequestRow(supabase, openRequest.id);
+  if (params.source === "availability" && params.requestId) {
+    const request = await openRequestOfCampaign(supabase, params.campaignId, params.requestId);
+    if (request) await closeAvailabilityRequestRow(supabase, request.id);
   }
   return session;
 }

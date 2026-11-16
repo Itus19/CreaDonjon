@@ -1036,9 +1036,19 @@ export async function assembleResolvedRuleset(
       const resources = declaredResources(resolvedFeatureBlocks.get(fk)?.blocksByType.get("resources"));
       const activation = declaredActivation(resolvedFeatureBlocks.get(fk)?.blocksByType.get("activation"));
       const echecs = declaredForcedSaveFailures(resolvedFeatureBlocks.get(fk)?.blocksByType.get("forced_save_failures"));
-      const jouable = { ...(resources.length > 0 ? { resources } : {}), ...(activation ? { activation } : {}), ...(echecs.length > 0 ? { forcedSaveFailures: echecs } : {}) };
+      // V3.1-171 (ADR 0077) : les auras et retouches du bloc `modifiers` (Aura de protection, Aura étendue).
+      const extras = zModifiersBlockData.safeParse(resolvedFeatureBlocks.get(fk)?.blocksByType.get("modifiers"));
+      const auras = extras.success ? (extras.data.auras ?? []) : [];
+      const patches = extras.success ? (extras.data.patches ?? []) : [];
+      const jouable = {
+        ...(resources.length > 0 ? { resources } : {}),
+        ...(activation ? { activation } : {}),
+        ...(echecs.length > 0 ? { forcedSaveFailures: echecs } : {}),
+        ...(auras.length > 0 ? { auras } : {}),
+        ...(patches.length > 0 ? { patches } : {}),
+      };
       // V3.1-163 : une aptitude de sous-classe lue pour ses briques, et qui n'en a pas : rien à ajouter.
-      if (playableOnlyKeys.has(fk) && !activation && resources.length === 0 && echecs.length === 0) continue;
+      if (playableOnlyKeys.has(fk) && !activation && resources.length === 0 && echecs.length === 0 && auras.length === 0 && patches.length === 0) continue;
       // V3.1-199 : la progression du SRD liste les aptitudes de la sous-classe d'exemple (Mots cinglants
       // du Collège du Savoir) : elles ne reviennent qu'à qui a choisi cette sous-classe.
       if (source.startsWith("class:") && chip && belongsToAnotherSubclass(chip.source_raw, subclassByClass.get(source.slice(6)))) continue;

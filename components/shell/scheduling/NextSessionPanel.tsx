@@ -1,126 +1,89 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { chargerProchaineSession } from "@/src/server/services/prochaineSession";
-import AvailabilityGrid, { type GridResponse } from "./AvailabilityGrid";
-import { NextSessionCard, PossibleDates, SessionsCard, type OpenRequestBoard, type RealSession } from "./SessionBoardParts";
-
-interface OpenRequestResponse {
-  campaignId: string | null;
-  request: OpenRequestBoard["request"];
-  hasResponded: boolean;
-  myResponses: GridResponse[];
-}
+import AvailabilityGrid from "./AvailabilityGrid";
+import { NextSessionCard, PossibleDates, RequestTabs, SessionsCard, type OpenRequestBoard, type RealSession } from "./SessionBoardParts";
 
 /**
  * Page « Prochaine session » côté joueuse (V3.1-9, redessinée V3.1-16 d'après
  * l'esquisse « Vue joueuse », `Joueuse.dc.html`) : le même écran que le
  * Calendrier réel du MJ, **sans aucun outil MJ** — ni durée visée, ni
- * annulation, ni confirmation, ni date à la main. Une seule page au lieu des
- * trois onglets d'avant :
+ * annulation, ni confirmation, ni date à la main :
  *
  * 1. la prochaine séance confirmée, en tête — c'est ce qu'on vient chercher ;
- * 2. la demande ouverte et la grille à bascule (`AvailabilityGrid.tsx`),
- *    « Toute la table » compris : la RLS de `real_session_availabilities`
- *    ouvre déjà ces réponses à tout membre du monde ;
+ * 2. V3.1-190 : la rangée « Demandes du MJ » (`RequestTabs`), chacune « À
+ *    répondre » ou « ✓ Répondu », puis, pour la demande choisie, sa grille à
+ *    bascule (`AvailabilityGrid.tsx`) et « Aucune date ne me va » ;
  * 3. les dates qui se dessinent, en lecture seule ;
  * 4. séances à venir et déjà jouées.
  */
 export default function NextSessionPanel({
-  worldSlug,
   initial,
 }: {
-  worldSlug: string;
   /**
    * V3.1-62, étape 3 (C1) : ce que la page a lu avec elle — `null` si le monde
-   * n'a pas de campagne. Absent, le panneau charge lui-même, comme avant.
-   * Les relectures après un geste (`onSaved`, « Réessayer ») passent toujours
-   * par les routes.
+   * n'a pas de campagne. Les relectures après un geste passent par la route
+   * `requests/open`.
    */
-  initial?: Awaited<ReturnType<typeof chargerProchaineSession>>;
+  initial: Awaited<ReturnType<typeof chargerProchaineSession>>;
 }) {
-  const [openData, setOpenData] = useState<OpenRequestResponse | null>(() =>
-    initial === undefined ? null : initial === null ? { campaignId: null, request: null, hasResponded: false, myResponses: [] } : initial.openData
-  );
+  const campaignId = initial?.campaignId ?? null;
   const [board, setBoard] = useState<OpenRequestBoard | null>(initial?.board ?? null);
-  const [upcoming, setUpcoming] = useState<RealSession[] | null>(initial === undefined ? null : (initial?.upcoming ?? []));
-  const [past, setPast] = useState<RealSession[]>(initial?.past ?? []);
-  const [error, setError] = useState(false);
-  /** Lu, jamais modifié : le mode strict rejoue les effets, la condition doit rester vraie. */
-  const avecPage = useRef(initial !== undefined);
+  const [upcoming] = useState<RealSession[]>(initial?.upcoming ?? []);
+  const [past] = useState<RealSession[]>(initial?.past ?? []);
+  const [error, setError] = useState<string | null>(null);
+  const [declining, setDeclining] = useState(false);
+  /** La demande affichée ; `null` : la plus ancienne. */
+  const demandeVisee = useRef<string | null>(null);
 
-  const loadOpenRequest = useCallback(() => {
-    fetch(`/api/worlds/${worldSlug}/scheduling/open-request`)
-      .then((res) => (res.ok ? res.json() : Promise.reject(new Error())))
-      .then((body: OpenRequestResponse) => {
-        setError(false);
-        setOpenData(body);
-      })
-      .catch(() => setError(true));
-  }, [worldSlug]);
+  const loadBoard = useCallback(
+    (requestId: string | null = demandeVisee.current) => {
+      if (!campaignId) return;
+      demandeVisee.current = requestId;
+      const query = requestId ? `?requestId=${encodeURIComponent(requestId)}` : "";
+      fetch(`/api/campaigns/${campaignId}/scheduling/requests/open${query}`)
+        .then((res) => (res.ok ? res.json() : Promise.reject(new Error())))
+        .then((body: OpenRequestBoard) => {
+          setError(null);
+          setBoard(body);
+        })
+        .catch(() => setError("Impossible de charger les demandes de disponibilités."));
+    },
+    [campaignId]
+  );
 
-  useEffect(() => {
-    if (!avecPage.current) loadOpenRequest();
-  }, [loadOpenRequest]);
-
-  const campaignId = openData?.campaignId ?? null;
-
-  const loadBoard = useCallback(() => {
+  async function declineRequest(requestId: string) {
     if (!campaignId) return;
-    fetch(`/api/campaigns/${campaignId}/scheduling/requests/open`)
-      .then((res) => (res.ok ? res.json() : Promise.reject(new Error())))
-      .then(setBoard)
-      .catch((erreur) => {
-        console.error("Chargement du tableau de disponibilités impossible", erreur);
-        setBoard(null);
-      });
-  }, [campaignId]);
-
-  useEffect(() => {
-    if (!avecPage.current) loadBoard();
-  }, [loadBoard]);
-
-  useEffect(() => {
-    if (!campaignId || avecPage.current) return;
-    fetch(`/api/campaigns/${campaignId}/scheduling/sessions`)
-      .then((res) => (res.ok ? res.json() : Promise.reject(new Error())))
-      .then((body: { upcoming: RealSession[]; past: RealSession[] }) => {
-        setUpcoming(body.upcoming);
-        setPast(body.past);
-      })
-      .catch((erreur) => {
-        console.error("Chargement des séances à venir impossible", erreur);
-        setUpcoming([]);
-        setPast([]);
-      });
-  }, [campaignId]);
-
-  function onSaved() {
-    loadOpenRequest();
-    loadBoard();
+    setDeclining(true);
+    const res = await fetch(`/api/campaigns/${campaignId}/scheduling/requests/${requestId}/decline`, { method: "POST" });
+    setDeclining(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      setError(body?.error ?? "Échec de l'enregistrement.");
+      return;
+    }
+    loadBoard(requestId);
   }
 
-  if (error)
-    return (
-      <div className="flex items-center gap-3 text-sm text-danger">
-        Impossible de charger la prochaine session.
-        <button type="button" onClick={loadOpenRequest} className="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised">
-          Réessayer
-        </button>
-      </div>
-    );
-  if (!openData) return <p className="text-xs italic text-ink-muted">Chargement…</p>;
   if (!campaignId) return <p className="text-sm italic text-ink-muted">Ce monde n&apos;a pas encore de campagne.</p>;
 
-  const next = upcoming?.[0] ?? null;
-  const request = openData.request;
+  const next = upcoming[0] ?? null;
+  const request = board?.request ?? null;
+  const carte = board?.requests.find((r) => r.id === request?.id);
 
   return (
     <div className="flex flex-col gap-5">
-      <NextSessionCard session={next} loading={upcoming === null} />
+      <NextSessionCard session={next} />
+
+      {board && (
+        <RequestTabs requests={board.requests} selectedId={request?.id ?? null} onSelect={(id) => loadBoard(id)} mode="joueur" />
+      )}
+
+      {error && <p className="text-sm text-danger">{error}</p>}
 
       <section className="flex flex-col gap-3 rounded-[18px] border border-edge bg-panel backdrop-blur-[var(--blur)] p-4">
-        {request ? (
+        {board && request ? (
           <>
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
@@ -129,34 +92,48 @@ export default function NextSessionPanel({
                   Le MJ propose {request.candidate_dates.length} jours, entre {request.starts_at.slice(0, 5)} et {request.ends_at.slice(0, 5)}. Coche tout ce qui t&apos;irait.
                 </div>
               </div>
-              <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${openData.hasResponded ? "bg-success/20 text-success" : "bg-accent/15 text-accent"}`}>
-                {openData.hasResponded ? "Réponse enregistrée" : "Pas encore répondu"}
-              </span>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${carte?.viewerResponded ? "bg-success/20 text-success" : "bg-accent/15 text-accent"}`}>
+                  {board.declined ? "Aucune date ne te va" : carte?.viewerResponded ? "Réponse enregistrée" : "Pas encore répondu"}
+                </span>
+                {!board.declined && (
+                  <button
+                    type="button"
+                    onClick={() => declineRequest(request.id)}
+                    disabled={declining}
+                    className="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised disabled:opacity-50"
+                  >
+                    Aucune date ne me va
+                  </button>
+                )}
+              </div>
             </div>
             <AvailabilityGrid
-              key={request.id}
+              key={`${request.id}-${board.declined ? "non" : "oui"}`}
               campaignId={campaignId}
               request={request}
-              myResponses={openData.myResponses}
-              heatmap={board?.heatmap ?? null}
-              expected={board?.expected ?? 0}
-              viewerId={board?.viewerId ?? null}
-              onSaved={onSaved}
+              myResponses={board.myResponses}
+              heatmap={board.heatmap}
+              expected={board.expected}
+              viewerId={board.viewerId}
+              onSaved={() => loadBoard(request.id)}
             />
-            <p className="text-xs text-ink-muted">Tes cases s&apos;enregistrent toutes seules. Tu peux revenir les modifier tant que le MJ n&apos;a pas fixé la date.</p>
+            <p className="text-xs text-ink-muted">
+              Tes cases s&apos;enregistrent toutes seules ; en cocher une annule « Aucune date ne me va ». Tu peux revenir les modifier tant que le MJ n&apos;a pas fixé la date.
+            </p>
           </>
         ) : (
           <p className="text-sm italic text-ink-muted">Aucune demande de disponibilités pour le moment.</p>
         )}
       </section>
 
-      {request && board && (
+      {board && request && (
         <PossibleDates title="Les dates qui se dessinent" hint="c'est le MJ qui choisit · seuls les jours où quelqu'un est disponible" days={board.days} targetMinutes={board.targetMinutes} />
       )}
 
       <div className="@container">
         <div className="grid grid-cols-1 gap-4 @2xl:grid-cols-2">
-          <SessionsCard title="Séances à venir" sessions={upcoming ?? []} emptyLabel="Aucune séance confirmée." />
+          <SessionsCard title="Séances à venir" sessions={upcoming} emptyLabel="Aucune séance confirmée." />
           <SessionsCard title="Déjà jouées" sessions={past} emptyLabel="Aucune séance passée." muted />
         </div>
       </div>

@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /**
- * Les paliers des titres des joueurs (V3.1-89, ADR 0064) : des DONNÉES,
+ * Les paliers des titres des joueurs (V3.1-89, ADR 0079) : des DONNÉES,
  * réglables par le superadmin (V3.1-92), globales à la plateforme. Table
  * `player_title_tiers`. Le noyau des statistiques (V3.1-90) choisit le palier
  * d'une mesure ; ce module dit ce qu'un palier valide peut contenir.

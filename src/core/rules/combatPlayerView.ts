@@ -30,6 +30,8 @@ export interface PlayerCombatRow {
   wound: WoundState | null;
   /** V3.1-166 (ADR 0076) : le budget du tour d'un allié tel que la base le garde (daté) ; `null` pour un adversaire ou s'il n'a encore rien dépensé. */
   budget: TurnBudget | null;
+  /** V3.1-169 (ADR 0077) : la position sur le plan, en mètres ; `null` tant que le jeton n'est pas posé. */
+  position: { x: number; y: number } | null;
 }
 
 export interface PlayerCombatParticipant extends PlayerCombatRow {

@@ -85,6 +85,20 @@ export const myInitiativeSchema = z.discriminatedUnion("mode", [
 export type MyInitiativeInput = z.infer<typeof myInitiativeSchema>;
 
 /**
+ * V3.1-169 (ADR 0077) — déplacer un jeton sur le plan, en mètres. `null`
+ * retire le jeton (MJ seulement, vérifié par le service). Les bornes sont
+ * celles de la base (±1000 m).
+ */
+const zMetres = z.number().finite().min(-1000).max(1000);
+export const moveParticipantSchema = z
+  .object({
+    participantId: z.string().uuid(),
+    position: z.object({ x: zMetres, y: zMetres }).strict().nullable(),
+  })
+  .strict();
+export type MoveParticipantInput = z.infer<typeof moveParticipantSchema>;
+
+/**
  * V3.1-105 (ADR 0042) — un jet ciblé contre un participant du combat en cours.
  * L'acteur : un personnage (sa fiche) ou un participant (un monstre et son
  * bloc de stats). L'action : une arme de l'inventaire, un sort connu, ou une

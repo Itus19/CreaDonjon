@@ -32,6 +32,8 @@ export function eventsForAttack(params: {
   result: AttackRollResult;
   ac: number;
   damage?: number;
+  /** V3.1-168 (ADR 0077) : l'arme du jet, pour les étiquettes `weapon:<clé>` et `property:<propriété>` (ADR 0028). */
+  weapon?: { key: string; properties: readonly string[] };
 }): FiredEvent[] {
   // Regles 2024 (`attackVerdict`) : un 20 naturel touche, un 1 naturel rate,
   // quelle que soit la CA — le meme verdict que la table et le solo.
@@ -42,11 +44,12 @@ export function eventsForAttack(params: {
     "event.critical": params.result.isCritical ? 1 : 0,
   };
 
+  const tags = params.weapon ? [`weapon:${params.weapon.key}`, ...params.weapon.properties.map((x) => `property:${x.toLowerCase()}`)] : undefined;
   if (!hit) {
-    return [{ event: "attack_miss", subject: params.attacker, data: base }];
+    return [{ event: "attack_miss", subject: params.attacker, data: base, ...(tags ? { tags } : {}) }];
   }
 
-  const events: FiredEvent[] = [{ event: "attack_hit", subject: params.attacker, data: base }];
+  const events: FiredEvent[] = [{ event: "attack_hit", subject: params.attacker, data: base, ...(tags ? { tags } : {}) }];
   if (params.damage !== undefined) {
     const withDamage = { ...base, "event.damage": params.damage };
     // Les deux faces sont emises : une regle peut s'accrocher a « j'inflige »

@@ -1,5 +1,5 @@
 import { infoboxValueNodes, type InfoboxValue } from "@/src/core/schemas/blocks/infobox";
-import type { SegmentContentNode } from "@/src/core/schemas/entities/segments";
+import type { MentionNode } from "@/src/core/schemas/entities/segments";
 
 /**
  * V3.1-66 — « @ » dans une valeur d'Encadré cite une fiche. L'éditeur montre
@@ -8,7 +8,7 @@ import type { SegmentContentNode } from "@/src/core/schemas/entities/segments";
  * en forme. Une valeur sans mention redevient une chaîne : la forme d'avant.
  */
 
-type NoeudTexte = Extract<SegmentContentNode, { t: "text" }>;
+type NoeudTexte = Extract<MentionNode, { t: "text" }>;
 
 /** Au-delà, on n'est plus en train de citer une fiche. */
 const LONGUEUR_REQUETE_MAX = 40;
@@ -26,8 +26,8 @@ export function mentionEnCours(texte: string, curseur: number): { debut: number;
 }
 
 /** Les nœuds d'édition : toujours un nœud texte (éventuellement vide) avant, entre et après les mentions. */
-export function noeudsEditables(valeur: InfoboxValue): SegmentContentNode[] {
-  const sortie: SegmentContentNode[] = [];
+export function noeudsEditables(valeur: InfoboxValue): MentionNode[] {
+  const sortie: MentionNode[] = [];
   for (const noeud of infoboxValueNodes(valeur)) {
     const dernier = sortie[sortie.length - 1];
     if (noeud.t === "text") {
@@ -44,11 +44,11 @@ export function noeudsEditables(valeur: InfoboxValue): SegmentContentNode[] {
 
 /** Remplace, dans le nœud texte `index`, les caractères `debut`..`fin` (« @Sil ») par la mention ; une espace suit pour continuer à écrire. */
 export function insererMention(
-  noeuds: readonly SegmentContentNode[],
+  noeuds: readonly MentionNode[],
   index: number,
   plage: { debut: number; fin: number },
-  mention: SegmentContentNode
-): SegmentContentNode[] {
+  mention: MentionNode
+): MentionNode[] {
   const cible = noeuds[index];
   if (cible?.t !== "text") return [...noeuds];
   const avant: NoeudTexte = { ...cible, v: cible.v.slice(0, plage.debut) };
@@ -58,13 +58,13 @@ export function insererMention(
 }
 
 /** Retire la mention `index` ; le texte autour se recolle à la normalisation. */
-export function retirerMention(noeuds: readonly SegmentContentNode[], index: number): SegmentContentNode[] {
+export function retirerMention(noeuds: readonly MentionNode[], index: number): MentionNode[] {
   return noeuds.filter((_, i) => i !== index);
 }
 
 /** La valeur à enregistrer : textes voisins fusionnés, textes vides retirés ; sans mention, une chaîne. */
-export function normaliserValeur(noeuds: readonly SegmentContentNode[]): InfoboxValue {
-  const fusion: SegmentContentNode[] = [];
+export function normaliserValeur(noeuds: readonly MentionNode[]): InfoboxValue {
+  const fusion: MentionNode[] = [];
   for (const noeud of noeuds) {
     const dernier = fusion[fusion.length - 1];
     if (noeud.t === "text" && dernier?.t === "text" && !noeud.marks && !dernier.marks) {

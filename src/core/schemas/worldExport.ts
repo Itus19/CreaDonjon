@@ -43,6 +43,13 @@ const zExportedEntity = z.object({
 // exporte : une ligne fraichement importee n'a encore ete editee par
 // personne, elle repart a 1 (valeur par defaut de la colonne).
 const zExportedBlock = z.object({
+  /**
+   * V3.1-189 : l'identifiant d'origine du bloc, pour recaler a l'import les
+   * references entre blocs (image posee dans le texte, ancrage d'une image).
+   * Facultatif : un fichier exporte avant ce ticket reste lisible, ses
+   * references entre blocs ne sont simplement pas recalees.
+   */
+  ref: z.string().min(1).optional(),
   entityRef: z.string().min(1),
   blockType: z.enum(BLOCK_TYPES),
   display: z.unknown(),

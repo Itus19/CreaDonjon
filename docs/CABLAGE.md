@@ -123,6 +123,7 @@ Chaque page affichée fait deux appels `/api` de moins : c'est aussi du quota é
 
 - **Fenêtre Initiative** : les PJ sont lus en un lot, en même temps que le combat actif (C4).
 - **Badge « Prochaine session » de la joueuse** : ses données arrivent avec le layout joueur (C1), au lieu de deux appels `/api` sur chaque page joueuse.
+- **Pastilles du Calendrier réel (V3.1-190)** : le nombre de demandes sans réponse (layout joueur) et le nombre de demandes « à fixer » (layout MJ) arrivent avec le layout, en quatre lectures légères quel que soit le nombre de demandes (`countUnansweredRequests`, `countRequestsReadyToFix`). L'outil MJ lit tout son écran en un appel (`requests/open`, réponses du MJ comprises : l'appel `availability` en lecture a disparu).
 
 | Écran | Requêtes à la base | Chargements après affichage | Écran stable |
 |---|---|---|---|
@@ -134,7 +135,7 @@ Chaque page affichée fait deux appels `/api` de moins : c'est aussi du quota é
 
 **Après les corrections 7 et 8 (§7), le 11 octobre** :
 - **Messages non lus** : le compte arrive avec le layout du monde (`countUnreadChatMessages`, partagé avec la route). Plus aucun appel `/api` après l'affichage sur les accueils.
-- **La fiche avec la page (C1, ADR 0056)** : la page lance le calcul de la fiche sans l'attendre et le passe en promesse ; la fiche l'adopte à la place de `/sheet` et `/resolved-ruleset`. Ces deux appels ont disparu sur les trois pages qui affichent une fiche par `EditEntityForm`.
+- **La fiche avec la page (C1, ADR 0056)** : la page lance le calcul de la fiche sans l'attendre et le passe en promesse ; la fiche l'adopte à la place de `/sheet` et `/resolved-ruleset`. Ces deux appels ont disparu sur les pages qui affichent une fiche par `EditEntityForm` (le Wiki joueur n’en fait plus partie depuis le 9 novembre : il n’édite plus, l’édition vit dans l’onglet Édition).
 
 | Écran | Fin des chargements (chronologie) |
 |---|---|
@@ -206,11 +207,11 @@ Les routes les plus lentes, en temps serveur moyen (mesure avant) :
 
 Ce qui se charge, quand et où. Une carte à mettre à jour à chaque recâblage.
 
-**Fond commun de toutes les pages du monde.** *Au 18 octobre* : rien ne part après l'affichage. Les jets de dés et la radio se chargent à la première ouverture de leur volet ; les messages non lus et la prochaine séance arrivent avec le layout. Côté joueuse, la page « Prochaine session » reçoit la demande ouverte, le tableau et les séances avec elle (`chargerProchaineSession`), et la coquille joueuse reçoit le devoir de journal avec son layout, dans la même vague que la prochaine séance (V3.1-150 : il vit sous « Édition » ; le calendrier ne se lit que si un devoir existe). La page d'un devoir, dans l'onglet Édition, lit son bandeau avec la fiche, et seulement pour une page du Livre.
+**Fond commun de toutes les pages du monde.** *Au 18 octobre* : rien ne part après l'affichage. Les jets de dés et la radio se chargent à la première ouverture de leur volet ; les messages non lus et la prochaine séance arrivent avec le layout. Côté joueuse, la page « Prochaine session » reçoit les demandes ouvertes, le tableau de celle affichée et les séances avec elle (`chargerProchaineSession`, V3.1-190 : `getSchedulingBoard`) ; choisir une autre demande relit `requests/open?requestId=`, et la coquille joueuse reçoit le devoir de journal avec son layout, dans la même vague que la prochaine séance (V3.1-150 : il vit sous « Édition » ; le calendrier ne se lit que si un devoir existe). La page d'un devoir, dans l'onglet Édition, lit son bandeau avec la fiche, et seulement pour une page du Livre.
 
 **Outil Table du MJ** (page `/mj/table` et fenêtre) : tout arrive avec la page ou la route ; les PJ se résolvent ensemble (`getTableParty`). Reste la liste des règles du monde, demandée par la rangée chiffrée pour relier les états à leur règle (un appel par onglet, hors du chemin critique).
 
-**Fiche de personnage** (MJ `/m/[monde]/f/[pj]`, joueuse `/joueur` et `/joueur/wiki/[pj]`) :
+**Fiche de personnage** (MJ `/m/[monde]/f/[pj]`, joueuse `/joueur` et `/joueur/fiche/[pj]`) :
 - avec la page : la coquille et les blocs ;
 - après l'affichage, en cascade :
   - `resolved-ruleset` ×6 ;

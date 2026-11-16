@@ -33,6 +33,9 @@ const MESSAGES: Record<ActivateFeatureFailure, string> = {
   no_slot_available: "Plus d'emplacement de ce niveau.",
   unknown_cast_option: "Cette option de lancement n'existe pas pour ce personnage.",
   token_required: "Cette utilisation n'existe que tant que l'effet qui l'accorde dure.",
+  out_of_range: "Hors de portée sur le plan.",
+  area_unplaced: "La zone ne se pose pas : jeton du lanceur, point ou direction manquant sur le plan.",
+  target_out_of_area: "Cette cible n'est pas dans la zone.",
 };
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -56,6 +59,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     callerIsGm,
     locale,
     ...(body.spell ? { spell: body.spell } : {}),
+    ...(body.area ? { area: body.area } : {}),
   });
   if (!result.ok) {
     const message = MESSAGES[result.reason];

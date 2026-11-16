@@ -20,6 +20,7 @@ Les chiffres ont été relevés le 11 octobre 2026 dans la documentation officie
 |---|---|---|
 | Taille de la base | 500 Mo par projet | Le SRD importé (deux éditions, traductions, blocs), le wiki, le journal de session, `ai_usage_log`, les vecteurs (`pgvector`) |
 | **Sortie réseau (egress)** | **5 Go par mois** (+ 5 Go en cache), partagés par toute l'organisation | Chaque réponse de la base vers le serveur Next ou le navigateur : listes de règles, fiches, images du stockage |
+| **Journaux ingérés (log ingestion)** | **1 Go par cycle** ; marqué « Upcoming » au tableau d'usage, facturation et restriction annoncées pour début 2027 | Une ligne de journal par requête et par service traversé : passerelle d'API, PostgREST, Auth, Storage, Realtime, Postgres. Les suites d'intégration complètes et les mesures de câblage font les pics (T6) |
 | Stockage de fichiers | 1 Go, 50 Mo par fichier | Portraits, images de blocs, fonds de page, cartes |
 | Utilisateurs actifs par mois | 50 000 | Chaque compte qui se connecte dans le mois, comptes de test compris |
 | Temps réel | 200 connexions simultanées, 2 millions de messages par mois | Le chat, les messages non lus, les jets de dés (un abonnement par onglet ouvert) |
@@ -115,6 +116,8 @@ Les tests, les mesures et les scripts tournent **contre la vraie base**, celle d
 **T4. Les scripts d'import se lancent rarement.** `npm run ingest:srd` réécrit des milliers de lignes, et il efface ce qu'il ne connaît pas : relancer ensuite les scripts qu'il rappelle. On ne le lance que pour une raison écrite.
 
 **T5. Les sessions de vérification se ferment.** Une session cloud qui garde `npm run dev` ouvert ne consomme rien chez Vercel, mais garde des abonnements temps réel et des requêtes vers Supabase. On arrête le serveur à la fin.
+
+**T6. Les journaux suivent les requêtes.** Supabase journalise chaque requête dans chaque service qu'elle traverse : une suite complète ou un passage du pilote de câblage pèse donc aussi sur les journaux ingérés (1 Go par cycle). *Constaté sur le cycle 13 octobre - 13 novembre* : 0,99 Go le 3 novembre, avec des pics de 80 à 140 Mo les jours de travail en série (17-18, 24-26 et 31 octobre), presque rien les autres jours. Avant de corriger quoi que ce soit, regarder dans le *Logs Explorer* quel service domine ; côté Postgres, vérifier `show log_statement;` (attendu `none`), `show log_min_duration_statement;` et `show log_connections;` dans l'éditeur SQL. Ce sont des réglages du projet, pas des migrations.
 
 ## 4. Surveiller
 

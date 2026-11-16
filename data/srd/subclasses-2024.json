@@ -4,7 +4,7 @@
     "Cle : l'`index` de la sous-classe, puis le debut exact du nom de l'aptitude dans le SRD. `name` remplace un nom mal decoupe par le JSON source.",
     "DONNEE, jamais code : ingest-srd.ts la fusionne dans le bloc `subclass_features`, valide. Suivi par Git (SRD sous CC-BY-4.0, NOTICE.md).",
     "Les niveaux des sorts sont des niveaux de CLASSE.",
-    "Pas encore exprimable (V3.1-137 resistances) : la resistance de l'Affinite elementaire (son bonus de degats est fait, V3.1-158), la resistance de la Resilience fielonne, les effets de Proie du chasseur et Tactiques defensives. Le choix est enregistre, l'effet attend son vocabulaire."
+    "Pas encore exprimable : les effets de Proie du chasseur et Tactiques defensives. Le choix est enregistre, l'effet attend son vocabulaire. (Les resistances de l'Affinite elementaire et de la Resilience fielonne sont faites, V3.1-171.)"
   ],
   "circle-of-the-land": {
     "_regle": "Sorts du Cercle de la Terre : un terrain choisi a chaque repos long, ses sorts toujours prepares selon le niveau de druide.",
@@ -186,7 +186,7 @@
     }
   },
   "draconic-sorcery": {
-    "_regle": "Affinite elementaire : un type de degats parmi acide, froid, feu, foudre, poison, choisi une fois ; + mod. CHA aux degats d'un sort de ce type (V3.1-158). La resistance attend V3.1-137.",
+    "_regle": "Affinite elementaire : un type de degats parmi acide, froid, feu, foudre, poison, choisi une fois ; + mod. CHA aux degats d'un sort de ce type (V3.1-158) et Resistance a ce type (V3.1-171).",
     "features": {
       "Elemental Affinity": {
         "grants": [
@@ -216,13 +216,18 @@
               "op": "ref",
               "name": "ability.cha"
             }
+          },
+          {
+            "target": "resist.{choice:draconic-sorcery.elemental-affinity.damage-type}",
+            "op": "add",
+            "value": 1
           }
         ]
       }
     }
   },
   "fiend-patron": {
-    "_regle": "Resilience fielonne : un type de degats autre que force, choisi a chaque repos court ou long.",
+    "_regle": "Resilience fielonne : un type de degats autre que force, choisi a chaque repos court ou long ; Resistance a ce type (V3.1-171).",
     "features": {
       "Fiendish Resilience": {
         "grants": [
@@ -250,6 +255,13 @@
                 "thunder"
               ]
             }
+          }
+        ],
+        "modifiers": [
+          {
+            "target": "resist.{choice:fiend-patron.fiendish-resilience.damage-type}",
+            "op": "add",
+            "value": 1
           }
         ]
       }

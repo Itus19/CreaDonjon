@@ -3,31 +3,25 @@ import { getLocale } from "next-intl/server";
 import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { getEntityBySlug } from "@/src/server/repos/entities";
-import { canUserEditEntity } from "@/src/server/services/permissions";
-import { getEntityWindowData } from "@/src/server/services/entityWindow";
-import { getPlayerEntityDetail, getPlayerWikiBackground } from "@/src/server/services/playerEntityDetail";
+import { getPlayerEntityDetail } from "@/src/server/services/playerEntityDetail";
 import { listCampaigns } from "@/src/server/services/campaigns";
 import { discoverEntity } from "@/src/server/services/discoveries";
 import type { Locale } from "@/src/i18n/request";
 import PublicEntityBody from "@/components/entities/public/PublicEntityBody";
 import { WikiBackgroundRegistrar } from "@/components/entities/public/WikiBackgroundProvider";
 import WikiBackgroundPreload from "@/components/entities/public/WikiBackgroundPreload";
-import EditEntityForm from "../../../(monde)/f/[entitySlug]/EditEntityForm";
 import EnregistrerRecent from "@/components/shell/EnregistrerRecent";
-import { lancerFicheAvecPage } from "@/src/server/services/ficheAvecPage";
 
 /**
- * Fiche du Wiki (V2-M7b, coquille joueur) — lecture seule PAR DEFAUT
+ * Fiche du Wiki (V2-M7b, coquille joueur) — TOUJOURS en lecture seule
  * (`getPlayerEntityDetail` + `PublicEntityBody`, le meme corps de fiche que
- * l'apercu MJ et le partage anonyme, jamais d'affordance d'edition),
- * SAUF si `canEditEntity` autorise ce viewer sur CETTE fiche precise
- * (retour utilisateur : "le joueur a toujours le droit d'edition sur sa
- * propre fiche" — deja vrai via canEditEntity cas 3 — "et sur une fiche de
- * lore accordee par le MJ" — cas 4, `entity_grants`). Sans ce test, la
- * seule facon d'editer sa propre fiche restait l'onglet Fiche, et une
- * fiche de lore accordee via le panneau MJ (V2-M7, "Octrois d'edition")
- * n'etait JAMAIS editable depuis la coquille joueur — aucun autre chemin
- * n'y menait.
+ * l'apercu MJ et le partage anonyme, jamais d'affordance d'edition).
+ *
+ * Retour utilisateur (9 novembre 2026) : le Wiki est une visualisation,
+ * l'edition vit dans l'onglet Edition (`joueur/fiche`), qui liste deja les
+ * memes fiches que `canEditEntity` autorise (personnage revendique et
+ * octrois du MJ, `listPlayerEditableEntities`). Avant, une fiche editable
+ * s'ouvrait aussi en edition ici : deux chemins pour le meme geste.
  */
 export default async function JoueurWikiEntityPage({
   params,
@@ -57,44 +51,6 @@ export default async function JoueurWikiEntityPage({
       // La fiche s'affiche quand même ; l'échec, lui, se voit dans le journal du serveur (pas de catch muet).
       console.error("Découverte de la fiche non enregistrée", erreur);
     }
-  }
-
-  const canEdit = await canUserEditEntity(supabase, { worldId: world.id, entityId: entity.id, userId: user.id });
-
-  if (canEdit) {
-    const data = await getEntityWindowData(supabase, worldSlug, entitySlug);
-    if (!data) notFound();
-    // V2.1-20 lot 2.1 — décision de l'auteur : une fiche éditable porte le fond
-    // de sa fiche, comme en lecture. Cette branche n'enregistrait rien du tout,
-    // ce qui produisait deux écrans différents pour la même fiche : à froid,
-    // aucun fond ; en navigation client depuis une fiche illustrée, le fond de
-    // la fiche PRÉCÉDENTE, que plus personne ne remplaçait. Enregistrer ici
-    // referme l'écart dans les deux sens.
-    //
-    // `getPlayerWikiBackground` est mémoïsé et déjà demandé par le `layout.tsx`
-    // dans ce même rendu : cet appel n'ajoute aucune requête.
-    const background = await getPlayerWikiBackground(supabase, world.id, entitySlug, user.id);
-    return (
-      <>
-        <EnregistrerRecent worldSlug={worldSlug} espace="joueur-wiki" titre={entity.name} type={entity.entity_kind} />
-        <WikiBackgroundPreload background={background} />
-        <WikiBackgroundRegistrar background={background} />
-        <EditEntityForm
-          entity={data.entity}
-          worldSlug={data.worldSlug}
-          initialBlocks={data.blocks}
-          initialRelations={data.relations}
-          otherEntities={data.otherEntities}
-          worldCustomKinds={data.worldCustomKinds}
-          campaignId={data.campaignId}
-          initialIsPc={data.isPc}
-          campaignCharacterUserId={data.campaignCharacterUserId}
-          initialPortraitLayout={data.portraitLayout}
-          playerRestricted
-          ficheAvecPage={lancerFicheAvecPage(supabase, { worldId: data.entity.world_id, entityId: data.entity.id, userId: user.id, locale: (await getLocale()) as Locale, blocks: data.blocks })}
-        />
-      </>
-    );
   }
 
   const detail = await getPlayerEntityDetail(supabase, { worldId: world.id, entitySlug, userId: user.id, locale: (await getLocale()) as Locale });

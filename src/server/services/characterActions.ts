@@ -11,6 +11,7 @@ import {
   resolveHpGain,
   rollBonus,
   type Ability,
+  type ActiveEffect,
   type CharacterBuild,
   type DerivedSheet,
   type EquippedItem,
@@ -32,7 +33,7 @@ import {
   type AttackRollResult,
   type DamageRollResult,
 } from "@/src/core/rules/action";
-import { armorAcModifier, mapChosenSkillModifiers, type WeaponData } from "@/src/core/rules/srdMapping";
+import { armorAcModifier, mapChosenSkillModifiers, weaponRollProperties, type WeaponData } from "@/src/core/rules/srdMapping";
 import { totalCarriedWeight } from "@/src/core/rules/encumbrance";
 import { resolveScaledFormulaText } from "@/src/core/rules/scaling";
 import { formatFormulaNode } from "@/src/core/formula/format";
@@ -73,6 +74,7 @@ import type { Concentration } from "@/src/core/schemas/runtimeState";
 import { expireFeatureEffects } from "@/src/server/services/effectExpiry";
 import { listFeatureEffectsForEntity } from "@/src/server/repos/activeEffects";
 import { activeEffectsForSheet, effectFromRow, type ActiveDurableEffect } from "@/src/core/rules/durableEffects";
+import { sameGameDate } from "@/src/core/calendar/sameGameDate";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -164,7 +166,9 @@ export async function resolveCharacterActionContext(
   supabase: TypedClient,
   entityId: string,
   campaignId: string | null,
-  locale: Locale
+  locale: Locale,
+  /** V3.1-169 (ADR 0077) : les auras reçues sur le plan (`receivedAurasFor`), ajoutées en couche 7 ; absent hors des jets qui les lisent. */
+  options?: { receivedAuras?: readonly ActiveEffect[] }
 ): Promise<CharacterActionContext | null> {
   // V3.1-62 (docs/CABLAGE.md, C3) : la fiche, ses blocs et la campagne ne
   // dependent pas les uns des autres — une seule vague au lieu de trois.
@@ -298,7 +302,7 @@ export async function resolveCharacterActionContext(
     // V3.1-115 : plafond de caracteristique et charge lus dans les regles du ruleset.
     { classes: assembled.ruleset.classes, features: { ...assembled.ruleset.features, ...choiceFeatures }, characterRules: assembled.ruleset.characterRules },
     equippedItems,
-    activeEffectsForSheet(activeEffects, entityId),
+    [...activeEffectsForSheet(activeEffects, entityId), ...(options?.receivedAuras ?? [])],
     carriedWeight
   );
 
@@ -428,7 +432,7 @@ export async function rollWeaponAttack(
   const ability = weaponAttackAbility(weapon.properties, weapon.isRanged, ctx.sheet.abilities.str.mod, ctx.sheet.abilities.dex.mod);
   const abilityMod = ctx.sheet.abilities[ability].mod;
   // V3.1-156 (ADR 0074) : bonus, dés de bonus, avantage et plage de critique donnés par les règles du personnage.
-  const extra = rollBonus(ctx.sheet, { roll: "attack", kind: "weapon" });
+  const extra = rollBonus(ctx.sheet, { roll: "attack", kind: "weapon", properties: weaponRollProperties(weapon) });
   // Decision de perimetre (V1-B5) : aucune maitrise d'arme n'est modelisee
   // par classe aujourd'hui (seulement competences/JS, cf. sheet.ts) — le
   // bonus de maitrise est toujours applique aux attaques d'arme.
@@ -482,7 +486,7 @@ export async function rollWeaponDamage(
   const ability = weaponAttackAbility(weapon.properties, weapon.isRanged, ctx.sheet.abilities.str.mod, ctx.sheet.abilities.dex.mod);
   const abilityMod = ctx.sheet.abilities[ability].mod;
   // V3.1-156 (ADR 0074) : la Rage (`damage.weapon.str`), un bonus de dégâts d'arme, des dés de bonus.
-  const extra = rollBonus(ctx.sheet, { roll: "damage", kind: "weapon", ability, ...(weapon.damageType ? { damageType: weapon.damageType } : {}) });
+  const extra = rollBonus(ctx.sheet, { roll: "damage", kind: "weapon", ability, properties: weaponRollProperties(weapon), ...(weapon.damageType ? { damageType: weapon.damageType } : {}) });
 
   const damage = resolveDamageRoll({ formula, abilityMod, bonus: extra.value, bonusDice: extra.dice, critical: params.critical }, serverRng);
 
@@ -641,7 +645,7 @@ export async function castSpell(
         ast: damage.ast,
         context: extra.value !== 0 ? { mod: extra.value } : {},
         result: damage.total,
-        // Les dégâts d'un sort comptent comme des dégâts (record), l'attaque de sort comme un sort (ADR 0064).
+        // Les dégâts d'un sort comptent comme des dégâts (record), l'attaque de sort comme un sort (ADR 0079).
         attribution: { entityId: ctx.entityId, kind: "damage" },
         detail: {
           who: ctx.entityName,
@@ -1032,7 +1036,7 @@ export async function applyLevelUp(
     old.portrait_asset_id !== next.portrait_asset_id ||
     (old.gender ?? null) !== (next.gender ?? null) ||
     JSON.stringify(old.pronouns ?? null) !== JSON.stringify(next.pronouns ?? null) ||
-    JSON.stringify(old.birth ?? null) !== JSON.stringify(next.birth ?? null) ||
+    !sameGameDate(old.birth, next.birth) ||
     (old.given_name ?? "") !== (next.given_name ?? "") ||
     (old.family_name ?? "") !== (next.family_name ?? "")
   ) {

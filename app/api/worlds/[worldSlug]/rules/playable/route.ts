@@ -5,7 +5,7 @@ import { getWorldBySlug } from "@/src/server/services/worlds";
 import { isWorldAdmin } from "@/src/server/services/permissions";
 import { savePlayableBlocks } from "@/src/server/services/rulePlayableBlocks";
 import { zActivationBlockData, zCoverageBlockData, zRuleResourcesBlockData } from "@/src/core/schemas/rule-blocks/playable";
-import { zForcedSaveFailuresBlockData } from "@/src/core/schemas/rule-blocks/blocks";
+import { zForcedSaveFailuresBlockData, zModifiersBlockData } from "@/src/core/schemas/rule-blocks/blocks";
 
 /** Absent : le bloc ne change pas ; `null` : il est retiré. */
 const bodySchema = z
@@ -16,6 +16,8 @@ const bodySchema = z
     coverage: zCoverageBlockData.nullable().optional(),
     // V3.1-207 : les échecs automatiques d'une sauvegarde (Mante de majesté).
     forced_save_failures: zForcedSaveFailuresBlockData.nullable().optional(),
+    /** V3.1-170 (ADR 0077) : le bloc entier (modificateurs, auras, retouches). */
+    modifiers: zModifiersBlockData.nullable().optional(),
   })
   .strict();
 

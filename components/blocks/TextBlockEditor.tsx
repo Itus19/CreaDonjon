@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import RichTextEditor from "@/components/entities/richtext/RichTextEditor";
+import type { ImageBlockData } from "@/src/core/schemas/blocks/image";
 import type { Segment } from "@/src/core/schemas/entities/segments";
 import type { TextBlockData } from "@/src/core/schemas/blocks/text";
 import type { OtherEntityOption } from "@/components/entities/RelationsChips";
@@ -42,6 +43,9 @@ export default function TextBlockEditor({
   worldSlug,
   worldId,
   otherEntities,
+  inlineImages,
+  onEditImage,
+  onOpenImageBlock,
 }: {
   data: TextBlockData;
   onChange: (data: TextBlockData) => void;
@@ -54,6 +58,10 @@ export default function TextBlockEditor({
   worldSlug?: string;
   worldId?: string;
   otherEntities?: OtherEntityOption[];
+  /** V3.1-189 : images posees dans la phrase — voir `RichTextEditor`. */
+  inlineImages?: Record<string, ImageBlockData>;
+  onEditImage?: (blockId: string, data: ImageBlockData) => void;
+  onOpenImageBlock?: (blockId: string) => void;
 }) {
   const t = useTranslations("fiche.assistance");
   const [showAssist, setShowAssist] = useState(false);
@@ -74,6 +82,19 @@ export default function TextBlockEditor({
    * la frappe normale.
    */
   const [remountKey, setRemountKey] = useState(0);
+  /**
+   * V3.1-189 : meme remontage quand le TEXTE change par une autre voie que
+   * cet editeur — le bloc image qui s'y pose ou s'en retire
+   * (`placeImageInText`). On reconnait ce cas a ce que les segments recus ne
+   * sont pas ceux que l'editeur vient d'emettre. Motif « valeur precedente
+   * gardee en etat » de React : comparer pendant le rendu, sans effet.
+   */
+  const [segmentsEmis, setSegmentsEmis] = useState<Segment[] | null>(null);
+  const [segmentsVus, setSegmentsVus] = useState(data.segments);
+  if (data.segments !== segmentsVus) {
+    setSegmentsVus(data.segments);
+    if (data.segments !== segmentsEmis) setRemountKey((k) => k + 1);
+  }
 
   /** V3.1-65 : relu apres chaque appel, pour que le compte affiche ne soit jamais celui d'avant. */
   const chargerBudget = useCallback(() => {
@@ -155,11 +176,17 @@ export default function TextBlockEditor({
       <RichTextEditor
         key={remountKey}
         segments={data.segments}
-        onChange={(segments: Segment[]) => onChange({ ...data, segments })}
+        onChange={(segments: Segment[]) => {
+          setSegmentsEmis(segments);
+          onChange({ ...data, segments });
+        }}
         worldSlug={worldSlug}
         worldId={worldId}
         otherEntities={otherEntities}
         dropCap={data.dropCap}
+        inlineImages={inlineImages}
+        onEditImage={onEditImage}
+        onOpenImageBlock={onOpenImageBlock}
       />
 
       {/* A SA PLACE : un paragraphe propose s'ajoutera a la fin du bloc,

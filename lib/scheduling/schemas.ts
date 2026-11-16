@@ -3,12 +3,15 @@ import { z } from "zod";
 const zDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date invalide (AAAA-MM-JJ).");
 const zTime = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Heure invalide (HH:MM).");
 
-/** Une seule plage par jour (retour utilisateur, V2.1-4) — poser une nouvelle plage remplace l'ancienne du même jour. */
+/** Une seule plage par jour et par demande (V2.1-4, V3.1-190) — poser une nouvelle plage remplace l'ancienne du même jour. */
 export const setAvailabilitySchema = z
-  .object({ date: zDate, startsAt: zTime, endsAt: zTime })
+  .object({ requestId: z.guid(), date: zDate, startsAt: zTime, endsAt: zTime })
   .refine((v) => v.endsAt > v.startsAt, { message: "L'heure de fin doit être après l'heure de début.", path: ["endsAt"] });
 
-export const clearAvailabilitySchema = z.object({ date: zDate });
+export const clearAvailabilitySchema = z.object({ requestId: z.guid(), date: zDate });
+
+/** V3.1-190 — l'adresse d'une demande (`requests/[requestId]/…`) et la demande affichée (`?requestId=`). */
+export const requestIdSchema = z.guid();
 
 /**
  * Confirmer une séance (V2.1-4) — `source: "availability"` vient d'un jour
@@ -22,6 +25,8 @@ export const createRealSessionSchema = z.object({
   startsAt: zTime,
   durationMinutes: z.number().int().positive().max(24 * 60),
   source: z.enum(["availability", "manual"]),
+  /** V3.1-190 : la demande dont la date est fixée, fermée par la même écriture. Absent pour une date réglée à la main. */
+  requestId: z.guid().optional(),
 });
 
 export const targetDurationSchema = z.object({ minutes: z.number().int().min(30).max(24 * 60) });

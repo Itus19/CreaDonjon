@@ -39,6 +39,7 @@ import { buildViewerForWorld } from "@/src/server/services/visibility";
 import { getSessionJournalTreeGroup } from "@/src/server/services/sessionJournalTree";
 import { listUnpublishedJournalEntityIds } from "@/src/server/repos/sessionJournal";
 import { getDisplayNamesForUsers } from "@/src/server/repos/activityJournal";
+import { remapBlockIds } from "@/src/core/linker/remapBlockIds";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -445,12 +446,17 @@ export async function duplicateEntity(
   await recordEntityRevision(supabase, { entity: copy, changeSource: "user", changedBy: params.duplicatedBy });
 
   const blocks = await listBlocksForEntity(supabase, original.id);
+  // V3.1-189 : les nouveaux ids sont choisis avant l'insertion, pour que les
+  // references entre blocs de la copie (image posee dans le texte, ancien
+  // ancrage d'une image) visent la copie et non l'original.
+  const blockIdMap = new Map(blocks.map((block) => [block.id, crypto.randomUUID()]));
   for (const block of blocks) {
     await insertBlock(supabase, {
+      id: blockIdMap.get(block.id),
       entityId: copy.id,
       blockType: block.block_type,
       display: block.display,
-      data: block.data,
+      data: remapBlockIds(block.data, blockIdMap) as Json,
       displayOrder: block.display_order,
       visibilityLevel: block.visibility_level,
       visibilityScopeId: block.visibility_scope_id,

@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { isWorldAdmin } from "@/src/server/services/permissions";
-import { listCampaigns } from "@/src/server/services/campaigns";
+import { listCampaigns, resolveCampaignId } from "@/src/server/services/campaigns";
+import { countRequestsReadyToFix } from "@/src/server/services/scheduling";
 import MjSidebar from "@/components/shell/MjSidebar";
 import WindowsDesktop from "@/components/shell/WindowsDesktop";
 
@@ -55,9 +56,15 @@ export default async function MjLayout({
     );
   }
 
+  // V3.1-190 : la pastille « à fixer » de Calendrier réel (quatre lectures
+  // légères, `countRequestsReadyToFix`). Le layout ne se relit qu'au
+  // chargement d'une page, pas à chaque navigation entre outils.
+  const campaignId = await resolveCampaignId(supabase, world.id);
+  const demandesAFixer = campaignId ? await countRequestsReadyToFix(supabase, campaignId) : 0;
+
   return (
     <>
-      <MjSidebar worldSlug={worldSlug} worldName={world.name} campaignName={campaignName} />
+      <MjSidebar worldSlug={worldSlug} worldName={world.name} campaignName={campaignName} demandesAFixer={demandesAFixer} />
       <WindowsDesktop>{children}</WindowsDesktop>
     </>
   );

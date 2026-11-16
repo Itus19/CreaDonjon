@@ -319,6 +319,42 @@ export type Database = {
           },
         ]
       }
+      availability_declines: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          request_id: string
+          user_id: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          request_id: string
+          user_id: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          request_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "availability_declines_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "availability_declines_request_id_campaign_id_fkey"
+            columns: ["request_id", "campaign_id"]
+            isOneToOne: false
+            referencedRelation: "availability_requests"
+            referencedColumns: ["id", "campaign_id"]
+          },
+        ]
+      }
       availability_requests: {
         Row: {
           campaign_id: string
@@ -942,6 +978,8 @@ export type Database = {
           initiative: number | null
           is_ally: boolean
           label: string
+          pos_x: number | null
+          pos_y: number | null
           resources_used: Json
           rule_key: string | null
           source_kind: string
@@ -962,6 +1000,8 @@ export type Database = {
           initiative?: number | null
           is_ally?: boolean
           label: string
+          pos_x?: number | null
+          pos_y?: number | null
           resources_used?: Json
           rule_key?: string | null
           source_kind: string
@@ -982,6 +1022,8 @@ export type Database = {
           initiative?: number | null
           is_ally?: boolean
           label?: string
+          pos_x?: number | null
+          pos_y?: number | null
           resources_used?: Json
           rule_key?: string | null
           source_kind?: string
@@ -1994,6 +2036,7 @@ export type Database = {
           campaign_id: string
           date: string
           ends_at: string
+          id: string
           request_id: string | null
           starts_at: string
           updated_at: string
@@ -2003,6 +2046,7 @@ export type Database = {
           campaign_id: string
           date: string
           ends_at: string
+          id?: string
           request_id?: string | null
           starts_at: string
           updated_at?: string
@@ -2012,6 +2056,7 @@ export type Database = {
           campaign_id?: string
           date?: string
           ends_at?: string
+          id?: string
           request_id?: string | null
           starts_at?: string
           updated_at?: string
@@ -2915,6 +2960,8 @@ export type Database = {
           temp_hp: number | null
           wound: string | null
           budget: Json | null
+          pos_x: number | null
+          pos_y: number | null
         }[]
       }
       claim_shared_note_grant: { Args: { p_entity_id: string }; Returns: boolean }
@@ -3057,6 +3104,10 @@ export type Database = {
       }
       set_own_initiative: {
         Args: { p_participant: string; p_value: number }
+        Returns: Json
+      }
+      set_own_position: {
+        Args: { p_participant: string; p_x: number; p_y: number }
         Returns: Json
       }
       resolve_campaign_invite: {

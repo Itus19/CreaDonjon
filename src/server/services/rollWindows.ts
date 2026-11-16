@@ -60,6 +60,8 @@ const zPendingRoll = z.object({
   // V3.1-207 : sauvegardes de l'assaillant (Majesté souveraine) et l'attaque ratée qui en résulte.
   rollerSaves: z.partialRecord(z.enum(["str", "dex", "con", "int", "wis", "cha"]), z.number()).optional(),
   forcedMiss: z.boolean().optional(),
+  /** V3.1-171 : l'arme du jet (Attaque sournoise). */
+  weaponProperties: z.array(z.string().max(40)).max(20).optional(),
 });
 
 const zWindowChoice = z.object({
@@ -100,6 +102,8 @@ export interface ReactorPool {
   teams: Record<string, string>;
   /** V3.1-165 : `"<acteur>|<sort>"` → le plus petit emplacement disponible d'un sort de réaction. */
   spellSlots: Record<string, number>;
+  /** V3.1-169 (ADR 0077) : la position sur le plan de chaque acteur posé, pour la portée des réactions. */
+  positions: Record<string, { x: number; y: number }>;
 }
 
 /**
@@ -120,11 +124,12 @@ export async function gatherReactors(
     locale: Locale;
   },
 ): Promise<ReactorPool> {
-  const pool: ReactorPool = { candidates: [], meta: {}, ctx: { actors: {} }, teams: {}, spellSlots: {} };
+  const pool: ReactorPool = { candidates: [], meta: {}, ctx: { actors: {} }, teams: {}, spellSlots: {}, positions: {} };
   const ordre = orderParticipants(params.participants);
   for (const p of params.participants) {
     const key = p.entity_id && params.pcs.some((c) => c.entity_id === p.entity_id) ? p.entity_id : `participant:${p.id}`;
     pool.teams[key] = p.is_ally || key === p.entity_id ? "pj" : "adversaires";
+    if (p.pos_x !== null && p.pos_y !== null) pool.positions[key] = { x: Number(p.pos_x), y: Number(p.pos_y) };
   }
   const rows: { pc: { entity_id: string; user_id: string | null }; p: CombatParticipantRow | null }[] = params.participants.flatMap((p) => {
     const pc = p.entity_id ? params.pcs.find((c) => c.entity_id === p.entity_id) : undefined;
@@ -242,7 +247,7 @@ export async function interveneOnRoll(
   },
 ): Promise<InterveneResult> {
   const stamp = params.combat ? turnStamp(params.combat.round, params.combat.turn_index) : null;
-  const { automatic, choices } = eligibleReactions({ roll: params.roll, candidates: params.pool.candidates, ctx: params.pool.ctx, teams: params.pool.teams, stamp, rng: serverRng });
+  const { automatic, choices } = eligibleReactions({ roll: params.roll, candidates: params.pool.candidates, ctx: params.pool.ctx, teams: params.pool.teams, stamp, rng: serverRng, positions: params.pool.positions });
 
   // Les réactions automatiques (Chance) s'appliquent d'office, avant la fenêtre.
   const opsOf = (e: EligibleReaction) => params.pool.candidates.find((c) => c.actorId === e.actorId && c.ruleKey === e.ruleKey && c.activation.id === e.activationId)?.activation.roll_operations ?? [];
@@ -251,7 +256,7 @@ export async function interveneOnRoll(
   if (choices.length === 0) return { kind: "continue", roll, automatic };
 
   // Après l'automatique, l'éligibilité peut avoir changé (Chance a relancé un 1) : on la refait.
-  const again = automatic.length === 0 ? choices : eligibleReactions({ roll, candidates: params.pool.candidates, ctx: params.pool.ctx, teams: params.pool.teams, stamp, rng: serverRng }).choices;
+  const again = automatic.length === 0 ? choices : eligibleReactions({ roll, candidates: params.pool.candidates, ctx: params.pool.ctx, teams: params.pool.teams, stamp, rng: serverRng, positions: params.pool.positions }).choices;
   if (again.length === 0) return { kind: "continue", roll, automatic };
   const ordered = [...again].sort((a, b) => rank(a, roll) - rank(b, roll));
 

@@ -346,3 +346,36 @@ describe("docToSegments, trait de separation", () => {
     expect(docToSegments(segmentsToDoc(segments))).toEqual(segments);
   });
 });
+
+describe("image dans le texte (V3.1-189)", () => {
+  const segment: Segment = {
+    id: "s1",
+    blockType: "paragraph",
+    visibility: { level: "public", scopeId: null },
+    content: [{ t: "text", v: "Avant " }, { t: "image", blockId: "img-1" }, { t: "text", v: " après" }],
+    align: "left",
+  };
+
+  it("segmentsToDoc pose un noeud inlineImage a sa place dans la phrase", () => {
+    const doc = segmentsToDoc([segment]);
+    expect(doc.content[0].content).toEqual([
+      { type: "text", text: "Avant " },
+      { type: "inlineImage", attrs: { blockId: "img-1" } },
+      { type: "text", text: " après" },
+    ]);
+  });
+
+  it("l'aller-retour conserve l'image, jamais supprimee en silence", () => {
+    expect(docToSegments(segmentsToDoc([segment]))[0].content).toEqual(segment.content);
+  });
+
+  it("un noeud inlineImage sans bloc vise est ecarte", () => {
+    const doc: DocJSON = { type: "doc", content: [{ type: "paragraph", attrs: { segmentId: "s1" }, content: [{ type: "inlineImage", attrs: {} }, { type: "text", text: "x" }] }] };
+    expect(docToSegments(doc)[0].content).toEqual([{ t: "text", v: "x" }]);
+  });
+
+  it("le schema accepte le noeud image et refuse un identifiant vide", () => {
+    expect(zSegmentContentNode.safeParse({ t: "image", blockId: "img-1" }).success).toBe(true);
+    expect(zSegmentContentNode.safeParse({ t: "image", blockId: "" }).success).toBe(false);
+  });
+});

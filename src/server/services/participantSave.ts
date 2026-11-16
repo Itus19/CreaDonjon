@@ -9,6 +9,7 @@ import type { formatFormulaNode } from "@/src/core/formula/format";
 import type { CombatParticipantRow } from "@/src/server/repos/combats";
 import { resolveCharacterActionContext } from "@/src/server/services/characterActions";
 import { getRuleEntryForWorld } from "@/src/server/services/rules";
+import { withReceivedAuras } from "@/src/server/services/combatAuras";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -43,7 +44,9 @@ export async function targetSaveBonus(
 ): Promise<{ bonus: number; hint: string | null; dice: BonusDie[] }> {
   const ability = params.ability.toLowerCase();
   if (params.target.entity_id && params.isPc) {
-    const ctx = await resolveCharacterActionContext(supabase, params.target.entity_id, params.campaignId, params.locale);
+    const brute = await resolveCharacterActionContext(supabase, params.target.entity_id, params.campaignId, params.locale);
+    // V3.1-169 (ADR 0077) : les auras reçues sur le plan (Aura de protection) comptent pour la sauvegarde.
+    const ctx = brute ? await withReceivedAuras(supabase, brute, { campaignId: params.campaignId, locale: params.locale, callerIsGm: true }) : null;
     const save = ctx?.sheet.savingThrows[ability as keyof typeof ctx.sheet.savingThrows];
     // V3.1-156 (ADR 0074) : un PJ béni ajoute son 1d4, lancé par le serveur avec le d20.
     if (save) return { bonus: save.mod, hint: null, dice: save.dice };

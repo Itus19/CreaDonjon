@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { resolveCampaignId, hasHumanGm } from "@/src/server/services/campaigns";
-import { getNextSession, getOpenRequest, hasRespondedToRequest } from "@/src/server/services/scheduling";
+import { countUnansweredRequests, getNextSession } from "@/src/server/services/scheduling";
 import PlayerShell from "@/components/shell/PlayerShell";
 import { getMyOpenDevoir } from "@/src/server/services/sessionJournal";
 
@@ -36,14 +36,16 @@ export default async function JoueurLayout({
   // au lieu de deux appels `/api` apres l'affichage sur chaque page joueuse.
   // V3.1-150 : le devoir de journal (sous « Édition », dans le rail) part
   // dans la même vague ; le calendrier ne se lit que si un devoir existe.
-  const [humanGm, nextSession, openRequest, devoir] = await Promise.all([
+  // V3.1-190 : le nombre de demandes qui attendent ma réponse (la pastille),
+  // dans la même vague — quatre lectures légères quel que soit le nombre de
+  // demandes (`countUnansweredRequests`).
+  const [humanGm, nextSession, demandesEnAttente, devoir] = await Promise.all([
     campaignId ? hasHumanGm(supabase, campaignId) : Promise.resolve(false),
     campaignId ? getNextSession(supabase, campaignId) : Promise.resolve(null),
-    campaignId ? getOpenRequest(supabase, campaignId) : Promise.resolve(null),
+    campaignId ? countUnansweredRequests(supabase, campaignId, user.id) : Promise.resolve(0),
     campaignId ? getMyOpenDevoir(supabase, { worldId: world.id, campaignId, userId: user.id }) : Promise.resolve(null),
   ]);
-  const demandeEnAttente = openRequest ? !(await hasRespondedToRequest(supabase, openRequest.id, user.id)) : false;
-  const prochaineSession = campaignId ? { date: nextSession?.scheduled_date ?? null, demandeEnAttente } : null;
+  const prochaineSession = campaignId ? { date: nextSession?.scheduled_date ?? null, demandesEnAttente } : null;
 
   return (
     <PlayerShell worldSlug={worldSlug} worldName={world.name} hasHumanGm={humanGm} prochaineSession={prochaineSession} devoir={devoir}>

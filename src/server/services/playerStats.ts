@@ -13,7 +13,7 @@ import { inventoryValueCp } from "@/src/server/services/campaignEconomy";
 type TypedClient = SupabaseClient<Database>;
 
 /**
- * Le contrat des statistiques du joueur (V3.1-89, ADR 0064), lu par V3.1-90
+ * Le contrat des statistiques du joueur (V3.1-89, ADR 0079), lu par V3.1-90
  * et 91. Un personnage, une campagne ; `sinceSessionId` : depuis le début de
  * cette séance. Les jets cachés et secrets n'y entrent jamais (repo).
  */

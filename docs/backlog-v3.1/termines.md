@@ -6098,3 +6098,10 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
 - **« DnD 2024 »** : Omniprésence devient une utilisation « Second croc-en-jambe » (mêmes briques) ; la distance à la main du mage attend le plan de combat.
 - En revérifiant les textes après le réimport : `recollerCoupures` (V3.1-201) aurait recollé les rangées des tableaux de V3.1-208 ; corrigé avant toute écriture.
 
+### V3.1-186 — Le quota de journaux ingérés de Supabase (3 novembre)
+
+Opus seul. Constat de l'auteur : le tableau d'usage Supabase montre « Log Ingestion » à 0,99 Go sur 1, avec des pics les jours de travail avec Claude.
+- **Cause probable** : chaque requête est journalisée par chaque service qu'elle traverse ; les suites d'intégration complètes (68 fichiers contre la vraie base) et les mesures de câblage font les pics. Aucune migration n'active de journalisation Postgres en plus.
+- **Disponibilité** : quota marqué « Upcoming », facturation et restriction annoncées pour début 2027.
+- **`QUOTAS.md`** : ligne « Journaux ingérés » au tableau Supabase, réflexe **T6** (« les journaux suivent les requêtes »).
+- *Reste, hors de ce ticket* : avant 2027, une base locale pour les tests d'intégration serait la vraie réponse.

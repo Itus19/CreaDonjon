@@ -21,6 +21,9 @@ import type { TurnBudget } from "@/src/core/rules/turnBudget";
 import InvitationInitiative from "./InvitationInitiative";
 import { useCombatJoueur } from "./useCombatJoueur";
 import { conditionLabel } from "@/src/core/rules/weaponMastery";
+import PlanCombat from "./PlanCombat";
+import { jetonsDepuisVue, type Point } from "@/lib/ui/planCombat";
+import { deplacerJeton } from "@/lib/ui/planCombatApi";
 
 const CARTE = "rounded-[18px] border border-edge bg-panel backdrop-blur-[var(--blur)]";
 
@@ -58,17 +61,37 @@ export default function CombatJoueur({
       {vue.kind === "ok" && afficheInvitation && (
         <InvitationInitiative campaignId={campaignId} combatId={vue.combat.id} onValidation={ouvrir} onTermine={fermer} onEnvoyee={reliree} />
       )}
-      {vue.kind === "ok" && modeCombat(vue) && <ModeCombat combat={vue.combat} participants={vue.participants} entityId={entityId} />}
+      {vue.kind === "ok" && modeCombat(vue) && <ModeCombat campaignId={campaignId} combat={vue.combat} participants={vue.participants} entityId={entityId} />}
       {children}
     </div>
   );
 }
 
-function ModeCombat({ combat, participants, entityId }: { combat: InfosCombatJoueur; participants: PlayerCombatParticipant[]; entityId: string }) {
+function ModeCombat({
+  campaignId,
+  combat,
+  participants,
+  entityId,
+}: {
+  campaignId: string;
+  combat: InfosCombatJoueur;
+  participants: PlayerCombatParticipant[];
+  entityId: string;
+}) {
+  const t = useTranslations("combatJoueur");
   const moi = monParticipant(participants, entityId);
+  const moiId = moi?.id ?? null;
+  /** V3.1-170 : la joueuse ne déplace que SON jeton ; la route le revérifie (`set_own_position`). */
+  const deplacer = moiId
+    ? async (id: string, position: Point | null) => (await deplacerJeton(campaignId, combat.id, id, position, t("planErreurDeplacement"))).movement
+    : undefined;
   return (
     <section className="@container flex flex-col gap-3" data-testid="combat-joueur">
-      <OrdreDuTour combat={combat} participants={participants} moiId={moi?.id ?? null} />
+      <OrdreDuTour combat={combat} participants={participants} moiId={moiId} />
+      <div className={`${CARTE} p-3`}>
+        <h2 className="mb-2 font-chrome text-sm font-semibold text-ink">{t("planTitre")}</h2>
+        <PlanCombat jetons={jetonsDepuisVue(participants)} deplacables={(id) => id === moiId} onDeplacer={deplacer} moiId={moiId} />
+      </div>
       {moi && <Economie combat={combat} rang={moi.order} budget={moi.budget} />}
     </section>
   );

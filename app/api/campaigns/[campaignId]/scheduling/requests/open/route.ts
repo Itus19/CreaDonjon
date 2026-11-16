@@ -1,10 +1,24 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getOpenRequest, getRequestBoard, getTargetSessionMinutes } from "@/src/server/services/scheduling";
+import { requestIdSchema } from "@/lib/scheduling/schemas";
+import { getSchedulingBoard } from "@/src/server/services/scheduling";
 
-/** La ronde ouverte d'une campagne (V3.1-8), avec les dates possibles et la carte de chaleur — lue par le Calendrier réel du MJ ET par la page joueuse (V3.1-16 : la RLS de `real_session_availabilities` ouvre déjà ces réponses à tout membre du monde). `viewerId` sert à marquer « (toi) ». `request: null` si aucune ronde n'est ouverte. */
-export async function GET(_request: NextRequest, { params }: { params: Promise<{ campaignId: string }> }) {
+/**
+ * V3.1-190 — tout l'écran du calendrier réel en une réponse : les cartes des
+ * demandes ouvertes, puis, pour la demande affichée (`?requestId=`, sinon la
+ * plus ancienne), la grille, les dates possibles, qui a répondu et mes
+ * propres réponses. Lue à l'identique par le MJ et la joueuse ; la RLS borne
+ * ce que chacun lit (membre du monde).
+ */
+export async function GET(request: NextRequest, { params }: { params: Promise<{ campaignId: string }> }) {
   const { campaignId } = await params;
+  const campaign = requestIdSchema.safeParse(campaignId);
+  const raw = request.nextUrl.searchParams.get("requestId");
+  const requestId = raw === null ? null : requestIdSchema.safeParse(raw);
+  if (!campaign.success || (requestId !== null && !requestId.success)) {
+    return NextResponse.json({ error: "Identifiant invalide." }, { status: 400 });
+  }
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -13,11 +27,6 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
 
-  const request = await getOpenRequest(supabase, campaignId);
-  if (!request) {
-    return NextResponse.json({ request: null, days: [], heatmap: null, expected: 0, viewerId: user.id, targetMinutes: await getTargetSessionMinutes(supabase, campaignId) }, { status: 200 });
-  }
-
-  const [board, targetMinutes] = await Promise.all([getRequestBoard(supabase, campaignId, request), getTargetSessionMinutes(supabase, campaignId)]);
-  return NextResponse.json({ request, ...board, viewerId: user.id, targetMinutes }, { status: 200 });
+  const board = await getSchedulingBoard(supabase, { campaignId, userId: user.id, requestId: requestId?.data ?? null });
+  return NextResponse.json(board, { status: 200 });
 }

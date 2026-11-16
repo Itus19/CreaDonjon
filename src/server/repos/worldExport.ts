@@ -167,6 +167,8 @@ export async function insertImportedWorld(
 }
 
 export interface ImportedBlockInput {
+  /** V3.1-189 : choisi avant l'insertion quand le fichier porte l'id d'origine du bloc (`ref`), pour recaler les references entre blocs. */
+  id?: string;
   entityId: string;
   blockType: string;
   display: Json;
@@ -181,6 +183,7 @@ export async function insertImportedBlocks(supabase: TypedClient, blocks: Import
   if (blocks.length === 0) return [];
   const { data, error } = await supabase.from("blocks").insert(
     blocks.map((b) => ({
+      ...(b.id ? { id: b.id } : {}),
       entity_id: b.entityId,
       block_type: b.blockType,
       display: b.display,
