@@ -33,9 +33,9 @@ Une fonction pure du noyau, `coverageOf(catégorie, faits)`, rend `playable`, `p
 | Aptitude, don, objet magique | un bloc mécanique (ADR 0059) | des lacunes déclarées |
 | Sort | une activation, ou un bloc d'effets (attaque, sauvegarde, dégâts : le jet ciblé, ADR 0098) | des lacunes déclarées |
 | Arme, armure, classe | son bloc (`weapon`, `armor`, progression), comme aujourd'hui | — |
-| Monstre | toutes ses actions ont un jet ou des dégâts chiffrés | des actions sans chiffre, ou des traits non joués |
+| Monstre | toutes ses actions ont un jet ou des dégâts chiffrés, et aucun trait en prose | une action sans chiffre (`monster_action`), un trait non joué (`monster_trait`) |
 | Espèce, classe, sous-classe | toutes ses aptitudes atteintes sont jouables | l'une d'elles est partielle ou non évaluée |
-| État | la clé est dans la liste des états joués par le moteur | — |
+| État | la clé est dans `ENGINE_CONDITIONS` (au départ Aveuglé et Invisible : la perception, ADR 0078) | — |
 | Historique, monture, règle générale, équipement d'aventurier | **hors du compte** (`out_of_scope`) : rien à jouer, ou joué ailleurs | — |
 
 Un **trait de monstre** en prose compte comme une lacune de la brique `monster_trait`, tant qu'il n'est pas traduit en briques.
@@ -50,6 +50,7 @@ Une lacune gagne un champ facultatif, `brick`. Il est choisi dans un vocabulaire
 - `turn_restriction` : restreindre le tour d'une créature ;
 - `equipment_condition` : une fin ou une condition liée à l'équipement ;
 - `ending_event` : une fin sur un événement non émis (Neutralisé, mort, repos long) ;
+- `monster_action` : une action de monstre sans jet ni dégâts chiffrés ;
 - `monster_trait` : un trait de monstre ;
 - `other`.
 

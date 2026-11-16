@@ -518,7 +518,7 @@ Mesurer la couverture de tout ce qui entre en jeu (sorts, aptitudes, espèces, d
 
 **Conçu le 16 novembre (ADR 0100).** Deux choix de l'auteur : le compte vit dans un **rapport généré** (`docs/couverture-srd.md`, script en lecture seule, commité après chaque ticket de données) ; chaque lacune porte une **étiquette `brick`** dans un vocabulaire fermé. « Jouable » se définit par catégorie (`coverageOf`) : une espèce ou une sous-classe se joue par ses aptitudes, un monstre par ses actions chiffrées (ses traits en prose sont des lacunes), un état par le moteur ; le reste garde le critère du bloc mécanique. Mesure de départ (officiel) : sorts 73 jouables, 1 partiel, 265 non évalués ; aptitudes 33 jouables, 23 partielles, 555 non évaluées ; objets magiques 1 partiel, 302 non évalués ; armes, armures, classes toutes jouables ; espèces 33, sous-classes 12, états 15 et monstres 317 que le critère actuel ne sait pas compter.
 
-#### ☐ V3.1-212 — Le noyau de la couverture : `coverageOf` et les briques · `M` · sans modèle IA — **prêt (Opus)**
+#### ☑ V3.1-212 — Le noyau de la couverture : `coverageOf` et les briques · `M` · sans modèle IA — **prêt (Opus)**
 
 **Modèle conseillé : Opus** — noyau, définition. Tests d'abord.
 
@@ -527,7 +527,9 @@ Mesurer la couverture de tout ce qui entre en jeu (sorts, aptitudes, espèces, d
 - La liste des états joués par le moteur, en une constante.
 
 **Critères d'acceptation**
-- [ ] Tests : un sort à bloc d'effets est jouable sans activation ; une arme à bloc `weapon` est jouable ; un monstre dont une action n'a ni jet ni dégâts est partiel ; une espèce dont une aptitude est partielle est partielle ; une lacune sans brique compte dans `other`.
+- [x] Tests : un sort à bloc d'effets est jouable sans activation ; une arme à bloc `weapon` est jouable ; un monstre dont une action n'a ni jet ni dégâts est partiel ; une espèce dont une aptitude est partielle est partielle ; une lacune sans brique compte dans `other`.
+
+*Fait le 16 novembre.* `src/core/rules/coverage.ts` : `coverageCategoryOf`, `coverageOf`, `coverageTally`, `ENGINE_CONDITIONS` (Aveuglé, Invisible). `COVERAGE_BRICKS` dans le schéma du bloc `coverage` (`brick` facultatif, vocabulaire fermé, brique `monster_action` ajoutée). Tests : `coverage.test.ts` 13/13.
 
 #### ☐ V3.1-213 — Les lacunes étiquetées · `S` · sans modèle IA — **prêt (Opus)**
 

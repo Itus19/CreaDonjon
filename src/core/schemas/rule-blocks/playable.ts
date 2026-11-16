@@ -307,7 +307,25 @@ export type ActivationBlockData = z.infer<typeof zActivationBlockData>;
 
 // --- coverage --------------------------------------------------------------
 
+/**
+ * V3.1-212 (ADR 0100) — la brique qui manque à une lacune : un vocabulaire fermé, qui grandit par ticket.
+ * Une lacune sans brique compte dans `other`.
+ */
+export const COVERAGE_BRICKS = [
+  "timing",
+  "duration_formula",
+  "choice",
+  "slot_regain",
+  "turn_restriction",
+  "equipment_condition",
+  "ending_event",
+  "monster_action",
+  "monster_trait",
+  "other",
+] as const;
+export type CoverageBrick = (typeof COVERAGE_BRICKS)[number];
+
 export const zCoverageBlockData = z.object({
-  gaps: z.array(z.object({ text: z.string().min(1), missing: z.string().min(1) })),
+  gaps: z.array(z.object({ text: z.string().min(1), missing: z.string().min(1), brick: z.enum(COVERAGE_BRICKS).optional() })),
 });
 export type CoverageBlockData = z.infer<typeof zCoverageBlockData>;
