@@ -136,7 +136,7 @@ describe.skipIf(!hasCreds)("réagir sur son propre jet (V3.1-163, integration, b
 
   it("Mots cinglants : l'aptitude de sous-classe arrive sur la fiche d'un Barde du Savoir 3, avec ses deux activations", async () => {
     await personnage("lyra", "human", "bard", 3);
-    await admin.from("blocks").update({ data: { __v: 1, species: { kind: "rule", key: "human" }, background: null, classes: [{ class: { kind: "rule", key: "bard" }, level: 3, subclass: { kind: "rule", key: "lore" } }], abilities: { method: "manual", base: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 16 } }, choices: {}, hp_method: "fixed", portrait_asset_id: null } as unknown as Json }).eq("entity_id", ids.lyra).eq("block_type", "character");
+    await admin.from("blocks").update({ data: { __v: 1, species: { kind: "rule", key: "human" }, background: null, classes: [{ class: { kind: "rule", key: "bard" }, level: 3, subclass: { kind: "rule", key: "college-of-lore" } }], abilities: { method: "manual", base: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 16 } }, choices: {}, hp_method: "fixed", portrait_asset_id: null } as unknown as Json }).eq("entity_id", ids.lyra).eq("block_type", "character");
     const ctx = await resolveCharacterActionContext(client(gm), ids.lyra, campaignId, "fr");
     const mots = ctx!.sheet.features.find((f) => f.key === "lore-cutting-words");
     expect(mots?.activation?.activations.map((a) => a.id)).toEqual(["cutting-words-damage", "cutting-words-attack"]);

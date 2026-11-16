@@ -193,10 +193,16 @@ describe.skipIf(!hasCreds)("sous-classes du SRD 2024 (integration, base reelle)"
     expect(resolved.open.find((c) => c.key === "evoker.evocation-savant.spells")?.chosen).toEqual(["magic-missile"]);
   });
 
-  it("une sous-classe descriptive (Voleur) n'ajoute ni aptitude chiffrée ni choix", async () => {
+  it("une sous-classe descriptive (Voleur) n'ajoute que ses propres aptitudes, sans effet chiffré ni choix", async () => {
     const without = await assembleResolvedRuleset(admin, rulesetId, { classes: [{ key: "rogue", level: 3 }] }, "fr");
     const withThief = await assembleResolvedRuleset(admin, rulesetId, { classes: [{ key: "rogue", level: 3, subclass: "thief" }] }, "fr");
-    expect(Object.keys(withThief.ruleset.features).sort()).toEqual(Object.keys(without.ruleset.features).sort());
+    // V3.1-199 : la progression du SRD liste les aptitudes de la sous-classe choisie ; elles s'affichent, descriptives.
+    const ajoutees = Object.keys(withThief.ruleset.features).filter((k) => !(k in without.ruleset.features));
+    expect(ajoutees.every((k) => k.startsWith("thief-"))).toBe(true);
+    for (const k of ajoutees) {
+      expect(withThief.ruleset.features[k]).toMatchObject({ modifiers: [] });
+      expect(withThief.ruleset.features[k]?.activation).toBeUndefined();
+    }
     expect(withThief.choiceSources).toEqual(without.choiceSources);
   });
 });

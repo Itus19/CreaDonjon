@@ -56,7 +56,7 @@ describe.skipIf(!hasCreds)("les actions modifiées du SRD (V3.1-167, integration
     await personnage("brom", "fighter", 11);
     await personnage("ombre", "rogue", 2);
     await personnage("mage", "wizard", 1, { known: ["shield-spell"] });
-    await personnage("aldric", "paladin", 5, { subclass: "devotion" });
+    await personnage("aldric", "paladin", 5, { subclass: "oath-of-devotion" });
   });
 
   afterAll(async () => {
