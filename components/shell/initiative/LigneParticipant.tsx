@@ -6,12 +6,14 @@ import Dropdown from "@/components/shared/Dropdown";
 import { MonsterCard } from "@/components/rules/blockContentRenderer";
 import ParticipantCharacterSheet from "@/components/shell/ParticipantCharacterSheet";
 import type { CombatParticipantRow } from "@/src/server/repos/combats";
-import type { CorrectifParticipant } from "@/lib/ui/initiativeApi";
+import type { CorrectifParticipant, ReponseSeCacher } from "@/lib/ui/initiativeApi";
 import {
   appliquerPv,
   concentrationDe,
   estUnPj,
   etatsDe,
+  formeDe,
+  invocateurDe,
   fractionsAnneau,
   INITIATIVE_DE_DEPART,
   libellePv,
@@ -41,6 +43,8 @@ export default function LigneParticipant({
   enCours,
   occupe,
   nomOrigine,
+  discretion,
+  onSeCacher,
   etatsDisponibles,
   details,
   onBasculer,
@@ -59,6 +63,9 @@ export default function LigneParticipant({
   enCours: boolean;
   occupe: boolean;
   nomOrigine: string | null;
+  /** V3.1-184 : le dernier test de Discrétion rendu par le serveur. */
+  discretion: ReponseSeCacher | undefined;
+  onSeCacher: () => void;
   etatsDisponibles: string[];
   details: DetailsParticipant | "chargement" | "erreur" | undefined;
   onBasculer: () => void;
@@ -76,10 +83,13 @@ export default function LigneParticipant({
 
   const etats = etatsDe(p);
   const concentration = concentrationDe(p);
+  const forme = formeDe(p);
+  const invocateur = invocateurDe(p, participants);
   const anneau = fractionsAnneau(p);
   const pv = libellePv(p);
   const aPv = p.hp_max !== null && p.hp_max > 0;
   const horsCombat = aPv && (p.hp_current ?? 0) <= 0;
+  const repereLigne = etats.length > 0 || concentration || horsCombat || p.hidden_from_players || forme || p.summoned_by !== null;
   const peutRenommer = !p.is_ally && !estUnPj(p);
 
   function changerPv(delta: number) {
@@ -123,9 +133,14 @@ export default function LigneParticipant({
               <b className="truncate text-sm font-semibold text-ink">{p.label}</b>
               {nomOrigine && <small className="truncate text-xs font-normal text-ink-muted">{nomOrigine}</small>}
             </span>
-            {(etats.length > 0 || concentration || horsCombat) && (
+            {repereLigne && (
               <span className="flex flex-wrap gap-1 pt-0.5">
                 {horsCombat && <span className="rounded-full border border-danger px-1.5 text-xs text-danger">{t("horsDeCombat")}</span>}
+                {p.hidden_from_players && <span className="rounded-full border border-dashed border-gm px-1.5 text-xs text-gm">{t("masqueAuxJoueuses")}</span>}
+                {forme && <span className="rounded-full border border-accent/60 px-1.5 text-xs text-accent">{forme}</span>}
+                {p.summoned_by !== null && (
+                  <span className="rounded-full border border-edge px-1.5 text-xs text-ink-soft">{invocateur ? t("invoqueePar", { nom: invocateur }) : t("invoqueePar", { nom: "…" })}</span>
+                )}
                 {etats.map((e) => (
                   <span key={e} className="rounded-full border border-gm px-1.5 text-xs text-gm">
                     {conditionLabel(e)}
@@ -217,6 +232,16 @@ export default function LigneParticipant({
             <button type="button" onClick={() => setFiche((v) => !v)} aria-expanded={fiche} className={PETIT_BOUTON}>
               {t("fiche")} {fiche ? "▾" : "▸"}
             </button>
+            {enCours && (
+              <button type="button" disabled={occupe} onClick={onSeCacher} aria-label={t("seCacherPour", { nom: p.label })} className={PETIT_BOUTON}>
+                {t("seCacher")}
+              </button>
+            )}
+            {discretion && (
+              <span role="status" className="text-xs text-ink-soft">
+                {t(discretion.hidden ? "discretionCache" : "discretionRate", { total: discretion.total })}
+              </span>
+            )}
             {!estUnPj(p) && (
               <button type="button" disabled={occupe} onClick={onRelancer} title={t("relancerInitiative")} className={PETIT_BOUTON}>
                 {t("relancer")}

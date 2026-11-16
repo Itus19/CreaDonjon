@@ -24,6 +24,7 @@ import { conditionLabel } from "@/src/core/rules/weaponMastery";
 import PlanCombat from "./PlanCombat";
 import { jetonsDepuisVue, type Point } from "@/lib/ui/planCombat";
 import { deplacerJeton } from "@/lib/ui/planCombatApi";
+import { seCacher, type ReponseSeCacher } from "@/lib/ui/initiativeApi";
 
 const CARTE = "rounded-[18px] border border-edge bg-panel backdrop-blur-[var(--blur)]";
 
@@ -86,6 +87,23 @@ function ModeCombat({
   const t = useTranslations("combatJoueur");
   const moi = monParticipant(participants, entityId);
   const moiId = moi?.id ?? null;
+  const [discretion, setDiscretion] = useState<ReponseSeCacher | null>(null);
+  const [erreurCacher, setErreurCacher] = useState<string | null>(null);
+  const [occupe, setOccupe] = useState(false);
+  /** V3.1-184 : Se cacher avec son PJ ; le serveur lance le test, une seule requête par geste. */
+  async function cacher() {
+    if (!moiId) return;
+    setOccupe(true);
+    setErreurCacher(null);
+    try {
+      setDiscretion(await seCacher(campaignId, combat.id, moiId, t("erreurSeCacher")));
+    } catch (e) {
+      console.error("Se cacher en échec", e);
+      setErreurCacher(e instanceof Error ? e.message : t("erreurSeCacher"));
+    } finally {
+      setOccupe(false);
+    }
+  }
   /** V3.1-170 : la joueuse ne déplace que SON jeton ; la route le revérifie (`set_own_position`). */
   const deplacer = moiId
     ? async (id: string, position: Point | null) => (await deplacerJeton(campaignId, combat.id, id, position, t("planErreurDeplacement"))).movement
@@ -97,6 +115,28 @@ function ModeCombat({
         <h2 className="mb-2 font-chrome text-sm font-semibold text-ink">{t("planTitre")}</h2>
         <PlanCombat jetons={jetonsDepuisVue(participants)} deplacables={(id) => id === moiId || participants.some((p) => p.id === id && p.mine)} onDeplacer={deplacer} moiId={moiId} />
       </div>
+      {moi && combat.status === "running" && (
+        <div className={`${CARTE} flex flex-wrap items-center gap-3 p-3`}>
+          <button
+            type="button"
+            disabled={occupe}
+            onClick={() => void cacher()}
+            className="min-h-11 rounded-full border border-edge px-4 py-1 text-sm text-ink transition-colors hover:bg-panel-raised disabled:opacity-50"
+          >
+            {t("seCacher")}
+          </button>
+          {discretion && (
+            <span role="status" className="text-xs text-ink-soft">
+              {t(discretion.hidden ? "discretionCache" : "discretionRate", { total: discretion.total })}
+            </span>
+          )}
+          {erreurCacher && (
+            <span role="alert" className="text-xs text-danger">
+              {erreurCacher}
+            </span>
+          )}
+        </div>
+      )}
       {moi && <Economie combat={combat} rang={moi.order} budget={moi.budget} attaquesParAction={attaquesParAction} />}
     </section>
   );
@@ -137,6 +177,8 @@ function LigneParticipant({ participant: p, moi }: { participant: PlayerCombatPa
       <span className={`min-w-0 flex-1 truncate text-sm ${p.isCurrent ? "font-semibold text-ink" : "text-ink-soft"}`}>
         {p.label}
         {moi && <span className="ml-1.5 rounded-full border border-accent/60 px-1.5 py-px text-xs font-semibold text-accent">{t("vous")}</span>}
+        {p.mine && <span className="ml-1.5 rounded-full border border-accent/60 px-1.5 py-px text-xs font-semibold text-accent">{t("aToi")}</span>}
+        {p.formLabel && <span className="ml-1.5 rounded-full border border-edge px-1.5 py-px text-xs text-ink-soft">{t("forme", { nom: p.formLabel })}</span>}
       </span>
       {p.side === "ally" && p.hp ? (
         <span className="shrink-0 font-mech text-xs text-ink">{t("pv", { courant: p.hp.current ?? "—", max: p.hp.max ?? "—" })}</span>

@@ -188,5 +188,7 @@ function ChampsOperation({ operation: o, onChange }: { operation: BrouillonOpera
           <ChampFormule libelle={t("ddDeLaSauvegarde")} valeur={o.dd} onChange={(dd) => onChange({ ...o, dd })} />
         </div>
       );
+    case "redirect":
+      return <p className="text-xs text-ink-muted">{t("interposeAide")}</p>;
   }
 }

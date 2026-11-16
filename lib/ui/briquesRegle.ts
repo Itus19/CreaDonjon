@@ -99,9 +99,17 @@ export interface BrouillonDepense {
   quantite: string;
 }
 
+/** V3.1-184 : un objet de l'inventaire consommé (fiole, munition) : sa clé de règle et le nombre (texte). */
+export interface BrouillonObjetConsomme {
+  cle: string;
+  nombre: string;
+}
+
 export interface BrouillonCout {
   action: TypeAction;
   depenses: BrouillonDepense[];
+  /** V3.1-184 : « Consommer un objet » ; `null` : aucun. */
+  objet: BrouillonObjetConsomme | null;
   /** V3.1-166 : un sort, son niveau de base (0 : sort mineur) ; `null` : pas un coût en emplacement. */
   emplacement: number | null;
   passage: string | null;
@@ -247,6 +255,12 @@ export type CorpsEffet =
   | { type: "narrate_hint"; texte: string }
   /** V3.1-166 : « Lancer un sort » par son activation (clé du sort) ; `gratuit` : sans emplacement. */
   | { type: "cast_spell"; sort: string; gratuit: boolean }
+  /** V3.1-184 (ADR 0078) : prendre une forme (Forme sauvage : `overlay`, Métamorphose : `replace`), par la clé de la règle de la forme. */
+  | { type: "transform"; forme: string; mode: "overlay" | "replace" }
+  /** V3.1-184 : invoquer une créature par la clé de sa règle ; `nombre` est une formule en texte (vide : 1). */
+  | { type: "summon"; creature: string; nombre: string }
+  /** V3.1-184 : regagner une ressource (un nombre, une formule, ou `tout`). */
+  | { type: "restore_resource"; cle: string; quantite: string; tout: boolean }
   /** Un effet hors du formulaire (dépense de ressource, inspiration) : conservé tel quel. */
   | { type: "opaque"; effet: EffectNode };
 
@@ -338,6 +352,14 @@ export interface BrouillonActivation {
   limite: LimiteReaction | null;
   /** V3.1-166 : les options que cette aptitude offre au lancer d'un sort. */
   optionsLancement: BrouillonOptionLancement[];
+  /** V3.1-184 : « Quantité choisie » à l'activation (`amount` dans les formules) ; `max` est une formule en texte ; `null` : aucune. */
+  quantite: BrouillonQuantite | null;
+}
+
+export interface BrouillonQuantite {
+  max: string;
+  label: string;
+  labelOrig: Localise;
 }
 
 export interface BrouillonLacune {
@@ -511,7 +533,7 @@ export function nouvelleRessource(): BrouillonRessource {
 }
 
 export function nouveauCout(): BrouillonCout {
-  return { action: "action", depenses: [], emplacement: null, passage: null };
+  return { action: "action", depenses: [], objet: null, emplacement: null, passage: null };
 }
 
 export function nouvellesCibles(): BrouillonCibles {
@@ -562,6 +584,7 @@ export function nouvelleActivation(b: Brouillon): BrouillonActivation {
     quand: conditionVide(),
     limite: null,
     optionsLancement: [],
+    quantite: null,
   };
 }
 
@@ -590,6 +613,7 @@ const MODELES_OPERATIONS: readonly RollOperation[] = [
   { op: "damage_multiplier", factor: 1 },
   { op: "add_damage", formula: { op: "num", value: 1 } },
   { op: "attacker_save", ability: "cha", dc: { op: "num", value: 10 } },
+  { op: "redirect" },
 ];
 
 /** Les opérations qui ont un sens sur le jet visé (le noyau en décide : `rollOperationProblems`). */
@@ -673,6 +697,9 @@ export const ENTREES_AJOUT = [
   "roll",
   "narrate_hint",
   "cast_spell",
+  "transform",
+  "summon",
+  "restore_resource",
 ] as const;
 export type EntreeAjout = (typeof ENTREES_AJOUT)[number];
 
@@ -769,6 +796,12 @@ export function nouvelEffet(entree: EntreeAjout, b: Brouillon): BrouillonEffet {
       return { ...base, who: "self", type: "narrate_hint", texte: "" };
     case "cast_spell":
       return { ...base, who: "self", type: "cast_spell", sort: "", gratuit: false };
+    case "transform":
+      return { ...base, who: "self", type: "transform", forme: "", mode: "overlay" };
+    case "summon":
+      return { ...base, who: "self", type: "summon", creature: "", nombre: "" };
+    case "restore_resource":
+      return { ...base, who: "self", type: "restore_resource", cle: "", quantite: "1", tout: false };
   }
 }
 
@@ -801,7 +834,7 @@ export function deplacerA<T>(liste: readonly T[], i: number, delta: number): T[]
 // --- Blocs -> brouillon ------------------------------------------------------
 
 function coutVersBrouillon(c: ActivationBlockData["activations"][number]["cost"], passage: string | null): BrouillonCout {
-  return { action: c.action, depenses: depensesVersBrouillon(c.resources), emplacement: c.slot?.level ?? null, passage };
+  return { action: c.action, depenses: depensesVersBrouillon(c.resources), objet: c.consume_item ? { cle: c.consume_item.key, nombre: String(c.consume_item.count) } : null, emplacement: c.slot?.level ?? null, passage };
 }
 
 function depensesVersBrouillon(ressources: readonly { key: string; amount: FormulaNode }[]): BrouillonDepense[] {
@@ -926,11 +959,12 @@ function effetVersBrouillon(e: EffectNode, chemin: string, ctx: CtxLecture): Bro
       return { ...base, who: "self", type: "narrate_hint", texte: e.text };
     case "cast_spell":
       return { ...base, who: e.who, type: "cast_spell", sort: e.spell, gratuit: e.free };
-    // V3.1-182 (ADR 0078) : formes, invocations, regain — conservés tels quels jusqu'à leur saisie à l'éditeur (V3.1-184).
     case "transform":
+      return { ...base, who: e.who, type: "transform", forme: e.form, mode: e.mode };
     case "summon":
+      return { ...base, who: e.who, type: "summon", creature: e.creature, nombre: e.count ? formatFormulaNode(e.count) : "" };
     case "restore_resource":
-      return { ...base, who: e.who, type: "opaque", effet: e };
+      return { ...base, who: e.who, type: "restore_resource", cle: e.key, quantite: e.amount ? formatFormulaNode(e.amount) : "1", tout: e.all === true };
     case "apply_effect": {
       const d = ctx.durables.get(e.effect);
       if (!d) return { ...base, who: e.who, type: "opaque", effet: e };
@@ -1086,6 +1120,7 @@ export function blocsVersBrouillon(blocs: readonly { blockType: string; data: un
           depenses: depensesVersBrouillon(o.cost.resources),
           action: o.changes.action ?? "",
         })),
+        quantite: a.amount ? { max: formatFormulaNode(a.amount.max), label: a.amount.label ? libelleFr(a.amount.label) : "", labelOrig: a.amount.label ?? {} } : null,
       };
     });
     b.durablesConserves = [...conserves.values()];
@@ -1146,11 +1181,19 @@ function depensesEcrites(depenses: readonly BrouillonDepense[], contexte: string
   });
 }
 
+function objetConsommeEcrit(o: BrouillonObjetConsomme, contexte: string, ctx: CtxEcriture): { key: string; count: number } {
+  const nombre = Number(o.nombre);
+  if (o.cle.trim() === "") ctx.erreurs.push(`${contexte} : donne la clé de l'objet consommé`);
+  if (!Number.isInteger(nombre) || nombre < 1 || nombre > 100) ctx.erreurs.push(`${contexte} : le nombre d'objets consommés est un entier de 1 à 100`);
+  return { key: o.cle.trim() || "?", count: Number.isInteger(nombre) && nombre >= 1 && nombre <= 100 ? nombre : 1 };
+}
+
 function coutEcrit(c: BrouillonCout, contexte: string, ctx: CtxEcriture): ActivationBlockData["activations"][number]["cost"] {
   return {
     action: c.action,
     resources: depensesEcrites(c.depenses, contexte, ctx),
     ...(c.emplacement !== null ? { slot: { level: c.emplacement } } : {}),
+    ...(c.objet ? { consume_item: objetConsommeEcrit(c.objet, contexte, ctx) } : {}),
   };
 }
 
@@ -1366,6 +1409,17 @@ function effetEcrit(e: BrouillonEffet, contexte: string, activationId: string, c
     case "cast_spell":
       if (e.sort.trim() === "") ctx.erreurs.push(`${ou} : donne la clé du sort`);
       return { action: "cast_spell", who: e.who, spell: e.sort.trim() || "?", free: e.gratuit };
+    case "transform":
+      if (e.forme.trim() === "") ctx.erreurs.push(`${ou} : donne la clé de la forme`);
+      return { action: "transform", who: e.who, form: e.forme.trim() || "?", mode: e.mode };
+    case "summon":
+      if (e.creature.trim() === "") ctx.erreurs.push(`${ou} : donne la clé de la créature`);
+      return { action: "summon", who: e.who, creature: e.creature.trim() || "?", ...(e.nombre.trim() !== "" ? { count: formule(e.nombre, `${ou}, nombre`, ctx) } : {}) };
+    case "restore_resource":
+      if (e.cle.trim() === "") ctx.erreurs.push(`${ou} : choisis la ressource regagnée`);
+      return e.tout
+        ? { action: "restore_resource", who: e.who, key: e.cle.trim() || "?", all: true }
+        : { action: "restore_resource", who: e.who, key: e.cle.trim() || "?", amount: formule(e.quantite, `${ou}, quantité`, ctx) };
     case "opaque":
       return e.effet;
   }
@@ -1470,6 +1524,7 @@ export function brouillonVersBlocs(b: Brouillon, nomsEtats: Readonly<Record<stri
       ...(a.declencheur && a.operations.length > 0 ? { roll_operations: a.operations.map((o, k) => operationEcrite(o, `${nomAct}, opération ${k + 1}`, ctx)) } : {}),
       ...(conditionEcrite(a.quand) ? { when: conditionEcrite(a.quand) } : {}),
       ...(a.limite ? { limit: { per: a.limite } } : {}),
+      ...(a.quantite ? { amount: { max: formule(a.quantite.max, `${nomAct}, quantité maximale`, ctx), ...(a.quantite.label.trim() !== "" ? { label: localise(a.quantite.labelOrig, a.quantite.label.trim()) } : {}) } } : {}),
       ...(a.optionsLancement.length > 0
         ? { cast_options: a.optionsLancement.map((o, k) => optionLancementEcrite(o, `${nomAct}, option de lancement ${o.label.trim() || k + 1}`, ctx)) }
         : {}),

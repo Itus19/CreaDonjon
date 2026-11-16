@@ -658,6 +658,13 @@ function CoutEditeur({ cout, onChange, uid, avecCitation }: { cout: BrouillonCou
       <div className="w-fit">
         <BoutonPetit onClick={() => onChange({ ...cout, depenses: [...cout.depenses, { cle: "", quantite: "1" }] })}>{t("ajouterDepense")}</BoutonPetit>
       </div>
+      <Checkbox checked={cout.objet !== null} onChange={() => onChange({ ...cout, objet: cout.objet ? null : { cle: "", nombre: "1" } })} label={t("consommerUnObjet")} />
+      {cout.objet && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <ChampTexte libelle={t("cleDeLObjet")} valeur={cout.objet.cle} onChange={(cle) => cout.objet && onChange({ ...cout, objet: { ...cout.objet, cle } })} mecanique />
+          <ChampTexte libelle={t("nombreDObjets")} valeur={cout.objet.nombre} onChange={(nombre) => cout.objet && onChange({ ...cout, objet: { ...cout.objet, nombre } })} mecanique />
+        </div>
+      )}
       {avecCitation && <Citation passage={cout.passage} onChange={(passage) => onChange({ ...cout, passage })} />}
     </CarteBrique>
   );
@@ -697,6 +704,20 @@ function CarteActivation({
       <ConditionEquipement condition={a.quand} onChange={(quand) => onChange({ ...a, quand })} />
 
       <CoutEditeur cout={a.cout} onChange={(cout) => onChange({ ...a, cout })} uid={`${a.uid}:cout`} avecCitation />
+
+      <CarteBrique uid={`${a.uid}:quantite`} titre={t("quantiteChoisie")}>
+        <Checkbox
+          checked={a.quantite !== null}
+          onChange={() => onChange({ ...a, quantite: a.quantite ? null : { max: "1", label: "", labelOrig: {} } })}
+          label={t("quantiteChoisieAide")}
+        />
+        {a.quantite && (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <ChampFormule libelle={t("quantiteMax")} valeur={a.quantite.max} onChange={(max) => a.quantite && onChange({ ...a, quantite: { ...a.quantite, max } })} />
+            <ChampTexte libelle={t("quantiteLibelle")} valeur={a.quantite.label} onChange={(label) => a.quantite && onChange({ ...a, quantite: { ...a.quantite, label } })} />
+          </div>
+        )}
+      </CarteBrique>
 
       <CarteBrique uid={`${a.uid}:cibles`} titre={t("cibles")}>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

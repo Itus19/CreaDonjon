@@ -76,6 +76,8 @@ export default function InitiativeTracker({
   const [details, setDetails] = useState<Record<string, DetailsParticipant | "chargement" | "erreur">>({});
   /** V3.1-170 : la liste du tour, ou le plan (jetons déplaçables). */
   const [affichage, setAffichage] = useState<"liste" | "plan">("liste");
+  /** V3.1-184 : le dernier test de Discrétion de chaque ligne (rendu par le serveur). */
+  const [discretions, setDiscretions] = useState<Record<string, api.ReponseSeCacher>>({});
 
   const phase = combat ? phaseDe(combat.status) : "draft";
   const enCours = phase === "running";
@@ -329,6 +331,23 @@ export default function InitiativeTracker({
     });
   }
 
+  /** V3.1-184 : la lumière du combat ; le serveur recalcule le masquage, le temps réel rapporte les lignes. */
+  async function regler(lumiere: "bright" | "dim" | "dark") {
+    if (!combat || combat.lighting === lumiere) return;
+    await executer(async () => {
+      poserCombat(await api.changerLumiere(campaignId, combat.id, lumiere, t("erreurGeste")));
+    });
+  }
+
+  /** V3.1-184 : Se cacher, test lancé par le serveur ; l'état Caché revient par le temps réel. */
+  async function cacher(p: CombatParticipantRow) {
+    if (!combat) return;
+    await executer(async () => {
+      const r = await api.seCacher(campaignId, combat.id, p.id, t("erreurSeCacher"));
+      setDiscretions((prev) => ({ ...prev, [p.id]: r }));
+    });
+  }
+
   /** V3.1-170 : un jeton lâché (ou retiré) sur le plan ; la route répond avec le mouvement du tour. Un refus lève, le plan le montre. */
   async function deplacerSurLePlan(id: string, position: Point | null) {
     if (!combat) return null;
@@ -450,9 +469,31 @@ export default function InitiativeTracker({
         ))}
       </div>
 
+      <div className="flex flex-wrap items-center gap-1" role="group" aria-label={t("lumiereChoix")}>
+        <span className="pr-1 text-xs font-bold uppercase tracking-wide text-ink-muted">{t("lumiere")}</span>
+        {(
+          [
+            ["bright", "lumiereVive"],
+            ["dim", "lumiereFaible"],
+            ["dark", "lumiereTenebres"],
+          ] as const
+        ).map(([valeur, cle]) => (
+          <button
+            key={valeur}
+            type="button"
+            aria-pressed={combat.lighting === valeur}
+            disabled={occupe}
+            onClick={() => void regler(valeur)}
+            className={`min-h-11 rounded-full border px-4 py-1 text-sm disabled:opacity-50 ${combat.lighting === valeur ? "border-accent text-accent" : "border-edge text-ink-muted"}`}
+          >
+            {t(cle)}
+          </button>
+        ))}
+      </div>
+
       {affichage === "plan" && (
         <section className="rounded-[18px] border border-edge bg-panel p-2 backdrop-blur-[var(--blur)]" data-testid="plan-mj">
-          <PlanCombat jetons={jetonsDepuisLignes(participants, actif?.id ?? null)} deplacables={() => true} onDeplacer={deplacerSurLePlan} retirable />
+          <PlanCombat jetons={jetonsDepuisLignes(participants, actif?.id ?? null)} lumiere={combat.lighting} deplacables={() => true} onDeplacer={deplacerSurLePlan} retirable />
         </section>
       )}
 
@@ -474,6 +515,8 @@ export default function InitiativeTracker({
                 enCours={enCours}
                 occupe={occupe}
                 nomOrigine={nomOrigine(p, nomsParCle)}
+                discretion={discretions[p.id]}
+                onSeCacher={() => void cacher(p)}
                 etatsDisponibles={conditions}
                 details={details[p.id]}
                 onBasculer={() => basculer(p)}

@@ -43,7 +43,7 @@ function abjuration(): Brouillon {
   const a = nouvelleActivation(b);
   a.id = "abjure";
   a.label = "Abjuration d'ennemis";
-  a.cout = { action: "magic", depenses: [{ cle: "channel-divinity", quantite: "1" }], emplacement: null, passage: "l'action Magie" };
+  a.cout = { action: "magic", depenses: [{ cle: "channel-divinity", quantite: "1" }], objet: null, emplacement: null, passage: "l'action Magie" };
   a.cibles = { kind: "creature", zone: null, nombre: "max(1, {ability.cha})", portee: "18", doitVoir: true, passage: "cibler un nombre de créatures" };
   const sauvegarde = nouvelEffet("saving_throw", b);
   if (sauvegarde.type !== "saving_throw") throw new Error("type inattendu");
@@ -250,7 +250,7 @@ function benediction(): Brouillon {
   const a = nouvelleActivation(b);
   a.id = "benediction";
   a.label = "Bénédiction";
-  a.cout = { action: "action", depenses: [], emplacement: null, passage: null };
+  a.cout = { action: "action", depenses: [], objet: null, emplacement: null, passage: null };
   a.cibles = { kind: "creature", zone: null, nombre: "3", portee: "9", doitVoir: false, passage: null };
   const boost = nouvelEffet("apply_modifier", b);
   if (boost.type !== "apply_boost") throw new Error("type inattendu");
@@ -365,7 +365,7 @@ describe("réactions à un jet (V3.1-161)", () => {
     let a = nouvelleActivation(b);
     a.id = "esquive-instinctive";
     a.label = "Esquive instinctive";
-    a.cout = { action: "reaction", depenses: [], emplacement: null, passage: null };
+    a.cout = { action: "reaction", depenses: [], objet: null, emplacement: null, passage: null };
     a.cibles = { ...a.cibles, kind: "self" };
     a = avecDeclencheur(a, { jet: "damage", sujet: "attack_against_self", moment: "rolled" });
     a = { ...a, operations: [nouvelleOperation("damage_multiplier")] };
@@ -494,7 +494,7 @@ describe("V3.1-205 — « après un sort lancé » dans l'éditeur", () => {
     let a = nouvelleActivation(b);
     a.id = "envouter";
     a.label = "Envoûter";
-    a.cout = { action: "free", depenses: [], emplacement: null, passage: null };
+    a.cout = { action: "free", depenses: [], objet: null, emplacement: null, passage: null };
     a = avecApresSort(a, { ecoles: ["Enchantment", "Illusion"] });
     b.activations = [a];
     return b;
@@ -786,12 +786,12 @@ describe("V3.1-197 — « Accorder une utilisation » et le JS répété dans l'
     const b = brouillonVide();
     const presence = nouvelleActivation(b);
     presence.label = "Majesté souveraine";
-    presence.cout = { action: "bonus", depenses: [], emplacement: null, passage: null };
+    presence.cout = { action: "bonus", depenses: [], objet: null, emplacement: null, passage: null };
     presence.cibles = { ...presence.cibles, kind: "self" };
     b.activations.push(presence);
     const reaction = nouvelleActivation(b);
     reaction.label = "Majesté : l'attaque rate";
-    reaction.cout = { action: "none", depenses: [], emplacement: null, passage: null };
+    reaction.cout = { action: "none", depenses: [], objet: null, emplacement: null, passage: null };
     b.activations.push(reaction);
     const jeton = nouvelEffet("grant_token", b);
     if (jeton.type !== "grant_token") throw new Error("brique attendue");
@@ -843,5 +843,91 @@ describe("V3.1-197 — « Accorder une utilisation » et le JS répété dans l'
     expect(relu.activations[0].effets[0]).toMatchObject({ type: "apply_state", jsRepete: { carac: "wis", dd: "{spell_save_dc}" } });
     const sans = brouillonVersBlocs({ ...b, activations: [{ ...a, effets: [{ ...etat, cle: "charmed" }] }] }, {});
     expect(sans.ok && sans.activation?.durable_effects[0].repeat_save).toBeUndefined();
+  });
+});
+
+describe("V3.1-184 : formes, invocations, regain, quantité choisie, objet consommé, s'interposer", () => {
+  /** Une activation qui prend une forme, invoque, regagne, consomme un objet et choisit une quantité. */
+  function casUniques(): Brouillon {
+    const b = brouillonVide();
+    const a = nouvelleActivation(b);
+    a.id = "cas-uniques";
+    a.label = "Cas uniques";
+    a.cout = { action: "bonus", depenses: [], objet: { cle: "fiole-de-soin", nombre: "2" }, emplacement: null, passage: null };
+    a.quantite = { max: "5 * {level}", label: "Points de vie", labelOrig: { fr: "Points de vie" } };
+    const forme = nouvelEffet("transform", b);
+    if (forme.type !== "transform") throw new Error("type inattendu");
+    forme.forme = "loup";
+    forme.mode = "replace";
+    const invocation = nouvelEffet("summon", b);
+    if (invocation.type !== "summon") throw new Error("type inattendu");
+    invocation.creature = "familier-chouette";
+    invocation.nombre = "2";
+    const regain = nouvelEffet("restore_resource", b);
+    if (regain.type !== "restore_resource") throw new Error("type inattendu");
+    regain.cle = "rage";
+    regain.quantite = "{amount}";
+    const tout = nouvelEffet("restore_resource", b);
+    if (tout.type !== "restore_resource") throw new Error("type inattendu");
+    tout.cle = "emplacements";
+    tout.tout = true;
+    a.effets = [forme, invocation, regain, tout];
+    b.activations = [a];
+    return b;
+  }
+
+  it("s'écrit en blocs valides, se relit en vraies briques (plus d'effet opaque) et se réécrit à l'identique", () => {
+    const r = brouillonVersBlocs(casUniques(), {});
+    if (!r.ok || !r.activation) throw new Error("écriture refusée");
+    const a = r.activation.activations[0];
+    expect(a.effects.map((e) => e.action)).toEqual(["transform", "summon", "restore_resource", "restore_resource"]);
+    expect(a.effects[0]).toMatchObject({ form: "loup", mode: "replace" });
+    expect(a.effects[2]).toMatchObject({ key: "rage" });
+    expect(a.effects[3]).toMatchObject({ key: "emplacements", all: true });
+    expect(a.cost.consume_item).toEqual({ key: "fiole-de-soin", count: 2 });
+    expect(a.amount?.label).toEqual({ fr: "Points de vie" });
+    expect(zActivationBlockData.safeParse(r.activation).success).toBe(true);
+
+    const relu = blocsVersBrouillon([{ blockType: "activation", data: r.activation }]);
+    const relues = relu.activations[0];
+    expect(relues.effets.map((e) => e.type)).toEqual(["transform", "summon", "restore_resource", "restore_resource"]);
+    expect(relues.cout.objet).toEqual({ cle: "fiole-de-soin", nombre: "2" });
+    expect(relues.quantite?.max).toBe("5 * {level}");
+    expect(brouillonVersBlocs(relu, {})).toEqual(r);
+  });
+
+  it("refuse une forme, une créature, une ressource ou un objet sans clé, et un nombre d'objets hors bornes", () => {
+    const b = brouillonVide();
+    const a = nouvelleActivation(b);
+    a.label = "Vide";
+    a.cout = { ...a.cout, objet: { cle: "", nombre: "0" } };
+    a.effets = [nouvelEffet("transform", b), nouvelEffet("summon", b), nouvelEffet("restore_resource", b)];
+    b.activations = [a];
+    const r = brouillonVersBlocs(b, {});
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      const texte = r.erreurs.join(" | ");
+      expect(texte).toContain("clé de la forme");
+      expect(texte).toContain("clé de la créature");
+      expect(texte).toContain("ressource regagnée");
+      expect(texte).toContain("clé de l'objet");
+      expect(texte).toContain("objets consommés");
+    }
+  });
+
+  it("S'interposer s'ajoute à une réaction sur une attaque et fait l'aller-retour", () => {
+    const b = brouillonVide();
+    const a = nouvelleActivation(b);
+    a.label = "Protection";
+    a.cout = { ...a.cout, action: "reaction" };
+    const avec = avecDeclencheur(a, { jet: "attack", sujet: "any", moment: "rolled" });
+    expect(operationsPermises("attack")).toContain("redirect");
+    avec.operations = [nouvelleOperation("redirect")];
+    b.activations = [avec];
+    const r = brouillonVersBlocs(b, {});
+    if (!r.ok || !r.activation) throw new Error("écriture refusée");
+    expect(r.activation.activations[0].roll_operations).toEqual([{ op: "redirect" }]);
+    const relu = blocsVersBrouillon([{ blockType: "activation", data: r.activation }]);
+    expect(relu.activations[0].operations.map((o) => o.op)).toEqual(["redirect"]);
   });
 });

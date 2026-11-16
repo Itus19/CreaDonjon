@@ -404,8 +404,9 @@ export default function PlanCombat({ jetons, deplacables, onDeplacer, retirable 
                 <circle
                   r={enGlisse ? RAYON_JETON + 3 : RAYON_JETON}
                   className={c.rond}
-                  strokeWidth={j.id === moiId ? 3 : 1}
-                  {...(j.discret ? { strokeDasharray: "4 3", strokeWidth: 3, fillOpacity: 0.55 } : {})}
+                  strokeWidth={j.discret || j.id === moiId ? 3 : 1}
+                  strokeDasharray={j.discret ? "4 3" : undefined}
+                  fillOpacity={j.discret ? 0.55 : undefined}
                 />
                 <text textAnchor="middle" dominantBaseline="central" className={`${c.texte} pointer-events-none text-xs font-semibold`}>
                   {initiales(j.label)}

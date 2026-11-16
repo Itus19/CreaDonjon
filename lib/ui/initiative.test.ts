@@ -10,6 +10,8 @@ import {
   demandeDegatsApres,
   desDeLaFormule,
   effetDesChanges,
+  formeDe,
+  invocateurDe,
   estUneArme,
   fractionsAnneau,
   joueusesEnAttente,
@@ -400,5 +402,21 @@ describe("V3.1-200 (ADR 0099) — le jet ciblé d'une joueuse", () => {
 
   it("une action de monstre reste refusée", () => {
     expect(() => corpsJetJoueur({ kind: "attack", acteur, action: { kind: "monster_action", name: "Dague" }, cibleId })).toThrow();
+  });
+});
+
+describe("V3.1-184 : forme portée et créature invoquée", () => {
+  it("lit le libellé de la forme, rien sans forme ni avec une colonne mal formée", () => {
+    expect(formeDe(participant({ id: "a", form: { rule_key: "loup", mode: "overlay", label: "Loup" } }))).toBe("Loup");
+    expect(formeDe(participant({ id: "a", form: null }))).toBeNull();
+    expect(formeDe(participant({ id: "a", form: ["x"] }))).toBeNull();
+  });
+
+  it("nomme l'invocateur d'une créature invoquée, pas d'une autre", () => {
+    const druide = pj("d", { label: "Aela" });
+    const familier = participant({ id: "f", summoned_by: "d" });
+    expect(invocateurDe(familier, [druide, familier])).toBe("Aela");
+    expect(invocateurDe(participant({ id: "g" }), [druide])).toBeNull();
+    expect(invocateurDe(participant({ id: "h", summoned_by: "parti" }), [druide])).toBeNull();
   });
 });

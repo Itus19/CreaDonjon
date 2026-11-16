@@ -226,6 +226,38 @@ function ChampsEffet({ effet, maj, sauvegardeParente }: { effet: BrouillonEffet;
           </div>
         </>
       );
+    case "transform":
+      return (
+        <>
+          <ChampTexte libelle={t("cleDeLaForme")} valeur={effet.forme} onChange={(forme) => maj({ forme })} mecanique />
+          <ChampListe
+            libelle={t("modeDeForme")}
+            valeur={effet.mode}
+            options={[
+              { value: "overlay", label: t("formeSuperposee") },
+              { value: "replace", label: t("formeRemplacee") },
+            ]}
+            onChange={(v) => maj({ mode: v === "replace" ? "replace" : "overlay" })}
+          />
+        </>
+      );
+    case "summon":
+      return (
+        <>
+          <ChampTexte libelle={t("cleDeLaCreature")} valeur={effet.creature} onChange={(creature) => maj({ creature })} mecanique />
+          <ChampFormule facultatif libelle={t("nombreDeCreatures")} valeur={effet.nombre} onChange={(nombre) => maj({ nombre })} />
+        </>
+      );
+    case "restore_resource":
+      return (
+        <>
+          <ChampTexte libelle={t("ressourceRegagnee")} valeur={effet.cle} onChange={(cle) => maj({ cle })} mecanique />
+          {!effet.tout && <ChampFormule libelle={t("quantiteRegagnee")} valeur={effet.quantite} onChange={(quantite) => maj({ quantite })} />}
+          <div className="sm:pt-5">
+            <Checkbox checked={effet.tout} onChange={() => maj({ tout: !effet.tout })} label={t("toutRegagner")} />
+          </div>
+        </>
+      );
     case "opaque":
       return <p className="text-xs text-ink-muted sm:col-span-2 lg:col-span-3">{t("effetOpaque")}</p>;
   }
