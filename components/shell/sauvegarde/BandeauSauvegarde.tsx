@@ -21,7 +21,10 @@ type Phase = "choix" | "saisie" | "envoi" | "verdict";
  */
 export default function BandeauSauvegarde({ campaignId, worldSlug }: { campaignId: string | null; worldSlug: string }) {
   const pathname = usePathname();
-  const { aRepondre } = useSauvegardes();
+  const { aRepondre, fenetres } = useSauvegardes();
+  // V3.1-161 : une fenêtre de réaction tient un jet en suspens ; elle passe devant. Le bandeau reste monté
+  // (caché, pas démonté) pour qu'une saisie en cours ne se perde pas, et revient quand la fenêtre se ferme.
+  const masque = fenetres.length > 0;
   // Côté MJ, la liste vit dans les outils Initiative et Table, pas dans un bandeau.
   const horsMj = !pathname.startsWith(`/m/${worldSlug}/mj`);
   const [retenue, setRetenue] = useState<{ demande: DemandeSauvegarde; issue: IssueSauvegarde; changes: string[]; enAttenteReactions: boolean } | null>(null);
@@ -29,9 +32,13 @@ export default function BandeauSauvegarde({ campaignId, worldSlug }: { campaignI
   const courante = aRepondre[0];
   if (!campaignId || !horsMj) return null;
   // Le verdict reste affiché même si le signal temps réel a déjà retiré la demande.
-  if (retenue) return <CadreVerdict retenue={retenue} onFini={() => setRetenue(null)} />;
+  if (retenue) return <div hidden={masque}><CadreVerdict retenue={retenue} onFini={() => setRetenue(null)} /></div>;
   if (!courante) return null;
-  return <Reponse key={courante.id} campaignId={campaignId} demande={courante} onRepondue={(issue, changes, enAttenteReactions) => setRetenue({ demande: courante, issue, changes, enAttenteReactions })} />;
+  return (
+    <div hidden={masque}>
+      <Reponse key={courante.id} campaignId={campaignId} demande={courante} onRepondue={(issue, changes, enAttenteReactions) => setRetenue({ demande: courante, issue, changes, enAttenteReactions })} />
+    </div>
+  );
 }
 
 function Cadre({ children, labelledBy }: { children: React.ReactNode; labelledBy: string }) {

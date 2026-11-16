@@ -849,6 +849,7 @@ const OPTIONS_TEMPS = ["action", "bonus", "reaction", "magic"] as const;
 /** L'aperçu du bouton, tel qu'il apparaîtra sur la fiche (planche « Éditeur »). */
 function Apercu({ activation }: { activation: BrouillonActivation }) {
   const t = useTranslations("regles.briques");
+  const tFiche = useTranslations("fiche.activation");
   const { ressources } = useContexteBriques();
   const p = apercuBouton(activation);
   const emplacement = activation.cout.emplacement;
@@ -868,9 +869,14 @@ function Apercu({ activation }: { activation: BrouillonActivation }) {
           <span className="text-sm font-medium text-ink">{p.libelle || t("nouvelleUtilisation")}</span>
           <span className="text-xs text-ink-soft">{morceaux.join(" · ")}</span>
         </div>
-        <span className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink opacity-70" aria-hidden="true">
-          {t("utiliser")}
-        </span>
+        {activation.declencheur ? (
+          // Comme sur la fiche : une réaction n'a pas de bouton, elle se propose pendant le jet (V3.1-161).
+          <span className="text-xs italic text-ink-soft">{tFiche("reaction")}</span>
+        ) : (
+          <span className="rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink opacity-70" aria-hidden="true">
+            {t("utiliser")}
+          </span>
+        )}
       </div>
     </div>
   );
