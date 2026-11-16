@@ -25,6 +25,7 @@ import PlanCombat from "./PlanCombat";
 import { jetonsDepuisVue, type Point } from "@/lib/ui/planCombat";
 import { deplacerJeton } from "@/lib/ui/planCombatApi";
 import { seCacher, type ReponseSeCacher } from "@/lib/ui/initiativeApi";
+import CreaturePilotee from "./CreaturePilotee";
 
 const CARTE = "rounded-[18px] border border-edge bg-panel backdrop-blur-[var(--blur)]";
 
@@ -113,7 +114,7 @@ function ModeCombat({
       <OrdreDuTour combat={combat} participants={participants} moiId={moiId} />
       <div className={`${CARTE} p-3`}>
         <h2 className="mb-2 font-chrome text-sm font-semibold text-ink">{t("planTitre")}</h2>
-        <PlanCombat jetons={jetonsDepuisVue(participants)} deplacables={(id) => id === moiId || participants.some((p) => p.id === id && p.mine)} onDeplacer={deplacer} moiId={moiId} />
+        <PlanCombat jetons={jetonsDepuisVue(participants)} lumiere={combat.lighting} deplacables={(id) => id === moiId || participants.some((p) => p.id === id && p.mine)} onDeplacer={deplacer} moiId={moiId} />
       </div>
       {moi && combat.status === "running" && (
         <div className={`${CARTE} flex flex-wrap items-center gap-3 p-3`}>
@@ -137,6 +138,14 @@ function ModeCombat({
           )}
         </div>
       )}
+      {combat.status === "running" &&
+        participants
+          .filter((p) => p.mine)
+          .map((p) => (
+            <div key={p.id} className={`${CARTE} p-3`}>
+              <CreaturePilotee campaignId={campaignId} combatId={combat.id} creature={p} participants={participants} />
+            </div>
+          ))}
       {moi && <Economie combat={combat} rang={moi.order} budget={moi.budget} attaquesParAction={attaquesParAction} />}
     </section>
   );

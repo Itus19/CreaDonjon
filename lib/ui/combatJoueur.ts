@@ -14,6 +14,8 @@ export interface InfosCombatJoueur {
   round: number;
   turnIndex: number;
   updatedAt: string;
+  /** V3.1-184 : la lumière ambiante du combat, réglée par le MJ (pas un secret : elle se voit). */
+  lighting?: string;
 }
 
 export type VueCombatJoueur =

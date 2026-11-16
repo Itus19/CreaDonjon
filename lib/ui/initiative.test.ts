@@ -403,6 +403,18 @@ describe("V3.1-200 (ADR 0099) — le jet ciblé d'une joueuse", () => {
   it("une action de monstre reste refusée", () => {
     expect(() => corpsJetJoueur({ kind: "attack", acteur, action: { kind: "monster_action", name: "Dague" }, cibleId })).toThrow();
   });
+
+  it("V3.1-184 : la créature pilotée agit par une action de son bloc de stats, jamais avec une arme de fiche", () => {
+    const creature = { kind: "participant" as const, participantId: "22222222-2222-4222-8222-222222222222" };
+    expect(corpsJetJoueur({ kind: "attack", acteur: creature, action: { kind: "monster_action", name: "Serres" }, cibleId })).toEqual({
+      kind: "attack",
+      actor: creature,
+      action: { kind: "monster_action", name: "Serres" },
+      targetId: cibleId,
+      advantage: "normal",
+    });
+    expect(() => corpsJetJoueur({ kind: "attack", acteur: creature, action: { kind: "weapon", itemId: "x" }, cibleId })).toThrow();
+  });
 });
 
 describe("V3.1-184 : forme portée et créature invoquée", () => {

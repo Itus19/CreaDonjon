@@ -1939,6 +1939,9 @@
   },
   "combatJoueur": {
     "aToi": "À toi",
+    "faireAgir": "Faire agir {nom}",
+    "creatureSansAttaque": "Cette créature n'a pas d'attaque à lancer ; le MJ joue ses autres actions.",
+    "erreurCreature": "Impossible de lire cette créature.",
     "forme": "Forme : {nom}",
     "seCacher": "Se cacher",
     "discretionCache": "Discrétion {total} : caché",

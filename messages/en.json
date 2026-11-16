@@ -1938,6 +1938,9 @@
   },
   "combatJoueur": {
     "aToi": "Yours",
+    "faireAgir": "Act with {nom}",
+    "creatureSansAttaque": "This creature has no attack to roll; the GM plays its other actions.",
+    "erreurCreature": "Could not read this creature.",
     "forme": "Form: {nom}",
     "seCacher": "Hide",
     "discretionCache": "Stealth {total}: hidden",

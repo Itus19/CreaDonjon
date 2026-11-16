@@ -18,7 +18,7 @@ export type PlayerCombatViewResult =
   | { kind: "none" }
   | {
       kind: "ok";
-      combat: { id: string; name: string | null; status: string; round: number; turnIndex: number; updatedAt: string };
+      combat: { id: string; name: string | null; status: string; round: number; turnIndex: number; updatedAt: string; lighting: string };
       participants: PlayerCombatParticipant[];
     };
 
@@ -85,6 +85,7 @@ export async function getPlayerCombatView(supabase: TypedClient, campaignId: str
       round: combat.round,
       turnIndex: combat.turn_index,
       updatedAt: combat.updated_at,
+      lighting: combat.lighting,
     },
     participants: orderPlayerCombatView(rows.map(toRow), { status: combat.status, turnIndex: combat.turn_index }),
   };

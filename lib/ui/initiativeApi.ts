@@ -200,3 +200,8 @@ export interface ReponseSeCacher {
 export function seCacher(campaignId: string, combatId: string, participantId: string, parDefaut: string): Promise<ReponseSeCacher> {
   return post<ReponseSeCacher>(`${base(campaignId)}/${combatId}/hide`, { participantId }, parDefaut);
 }
+
+/** V3.1-184 : une joueuse lit la créature qu'elle pilote (bloc de stats et actions), au geste « Faire agir ». */
+export function lireMaCreature(campaignId: string, combatId: string, participantId: string, parDefaut: string): Promise<ParticipantCharacteristics> {
+  return appeler<ParticipantCharacteristics>(`${base(campaignId)}/${combatId}/participants/${participantId}/creature`, {}, parDefaut);
+}

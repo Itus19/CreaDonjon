@@ -9,6 +9,8 @@ const { moveParticipant } = await import("./combatPositions");
 const { getOrOpenSessionForCampaign } = await import("./sessions");
 const { getCombatById } = await import("../repos/combats");
 const { readCombatParticipantsSigned } = await import("./engineSigning");
+const { getControlledCreatureCharacteristics } = await import("./controlledCreature");
+const { resolveTargetedRoll } = await import("./targetedRoll");
 
 /**
  * V3.1-183 (ADR 0078) — les formes et les invocations contre la vraie base :
@@ -101,6 +103,25 @@ describe.skipIf(!hasCreds)("formes et invocations (V3.1-183, integration, base r
     expect(await moveParticipant(client(a), { campaignId, combatId, userId: a.id, participantId: ligne.Brunhild, position: { x: 9, y: 0 }, locale: "fr" })).toMatchObject({ ok: false });
     await expect(jouer(a, pc.Brunhild, [{ action: "summon", who: pc.Brunhild, creature: "owl", count: 1 }])).rejects.toThrow();
     expect((await lignes()).filter((r) => r.summoned_by === ligne.Brunhild)).toHaveLength(0);
+  }, 120000);
+
+  it("elle fait agir sa chouette (attaque de son bloc de stats) ; l'autre joueuse ne la lit ni ne la fait agir", async () => {
+    const lue = await getControlledCreatureCharacteristics(client(a), { campaignId, combatId, participantId: ligne.Chouette, userId: a.id, locale: "fr" });
+    expect(lue?.kind).toBe("monster");
+    const attaque = lue?.kind === "monster" ? lue.actions?.actions.find((x) => x.attack_bonus !== undefined) : undefined;
+    expect(attaque).toBeDefined();
+    expect(await getControlledCreatureCharacteristics(client(b), { campaignId, combatId, participantId: ligne.Chouette, userId: b.id, locale: "fr" })).toBeNull();
+    const jet = (u: ReusableAccount) =>
+      resolveTargetedRoll(client(u), {
+        campaignId,
+        combatId,
+        callerId: u.id,
+        locale: "fr",
+        callerIsGm: false,
+        input: { kind: "attack", actor: { kind: "participant", participantId: ligne.Chouette }, action: { kind: "monster_action", name: attaque!.name }, targetId: ligne.Brunhild, advantage: "normal", critical: false, secret: false },
+      });
+    expect(await jet(a)).toMatchObject({ ok: true });
+    expect(await jet(b)).toMatchObject({ ok: false });
   }, 120000);
 
   it("une forme se pose (Forme sauvage : loup), et la fin de l'effet de la règle retire forme et chouette", async () => {

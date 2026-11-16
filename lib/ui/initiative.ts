@@ -304,10 +304,13 @@ export function demandeDegatsApres(reponse: ReponseJetCible): { demande: Demande
  */
 export function corpsJetJoueur(demande: DemandeJetCible, options: { avantage?: AdvantageState; jeton?: string | null } = {}): PlayerTargetedRollInput {
   const { kind, acteur, action } = demande;
-  if (acteur.kind !== "character" || action.kind === "monster_action") throw new Error("Une joueuse n'agit qu'avec son personnage.");
+  // Son PJ avec ses armes et sorts ; ou (V3.1-184) la créature qu'elle pilote, avec une action de son bloc de stats.
+  const avecSonPj = acteur.kind === "character" && action.kind !== "monster_action";
+  const avecSaCreature = acteur.kind === "participant" && action.kind === "monster_action";
+  if (!avecSonPj && !avecSaCreature) throw new Error("Une joueuse n'agit qu'avec son personnage ou la créature qu'elle pilote.");
   return {
     kind,
-    actor: { kind: "character", entityId: acteur.entityId },
+    actor: acteur.kind === "character" ? { kind: "character", entityId: acteur.entityId } : { kind: "participant", participantId: acteur.participantId },
     action,
     targetId: demande.cibleId,
     advantage: options.avantage ?? "normal",
