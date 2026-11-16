@@ -1924,6 +1924,7 @@
     "reaction": "Réaction",
     "budgetReste": "Reste : {action} action, {bonus} action bonus",
     "budgetAttaques": "{restantes} attaque(s) restante(s)",
+    "budgetAttaquesSur": "{restantes} / {total} attaques restantes",
     "budgetDepasse": "Le budget du tour est dépassé. Le MJ tranche."
   },
   "reactions": {

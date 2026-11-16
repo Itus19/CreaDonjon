@@ -102,6 +102,17 @@ export default async function JoueurPersonnagePage({
     blocks,
   });
 
+  // V3.1-166 : le total d'attaques de la carte de combat, tiré de la fiche déjà lancée (aucune lecture de plus).
+  const attaquesParAction = ficheAvecPage
+    ? ficheAvecPage.then(
+        (f) => f.remote?.sheet.attacksPerAction ?? null,
+        (erreur: unknown) => {
+          console.error("Fiche avec la page : attaques par action indisponibles", erreur);
+          return null;
+        }
+      )
+    : null;
+
   return (
     // `max-w-5xl` (pas `70ch`, retour utilisateur : "les boutons des actions
     // soient sur une même ligne") — la fiche jouable est un tableau de bord
@@ -115,7 +126,7 @@ export default async function JoueurPersonnagePage({
           {t("reclame", { prenom: entity.name.split(" ")[0] })}
         </p>
       )}
-      <CombatJoueur campaignId={campaign.id} entityId={entityId} vueInitiale={vueInitiale}>
+      <CombatJoueur campaignId={campaign.id} entityId={entityId} vueInitiale={vueInitiale} attaquesParAction={attaquesParAction}>
         <ParticipantCharacterSheet
           worldSlug={worldSlug}
           campaignId={campaign.id}

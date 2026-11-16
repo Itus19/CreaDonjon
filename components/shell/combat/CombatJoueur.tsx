@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import type { PlayerCombatParticipant } from "@/src/core/rules/combatPlayerView";
 import {
@@ -39,12 +39,15 @@ export default function CombatJoueur({
   campaignId,
   entityId,
   vueInitiale,
+  attaquesParAction = null,
   children,
 }: {
   campaignId: string;
   /** La fiche réclamée : elle désigne le participant de la joueuse dans l'ordre du tour. */
   entityId: string;
   vueInitiale: VueCombatJoueur;
+  /** V3.1-166 : les attaques par action de la fiche, tirées de la fiche que la page calcule déjà (promesse, ADR 0056). */
+  attaquesParAction?: Promise<number | null> | null;
   children: React.ReactNode;
 }) {
   const { vue, relire } = useCombatJoueur(campaignId, vueInitiale);
@@ -61,7 +64,7 @@ export default function CombatJoueur({
       {vue.kind === "ok" && afficheInvitation && (
         <InvitationInitiative campaignId={campaignId} combatId={vue.combat.id} onValidation={ouvrir} onTermine={fermer} onEnvoyee={reliree} />
       )}
-      {vue.kind === "ok" && modeCombat(vue) && <ModeCombat campaignId={campaignId} combat={vue.combat} participants={vue.participants} entityId={entityId} />}
+      {vue.kind === "ok" && modeCombat(vue) && <ModeCombat campaignId={campaignId} combat={vue.combat} participants={vue.participants} entityId={entityId} attaquesParAction={attaquesParAction} />}
       {children}
     </div>
   );
@@ -72,11 +75,13 @@ function ModeCombat({
   combat,
   participants,
   entityId,
+  attaquesParAction,
 }: {
   campaignId: string;
   combat: InfosCombatJoueur;
   participants: PlayerCombatParticipant[];
   entityId: string;
+  attaquesParAction: Promise<number | null> | null;
 }) {
   const t = useTranslations("combatJoueur");
   const moi = monParticipant(participants, entityId);
@@ -92,7 +97,7 @@ function ModeCombat({
         <h2 className="mb-2 font-chrome text-sm font-semibold text-ink">{t("planTitre")}</h2>
         <PlanCombat jetons={jetonsDepuisVue(participants)} deplacables={(id) => id === moiId} onDeplacer={deplacer} moiId={moiId} />
       </div>
-      {moi && <Economie combat={combat} rang={moi.order} budget={moi.budget} />}
+      {moi && <Economie combat={combat} rang={moi.order} budget={moi.budget} attaquesParAction={attaquesParAction} />}
     </section>
   );
 }
@@ -158,13 +163,34 @@ const CASES: { quelle: keyof EconomieAction; cle: string }[] = [
 ];
 
 /** Trois cases locales (rien n'est enregistré) : remises à zéro quand le tour revient à la joueuse. */
-function Economie({ combat, rang, budget }: { combat: InfosCombatJoueur; rang: number; budget: TurnBudget | null }) {
+function Economie({
+  combat,
+  rang,
+  budget,
+  attaquesParAction,
+}: {
+  combat: InfosCombatJoueur;
+  rang: number;
+  budget: TurnBudget | null;
+  attaquesParAction: Promise<number | null> | null;
+}) {
   const t = useTranslations("combatJoueur");
   const [etat, setEtat] = useState<EconomieDuTour | null>(null);
+  // Le total arrive avec la fiche (promesse lancée par la page) ; d'ici là, on montre les attaques restantes seules.
+  const [parAction, setParAction] = useState<number | null>(null);
+  useEffect(() => {
+    let vivant = true;
+    void attaquesParAction?.then((n) => {
+      if (vivant) setParAction(n);
+    });
+    return () => {
+      vivant = false;
+    };
+  }, [attaquesParAction]);
   const cle = cleDuCycle(combat, rang);
   const utilisee = economieAffichee(etat, cle);
-  // V3.1-166 : ce que le serveur a compté ce tour-ci. La fiche (attaques par action) n'est pas connue ici : pas de total.
-  const reste = budgetAffiche({ budget, combat, rang, attaquesParAction: null });
+  // V3.1-166 : ce que le serveur a compté ce tour-ci, sur le total d'attaques de la fiche.
+  const reste = budgetAffiche({ budget, combat, rang, attaquesParAction: parAction });
   return (
     <div className={`${CARTE} p-3`}>
       <h2 className="mb-2 font-chrome text-sm font-semibold text-ink">{t("economieTitre")}</h2>
@@ -185,7 +211,8 @@ function Economie({ combat, rang, budget }: { combat: InfosCombatJoueur; rang: n
       </div>
       <p className="mt-2 text-xs text-ink-muted" data-testid="budget-tour">
         {t("budgetReste", { action: reste.action, bonus: reste.bonus })}
-        {reste.attaques && ` · ${t("budgetAttaques", { restantes: reste.attaques.restantes })}`}
+        {reste.attaques &&
+          ` · ${reste.attaques.total !== null ? t("budgetAttaquesSur", { restantes: reste.attaques.restantes, total: reste.attaques.total }) : t("budgetAttaques", { restantes: reste.attaques.restantes })}`}
       </p>
       {reste.depasse && (
         <p role="status" className="mt-1 text-xs text-accent">

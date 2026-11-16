@@ -1923,6 +1923,7 @@
     "reaction": "Reaction",
     "budgetReste": "Left: {action} action, {bonus} bonus action",
     "budgetAttaques": "{restantes} attack(s) left",
+    "budgetAttaquesSur": "{restantes} / {total} attacks left",
     "budgetDepasse": "The turn budget is exceeded. The GM decides."
   },
   "reactions": {
