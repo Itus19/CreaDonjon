@@ -706,7 +706,9 @@ export async function resolveTargetedRoll(
     ctx = await resolveCharacterActionContext(supabase, input.actor.entityId, params.campaignId, params.locale);
     if (!ctx) return { ok: false, reason: "actor_not_found" };
   } else {
-    actorParticipant = await getCombatParticipantById(supabase, input.actor.participantId);
+    // Une joueuse ne lit pas `combat_participants` : sa créature vient de la lecture signée, déjà faite (V3.1-183).
+    const acteurId = input.actor.participantId;
+    actorParticipant = participantsSignes ? (participantsSignes.find((p) => p.id === acteurId) ?? null) : await getCombatParticipantById(supabase, acteurId);
     if (!actorParticipant || actorParticipant.combat_id !== combat.id) return { ok: false, reason: "actor_not_found" };
     if (actorParticipant.rule_key) monster = await loadMonsterBlocks(supabase, { worldId: campaign.worldId, ruleKey: actorParticipant.rule_key, locale: params.locale });
   }

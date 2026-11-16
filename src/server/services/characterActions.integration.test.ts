@@ -513,5 +513,6 @@ describe.skipIf(!hasCreds)("characterActions (integration, base reelle)", () => 
     } finally {
       await admin.from("worlds").delete().eq("id", monde.id);
     }
-  });
+    // Six résolutions complètes de la fiche contre la base hébergée : plus de 30 s, déjà sur master (mesuré le 16 nov.).
+  }, 120000);
 });

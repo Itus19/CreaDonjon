@@ -477,7 +477,7 @@ Perception et visibilité (invisible, caché, sens), lumière, étiquettes de ma
 
 *Fait le 16 novembre.* `forms.ts` (`formStats`, modes `overlay` et `replace`). Effets nouveaux (`triggers.ts`, vocabulaire fermé) : `transform { form, mode }`, `summon { creature, count? }` (nombre calculé), `restore_resource { key, amount | all }` ; le tour les dit « joués par le service » (forme, invocation, « tout regagner ») ou applique un regain chiffré. Activation : `amount { max }` (quantité choisie, `amount` dans les formules du coût et des effets, refus `amount_out_of_range`), coût `consume_item { key, count }` rendu par le plan (`consume`). Les effets d'une activation lisent désormais les mêmes nombres que son coût (`slot.level`, `amount`). Opération de réaction `redirect` (l'attaque vise celui qui réagit). L'éditeur conserve ces effets tels quels (brouillon « opaque ») jusqu'à leur saisie (184) ; la lecture d'une règle les décrit. `gain_resource` (jauge qui monte) n'est pas fait : aucune règle de l'échantillon ne le demande encore sans `restore_resource`. Tests : `formesEtCasUniques.test.ts` 10/10.
 
-#### ☐ V3.1-183 — La migration et le service des formes et invocations · `L` · sans modèle IA — **prêt (Opus)**
+#### ☑ V3.1-183 — La migration et le service des formes et invocations · `L` · sans modèle IA — **prêt (Opus)**
 
 **Modèle conseillé : Opus** — migration, sécurité. **Dépend de** : 182.
 
@@ -485,7 +485,9 @@ Perception et visibilité (invisible, caché, sens), lumière, étiquettes de ma
 - Service : l'effet `summon` ajoute le participant, sa fin le retire ; `transform` pose la forme sur la ligne, sa fin la retire ; jets ciblés avec la créature pilotée.
 
 **Critères d'acceptation**
-- [ ] Intégration : une joueuse invoque un familier, le fait agir, pas celui d'une autre ; la fin de l'effet le retire du combat.
+- [x] Intégration : une joueuse invoque un familier, le fait agir, pas celui d'une autre ; la fin de l'effet le retire du combat.
+
+*Fait le 16 novembre.* Deux migrations (`20261116140000_formes_et_invocations`, `20261116150000_journal_creature_pilotee`) : colonnes `form`, `summoned_by`, `controlled_by`, `source_rule_key` ; genres signés `summon`, `unsummon`, `form` ; `set_own_position` et le journal acceptent la créature pilotée. Service `combatForms.ts` (poser, retirer à la fin d'un effet de la règle, `effectExpiry`), jet ciblé avec l'acteur `participant` relu par la lecture signée. Quantité choisie, regain et objet consommé branchés dans `activateFeature`. Vérifié par `formesInvocations.integration.test.ts` 4/4.
 
 #### ☑ V3.1-184 — Les écrans : lumière, Caché, formes, créatures pilotées · `L` · sans modèle IA — **prêt (Sonnet)**
 
