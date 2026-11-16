@@ -345,6 +345,12 @@ export function applyRollOperations(start: PendingRoll, applications: readonly R
           steps.push({ actorId: a.actorId, op: op.op, value: r.value, dice: [] });
           break;
         }
+        case "redirect": {
+          // V3.1-182 : celui qui réagit prend l'attaque pour lui (la CA reste celle que le service relira à la reprise).
+          roll = { ...roll, target: a.actorId };
+          steps.push({ actorId: a.actorId, op: op.op, value: 0, dice: [] });
+          break;
+        }
         case "attacker_save": {
           if (roll.kind !== "attack") break;
           const d = rollDie(20, rng);

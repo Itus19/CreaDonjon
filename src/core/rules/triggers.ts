@@ -124,6 +124,12 @@ export type EffectNode =
   | { action: "apply_effect"; who: string; effect: string }
   /** V3.1-164 (ADR 0076) — lance un sort par son activation ; sans emplacement si `free` (Compagnon sauvage). Le service le joue. */
   | { action: "cast_spell"; who: string; spell: string; free: boolean }
+  /** V3.1-182 (ADR 0078) — prendre une forme (bloc de stats `form`) ; le service la pose sur la ligne de combat. */
+  | { action: "transform"; who: string; form: string; mode: "overlay" | "replace" }
+  /** V3.1-182 — invoquer `count` créatures (bloc de stats `creature`) ; le service les ajoute au combat, pilotées par la joueuse. */
+  | { action: "summon"; who: string; creature: string; count?: FormulaNode }
+  /** V3.1-182 — regagner des utilisations d'une ressource (recharge sur événement) ; `all` : toutes. */
+  | { action: "restore_resource"; who: string; key: string; amount?: FormulaNode; all?: boolean }
   | { action: "roll"; label: string; formula: FormulaNode }
   | { action: "narrate_hint"; text: string };
 
@@ -142,6 +148,9 @@ export type ResolvedEffect =
   | { action: "grant_inspiration"; who: string }
   | { action: "apply_effect"; who: string; effect: string }
   | { action: "cast_spell"; who: string; spell: string; free: boolean }
+  | { action: "transform"; who: string; form: string; mode: "overlay" | "replace" }
+  | { action: "summon"; who: string; creature: string; count: number }
+  | { action: "restore_resource"; who: string; key: string; amount?: number; all?: boolean }
   | { action: "roll"; label: string; value: number }
   | { action: "narrate_hint"; text: string };
 
@@ -229,6 +238,11 @@ export const zEffect: z.ZodType<EffectNode> = z.lazy(() =>
     z.object({ action: z.literal("grant_inspiration"), who: z.string().min(1) }),
     z.object({ action: z.literal("apply_effect"), who: z.string().min(1), effect: z.string().min(1) }),
     z.object({ action: z.literal("cast_spell"), who: z.string().min(1), spell: z.string().min(1), free: z.boolean() }),
+    z.object({ action: z.literal("transform"), who: z.string().min(1), form: z.string().min(1), mode: z.enum(["overlay", "replace"]) }),
+    z.object({ action: z.literal("summon"), who: z.string().min(1), creature: z.string().min(1), count: zFormulaNode.optional() }),
+    z
+      .object({ action: z.literal("restore_resource"), who: z.string().min(1), key: z.string().min(1), amount: zFormulaNode.optional(), all: z.boolean().optional() })
+      .refine((e) => (e.all === true) !== (e.amount !== undefined), { message: "Regagner : un nombre, ou « tout », et seulement l'un des deux." }),
     z.object({ action: z.literal("roll"), label: z.string().min(1), formula: zFormulaNode }),
     z.object({ action: z.literal("narrate_hint"), text: z.string().min(1) }),
   ]),
@@ -454,6 +468,18 @@ function resolveEffect(
       };
     case "grant_inspiration":
       return { resolved: { action: "grant_inspiration", who: effect.who }, branch: [] };
+    case "summon":
+      return {
+        resolved: { action: "summon", who: effect.who, creature: effect.creature, count: Math.max(1, Math.trunc(effect.count ? evalNumber(effect.count, ctx, fired, rng) : 1)) },
+        branch: [],
+      };
+    case "restore_resource":
+      return {
+        resolved: effect.all
+          ? { action: "restore_resource", who: effect.who, key: effect.key, all: true }
+          : { action: "restore_resource", who: effect.who, key: effect.key, amount: Math.max(0, evalNumber(effect.amount ?? { op: "num", value: 0 }, ctx, fired, rng)) },
+        branch: [],
+      };
     case "roll":
       return { resolved: { action: "roll", label: effect.label, value: evalNumber(effect.formula, ctx, fired, rng) }, branch: [] };
     default:

@@ -341,6 +341,35 @@ export function applyEffects(state: TurnState, effects: readonly ResolvedEffect[
         });
         break;
 
+      case "transform":
+      case "summon":
+        // V3.1-182 (ADR 0078) : une forme se pose sur la ligne de combat, une invocation ajoute un participant : le service le fait.
+        changes.push({
+          kind: "ignored",
+          action: effect.action,
+          who: effect.who,
+          reason: effect.action === "transform" ? `Forme « ${effect.form} » non prise par le tour : le service la pose (ADR 0078).` : `Invocation « ${effect.creature} » non faite par le tour : le service l'ajoute au combat (ADR 0078).`,
+        });
+        break;
+
+      case "restore_resource": {
+        const actor = next.actors[effect.who];
+        if (!actor) {
+          missing(effect, effect.who);
+          break;
+        }
+        if (effect.all) {
+          // Le maximum n'est pas connu du tour : c'est le service qui remet le compteur à zéro.
+          changes.push({ kind: "ignored", action: effect.action, who: effect.who, reason: `« Tout regagner » (${effect.key}) se joue par le service, qui connaît le maximum.` });
+          break;
+        }
+        const from = actor.resources[effect.key] ?? 0;
+        const to = from + (effect.amount ?? 0);
+        next = withActor(next, effect.who, { ...actor, resources: { ...actor.resources, [effect.key]: to } });
+        changes.push({ kind: "resource", who: effect.who, key: effect.key, from, to });
+        break;
+      }
+
       case "cast_spell":
         // V3.1-164 (ADR 0076) : lancer un sort se fait par son activation, côté service ; le tour ne le joue pas.
         changes.push({

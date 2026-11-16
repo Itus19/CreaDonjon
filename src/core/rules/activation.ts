@@ -31,7 +31,9 @@ export type ActivationRefusal =
   | "unknown_effect"
   | "invalid_formula"
   /** V3.1-164 : un sort lancé sans emplacement, ou avec un emplacement plus bas que son niveau. */
-  | "slot_too_low";
+  | "slot_too_low"
+  /** V3.1-182 (ADR 0078) : une quantité choisie absente, nulle, ou au-delà de son maximum. */
+  | "amount_out_of_range";
 
 export interface ActivationPlan {
   activationId: string;
@@ -47,6 +49,8 @@ export interface ActivationPlan {
   effects: ResolvedEffect[];
   /** Les effets qui durent à poser, déjà ancrés (porteur, source, durée). */
   applied: ActiveDurableEffect[];
+  /** V3.1-182 : l'objet de l'inventaire consommé (une fiole, une munition) ; le service le retire. */
+  consume?: { key: string; count: number };
 }
 
 export type ActivationResult = { ok: true; plan: ActivationPlan } | { ok: false; reason: ActivationRefusal; detail?: string };
@@ -157,6 +161,8 @@ export function planActivation(p: {
   locale?: string;
   /** V3.1-164 (ADR 0076) : le niveau de l'emplacement dépensé pour un sort (`slot.level` dans les formules). */
   slotLevel?: number;
+  /** V3.1-182 (ADR 0078) : la quantité choisie par la joueuse (`amount` dans les formules), bornée par `activation.amount.max`. */
+  amount?: number;
 }): ActivationResult {
   try {
     const activation = p.block.activations.find((a) => a.id === p.activationId);
@@ -170,7 +176,15 @@ export function planActivation(p: {
     if (!actor) throw new Refus("unknown_target", p.actorId);
     // V3.1-164 : un sort demande un emplacement d'au moins son niveau, AVANT le moindre dé.
     if (cost.slot && (p.slotLevel === undefined || p.slotLevel < cost.slot.level)) throw new Refus("slot_too_low");
-    const refs = p.slotLevel === undefined ? actor.numbers : { ...actor.numbers, "slot.level": p.slotLevel };
+    let refs: Readonly<Record<string, number>> = p.slotLevel === undefined ? actor.numbers : { ...actor.numbers, "slot.level": p.slotLevel };
+    // V3.1-182 : une quantité choisie (Imposition des mains) : entière, d'au moins 1, au plus son maximum ; AVANT le moindre dé.
+    if (activation.amount) {
+      const max = nombre(activation.amount.max, refs, p.rng);
+      if (p.amount === undefined || !Number.isInteger(p.amount) || p.amount < 1 || p.amount > max) throw new Refus("amount_out_of_range");
+      refs = { ...refs, amount: p.amount };
+    }
+    // Les effets lisent les mêmes nombres que le coût (`slot.level`, `amount`).
+    const ctxEffets: TriggerContext = refs === actor.numbers ? p.ctx : { ...p.ctx, actors: { ...p.ctx.actors, [p.actorId]: { ...actor, numbers: refs } } };
 
     if (activation.requires && !conditionRemplie(activation.requires, p.ctx, p.actorId, p.rng)) throw new Refus("requires_not_met");
 
@@ -218,7 +232,7 @@ export function planActivation(p: {
     for (const cible of cibles) {
       const lies = bindActors(effects, { self: p.actorId, target: cible });
       try {
-        resolved.push(...resolveEffectList(lies, p.ctx, fired, p.rng));
+        resolved.push(...resolveEffectList(lies, ctxEffets, fired, p.rng));
       } catch (err) {
         throw new Refus("invalid_formula", err instanceof Error ? err.message : String(err));
       }
@@ -247,7 +261,10 @@ export function planActivation(p: {
 
     return {
       ok: true,
-      plan: { activationId: activation.id, variantId: variant?.id ?? null, spend, used, budget, overBudget, effects: resolved, applied },
+      plan: {
+        activationId: activation.id, variantId: variant?.id ?? null, spend, used, budget, overBudget, effects: resolved, applied,
+        ...(cost.consume_item ? { consume: { key: cost.consume_item.key, count: cost.consume_item.count } } : {}),
+      },
     };
   } catch (err) {
     if (err instanceof Refus) return err.detail === undefined ? { ok: false, reason: err.reason } : { ok: false, reason: err.reason, detail: err.detail };

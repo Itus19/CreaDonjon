@@ -465,7 +465,7 @@ Perception et visibilité (invisible, caché, sens), lumière, étiquettes de ma
 
 *Reste* : `trigger.must_see` des réactions (Mots cinglants : « que vous voyez ») ; la lumière émise par une créature (seuls les PJ en portent, par leur fiche) ; le masquage forcé par le MJ tient jusqu'au prochain recalcul.
 
-#### ☐ V3.1-182 — Le noyau des formes, des invocations et des cas uniques · `L` · sans modèle IA — **prêt (Opus)**
+#### ☑ V3.1-182 — Le noyau des formes, des invocations et des cas uniques · `L` · sans modèle IA — **prêt (Opus)**
 
 **Modèle conseillé : Opus** — noyau. Tests d'abord.
 
@@ -473,7 +473,9 @@ Perception et visibilité (invisible, caché, sens), lumière, étiquettes de ma
 - Le profil d'une forme (`overlay` : CA, vitesse, FOR/DEX/CON, attaques de la bête ; `replace` : PV à part, retour au profil à 0).
 
 **Critères d'acceptation**
-- [ ] Tests : Forme sauvage (overlay) garde les PV du druide et donne ses PV temporaires ; Métamorphose (replace) rend le profil à 0 PV de la forme, le reste des dégâts perdu ; Imposition des mains borne le montant à la réserve.
+- [x] Tests : Forme sauvage (overlay) : CA, vitesse, FOR/DEX/CON de la bête, le reste du druide ; Métamorphose (replace) : les six caractéristiques ; Imposition des mains borne le montant (1 à 5 × niveau) et la réserve. *Corrigé à la lecture des règles 2024* : la Métamorphose ne donne plus des PV à part, mais des PV temporaires égaux à ceux de la forme, comme la Forme sauvage (`temp_hp`, ADR 0095) ; la forme prend fin quand ils sont épuisés (183).
+
+*Fait le 16 novembre.* `forms.ts` (`formStats`, modes `overlay` et `replace`). Effets nouveaux (`triggers.ts`, vocabulaire fermé) : `transform { form, mode }`, `summon { creature, count? }` (nombre calculé), `restore_resource { key, amount | all }` ; le tour les dit « joués par le service » (forme, invocation, « tout regagner ») ou applique un regain chiffré. Activation : `amount { max }` (quantité choisie, `amount` dans les formules du coût et des effets, refus `amount_out_of_range`), coût `consume_item { key, count }` rendu par le plan (`consume`). Les effets d'une activation lisent désormais les mêmes nombres que son coût (`slot.level`, `amount`). Opération de réaction `redirect` (l'attaque vise celui qui réagit). L'éditeur conserve ces effets tels quels (brouillon « opaque ») jusqu'à leur saisie (184) ; la lecture d'une règle les décrit. `gain_resource` (jauge qui monte) n'est pas fait : aucune règle de l'échantillon ne le demande encore sans `restore_resource`. Tests : `formesEtCasUniques.test.ts` 10/10.
 
 #### ☐ V3.1-183 — La migration et le service des formes et invocations · `L` · sans modèle IA — **prêt (Opus)**
 

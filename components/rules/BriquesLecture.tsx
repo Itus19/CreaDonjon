@@ -74,6 +74,12 @@ function decrire(e: EffectNode, durables: ReadonlyMap<string, DurableEffect>, t:
       return { titre: t("lecture.inspiration") };
     case "cast_spell":
       return { titre: t("lecture.lancerSort", { sort: e.spell }), ...(e.free ? { detail: t("lecture.sansEmplacement") } : {}) };
+    case "transform":
+      return { titre: t("lecture.forme", { forme: e.form }), detail: t(`lecture.modeForme.${e.mode}`) };
+    case "summon":
+      return { titre: t("lecture.invoquer", { creature: e.creature }), ...(e.count ? { detail: formatFormulaNode(e.count) } : {}) };
+    case "restore_resource":
+      return { titre: t("lecture.regagner", { ressource: nomsUtilisations.get(e.key) ?? e.key }), detail: e.all ? t("lecture.tout") : formatFormulaNode(e.amount ?? { op: "num", value: 0 }) };
   }
 }
 

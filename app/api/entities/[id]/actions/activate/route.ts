@@ -37,6 +37,7 @@ const MESSAGES: Record<ActivateFeatureFailure, string> = {
   area_unplaced: "La zone ne se pose pas : jeton du lanceur, point ou direction manquant sur le plan.",
   target_out_of_area: "Cette cible n'est pas dans la zone.",
   target_unseen: "Le lanceur ne voit pas cette cible.",
+  amount_out_of_range: "Choisis une quantité entre 1 et le maximum permis.",
 };
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

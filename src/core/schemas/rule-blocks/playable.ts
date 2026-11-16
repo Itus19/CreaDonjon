@@ -63,6 +63,8 @@ const zActivationCost = z.object({
   resources: z.array(z.object({ key: z.string().min(1), amount: zFormulaNode })),
   /** V3.1-164 (ADR 0076) : un sort, son niveau de base (0 : sort mineur). Les formules lisent `slot.level`, le niveau dépensé. */
   slot: z.object({ level: z.number().int().min(0).max(9) }).optional(),
+  /** V3.1-182 (ADR 0078) : un objet de l'inventaire consommé (fiole, munition), par sa clé de règle. */
+  consume_item: z.object({ key: z.string().min(1), count: z.number().int().min(1).max(100) }).optional(),
 });
 export type ActivationCost = z.infer<typeof zActivationCost>;
 
@@ -145,6 +147,8 @@ export const zRollOperation = z.discriminatedUnion("op", [
   z.object({ op: z.literal("add_damage"), formula: zFormulaNode, damage_type: z.string().min(1).optional() }),
   /** V3.1-207 : l'assaillant fait une sauvegarde contre `dc` ; échec : l'attaque rate (Majesté souveraine). */
   z.object({ op: z.literal("attacker_save"), ability: z.enum(["str", "dex", "con", "int", "wis", "cha"]), dc: zFormulaNode }),
+  /** V3.1-182 (ADR 0078) : l'attaque vise désormais celui qui réagit (s'interposer). */
+  z.object({ op: z.literal("redirect") }),
 ]);
 export type RollOperation = z.infer<typeof zRollOperation>;
 
@@ -157,6 +161,7 @@ const OPERATION_ROLLS: Record<RollOperation["op"], readonly (typeof REACTION_ROL
   damage_multiplier: ["damage"],
   add_damage: ["damage"],
   attacker_save: ["attack"],
+  redirect: ["attack"],
 };
 
 /** V3.1-159 : le refus d'une opération qui n'a pas de sens sur le jet visé (`ac_bonus` sur une sauvegarde). */
@@ -194,6 +199,8 @@ export const zActivation = z.object({
   limit: zActivationLimit.optional(),
   /** V3.1-164 : les options que cette aptitude offre au lancer d'un sort (Métamagie). */
   cast_options: z.array(zCastOption).optional(),
+  /** V3.1-182 (ADR 0078) : une quantité choisie à l'activation (Imposition des mains) — `amount` dans les formules, de 1 à `max`. */
+  amount: z.object({ max: zFormulaNode, label: zLocalized.optional() }).optional(),
   /** V3.1-171 (ADR 0077) : une réaction qui exige une arme (Attaque sournoise : Finesse ou À distance), lue sur l'arme du jet. */
   when: zEquipmentCondition.optional(),
   /** V3.1-132 : le passage dont vient chaque brique, par chemin (`brickPaths`) : `cost`, `targets`, `effects.0.on_fail.0`… */

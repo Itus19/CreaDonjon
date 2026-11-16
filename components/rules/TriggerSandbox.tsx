@@ -158,6 +158,12 @@ export default function TriggerSandbox() {
         return `Souffler au narrateur : « ${effect.text} »`;
       case "cast_spell":
         return `${effect.who} lance « ${effect.spell} »${effect.free ? " sans emplacement" : ""}`;
+      case "transform":
+        return `${effect.who} prend la forme « ${effect.form} » (${effect.mode === "overlay" ? "physique" : "entière"})`;
+      case "summon":
+        return `${effect.who} invoque ${effect.count} × « ${effect.creature} »`;
+      case "restore_resource":
+        return `${effect.who} regagne ${effect.all ? "toutes ses utilisations" : effect.amount} (${effect.key})`;
     }
   }
 

@@ -288,6 +288,8 @@ export type BrouillonOperation = { uid: string } & (
   | { op: "add_damage"; formule: string; typeDegats: string }
   /** V3.1-207 : l'assaillant sauvegarde contre `dd` (formule), sinon l'attaque rate. */
   | { op: "attacker_save"; carac: "str" | "dex" | "con" | "int" | "wis" | "cha"; dd: string }
+  /** V3.1-182 (ADR 0078) : l'attaque vise désormais celui qui réagit. */
+  | { op: "redirect" }
 );
 export type GenreOperation = RollOperation["op"];
 
@@ -622,6 +624,8 @@ export function nouvelleOperation(op: GenreOperation): BrouillonOperation {
       return { ...base, op, formule: "1d6", typeDegats: "" };
     case "attacker_save":
       return { ...base, op, carac: "cha", dd: "{spell_save_dc}" };
+    case "redirect":
+      return { ...base, op };
   }
 }
 
@@ -866,6 +870,8 @@ function operationVersBrouillon(o: RollOperation): BrouillonOperation {
       return { ...base, op: "add_damage", formule: formatFormulaNode(o.formula), typeDegats: o.damage_type ?? "" };
     case "attacker_save":
       return { ...base, op: "attacker_save", carac: o.ability, dd: formatFormulaNode(o.dc) };
+    case "redirect":
+      return { ...base, op: "redirect" };
   }
 }
 
@@ -920,6 +926,11 @@ function effetVersBrouillon(e: EffectNode, chemin: string, ctx: CtxLecture): Bro
       return { ...base, who: "self", type: "narrate_hint", texte: e.text };
     case "cast_spell":
       return { ...base, who: e.who, type: "cast_spell", sort: e.spell, gratuit: e.free };
+    // V3.1-182 (ADR 0078) : formes, invocations, regain — conservés tels quels jusqu'à leur saisie à l'éditeur (V3.1-184).
+    case "transform":
+    case "summon":
+    case "restore_resource":
+      return { ...base, who: e.who, type: "opaque", effet: e };
     case "apply_effect": {
       const d = ctx.durables.get(e.effect);
       if (!d) return { ...base, who: e.who, type: "opaque", effet: e };
@@ -1248,6 +1259,8 @@ function operationEcrite(o: BrouillonOperation, contexte: string, ctx: CtxEcritu
       return { op: "add_damage", formula: formule(o.formule, `${contexte}, dégâts`, ctx), ...(o.typeDegats.trim() !== "" ? { damage_type: o.typeDegats.trim() } : {}) };
     case "attacker_save":
       return { op: "attacker_save", ability: o.carac, dc: formule(o.dd, `${contexte}, DD`, ctx) };
+    case "redirect":
+      return { op: "redirect" };
   }
 }
 
