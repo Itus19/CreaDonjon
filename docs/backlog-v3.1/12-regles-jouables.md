@@ -487,7 +487,7 @@ Perception et visibilité (invisible, caché, sens), lumière, étiquettes de ma
 **Critères d'acceptation**
 - [ ] Intégration : une joueuse invoque un familier, le fait agir, pas celui d'une autre ; la fin de l'effet le retire du combat.
 
-#### ☐ V3.1-184 — Les écrans : lumière, Caché, formes, créatures pilotées · `L` · sans modèle IA — **prêt (Sonnet)**
+#### ☑ V3.1-184 — Les écrans : lumière, Caché, formes, créatures pilotées · `L` · sans modèle IA — **prêt (Sonnet)**
 
 **Modèle conseillé : Sonnet**, une fois 181 et 183 faits ; Opus relit. **Sous-tâches Haiku** : libellés ; planche ; vérifications.
 
@@ -496,7 +496,9 @@ Perception et visibilité (invisible, caché, sens), lumière, étiquettes de ma
 - Éditeur : effets nouveaux, quantité choisie, consommable.
 
 **Critères d'acceptation**
-- [ ] La joueuse ne voit pas sur son plan le monstre que son groupe ne voit pas ; le MJ, si.
+- [x] La joueuse ne voit pas sur son plan le monstre que son groupe ne voit pas ; le MJ, si.
+
+*Fait le 16 novembre* (Sonnet, relu et complété par Opus). MJ : lumière Vive / Faible / Ténèbres (un geste, une requête), voile du plan selon la lumière, jeton Caché ou Invisible en pointillé, pastilles « Masqué aux joueuses », forme portée, « Invoquée par », « Se cacher » (test lancé par le serveur). Joueuse : « Quelqu'un » dans l'ordre du tour, absent du plan et de la réserve « À poser », voile de la lumière, « À toi » sur sa créature, « Se cacher », et **« Faire agir »** : une route à part (`…/participants/[id]/creature`, seulement si `controlled_by` est l'appelante) rend le bloc de stats, l'attaque passe par `player-targeted-roll` avec l'acteur `participant`. Éditeur : briques « Prendre une forme », « Invoquer », « Regagner une ressource », « Quantité choisie », « Consommer un objet », opération « S'interposer ». Vérifié au navigateur à 360 px (MJ et joueuse, aucun débordement). **Reste** : halos des sources de lumière (la lumière émise n'est pas dans les lignes côté client) ; clés de forme, créature et objet saisies en texte libre ; la colonne du nom de la ligne MJ est très étroite à 360 px (défaut antérieur, pastilles désormais tronquées sur une ligne).
 
 #### ☐ V3.1-185 — Les données : lumière, Se cacher, Forme sauvage, Compagnon sauvage, cas uniques du SRD · `M` · sans modèle IA — **prêt (Opus)**
 
