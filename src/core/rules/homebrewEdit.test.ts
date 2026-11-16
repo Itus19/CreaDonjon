@@ -114,7 +114,7 @@ describe("subclassFormValues (V3.1-2)", () => {
   });
 });
 
-describe("subclassFormValues — sorts accordés (V3.1-182)", () => {
+describe("subclassFormValues — sorts accordés (V3.1-203)", () => {
   it("relit les sorts d'une aptitude, préparés et gratuits ; une aptitude sans sort n'a pas la clé", () => {
     const entry = buildHomebrewSubclassEntry({
       name: "Collège de la séduction",
@@ -133,7 +133,7 @@ describe("subclassFormValues — sorts accordés (V3.1-182)", () => {
   });
 });
 
-describe("subclassFormValues — incantation d'une sous-classe (V3.1-185)", () => {
+describe("subclassFormValues — incantation d'une sous-classe (V3.1-206)", () => {
   it("écrit le bloc subclass_spellcasting et le relit ; les lignes vides sont écartées et la table triée", () => {
     const entry = buildHomebrewSubclassEntry({
       name: "Arnaqueur arcanique",
@@ -176,7 +176,7 @@ describe("subclassFormValues — incantation d'une sous-classe (V3.1-185)", () =
   });
 });
 
-describe("subclassFormValues — liste et budget de sorts (V3.1-190)", () => {
+describe("subclassFormValues — liste et budget de sorts (V3.1-211)", () => {
   it("la liste et les colonnes mineurs/préparés s'écrivent et se relisent ; une ligne de budget seul garde les emplacements d'avant", () => {
     const entry = buildHomebrewSubclassEntry({
       name: "Arnaqueur arcanique",

@@ -4,7 +4,7 @@ import { activerRegle } from "@/lib/ui/activationApi";
 import { sortieSansDes, type SuiteDeJet } from "@/lib/ui/outilDes";
 
 /**
- * V3.1-184 (solution A) — après « Lancer » un sort, le résultat de l'outil de
+ * V3.1-205 (solution A) — après « Lancer » un sort, le résultat de l'outil de
  * dés propose l'utilisation que ce sort déclenche (Magie envoûtante : « aussitôt
  * après avoir lancé un sort d'Enchantement ou d'Illusion par un emplacement »).
  * « Utiliser » passe par la route d'activation, comme au clic : le serveur

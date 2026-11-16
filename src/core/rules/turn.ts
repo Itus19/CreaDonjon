@@ -155,7 +155,7 @@ export function applyEffects(state: TurnState, effects: readonly ResolvedEffect[
       }
 
       case "temp_hp": {
-        // ADR 0078 : les PV temporaires ne s'additionnent pas — on garde le plus grand des deux.
+        // ADR 0095 : les PV temporaires ne s'additionnent pas — on garde le plus grand des deux.
         const actor = next.actors[effect.who];
         if (!actor) {
           missing(effect, effect.who);

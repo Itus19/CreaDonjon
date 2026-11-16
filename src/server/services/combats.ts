@@ -568,7 +568,7 @@ async function moveTurn(
     }
   }
 
-  // V3.1-195 (ADR 0090) : à la fin de son tour, le sortant refait ses JS
+  // V3.1-195 (ADR 0098) : à la fin de son tour, le sortant refait ses JS
   // répétés ; une réussite retire l'effet. Import différé : le service des
   // jets ciblés importe celui-ci. Une panne n'emporte pas la bascule.
   let participantsApresJets = participants;

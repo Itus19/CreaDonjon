@@ -41,9 +41,9 @@ export interface PendingRoll {
   acBonus: number;
   /** Dégâts : la somme lancée, puis le facteur (Esquive instinctive : ½), arrondi à l'inférieur. */
   damage: { base: number; multiplier: number } | null;
-  /** V3.1-186 : les bonus de sauvegarde de l'auteur du jet, quand une réaction lui en impose une (`attacker_save`). Absent : +0. */
+  /** V3.1-207 : les bonus de sauvegarde de l'auteur du jet, quand une réaction lui en impose une (`attacker_save`). Absent : +0. */
   rollerSaves?: Partial<Record<"str" | "dex" | "con" | "int" | "wis" | "cha", number>>;
-  /** V3.1-186 : l'attaque rate quoi qu'en dise le dé (sauvegarde de l'assaillant ratée). */
+  /** V3.1-207 : l'attaque rate quoi qu'en dise le dé (sauvegarde de l'assaillant ratée). */
   forcedMiss?: boolean;
 }
 
@@ -224,7 +224,7 @@ export function eligibleReactions(p: {
   const seen = new Set<string>();
   for (const c of p.candidates) {
     const t = c.activation.trigger;
-    // V3.1-184 : un déclencheur « après un sort » n'ouvre pas de fenêtre de jet.
+    // V3.1-205 : un déclencheur « après un sort » n'ouvre pas de fenêtre de jet.
     if (!t || t.on !== "roll") continue;
     const id = `${c.actorId}|${c.ruleKey}|${c.activation.id}`;
     if (seen.has(id)) continue;

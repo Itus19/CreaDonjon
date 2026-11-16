@@ -106,7 +106,7 @@ describe("subclassSlotWrite", () => {
   });
 });
 
-describe("V3.1-182 — les sorts accordés d'une aptitude", () => {
+describe("V3.1-203 — les sorts accordés d'une aptitude", () => {
   const seduction = {
     name: "Collège de la séduction",
     parentClassKey: "bard",

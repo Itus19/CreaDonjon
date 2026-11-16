@@ -129,7 +129,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 - [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) — Les règles jouables : fondation et chantiers (V3.1-129 à 141, 13 octobre)
 - [`13-audit-de-fin.md`](backlog-v3.1/13-audit-de-fin.md) — L'audit de fin de V3.1 : les retouches d'affichage relevées en chemin, V3.1-144
 - [`14-rugosites-novembre.md`](backlog-v3.1/14-rugosites-novembre.md) — Rugosités de novembre : ce qu'on a constaté en jouant (V3.1-150 à 154, terminés)
-- [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) — La Création de personnage : retours du 7 novembre (V3.1-172 à 189, 193 à 200)
+- [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) — La Création de personnage : retours du 7 novembre (V3.1-172 à 179, 193 à 211)
 - [`termines.md`](backlog-v3.1/termines.md) — Tickets terminés (☑)
 
 | Ticket | État | Modèle IA | Titre | Fichier |
@@ -314,16 +314,16 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-177 | ☑ | sans | Aperçu : la colonne s'efface, la fiche s'affiche comme sur la fiche | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-178 | ☑ | sans | Les valeurs passives : Perception, Intuition, Investigation | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-179 | ☐ | sans | Trois sous-classes pour « La Croisade des Ombres », saisies et jouables | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
-| V3.1-180 | ☑ | sans | Textes français : recoller les phrases coupées par la mise en page du PDF | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-181 | ☑ | sans | Sous-classe maison : rendre jouable chacune de ses aptitudes | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-182 | ☑ | sans | Formulaire de sous-classe : sorts toujours préparés et lancés sans emplacement | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-183 | ☑ | sans | Briques : des PV temporaires, et regagner une utilisation en dépensant autre chose | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-184 | ☑ | sans | Une utilisation proposée après un sort lancé | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-185 | ☑ | sans | Une sous-classe qui lance des sorts : sa progression d'emplacements | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-186 | ☑ | sans | « Sauvegarde ou l'attaque rate », et l'échec automatique d'une créature charmée | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-187 | ☑ | sans | Textes français : les tableaux aplatis redeviennent des tableaux, une puce par ligne | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-188 | ☑ | sans | Textes français : le sous-titre des objets magiques remis en tête, le texte de *divination* retrouvé | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-189 | ☑ | sans | Textes français : l'en-tête des sorts mal lu à l'import, relu dans la source | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-190 | ☑ | sans | Une sous-classe lanceuse : sa liste de sorts et son budget, choisis à la création | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-201 | ☑ | sans | Textes français : recoller les phrases coupées par la mise en page du PDF | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-202 | ☑ | sans | Sous-classe maison : rendre jouable chacune de ses aptitudes | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-203 | ☑ | sans | Formulaire de sous-classe : sorts toujours préparés et lancés sans emplacement | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-204 | ☑ | sans | Briques : des PV temporaires, et regagner une utilisation en dépensant autre chose | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-205 | ☑ | sans | Une utilisation proposée après un sort lancé | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-206 | ☑ | sans | Une sous-classe qui lance des sorts : sa progression d'emplacements | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-207 | ☑ | sans | « Sauvegarde ou l'attaque rate », et l'échec automatique d'une créature charmée | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-208 | ☑ | sans | Textes français : les tableaux aplatis redeviennent des tableaux, une puce par ligne | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-209 | ☑ | sans | Textes français : le sous-titre des objets magiques remis en tête, le texte de *divination* retrouvé | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-210 | ☑ | sans | Textes français : l'en-tête des sorts mal lu à l'import, relu dans la source | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-211 | ☑ | sans | Une sous-classe lanceuse : sa liste de sorts et son budget, choisis à la création | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-191 | ☑ | sans | « Sauvegarde contre vos sorts » : désavantage, état de la lanceuse (Embuscade magique) | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-192 | ☑ | sans | Frappe malicieuse du Roublard jouable, et Omniprésence | [`termines.md`](backlog-v3.1/termines.md) |

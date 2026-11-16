@@ -1,5 +1,5 @@
 /**
- * V3.1-189 — l'en-tête d'un sort (temps d'incantation, portée, composantes,
+ * V3.1-210 — l'en-tête d'un sort (temps d'incantation, portée, composantes,
  * durée), relu dans le texte extrait du PDF du SRD français (2014 et 2024).
  * Pur.
  *

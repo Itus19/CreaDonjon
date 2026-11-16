@@ -73,7 +73,7 @@ export const REFERENCES_FORMULE: readonly { cle: string; texte: string }[] = [
   { cle: "niveau", texte: "{level}" },
   { cle: "niveauClasse", texte: "{class.level}" },
   { cle: "maitrise", texte: "{proficiency}" },
-  /** ADR 0078 (V3.1-183) : le résultat du dé lancé par une brique « Jet libre » plus haut dans la même utilisation. */
+  /** ADR 0095 (V3.1-204) : le résultat du dé lancé par une brique « Jet libre » plus haut dans la même utilisation. */
   { cle: "deLance", texte: "{event.last_roll}" },
 ];
 
@@ -86,7 +86,7 @@ export interface BrouillonRessource {
   labelOrig: Localise;
   max: string;
   recharge: RechargeRegle;
-  /** ADR 0078 (V3.1-183) : regagner une utilisation en dépensant autre chose ; « aucun » : seulement au repos. */
+  /** ADR 0095 (V3.1-204) : regagner une utilisation en dépensant autre chose ; « aucun » : seulement au repos. */
   regain: { genre: "aucun" | "resource" | "slot"; cle: string; quantite: string; niveauMin: string };
   passage: string | null;
 }
@@ -146,7 +146,7 @@ export type CorpsEffet =
   | { type: "saving_throw"; ability: string; dc: string; echec: BrouillonEffet[]; reussite: BrouillonEffet[] }
   | { type: "deal_damage"; montant: string; typeDegats: string }
   | { type: "heal"; montant: string }
-  /** ADR 0078 (V3.1-183). */
+  /** ADR 0095 (V3.1-204). */
   | { type: "temp_hp"; montant: string }
   | { type: "apply_condition"; cle: string }
   | { type: "remove_condition"; cle: string }
@@ -159,11 +159,11 @@ export type CorpsEffet =
       duree: BrouillonDuree;
       concentration: boolean;
       finSi: BrouillonFin[];
-      /** V3.1-197 (ADR 0090) : la cible refait ce JS à la fin de chacun de ses tours ; `null` : non. */
+      /** V3.1-197 (ADR 0098) : la cible refait ce JS à la fin de chacun de ses tours ; `null` : non. */
       jsRepete: BrouillonJsRepete | null;
     }
   /**
-   * V3.1-197 (ADR 0090 §3) : « Accorder une utilisation » — un effet qui dure, sans état ni modificateur,
+   * V3.1-197 (ADR 0098 §3) : « Accorder une utilisation » — un effet qui dure, sans état ni modificateur,
    * dont le jeton accorde une autre utilisation de la même aptitude tant qu'il dure (Majesté souveraine).
    */
   | { type: "grant_token"; effectId: string; nom: string; labelOrig: Localise; accorde: string; usages: number; duree: BrouillonDuree; concentration: boolean; finSi: BrouillonFin[] }
@@ -205,7 +205,7 @@ export interface BrouillonDeclencheur {
   portee: RollTrigger["range"];
 }
 
-/** V3.1-184 : « après un sort lancé » — les écoles (aucune : toutes), et s'il faut un emplacement. */
+/** V3.1-205 : « après un sort lancé » — les écoles (aucune : toutes), et s'il faut un emplacement. */
 export interface BrouillonApresSort {
   ecoles: SpellSchool[];
   avecEmplacement: boolean;
@@ -219,7 +219,7 @@ export type BrouillonOperation = { uid: string } & (
   | { op: "ac_bonus"; valeur: string }
   | { op: "damage_multiplier"; facteur: string }
   | { op: "add_damage"; formule: string; typeDegats: string }
-  /** V3.1-186 : l'assaillant sauvegarde contre `dd` (formule), sinon l'attaque rate. */
+  /** V3.1-207 : l'assaillant sauvegarde contre `dd` (formule), sinon l'attaque rate. */
   | { op: "attacker_save"; carac: "str" | "dex" | "con" | "int" | "wis" | "cha"; dd: string }
 );
 export type GenreOperation = RollOperation["op"];
@@ -260,7 +260,7 @@ export interface BrouillonActivation {
   variantes: BrouillonVariante[];
   /** `null` : l'activation se joue au clic. */
   declencheur: BrouillonDeclencheur | null;
-  /** V3.1-184 : proposée après un sort lancé ; exclut `declencheur` (un seul déclencheur par activation). */
+  /** V3.1-205 : proposée après un sort lancé ; exclut `declencheur` (un seul déclencheur par activation). */
   apresSort: BrouillonApresSort | null;
   operations: BrouillonOperation[];
   /** « Une fois par tour / par round » ; `null` : sans limite. */
@@ -276,7 +276,7 @@ export interface BrouillonLacune {
 }
 
 /**
- * V3.1-186, élargi en V3.1-191 : une sauvegarde contre vos sorts — échec
+ * V3.1-207, élargi en V3.1-191 : une sauvegarde contre vos sorts — échec
  * d'office (Mante de majesté) ou désavantage (Embuscade magique) ; l'état
  * porté par la cible (« par vous » si coché) ou par vous ; `sorts` vide : tous.
  */
@@ -297,7 +297,7 @@ export interface Brouillon {
   /** Les effets qui durent hors formulaire, gardés pour être réécrits. */
   durablesConserves: DurableEffect[];
   lacunes: BrouillonLacune[];
-  /** V3.1-186 : les échecs automatiques d'une sauvegarde (bloc `forced_save_failures`). */
+  /** V3.1-207 : les échecs automatiques d'une sauvegarde (bloc `forced_save_failures`). */
   echecs: BrouillonEchec[];
   /** Les blocs existaient déjà : les retirer s'envoie `null`. */
   existait: { resources: boolean; activation: boolean; coverage: boolean; forced_save_failures: boolean };
@@ -492,7 +492,7 @@ export function avecDeclencheur(a: BrouillonActivation, changement: Partial<Brou
 }
 
 /**
- * V3.1-184 : « après un sort lancé » (ou l'enlève avec `null`). Une activation
+ * V3.1-205 : « après un sort lancé » (ou l'enlève avec `null`). Une activation
  * n'a qu'un déclencheur : celui-ci retire la réaction à un jet et ses opérations.
  */
 export function avecApresSort(a: BrouillonActivation, changement: Partial<BrouillonApresSort> | null): BrouillonActivation {
@@ -1170,7 +1170,7 @@ function passagesEffets(prefixe: string, liste: readonly BrouillonEffet[], sorti
   });
 }
 
-/** ADR 0078 : le regain d'une ressource, du brouillon au bloc ; une saisie incomplète est une erreur nommée, jamais un regain muet. */
+/** ADR 0095 : le regain d'une ressource, du brouillon au bloc ; une saisie incomplète est une erreur nommée, jamais un regain muet. */
 function regainVersBloc(r: BrouillonRessource, nom: string, ctx: CtxEcriture): { regain?: ResourceRegain } {
   const g = r.regain;
   if (g.genre === "aucun") return {};

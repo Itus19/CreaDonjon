@@ -316,7 +316,7 @@ function SectionRessources({
 }: {
   brouillon: Brouillon;
   onChange: (b: Brouillon) => void;
-  /** Les ressources dépensables (ruleset et cette fiche), pour le regain (ADR 0078). */
+  /** Les ressources dépensables (ruleset et cette fiche), pour le regain (ADR 0095). */
   ressources: readonly { value: string; label: string }[];
 }) {
   const t = useTranslations("regles.briques");
@@ -348,7 +348,7 @@ function SectionRessources({
                 onChange={(v) => maj({ ...r, recharge: (RULE_RECHARGES.find((x) => x === v) ?? r.recharge) as RechargeRegle })}
               />
             </div>
-            {/* ADR 0078 (V3.1-183) : regagner une utilisation en dépensant autre chose. */}
+            {/* ADR 0095 (V3.1-204) : regagner une utilisation en dépensant autre chose. */}
             <div className="grid gap-3 sm:grid-cols-2">
               <ChampListe
                 libelle={t("regain")}
@@ -387,7 +387,7 @@ function SectionRessources({
 }
 
 /**
- * V3.1-186 — « Échec automatique d'une sauvegarde » (Mante de majesté) : contre
+ * V3.1-207 — « Échec automatique d'une sauvegarde » (Mante de majesté) : contre
  * ces sorts, une cible qui porte cet état — posé par vous, si coché — rate sa
  * sauvegarde d'office. Le moteur l'applique quand le MJ cible avec le sort.
  */

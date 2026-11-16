@@ -55,7 +55,7 @@ export default function RuleEntryView({
   // route ni de nouvelle cle de fenetre.
   const [editing, setEditing] = useState(false);
   // V3.1-132 : l'éditeur de briques s'ouvre lui aussi dans la fiche, jamais dans une autre page.
-  // V3.1-181 : « Rendre jouable » une aptitude de sous-classe arrive ici avec `?briques=1` : l'éditeur s'ouvre d'emblée.
+  // V3.1-202 : « Rendre jouable » une aptitude de sous-classe arrive ici avec `?briques=1` : l'éditeur s'ouvre d'emblée.
   const searchParams = useSearchParams();
   const [editingBriques, setEditingBriques] = useState(() => !playerRestricted && !entry.isOfficialBase && searchParams.get("briques") === "1");
   // Message du dernier geste du menu (confirmation ou erreur du serveur).
@@ -237,7 +237,7 @@ export default function RuleEntryView({
               <RuleBlockRenderer key={block.id} block={block} worldSlug={worldSlug} outgoingRefs={entry.outgoingRefs} sansBascule={playerRestricted} />
             )
           )}
-        {/* V3.1-181 : une sous-classe maison rend chacune de ses aptitudes jouable. */}
+        {/* V3.1-202 : une sous-classe maison rend chacune de ses aptitudes jouable. */}
         {!playerRestricted && entry.entryType === "subclass" && entry.isHomebrew && (
           <AptitudesJouables worldSlug={worldSlug} subclassKey={entry.entryKey} data={entry.blocks.find((b) => b.blockType === "subclass_features")?.data} />
         )}

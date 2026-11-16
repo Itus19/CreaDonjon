@@ -234,7 +234,7 @@ interface BatchEntry {
   /** V3.1-113 : magie de pacte et poids dans la table du multiclassé (bloc `class_basics`). */
   spellcastingKind?: "slots" | "pact";
   casterWeight?: { fraction: "full" | "half" | "third"; rounding: "up" | "down" };
-  /** V3.1-185 : l'incantation qu'une sous-classe donne à sa classe (bloc `subclass_spellcasting`). */
+  /** V3.1-206 : l'incantation qu'une sous-classe donne à sa classe (bloc `subclass_spellcasting`). */
   subclassSpellcasting?: ClassSpellcasting;
   /** V3.1-116 : le bloc `choices` de la fiche, s'il en porte un. */
   choices?: ChoicesBlockData;
@@ -245,7 +245,7 @@ interface BatchEntry {
   resources?: RuleResource[];
 }
 
-/** V3.1-186 : bloc `forced_save_failures`, validé. Mal formé : aucune règle, mais journalisé. */
+/** V3.1-207 : bloc `forced_save_failures`, validé. Mal formé : aucune règle, mais journalisé. */
 function declaredForcedSaveFailures(data: unknown): ForcedSaveFailuresBlockData["failures"] {
   if (data === undefined || data === null) return [];
   const parsed = zForcedSaveFailuresBlockData.safeParse(data);
@@ -256,7 +256,7 @@ function declaredForcedSaveFailures(data: unknown): ForcedSaveFailuresBlockData[
   return parsed.data.failures;
 }
 
-/** V3.1-185 : bloc `subclass_spellcasting`, validé. Mal formé : ignoré mais journalisé. */
+/** V3.1-206 : bloc `subclass_spellcasting`, validé. Mal formé : ignoré mais journalisé. */
 function parseSubclassSpellcasting(data: unknown): Pick<BatchEntry, "subclassSpellcasting"> {
   if (data === undefined || data === null) return {};
   const parsed = zSubclassSpellcastingBlockData.safeParse(data);
@@ -833,7 +833,7 @@ export async function assembleResolvedRuleset(
     // V3.1-117 : la sous-classe choisie rejoint le lot ; ses aptitudes atteintes
     // (niveau de classe) donnent leurs effets et leurs choix.
     const subclassEntry = cl.subclass ? batch.get(cl.subclass) : undefined;
-    // V3.1-185 : une sous-classe qui lance des sorts les prête à une classe qui n'en lance pas.
+    // V3.1-206 : une sous-classe qui lance des sorts les prête à une classe qui n'en lance pas.
     const incantation = classSpellcastingWithSubclass(classes[cl.key].spellcasting, subclassEntry?.subclassSpellcasting);
     if (incantation) classes[cl.key] = { ...classes[cl.key], spellcasting: incantation };
     if (cl.subclass && subclassEntry?.subclassFeatures) {

@@ -18,7 +18,7 @@ interface SelectableRuleset {
   content_origin: string;
 }
 
-/** V3.1-182 : un sort accordé par l'aptitude, en brouillon d'écran. `gratuit` : combien de fois sans emplacement (« 0 » : jamais). */
+/** V3.1-203 : un sort accordé par l'aptitude, en brouillon d'écran. `gratuit` : combien de fois sans emplacement (« 0 » : jamais). */
 interface SortDraft {
   key: string;
   alwaysPrepared: boolean;
@@ -33,7 +33,7 @@ interface FeatureDraft {
   spells: SortDraft[];
 }
 
-/** V3.1-185 : l'incantation d'une sous-classe, en brouillon d'écran (nombres en texte, comme les autres champs). */
+/** V3.1-206 : l'incantation d'une sous-classe, en brouillon d'écran (nombres en texte, comme les autres champs). */
 type Carac = "str" | "dex" | "con" | "int" | "wis" | "cha";
 type Fraction = "full" | "half" | "third";
 interface IncantationDraft {
@@ -41,9 +41,9 @@ interface IncantationDraft {
   ability: Carac;
   fraction: Fraction;
   colonnes: number;
-  /** V3.1-190 : la liste où choisir les sorts (clé de classe) ; « » : aucune. */
+  /** V3.1-211 : la liste où choisir les sorts (clé de classe) ; « » : aucune. */
   spellList: string;
-  /** `cantrips`, `prepared` (V3.1-190) : « » pour « comme la ligne d'avant ». */
+  /** `cantrips`, `prepared` (V3.1-211) : « » pour « comme la ligne d'avant ». */
   rows: { level: string; counts: string[]; cantrips: string; prepared: string }[];
 }
 const INCANTATION_VIDE: IncantationDraft = { active: false, ability: "int", fraction: "third", colonnes: 4, spellList: "", rows: [{ level: "3", counts: ["2", "", "", ""], cantrips: "", prepared: "" }] };
@@ -81,7 +81,7 @@ export default function CreateHomebrewSubclassForm({
   const reglesDuMonde = useWorldRuleEntries(worldSlug);
   const classes = reglesDuMonde.filter((e) => e.entryType === "class");
   const sortsDuMonde = reglesDuMonde.filter((e) => e.entryType === "spell").map((e) => ({ key: e.key, name: e.name }));
-  // V3.1-182 : les aptitudes dont le repli « Sorts accordés » est ouvert (par position).
+  // V3.1-203 : les aptitudes dont le repli « Sorts accordés » est ouvert (par position).
   const [sortsOuverts, setSortsOuverts] = useState<ReadonlySet<number>>(() => new Set());
 
   const [loading, setLoading] = useState(true);
@@ -400,7 +400,7 @@ export default function CreateHomebrewSubclassForm({
 }
 
 /**
- * V3.1-182 — Sous une aptitude, le repli « Sorts accordés (n) » : une ligne par
+ * V3.1-203 — Sous une aptitude, le repli « Sorts accordés (n) » : une ligne par
  * sort — le sort, « toujours préparé », et combien de fois il se lance sans
  * emplacement, jusqu'à quel repos. Le moteur lit déjà ces sorts
  * (`subclass_features.spells`) ; l'écran les rend saisissables.
@@ -474,7 +474,7 @@ const CARACS: readonly Carac[] = ["str", "dex", "con", "int", "wis", "cha"];
 const FRACTIONS: readonly Fraction[] = ["third", "half", "full"];
 
 /**
- * V3.1-185 — « Cette sous-classe lance des sorts » (Arnaqueur arcanique,
+ * V3.1-206 — « Cette sous-classe lance des sorts » (Arnaqueur arcanique,
  * Chevalier occulte) : sa caractéristique, son poids au multiclassage, et la
  * table de ses emplacements par niveau de classe. Seules les lignes qui
  * changent ; la dernière atteinte vaut (le moteur la déroule).
@@ -486,7 +486,7 @@ function IncantationSousClasse({
 }: {
   valeur: IncantationDraft;
   onChange: (v: IncantationDraft) => void;
-  /** V3.1-190 : les classes du monde, dont la liste de sorts peut servir. */
+  /** V3.1-211 : les classes du monde, dont la liste de sorts peut servir. */
   classes: readonly { key: string; name: string }[];
 }) {
   const t = useTranslations("regles.incantationSousClasse");

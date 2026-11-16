@@ -28,7 +28,7 @@ function ruleKeyOf(ref: SpellcastingBlockData["known"][number]["ref"]): string |
 interface ClassSpellBudget {
   classKey: string;
   className: string;
-  /** V3.1-190 : la liste de sorts où choisir — celle de la classe, ou celle que déclare sa sous-classe (Arnaqueur arcanique : Magicien). */
+  /** V3.1-211 : la liste de sorts où choisir — celle de la classe, ou celle que déclare sa sous-classe (Arnaqueur arcanique : Magicien). */
   spellList: string;
   ability: string;
   cantripsAllowed: number;
@@ -100,7 +100,7 @@ function computeBudget(
 }
 
 /**
- * V3.1-190 — une classe qui ne lance pas de sorts, mais dont la sous-classe
+ * V3.1-211 — une classe qui ne lance pas de sorts, mais dont la sous-classe
  * oui (Roublard Arnaqueur arcanique) : le budget et la liste viennent du bloc
  * `subclass_spellcasting` de la sous-classe (`subclassSpellBudget`).
  */

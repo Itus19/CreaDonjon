@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { fragmentDeSousTitre, retrouverSousTitre, paragraphesDeLaSource } from "./sousTitresPdf";
 
 /**
- * V3.1-188 — la fin du sous-titre d'un objet magique (rareté, harmonisation)
+ * V3.1-209 — la fin du sous-titre d'un objet magique (rareté, harmonisation)
  * a glissé au début de sa description : « (bronze) ou légendaire (fer) Souffler… ».
  */
 describe("fragmentDeSousTitre", () => {

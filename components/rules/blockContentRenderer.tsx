@@ -934,13 +934,13 @@ const POIDS_MULTICLASSAGE: Record<SubclassSpellcastingBlockData["caster_weight"]
   third: "le tiers des niveaux",
 };
 
-/** Les classes du SRD, pour nommer une liste de sorts (V3.1-190) ; une classe maison garde sa clé. */
+/** Les classes du SRD, pour nommer une liste de sorts (V3.1-211) ; une classe maison garde sa clé. */
 const LISTES_DE_SORTS_FR: Record<string, string> = {
   barbarian: "Barbare", bard: "Barde", cleric: "Clerc", druid: "Druide", fighter: "Guerrier", monk: "Moine",
   paladin: "Paladin", ranger: "Rôdeur", rogue: "Roublard", sorcerer: "Ensorceleur", warlock: "Occultiste", wizard: "Magicien",
 };
 
-/** V3.1-185 : l'incantation d'une sous-classe — caractéristique, poids au multiclassage, table d'emplacements ; V3.1-190 : sa liste de sorts et son budget. */
+/** V3.1-206 : l'incantation d'une sous-classe — caractéristique, poids au multiclassage, table d'emplacements ; V3.1-211 : sa liste de sorts et son budget. */
 function SubclassSpellcasting({ data }: { data: SubclassSpellcastingBlockData }) {
   const largeur = Math.max(1, ...data.slots.map((r) => r.counts.length));
   const budget = data.slots.some((r) => r.cantrips !== undefined || r.prepared !== undefined);
@@ -969,7 +969,7 @@ function SubclassSpellcasting({ data }: { data: SubclassSpellcastingBlockData })
   );
 }
 
-/** V3.1-186, V3.1-191 : ce que les règles de la lanceuse font aux sauvegardes contre ses sorts. */
+/** V3.1-207, V3.1-191 : ce que les règles de la lanceuse font aux sauvegardes contre ses sorts. */
 function ForcedSaveFailures({ data }: { data: ForcedSaveFailuresBlockData }) {
   return (
     <ul className="flex flex-col gap-1 text-sm text-ink">

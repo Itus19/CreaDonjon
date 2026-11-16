@@ -107,7 +107,7 @@ export type EffectNode =
   | { action: "remove_condition"; who: string; key: string }
   | { action: "deal_damage"; who: string; amount: FormulaNode; damage_type?: string }
   | { action: "heal"; who: string; amount: FormulaNode }
-  /** ADR 0078 (V3.1-183) — des PV temporaires : on garde le plus grand des deux, jamais la somme. */
+  /** ADR 0095 (V3.1-204) — des PV temporaires : on garde le plus grand des deux, jamais la somme. */
   | { action: "temp_hp"; who: string; amount: FormulaNode }
   | { action: "spend_resource"; who: string; key: string; amount: FormulaNode }
   | { action: "move"; who: string; zone: TriggerZone }
@@ -471,7 +471,7 @@ function resolveEffect(
 export function resolveEffectList(effects: readonly EffectNode[], ctx: TriggerContext, fired: FiredEvent, rng: Rng): ResolvedEffect[] {
   const out: ResolvedEffect[] = [];
   const pending: EffectNode[] = [...effects];
-  // ADR 0078 (V3.1-183) : le résultat d'un dé lancé se relit dans les effets qui suivent (`event.last_roll`) —
+  // ADR 0095 (V3.1-204) : le résultat d'un dé lancé se relit dans les effets qui suivent (`event.last_roll`) —
   // « le double du nombre obtenu sur le dé ». Le dé est lancé une fois, par le générateur injecté (règle 8).
   let courant = fired;
   while (pending.length > 0) {

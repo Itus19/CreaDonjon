@@ -1,4 +1,4 @@
-// V3.1-180 : les traductions françaises du SRD (5.1 et 5.2.1) extraites du
+// V3.1-201 : les traductions françaises du SRD (5.1 et 5.2.1) extraites du
 // PDF gardent deux défauts de mise en page :
 //   1. une phrase coupée en fin de ligne garde son retour (« deux sorts⏎mineurs ») :
 //      le rendu en fait deux paragraphes ;

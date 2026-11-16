@@ -146,7 +146,7 @@ function LigneRessource({ ressource, ...p }: ActivationsPanelProps & { ressource
   const { restants, max } = ressourceRestante(ressource, p.utilises);
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
-  // ADR 0078 (V3.1-183) : une ressource entamée qui se regagne contre autre chose montre son geste, et ce qu'il coûte.
+  // ADR 0095 (V3.1-204) : une ressource entamée qui se regagne contre autre chose montre son geste, et ce qu'il coûte.
   const regain = ressource.regain;
   const cout = regain
     ? regain.kind === "resource"

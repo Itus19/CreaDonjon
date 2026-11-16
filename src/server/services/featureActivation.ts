@@ -405,7 +405,7 @@ function bearerOf(
 }
 
 /**
- * V3.1-196 (ADR 0090) — « lancer un sort » quand le sort n'a pas d'activation
+ * V3.1-196 (ADR 0098) — « lancer un sort » quand le sort n'a pas d'activation
  * (presque tous les sorts importés) : il passe par le chemin ordinaire d'un sort
  * à sauvegarde, le jet ciblé — DD de sorts du lanceur, demande de sauvegarde à
  * la cible, échecs imposés (Mante de majesté) compris. Une fois par cible de
@@ -443,7 +443,7 @@ async function castSpellWithoutActivation(
       combatId: p.combatId,
       callerId: p.callerId,
       locale: p.locale,
-      // V3.1-200 (ADR 0091) : une joueuse aussi ; sa demande de sauvegarde passe par un changement signé.
+      // V3.1-200 (ADR 0099) : une joueuse aussi ; sa demande de sauvegarde passe par un changement signé.
       callerIsGm: p.callerIsGm,
       ...(p.free ? { freeCast: true } : {}),
       input: {

@@ -1,4 +1,4 @@
-// V3.1-189 : l'en-tête de sorts mal lu à l'import dans les traductions
+// V3.1-210 : l'en-tête de sorts mal lu à l'import dans les traductions
 // françaises du SRD (5.1 et 5.2.1) — durée vide, composante matérielle perdue,
 // texte du sort pris pour l'en-tête. Chaque en-tête est relu dans la source
 // française (CC-BY-4.0, attribution dans NOTICE.md) par

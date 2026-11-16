@@ -2301,7 +2301,7 @@ export type EnsureSubclassFeatureEntryResult =
   | { ok: false; reason: "not_subclass" | "no_feature" | "invalid"; message?: string };
 
 /**
- * V3.1-181 — La fiche qui porte les briques jouables d'une aptitude de
+ * V3.1-202 — La fiche qui porte les briques jouables d'une aptitude de
  * sous-classe (`<sous-classe>-<aptitude>`, celle que lit le ruleset résolu,
  * V3.1-163). Une sous-classe maison n'en a pas : elle naît ici, dans la
  * variante, par le chemin d'écriture des fiches maison (`importRulesetEntries`,

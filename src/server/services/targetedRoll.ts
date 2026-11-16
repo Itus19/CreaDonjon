@@ -489,7 +489,7 @@ export interface PresetAttack {
   acBonus: number;
   label: string;
   expression: string;
-  /** V3.1-186 : la sauvegarde de l'assaillant a été ratée pendant la fenêtre : l'attaque rate. */
+  /** V3.1-207 : la sauvegarde de l'assaillant a été ratée pendant la fenêtre : l'attaque rate. */
   forcedMiss?: boolean;
 }
 
@@ -608,7 +608,7 @@ export async function resolveTargetedRoll(
      * n'est relancé, aucune fenêtre ne se rouvre.
      */
     preset?: { attack?: PresetAttack; damage?: { total: number; type?: string } };
-    /** V3.1-196 (ADR 0090) : un sort lancé par l'effet gratuit d'une aptitude — passé par le service des activations seul, jamais par une route. */
+    /** V3.1-196 (ADR 0098) : un sort lancé par l'effet gratuit d'une aptitude — passé par le service des activations seul, jamais par une route. */
     freeCast?: boolean;
   }
 ): Promise<TargetedRollResult> {
@@ -775,7 +775,7 @@ export async function resolveTargetedRoll(
         damage: null,
       };
       const pool = await reactorPool();
-      // V3.1-186 : une réaction impose une sauvegarde à l'assaillant (Majesté souveraine) : ses bonus, lus seulement alors.
+      // V3.1-207 : une réaction impose une sauvegarde à l'assaillant (Majesté souveraine) : ses bonus, lus seulement alors.
       const sauvegardesImposees = new Set(
         pool.candidates.flatMap((c) => (c.activation.roll_operations ?? []).flatMap((o) => (o.op === "attacker_save" ? [o.ability] : [])))
       );
@@ -810,7 +810,7 @@ export async function resolveTargetedRoll(
     }
     if (params.preset?.attack?.forcedMiss) attaqueRatee = true;
     const caEffective = target.ac === null ? null : target.ac + acBonus;
-    // V3.1-186 : sauvegarde de l'assaillant ratée : l'attaque rate, quoi qu'en dise le dé.
+    // V3.1-207 : sauvegarde de l'assaillant ratée : l'attaque rate, quoi qu'en dise le dé.
     verdict = attaqueRatee ? "miss" : attackVerdict(attack, caEffective);
     if (attaqueRatee) fait(`${actorName} rate sa sauvegarde : l'attaque rate.`);
     fait(
@@ -981,14 +981,14 @@ export async function resolveTargetedRoll(
         }),
       };
       amount = cast.damage ? rolledDamage : null;
-      // V3.1-186 : une sauvegarde qui échoue d'office (Mante de majesté : charmée par la lanceuse, contre son injonction).
+      // V3.1-207 : une sauvegarde qui échoue d'office (Mante de majesté : charmée par la lanceuse, contre son injonction).
       // V3.1-191 : ou qui se fait avec le désavantage (Embuscade magique : la lanceuse est Invisible).
       const echecsImposes = ctx.sheet.features.flatMap((f) => f.forcedSaveFailures ?? []);
       let issueImposee: "fail" | "disadvantage" | null = null;
       if (echecsImposes.length > 0) {
         const etats = (row: CombatParticipantRow | undefined) => (Array.isArray(row?.conditions) ? row.conditions.filter((c): c is string => typeof c === "string") : []);
         const lanceuse = (participantsSignes ?? (await listCombatParticipants(supabase, combat.id))).find((p) => p.entity_id === ctx.entityId);
-        // V3.1-200 (ADR 0091) : une joueuse ne lit pas les effets d'un monstre ; le moteur les lit pour elle (lecture signée, ADR 0073).
+        // V3.1-200 (ADR 0099) : une joueuse ne lit pas les effets d'un monstre ; le moteur les lit pour elle (lecture signée, ADR 0073).
         const effets = joueur
           ? await readCombatEffectsForEngine(supabase, { campaignId: params.campaignId, combatId: combat.id })
           : await listFeatureEffectsForBearers(supabase, {
@@ -1055,7 +1055,7 @@ export async function resolveTargetedRoll(
   });
 
   if (pendingSave && joueur) {
-    // V3.1-200 (ADR 0091) : la demande d'une joueuse s'écrit par un changement signé. Le serveur a calculé
+    // V3.1-200 (ADR 0099) : la demande d'une joueuse s'écrit par un changement signé. Le serveur a calculé
     // l'effet ; la base déduit la fiche de la cible et le compte qui répond, et vérifie la campagne.
     const requestId = randomUUID();
     await applySignedEngineChange(supabase, {

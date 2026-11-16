@@ -1,9 +1,9 @@
-# 0090 — Le JS répété en fin de tour, et « lancer un sort » qui n'a pas d'activation
+# 0098 — Le JS répété en fin de tour, et « lancer un sort » qui n'a pas d'activation
 
 **Date :** 2026-11-08
 **Statut :** acceptée (V3.1-195 et 196)
 
-**Numéro.** 0081 à 0089 sont pris par la branche `eloquent-dirac` (non fusionnée) : ce chantier prend 0090. Au moment de la fusion, les ADR 0078 à 0080 de cette branche-ci entreront aussi en collision avec cette branche-là.
+**Numéro.** Écrit d'abord sous le numéro 0090 ; renuméroté 0098 le 16 novembre, à la fusion dans `master` (voir la note de numérotation de `docs/backlog-v3.1/15-creation-retours-7-novembre.md`).
 
 ## Contexte
 

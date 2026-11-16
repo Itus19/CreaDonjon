@@ -129,7 +129,7 @@ export interface SubclassFormValues {
   description: string;
   pageRef: string;
   features: HomebrewSubclassFeatureInput[];
-  /** V3.1-185 : absente si la sous-classe ne lance pas de sorts. */
+  /** V3.1-206 : absente si la sous-classe ne lance pas de sorts. */
   spellcasting?: HomebrewSubclassSpellcastingInput;
 }
 
@@ -158,7 +158,7 @@ export function subclassFormValues(blocks: readonly EditableBlock[]): SubclassFo
           name: f.name,
           level: f.level,
           description: f.description,
-          // V3.1-182 : les sorts accordés, au format du formulaire ; absents si l'aptitude n'en a pas.
+          // V3.1-203 : les sorts accordés, au format du formulaire ; absents si l'aptitude n'en a pas.
           ...(f.spells && f.spells.length > 0
             ? {
                 spells: f.spells.map((sp) => ({

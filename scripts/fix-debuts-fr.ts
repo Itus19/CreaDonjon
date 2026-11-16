@@ -1,5 +1,5 @@
-// V3.1-188 : deux restes de l'extraction du PDF dans les traductions françaises
-// du SRD (5.1 et 5.2.1), après V3.1-180 et 187 :
+// V3.1-209 : deux restes de l'extraction du PDF dans les traductions françaises
+// du SRD (5.1 et 5.2.1), après V3.1-201 et 208 :
 //   1. la fin du sous-titre d'un objet magique (rareté, harmonisation) a glissé
 //      au début de sa description (« (bronze) ou légendaire (fer) Souffler… ») :
 //      le sous-titre entier, relu dans la source, est remis en tête, en italique ;

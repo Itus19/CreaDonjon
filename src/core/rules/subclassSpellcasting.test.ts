@@ -5,7 +5,7 @@ import { characterSheet, type CharacterBuild, type ClassSpellcasting, type Resol
 import { zSubclassSpellcastingBlockData, type SubclassSpellcastingBlockData } from "../schemas/rule-blocks/blocks";
 
 /**
- * V3.1-185 — une sous-classe qui lance des sorts (Arnaqueur arcanique,
+ * V3.1-206 — une sous-classe qui lance des sorts (Arnaqueur arcanique,
  * Chevalier occulte) : tiers de lanceur, sa propre table d'emplacements.
  */
 
@@ -29,7 +29,7 @@ const MULTICLASS_TABLE: Record<string, number[]> = {
 };
 const WIZARD: ClassSpellcasting = { ability: "int", kind: "slots", casterWeight: { fraction: "full", rounding: "down" }, slotsByLevel: { 3: { 1: 4, 2: 2 } } };
 
-describe("l'incantation d'une sous-classe (V3.1-185)", () => {
+describe("l'incantation d'une sous-classe (V3.1-206)", () => {
   it("la table se lit niveau par niveau : la dernière ligne atteinte vaut", () => {
     const sc = subclassSpellcasting(ARNAQUEUR);
     expect(sc.ability).toBe("int");
@@ -92,7 +92,7 @@ describe("l'incantation d'une sous-classe (V3.1-185)", () => {
   });
 });
 
-describe("V3.1-190 — le budget de sorts d'une sous-classe lanceuse", () => {
+describe("V3.1-211 — le budget de sorts d'une sous-classe lanceuse", () => {
   const AVEC_BUDGET: SubclassSpellcastingBlockData = {
     ...ARNAQUEUR,
     spell_list: "wizard",

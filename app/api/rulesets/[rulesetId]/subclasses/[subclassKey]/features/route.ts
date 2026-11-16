@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ensureSubclassFeatureEntry } from "@/src/server/services/rules";
 
 /**
- * V3.1-181 — Crée (ou retrouve) la fiche qui porte les briques jouables
+ * V3.1-202 — Crée (ou retrouve) la fiche qui porte les briques jouables
  * d'une aptitude de sous-classe, dans la variante `rulesetId`. Même forme que
  * `../route.ts` : l'identifiant vient de l'URL, le corps est validé par Zod,
  * et c'est la RPC `upsert_ruleset_override` qui refuse d'écrire dans une base

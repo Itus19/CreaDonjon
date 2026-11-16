@@ -376,7 +376,7 @@ describe("desDeLaFormule", () => {
   });
 });
 
-describe("V3.1-200 (ADR 0091) — le jet ciblé d'une joueuse", () => {
+describe("V3.1-200 (ADR 0099) — le jet ciblé d'une joueuse", () => {
   const acteur = { kind: "character" as const, entityId: "9b2f8a64-1c1e-4f0a-8a55-0b9f2d1e6c11" };
   const cibleId = "7c9e6679-7425-40de-944b-e07fc1f90ae7";
 

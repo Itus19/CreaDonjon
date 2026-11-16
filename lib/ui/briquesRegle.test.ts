@@ -451,7 +451,7 @@ describe("réactions à un jet (V3.1-161)", () => {
   });
 });
 
-describe("ADR 0078 — le regain d'une ressource dans l'éditeur (V3.1-183)", () => {
+describe("ADR 0095 — le regain d'une ressource dans l'éditeur (V3.1-204)", () => {
   const bloc = {
     resources: [
       { key: "magie-envoutante", label: { fr: "Magie envoûtante" }, max: { op: "num", value: 1 }, recharge: "long_rest", regain: { kind: "resource", key: "bardic-inspiration", amount: 1 } },
@@ -481,7 +481,7 @@ describe("ADR 0078 — le regain d'une ressource dans l'éditeur (V3.1-183)", ()
   });
 });
 
-describe("V3.1-184 — « après un sort lancé » dans l'éditeur", () => {
+describe("V3.1-205 — « après un sort lancé » dans l'éditeur", () => {
   function envouter(): Brouillon {
     const b = brouillonVide();
     let a = nouvelleActivation(b);
@@ -513,7 +513,7 @@ describe("V3.1-184 — « après un sort lancé » dans l'éditeur", () => {
   });
 });
 
-describe("V3.1-186 — l'échec automatique d'une sauvegarde dans l'éditeur", () => {
+describe("V3.1-207 — l'échec automatique d'une sauvegarde dans l'éditeur", () => {
   it("s'écrit, se relit, et part dans le corps de l'enregistrement", () => {
     const b = brouillonVide();
     b.echecs = [{ ...nouvelEchec(), sorts: ["command"] }];

@@ -1,7 +1,7 @@
-# 0079 — Incantation d'une sous-classe, « après un sort lancé », sauvegarde de l'assaillant et échec d'office
+# 0096 — Incantation d'une sous-classe, « après un sort lancé », sauvegarde de l'assaillant et échec d'office
 
 **Date :** 2026-11-07
-**Statut :** acceptée (V3.1-184 à 186 ; écrans choisis par l'auteur : 185 A, 184 A)
+**Statut :** acceptée (V3.1-205 à 207 ; écrans choisis par l'auteur : 206 A, 205 A)
 
 ## Contexte
 
@@ -19,4 +19,4 @@ La Croisade des Ombres (V3.1-179) bute sur quatre règles que les briques ne sav
 - Les sorts toujours préparés d'une sous-classe se lancent depuis l'onglet Actions ; le serveur les accepte (`canCastSpell`).
 - « Pour la première fois d'un tour » se compte une fois par tour pour la porteuse (`limit: turn`), pas par assaillant.
 - La proposition « après un sort » ne vise personne : en combat, la cible se joue au récit, comme une utilisation sans cible.
-- Le repos recharge aussi les ressources déclarées par les règles (`trackersForRest`), défaut relevé en vérifiant V3.1-183.
+- Le repos recharge aussi les ressources déclarées par les règles (`trackersForRest`), défaut relevé en vérifiant V3.1-204.

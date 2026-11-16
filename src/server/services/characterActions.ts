@@ -580,7 +580,7 @@ export async function castSpell(
     /** V3.1-105 : `false` pour une attaque de sort ratée — l'emplacement est dépensé, aucun dé de dégâts n'est lancé. Vrai par défaut. */
     rollDamage?: boolean;
     /**
-     * V3.1-196 (ADR 0090) : lancé par l'effet gratuit d'une aptitude (`cast_spell` `free`) :
+     * V3.1-196 (ADR 0098) : lancé par l'effet gratuit d'une aptitude (`cast_spell` `free`) :
      * le sort n'a pas à être connu, aucun emplacement n'est dépensé. Jamais lu d'une entrée
      * de route : seul le service des activations le passe.
      */
@@ -1575,7 +1575,7 @@ export async function changeSpellSlotUsage(
 }
 
 /**
- * ADR 0078 (V3.1-183) — Regagner une utilisation d'une ressource en dépensant
+ * ADR 0095 (V3.1-204) — Regagner une utilisation d'une ressource en dépensant
  * autre chose (une Inspiration bardique, un emplacement de niveau 3+). Le
  * client n'envoie qu'une intention ; le coût se vérifie ici, sur la fiche
  * calculée par le serveur et l'état de jeu relu (`planResourceRegain`), et les

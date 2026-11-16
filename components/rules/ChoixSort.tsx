@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 
 /**
- * V3.1-182 — Le choix d'un sort parmi ceux du monde (plusieurs centaines) :
+ * V3.1-203 — Le choix d'un sort parmi ceux du monde (plusieurs centaines) :
  * un champ de recherche et quelques propositions dessous. La charte écarte le
  * `<select>` natif et `Dropdown` n'a pas de recherche ; le nom choisi
  * s'affiche, la clé part au serveur.

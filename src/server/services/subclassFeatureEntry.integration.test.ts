@@ -4,7 +4,7 @@ import { createHomebrewSubclass, ensureSubclassFeatureEntry, resolveEntryBlocksI
 import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
 
 /**
- * V3.1-181 — « Rendre jouable » une aptitude d'une sous-classe maison : la
+ * V3.1-202 — « Rendre jouable » une aptitude d'une sous-classe maison : la
  * fiche à briques `<sous-classe>-<aptitude>` naît dans la variante, une
  * seconde demande la retrouve, et la variante d'un autre reste fermée (la
  * RPC `upsert_ruleset_override` refuse). Variante et monde temporaires sur un

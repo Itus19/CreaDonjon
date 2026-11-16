@@ -170,7 +170,7 @@ describe("une aptitude de sous-classe sur la fiche", () => {
   });
 });
 
-describe("V3.1-181 — la clé d'une aptitude de sous-classe", () => {
+describe("V3.1-202 — la clé d'une aptitude de sous-classe", () => {
   it("un nom anglais du SRD garde sa clé d'avant (choix stockés et fiches à briques inchangés)", () => {
     expect(subclassFeatureSlug("Hunter's Prey")).toBe("hunter-s-prey");
     expect(subclassFeatureSlug("Improved Critical")).toBe("improved-critical");
@@ -184,7 +184,7 @@ describe("V3.1-181 — la clé d'une aptitude de sous-classe", () => {
   });
 });
 
-describe("V3.1-181 — la fiche à briques d'une aptitude", () => {
+describe("V3.1-202 — la fiche à briques d'une aptitude", () => {
   it("sa clé : celle de la sous-classe, un tiret, celle de l'aptitude", () => {
     expect(subclassFeatureEntryKey("college-de-la-seduction", "Magie envoûtante")).toBe("college-de-la-seduction-magie-envoutante");
     expect(subclassFeatureEntryKey("champion", "Improved Critical")).toBe("champion-improved-critical");

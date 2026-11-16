@@ -1,4 +1,4 @@
-// Tableaux aplatis (suite de V3.1-180) : dans les traductions françaises du
+// Tableaux aplatis (suite de V3.1-201) : dans les traductions françaises du
 // SRD 5.2.1, un tableau du PDF est devenu une seule phrase (« 1d10 Type de
 // dégâts 1d10 Type de dégâts 1 Acide 6 Nécrotiques … »), et la dernière
 // rangée manque souvent. Chaque tableau est relu dans la source française

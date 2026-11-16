@@ -2,7 +2,7 @@ import type { SubclassSpellcastingBlockData } from "../schemas/rule-blocks/block
 import type { ClassSpellcasting } from "./sheet";
 
 /**
- * V3.1-185 — l'incantation qu'une sous-classe donne à sa classe (Arnaqueur
+ * V3.1-206 — l'incantation qu'une sous-classe donne à sa classe (Arnaqueur
  * arcanique, Chevalier occulte). Pure. La table du bloc ne liste que les
  * niveaux qui changent : on la déroule jusqu'au niveau 20, la dernière ligne
  * atteinte valant, pour que `computeSpellSlots` lise la classe comme une autre.
@@ -43,7 +43,7 @@ export interface SubclassSpellBudget {
 }
 
 /**
- * V3.1-190 — combien de sorts une sous-classe lanceuse choisit au niveau de
+ * V3.1-211 — combien de sorts une sous-classe lanceuse choisit au niveau de
  * classe donné, et dans quelle liste. Chaque colonne (emplacements, sorts
  * mineurs, sorts préparés) vaut sa dernière valeur atteinte. `null` avant la
  * première ligne, ou sans liste de sorts déclarée.

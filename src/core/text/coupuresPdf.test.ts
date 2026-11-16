@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { couperDebordement, recollerCoupures } from "./coupuresPdf";
 
 /**
- * V3.1-180 — les textes français extraits du PDF du SRD : une phrase coupée
+ * V3.1-201 — les textes français extraits du PDF du SRD : une phrase coupée
  * en fin de ligne garde son retour, et le dernier texte d'un chapitre avale
  * parfois le début du suivant.
  */
@@ -30,7 +30,7 @@ describe("recollerCoupures", () => {
     expect(recollerCoupures(t).texte).toBe("Fin de phrase.\nNouvelle phrase.\n**Intertitre.** Texte\n**Autre.** Texte\n- un point de liste");
   });
 
-  it("les rangées d'un tableau (« a | b », V3.1-187) ne se recollent pas, même finies en minuscule et suivies d'un nombre", () => {
+  it("les rangées d'un tableau (« a | b », V3.1-208) ne se recollent pas, même finies en minuscule et suivies d'un nombre", () => {
     const t = "Niveau | Sorts\n5 | aide, zone de vérité\n9 | dissipation de la magie";
     expect(recollerCoupures(t)).toEqual({ texte: t, coupures: [] });
   });

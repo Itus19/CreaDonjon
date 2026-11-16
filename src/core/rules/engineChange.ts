@@ -57,7 +57,7 @@ const zTurnUsageChange = z
   .strict();
 
 /**
- * V3.1-200 (ADR 0091) — une demande de sauvegarde au nom d'une joueuse (son
+ * V3.1-200 (ADR 0099) — une demande de sauvegarde au nom d'une joueuse (son
  * sort à sauvegarde). `id` : la NOUVELLE demande, tirée par le serveur.
  * Fermée : ni le compte qui répond ni la fiche de la cible, que la base
  * déduit elle-même de la ligne de combat visée.

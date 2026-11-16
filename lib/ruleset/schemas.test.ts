@@ -81,7 +81,7 @@ describe("createHomebrewSpellSchema (V2-N2)", () => {
   });
 });
 
-describe("ensureSubclassFeatureEntrySchema (V3.1-181)", () => {
+describe("ensureSubclassFeatureEntrySchema (V3.1-202)", () => {
   const ok = { rulesetId: "0e2b6e26-4303-4938-b1c9-14b6f4bb74e2", subclassKey: "college-de-la-seduction", featureIndex: 0 };
   it("une sous-classe et la position d'une aptitude", () => {
     expect(ensureSubclassFeatureEntrySchema.safeParse(ok).success).toBe(true);
@@ -93,7 +93,7 @@ describe("ensureSubclassFeatureEntrySchema (V3.1-181)", () => {
   });
 });
 
-describe("createHomebrewSubclassSchema — sorts accordés (V3.1-182)", () => {
+describe("createHomebrewSubclassSchema — sorts accordés (V3.1-203)", () => {
   const base = { rulesetId: "0e2b6e26-4303-4938-b1c9-14b6f4bb74e2", name: "Collège", parentClassKey: "bard", features: [{ name: "Mante de majesté", level: 6, description: "" }] };
   it("accepte un sort toujours préparé, lancé sans emplacement une fois par repos long", () => {
     const r = createHomebrewSubclassSchema.safeParse({ ...base, features: [{ ...base.features[0], spells: [{ key: "command", alwaysPrepared: true, freeCast: { uses: 1, refresh: "long_rest" } }] }] });

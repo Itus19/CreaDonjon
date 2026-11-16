@@ -2,7 +2,7 @@ import type { ForcedSaveFailuresBlockData } from "../schemas/rule-blocks/blocks"
 import { zStoredEffectPayload } from "./durableEffects";
 
 /**
- * V3.1-186 — une sauvegarde qui échoue d'office : « une créature Charmée par
+ * V3.1-207 — une sauvegarde qui échoue d'office : « une créature Charmée par
  * vous rate automatiquement son jet de sauvegarde contre toute injonction que
  * vous lancez » (Mante de majesté). Pur. Les états de la cible viennent avec
  * leur source (l'effet actif qui les pose, ADR 0073) ; une source inconnue ne

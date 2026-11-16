@@ -3,7 +3,7 @@ import { proposalsAfterSpell, spellCastMatches } from "./afterSpell";
 import { zActivationBlockData, type ActivationBlockData } from "../schemas/rule-blocks/playable";
 
 /**
- * V3.1-184 — une utilisation proposée après un sort lancé : « Aussitôt après
+ * V3.1-205 — une utilisation proposée après un sort lancé : « Aussitôt après
  * avoir lancé un sort d'Enchantement ou d'Illusion par un emplacement de
  * sort… » (Magie envoûtante).
  */

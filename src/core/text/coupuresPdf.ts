@@ -1,5 +1,5 @@
 /**
- * V3.1-180 — nettoyer un texte français extrait du PDF du SRD. Pur.
+ * V3.1-201 — nettoyer un texte français extrait du PDF du SRD. Pur.
  *
  * 1. `recollerCoupures` : une phrase coupée en fin de ligne par la mise en
  *    page garde son retour, et le rendu (`Prose`) en fait deux paragraphes.
@@ -26,7 +26,7 @@ export interface Coupure {
   apres: string;
 }
 
-/** Une rangée de tableau (« a | b », V3.1-187) : jamais recollée à sa voisine. */
+/** Une rangée de tableau (« a | b », V3.1-208) : jamais recollée à sa voisine. */
 const RANGEE_DE_TABLEAU = /\s\|\s/;
 
 function seRecolle(ligne: string, suivante: string): boolean {

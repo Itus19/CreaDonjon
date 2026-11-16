@@ -1,5 +1,5 @@
 /**
- * V3.1-188 — deux restes de l'extraction du PDF du SRD français. Pur.
+ * V3.1-209 — deux restes de l'extraction du PDF du SRD français. Pur.
  *
  * 1. La fin du sous-titre d'un objet magique (rareté, harmonisation) a glissé
  *    au début de sa description : « (bronze) ou légendaire (fer) Souffler… ».

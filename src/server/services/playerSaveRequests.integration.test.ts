@@ -6,7 +6,7 @@ import { engineSigningKeyFromEnv, signEngineChange } from "./engineSigning";
 import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
 
 /**
- * V3.1-200 (ADR 0091) — la demande de sauvegarde d'une joueuse, contre la vraie
+ * V3.1-200 (ADR 0099) — la demande de sauvegarde d'une joueuse, contre la vraie
  * base : elle ne s'écrit jamais directement ; le changement signé ne vise
  * qu'un participant d'un combat de la campagne nommée ; la base refuse un
  * compte qui répond glissé dans la charge (elle le déduit) ; l'auteur est

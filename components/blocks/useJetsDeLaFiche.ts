@@ -28,7 +28,7 @@ export function useJetsDeLaFiche(params: {
   estMj: boolean;
   /** Après un sort lancé ou appliqué : la fiche se recharge (emplacements, PV). */
   apresSort: () => void;
-  /** V3.1-184 : ce qu'un sort lancé propose aussitôt après (Magie envoûtante), en suite du résultat. */
+  /** V3.1-205 : ce qu'un sort lancé propose aussitôt après (Magie envoûtante), en suite du résultat. */
   suiteDuSort?: (sort: SortFiche) => SuiteDeJet | undefined;
 }) {
   const { entityId, campaignId, estMj, apresSort, suiteDuSort } = params;
@@ -263,7 +263,7 @@ export function useJetsDeLaFiche(params: {
               formule: sort.formuleDegats,
               touche: false,
             }),
-      // V3.1-200 (ADR 0091) : la joueuse cible aussi un sort à sauvegarde ; sa demande s'écrit par un changement signé.
+      // V3.1-200 (ADR 0099) : la joueuse cible aussi un sort à sauvegarde ; sa demande s'écrit par un changement signé.
       genre !== null
         ? (combat, campagne) =>
             cibleeJoueur(combat, campagne, sort.nom, {

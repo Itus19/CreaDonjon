@@ -3,7 +3,7 @@ import { conditionsWithSource, saveAutomaticallyFails, saveRuleOutcome, isCharme
 import { zForcedSaveFailuresBlockData } from "../schemas/rule-blocks/blocks";
 
 /**
- * V3.1-186 — « une créature Charmée par vous rate automatiquement son jet de
+ * V3.1-207 — « une créature Charmée par vous rate automatiquement son jet de
  * sauvegarde contre toute injonction que vous lancez » (Mante de majesté).
  */
 const MANTE = zForcedSaveFailuresBlockData.parse({ failures: [{ spells: ["command"], target_condition: "charmed", imposed_by_caster: true }] });

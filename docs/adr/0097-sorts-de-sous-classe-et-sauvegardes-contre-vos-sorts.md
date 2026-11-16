@@ -1,11 +1,11 @@
-# 0080 — Les sorts d'une sous-classe lanceuse, et les sauvegardes contre vos sorts
+# 0097 — Les sorts d'une sous-classe lanceuse, et les sauvegardes contre vos sorts
 
 **Date :** 2026-11-08
-**Statut :** acceptée (V3.1-190 à 192 ; écrans approuvés tels qu'esquissés)
+**Statut :** acceptée (V3.1-211, 191 et 192 ; écrans approuvés tels qu'esquissés)
 
 ## Contexte
 
-L'Arnaqueur arcanique de « DnD 2024 » lançait des sorts (ADR 0079) sans pouvoir les choisir, et deux de ses aptitudes restaient du texte : Embuscade magique (la cible a le désavantage à sa sauvegarde si l'Arnaqueur est Invisible) et Omniprésence (un second Croc-en-jambe de Frappe malicieuse, qui n'était pas jouable).
+L'Arnaqueur arcanique de « DnD 2024 » lançait des sorts (ADR 0096) sans pouvoir les choisir, et deux de ses aptitudes restaient du texte : Embuscade magique (la cible a le désavantage à sa sauvegarde si l'Arnaqueur est Invisible) et Omniprésence (un second Croc-en-jambe de Frappe malicieuse, qui n'était pas jouable).
 
 ## Décision
 
@@ -16,4 +16,4 @@ L'Arnaqueur arcanique de « DnD 2024 » lançait des sorts (ADR 0079) sans pouvo
 ## Conséquences
 
 - Le dé d'Attaque sournoise auquel on renonce, la taille de la cible du Croc-en-jambe, la sauvegarde répétée du Poison et « pendant ce tour » d'Embuscade magique restent à la table, et les fiches le disent (`coverage`).
-- Un sort lancé par l'activation d'un sort (Capacités, V3.1-166) ne propose pas encore « aussitôt après » (V3.1-184) : à reprendre.
+- Un sort lancé par l'activation d'un sort (Capacités, V3.1-166) ne propose pas encore « aussitôt après » (V3.1-205) : à reprendre.

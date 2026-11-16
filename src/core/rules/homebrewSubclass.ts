@@ -11,7 +11,7 @@ import type { OverrideAction } from "./resolve";
  * Merge Patch REMPLACE en entier au lieu d'y ajouter.
  */
 
-/** V3.1-182 : un sort qu'une aptitude accorde — toujours préparé, et/ou lancé sans emplacement n fois par repos. */
+/** V3.1-203 : un sort qu'une aptitude accorde — toujours préparé, et/ou lancé sans emplacement n fois par repos. */
 export interface HomebrewGrantedSpellInput {
   key: string;
   alwaysPrepared: boolean;
@@ -34,7 +34,7 @@ function sortsDuBloc(spells: readonly HomebrewGrantedSpellInput[] | undefined) {
 }
 
 /**
- * V3.1-185 : une sous-classe qui lance des sorts (Arnaqueur arcanique) — sa
+ * V3.1-206 : une sous-classe qui lance des sorts (Arnaqueur arcanique) — sa
  * caractéristique, son poids au multiclassage (le tiers s'arrondit à
  * l'inférieur, la moitié au supérieur, comme en 2024) et sa table
  * d'emplacements : `counts[i]` emplacements du niveau i + 1.
@@ -42,9 +42,9 @@ function sortsDuBloc(spells: readonly HomebrewGrantedSpellInput[] | undefined) {
 export interface HomebrewSubclassSpellcastingInput {
   ability: "str" | "dex" | "con" | "int" | "wis" | "cha";
   fraction: "full" | "half" | "third";
-  /** V3.1-190 : la liste où choisir les sorts (clé de classe) ; absente : rien à choisir. */
+  /** V3.1-211 : la liste où choisir les sorts (clé de classe) ; absente : rien à choisir. */
   spellList?: string;
-  /** `cantrips`, `prepared` (V3.1-190) : absents, ceux de la ligne d'avant. */
+  /** `cantrips`, `prepared` (V3.1-211) : absents, ceux de la ligne d'avant. */
   rows: { level: number; counts: number[]; cantrips?: number; prepared?: number }[];
 }
 
@@ -67,7 +67,7 @@ function incantationDuBloc(sc: HomebrewSubclassSpellcastingInput | undefined) {
       return { level: r.level, counts, ...(r.cantrips !== undefined ? { cantrips: r.cantrips } : {}), ...(r.prepared !== undefined ? { prepared: r.prepared } : {}) };
     })
     .sort((a, b) => a.level - b.level);
-  // V3.1-190 : une ligne qui ne change que le budget de sorts garde les emplacements de la ligne d'avant.
+  // V3.1-211 : une ligne qui ne change que le budget de sorts garde les emplacements de la ligne d'avant.
   const slots: typeof triees = [];
   for (const r of triees) {
     const budget = r.cantrips !== undefined || r.prepared !== undefined;

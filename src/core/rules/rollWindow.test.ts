@@ -271,7 +271,7 @@ describe("le schéma refuse une opération hors de propos", () => {
   });
 });
 
-describe("V3.1-186 — « sauvegarde ou l'attaque rate » (Majesté souveraine)", () => {
+describe("V3.1-207 — « sauvegarde ou l'attaque rate » (Majesté souveraine)", () => {
   const MAJESTE = [{ op: "attacker_save" as const, ability: "cha" as const, dc: ref("spell_save_dc") }];
 
   it("l'assaillant rate sa sauvegarde : la touche devient un raté", () => {

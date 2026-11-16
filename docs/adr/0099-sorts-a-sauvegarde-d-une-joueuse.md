@@ -1,4 +1,4 @@
-# 0091 — Les sorts à sauvegarde d'une joueuse
+# 0099 — Les sorts à sauvegarde d'une joueuse
 
 **Date :** 2026-11-09
 **Statut :** acceptée (V3.1-200) ; migration `20261108120000_player_save_requests` appliquée et vérifiée le 9 nov.
@@ -13,7 +13,7 @@ La demande d'une joueuse s'écrit par un **changement signé du moteur** (ADR 00
 - le **serveur** calcule l'effet (sort connu ou accordé, dégâts lancés par lui, règle 8) et signe ; la joueuse n'écrit jamais la ligne (la RLS d'insertion reste réservée au MJ) ;
 - le changement est **fermé** (`zSaveRequestChange`, et la même liste dans la fonction SQL) : combat, cible, libellé, caractéristique, DD, effet, jet d'origine ;
 - la base **déduit** ce qui donne un droit : la cible doit être un participant d'un combat de la campagne nommée ; la fiche de la cible et le compte qui répond viennent de cette ligne et de `campaign_characters` (le joueur du PJ, sinon le MJ) ; l'auteur est l'appelant ; un jet d'origine hors des sessions de la campagne est ignoré ;
-- l'échec d'office ou le désavantage d'une sauvegarde (ADR 0079, 0080) se lit, côté joueuse, par la lecture signée des effets (ADR 0073).
+- l'échec d'office ou le désavantage d'une sauvegarde (ADR 0096, 0080) se lit, côté joueuse, par la lecture signée des effets (ADR 0073).
 
 Viser le PJ d'une autre joueuse reste possible, comme à la table : la demande vient du vrai sort, et c'est l'autre joueuse qui répond.
 

@@ -2,7 +2,7 @@ import type { ActivationBlockData, SpellCastTrigger } from "../schemas/rule-bloc
 import { SPELL_SCHOOLS, type SpellSchool } from "./homebrewSpell";
 
 /**
- * V3.1-184 — les utilisations qu'une fiche propose juste après un sort lancé
+ * V3.1-205 — les utilisations qu'une fiche propose juste après un sort lancé
  * (Magie envoûtante : « aussitôt après avoir lancé un sort d'Enchantement ou
  * d'Illusion par un emplacement de sort »). Pur. Ce n'est qu'une proposition :
  * l'utilisation passe ensuite par la route d'activation, comme au clic, qui

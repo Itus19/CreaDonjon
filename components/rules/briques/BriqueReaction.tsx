@@ -48,7 +48,7 @@ export default function ReactionEditeur({ activation: a, onChange }: { activatio
         onChange={(v) => onChange(v === "reaction" ? avecDeclencheur(a, {}) : v === "apres_sort" ? avecApresSort(a, {}) : avecApresSort(avecDeclencheur(a, null), null))}
       />
 
-      {/* V3.1-184 : proposée sur la fiche juste après un sort lancé ; reste jouable au clic. */}
+      {/* V3.1-205 : proposée sur la fiche juste après un sort lancé ; reste jouable au clic. */}
       {apres && (
         <CarteBrique uid={`${a.uid}:apres-sort`} titre={t("declencheur")}>
           <p className="text-xs text-ink-muted">{t("apresUnSortAide")}</p>

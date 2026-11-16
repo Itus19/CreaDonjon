@@ -5763,7 +5763,7 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
 - `AbilityScoreStep.tsx` : une seule ligne de chiffres par case (« 15 +2 »), le détail complet au survol ; la légende sous les six cases (cinq couleurs de la charte). Les sources viennent toujours de la fiche du moteur.
 - Vérifié au navigateur (Testeur MJ, Humain Rôdeur, tableau standard) : les six cases sur une ligne, plus aucun texte qui déborde ; la légende « Valeur attribuée ». Le cas avec bonus (l'Acolyte +1) est montré sur la planche « Création » du catalogue ; la sous-étape de répartition de l'historique n'a pas été pilotée au navigateur.
 
-### V3.1-181 — Sous-classe maison : rendre jouable chacune de ses aptitudes (7 novembre)
+### V3.1-202 — Sous-classe maison : rendre jouable chacune de ses aptitudes (7 novembre)
 
 **Modèle conseillé : Opus** (serveur des surcharges, clé des aptitudes).
 
@@ -5779,7 +5779,7 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
 - Écran : « Aptitudes jouables » sur la page d'une sous-classe maison (état, « Rendre jouable » / « Modifier les briques »), et `?briques=1` ouvre l'éditeur à l'arrivée.
 - Vérifié au navigateur (monde et variante temporaires du Testeur MJ, supprimés ensuite) : la sous-classe créée par le formulaire, « Rendre jouable » ouvre l'éditeur sur `college-de-verification-mante-de-majeste`, l'aptitude passe « jouable » une fois ses briques enregistrées.
 
-### V3.1-182 — Formulaire de sous-classe : sorts toujours préparés et lancés sans emplacement (7 novembre)
+### V3.1-203 — Formulaire de sous-classe : sorts toujours préparés et lancés sans emplacement (7 novembre)
 
 **Modèle conseillé : Sonnet**, schéma déjà prêt (`spells` d'une aptitude : `always_prepared`, `free_cast`).
 
@@ -5791,7 +5791,7 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
 
 **Fait le 7 novembre** (Opus seul). Sous chaque aptitude du formulaire, le repli « Sorts accordés (n) » : le sort (recherche dans les sorts du monde : `Dropdown` n'a pas de recherche et la charte écarte le `<select>`), « toujours préparé », « lancer sans emplacement » 1 à 3 fois par repos court ou long. Écrit dans `subclass_features.spells` (que le moteur lit déjà), relu en modification ; un sort qui n'apporte rien est écarté (tests). Vérifié au navigateur : *Injonction*, toujours préparé, une fois par repos long, enregistré tel quel.
 
-### V3.1-183 — Briques : des PV temporaires, et regagner une utilisation en dépensant autre chose (7 novembre)
+### V3.1-204 — Briques : des PV temporaires, et regagner une utilisation en dépensant autre chose (7 novembre)
 
 **Modèle conseillé : Opus** (vocabulaire fermé des effets, ADR si l'on ajoute une action).
 
@@ -5801,7 +5801,7 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
 
 **Critères.** Mante d'inspiration se joue de bout en bout (dépense, jet du dé par le serveur, PV temporaires ×2 aux cibles choisies) ; Magie envoûtante vide se recharge contre une Inspiration bardique ; tests du noyau.
 
-**Fait le 7 novembre** (Opus seul ; ADR 0078).
+**Fait le 7 novembre** (Opus seul ; ADR 0095).
 - **PV temporaires** : l'effet `temp_hp` rejoint le vocabulaire fermé, appliqué avec `grantTempHp` (le plus grand des deux) ; le serveur l'écrit comme tout changement de PV. Le dé d'une brique « Jet libre » se relit dans les effets qui suivent (`event.last_roll`, proposé dans « Insérer une référence »). Tests du noyau.
 - **Regagner en dépensant** : une ressource peut porter `regain` (une autre ressource et sa quantité, ou un emplacement d'un niveau minimal). `planResourceRegain` (pur, 7 tests) ; la route `resource-regain` n'accepte qu'une intention et vérifie le coût côté serveur ; la fiche montre « Regagner (− 1 Inspiration bardique) » sur une ressource entamée ; l'éditeur le saisit sur la carte de la ressource (aller-retour testé).
 - Vérifié au navigateur (monde temporaire) : la ressource « Mante de majesté » avec regain contre un emplacement de niveau 3, et une utilisation « PV temporaires = 2 × {event.last_roll} », enregistrées et relues.
@@ -5892,7 +5892,7 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
 - **Écran** (`ChoixSousClasse.tsx`) : les sous-classes du monde pour cette classe en cartes courtes (nom, première phrase ; une sous-classe d'un ruleset personnel s'y range comme une officielle, elles viennent de la même liste), la fiche de la touchée dessous (`FicheSelection`, V3.1-172 : description, aptitudes « Niv. n · nom » dépliables, ses choix en pastilles). Les choix entre options nommées (tous, pas seulement ceux d'une sous-classe) passent au même geste : cartes courtes, texte de l'option touchée dessous. Le texte vient de l'option, ou de son paragraphe dans l'aptitude qui l'accorde (`texteOption`, « **Briseur de hordes.** … »).
 - Vérifié au navigateur (Testeur MJ, 1400 et 390 px) : Rôdeur 3, la sous-étape apparaît, le Chasseur se déplie, « Proie du chasseur » naît dessous et montre le texte de Goût du sang et de Briseur de hordes.
 
-*Restes* : la ligne 3 de la progression du Rôdeur annonce déjà « Savoir du Chasseur, Proie du chasseur » avant tout choix (donnée de la progression importée) ; le texte de « Défense de chasseur supérieure » déborde sur le chapitre du Roublard (V3.1-180).
+*Restes* : la ligne 3 de la progression du Rôdeur annonce déjà « Savoir du Chasseur, Proie du chasseur » avant tout choix (donnée de la progression importée) ; le texte de « Défense de chasseur supérieure » déborde sur le chapitre du Roublard (V3.1-201).
 
 ### V3.1-172 — Espèce, don d'origine, historique : le texte entier, sans quitter l'écran (7 novembre)
 
@@ -5952,7 +5952,7 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
 
 *Restes* : l'outil Table du MJ et la fiche de créature n'affichent pas de valeurs passives (la créature garde celle de son bloc de stats) ; « Vigilant » n'en donne pas en 2024, contrairement à ce que disait le critère.
 
-### V3.1-184 — Une utilisation proposée après un sort lancé (7 novembre)
+### V3.1-205 — Une utilisation proposée après un sort lancé (7 novembre)
 
 **Modèle conseillé : Opus** (déclencheurs, ADR 0075).
 
@@ -5962,7 +5962,7 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
 
 **Critères.** Après *charme-personne* lancé par un emplacement, la fiche propose Magie envoûtante ; pas après un sort mineur ni un sort d'une autre école.
 
-**Fait le 7 novembre** (Opus seul ; écran : solution A, choix de l'auteur). ADR 0079.
+**Fait le 7 novembre** (Opus seul ; écran : solution A, choix de l'auteur). ADR 0096.
 - **Noyau** (tests d'abord) : `trigger` devient une union — `on: "roll"` (ADR 0075) ou `on: "spell_cast"` (`schools`, `with_slot`) ; `spellCastMatches` et `proposalsAfterSpell` ; l'école se reconnaît en anglais comme en français (les traductions écrivent « Enchantement »).
 - **Éditeur** : « Déclenchement » propose « Après un sort lancé », les huit écoles à cocher et « par un emplacement ». Un seul déclencheur par utilisation.
 - **Fiche** : après « Lancer », le résultat de l'outil de dés propose « Aussitôt après : Envoûter (Magie envoûtante) » et « Passer » ; « Utiliser » passe par la route d'activation (le serveur vérifie et dépense).
@@ -5971,7 +5971,7 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
 
 *Restes* : la proposition ne vise personne (en combat, la cible se dit au récit) ; une seule proposition par sort lancé (la première).
 
-### V3.1-185 — Une sous-classe qui lance des sorts : sa progression d'emplacements (7 novembre)
+### V3.1-206 — Une sous-classe qui lance des sorts : sa progression d'emplacements (7 novembre)
 
 **Modèle conseillé : Opus** (noyau, `characterSheet`).
 
@@ -5981,14 +5981,14 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
 
 **Critères.** Un Arnaqueur 3 a deux emplacements du 1er niveau, son DD et son attaque de sort ; tests du noyau (tiers de lanceur seul, multiclassé).
 
-**Fait le 7 novembre** (Opus seul ; écran : solution A, choix de l'auteur). ADR 0079.
+**Fait le 7 novembre** (Opus seul ; écran : solution A, choix de l'auteur). ADR 0096.
 - **Noyau** (tests d'abord) : bloc `subclass_spellcasting` ; `subclassSpellcasting` déroule la table (la dernière ligne atteinte vaut) ; poids `third` dans le multiclassage (arrondi à l'inférieur) ; la sous-classe prête son incantation à une classe qui n'en a pas.
 - **Formulaire de sous-classe** : « Cette sous-classe lance des sorts », caractéristique, multiclassage, table par niveau de classe (« + Une ligne », « + Un niveau d'emplacement ») ; relue à la modification. La page de la règle montre la section « Incantation ».
 - Vérifié au navigateur : un « Arnaqueur de test » saisi par le formulaire, un Roublard 3 créé par l'assistant a ses emplacements dans l'aperçu.
 
 *Restes* : les sorts mineurs et sorts préparés de la sous-classe (leur nombre) ne sont pas comptés ; l'Arnaqueur arcanique de « DnD 2024 » garde sa table en texte tant que l'auteur ne coche pas la section.
 
-### V3.1-186 — « Sauvegarde ou l'attaque rate », et l'échec automatique d'une créature charmée (7 novembre)
+### V3.1-207 — « Sauvegarde ou l'attaque rate », et l'échec automatique d'une créature charmée (7 novembre)
 
 **Modèle conseillé : Opus**, dans la lignée de V3.1-135 et 163 (fenêtre de réaction).
 
@@ -5998,14 +5998,14 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
 
 **Critères.** Sous Majesté souveraine, une attaque qui touche la barde déclenche la sauvegarde ; un échec la fait rater ; une *injonction* contre une créature charmée par elle échoue d'office.
 
-**Fait le 7 novembre** (Opus seul ; écrans approuvés tels qu'esquissés). ADR 0079.
+**Fait le 7 novembre** (Opus seul ; écrans approuvés tels qu'esquissés). ADR 0096.
 - **Majesté souveraine** : opération de réaction `attacker_save { ability, dc }` sur une attaque ; le serveur lance la sauvegarde avec les bonus de l'assaillant (lus seulement si une réaction en a besoin), un échec pose `forcedMiss` et l'attaque rate ; voyage dans le jet suspendu signé. Saisie dans « Opérations sur le jet ».
 - **Mante de majesté** : bloc `forced_save_failures` (sorts, état, imposé par la lanceuse), brique « Échec automatique d'une sauvegarde » de l'éditeur ; quand le MJ cible avec ce sort une créature charmée par la lanceuse, la sauvegarde n'est pas demandée et l'échec s'applique.
 - Vérifié : tests du noyau (sauvegarde ratée ou réussie, échec d'office selon la source de l'état) ; l'éditeur enregistre la brique (navigateur). **Le combat lui-même n'a pas été joué au navigateur.**
 
 *Restes* : « pour la première fois d'un tour » se compte une fois par tour pour la barde, pas par assaillant ; un état posé à la main par le MJ n'a pas de source, il ne suffit pas quand « par vous » est coché ; la condition « sous Mante de majesté » d'une réaction ne se saisit pas encore dans l'éditeur.
 
-### V3.1-180 — Textes français : recoller les phrases coupées par la mise en page du PDF (8 novembre)
+### V3.1-201 — Textes français : recoller les phrases coupées par la mise en page du PDF (8 novembre)
 
 **Modèle conseillé : Opus** (script contre la vraie base, contenu officiel).
 
@@ -6028,11 +6028,11 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
 
 *Restes* : le script d'import qui avait écrit ces descriptions (dons, aptitudes) n'est pas dans le dépôt (passe ponctuelle d'une session antérieure) : la prévention, c'est de relancer `fix-coupures-fr.ts` après une réimportation. Une quarantaine de descriptions portent encore un **tableau aplati en texte** (Corne du Valhalla, Bourse à malices, sorts de domaine…), autre défaut, pour un ticket à part.
 
-### V3.1-187 — Textes français : les tableaux aplatis redeviennent des tableaux, une puce par ligne (8 novembre)
+### V3.1-208 — Textes français : les tableaux aplatis redeviennent des tableaux, une puce par ligne (8 novembre)
 
 **Modèle conseillé : Opus** (script contre la vraie base, contenu officiel ; rendu des textes de règle).
 
-**Constat** (relevé pendant V3.1-180). Dans les traductions françaises du SRD 5.2.1, 40 descriptions finissent par un tableau du PDF aplati en une phrase (« 1d10 Type de dégâts 1d10 Type de dégâts 1 Acide 6 Nécrotiques… ») : 27 objets magiques, 9 aptitudes, 4 sorts. La dernière rangée manque souvent (l'import a perdu la dernière ligne de chaque fiche). Des listes à puces sont aussi écrites sur une seule ligne (« • a • b »).
+**Constat** (relevé pendant V3.1-201). Dans les traductions françaises du SRD 5.2.1, 40 descriptions finissent par un tableau du PDF aplati en une phrase (« 1d10 Type de dégâts 1d10 Type de dégâts 1 Acide 6 Nécrotiques… ») : 27 objets magiques, 9 aptitudes, 4 sorts. La dernière rangée manque souvent (l'import a perdu la dernière ligne de chaque fiche). Des listes à puces sont aussi écrites sur une seule ligne (« • a • b »).
 
 **Fait le 8 novembre** (Opus seul ; solution B de l'esquisse « Tableaux aplatis », choix de l'auteur, et une puce par ligne).
 - **Noyau** (tests d'abord) : `src/core/text/tableauxPdf.ts` — `lireBloc` relit un tableau dans la source française, où chaque rangée tient sur sa ligne (bruits de page sautés, cellule longue sur plusieurs lignes recollée, deux ou trois tableaux côte à côte remis en une colonne, nombre de rangées vérifié : un tableau qui ne se lit pas exactement est refusé) ; `blocEnTexte` l'écrit en lignes « a | b » ; `puceParLigne` ; `decouperLignesEtTableaux` pour le rendu.
@@ -6042,24 +6042,24 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
 
 *Restes* : quelques descriptions **commencent** au milieu d'une phrase (Cor du Valhalla : « (bronze) ou légendaire (fer) Souffler… ») — l'import a aussi perdu leur début ; *divination* finit par l'en-tête d'un autre sort (« Durée : instantanée ») ; « Autrache » est une coquille de la source, gardée telle quelle.
 
-### V3.1-188 — Textes français : le sous-titre des objets magiques remis en tête, le texte de *divination* retrouvé (8 novembre)
+### V3.1-209 — Textes français : le sous-titre des objets magiques remis en tête, le texte de *divination* retrouvé (8 novembre)
 
 **Modèle conseillé : Opus** (script contre la vraie base, contenu officiel).
 
-**Constat** (relevé pendant V3.1-187). 56 descriptions d'objets magiques (23 du SRD 5.1, 33 du 5.2.1) commencent par la fin de leur sous-titre, glissée là par l'extraction du PDF : « (bronze) ou légendaire (fer) Souffler dans le cor… », « (Harmonisation requise avec un Paladin) Vous recevez… ». *Divination* (5.2.1) n'a pour description que la fin de son en-tête (« 25 po, que le sort détruit) Durée : instantanée ») : son texte, dans la source, a été déplacé par la mise en page au milieu de *domination de monstre*.
+**Constat** (relevé pendant V3.1-208). 56 descriptions d'objets magiques (23 du SRD 5.1, 33 du 5.2.1) commencent par la fin de leur sous-titre, glissée là par l'extraction du PDF : « (bronze) ou légendaire (fer) Souffler dans le cor… », « (Harmonisation requise avec un Paladin) Vous recevez… ». *Divination* (5.2.1) n'a pour description que la fin de son en-tête (« 25 po, que le sort détruit) Durée : instantanée ») : son texte, dans la source, a été déplacé par la mise en page au milieu de *domination de monstre*.
 
 **Fait le 8 novembre** (Opus seul).
 - **Noyau** (tests d'abord) : `src/core/text/sousTitresPdf.ts` — `fragmentDeSousTitre` (parenthèses et mots de rareté en tête, suivis d'une majuscule), `retrouverSousTitre` (relit le sous-titre entier dans la source, **sous le titre de l'objet** : deux objets commencent parfois par la même phrase, et sans le titre *voleuse de neuf vies* aurait pris le sous-titre d'un bâton), `paragraphesDeLaSource` (un passage déplacé, un paragraphe par phrase finie).
 - **Script** `scripts/fix-debuts-fr.ts`, à blanc par défaut, `--write`, relançable : le sous-titre entier remis en tête de 56 descriptions, en italique (« *Objet merveilleux, rare (argent ou airain), très rare (bronze) ou légendaire (fer)* ») — garder le sous-titre plutôt que couper le fragment conserve une précision (« avec un Paladin », les armes admises) ; le texte de *divination* relu dans la source. 57 fiches, aucun refus ; relancé à blanc : 0. Sauvegarde des traductions d'avant hors du dépôt.
-- Vérifié au navigateur (Banc d'essai) : Cor du Valhalla (sous-titre en tête, puis le tableau de V3.1-187), *Divination* (deux paragraphes).
+- Vérifié au navigateur (Banc d'essai) : Cor du Valhalla (sous-titre en tête, puis le tableau de V3.1-208), *Divination* (deux paragraphes).
 
 *Restes* : l'en-tête de 24 sorts est mal lu dans leurs traductions françaises (durée vide, composantes incomplètes : *divination* n'a ni durée ni composante M, *arrêt du temps*, *simulacre*…) — autre défaut, tâche à part.
 
-### V3.1-189 — Textes français : l'en-tête des sorts mal lu à l'import, relu dans la source (8 novembre)
+### V3.1-210 — Textes français : l'en-tête des sorts mal lu à l'import, relu dans la source (8 novembre)
 
 **Modèle conseillé : Opus** (script contre la vraie base, contenu officiel).
 
-**Constat** (relevé pendant V3.1-188). Dans les traductions françaises, le bloc `spell_casting` de plusieurs sorts a un en-tête mal lu : durée vide, composante matérielle perdue (*divination* : ni durée ni M), parfois une portée ou un matériau d'un autre sort. Cause : l'import d'origine (`translate-spell-descriptions-2024-fr.ts`) arrêtait une valeur dès qu'une ligne commençait par un chiffre (« M (encens d'une valeur minimale de⏎25 po…) »), et ne lisait plus la durée.
+**Constat** (relevé pendant V3.1-209). Dans les traductions françaises, le bloc `spell_casting` de plusieurs sorts a un en-tête mal lu : durée vide, composante matérielle perdue (*divination* : ni durée ni M), parfois une portée ou un matériau d'un autre sort. Cause : l'import d'origine (`translate-spell-descriptions-2024-fr.ts`) arrêtait une valeur dès qu'une ligne commençait par un chiffre (« M (encens d'une valeur minimale de⏎25 po…) »), et ne lisait plus la durée.
 
 **Fait le 8 novembre** (Opus seul).
 - **Noyau** (tests d'abord, 7 cas) : `src/core/text/enTeteSortPdf.ts` — `lireEnTeteDeSort` cherche le sort par son titre français **suivi de sa ligne d'école** (« Divination du 5e niveau (rituel) », « Sort mineur de transmutation » ; un titre dans une liste de sorts, suivi de l'en-tête d'un AUTRE sort, n'est pas pris), saute les pieds de page des deux éditions, et continue une valeur tant que ses parenthèses ne sont pas fermées, qu'elle finit sur un mot de liaison (« action (Embroussaillement) ou⏎8 heures ») ou que la ligne suivante commence par une minuscule. Rituel : dans le temps d'incantation (2024) ou sur la ligne d'école (2014).
@@ -6068,11 +6068,11 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
 
 *Restes* : l'écart avec le bloc anglais de base n'a pas servi de preuve (2014 et 2024 diffèrent : *message*, *coup au but*) ; si une donnée anglaise est fausse, c'est un autre ticket.
 
-### V3.1-190 — Une sous-classe lanceuse : sa liste de sorts et son budget, choisis à la création (8 novembre)
+### V3.1-211 — Une sous-classe lanceuse : sa liste de sorts et son budget, choisis à la création (8 novembre)
 
-**Constat.** L'Arnaqueur arcanique avait ses emplacements (V3.1-185) mais ne pouvait choisir aucun sort : l'étape Sorts de l'assistant ne lit que la progression et la liste de la classe, et le Roublard n'en a pas.
+**Constat.** L'Arnaqueur arcanique avait ses emplacements (V3.1-206) mais ne pouvait choisir aucun sort : l'étape Sorts de l'assistant ne lit que la progression et la liste de la classe, et le Roublard n'en a pas.
 
-**Fait le 8 novembre** (Opus seul ; écran tel qu'esquissé). ADR 0080.
+**Fait le 8 novembre** (Opus seul ; écran tel qu'esquissé). ADR 0097.
 - **Noyau** (tests d'abord) : `subclass_spellcasting` gagne `spell_list` et, par ligne, `cantrips` et `prepared` ; `subclassSpellBudget` ; `buildHomebrewSubclassEntry` garde les emplacements d'avant sur une ligne de budget seul.
 - **Assistant** : l'étape Sorts s'ouvre pour une sous-classe lanceuse et propose les sorts de sa liste, au bon nombre (sorts mineurs, sorts préparés jusqu'au plus haut emplacement).
 - **Formulaire de sous-classe** : « Sorts de : Magicien » et les colonnes « Mineurs » et « Préparés » ; la page de la règle les montre.
@@ -6081,9 +6081,9 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
 
 ### V3.1-191 — « Sauvegarde contre vos sorts » : désavantage, état de la lanceuse (8 novembre)
 
-**Constat.** Embuscade magique — la cible a le désavantage à sa sauvegarde si l'Arnaqueur est Invisible — ne s'écrivait pas : la règle de V3.1-186 ne savait qu'un échec d'office, selon un état de la cible.
+**Constat.** Embuscade magique — la cible a le désavantage à sa sauvegarde si l'Arnaqueur est Invisible — ne s'écrivait pas : la règle de V3.1-207 ne savait qu'un échec d'office, selon un état de la cible.
 
-**Fait le 8 novembre** (Opus seul ; écran tel qu'esquissé). ADR 0080.
+**Fait le 8 novembre** (Opus seul ; écran tel qu'esquissé). ADR 0097.
 - **Noyau** (tests d'abord) : `forced_save_failures` s'élargit (`outcome`, `caster_condition`, sorts facultatifs) ; `saveRuleOutcome` (l'échec l'emporte) ; les règles déjà écrites gardent leur sens.
 - **Serveur** : les états de la lanceuse (sa ligne de combat et ses effets) ; le désavantage part dans la demande de sauvegarde (`roll_mode`, libellé « · désavantage »), et le serveur lance avec.
 - **Éditeur** : la brique « Sauvegarde contre vos sorts » — Résultat, Si (la cible / vous) et l'état, Contre (tous vos sorts / ces sorts).
@@ -6093,8 +6093,8 @@ Détail dans [`12-regles-jouables.md`](12-regles-jouables.md). Par Opus.
 
 ### V3.1-192 — Frappe malicieuse du Roublard jouable, et Omniprésence (8 novembre)
 
-**Fait le 8 novembre** (Opus seul). ADR 0080.
+**Fait le 8 novembre** (Opus seul). ADR 0097.
 - **Données SRD** (`playable-2024.json`, réimport des aptitudes) : Frappe malicieuse — Croc-en-jambe (JS Dex, sinon À terre), Poison (JS Con, sinon Empoisonné), Repli —, JS contre 8 + Dex + maîtrise ; les manques dits (dé d'Attaque sournoise retiré à la main, taille, sauvegarde répétée du Poison). Test de la donnée.
 - **« DnD 2024 »** : Omniprésence devient une utilisation « Second croc-en-jambe » (mêmes briques) ; la distance à la main du mage attend le plan de combat.
-- En revérifiant les textes après le réimport : `recollerCoupures` (V3.1-180) aurait recollé les rangées des tableaux de V3.1-187 ; corrigé avant toute écriture.
+- En revérifiant les textes après le réimport : `recollerCoupures` (V3.1-201) aurait recollé les rangées des tableaux de V3.1-208 ; corrigé avant toute écriture.
 

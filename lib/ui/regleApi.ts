@@ -68,7 +68,7 @@ export async function enregistrerBriques(worldSlug: string, corps: Record<string
 }
 
 /**
- * V3.1-181 — « Rendre jouable » une aptitude de sous-classe : crée (ou
+ * V3.1-202 — « Rendre jouable » une aptitude de sous-classe : crée (ou
  * retrouve) sa fiche à briques dans la variante active du monde et rend sa
  * clé. Deux appels, au clic seulement : la variante active, puis la création.
  */

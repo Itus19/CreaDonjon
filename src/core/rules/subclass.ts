@@ -28,7 +28,7 @@ export interface SubclassInfo {
  * Identifiant stable d'une aptitude d'après son nom (« Elemental Affinity » →
  * `elemental-affinity`). Il entre dans la clé des choix stockés et dans celle
  * de la fiche à briques de l'aptitude (`<sous-classe>-<identifiant>`).
- * V3.1-181 : les accents sont retirés avant le reste (`slugify`), au lieu de
+ * V3.1-202 : les accents sont retirés avant le reste (`slugify`), au lieu de
  * couper le mot (« Magie envoûtante » → `magie-envoutante`, pas
  * `magie-envo-tante`) ; un nom anglais, sans accent, garde sa clé d'avant.
  */
@@ -36,7 +36,7 @@ export function subclassFeatureSlug(name: string): string {
   return slugify(name);
 }
 
-/** La clé de la fiche qui porte les briques jouables d'une aptitude de sous-classe (V3.1-163, V3.1-181) — celle que lit le ruleset résolu. */
+/** La clé de la fiche qui porte les briques jouables d'une aptitude de sous-classe (V3.1-163, V3.1-202) — celle que lit le ruleset résolu. */
 export function subclassFeatureEntryKey(subclassKey: string, featureName: string): string {
   return `${subclassKey}-${subclassFeatureSlug(featureName)}`;
 }

@@ -57,7 +57,7 @@ const zPendingRoll = z.object({
   dc: z.number().int().nullable(),
   acBonus: z.number(),
   damage: z.object({ base: z.number(), multiplier: z.number() }).nullable(),
-  // V3.1-186 : sauvegardes de l'assaillant (Majesté souveraine) et l'attaque ratée qui en résulte.
+  // V3.1-207 : sauvegardes de l'assaillant (Majesté souveraine) et l'attaque ratée qui en résulte.
   rollerSaves: z.partialRecord(z.enum(["str", "dex", "con", "int", "wis", "cha"]), z.number()).optional(),
   forcedMiss: z.boolean().optional(),
 });

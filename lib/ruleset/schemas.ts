@@ -112,7 +112,7 @@ export const createHomebrewSubclassSchema = z.object({
         name: z.string().max(120, "120 caractères maximum."),
         level: z.number().int().min(1, "Niveau entre 1 et 20.").max(20, "Niveau entre 1 et 20."),
         description: z.string().max(2000, "2 000 caractères maximum."),
-        /** V3.1-182 : les sorts que l'aptitude accorde (toujours préparés, lancés sans emplacement). */
+        /** V3.1-203 : les sorts que l'aptitude accorde (toujours préparés, lancés sans emplacement). */
         spells: z
           .array(
             z.object({
@@ -127,12 +127,12 @@ export const createHomebrewSubclassSchema = z.object({
     )
     .max(30, "30 aptitudes maximum.")
     .refine((features) => features.some((f) => f.name.trim().length > 0), "Ajoute au moins une aptitude nommée."),
-  /** V3.1-185 : une sous-classe qui lance des sorts — caractéristique, poids au multiclassage, table d'emplacements. */
+  /** V3.1-206 : une sous-classe qui lance des sorts — caractéristique, poids au multiclassage, table d'emplacements. */
   spellcasting: z
     .object({
       ability: z.enum(["str", "dex", "con", "int", "wis", "cha"]),
       fraction: z.enum(["full", "half", "third"]),
-      /** V3.1-190 : la liste où choisir les sorts (clé de classe). */
+      /** V3.1-211 : la liste où choisir les sorts (clé de classe). */
       spellList: z.string().trim().min(1).max(80).regex(/^[a-z0-9_-]+$/).optional(),
       rows: z
         .array(
@@ -206,7 +206,7 @@ export const replaceHomebrewEntrySchema = z.object({
   entry: zImportEntry.omit({ entry_key: true }),
 });
 
-/** V3.1-181 — rendre jouable une aptitude de sous-classe : sa position dans le bloc `subclass_features` de la sous-classe. */
+/** V3.1-202 — rendre jouable une aptitude de sous-classe : sa position dans le bloc `subclass_features` de la sous-classe. */
 export const ensureSubclassFeatureEntrySchema = z.object({
   rulesetId: z.string().uuid(),
   subclassKey: z.string().trim().min(1).max(80).regex(/^[a-z0-9_-]+$/),

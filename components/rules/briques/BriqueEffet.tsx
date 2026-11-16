@@ -257,7 +257,7 @@ function ChampsEtat({
     <>
       <ChampListe libelle={t("etat")} valeur={effet.cle} options={avecValeur(options, effet.cle)} onChange={(cle) => maj({ cle })} />
       <ChampsDuree duree={effet.duree} concentration={effet.concentration} finSi={effet.finSi} maj={maj} />
-      {/* V3.1-197 (ADR 0090) : la cible refait son JS à la fin de chacun de ses tours ; par défaut, celui du jet au-dessus. */}
+      {/* V3.1-197 (ADR 0098) : la cible refait son JS à la fin de chacun de ses tours ; par défaut, celui du jet au-dessus. */}
       <div className="sm:col-span-2 lg:col-span-3">
         <Checkbox
           checked={effet.jsRepete !== null}
@@ -289,7 +289,7 @@ function caracDuJet(jet: { ability: string } | null | undefined): (typeof CARACS
 }
 
 /**
- * V3.1-197 (ADR 0090 §3) : « Accorder une utilisation » — le nom de l'effet, l'utilisation qu'il accorde tant
+ * V3.1-197 (ADR 0098 §3) : « Accorder une utilisation » — le nom de l'effet, l'utilisation qu'il accorde tant
  * qu'il dure (une autre de cette aptitude), puis sa durée, sa concentration et ses fins.
  */
 function ChampsJeton({ effet, maj }: { effet: Extract<BrouillonEffet, { type: "grant_token" }>; maj: (c: Partial<CorpsEffet>) => void }) {

@@ -42,9 +42,9 @@ export const BLOCK_TYPES = [
   "background",
   "condition_effects",
   "subclass_features",
-  // V3.1-185 : une sous-classe qui lance des sorts (tiers de lanceur).
+  // V3.1-206 : une sous-classe qui lance des sorts (tiers de lanceur).
   "subclass_spellcasting",
-  // V3.1-186 : une sauvegarde qui échoue d'office (Mante de majesté).
+  // V3.1-207 : une sauvegarde qui échoue d'office (Mante de majesté).
   "forced_save_failures",
   "species_traits",
   "class_equipment",
@@ -488,7 +488,7 @@ export const zSubclassFeatureEntry = z.object({
 export const zSubclassFeaturesBlockData = z.object({ features: z.array(zSubclassFeatureEntry) });
 export type SubclassFeaturesBlockData = z.infer<typeof zSubclassFeaturesBlockData>;
 
-// --- subclass_spellcasting (V3.1-185) -----------------------------------
+// --- subclass_spellcasting (V3.1-206) -----------------------------------
 // Une sous-classe qui donne l'incantation à une classe qui ne l'a pas
 // (Arnaqueur arcanique, Chevalier occulte) : caractéristique, poids dans la
 // table du multiclassé (2024 : le tiers, arrondi à l'inférieur), et sa propre
@@ -498,14 +498,14 @@ export type SubclassFeaturesBlockData = z.infer<typeof zSubclassFeaturesBlockDat
 export const zSubclassSpellcastingBlockData = z.object({
   ability: z.enum(["str", "dex", "con", "int", "wis", "cha"]),
   caster_weight: z.object({ fraction: z.enum(["full", "half", "third"]), rounding: z.enum(["up", "down"]) }),
-  /** V3.1-190 : la liste de sorts où choisir (clé de classe : « wizard » pour l'Arnaqueur arcanique). Absente : rien à choisir. */
+  /** V3.1-211 : la liste de sorts où choisir (clé de classe : « wizard » pour l'Arnaqueur arcanique). Absente : rien à choisir. */
   spell_list: z.string().min(1).optional(),
   slots: z
     .array(
       z.object({
         level: z.number().int().min(1).max(20),
         counts: z.array(z.number().int().nonnegative()).max(9),
-        /** V3.1-190 : sorts mineurs et sorts préparés à ce niveau ; absents : ceux de la ligne d'avant. */
+        /** V3.1-211 : sorts mineurs et sorts préparés à ce niveau ; absents : ceux de la ligne d'avant. */
         cantrips: z.number().int().nonnegative().optional(),
         prepared: z.number().int().nonnegative().optional(),
       })
@@ -514,7 +514,7 @@ export const zSubclassSpellcastingBlockData = z.object({
 });
 export type SubclassSpellcastingBlockData = z.infer<typeof zSubclassSpellcastingBlockData>;
 
-// --- forced_save_failures (V3.1-186) ------------------------------------
+// --- forced_save_failures (V3.1-207) ------------------------------------
 // « Une créature Charmée par vous rate automatiquement son jet de sauvegarde
 // contre toute injonction que vous lancez » : des sorts (clés), l'état que
 // porte la cible, et s'il doit venir de la lanceuse. Porté par la fiche de

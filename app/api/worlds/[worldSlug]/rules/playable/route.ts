@@ -14,7 +14,7 @@ const bodySchema = z
     resources: zRuleResourcesBlockData.nullable().optional(),
     activation: zActivationBlockData.nullable().optional(),
     coverage: zCoverageBlockData.nullable().optional(),
-    // V3.1-186 : les échecs automatiques d'une sauvegarde (Mante de majesté).
+    // V3.1-207 : les échecs automatiques d'une sauvegarde (Mante de majesté).
     forced_save_failures: zForcedSaveFailuresBlockData.nullable().optional(),
   })
   .strict();

@@ -26,7 +26,7 @@ function aptitudesDuBloc(data: unknown): AptitudeLue[] {
 }
 
 /**
- * V3.1-181 (esquisse, solution A) — Sur la page d'une sous-classe maison,
+ * V3.1-202 (esquisse, solution A) — Sur la page d'une sous-classe maison,
  * chaque aptitude dit si elle est jouable et porte son geste : « Rendre
  * jouable » crée sa fiche à briques (`<sous-classe>-<aptitude>`, celle que lit
  * le moteur) puis ouvre l'éditeur de briques ; « Modifier les briques » le

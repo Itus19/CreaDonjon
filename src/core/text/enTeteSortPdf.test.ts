@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { lireEnTeteDeSort } from "./enTeteSortPdf";
 
-/** V3.1-189 — l'en-tête d'un sort, relu dans le texte extrait du PDF du SRD français. */
+/** V3.1-210 — l'en-tête d'un sort, relu dans le texte extrait du PDF du SRD français. */
 describe("lireEnTeteDeSort", () => {
   it("2024 : une composante matérielle sur deux lignes, la seconde commençant par un chiffre (le cas de divination)", () => {
     const l = ["Divination", "", "Divination du 4e niveau (Clerc, Druide, Magicien)", "Temps d’incantation : action ou rituel", "Portée : personnelle", "Composantes : V, S, M (encens d’une valeur minimale de ", "", "25 po, que le sort détruit)", "Durée : instantanée", "", "=== page 138 ===", "Domination de monstre"];

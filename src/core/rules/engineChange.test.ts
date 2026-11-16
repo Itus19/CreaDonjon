@@ -34,7 +34,7 @@ describe("la demande de lecture signée (V3.1-107, ADR 0069)", () => {
   });
 });
 
-describe("V3.1-200 (ADR 0091) — la demande de sauvegarde signée", () => {
+describe("V3.1-200 (ADR 0099) — la demande de sauvegarde signée", () => {
   const demande = {
     kind: "save_request" as const,
     id: "9b2f8a64-1c1e-4f0a-8a55-0b9f2d1e6c11",

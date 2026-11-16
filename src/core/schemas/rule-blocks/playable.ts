@@ -20,7 +20,7 @@ export const zPassage = z.string().trim().min(1).max(2000);
 export const RULE_RECHARGES = ["short_rest", "short_rest_one", "long_rest", "dawn", "never"] as const;
 
 /**
- * ADR 0078 (V3.1-183) — regagner une utilisation en dépensant autre chose :
+ * ADR 0095 (V3.1-204) — regagner une utilisation en dépensant autre chose :
  * une autre ressource (Magie envoûtante contre une Inspiration bardique), ou
  * un emplacement de sort d'un niveau minimal (Mante de majesté, niveau 3+).
  */
@@ -37,7 +37,7 @@ export const zRuleResource = z.object({
   /** Formule : `column.<clé>` (progression de la classe qui accorde la fiche), `class.level`, `level`, `ability.*`, `proficiency`. */
   max: zFormulaNode,
   recharge: z.enum(RULE_RECHARGES),
-  /** ADR 0078 : regagner une utilisation en dépensant autre chose. Absent : seulement au repos. */
+  /** ADR 0095 : regagner une utilisation en dépensant autre chose. Absent : seulement au repos. */
   regain: zResourceRegain.optional(),
   /** V3.1-132 : le passage du texte de la règle dont vient la brique (surligné à côté de l'éditeur). */
   passage: zPassage.optional(),
@@ -115,7 +115,7 @@ export const zRollTrigger = z
 export type RollTrigger = z.infer<typeof zRollTrigger>;
 
 /**
- * V3.1-184 : « aussitôt après avoir lancé un sort d'Enchantement ou d'Illusion
+ * V3.1-205 : « aussitôt après avoir lancé un sort d'Enchantement ou d'Illusion
  * par un emplacement de sort » (Magie envoûtante). Pas une réaction : la fiche
  * propose l'utilisation juste après le lancer, qui reste jouable au clic.
  * `schools` absent : toute école ; `with_slot` : un emplacement dépensé (pas un
@@ -139,7 +139,7 @@ export const zRollOperation = z.discriminatedUnion("op", [
   z.object({ op: z.literal("ac_bonus"), value: zFormulaNode }),
   z.object({ op: z.literal("damage_multiplier"), factor: z.number().positive() }),
   z.object({ op: z.literal("add_damage"), formula: zFormulaNode, damage_type: z.string().min(1).optional() }),
-  /** V3.1-186 : l'assaillant fait une sauvegarde contre `dc` ; échec : l'attaque rate (Majesté souveraine). */
+  /** V3.1-207 : l'assaillant fait une sauvegarde contre `dc` ; échec : l'attaque rate (Majesté souveraine). */
   z.object({ op: z.literal("attacker_save"), ability: z.enum(["str", "dex", "con", "int", "wis", "cha"]), dc: zFormulaNode }),
 ]);
 export type RollOperation = z.infer<typeof zRollOperation>;
@@ -182,7 +182,7 @@ export const zActivation = z.object({
   targets: zActivationTargets,
   effects: zEffectList,
   variants: z.array(zActivationVariant).nullable(),
-  /** V3.1-159 (ADR 0075) : absent, l'activation se joue au clic ; `roll`, en réaction à un jet ; `spell_cast` (V3.1-184), proposée après un sort. */
+  /** V3.1-159 (ADR 0075) : absent, l'activation se joue au clic ; `roll`, en réaction à un jet ; `spell_cast` (V3.1-205), proposée après un sort. */
   trigger: zActivationTrigger.optional(),
   /** V3.1-159 : ce que la réaction fait au jet en cours. */
   roll_operations: z.array(zRollOperation).optional(),

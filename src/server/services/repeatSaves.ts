@@ -16,7 +16,7 @@ import { targetSaveBonus } from "@/src/server/services/participantSave";
 type TypedClient = SupabaseClient<Database>;
 
 /**
- * V3.1-195 (ADR 0090) — le JS répété à la fin du tour du porteur (Magie
+ * V3.1-195 (ADR 0098) — le JS répété à la fin du tour du porteur (Magie
  * envoûtante, la plupart des sorts « la cible refait son jet à la fin de
  * chacun de ses tours »). Appelé par la bascule de tour, au MJ seulement :
  * lecture et écriture directes. Le dé est lancé par le serveur (règle 8),

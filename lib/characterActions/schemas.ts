@@ -188,7 +188,7 @@ export const resourceUsageSchema = z.object({
   delta: z.number().int(),
 });
 
-/** ADR 0078 (V3.1-183) — regagner une utilisation en dépensant autre chose : une INTENTION, le serveur vérifie le coût et l'écrit. */
+/** ADR 0095 (V3.1-204) — regagner une utilisation en dépensant autre chose : une INTENTION, le serveur vérifie le coût et l'écrit. */
 export const resourceRegainSchema = z.object({
   campaignId: campaignIdField,
   resourceKey: z.string().min(1).max(80),
