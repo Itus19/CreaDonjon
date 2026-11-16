@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { attackSight, canSee, lightAt, perceptionConditions, targetingRefusal, type Perceiver, type PerceptionWorld } from "./perception";
+import { attackSight, canSee, lightAt, perceptionConditions, sensesFromStatBlock, targetingRefusal, type Perceiver, type PerceptionWorld } from "./perception";
 import { characterSheet } from "./sheet";
 
 /**
@@ -119,5 +119,14 @@ describe("la fiche : lumière émise, cibles interdites, immunité à un sort", 
 describe("perceptionConditions : un état posé par le moteur ou par le menu du MJ", () => {
   it("« Aveuglé », « Invisible », « Caché » valent blinded, invisible, hidden ; le reste ne change pas", () => {
     expect(perceptionConditions(["Aveuglé", "Invisible", "Caché", "prone", "Empoigné"])).toEqual(["blinded", "invisible", "hidden", "prone", "Empoigné"]);
+  });
+});
+
+describe("sensesFromStatBlock : les sens d'un bloc de stats, en mètres", () => {
+  it("le JSON du SRD (pieds), le texte d'un bloc du wiki (mètres ou pieds), et la Perception passive", () => {
+    expect(sensesFromStatBlock({ darkvision: "60 ft.", passive_perception: "9" })).toEqual({ senses: { darkvision: 18 }, passivePerception: 9 });
+    expect(sensesFromStatBlock("vision dans le noir 18 m, vision véritable 36 m, Perception passive 14")).toEqual({ senses: { darkvision: 18, truesight: 36 }, passivePerception: 14 });
+    expect(sensesFromStatBlock("blindsight 30 ft., passive Perception 10")).toEqual({ senses: { blindsight: 9 }, passivePerception: 10 });
+    expect(sensesFromStatBlock(undefined)).toEqual({ senses: {}, passivePerception: null });
   });
 });

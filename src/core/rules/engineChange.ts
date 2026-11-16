@@ -80,7 +80,16 @@ const zSaveRequestChange = z
   })
   .strict();
 
-const zChange = z.union([zStateChange, zEffectAdd, zEffectRemove, zTurnUsageChange, zSaveRequestChange]);
+/** V3.1-181 (ADR 0078) : le masquage recalculé par le serveur et le total de Discrétion d'un Caché ; la base l'accepte depuis la migration du 181. */
+const zPerceptionChange = z
+  .object({
+    kind: z.literal("perception"),
+    id: z.string().uuid(),
+    perception: z.object({ hidden_from_players: z.boolean().optional(), stealth_total: z.number().int().min(-10).max(60).nullable().optional() }).strict(),
+  })
+  .strict();
+
+const zChange = z.union([zStateChange, zEffectAdd, zEffectRemove, zTurnUsageChange, zSaveRequestChange, zPerceptionChange]);
 
 export const zEngineChange = z
   .object({

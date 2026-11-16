@@ -46,6 +46,8 @@ function participant(extra: Partial<CombatParticipantRow> & { id: string }): Com
     created_at: "2026-10-24T00:00:00Z",
     pos_x: null,
     pos_y: null,
+    hidden_from_players: false,
+    stealth_total: null,
     ...extra,
   };
 }

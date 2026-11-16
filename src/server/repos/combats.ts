@@ -14,9 +14,11 @@ export interface CombatRow {
   status: string;
   created_at: string;
   updated_at: string;
+  /** V3.1-181 (ADR 0078) : la lumière ambiante du combat (`bright`, `dim`, `dark`), réglée par le MJ. */
+  lighting: string;
 }
 
-const COMBAT_COLUMNS = "id, campaign_id, session_id, name, round, turn_index, status, created_at, updated_at";
+const COMBAT_COLUMNS = "id, campaign_id, session_id, name, round, turn_index, status, created_at, updated_at, lighting";
 
 export async function insertCombat(
   supabase: TypedClient,
@@ -65,7 +67,7 @@ export async function listCombatsForCampaign(supabase: TypedClient, campaignId: 
 export async function updateCombat(
   supabase: TypedClient,
   id: string,
-  patch: { name?: string | null; round?: number; turnIndex?: number; status?: string; sessionId?: string }
+  patch: { name?: string | null; round?: number; turnIndex?: number; status?: string; sessionId?: string; lighting?: "bright" | "dim" | "dark" }
 ): Promise<CombatRow> {
   const update: Database["public"]["Tables"]["combats"]["Update"] = {};
   if (patch.sessionId !== undefined) update.session_id = patch.sessionId;
@@ -73,6 +75,7 @@ export async function updateCombat(
   if (patch.round !== undefined) update.round = patch.round;
   if (patch.turnIndex !== undefined) update.turn_index = patch.turnIndex;
   if (patch.status !== undefined) update.status = patch.status;
+  if (patch.lighting !== undefined) update.lighting = patch.lighting;
   const { data, error } = await supabase.from("combats").update(update).eq("id", id).select(COMBAT_COLUMNS).single();
   if (error) throw new Error(error.message);
   return data;
@@ -102,10 +105,14 @@ export interface CombatParticipantRow {
   /** V3.1-169 (ADR 0077) : position sur le plan, en mètres ; `null` tant que le jeton n'est pas posé. */
   pos_x: number | null;
   pos_y: number | null;
+  /** V3.1-181 (ADR 0078) : drapeau d'accès — aucun PJ ne voit la créature ; la vue des joueuses la masque. */
+  hidden_from_players: boolean;
+  /** V3.1-181 : total du test de Discrétion d'un Caché (lancé par le serveur). */
+  stealth_total: number | null;
 }
 
 const PARTICIPANT_COLUMNS =
-  "id, combat_id, source_kind, entity_id, rule_key, label, initiative, ac, hp_max, hp_current, temp_hp, conditions, concentration, resources_used, turn_usage, is_ally, display_order, created_at, pos_x, pos_y";
+  "id, combat_id, source_kind, entity_id, rule_key, label, initiative, ac, hp_max, hp_current, temp_hp, conditions, concentration, resources_used, turn_usage, is_ally, display_order, created_at, pos_x, pos_y, hidden_from_players, stealth_total";
 
 export async function listCombatParticipants(supabase: TypedClient, combatId: string): Promise<CombatParticipantRow[]> {
   const { data, error } = await supabase
@@ -174,6 +181,9 @@ export interface CombatParticipantPatch {
   turnUsage?: Json;
   /** V3.1-169 : la position sur le plan (les deux ensemble, `null` pour retirer le jeton). */
   position?: { x: number; y: number } | null;
+  /** V3.1-181 : le masquage (drapeau d'accès) et le total de Discrétion d'un Caché. */
+  hiddenFromPlayers?: boolean;
+  stealthTotal?: number | null;
 }
 
 export async function updateCombatParticipant(
@@ -191,6 +201,8 @@ export async function updateCombatParticipant(
   if (patch.concentration !== undefined) update.concentration = patch.concentration;
   if (patch.resourcesUsed !== undefined) update.resources_used = patch.resourcesUsed;
   if (patch.turnUsage !== undefined) update.turn_usage = patch.turnUsage;
+  if (patch.hiddenFromPlayers !== undefined) update.hidden_from_players = patch.hiddenFromPlayers;
+  if (patch.stealthTotal !== undefined) update.stealth_total = patch.stealthTotal;
   if (patch.position !== undefined) {
     update.pos_x = patch.position?.x ?? null;
     update.pos_y = patch.position?.y ?? null;

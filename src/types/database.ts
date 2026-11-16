@@ -973,6 +973,7 @@ export type Database = {
           display_order: number
           entity_id: string | null
           hp_current: number | null
+          hidden_from_players: boolean
           hp_max: number | null
           id: string
           initiative: number | null
@@ -983,6 +984,7 @@ export type Database = {
           resources_used: Json
           rule_key: string | null
           source_kind: string
+          stealth_total: number | null
           temp_hp: number
           turn_usage: Json
         }
@@ -995,6 +997,7 @@ export type Database = {
           display_order?: number
           entity_id?: string | null
           hp_current?: number | null
+          hidden_from_players?: boolean
           hp_max?: number | null
           id?: string
           initiative?: number | null
@@ -1005,6 +1008,7 @@ export type Database = {
           resources_used?: Json
           rule_key?: string | null
           source_kind: string
+          stealth_total?: number | null
           temp_hp?: number
           turn_usage?: Json
         }
@@ -1017,6 +1021,7 @@ export type Database = {
           display_order?: number
           entity_id?: string | null
           hp_current?: number | null
+          hidden_from_players?: boolean
           hp_max?: number | null
           id?: string
           initiative?: number | null
@@ -1027,6 +1032,7 @@ export type Database = {
           resources_used?: Json
           rule_key?: string | null
           source_kind?: string
+          stealth_total?: number | null
           temp_hp?: number
           turn_usage?: Json
         }
@@ -1052,6 +1058,7 @@ export type Database = {
           campaign_id: string
           created_at: string
           id: string
+          lighting: string
           name: string | null
           round: number
           session_id: string | null
@@ -1063,6 +1070,7 @@ export type Database = {
           campaign_id: string
           created_at?: string
           id?: string
+          lighting?: string
           name?: string | null
           round?: number
           session_id?: string | null
@@ -1074,6 +1082,7 @@ export type Database = {
           campaign_id?: string
           created_at?: string
           id?: string
+          lighting?: string
           name?: string | null
           round?: number
           session_id?: string | null

@@ -124,3 +124,42 @@ const ETATS_VUE: Record<string, "blinded" | "invisible" | "hidden"> = {
 export function perceptionConditions(conditions: readonly string[]): string[] {
   return conditions.map((c) => ETATS_VUE[c.trim().toLowerCase()] ?? c);
 }
+
+/** Les noms d'un sens dans un bloc de stats, en anglais (SRD) ou en français (wiki), vers la clé de `Perceiver.senses`. */
+const NOMS_DE_SENS: [RegExp, keyof Perceiver["senses"]][] = [
+  [/darkvision|vision dans le noir/i, "darkvision"],
+  [/blindsight|perception aveugle|vision aveugle/i, "blindsight"],
+  [/tremorsense|perception des vibrations/i, "tremorsense"],
+  [/truesight|vision v[ée]ritable/i, "truesight"],
+];
+
+/** « 60 ft. » → 18 (1,5 m pour 5 pieds, comme le SRD français) ; « 18 m » → 18. */
+function metres(texte: string): number | null {
+  const m = /(\d+(?:[.,]\d+)?)\s*(ft|feet|pieds?|m\b|mètres?)/i.exec(texte);
+  if (!m) return null;
+  const n = Number(m[1].replace(",", "."));
+  return /^(ft|feet|pied)/i.test(m[2]) ? Math.round(n * 0.3 * 100) / 100 : n;
+}
+
+/**
+ * V3.1-181 — les sens d'une créature d'après son bloc de stats : un objet
+ * (`senses` du JSON du SRD, valeurs en pieds) ou un texte (bloc `statblock`
+ * du wiki). Ce qui ne se lit pas est laissé de côté : on ne devine pas.
+ */
+export function sensesFromStatBlock(raw: Readonly<Record<string, string>> | string | undefined): { senses: Perceiver["senses"]; passivePerception: number | null } {
+  const senses: Perceiver["senses"] = {};
+  let passivePerception: number | null = null;
+  if (!raw) return { senses, passivePerception };
+  const morceaux = typeof raw === "string" ? raw.split(/[,;]/) : Object.entries(raw).map(([k, v]) => `${k.replace(/_/g, " ")} ${v}`);
+  for (const m of morceaux) {
+    if (/passive|passive_perception|perception passive/i.test(m)) {
+      const n = /(-?\d+)/.exec(m);
+      if (n) passivePerception = Number(n[1]);
+      continue;
+    }
+    const sens = NOMS_DE_SENS.find(([re]) => re.test(m));
+    const portee = metres(m);
+    if (sens && portee !== null) senses[sens[1]] = portee;
+  }
+  return { senses, passivePerception };
+}

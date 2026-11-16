@@ -1,17 +1,29 @@
--- Réunit deux versions concurrentes de `apply_engine_change`.
+-- V3.1-181 (ADR 0078) — la perception en combat, et la réunion de deux
+-- versions concurrentes de `apply_engine_change`.
 --
--- Deux migrations portant la même version (`20261108120000`), écrites sur
--- deux branches, redéfinissaient chacune la fonction entière :
---   - `combat_positions` (V3.1-169, ADR 0077) admettait `budget.moved`, les
---     mètres parcourus pendant le tour ;
---   - `player_save_requests` (V3.1-200, ADR 0099) ajoutait le genre
---     `save_request`.
--- Appliquée après, la seconde a effacé l'ajout de la première : depuis, le
--- mouvement d'une joueuse est refusé (« compte de tour invalide »).
---
--- Cette fonction est celle de `player_save_requests`, à une clé près :
--- `moved` est de nouveau admise dans le budget. Rien d'autre ne change.
--- (Les migrations appliquées ne se modifient pas, règle 14.)
+-- 1. `combats.lighting` : la lumière ambiante du combat (`bright`, `dim`,
+--    `dark`), réglée par le MJ (la RLS de `combats` ne laisse écrire que lui).
+-- 2. `combat_participants.hidden_from_players` : un DRAPEAU D'ACCÈS, de même
+--    nature que `visibility_level` (pas une valeur de jeu, règle 16) : vrai
+--    quand aucun PJ du combat ne voit la créature. Le serveur le recalcule après
+--    chaque écriture qui change la perception ; le MJ peut le forcer.
+--    `stealth_total` : le total du test de Discrétion d'un Caché (lancé par le
+--    serveur, règle 8), contre lequel se mesure la Perception de qui le cherche.
+-- 3. `apply_engine_change` : deux migrations de même version (`20261108120000`)
+--    redéfinissaient chacune la fonction entière ; `player_save_requests`
+--    (V3.1-200), appliquée après, a effacé l'ajout de `combat_positions`
+--    (V3.1-169 : `budget.moved`), et le mouvement d'une joueuse est refusé
+--    depuis. La fonction ci-dessous est celle de `player_save_requests`, plus
+--    `moved` dans le budget, plus le genre `perception` (le masquage recalculé
+--    après le geste d'une joueuse, qui n'écrit pas les lignes des autres).
+-- 4. `combat_player_view` : un adversaire masqué reste dans l'ordre du tour
+--    (le tour en cours désigne le même participant que chez le MJ) mais sous le
+--    nom « Quelqu'un », sans position, état ni blessure. Un allié n'est jamais
+--    masqué aux joueuses. `stealth_total` n'est jamais rendu.
+
+alter table combats add column lighting text not null default 'bright' check (lighting in ('bright', 'dim', 'dark'));
+alter table combat_participants add column hidden_from_players boolean not null default false;
+alter table combat_participants add column stealth_total int check (stealth_total between -10 and 60);
 
 create or replace function public.apply_engine_change(p_payload text, p_signature text)
 returns void
@@ -33,6 +45,7 @@ declare
   v_effect   jsonb;
   v_usage    jsonb;
   v_req      jsonb;
+  v_per      jsonb;
   v_lignes   int;
 begin
   if p_payload is null or p_signature is null or length(p_payload) > 20000 then
@@ -75,7 +88,7 @@ begin
 
   for v_change in select value from jsonb_array_elements(v_payload -> 'changes') loop
     if jsonb_typeof(v_change) <> 'object'
-       or exists (select 1 from jsonb_object_keys(v_change) k where k not in ('kind', 'id', 'hp', 'temp_hp', 'conditions', 'bearer', 'effect', 'turn_usage', 'request')) then
+       or exists (select 1 from jsonb_object_keys(v_change) k where k not in ('kind', 'id', 'hp', 'temp_hp', 'conditions', 'bearer', 'effect', 'turn_usage', 'request', 'perception')) then
       raise exception 'champ hors liste' using errcode = '22023';
     end if;
     v_id   := (v_change ->> 'id')::uuid;
@@ -180,6 +193,22 @@ begin
          and c.id = (v_req ->> 'combat_id')::uuid
          and c.campaign_id = v_campaign
          and auth.uid() is not null;
+    elsif v_change ->> 'kind' = 'perception' then
+      -- V3.1-181 (ADR 0078) : le masquage recalculé par le serveur (drapeau d'accès) et le total de
+      -- Discrétion d'un Caché. `perception` = { hidden_from_players?: booléen, stealth_total?: entier ou null }, rien d'autre.
+      v_per := v_change -> 'perception';
+      if v_per is null or jsonb_typeof(v_per) <> 'object'
+         or exists (select 1 from jsonb_object_keys(v_per) k where k not in ('hidden_from_players', 'stealth_total'))
+         or (v_per ? 'hidden_from_players' and jsonb_typeof(v_per -> 'hidden_from_players') <> 'boolean')
+         or (v_per ? 'stealth_total' and jsonb_typeof(v_per -> 'stealth_total') not in ('number', 'null'))
+         or (jsonb_typeof(v_per -> 'stealth_total') = 'number' and (v_per ->> 'stealth_total')::int not between -10 and 60) then
+        raise exception 'perception invalide' using errcode = '22023';
+      end if;
+      update combat_participants cp
+         set hidden_from_players = case when v_per ? 'hidden_from_players' then (v_per ->> 'hidden_from_players')::boolean else cp.hidden_from_players end,
+             stealth_total       = case when v_per ? 'stealth_total' then (v_per ->> 'stealth_total')::int else cp.stealth_total end
+       where cp.id = v_id
+         and exists (select 1 from combats c where c.id = cp.combat_id and c.campaign_id = v_campaign);
     else
       raise exception 'genre de changement inconnu' using errcode = '22023';
     end if;
@@ -196,3 +225,82 @@ $$;
 
 revoke execute on function public.apply_engine_change(text, text) from public, anon;
 grant execute on function public.apply_engine_change(text, text) to authenticated;
+
+drop function if exists public.combat_player_view(uuid);
+
+create function public.combat_player_view(p_combat uuid)
+returns table (
+  id uuid,
+  label text,
+  initiative int,
+  display_order numeric,
+  side text,
+  entity_id uuid,
+  conditions jsonb,
+  hp_current int,
+  hp_max int,
+  temp_hp int,
+  wound text,
+  budget jsonb,
+  pos_x numeric,
+  pos_y numeric
+)
+language plpgsql
+stable
+security definer
+set search_path = public, app
+set row_security = off
+as $$
+#variable_conflict use_column
+declare
+  v_campaign uuid;
+begin
+  select c.campaign_id into v_campaign from combats c where c.id = p_combat;
+  if v_campaign is null or not app.is_world_member(app.campaign_world_id(v_campaign)) then
+    raise exception 'combat_player_view : accès refusé' using errcode = '42501';
+  end if;
+
+  return query
+  with participants as (
+    select cp.*,
+           (cp.is_ally or exists (
+              select 1 from campaign_characters cc
+               where cc.campaign_id = v_campaign and cc.entity_id = cp.entity_id and cc.is_pc
+           )) as ally,
+           -- V3.1-181 : un adversaire que le groupe ne voit pas.
+           (cp.hidden_from_players and not (cp.is_ally or exists (
+              select 1 from campaign_characters cc
+               where cc.campaign_id = v_campaign and cc.entity_id = cp.entity_id and cc.is_pc
+           ))) as masque
+      from combat_participants cp
+     where cp.combat_id = p_combat
+  )
+  select p.id,
+         case when p.masque then 'Quelqu''un' else p.label end,
+         p.initiative,
+         p.display_order,
+         case when p.ally then 'ally' else 'enemy' end,
+         case when p.ally then p.entity_id end,
+         case when p.masque then '[]'::jsonb else p.conditions end,
+         case when p.ally then p.hp_current end,
+         case when p.ally then p.hp_max end,
+         case when p.ally then p.temp_hp end,
+         case
+           when p.ally or p.masque then null
+           when p.hp_current is null or p.hp_max is null then null
+           when p.hp_current >= p.hp_max then 'unhurt'
+           when p.hp_current * 2 > p.hp_max then 'hurt'
+           when p.hp_current > 0 then 'bloodied'
+           else 'down'
+         end,
+         -- V3.1-166 (ADR 0076) : le budget du tour d'un allié (le tour est public à la table) ; jamais celui d'un adversaire.
+         case when p.ally then p.turn_usage -> 'budget' end,
+         -- V3.1-169 (ADR 0077) : la position sur le plan ; V3.1-181 : sauf d'un adversaire masqué.
+         case when p.masque then null else p.pos_x end,
+         case when p.masque then null else p.pos_y end
+    from participants p;
+end;
+$$;
+
+revoke execute on function public.combat_player_view(uuid) from public, anon;
+grant execute on function public.combat_player_view(uuid) to authenticated;
