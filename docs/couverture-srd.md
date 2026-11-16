@@ -1,0 +1,1132 @@
+# Couverture du SRD 5.2
+
+Généré le 2026-11-16.
+
+Pour régénérer (lecture seule, à la main) : `npx tsx --env-file=.env.local scripts/couverture-srd.ts`
+
+Ce que « jouable » veut dire : voir l'ADR 0100. Fichier généré, ne pas l'éditer à la main.
+
+## Par catégorie
+
+| Catégorie | Jouables | Partielles | Non évaluées | Total | % jouable |
+|---|---:|---:|---:|---:|---:|
+| Aptitudes et dons | 33 | 23 | 555 | 611 | 5 % |
+| Sorts | 73 | 1 | 265 | 339 | 22 % |
+| Objets magiques | 0 | 1 | 302 | 303 | 0 % |
+| Armes | 38 | 0 | 0 | 38 | 100 % |
+| Armures | 13 | 0 | 0 | 13 | 100 % |
+| Classes | 12 | 0 | 0 | 12 | 100 % |
+| Sous-classes | 0 | 4 | 8 | 12 | 0 % |
+| Espèces | 1 | 16 | 16 | 33 | 3 % |
+| Monstres | 53 | 264 | 0 | 317 | 17 % |
+| États | 2 | 0 | 13 | 15 | 13 % |
+| **Ensemble** | 225 | 309 | 1159 | 1693 | 13 % |
+
+## Lacunes par brique
+
+Chaque lacune compte une fois, sur la fiche qui la porte : une espèce ou une sous-classe est partielle à cause de ses aptitudes, sans recompter leurs lacunes.
+
+| Brique | Lacunes |
+|---|---:|
+| `timing` (Moment ou limite) | 4 |
+| `duration` (Durée) | 5 |
+| `choice` (Choix) | 4 |
+| `spell_slots` (Emplacements de sort) | 1 |
+| `turn_restriction` (Restriction de tour) | 3 |
+| `target_filter` (Cibles filtrées) | 7 |
+| `scaling` (Progression par niveau) | 1 |
+| `area_damage` (Dégâts de zone) | 5 |
+| `equipment_condition` (Condition d'équipement) | 1 |
+| `ending_event` (Événement de fin) | 3 |
+| `monster_action` (Action de monstre) | 283 |
+| `monster_trait` (Trait de monstre) | 328 |
+| `other` (Autre) | 4 |
+
+## Règles concernées, par brique
+
+### `timing` (Moment ou limite) — 4
+
+- Rage persistante (`barbarian-persistent-rage`) : Lorsque vous jouez l’Initiative
+- Arme sacrée (`devotion-sacred-weapon`) : Lorsque vous entreprenez l’action Attaque
+- Fougue (`fighter-action-surge`) : mais seulement une fois par tour
+- Mots cinglants (`lore-cutting-words`) : ou bien réussit un test de caractéristique
+
+### `duration` (Durée) — 5
+
+- Rage persistante (`barbarian-persistent-rage`) : votre Rage est si féroce qu’elle persiste désormais 10 minutes
+- Rage (`barbarian-rage`) : La Rage persiste jusqu’à la fin de votre tour suivant
+- Forme sauvage (`druid-wild-shape`) : autant d’heures que la moitié de votre niveau de Druide
+- Bouclier +1, +2 ou +3 (`shield-magic_item`) : Jusqu’au début de votre tour suivant, vous recevez un bonus de +5 à la CA
+- Bouclier (`shield-spell`) : Jusqu’au début de votre tour suivant, vous recevez un bonus de +5 à la CA
+
+### `choice` (Choix) — 4
+
+- Compagnon sauvage (`druid-wild-companion`) : qui adopte une forme animale
+- Forme sauvage (`druid-wild-shape`) : Vous connaissez quatre formes de Bête pour cette aptitude
+- Attaque sournoise (`rogue-sneak-attack`) : Une fois par tour et à condition que l’attaque soit portée avec une arme dotée de la propriété Finesse ou À distance
+- Métamagie (`sorcerer-metamagic`) : vous recevez deux options de Métamagie au choix
+
+### `spell_slots` (Emplacements de sort) — 1
+
+- Réserve arcanique (`sorcerer-font-of-magic`) : Vous pouvez utiliser vos points de Sorcellerie pour alimenter les options ci-dessous
+
+### `turn_restriction` (Restriction de tour) — 3
+
+- Rage (`barbarian-rage`) : Vous ne pouvez pas maintenir votre Concentration ni lancer de sorts.
+- Fougue (`fighter-action-surge`) : hormis l’action Magie
+- Abjuration d’ennemis (`paladin-abjure-foes`) : la cible ne peut faire qu’une seule des choses suivantes à son tour : se déplacer, entreprendre une action ou une action Bonus
+
+### `target_filter` (Cibles filtrées) — 7
+
+- Conduit divin (`cleric-channel-divinity`) : Chaque Mort-vivant de votre choix dans un rayon de 9 m effectue un jet de sauvegarde de Sagesse.
+- Mots cinglants (`lore-cutting-words`) : Lorsqu’une créature que vous voyez dans un rayon de 18 m
+- Conduit divin (`paladin-channel-divinity`) : vous savez où se trouve toute créature des types précités dans un rayon de 18 m
+- Frappe malicieuse (`rogue-cunning-strike`) : Si la cible est une de taille G ou inférieure
+- Esquive instinctive (`rogue-uncanny-dodge`) : Lorsqu’un assaillant que vous voyez vous touche
+- Bouclier +1, +2 ou +3 (`shield-magic_item`) : ou que le sort projectile magique vous cible
+- Bouclier (`shield-spell`) : ou que le sort projectile magique vous cible
+
+### `scaling` (Progression par niveau) — 1
+
+- Conduit divin (`cleric-channel-divinity`) : Vous ajoutez un d8 lorsque vous atteignez les niveaux 7 (2d8), 13 (3d8) et 18 (4d8) de Clerc.
+
+### `area_damage` (Dégâts de zone) — 5
+
+- Souffle : Acide (`draconic-breath-weapon-acid`) : En cas de réussite, elle ne subit que la moitié de ces dégâts.
+- Souffle : Froid (`draconic-breath-weapon-cold`) : En cas de réussite, elle ne subit que la moitié de ces dégâts.
+- Souffle : Feu (`draconic-breath-weapon-fire`) : En cas de réussite, elle ne subit que la moitié de ces dégâts.
+- Souffle : Foudre (`draconic-breath-weapon-lightning`) : En cas de réussite, elle ne subit que la moitié de ces dégâts.
+- Souffle : Poison (`draconic-breath-weapon-poison`) : En cas de réussite, elle ne subit que la moitié de ces dégâts.
+
+### `equipment_condition` (Condition d'équipement) — 1
+
+- Arme sacrée (`devotion-sacred-weapon`) : L’effet cesse également si vous cessez de porter l’arme.
+
+### `ending_event` (Événement de fin) — 3
+
+- Compagnon sauvage (`druid-wild-companion`) : disparaît lorsque vous terminez un Repos long
+- Forme sauvage (`druid-wild-shape`) : subissez l’état Neutralisé ou mourez
+- Frappe malicieuse (`rogue-cunning-strike`) : La cible réitère le JS à la fin de chacun de ses tours
+
+### `monster_action` (Action de monstre) — 283
+
+- Aboleth (`aboleth`) : Multiattack
+- Aboleth (`aboleth`) : Dominate Mind
+- Acolyte (`acolyte-monster`) : Spellcasting
+- Dragon noir adulte (`adult-black-dragon`) : Multiattack
+- Dragon noir adulte (`adult-black-dragon`) : Spellcasting
+- Dragon bleu adulte (`adult-blue-dragon`) : Multiattack
+- Dragon bleu adulte (`adult-blue-dragon`) : Spellcasting
+- Dragon d’airain adulte (`adult-brass-dragon`) : Multiattack
+- Dragon d’airain adulte (`adult-brass-dragon`) : Sleep Breath
+- Dragon d’airain adulte (`adult-brass-dragon`) : Spellcasting
+- Dragon de bronze adulte (`adult-bronze-dragon`) : Multiattack
+- Dragon de bronze adulte (`adult-bronze-dragon`) : Repulsion Breath
+- Dragon de bronze adulte (`adult-bronze-dragon`) : Spellcasting
+- Dragon de cuivre adulte (`adult-copper-dragon`) : Multiattack
+- Dragon de cuivre adulte (`adult-copper-dragon`) : Slowing Breath
+- Dragon de cuivre adulte (`adult-copper-dragon`) : Spellcasting
+- Dragon d’or adulte (`adult-gold-dragon`) : Multiattack
+- Dragon d’or adulte (`adult-gold-dragon`) : Spellcasting
+- Dragon d’or adulte (`adult-gold-dragon`) : Weakening Breath
+- Dragon vert adulte (`adult-green-dragon`) : Multiattack
+- Dragon vert adulte (`adult-green-dragon`) : Spellcasting
+- Dragon rouge adulte (`adult-red-dragon`) : Multiattack
+- Dragon rouge adulte (`adult-red-dragon`) : Spellcasting
+- Dragon d’argent adulte (`adult-silver-dragon`) : Multiattack
+- Dragon d’argent adulte (`adult-silver-dragon`) : Paralyzing Breath
+- Dragon d’argent adulte (`adult-silver-dragon`) : Spellcasting
+- Dragon blanc adulte (`adult-white-dragon`) : Multiattack
+- Élémentaire de l’air (`air-elemental`) : Multiattack
+- Dragon noir vénérable (`ancient-black-dragon`) : Multiattack
+- Dragon noir vénérable (`ancient-black-dragon`) : Spellcasting
+- Dragon bleu vénérable (`ancient-blue-dragon`) : Multiattack
+- Dragon bleu vénérable (`ancient-blue-dragon`) : Spellcasting
+- Dragon d’airain vénérable (`ancient-brass-dragon`) : Multiattack
+- Dragon d’airain vénérable (`ancient-brass-dragon`) : Sleep Breath
+- Dragon d’airain vénérable (`ancient-brass-dragon`) : Spellcasting
+- Dragon de bronze vénérable (`ancient-bronze-dragon`) : Multiattack
+- Dragon de bronze vénérable (`ancient-bronze-dragon`) : Repulsion Breath
+- Dragon de bronze vénérable (`ancient-bronze-dragon`) : Spellcasting
+- Dragon de cuivre vénérable (`ancient-copper-dragon`) : Multiattack
+- Dragon de cuivre vénérable (`ancient-copper-dragon`) : Slowing Breath
+- Dragon de cuivre vénérable (`ancient-copper-dragon`) : Spellcasting
+- Dragon d’or vénérable (`ancient-gold-dragon`) : Multiattack
+- Dragon d’or vénérable (`ancient-gold-dragon`) : Spellcasting
+- Dragon d’or vénérable (`ancient-gold-dragon`) : Weakening Breath
+- Dragon vert vénérable (`ancient-green-dragon`) : Multiattack
+- Dragon vert vénérable (`ancient-green-dragon`) : Spellcasting
+- Dragon rouge vénérable (`ancient-red-dragon`) : Multiattack
+- Dragon rouge vénérable (`ancient-red-dragon`) : Spellcasting
+- Dragon d’argent vénérable (`ancient-silver-dragon`) : Multiattack
+- Dragon d’argent vénérable (`ancient-silver-dragon`) : Paralyzing Breath
+- Dragon d’argent vénérable (`ancient-silver-dragon`) : Spellcasting
+- Dragon blanc vénérable (`ancient-white-dragon`) : Multiattack
+- Sphinx valeureux (`androsphinx`) : Multiattack
+- Sphinx valeureux (`androsphinx`) : Roar (3/Day)
+- Sphinx valeureux (`androsphinx`) : First Roar
+- Sphinx valeureux (`androsphinx`) : Second Roar
+- Sphinx valeureux (`androsphinx`) : Spellcasting
+- Armure animée (`animated-armor`) : Multiattack
+- Grand singe (`ape`) : Multiattack
+- Archimage (`archmage`) : Multiattack
+- Archimage (`archmage`) : Spellcasting
+- Assassin (`assassin`) : Multiattack
+- Balor (`balor`) : Multiattack
+- Chef de bande (`bandit-captain`) : Multiattack
+- Diable barbelé (`barbed-devil`) : Multiattack
+- Diable barbu (`bearded-devil`) : Multiattack
+- Béhir (`behir`) : Multiattack
+- Ours noir (`black-bear`) : Multiattack
+- Dragonnet noir (`black-dragon-wyrmling`) : Multiattack
+- Dragonnet bleu (`blue-dragon-wyrmling`) : Multiattack
+- Diable osseux (`bone-devil`) : Multiattack
+- Dragonnet d’airain (`brass-dragon-wyrmling`) : Sleep Breath
+- Dragonnet de bronze (`bronze-dragon-wyrmling`) : Multiattack
+- Dragonnet de bronze (`bronze-dragon-wyrmling`) : Repulsion Breath
+- Ours brun (`brown-bear`) : Multiattack
+- Traqueur gobelours (`bugbear-stalker`) : Multiattack
+- Bulette (`bulette`) : Multiattack
+- Centaure (`centaur`) : Multiattack
+- Diable des chaînes (`chain-devil`) : Multiattack
+- Chimère (`chimera`) : Multiattack
+- Chtuul (`chuul`) : Multiattack
+- Chtuul (`chuul`) : Paralyzing Tentacles
+- Golem d’argile (`clay-golem`) : Multiattack
+- Manteleur (`cloaker`) : Multiattack
+- Géant des nuages (`cloud-giant`) : Multiattack
+- Géant des nuages (`cloud-giant`) : Spellcasting
+- Dragonnet de cuivre (`copper-dragon-wyrmling`) : Slowing Breath
+- Couatl (`couatl`) : Spellcasting
+- Fanatique de secte (`cult-fanatic`) : Spellcasting
+- Mante obscure (`darkmantle`) : Darkness Aura (1/Day)
+- Chien du trépas (`death-dog`) : Multiattack
+- Déva (`deva`) : Multiattack
+- Déva (`deva`) : Spellcasting
+- Djinn (`djinni`) : Multiattack
+- Djinn (`djinni`) : Spellcasting
+- Doppelganger (`doppelganger`) : Multiattack
+- Doppelganger (`doppelganger`) : Read Thoughts
+- Doppelganger (`doppelganger`) : Unsettling Visage (Recharge 6)
+- Dragon-tortue (`dragon-turtle`) : Multiattack
+- Dretch (`dretch`) : Fetid Cloud (1/Day)
+- Drider (`drider`) : Multiattack
+- Druide (`druid-monster`) : Multiattack
+- Druide (`druid-monster`) : Spellcasting
+- Dryade (`dryad`) : Multiattack
+- Dryade (`dryad`) : Spellcasting
+- Méphite poussiéreux (`dust-mephit`) : Blinding Breath (Recharge 6)
+- Méphite poussiéreux (`dust-mephit`) : Sleep (1/Day)
+- Élémentaire de la terre (`earth-elemental`) : Multiattack
+- Éfrit (`efreeti`) : Multiattack
+- Éfrit (`efreeti`) : Spellcasting
+- Éléphant (`elephant-monster`) : Multiattack
+- Érinye (`erinyes`) : Multiattack
+- Ettercap (`ettercap`) : Multiattack
+- Ettercap (`ettercap`) : Web Strand (Recharge 5-6)
+- Ettin (`ettin`) : Multiattack
+- Élémentaire du feu (`fire-elemental`) : Multiattack
+- Géant du feu (`fire-giant`) : Multiattack
+- Golem de chair (`flesh-golem`) : Multiattack
+- Géant du givre (`frost-giant`) : Multiattack
+- Gargouille (`gargoyle`) : Multiattack
+- Fantôme (`ghost`) : Multiattack
+- Fantôme (`ghost`) : Etherealness
+- Fantôme (`ghost`) : Possession (Recharge 6)
+- Goule (`ghoul`) : Multiattack
+- Singe géant (`giant-ape`) : Multiattack
+- Serpent constricteur géant (`giant-constrictor-snake`) : Multiattack
+- Crocodile géant (`giant-crocodile`) : Multiattack
+- Aigle géant (`giant-eagle`) : Multiattack
+- Chouette géante (`giant-owl`) : Spellcasting
+- Scorpion géant (`giant-scorpion`) : Multiattack
+- Requin géant (`giant-shark`) : Multiattack
+- Araignée géante (`giant-spider`) : Web (Recharge 5-6)
+- Glabrezu (`glabrezu`) : Multiattack
+- Glabrezu (`glabrezu`) : Spellcasting
+- Gladiateur (`gladiator`) : Multiattack
+- Chef gobelin (`goblin-boss`) : Multiattack
+- Dragonnet d’or (`gold-dragon-wyrmling`) : Multiattack
+- Dragonnet d’or (`gold-dragon-wyrmling`) : Weakening Breath
+- Gorgone (`gorgon`) : Petrifying Breath (Recharge 5-6)
+- Dragonnet vert (`green-dragon-wyrmling`) : Multiattack
+- Guenaude verte (`green-hag`) : Multiattack
+- Guenaude verte (`green-hag`) : Spellcasting
+- Grick (`grick`) : Multiattack
+- Griffon (`griffon`) : Multiattack
+- Naga gardien (`guardian-naga`) : Multiattack
+- Naga gardien (`guardian-naga`) : Spellcasting
+- Sphinx érudit (`gynosphinx`) : Multiattack
+- Sphinx érudit (`gynosphinx`) : Spellcasting
+- Demi-dragon (`half-dragon`) : Multiattack
+- Demi-dragon (`half-dragon`) : Dragon's Breath (Recharge 5-6)
+- half-red-dragon-veteran (`half-red-dragon-veteran`) : Multiattack
+- Harpie (`harpy`) : Luring Song
+- Molosse infernal (`hell-hound`) : Multiattack
+- Hezrou (`hezrou`) : Multiattack
+- Géant des collines (`hill-giant`) : Multiattack
+- Hippogriffe (`hippogriff`) : Multiattack
+- Capitaine hobgobelin (`hobgoblin-captain`) : Multiattack
+- Diable cornu (`horned-devil`) : Multiattack
+- Hydre (`hydra`) : Multiattack
+- Diable gelé (`ice-devil`) : Multiattack
+- Diable gelé (`ice-devil`) : Ice Wall (Recharge 6)
+- Méphite gelé (`ice-mephit`) : Fog Cloud (1/Day)
+- Diablotin (`imp`) : Invisibility
+- Diablotin (`imp`) : Shape-Shift
+- Incube (`incubus`) : Multiattack
+- Incube (`incubus`) : Spellcasting
+- Traqueur invisible (`invisible-stalker`) : Multiattack
+- Golem de fer (`iron-golem`) : Multiattack
+- Chevalier (`knight`) : Multiattack
+- Kraken (`kraken`) : Multiattack
+- Lamie (`lamia`) : Multiattack
+- Lamie (`lamia`) : Spellcasting
+- Liche (`lich`) : Multiattack
+- Liche (`lich`) : Spellcasting
+- Lion (`lion`) : Multiattack
+- Lion (`lion`) : Roar
+- Mage (`mage`) : Multiattack
+- Mage (`mage`) : Spellcasting
+- Mammouth (`mammoth`) : Multiattack
+- Manticore (`manticore`) : Multiattack
+- Marilith (`marilith`) : Multiattack
+- Méduse (`medusa`) : Multiattack
+- Merrow (`merrow`) : Multiattack
+- Momie (`mummy`) : Multiattack
+- Momie (`mummy`) : Dreadful Glare
+- Momie auguste (`mummy-lord`) : Multiattack
+- Momie auguste (`mummy-lord`) : Spellcasting
+- Nalfeshnie (`nalfeshnee`) : Multiattack
+- Nalfeshnie (`nalfeshnee`) : Teleport
+- Guenaude nocturne (tormante) (`night-hag`) : Multiattack
+- Guenaude nocturne (tormante) (`night-hag`) : Nightmare Haunting (1/Day; Requires Soul Bag)
+- Guenaude nocturne (tormante) (`night-hag`) : Spellcasting
+- Horriflamme (destrier noir) (`nightmare`) : Ethereal Stride
+- Oni (`oni`) : Multiattack
+- Oni (`oni`) : Shape-Shift
+- Oni (`oni`) : Spellcasting
+- Otyugh (`otyugh`) : Multiattack
+- Hibours (ours-hibou) (`owlbear`) : Multiattack
+- Araignée de phase (`phase-spider`) : Multiattack
+- Diantrefosse (`pit-fiend`) : Multiattack
+- Diantrefosse (`pit-fiend`) : Hellfire Spellcasting (Recharge 4-6)
+- Planétar (`planetar`) : Multiattack
+- Planétar (`planetar`) : Spellcasting
+- Ours polaire (`polar-bear`) : Multiattack
+- Prêtre (`priest`) : Multiattack
+- Prêtre (`priest`) : Spellcasting
+- Pseudodragon (`pseudodragon`) : Multiattack
+- Ver pourpre (`purple-worm`) : Multiattack
+- Quasit (`quasit`) : Invisibility
+- Quasit (`quasit`) : Scare (1/Day)
+- Quasit (`quasit`) : Shape-Shift
+- Rakshasa (`rakshasa`) : Multiattack
+- Rakshasa (`rakshasa`) : Spellcasting
+- Dragonnet rouge (`red-dragon-wyrmling`) : Multiattack
+- Rukh (`roc`) : Multiattack
+- Enlaceur (`roper`) : Multiattack
+- Enlaceur (`roper`) : Reel
+- Oxydeur (`rust-monster`) : Multiattack
+- Oxydeur (`rust-monster`) : Antennae
+- Oxydeur (`rust-monster`) : Destroy Metal
+- Tigre à dents de sabre (`saber-toothed-tiger`) : Multiattack
+- Sahuagin (`sahuagin`) : Multiattack
+- Salamandre (`salamander`) : Multiattack
+- Éclaireur (`scout`) : Multiattack
+- Guenaude marine (`sea-hag`) : Illusory Appearance
+- Hippocampe (`sea-horse`) : Bubble Dash
+- Tertre errant (`shambling-mound`) : Multiattack
+- Garde animé (`shield-guardian`) : Multiattack
+- Dragonnet d’argent (`silver-dragon-wyrmling`) : Multiattack
+- Dragonnet d’argent (`silver-dragon-wyrmling`) : Paralyzing Breath
+- Solar (`solar`) : Multiattack
+- Solar (`solar`) : Spellcasting
+- Naga corrupteur (`spirit-naga`) : Multiattack
+- Naga corrupteur (`spirit-naga`) : Spellcasting
+- Esprit follet (`sprite`) : Heart Sight
+- Esprit follet (`sprite`) : Invisibility
+- Géant des pierres (`stone-giant`) : Multiattack
+- Golem de pierre (`stone-golem`) : Multiattack
+- Géant des tempêtes (`storm-giant`) : Multiattack
+- Géant des tempêtes (`storm-giant`) : Spellcasting
+- Succube (`succubus`) : Multiattack
+- Succube (`succubus`) : Charm
+- Nuée de corbeaux (`swarm-of-ravens`) : Cacophony (Recharge 6)
+- Tarasque (`tarrasque`) : Multiattack
+- Sylvanien (`treant`) : Multiattack
+- Sylvanien (`treant`) : Animate Trees (1/Day)
+- Tricératops (`triceratops`) : Multiattack
+- Troll (`troll`) : Multiattack
+- Tyrannosaure (`tyrannosaurus-rex`) : Multiattack
+- Licorne (`unicorn`) : Multiattack
+- Licorne (`unicorn`) : Spellcasting
+- Vampire (`vampire`) : Multiattack (Vampire Form Only)
+- Familier de vampire (`vampire-familiar`) : Multiattack
+- Vampirien (`vampire-spawn`) : Multiattack
+- Vétéran (`veteran`) : Multiattack
+- Thallophyte violette (`violet-fungus`) : Multiattack
+- Vrock (`vrock`) : Multiattack
+- Élémentaire de l’eau (`water-elemental`) : Multiattack
+- Ours-garou (`werebear`) : Multiattack
+- Sanglier-garou (`wereboar`) : Multiattack
+- Rat-garou (`wererat`) : Multiattack
+- Tigre-garou (`weretiger`) : Multiattack
+- Loup-garou (`werewolf`) : Multiattack
+- Dragonnet blanc (`white-dragon-wyrmling`) : Multiattack
+- Nécronte (`wight`) : Multiattack
+- Âme-en-peine (`wraith`) : Create Specter
+- Vouivre (`wyvern`) : Multiattack
+- Xorn (`xorn`) : Multiattack
+- Jeune dragon noir (`young-black-dragon`) : Multiattack
+- Jeune dragon bleu (`young-blue-dragon`) : Multiattack
+- Jeune dragon d’airain (`young-brass-dragon`) : Multiattack
+- Jeune dragon d’airain (`young-brass-dragon`) : Sleep Breath
+- Jeune dragon de bronze (`young-bronze-dragon`) : Multiattack
+- Jeune dragon de bronze (`young-bronze-dragon`) : Repulsion Breath
+- Jeune dragon de cuivre (`young-copper-dragon`) : Multiattack
+- Jeune dragon de cuivre (`young-copper-dragon`) : Slowing Breath
+- Jeune dragon d’or (`young-gold-dragon`) : Multiattack
+- Jeune dragon d’or (`young-gold-dragon`) : Weakening Breath
+- Jeune dragon vert (`young-green-dragon`) : Multiattack
+- Jeune dragon rouge (`young-red-dragon`) : Multiattack
+- Jeune dragon d’argent (`young-silver-dragon`) : Multiattack
+- Jeune dragon d’argent (`young-silver-dragon`) : Paralyzing Breath
+- Jeune dragon blanc (`young-white-dragon`) : Multiattack
+
+### `monster_trait` (Trait de monstre) — 328
+
+- Aboleth (`aboleth`) : Amphibious
+- Aboleth (`aboleth`) : Eldritch Restoration
+- Aboleth (`aboleth`) : Legendary Resistance
+- Aboleth (`aboleth`) : Mucous Cloud
+- Aboleth (`aboleth`) : Probing Telepathy
+- Dragon noir adulte (`adult-black-dragon`) : Amphibious
+- Dragon noir adulte (`adult-black-dragon`) : Legendary Resistance
+- Dragon bleu adulte (`adult-blue-dragon`) : Legendary Resistance
+- Dragon d’airain adulte (`adult-brass-dragon`) : Legendary Resistance (3/Day, or 4/Day in Lair)
+- Dragon de bronze adulte (`adult-bronze-dragon`) : Amphibious
+- Dragon de bronze adulte (`adult-bronze-dragon`) : Legendary Resistance (3/Day, or 4/Day in Lair)
+- Dragon de cuivre adulte (`adult-copper-dragon`) : Legendary Resistance (3/Day, or 4/Day in Lair)
+- Dragon d’or adulte (`adult-gold-dragon`) : Amphibious
+- Dragon d’or adulte (`adult-gold-dragon`) : Legendary Resistance (3/Day, or 4/Day in Lair)
+- Dragon vert adulte (`adult-green-dragon`) : Amphibious
+- Dragon vert adulte (`adult-green-dragon`) : Legendary Resistance (3/Day, or 4/Day in Lair)
+- Dragon rouge adulte (`adult-red-dragon`) : Legendary Resistance (3/Day, or 4/Day in Lair)
+- Dragon d’argent adulte (`adult-silver-dragon`) : Legendary Resistance (3/Day, or 4/Day in Lair)
+- Dragon blanc adulte (`adult-white-dragon`) : Ice Walk
+- Dragon blanc adulte (`adult-white-dragon`) : Legendary Resistance (3/Day, or 4/Day in Lair)
+- Élémentaire de l’air (`air-elemental`) : Air Form
+- Dragon noir vénérable (`ancient-black-dragon`) : Amphibious
+- Dragon noir vénérable (`ancient-black-dragon`) : Legendary Resistance (4/Day, or 5/Day in Lair)
+- Dragon bleu vénérable (`ancient-blue-dragon`) : Legendary Resistance (4/Day, or 5/Day in Lair)
+- Dragon d’airain vénérable (`ancient-brass-dragon`) : Legendary Resistance (4/Day, or 5/Day in Lair)
+- Dragon de bronze vénérable (`ancient-bronze-dragon`) : Amphibious
+- Dragon de bronze vénérable (`ancient-bronze-dragon`) : Legendary Resistance (4/Day, or 5/Day in Lair)
+- Dragon de cuivre vénérable (`ancient-copper-dragon`) : Legendary Resistance (4/Day, or 5/Day in Lair)
+- Dragon d’or vénérable (`ancient-gold-dragon`) : Amphibious
+- Dragon d’or vénérable (`ancient-gold-dragon`) : Legendary Resistance (4/Day, or 5/Day in Lair)
+- Dragon vert vénérable (`ancient-green-dragon`) : Amphibious
+- Dragon vert vénérable (`ancient-green-dragon`) : Legendary Resistance (4/Day, or 5/Day in Lair)
+- Dragon rouge vénérable (`ancient-red-dragon`) : Legendary Resistance (4/Day, or 5/Day in Lair)
+- Dragon d’argent vénérable (`ancient-silver-dragon`) : Legendary Resistance (4/Day, or 5/Day in Lair)
+- Dragon blanc vénérable (`ancient-white-dragon`) : Ice Walk
+- Dragon blanc vénérable (`ancient-white-dragon`) : Legendary Resistance (4/Day, or 5/Day in Lair)
+- Sphinx valeureux (`androsphinx`) : Inscrutable
+- Sphinx valeureux (`androsphinx`) : Legendary Resistance (3/Day, or 4/Day in Lair)
+- Ankheg (`ankheg`) : Tunneler
+- Archimage (`archmage`) : Magic Resistance
+- Assassin (`assassin`) : Evasion
+- Azer (`azer`) : Fire Aura
+- Azer (`azer`) : Illumination
+- Babouin (`baboon`) : Pack Tactics
+- Balor (`balor`) : Death Throes
+- Balor (`balor`) : Fire Aura
+- Balor (`balor`) : Legendary Resistance (3/Day)
+- Balor (`balor`) : Magic Resistance
+- Diable barbelé (`barbed-devil`) : Barbed Hide
+- Diable barbelé (`barbed-devil`) : Diabolical Restoration
+- Diable barbelé (`barbed-devil`) : Magic Resistance
+- Diable barbu (`bearded-devil`) : Magic Resistance
+- Berserker (`berserker`) : Bloodied Frenzy
+- Dragonnet noir (`black-dragon-wyrmling`) : Amphibious
+- Pouding noir (`black-pudding`) : Amorphous
+- Pouding noir (`black-pudding`) : Corrosive Form
+- Pouding noir (`black-pudding`) : Spider Climb
+- Faucon de sang (`blood-hawk`) : Pack Tactics
+- Sanglier (`boar`) : Bloodied Fury
+- Diable osseux (`bone-devil`) : Diabolical Restoration
+- Diable osseux (`bone-devil`) : Magic Resistance
+- Dragonnet de bronze (`bronze-dragon-wyrmling`) : Amphibious
+- Traqueur gobelours (`bugbear-stalker`) : Abduct
+- Combattant gobelours (`bugbear-warrior`) : Abduct
+- Chat (`cat`) : Jumper
+- Diable des chaînes (`chain-devil`) : Diabolical Restoration
+- Diable des chaînes (`chain-devil`) : Magic Resistance
+- Chtuul (`chuul`) : Amphibious
+- Chtuul (`chuul`) : Sense Magic
+- Golem d’argile (`clay-golem`) : Acid Absorption
+- Golem d’argile (`clay-golem`) : Berserk
+- Golem d’argile (`clay-golem`) : Immutable Form
+- Golem d’argile (`clay-golem`) : Magic Resistance
+- Manteleur (`cloaker`) : Light Sensitivity
+- Roturier (`commoner`) : Training
+- Couatl (`couatl`) : Shielded Mind
+- Crabe (`crab`) : Amphibious
+- Crocodile (`crocodile`) : Hold Breath
+- Petit cervidé (`deer`) : Agile
+- Déva (`deva`) : Exalted Restoration
+- Déva (`deva`) : Magic Resistance
+- Loup sanguinaire (`dire-wolf`) : Pack Tactics
+- Djinn (`djinni`) : Elemental Restoration
+- Djinn (`djinni`) : Magic Resistance
+- Djinn (`djinni`) : Wishes
+- Dragon-tortue (`dragon-turtle`) : Amphibious
+- Drider (`drider`) : Spider Climb
+- Drider (`drider`) : Sunlight Sensitivity
+- Drider (`drider`) : Web Walker
+- Dryade (`dryad`) : Magic Resistance
+- Dryade (`dryad`) : Speak with Beasts and Plants
+- Méphite poussiéreux (`dust-mephit`) : Death Burst
+- Élémentaire de la terre (`earth-elemental`) : Earth Glide
+- Élémentaire de la terre (`earth-elemental`) : Siege Monster
+- Éfrit (`efreeti`) : Elemental Restoration
+- Éfrit (`efreeti`) : Magic Resistance
+- Éfrit (`efreeti`) : Wishes
+- Érinye (`erinyes`) : Diabolical Restoration
+- Érinye (`erinyes`) : Magic Resistance
+- Érinye (`erinyes`) : Magic Rope
+- Ettercap (`ettercap`) : Spider Climb
+- Ettercap (`ettercap`) : Web Walker
+- Élémentaire du feu (`fire-elemental`) : Fire Aura
+- Élémentaire du feu (`fire-elemental`) : Fire Form
+- Élémentaire du feu (`fire-elemental`) : Illumination
+- Élémentaire du feu (`fire-elemental`) : Water Susceptibility
+- Golem de chair (`flesh-golem`) : Aversion to Fire
+- Golem de chair (`flesh-golem`) : Berserk
+- Golem de chair (`flesh-golem`) : Immutable Form
+- Golem de chair (`flesh-golem`) : Lightning Absorption
+- Golem de chair (`flesh-golem`) : Magic Resistance
+- Serpent volant (`flying-snake`) : Flyby
+- Grenouille (`frog`) : Amphibious
+- Grenouille (`frog`) : Standing Leap
+- Gargouille (`gargoyle`) : Flyby
+- Cube gélatineux (`gelatinous-cube`) : Ooze Cube
+- Cube gélatineux (`gelatinous-cube`) : Transparent
+- Blême (`ghast`) : Stench
+- Fantôme (`ghost`) : Ethereal Sight
+- Fantôme (`ghost`) : Incorporeal Movement
+- Sanglier géant (`giant-boar`) : Bloodied Fury
+- Crabe géant (`giant-crab`) : Amphibious
+- Crocodile géant (`giant-crocodile`) : Hold Breath
+- Scarabée de feu géant (`giant-fire-beetle`) : Illumination
+- Grenouille géante (`giant-frog`) : Amphibious
+- Grenouille géante (`giant-frog`) : Standing Leap
+- Lézard géant (`giant-lizard`) : Spider Climb
+- Pieuvre géante (`giant-octopus`) : Water Breathing
+- Chouette géante (`giant-owl`) : Flyby
+- Rat géant (`giant-rat`) : Pack Tactics
+- Hippocampe géant (`giant-sea-horse`) : Water Breathing
+- Requin géant (`giant-shark`) : Water Breathing
+- Araignée géante (`giant-spider`) : Spider Climb
+- Araignée géante (`giant-spider`) : Web Walker
+- Crapaud géant (`giant-toad`) : Amphibious
+- Crapaud géant (`giant-toad`) : Standing Leap
+- Vautour géant (`giant-vulture`) : Pack Tactics
+- Guêpe géante (`giant-wasp`) : Flyby
+- Araignée-loup géante (`giant-wolf-spider`) : Spider Climb
+- Babélien (`gibbering-mouther`) : Aberrant Ground
+- Babélien (`gibbering-mouther`) : Gibbering
+- Glabrezu (`glabrezu`) : Demonic Restoration
+- Glabrezu (`glabrezu`) : Magic Resistance
+- Dragonnet d’or (`gold-dragon-wyrmling`) : Amphibious
+- Vase grise (`gray-ooze`) : Amorphous
+- Vase grise (`gray-ooze`) : Corrosive Form
+- Dragonnet vert (`green-dragon-wyrmling`) : Amphibious
+- Guenaude verte (`green-hag`) : Amphibious
+- Guenaude verte (`green-hag`) : Coven Magic
+- Guenaude verte (`green-hag`) : Mimicry
+- Naga gardien (`guardian-naga`) : Celestial Restoration
+- Sphinx érudit (`gynosphinx`) : Inscrutable
+- Sphinx érudit (`gynosphinx`) : Legendary Resistance (3/Day, or 4/Day in Lair)
+- Demi-dragon (`half-dragon`) : Draconic Origin
+- Molosse infernal (`hell-hound`) : Pack Tactics
+- Hezrou (`hezrou`) : Demonic Restoration
+- Hezrou (`hezrou`) : Magic Resistance
+- Hezrou (`hezrou`) : Stench
+- Hippogriffe (`hippogriff`) : Flyby
+- Capitaine hobgobelin (`hobgoblin-captain`) : Aura of Authority
+- Combattant hobgobelin (`hobgoblin-warrior`) : Pack Tactics
+- Homoncule (`homunculus`) : Telepathic Bond
+- Diable cornu (`horned-devil`) : Diabolical Restoration
+- Diable cornu (`horned-devil`) : Magic Resistance
+- Requin-chasseur (`hunter-shark`) : Water Breathing
+- Hydre (`hydra`) : Hold Breath
+- Hydre (`hydra`) : Multiple Heads
+- Hydre (`hydra`) : Reactive Heads
+- Hyène (`hyena`) : Pack Tactics
+- Diable gelé (`ice-devil`) : Diabolical Restoration
+- Diable gelé (`ice-devil`) : Magic Resistance
+- Méphite gelé (`ice-mephit`) : Death Burst
+- Diablotin (`imp`) : Magic Resistance
+- Incube (`incubus`) : Succubus Form
+- Traqueur invisible (`invisible-stalker`) : Air Form
+- Traqueur invisible (`invisible-stalker`) : Invisibility
+- Golem de fer (`iron-golem`) : Fire Absorption
+- Golem de fer (`iron-golem`) : Immutable Form
+- Golem de fer (`iron-golem`) : Magic Resistance
+- Épaulard (`killer-whale`) : Hold Breath
+- Kobold (`kobold`) : Pack Tactics
+- Kobold (`kobold`) : Sunlight Sensitivity
+- Kraken (`kraken`) : Amphibious
+- Kraken (`kraken`) : Legendary Resistance (4/Day, or 5/Day in Lair)
+- Kraken (`kraken`) : Siege Monster
+- Lémure (`lemure`) : Hellish Restoration
+- Liche (`lich`) : Legendary Resistance (4/Day, or 5/Day in Lair)
+- Liche (`lich`) : Spirit Jar
+- Lion (`lion`) : Pack Tactics
+- Lion (`lion`) : Running Leap
+- Lézard (`lizard`) : Spider Climb
+- Méphite magmatique (`magma-mephit`) : Death Burst
+- Magmatique (`magmin`) : Death Burst
+- Marilith (`marilith`) : Demonic Restoration
+- Marilith (`marilith`) : Magic Resistance
+- Marilith (`marilith`) : Reactive
+- Thalasséen (homme-poisson) (`merfolk`) : Amphibious
+- Merrow (`merrow`) : Amphibious
+- Mimique (`mimic`) : Adhesive (Object Form Only)
+- Mule (`mule-monster`) : Beast of Burden
+- Momie auguste (`mummy-lord`) : Legendary Resistance (3/Day, or 4/Day in Lair)
+- Momie auguste (`mummy-lord`) : Magic Resistance
+- Momie auguste (`mummy-lord`) : Undead Restoration
+- Nalfeshnie (`nalfeshnee`) : Demonic Restoration
+- Nalfeshnie (`nalfeshnee`) : Magic Resistance
+- Guenaude nocturne (tormante) (`night-hag`) : Coven Magic
+- Guenaude nocturne (tormante) (`night-hag`) : Magic Resistance
+- Guenaude nocturne (tormante) (`night-hag`) : Soul Bag
+- Horriflamme (destrier noir) (`nightmare`) : Confer Fire Resistance
+- Horriflamme (destrier noir) (`nightmare`) : Illumination
+- Gelée ocre (`ochre-jelly`) : Amorphous
+- Gelée ocre (`ochre-jelly`) : Spider Climb
+- Pieuvre (`octopus`) : Compression
+- Pieuvre (`octopus`) : Water Breathing
+- Ogre zombi (`ogre-zombie`) : Undead Fortitude
+- Oni (`oni`) : Regeneration
+- Chouette (`owl`) : Flyby
+- Araignée de phase (`phase-spider`) : Ethereal Sight
+- Araignée de phase (`phase-spider`) : Spider Climb
+- Araignée de phase (`phase-spider`) : Web Walker
+- Piranha (`piranha`) : Water Breathing
+- Diantrefosse (`pit-fiend`) : Diabolical Restoration
+- Diantrefosse (`pit-fiend`) : Fear Aura
+- Diantrefosse (`pit-fiend`) : Legendary Resistance (4/Day)
+- Diantrefosse (`pit-fiend`) : Magic Resistance
+- Planétar (`planetar`) : Divine Awareness
+- Planétar (`planetar`) : Exalted Restoration
+- Planétar (`planetar`) : Magic Resistance
+- Plésiosaure (`plesiosaurus`) : Hold Breath
+- Pseudodragon (`pseudodragon`) : Magic Resistance
+- Ver pourpre (`purple-worm`) : Tunneler
+- Quasit (`quasit`) : Magic Resistance
+- Rakshasa (`rakshasa`) : Greater Magic Resistance
+- Rakshasa (`rakshasa`) : Fiendish Restoration
+- Rat (`rat`) : Agile
+- Corbeau (`raven`) : Mimicry
+- Requin de récif (`reef-shark`) : Pack Tactics
+- Requin de récif (`reef-shark`) : Water Breathing
+- Remorhaz (`remorhaz`) : Heat Aura
+- Enlaceur (`roper`) : Spider Climb
+- Oxydeur (`rust-monster`) : Iron Scent
+- Tigre à dents de sabre (`saber-toothed-tiger`) : Running Leap
+- Sahuagin (`sahuagin`) : Blood Frenzy
+- Sahuagin (`sahuagin`) : Limited Amphibiousness
+- Sahuagin (`sahuagin`) : Shark Telepathy
+- Salamandre (`salamander`) : Fire Aura
+- Satyre (`satyr`) : Magic Resistance
+- Guenaude marine (`sea-hag`) : Amphibious
+- Guenaude marine (`sea-hag`) : Coven Magic
+- Guenaude marine (`sea-hag`) : Vile Appearance
+- Hippocampe (`sea-horse`) : Water Breathing
+- Ombre (`shadow`) : Amorphous
+- Ombre (`shadow`) : Sunlight Weakness
+- Tertre errant (`shambling-mound`) : Lightning Absorption
+- Garde animé (`shield-guardian`) : Bound
+- Garde animé (`shield-guardian`) : Regeneration
+- Garde animé (`shield-guardian`) : Spell Storing
+- Solar (`solar`) : Divine Awareness
+- Solar (`solar`) : Exalted Restoration
+- Solar (`solar`) : Legendary Resistance (4/Day)
+- Solar (`solar`) : Magic Resistance
+- Spectre (`specter`) : Incorporeal Movement
+- Spectre (`specter`) : Sunlight Sensitivity
+- Araignée (`spider`) : Spider Climb
+- Araignée (`spider`) : Web Walker
+- Naga corrupteur (`spirit-naga`) : Fiendish Restoration
+- Méphite vaporeux (`steam-mephit`) : Blurred Form
+- Méphite vaporeux (`steam-mephit`) : Death Burst
+- Golem de pierre (`stone-golem`) : Immutable Form
+- Golem de pierre (`stone-golem`) : Magic Resistance
+- Géant des tempêtes (`storm-giant`) : Amphibious
+- Succube (`succubus`) : Incubus Form
+- Nuée de chauves-souris (`swarm-of-bats`) : Swarm
+- Nuée d’insectes (`swarm-of-insects`) : Spider Climb
+- Nuée d’insectes (`swarm-of-insects`) : Swarm
+- Nuée de piranhas (`swarm-of-piranhas`) : Swarm
+- Nuée de piranhas (`swarm-of-piranhas`) : Water Breathing
+- Nuée de rats (`swarm-of-rats`) : Swarm
+- Nuée de corbeaux (`swarm-of-ravens`) : Swarm
+- Nuée de serpents venimeux (`swarm-of-venomous-snakes`) : Swarm
+- Tarasque (`tarrasque`) : Legendary Resistance (6/Day)
+- Tarasque (`tarrasque`) : Magic Resistance
+- Tarasque (`tarrasque`) : Reflective Carapace
+- Tarasque (`tarrasque`) : Siege Monster
+- Gros-bras (`tough`) : Pack Tactics
+- Sylvanien (`treant`) : Siege Monster
+- Troll (`troll`) : Loathsome Limbs (4/Day)
+- Troll (`troll`) : Regeneration
+- Licorne (`unicorn`) : Legendary Resistance (3/Day)
+- Licorne (`unicorn`) : Magic Resistance
+- Vampire (`vampire`) : Legendary Resistance (3/Day, or 4/Day in Lair)
+- Vampire (`vampire`) : Misty Escape
+- Vampire (`vampire`) : Spider Climb
+- Vampire (`vampire`) : Vampire Weakness
+- Vampire (`vampire`) : Forbiddance
+- Vampire (`vampire`) : Running Water
+- Vampire (`vampire`) : Stake to the Heart
+- Vampire (`vampire`) : Sunlight
+- Familier de vampire (`vampire-familiar`) : Vampiric Connection
+- Vampirien (`vampire-spawn`) : Spider Climb
+- Vampirien (`vampire-spawn`) : Vampire Weakness
+- Vampirien (`vampire-spawn`) : Forbiddance
+- Vampirien (`vampire-spawn`) : Running Water
+- Vampirien (`vampire-spawn`) : Stake to the Heart
+- Vampirien (`vampire-spawn`) : Sunlight
+- Vrock (`vrock`) : Demonic Restoration
+- Vrock (`vrock`) : Magic Resistance
+- Vautour (`vulture`) : Pack Tactics
+- Élémentaire de l’eau (`water-elemental`) : Freeze
+- Élémentaire de l’eau (`water-elemental`) : Water Form
+- Loup-garou (`werewolf`) : Pack Tactics
+- Dragonnet blanc (`white-dragon-wyrmling`) : Ice Walk
+- Nécronte (`wight`) : Sunlight Sensitivity
+- Feu follet (`will-o-wisp`) : Ephemeral
+- Feu follet (`will-o-wisp`) : Illumination
+- Feu follet (`will-o-wisp`) : Incorporeal Movement
+- Loup arctique (`winter-wolf`) : Pack Tactics
+- Loup (`wolf`) : Pack Tactics
+- Âme-en-peine (`wraith`) : Incorporeal Movement
+- Âme-en-peine (`wraith`) : Sunlight Sensitivity
+- Xorn (`xorn`) : Earth Glide
+- Xorn (`xorn`) : Treasure Sense
+- Jeune dragon noir (`young-black-dragon`) : Amphibious
+- Jeune dragon de bronze (`young-bronze-dragon`) : Amphibious
+- Jeune dragon d’or (`young-gold-dragon`) : Amphibious
+- Jeune dragon vert (`young-green-dragon`) : Amphibious
+- Jeune dragon blanc (`young-white-dragon`) : Ice Walk
+- Zombi (`zombie`) : Undead Fortitude
+
+### `other` (Autre) — 4
+
+- Inspiration bardique (`bard-bardic-inspiration`) : lorsque la créature rate un Test d20, elle peut lancer le dé d’Inspiration bardique pour en ajouter le résultat au Test d20
+- Affinité élémentaire (`draconic-sorcery-elemental-affinity`) : Vous avez la Résistance à ce type de dégâts
+- Aura de protection (`paladin-aura-of-protection`) : Vous-même et vos alliés dans l’aura recevez un bonus aux jets de sauvegarde égal à votre modificateur de Charisme
+- Frappe malicieuse (`rogue-cunning-strike`) : au nombre de dés d’Attaque sournoise auquel vous renoncez pour ajouter cet effet
+
+## Fréquentes d'abord
+
+### Aptitudes non jouables, niveaux 1 à 5 — 243
+
+- niveau 4 : Amélioration de caractéristique (`ability-score-improvement-2`), non évaluée
+- niveau 4 : Amélioration de caractéristique (`ability-score-improvement-3`), non évaluée
+- niveau 4 : Amélioration de caractéristique (`ability-score-improvement-feature`), non évaluée
+- niveau 2 : Fougue (une utilisation) (`action-surge-1-use`), non évaluée
+- niveau 1 : Restauration magique (`arcane-recovery`), non évaluée
+- niveau 2 : Sous-classe de Magicien (`arcane-tradition`), non évaluée
+- niveau 4 : Amélioration de caractéristique (`barbarian-ability-score-improvement`), non évaluée
+- niveau 2 : Sens du danger (`barbarian-danger-sense`), non évaluée
+- niveau 5 : Déplacement rapide (`barbarian-fast-movement`), non évaluée
+- niveau 3 : Savoir primal (`barbarian-primal-knowledge`), non évaluée
+- niveau 1 : Rage (`barbarian-rage`), partielle
+- niveau 2 : Témérité (`barbarian-reckless-attack`), non évaluée
+- niveau 3 : Sous-classe de Barbare (`barbarian-subclass`), non évaluée
+- niveau 1 : Maîtrise des armes (`barbarian-weapon-mastery`), non évaluée
+- niveau 4 : Amélioration de caractéristique (`bard-ability-score-improvement`), non évaluée
+- niveau 1 : Inspiration bardique (`bard-bardic-inspiration`), partielle
+- niveau 3 : Sous-classe de Barde (`bard-college`), non évaluée
+- niveau 2 : Expertise (`bard-expertise`), non évaluée
+- niveau 5 : Source d’inspiration (`bard-font-of-inspiration`), non évaluée
+- niveau 1 : Incantation (`bard-spellcasting`), non évaluée
+- niveau 3 : Sous-classe de Barde (`bard-subclass`), non évaluée
+- niveau 3 : Frénésie (`berserker-frenzy`), non évaluée
+- niveau 2 : Sort mineur bonus (`bonus-cantrip`), non évaluée
+- niveau 3 : Maîtrises supplémentaires (`bonus-proficiencies`), non évaluée
+- niveau 1 : Maîtrise supplémentaire (`bonus-proficiency`), non évaluée
+- niveau 3 : Athlète accompli (`champion-remarkable-athlete`), non évaluée
+- niveau 3 : Conduit divin (`channel-divinity`), non évaluée
+- niveau 2 : Conduit divin : Préservation de la vie (`channel-divinity-preserve-life`), non évaluée
+- niveau 3 : Arme sacrée (`channel-divinity-sacred-weapon`), non évaluée
+- niveau 3 : Conduit divin : Répression des impies (`channel-divinity-turn-the-unholy`), non évaluée
+- niveau 2 : Conduit divin : Renvoi des morts-vivants (`channel-divinity-turn-undead`), non évaluée
+- niveau 2 : Cercle de la Terre (`circle-of-the-land`), non évaluée
+- niveau 2 : Arctique (`circle-of-the-land-arctic`), non évaluée
+- niveau 2 : Littoral (`circle-of-the-land-coast`), non évaluée
+- niveau 2 : Désert (`circle-of-the-land-desert`), non évaluée
+- niveau 2 : Forêt (`circle-of-the-land-forest`), non évaluée
+- niveau 2 : Plaine (`circle-of-the-land-grassland`), non évaluée
+- niveau 2 : Montagne (`circle-of-the-land-mountain`), non évaluée
+- niveau 2 : Marais (`circle-of-the-land-swamp`), non évaluée
+- niveau 3 : Sorts de cercle (`circle-spells`), non évaluée
+- niveau 4 : Amélioration de caractéristique (`cleric-ability-score-improvement`), non évaluée
+- niveau 2 : Conduit divin (`cleric-channel-divinity`), partielle
+- niveau 1 : Ordre divin (`cleric-divine-order`), non évaluée
+- niveau 5 : Calcination de Mort-vivant (`cleric-sear-undead`), non évaluée
+- niveau 1 : Incantation (`cleric-spellcasting`), non évaluée
+- niveau 3 : Sous-classe de Clerc (`cleric-subclass`), non évaluée
+- niveau 2 : Ruse (`cunning-action`), non évaluée
+- niveau 3 : Mots cinglants (`cutting-words`), non évaluée
+- niveau 2 : Sens du danger (`danger-sense`), non évaluée
+- niveau 1 : Bénédiction du ténébreux (`dark-ones-blessing`), non évaluée
+- niveau 3 : Déviation de projectiles (`deflect-missiles`), non évaluée
+- niveau 3 : Sorts du Serment de Dévotion (`devotion-oath-of-devotion-spells`), non évaluée
+- niveau 3 : Arme sacrée (`devotion-sacred-weapon`), partielle
+- niveau 1 : Disciple de la Vie (`disciple-of-life`), non évaluée
+- niveau 1 : Sous-classe de Clerc (`divine-domain`), non évaluée
+- niveau 2 : Sous-classe de Clerc (`divine-domain-feature`), non évaluée
+- niveau 3 : Vertu divine (`divine-health`), non évaluée
+- niveau 1 : Perception divine (`divine-sense`), non évaluée
+- niveau 2 : Châtiment divin (`divine-smite`), non évaluée
+- niveau 1 : Sorts de domaine (`domain-spells`), non évaluée
+- niveau 1 : Résistance draconique (`draconic-resilience`), non évaluée
+- niveau 3 : Résistance draconique (`draconic-sorcery-draconic-resilience`), non évaluée
+- niveau 3 : Sorts draconiques (`draconic-sorcery-draconic-spells`), non évaluée
+- niveau 4 : Amélioration de caractéristique (`druid-ability-score-improvement`), non évaluée
+- niveau 2 : Sous-classe de Druide (`druid-circle`), non évaluée
+- niveau 1 : Druidique (`druid-druidic`), non évaluée
+- niveau 1 : Ordre primitif (`druid-primal-order`), non évaluée
+- niveau 1 : Incantation (`druid-spellcasting`), non évaluée
+- niveau 3 : Sous-classe de Druide (`druid-subclass`), non évaluée
+- niveau 2 : Compagnon sauvage (`druid-wild-companion`), partielle
+- niveau 5 : Regain sauvage (`druid-wild-resurgence`), non évaluée
+- niveau 2 : Forme sauvage (`druid-wild-shape`), partielle
+- niveau 1 : Druidique (`druidic`), non évaluée
+- niveau 2 : Décharge déchirante (`eldritch-invocation-agonizing-blast`), non évaluée
+- niveau 2 : Armure d’ombres (`eldritch-invocation-armor-of-shadows`), non évaluée
+- niveau 2 : Invocation occulte : Langage des bêtes (`eldritch-invocation-beast-speech`), non évaluée
+- niveau 2 : Invocation occulte : Influence trompeuse (`eldritch-invocation-beguiling-influence`), non évaluée
+- niveau 2 : Invocation occulte : Grimoire des secrets anciens (`eldritch-invocation-book-of-ancient-secrets`), non évaluée
+- niveau 2 : Vision du diable (`eldritch-invocation-devils-sight`), non évaluée
+- niveau 2 : Invocation occulte : Vision occulte (`eldritch-invocation-eldritch-sight`), non évaluée
+- niveau 2 : Lance occulte (`eldritch-invocation-eldritch-spear`), non évaluée
+- niveau 2 : Invocation occulte : Yeux du gardien des runes (`eldritch-invocation-eyes-of-the-rune-keeper`), non évaluée
+- niveau 2 : Vigueur fiélonne (`eldritch-invocation-fiendish-vigor`), non évaluée
+- niveau 2 : Perception transférée (`eldritch-invocation-gaze-of-two-minds`), non évaluée
+- niveau 2 : Mille visages (`eldritch-invocation-mask-of-many-faces`), non évaluée
+- niveau 5 : Invocation occulte : Enlisement de l’esprit (`eldritch-invocation-mire-the-mind`), non évaluée
+- niveau 2 : Visions embrumées (`eldritch-invocation-misty-visions`), non évaluée
+- niveau 5 : Maître des ombres (`eldritch-invocation-one-with-shadows`), non évaluée
+- niveau 2 : Décharge répulsive (`eldritch-invocation-repelling-blast`), non évaluée
+- niveau 5 : Invocation occulte : Signe de mauvais augure (`eldritch-invocation-sign-of-ill-omen`), non évaluée
+- niveau 2 : Invocation occulte : Voleuse des cinq destins (`eldritch-invocation-thief-of-five-fates`), non évaluée
+- niveau 5 : Lame assoiffée (`eldritch-invocation-thirsting-blade`), non évaluée
+- niveau 2 : Invocation occulte : Voix du maître des chaînes (`eldritch-invocation-voice-of-the-chain-master`), non évaluée
+- niveau 2 : Manifestations occultes (`eldritch-invocations`), non évaluée
+- niveau 2 : Évocateur érudit (`evocation-savant`), non évaluée
+- niveau 3 : Évocateur érudit (`evoker-evocation-savant`), non évaluée
+- niveau 3 : Sort mineur appuyé (`evoker-potent-cantrip`), non évaluée
+- niveau 3 : Expertise (`expertise`), non évaluée
+- niveau 1 : Expertise (`expertise-2`), non évaluée
+- niveau 5 : Attaque supplémentaire (`extra-attack-1`), non évaluée
+- niveau 3 : Mains lestes (`fast-hands`), non évaluée
+- niveau 5 : Déplacement rapide (`fast-movement`), non évaluée
+- niveau 1 : Ennemi juré (`favored-enemy-1-type`), non évaluée
+- niveau 3 : Bénédiction du ténébreux (`fiend-patron-dark-ones-blessing`), non évaluée
+- niveau 3 : Sorts du Fiélon (`fiend-patron-fiend-spells`), non évaluée
+- niveau 4 : Amélioration de caractéristique (`fighter-ability-score-improvement`), non évaluée
+- niveau 2 : Fougue (`fighter-action-surge`), partielle
+- niveau 1 : Style de combat (`fighter-fighting-style`), non évaluée
+- niveau 1 : Armes à deux mains (`fighter-fighting-style-great-weapon-fighting`), non évaluée
+- niveau 3 : Sous-classe de Guerrier (`fighter-subclass`), non évaluée
+- niveau 2 : Sens tactique (`fighter-tactical-mind`), non évaluée
+- niveau 5 : Décalage tactique (`fighter-tactical-shift`), non évaluée
+- niveau 1 : Maîtrise des armes (`fighter-weapon-mastery`), non évaluée
+- niveau 1 : Archerie (`fighting-style-archery`), non évaluée
+- niveau 1 : Défense (`fighting-style-defense-2`), non évaluée
+- niveau 1 : Style de combat : Duel (`fighting-style-dueling-2`), non évaluée
+- niveau 2 : Armes à deux mains (`fighting-style-great-weapon-fighting`), non évaluée
+- niveau 1 : Protection (`fighting-style-protection-2`), non évaluée
+- niveau 1 : Combat à deux armes (`fighting-style-two-weapon-fighting`), non évaluée
+- niveau 2 : Incantation flexible : Conversion d’emplacement de sort (`flexible-casting-converting-spell-slot`), non évaluée
+- niveau 2 : Création d’emplacements de sort (`flexible-casting-creating-spell-slots`), non évaluée
+- niveau 2 : Déluge de coups (`flurry-of-blows`), non évaluée
+- niveau 5 : Source d’inspiration (`font-of-inspiration`), non évaluée
+- niveau 2 : Réserve arcanique (`font-of-magic`), non évaluée
+- niveau 3 : Frénésie (`frenzy`), non évaluée
+- niveau 3 : Savoir du Chasseur (`hunter-hunters-lore`), non évaluée
+- niveau 3 : Proie du chasseur (`hunter-hunters-prey`), non évaluée
+- niveau 3 : Proie du chasseur (`hunters-prey`), non évaluée
+- niveau 3 : Goût du sang (`hunters-prey-colossus-slayer`), non évaluée
+- niveau 3 : Proie du chasseur : Tueur de géants (`hunters-prey-giant-killer`), non évaluée
+- niveau 3 : Briseur de hordes (`hunters-prey-horde-breaker`), non évaluée
+- niveau 3 : Critique amélioré (`improved-critical`), non évaluée
+- niveau 2 : Touche-à-tout (`jack-of-all-trades`), non évaluée
+- niveau 2 : Ki (`ki`), non évaluée
+- niveau 3 : Sorts du Cercle de la Terre (`land-circle-of-the-land-spells`), non évaluée
+- niveau 3 : Aval de la terre (`land-lands-aid`), non évaluée
+- niveau 1 : Imposition des mains (`lay-on-hands`), non évaluée
+- niveau 3 : Disciple de la Vie (`life-disciple-of-life`), non évaluée
+- niveau 3 : Sorts du Domaine de la Vie (`life-domain-spells`), non évaluée
+- niveau 3 : Survivance (`life-preserve-life`), non évaluée
+- niveau 3 : Maîtrises supplémentaires (`lore-bonus-proficiencies`), non évaluée
+- niveau 3 : Mots cinglants (`lore-cutting-words`), partielle
+- niveau 3 : Sous-classe de Guerrier (`martial-archetype`), non évaluée
+- niveau 1 : Arts martiaux (`martial-arts`), non évaluée
+- niveau 3 : Métamagie (`metamagic`), non évaluée
+- niveau 3 : Sort prévenant (`metamagic-careful-spell`), non évaluée
+- niveau 3 : Sort ample (`metamagic-distant-spell`), non évaluée
+- niveau 3 : Sort renforcé (`metamagic-empowered-spell`), non évaluée
+- niveau 3 : Sort étendu (`metamagic-extended-spell`), non évaluée
+- niveau 3 : Sort intensifié (`metamagic-heightened-spell`), non évaluée
+- niveau 3 : Sort accéléré (`metamagic-quickened-spell`), non évaluée
+- niveau 3 : Sort subtil (`metamagic-subtle-spell`), non évaluée
+- niveau 3 : Sort jumeau (`metamagic-twinned-spell`), non évaluée
+- niveau 3 : Sous-classe de Moine (`monastic-tradition`), non évaluée
+- niveau 4 : Amélioration de caractéristique (`monk-ability-score-improvement`), non évaluée
+- niveau 3 : Déviation d’assaut (`monk-deflect-attacks`), non évaluée
+- niveau 1 : Arts martiaux (`monk-martial-arts`), non évaluée
+- niveau 2 : Credo du Moine (`monk-monks-focus`), non évaluée
+- niveau 4 : Chute ralentie (`monk-slow-fall`), non évaluée
+- niveau 5 : Frappe étourdissante (`monk-stunning-strike`), non évaluée
+- niveau 3 : Sous-classe de Moine (`monk-subclass`), non évaluée
+- niveau 2 : Déplacement sans armure (`monk-unarmored-movement`), non évaluée
+- niveau 2 : Métabolisme surnaturel (`monk-uncanny-metabolism`), non évaluée
+- niveau 2 : Ressourcement (`natural-recovery`), non évaluée
+- niveau 3 : Sorts de serment (`oath-spells`), non évaluée
+- niveau 3 : Technique de la Paume (`open-hand-technique`), non évaluée
+- niveau 1 : Sous-classe d’Occultiste (`otherworldly-patron`), non évaluée
+- niveau 3 : Pacte (`pact-boon`), non évaluée
+- niveau 1 : Magie de pacte (`pact-magic`), non évaluée
+- niveau 3 : Pacte de la lame (`pact-of-the-blade`), non évaluée
+- niveau 3 : Pacte de la chaîne (`pact-of-the-chain`), non évaluée
+- niveau 3 : Pacte du grimoire (`pact-of-the-tome`), non évaluée
+- niveau 4 : Amélioration de caractéristique (`paladin-ability-score-improvement`), non évaluée
+- niveau 3 : Conduit divin (`paladin-channel-divinity`), partielle
+- niveau 5 : Fidèle destrier (`paladin-faithful-steed`), non évaluée
+- niveau 2 : Style de combat (`paladin-fighting-style`), non évaluée
+- niveau 2 : Châtiment de paladin (`paladin-paladins-smite`), non évaluée
+- niveau 1 : Incantation (`paladin-spellcasting`), non évaluée
+- niveau 3 : Sous-classe de Paladin (`paladin-subclass`), non évaluée
+- niveau 1 : Maîtrise des armes (`paladin-weapon-mastery`), non évaluée
+- niveau 2 : Défense patiente (`patient-defense`), non évaluée
+- niveau 3 : Sous-classe de Barbare (`primal-path`), non évaluée
+- niveau 3 : Conscience primitive (`primeval-awareness`), non évaluée
+- niveau 1 : Rage (`rage`), non évaluée
+- niveau 4 : Amélioration de caractéristique (`ranger-ability-score-improvement`), non évaluée
+- niveau 3 : Sous-classe de Rôdeur (`ranger-archetype`), non évaluée
+- niveau 2 : Fin explorateur (`ranger-deft-explorer`), non évaluée
+- niveau 1 : Ennemi juré (`ranger-favored-enemy`), non évaluée
+- niveau 2 : Style de combat (`ranger-fighting-style`), non évaluée
+- niveau 1 : Incantation (`ranger-spellcasting`), non évaluée
+- niveau 3 : Sous-classe de Rôdeur (`ranger-subclass`), non évaluée
+- niveau 1 : Maîtrise des armes (`ranger-weapon-mastery`), non évaluée
+- niveau 2 : Témérité (`reckless-attack`), non évaluée
+- niveau 4 : Amélioration de caractéristique (`rogue-ability-score-improvement`), non évaluée
+- niveau 5 : Frappe malicieuse (`rogue-cunning-strike`), partielle
+- niveau 1 : Attaque sournoise (`rogue-sneak-attack`), partielle
+- niveau 3 : Visée appliquée (`rogue-steady-aim`), non évaluée
+- niveau 3 : Sous-classe de Roublard (`rogue-subclass`), non évaluée
+- niveau 5 : Esquive instinctive (`rogue-uncanny-dodge`), partielle
+- niveau 1 : Maîtrise des armes (`rogue-weapon-mastery`), non évaluée
+- niveau 3 : Sous-classe de Roublard (`roguish-archetype`), non évaluée
+- niveau 3 : Sous-classe de Paladin (`sacred-oath`), non évaluée
+- niveau 2 : Façonneur de sorts (`sculpt-spells`), non évaluée
+- niveau 3 : Monte-en-l’air (`second-story-work`), non évaluée
+- niveau 1 : Second souffle (`second-wind`), non évaluée
+- niveau 4 : Chute ralentie (`slow-fall`), non évaluée
+- niveau 1 : Attaque sournoise (`sneak-attack`), non évaluée
+- niveau 4 : Amélioration de caractéristique (`sorcerer-ability-score-improvement`), non évaluée
+- niveau 2 : Réserve arcanique (`sorcerer-font-of-magic`), partielle
+- niveau 1 : Sorcellerie innée (`sorcerer-innate-sorcery`), non évaluée
+- niveau 2 : Métamagie (`sorcerer-metamagic`), partielle
+- niveau 5 : Restauration ensorcelée (`sorcerer-sorcerous-restoration`), non évaluée
+- niveau 1 : Incantation (`sorcerer-spellcasting`), non évaluée
+- niveau 3 : Sous-classe d’Ensorceleur (`sorcerer-subclass`), non évaluée
+- niveau 1 : Sous-classe d’Ensorceleur (`sorcerous-origin`), non évaluée
+- niveau 1 : Sorts (`spellcasting-bard`), non évaluée
+- niveau 1 : Sorts (`spellcasting-cleric`), non évaluée
+- niveau 1 : Sorts (`spellcasting-druid`), non évaluée
+- niveau 2 : Sorts (`spellcasting-paladin`), non évaluée
+- niveau 2 : Sorts (`spellcasting-ranger`), non évaluée
+- niveau 1 : Sorts (`spellcasting-sorcerer`), non évaluée
+- niveau 1 : Sorts (`spellcasting-wizard`), non évaluée
+- niveau 2 : Porté par le vent (`step-of-the-wind`), non évaluée
+- niveau 5 : Frappe étourdissante (`stunning-strike`), non évaluée
+- niveau 3 : Mains lestes (`thief-fast-hands`), non évaluée
+- niveau 3 : Monte-en-l’air (`thief-second-story-work`), non évaluée
+- niveau 1 : Argot des voleurs (`thieves-cant`), non évaluée
+- niveau 2 : Déplacement sans armure (`unarmored-movement`), non évaluée
+- niveau 5 : Esquive instinctive (`uncanny-dodge`), non évaluée
+- niveau 4 : Amélioration de caractéristique (`warlock-ability-score-improvement`), non évaluée
+- niveau 1 : Manifestations occultes (`warlock-eldritch-invocations`), non évaluée
+- niveau 2 : Rouerie magique (`warlock-magical-cunning`), non évaluée
+- niveau 1 : Magie de pacte (`warlock-pact-magic`), non évaluée
+- niveau 3 : Sous-classe d’Occultiste (`warlock-subclass`), non évaluée
+- niveau 4 : Forme sauvage (`wild-shape-cr-1-2-or-below-no-flying-speed`), non évaluée
+- niveau 2 : Forme sauvage (`wild-shape-cr-1-4-or-below-no-flying-or-swim-speed`), non évaluée
+- niveau 4 : Amélioration de caractéristique (`wizard-ability-score-improvement`), non évaluée
+- niveau 1 : Restauration magique (`wizard-arcane-recovery`), non évaluée
+- niveau 5 : Mémorisation de sort (`wizard-memorize-spell`), non évaluée
+- niveau 1 : Savoir rituel (`wizard-ritual-adept`), non évaluée
+- niveau 2 : Érudition (`wizard-scholar`), non évaluée
+- niveau 1 : Incantation (`wizard-spellcasting`), non évaluée
+- niveau 3 : Sous-classe de Magicien (`wizard-subclass`), non évaluée
+
+### Sorts non jouables, niveaux 0 à 3 — 148
+
+- niveau 2 : Aide (`aid`), non évaluée
+- niveau 1 : Alarme (`alarm`), non évaluée
+- niveau 2 : Métamorphose (`alter-self`), non évaluée
+- niveau 2 : Messager animal (`animal-messenger`), non évaluée
+- niveau 3 : Animation des morts (`animate-dead`), non évaluée
+- niveau 2 : Verrou magique (`arcane-lock`), non évaluée
+- niveau 2 : Aura magique de l’arcaniste (`arcanists-magic-aura`), non évaluée
+- niveau 2 : Augure (`augury`), non évaluée
+- niveau 1 : Imprécation (`bane`), non évaluée
+- niveau 2 : Peau d’écorce (`barkskin`), non évaluée
+- niveau 3 : Lueur d’espoir (`beacon-of-hope`), non évaluée
+- niveau 3 : Malédiction (`bestow-curse`), non évaluée
+- niveau 1 : Bénédiction (`bless`), non évaluée
+- niveau 2 : Cécité/surdité (`blindness-deafness`), non évaluée
+- niveau 3 : Clignotement (`blink`), non évaluée
+- niveau 2 : Flou (`blur`), non évaluée
+- niveau 2 : Apaisement des émotions (`calm-emotions`), non évaluée
+- niveau 1 : Orbe chromatique (`chromatic-orb`), non évaluée
+- niveau 3 : Clairvoyance (`clairvoyance`), non évaluée
+- niveau 1 : Couleurs dansantes (`color-spray`), non évaluée
+- niveau 1 : Injonction (`command`), non évaluée
+- niveau 1 : Compréhension des langues (`comprehend-languages`), non évaluée
+- niveau 3 : Invocation d’animaux (`conjure-animals`), non évaluée
+- niveau 2 : Flamme éternelle (`continual-flame`), non évaluée
+- niveau 3 : Contresort (`counterspell`), non évaluée
+- niveau 3 : Création de nourriture et d’eau (`create-food-and-water`), non évaluée
+- niveau 1 : Création ou destruction d’eau (`create-or-destroy-water`), non évaluée
+- niveau 1 : Soins (`cure-wounds`), non évaluée
+- niveau 0 : Lumières dansantes (`dancing-lights`), non évaluée
+- niveau 2 : Ténèbres (`darkness`), non évaluée
+- niveau 2 : Vision dans le noir (`darkvision`), non évaluée
+- niveau 3 : Lumière du jour (`daylight`), non évaluée
+- niveau 1 : Détection du mal et du bien (`detect-evil-and-good`), non évaluée
+- niveau 1 : Détection de la magie (`detect-magic`), non évaluée
+- niveau 1 : Détection du poison et des maladies (`detect-poison-and-disease`), non évaluée
+- niveau 2 : Détection des pensées (`detect-thoughts`), non évaluée
+- niveau 1 : Déguisement (`disguise-self`), non évaluée
+- niveau 3 : Dissipation de la magie (`dispel-magic`), non évaluée
+- niveau 1 : Murmures dissonants (`dissonant-whispers`), non évaluée
+- niveau 1 : Châtiment divin (`divine-smite-spell`), non évaluée
+- niveau 2 : Souffle du dragon (`dragon-s-breath`), non évaluée
+- niveau 0 : Druidisme (`druidcraft`), non évaluée
+- niveau 0 : Élémentalisme (`elementalism`), non évaluée
+- niveau 2 : Amélioration de caractéristique (`enhance-ability`), non évaluée
+- niveau 2 : Agrandissement/rapetissement (`enlarge-reduce`), non évaluée
+- niveau 1 : Frappe piégeuse (`ensnaring-strike`), non évaluée
+- niveau 1 : Enchevêtrement (`entangle`), non évaluée
+- niveau 2 : Discours captivant (`enthrall`), non évaluée
+- niveau 1 : Repli expéditif (`expeditious-retreat`), non évaluée
+- niveau 1 : Lueurs féeriques (`faerie-fire`), non évaluée
+- niveau 1 : Simulacre de vie (`false-life`), non évaluée
+- niveau 3 : Terreur (`fear`), non évaluée
+- niveau 1 : Feuille morte (`feather-fall`), non évaluée
+- niveau 1 : Appel de familier (`find-familiar`), non évaluée
+- niveau 2 : Appel de destrier (`find-steed`), non évaluée
+- niveau 2 : Détection des pièges (`find-traps`), non évaluée
+- niveau 1 : Disque flottant (`floating-disk`), non évaluée
+- niveau 3 : Vol (`fly`), non évaluée
+- niveau 1 : Nappe de brouillard (`fog-cloud`), non évaluée
+- niveau 3 : Forme gazeuse (`gaseous-form`), non évaluée
+- niveau 2 : Doux repos (`gentle-repose`), non évaluée
+- niveau 3 : Glyphe de garde (`glyph-of-warding`), non évaluée
+- niveau 1 : Baies nourricières (`goodberry`), non évaluée
+- niveau 1 : Graisse (`grease`), non évaluée
+- niveau 0 : Assistance (`guidance`), non évaluée
+- niveau 2 : Bourrasque (`gust-of-wind`), non évaluée
+- niveau 3 : Hâte (`haste`), non évaluée
+- niveau 1 : Mot de guérison (`healing-word`), non évaluée
+- niveau 1 : Héroïsme (`heroism`), non évaluée
+- niveau 1 : Maléfice (`hex`), non évaluée
+- niveau 1 : Fou rire (`hideous-laughter`), non évaluée
+- niveau 1 : Marque du chasseur (`hunters-mark`), non évaluée
+- niveau 3 : Motif hypnotique (`hypnotic-pattern`), non évaluée
+- niveau 1 : Couteau de glace (`ice-knife`), non évaluée
+- niveau 1 : Identification (`identify`), non évaluée
+- niveau 1 : Texte illusoire (`illusory-script`), non évaluée
+- niveau 2 : Invisibilité (`invisibility`), non évaluée
+- niveau 1 : Saut (`jump`), non évaluée
+- niveau 2 : Déblocage (`knock`), non évaluée
+- niveau 2 : Restauration partielle (`lesser-restoration`), non évaluée
+- niveau 2 : Lévitation (`levitate`), non évaluée
+- niveau 0 : Lumière (`light`), non évaluée
+- niveau 2 : Localisation d’animaux ou de plantes (`locate-animals-or-plants`), non évaluée
+- niveau 2 : Localisation d’objet (`locate-object`), non évaluée
+- niveau 1 : Grande foulée (`longstrider`), non évaluée
+- niveau 1 : Armure du mage (`mage-armor`), non évaluée
+- niveau 0 : Main du mage (`mage-hand`), non évaluée
+- niveau 3 : Cercle magique (`magic-circle`), non évaluée
+- niveau 2 : Bouche magique (`magic-mouth`), non évaluée
+- niveau 2 : Arme magique (`magic-weapon`), non évaluée
+- niveau 3 : Image majeure (`major-image`), non évaluée
+- niveau 3 : Mot de guérison de groupe (`mass-healing-word`), non évaluée
+- niveau 3 : Fusion dans la pierre (`meld-into-stone`), non évaluée
+- niveau 0 : Réparation (`mending`), non évaluée
+- niveau 0 : Message (`message`), non évaluée
+- niveau 2 : Épine mentale (`mind-spike`), non évaluée
+- niveau 0 : Illusion mineure (`minor-illusion`), non évaluée
+- niveau 2 : Image miroir (`mirror-image`), non évaluée
+- niveau 2 : Foulée brumeuse (`misty-step`), non évaluée
+- niveau 3 : Antidétection (`nondetection`), non évaluée
+- niveau 2 : Passage sans trace (`pass-without-trace`), non évaluée
+- niveau 2 : Force fantasmagorique (`phantasmal-force`), non évaluée
+- niveau 3 : Monture fantôme (`phantom-steed`), non évaluée
+- niveau 3 : Croissance végétale (`plant-growth`), non évaluée
+- niveau 2 : Prière de guérison (`prayer-of-healing`), non évaluée
+- niveau 0 : Prestidigitation (`prestidigitation`), non évaluée
+- niveau 3 : Protection contre l’énergie (`protection-from-energy`), non évaluée
+- niveau 1 : Protection contre le mal et le bien (`protection-from-evil-and-good`), non évaluée
+- niveau 2 : Protection contre le poison (`protection-from-poison`), non évaluée
+- niveau 1 : Purification de la nourriture et de l’eau (`purify-food-and-drink`), non évaluée
+- niveau 2 : Rayon affaiblissant (`ray-of-enfeeblement`), non évaluée
+- niveau 1 : Rayon empoisonné (`ray-of-sickness`), non évaluée
+- niveau 3 : Délivrance des malédictions (`remove-curse`), non évaluée
+- niveau 0 : Résistance (`resistance`), non évaluée
+- niveau 3 : Retour à la vie (`revivify`), non évaluée
+- niveau 2 : Corde enchantée (`rope-trick`), non évaluée
+- niveau 1 : Sanctuaire (`sanctuary`), non évaluée
+- niveau 1 : Châtiment de fournaise (`searing-smite`), non évaluée
+- niveau 2 : Détection de l’invisibilité (`see-invisibility`), non évaluée
+- niveau 3 : Communication à distance (`sending`), non évaluée
+- niveau 1 : Bouclier de la foi (`shield-of-faith`), non évaluée
+- niveau 1 : Bouclier (`shield-spell`), partielle
+- niveau 0 : Crosse des druides (`shillelagh`), non évaluée
+- niveau 2 : Silence (`silence`), non évaluée
+- niveau 1 : Image silencieuse (`silent-image`), non évaluée
+- niveau 3 : Tempête de neige (`sleet-storm`), non évaluée
+- niveau 3 : Lenteur (`slow`), non évaluée
+- niveau 0 : Éruption ensorcelée (`sorcerous-burst`), non évaluée
+- niveau 0 : Stabilisation (`spare-the-dying`), non évaluée
+- niveau 1 : Communication avec les animaux (`speak-with-animals`), non évaluée
+- niveau 3 : Communication avec les morts (`speak-with-dead`), non évaluée
+- niveau 3 : Communication avec les plantes (`speak-with-plants`), non évaluée
+- niveau 2 : Pattes d’araignée (`spider-climb`), non évaluée
+- niveau 2 : Croissance d’épines (`spike-growth`), non évaluée
+- niveau 3 : Esprits gardiens (`spirit-guardians`), non évaluée
+- niveau 0 : Poussière d’étoile (`starry-wisp`), non évaluée
+- niveau 3 : Nuage nauséabond (`stinking-cloud`), non évaluée
+- niveau 2 : Suggestion (`suggestion`), non évaluée
+- niveau 0 : Thaumaturgie (`thaumaturgy`), non évaluée
+- niveau 3 : Petite hutte (`tiny-hut`), non évaluée
+- niveau 3 : Don des langues (`tongues`), non évaluée
+- niveau 0 : Coup au but (`true-strike`), non évaluée
+- niveau 1 : Serviteur invisible (`unseen-servant`), non évaluée
+- niveau 2 : Lien de protection (`warding-bond`), non évaluée
+- niveau 3 : Respiration aquatique (`water-breathing`), non évaluée
+- niveau 3 : Marche sur l’onde (`water-walk`), non évaluée
+- niveau 2 : Toile d’araignée (`web`), non évaluée
+- niveau 2 : Zone de vérité (`zone-of-truth`), non évaluée

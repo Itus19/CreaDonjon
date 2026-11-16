@@ -543,7 +543,7 @@ Mesurer la couverture de tout ce qui entre en jeu (sorts, aptitudes, espèces, d
 
 *Fait le 16 novembre.* Les 36 lacunes de `data/srd/playable-2024.json` étiquetées ; le vocabulaire a grandi à leur lecture (`duration` au lieu de `duration_formula`, `spell_slots`, `target_filter`, `scaling`, `area_damage`) ; réimport fait : 38 lacunes en base sur 1 926 fiches, aucune sans brique. L'éditeur de briques propose la brique d'une lacune (« Non précisée » : `other`), l'aller-retour est testé (`briquesRegle.test.ts`). **À revoir au rapport (214)** : certaines lacunes semblent dépassées par des chantiers faits depuis (Inspiration bardique et le jeton, V3.1-197 ; Résistance de l'Affinité élémentaire, V3.1-171 ; la sauvegarde répétée de la Frappe malicieuse, ADR 0098).
 
-#### ☐ V3.1-214 — Le rapport de couverture · `M` · sans modèle IA — **prêt (Sonnet)**
+#### ☑ V3.1-214 — Le rapport de couverture · `M` · sans modèle IA — **prêt (Sonnet)**
 
 **Modèle conseillé : Sonnet**, une fois 212 fait ; Opus relit. **Dépend de** : 212.
 
@@ -551,7 +551,9 @@ Mesurer la couverture de tout ce qui entre en jeu (sorts, aptitudes, espèces, d
 - Le premier rapport est commité.
 
 **Critères d'acceptation**
-- [ ] Le rapport se régénère à l'identique sur une base inchangée ; ses comptes recoupent `coverageOf` sur un échantillon testé.
+- [x] Le rapport se régénère à l'identique sur une base inchangée ; ses comptes recoupent `coverageOf` sur un échantillon testé.
+
+*Fait le 16 novembre* (Sonnet, relu et corrigé par Opus). `scripts/couverture-srd.ts` (lecture seule, paginée, 40 à 60 requêtes), `src/core/rules/coverageReport.ts` (pur, `coverageReport.test.ts` 13/13), premier rapport `docs/couverture-srd.md`. Deux générations identiques hors la date. **Corrigé à la relecture** : les lacunes d'une espèce ou d'une sous-classe ne se recomptent plus par brique (elles sont celles de ses aptitudes). Premier compte : 225 jouables, 309 partielles, 1 159 non évaluées sur 1 693 fiches comptées (13 %) ; les monstres pèsent lourd (283 actions sans chiffre, 328 traits en prose) ; hors monstres, 38 lacunes déclarées.
 
 #### ☐ V3.1-215 — La vue du MJ étendue · `M` · sans modèle IA — **prêt (Sonnet)**
 
