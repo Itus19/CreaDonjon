@@ -516,7 +516,7 @@ Perception et visibilité (invisible, caché, sens), lumière, étiquettes de ma
 ### ☐ V3.1-139 — L'inventaire et la couverture du SRD · `L` · sans modèle IA — **conçu (ADR 0100), découpé en 212 à 215**
 Mesurer la couverture de tout ce qui entre en jeu (sorts, aptitudes, espèces, dons, objets magiques, monstres avec leurs actions et traits), lister les lacunes par brique, et tenir le compte jusqu'à 100 %.
 
-**Conçu le 16 novembre (ADR 0100).** Deux choix de l'auteur : le compte vit dans un **rapport généré** (`docs/couverture-srd.md`, script en lecture seule, commité après chaque ticket de données) ; chaque lacune porte une **étiquette `brick`** dans un vocabulaire fermé. « Jouable » se définit par catégorie (`coverageOf`) : un sort se joue aussi par son bloc d'effets, une arme par ses données, un monstre par ses actions chiffrées, une espèce ou une classe par ses aptitudes. Mesure de départ (officiel, critère de V3.1-132) : aptitudes 22 jouables, 23 partielles, 566 non évaluées ; sorts 1 partiel, 338 non évalués (dont 153 jouables par leurs effets, que l'ancien critère ne voit pas) ; objets magiques 1 partiel, 302 non évalués ; 317 monstres.
+**Conçu le 16 novembre (ADR 0100).** Deux choix de l'auteur : le compte vit dans un **rapport généré** (`docs/couverture-srd.md`, script en lecture seule, commité après chaque ticket de données) ; chaque lacune porte une **étiquette `brick`** dans un vocabulaire fermé. « Jouable » se définit par catégorie (`coverageOf`) : une espèce ou une sous-classe se joue par ses aptitudes, un monstre par ses actions chiffrées (ses traits en prose sont des lacunes), un état par le moteur ; le reste garde le critère du bloc mécanique. Mesure de départ (officiel) : sorts 73 jouables, 1 partiel, 265 non évalués ; aptitudes 33 jouables, 23 partielles, 555 non évaluées ; objets magiques 1 partiel, 302 non évalués ; armes, armures, classes toutes jouables ; espèces 33, sous-classes 12, états 15 et monstres 317 que le critère actuel ne sait pas compter.
 
 #### ☐ V3.1-212 — Le noyau de la couverture : `coverageOf` et les briques · `M` · sans modèle IA — **prêt (Opus)**
 
@@ -527,7 +527,7 @@ Mesurer la couverture de tout ce qui entre en jeu (sorts, aptitudes, espèces, d
 - La liste des états joués par le moteur, en une constante.
 
 **Critères d'acceptation**
-- [ ] Tests : un sort à bloc d'effets est jouable sans activation ; une arme est jouable ; un monstre dont une action n'a ni jet ni dégâts est partiel ; une espèce dont une aptitude est partielle est partielle ; une lacune sans brique compte dans `other`.
+- [ ] Tests : un sort à bloc d'effets est jouable sans activation ; une arme à bloc `weapon` est jouable ; un monstre dont une action n'a ni jet ni dégâts est partiel ; une espèce dont une aptitude est partielle est partielle ; une lacune sans brique compte dans `other`.
 
 #### ☐ V3.1-213 — Les lacunes étiquetées · `S` · sans modèle IA — **prêt (Opus)**
 
@@ -556,7 +556,7 @@ Mesurer la couverture de tout ce qui entre en jeu (sorts, aptitudes, espèces, d
 - « Règles non jouables » passe par `coverageOf` : espèces et monstres en plus, la brique de chaque lacune, un filtre par brique. Toujours lue à la demande (QUOTAS).
 
 **Critères d'acceptation**
-- [ ] Une variante maison voit ses propres règles partielles avec leur brique ; un sort jouable par ses effets n'y figure plus.
+- [ ] Une variante maison voit ses propres règles partielles avec leur brique ; une espèce dont une aptitude est partielle y figure, un monstre aux traits non joués aussi.
 
 ### ☐ V3.1-140 — La conversion assistée : du texte aux briques · `L` · **avec modèle IA** — **après la fondation**
 Le modèle lit le texte d'une fiche et propose des blocs (`resources`, `activation`, `coverage`), par `ai_proposals` : Zod, validation métier, relecture par l'auteur, application. Jamais d'écriture directe (règle absolue 9). Le texte de la règle entre dans le prompt comme donnée encadrée (règle 10).

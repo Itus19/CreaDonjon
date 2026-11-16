@@ -5,11 +5,9 @@
 
 ## Contexte
 
-L'ADR 0059 vise une table où toute règle en jeu se joue par le moteur, sans qu'un modèle la lise. La vue « règles non jouables » (V3.1-132) ne regarde que trois catégories (aptitudes, sorts, objets magiques), et sur un seul critère : la règle porte-t-elle un bloc mécanique ? Mesuré le 16 novembre sur l'officiel, ce critère trompe :
-- **Sorts :** 338 sur 339 seraient non évalués. Pourtant 153 se jouent déjà par leur bloc d'effets (attaque, sauvegarde, dégâts : le jet ciblé, ADR 0098).
-- **Armes et armures :** elles se jouent par leurs données (propriétés, CA), sans bloc de briques.
-- **Monstres :** leurs 317 blocs de stats se jouent par les actions chiffrées ; leurs traits restent en prose.
-- **Espèces, classes, sous-classes :** elles se jouent par leurs aptitudes, qui sont des fiches à part.
+L'ADR 0059 vise une table où toute règle en jeu se joue par le moteur, sans qu'un modèle la lise. La vue « règles non jouables » (V3.1-132) ne regarde que trois catégories (aptitudes, sorts, objets magiques), sur un seul critère : la règle porte-t-elle un bloc mécanique (`MECHANICAL_BLOCK_TYPES` : briques, `effects` d'un sort, `weapon`, `armor`, progression de classe…) ? Mesuré le 16 novembre sur l'officiel :
+- **Sorts :** 73 jouables par leur bloc d'effets, 1 partiel, 265 non évalués ; **aptitudes :** 33 jouables, 23 partielles, 555 non évaluées ; **objets magiques :** 1 partiel, 302 non évalués ; armes, armures et classes : toutes jouables par leurs blocs.
+- Ce que le critère ne sait pas dire : une **espèce** (33) ou une **sous-classe** (12) se joue par ses aptitudes, qui sont des fiches à part ; un **monstre** (317) se joue par les actions chiffrées de son bloc de stats, ses traits restant en prose ; un **état** (15) se joue par le moteur, pas par un bloc.
 
 Les lacunes déclarées (bloc `coverage`) sont du texte libre : on ne peut pas dire quelle brique manque le plus.
 
@@ -33,8 +31,8 @@ Une fonction pure du noyau, `coverageOf(catégorie, faits)`, rend `playable`, `p
 | Catégorie | Jouable quand | Partielle quand |
 |---|---|---|
 | Aptitude, don, objet magique | un bloc mécanique (ADR 0059) | des lacunes déclarées |
-| Sort | une activation, **ou** un bloc d'effets (attaque, sauvegarde, dégâts) | des lacunes déclarées |
-| Arme, armure | toujours (ses données suffisent au moteur) | — |
+| Sort | une activation, ou un bloc d'effets (attaque, sauvegarde, dégâts : le jet ciblé, ADR 0098) | des lacunes déclarées |
+| Arme, armure, classe | son bloc (`weapon`, `armor`, progression), comme aujourd'hui | — |
 | Monstre | toutes ses actions ont un jet ou des dégâts chiffrés | des actions sans chiffre, ou des traits non joués |
 | Espèce, classe, sous-classe | toutes ses aptitudes atteintes sont jouables | l'une d'elles est partielle ou non évaluée |
 | État | la clé est dans la liste des états joués par le moteur | — |
