@@ -17,8 +17,8 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const hasCreds = Boolean(SUPABASE_URL && SERVICE_ROLE_KEY);
 
-// Une aptitude sans brique dans l'officielle (V3.1-133 a rendu Abjuration d'ennemis jouable par les données du SRD).
-const KEY = "paladin-lay-on-hands";
+// Une aptitude sans brique dans l'officielle (V3.1-133 a rendu Abjuration d'ennemis jouable, V3.1-185 Imposition des mains).
+const KEY = "wizard-arcane-recovery";
 const num = (value: number) => ({ op: "num" as const, value });
 const ACTIVATION = {
   activations: [
