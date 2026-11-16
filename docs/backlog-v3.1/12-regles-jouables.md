@@ -531,7 +531,7 @@ Mesurer la couverture de tout ce qui entre en jeu (sorts, aptitudes, espèces, d
 
 *Fait le 16 novembre.* `src/core/rules/coverage.ts` : `coverageCategoryOf`, `coverageOf`, `coverageTally`, `ENGINE_CONDITIONS` (Aveuglé, Invisible). `COVERAGE_BRICKS` dans le schéma du bloc `coverage` (`brick` facultatif, vocabulaire fermé, brique `monster_action` ajoutée). Tests : `coverage.test.ts` 13/13.
 
-#### ☐ V3.1-213 — Les lacunes étiquetées · `S` · sans modèle IA — **prêt (Opus)**
+#### ☑ V3.1-213 — Les lacunes étiquetées · `S` · sans modèle IA — **prêt (Opus)**
 
 **Modèle conseillé : Opus** — juger la brique de chaque lacune. **Dépend de** : 212. **Sous-tâches Haiku** : recenser les lacunes existantes ; vérifications.
 
@@ -539,13 +539,15 @@ Mesurer la couverture de tout ce qui entre en jeu (sorts, aptitudes, espèces, d
 - L'éditeur de briques propose la brique d'une lacune (liste fermée, libellés dans `messages/`).
 
 **Critères d'acceptation**
-- [ ] Aucune lacune de l'officiel sans brique ; l'éditeur l'enregistre et la relit.
+- [x] Aucune lacune de l'officiel sans brique ; l'éditeur l'enregistre et la relit.
+
+*Fait le 16 novembre.* Les 36 lacunes de `data/srd/playable-2024.json` étiquetées ; le vocabulaire a grandi à leur lecture (`duration` au lieu de `duration_formula`, `spell_slots`, `target_filter`, `scaling`, `area_damage`) ; réimport fait : 38 lacunes en base sur 1 926 fiches, aucune sans brique. L'éditeur de briques propose la brique d'une lacune (« Non précisée » : `other`), l'aller-retour est testé (`briquesRegle.test.ts`). **À revoir au rapport (214)** : certaines lacunes semblent dépassées par des chantiers faits depuis (Inspiration bardique et le jeton, V3.1-197 ; Résistance de l'Affinité élémentaire, V3.1-171 ; la sauvegarde répétée de la Frappe malicieuse, ADR 0098).
 
 #### ☐ V3.1-214 — Le rapport de couverture · `M` · sans modèle IA — **prêt (Sonnet)**
 
 **Modèle conseillé : Sonnet**, une fois 212 fait ; Opus relit. **Dépend de** : 212.
 
-- `scripts/couverture-srd.ts` : lecture seule, paginée, de l'officiel ; écrit `docs/couverture-srd.md` (compte par catégorie, lacunes par brique avec les règles concernées, règles fréquentes d'abord : aptitudes des niveaux 1 à 5, sorts 0 à 3). Coût écrit en tête du script (QUOTAS).
+- `scripts/couverture-srd.ts` : lecture seule, paginée (Supabase plafonne à 1 000 lignes par requête), de l'officiel ; écrit `docs/couverture-srd.md` (compte par catégorie, lacunes par brique avec les règles concernées, règles fréquentes d'abord : aptitudes des niveaux 1 à 5, sorts 0 à 3). Coût écrit en tête du script (QUOTAS).
 - Le premier rapport est commité.
 
 **Critères d'acceptation**

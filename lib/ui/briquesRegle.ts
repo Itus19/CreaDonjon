@@ -28,6 +28,7 @@ import {
   type ActivationBlockData,
   type CastOption,
   type CoverageBlockData,
+  type CoverageBrick,
   type DurableEffect,
   type DurableEffectDuration,
   type DurableEffectEnd,
@@ -366,6 +367,8 @@ export interface BrouillonLacune {
   uid: string;
   texte: string;
   manque: string;
+  /** V3.1-213 (ADR 0100) : la brique qui manque ; vide : `other` au compte. */
+  brique: CoverageBrick | "";
 }
 
 /**
@@ -541,7 +544,7 @@ export function nouvellesCibles(): BrouillonCibles {
 }
 
 export function nouvelleLacune(texte = ""): BrouillonLacune {
-  return { uid: nouvelUid(), texte, manque: "" };
+  return { uid: nouvelUid(), texte, manque: "", brique: "" };
 }
 
 /** V3.1-197 : les utilisations qu'un jeton accorde, et le nom de l'effet qui les accorde (« Accordée par … »). */
@@ -1127,7 +1130,7 @@ export function blocsVersBrouillon(blocs: readonly { blockType: string; data: un
   }
 
   if (cov) {
-    b.lacunes = (cov.data as CoverageBlockData).gaps.map((g) => ({ uid: nouvelUid(), texte: g.text, manque: g.missing }));
+    b.lacunes = (cov.data as CoverageBlockData).gaps.map((g) => ({ uid: nouvelUid(), texte: g.text, manque: g.missing, brique: g.brick ?? "" }));
   }
   b.signatureAuras = signatureAuras(b);
   return b;
@@ -1534,7 +1537,7 @@ export function brouillonVersBlocs(b: Brouillon, nomsEtats: Readonly<Record<stri
 
   const lacunes = b.lacunes.map((g, i) => {
     if (g.texte.trim() === "" || g.manque.trim() === "") ctx.erreurs.push(`Passage non exprimable ${i + 1} : le texte et ce qui manque sont tous deux requis`);
-    return { text: g.texte.trim() || "?", missing: g.manque.trim() || "?" };
+    return { text: g.texte.trim() || "?", missing: g.manque.trim() || "?", ...(g.brique ? { brick: g.brique } : {}) };
   });
 
   const echecs = b.echecs.map((e, i) => {

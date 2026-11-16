@@ -57,7 +57,7 @@ function abjuration(): Brouillon {
   sauvegarde.echec = [etat];
   a.effets = [sauvegarde];
   b.activations = [a];
-  b.lacunes = [{ uid: "g", texte: "une seule des choses suivantes", manque: "une seule chose par tour" }];
+  b.lacunes = [{ uid: "g", texte: "une seule des choses suivantes", manque: "une seule chose par tour", brique: "turn_restriction" }];
   return b;
 }
 
@@ -101,7 +101,8 @@ describe("brouillonVersBlocs : Abjuration d'ennemis", () => {
       "effects.0": "réussir un jet de sauvegarde de Sagesse",
       "effects.0.on_fail.0": "subir l'état Effrayé",
     });
-    expect(r.coverage).toEqual({ gaps: [{ text: "une seule des choses suivantes", missing: "une seule chose par tour" }] });
+    // V3.1-213 : la brique de la lacune s'écrit, et se relit.
+    expect(r.coverage).toEqual({ gaps: [{ text: "une seule des choses suivantes", missing: "une seule chose par tour", brick: "turn_restriction" }] });
     // Chaque chemin cité désigne une brique (le schéma le vérifie aussi).
     expect(Object.keys(a.passages ?? {}).every((c) => brickPaths(a).includes(c))).toBe(true);
   });

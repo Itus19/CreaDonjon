@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import Checkbox from "@/components/shared/Checkbox";
 import { useWorldRuleEntries } from "@/components/blocks/useWorldRuleEntries";
 import type { RuleEntryDetail } from "@/src/server/services/rules";
-import { RULE_RECHARGES } from "@/src/core/schemas/rule-blocks/playable";
+import { COVERAGE_BRICKS, RULE_RECHARGES } from "@/src/core/schemas/rule-blocks/playable";
 import { ACTIVATION_COSTS, ACTIVATION_TARGET_KINDS } from "@/src/core/schemas/rule-blocks/playable";
 import { ABILITY_LABELS } from "@/src/core/rules/abilities";
 import type { Ability } from "@/src/core/rules/sheet";
@@ -607,6 +607,12 @@ function SectionLacunes({ brouillon, onChange }: { brouillon: Brouillon; onChang
           >
             <ChampTexte libelle={t("texteDuPassage")} valeur={g.texte} onChange={(texte) => maj({ ...g, texte })} />
             <ChampTexte libelle={t("ceQuiManque")} valeur={g.manque} onChange={(manque) => maj({ ...g, manque })} />
+            <ChampListe
+              libelle={t("briqueManquante")}
+              valeur={g.brique}
+              options={[{ value: "", label: t("briqueNonPrecisee") }, ...COVERAGE_BRICKS.map((b) => ({ value: b, label: t(`brique.${b}`) }))]}
+              onChange={(v) => maj({ ...g, brique: (COVERAGE_BRICKS as readonly string[]).includes(v) ? (v as (typeof COVERAGE_BRICKS)[number]) : "" })}
+            />
           </CarteBrique>
         );
       })}

@@ -42,14 +42,17 @@ Un **trait de monstre** en prose compte comme une lacune de la brique `monster_t
 
 ### Les briques manquantes
 
-Une lacune gagne un champ facultatif, `brick`. Il est choisi dans un vocabulaire fermé, tenu dans le noyau (`COVERAGE_BRICKS`), qui grandit par ticket. Les briques de départ viennent des lacunes existantes :
-- `timing` : le moment n'est pas vérifié (« en prenant l'action Attaque », « au jet d'Initiative ») ;
-- `duration_formula` : une durée en formule ;
+Une lacune gagne un champ facultatif, `brick`. Il est choisi dans un vocabulaire fermé, tenu dans le noyau (`COVERAGE_BRICKS`), qui grandit par ticket. Les briques de départ viennent des 36 lacunes de l'officiel (V3.1-213) :
+- `timing` : le moment ou la limite n'est pas vérifié (« en prenant l'action Attaque », « au jet d'Initiative », « une fois par tour ») ;
+- `duration` : une durée que le moteur n'exprime pas (en formule, « jusqu'au début de votre tour suivant », prolongée de tour en tour) ;
 - `choice` : le choix d'une forme, d'une créature, d'une option ;
-- `slot_regain` : regagner des emplacements de sort ;
-- `turn_restriction` : restreindre le tour d'une créature ;
+- `spell_slots` : regagner ou convertir des emplacements de sort ;
+- `turn_restriction` : restreindre le tour d'une créature, ou lui interdire une action ;
+- `target_filter` : des cibles filtrées (type de créature, taille, « que vous voyez » sur une réaction, un sort précis) ;
+- `scaling` : un nombre de dés qui grandit avec le niveau ;
+- `area_damage` : un seul jet de dégâts pour toute une zone ;
 - `equipment_condition` : une fin ou une condition liée à l'équipement ;
-- `ending_event` : une fin sur un événement non émis (Neutralisé, mort, repos long) ;
+- `ending_event` : une fin sur un événement non émis (Neutralisé, mort, repos long, sauvegarde répétée) ;
 - `monster_action` : une action de monstre sans jet ni dégâts chiffrés ;
 - `monster_trait` : un trait de monstre ;
 - `other`.

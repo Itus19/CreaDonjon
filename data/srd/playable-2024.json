@@ -178,11 +178,13 @@
       "gaps": [
         {
           "text": "hormis l’action Magie",
-          "missing": "Une action accordée réservée à un usage (pas l'action Magie) — chantier des actions modifiées (V3.1-136)."
+          "missing": "Une action accordée réservée à un usage (pas l'action Magie) — chantier des actions modifiées (V3.1-136).",
+          "brick": "turn_restriction"
         },
         {
           "text": "mais seulement une fois par tour",
-          "missing": "Une limite d'usage par tour — chantier « Intervenir sur un jet » (V3.1-135)."
+          "missing": "Une limite d'usage par tour — chantier « Intervenir sur un jet » (V3.1-135).",
+          "brick": "timing"
         }
       ]
     }
@@ -210,7 +212,8 @@
       "gaps": [
         {
           "text": "vous savez où se trouve toute créature des types précités dans un rayon de 18 m",
-          "missing": "Perception divine : savoir où sont les créatures d'un type — chantier du modèle du monde (V3.1-138)."
+          "missing": "Perception divine : savoir où sont les créatures d'un type — chantier du modèle du monde (V3.1-138).",
+          "brick": "target_filter"
         }
       ]
     }
@@ -238,11 +241,13 @@
       "gaps": [
         {
           "text": "Vous ajoutez un d8 lorsque vous atteignez les niveaux 7 (2d8), 13 (3d8) et 18 (4d8) de Clerc.",
-          "missing": "Étincelle divine : un nombre de dés qui dépend du niveau — chantier des valeurs calculées (V3.1-134)."
+          "missing": "Étincelle divine : un nombre de dés qui dépend du niveau — chantier des valeurs calculées (V3.1-134).",
+          "brick": "scaling"
         },
         {
           "text": "Chaque Mort-vivant de votre choix dans un rayon de 9 m effectue un jet de sauvegarde de Sagesse.",
-          "missing": "Renvoi des morts-vivants : des cibles filtrées par type de créature — chantier des conditions de jeu (V3.1-137)."
+          "missing": "Renvoi des morts-vivants : des cibles filtrées par type de créature — chantier des conditions de jeu (V3.1-137).",
+          "brick": "target_filter"
         }
       ]
     }
@@ -347,7 +352,8 @@
       "gaps": [
         {
           "text": "la cible ne peut faire qu’une seule des choses suivantes à son tour : se déplacer, entreprendre une action ou une action Bonus",
-          "missing": "Restreindre le tour d'une créature à une seule chose — chantier des actions modifiées (V3.1-136). Rappelée sur la cible ; le MJ l'applique."
+          "missing": "Restreindre le tour d'une créature à une seule chose — chantier des actions modifiées (V3.1-136). Rappelée sur la cible ; le MJ l'applique.",
+          "brick": "turn_restriction"
         }
       ]
     }
@@ -509,11 +515,13 @@
       "gaps": [
         {
           "text": "La Rage persiste jusqu’à la fin de votre tour suivant",
-          "missing": "Une durée prolongée de tour en tour par une attaque — l'effet dure 10 minutes au plus et se retire au choix (V3.1-136)."
+          "missing": "Une durée prolongée de tour en tour par une attaque — l'effet dure 10 minutes au plus et se retire au choix (V3.1-136).",
+          "brick": "duration"
         },
         {
           "text": "Vous ne pouvez pas maintenir votre Concentration ni lancer de sorts.",
-          "missing": "Interdire une action (sorts, concentration) — chantier des actions modifiées (V3.1-136)."
+          "missing": "Interdire une action (sorts, concentration) — chantier des actions modifiées (V3.1-136).",
+          "brick": "turn_restriction"
         }
       ]
     }
@@ -524,7 +532,8 @@
       "gaps": [
         {
           "text": "Vous-même et vos alliés dans l’aura recevez un bonus aux jets de sauvegarde égal à votre modificateur de Charisme",
-          "missing": "Joué : le bonus du paladin, et celui des alliés posés sur le plan à 3 m (9 m avec Aura étendue) quand ils sauvegardent. Le bonus ne s'affiche pas sur la fiche d'un allié (calculé au jet)."
+          "missing": "Joué : le bonus du paladin, et celui des alliés posés sur le plan à 3 m (9 m avec Aura étendue) quand ils sauvegardent. Le bonus ne s'affiche pas sur la fiche d'un allié (calculé au jet).",
+          "brick": "other"
         }
       ]
     }
@@ -535,7 +544,8 @@
       "gaps": [
         {
           "text": "Vous avez la Résistance à ce type de dégâts",
-          "missing": "Résistance à un type de dégâts — V3.1-137."
+          "missing": "Résistance à un type de dégâts — V3.1-137.",
+          "brick": "other"
         }
       ]
     }
@@ -572,7 +582,8 @@
       "gaps": [
         {
           "text": "lorsque la créature rate un Test d20, elle peut lancer le dé d’Inspiration bardique pour en ajouter le résultat au Test d20",
-          "missing": "Donner un dé à un allié, qu'il ajoute à un test raté — chantier « Intervenir sur un jet » (V3.1-135). Le dé s'écrit déjà 1d{column.class_specific_bardic_inspiration_die}."
+          "missing": "Donner un dé à un allié, qu'il ajoute à un test raté — chantier « Intervenir sur un jet » (V3.1-135). Le dé s'écrit déjà 1d{column.class_specific_bardic_inspiration_die}.",
+          "brick": "other"
         }
       ]
     }
@@ -646,7 +657,8 @@
       "gaps": [
         {
           "text": "Une fois par tour et à condition que l’attaque soit portée avec une arme dotée de la propriété Finesse ou À distance",
-          "missing": "Joué : l'arme (Finesse ou À distance), le dé, la touche et « une fois par tour ». L'Avantage ou l'allié au contact de la cible restent au choix de la joueuse."
+          "missing": "Joué : l'arme (Finesse ou À distance), le dé, la touche et « une fois par tour ». L'Avantage ou l'allié au contact de la cible restent au choix de la joueuse.",
+          "brick": "choice"
         }
       ]
     }
@@ -782,15 +794,18 @@
       "gaps": [
         {
           "text": "au nombre de dés d’Attaque sournoise auquel vous renoncez pour ajouter cet effet",
-          "missing": "Le dé auquel on renonce n'est pas retiré du jet d'Attaque sournoise : la joueuse le retire en lançant (la Frappe malicieuse se joue au clic, après la touche)."
+          "missing": "Le dé auquel on renonce n'est pas retiré du jet d'Attaque sournoise : la joueuse le retire en lançant (la Frappe malicieuse se joue au clic, après la touche).",
+          "brick": "other"
         },
         {
           "text": "Si la cible est une de taille G ou inférieure",
-          "missing": "La taille de la cible n'est pas vérifiée : la table tranche."
+          "missing": "La taille de la cible n'est pas vérifiée : la table tranche.",
+          "brick": "target_filter"
         },
         {
           "text": "La cible réitère le JS à la fin de chacun de ses tours",
-          "missing": "L'état Empoisonné est posé sans sa sauvegarde répétée ni sa durée d'une minute : le MJ le retire."
+          "missing": "L'état Empoisonné est posé sans sa sauvegarde répétée ni sa durée d'une minute : le MJ le retire.",
+          "brick": "ending_event"
         }
       ]
     }
@@ -837,7 +852,8 @@
       "gaps": [
         {
           "text": "Lorsqu’un assaillant que vous voyez vous touche",
-          "missing": "« que vous voyez » : la perception attend le modèle du monde (V3.1-138) ; la réaction est proposée sans le vérifier."
+          "missing": "« que vous voyez » : la perception attend le modèle du monde (V3.1-138) ; la réaction est proposée sans le vérifier.",
+          "brick": "target_filter"
         }
       ]
     }
@@ -1234,11 +1250,13 @@
       "gaps": [
         {
           "text": "ou bien réussit un test de caractéristique",
-          "missing": "Un test de caractéristique réussi d'une autre créature : la fenêtre ne s'ouvre pas encore sur les tests des autres."
+          "missing": "Un test de caractéristique réussi d'une autre créature : la fenêtre ne s'ouvre pas encore sur les tests des autres.",
+          "brick": "timing"
         },
         {
           "text": "Lorsqu’une créature que vous voyez dans un rayon de 18 m",
-          "missing": "La portée (18 m) et « que vous voyez » attendent les distances réelles et la perception (V3.1-137, 138) : la réaction est proposée sans les vérifier."
+          "missing": "La portée (18 m) et « que vous voyez » attendent les distances réelles et la perception (V3.1-137, 138) : la réaction est proposée sans les vérifier.",
+          "brick": "target_filter"
         }
       ]
     }
@@ -1266,7 +1284,8 @@
       "gaps": [
         {
           "text": "Vous pouvez utiliser vos points de Sorcellerie pour alimenter les options ci-dessous",
-          "missing": "Convertir des emplacements en points de Sorcellerie (et l'inverse) se fait à la main pour l'instant."
+          "missing": "Convertir des emplacements en points de Sorcellerie (et l'inverse) se fait à la main pour l'instant.",
+          "brick": "spell_slots"
         }
       ]
     }
@@ -1321,7 +1340,8 @@
       "gaps": [
         {
           "text": "vous recevez deux options de Métamagie au choix",
-          "missing": "Sort accéléré est proposé sans vérifier qu'il fait partie des options choisies ; les autres options restent en texte."
+          "missing": "Sort accéléré est proposé sans vérifier qu'il fait partie des options choisies ; les autres options restent en texte.",
+          "brick": "choice"
         }
       ]
     }
@@ -1422,11 +1442,13 @@
       "gaps": [
         {
           "text": "Lorsque vous entreprenez l’action Attaque",
-          "missing": "« En prenant l'action Attaque » n'est pas vérifié : l'activation ne coûte rien et se joue au moment voulu."
+          "missing": "« En prenant l'action Attaque » n'est pas vérifié : l'activation ne coûte rien et se joue au moment voulu.",
+          "brick": "timing"
         },
         {
           "text": "L’effet cesse également si vous cessez de porter l’arme.",
-          "missing": "La fin quand l'arme n'est plus portée attend une condition d'équipement sur un effet qui dure : on met fin à l'effet à la main. La lumière émise, elle, est jouée (V3.1-185)."
+          "missing": "La fin quand l'arme n'est plus portée attend une condition d'équipement sur un effet qui dure : on met fin à l'effet à la main. La lumière émise, elle, est jouée (V3.1-185).",
+          "brick": "equipment_condition"
         }
       ]
     }
@@ -1505,11 +1527,13 @@
       "gaps": [
         {
           "text": "Jusqu’au début de votre tour suivant, vous recevez un bonus de +5 à la CA",
-          "missing": "La durée « jusqu'au début de votre tour suivant » n'existe pas encore : l'effet dure un round."
+          "missing": "La durée « jusqu'au début de votre tour suivant » n'existe pas encore : l'effet dure un round.",
+          "brick": "duration"
         },
         {
           "text": "ou que le sort projectile magique vous cible",
-          "missing": "Le déclenchement par Projectile magique et l'immunité à ses dégâts attendent les restrictions de ciblage (V3.1-138)."
+          "missing": "Le déclenchement par Projectile magique et l'immunité à ses dégâts attendent les restrictions de ciblage (V3.1-138).",
+          "brick": "target_filter"
         }
       ]
     }
@@ -1879,7 +1903,8 @@
       "gaps": [
         {
           "text": "En cas de réussite, elle ne subit que la moitié de ces dégâts.",
-          "missing": "Un seul jet de dégâts pour toute la zone n'existe pas encore : chaque créature a son jet, et la moitié d'un jet à part sur une réussite."
+          "missing": "Un seul jet de dégâts pour toute la zone n'existe pas encore : chaque créature a son jet, et la moitié d'un jet à part sur une réussite.",
+          "brick": "area_damage"
         }
       ]
     }
@@ -2249,7 +2274,8 @@
       "gaps": [
         {
           "text": "En cas de réussite, elle ne subit que la moitié de ces dégâts.",
-          "missing": "Un seul jet de dégâts pour toute la zone n'existe pas encore : chaque créature a son jet, et la moitié d'un jet à part sur une réussite."
+          "missing": "Un seul jet de dégâts pour toute la zone n'existe pas encore : chaque créature a son jet, et la moitié d'un jet à part sur une réussite.",
+          "brick": "area_damage"
         }
       ]
     }
@@ -2619,7 +2645,8 @@
       "gaps": [
         {
           "text": "En cas de réussite, elle ne subit que la moitié de ces dégâts.",
-          "missing": "Un seul jet de dégâts pour toute la zone n'existe pas encore : chaque créature a son jet, et la moitié d'un jet à part sur une réussite."
+          "missing": "Un seul jet de dégâts pour toute la zone n'existe pas encore : chaque créature a son jet, et la moitié d'un jet à part sur une réussite.",
+          "brick": "area_damage"
         }
       ]
     }
@@ -2989,7 +3016,8 @@
       "gaps": [
         {
           "text": "En cas de réussite, elle ne subit que la moitié de ces dégâts.",
-          "missing": "Un seul jet de dégâts pour toute la zone n'existe pas encore : chaque créature a son jet, et la moitié d'un jet à part sur une réussite."
+          "missing": "Un seul jet de dégâts pour toute la zone n'existe pas encore : chaque créature a son jet, et la moitié d'un jet à part sur une réussite.",
+          "brick": "area_damage"
         }
       ]
     }
@@ -3359,7 +3387,8 @@
       "gaps": [
         {
           "text": "En cas de réussite, elle ne subit que la moitié de ces dégâts.",
-          "missing": "Un seul jet de dégâts pour toute la zone n'existe pas encore : chaque créature a son jet, et la moitié d'un jet à part sur une réussite."
+          "missing": "Un seul jet de dégâts pour toute la zone n'existe pas encore : chaque créature a son jet, et la moitié d'un jet à part sur une réussite.",
+          "brick": "area_damage"
         }
       ]
     }
@@ -3554,15 +3583,18 @@
       "gaps": [
         {
           "text": "Vous connaissez quatre formes de Bête pour cette aptitude",
-          "missing": "Les formes connues ne se choisissent pas encore sur la fiche : l'activation propose les quatre formes recommandées (araignée, cheval de selle, loup, rat). Une autre forme se pose par le MJ."
+          "missing": "Les formes connues ne se choisissent pas encore sur la fiche : l'activation propose les quatre formes recommandées (araignée, cheval de selle, loup, rat). Une autre forme se pose par le MJ.",
+          "brick": "choice"
         },
         {
           "text": "autant d’heures que la moitié de votre niveau de Druide",
-          "missing": "La durée est comptée 1 heure (juste aux niveaux 2 et 3) : une durée en formule n'existe pas encore. Au-delà, on met fin à la forme à la main."
+          "missing": "La durée est comptée 1 heure (juste aux niveaux 2 et 3) : une durée en formule n'existe pas encore. Au-delà, on met fin à la forme à la main.",
+          "brick": "duration"
         },
         {
           "text": "subissez l’état Neutralisé ou mourez",
-          "missing": "La fin à l'état Neutralisé ou à la mort n'est pas jouée : le MJ retire la forme."
+          "missing": "La fin à l'état Neutralisé ou à la mort n'est pas jouée : le MJ retire la forme.",
+          "brick": "ending_event"
         }
       ]
     }
@@ -3673,11 +3705,13 @@
       "gaps": [
         {
           "text": "qui adopte une forme animale",
-          "missing": "Le familier prend la forme d'une chouette ; une autre forme d'appel de familier se change par le MJ."
+          "missing": "Le familier prend la forme d'une chouette ; une autre forme d'appel de familier se change par le MJ.",
+          "brick": "choice"
         },
         {
           "text": "disparaît lorsque vous terminez un Repos long",
-          "missing": "La fin est comptée 8 heures (la durée d'un Repos long) : un Repos court ne la retire pas, huit heures de jeu si."
+          "missing": "La fin est comptée 8 heures (la durée d'un Repos long) : un Repos court ne la retire pas, huit heures de jeu si.",
+          "brick": "ending_event"
         }
       ]
     }
@@ -3875,11 +3909,13 @@
       "gaps": [
         {
           "text": "Lorsque vous jouez l’Initiative",
-          "missing": "Le moment n'est pas vérifié : l'activation se propose au clic, à faire au jet d'Initiative."
+          "missing": "Le moment n'est pas vérifié : l'activation se propose au clic, à faire au jet d'Initiative.",
+          "brick": "timing"
         },
         {
           "text": "votre Rage est si féroce qu’elle persiste désormais 10 minutes",
-          "missing": "La durée de la Rage n'est pas allongée par cette aptitude : la Rage garde sa propre durée."
+          "missing": "La durée de la Rage n'est pas allongée par cette aptitude : la Rage garde sa propre durée.",
+          "brick": "duration"
         }
       ]
     }

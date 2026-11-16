@@ -313,10 +313,13 @@ export type ActivationBlockData = z.infer<typeof zActivationBlockData>;
  */
 export const COVERAGE_BRICKS = [
   "timing",
-  "duration_formula",
+  "duration",
   "choice",
-  "slot_regain",
+  "spell_slots",
   "turn_restriction",
+  "target_filter",
+  "scaling",
+  "area_damage",
   "equipment_condition",
   "ending_event",
   "monster_action",
