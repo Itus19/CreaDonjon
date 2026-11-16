@@ -1735,6 +1735,18 @@
     }
   },
   "initiative": {
+    "lumiere": "Lumière",
+    "lumiereChoix": "Lumière du combat",
+    "lumiereVive": "Vive",
+    "lumiereFaible": "Faible",
+    "lumiereTenebres": "Ténèbres",
+    "masqueAuxJoueuses": "Masqué aux joueuses",
+    "invoqueePar": "Invoquée par {nom}",
+    "seCacher": "Se cacher",
+    "seCacherPour": "Se cacher : {nom}",
+    "discretionCache": "Discrétion {total} : caché",
+    "discretionRate": "Discrétion {total} : raté",
+    "erreurSeCacher": "Le test de Discrétion n'a pas pu être lancé.",
     "plan": {
       "affichage": "Affichage de l'initiative",
       "liste": "Liste",
@@ -1867,6 +1879,8 @@
     "typeAjout": "Type de participant à ajouter"
   },
   "planCombat": {
+    "cache": "caché",
+    "invisible": "invisible",
     "planTitre": "Plan du combat",
     "zoomer": "Agrandir le plan",
     "dezoomer": "Rétrécir le plan",
@@ -1900,6 +1914,12 @@
     "annulerZone": "Annuler"
   },
   "combatJoueur": {
+    "aToi": "À toi",
+    "forme": "Forme : {nom}",
+    "seCacher": "Se cacher",
+    "discretionCache": "Discrétion {total} : caché",
+    "discretionRate": "Discrétion {total} : raté",
+    "erreurSeCacher": "Le test de Discrétion n'a pas pu être lancé.",
     "planTitre": "Plan du combat",
     "planErreurDeplacement": "Le déplacement n'a pas pu être enregistré.",
     "invitationTitre": "Vous entrez en combat",

@@ -13,6 +13,7 @@ import {
   etapeSuivante,
   etapesZone,
   initiales,
+  discretionDe,
   jetonsDepuisLignes,
   jetonsDepuisVue,
   metresVersEcran,
@@ -21,6 +22,7 @@ import {
   repartir,
   resumeMouvement,
   vueQuiCadre,
+  voileLumiere,
   zoomerAutour,
   ZOOM_MAX,
   ZOOM_MIN,
@@ -266,5 +268,30 @@ describe("l'outil de zone", () => {
     expect(ciblesAEnvoyer(["a", "b"], ["a"])).toEqual({ ids: ["a"], valide: true });
     expect(ciblesAEnvoyer(["a", "b"], [])).toEqual({ ids: [], valide: false });
     expect(ciblesAEnvoyer([], [])).toEqual({ ids: [], valide: true });
+  });
+});
+
+describe("V3.1-184 : lumière et discrétion", () => {
+  it("le voile suit la lumière : rien en lumière vive", () => {
+    expect(voileLumiere("bright")).toBeNull();
+    expect(voileLumiere(undefined)).toBeNull();
+    expect(voileLumiere("dim")).not.toBeNull();
+    expect(voileLumiere("dark")).not.toBe(voileLumiere("dim"));
+  });
+
+  it("Caché et Invisible sont lus sous leurs noms français ou techniques, Invisible l'emporte", () => {
+    expect(discretionDe(["Caché"])).toBe("cache");
+    expect(discretionDe(["hidden"])).toBe("cache");
+    expect(discretionDe(["Invisible", "Caché"])).toBe("invisible");
+    expect(discretionDe(["Empoisonné"])).toBeNull();
+    expect(discretionDe(null)).toBeNull();
+  });
+
+  it("le jeton du MJ porte la discrétion de sa ligne", () => {
+    const [j] = jetonsDepuisLignes(
+      [{ id: "m1", label: "Gobelin", is_ally: false, source_kind: "statblock", pos_x: 1, pos_y: 1, hp_max: 7, hp_current: 7, conditions: ["Invisible"] }],
+      null
+    );
+    expect(j.discret).toBe("invisible");
   });
 });

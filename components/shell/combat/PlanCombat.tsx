@@ -19,10 +19,12 @@ import {
   repartir,
   resumeMouvement,
   vueQuiCadre,
+  voileLumiere,
   zoomerAutour,
   type Cadre,
   type EtapeZone,
   type JetonPlan,
+  type Lumiere,
   type MouvementRecu,
   type Point,
   type Surcharge,
@@ -68,6 +70,8 @@ export interface PlanCombatProps {
   /** Le jeton de la personne qui regarde. */
   moiId?: string | null;
   zone?: ZonePosee;
+  /** V3.1-184 : la lumière du combat ; le plan s'assombrit en lumière faible et dans les ténèbres. */
+  lumiere?: Lumiere | string | null;
 }
 
 interface Glisse {
@@ -89,7 +93,7 @@ const COULEURS: Record<JetonPlan["camp"], { rond: string; texte: string }> = {
 
 const BOUTON_PETIT = "min-h-11 min-w-11 rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised disabled:opacity-50";
 
-export default function PlanCombat({ jetons, deplacables, onDeplacer, retirable = false, moiId = null, zone }: PlanCombatProps) {
+export default function PlanCombat({ jetons, deplacables, onDeplacer, retirable = false, moiId = null, zone, lumiere = null }: PlanCombatProps) {
   const t = useTranslations("planCombat");
   const conteneur = useRef<HTMLDivElement | null>(null);
   const cadreRef = useRef<Cadre>({ largeur: 320, hauteur: 320 });
@@ -304,6 +308,7 @@ export default function PlanCombat({ jetons, deplacables, onDeplacer, retirable 
   const contour = zone && apercu?.etat === "ok" ? contourZone(zone.zone.spec, apercu.origine, apercu.aim) : null;
   const etapesZoneListe = zone ? etapesZone(zone.zone.spec) : [];
 
+  const voile = voileLumiere(lumiere);
   const peutRetirer = retirable && onDeplacer && jetonChoisi?.pos && deplacables(jetonChoisi.id) && !zone;
 
   return (
@@ -344,6 +349,7 @@ export default function PlanCombat({ jetons, deplacables, onDeplacer, retirable 
         onPointerUp={(e) => surLever(e, false)}
         onPointerCancel={(e) => surLever(e, true)}
       >
+        {voile && <div className={`pointer-events-none absolute inset-0 ${voile}`} data-testid="plan-voile" aria-hidden="true" />}
         <svg width={cadre.largeur} height={cadre.hauteur} className="absolute inset-0" role="img" aria-label={t("planTitre")}>
           {contour?.type === "cercle" && (
             <circle cx={ecran(contour.centre).x} cy={ecran(contour.centre).y} r={contour.rayon * k} className="fill-accent/15 stroke-accent" strokeWidth={2} />
@@ -389,13 +395,18 @@ export default function PlanCombat({ jetons, deplacables, onDeplacer, retirable 
                 onPointerLeave={() => setSurvol((v) => (v === j.id ? null : v))}
                 className={onDeplacer && !zone && deplacables(j.id) ? "cursor-grab" : "cursor-pointer"}
               >
-                <title>{j.label}</title>
+                <title>{j.discret ? `${j.label} (${t(j.discret === "invisible" ? "invisible" : "cache")})` : j.label}</title>
                 {/* La cible de toucher : 44 px au moins, invisible. */}
                 <circle r={RAYON_TOUCHER} className="fill-transparent" />
                 {j.actif && <circle r={RAYON_JETON + 5} className="fill-none stroke-ink" strokeWidth={2} />}
                 {dedans.has(j.id) && <circle r={RAYON_JETON + 5} className="fill-none stroke-success" strokeWidth={3} />}
                 {choisi === j.id && <circle r={RAYON_JETON + 8} className="fill-none stroke-ink-soft" strokeWidth={1.5} strokeDasharray="3 3" />}
-                <circle r={enGlisse ? RAYON_JETON + 3 : RAYON_JETON} className={c.rond} strokeWidth={j.id === moiId ? 3 : 1} />
+                <circle
+                  r={enGlisse ? RAYON_JETON + 3 : RAYON_JETON}
+                  className={c.rond}
+                  strokeWidth={j.id === moiId ? 3 : 1}
+                  {...(j.discret ? { strokeDasharray: "4 3", strokeWidth: 3, fillOpacity: 0.55 } : {})}
+                />
                 <text textAnchor="middle" dominantBaseline="central" className={`${c.texte} pointer-events-none text-xs font-semibold`}>
                   {initiales(j.label)}
                 </text>

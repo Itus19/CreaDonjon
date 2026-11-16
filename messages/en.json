@@ -1734,6 +1734,18 @@
     }
   },
   "initiative": {
+    "lumiere": "Light",
+    "lumiereChoix": "Combat lighting",
+    "lumiereVive": "Bright",
+    "lumiereFaible": "Dim",
+    "lumiereTenebres": "Darkness",
+    "masqueAuxJoueuses": "Hidden from players",
+    "invoqueePar": "Summoned by {nom}",
+    "seCacher": "Hide",
+    "seCacherPour": "Hide: {nom}",
+    "discretionCache": "Stealth {total}: hidden",
+    "discretionRate": "Stealth {total}: failed",
+    "erreurSeCacher": "The Stealth check could not be rolled.",
     "plan": {
       "affichage": "Initiative display",
       "liste": "List",
@@ -1866,6 +1878,8 @@
     "typeAjout": "Type of participant to add"
   },
   "planCombat": {
+    "cache": "hidden",
+    "invisible": "invisible",
     "planTitre": "Combat plan",
     "zoomer": "Zoom the plan in",
     "dezoomer": "Zoom the plan out",
@@ -1899,6 +1913,12 @@
     "annulerZone": "Cancel"
   },
   "combatJoueur": {
+    "aToi": "Yours",
+    "forme": "Form: {nom}",
+    "seCacher": "Hide",
+    "discretionCache": "Stealth {total}: hidden",
+    "discretionRate": "Stealth {total}: failed",
+    "erreurSeCacher": "The Stealth check could not be rolled.",
     "planTitre": "Combat plan",
     "planErreurDeplacement": "The move could not be saved.",
     "invitationTitre": "You enter combat",

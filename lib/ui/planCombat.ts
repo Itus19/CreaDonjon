@@ -1,5 +1,6 @@
 import { areaTargets, distance, type AreaPlacement, type Point } from "@/src/core/rules/geometry";
 import type { PlayerCombatParticipant } from "@/src/core/rules/combatPlayerView";
+import { perceptionConditions } from "@/src/core/rules/perception";
 import type { CombatParticipantRow } from "@/src/server/repos/combats";
 
 /**
@@ -118,9 +119,30 @@ export interface JetonPlan {
   abattu: boolean;
   /** C'est son tour. */
   actif: boolean;
+  /** V3.1-184 : vu du MJ seulement, un jeton Caché ou Invisible est marqué (contour pointillé). */
+  discret?: "cache" | "invisible" | null;
 }
 
-export type LigneMj = Pick<CombatParticipantRow, "id" | "label" | "is_ally" | "source_kind" | "pos_x" | "pos_y" | "hp_max" | "hp_current">;
+export type LigneMj = Pick<CombatParticipantRow, "id" | "label" | "is_ally" | "source_kind" | "pos_x" | "pos_y" | "hp_max" | "hp_current"> &
+  Partial<Pick<CombatParticipantRow, "conditions">>;
+
+/** V3.1-184 : Invisible l'emporte sur Caché ; les états sont lus par le noyau (« Caché », « hidden »…). */
+export function discretionDe(conditions: unknown): "cache" | "invisible" | null {
+  if (!Array.isArray(conditions)) return null;
+  const cles = perceptionConditions(conditions.filter((c): c is string => typeof c === "string"));
+  if (cles.includes("invisible")) return "invisible";
+  if (cles.includes("hidden")) return "cache";
+  return null;
+}
+
+export type Lumiere = "bright" | "dim" | "dark";
+
+/** V3.1-184 : le voile posé sur le plan selon la lumière du combat (rien en lumière vive). */
+export function voileLumiere(lumiere: Lumiere | string | null | undefined): string | null {
+  if (lumiere === "dim") return "bg-black/25";
+  if (lumiere === "dark") return "bg-black/55";
+  return null;
+}
 
 /** Une demi-position n'est pas une position : il faut les deux coordonnées. */
 export function jetonsDepuisLignes(lignes: readonly LigneMj[], actifId: string | null): JetonPlan[] {
@@ -132,6 +154,7 @@ export function jetonsDepuisLignes(lignes: readonly LigneMj[], actifId: string |
     camp: l.is_ally || l.source_kind === "entity" ? "ally" : "enemy",
     abattu: l.hp_max !== null && l.hp_current === 0,
     actif: l.id === actifId,
+    discret: discretionDe(l.conditions),
   }));
 }
 

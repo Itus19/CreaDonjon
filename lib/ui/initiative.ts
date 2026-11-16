@@ -404,3 +404,18 @@ export function desDeLaFormule(formule: string | null): { dice: { d4?: number; d
   if (!m || ![4, 6, 8, 10, 12, 20, 100].includes(faces)) return { dice: { d6: 1 }, modifier: 0 };
   return { dice: { [`d${faces}`]: Math.min(20, Number(m[1])) }, modifier: m[4] ? (m[3] === "-" ? -Number(m[4]) : Number(m[4])) : 0 };
 }
+
+// ---- V3.1-184 : forme portée, créature invoquée ----
+
+/** Le libellé de la forme portée par une ligne (colonne JSON : on rétrécit). */
+export function formeDe(p: Pick<CombatParticipantRow, "form">): string | null {
+  const f = p.form;
+  if (f !== null && typeof f === "object" && !Array.isArray(f) && typeof (f as { label?: unknown }).label === "string") return (f as { label: string }).label;
+  return null;
+}
+
+/** Le nom de la ligne qui a invoqué cette créature, ou `null` si elle n'est pas invoquée (ou si l'invocateur a quitté le combat). */
+export function invocateurDe(p: Pick<CombatParticipantRow, "summoned_by">, participants: readonly Pick<CombatParticipantRow, "id" | "label">[]): string | null {
+  if (p.summoned_by === null) return null;
+  return participants.find((x) => x.id === p.summoned_by)?.label ?? null;
+}

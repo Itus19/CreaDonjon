@@ -180,3 +180,23 @@ export function lancerJetCible(campaignId: string, combatId: string, corps: Targ
 export function lancerJetCibleJoueur(campaignId: string, combatId: string, corps: PlayerTargetedRollInput, parDefaut: string): Promise<ReponseJetCible> {
   return post<ReponseJetCible>(`${base(campaignId)}/${combatId}/player-targeted-roll`, corps, parDefaut);
 }
+
+// ---- V3.1-184 : lumière et Se cacher ----------------------------------------------
+
+/** La lumière du combat (réglée par le MJ) : le serveur recalcule le masquage des joueuses. */
+export function changerLumiere(campaignId: string, combatId: string, lighting: "bright" | "dim" | "dark", parDefaut: string): Promise<CombatRow> {
+  return appeler<CombatRow>(`${base(campaignId)}/${combatId}`, { method: "PATCH", headers: ENTETES_JSON, body: JSON.stringify({ lighting }) }, parDefaut);
+}
+
+export interface ReponseSeCacher {
+  ok: boolean;
+  participantId: string;
+  /** Le total du test de Discrétion, lancé par le serveur. */
+  total: number;
+  hidden: boolean;
+}
+
+/** « Se cacher » : le serveur lance le test de Discrétion (règle 8). Le MJ pour tous, une joueuse pour son PJ. */
+export function seCacher(campaignId: string, combatId: string, participantId: string, parDefaut: string): Promise<ReponseSeCacher> {
+  return post<ReponseSeCacher>(`${base(campaignId)}/${combatId}/hide`, { participantId }, parDefaut);
+}
