@@ -583,7 +583,7 @@ Mesurer la couverture de tout ce qui entre en jeu (sorts, aptitudes, espèces, d
 ### ☐ V3.1-140 — La conversion assistée : du texte aux briques · `L` · **avec modèle IA** — **après la fondation**
 Le modèle lit le texte d'une fiche et propose des blocs (`resources`, `activation`, `coverage`), par `ai_proposals` : Zod, validation métier, relecture par l'auteur, application. Jamais d'écriture directe (règle absolue 9). Le texte de la règle entre dans le prompt comme donnée encadrée (règle 10).
 
-### ☐ V3.1-141 — Le système monétaire en données : pièces courantes, réserve, pièces maison · `M` · sans modèle IA — **à concevoir (Opus)**
+### ☑ V3.1-141 — Le système monétaire en données : pièces courantes, réserve, pièces maison · `M` · sans modèle IA — **conçu (ADR 0102), découpé en 217 à 220**
 
 **Modèle conseillé : Opus** : forme d'un bloc de règle, forme du porte-monnaie, compatibilité des inventaires déjà enregistrés.
 
@@ -600,6 +600,39 @@ Le modèle lit le texte d'une fiche et propose des blocs (`resources`, `activati
 **Découpage probable** : ADR ; noyau paramétré (tests d'abord, les 28 tests de `currency.test.ts` restent verts avec le système par défaut) ; bloc de règle et sa lecture ; pièces maison ; écran.
 
 **Critères d'acceptation (de la conception)**
-- [ ] ADR écrit : forme du bloc, forme du porte-monnaie, compatibilité des inventaires existants.
-- [ ] Tickets prêts découpés et ajoutés à l'index.
+- [x] ADR écrit : forme du bloc, forme du porte-monnaie, compatibilité des inventaires existants.
+- [x] Tickets prêts découpés et ajoutés à l'index.
+
+*Conçu le 17 novembre (ADR 0102).* Choix de l'auteur : les **cinq cases restent**, plus `extra` pour les pièces maison (aucun inventaire à convertir) ; le système vit dans un **bloc `currency_system`** sur la fiche « Pièces de monnaie », surchargeable par une variante.
+
+#### ☐ V3.1-217 — Le noyau paramétré : le système monétaire en paramètre · `M` · sans modèle IA — **prêt (Opus)**
+
+**Modèle conseillé : Opus** — noyau. Tests d'abord.
+
+- `zCurrencySystemBlockData` (pièces : clé, libellé, valeur en pc, rôle ; ordre de casse ; refus : clés en double, aucune pièce de valeur 1, une réserve inconnue dans l'ordre de casse) ; `DEFAULT_CURRENCY_SYSTEM` = le système du 13 octobre.
+- `zCurrency` gagne `extra` (facultatif) ; `depositCoins`, `spendCoins`, `applyCurrencyDelta`, `totalValueCp` prennent le système (défaut : celui d'aujourd'hui).
+
+**Critères d'acceptation**
+- [ ] Les 28 tests de `currency.test.ts` passent sans changement ; tests nouveaux : une pièce maison courante se forme et se dépense, une réserve maison se casse dans l'ordre donné, une pièce absente du système compte à sa valeur standard (SRD) ou à 0 (maison).
+
+#### ☐ V3.1-218 — Le bloc sur la fiche « Pièces de monnaie », lu par le service · `S` · sans modèle IA — **prêt (Opus)**
+
+**Dépend de** : 217. Données SRD (le bloc par défaut sur `standard-exchange-rates`, réimport) ; le service d'inventaire et la route `actions/currency` lisent le système par la chaîne de rulesets ; les statistiques d'économie aussi.
+
+**Critères d'acceptation**
+- [ ] Intégration : une variante qui surcharge le bloc (une pièce maison courante) dépense et rend la monnaie selon elle ; le monde officiel garde le comportement d'aujourd'hui.
+
+#### ☐ V3.1-219 — L'inventaire affiche les pièces du système · `M` · sans modèle IA — **prêt (Sonnet)**
+
+**Dépend de** : 218. `InventoryPanel` et la feuille de monnaie : les pièces du système (cinq ou plus), une pièce maison inconnue signalée ; libellés dans `messages/` ; planche du catalogue.
+
+**Critères d'acceptation**
+- [ ] Au navigateur (360 px et ordinateur) : une pièce maison s'ajoute, se dépense, s'affiche avec son libellé ; aucun débordement.
+
+#### ☐ V3.1-220 — Saisir le système monétaire dans l'éditeur de règle · `S` · sans modèle IA — **prêt (Sonnet)**
+
+**Dépend de** : 217. Le formulaire du bloc `currency_system` (ajouter une pièce, son rôle, l'ordre de casse), validé par le schéma ; aller-retour testé.
+
+**Critères d'acceptation**
+- [ ] Une variante saisit une pièce maison par l'éditeur ; le bloc relu est identique.
 
