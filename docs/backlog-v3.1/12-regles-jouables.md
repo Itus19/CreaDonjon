@@ -203,10 +203,12 @@ Valeur de modificateur en formule ou en dé (+ mod. CHA, +1d4, 10 + DEX + CON), 
 
 *Reste* : Souffle du drakéide (zone, remplace une attaque : 136, 137) ; le dé d'Inspiration bardique attend 135.
 
-### ☐ V3.1-135 — Intervenir sur un jet · `L` · sans modèle IA — **conçu le 7 novembre ([ADR 0075](../adr/0075-intervenir-sur-un-jet.md)), découpé en V3.1-159 à 162**
+### ☑ V3.1-135 — Intervenir sur un jet · `L` · sans modèle IA — **conçu le 7 novembre ([ADR 0075](../adr/0075-intervenir-sur-un-jet.md)), fait par V3.1-159 à 163 ; fermé le 17 novembre**
 Réactions (une fenêtre de choix dans le déroulé d'un jet, côté serveur), opérations sur un jet en cours (ajouter ou soustraire un dé, relancer, fixer à 20, CA contre ce jet, diviser les dégâts), limite une fois par tour. Règles visées : 5, 9, 10, 19, 20, 27, 28, 33, 37, 39.
 
 *Conçu le 7 novembre* : [ADR 0075](../adr/0075-intervenir-sur-un-jet.md). Deux choix de l'auteur : le **jet suspendu** (si quelqu'un peut réagir, le serveur fige le jet et attend les réponses ou « Continuer » du MJ ; sinon rien ne change) ; le moteur **compte** la réaction et le « une fois par tour » en combat. Découpé ci-dessous.
+
+*Fermé le 17 novembre* : les cinq sous-tickets sont faits (159 noyau, 160 jet suspendu, 161 et 162 côté écran, 163 les autres jets et le jeton qui porte une règle, ADR 0101). Les règles visées se jouent par la fenêtre de réaction. Seule la boucle du solo, qui demande un modèle d'IA, reste à part : **V3.1-216**, ticket à lui.
 
 #### ☑ V3.1-159 — Le noyau : déclencheur de réaction, opérations sur le jet, une fois par tour · `M` · sans modèle IA — **prêt (Opus)**
 

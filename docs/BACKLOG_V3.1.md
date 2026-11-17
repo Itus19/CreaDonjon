@@ -97,7 +97,7 @@ valables ; celui-ci les relie.
 | **8 · Règles et Chronologie** | ~~93~~ → ~~94~~ → ~~95~~ ; ~~96~~ → ~~97~~ → ~~98~~ → ~~99~~ | Les règles s'appuient sur les fenêtres à volets (20) ; la Chronologie sur la pastille (64) et les dates de naissance (74). |
 | **À côté, quand on veut** | 13 (attend le texte des manuels de l'auteur) ; 145 (les tests d'intégration se suppriment les mondes entre eux : dette technique) ; vérifications en direct de 1, 2, 4, 5, 12, 17, 18 | Codés ; il ne reste que l'œil de l'auteur. | |
 | **Étape 4, avec 105** | ~~104~~ (ADR 0041, option B) → ~~107~~ (ADR 0069) → ~~149~~ (faille du journal relevée en concevant 107) | Le joueur qui cible : écritures et lectures signées par le serveur, et un journal qui ne lui montre que ce qu'il a le droit de voir. | Après 105. |
-| **Étape 9 · Les règles jouables** | ~~129~~ → ~~130~~ → ~~131~~, ~~132~~ ; ~~133~~ ; ~~134~~ (conçu, ADR 0074) → ~~155~~ → ~~156~~, ~~157~~ → ~~158~~ ; 135 (conçu, ADR 0075) → ~~159~~ → ~~160~~ → ~~161~~, ~~162~~, ~~163~~ (solo : 216) ; 136 (conçu, ADR 0076) → ~~164~~ → ~~165~~ → ~~166~~, ~~167~~ ; ~~137~~ (ADR 0077) → ~~168~~ → ~~169~~ → ~~170~~, ~~171~~ ; ~~138~~ (ADR 0078) → ~~180~~, ~~182~~ → ~~181~~, ~~183~~ → ~~184~~, ~~185~~ ; ~~139~~ (ADR 0100) → ~~212~~ → ~~213~~, ~~214~~ → ~~215~~ ; 140 ; ~~141~~ (ADR 0102) → ~~217~~ → ~~218~~ → ~~219~~, ~~220~~ | La clé de voûte du solo : toute règle en jeu est jouable à 100 % par le moteur, sans qu'un modèle la lise (ADR 0059). **La fondation est faite** (129 à 133, du 3 au 7 novembre) : une règle se saisit dans l'éditeur de briques et se joue sur la fiche ; Second souffle, Fougue, Conduit divin et Abjuration d'ennemis le font avec les données du SRD. Le 134 est conçu (ADR 0074) et fait par 155 à 158 (7 novembre) : formules et dés de bonus dans les modificateurs, Rage, Défense sans armure, Critique amélioré, Aura de protection ; 135 à 138 commencent chacun par un ADR. |
+| **Étape 9 · Les règles jouables** | ~~129~~ → ~~130~~ → ~~131~~, ~~132~~ ; ~~133~~ ; ~~134~~ (conçu, ADR 0074) → ~~155~~ → ~~156~~, ~~157~~ → ~~158~~ ; ~~135~~ (ADR 0075) → ~~159~~ → ~~160~~ → ~~161~~, ~~162~~, ~~163~~ (solo : 216) ; 136 (conçu, ADR 0076) → ~~164~~ → ~~165~~ → ~~166~~, ~~167~~ ; ~~137~~ (ADR 0077) → ~~168~~ → ~~169~~ → ~~170~~, ~~171~~ ; ~~138~~ (ADR 0078) → ~~180~~, ~~182~~ → ~~181~~, ~~183~~ → ~~184~~, ~~185~~ ; ~~139~~ (ADR 0100) → ~~212~~ → ~~213~~, ~~214~~ → ~~215~~ ; 140 ; ~~141~~ (ADR 0102) → ~~217~~ → ~~218~~ → ~~219~~, ~~220~~ | La clé de voûte du solo : toute règle en jeu est jouable à 100 % par le moteur, sans qu'un modèle la lise (ADR 0059). **La fondation est faite** (129 à 133, du 3 au 7 novembre) : une règle se saisit dans l'éditeur de briques et se joue sur la fiche ; Second souffle, Fougue, Conduit divin et Abjuration d'ennemis le font avec les données du SRD. Le 134 est conçu (ADR 0074) et fait par 155 à 158 (7 novembre) : formules et dés de bonus dans les modificateurs, Rage, Défense sans armure, Critique amélioré, Aura de protection ; 135 à 138 commencent chacun par un ADR. |
 | **Fin de V3.1 · L'audit** | 144, en dernier | Les retouches d'affichage relevées en vérifiant les tickets, en une seule passe (une session au navigateur). Chaque défaut vu en chemin, qu'aucun ticket prévu ne couvre, s'ajoute au ticket 144. | Après tout le reste. |
 
 **Règle** : un ticket Opus « à concevoir » ne se code pas ; il se conçoit
@@ -134,11 +134,11 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 
 | Ticket | État | Modèle IA | Titre | Fichier |
 |---|---|---|---|---|
-| V3.1-1 | ☐ | sans | `REQUIRED_BLOCKS` trop strict sur les sorts sans effet chiffré | [`01-rugosites.md`](backlog-v3.1/01-rugosites.md) |
-| V3.1-2 | ☐ | sans | Aucun moyen d'éditer une fiche maison déjà créée | [`01-rugosites.md`](backlog-v3.1/01-rugosites.md) |
+| V3.1-1 | ☑ | sans | `REQUIRED_BLOCKS` trop strict sur les sorts sans effet chiffré | [`01-rugosites.md`](backlog-v3.1/01-rugosites.md) |
+| V3.1-2 | ☑ | sans | Aucun moyen d'éditer une fiche maison déjà créée | [`01-rugosites.md`](backlog-v3.1/01-rugosites.md) |
 | V3.1-3 | ☑ | sans | Les dons à choix (Initié à la magie, etc.) n'ont aucune UI de choix | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-4 | ☐ | sans | Un trait d'espèce qui accorde une maîtrise au choix ne l'accorde jamais | [`01-rugosites.md`](backlog-v3.1/01-rugosites.md) |
-| V3.1-5 | ☐ | sans | Le Repos long ne déclenche aucun effet lié aux traits (Inspiration héroïque, etc.) | [`01-rugosites.md`](backlog-v3.1/01-rugosites.md) |
+| V3.1-4 | ☑ | sans | Un trait d'espèce qui accorde une maîtrise au choix ne l'accorde jamais | [`01-rugosites.md`](backlog-v3.1/01-rugosites.md) |
+| V3.1-5 | ☑ | sans | Le Repos long ne déclenche aucun effet lié aux traits (Inspiration héroïque, etc.) | [`01-rugosites.md`](backlog-v3.1/01-rugosites.md) |
 | V3.1-6 | ☑ | sans | Aucun mécanisme générique pour les traits d'espèce à choix | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-7 | ☑ | sans | Une sous-classe n'apporte jamais d'effet mécanique, choix ou pas | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-8 | ☑ | sans | Aucune demande structurée de disponibilités pour la prochaine séance | [`termines.md`](backlog-v3.1/termines.md) |
@@ -151,7 +151,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-15 | ☑ | sans | La Gestion de campagne illisible : invitations en haut, une carte par personne | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-16 | ☑ | sans | Le Calendrier réel refait : une grille à bascule, côté MJ comme côté joueuse | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-17 | ☐ | sans | Un catalogue d'interface visuel, et une charte qui y renvoie | [`01-rugosites.md`](backlog-v3.1/01-rugosites.md) |
-| V3.1-18 | ☐ | sans | Retirer les émojis de l'interface | [`01-rugosites.md`](backlog-v3.1/01-rugosites.md) |
+| V3.1-18 | ☑ | sans | Retirer les émojis de l'interface | [`01-rugosites.md`](backlog-v3.1/01-rugosites.md) |
 | V3.1-19 | ☐ | **avec** | Refonte « verre minéral » (ticket parent) | [`02-refonte-parent.md`](backlog-v3.1/02-refonte-parent.md) |
 | V3.1-20 | ☑ | sans | Fenêtres du MJ en deux volets à onglets | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-21 | ☑ | sans | Cibler et résoudre depuis les boutons de jet | [`termines.md`](backlog-v3.1/termines.md) |
@@ -271,7 +271,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-156 | ☑ | sans | Les jets lancent les dés de bonus et lisent les nouvelles cibles | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
 | V3.1-157 | ☑ | sans | L'écran : dés de bonus, sens, vitesses, maîtrises ; l'éditeur suit | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
 | V3.1-158 | ☑ | sans | Les données : les règles du SRD que ce chantier rend jouables | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
-| V3.1-135 | ☐ | sans | Intervenir sur un jet | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
+| V3.1-135 | ☑ | sans | Intervenir sur un jet | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
 | V3.1-159 | ☑ | sans | Le noyau : déclencheur de réaction, opérations sur le jet, une fois par tour | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
 | V3.1-160 | ☑ | sans | La migration et le service : le jet suspendu | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
 | V3.1-161 | ☑ | sans | Les écrans : le bandeau de réaction ; l'éditeur suit | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
@@ -318,8 +318,8 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-153 | ☑ | sans | Le badge « Prochaine session » couché rail déplié, debout rail replié | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-154 | ☑ | sans | PJ attribué sans fiche : sa carte et « Créer la fiche de … » | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-186 | ☑ | sans | Le quota de journaux ingérés de Supabase | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-187 | ☐ | sans | La montée de niveau refuse tout personnage qui a une date de naissance | [`14-rugosites-novembre.md`](backlog-v3.1/14-rugosites-novembre.md) |
-| V3.1-188 | ☐ | sans | Le Wiki du joueur ne s'ouvre plus en édition | [`14-rugosites-novembre.md`](backlog-v3.1/14-rugosites-novembre.md) |
+| V3.1-187 | ☑ | sans | La montée de niveau refuse tout personnage qui a une date de naissance | [`14-rugosites-novembre.md`](backlog-v3.1/14-rugosites-novembre.md) |
+| V3.1-188 | ☑ | sans | Le Wiki du joueur ne s'ouvre plus en édition | [`14-rugosites-novembre.md`](backlog-v3.1/14-rugosites-novembre.md) |
 | V3.1-189 | ☑ | sans | Bloc image : le placer dans le texte, à la souris, comme dans Word | [`14-rugosites-novembre.md`](backlog-v3.1/14-rugosites-novembre.md) |
 | V3.1-190 | ☑ | sans | Calendrier réel : plusieurs demandes de dates en même temps | [`14-rugosites-novembre.md`](backlog-v3.1/14-rugosites-novembre.md) |
 | V3.1-193 | ☑ | sans | Pronoms : une liste à choix multiples, lue pour accorder | [`termines.md`](backlog-v3.1/termines.md) |

@@ -2,7 +2,7 @@
 
 Partie de [`BACKLOG_V3.1.md`](../BACKLOG_V3.1.md), qui tient la feuille de route et l'index des tickets. Les tickets terminés (☑) sont dans [`termines.md`](termines.md).
 
-### ☐ V3.1-1 — `REQUIRED_BLOCKS` trop strict sur les sorts sans effet chiffré · `S` · sans modèle IA — **fait le 9 octobre ; reste une vérification en direct**
+### ☑ V3.1-1 — `REQUIRED_BLOCKS` trop strict sur les sorts sans effet chiffré · `S` · sans modèle IA — **fait le 9 octobre, vérifié en direct le 17 novembre**
 
 **Modèle conseillé : Sonnet** — assouplir une validation, cas bien décrits.
 
@@ -33,7 +33,7 @@ Le ticket V2-N2 l'avait déjà noté en passant, sans ouvrir de ticket dédié :
   ont besoin.
 - [x] Aucune régression sur les autres types d'entrée qui utilisent
   `REQUIRED_BLOCKS` (sous-classe, don, historique…).
-- [ ] À vérifier en direct par l'auteur : Détection de la magie n'affiche plus d'avertissement de bloc manquant ; un sort maison à jet de sauvegarde sans effet chiffré, si.
+- [x] À vérifier en direct par l'auteur : Détection de la magie n'affiche plus d'avertissement de bloc manquant ; un sort maison à jet de sauvegarde sans effet chiffré, si. *Vérifié en direct le 17 novembre (MJ de test, variante temporaire) : aucune bannière sur Détection de la magie ; « Règle incomplète : bloc manquant — effects » sur un sort maison à JS sans effet.*
 
 **Fait le 9 octobre.** `effects` n'est plus dans `REQUIRED_BLOCKS.spell` ;
 `missingRequiredBlocks` (`src/core/rules/requiredBlocks.ts`) l'exige sous
@@ -47,7 +47,7 @@ verts.
 
 ---
 
-### ☐ V3.1-2 — Aucun moyen d'éditer une fiche maison déjà créée · `M` · sans modèle IA — **fait le 9 octobre ; reste une vérification en direct**
+### ☑ V3.1-2 — Aucun moyen d'éditer une fiche maison déjà créée · `M` · sans modèle IA — **fait le 9 octobre, vérifié en direct le 17 novembre**
 
 **Modèle conseillé : Sonnet** — réutiliser le formulaire de création en édition, verrous déjà connus.
 
@@ -76,7 +76,7 @@ historique, don/aptitude, sous-classe, sort) : aucun n'a d'équivalent en
   qui la référence comme sous-classe, un personnage qui la porte comme don)
   continue de pointer dessus après modification.
 - [x] Une base officielle reste inéditable — même verrou que la création.
-- [ ] À vérifier en direct par l'auteur : « Modifier » sur une fiche maison de chaque type (sort, sous-classe, don, historique, arme), enregistrer, rouvrir.
+- [x] À vérifier en direct par l'auteur : « Modifier » sur une fiche maison de chaque type (sort, sous-classe, don, historique, arme), enregistrer, rouvrir. *Vérifié en direct le 17 novembre : les cinq types s'enregistrent en place et se rouvrent modifiés. Trouvé en chemin et corrigé : un sort maison dont l'effet porte un type de dégâts avec majuscule (« Psychic », ainsi « Piqûre mentale » dans « DnD 2024 ») ne se modifiait plus — la route refusait la valeur ; `spellFormValues` la remet en clé (`homebrewEdit.ts`, test).*
 
 **Fait le 9 octobre.** Le bouton « Modifier » de `RuleEntryView.tsx`
 rouvre, en place, le formulaire de création du type (`HomebrewEditForm.tsx`,
@@ -98,7 +98,7 @@ typecheck, lint et tests verts.
 
 ---
 
-### ☐ V3.1-4 — Un trait d'espèce qui accorde une maîtrise au choix ne l'accorde jamais · `S`/`M` · sans modèle IA — **fait le 9 octobre ; reste une vérification en direct**
+### ☑ V3.1-4 — Un trait d'espèce qui accorde une maîtrise au choix ne l'accorde jamais · `S`/`M` · sans modèle IA — **fait le 9 octobre, vérifié en direct le 17 novembre**
 
 **Modèle conseillé : Sonnet** — brancher un choix déjà lu par extractSkillChoices.
 
@@ -126,7 +126,7 @@ inventer un nouveau.
   compétence concerné, bonus de maîtrise appliqué).
 - [x] Aucune régression sur les maîtrises fixes déjà accordées par une
   espèce (celles qui ne portent pas de choix).
-- [ ] À vérifier en direct par l'auteur : créer un Humain : Compétent propose une compétence ; avec un Guerrier, une compétence de classe déjà prise reste possible pour Compétent.
+- [x] À vérifier en direct par l'auteur : créer un Humain : Compétent propose une compétence ; avec un Guerrier, une compétence de classe déjà prise reste possible pour Compétent. *Vérifié en direct le 17 novembre (assistant de création, MJ de test) : Humain fait naître « Compétent » ; Athlétisme pris par le Guerrier reste choisissable pour Compétent (avec la mention « déjà maîtrisée… ne donnerait rien de plus »).*
 
 **Fait le 9 octobre.** `assembleResolvedRuleset` lit le bloc `species_traits`
 de l'espèce, charge ses traits en un second lot, et ajoute un choix de
@@ -148,7 +148,7 @@ sous sa forme `zChoiceGrant`. Tests : `srdMapping.test.ts` (2 cas),
 
 ---
 
-### ☐ V3.1-5 — Le Repos long ne déclenche aucun effet lié aux traits (Inspiration héroïque, etc.) · `M` · sans modèle IA — **fait le 9 octobre (ADR 0050) ; reste une vérification en direct**
+### ☑ V3.1-5 — Le Repos long ne déclenche aucun effet lié aux traits (Inspiration héroïque, etc.) · `M` · sans modèle IA — **fait le 9 octobre (ADR 0050), vérifié en direct le 17 novembre**
 
 **Modèle conseillé : Sonnet** — un effet de Repos long sur le vocabulaire de déclencheurs existant.
 
@@ -177,7 +177,7 @@ déclencheurs (V3-A5) que de l'assistant de personnage.
 - [x] Un personnage sans ce trait n'est pas affecté.
 - [x] Le mécanisme reste ouvert à d'autres effets liés au Repos long portés
   par un trait/don futur, plutôt que câblé en dur pour Ingénieux seul.
-- [ ] À vérifier en direct par l'auteur : un Humain sans Inspiration fait un repos long : il la gagne (journal « Inspiration héroïque : 0 → 1 ») et ses emplacements de sort reviennent.
+- [x] À vérifier en direct par l'auteur : un Humain sans Inspiration fait un repos long : il la gagne (journal « Inspiration héroïque : 0 → 1 ») et ses emplacements de sort reviennent. *Vérifié en direct le 17 novembre, après une correction : l'Inspiration ne venait plus. Depuis V3.1-163, un trait d'espèce n'est une aptitude de la fiche que s'il se joue ; Ingénieux (un simple déclencheur) n'était plus chargé. `loadTriggersForEntries` charge désormais les déclencheurs des traits d'une espèce (`triggerStore.ts`, test d'intégration). Ensuite : Testeuse A passe de 0 à 1 ; un mage humain récupère ses deux emplacements de niveau 1 et gagne l'Inspiration. La ligne du journal n'existe qu'en campagne (repos joué depuis la fiche hors campagne : pas de séance) — non vue.*
 
 **Fait le 9 octobre (ADR 0050).** Le point 4 de V3.1-24 est fait du même
 coup : `takeShortRest` / `takeLongRest` émettent `short_rest` / `long_rest`
@@ -431,7 +431,7 @@ joueur, desktop et tablette).
 
 ---
 
-### ☐ V3.1-18 — Retirer les émojis de l'interface · `S` · sans modèle IA — **fait le 1ᵉʳ octobre ; reste une vérification en direct**
+### ☑ V3.1-18 — Retirer les émojis de l'interface · `S` · sans modèle IA — **fait le 1ᵉʳ octobre, vérifié en direct le 17 novembre**
 
 **Modèle conseillé : Sonnet** — remplacements mécaniques.
 
@@ -472,7 +472,7 @@ suffi.
 - [x] Plus aucun émoji affiché dans `components/` ni `app/` (il en reste dans des commentaires).
 - [x] Les icônes nouvelles sont au trait, `currentColor`, avec un `aria-label` sur les boutons qui n'ont qu'elles.
 - [x] Planche 9 (Suivi d'initiative) mise à jour, la mention « écart à la charte » retirée ; §9 de la charte mis à jour.
-- [ ] À vérifier en direct : les trois icônes dans un vrai combat, aux quatre modes.
+- [x] À vérifier en direct : les trois icônes dans un vrai combat, aux quatre modes. *Vérifié en direct le 17 novembre : un combat avec une entité, un combattant improvisé et un bloc de statistiques — les trois icônes au trait (`IconeGenre.tsx`, depuis la refonte de l'initiative) suivent la couleur du texte en sombre, tamisé, doux et clair. Aucun émoji dans `components/` ni `app/` (seul ♪, glyphe de texte). Le dé de relance n'existe plus sous cette forme dans le suivi refait.*
 
 C'est le premier ticket qui suit la règle de V3.1-17 : il sert aussi à vérifier
 que le circuit « corriger le composant → mettre à jour la planche → mettre à

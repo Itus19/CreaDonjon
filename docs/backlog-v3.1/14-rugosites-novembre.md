@@ -12,7 +12,7 @@ Ce qu'on a constaté en jouant, à partir du 1ᵉʳ novembre. Même règle que l
 - **Cause** : `applyLevelUp` (`src/server/services/characterActions.ts`) comparait la naissance par `JSON.stringify`. La colonne `jsonb` réordonne les clés (`day, end, year, label, month, precision`) ; l'objet reçu, passé par Zod, suit l'ordre du schéma (`year, month, day, precision, end, label`). Chaînes toujours différentes : refus `forbidden_field_change` pour **tout** personnage né. Constaté sur la vraie base (Terk, 21/5/1398, et deux autres fiches).
 - **Correction** : `sameGameDate` (`src/core/calendar/sameGameDate.ts`), comparaison champ par champ, `end` et `label` absents valent `null`. 7 tests écrits d'abord, dont la date de Terk telle que Postgres la rend.
 - **Vérifié** : typecheck, lint, tests unitaires. Pas de test d'intégration pour la montée de niveau.
-- **Reste** : refaire la montée de Terk au navigateur, après déploiement.
+- **Vérifié en direct le 17 novembre** : un Guerrier 2 né le 21/5/1398 (la date de Terk), monde de test, monte au niveau 3 sans l'erreur (route `level-up` 200). Terk lui-même reste à monter par l'auteur.
 
 ### V3.1-188 — Le Wiki du joueur ne s'ouvre plus en édition (9 novembre)
 
@@ -22,7 +22,7 @@ Ce qu'on a constaté en jouant, à partir du 1ᵉʳ novembre. Même règle que l
 - **Sécurité** : aucune barrière ne bouge. Le Wiki n'envoie plus, pour toutes les fiches, que ce que la résolution de visibilité joueur autorise ; l'édition et ses droits sont inchangés.
 - **`CABLAGE.md`** : les deux mentions de cette page mises à jour.
 - **Vérifié** : typecheck, lint, tests unitaires.
-- **Reste** : au navigateur, en Testeuse A : son PJ s'ouvre en lecture dans Wiki, en édition dans Édition.
+- **Vérifié en direct le 17 novembre**, en Testeuse A : dans Wiki, son PJ s'ouvre en lecture (aucun champ sauf la recherche) ; dans Édition, en édition (fiche complète, Repos long).
 
 ### V3.1-189 — Bloc image : le placer dans le texte, à la souris, comme dans Word (9 novembre)
 
