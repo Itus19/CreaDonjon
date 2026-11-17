@@ -3,6 +3,7 @@ import { createClient as createSupabaseClient, type SupabaseClient } from "@supa
 import { AiRateLimitError, runAiCompletion, runAiEmbedding } from "./callAi";
 import type { AiProvider, CompletionResult } from "./provider";
 import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
+import { cleanupCreated } from "../testUtils/cleanupCreated";
 
 /**
  * V1-F1 : sans ce test, rien ne prouve que le point de passage oblige
@@ -38,6 +39,7 @@ describe.skipIf(!hasCreds)("runAiCompletion / runAiEmbedding (integration, base 
   let userId: string;
   let rateLimitUserId: string;
 
+  const debut = new Date().toISOString();
   beforeAll(async () => {
     admin = createSupabaseClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
     userId = (await getReusableTestAccount(admin, "owner")).id;
@@ -48,7 +50,8 @@ describe.skipIf(!hasCreds)("runAiCompletion / runAiEmbedding (integration, base 
   afterAll(async () => {
     for (const id of [userId, rateLimitUserId]) {
       if (!id) continue;
-      await admin.from("ai_usage_log").delete().eq("user_id", id);
+      // V3.1-145 : seulement les journaux écrits depuis le début de ce fichier (le compte est partagé).
+      await cleanupCreated(admin, { aiLogs: { userId: id, since: debut } });
     }
   });
 

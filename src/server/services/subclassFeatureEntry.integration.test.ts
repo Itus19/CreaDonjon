@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import { createHomebrewSubclass, ensureSubclassFeatureEntry, resolveEntryBlocksInRuleset } from "./rules";
 import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
+import { cleanupCreated } from "../testUtils/cleanupCreated";
 
 /**
  * V3.1-202 — « Rendre jouable » une aptitude d'une sous-classe maison : la
@@ -76,8 +77,9 @@ describe.skipIf(!hasCreds)("la fiche à briques d'une aptitude de sous-classe ma
 
   afterAll(async () => {
     if (userId) {
-      await admin.from("worlds").delete().eq("owner_id", userId).eq("default_ruleset_id", variantRulesetId);
-      await admin.from("rulesets").delete().eq("id", variantRulesetId);
+      // V3.1-145 : seulement la lignée de la variante de ce fichier (reforgée par la sous-classe), ses mondes avant elle.
+      const { data: mondes } = await admin.from("worlds").select("id").eq("owner_id", userId).eq("default_ruleset_id", variantRulesetId);
+      await cleanupCreated(admin, { worldIds: (mondes ?? []).map((m: { id: string }) => m.id), rulesetIds: [variantRulesetId] });
     }
   });
 

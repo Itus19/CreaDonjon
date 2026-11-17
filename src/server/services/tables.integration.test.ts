@@ -4,6 +4,7 @@ import { SeededRng } from "@/src/core/dice/rng";
 import { drawFromTableBlock } from "./tables";
 import { TableCascadeCycleError, TableExhaustedError } from "@/src/core/tables/errors";
 import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
+import { cleanupCreated } from "../testUtils/cleanupCreated";
 
 /**
  * V1-E1 : sans ce test, rien ne prouve que le tirage en cascade resout
@@ -49,8 +50,8 @@ describe.skipIf(!hasCreds)("tirage sur random_table, cascade et cycles (integrat
 
   afterAll(async () => {
     if (userId) {
-      await admin.from("entities").delete().eq("created_by", userId);
-      await admin.from("worlds").delete().eq("owner_id", userId);
+      // V3.1-145 : seulement le monde de ce fichier (ses fiches partent avec lui).
+      await cleanupCreated(admin, { worldIds: [worldId] });
     }
   });
 

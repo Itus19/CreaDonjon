@@ -4,6 +4,7 @@ import { SeededRng } from "@/src/core/dice/rng";
 import { renderGeneratorTemplate } from "@/src/core/generators/render";
 import { drawTableSlotsFromGeneratorBlock } from "./generators";
 import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
+import { cleanupCreated } from "../testUtils/cleanupCreated";
 
 /**
  * V1-E2 : sans ce test, rien ne prouve que le tirage de generateur resout
@@ -46,8 +47,8 @@ describe.skipIf(!hasCreds)("tirage sur un bloc generator (integration, base reel
 
   afterAll(async () => {
     if (userId) {
-      await admin.from("entities").delete().eq("created_by", userId);
-      await admin.from("worlds").delete().eq("owner_id", userId);
+      // V3.1-145 : seulement le monde de ce fichier (ses fiches partent avec lui).
+      await cleanupCreated(admin, { worldIds: [worldId] });
     }
   });
 

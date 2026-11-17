@@ -27,6 +27,7 @@ describe.skipIf(!hasCreds)("changements signés du moteur (V3.1-104, integration
   let gm: ReusableAccount;
   let player: ReusableAccount;
   let worldId: string;
+  let autreMondeId: string | undefined;
   let campaignId: string;
   let otherCampaignId: string;
   let participantId: string;
@@ -72,6 +73,7 @@ describe.skipIf(!hasCreds)("changements signés du moteur (V3.1-104, integration
       .insert({ name: "Autre monde", slug: `integration-test-engine-signing-b-${Date.now()}`, owner_id: gm.id })
       .select("id")
       .single();
+    autreMondeId = autreMonde!.id;
     const { data: autre } = await admin.from("campaigns").insert({ world_id: autreMonde!.id, name: "Autre", ruleset_id: official!.id, mode: "campaign", gm_user_id: gm.id }).select("id").single();
     otherCampaignId = autre!.id;
     const { data: autreCombat } = await admin.from("combats").insert({ campaign_id: otherCampaignId, name: "Ailleurs", status: "running", round: 1, turn_index: 0 }).select("id").single();
@@ -85,7 +87,8 @@ describe.skipIf(!hasCreds)("changements signés du moteur (V3.1-104, integration
 
   afterAll(async () => {
     if (worldId) await admin.from("worlds").delete().eq("id", worldId);
-    await admin.from("worlds").delete().like("slug", "integration-test-engine-signing-b-%");
+    // V3.1-145 : le second monde de CE fichier, par son identifiant (jamais par un motif qui emporterait ceux d'une autre exécution).
+    if (autreMondeId) await admin.from("worlds").delete().eq("id", autreMondeId);
   });
 
   it("un changement signé s'applique ; le même, rejoué, est refusé", async () => {

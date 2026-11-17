@@ -5,6 +5,7 @@ import { createBlock } from "./blocks";
 import { insertAiProposal } from "@/src/server/repos/aiProposals";
 import { listRevisions } from "./entityHistory";
 import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
+import { cleanupCreated } from "../testUtils/cleanupCreated";
 
 /**
  * V1-F3 : sans ce test, rien ne prouve que "Accepter" ecrit reellement le
@@ -59,8 +60,8 @@ describe.skipIf(!hasCreds)("applyAiProposal / rejectAiProposal (integration, bas
   afterAll(async () => {
     if (userId) {
       await admin.from("ai_proposals").delete().eq("target_entity_id", entityId);
-      await admin.from("entities").delete().eq("created_by", userId);
-      await admin.from("worlds").delete().eq("owner_id", userId);
+      // V3.1-145 : seulement le monde de ce fichier (ses fiches partent avec lui).
+      await cleanupCreated(admin, { worldIds: [worldId] });
     }
   });
 

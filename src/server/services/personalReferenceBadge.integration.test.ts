@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import { getRuleEntryForWorld } from "./rules";
 import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
+import { cleanupCreated } from "../testUtils/cleanupCreated";
 
 /**
  * V1-D5 : sans ce test, rien ne prouve que le badge "reference personnelle"
@@ -81,8 +82,8 @@ describe.skipIf(!hasCreds)("badge reference personnelle : entree touchee vs entr
 
   afterAll(async () => {
     if (userId) {
-      await admin.from("worlds").delete().eq("owner_id", userId);
-      await admin.from("rulesets").delete().eq("created_by", userId);
+      // V3.1-145 : seulement ce que ce fichier a créé (le compte est partagé).
+      await cleanupCreated(admin, { worldIds: [worldId], rulesetIds: [personalRulesetId] });
     }
   });
 

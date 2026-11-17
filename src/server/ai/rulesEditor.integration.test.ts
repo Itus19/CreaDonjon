@@ -3,6 +3,7 @@ import { createClient as createSupabaseClient, type SupabaseClient } from "@supa
 import { proposeWeaponFromDescription } from "./rulesEditor";
 import type { AiProvider, CompletionResult } from "./provider";
 import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
+import { cleanupCreated } from "../testUtils/cleanupCreated";
 
 /**
  * V1-F2 : sans ce test, rien ne prouve que la nouvelle tentative sur echec
@@ -47,6 +48,7 @@ describe.skipIf(!hasCreds)("proposeWeaponFromDescription (integration, base reel
   let admin: SupabaseClient;
   let userId: string;
 
+  const debut = new Date().toISOString();
   beforeAll(async () => {
     admin = createSupabaseClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
     userId = (await getReusableTestAccount(admin, "owner")).id;
@@ -54,7 +56,8 @@ describe.skipIf(!hasCreds)("proposeWeaponFromDescription (integration, base reel
 
   afterAll(async () => {
     if (userId) {
-      await admin.from("ai_usage_log").delete().eq("user_id", userId);
+      // V3.1-145 : seulement les journaux écrits depuis le début de ce fichier (le compte est partagé).
+      await cleanupCreated(admin, { aiLogs: { userId, since: debut } });
     }
   });
 

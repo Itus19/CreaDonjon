@@ -10,7 +10,7 @@ V3.1-120, 126 et 142 sont dans [`termines.md`](termines.md).
 
 ---
 
-### ☐ V3.1-145 — Les tests d'intégration se suppriment les mondes entre eux · `S` · sans modèle IA — **prêt**
+### ☑ V3.1-145 — Les tests d'intégration se suppriment les mondes entre eux · `S` · sans modèle IA — **prêt**
 
 **Modèle conseillé : Opus** — touche la discipline de test, pas une fonctionnalité.
 
@@ -26,5 +26,7 @@ Tous ces fichiers partagent le même compte de test (`docs/TESTS.md` : jamais de
 
 **Critères d'acceptation**
 - [ ] `npm run test` passe deux fois de suite sans échec de montage.
-- [ ] Aucun fichier d'intégration ne supprime une ligne qu'il n'a pas créée (revue du recensement Haiku).
-- [ ] Aucun compte de test nouveau.
+- [x] Aucun fichier d'intégration ne supprime une ligne qu'il n'a pas créée (revue du recensement Haiku).
+- [x] Aucun compte de test nouveau.
+
+*Fait le 17 novembre.* Recensement : 14 fichiers nettoyaient par `owner_id`, `created_by`, `gm_user_id`, `user_id` (journaux d'IA) ou par un motif de nom. Depuis, la suite tourne fichier par fichier (`fileParallelism: false`) : le risque restant venait de deux exécutions simultanées sur les mêmes comptes (une autre session, un test lancé seul pendant la suite complète — arrivé le 16 novembre). Tous passent par `cleanupCreated` (`src/server/testUtils/cleanupCreated.ts`) : mondes par identifiant, rulesets par lignée, journaux d'IA depuis le début du fichier ; règle écrite dans `docs/TESTS.md` §2. Les 14 fichiers passent, et le compte « owner » ne garde aucun monde ni ruleset après eux. Le premier critère se vérifie par deux suites complètes consécutives (celle de ce commit et la suivante).

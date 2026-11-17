@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import { promoteToEntity } from "./promotion";
 import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
+import { cleanupCreated } from "../testUtils/cleanupCreated";
 
 /**
  * V2-J2 : mecanisme generique de promotion (V1-E6) — sans ce test, rien ne
@@ -44,8 +45,8 @@ describe.skipIf(!hasCreds)("promotion generique en entite (integration, base ree
 
   afterAll(async () => {
     if (userId) {
-      await admin.from("entities").delete().eq("created_by", userId);
-      await admin.from("worlds").delete().eq("owner_id", userId);
+      // V3.1-145 : seulement le monde de ce fichier (ses fiches partent avec lui).
+      await cleanupCreated(admin, { worldIds: [worldId] });
     }
   });
 

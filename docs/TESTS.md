@@ -22,6 +22,7 @@ Ils passent tous par `getReusableTestAccount(role)` (`src/server/testUtils/reusa
 
 - **Jamais** de `auth.admin.createUser` dans un test. Il faut un rôle de plus ? On ajoute une ligne dans `ROLE_EMAILS`.
 - Un test nettoie **les données** qu'il a créées (mondes, rulesets…), jamais le compte.
+- **Seulement ce qu'il a créé, par identifiant** (V3.1-145) : jamais `delete().eq("owner_id", …)`, `created_by`, `gm_user_id` ni un motif de nom. Les comptes sont partagés : une autre exécution (une autre session, un test lancé seul pendant la suite complète) perdrait ses mondes en plein montage. `cleanupCreated` (`src/server/testUtils/cleanupCreated.ts`) supprime les mondes par identifiant (leurs fiches et campagnes suivent), les rulesets par lignée (les versions reforgées comprises) et les journaux d'IA depuis le début du fichier.
 - Pourquoi : chaque connexion compte comme un utilisateur actif facturé par Supabase. Les anciens comptes jetables avaient fait déborder le quota.
 
 ## 3. À la main : le Banc d'essai

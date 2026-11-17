@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
+import { cleanupCreated } from "../testUtils/cleanupCreated";
 
 /**
  * V1-D5 : sans ce test, rien ne prouve que les garde-fous de
@@ -102,10 +103,8 @@ describe.skipIf(!hasCreds)("content_origin et garde-fous de reference personnell
 
   afterAll(async () => {
     if (userId) {
-      await admin.from("campaigns").delete().eq("gm_user_id", userId);
-      await admin.from("entities").delete().eq("created_by", userId);
-      await admin.from("worlds").delete().eq("owner_id", userId);
-      await admin.from("rulesets").delete().eq("created_by", userId);
+      // V3.1-145 : seulement ce que ce fichier a créé ; campagne et fiches partent avec leur monde.
+      await cleanupCreated(admin, { worldIds: [personalWorldId, normalWorldId], rulesetIds: [userCreatedRulesetId, personalRulesetId] });
     }
   });
 

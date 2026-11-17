@@ -4,6 +4,7 @@ import { getRuleEntryForWorld, importRulesetEntries } from "./rules";
 import { resolveBlockReferences } from "./referenceChips";
 import type { BackgroundBlockData } from "@/src/core/schemas/rule-blocks";
 import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
+import { cleanupCreated } from "../testUtils/cleanupCreated";
 
 /**
  * Bug reel trouve en verifiant en direct le formulaire "Créer un historique
@@ -120,8 +121,8 @@ describe.skipIf(!hasCreds)("resolution d'une fiche maison referencee par une aut
 
   afterAll(async () => {
     if (userId) {
-      await admin.from("worlds").delete().eq("owner_id", userId);
-      await admin.from("rulesets").delete().eq("created_by", userId);
+      // V3.1-145 : seulement ce que ce fichier a créé ; la variante reforgée garde sa lignée.
+      await cleanupCreated(admin, { worldIds: [world?.id], rulesetIds: [variantRulesetId] });
     }
   });
 

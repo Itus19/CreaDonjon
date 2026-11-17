@@ -3,6 +3,7 @@ import { createClient as createSupabaseClient, type SupabaseClient } from "@supa
 import { createHomebrewWeapon } from "./rules";
 import { resolveEquipmentArmorData, resolveEquipmentCost, resolveEquipmentWeaponData, resolveEquipmentWeight } from "./resolvedRuleset";
 import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
+import { cleanupCreated } from "../testUtils/cleanupCreated";
 
 /**
  * V1-D4 : sans ce test, rien ne prouve qu'une fiche maison (surcharge
@@ -61,7 +62,8 @@ describe.skipIf(!hasCreds)("arme maison : ecriture + resolution mecanique (integ
 
   afterAll(async () => {
     if (userId) {
-      await admin.from("rulesets").delete().eq("created_by", userId);
+      // V3.1-145 : seulement la lignée de la variante de ce fichier.
+      await cleanupCreated(admin, { rulesetIds: [variantRulesetId] });
     }
   });
 

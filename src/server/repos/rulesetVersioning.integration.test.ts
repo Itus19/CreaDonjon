@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
+import { cleanupCreated } from "../testUtils/cleanupCreated";
 
 /**
  * V1-A4 : sans ce test, rien ne prouve que les rulesets officiels restent
@@ -56,10 +57,10 @@ describe.skipIf(!hasCreds)("surcharge et versioning de ruleset (integration, bas
   });
 
   afterAll(async () => {
-    // Toutes les versions creees pendant le test partagent created_by : les
-    // supprimer par cle etrangere suffit, pas besoin de suivre lineage_id.
+    // V3.1-145 : toutes les versions créées pendant le test partagent la lignée de la variante ;
+    // supprimer par auteur emporterait les rulesets d'une autre exécution (le compte est partagé).
     if (userId) {
-      await admin.from("rulesets").delete().eq("created_by", userId);
+      await cleanupCreated(admin, { rulesetIds: [variantRulesetId] });
     }
   });
 

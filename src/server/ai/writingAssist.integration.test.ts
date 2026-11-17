@@ -3,6 +3,7 @@ import { createClient as createSupabaseClient, type SupabaseClient } from "@supa
 import { proposeTextForBlock } from "./writingAssist";
 import type { AiProvider, CompletionResult } from "./provider";
 import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
+import { cleanupCreated } from "../testUtils/cleanupCreated";
 
 /**
  * V1-F3 : sans ce test, rien ne prouve que chaque appel d'outil devient une
@@ -47,6 +48,7 @@ describe.skipIf(!hasCreds)("proposeTextForBlock (integration, base reelle)", () 
   let worldId: string;
   let entityId: string;
 
+  const debut = new Date().toISOString();
   beforeAll(async () => {
     admin = createSupabaseClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
     userId = (await getReusableTestAccount(admin, "owner")).id;
@@ -71,9 +73,8 @@ describe.skipIf(!hasCreds)("proposeTextForBlock (integration, base reelle)", () 
   afterAll(async () => {
     if (userId) {
       await admin.from("ai_proposals").delete().eq("target_entity_id", entityId);
-      await admin.from("entities").delete().eq("created_by", userId);
-      await admin.from("worlds").delete().eq("owner_id", userId);
-      await admin.from("ai_usage_log").delete().eq("user_id", userId);
+      // V3.1-145 : seulement ce que ce fichier a créé (le compte est partagé).
+      await cleanupCreated(admin, { worldIds: [worldId], aiLogs: { userId, since: debut } });
     }
   });
 
