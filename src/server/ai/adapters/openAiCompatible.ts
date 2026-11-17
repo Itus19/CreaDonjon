@@ -6,6 +6,8 @@ export interface OpenAiCompatibleConfig {
   model: string;
   contextWindow?: number;
   embedDim?: number;
+  /** Jeton exigé par le serveur local (LM Studio « Require Authentication ») ; absent : aucun en-tête. Serveur uniquement (règle 1). */
+  apiKey?: string;
 }
 
 interface OpenAiToolCall {
@@ -48,12 +50,18 @@ export class OpenAiCompatibleProvider implements AiProvider {
   private readonly baseUrl: string;
   private readonly contextWindow: number;
   private readonly embedDim: number;
+  private readonly apiKey: string | undefined;
 
   constructor(config: OpenAiCompatibleConfig) {
     this.model = config.model;
     this.baseUrl = config.baseUrl.replace(/\/+$/, "");
     this.contextWindow = config.contextWindow ?? 8192;
     this.embedDim = config.embedDim ?? 1024;
+    this.apiKey = config.apiKey?.trim() || undefined;
+  }
+
+  private headers(): Record<string, string> {
+    return { "Content-Type": "application/json", ...(this.apiKey ? { Authorization: `Bearer ${this.apiKey}` } : {}) };
   }
 
   capabilities(): AiCapabilities {
@@ -82,7 +90,7 @@ export class OpenAiCompatibleProvider implements AiProvider {
 
     const res = await fetch(`${this.baseUrl}/chat/completions`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: this.headers(),
       body: JSON.stringify(body),
     });
     if (!res.ok) {
@@ -108,7 +116,7 @@ export class OpenAiCompatibleProvider implements AiProvider {
   async embed(texts: string[]): Promise<number[][]> {
     const res = await fetch(`${this.baseUrl}/embeddings`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: this.headers(),
       body: JSON.stringify({ model: this.model, input: texts }),
     });
     if (!res.ok) {
@@ -127,5 +135,5 @@ export function getOpenAiCompatibleProviderFromEnv(): OpenAiCompatibleProvider {
   if (!baseUrl || !model) {
     throw new Error("AI_LOCAL_BASE_URL et AI_LOCAL_MODEL doivent être définis (.env.local) pour utiliser l'éditeur de règle assisté.");
   }
-  return new OpenAiCompatibleProvider({ baseUrl, model });
+  return new OpenAiCompatibleProvider({ baseUrl, model, apiKey: process.env.AI_LOCAL_API_KEY });
 }
