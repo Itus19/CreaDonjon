@@ -10,7 +10,7 @@ import { listAiProposalsBySessionEventIds, updateAiProposalStatus } from "@/src/
 import { softDeleteEntity } from "@/src/server/repos/entities";
 import { deleteDiscoveriesBySourceEvents } from "@/src/server/repos/entityDiscoveries";
 import { deleteFeatureEffectsCreatedSince } from "@/src/server/repos/activeEffects";
-import { putRuntimeState } from "@/src/server/repos/runtimeState";
+import { deleteRuntimeState, putRuntimeState } from "@/src/server/repos/runtimeState";
 import { putSceneState } from "@/src/server/repos/sceneStates";
 
 type TypedClient = SupabaseClient<Database>;
@@ -80,10 +80,16 @@ export async function undoLastSoloTurn(supabase: TypedClient, params: { campaign
   let scene = false;
   if (tour.before) {
     effects = await deleteFeatureEffectsCreatedSince(supabase, { entityId: tour.before.entity_id, campaignId: params.campaignId, since: debut });
-    const runtime = zRuntimeState.safeParse(tour.before.runtime);
-    if (runtime.success) {
-      await putRuntimeState(supabase, { entityId: tour.before.entity_id, campaignId: params.campaignId, state: runtime.data as unknown as Json });
+    if (tour.before.runtime === null) {
+      // Pas encore d'état en base au début du tour : la ligne écrite depuis s'en va, l'état par défaut revient.
+      await deleteRuntimeState(supabase, { entityId: tour.before.entity_id, campaignId: params.campaignId });
       state = true;
+    } else {
+      const runtime = zRuntimeState.safeParse(tour.before.runtime);
+      if (runtime.success) {
+        await putRuntimeState(supabase, { entityId: tour.before.entity_id, campaignId: params.campaignId, state: runtime.data as unknown as Json });
+        state = true;
+      }
     }
     const sceneAvant = zSceneState.safeParse(tour.before.scene);
     if (sceneAvant.success) {

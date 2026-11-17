@@ -79,6 +79,8 @@ describe.skipIf(!hasCreds)("annuler un tour du solo (V3-F2, integration, base re
     expect(r.reverted).toMatchObject({ entities: 1, proposals: 1, discoveries: 1, state: true });
 
     expect((await getEntityRuntimeState(client(owner), entityId, campaignId)).hp).toEqual(avant.hp);
+    // Sans état en base au début du tour, l'annulation retire la ligne (la fiche retrouve ses PV pleins), jamais un état à 0 PV.
+    expect((await admin.from("entity_runtime_state").select("entity_id").eq("entity_id", entityId).eq("campaign_id", campaignId)).data).toEqual([]);
     expect((await admin.from("entities").select("deleted_at").eq("id", pnj!.id).single()).data?.deleted_at).not.toBeNull();
     expect((await admin.from("entity_discoveries").select("id").eq("source_event_id", tour.eventId)).data).toEqual([]);
     expect((await admin.from("ai_proposals").select("status").eq("session_event_id", tour.eventId).single()).data?.status).toBe("reverted");

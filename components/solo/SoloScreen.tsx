@@ -149,7 +149,8 @@ export default function SoloScreen({
       {/* Téléphone (V3.1-36) : la bande de jauges en ligne, et ✦ qui ouvre les conséquences en feuille du bas. */}
       <div className="flex shrink-0 items-stretch gap-2 md:hidden">
         <BandeFiche jauges={jauges} variante="ligne" />
-        {nombreConsequences > 0 && (
+        {/* V3-F2 : ✦ aussi quand un tour peut être annulé, même si le monde n'a rien écrit (le geste vit dans la feuille). */}
+        {(nombreConsequences > 0 || annulable) && (
           <button
             type="button"
             onClick={() => setFeuilleConsequences(true)}
@@ -158,7 +159,7 @@ export default function SoloScreen({
             className="flex shrink-0 flex-col items-center justify-center rounded-lg border border-edge bg-panel px-3 text-accent transition-colors hover:bg-panel-raised"
           >
             <span aria-hidden="true">✦</span>
-            <span className="text-xs tabular-nums text-ink-soft">{nombreConsequences}</span>
+            {nombreConsequences > 0 && <span className="text-xs tabular-nums text-ink-soft">{nombreConsequences}</span>}
           </button>
         )}
       </div>

@@ -89,7 +89,7 @@ Les tickets vivent dans `docs/backlog-v3/`, un fichier par lot. **Ne lis que le 
 | V3-E2 | ☐ | **avec** | RAG sur le wiki | [`05-memoire.md`](backlog-v3/05-memoire.md) |
 | V3-E3 | ☐ | **avec** | Le journal de personnage | [`05-memoire.md`](backlog-v3/05-memoire.md) |
 | V3-F1 | ☐ | **avec** | Reprendre une partie | [`06-partie-qui-dure.md`](backlog-v3/06-partie-qui-dure.md) |
-| V3-F2 | ☐ | sans | Annuler un tour | [`06-partie-qui-dure.md`](backlog-v3/06-partie-qui-dure.md) |
+| V3-F2 | ☑ | sans | Annuler un tour | [`06-partie-qui-dure.md`](backlog-v3/06-partie-qui-dure.md) |
 | V3-F3 | ☑ | sans | Copier le wiki d'un monde, sans jamais convertir une partie solo | [`termines.md`](backlog-v3/termines.md) |
 | V3-R0 | ☑ | sans | Poser la mesure et le budget | [`termines.md`](backlog-v3/termines.md) |
 | V3-R1 | ☑ | sans | Ne plus livrer le bureau à fenêtres au téléphone | [`termines.md`](backlog-v3/termines.md) |

@@ -60,3 +60,10 @@ export async function putRuntimeState(
   if (error) throw new Error(error.message);
   return data;
 }
+
+/** V3-F2 — un tour annulé ramène un personnage qui n'avait pas encore d'état en base : sa ligne s'en va (l'état par défaut revient). */
+export async function deleteRuntimeState(supabase: TypedClient, params: { entityId: string; campaignId: string }): Promise<void> {
+  const { error } = await supabase.from("entity_runtime_state").delete().eq("entity_id", params.entityId).eq("campaign_id", params.campaignId);
+  if (error) throw new Error(error.message);
+}
+

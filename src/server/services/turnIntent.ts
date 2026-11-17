@@ -51,6 +51,7 @@ import { insertDiceRoll } from "@/src/server/repos/diceRolls";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
 import { serverRng } from "@/src/server/services/rng";
 import { applyRuntimeStateChange, getEntityRuntimeState } from "@/src/server/services/runtimeState";
+import { getRuntimeState } from "@/src/server/repos/runtimeState";
 import type { TargetId, IntentTargetDetail, IntentBarData, TurnRecord } from "@/lib/solo/types";
 
 type TypedClient = SupabaseClient<Database>;
@@ -315,7 +316,9 @@ async function journalTurn(
   const sessionId = await getOrOpenSessionForCampaign(supabase, params.campaignId);
   // V3-F2 (PDD §29) : l'état du personnage et la scène AVANT ce que le tour va appliquer (les effets des jets
   // partent ensuite, dans la boucle du tour) ; « annuler ce tour » les restaure. Deux lectures de plus par tour.
-  const [runtime, scene] = await Promise.all([getEntityRuntimeState(supabase, params.entityId, params.campaignId), getSceneState(supabase, params.campaignId)]);
+  // L'état tel qu'il est EN BASE : `null` quand le personnage n'a pas encore de ligne (sa fiche montre alors ses PV pleins).
+  const [ligneEtat, scene] = await Promise.all([getRuntimeState(supabase, params.entityId, params.campaignId), getSceneState(supabase, params.campaignId)]);
+  const runtime = ligneEtat?.state ?? null;
   const seq = await nextEventSeq(supabase, sessionId);
   const event = await insertSessionEvent(supabase, {
     sessionId,
