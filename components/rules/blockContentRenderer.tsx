@@ -9,6 +9,7 @@ import type {
   ClassBasicsBlockData,
   ClassProgressionBlockData,
   ConditionEffectsBlockData,
+  CurrencySystemBlockData,
   CustomTableBlockData,
   DescriptionBlockData,
   EffectsBlockData,
@@ -988,6 +989,24 @@ function ForcedSaveFailures({ data }: { data: ForcedSaveFailuresBlockData }) {
   );
 }
 
+/**
+ * V3.1-218 (ADR 0102) — le système monétaire de la fiche « Pièces de
+ * monnaie » : chaque pièce, sa valeur en pièces de cuivre et son rôle, puis
+ * l'ordre de casse des réserves.
+ */
+function CurrencySystemView({ data }: { data: CurrencySystemBlockData }) {
+  const nom = (key: string) => data.coins.find((c) => c.key === key)?.label.fr ?? key;
+  const pieces = [...data.coins].sort((a, b) => b.value_cp - a.value_cp);
+  return (
+    <KeyValues
+      items={[
+        ...pieces.map((c) => ({ label: c.label.fr, value: `${c.value_cp} pc · ${c.role === "common" ? "courante" : "réserve"}` })),
+        ...(data.break_order.length > 0 ? [{ label: "Ordre de casse", value: data.break_order.map(nom).join(", puis ") }] : []),
+      ]}
+    />
+  );
+}
+
 function ConditionEffects({ data }: { data: ConditionEffectsBlockData }) {
   return (
     <KeyValues
@@ -1480,5 +1499,6 @@ export function renderBlockData(
   if (blockType === "forced_save_failures") return <ForcedSaveFailures data={data as ForcedSaveFailuresBlockData} />;
   if (blockType === "modifiers") return <Modifiers data={data as ModifiersBlockData} />;
   if (blockType === "triggers") return <Triggers data={data as TriggersBlockData} />;
+  if (blockType === "currency_system") return <CurrencySystemView data={data as CurrencySystemBlockData} />;
   return null;
 }

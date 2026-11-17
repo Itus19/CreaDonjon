@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
-import { applyCurrencyDelta, type CurrencyDelta } from "@/src/core/rules/currency";
+import { applyCurrencyDelta, isStandardCoin, type CurrencyDelta, type CurrencySystem } from "@/src/core/rules/currency";
 import type { InventoryBlockData } from "@/src/core/schemas/blocks/inventory";
 import { listBlocksForEntity } from "@/src/server/repos/blocks";
 import { createBlock, updateBlockContent } from "@/src/server/services/blocks";
@@ -18,7 +18,7 @@ type TypedClient = SupabaseClient<Database>;
  * (l'économie de campagne et le journal lisent le porte-monnaie dans les
  * révisions). Jamais un renvoi du bloc entier par le client.
  */
-export type InventoryActionError = "not_found" | "forbidden" | "conflict" | "insufficient_funds" | "item_not_found";
+export type InventoryActionError = "not_found" | "forbidden" | "conflict" | "insufficient_funds" | "item_not_found" | "unknown_coin";
 
 export interface InventoryActionOutcome {
   /** Le bloc tel qu'il est écrit — de quoi rafraîchir l'écran sans le recharger (`onBlockRefreshed`). */
@@ -74,14 +74,20 @@ async function writeInventory(
  * écrire (`insufficient_funds`) si le total ne suffit pas, même en cassant de
  * plus grosses pièces. Une fiche sans bloc `inventory` en reçoit un à la volée
  * pour un dépôt, comme l'écran le faisait avant.
+ *
+ * V3.1-218 (ADR 0102) : selon le système monétaire de la fiche
+ * (`readCurrencySystemForEntity`). Une pièce ni du système ni des cinq du SRD
+ * est refusée (`unknown_coin`) : on ne crée pas une pièce par une faute de frappe.
  */
 export async function changeCurrency(
   supabase: TypedClient,
-  params: { entityId: string; delta: CurrencyDelta; actorUserId: string }
+  params: { entityId: string; delta: CurrencyDelta; actorUserId: string; system: CurrencySystem }
 ): Promise<InventoryActionOutcome | { error: InventoryActionError }> {
+  const known = new Set(params.system.coins.map((c) => c.key));
+  if (Object.keys(params.delta).some((k) => !known.has(k) && !isStandardCoin(k))) return { error: "unknown_coin" };
   let current = await loadInventory(supabase, params.entityId);
   const base = current?.data ?? EMPTY_INVENTORY;
-  const currency = applyCurrencyDelta(base.currency, params.delta);
+  const currency = applyCurrencyDelta(base.currency, params.delta, params.system);
   if (!currency) return { error: "insufficient_funds" };
 
   if (!current) {

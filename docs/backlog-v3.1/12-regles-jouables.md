@@ -615,12 +615,12 @@ Le modèle lit le texte d'une fiche et propose des blocs (`resources`, `activati
 **Critères d'acceptation**
 - [x] Les 28 tests de `currency.test.ts` passent sans changement ; tests nouveaux : une pièce maison courante se forme et se dépense, une réserve maison se casse dans l'ordre donné, une pièce absente du système compte à sa valeur standard (SRD) ou à 0 (maison).
 
-#### ☐ V3.1-218 — Le bloc sur la fiche « Pièces de monnaie », lu par le service · `S` · sans modèle IA — **prêt (Opus)**
+#### ☑ V3.1-218 — Le bloc sur la fiche « Pièces de monnaie », lu par le service · `S` · sans modèle IA — **prêt (Opus)**
 
 **Dépend de** : 217. Données SRD (le bloc par défaut sur `standard-exchange-rates`, réimport) ; le service d'inventaire et la route `actions/currency` lisent le système par la chaîne de rulesets ; les statistiques d'économie aussi.
 
 **Critères d'acceptation**
-- [ ] Intégration : une variante qui surcharge le bloc (une pièce maison courante) dépense et rend la monnaie selon elle ; le monde officiel garde le comportement d'aujourd'hui.
+- [x] Intégration : une variante qui surcharge le bloc (une pièce maison courante) dépense et rend la monnaie selon elle ; le monde officiel garde le comportement d'aujourd'hui.
 
 #### ☐ V3.1-219 — L'inventaire affiche les pièces du système · `M` · sans modèle IA — **prêt (Sonnet)**
 

@@ -169,9 +169,10 @@ const coinDeltaField = z.number().int().min(-1_000_000).max(1_000_000).optional(
 /** V3.1-24 : variation du porte-monnaie, par pièce (positif = dépôt, négatif = dépense). Le serveur applique `depositCoins` / `spendCoins`. */
 export const currencyChangeSchema = z.object({
   campaignId: campaignIdField,
+  // V3.1-218 (ADR 0102) : les cinq pièces SRD ou une pièce maison (clé snake_case) ; le service refuse une clé hors du système.
   delta: z
-    .object({ pp: coinDeltaField, gp: coinDeltaField, ep: coinDeltaField, sp: coinDeltaField, cp: coinDeltaField })
-    .strict()
+    .record(z.string().regex(/^[a-z][a-z0-9_]*$/).max(40), coinDeltaField)
+    .refine((d) => Object.keys(d).length <= 20, { message: "Trop de pièces à la fois." })
     .refine((d) => Object.values(d).some((v) => v !== undefined && v !== 0), { message: "Aucune pièce à ajouter ou à retirer." }),
 });
 

@@ -9,6 +9,7 @@ const ERROR_RESPONSES = {
   conflict: { message: "L'inventaire a été modifié entre-temps. Réessayez.", status: 409 },
   insufficient_funds: { message: "Fonds insuffisants, même en cassant des pièces plus grosses.", status: 400 },
   item_not_found: { message: "Cet objet n'est pas dans l'inventaire.", status: 404 },
+  unknown_coin: { message: "Cette pièce n'existe pas dans le système monétaire de ce monde.", status: 400 },
 } as const;
 
 // Aucun interrupteur de table pour l'équipement : le droit d'éditer la fiche suffit, comme avant.

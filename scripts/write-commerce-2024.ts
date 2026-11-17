@@ -34,6 +34,8 @@
 // Lancement : npx tsx --env-file=.env.local scripts/write-commerce-2024.ts [--write]
 
 import { createClient } from "@supabase/supabase-js";
+import { DEFAULT_CURRENCY_SYSTEM } from "../src/core/rules/currency";
+import { validateBlockData } from "../src/core/schemas/rule-blocks/blocks";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -114,6 +116,15 @@ async function main() {
           display: { label: "Taux de conversion", layout: "table" },
           data: EXCHANGE_TABLE,
           display_order: 200,
+        },
+        // V3.1-218 (ADR 0102) : le système monétaire, explicite sur la fiche
+        // pour qu'une variante le surcharge (replace_block) ; identique au
+        // système par défaut du noyau, validé ici.
+        {
+          block_type: "currency_system",
+          display: { label: "Système monétaire", layout: "key_values" },
+          data: validateBlockData("currency_system", DEFAULT_CURRENCY_SYSTEM),
+          display_order: 300,
         },
         RAW_DATA_BLOCK,
       ],
