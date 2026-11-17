@@ -53,8 +53,24 @@ export async function loadTriggersForEntries(
 
   const resolved = await resolveEntryBlocksInRulesetBatch(supabase, rulesetId, entryKeys);
 
-  for (const entryKey of new Set(entryKeys)) {
-    const data = resolved.get(entryKey)?.blocksByType.get("triggers");
+  // V3.1-5, vérification du 17 novembre : une espèce porte les déclencheurs de
+  // ses traits (Ingénieux de l'Humain : l'Inspiration au repos long). La fiche
+  // dérivée ne liste un trait comme aptitude que s'il se joue (V3.1-163) ; les
+  // traits se lisent donc ici, dans le bloc `species_traits` déjà résolu — une
+  // seconde résolution groupée, seulement quand une espèce a des traits.
+  const demandees = new Set(entryKeys);
+  const traitKeys = new Set<string>();
+  for (const entryKey of demandees) {
+    const traits = (resolved.get(entryKey)?.blocksByType.get("species_traits") as { traits?: { kind: string; key: string }[] } | undefined)?.traits ?? [];
+    for (const t of traits) if (t.kind !== "entity" && !demandees.has(t.key)) traitKeys.add(t.key);
+  }
+  const resolvedTraits = traitKeys.size > 0 ? await resolveEntryBlocksInRulesetBatch(supabase, rulesetId, [...traitKeys]) : new Map();
+
+  const sources: [string, unknown][] = [
+    ...[...demandees].map((k): [string, unknown] => [k, resolved.get(k)?.blocksByType.get("triggers")]),
+    ...[...traitKeys].map((k): [string, unknown] => [k, resolvedTraits.get(k)?.blocksByType.get("triggers")]),
+  ];
+  for (const [entryKey, data] of sources) {
     if (!data) continue;
 
     const raw = (data as { triggers?: unknown[] }).triggers ?? [];
