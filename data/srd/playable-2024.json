@@ -539,7 +539,7 @@
     }
   },
   "bard-bardic-inspiration": {
-    "_regle": "Inspiration bardique : usages = mod. CHA (minimum 1), au repos long ; donner le de a un allie, qui l'ajoute a un test rate, attend qu'un jeton puisse accorder une reaction d'une regle absente de la fiche du porteur.",
+    "_regle": "Inspiration bardique : usages = mod. CHA (minimum 1), au repos long ; action Bonus, une autre creature a 18 m recoit un de (taille selon le niveau du barde, figee a la pose) ; une fois dans l'heure, sur un Test d20 rate, elle l'ajoute (ADR 0101).",
     "resources": {
       "resources": [
         {
@@ -566,11 +566,158 @@
         }
       ]
     },
+    "activation": {
+      "activations": [
+        {
+          "id": "bardic-inspiration",
+          "label": {
+            "fr": "Inspiration bardique",
+            "en": "Bardic Inspiration"
+          },
+          "cost": {
+            "action": "bonus",
+            "resources": [
+              {
+                "key": "bardic-inspiration",
+                "amount": {
+                  "op": "num",
+                  "value": 1
+                }
+              }
+            ]
+          },
+          "targets": {
+            "kind": "creature",
+            "range": {
+              "value": 18,
+              "unit": "m"
+            }
+          },
+          "effects": [
+            {
+              "action": "apply_effect",
+              "who": "target",
+              "effect": "bardic-inspiration-die"
+            }
+          ],
+          "variants": null,
+          "passages": {
+            "cost": "Par une action Bonus, vous pouvez inspirer une autre créature qui vous voit ou vous entend dans un rayon de 18 m.",
+            "effects.0": "Cette créature reçoit l’un de vos dés d’Inspiration bardique."
+          }
+        },
+        {
+          "id": "bardic-inspiration-roll",
+          "label": {
+            "fr": "Dé d’Inspiration bardique",
+            "en": "Bardic Inspiration die"
+          },
+          "cost": {
+            "action": "none",
+            "resources": []
+          },
+          "targets": {
+            "kind": "self"
+          },
+          "effects": [],
+          "variants": null,
+          "trigger": {
+            "on": "roll",
+            "roll": "d20",
+            "subject": "self",
+            "when": "failed"
+          },
+          "roll_operations": [
+            {
+              "op": "add_die",
+              "count": {
+                "op": "num",
+                "value": 1
+              },
+              "faces": {
+                "op": "ref",
+                "name": "token.die"
+              },
+              "sign": 1
+            }
+          ]
+        }
+      ],
+      "durable_effects": [
+        {
+          "id": "bardic-inspiration-die",
+          "label": {
+            "fr": "Dé d’Inspiration bardique",
+            "en": "Bardic Inspiration die"
+          },
+          "conditions": [],
+          "modifiers": [],
+          "duration": {
+            "unit": "hour",
+            "amount": 1
+          },
+          "concentration": false,
+          "ends_on": [],
+          "token": {
+            "uses": 1,
+            "grants": "bardic-inspiration-roll",
+            "values": {
+              "die": {
+                "op": "min",
+                "args": [
+                  {
+                    "op": "num",
+                    "value": 12
+                  },
+                  {
+                    "op": "add",
+                    "args": [
+                      {
+                        "op": "num",
+                        "value": 6
+                      },
+                      {
+                        "op": "mul",
+                        "args": [
+                          {
+                            "op": "num",
+                            "value": 2
+                          },
+                          {
+                            "op": "floor",
+                            "args": [
+                              {
+                                "op": "div",
+                                "args": [
+                                  {
+                                    "op": "ref",
+                                    "name": "class.level"
+                                  },
+                                  {
+                                    "op": "num",
+                                    "value": 5
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          "passage": "Une fois au cours de l’heure à venir, lorsque la créature rate un Test d20, elle peut lancer le dé d’Inspiration bardique pour en ajouter le résultat au Test d20"
+        }
+      ]
+    },
     "coverage": {
       "gaps": [
         {
-          "text": "lorsque la créature rate un Test d20, elle peut lancer le dé d’Inspiration bardique pour en ajouter le résultat au Test d20",
-          "missing": "Donner le dé à un allié : le jeton d'un effet qui dure existe (V3.1-197), mais une réaction ne se propose qu'à partir des aptitudes de la fiche de celui qui lance le dé ; l'allié qui porte le jeton du barde ne se la voit donc pas proposer. Le dé s'écrit déjà 1d{column.class_specific_bardic_inspiration_die}.",
+          "text": "Une même créature ne peut pas disposer de plus d’un dé d’Inspiration bardique à la fois.",
+          "missing": "Rien n'empêche de donner un second dé à une créature qui en a déjà un : la table veille (la réaction ne se propose qu'une fois).",
           "brick": "other"
         }
       ]

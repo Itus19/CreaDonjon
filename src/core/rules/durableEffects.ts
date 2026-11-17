@@ -44,6 +44,8 @@ export interface ActiveDurableEffect {
   startedRound: number | null;
   /** V3.1-195 : le JS que le porteur refait à la fin de chacun de ses tours (DD figé à la pose). */
   repeatSave?: RepeatSave;
+  /** V3.1-163 (ADR 0101) : les valeurs du jeton, figées à la pose avec les nombres de la source. */
+  tokenValues?: Record<string, number>;
   /** V3.1-158 : la clé de la règle qui l'a posé (`source_key`) — ses formules lisent la table de la classe qui accorde cette règle. */
   ruleKey?: string;
 }
@@ -74,6 +76,8 @@ export function instantiateDurableEffect(
     locale?: string;
     /** V3.1-195 : le DD du JS répété, déjà calculé avec les nombres de la source (`repeat_save.dc`). */
     repeatSaveDc?: number;
+    /** V3.1-163 : les valeurs du jeton, déjà calculées avec les nombres de la source (`token.values`). */
+    tokenValues?: Record<string, number>;
   },
 ): ActiveDurableEffect {
   const d = def.duration;
@@ -103,6 +107,7 @@ export function instantiateDurableEffect(
     tokenUsesLeft: def.token?.uses ?? 0,
     startedRound: at.round,
     ...(def.repeat_save && at.repeatSaveDc !== undefined ? { repeatSave: { ability: def.repeat_save.ability, dc: at.repeatSaveDc } } : {}),
+    ...(def.token && at.tokenValues && Object.keys(at.tokenValues).length > 0 ? { tokenValues: { ...at.tokenValues } } : {}),
   };
 }
 
@@ -227,6 +232,28 @@ export type TokenResult =
   | { ok: true; grants: string; kept: ActiveDurableEffect[]; expired: ExpiryResult["expired"] }
   | { ok: false; reason: "no_token" | "not_bearer" };
 
+/** V3.1-163 (ADR 0101) — une activation qu'un jeton accorde à un porteur, avec la règle qui la porte et les valeurs figées. */
+export interface GrantedActivation {
+  ruleKey: string;
+  activationId: string;
+  instanceId: string;
+  values: Record<string, number>;
+}
+
+/** Les activations que les jetons encore utilisables accordent à `bearer` (règle connue par `source_key`). */
+export function grantedActivations(effects: readonly ActiveDurableEffect[], bearer: string): GrantedActivation[] {
+  return effects.flatMap((e) =>
+    e.bearer === bearer && e.tokenGrants !== null && e.tokenUsesLeft > 0 && e.ruleKey !== undefined
+      ? [{ ruleKey: e.ruleKey, activationId: e.tokenGrants, instanceId: e.instanceId, values: { ...(e.tokenValues ?? {}) } }]
+      : [],
+  );
+}
+
+/** Les nombres d'une formule d'activation accordée : ceux du porteur, plus les valeurs du jeton sous `token.<nom>`. */
+export function withTokenValues(numbers: Readonly<Record<string, number>>, values: Readonly<Record<string, number>>): Record<string, number> {
+  return { ...numbers, ...Object.fromEntries(Object.entries(values).map(([k, v]) => [`token.${k}`, v])) };
+}
+
 /** Engage un usage du jeton d'un effet ; le dernier usage retire l'effet. Seul le porteur engage son jeton. */
 export function consumeToken(effects: readonly ActiveDurableEffect[], p: { instanceId: string; by: string }): TokenResult {
   const cible = effects.find((e) => e.instanceId === p.instanceId && e.tokenGrants !== null && e.tokenUsesLeft > 0);
@@ -278,6 +305,8 @@ export const zStoredEffectPayload = z.object({
   startedRound: z.number().int().nullable(),
   /** V3.1-195 : absent des lignes antérieures. */
   repeatSave: z.object({ ability: z.enum(["str", "dex", "con", "int", "wis", "cha"]), dc: z.number().int() }).optional(),
+  /** V3.1-163 : absent des lignes antérieures. */
+  tokenValues: z.record(z.string(), z.number()).optional(),
 });
 
 export interface StoredEffectRow {
@@ -307,6 +336,7 @@ export function effectToRow(e: ActiveDurableEffect, sourceKey: string) {
       tokenUsesLeft: e.tokenUsesLeft,
       startedRound: e.startedRound,
       ...(e.repeatSave ? { repeatSave: e.repeatSave } : {}),
+      ...(e.tokenValues ? { tokenValues: e.tokenValues } : {}),
     },
   };
 }

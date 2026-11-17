@@ -207,3 +207,16 @@ describe("V3.1-195 — un effet à JS répété reçoit son DD à la pose", () =
     expect(r.plan.applied[0].repeatSave).toEqual({ ability: "wis", dc: 15 });
   });
 });
+
+describe("V3.1-163 (ADR 0101) — les valeurs d'un jeton se figent à la pose, avec les nombres de la source", () => {
+  it("token.values est lu avec les nombres de celle qui pose l'effet", () => {
+    const bloc: ActivationBlockData = zActivationBlockData.parse({
+      ...BLOC,
+      durable_effects: [{ ...BLOC.durable_effects[0], token: { uses: 1, grants: BLOC.activations[0].id, values: { die: { op: "ref", name: "spell_save_dc" } } } }],
+    });
+    const r = planActivation({ ...base, block: bloc, targetIds: ["g1"], ctx: scene(), rng: d20s(4) });
+    if (!r.ok) throw new Error(r.reason);
+    expect(r.plan.applied[0].tokenValues).toEqual({ die: 15 });
+  });
+});
+

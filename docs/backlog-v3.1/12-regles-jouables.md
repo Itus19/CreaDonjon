@@ -239,7 +239,7 @@ Réactions (une fenêtre de choix dans le déroulé d'un jet, côté serveur), o
 
 *Reste* : seuls les jets ciblés (attaque, dégâts) passent par le point de décision. Les sauvegardes demandées, les tests, l'attaque sans cible et la boucle du solo : V3.1-163.
 
-#### ☐ V3.1-163 — Les autres jets passent par la fenêtre : sauvegardes, tests, attaque sans cible, solo · `M` · sans modèle IA — **prêt (Opus)**
+#### ☑ V3.1-163 — Les autres jets passent par la fenêtre : sauvegardes, tests, attaque sans cible, solo · `M` · sans modèle IA — **prêt (Opus)**
 
 **Modèle conseillé : Opus** — déroulé des jets côté serveur.
 **Dépend de** : 160.
@@ -254,11 +254,23 @@ Réactions (une fenêtre de choix dans le déroulé d'un jet, côté serveur), o
 **Critères d'acceptation**
 - [x] Intégration : Guerrier 9 rate une sauvegarde demandée → fenêtre ; Indomptable → relance + 9, usage dépensé.
 - [x] Chance (automatique) relance un 1 naturel sur un test sans fenêtre. *La relance est prouvée par le noyau ; l'intégration prouve que le trait est une aptitude jouable et qu'aucune fenêtre ne s'ouvre.*
-- [ ] Solo : une réaction se propose dans le tour, et le budget de la scène la compte.
+- [ ] Solo : une réaction se propose dans le tour, et le budget de la scène la compte. *Sorti en V3.1-216 (17 novembre).*
 
 *En partie fait le 7 novembre.* Point de décision dans `answerSaveRequest` (après le d20, la demande reste en attente) et dans les tests et sauvegardes de la fiche (`recordAndBuildOutcome`, rien n'est enregistré avant la reprise ; hors combat, rien n'est compté) ; `selfReactorPool` (un seul personnage, en combat ou non) ; la reprise rejoue les trois origines (`ResumedRoll`, union étiquetée). Le résolveur attache les briques jouables des **traits d'espèce** (Chance) et des **aptitudes de sous-classe qui ont leur fiche** (Mots cinglants, `lore-cutting-words`), sans doubler leurs modificateurs ni ajouter d'aptitude vide. Données : Chance (automatique), Mots cinglants (deux activations : dégâts lancés, attaque qui touche ; dé d'inspiration en formule sur le niveau de Barde, `min(12, 6 + 2 × ⌊niveau / 5⌋)`), réimport fait. Vérifié : `rollWindowsSelf.integration.test.ts` 4/4 (Inflexible, Coup de chance, Chance sur la fiche, Mots cinglants sur la fiche d'un Barde du Savoir 3).
 
 *Reste* : la boucle du solo ; l'attaque sans cible ; le dé d'Inspiration bardique reçu (activation accordée par un jeton) ; le test de caractéristique réussi d'une autre créature (Mots cinglants).
+
+*Fini le 17 novembre (ADR 0101).* **Le dé d'Inspiration bardique reçu** : le jeton porte des valeurs figées à la pose (`token.values`, le dé selon le niveau du barde) ; une activation accordée par un jeton se joue même si sa règle est absente de la fiche du porteur (fenêtres de réaction et `activateFeature`) ; jouer une activation accordée consomme un usage du jeton (`consumeToken`, enfin branché : les jetons de V3.1-197 se décomptent aussi). Données : Inspiration bardique (action Bonus, un dé à une autre créature à 18 m ; réaction du porteur sur un Test d20 raté, `1d{token.die}`), réimport fait. **L'attaque sans cible** : seules les réactions automatiques sur son propre jet (Chance), sans fenêtre, et sans aucune lecture quand la fiche n'en porte pas. **Le test réussi d'une autre créature** : sans objet tant que le moteur ne lance pas les tests d'un monstre (le MJ les lance) ; le jet d'une alliée ne regarde que ses propres réactions. **La boucle du solo** : sortie en V3.1-216. Vérifié : `rollWindowsSelf.integration.test.ts` 6/6 (dé reçu proposé à l'alliée, ajouté, jeton épuisé ; Chance sur une attaque sans cible).
+
+#### ☐ V3.1-216 — Les réactions dans la boucle du solo · `M` · **avec modèle IA** (vérification de bout en bout) — **prêt (Opus)**
+
+**Modèle conseillé : Opus** — tour du solo, moteur. Sorti de V3.1-163 le 17 novembre.
+
+- La boucle du solo (V3-B2) : `pending_request` de genre `reaction` quand un jet du tour ouvre une fenêtre ; le budget de la scène (V3-A3) compte la réaction ; la portée se lit dans les zones abstraites (V3-A4) faute de plan.
+- Le moteur seul tranche (règle 8) ; la narration ne fait que dire ce qui a été joué.
+
+**Critères d'acceptation**
+- [ ] Solo : une réaction se propose dans le tour, et le budget de la scène la compte.
 
 
 #### ☑ V3.1-161 — Les écrans : le bandeau de réaction ; l'éditeur suit · `M` · sans modèle IA — **prêt (Sonnet)**

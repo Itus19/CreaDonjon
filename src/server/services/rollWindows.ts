@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import type { Locale } from "@/src/i18n/request";
-import { zRollOperation, type Activation } from "@/src/core/schemas/rule-blocks/playable";
+import { zActivationBlockData, zRollOperation, type Activation } from "@/src/core/schemas/rule-blocks/playable";
 import { loadSpellActivations } from "@/src/server/services/spellActivations";
 import {
   applyRollOperations,
@@ -25,7 +25,9 @@ import { orderParticipants } from "@/src/server/services/combats";
 import { openRollWindow, readCombatParticipantsSigned } from "@/src/server/services/engineSigning";
 import { actorNumbersFor } from "@/src/server/services/actorNumbers";
 import { serverRng } from "@/src/server/services/rng";
-import { activationUnlocked, effectFromRow, localized } from "@/src/core/rules/durableEffects";
+import { activationUnlocked, effectFromRow, grantedActivations, localized, withTokenValues, type ActiveDurableEffect } from "@/src/core/rules/durableEffects";
+import { resolveEntryBlocksInRulesetBatch } from "@/src/server/services/rules";
+import { isWorldAdmin } from "@/src/server/services/permissions";
 import { listFeatureEffectsForBearers } from "@/src/server/repos/activeEffects";
 
 type TypedClient = SupabaseClient<Database>;
@@ -139,25 +141,28 @@ export async function gatherReactors(
     rows.push({ pc: params.standalone, p: null });
     pool.teams[params.standalone.entity_id] = "pj";
   }
-  for (const { pc, p } of rows) {
-    if (params.only && !params.only.has(pc.entity_id)) continue;
+  // V3.1-163 (ADR 0101) : les effets de tous les PJ du réservoir, en UNE lecture : les jetons qu'ils portent accordent
+  // des réactions, y compris d'une règle absente de leur fiche (le dé d'Inspiration bardique reçu).
+  const retenus = rows.filter(({ pc }) => !params.only || params.only.has(pc.entity_id));
+  const lignesEffets =
+    retenus.length > 0 ? await listFeatureEffectsForBearers(supabase, { campaignId: params.campaignId, entityIds: retenus.map((r) => r.pc.entity_id), participantIds: [] }) : [];
+  const effetsDe = (entityId: string) =>
+    lignesEffets.flatMap((row) => {
+      if (row.entity_id !== entityId) return [];
+      const e = effectFromRow(row, entityId);
+      return e ? [e] : [];
+    });
+  for (const { pc, p } of retenus) {
     const ctx = params.loaded?.find((c) => c.entityId === pc.entity_id) ?? (await resolveCharacterActionContext(supabase, pc.entity_id, params.campaignId, params.locale));
     if (!ctx) continue;
     const features = ctx.sheet.features.filter((f) => f.activation?.activations.some((a) => a.trigger?.on === "roll"));
     const sorts = await reactionSpells(supabase, ctx);
-    if (features.length === 0 && sorts.length === 0) continue;
+    const effetsActifs = effetsDe(pc.entity_id);
+    const etrangeres = await foreignGrantedReactions(supabase, ctx, effetsActifs);
+    if (features.length === 0 && sorts.length === 0 && etrangeres.length === 0) continue;
     const state = await getEntityRuntimeState(supabase, pc.entity_id, params.campaignId);
     const usage = zTurnUsage.safeParse(p?.turn_usage);
     const numbersByRule: Record<string, Record<string, number>> = {};
-    // V3.1-197 : une réaction qu'un jeton accorde (Majesté souveraine) n'est candidate que tant que l'effet dure.
-    // Lus seulement s'il y en a une : aucune lecture de plus dans le cas ordinaire (QUOTAS Q1).
-    const aJeton = features.some((f) => f.activation!.durable_effects.some((d) => d.token));
-    const effetsActifs = aJeton
-      ? (await listFeatureEffectsForBearers(supabase, { campaignId: params.campaignId, entityIds: [pc.entity_id], participantIds: [] })).flatMap((row) => {
-          const e = effectFromRow(row, pc.entity_id);
-          return e ? [e] : [];
-        })
-      : [];
     for (const f of features) {
       numbersByRule[f.key] = actorNumbersFor(ctx, f.key);
       for (const a of f.activation!.activations) {
@@ -173,6 +178,19 @@ export async function gatherReactors(
           ownTurnIndex: p ? Math.max(0, ordre.findIndex((o) => o.id === p.id)) : null,
         });
       }
+    }
+    // V3.1-163 (ADR 0101) : une réaction qu'un jeton accorde, d'une règle absente de la fiche ; ses formules lisent `token.*`.
+    for (const g of etrangeres) {
+      numbersByRule[g.ruleKey] = withTokenValues(actorNumbersFor(ctx, g.ruleKey), g.values);
+      pool.candidates.push({
+        actorId: pc.entity_id,
+        ruleKey: g.ruleKey,
+        activation: g.activation,
+        resources: ctx.sheet.resources,
+        used: state.resources,
+        usage: usage.success ? usage.data : EMPTY_TURN_USAGE,
+        ownTurnIndex: p ? Math.max(0, ordre.findIndex((o) => o.id === p.id)) : null,
+      });
     }
     // V3.1-165 (ADR 0076) : un sort de réaction préparé (Bouclier), tant qu'un emplacement de son niveau ou plus reste.
     for (const sort of sorts) {
@@ -197,6 +215,30 @@ export async function gatherReactors(
     pool.ctx = { actors: { ...pool.ctx.actors, [pc.entity_id]: actor } };
   }
   return pool;
+}
+
+/**
+ * V3.1-163 (ADR 0101) — les réactions que des jetons accordent à un PJ depuis
+ * une règle absente de sa fiche : la règle vient de l'effet (`source_key`), son
+ * bloc d'activation est lu en une requête groupée, seulement s'il y en a.
+ */
+async function foreignGrantedReactions(
+  supabase: TypedClient,
+  ctx: CharacterActionContext,
+  effects: readonly ActiveDurableEffect[],
+): Promise<{ ruleKey: string; activation: Activation; values: Record<string, number> }[]> {
+  const possedees = new Set(ctx.sheet.features.map((f) => f.key));
+  const accordees = grantedActivations(effects, ctx.entityId).filter((g) => !possedees.has(g.ruleKey));
+  if (accordees.length === 0) return [];
+  const blocs = await resolveEntryBlocksInRulesetBatch(supabase, ctx.rulesetId, [...new Set(accordees.map((g) => g.ruleKey))]);
+  const out: { ruleKey: string; activation: Activation; values: Record<string, number> }[] = [];
+  for (const g of accordees) {
+    const lu = zActivationBlockData.safeParse(blocs.get(g.ruleKey)?.blocksByType.get("activation"));
+    const activation = lu.success ? lu.data.activations.find((a) => a.id === g.activationId) : undefined;
+    // Un jeton par activation suffit : deux dés reçus du même barde ne proposent pas deux fois la même réaction.
+    if (activation?.trigger?.on === "roll" && !out.some((o) => o.ruleKey === g.ruleKey && o.activation.id === activation.id)) out.push({ ruleKey: g.ruleKey, activation, values: g.values });
+  }
+  return out;
 }
 
 /**
@@ -355,4 +397,37 @@ function lowestFreeSlot(ctx: CharacterActionContext, state: { spell_slots_used: 
   const pact = ctx.sheet.spellcasting?.pactSlots;
   if (pact && pact.slotLevel >= base && state.pact_slots_used < pact.count) return pact.slotLevel;
   return null;
+}
+
+/**
+ * V3.1-163 — une attaque lancée depuis la fiche, sans cible : sans CA, le jet
+ * n'a pas d'issue, donc aucune fenêtre. Seules les réactions automatiques du
+ * personnage sur son propre jet s'appliquent (Chance relance un 1 naturel).
+ * Rend le jet modifié et les noms des réactions jouées, pour le journal.
+ *
+ * Coût (QUOTAS) : le réservoir d'un seul personnage (le combat en cours, ses
+ * effets, sa fiche déjà chargée) ; rien n'est écrit.
+ */
+export async function automaticSelfReactions(
+  supabase: TypedClient,
+  params: { campaignId: string; ctx: CharacterActionContext; callerId: string; roll: PendingRoll; locale: Locale },
+): Promise<{ roll: PendingRoll; names: string | null }> {
+  // Aucune lecture quand la fiche ne porte aucune réaction automatique (le cas courant) : QUOTAS Q1.
+  const automatique = params.ctx.sheet.features.some((f) => f.activation?.activations.some((a) => a.trigger?.on === "roll" && a.trigger.automatic === true));
+  if (!automatique) return { roll: params.roll, names: null };
+  const callerIsGm = await isWorldAdmin(supabase, { worldId: params.ctx.worldId, userId: params.callerId });
+  const { pool, combat } = await selfReactorPool(supabase, {
+    campaignId: params.campaignId,
+    entityId: params.ctx.entityId,
+    userId: callerIsGm ? null : params.callerId,
+    callerIsGm,
+    loaded: params.ctx,
+    locale: params.locale,
+  });
+  const stamp = combat ? turnStamp(combat.round, combat.turn_index) : null;
+  const { automatic } = eligibleReactions({ roll: params.roll, candidates: pool.candidates, ctx: pool.ctx, teams: pool.teams, stamp, rng: serverRng, positions: pool.positions });
+  if (automatic.length === 0) return { roll: params.roll, names: null };
+  const opsOf = (e: EligibleReaction) => pool.candidates.find((c) => c.actorId === e.actorId && c.ruleKey === e.ruleKey && c.activation.id === e.activationId)?.activation.roll_operations ?? [];
+  const roll = applyRollOperations(params.roll, automatic.map((e) => ({ actorId: e.actorId, operations: opsOf(e), numbers: pool.meta[e.actorId]?.numbers[e.ruleKey] ?? {} })), serverRng).roll;
+  return { roll, names: nomsDesReactions(pool, automatic) };
 }

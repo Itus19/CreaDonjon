@@ -726,7 +726,7 @@ Chaque lacune compte une fois, sur la fiche qui la porte : une espèce ou une so
 
 ### `other` (Autre) — 3
 
-- Inspiration bardique (`bard-bardic-inspiration`) : lorsque la créature rate un Test d20, elle peut lancer le dé d’Inspiration bardique pour en ajouter le résultat au Test d20
+- Inspiration bardique (`bard-bardic-inspiration`) : Une même créature ne peut pas disposer de plus d’un dé d’Inspiration bardique à la fois.
 - Aura de protection (`paladin-aura-of-protection`) : Vous-même et vos alliés dans l’aura recevez un bonus aux jets de sauvegarde égal à votre modificateur de Charisme
 - Frappe malicieuse (`rogue-cunning-strike`) : au nombre de dés d’Attaque sournoise auquel vous renoncez pour ajouter cet effet
 

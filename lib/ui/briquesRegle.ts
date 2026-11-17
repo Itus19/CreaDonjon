@@ -855,9 +855,12 @@ function finVersBrouillon(f: DurableEffectEnd): BrouillonFin {
   return f.event === "dismissed" ? { event: "dismissed", subject: "bearer" } : { event: f.event, subject: f.subject };
 }
 
-/** V3.1-197 : un effet qui dure porteur d'un jeton seul (ni état, ni modificateur) : ce que « Accorder une utilisation » écrit. */
+/**
+ * V3.1-197 : un effet qui dure porteur d'un jeton seul (ni état, ni modificateur) : ce que « Accorder une utilisation » écrit.
+ * V3.1-163 : un jeton qui porte des valeurs figées (ADR 0101) n'a pas de champ au formulaire : il est conservé tel quel.
+ */
 function durableJeton(d: DurableEffect): boolean {
-  return d.conditions.length === 0 && d.modifiers.length === 0 && d.token !== null && d.repeat_save === undefined;
+  return d.conditions.length === 0 && d.modifiers.length === 0 && d.token !== null && d.token.values === undefined && d.repeat_save === undefined;
 }
 
 /** Un effet qui dure que le formulaire sait saisir : un seul état, ni modificateur ni jeton. */

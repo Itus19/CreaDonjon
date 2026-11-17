@@ -10,6 +10,9 @@ const { answerRollWindow } = await import("./rollWindowResume");
 const { resolveCharacterActionContext } = await import("./characterActions");
 const { getEntityRuntimeState } = await import("./runtimeState");
 const { insertSaveRequest } = await import("../repos/saveRequests");
+const { activateFeature } = await import("./featureActivation");
+const { getOrOpenSessionForCampaign } = await import("./sessions");
+const { automaticSelfReactions } = await import("./rollWindows");
 
 /**
  * V3.1-163 (ADR 0075) — les réactions sur SON propre jet, hors combat, sur
@@ -142,4 +145,56 @@ describe.skipIf(!hasCreds)("réagir sur son propre jet (V3.1-163, integration, b
     expect(mots?.activation?.activations.map((a) => a.id)).toEqual(["cutting-words-damage", "cutting-words-attack"]);
     expect(mots?.source).toBe("class:bard");
   });
+
+  it("V3.1-163 (ADR 0101) : le dé d'Inspiration bardique reçu — la fenêtre le propose à l'alliée qui rate un test, et le jeton s'épuise", async () => {
+    // Lyra (Barde 3, créée au test précédent) donne son dé à Pip, en combat (une cible se désigne par sa ligne).
+    const sessionId = await getOrOpenSessionForCampaign(client(gm), campaignId);
+    const { data: combat } = await admin.from("combats").insert({ campaign_id: campaignId, session_id: sessionId, name: "Inspiration", status: "running", round: 1, turn_index: 0 }).select("id").single();
+    const base = { combat_id: combat!.id, ac: 12, hp_max: 10, hp_current: 10, temp_hp: 0, is_ally: true, conditions: [], source_kind: "entity", rule_key: null };
+    const { data: lignes } = await admin
+      .from("combat_participants")
+      .insert([
+        { ...base, entity_id: ids.lyra, label: "lyra", initiative: 15, display_order: 1 },
+        { ...base, entity_id: ids.pip, label: "pip", initiative: 10, display_order: 2 },
+      ])
+      .select("id, label");
+    const pipLigne = lignes!.find((l) => l.label === "pip")!.id;
+    const don = await activateFeature(client(gm), {
+      entityId: ids.lyra, campaignId, ruleKey: "bard-bardic-inspiration", activationId: "bardic-inspiration", variantId: null,
+      targetParticipantIds: [pipLigne], callerId: gm.id, callerIsGm: true, locale: "fr",
+    });
+    if (!don.ok) throw new Error(don.reason);
+    const jetons = async () => (await admin.from("entity_active_effects").select("id, payload").eq("entity_id", ids.pip).eq("source_key", "bard-bardic-inspiration")).data ?? [];
+    const poses = await jetons();
+    expect(poses).toHaveLength(1);
+    // Le dé est figé à la pose avec le niveau de Lyra (Barde 3 : d6).
+    expect((poses[0]!.payload as { tokenValues?: unknown }).tokenValues).toEqual({ die: 6 });
+
+    // Pip rate un test (DD 25) : la fenêtre propose le dé de la règle du barde, absente de sa fiche.
+    const r = await rollAbilityCheck(client(joueuse), { entityId: ids.pip, campaignId, callerId: joueuse.id, advantage: "normal", dc: 25, hidden: false, locale: "fr", ability: "str" });
+    if (!r.ok || !r.roll.rollWindowId) throw new Error("fenêtre attendue");
+    const { data: fenetre } = await admin.from("roll_windows").select("choices").eq("id", r.roll.rollWindowId).single();
+    expect((fenetre!.choices as { rule_key: string }[]).map((c) => c.rule_key)).toContain("bard-bardic-inspiration");
+    const index = (fenetre!.choices as { rule_key: string }[]).findIndex((c) => c.rule_key === "bard-bardic-inspiration");
+    const avant = r.roll.total;
+    const reponse = await answerRollWindow(client(joueuse), { windowId: r.roll.rollWindowId, index, use: true, callerId: joueuse.id, locale: "fr" });
+    if (!reponse.ok || reponse.resumed?.origin !== "sheet_check") throw new Error("reprise attendue");
+    const fin = reponse.resumed.result;
+    if (!fin.ok) throw new Error(fin.reason);
+    expect(fin.roll.total).toBeGreaterThan(avant);
+    expect(fin.roll.total).toBeLessThanOrEqual(avant + 6);
+    // Le jeton n'avait qu'un usage : l'effet est retiré.
+    expect(await jetons()).toHaveLength(0);
+    await admin.from("combats").delete().eq("id", combat!.id);
+  }, 120000);
+
+  it("V3.1-163 : une attaque sans cible n'ouvre pas de fenêtre ; seule Chance relance un 1, et une fiche sans réaction automatique ne lit rien", async () => {
+    const jet = (roller: string) => ({ kind: "attack" as const, roller, target: null, natural: 1, total: 4, critRange: 20, ac: null, dc: null, acBonus: 0, damage: null });
+    const pip = (await resolveCharacterActionContext(client(joueuse), ids.pip, campaignId, "fr"))!;
+    const r = await automaticSelfReactions(client(joueuse), { campaignId, ctx: pip, callerId: joueuse.id, roll: jet(ids.pip), locale: "fr" });
+    expect(r.names).toMatch(/Chance/);
+    const brom = (await resolveCharacterActionContext(client(joueuse), ids.brom, campaignId, "fr"))!;
+    const rien = await automaticSelfReactions(client(joueuse), { campaignId, ctx: brom, callerId: joueuse.id, roll: jet(ids.brom), locale: "fr" });
+    expect(rien).toEqual({ roll: jet(ids.brom), names: null });
+  }, 120000);
 });

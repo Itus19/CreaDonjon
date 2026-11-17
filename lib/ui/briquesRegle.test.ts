@@ -932,3 +932,31 @@ describe("V3.1-184 : formes, invocations, regain, quantité choisie, objet conso
     expect(relu.activations[0].operations.map((o) => o.op)).toEqual(["redirect"]);
   });
 });
+
+describe("V3.1-163 (ADR 0101) — un jeton qui porte des valeurs figées", () => {
+  it("revient de l'éditeur intact : la taille du dé n'est pas perdue", () => {
+    const num = (value: number) => ({ op: "num" as const, value });
+    const activation = {
+      activations: [
+        { id: "donner", label: { fr: "Inspiration bardique" }, cost: { action: "bonus", resources: [] }, targets: { kind: "creature" }, effects: [{ action: "apply_effect", who: "target", effect: "de" }], variants: null },
+        {
+          id: "lancer",
+          label: { fr: "Dé d'Inspiration bardique" },
+          cost: { action: "none", resources: [] },
+          targets: { kind: "self" },
+          effects: [],
+          variants: null,
+          trigger: { on: "roll", roll: "d20", subject: "self", when: "failed" },
+          roll_operations: [{ op: "add_die", count: num(1), faces: { op: "ref", name: "token.die" }, sign: 1 }],
+        },
+      ],
+      durable_effects: [
+        { id: "de", label: { fr: "Dé" }, conditions: [], modifiers: [], duration: { unit: "hour", amount: 1 }, concentration: false, ends_on: [], token: { uses: 1, grants: "lancer", values: { die: num(8) } } },
+      ],
+    };
+    const relu = blocsVersBrouillon([{ blockType: "activation", data: activation }]);
+    const r = brouillonVersBlocs(relu, NOMS_VIDES);
+    if (!r.ok) throw new Error(r.erreurs.join(" ; "));
+    expect(r.activation?.durable_effects.find((d) => d.id === "de")?.token).toEqual({ uses: 1, grants: "lancer", values: { die: num(8) } });
+  });
+});

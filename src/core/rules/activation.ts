@@ -246,6 +246,8 @@ export function planActivation(p: {
       if (!def) throw new Refus("unknown_effect", e.effect);
       // V3.1-195 : le DD du JS répété se calcule ICI, avec les nombres de la source, et se fige.
       const repeatSaveDc = def.repeat_save ? nombre(def.repeat_save.dc, refs, p.rng) : undefined;
+      // V3.1-163 (ADR 0101) : les valeurs du jeton aussi (le dé du barde, selon le niveau du barde).
+      const tokenValues = def.token?.values ? Object.fromEntries(Object.entries(def.token.values).map(([k, f]) => [k, nombre(f, refs, p.rng)])) : undefined;
       applied.push(
         instantiateDurableEffect(def, {
           bearer: e.who,
@@ -255,6 +257,7 @@ export function planActivation(p: {
           currentTurn: p.currentTurn,
           locale: p.locale,
           ...(repeatSaveDc !== undefined ? { repeatSaveDc } : {}),
+          ...(tokenValues ? { tokenValues } : {}),
         }),
       );
     }

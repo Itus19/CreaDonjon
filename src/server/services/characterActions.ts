@@ -421,7 +421,18 @@ export interface WeaponRollOutcome {
 /** Jet d'attaque d'une arme equipee (V1-B5). Le serveur relance la fiche derivee, jamais confiance en un modificateur envoye par le client. */
 export async function rollWeaponAttack(
   supabase: TypedClient,
-  params: { entityId: string; campaignId: string | null; itemId: string; advantage: AdvantageState; locale: Locale }
+  params: {
+    entityId: string;
+    campaignId: string | null;
+    itemId: string;
+    advantage: AdvantageState;
+    locale: Locale;
+    /**
+     * V3.1-163 : une attaque de la fiche, sans cible — les réactions automatiques du personnage sur son propre jet
+     * (Chance), appliquées avant l'enregistrement. Fournie par la route de la fiche seulement : le jet ciblé a sa fenêtre.
+     */
+    adjust?: (ctx: CharacterActionContext, attack: AttackRollResult, critRange: number) => Promise<AttackRollResult>;
+  }
 ): Promise<WeaponRollOutcome | { error: ActionErrorReason }> {
   const ctx = await resolveCharacterActionContext(supabase, params.entityId, params.campaignId, params.locale);
   if (!ctx) return { error: "not_found" };
@@ -439,7 +450,7 @@ export async function rollWeaponAttack(
   // Decision de perimetre (V1-B5) : aucune maitrise d'arme n'est modelisee
   // par classe aujourd'hui (seulement competences/JS, cf. sheet.ts) — le
   // bonus de maitrise est toujours applique aux attaques d'arme.
-  const attack = resolveAttackRoll(
+  const lance = resolveAttackRoll(
     {
       abilityMod,
       proficiencyBonus: ctx.sheet.proficiencyBonus,
@@ -451,6 +462,7 @@ export async function rollWeaponAttack(
     },
     serverRng
   );
+  const attack = params.adjust && params.campaignId ? await params.adjust(ctx, lance, extra.critRange) : lance;
 
   await recordRoll(supabase, params.campaignId, {
     expression: attack.expression,

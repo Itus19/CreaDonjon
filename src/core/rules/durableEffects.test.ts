@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activeEffectsForSheet, consumeToken, effectFromRow, activationUnlocked, effectToRow, effectsDueForRepeatSave, expireEffects, instantiateDurableEffect, rollRepeatSave, type ActiveDurableEffect } from "./durableEffects";
+import { activeEffectsForSheet, consumeToken, grantedActivations, effectFromRow, activationUnlocked, effectToRow, effectsDueForRepeatSave, expireEffects, instantiateDurableEffect, rollRepeatSave, type ActiveDurableEffect } from "./durableEffects";
 import type { DurableEffect } from "../schemas/rule-blocks/playable";
 
 /**
@@ -229,3 +229,37 @@ describe("V3.1-197 — une activation qu'un jeton accorde n'existe que tant que 
     expect(activationUnlocked(bloc, "utilisation-2", [presence({ ruleKey: "autre-aptitude" })], "majeste-souveraine")).toBe(false);
   });
 });
+
+describe("V3.1-163 (ADR 0101) — le jeton porte des valeurs figées à la pose et une règle d'ailleurs", () => {
+  const DE: DurableEffect = {
+    id: "bardic-inspiration-die",
+    label: { fr: "Inspiration bardique" },
+    conditions: [],
+    modifiers: [],
+    duration: { unit: "hour", amount: 1 },
+    concentration: false,
+    ends_on: [],
+    token: { uses: 1, grants: "bardic-inspiration-roll", values: { die: { op: "num", value: 8 } } },
+  };
+  const de = (bearer = "lia") => ({
+    ...instantiateDurableEffect(DE, { bearer, source: "lyra", activationId: "bardic-inspiration", round: null, currentTurn: null, tokenValues: { die: 8 } }),
+    ruleKey: "bard-bardic-inspiration",
+  });
+
+  it("l'instance garde les valeurs du jeton, calculées à la pose", () => {
+    expect(de().tokenValues).toEqual({ die: 8 });
+  });
+
+  it("la forme stockée les garde ; une ancienne ligne sans elles se relit", () => {
+    expect(effectFromRow({ id: "r", ...effectToRow(de(), "bard-bardic-inspiration") }, "lia")?.tokenValues).toEqual({ die: 8 });
+    expect(effectFromRow({ id: "r", ...effectToRow({ ...de(), tokenValues: undefined }, "x") }, "lia")?.tokenValues).toBeUndefined();
+  });
+
+  it("les activations accordées à un porteur : règle, activation, instance, valeurs ; pas celles d'un autre, ni un jeton épuisé", () => {
+    const epuise = { ...de("lia"), instanceId: "vide", tokenUsesLeft: 0 };
+    expect(grantedActivations([{ ...de("lia"), instanceId: "i1" }, de("garde"), epuise], "lia")).toEqual([
+      { ruleKey: "bard-bardic-inspiration", activationId: "bardic-inspiration-roll", instanceId: "i1", values: { die: 8 } },
+    ]);
+  });
+});
+

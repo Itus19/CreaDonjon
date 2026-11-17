@@ -5,7 +5,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
 import type { Locale } from "@/src/i18n/request";
 import { planActivation, type ActivationRefusal } from "@/src/core/rules/activation";
-import { activationUnlocked, effectFromRow, effectToRow, type ActiveDurableEffect } from "@/src/core/rules/durableEffects";
+import { activationUnlocked, effectFromRow, effectToRow, grantedActivations, withTokenValues, type ActiveDurableEffect, type GrantedActivation } from "@/src/core/rules/durableEffects";
+import { consumeGrantedToken } from "@/src/server/services/grantedTokens";
 import type { EffectNode, ResolvedEffect, TriggerActorState, TriggerContext } from "@/src/core/rules/triggers";
 import { zActivationBlockData, type ActivationBlockData } from "@/src/core/schemas/rule-blocks/playable";
 import { zSpellCastingBlockData } from "@/src/core/schemas/rule-blocks";
@@ -141,8 +142,25 @@ export async function activateFeature(
     const connu =
       (ctx.spellcastingData?.known ?? []).some((k) => k.ref.kind === "rule" && k.ref.key === params.ruleKey) || ctx.sheet.grantedSpells.some((g) => g.key === params.ruleKey);
     if (!connu) return { ok: false, reason: "spell_not_known" };
-  } else if (!params.spell && !ctx.sheet.features.some((f) => f.key === params.ruleKey)) {
-    return { ok: false, reason: "feature_not_owned" };
+  }
+  // V3.1-163 (ADR 0101) : les activations que des jetons accordent à ce personnage (le dé d'Inspiration bardique reçu),
+  // lues seulement si la règle n'est pas sur la fiche ou si elle déclare un jeton (une lecture des effets du porteur).
+  let jetons: GrantedActivation[] | null = null;
+  let effetsDuPorteur: ActiveDurableEffect[] = [];
+  const lireJetons = async () => {
+    const lignes = await listFeatureEffectsForBearers(supabase, { campaignId: params.campaignId, entityIds: [params.entityId], participantIds: [] });
+    effetsDuPorteur = lignes.flatMap((row) => {
+      const e = effectFromRow(row, params.entityId);
+      return e ? [e] : [];
+    });
+    jetons = grantedActivations(effetsDuPorteur, params.entityId);
+    return jetons;
+  };
+  const possede = ctx.sheet.features.some((f) => f.key === params.ruleKey);
+  if (!params.spell && !possede) {
+    // Une règle absente de la fiche ne se joue que par un jeton actif qui en accorde CETTE activation.
+    const accordees = await lireJetons();
+    if (!accordees.some((j) => j.ruleKey === params.ruleKey && j.activationId === params.activationId)) return { ok: false, reason: "feature_not_owned" };
   }
 
   const resolved = await resolveEntryBlocksInRuleset(supabase, ctx.rulesetId, params.ruleKey);
@@ -153,14 +171,13 @@ export async function activateFeature(
   if (!found) return { ok: false, reason: "unknown_activation" };
   // V3.1-197 : accordée par un jeton (la réaction de Majesté souveraine, l'Injonction de Mante de majesté) :
   // seulement tant qu'un effet actif de cette règle en porte le jeton. La fiche la cache ; le serveur tranche.
-  if (block.durable_effects.some((d) => d.token?.grants === found.id)) {
-    const lignes = await listFeatureEffectsForBearers(supabase, { campaignId: params.campaignId, entityIds: [params.entityId], participantIds: [] });
-    const actifs = lignes.flatMap((row) => {
-      const e = effectFromRow(row, params.entityId);
-      return e ? [e] : [];
-    });
-    if (!activationUnlocked(block, found.id, actifs, params.ruleKey)) return { ok: false, reason: "token_required" };
+  const accordeeParJeton = block.durable_effects.some((d) => d.token?.grants === found.id);
+  if (accordeeParJeton) {
+    if (jetons === null) await lireJetons();
+    if (!activationUnlocked(block, found.id, effetsDuPorteur, params.ruleKey)) return { ok: false, reason: "token_required" };
   }
+  // Le jeton qui accorde cette activation (le plus ancien d'abord) : ses valeurs entrent dans les formules, et il perd un usage.
+  const jeton = accordeeParJeton ? ((jetons ?? []) as GrantedActivation[]).find((j) => j.ruleKey === params.ruleKey && j.activationId === found.id) ?? null : null;
   // V3.1-165 : l'option de lancement (Sort accéléré) change le coût du sort : son temps, et ses ressources s'ajoutent.
   let activation = found;
   if (params.spell?.castOption) {
@@ -247,7 +264,7 @@ export async function activateFeature(
 
   // Les nombres de celui qui active : ce que ses formules lisent.
   const sheet = ctx.sheet;
-  const actorNumbers = actorNumbersFor(ctx, params.ruleKey);
+  const actorNumbers = jeton ? withTokenValues(actorNumbersFor(ctx, params.ruleKey), jeton.values) : actorNumbersFor(ctx, params.ruleKey);
   const actors: Record<string, TriggerActorState> = {
     [params.entityId]: { conditions: [...state.conditions], features: sheet.features.map((f) => f.key), numbers: actorNumbers },
   };
@@ -503,6 +520,9 @@ export async function activateFeature(
   const budget = params.skipBudget
     ? null
     : await spendTurnBudgetFor(supabase, { campaignId: params.campaignId, actor: { entityId: params.entityId }, kind: activation.cost.action, attacksPerAction: sheet.attacksPerAction, grants: accorde, callerIsGm: params.callerIsGm });
+
+  // V3.1-163 (ADR 0101) : l'activation accordée a été jouée ; son jeton perd un usage, le dernier retire l'effet.
+  if (jeton) await consumeGrantedToken(supabase, effetsDuPorteur, { instanceId: jeton.instanceId, bearer: params.entityId });
 
   return {
     ok: true,
