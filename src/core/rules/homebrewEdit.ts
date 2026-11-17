@@ -14,7 +14,7 @@ import {
 } from "../schemas/rule-blocks/blocks";
 import type { Trigger } from "./triggers";
 import { formatFormulaNode } from "../formula/format";
-import type { HomebrewSpellEffectInput } from "./homebrewSpell";
+import { SPELL_DAMAGE_TYPES, type HomebrewSpellEffectInput } from "./homebrewSpell";
 import type { HomebrewSubclassFeatureInput, HomebrewSubclassSpellcastingInput } from "./homebrewSubclass";
 
 /**
@@ -65,6 +65,18 @@ export interface SpellFormValues {
   classKeys: string[];
 }
 
+/**
+ * Vérification de V3.1-2 (17 novembre) : une fiche maison écrite avant la liste
+ * fermée des types de dégâts peut porter « Psychic » ; le formulaire, puis sa
+ * route, n'acceptent que la clé (`psychic`) — la fiche ne se modifiait plus. Un
+ * type connu revient en clé ; un type inconnu reste tel quel, et le formulaire
+ * le signale plutôt que d'en deviner un.
+ */
+function damageTypeKey(stored: string): string {
+  const key = stored.trim().toLowerCase();
+  return (SPELL_DAMAGE_TYPES as readonly string[]).includes(key) ? key : stored;
+}
+
 /** Classes autorisees : la ligne `classes` du tableau « Classes et niveau » (`buildHomebrewSpellEntry`). */
 function spellClassKeys(blocks: readonly EditableBlock[]): string[] {
   const table = dataOf(blocks, "custom_table") as { rows?: { field?: unknown; value?: unknown }[] } | undefined;
@@ -93,7 +105,7 @@ export function spellFormValues(blocks: readonly EditableBlock[]): SpellFormValu
       ability: first.save?.ability ?? "dex",
       attackRange: first.attack?.range ?? "ranged",
       formula: first.formula ? formatFormulaNode(first.formula) : "",
-      damageType: first.damage_type ?? "fire",
+      damageType: damageTypeKey(first.damage_type ?? "fire"),
       onSuccess: (first.save?.effect_on_success as HomebrewSpellEffectInput["onSuccess"] | undefined) ?? "half",
     };
   }

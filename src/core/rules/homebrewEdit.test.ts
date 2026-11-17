@@ -52,6 +52,15 @@ describe("spellFormValues (V3.1-2)", () => {
     expect(spellFormValues(blocs).school).toBe("Enchantment");
   });
 
+  it("vérification V3.1-2 (17 nov.) : un type de dégâts stocké avec une majuscule (« Psychic ») revient en clé du schéma ; un type inconnu reste tel quel", () => {
+    const avec = (type: string) =>
+      asBlocks(buildHomebrewSpellEntry(input).blocks).map((b) =>
+        b.blockType === "effects" ? { ...b, data: { effects: [{ ...(b.data as { effects: object[] }).effects[0], damage_type: type }] } } : b
+      );
+    expect(spellFormValues(avec("Psychic")).effect?.damageType).toBe("psychic");
+    expect(spellFormValues(avec("Ombre")).effect?.damageType).toBe("Ombre");
+  });
+
   it("relit exactement ce que le formulaire avait ecrit", () => {
     const values = spellFormValues(asBlocks(buildHomebrewSpellEntry(input).blocks));
     expect(values).toEqual({
