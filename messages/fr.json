@@ -1343,6 +1343,14 @@
     "echec": "erreur — {message}"
   },
   "solo": {
+    "annulerTour": {
+      "bouton": "Annuler le dernier tour",
+      "question": "Annuler ce tour ? Ce qu'il a changé est défait ; le journal le garde.",
+      "confirmer": "Oui, annuler",
+      "garder": "Garder",
+      "erreur": "Le tour n'a pas pu être annulé.",
+      "aucunChangement": "Aucun changement dans le monde pour l'instant."
+    },
     "colonneAffichee": "Colonne affichée",
     "onglets": {
       "monde": "Monde",

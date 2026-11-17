@@ -1342,6 +1342,14 @@
     "echec": "error — {message}"
   },
   "solo": {
+    "annulerTour": {
+      "bouton": "Undo last turn",
+      "question": "Undo this turn? What it changed is reverted; the log keeps it.",
+      "confirmer": "Yes, undo",
+      "garder": "Keep",
+      "erreur": "The turn could not be undone.",
+      "aucunChangement": "No change in the world yet."
+    },
     "colonneAffichee": "Column shown",
     "onglets": {
       "monde": "World",

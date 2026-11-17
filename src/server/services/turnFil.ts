@@ -4,6 +4,7 @@ import type { Database } from "@/src/types/database";
 import type { FilItem } from "@/lib/solo/types";
 import type { TraceStep } from "@/src/core/formula/evaluate";
 import { listSessionEvents, type SessionEventRow } from "@/src/server/repos/sessions";
+import { undoneEventIds } from "@/src/core/rules/turnUndo";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -112,5 +113,15 @@ export function mapSessionEventToFilItem(row: SessionEventRow): FilItem {
 
 export async function buildFilForSession(supabase: TypedClient, sessionId: string): Promise<FilItem[]> {
   const events = await listSessionEvents(supabase, sessionId);
-  return events.map(mapSessionEventToFilItem);
+  return visibleInFil(events).map(mapSessionEventToFilItem);
+}
+
+/**
+ * V3-F2 — le fil ne montre ni les événements d'un tour annulé, ni l'annulation
+ * elle-même : le journal les garde (ajout seul), l'écran raconte la partie
+ * telle qu'elle continue.
+ */
+export function visibleInFil(events: readonly SessionEventRow[]): SessionEventRow[] {
+  const defaits = undoneEventIds(events.map((e) => ({ id: e.id, seq: e.seq, kind: e.kind, actor: e.actor, payload: (e.payload as Record<string, unknown> | null) ?? {} })));
+  return events.filter((e) => !defaits.has(e.id) && !(e.kind === "system" && (e.payload as { undo_turn?: unknown } | null)?.undo_turn !== undefined));
 }

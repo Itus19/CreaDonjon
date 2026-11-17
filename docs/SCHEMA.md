@@ -884,6 +884,8 @@ create index session_events_session_idx on session_events (session_id, seq desc)
 
 Journal en **ajout seul**. Annuler un tour ne supprime rien : on ajoute un événement de compensation. C'est ce qui permet de reconstruire l'état, de déboguer une partie solo, et d'auditer ce que l'IA a réellement fait.
 
+**V3-F2 — annuler un tour du solo.** Le premier événement d'un tour (`player_action` ou `roll` d'acteur `player`) porte `payload.undo_before` : `{ entity_id, runtime, scene }`, l'état de jeu du personnage et la scène relevés avant ce que le tour applique. L'annulation (`turnUndo.ts`, réservée au MJ de la campagne solo) écrit un événement `system` dont `payload.undo_turn` vaut `{ event_ids, from_seq, reverted }` : les événements défaits restent, le fil et le contexte du modèle les écartent. Elle restaure l'état relevé, retire les effets posés depuis, les découvertes dont `source_event_id` est dans le tour, met à la corbeille les fiches nées automatiquement et passe leurs propositions (et celles en attente) à `ai_proposals.status = 'reverted'` (migration `20261117120000_ai_proposals_reverted`).
+
 **V3.1-149 (ADR 0070) — les chiffres du MJ à part.** Un événement `combat` se lit par l'administrateur du monde et son auteur ; les autres genres par tout membre. Insérer : membre ; modifier, supprimer : administrateur. Le numéro suivant : `public.next_session_event_seq(p_session)`.
 
 ```sql
@@ -1102,7 +1104,7 @@ create table ai_proposals (
   target_entity_id uuid references entities(id),
   payload          jsonb not null,
   status           text not null default 'pending'
-                     check (status in ('pending','applied','rejected','failed')),
+                     check (status in ('pending','applied','rejected','failed','reverted')),
   validation_errors jsonb,
   auto_applied     boolean not null default false,
   reviewed_by      uuid references auth.users(id),

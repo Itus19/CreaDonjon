@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mapSessionEventToFilItem } from "./turnFil";
+import { mapSessionEventToFilItem, visibleInFil } from "./turnFil";
 import type { SessionEventRow } from "@/src/server/repos/sessions";
 
 /**
@@ -136,3 +136,16 @@ describe("mapSessionEventToFilItem", () => {
     expect(item).toMatchObject({ kind: "roll", total: null, verdict: null, trace: [] });
   });
 });
+
+describe("V3-F2 — visibleInFil", () => {
+  it("cache les événements d'un tour annulé et l'annulation elle-même, garde le reste", () => {
+    const evts = [
+      row({ id: "a", seq: 1 }),
+      row({ id: "b", seq: 2, kind: "roll" }),
+      row({ id: "n", seq: 3, kind: "narration", actor: "ai" }),
+      row({ id: "u", seq: 4, kind: "system", payload: { __v: 1, undo_turn: { event_ids: ["b", "n"] } } }),
+    ];
+    expect(visibleInFil(evts).map((e) => e.id)).toEqual(["a"]);
+  });
+});
+

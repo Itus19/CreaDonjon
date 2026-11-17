@@ -12,6 +12,7 @@ import { getSceneState } from "@/src/server/repos/sceneStates";
 import { listBlocksForEntity } from "@/src/server/repos/blocks";
 import { listEntitiesByIds } from "@/src/server/repos/entities";
 import { listRecentEventsByKind } from "@/src/server/repos/sessions";
+import { undoneEventIds } from "@/src/core/rules/turnUndo";
 import { getCurrentAttitude } from "@/src/server/services/psyche";
 import { listActiveQuestsForWorld } from "@/src/server/services/quests";
 
@@ -116,8 +117,16 @@ async function resolveQuests(supabase: TypedClient, worldId: string, viewer: Vie
 
 /** V3-B4 — Les textes des dernières narrations de CETTE session, plus récente en tête ; une ligne dont `payload.text` ne serait pas une chaîne (jamais écrit par ce code, mais un payload reste une donnée non typée en base) est ignorée plutôt que de casser tout le contexte pour ça. */
 async function resolveRecentNarrations(supabase: TypedClient, sessionId: string): Promise<string[]> {
-  const events = await listRecentEventsByKind(supabase, sessionId, "narration", RECENT_NARRATIONS_KEPT);
+  // V3-F2 : une narration d'un tour annulé ne revient pas dans le contexte. Les annulations sont des
+  // événements `system` ; on lit les plus récentes avec les narrations (une lecture de plus par tour).
+  const [events, annulations] = await Promise.all([
+    listRecentEventsByKind(supabase, sessionId, "narration", RECENT_NARRATIONS_KEPT * 3),
+    listRecentEventsByKind(supabase, sessionId, "system", 50),
+  ]);
+  const defaits = undoneEventIds(annulations.map((e) => ({ id: e.id, seq: e.seq, kind: e.kind, actor: e.actor, payload: (e.payload as Record<string, unknown> | null) ?? {} })));
   return events
+    .filter((e) => !defaits.has(e.id))
+    .slice(0, RECENT_NARRATIONS_KEPT)
     .map((e) => (e.payload as { text?: unknown } | null)?.text)
     .filter((text): text is string => typeof text === "string");
 }

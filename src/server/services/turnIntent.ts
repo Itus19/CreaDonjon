@@ -305,12 +305,17 @@ async function journalTurn(
   params: {
     campaignId: string | null;
     callerId: string;
+    /** V3-F2 : le personnage du tour, dont l'état est relevé pour pouvoir annuler le tour. */
+    entityId: string;
     kind: "roll" | "player_action";
     payload: Record<string, unknown>;
   }
 ): Promise<string | null> {
   if (!params.campaignId) return null;
   const sessionId = await getOrOpenSessionForCampaign(supabase, params.campaignId);
+  // V3-F2 (PDD §29) : l'état du personnage et la scène AVANT ce que le tour va appliquer (les effets des jets
+  // partent ensuite, dans la boucle du tour) ; « annuler ce tour » les restaure. Deux lectures de plus par tour.
+  const [runtime, scene] = await Promise.all([getEntityRuntimeState(supabase, params.entityId, params.campaignId), getSceneState(supabase, params.campaignId)]);
   const seq = await nextEventSeq(supabase, sessionId);
   const event = await insertSessionEvent(supabase, {
     sessionId,
@@ -318,7 +323,7 @@ async function journalTurn(
     kind: params.kind,
     actor: "player",
     actorUserId: params.callerId,
-    payload: { __v: 1, ...params.payload } as unknown as Json,
+    payload: { __v: 1, ...params.payload, undo_before: { entity_id: params.entityId, runtime, scene } } as unknown as Json,
   });
   return event.id;
 }
@@ -377,6 +382,7 @@ export async function executeIntent(
     const eventId = await journalTurn(supabase, {
     campaignId: params.campaignId,
     callerId: params.callerId,
+    entityId: params.entityId,
     kind: "player_action",
     payload,
   });
@@ -446,6 +452,7 @@ export async function executeIntent(
     const eventId = await journalTurn(supabase, {
     campaignId: params.campaignId,
     callerId: params.callerId,
+    entityId: params.entityId,
     kind: "roll",
     payload,
   });
@@ -487,6 +494,7 @@ export async function executeIntent(
   const eventId = await journalTurn(supabase, {
     campaignId: params.campaignId,
     callerId: params.callerId,
+    entityId: params.entityId,
     kind: "roll",
     payload,
   });
@@ -866,7 +874,7 @@ async function finishResolution(
       weapon: pending.what,
       origin,
     };
-    const eventId = await journalTurn(supabase, { campaignId: params.campaignId, callerId: params.callerId, kind: "roll", payload });
+    const eventId = await journalTurn(supabase, { campaignId: params.campaignId, callerId: params.callerId, entityId: params.entityId, kind: "roll", payload });
 
     let chained: PendingRequest | null = null;
     if (hit === true) {
@@ -921,7 +929,7 @@ async function finishResolution(
       weapon: pending.what,
       origin,
     };
-    const eventId = await journalTurn(supabase, { campaignId: params.campaignId, callerId: params.callerId, kind: "roll", payload });
+    const eventId = await journalTurn(supabase, { campaignId: params.campaignId, callerId: params.callerId, entityId: params.entityId, kind: "roll", payload });
     await clearPendingRequest(supabase, params.entityId, params.campaignId, sessionId);
     return { record: { kind: "roll", facts, eventId, detail: payload, effects: [] }, chained: null };
   }
@@ -969,7 +977,7 @@ async function finishResolution(
     check: { what: pending.what, expression, total, dc: pending.dc, verdict, trace },
     origin,
   };
-  const eventId = await journalTurn(supabase, { campaignId: params.campaignId, callerId: params.callerId, kind: "roll", payload });
+  const eventId = await journalTurn(supabase, { campaignId: params.campaignId, callerId: params.callerId, entityId: params.entityId, kind: "roll", payload });
   await clearPendingRequest(supabase, params.entityId, params.campaignId, sessionId);
   return { record: { kind: "roll", facts, eventId, detail: payload, effects: firedTriggers }, chained: null };
 }

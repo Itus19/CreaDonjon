@@ -100,3 +100,16 @@ export async function deleteFeatureEffect(supabase: TypedClient, id: string): Pr
   const { error } = await supabase.from("entity_active_effects").delete().eq("id", id);
   if (error) throw new Error(error.message);
 }
+
+/** V3-F2 — les effets posés sur un personnage depuis le début d'un tour se retirent avec lui. Rend le nombre retiré. */
+export async function deleteFeatureEffectsCreatedSince(supabase: TypedClient, params: { entityId: string; campaignId: string; since: string }): Promise<number> {
+  const { data, error } = await supabase
+    .from("entity_active_effects")
+    .delete()
+    .eq("entity_id", params.entityId)
+    .eq("campaign_id", params.campaignId)
+    .gte("created_at", params.since)
+    .select("id");
+  if (error) throw new Error(error.message);
+  return (data ?? []).length;
+}

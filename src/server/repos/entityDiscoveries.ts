@@ -89,3 +89,11 @@ export async function upsertDiscovery(
   });
   if (error) throw new Error(error.message);
 }
+
+/** V3-F2 — les découvertes qu'un tour a posées (`source_event_id` parmi ses événements) se retirent avec lui. Rend le nombre retiré. */
+export async function deleteDiscoveriesBySourceEvents(supabase: TypedClient, params: { campaignId: string; eventIds: readonly string[] }): Promise<number> {
+  if (params.eventIds.length === 0) return 0;
+  const { data, error } = await supabase.from("entity_discoveries").delete().eq("campaign_id", params.campaignId).in("source_event_id", [...params.eventIds]).select("id");
+  if (error) throw new Error(error.message);
+  return (data ?? []).length;
+}

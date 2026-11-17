@@ -106,6 +106,9 @@ export default function SoloScreen({
     ]);
   }
 
+  /** V3-F2 : un tour de la joueuse figure au fil (le serveur retrouve lui-même lequel annuler). */
+  const annulable = campaignId && (filItems ?? []).some((i) => i.kind === "player_action" || i.kind === "roll") ? { campaignId } : null;
+
   /** Après un geste de cette colonne : le fil, les conséquences, ET la fiche (PV, demande) sans attendre son prochain tick. */
   function apresGeste() {
     rechargerFiche();
@@ -174,7 +177,7 @@ export default function SoloScreen({
           <Fil items={filItems} />
         </div>
         <div className="mt-2 max-md:hidden">
-          <ConsequencesDrawer data={consequences} onChanged={apresGeste} />
+          <ConsequencesDrawer data={consequences} onChanged={apresGeste} annulation={annulable} />
         </div>
       </div>
       {/* Region discrete : annonce chaque nouveau tour sans deplacer le
@@ -199,7 +202,7 @@ export default function SoloScreen({
       {feuilleConsequences && (
         <FeuilleDuBas titre={t("consequencesTitre")} titreVisible onFermer={() => setFeuilleConsequences(false)}>
           <div className="pb-2">
-            <ConsequencesDrawer data={consequences} onChanged={apresGeste} ouvertParDefaut />
+            <ConsequencesDrawer data={consequences} onChanged={apresGeste} ouvertParDefaut annulation={annulable} />
           </div>
         </FeuilleDuBas>
       )}

@@ -1,18 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 /**
  * V3-C5 — Le tiroir de conséquences : « rend visible ce que le monde vient
  * d'écrire, sans interrompre le jeu » (docs/BACKLOG_V3.md). Un bandeau
  * discret, replié par défaut — jamais un bloqueur, jamais rouvert tout seul.
  *
- * **« Annuler » n'est pas posé.** Le bullet du ticket le demande pour ce qui
- * a été écrit automatiquement, mais rien n'existe encore pour défaire une
- * mutation par son `session_event_id` (V3-F2, « Annuler un tour », pas fait) —
- * un bouton qui ne ferait jamais rien serait pire qu'un bouton absent
- * (même principe que V3-D3 pour l'esquisse de PNJ). La liste reste donc en
- * lecture seule ; le bouton reviendra avec F2, sans changer cette forme.
+ * **V3-F2 : « Annuler le dernier tour ».** Un geste en deux temps (demander,
+ * puis confirmer), une requête : le serveur défait le tour entier (fiches nées
+ * automatiquement, découvertes, état du personnage et scène d'avant), écrit
+ * l'annulation au journal sans rien effacer, puis l'écran se relit.
  */
 
 export interface ConsequenceEntryView {
@@ -95,18 +94,86 @@ function PendingEntry({ entry, onDone }: { entry: ConsequenceEntryView; onDone: 
   );
 }
 
+/** V3-F2 — annuler le dernier tour : demander, puis confirmer ; une seule requête. */
+function AnnulerTour({ campaignId, onDone }: { campaignId: string; onDone: () => void }) {
+  const t = useTranslations("solo.annulerTour");
+  const [confirmer, setConfirmer] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+
+  async function annuler() {
+    setBusy(true);
+    setErreur(null);
+    try {
+      const res = await fetch(`/api/campaigns/${campaignId}/solo/annuler-tour`, { method: "POST" });
+      const corps: unknown = await res.json().catch(() => null);
+      if (!res.ok) {
+        const message = corps && typeof corps === "object" && typeof (corps as { error?: unknown }).error === "string" ? (corps as { error: string }).error : t("erreur");
+        setErreur(message);
+        return;
+      }
+      setConfirmer(false);
+      onDone();
+    } catch (e) {
+      console.error("Annulation du tour en échec", e);
+      setErreur(t("erreur"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {confirmer ? (
+        <>
+          <span className="text-xs text-ink-soft">{t("question")}</span>
+          <button type="button" onClick={() => void annuler()} disabled={busy} className="min-h-11 rounded-full bg-accent px-3 py-1 text-xs font-medium text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50 sm:min-h-0">
+            {t("confirmer")}
+          </button>
+          <button type="button" onClick={() => setConfirmer(false)} disabled={busy} className="min-h-11 rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised disabled:opacity-50 sm:min-h-0">
+            {t("garder")}
+          </button>
+        </>
+      ) : (
+        <button type="button" onClick={() => setConfirmer(true)} className="min-h-11 rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised sm:min-h-0">
+          {t("bouton")}
+        </button>
+      )}
+      {erreur && (
+        <span role="alert" className="text-xs text-danger">
+          {erreur}
+        </span>
+      )}
+    </div>
+  );
+}
+
 export default function ConsequencesDrawer({
   data,
   onChanged,
   ouvertParDefaut = false,
+  annulation = null,
 }: {
   data: ConsequencesDrawerData | null;
   onChanged: () => void;
   /** V3.1-36 : dans la feuille du bas du téléphone, la liste est déjà ouverte — la feuille EST le geste d'ouvrir. */
   ouvertParDefaut?: boolean;
+  /** V3-F2 : la campagne solo, quand un tour de la joueuse existe à annuler ; `null` : pas de geste. */
+  annulation?: { campaignId: string } | null;
 }) {
+  const t = useTranslations("solo.annulerTour");
   const [open, setOpen] = useState(ouvertParDefaut);
-  if (!data || (data.pending.length === 0 && data.applied.length === 0)) return null;
+  const vide = !data || (data.pending.length === 0 && data.applied.length === 0);
+  if (vide && !annulation) return null;
+  if (vide && annulation) {
+    return (
+      <div className="flex items-center justify-between gap-2 rounded-md border border-edge bg-panel-sunken px-3 py-2">
+        <span className="text-xs text-ink-muted">{t("aucunChangement")}</span>
+        <AnnulerTour campaignId={annulation.campaignId} onDone={onChanged} />
+      </div>
+    );
+  }
+  if (!data) return null;
 
   const total = data.pending.length + data.applied.length;
   const line = tallyLine(data.tally);
@@ -141,6 +208,7 @@ export default function ConsequencesDrawer({
             </div>
           )}
           {line && <p className="text-xs text-ink-muted">{line}</p>}
+          {annulation && <AnnulerTour campaignId={annulation.campaignId} onDone={onChanged} />}
         </div>
       )}
     </div>

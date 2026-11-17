@@ -13,7 +13,8 @@ export type AiProposalKind =
   | "create_relation"
   | "set_discovery"
   | "update_mechanical";
-export type AiProposalStatus = "pending" | "applied" | "rejected" | "failed";
+/** V3-F2 : `reverted`, une proposition défaite par l'annulation d'un tour du solo (sa ligne reste). */
+export type AiProposalStatus = "pending" | "applied" | "rejected" | "failed" | "reverted";
 
 export interface AiProposalRow {
   id: string;
@@ -155,6 +156,14 @@ export async function listAppliedAiProposalsBySessionEventIds(supabase: TypedCli
     .in("session_event_id", sessionEventIds)
     .eq("status", "applied")
     .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data ?? []).map(toRow);
+}
+
+/** V3-F2 — toutes les propositions nées des événements d'un tour (tous statuts), pour l'annuler. */
+export async function listAiProposalsBySessionEventIds(supabase: TypedClient, sessionEventIds: readonly string[]): Promise<AiProposalRow[]> {
+  if (sessionEventIds.length === 0) return [];
+  const { data, error } = await supabase.from("ai_proposals").select(COLUMNS).in("session_event_id", [...sessionEventIds]);
   if (error) throw new Error(error.message);
   return (data ?? []).map(toRow);
 }
