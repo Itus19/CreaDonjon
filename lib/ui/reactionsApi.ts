@@ -30,6 +30,11 @@ export type ResultatFenetre = { ok: true; reponse: ReponseFenetre } | { ok: fals
 const zReprise = z.discriminatedUnion("origin", [
   z.object({ origin: z.literal("targeted"), result: z.object({ ok: z.literal(true), facts: z.array(z.string()), changes: z.array(z.string()) }) }),
   z.object({ origin: z.literal("save_request"), result: z.object({ ok: z.literal(true), changes: z.array(z.string()), hints: z.array(z.string()) }) }),
+  // V3.1-216 : le tour solo repris. Un tour refusé ou une seconde fenêtre (`result` sans `record`) n'a rien à montrer : le fil le dira.
+  z.object({
+    origin: z.literal("solo_turn"),
+    result: z.union([z.object({ record: z.object({ facts: z.array(z.string()) }), changes: z.array(z.string()) }), z.object({ record: z.undefined().optional() })]),
+  }),
   z.object({
     origin: z.literal("sheet_check"),
     result: z.object({ ok: z.literal(true), roll: z.object({ what: z.string(), total: z.number(), verdict: z.enum(["success", "fail"]).nullable() }) }),
@@ -48,6 +53,7 @@ function issueDe(resumed: unknown): IssueReprise | null | "illisible" {
   const r = lue.data;
   if (r.origin === "targeted") return { phrases: [...r.result.facts, ...r.result.changes], test: null };
   if (r.origin === "save_request") return { phrases: [...r.result.changes, ...r.result.hints], test: null };
+  if (r.origin === "solo_turn") return { phrases: r.result.record ? [...r.result.record.facts, ...r.result.changes] : [], test: null };
   return { phrases: [], test: r.result.roll };
 }
 

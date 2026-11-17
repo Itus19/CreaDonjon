@@ -2,8 +2,8 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import type { Locale } from "@/src/i18n/request";
-import { advanceSceneTime, rememberEvent, startTurn, type SceneState } from "@/src/core/rules/scene";
-import type { BudgetKind } from "@/src/core/rules/actionBudget";
+import { advanceSceneTime, budgetOf, rememberEvent, startTurn, type SceneState } from "@/src/core/rules/scene";
+import { spendFromBudget, type ActionBudget, type BudgetKind } from "@/src/core/rules/actionBudget";
 import { eventsForAttack } from "@/src/core/rules/gameEvents";
 import type { AttackRollResult } from "@/src/core/rules/action";
 import type { ResolvedEffect } from "@/src/core/rules/triggers";
@@ -12,6 +12,8 @@ import {
   executeIntent,
   resolveIntentRequest,
   resolveIntentRequestFromRoll,
+  resumeIntentRequest,
+  type RollOrigin,
   type IntentChoice,
   type IntentErrorReason,
   type ResolvedTurnRecord,
@@ -104,6 +106,9 @@ export async function playTurn(
  * en attente), et rendre `chained` — la demande de degats posee a la suite
  * d'une attaque qui a touche, que l'ecran doit maintenant montrer.
  */
+/** Ce qu'un encaissement rend : le tour joué, une fenêtre de réaction ouverte (V3.1-216), ou un refus. */
+export type EncashedTurn = (TurnOutcome & { chained: PendingRequest | null }) | { window: string } | { error: ResolveIntentErrorReason };
+
 export async function playEncashedTurn(
   supabase: TypedClient,
   params: {
@@ -114,10 +119,10 @@ export async function playEncashedTurn(
     natural: number;
     origin: "volet" | "a_la_main";
   }
-): Promise<(TurnOutcome & { chained: PendingRequest | null }) | { error: ResolveIntentErrorReason }> {
+): Promise<EncashedTurn> {
   const outcome = await resolveIntentRequest(supabase, params);
-  if ("error" in outcome) return outcome;
-  return finishEncashedTurn(supabase, params, outcome);
+  if ("error" in outcome || "window" in outcome) return outcome;
+  return finishEncashedTurn(supabase, params, outcome, []);
 }
 
 /**
@@ -131,16 +136,40 @@ export async function playEncashedTurn(
 export async function playEncashedTurnFromRoll(
   supabase: TypedClient,
   params: { entityId: string; campaignId: string; callerId: string; locale: Locale }
-): Promise<(TurnOutcome & { chained: PendingRequest | null }) | { error: ResolveIntentErrorReason }> {
+): Promise<EncashedTurn> {
   const outcome = await resolveIntentRequestFromRoll(supabase, params);
-  if ("error" in outcome) return outcome;
-  return finishEncashedTurn(supabase, params, outcome);
+  if ("error" in outcome || "window" in outcome) return outcome;
+  return finishEncashedTurn(supabase, params, outcome, []);
+}
+
+/**
+ * V3.1-216 — le tour solo repris après une fenêtre de réaction : même
+ * pipeline que l'encaissement ordinaire, avec le jet déjà modifié (aucun dé
+ * relancé) et les réactions jouées, que le budget de la scène décompte.
+ */
+export async function playResumedSoloTurn(
+  supabase: TypedClient,
+  params: {
+    entityId: string;
+    campaignId: string;
+    callerId: string;
+    locale: Locale;
+    origin: RollOrigin;
+    preset: { natural: number | null; total: number };
+    /** Qui a joué une réaction : une par acteur, décomptée de son budget de scène. */
+    reactors: readonly string[];
+  }
+): Promise<EncashedTurn> {
+  const outcome = await resumeIntentRequest(supabase, params);
+  if ("error" in outcome || "window" in outcome) return outcome;
+  return finishEncashedTurn(supabase, params, outcome, params.reactors);
 }
 
 async function finishEncashedTurn(
   supabase: TypedClient,
   params: { entityId: string; campaignId: string; callerId: string; locale: Locale },
-  outcome: { record: ResolvedTurnRecord; chained: PendingRequest | null }
+  outcome: { record: ResolvedTurnRecord; chained: PendingRequest | null },
+  reactors: readonly string[]
 ): Promise<TurnOutcome & { chained: PendingRequest | null }> {
   const intent = outcome.record.detail.intent as { text: string; kind: PendingRequestKind };
   // Les degats chaines par une attaque qui a touche ne sont pas une action
@@ -151,7 +180,7 @@ async function finishEncashedTurn(
 
   const turn = await applyResolvedTurn(
     supabase,
-    { entityId: params.entityId, campaignId: params.campaignId, callerId: params.callerId, locale: params.locale, text: intent.text, choiceKind },
+    { entityId: params.entityId, campaignId: params.campaignId, callerId: params.callerId, locale: params.locale, text: intent.text, choiceKind, reactors },
     outcome.record
   );
   return { ...turn, chained: outcome.chained };
@@ -167,6 +196,8 @@ async function applyResolvedTurn(
     text: string;
     /** `null` pour une resolution chainee (degats d'une attaque deja payee) : aucune depense, aucune ouverture de tour. */
     choiceKind: IntentChoice["kind"] | null;
+    /** V3.1-216 : qui a joué une réaction sur ce jet ; décomptée du budget de scène APRÈS l'ouverture du tour, sinon elle serait effacée. */
+    reactors?: readonly string[];
   },
   record: ResolvedTurnRecord
 ): Promise<TurnOutcome> {
@@ -254,6 +285,12 @@ async function applyResolvedTurn(
     // pas avancer l'horloge une seconde fois pour le meme coup.
     if (params.choiceKind !== null) {
       scene = advanceSceneTime(scene, minutesForTurn(scene));
+    }
+    // V3.1-216 — la reaction se paie ici, et pas avant : `startTurn` vient de
+    // remettre le budget a neuf, une depense posee plus tot aurait disparu.
+    for (const who of params.reactors ?? []) {
+      const apres: ActionBudget = spendFromBudget(budgetOf(scene, who, ctx.sheet.speed.value), "reaction").budget;
+      scene = { ...scene, budgets: { ...scene.budgets, [who]: apres } };
     }
     for (const id of [record.eventId, applicationEventId].filter((i): i is string => i !== null)) {
       scene = rememberEvent(scene, id);

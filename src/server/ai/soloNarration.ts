@@ -8,6 +8,9 @@ import { buildSoloTurnContext } from "@/src/server/services/turnContext";
 import { drawSketchForScene, recordSketchSpeechAndMaybeAnchor } from "@/src/server/services/sceneSketches";
 import { proposeWorldNote } from "@/src/server/services/soloWorldNotes";
 import { findEventByFromEvent, getSessionEventById, insertSessionEvent, nextEventSeq } from "@/src/server/repos/sessions";
+import { buildViewerForWorld } from "@/src/server/services/visibility";
+import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
+import { getOpenAiCompatibleProviderFromEnv } from "./adapters/openAiCompatible";
 import type { AiProvider } from "./provider";
 import { runAiCompletion } from "./callAi";
 
@@ -303,4 +306,33 @@ export async function reconstructTurnForNarration(supabase: TypedClient, session
   const hints = Array.isArray(applicationPayload?.hints_text) ? applicationPayload!.hints_text.filter((h): h is string => typeof h === "string") : [];
 
   return { ok: true, playerAction, facts, changes, hints };
+}
+
+/**
+ * V3.1-216 — la narration d'un tour solo, telle que les routes l'appellent :
+ * toujours APRÈS que le tour est écrit, toujours best-effort (specs/
+ * cible-locale-et-ia.md §4 : aucune fonction essentielle ne dépend du succès
+ * d'un appel de modèle). Un échec, un fournisseur absent : le tour reste
+ * joué, et rien ne remonte au joueur.
+ *
+ * Elle existe parce qu'un quatrième chemin la demande (le tour repris après
+ * une fenêtre de réaction) : quatre copies du même bloc `try` dans quatre
+ * routes valaient une fonction.
+ */
+export async function narrerTourSoloSansFaillir(
+  supabase: TypedClient,
+  params: Omit<SoloNarrationParams, "viewer" | "sessionId">,
+): Promise<{ text: string; npcReaction: { npcId: string; text: string } | null } | null> {
+  try {
+    const provider = getOpenAiCompatibleProviderFromEnv();
+    const [viewer, sessionId] = await Promise.all([
+      buildViewerForWorld(supabase, params.worldId, params.userId),
+      getOrOpenSessionForCampaign(supabase, params.campaignId),
+    ]);
+    const narrated = await narrateSoloTurn(supabase, provider, { ...params, viewer, sessionId });
+    return narrated.ok && narrated.narration ? { text: narrated.narration, npcReaction: narrated.npcReaction ?? null } : null;
+  } catch (erreur) {
+    console.error("Narration du tour impossible", erreur);
+    return null;
+  }
 }

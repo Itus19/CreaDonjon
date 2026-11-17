@@ -15,9 +15,10 @@ import {
   type EligibleReaction,
   type PendingRoll,
   type ReactionCandidate,
+  zonePoint,
   type RollOutcome,
 } from "@/src/core/rules/rollWindow";
-import type { TriggerActorState, TriggerContext } from "@/src/core/rules/triggers";
+import type { TriggerActorState, TriggerContext, TriggerZone } from "@/src/core/rules/triggers";
 import { getActiveCombatForCampaign, listCombatParticipants, type CombatParticipantRow, type CombatRow } from "@/src/server/repos/combats";
 import { resolveCharacterActionContext, type CharacterActionContext } from "@/src/server/services/characterActions";
 import { getEntityRuntimeState } from "@/src/server/services/runtimeState";
@@ -86,7 +87,7 @@ export type WindowChoice = z.infer<typeof zWindowChoice>;
 export const zRollWindowState = z.object({
   __v: z.literal(1),
   /** D'où vient le jet : la reprise rejoue ce chemin (jet ciblé, sauvegarde demandée, test ou sauvegarde de la fiche). */
-  origin: z.enum(["targeted", "save_request", "sheet_check"]),
+  origin: z.enum(["targeted", "save_request", "sheet_check", "solo_turn"]),
   campaignId: z.string().uuid(),
   combatId: z.string().uuid().nullable(),
   stamp: z.string().nullable(),
@@ -123,6 +124,8 @@ export async function gatherReactors(
     loaded?: readonly CharacterActionContext[];
     /** V3.1-163 : un PJ hors combat (pas de ligne de participant) : ses réactions sur son propre jet, sans compte. */
     standalone?: { entity_id: string; user_id: string | null };
+    /** V3.1-216 : les zones de la scène, par entité — la portée du solo, faute de plan. Une position du plan prime. */
+    zones?: Readonly<Record<string, TriggerZone>>;
     locale: Locale;
   },
 ): Promise<ReactorPool> {
@@ -140,6 +143,10 @@ export async function gatherReactors(
   if (params.standalone && !rows.some((r) => r.pc.entity_id === params.standalone!.entity_id)) {
     rows.push({ pc: params.standalone, p: null });
     pool.teams[params.standalone.entity_id] = "pj";
+  }
+  // V3.1-216 : faute de plan (le solo), la zone de la scène tient lieu de position. Un acteur posé sur un plan garde la sienne.
+  for (const [entityId, zone] of Object.entries(params.zones ?? {})) {
+    if (!pool.positions[entityId]) pool.positions[entityId] = zonePoint(zone);
   }
   // V3.1-163 (ADR 0101) : les effets de tous les PJ du réservoir, en UNE lecture : les jetons qu'ils portent accordent
   // des réactions, y compris d'une règle absente de leur fiche (le dé d'Inspiration bardique reçu).
@@ -361,7 +368,16 @@ export async function interveneOnRoll(
  */
 export async function selfReactorPool(
   supabase: TypedClient,
-  params: { campaignId: string; entityId: string; userId: string | null; callerIsGm: boolean; loaded?: CharacterActionContext; locale: Locale },
+  params: {
+    campaignId: string;
+    entityId: string;
+    userId: string | null;
+    callerIsGm: boolean;
+    loaded?: CharacterActionContext;
+    /** V3.1-216 : les zones de la scène (le solo n'a pas de plan). */
+    zones?: Readonly<Record<string, TriggerZone>>;
+    locale: Locale;
+  },
 ): Promise<{ pool: ReactorPool; combat: CombatRow | null }> {
   const combat = await getActiveCombatForCampaign(supabase, params.campaignId);
   const running = combat && combat.status === "running" ? combat : null;
@@ -378,6 +394,7 @@ export async function selfReactorPool(
     only: new Set([params.entityId]),
     loaded: params.loaded ? [params.loaded] : [],
     standalone: pc,
+    ...(params.zones ? { zones: params.zones } : {}),
     locale: params.locale,
   });
   return { pool, combat: running };

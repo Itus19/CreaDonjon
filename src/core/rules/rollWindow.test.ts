@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { Rng } from "../dice/rng";
 import type { Activation } from "../schemas/rule-blocks/playable";
 import { zActivationBlockData } from "../schemas/rule-blocks/playable";
-import type { TriggerActorState, TriggerContext } from "./triggers";
+import type { TriggerActorState, TriggerContext, TriggerZone } from "./triggers";
+import { distance } from "./geometry";
 import {
   applyRollOperations,
   eligibleReactions,
@@ -11,6 +12,7 @@ import {
   recordUse,
   turnStamp,
   wouldChangeOutcome,
+  zonePoint,
   EMPTY_TURN_USAGE,
   type PendingRoll,
   type ReactionCandidate,
@@ -330,5 +332,31 @@ describe("V3.1-171 (ADR 0077) — une réaction conditionnée par l'arme du jet 
     expect(avec(degats(["ammunition", "ranged"])).choices).toHaveLength(1);
     expect(avec(degats(["heavy", "two-handed"])).choices).toHaveLength(0);
     expect(avec(degats()).choices).toHaveLength(1);
+  });
+});
+
+describe("V3.1-216 — la portée faute de plan : les trois zones abstraites", () => {
+  it("deux acteurs de la même zone sont à portée de tout ; les zones s'éloignent de 9 m puis de 30 m", () => {
+    expect(distance(zonePoint("engaged"), zonePoint("engaged"))).toBe(0);
+    expect(distance(zonePoint("far"), zonePoint("far"))).toBe(0);
+    expect(distance(zonePoint("engaged"), zonePoint("near"))).toBe(9);
+    expect(distance(zonePoint("near"), zonePoint("far"))).toBe(21);
+    expect(distance(zonePoint("engaged"), zonePoint("far"))).toBe(30);
+  });
+
+  it("Mots cinglants (18 m) : proposée depuis la zone voisine, écartée de l'autre bout de la scène", () => {
+    const avec = (barde: TriggerZone, gobelin: TriggerZone) =>
+      eligibleReactions({
+        roll: attaque(),
+        candidates: [candidat("barde", MOTS_CINGLANTS, [{ key: "bardic-inspiration", max: 3 }])],
+        ctx,
+        teams: equipes,
+        stamp: "1:0",
+        rng: des(),
+        positions: { barde: zonePoint(barde), gobelin: zonePoint(gobelin) },
+      });
+    expect(avec("near", "near").choices).toHaveLength(1);
+    expect(avec("engaged", "near").choices).toHaveLength(1);
+    expect(avec("engaged", "far").choices).toHaveLength(0);
   });
 });

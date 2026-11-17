@@ -4,12 +4,9 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { playEncashedTurn } from "@/src/server/services/turnLoop";
-import { buildViewerForWorld } from "@/src/server/services/visibility";
-import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
-import { getOpenAiCompatibleProviderFromEnv } from "@/src/server/ai/adapters/openAiCompatible";
-import { narrateSoloTurn } from "@/src/server/ai/soloNarration";
+import { narrerTourSoloSansFaillir } from "@/src/server/ai/soloNarration";
 import type { Locale } from "@/src/i18n/request";
-import type { EncashedTurnOutcome } from "@/lib/solo/types";
+import type { EncashedTurnOutcome, FenetreReactionResponse } from "@/lib/solo/types";
 
 const bodySchema = z.object({
   entityId: z.string().uuid(),
@@ -81,6 +78,12 @@ export async function POST(request: NextRequest) {
   if ("error" in outcome) {
     return NextResponse.json({ error: REASON_MESSAGE[outcome.error] }, { status: REASON_STATUS[outcome.error] });
   }
+  // V3.1-216 : une réaction peut intervenir — le tour n'est pas joué, la
+  // demande reste posée, et c'est le bandeau de réaction qui prend la suite.
+  if ("window" in outcome) {
+    const attente: FenetreReactionResponse = { fenetre: outcome.window };
+    return NextResponse.json(attente, { status: 200 });
+  }
 
   const result: EncashedTurnOutcome = outcome;
 
@@ -95,33 +98,18 @@ export async function POST(request: NextRequest) {
   // meme forme qu'en `POST /api/solo/tour` (specs/cible-locale-et-ia.md
   // §4 : aucune fonction essentielle ne depend du succes d'un appel).
   if (result.record.eventId) {
-    try {
-      const provider = getOpenAiCompatibleProviderFromEnv();
-      const [viewer, sessionId] = await Promise.all([
-        buildViewerForWorld(supabase, world.id, user.id),
-        getOrOpenSessionForCampaign(supabase, parsed.data.campaignId),
-      ]);
-      const narrated = await narrateSoloTurn(supabase, provider, {
-        worldId: world.id,
-        campaignId: parsed.data.campaignId,
-        playerEntityId: parsed.data.entityId,
-        viewer,
-        userId: user.id,
-        sessionId,
-        fromEventId: result.record.eventId,
-        playerAction: intentText,
-        facts: result.record.facts,
-        changes: result.changes,
-        hints: result.hints,
-      });
-      if (narrated.ok) {
-        result.narration = { text: narrated.narration!, npcReaction: narrated.npcReaction ?? null };
-      }
-    } catch (erreur) {
-      // Aucun fournisseur configure, ou l'appel a echoue : le tour reste
-      // valide sans narration, jamais une erreur renvoyee au joueur pour ca.
-      console.error("Narration du tour impossible", erreur);
-    }
+    const narre = await narrerTourSoloSansFaillir(supabase, {
+      worldId: world.id,
+      campaignId: parsed.data.campaignId,
+      playerEntityId: parsed.data.entityId,
+      userId: user.id,
+      fromEventId: result.record.eventId,
+      playerAction: intentText,
+      facts: result.record.facts,
+      changes: result.changes,
+      hints: result.hints,
+    });
+    if (narre) result.narration = { text: narre.text, npcReaction: narre.npcReaction };
   }
 
   return NextResponse.json(result, { status: 200 });

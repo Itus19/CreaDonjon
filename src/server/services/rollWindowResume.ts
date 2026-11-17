@@ -12,6 +12,7 @@ import { activateFeature } from "@/src/server/services/featureActivation";
 import { resolveTargetedRoll, type TargetedRollResult } from "@/src/server/services/targetedRoll";
 import { answerSaveRequest, type AnswerSaveRequestResult } from "@/src/server/services/saveRequests";
 import { rollAbilityCheck, rollSavingThrow, rollSkillCheck, type CheckRollResult } from "@/src/server/services/checkRolls";
+import { playResumedSoloTurn, type EncashedTurn } from "@/src/server/services/turnLoop";
 import { answerSaveRequestSchema } from "@/lib/saveRequests/schemas";
 import { ABILITIES } from "@/src/core/rules/abilities";
 import { SKILLS } from "@/src/core/rules/sheet";
@@ -35,7 +36,9 @@ type TypedClient = SupabaseClient<Database>;
 export type ResumedRoll =
   | { origin: "targeted"; result: TargetedRollResult }
   | { origin: "save_request"; result: AnswerSaveRequestResult }
-  | { origin: "sheet_check"; result: CheckRollResult };
+  | { origin: "sheet_check"; result: CheckRollResult }
+  /** V3.1-216 : le tour solo, repris avec le jet modifié — le tour entier est joué (effets, budget, scène, journal). */
+  | { origin: "solo_turn"; entityId: string; result: EncashedTurn };
 
 export type RollWindowAnswerResult =
   | { ok: true; closed: boolean; resumed: ResumedRoll | null }
@@ -50,6 +53,7 @@ const zResumeTargeted = z.object({
   damageType: z.string().nullable().optional(),
 });
 const zResumeSave = z.object({ requestId: z.string().uuid(), input: answerSaveRequestSchema });
+const zResumeSolo = z.object({ entityId: z.string().uuid(), campaignId: z.string().uuid(), origin: z.enum(["volet", "a_la_main", "fiche"]) });
 const zResumeCheck = z.object({
   replay: z.discriminatedUnion("fn", [
     z.object({ fn: z.literal("ability"), ability: z.enum(ABILITIES) }),
@@ -139,6 +143,23 @@ export async function resumeRollWindow(supabase: TypedClient, params: { windowId
   if (state.origin === "save_request") {
     const r = zResumeSave.parse(state.resume);
     return { origin: "save_request", result: await answerSaveRequest(supabase, { campaignId: params.campaignId, requestId: r.requestId, callerId: params.callerId, locale: params.locale, input: r.input, preset }) };
+  }
+  if (state.origin === "solo_turn") {
+    const r = zResumeSolo.parse(state.resume);
+    return {
+      origin: "solo_turn",
+      entityId: r.entityId,
+      result: await playResumedSoloTurn(supabase, {
+        entityId: r.entityId,
+        campaignId: params.campaignId,
+        callerId: params.callerId,
+        locale: params.locale,
+        origin: r.origin,
+        preset: { natural: roll.natural, total: roll.total },
+        // Le budget de la scène compte la réaction (V3-A3) : il n'y a pas toujours de ligne de combat en solo.
+        reactors: used.filter((c) => c.reaction).map((c) => c.actorId),
+      }),
+    };
   }
   if (state.origin === "sheet_check") {
     const r = zResumeCheck.parse(state.resume);

@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import Dropdown from "@/components/shared/Dropdown";
 import { interpretIntent, looksLikeQuestion, type IntentAction, type MechanicalIntentKind } from "@/src/core/rules/intent";
 import { GM_QUESTION_MARKERS_FR } from "@/src/i18n/fr";
 import type { AdvantageState } from "@/src/core/rules/action";
-import type { EncashedTurnOutcome, IntentBarData, PendingRequest, PendingTurnResponse, TurnOutcome } from "@/lib/solo/types";
+import type { EncashedTurnResponse, IntentBarData, PendingRequest, PendingTurnResponse, TurnOutcome } from "@/lib/solo/types";
 import { useDiceRoll } from "@/components/shell/DiceRollPanel";
 import { ErreurLancer, type SortieJet } from "@/lib/ui/outilDes";
-import { preReglageDepuisDemande, sortieJetDepuisTour } from "@/lib/ui/solo";
+import { preReglageDepuisDemande, sortieAttenteReactions, sortieJetDepuisTour } from "@/lib/ui/solo";
 import { encaisserDepuisFiche } from "@/lib/ui/soloApi";
 
 /**
@@ -103,6 +104,7 @@ export default function IntentBar({
   /** Appelé après toute action confirmée par le serveur (pose ou encaissement) — `SoloScreen.tsx` en profite pour rafraîchir le fil tout de suite, sans attendre son sondage. */
   onActed?: () => void;
 }) {
+  const tOutil = useTranslations("outilDes");
   const [text, setText] = useState("");
   const [overrideActionId, setOverrideActionId] = useState<string | null>(null);
   const [overrideTargetId, setOverrideTargetId] = useState<string | null>(null);
@@ -185,6 +187,10 @@ export default function IntentBar({
   async function lancerDansOutil(demande: PendingRequest): Promise<SortieJet | null> {
     if (campaignId === null) throw new ErreurLancer("Sans campagne, il n'y a pas de tour à jouer.");
     const outcome = await encaisserDepuisFiche({ entityId, campaignId, worldSlug });
+    // V3.1-216 : une réaction peut intervenir — le tour n'est pas joué, la
+    // demande reste posée, et le bandeau de réaction prend la main. L'outil
+    // n'affiche ni total ni verdict jusqu'à la reprise.
+    if ("fenetre" in outcome) return sortieAttenteReactions(demande, outcome.fenetre, tOutil("enAttenteReactions"));
     onPendingChange(outcome.chained);
     if (outcome.chained === null) setDc("");
     onActed?.();
@@ -271,7 +277,9 @@ export default function IntentBar({
         setError(payload?.error ?? "Le jet n'a pas pu être encaissé.");
         return;
       }
-      const outcome = (await res.json()) as EncashedTurnOutcome;
+      const outcome = (await res.json()) as EncashedTurnResponse;
+      // V3.1-216 : même attente que ci-dessus, pour le dé annoncé à la main.
+      if ("fenetre" in outcome) return;
       onPendingChange(outcome.chained);
       if (outcome.chained === null) setDc("");
       onActed?.();

@@ -8,7 +8,7 @@ import type { Activation, RollOperation, RollTrigger } from "../schemas/rule-blo
 import { requirementMet } from "./activation";
 import { attackVerdict } from "./targeting";
 import { zTurnBudget } from "./turnBudget";
-import type { TriggerContext } from "./triggers";
+import type { TriggerContext, TriggerZone } from "./triggers";
 
 /**
  * V3.1-159 (ADR 0075) — intervenir sur un jet, en fonctions PURES.
@@ -200,6 +200,22 @@ function amount(node: FormulaNode, numbers: Readonly<Record<string, number>>, rn
   } catch (err) {
     return err instanceof Error ? err : new Error(String(err));
   }
+}
+
+/**
+ * V3.1-216 — la portée quand il n'y a pas de plan (le solo) : les trois zones
+ * abstraites de la scène (V3-A4) placées sur un axe, en mètres. Deux acteurs
+ * de la MÊME zone sont à distance nulle — c'est le sens d'une zone : on s'y
+ * atteint sans se déplacer ; d'une zone à l'autre, la différence fait la
+ * distance (contact → proche : 9 m ; proche → loin : 21 m).
+ *
+ * Grossier et assumé, comme l'horloge du tour : il n'y a pas de grille
+ * (spec §6). Les distances réelles viendront avec V3.1-137.
+ */
+const ZONE_METRES: Record<TriggerZone, number> = { engaged: 0, near: 9, far: 30 };
+
+export function zonePoint(zone: TriggerZone): Point {
+  return { x: ZONE_METRES[zone], y: 0 };
 }
 
 /** Sans l'une des deux positions, la portée n'est pas vérifiable : on laisse passer (le MJ tranche). */

@@ -171,6 +171,17 @@ export interface EncashedTurnOutcome extends TurnOutcome {
 }
 
 /**
+ * V3.1-216 — un encaissement qui n'a pas joué le tour : une réaction peut
+ * intervenir sur ce jet. La demande reste posée, rien n'est écrit, et le
+ * bandeau de réaction prend la main ; le tour se jouera à la reprise.
+ */
+export interface FenetreReactionResponse {
+  fenetre: string;
+}
+
+export type EncashedTurnResponse = EncashedTurnOutcome | FenetreReactionResponse;
+
+/**
  * V3-D4 — le fil, tel que `session_events` le rend. Un item par `kind`
  * RÉELLEMENT écrit par ce module (`turnFil.ts`) — `system` n'existe
  * encore nulle part dans le code : `other` est un repli défensif, jamais un

@@ -133,7 +133,7 @@ describe.skipIf(!hasCreds)("V3-B5 — proposer puis encaisser (integration, base
       corrected: false,
       choice: { kind: "skill_check", actionId: "athletics", targetId: null, advantage: "normal", dc: 12 },
     });
-    if ("error" in outcome) throw new Error(`echec inattendu : ${outcome.error}`);
+    if ("error" in outcome || "window" in outcome) throw new Error("echec inattendu");
     expect(outcome.request.kind).toBe("skill_check");
     expect(outcome.request.die_max).toBe(20); // un test se lit sur un d20, jamais sur le de de l'arme
     expect(outcome.request.dc).toBe(12);
@@ -148,7 +148,7 @@ describe.skipIf(!hasCreds)("V3-B5 — proposer puis encaisser (integration, base
     if (!pending) throw new Error("aucune demande en attente — le test precedent aurait du en poser une");
 
     const outcome = await resolveIntentRequest(admin, { ...common(), natural: 14, origin: "a_la_main" });
-    if ("error" in outcome) throw new Error(`echec inattendu : ${outcome.error}`);
+    if ("error" in outcome || "window" in outcome) throw new Error("echec inattendu");
     expect(outcome.chained).toBeNull();
     const check = outcome.record.detail.check as { total: number; dc: number | null; verdict: string | null };
     expect(check.total).toBe(14 + pending.modifier);
@@ -259,7 +259,7 @@ describe.skipIf(!hasCreds)("V3-B5 — proposer puis encaisser (integration, base
     // Coup normal (naturel 10, pas 20) : touche, chaine des degats bornes au
     // 1d6 du cimeterre — jamais 1-20.
     const attackResolved = await resolveIntentRequest(admin, { ...common(), natural: 10, origin: "a_la_main" });
-    if ("error" in attackResolved) throw new Error(`echec inattendu : ${attackResolved.error}`);
+    if ("error" in attackResolved || "window" in attackResolved) throw new Error("echec inattendu");
     const attackDetail = attackResolved.record.detail as { verdict: string | null };
     expect(attackDetail.verdict).toBe("hit");
     expect(attackResolved.chained).not.toBeNull();
@@ -274,7 +274,7 @@ describe.skipIf(!hasCreds)("V3-B5 — proposer puis encaisser (integration, base
     expect(await resolveIntentRequest(admin, { ...common(), natural: 7, origin: "a_la_main" })).toEqual({ error: "out_of_range" });
 
     const damageResolved = await resolveIntentRequest(admin, { ...common(), natural: 4, origin: "a_la_main" });
-    if ("error" in damageResolved) throw new Error(`echec inattendu : ${damageResolved.error}`);
+    if ("error" in damageResolved || "window" in damageResolved) throw new Error("echec inattendu");
     expect(damageResolved.chained).toBeNull();
     const damageDetail = damageResolved.record.detail as { damage: { total: number } | null };
     expect(damageDetail.damage?.total).toBe(4 + attackResolved.chained!.modifier);
@@ -301,16 +301,16 @@ describe.skipIf(!hasCreds)("V3-B5 — proposer puis encaisser (integration, base
     // 20 naturel + modificateur, tres en dessous de la CA 30 : touche quand meme.
     await pose((await target("Mur de fer", 30)).id);
     const twenty = await resolveIntentRequest(admin, { ...common(), natural: 20, origin: "a_la_main" });
-    if ("error" in twenty) throw new Error(`echec inattendu : ${twenty.error}`);
+    if ("error" in twenty || "window" in twenty) throw new Error("echec inattendu");
     expect((twenty.record.detail as { verdict: string | null }).verdict).toBe("hit");
     expect(twenty.chained).not.toBeNull();
     const damage = await resolveIntentRequest(admin, { ...common(), natural: 1, origin: "a_la_main" });
-    if ("error" in damage) throw new Error(`echec inattendu : ${damage.error}`);
+    if ("error" in damage || "window" in damage) throw new Error("echec inattendu");
 
     // 1 naturel + modificateur, au-dessus de la CA 1 : rate quand meme, rien n'est chaine.
     await pose((await target("Mannequin de paille", 1)).id);
     const one = await resolveIntentRequest(admin, { ...common(), natural: 1, origin: "a_la_main" });
-    if ("error" in one) throw new Error(`echec inattendu : ${one.error}`);
+    if ("error" in one || "window" in one) throw new Error("echec inattendu");
     expect((one.record.detail as { verdict: string | null }).verdict).toBe("miss");
     expect(one.chained).toBeNull();
     expect((await getEntityRuntimeState(admin, entityId, campaignId)).pending_request).toBeNull();
@@ -341,7 +341,7 @@ describe.skipIf(!hasCreds)("V3-B5 — proposer puis encaisser (integration, base
     if ("error" in pose) throw new Error(`echec inattendu : ${pose.error}`);
 
     const resolved = await resolveIntentRequest(admin, { ...common(), natural: 20, origin: "a_la_main" });
-    if ("error" in resolved) throw new Error(`echec inattendu : ${resolved.error}`);
+    if ("error" in resolved || "window" in resolved) throw new Error("echec inattendu");
     expect(resolved.chained!.die_max).toBe(12); // 1d6 double, jamais le modificateur
     expect(resolved.chained!.modifier).toBe(3); // FOR +3 (finesse : max(3, 0)), inchange par le critique
     expect(resolved.chained!.critical).toBe(true);
@@ -349,7 +349,7 @@ describe.skipIf(!hasCreds)("V3-B5 — proposer puis encaisser (integration, base
     // Encaisse la demande de degats chainee : un test suivant qui suppose
     // "aucune demande en attente" ne doit pas heriter de celle-ci.
     const damageResolved = await resolveIntentRequest(admin, { ...common(), natural: 6, origin: "a_la_main" });
-    if ("error" in damageResolved) throw new Error(`echec inattendu : ${damageResolved.error}`);
+    if ("error" in damageResolved || "window" in damageResolved) throw new Error("echec inattendu");
     expect(damageResolved.chained).toBeNull();
   });
 
@@ -369,7 +369,7 @@ describe.skipIf(!hasCreds)("V3-B5 — proposer puis encaisser (integration, base
       if ("error" in pose) throw new Error(`echec inattendu : ${pose.error}`);
 
       const outcome = await resolveIntentRequestFromRoll(admin, common());
-      if ("error" in outcome) throw new Error(`echec inattendu : ${outcome.error}`);
+      if ("error" in outcome || "window" in outcome) throw new Error("echec inattendu");
       const check = outcome.record.detail.check as { total: number };
       expect(check.total).toBeGreaterThanOrEqual(1 + pose.request.modifier);
       expect(check.total).toBeLessThanOrEqual(20 + pose.request.modifier);
@@ -413,7 +413,7 @@ describe.skipIf(!hasCreds)("V3-B5 — proposer puis encaisser (integration, base
       if ("error" in pose) throw new Error(`echec inattendu : ${pose.error}`);
 
       const attackOutcome = await resolveIntentRequestFromRoll(admin, common());
-      if ("error" in attackOutcome) throw new Error(`echec inattendu : ${attackOutcome.error}`);
+      if ("error" in attackOutcome || "window" in attackOutcome) throw new Error("echec inattendu");
       // Regles 2024 (V3.1-105) : contre CA 1, tout touche SAUF un 1 naturel,
       // qui rate toujours. Le de est tire par le serveur : on verifie la
       // branche tombee (choix de l'auteur, 17 octobre), jamais un resultat suppose.
@@ -432,7 +432,7 @@ describe.skipIf(!hasCreds)("V3-B5 — proposer puis encaisser (integration, base
       expect([6, 12]).toContain(attackOutcome.chained!.die_max);
 
       const damageOutcome = await resolveIntentRequestFromRoll(admin, common());
-      if ("error" in damageOutcome) throw new Error(`echec inattendu : ${damageOutcome.error}`);
+      if ("error" in damageOutcome || "window" in damageOutcome) throw new Error("echec inattendu");
       const damage = (damageOutcome.record.detail as { damage: { total: number } | null }).damage;
       expect(damage!.total).toBeGreaterThanOrEqual(1 + attackOutcome.chained!.modifier);
       expect(damage!.total).toBeLessThanOrEqual(attackOutcome.chained!.die_max + attackOutcome.chained!.modifier);

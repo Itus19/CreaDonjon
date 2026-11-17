@@ -204,3 +204,26 @@ export function sortieJetDepuisTour(demande: PendingRequest, tour: EncashedTurnO
     dcPrivate: false,
   };
 }
+
+/**
+ * V3.1-216 — l'encaissement a ouvert une fenêtre de réaction : le tour n'est
+ * pas joué, la demande reste posée, et l'outil de dés n'affiche ni total ni
+ * verdict (`rollWindowId`) jusqu'à la reprise. Même forme que le jet ciblé
+ * de la table (`sortieDepuisJetCible`).
+ */
+export function sortieAttenteReactions(demande: PendingRequest, fenetreId: string, texte: string): SortieJet {
+  return {
+    who: demande.actor_name,
+    what: texte,
+    chips: [],
+    total: 0,
+    dc: null,
+    verdict: null,
+    hidden: false,
+    trace: [],
+    pair: null,
+    naturalD20: null,
+    dcPrivate: false,
+    rollWindowId: fenetreId,
+  };
+}

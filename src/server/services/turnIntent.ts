@@ -50,6 +50,7 @@ import { insertSessionEvent, nextEventSeq } from "@/src/server/repos/sessions";
 import { insertDiceRoll } from "@/src/server/repos/diceRolls";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
 import { serverRng } from "@/src/server/services/rng";
+import { soloRollWindow } from "@/src/server/services/soloRollWindow";
 import { applyRuntimeStateChange, getEntityRuntimeState } from "@/src/server/services/runtimeState";
 import { getRuntimeState } from "@/src/server/repos/runtimeState";
 import type { TargetId, IntentTargetDetail, IntentBarData, TurnRecord } from "@/lib/solo/types";
@@ -726,7 +727,8 @@ export async function proposeIntentRequest(
 }
 
 export type ResolveIntentErrorReason = "no_pending_request" | "out_of_range" | IntentErrorReason;
-export type ResolveIntentOutcome = { record: ResolvedTurnRecord; chained: PendingRequest | null } | { error: ResolveIntentErrorReason };
+/** V3.1-216 : `window` — une réaction peut intervenir, rien n'est joué encore ; la demande reste posée et l'écran attend la réponse. */
+export type ResolveIntentOutcome = { record: ResolvedTurnRecord; chained: PendingRequest | null } | { window: string } | { error: ResolveIntentErrorReason };
 
 async function clearPendingRequest(supabase: TypedClient, entityId: string, campaignId: string, sessionId: string): Promise<void> {
   await applyRuntimeStateChange(supabase, { entityId, campaignId, patch: { pending_request: null }, note: "Demande honorée", sessionId, actor: "system" });
@@ -801,24 +803,65 @@ export async function resolveIntentRequestFromRoll(
   return finishResolution(supabase, params, pending, natural, "fiche");
 }
 
+/**
+ * V3.1-216 — la reprise d'une fenêtre de réaction ouverte dans le tour solo :
+ * la demande est toujours posée (rien n'avait été écrit), et le jet arrive
+ * déjà arrêté et modifié par les réactions jouées. Aucun dé n'est relancé.
+ */
+export async function resumeIntentRequest(
+  supabase: TypedClient,
+  params: { entityId: string; campaignId: string; callerId: string; locale: Locale; origin: RollOrigin; preset: { natural: number | null; total: number } }
+): Promise<ResolveIntentOutcome> {
+  const state = await getEntityRuntimeState(supabase, params.entityId, params.campaignId);
+  const pending = state.pending_request;
+  if (!pending) return { error: "no_pending_request" };
+  return finishResolution(supabase, params, pending, params.preset.natural ?? 0, params.origin, params.preset);
+}
+
 /** Le naturel une fois connu — annoncé, lu sur le volet, ou tiré au clic d'un bouton de fiche — le reste du chemin ne varie plus par origine, seulement dans ce que le journal en dit. */
 async function finishResolution(
   supabase: TypedClient,
   params: { entityId: string; campaignId: string; callerId: string; locale: Locale },
   pending: PendingRequest,
-  natural: number,
-  origin: RollOrigin
+  naturalLance: number,
+  origin: RollOrigin,
+  /** V3.1-216 : le jet DÉJÀ arrêté et modifié par les réactions, à la reprise d'une fenêtre — aucun dé n'est relancé ici. */
+  preset?: { natural: number | null; total: number }
 ): Promise<ResolveIntentOutcome> {
   const originLabel = origin === "a_la_main" ? "annoncé" : origin === "volet" ? "volet de dés" : "depuis la fiche";
+  let natural = preset?.natural ?? naturalLance;
   const trace: TraceStep[] = [{ text: originLabel, value: natural }];
   // V3.1-156 (ADR 0074) : les dés de bonus sont lancés ICI par le serveur, quelle que soit l'origine du naturel (règle 8).
+  // À la reprise, ils l'ont déjà été avant la fenêtre : leur somme est dans `preset.total`.
   let bonusDice = 0;
-  for (const d of pending.bonus_dice ?? []) {
-    const r = rollDice(d.count, d.faces, serverRng);
-    bonusDice += r.total;
-    trace.push({ text: `${d.count}d${d.faces} ${d.label} (${r.rolls.join(", ")})`, value: r.total });
+  if (!preset) {
+    for (const d of pending.bonus_dice ?? []) {
+      const r = rollDice(d.count, d.faces, serverRng);
+      bonusDice += r.total;
+      trace.push({ text: `${d.count}d${d.faces} ${d.label} (${r.rolls.join(", ")})`, value: r.total });
+    }
   }
-  const total = natural + pending.modifier + bonusDice;
+  let total = preset ? preset.total : natural + pending.modifier + bonusDice;
+
+  // La fiche : lue une seule fois pour tout le reste de la résolution (le
+  // point de décision, les dégâts chaînés, les déclencheurs du test).
+  const ctx = await resolveCharacterActionContext(supabase, params.entityId, params.campaignId, params.locale);
+
+  // V3.1-216 — le point de décision du tour solo : tant qu'une réaction peut
+  // intervenir, RIEN n'est écrit (la demande reste posée, le dé n'est pas
+  // relancé) ; la reprise repassera ici avec `preset`.
+  if (!preset && ctx) {
+    const fenetre = await soloRollWindow(supabase, { ctx, campaignId: params.campaignId, callerId: params.callerId, locale: params.locale, pending, natural, total, origin });
+    if (fenetre.kind === "window") return { window: fenetre.windowId };
+    if (fenetre.names !== null) {
+      natural = fenetre.natural ?? natural;
+      total = fenetre.total;
+      trace.push({ text: `réaction — ${fenetre.names}`, value: total });
+    }
+  } else if (preset) {
+    trace.push({ text: "après réaction", value: total });
+  }
+
   const ast = parseFormula(String(Math.max(0, total)));
   const expression = `${natural} (${originLabel}) + ${pending.modifier}${(pending.bonus_dice ?? []).map((d) => ` + ${d.count}d${d.faces}`).join("")}`;
   const sessionId = await getOrOpenSessionForCampaign(supabase, params.campaignId);
@@ -881,7 +924,6 @@ async function finishResolution(
 
     let chained: PendingRequest | null = null;
     if (hit === true) {
-      const ctx = await resolveCharacterActionContext(supabase, params.entityId, params.campaignId, params.locale);
       const basis = ctx ? buildDamageBasis(ctx, pending.action_id, isCritical) : { error: "not_found" as const };
       if (!("error" in basis)) {
         chained = {
@@ -943,7 +985,6 @@ async function finishResolution(
   const verdict: "success" | "fail" | null = pending.dc === null ? null : total >= pending.dc ? "success" : "fail";
   await recordDiceRoll(pending.what, pending.dc, verdict, {});
 
-  const ctx = await resolveCharacterActionContext(supabase, params.entityId, params.campaignId, params.locale);
   let firedTriggers: ResolvedEffect[] = [];
   if (ctx) {
     const events: ((passed: boolean, total: number, dc: number) => FiredEvent[]) | null =
