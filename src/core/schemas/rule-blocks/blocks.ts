@@ -56,6 +56,8 @@ export const BLOCK_TYPES = [
   "resources",
   "activation",
   "coverage",
+  // V3.1-217 (ADR 0102) : le système monétaire, sur la fiche « Pièces de monnaie ».
+  "currency_system",
 ] as const;
 export type BlockType = (typeof BLOCK_TYPES)[number];
 
@@ -608,6 +610,35 @@ export const zClassEquipmentBlockData = z.object({
 export type ClassEquipmentChoice = z.infer<typeof zClassEquipmentChoice>;
 export type ClassEquipmentBlockData = z.infer<typeof zClassEquipmentBlockData>;
 
+// --- currency_system (V3.1-217, ADR 0102) ---------------------------------
+// Les pièces d'un monde : clé (une des cinq SRD, ou maison en snake_case),
+// libellé, valeur en pièces de cuivre, rôle (courante ou réserve), et l'ordre
+// de casse des réserves. Sans ce bloc, le système par défaut du noyau
+// (`DEFAULT_CURRENCY_SYSTEM`) s'applique.
+export const zCurrencyCoin = z.object({
+  key: z.string().regex(/^[a-z][a-z0-9_]*$/, "clé en snake_case"),
+  label: z.object({ fr: z.string().min(1), en: z.string().min(1) }),
+  value_cp: z.number().int().positive(),
+  role: z.enum(["common", "reserve"]),
+});
+export const zCurrencySystemBlockData = z
+  .object({
+    coins: z.array(zCurrencyCoin).min(1),
+    break_order: z.array(z.string()),
+  })
+  .superRefine((sys, ctx) => {
+    const keys = sys.coins.map((c) => c.key);
+    if (new Set(keys).size !== keys.length) ctx.addIssue({ code: "custom", path: ["coins"], message: "deux pièces portent la même clé" });
+    if (!sys.coins.some((c) => c.role === "common")) ctx.addIssue({ code: "custom", path: ["coins"], message: "il faut au moins une pièce courante" });
+    if (!sys.coins.some((c) => c.role === "common" && c.value_cp === 1)) ctx.addIssue({ code: "custom", path: ["coins"], message: "il faut une pièce courante de valeur 1 pour rendre la monnaie" });
+    const reserves = new Set(sys.coins.filter((c) => c.role === "reserve").map((c) => c.key));
+    sys.break_order.forEach((k, i) => {
+      if (!reserves.has(k)) ctx.addIssue({ code: "custom", path: ["break_order", i], message: "l'ordre de casse ne cite que des réserves" });
+    });
+    if (new Set(sys.break_order).size !== sys.break_order.length) ctx.addIssue({ code: "custom", path: ["break_order"], message: "une réserve citée deux fois" });
+  });
+export type CurrencySystemBlockData = z.infer<typeof zCurrencySystemBlockData>;
+
 // --- Enveloppe commune (specs/regles-blocs.md §2) -----------------------
 export const zBlockDisplay = z.object({
   label: z.string(),
@@ -648,6 +679,7 @@ const DATA_SCHEMA_BY_BLOCK_TYPE = {
   resources: zRuleResourcesBlockData,
   activation: zActivationBlockData,
   coverage: zCoverageBlockData,
+  currency_system: zCurrencySystemBlockData,
 } satisfies Record<BlockType, z.ZodTypeAny>;
 
 /** Registre : le moteur demande le schema Zod d'un block_type et recoit une forme garantie. */

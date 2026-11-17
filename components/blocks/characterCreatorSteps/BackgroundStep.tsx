@@ -8,6 +8,7 @@ import type { BackgroundBlockData, BackgroundEquipmentOption } from "@/src/core/
 import { ABILITIES, ABILITY_LABELS as ABILITY_NAMES, SKILLS, type Ability, type Skill } from "@/src/core/rules/sheet";
 import { parseBackgroundAbilityBonusChoice, type BackgroundAbilityBonusChoice } from "@/src/core/rules/backgroundAbilityBonus";
 import { CURRENCY_LABELS_FR, SKILL_LABELS_FR } from "@/src/i18n/fr";
+import { isStandardCoin } from "@/src/core/rules/currency";
 import { libelleMaitrise } from "@/lib/ui/maitrises";
 import { cleRegleCompetence } from "@/lib/ui/texteRegle";
 import type { SousEtape } from "@/lib/ui/cheminCreation";
@@ -164,8 +165,8 @@ export default function BackgroundStep({
     const currency = { ...inventory.currency };
 
     if (choice?.appliedGold) {
-      const unit = choice.appliedGold.unit as keyof typeof currency;
-      if (unit in currency) currency[unit] = Math.max(0, currency[unit] - choice.appliedGold.value);
+      const unit = choice.appliedGold.unit;
+      if (isStandardCoin(unit)) currency[unit] = Math.max(0, currency[unit] - choice.appliedGold.value);
     }
 
     const tag = `${TAG_PREFIX}${currentKey}:${option.label}`;
@@ -183,8 +184,8 @@ export default function BackgroundStep({
     items = [...items, ...newItems];
 
     if (option.gold) {
-      const unit = option.gold.unit as keyof typeof currency;
-      if (unit in currency) currency[unit] = (currency[unit] ?? 0) + option.gold.value;
+      const unit = option.gold.unit;
+      if (isStandardCoin(unit)) currency[unit] = (currency[unit] ?? 0) + option.gold.value;
     }
 
     onUpdateInventory({ ...inventory, items, currency });

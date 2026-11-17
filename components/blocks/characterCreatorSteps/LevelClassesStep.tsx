@@ -11,6 +11,7 @@ import type {
   ClassEquipmentBlockData,
 } from "@/src/core/schemas/rule-blocks";
 import { exceedsLevelCap } from "@/src/core/rules/characterRules";
+import { isStandardCoin } from "@/src/core/rules/currency";
 import { renderBlockData, type EquipmentCardInteraction } from "@/components/rules/blockContentRenderer";
 import Checkbox from "@/components/shared/Checkbox";
 import type { ProgressionEmplacement } from "@/lib/ui/progressionsPersonnage";
@@ -161,8 +162,8 @@ export default function LevelClassesStep({
     const currency = { ...inventory.currency };
     for (const choice of equipmentChoices) {
       if (choice?.appliedGold) {
-        const unit = choice.appliedGold.unit as keyof typeof currency;
-        if (unit in currency) currency[unit] = Math.max(0, currency[unit] - choice.appliedGold.value);
+        const unit = choice.appliedGold.unit;
+        if (isStandardCoin(unit)) currency[unit] = Math.max(0, currency[unit] - choice.appliedGold.value);
       }
     }
     onUpdateInventory({ ...inventory, items, currency });
@@ -175,8 +176,8 @@ export default function LevelClassesStep({
     let items = inventory.items.filter((it) => it.notes !== `${EQUIPMENT_TAG_PREFIX}choice:${choiceIndex}`);
     const currency = { ...inventory.currency };
     if (prior?.appliedGold) {
-      const unit = prior.appliedGold.unit as keyof typeof currency;
-      if (unit in currency) currency[unit] = Math.max(0, currency[unit] - prior.appliedGold.value);
+      const unit = prior.appliedGold.unit;
+      if (isStandardCoin(unit)) currency[unit] = Math.max(0, currency[unit] - prior.appliedGold.value);
     }
 
     const tag = `${EQUIPMENT_TAG_PREFIX}choice:${choiceIndex}`;
@@ -194,8 +195,8 @@ export default function LevelClassesStep({
     items = [...items, ...newItems];
 
     if (option.gold) {
-      const unit = option.gold.unit as keyof typeof currency;
-      if (unit in currency) currency[unit] = (currency[unit] ?? 0) + option.gold.value;
+      const unit = option.gold.unit;
+      if (isStandardCoin(unit)) currency[unit] = (currency[unit] ?? 0) + option.gold.value;
     }
 
     onUpdateInventory({ ...inventory, items, currency });

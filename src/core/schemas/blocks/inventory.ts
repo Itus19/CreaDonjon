@@ -34,6 +34,8 @@ const zCurrency = z.object({
   ep: z.number().nonnegative(),
   sp: z.number().nonnegative(),
   cp: z.number().nonnegative(),
+  /** V3.1-217 (ADR 0102) : pièces maison, par clé snake_case. Une clé inconnue du système reste affichée, comptée à 0. */
+  extra: z.record(z.string().regex(/^[a-z][a-z0-9_]*$/), z.number().int().nonnegative()).optional(),
 });
 
 export const zInventoryBlockData = z.object({

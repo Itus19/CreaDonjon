@@ -605,7 +605,7 @@ Le modèle lit le texte d'une fiche et propose des blocs (`resources`, `activati
 
 *Conçu le 17 novembre (ADR 0102).* Choix de l'auteur : les **cinq cases restent**, plus `extra` pour les pièces maison (aucun inventaire à convertir) ; le système vit dans un **bloc `currency_system`** sur la fiche « Pièces de monnaie », surchargeable par une variante.
 
-#### ☐ V3.1-217 — Le noyau paramétré : le système monétaire en paramètre · `M` · sans modèle IA — **prêt (Opus)**
+#### ☑ V3.1-217 — Le noyau paramétré : le système monétaire en paramètre · `M` · sans modèle IA — **prêt (Opus)**
 
 **Modèle conseillé : Opus** — noyau. Tests d'abord.
 
@@ -613,7 +613,7 @@ Le modèle lit le texte d'une fiche et propose des blocs (`resources`, `activati
 - `zCurrency` gagne `extra` (facultatif) ; `depositCoins`, `spendCoins`, `applyCurrencyDelta`, `totalValueCp` prennent le système (défaut : celui d'aujourd'hui).
 
 **Critères d'acceptation**
-- [ ] Les 28 tests de `currency.test.ts` passent sans changement ; tests nouveaux : une pièce maison courante se forme et se dépense, une réserve maison se casse dans l'ordre donné, une pièce absente du système compte à sa valeur standard (SRD) ou à 0 (maison).
+- [x] Les 28 tests de `currency.test.ts` passent sans changement ; tests nouveaux : une pièce maison courante se forme et se dépense, une réserve maison se casse dans l'ordre donné, une pièce absente du système compte à sa valeur standard (SRD) ou à 0 (maison).
 
 #### ☐ V3.1-218 — Le bloc sur la fiche « Pièces de monnaie », lu par le service · `S` · sans modèle IA — **prêt (Opus)**
 

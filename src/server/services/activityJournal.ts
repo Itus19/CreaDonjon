@@ -18,6 +18,7 @@ import { walkRulesetChain, entryNameFrom } from "@/src/server/services/rules";
 import { normalizeStoredSnapshot } from "@/src/server/services/entityHistory";
 import { diffEntitySnapshots } from "@/src/core/history/diff";
 import { zInventoryBlockData, type InventoryBlockData, type InventoryItem } from "@/src/core/schemas/blocks/inventory";
+import { coinAmount, CURRENCY_ORDER, isStandardCoin, type CoinType } from "@/src/core/rules/currency";
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 
 type TypedClient = SupabaseClient<Database>;
@@ -58,7 +59,7 @@ export interface JournalEntry {
   blockDetail: string | null;
 }
 
-const CURRENCY_LABELS_FR: Record<keyof InventoryBlockData["currency"], string> = { pp: "pp", gp: "po", ep: "pe", sp: "pa", cp: "pc" };
+const CURRENCY_LABELS_FR: Record<CoinType, string> = { pp: "pp", gp: "po", ep: "pe", sp: "pa", cp: "pc" };
 
 const EMPTY_INVENTORY: InventoryBlockData = { __v: 1, items: [], containers: [], currency: { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 } };
 
@@ -100,9 +101,12 @@ function diffInventoryItems(before: InventoryBlockData, after: InventoryBlockDat
 function diffInventoryCurrency(
   before: InventoryBlockData["currency"],
   after: InventoryBlockData["currency"]
-): { denom: keyof InventoryBlockData["currency"]; before: number; after: number }[] {
-  const denoms = Object.keys(CURRENCY_LABELS_FR) as (keyof InventoryBlockData["currency"])[];
-  return denoms.filter((d) => before[d] !== after[d]).map((d) => ({ denom: d, before: before[d], after: after[d] }));
+): { denom: string; before: number; after: number }[] {
+  // V3.1-217 : les cinq pièces, puis les pièces maison de l'un ou l'autre état (affichées par leur clé).
+  const denoms = [...new Set([...CURRENCY_ORDER, ...Object.keys(before.extra ?? {}), ...Object.keys(after.extra ?? {})])];
+  return denoms
+    .map((d) => ({ denom: d, before: coinAmount(before, d), after: coinAmount(after, d) }))
+    .filter((c) => c.before !== c.after);
 }
 
 /**
@@ -187,7 +191,7 @@ async function formatInventoryDetail(
   }
   for (const change of currencyChanges) {
     const delta = change.after - change.before;
-    lines.push(`${CURRENCY_LABELS_FR[change.denom]} : ${change.before} → ${change.after} (${delta > 0 ? "+" : ""}${delta})`);
+    lines.push(`${isStandardCoin(change.denom) ? CURRENCY_LABELS_FR[change.denom] : change.denom} : ${change.before} → ${change.after} (${delta > 0 ? "+" : ""}${delta})`);
   }
   return lines.join(", ");
 }

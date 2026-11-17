@@ -148,6 +148,12 @@ Pour le SRD 2024, ces trois blocs s'écrivent à la main dans `data/srd/playable
 
 Un effet qui dure s'écrit dans `entity_active_effects` (SCHEMA.md §12.2) : par le PJ, ou par l'instance de combat pour toute autre créature (ADR 0073).
 
+### Système monétaire (V3.1-217, ADR 0102)
+
+| Bloc | Layout | Contenu |
+|---|---|---|
+| `currency_system` | `key_values` | les pièces d'un monde, sur la fiche « Pièces de monnaie » (`standard-exchange-rates`) : `coins` (`key` — une des cinq SRD ou une clé maison en `snake_case` —, `label` fr/en, `value_cp` entier positif, `role` `common` ou `reserve`) et `break_order` (réserves seulement). Refusé : clés en double, aucune pièce courante, aucune pièce courante de valeur 1. Sans bloc : `DEFAULT_CURRENCY_SYSTEM` (le système du 13 octobre) |
+
 ### Blocs requis par type d'entrée
 
 C'est ce qui répond à « n'oublier aucune information ». Chaque `entry_type` déclare les blocs qu'il doit posséder :

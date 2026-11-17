@@ -1961,6 +1961,7 @@ export const DEFAULT_BLOCK_DISPLAY: Record<BlockType, { label: string; layout: s
   resources: { label: "Ressources", layout: "key_values" },
   activation: { label: "Activations", layout: "key_values" },
   coverage: { label: "Couverture", layout: "key_values" },
+  currency_system: { label: "Système monétaire", layout: "key_values" },
 };
 
 export interface ImportRulesetEntryInput {
