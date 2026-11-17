@@ -3,6 +3,7 @@
 import type { InventoryBlockData } from "@/src/core/schemas/blocks/inventory";
 import type { WeaponData, ArmorData, ItemCost } from "@/src/core/rules/srdMapping";
 import type { EncumbranceResult } from "@/src/core/rules/encumbrance";
+import type { CurrencySystem } from "@/src/core/rules/currency";
 import InventoryPanel from "./InventoryPanel";
 
 /**
@@ -26,6 +27,7 @@ export default function InventoryTab({
   encumbrance,
   server,
   monnaieLectureSeule,
+  currencySystem,
 }: {
   worldSlug: string;
   inventory: InventoryBlockData | undefined;
@@ -43,6 +45,8 @@ export default function InventoryTab({
   server?: { entityId: string; campaignId: string | null; onBlockRefreshed: (fresh: { id: string; data: unknown; version: number }) => void };
   /** V3.1-109 : pièces en lecture seule (interrupteur du MJ coupé). */
   monnaieLectureSeule?: boolean;
+  /** V3.1-219 : le système monétaire du monde. */
+  currencySystem?: CurrencySystem;
 }) {
   return (
     <div className="pt-3">
@@ -62,6 +66,7 @@ export default function InventoryTab({
         encumbrance={encumbrance}
         server={server}
         monnaieLectureSeule={monnaieLectureSeule}
+        currencySystem={currencySystem}
       />
     </div>
   );

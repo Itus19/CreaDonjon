@@ -34,7 +34,7 @@ export default function InventoryBlockEditor({
   worldSlug: string;
   character?: CharacterBlockData;
 }) {
-  const { sheet, isMonk, weaponByKey, equipment, weight, cost } = useCharacterSheetContext(worldSlug, character, data, undefined);
+  const { sheet, isMonk, weaponByKey, equipment, weight, cost, currencySystem } = useCharacterSheetContext(worldSlug, character, data, undefined);
 
   return (
     <InventoryPanel
@@ -51,6 +51,7 @@ export default function InventoryBlockEditor({
       weight={weight}
       cost={cost}
       encumbrance={character ? sheet.encumbrance : undefined}
+      currencySystem={currencySystem}
     />
   );
 }

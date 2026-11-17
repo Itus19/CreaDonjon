@@ -13,6 +13,8 @@ import type { ClassSpellcasting } from "@/src/core/rules/sheet";
 import { belongsToAnotherSubclass, subclassFeatureEntryKey, subclassFeatures, type SubclassFeatureData } from "@/src/core/rules/subclass";
 import { zChoicesBlockData, type ChoiceGrant, type ChoicesBlockData } from "@/src/core/schemas/rule-blocks/choices";
 import { resolveChoices, simpleGrantChoices, type ChoiceSource, type FeatChoiceData, type ResolvedChoices, type SpellMeta } from "@/src/core/rules/choices";
+import { DEFAULT_CURRENCY_SYSTEM } from "@/src/core/rules/currency";
+import { readCurrencySystem } from "@/src/server/services/currencySystem";
 import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
@@ -1294,6 +1296,7 @@ const EMPTY_RULESET_VIEW = {
   weight: {},
   cost: {},
   spellLevels: {},
+  currencySystem: DEFAULT_CURRENCY_SYSTEM,
 };
 
 /**
@@ -1310,10 +1313,13 @@ export async function buildResolvedRulesetView(
 ) {
   const rulesetId = await getWorldDefaultRulesetId(supabase, worldId);
   if (!rulesetId) return EMPTY_RULESET_VIEW;
-  const [assembled, equipmentData, spellLevels] = await Promise.all([
+  // V3.1-219 (ADR 0102) : le système monétaire du monde voyage avec le ruleset résolu
+  // (une résolution de fiche de plus, en parallèle ; la réponse est mise en cache 30 s côté écran).
+  const [assembled, equipmentData, spellLevels, currencySystem] = await Promise.all([
     assembleResolvedRuleset(supabase, rulesetId, selection, locale),
     resolveEquipmentData(supabase, rulesetId, selection.equipmentKeys ?? []),
     resolveSpellLevels(supabase, rulesetId, selection.spellKeys ?? []),
+    readCurrencySystem(supabase, rulesetId),
   ]);
   const { armor: equipment, weapon: weaponByKey, weight, cost } = equipmentData;
   // Les sorts qu'une aptitude accorde (sous-classe) se lancent depuis la fiche comme les connus :
@@ -1322,5 +1328,5 @@ export async function buildResolvedRulesetView(
     (k) => !(k in spellLevels)
   );
   const niveauxAccordes = accordes.length > 0 ? await resolveSpellLevels(supabase, rulesetId, accordes) : {};
-  return { ...assembled, equipment, weaponByKey, weight, cost, spellLevels: { ...spellLevels, ...niveauxAccordes } };
+  return { ...assembled, equipment, weaponByKey, weight, cost, spellLevels: { ...spellLevels, ...niveauxAccordes }, currencySystem };
 }

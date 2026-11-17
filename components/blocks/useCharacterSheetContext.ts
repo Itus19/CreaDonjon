@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/blocks/inventory";
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
+import type { CurrencySystem } from "@/src/core/rules/currency";
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
 import { characterSheet, type Ability, type ActiveEffect, type CharacterBuild, type DerivedSheet, type EquippedItem, type ResolvedFeature } from "@/src/core/rules/sheet";
 import { routeSkillChoices } from "@/src/core/rules/skillChoiceRouting";
@@ -72,6 +73,8 @@ export interface CharacterSheetContext {
   featCatalog: Record<string, FeatChoiceData>;
   /** Ce qu'une expertise peut viser (compétences maîtrisées hors expertise). */
   proficientSkills: string[];
+  /** V3.1-219 (ADR 0102) : le système monétaire du monde. */
+  currencySystem: CurrencySystem;
 }
 
 /**
@@ -147,6 +150,7 @@ export function useCharacterSheetContext(
     choiceSources,
     choicePresets,
     featCatalog,
+    currencySystem,
     pret: rulesetPret,
   } = useResolvedRuleset(worldSlug, selection);
   const backgroundAbilityScores = (rawBackgroundAbilityScores as Ability[] | null) ?? null;
@@ -412,5 +416,6 @@ export function useCharacterSheetContext(
     choiceSources,
     featCatalog,
     proficientSkills: grantedChoices.proficientSkills,
+    currencySystem,
   };
 }

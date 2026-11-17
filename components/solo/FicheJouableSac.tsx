@@ -4,8 +4,9 @@ import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/block
 import { lbToKg, type EncumbranceResult } from "@/src/core/rules/encumbrance";
 import { itemLabel, itemRef } from "@/components/blocks/inventoryItem";
 import { refIdentity, type ResolvedChipView } from "@/components/blocks/useReferenceChips";
-import { CURRENCY_ORDER } from "@/src/core/rules/currency";
-import { CURRENCY_LABELS_FR } from "@/src/i18n/fr";
+import { useLocale, useTranslations } from "next-intl";
+import type { CurrencySystem } from "@/src/core/rules/currency";
+import { piecesAffichees } from "@/lib/ui/monnaie";
 import Checkbox from "@/components/shared/Checkbox";
 import { JaugeCirculaire } from "./FicheJouableEnTete";
 
@@ -36,14 +37,18 @@ export default function FicheJouableSac({
   onUpdateInventory,
   itemChips,
   encumbrance,
+  currencySystem,
 }: {
   inventory: InventoryBlockData | undefined;
   onUpdateInventory: (data: InventoryBlockData) => void;
   itemChips: Map<string, ResolvedChipView>;
   encumbrance: EncumbranceResult;
+  /** V3.1-219 (ADR 0102) : le système monétaire du monde. */
+  currencySystem: CurrencySystem;
 }) {
   const items = inventory?.items ?? [];
-  const currency = inventory?.currency ?? { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 };
+  const tm = useTranslations("fiche.monnaie");
+  const pieces = piecesAffichees(inventory?.currency ?? { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 }, currencySystem, useLocale());
 
   function toggleEquipped(itemId: string) {
     const base = inventory ?? { __v: 1 as const, items: [], containers: [], currency: { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 } };
@@ -64,9 +69,14 @@ export default function FicheJouableSac({
           qu'on vient y vérifier en jouant (auteur, 23 septembre). */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex flex-wrap gap-1">
-          {CURRENCY_ORDER.map((coin) => (
-            <span key={coin} className={`rounded-full border border-edge px-2 py-0.5 text-xs ${currency[coin] > 0 ? "text-ink" : "text-ink-muted"}`}>
-              {currency[coin]} {CURRENCY_LABELS_FR[coin]}
+          {pieces.map((p) => (
+            <span
+              key={p.key}
+              title={p.status === "outside" ? tm("horsSysteme") : p.status === "unknown" ? tm("inconnue") : p.label}
+              className={`rounded-full border border-edge px-2 py-0.5 text-xs ${p.amount > 0 ? "text-ink" : "text-ink-muted"} ${p.status !== "known" ? "italic" : ""}`}
+            >
+              {p.amount} {p.abbr}
+              {p.status !== "known" && <span aria-hidden="true"> ?</span>}
             </span>
           ))}
         </div>

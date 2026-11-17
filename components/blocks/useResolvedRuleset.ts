@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { ResolvedRuleset } from "@/src/core/rules/sheet";
 import type { ChoiceSource, FeatChoiceData } from "@/src/core/rules/choices";
 import type { ArmorData, ItemCost, WeaponData } from "@/src/core/rules/srdMapping";
+import { DEFAULT_CURRENCY_SYSTEM, type CurrencySystem } from "@/src/core/rules/currency";
 import { creerChargeurParLots } from "@/lib/chargement/chargeurParLots";
 import { selectionBody, selectionHasAnything, selectionKey, type RulesetSelection } from "@/lib/resolvedRuleset/selection";
 
@@ -55,6 +56,8 @@ export interface ResolvedRulesetView {
   choiceSources: ChoiceSource[];
   choicePresets: Record<string, string[]>;
   featCatalog: Record<string, FeatChoiceData>;
+  /** V3.1-219 (ADR 0102) : le système monétaire du monde (pièces, rôles, ordre de casse). */
+  currencySystem: CurrencySystem;
 }
 
 export type { RulesetSelection };
@@ -74,6 +77,7 @@ const EMPTY: ResolvedRulesetView = {
   choiceSources: [],
   choicePresets: {},
   featCatalog: {},
+  currencySystem: DEFAULT_CURRENCY_SYSTEM,
 };
 
 

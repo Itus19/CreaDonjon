@@ -2052,6 +2052,10 @@
     "enAttente": "Waiting for the saving throw…"
   },
   "fiche": {
+    "monnaie": {
+      "horsSysteme": "Not in this world's currency system: counted at its standard value, no longer formed.",
+      "inconnue": "Coin unknown to this world: counted as 0, never spent."
+    },
     "activation": {
       "apresSort": {"libelle": "Right after: {action} ({aptitude})", "passer": "Skip", "passe": "Skipped: nothing is used.", "utilisee": "Used.", "erreur": "The use could not be played."},
       "reaction": "Reaction: offered during the roll",

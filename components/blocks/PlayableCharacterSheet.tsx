@@ -193,6 +193,7 @@ export default function PlayableCharacterSheet({
     weaponMasteryChips,
     masteredWeaponKeys,
     openChoices,
+    currencySystem,
   } = useCharacterSheetContext(worldSlug, character, inventory, spellcasting, effetsPortes);
   const t = useTranslations("creation");
   const aRappeler = rulesetPret ? choixOuverts(remainingChoices, openChoices, character.choices) : [];
@@ -890,6 +891,7 @@ export default function PlayableCharacterSheet({
                 encumbrance={sheet.encumbrance}
                 server={{ entityId, campaignId, onBlockRefreshed }}
                 monnaieLectureSeule={!commandes.currency}
+                currencySystem={currencySystem}
               />
             )}
 

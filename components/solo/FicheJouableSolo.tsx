@@ -237,6 +237,7 @@ export default function FicheJouableSolo({
     languageChoices,
     allLanguages,
     spellLevels,
+    currencySystem,
   } = useCharacterSheetContext(worldSlug, character, inventory, spellcasting);
 
   // V3.1-118 : les sorts accordés partent dans la même requête de noms que les sorts connus.
@@ -538,7 +539,7 @@ export default function FicheJouableSolo({
           )}
 
           {tab === "inventaire" && (
-            <FicheJouableSac inventory={inventory} onUpdateInventory={updateInventory} itemChips={itemChips} encumbrance={sheet.encumbrance} />
+            <FicheJouableSac inventory={inventory} onUpdateInventory={updateInventory} itemChips={itemChips} encumbrance={sheet.encumbrance} currencySystem={currencySystem} />
           )}
 
           {tab === "magie" && spellcasting && (

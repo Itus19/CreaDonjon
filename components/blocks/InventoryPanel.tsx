@@ -8,10 +8,11 @@ import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 import { weaponAttackAbility, weaponAttackAbilityMod } from "@/src/core/rules/action";
 import { rollBonus, type Modifier } from "@/src/core/rules/sheet";
 import { complementDes, plageCritique, sourcesDesTexte } from "@/lib/ui/valeursCalculees";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import type { ArmorData, ItemCost, WeaponData } from "@/src/core/rules/srdMapping";
 import { lbToKg, ftToM } from "@/src/core/rules/encumbrance";
-import { CURRENCY_ORDER, depositCoins, spendCoins, type CoinType } from "@/src/core/rules/currency";
+import { coinAmount, DEFAULT_CURRENCY_SYSTEM, isStandardCoin, depositCoins, spendCoins, type CurrencySystem } from "@/src/core/rules/currency";
+import { piecesAffichees } from "@/lib/ui/monnaie";
 import { useReferenceChips, refIdentity, type ResolvedChipView } from "./useReferenceChips";
 import { itemLabel, itemRef } from "./inventoryItem";
 import ItemAutocomplete from "./ItemAutocomplete";
@@ -573,6 +574,7 @@ export default function InventoryPanel({
   encumbrance,
   server,
   monnaieLectureSeule = false,
+  currencySystem = DEFAULT_CURRENCY_SYSTEM,
 }: {
   worldSlug: string;
   inventory: InventoryBlockData | undefined;
@@ -596,9 +598,15 @@ export default function InventoryPanel({
   encumbrance?: { carried: number; capacity: number; tier: "none" | "encumbered" | "heavily_encumbered" };
   /** V3.1-109 : l'interrupteur « pièces » du MJ est coupé — les pièces se voient, sans saisie ni ▲▼. */
   monnaieLectureSeule?: boolean;
+  /** V3.1-219 (ADR 0102) : le système monétaire du monde (défaut : celui du 13 octobre). */
+  currencySystem?: CurrencySystem;
 }) {
   const [coinDelta, setCoinDelta] = useState("");
-  const [coinType, setCoinType] = useState<CoinType>("gp");
+  const [coinType, setCoinType] = useState<string>("gp");
+  const tm = useTranslations("fiche.monnaie");
+  const locale = useLocale();
+  const pieces = piecesAffichees(inventory?.currency ?? { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 }, currencySystem, locale);
+  const piecesDuSysteme = pieces.filter((p) => p.status === "known");
   const [coinError, setCoinError] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -671,9 +679,9 @@ export default function InventoryPanel({
   }
 
   /** Champ de piece quitte (mode serveur) : l'ecart avec la valeur affichee devient un delta de cette piece. */
-  async function commitCoinField(coin: CoinType, raw: string) {
+  async function commitCoinField(coin: string, raw: string) {
     const typed = Math.max(0, Math.trunc(Number(raw) || 0));
-    const diff = typed - (inventory?.currency[coin] ?? 0);
+    const diff = typed - (inventory ? coinAmount(inventory.currency, coin) : 0);
     if (diff === 0) return;
     setCoinError(false);
     await postInventoryAction("currency", { delta: { [coin]: diff } });
@@ -691,9 +699,9 @@ export default function InventoryPanel({
     }
     const base = inventoryBase();
     if (sign === 1) {
-      onUpdateInventory({ ...base, currency: depositCoins(base.currency, coinType, amount) });
+      onUpdateInventory({ ...base, currency: depositCoins(base.currency, coinType, amount, currencySystem) });
     } else {
-      const next = spendCoins(base.currency, coinType, amount);
+      const next = spendCoins(base.currency, coinType, amount, currencySystem);
       if (!next) {
         setCoinError(true);
         return;
@@ -736,49 +744,64 @@ export default function InventoryPanel({
           qu'un shrink discret des elements suffit a tout faire tenir. */}
       <div className="flex flex-col gap-1">
         <div className="flex items-end gap-2">
-          <div className="grid grid-cols-5 gap-1">
-            {(["pp", "gp", "ep", "sp", "cp"] as const).map((coin) => (
-              <label key={coin} className="flex flex-col gap-1 text-xs text-ink-muted">
-                {CURRENCY_LABELS_FR[coin]}
-                {monnaieLectureSeule ? (
-                  <span className="rounded-md border border-edge px-1 py-1 text-center text-xs text-ink">{inventory?.currency[coin] ?? 0}</span>
-                ) : server && inventory ? (
-                  // Mode serveur : on valide en quittant le champ (un delta par saisie
-                  // finie, pas par frappe) ; la cle remet le champ a la valeur ecrite.
-                  <input
-                    key={`${coin}-${inventory.currency[coin]}`}
-                    type="number"
-                    min={0}
-                    defaultValue={inventory.currency[coin]}
-                    disabled={pending}
-                    onBlur={(e) => void commitCoinField(coin, e.target.value)}
-                    className="w-full rounded-md border border-edge bg-transparent px-1 py-1 text-center text-xs text-ink outline-none disabled:opacity-50"
-                  />
-                ) : (
-                  <input
-                    type="number"
-                    min={0}
-                    value={inventory?.currency[coin] ?? 0}
-                    onChange={(e) => {
-                      const base = inventoryBase();
-                      onUpdateInventory({ ...base, currency: { ...base.currency, [coin]: Number(e.target.value) || 0 } });
-                    }}
-                    className="w-full rounded-md border border-edge bg-transparent px-1 py-1 text-center text-xs text-ink outline-none"
-                  />
-                )}
-              </label>
-            ))}
+          {/* V3.1-219 (ADR 0102) : les pièces du système (cinq ou plus), cinq par ligne au plus ;
+              une pièce hors système ou inconnue est signalée et ne se saisit pas. */}
+          <div className="grid min-w-0 flex-1 gap-1" style={{ gridTemplateColumns: `repeat(${Math.min(5, pieces.length)}, minmax(0, 1fr))` }}>
+            {pieces.map((piece) => {
+              const horsSysteme = piece.status !== "known";
+              const aide = piece.status === "outside" ? tm("horsSysteme") : piece.status === "unknown" ? tm("inconnue") : piece.label;
+              return (
+                <label key={piece.key} className="flex min-w-0 flex-col gap-1 text-xs text-ink-muted" title={aide}>
+                  <span className={`truncate ${horsSysteme ? "italic" : ""}`}>
+                    {piece.abbr}
+                    {horsSysteme && <span aria-hidden="true"> ?</span>}
+                    {horsSysteme && <span className="sr-only"> — {aide}</span>}
+                  </span>
+                  {monnaieLectureSeule || horsSysteme ? (
+                    <span className="rounded-md border border-edge px-1 py-1 text-center text-xs text-ink">{piece.amount}</span>
+                  ) : server && inventory ? (
+                    // Mode serveur : on valide en quittant le champ (un delta par saisie
+                    // finie, pas par frappe) ; la cle remet le champ a la valeur ecrite.
+                    <input
+                      key={`${piece.key}-${piece.amount}`}
+                      type="number"
+                      min={0}
+                      defaultValue={piece.amount}
+                      disabled={pending}
+                      onBlur={(e) => void commitCoinField(piece.key, e.target.value)}
+                      className="w-full rounded-md border border-edge bg-transparent px-1 py-1 text-center text-xs text-ink outline-none disabled:opacity-50"
+                    />
+                  ) : (
+                    <input
+                      type="number"
+                      min={0}
+                      value={piece.amount}
+                      onChange={(e) => {
+                        const base = inventoryBase();
+                        const n = Number(e.target.value) || 0;
+                        const currency =
+                          isStandardCoin(piece.key)
+                            ? { ...base.currency, [piece.key]: n }
+                            : { ...base.currency, extra: { ...base.currency.extra, [piece.key]: n } };
+                        onUpdateInventory({ ...base, currency });
+                      }}
+                      className="w-full rounded-md border border-edge bg-transparent px-1 py-1 text-center text-xs text-ink outline-none"
+                    />
+                  )}
+                </label>
+              );
+            })}
           </div>
           {!monnaieLectureSeule && (
           <div className="flex shrink-0 items-center gap-1">
             <Dropdown
               value={coinType}
               onChange={(v) => {
-                setCoinType(v as CoinType);
+                setCoinType(v);
                 setCoinError(false);
               }}
               aria-label="Type de pièce"
-              options={CURRENCY_ORDER.map((coin) => ({ value: coin, label: CURRENCY_LABELS_FR[coin] }))}
+              options={piecesDuSysteme.map((p) => ({ value: p.key, label: p.abbr }))}
             />
             <Stepper onIncrement={() => applyCoinDelta(1)} onDecrement={() => applyCoinDelta(-1)} incrementLabel="Ajouter" decrementLabel="Retirer" className="w-12">
               <input

@@ -2053,6 +2053,10 @@
     "enAttente": "En attente de la sauvegarde…"
   },
   "fiche": {
+    "monnaie": {
+      "horsSysteme": "Hors du système monétaire de ce monde : comptée à sa valeur standard, plus formée.",
+      "inconnue": "Pièce inconnue de ce monde : comptée à 0, jamais dépensée."
+    },
     "activation": {
       "apresSort": {"libelle": "Aussitôt après : {action} ({aptitude})", "passer": "Passer", "passe": "Passé : rien n'est utilisé.", "utilisee": "Utilisée.", "erreur": "L'utilisation n'a pas pu être jouée."},
       "reaction": "Réaction : se propose pendant le jet",
