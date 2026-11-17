@@ -25,7 +25,7 @@ Tous ces fichiers partagent le même compte de test (`docs/TESTS.md` : jamais de
 **Piste** (à trancher au ticket, pas ici) : nettoyer par les identifiants réellement créés par le fichier plutôt que par `owner_id`, ou sérialiser pour de bon les fichiers qui touchent `worlds`. Ne pas créer de compte de test par fichier (`docs/QUOTAS.md`).
 
 **Critères d'acceptation**
-- [ ] `npm run test` passe deux fois de suite sans échec de montage.
+- [x] `npm run test` passe deux fois de suite sans échec de montage (7e5cc068 : 3998 tests ; f2e4cb6c : 4005 tests, 17 novembre).
 - [x] Aucun fichier d'intégration ne supprime une ligne qu'il n'a pas créée (revue du recensement Haiku).
 - [x] Aucun compte de test nouveau.
 
