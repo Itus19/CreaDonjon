@@ -13,6 +13,7 @@ import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import { clearWorldRuleEntriesCache } from "@/components/blocks/useWorldRuleEntries";
 import HomebrewEditForm, { isEditableHomebrewType } from "@/components/rules/HomebrewEditForm";
 import PlayableBricksEditor from "@/components/rules/PlayableBricksEditor";
+import CurrencySystemEditor from "@/components/rules/CurrencySystemEditor";
 import AptitudesJouables from "@/components/rules/AptitudesJouables";
 import BadgeCouverture from "@/components/rules/BadgeCouverture";
 import { COVERAGE_ENTRY_TYPES } from "@/src/core/rules/activationEditor";
@@ -58,6 +59,8 @@ export default function RuleEntryView({
   // V3.1-202 : « Rendre jouable » une aptitude de sous-classe arrive ici avec `?briques=1` : l'éditeur s'ouvre d'emblée.
   const searchParams = useSearchParams();
   const [editingBriques, setEditingBriques] = useState(() => !playerRestricted && !entry.isOfficialBase && searchParams.get("briques") === "1");
+  // V3.1-220 : le formulaire du système monétaire, dans la fiche comme les briques.
+  const [editingMonnaie, setEditingMonnaie] = useState(false);
   // Message du dernier geste du menu (confirmation ou erreur du serveur).
   const [geste, setGeste] = useState<{ texte: string; erreur: boolean } | null>(null);
   const typeModifiable = isEditableHomebrewType(entry.entryType);
@@ -70,6 +73,7 @@ export default function RuleEntryView({
     isOfficialBase: entry.isOfficialBase,
     typeModifiable,
     typeJouable: (COVERAGE_ENTRY_TYPES as readonly string[]).includes(entry.entryType),
+    aSystemeMonetaire: entry.blocks.some((b) => b.blockType === "currency_system"),
   });
 
   async function epingler() {
@@ -114,6 +118,7 @@ export default function RuleEntryView({
       label: aDesBriques(entry.blocks) ? t("briques.modifierBriques") : t("briques.rendreJouable"),
       onSelect: () => setEditingBriques(true),
     },
+    monnaie: { label: t("monnaie.modifierSysteme"), onSelect: () => setEditingMonnaie(true) },
     supprimer: { label: t("supprimer"), onSelect: () => setConfirmingDelete(true), danger: true },
   };
 
@@ -170,7 +175,7 @@ export default function RuleEntryView({
               </span>
             )}
             {entry.coverage && <BadgeCouverture coverage={entry.coverage} />}
-            {entrees.length > 0 && !editing && !editingBriques && (
+            {entrees.length > 0 && !editing && !editingBriques && !editingMonnaie && (
               <ActionsMenu items={entrees.map((e) => libellesEntrees[e])} aria-label={t("actionsRegle")} />
             )}
           </div>
@@ -209,6 +214,18 @@ export default function RuleEntryView({
             relireFiche();
           }}
           onCancel={() => setEditingBriques(false)}
+        />
+      )}
+
+      {editingMonnaie && (
+        <CurrencySystemEditor
+          worldSlug={worldSlug}
+          entry={entry}
+          onDone={() => {
+            setEditingMonnaie(false);
+            relireFiche();
+          }}
+          onCancel={() => setEditingMonnaie(false)}
         />
       )}
 

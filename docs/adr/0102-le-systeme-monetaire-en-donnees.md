@@ -60,3 +60,10 @@ Le bloc est validé par Zod :
 - Aucune migration SQL : le bloc et le porte-monnaie sont du `jsonb` validé par Zod.
 - L'écran d'inventaire affiche les pièces du système (cinq ou plus), et le formulaire de règle sait saisir le bloc.
 - Découpé en V3.1-217 à 220.
+
+## Mise en œuvre (17 novembre, V3.1-217 à 220)
+
+- Le système voyage avec le ruleset résolu (`/resolved-ruleset`, en cache 30 s à l'écran) plutôt que par une route à lui : aucune requête de plus pour l'écran.
+- Le formulaire écrit par le chemin de l'éditeur de briques (`savePlayableBlocks`, route `rules/playable`) : une seule logique de surcharge (`replace_block`, `add_block`, version maison).
+- La route de monnaie refuse une pièce absente du système (`unknown_coin`) : une faute de frappe ne crée pas de pièce.
+

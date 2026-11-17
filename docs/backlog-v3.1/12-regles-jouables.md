@@ -629,10 +629,10 @@ Le modèle lit le texte d'une fiche et propose des blocs (`resources`, `activati
 **Critères d'acceptation**
 - [x] Au navigateur (360 px et ordinateur) : une pièce maison s'ajoute, se dépense, s'affiche avec son libellé ; aucun débordement. *(17 nov. : couronne déposée puis monnaie rendue ; pièce inconnue en italique « ? », lecture seule ; la grille passe à la ligne à 360 px ; planche « Porte-monnaie » de Fiche.dc.html, catalogue v108.)*
 
-#### ☐ V3.1-220 — Saisir le système monétaire dans l'éditeur de règle · `S` · sans modèle IA — **prêt (Sonnet)**
+#### ☑ V3.1-220 — Saisir le système monétaire dans l'éditeur de règle · `S` · sans modèle IA — **prêt (Sonnet)**
 
 **Dépend de** : 217. Le formulaire du bloc `currency_system` (ajouter une pièce, son rôle, l'ordre de casse), validé par le schéma ; aller-retour testé.
 
 **Critères d'acceptation**
-- [ ] Une variante saisit une pièce maison par l'éditeur ; le bloc relu est identique.
+- [x] Une variante saisit une pièce maison par l'éditeur ; le bloc relu est identique. *(17 nov. : aller-retour `systemeMonetaire.test.ts`, intégration `currencySystem.integration.test.ts`, vérifié au navigateur à 1400 et 360 px ; écrit par le chemin des briques, `replace_block` dans la variante.)*
 

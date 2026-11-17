@@ -205,6 +205,28 @@
     "maitrisesAccordees": "Accordées par une règle"
   },
   "regles": {
+    "monnaie": {
+      "modifierSysteme": "Modifier le système monétaire",
+      "titre": "Système monétaire",
+      "aide": "Une pièce par ligne : clé (snake_case), libellés, valeur en pièces de cuivre, rôle. Une pièce courante se forme et se regroupe ; une réserve est gardée et cassée au besoin. Il faut une pièce courante de valeur 1.",
+      "cle": "Clé",
+      "libelleFr": "Libellé (fr)",
+      "libelleEn": "Libellé (en)",
+      "valeur": "Valeur (pc)",
+      "role": "Rôle",
+      "courante": "Courante",
+      "reserve": "Réserve",
+      "retirer": "Retirer {nom}",
+      "ajouter": "+ Ajouter une pièce",
+      "ordreDeCasse": "Ordre de casse des réserves",
+      "aucuneReserve": "Aucune réserve.",
+      "monter": "Monter {nom}",
+      "descendre": "Descendre {nom}",
+      "annuler": "Annuler",
+      "enregistrer": "Enregistrer",
+      "enregistrement": "Enregistrement…",
+      "sansVariante": "Choisis d'abord une variante (« Règles actives ») : une règle officielle ne se modifie jamais."
+    },
     "incantationSousClasse": {
       "listeDeSorts": "Sorts de :",
       "aucuneListe": "aucune liste",

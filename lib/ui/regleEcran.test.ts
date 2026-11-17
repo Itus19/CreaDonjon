@@ -25,6 +25,11 @@ describe("entreesMenuRegle", () => {
     expect(entreesMenuRegle({ ...base, isHomebrew: true })).toContain("supprimer");
     expect(entreesMenuRegle({ ...base, houseVersion: true })).not.toContain("supprimer");
   });
+  it("propose le système monétaire sur la fiche qui le porte, jamais au joueur (V3.1-220)", () => {
+    expect(entreesMenuRegle(base)).not.toContain("monnaie");
+    expect(entreesMenuRegle({ ...base, aSystemeMonetaire: true })).toContain("monnaie");
+    expect(entreesMenuRegle({ ...base, aSystemeMonetaire: true, playerRestricted: true })).not.toContain("monnaie");
+  });
   it("propose l'éditeur de briques pour un type jouable, même sur une base officielle, jamais au joueur", () => {
     expect(entreesMenuRegle(base)).not.toContain("briques");
     expect(entreesMenuRegle({ ...base, typeJouable: true })).toContain("briques");

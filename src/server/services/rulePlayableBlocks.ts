@@ -35,7 +35,8 @@ type TypedClient = SupabaseClient<Database>;
  */
 
 /** V3.1-170 (ADR 0077) : `modifiers` aussi, pour ses auras et retouches (l'éditeur renvoie le bloc entier). V3.1-207 : `forced_save_failures`. */
-export const PLAYABLE_BLOCK_TYPES = ["resources", "activation", "coverage", "forced_save_failures", "modifiers"] as const;
+/** V3.1-220 (ADR 0102) : `currency_system` aussi — le système monétaire de la fiche « Pièces de monnaie » s'écrit par le même chemin de surcharge. */
+export const PLAYABLE_BLOCK_TYPES = ["resources", "activation", "coverage", "forced_save_failures", "modifiers", "currency_system"] as const;
 export type PlayableBlockType = (typeof PLAYABLE_BLOCK_TYPES)[number];
 
 /** `undefined` : ne pas toucher ; `null` : retirer le bloc ; un objet : la donnée (revalidée ici). */
@@ -46,7 +47,7 @@ export type SavePlayableBlocksResult =
   | { ok: false; reason: "no_variant" | "not_found" | "invalid"; message?: string };
 
 /** Après les blocs existants d'une règle officielle (leurs ordres vont de 100 en 100). */
-const DISPLAY_ORDER: Record<PlayableBlockType, number> = { resources: 9000, modifiers: 9050, activation: 9100, forced_save_failures: 9150, coverage: 9200 };
+const DISPLAY_ORDER: Record<PlayableBlockType, number> = { resources: 9000, modifiers: 9050, activation: 9100, forced_save_failures: 9150, coverage: 9200, currency_system: 300 };
 
 function validate(input: PlayableBlocksInput): Map<PlayableBlockType, unknown | null> {
   const out = new Map<PlayableBlockType, unknown | null>();

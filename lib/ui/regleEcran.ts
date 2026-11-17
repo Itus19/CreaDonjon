@@ -4,7 +4,7 @@
  * Aucun effet ici : les appels réseau vivent dans `regleApi.ts`.
  */
 
-export type EntreeMenuRegle = "epingler" | "copierLien" | "versionMaison" | "modifier" | "briques" | "supprimer";
+export type EntreeMenuRegle = "epingler" | "copierLien" | "versionMaison" | "modifier" | "briques" | "monnaie" | "supprimer";
 
 export interface DrapeauxRegle {
   /** Coquille joueur : ni ⋮ ni bascule (la page du joueur est le ticket V3.1-95). */
@@ -19,6 +19,8 @@ export interface DrapeauxRegle {
   typeModifiable: boolean;
   /** V3.1-132 : le type de la fiche se « joue » (aptitude, sort, objet magique) — l'éditeur de briques existe pour elle. */
   typeJouable?: boolean;
+  /** V3.1-220 (ADR 0102) : la fiche porte le système monétaire (« Pièces de monnaie ») — son formulaire existe pour elle. */
+  aSystemeMonetaire?: boolean;
 }
 
 /** Les entrées du ⋮, dans l'ordre d'affichage. Vide pour le joueur. */
@@ -30,6 +32,8 @@ export function entreesMenuRegle(d: DrapeauxRegle): EntreeMenuRegle[] {
   if (!d.isOfficialBase && (d.isHomebrew || d.houseVersion) && d.typeModifiable) entrees.push("modifier");
   // Même sur une base officielle : l'éditeur s'ouvre et explique qu'il faut d'abord choisir une variante.
   if (d.typeJouable) entrees.push("briques");
+  // Même règle que les briques : le formulaire s'ouvre sur une base officielle et dit d'abord choisir une variante.
+  if (d.aSystemeMonetaire) entrees.push("monnaie");
   if (d.isHomebrew) entrees.push("supprimer");
   return entrees;
 }

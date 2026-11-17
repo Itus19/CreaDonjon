@@ -9,6 +9,8 @@ vi.mock("server-only", () => ({}));
 const { readCurrencySystemForEntity, CURRENCY_ENTRY_KEY } = await import("./currencySystem");
 const { changeCurrency } = await import("./inventoryActions");
 const { upsertRulesetOverride } = await import("../repos/rules");
+const { savePlayableBlocks } = await import("./rulePlayableBlocks");
+const { readCurrencySystem } = await import("./currencySystem");
 
 /**
  * V3.1-218 (ADR 0102) — le système monétaire lu par la chaîne de rulesets,
@@ -97,5 +99,17 @@ describe.skipIf(!hasCreds)("système monétaire par la chaîne de rulesets (V3.1
     const depense = await changeCurrency(client(), { entityId, delta: { gp: -3 }, actorUserId: owner.id, system });
     if ("error" in depense) throw new Error(depense.error);
     expect(depense.block.data.currency).toEqual({ pp: 0, gp: 2, ep: 0, sp: 0, cp: 0, extra: { crown: 1 } });
+  }, 60000);
+
+  it("V3.1-220 — l'éditeur enregistre une pièce maison dans la variante ; le bloc relu est identique", async () => {
+    if (!variantId) throw new Error("variante attendue (test précédent)");
+    const saisi = {
+      coins: [...DEFAULT_CURRENCY_SYSTEM.coins, { key: "gem_shard", label: { fr: "Éclat de gemme", en: "Gem shard" }, value_cp: 200, role: "reserve" as const }],
+      break_order: ["gem_shard", "ep", "pp"],
+    };
+    const r = await savePlayableBlocks(client(), { worldId: worldId!, entryKey: CURRENCY_ENTRY_KEY, blocks: { currency_system: saisi } });
+    if (!r.ok) throw new Error(r.reason);
+    variantId = r.rulesetId;
+    expect(await readCurrencySystem(client(), r.rulesetId)).toEqual(saisi);
   }, 60000);
 });

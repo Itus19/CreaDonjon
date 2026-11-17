@@ -204,6 +204,28 @@
     "maitrisesAccordees": "Granted by a rule"
   },
   "regles": {
+    "monnaie": {
+      "modifierSysteme": "Edit the currency system",
+      "titre": "Currency system",
+      "aide": "One coin per row: key (snake_case), labels, value in copper pieces, role. A common coin is formed and regrouped; a reserve is kept and broken when needed. A common coin worth 1 is required.",
+      "cle": "Key",
+      "libelleFr": "Label (fr)",
+      "libelleEn": "Label (en)",
+      "valeur": "Value (cp)",
+      "role": "Role",
+      "courante": "Common",
+      "reserve": "Reserve",
+      "retirer": "Remove {nom}",
+      "ajouter": "+ Add a coin",
+      "ordreDeCasse": "Reserve break order",
+      "aucuneReserve": "No reserve.",
+      "monter": "Move {nom} up",
+      "descendre": "Move {nom} down",
+      "annuler": "Cancel",
+      "enregistrer": "Save",
+      "enregistrement": "Saving…",
+      "sansVariante": "Pick a variant first (\"Active rules\"): an official rule is never modified."
+    },
     "incantationSousClasse": {
       "listeDeSorts": "Spells from:",
       "aucuneListe": "no list",
