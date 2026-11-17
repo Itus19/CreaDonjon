@@ -743,10 +743,10 @@ export default function InventoryPanel({
           ligne casserait la demande explicite ("sur la meme ligne"), alors
           qu'un shrink discret des elements suffit a tout faire tenir. */}
       <div className="flex flex-col gap-1">
-        <div className="flex items-end gap-2">
-          {/* V3.1-219 (ADR 0102) : les pièces du système (cinq ou plus), cinq par ligne au plus ;
+        <div className="flex flex-wrap items-end gap-2">
+          {/* V3.1-219 (ADR 0102) : les pièces du système (cinq ou plus), 3 rem au moins chacune : la grille passe à la ligne plutôt que d'écraser les champs ;
               une pièce hors système ou inconnue est signalée et ne se saisit pas. */}
-          <div className="grid min-w-0 flex-1 gap-1" style={{ gridTemplateColumns: `repeat(${Math.min(5, pieces.length)}, minmax(0, 1fr))` }}>
+          <div className="grid min-w-[12rem] flex-1 gap-1" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(3rem, 1fr))" }}>
             {pieces.map((piece) => {
               const horsSysteme = piece.status !== "known";
               const aide = piece.status === "outside" ? tm("horsSysteme") : piece.status === "unknown" ? tm("inconnue") : piece.label;

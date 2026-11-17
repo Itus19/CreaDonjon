@@ -622,12 +622,12 @@ Le modèle lit le texte d'une fiche et propose des blocs (`resources`, `activati
 **Critères d'acceptation**
 - [x] Intégration : une variante qui surcharge le bloc (une pièce maison courante) dépense et rend la monnaie selon elle ; le monde officiel garde le comportement d'aujourd'hui.
 
-#### ☐ V3.1-219 — L'inventaire affiche les pièces du système · `M` · sans modèle IA — **prêt (Sonnet)**
+#### ☑ V3.1-219 — L'inventaire affiche les pièces du système · `M` · sans modèle IA — **prêt (Sonnet)**
 
 **Dépend de** : 218. `InventoryPanel` et la feuille de monnaie : les pièces du système (cinq ou plus), une pièce maison inconnue signalée ; libellés dans `messages/` ; planche du catalogue.
 
 **Critères d'acceptation**
-- [ ] Au navigateur (360 px et ordinateur) : une pièce maison s'ajoute, se dépense, s'affiche avec son libellé ; aucun débordement.
+- [x] Au navigateur (360 px et ordinateur) : une pièce maison s'ajoute, se dépense, s'affiche avec son libellé ; aucun débordement. *(17 nov. : couronne déposée puis monnaie rendue ; pièce inconnue en italique « ? », lecture seule ; la grille passe à la ligne à 360 px ; planche « Porte-monnaie » de Fiche.dc.html, catalogue v108.)*
 
 #### ☐ V3.1-220 — Saisir le système monétaire dans l'éditeur de règle · `S` · sans modèle IA — **prêt (Sonnet)**
 
