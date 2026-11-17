@@ -69,6 +69,31 @@ describe("assembleCoverage", () => {
   it("lit un monstre : une action sans chiffre et un trait", () => {
     expect(de("orc").result.gaps.map((g) => g.brick)).toEqual(["monster_action", "monster_trait"]);
   });
+  it("une aptitude de sous-classe dont la sous-classe déclare la mécanique (modificateurs, sorts, choix) est jouable ; sans rien, non évaluée", () => {
+    const lignes = assembleCoverage([
+      fiche({
+        key: "draconic-sorcery",
+        type: "subclass",
+        blocks: [
+          {
+            block_type: "subclass_features",
+            data: {
+              features: [
+                { name: "Elemental Affinity", level: 6, description: "", modifiers: [{ target: "resist.fire", op: "add", value: 1 }] },
+                { name: "Dragon Wings", level: 14, description: "" },
+              ],
+            },
+          },
+        ],
+      }),
+      fiche({ key: "draconic-sorcery-elemental-affinity", type: "feature", sourceRaw: { subclass: { index: "draconic-sorcery" } } }),
+      fiche({ key: "draconic-sorcery-dragon-wings", type: "feature", sourceRaw: { subclass: { index: "draconic-sorcery" } } }),
+    ]);
+    const etat = (k: string) => lignes.find((r) => r.key === k)?.result.state;
+    expect(etat("draconic-sorcery-elemental-affinity")).toBe("playable");
+    expect(etat("draconic-sorcery-dragon-wings")).toBe("unevaluated");
+    expect(etat("draconic-sorcery")).toBe("partial");
+  });
   it("un état du moteur est jouable ; un historique est hors du compte", () => {
     expect(de("blinded").result.state).toBe("playable");
     expect(de("lore").result.state).toBe("out_of_scope");

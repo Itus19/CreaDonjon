@@ -37,6 +37,7 @@ import { buildHomebrewSpellEntry, HomebrewSpellError, type HomebrewSpellInput } 
 import { blockTypesToRemove } from "@/src/core/rules/homebrewEdit";
 import { ruleEntryForPlayer } from "@/src/core/rules/ruleForReader";
 import { COVERAGE_ENTRY_TYPES, coverageSummary, type CoverageSummary } from "@/src/core/rules/activationEditor";
+import { featureDeclaredBySubclass, subclassIndexOf } from "@/src/core/rules/coverageReport";
 import { isWorldAdmin } from "@/src/server/services/permissions";
 import { houseVersionChangedBlocks, isEditableHomebrewType, zHouseVersionPayload, type HouseVersionPayload } from "@/src/core/rules/houseVersion";
 import {
@@ -1222,6 +1223,18 @@ export async function getRuleEntryForWorld(
   // le type resolu depuis la charge utile `add_entry`, et `homebrewName` son
   // nom (aucun des deux ne passe par `entryNameFrom`/la table de traduction,
   // qui exigent tous deux une ligne `ruleset_entries` reelle).
+  let coverage = (COVERAGE_ENTRY_TYPES as readonly string[]).includes(resolved.entry_type)
+    ? coverageSummary(blocks.map((b) => ({ blockType: b.blockType, data: b.data })))
+    : null;
+  // V3.1-139 : une aptitude de sous-classe jouée par le bloc de sa sous-classe (Affinité élémentaire) n'est pas
+  // « non évaluée ». Une résolution de plus, seulement pour une aptitude de sous-classe sans brique ni lacune.
+  const sousClasse = coverage?.state === "unevaluated" && resolved.entry_type === "feature" ? subclassIndexOf(entry?.source_raw) : undefined;
+  if (coverage && sousClasse && rulesetId) {
+    const blocsSousClasse = await resolveEntryBlocksInRuleset(supabase, rulesetId, sousClasse);
+    const donnees = blocsSousClasse?.blocksByType.get("subclass_features");
+    if (featureDeclaredBySubclass(entryKey, donnees)) coverage = { ...coverage, state: "playable" };
+  }
+
   return {
     id: entry?.id ?? entryKey,
     entryKey,
@@ -1242,9 +1255,7 @@ export async function getRuleEntryForWorld(
     houseVersion,
     isOfficialBase: chain[0]?.isOfficialBase ?? false,
     tableRule: houseVersion || resolved.modifiedBlockTypes.length > 0,
-    coverage: (COVERAGE_ENTRY_TYPES as readonly string[]).includes(resolved.entry_type)
-      ? coverageSummary(blocks.map((b) => ({ blockType: b.blockType, data: b.data })))
-      : null,
+    coverage,
   };
 }
 

@@ -1,6 +1,6 @@
 # Couverture du SRD 5.2
 
-Généré le 2026-11-16.
+Généré le 2026-11-17.
 
 Pour régénérer (lecture seule, à la main) : `npx tsx --env-file=.env.local scripts/couverture-srd.ts`
 
@@ -10,17 +10,17 @@ Ce que « jouable » veut dire : voir l'ADR 0100. Fichier généré, ne pas l'é
 
 | Catégorie | Jouables | Partielles | Non évaluées | Total | % jouable |
 |---|---:|---:|---:|---:|---:|
-| Aptitudes et dons | 33 | 23 | 555 | 611 | 5 % |
+| Aptitudes et dons | 40 | 22 | 549 | 611 | 7 % |
 | Sorts | 73 | 1 | 265 | 339 | 22 % |
 | Objets magiques | 0 | 1 | 302 | 303 | 0 % |
 | Armes | 38 | 0 | 0 | 38 | 100 % |
 | Armures | 13 | 0 | 0 | 13 | 100 % |
 | Classes | 12 | 0 | 0 | 12 | 100 % |
-| Sous-classes | 0 | 4 | 8 | 12 | 0 % |
+| Sous-classes | 0 | 7 | 5 | 12 | 0 % |
 | Espèces | 1 | 16 | 16 | 33 | 3 % |
 | Monstres | 53 | 264 | 0 | 317 | 17 % |
 | États | 2 | 0 | 13 | 15 | 13 % |
-| **Ensemble** | 225 | 309 | 1159 | 1693 | 13 % |
+| **Ensemble** | 232 | 311 | 1150 | 1693 | 14 % |
 
 ## Lacunes par brique
 
@@ -37,10 +37,10 @@ Chaque lacune compte une fois, sur la fiche qui la porte : une espèce ou une so
 | `scaling` (Progression par niveau) | 1 |
 | `area_damage` (Dégâts de zone) | 5 |
 | `equipment_condition` (Condition d'équipement) | 1 |
-| `ending_event` (Événement de fin) | 3 |
+| `ending_event` (Événement de fin) | 2 |
 | `monster_action` (Action de monstre) | 283 |
 | `monster_trait` (Trait de monstre) | 328 |
-| `other` (Autre) | 4 |
+| `other` (Autre) | 3 |
 
 ## Règles concernées, par brique
 
@@ -102,11 +102,10 @@ Chaque lacune compte une fois, sur la fiche qui la porte : une espèce ou une so
 
 - Arme sacrée (`devotion-sacred-weapon`) : L’effet cesse également si vous cessez de porter l’arme.
 
-### `ending_event` (Événement de fin) — 3
+### `ending_event` (Événement de fin) — 2
 
 - Compagnon sauvage (`druid-wild-companion`) : disparaît lorsque vous terminez un Repos long
 - Forme sauvage (`druid-wild-shape`) : subissez l’état Neutralisé ou mourez
-- Frappe malicieuse (`rogue-cunning-strike`) : La cible réitère le JS à la fin de chacun de ses tours
 
 ### `monster_action` (Action de monstre) — 283
 
@@ -725,16 +724,15 @@ Chaque lacune compte une fois, sur la fiche qui la porte : une espèce ou une so
 - Jeune dragon blanc (`young-white-dragon`) : Ice Walk
 - Zombi (`zombie`) : Undead Fortitude
 
-### `other` (Autre) — 4
+### `other` (Autre) — 3
 
 - Inspiration bardique (`bard-bardic-inspiration`) : lorsque la créature rate un Test d20, elle peut lancer le dé d’Inspiration bardique pour en ajouter le résultat au Test d20
-- Affinité élémentaire (`draconic-sorcery-elemental-affinity`) : Vous avez la Résistance à ce type de dégâts
 - Aura de protection (`paladin-aura-of-protection`) : Vous-même et vos alliés dans l’aura recevez un bonus aux jets de sauvegarde égal à votre modificateur de Charisme
 - Frappe malicieuse (`rogue-cunning-strike`) : au nombre de dés d’Attaque sournoise auquel vous renoncez pour ajouter cet effet
 
 ## Fréquentes d'abord
 
-### Aptitudes non jouables, niveaux 1 à 5 — 243
+### Aptitudes non jouables, niveaux 1 à 5 — 241
 
 - niveau 4 : Amélioration de caractéristique (`ability-score-improvement-2`), non évaluée
 - niveau 4 : Amélioration de caractéristique (`ability-score-improvement-3`), non évaluée
@@ -831,7 +829,6 @@ Chaque lacune compte une fois, sur la fiche qui la porte : une espèce ou une so
 - niveau 2 : Invocation occulte : Voix du maître des chaînes (`eldritch-invocation-voice-of-the-chain-master`), non évaluée
 - niveau 2 : Manifestations occultes (`eldritch-invocations`), non évaluée
 - niveau 2 : Évocateur érudit (`evocation-savant`), non évaluée
-- niveau 3 : Évocateur érudit (`evoker-evocation-savant`), non évaluée
 - niveau 3 : Sort mineur appuyé (`evoker-potent-cantrip`), non évaluée
 - niveau 3 : Expertise (`expertise`), non évaluée
 - niveau 1 : Expertise (`expertise-2`), non évaluée
@@ -867,7 +864,6 @@ Chaque lacune compte une fois, sur la fiche qui la porte : une espèce ou une so
 - niveau 3 : Goût du sang (`hunters-prey-colossus-slayer`), non évaluée
 - niveau 3 : Proie du chasseur : Tueur de géants (`hunters-prey-giant-killer`), non évaluée
 - niveau 3 : Briseur de hordes (`hunters-prey-horde-breaker`), non évaluée
-- niveau 3 : Critique amélioré (`improved-critical`), non évaluée
 - niveau 2 : Touche-à-tout (`jack-of-all-trades`), non évaluée
 - niveau 2 : Ki (`ki`), non évaluée
 - niveau 3 : Sorts du Cercle de la Terre (`land-circle-of-the-land-spells`), non évaluée

@@ -71,7 +71,7 @@ export function pruneOrphanDurableEffects(data: ActivationBlockData): Activation
  * (les lacunes déclarées), `species_traits` (les aptitudes d'une espèce),
  * `actions` et `traits` (un monstre). Les autres blocs ne comptent que par leur type.
  */
-export const COVERAGE_DATA_BLOCK_TYPES = ["coverage", "species_traits", "actions", "traits"] as const;
+export const COVERAGE_DATA_BLOCK_TYPES = ["coverage", "species_traits", "actions", "traits", "subclass_features"] as const;
 
 const estDonneeDeCouverture = (t: string): boolean => (COVERAGE_DATA_BLOCK_TYPES as readonly string[]).includes(t);
 

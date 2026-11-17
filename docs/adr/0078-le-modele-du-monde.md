@@ -101,7 +101,7 @@ Chacun a une forme propre, tant qu'aucun troisième cas ne demande de générali
 | Redirection | opération de réaction `redirect` (la cible devient le réagissant) |
 | Choix contraint | les options en données, présentées à la joueuse ou tirées sur une table par le serveur |
 
-Une activation accordée par un jeton (le dé d'Inspiration bardique reçu) existe déjà (V3.1-197).
+Une activation accordée par un jeton existe (V3.1-197), mais seulement pour une aptitude de la fiche du porteur. *Corrigé le 17 novembre* : le dé d'Inspiration bardique reçu par un allié n'en relève pas encore, car l'activation appartient à la règle du barde, absente de la fiche de l'allié.
 
 Pour **M15**, une fiche porte des étiquettes : `immune.spell.<clé>` et `untargetable.<étiquette>` (par exemple `divination`). Elles sont vérifiées au ciblage.
 

@@ -538,20 +538,8 @@
       ]
     }
   },
-  "draconic-sorcery-elemental-affinity": {
-    "_regle": "Affinite elementaire : le bonus de degats (+ mod. CHA, type choisi) est dans subclasses-2024.json ; la resistance attend V3.1-137.",
-    "coverage": {
-      "gaps": [
-        {
-          "text": "Vous avez la Résistance à ce type de dégâts",
-          "missing": "Résistance à un type de dégâts — V3.1-137.",
-          "brick": "other"
-        }
-      ]
-    }
-  },
   "bard-bardic-inspiration": {
-    "_regle": "Inspiration bardique : usages = mod. CHA (minimum 1), au repos long ; donner le de et l'ajouter a un test rate attendent V3.1-135.",
+    "_regle": "Inspiration bardique : usages = mod. CHA (minimum 1), au repos long ; donner le de a un allie, qui l'ajoute a un test rate, attend qu'un jeton puisse accorder une reaction d'une regle absente de la fiche du porteur.",
     "resources": {
       "resources": [
         {
@@ -582,7 +570,7 @@
       "gaps": [
         {
           "text": "lorsque la créature rate un Test d20, elle peut lancer le dé d’Inspiration bardique pour en ajouter le résultat au Test d20",
-          "missing": "Donner un dé à un allié, qu'il ajoute à un test raté — chantier « Intervenir sur un jet » (V3.1-135). Le dé s'écrit déjà 1d{column.class_specific_bardic_inspiration_die}.",
+          "missing": "Donner le dé à un allié : le jeton d'un effet qui dure existe (V3.1-197), mais une réaction ne se propose qu'à partir des aptitudes de la fiche de celui qui lance le dé ; l'allié qui porte le jeton du barde ne se la voit donc pas proposer. Le dé s'écrit déjà 1d{column.class_specific_bardic_inspiration_die}.",
           "brick": "other"
         }
       ]
@@ -664,7 +652,7 @@
     }
   },
   "rogue-cunning-strike": {
-    "_regle": "Frappe malicieuse : sur des dégâts d'Attaque sournoise, un effet au choix contre 1d6 de ses dés ; JS contre 8 + mod. Dex + maîtrise. Croc-en-jambe (Dex, sinon À terre), Poison (Con, sinon Empoisonné 1 minute), Repli (moitié de la Vitesse sans attaque d'opportunité). V3.1-192.",
+    "_regle": "Frappe malicieuse : sur des dégâts d'Attaque sournoise, un effet au choix contre 1d6 de ses dés ; JS contre 8 + mod. Dex + maîtrise. Croc-en-jambe (Dex, sinon À terre), Poison (Con, sinon Empoisonné 1 minute), Repli (moitié de la Vitesse sans attaque d'opportunité). V3.1-192. Poison : Empoisonné 1 minute, JS de Constitution réitéré à la fin de chaque tour (ADR 0098, V3.1-139).",
     "activation": {
       "activations": [
         {
@@ -760,9 +748,9 @@
                   },
                   "on_fail": [
                     {
-                      "action": "apply_condition",
+                      "action": "apply_effect",
                       "who": "target",
-                      "key": "poisoned"
+                      "effect": "cunning-strike-poisoned"
                     }
                   ]
                 }
@@ -788,7 +776,52 @@
           }
         }
       ],
-      "durable_effects": []
+      "durable_effects": [
+        {
+          "id": "cunning-strike-poisoned",
+          "label": {
+            "fr": "Empoisonné (Frappe malicieuse)",
+            "en": "Poisoned (Cunning Strike)"
+          },
+          "conditions": [
+            "poisoned"
+          ],
+          "modifiers": [],
+          "duration": {
+            "unit": "minute",
+            "amount": 1
+          },
+          "concentration": false,
+          "ends_on": [],
+          "token": null,
+          "repeat_save": {
+            "ability": "con",
+            "dc": {
+              "op": "add",
+              "args": [
+                {
+                  "op": "add",
+                  "args": [
+                    {
+                      "op": "num",
+                      "value": 8
+                    },
+                    {
+                      "op": "ref",
+                      "name": "ability.dex"
+                    }
+                  ]
+                },
+                {
+                  "op": "ref",
+                  "name": "proficiency"
+                }
+              ]
+            }
+          },
+          "passage": "La cible réitère le JS à la fin de chacun de ses tours"
+        }
+      ]
     },
     "coverage": {
       "gaps": [
@@ -801,11 +834,6 @@
           "text": "Si la cible est une de taille G ou inférieure",
           "missing": "La taille de la cible n'est pas vérifiée : la table tranche.",
           "brick": "target_filter"
-        },
-        {
-          "text": "La cible réitère le JS à la fin de chacun de ses tours",
-          "missing": "L'état Empoisonné est posé sans sa sauvegarde répétée ni sa durée d'une minute : le MJ le retire.",
-          "brick": "ending_event"
         }
       ]
     }

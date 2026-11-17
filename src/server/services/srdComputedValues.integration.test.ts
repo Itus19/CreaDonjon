@@ -126,6 +126,7 @@ describe.skipIf(!hasCreds)("valeurs calculées du SRD (V3.1-158, integration, ba
     expect(await etat("champion-improved-critical")).toBe("playable");
     expect(await etat("barbarian-rage")).toBe("partial");
     expect(await etat("paladin-aura-of-protection")).toBe("partial");
-    expect(await etat("draconic-sorcery-elemental-affinity")).toBe("partial");
+    // V3.1-139 : jouée par le bloc de sa sous-classe (Résistance et dégâts déclarés en V3.1-171), plus aucune lacune.
+    expect(await etat("draconic-sorcery-elemental-affinity")).toBe("playable");
   });
 });

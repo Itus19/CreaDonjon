@@ -8,6 +8,7 @@ import {
   type CoverageResult,
   type RawGap,
 } from "./coverage";
+import { subclassFeatureSlug } from "./subclass";
 
 /**
  * V3.1-214 (ADR 0100) — l'assemblage des faits d'une fiche et la mise en forme du rapport
@@ -65,7 +66,32 @@ function lacunesDe(data: unknown): RawGap[] {
   return gaps;
 }
 
-function faitsSimples(e: ReportEntry, category: CoverageCategory): CoverageFacts {
+/** La sous-classe que désigne le `source_raw` d'une aptitude du SRD (`subclass.index`), si elle en a une. */
+export function subclassIndexOf(sourceRaw: unknown): string | undefined {
+  return estObjet(sourceRaw) && estObjet(sourceRaw.subclass) ? chaine(sourceRaw.subclass.index) : undefined;
+}
+
+/** Les suffixes de clé des aptitudes dont le bloc `subclass_features` déclare la mécanique (modificateurs, sorts, choix). */
+function suffixesDeclares(subclassFeatures: unknown): Set<string> {
+  const out = new Set<string>();
+  const features = estObjet(subclassFeatures) ? liste(subclassFeatures.features) : [];
+  for (const f of features.filter(estObjet)) {
+    const nom = chaine(f.name);
+    if (nom && (liste(f.modifiers).length > 0 || liste(f.spells).length > 0 || liste(f.grants).length > 0)) out.add(subclassFeatureSlug(nom));
+  }
+  return out;
+}
+
+/**
+ * V3.1-139 — une aptitude de sous-classe peut être jouée par le bloc `subclass_features` de sa sous-classe
+ * (modificateurs, sorts, choix : V3.1-117, 171) et non par sa propre fiche (Affinité élémentaire).
+ * Partagé par le rapport, la vue du MJ et l'état affiché sur la fiche de la règle.
+ */
+export function featureDeclaredBySubclass(featureKey: string, subclassFeatures: unknown): boolean {
+  return [...suffixesDeclares(subclassFeatures)].some((s) => featureKey === s || featureKey.endsWith(`-${s}`));
+}
+
+function faitsSimples(e: ReportEntry, category: CoverageCategory, declaree = false): CoverageFacts {
   switch (category) {
     case "monster": {
       const actions = estObjet(blocDe(e, "actions")) ? liste((blocDe(e, "actions") as Record<string, unknown>).actions) : [];
@@ -88,7 +114,8 @@ function faitsSimples(e: ReportEntry, category: CoverageCategory): CoverageFacts
     case "weapon":
     case "armor":
     case "class":
-      return { category, blockTypes: e.blocks.map((b) => b.block_type), gaps: lacunesDe(blocDe(e, "coverage")) };
+      // Une aptitude jouée par le bloc de sa sous-classe compte comme portant des modificateurs.
+      return { category, blockTypes: [...e.blocks.map((b) => b.block_type), ...(declaree ? ["modifiers"] : [])], gaps: lacunesDe(blocDe(e, "coverage")) };
     default:
       return { category: "out_of_scope" };
   }
@@ -108,6 +135,11 @@ export function assembleCoverage(entries: readonly ReportEntry[]): ReportRow[] {
     level: levelOfEntry(e.sourceRaw, e.blocks),
   });
 
+  const blocSousClasse = new Map(tries.filter((e) => coverageCategoryOf(e.type) === "subclass").map((e) => [e.key, blocDe(e, "subclass_features")]));
+  const declaree = (e: ReportEntry): boolean => {
+    const sc = subclassIndexOf(e.sourceRaw);
+    return sc !== undefined && featureDeclaredBySubclass(e.key, blocSousClasse.get(sc));
+  };
   const agregees: { e: ReportEntry; category: CoverageCategory }[] = [];
   for (const e of tries) {
     const category = coverageCategoryOf(e.type);
@@ -115,7 +147,7 @@ export function assembleCoverage(entries: readonly ReportEntry[]): ReportRow[] {
       agregees.push({ e, category });
       continue;
     }
-    const row = ligne(e, category, coverageOf(faitsSimples(e, category)));
+    const row = ligne(e, category, coverageOf(faitsSimples(e, category, category === "feature" && declaree(e))));
     rows.push(row);
     if (category === "feature") parClé.set(e.key, row);
   }
