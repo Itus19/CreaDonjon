@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
 import Dropdown from "@/components/shared/Dropdown";
 import { interpretIntent, looksLikeQuestion, type IntentAction, type MechanicalIntentKind } from "@/src/core/rules/intent";
 import { GM_QUESTION_MARKERS_FR } from "@/src/i18n/fr";
@@ -104,7 +103,6 @@ export default function IntentBar({
   /** Appelé après toute action confirmée par le serveur (pose ou encaissement) — `SoloScreen.tsx` en profite pour rafraîchir le fil tout de suite, sans attendre son sondage. */
   onActed?: () => void;
 }) {
-  const tOutil = useTranslations("outilDes");
   const [text, setText] = useState("");
   const [overrideActionId, setOverrideActionId] = useState<string | null>(null);
   const [overrideTargetId, setOverrideTargetId] = useState<string | null>(null);
@@ -190,7 +188,7 @@ export default function IntentBar({
     // V3.1-216 : une réaction peut intervenir — le tour n'est pas joué, la
     // demande reste posée, et le bandeau de réaction prend la main. L'outil
     // n'affiche ni total ni verdict jusqu'à la reprise.
-    if ("fenetre" in outcome) return sortieAttenteReactions(demande, outcome.fenetre, tOutil("enAttenteReactions"));
+    if ("fenetre" in outcome) return sortieAttenteReactions(demande, outcome.fenetre);
     onPendingChange(outcome.chained);
     if (outcome.chained === null) setDc("");
     onActed?.();

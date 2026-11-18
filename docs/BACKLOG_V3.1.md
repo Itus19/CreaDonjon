@@ -277,7 +277,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-161 | ☑ | sans | Les écrans : le bandeau de réaction ; l'éditeur suit | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
 | V3.1-162 | ☑ | sans | Les données : les réactions du SRD | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
 | V3.1-163 | ☑ | sans | Les autres jets passent par la fenêtre : sauvegardes, tests, attaque sans cible, solo | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
-| V3.1-216 | ☐ | **avec** | Les réactions dans la boucle du solo | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
+| V3.1-216 | ☑ | **avec** | Les réactions dans la boucle du solo | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
 | V3.1-136 | ☑ | sans | Les actions modifiées | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
 | V3.1-164 | ☑ | sans | Le noyau : coût en emplacement, coût « une attaque », attaques par action, options de lancement, lancer un sort comme effet | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
 | V3.1-165 | ☑ | sans | La migration et le service : lancer un sort par son activation, compter le budget | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |

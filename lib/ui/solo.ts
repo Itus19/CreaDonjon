@@ -211,10 +211,11 @@ export function sortieJetDepuisTour(demande: PendingRequest, tour: EncashedTurnO
  * verdict (`rollWindowId`) jusqu'à la reprise. Même forme que le jet ciblé
  * de la table (`sortieDepuisJetCible`).
  */
-export function sortieAttenteReactions(demande: PendingRequest, fenetreId: string, texte: string): SortieJet {
+export function sortieAttenteReactions(demande: PendingRequest, fenetreId: string): SortieJet {
   return {
     who: demande.actor_name,
-    what: texte,
+    // Le libellé du jet, pas « en attente » : l'outil ajoute lui-même « · En attente des réactions » (`rollWindowId`).
+    what: demande.what,
     chips: [],
     total: 0,
     dc: null,

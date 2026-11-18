@@ -134,6 +134,7 @@ Les tests, les mesures et les scripts tournent **contre la vraie base**, celle d
 - **Éditeur de briques** (V3.1-132) : à l'ouverture, une lecture des ressources déclarées (blocs `resources` de la base et surcharges des variantes) ; à l'enregistrement, une surcharge par bloc changé (trois au plus) et une résolution de la règle dans le ruleset parent.
 - **Vue « règles non jouables »** (V3.1-132, MJ, à la demande) : la liste des règles (celle de la barre latérale, deux pages pour le SRD), les types de blocs mécaniques de la base (155 lignes pour le SRD, mesuré le 4 nov. : 0,5 s) et les surcharges des variantes, paginées.
 - **Mode solo** (V3.1-132) : le même calcul à l'ouverture de l'écran solo, pour avertir des règles non jouables du personnage ; jamais en boucle.
+- **Le point de décision du tour solo** (V3.1-216) : **rien** pour la quasi-totalité des tours — la garde est la fiche déjà chargée (aucune activation à déclencheur de jet : aucune lecture de plus). Quand le personnage en porte une : la scène, le combat en cours et ses participants, les effets du personnage, son état de jeu, et les activations de ses sorts. Écriture : une ligne de `roll_windows` **seulement** si une réaction se propose vraiment ; la reprise rejoue le tour sans relancer de dé, et n'ajoute aucune écriture à un tour ordinaire.
 
 ## 5. Où cette règle est appliquée
 

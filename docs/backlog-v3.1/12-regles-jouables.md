@@ -264,7 +264,7 @@ Réactions (une fenêtre de choix dans le déroulé d'un jet, côté serveur), o
 
 *Fini le 17 novembre (ADR 0101).* **Le dé d'Inspiration bardique reçu** : le jeton porte des valeurs figées à la pose (`token.values`, le dé selon le niveau du barde) ; une activation accordée par un jeton se joue même si sa règle est absente de la fiche du porteur (fenêtres de réaction et `activateFeature`) ; jouer une activation accordée consomme un usage du jeton (`consumeToken`, enfin branché : les jetons de V3.1-197 se décomptent aussi). Données : Inspiration bardique (action Bonus, un dé à une autre créature à 18 m ; réaction du porteur sur un Test d20 raté, `1d{token.die}`), réimport fait. **L'attaque sans cible** : seules les réactions automatiques sur son propre jet (Chance), sans fenêtre, et sans aucune lecture quand la fiche n'en porte pas. **Le test réussi d'une autre créature** : sans objet tant que le moteur ne lance pas les tests d'un monstre (le MJ les lance) ; le jet d'une alliée ne regarde que ses propres réactions. **La boucle du solo** : sortie en V3.1-216. Vérifié : `rollWindowsSelf.integration.test.ts` 6/6 (dé reçu proposé à l'alliée, ajouté, jeton épuisé ; Chance sur une attaque sans cible).
 
-#### ☐ V3.1-216 — Les réactions dans la boucle du solo · `M` · **avec modèle IA** (vérification de bout en bout) — **prêt (Opus)**
+#### ☑ V3.1-216 — Les réactions dans la boucle du solo · `M` · **avec modèle IA** (vérification de bout en bout) — **prêt (Opus)**
 
 **Modèle conseillé : Opus** — tour du solo, moteur. Sorti de V3.1-163 le 17 novembre.
 
@@ -272,7 +272,15 @@ Réactions (une fenêtre de choix dans le déroulé d'un jet, côté serveur), o
 - Le moteur seul tranche (règle 8) ; la narration ne fait que dire ce qui a été joué.
 
 **Critères d'acceptation**
-- [ ] Solo : une réaction se propose dans le tour, et le budget de la scène la compte.
+- [x] Solo : une réaction se propose dans le tour, et le budget de la scène la compte.
+
+*Fait les 17 et 18 novembre.* **Pas de nouveau genre de `pending_request`** : depuis V3.1-160 une fenêtre de réaction a sa propre table (`roll_windows`) et son bandeau ; le tour solo passe par le même point de décision que la table et la fiche (`interveneOnRoll`, origine `solo_turn`) plutôt que d'ouvrir un second mécanisme. `soloRollWindow.ts` : le réservoir est le seul personnage joué (`selfReactorPool`), et **la portée se lit dans les zones** — `zonePoint` place les trois zones de la scène sur un axe (même zone : 0 m ; contact → proche : 9 m ; proche → loin : 30 m), une position de plan primant toujours. Tant qu'une réaction peut intervenir, **rien n'est écrit** : la demande reste posée, aucun dé n'est relancé ; `resumeIntentRequest` et `playResumedSoloTurn` rejouent le tour avec le jet modifié. **Le budget de la scène** décompte la réaction dans `applyResolvedTurn`, après `startTurn` (plus tôt, la remise à neuf du tour l'effacerait) — il n'y a pas toujours de ligne de combat en solo. Les routes d'encaissement rendent `{ fenetre }`, l'outil de dés dit « En attente des réactions », et la route des fenêtres narre le tour repris, hors de la boucle (`turnIntent.noAi.test.ts` reste vert).
+
+Coût noté dans `docs/QUOTAS.md` : aucune lecture de plus quand la fiche ne porte pas d'activation à déclencheur de jet.
+
+**Vérifié le 18 novembre.** Noyau : `rollWindow.test.ts` (zones, Mots cinglants d'une zone à l'autre). Intégration : `soloReaction.integration.test.ts` (version maison de Coup de chance coûtant une réaction — aucune réaction du SRD ne se déclenche aujourd'hui sur son PROPRE jet). **Au navigateur**, avec le fournisseur local : « je force la porte », Test de Force DD 20, dé 16 → le bandeau propose « Coup de chance (maison) — Changerait l'issue », « Utiliser » rejoue le tour en 20 (réussite), l'activation est journalisée (`stroke-of-luck −1`), la narration locale habille le fait sans le contredire, et la scène garde `reaction: 0` et `action: 0`.
+
+*Reste* : une réaction du SRD qui se déclenche sur son propre jet et coûte une réaction (aucune aujourd'hui) ; le second affichage de l'outil de dés (« · En attente des réactions ») n'a été revu qu'en code, la ressource étant dépensée au moment du correctif.
 
 
 #### ☑ V3.1-161 — Les écrans : le bandeau de réaction ; l'éditeur suit · `M` · sans modèle IA — **prêt (Sonnet)**
