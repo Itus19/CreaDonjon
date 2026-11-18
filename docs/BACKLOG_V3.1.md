@@ -145,6 +145,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-9 | ☑ | sans | Bouton « Prochaine session » mal calibré selon l'écran | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-10 | ☑ | sans | Connexion par identifiant/mot de passe plutôt que lien à retrouver | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-11 | ☑ | sans | Onglet « Solo » visible même avec un MJ humain déjà présent | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-229 | ☐ | sans | Un test sauté ne se voit pas | [`01-rugosites.md`](backlog-v3.1/01-rugosites.md) |
 | V3.1-228 | ☐ | sans | Le registre des migrations ne dit plus la vérité | [`01-rugosites.md`](backlog-v3.1/01-rugosites.md) |
 | V3.1-225 | ☐ | **avec** | Le solo ne peut pas faire apparaître un figurant | [`01-rugosites.md`](backlog-v3.1/01-rugosites.md) |
 | V3.1-226 | ☐ | sans | Une question dans la fiction n'est pas une question au MJ | [`01-rugosites.md`](backlog-v3.1/01-rugosites.md) |

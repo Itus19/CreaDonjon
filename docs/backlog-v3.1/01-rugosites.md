@@ -215,6 +215,22 @@ lint et tests verts.
 
 ---
 
+### ☐ V3.1-229 — Un test sauté ne se voit pas · `S` · sans modèle IA — **prêt (Opus)**
+
+**Constaté deux fois le 18 novembre, à huit heures d'intervalle.**
+- Le matin : trois suites d'intégration (`rollWindowsSelf`, `srdReactions`, `soloReaction`) se sautaient depuis des semaines faute de `ENGINE_SIGNING_KEY`. Personne ne l'avait remarqué — la suite était « verte ».
+- Le soir : quatre tests d'IA (`openAiCompatible`, `soloNarration` ×2, `soloGmQuestion`) se sont évanouis d'une exécution à l'autre, parce que le serveur local avait cessé de répondre entre-temps. La suite est restée verte, avec « 5 skipped » dans une ligne de bilan que personne ne lit.
+
+**Le mécanisme est bon, c'est son silence qui ne l'est pas.** Sauter quand le fournisseur est absent est le bon comportement (une suite ne doit pas rougir parce qu'un modèle n'est pas lancé). Mais un test sauté **ne vérifie rien**, et rien ne le rappelle : le `console.warn` de chaque fichier se noie dans quinze minutes de sortie.
+
+**À faire.** Rendre le saut visible là où on le lira : un récapitulatif en fin de suite (« 5 tests sautés : fournisseur d'IA injoignable, seconde clé moteur absente »), ou un script `npm run test:sautes` qui liste les conditions non remplies et ce qu'elles couvrent. Décider aussi si un saut doit **échouer** en intégration continue, où tout devrait être posé.
+
+**Critères d'acceptation**
+- [ ] Après une suite, on sait d'un coup d'œil ce qui n'a pas été vérifié, et pourquoi.
+- [ ] Le cas « la variable est posée mais le service ne répond pas » se distingue de « rien n'est configuré ».
+
+---
+
 ### ☐ V3.1-228 — Le registre des migrations ne dit plus la vérité · `M` · sans modèle IA — **prêt (Opus)**
 
 **Constaté le 18 novembre**, en préparant la table de V3.1-224. `supabase migration list --remote` annonce **dix migrations locales absentes de la production** — or leurs tables et colonnes **existent bel et bien** en base (`save_requests`, `availability_requests`, `combat_participants.pos_x`, vérifiés un par un). Elles ont donc été appliquées **à la main**, par l'éditeur SQL, sans être inscrites au registre `supabase_migrations`.
