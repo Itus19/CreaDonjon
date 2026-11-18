@@ -1,0 +1,58 @@
+# Backlog V3.2 — Le solo à l'usage
+
+**Version :** 1.0 — 18 novembre 2026
+**Ouvert après la première séance solo réellement jouée.**
+
+Même esprit que la V3.1, et même discipline : **pas de lots planifiés à l'avance**. Ce backlog recueille ce que le mode solo montre **quand on y joue vraiment**, séance après séance. Un ticket s'y ajoute quand quelque chose a gêné à l'écran, pas quand il a été imaginé. Taille attendue : `S` ou `M` ; un ticket plus gros se découpe.
+
+La différence avec la V3.1 : celle-ci recueillait les rugosités de l'outil (le wiki, les règles, les écrans du MJ) ; celle-là recueille ce qui gêne **en jouant**. C'est la matière que les lots E et F du backlog V3 attendent (`docs/BACKLOG_V3.md`, étape 1 : jouer) — mais ces tickets-ci se corrigent sans attendre, ils ne demandent pas trois séances.
+
+**Lire les titres.** ☑ : terminé. ☐ : il reste du travail. Sous chaque titre, le **modèle conseillé** et s'il faut un **modèle d'IA joignable** pour coder ou vérifier (même convention que V3 et V3.1).
+
+---
+
+## Déjà ouverts ailleurs, même séance
+
+Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été relevés avant l'ouverture de ce backlog. Ils font partie du même chantier et ne sont pas renumérotés :
+
+| Ticket | Titre |
+|---|---|
+| [V3.1-225](backlog-v3.1/01-rugosites.md) | Le solo ne peut pas faire apparaître un figurant (le tirage est inerte) |
+| [V3.1-226](backlog-v3.1/01-rugosites.md) | Une question posée dans la fiction n'est pas une question au MJ |
+| [V3.1-227](backlog-v3.1/01-rugosites.md) | « Présents » doit montrer les inconnus, avec ce qu'on en voit |
+| [V3.1-223](backlog-v3.1/01-rugosites.md) | Un tour sans narration doit le dire |
+
+---
+
+## Ordre recommandé
+
+1. **Ce qui coûte peu et gêne à chaque tour** : V3.2-4 (la zone qui ne se vide pas), V3.2-3 (on ne sait pas si c'est parti), V3.2-2 (le contour).
+2. **Ce qui change le texte lui-même** : V3.2-5 (la deuxième personne) — une ligne de consigne, un réglage de partie.
+3. **Ce qui demande du dessin** : V3.2-1 (les bulles), puis V3.2-7 (l'onglet Wiki).
+4. **Ce qui demande de la conception** : V3.2-6 (les liens automatiques), le plus risqué des huit.
+
+---
+
+## Où trouver un ticket
+
+| Fichier | Contenu |
+|---|---|
+| [`01-ecran-du-solo.md`](backlog-v3.2/01-ecran-du-solo.md) | L'écran central : bulles, contour, chargement, envoi (V3.2-1 à 4) |
+| [`02-recit-et-liens.md`](backlog-v3.2/02-recit-et-liens.md) | Le texte : la personne du récit, les liens vers les fiches (V3.2-5, 6) |
+| [`03-colonnes.md`](backlog-v3.2/03-colonnes.md) | Les colonnes : l'onglet Wiki (V3.2-7) |
+
+| Ticket | État | Modèle IA | Titre | Fichier |
+|---|---|---|---|---|
+| V3.2-1 | ☐ | sans | Qui parle, et quand : les bulles du fil | [`01-ecran-du-solo.md`](backlog-v3.2/01-ecran-du-solo.md) |
+| V3.2-2 | ☐ | sans | Le contour de « Que fais-tu ? » | [`01-ecran-du-solo.md`](backlog-v3.2/01-ecran-du-solo.md) |
+| V3.2-3 | ☐ | sans | On ne sait pas si c'est parti, ni si l'IA répond | [`01-ecran-du-solo.md`](backlog-v3.2/01-ecran-du-solo.md) |
+| V3.2-4 | ☐ | sans | La zone de texte se vide à l'envoi | [`01-ecran-du-solo.md`](backlog-v3.2/01-ecran-du-solo.md) |
+| V3.2-5 | ☐ | **avec** | Le récit s'adresse au joueur : tu, ou vous | [`02-recit-et-liens.md`](backlog-v3.2/02-recit-et-liens.md) |
+| V3.2-6 | ☐ | **avec** | Les fiches citées par le récit deviennent des liens | [`02-recit-et-liens.md`](backlog-v3.2/02-recit-et-liens.md) |
+| V3.2-7 | ☐ | sans | L'onglet Wiki : chercher et lire sur place | [`03-colonnes.md`](backlog-v3.2/03-colonnes.md) |
+
+---
+
+## Méthode
+
+Mêmes règles qu'ailleurs : `docs/CHARTE-UI.md` avant tout code d'interface, une planche du catalogue par élément nouveau ou modifié (`docs/catalogue/`), `docs/CABLAGE.md` avant tout nouveau chargement, `docs/QUOTAS.md` pour ce que ça consomme. Jamais d'émoji.

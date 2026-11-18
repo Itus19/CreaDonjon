@@ -35,6 +35,7 @@ L'auteur apprend à coder sur ce projet. Explique tes choix. Ne livre pas de cod
 | `docs/BACKLOG_V2.md` | Tickets en cours | Au début de chaque tâche |
 | `docs/BACKLOG_V3.md` | **Index** du mode solo : feuille de route, ordre recommandé, table ticket → fichier. Les tickets (lots A à F, R, Z) vivent dans `docs/backlog-v3/`, un fichier par lot, plus `00-cadre.md` (critères transverses). Chaque titre dit s'il faut un **modèle d'IA** joignable. **Ne lis que le fichier du ticket en cours** | Tickets V3 |
 | `docs/BACKLOG_V3.1.md` | **Index** : feuille de route, ordre recommandé, et table ticket → fichier. Les tickets (rugosités et refonte « verre minéral », V3.1-1 à 119) vivent dans `docs/backlog-v3.1/`, un fichier par partie ; chaque ticket prêt dit son modèle et ses sous-tâches Haiku, et chaque titre s'il faut un **modèle d'IA** joignable. **Ne lis que le fichier du ticket en cours** | Avant tout ticket qui répare un détail, et avant tout ticket de la refonte |
+| `docs/BACKLOG_V3.2.md` | **Index** du solo à l'usage : ce qui gêne en JOUANT, relevé séance après séance (V3.2-1 et suivants). Les tickets vivent dans `docs/backlog-v3.2/`, un fichier par partie. **Ne lis que le fichier du ticket en cours** | Tickets V3.2 |
 | `docs/PDD.md` | Source de vérité fonctionnelle | Avant toute décision produit |
 | `docs/adr/` | Décisions d'architecture et leurs raisons | Avant de « corriger » quelque chose qui semble étrange |
 | `specs/regles-couche.md` | Fiches de règles, renvois, surcharge, contrat moteur/IA | Tickets règles |
