@@ -2,7 +2,9 @@
 
 Partie de [`BACKLOG_V3.1.md`](../BACKLOG_V3.1.md), qui tient la feuille de route et l'index des tickets. Les tickets terminés (☑) sont dans [`termines.md`](termines.md).
 
-### ☐ V3.1-19 — Refonte « verre minéral » (ticket parent) · `XL` · **avec modèle IA** — **lots a à h découpés (V3.1-24 à 36) ; lot i découpé (V3.1-41 à 62)**
+### ☑ V3.1-19 — Refonte « verre minéral » (ticket parent) · `XL` · **avec modèle IA** — **clos le 18 novembre : les 39 tickets des lots a à i sont faits**
+
+*Clos le 18 novembre 2026.* « Le ticket est fini quand tous les lots le sont » : les 39 tickets issus du découpage (V3.1-20 à 36 et 41 à 62) sont cochés, aucun lot n'est resté « à coder ». Le tableau ci-dessous garde l'état du jour du découpage (4 octobre) — il dit ce qui avait été décidé, pas ce qui reste. Les retouches d'affichage relevées en chemin ne reviennent pas ici : elles vivent dans V3.1-144, l'audit de fin.
 
 **Modèle conseillé : Opus** — ticket parent : la conception et le découpage ; chaque lot décidé se code ensuite avec Sonnet, sauf mention contraire.
 

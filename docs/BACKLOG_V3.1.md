@@ -152,7 +152,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-16 | ☑ | sans | Le Calendrier réel refait : une grille à bascule, côté MJ comme côté joueuse | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-17 | ☐ | sans | Un catalogue d'interface visuel, et une charte qui y renvoie | [`01-rugosites.md`](backlog-v3.1/01-rugosites.md) |
 | V3.1-18 | ☑ | sans | Retirer les émojis de l'interface | [`01-rugosites.md`](backlog-v3.1/01-rugosites.md) |
-| V3.1-19 | ☐ | **avec** | Refonte « verre minéral » (ticket parent) | [`02-refonte-parent.md`](backlog-v3.1/02-refonte-parent.md) |
+| V3.1-19 | ☑ | **avec** | Refonte « verre minéral » (ticket parent) | [`02-refonte-parent.md`](backlog-v3.1/02-refonte-parent.md) |
 | V3.1-20 | ☑ | sans | Fenêtres du MJ en deux volets à onglets | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-21 | ☑ | sans | Cibler et résoudre depuis les boutons de jet | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-22 | ☑ | sans | Salon de groupe et jets dans le chat | [`02-refonte-parent.md`](backlog-v3.1/02-refonte-parent.md) |
@@ -301,6 +301,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-214 | ☑ | sans | Le rapport de couverture | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
 | V3.1-215 | ☑ | sans | La vue du MJ étendue | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
 | V3.1-140 | ☐ | **avec** | La conversion assistée : du texte aux briques | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
+| V3.1-221 | ☐ | sans | Le d20 au plancher : « un naturel au plus N compte comme N » | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
 | V3.1-141 | ☑ | sans | Le système monétaire en données : pièces courantes, réserve, pièces maison | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
 | V3.1-217 | ☑ | sans | Le noyau paramétré : le système monétaire en paramètre | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
 | V3.1-218 | ☑ | sans | Le bloc sur la fiche « Pièces de monnaie », lu par le service | [`12-regles-jouables.md`](backlog-v3.1/12-regles-jouables.md) |
@@ -337,7 +338,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-176 | ☑ | sans | Points de vie : « Maximum » en plus de la moyenne et du jet | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-177 | ☑ | sans | Aperçu : la colonne s'efface, la fiche s'affiche comme sur la fiche | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-178 | ☑ | sans | Les valeurs passives : Perception, Intuition, Investigation | [`termines.md`](backlog-v3.1/termines.md) |
-| V3.1-179 | ☐ | sans | Trois sous-classes pour « La Croisade des Ombres », saisies et jouables | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
+| V3.1-179 | ☑ | sans | Trois sous-classes pour « La Croisade des Ombres », saisies et jouables | [`15-creation-retours-7-novembre.md`](backlog-v3.1/15-creation-retours-7-novembre.md) |
 | V3.1-201 | ☑ | sans | Textes français : recoller les phrases coupées par la mise en page du PDF | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-202 | ☑ | sans | Sous-classe maison : rendre jouable chacune de ses aptitudes | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-203 | ☑ | sans | Formulaire de sous-classe : sorts toujours préparés et lancés sans emplacement | [`termines.md`](backlog-v3.1/termines.md) |

@@ -14,7 +14,9 @@ Ordre conseillé : 162 (les textes en données) avant 161 et 163 ; 167 (noyau) i
 
 ---
 
-### V3.1-179 — Trois sous-classes pour « La Croisade des Ombres », saisies et jouables (sans modèle IA)
+### ☑ V3.1-179 — Trois sous-classes pour « La Croisade des Ombres », saisies et jouables (sans modèle IA) — **clos le 18 novembre**
+
+*Clos le 18 novembre 2026.* Les trois sous-classes sont saisies et vérifiées : Arnaqueur arcanique (rendu jouable le 8 novembre), Collège de la séduction (saisi par l'outil puis recopié dans « DnD 2024 » le 8 novembre), Champion (hérité du SRD). **Le reste du ticket était la jouabilité du Champion, aptitude par aptitude** : relevée le 18 novembre sur le rapport de couverture du 17 (`docs/couverture-srd.md`, ADR 0100) — cinq de ses six aptitudes sont jouables (Critique amélioré, Style de combat supplémentaire, Guerrier héroïque, Critique supérieur, Survivant), la sixième, **Athlète accompli**, est la seule non évaluée et part en **V3.1-221** (le d20 au plancher), avec Savoir-faire du Roublard qui bute sur le même manque. Critère « chaque aptitude est jouable ou rattachée à un ticket nommé » : tenu.
 
 **Modèle conseillé : Opus** (saisie par l'éditeur de briques, relevé des briques manquantes). **Attend les textes de l'auteur** pour les deux sous-classes hors SRD.
 

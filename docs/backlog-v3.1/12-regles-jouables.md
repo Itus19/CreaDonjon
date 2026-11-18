@@ -590,6 +590,25 @@ Mesurer la couverture de tout ce qui entre en jeu (sorts, aptitudes, espèces, d
 
 *Lacunes revues le 17 novembre.* **Frappe malicieuse** : le Poison devient un effet qui dure 1 minute, Empoisonné, JS de Constitution réitéré à la fin de chaque tour (`repeat_save`, ADR 0098) ; sa lacune disparaît. **Affinité élémentaire** : la Résistance et les dégâts étaient déjà déclarés sur la sous-classe (V3.1-171) ; la lacune disparaît, et le calcul de couverture reconnaît désormais une aptitude jouée par le bloc `subclass_features` de sa sous-classe (`featureDeclaredBySubclass`, partagé par le rapport, la vue du MJ et l'état de la fiche de la règle) : 7 aptitudes de plus comptent comme jouables (40 au lieu de 33). **Inspiration bardique** : la lacune reste vraie, son texte est précisé — un jeton n'accorde une réaction qu'à partir des aptitudes de la fiche du porteur ; l'allié qui reçoit le dé du barde ne se la voit pas proposer (l'ADR 0078 disait l'inverse, corrigé).
 
+### ☐ V3.1-221 — Le d20 au plancher : « un naturel au plus N compte comme N » · `S` · sans modèle IA — **prêt (Opus)**
+
+**Modèle conseillé : Opus** — vocabulaire du noyau, puis données officielles et réimport.
+**Relevé le 18 novembre**, en fermant V3.1-179 (jouabilité du Champion).
+
+L'opération existe déjà (`set_natural`, que Coup de chance emploie pour 20) ; c'est le **déclencheur** qui manque : `zRollTrigger` n'accepte qu'un naturel **exact** (`when: "natural"` + `natural: 1`, pour Chance), jamais un seuil. Deux règles officielles attendent exactement ça, dans les mêmes termes (« un d20 de 9 ou moins compte comme un 10 ») :
+
+- **Athlète accompli** (`champion-remarkable-athlete`, Champion 3) — la seule aptitude du Champion non évaluée ;
+- **Savoir-faire** (`rogue-reliable-talent`, Roublard 7).
+
+**À faire**
+- `zRollTrigger` : un seuil (`natural_at_most`) à côté de la valeur exacte, avec son refus Zod quand les deux sont donnés ; `momentMatches` (`rollWindow.ts`) l'évalue ; l'éditeur de briques propose « au plus » à côté de « exactement ».
+- Données : les deux aptitudes dans `playable-2024.json` (déclencheur automatique — aucune fenêtre à ouvrir, le plancher ne se refuse pas), puis réimport et **scripts d'auteur rejoués** (`ingest-srd` efface ce qu'il ne connaît pas).
+- Athlète accompli porte aussi un saut amélioré : si la brique manque, un bloc `coverage` honnête plutôt qu'une activation incomplète.
+
+**Critères d'acceptation**
+- [ ] Noyau : un test à 7 naturel devient 10 ; un 11 n'est pas touché ; le seuil et la valeur exacte ne se cumulent pas (tests).
+- [ ] Après réimport, Athlète accompli et Savoir-faire passent « jouable » (ou « partielle » pour le seul saut), et le rapport de couverture le montre.
+
 ### ☐ V3.1-140 — La conversion assistée : du texte aux briques · `L` · **avec modèle IA** — **après la fondation**
 Le modèle lit le texte d'une fiche et propose des blocs (`resources`, `activation`, `coverage`), par `ai_proposals` : Zod, validation métier, relecture par l'auteur, application. Jamais d'écriture directe (règle absolue 9). Le texte de la règle entre dans le prompt comme donnée encadrée (règle 10).
 
