@@ -215,6 +215,25 @@ lint et tests verts.
 
 ---
 
+### ☐ V3.1-224 — L'IA, un réglage du COMPTE : sa machine ou sa clé · `L` · sans modèle IA — **à concevoir (Opus, ADR)**
+
+**Demandé par l'auteur le 18 novembre**, en découvrant que le site en ligne ne peut pas joindre son LM Studio (V3.1-223). Direction voulue : **chacun joue sur ses propres ressources d'IA**, déclarées sur son compte — soit un **lien vers sa machine** (tunnel vers son fournisseur local), soit une **clé d'API** chez un fournisseur distant (Claude, OpenAI…). Personne ne consomme celles d'un autre, et l'hébergeur ne paie pour personne.
+
+La spec l'annonce déjà à demi-mot : « le choix du modèle est un réglage du monde ou de l'utilisateur, pas une constante » (`specs/cible-locale-et-ia.md`). Ce ticket en fait un réglage de compte, avec ce que cela suppose.
+
+**Ce que l'ADR doit trancher — les trois points durs, aucun n'est cosmétique.**
+- **Des secrets par compte.** Une clé d'API est un secret d'utilisateur en base. Règle absolue 1 : jamais derrière `NEXT_PUBLIC_`, jamais renvoyée au client, pas même à son propriétaire après saisie (on affiche « ••••, posée le … », jamais la valeur). Chiffrement au repos, RLS en refus par défaut, et le service seul la déchiffre.
+- **Une URL fournie par l'utilisateur, c'est une SSRF.** Un « lien vers ma machine » fait appeler par NOTRE serveur une adresse que l'utilisateur choisit : il faut une liste blanche de schémas, le refus des adresses privées et de `localhost` côté serveur hébergé, aucune redirection suivie, un délai court et une taille de réponse bornée. C'est le point le plus risqué du ticket.
+- **Qui paie quoi, et qui le voit.** `ai_usage_log` existe déjà et s'écrit à chaque appel (règle 13) ; il faut le rattacher au fournisseur employé, et montrer à chacun sa consommation. Un compte sans fournisseur joue **sans IA** — le mode solo doit le rester (`docs/backlog-v3/00-cadre.md` §3).
+
+**À prévoir aussi.** L'adaptateur existe (`AiProvider`, `openAiCompatible`, et `AI_LOCAL_API_KEY` depuis le 18 novembre) : brancher un fournisseur par utilisateur ne demande pas de réécrire les appels, qui restent confinés à `src/server/ai/` (règle 12). Le collage assisté sur du contenu d'ouvrage reste réservé à un fournisseur **local** (`specs/cible-locale-et-ia.md` : avec un distant, le texte quitte la machine).
+
+**Critères d'acceptation (de la conception)**
+- [ ] ADR écrit : forme du réglage, stockage du secret, défense contre la SSRF, rattachement de l'usage, comportement sans fournisseur.
+- [ ] Tickets prêts découpés et ajoutés à l'index.
+
+---
+
 ### ☐ V3.1-223 — Un tour sans narration doit le dire · `S` · sans modèle IA — **prêt (Opus)**
 
 **Constaté par l'auteur le 18 novembre**, en voulant jouer ses séances : ses tours partaient, s'inscrivaient au fil avec leurs faits… et restaient muets. Il jouait sur **le site en ligne**, où `AI_LOCAL_BASE_URL` vaut `http://localhost:1234/v1` : ce « localhost » est celui du serveur Vercel, jamais la machine du joueur. Son LM Studio était donc injoignable, et la narration — best-effort par conception (`specs/cible-locale-et-ia.md` §4) — échouait en silence.
