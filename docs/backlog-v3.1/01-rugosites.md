@@ -215,6 +215,20 @@ lint et tests verts.
 
 ---
 
+### ☐ V3.1-223 — Un tour sans narration doit le dire · `S` · sans modèle IA — **prêt (Opus)**
+
+**Constaté par l'auteur le 18 novembre**, en voulant jouer ses séances : ses tours partaient, s'inscrivaient au fil avec leurs faits… et restaient muets. Il jouait sur **le site en ligne**, où `AI_LOCAL_BASE_URL` vaut `http://localhost:1234/v1` : ce « localhost » est celui du serveur Vercel, jamais la machine du joueur. Son LM Studio était donc injoignable, et la narration — best-effort par conception (`specs/cible-locale-et-ia.md` §4) — échouait en silence.
+
+**Le défaut n'est pas l'absence de narration, c'est le silence.** Les trois routes du tour avalent l'échec dans un `catch` qui ne parle qu'à la console du serveur ; le joueur, lui, voit un tour incomplet sans savoir si c'est un bug, une lenteur, ou sa configuration.
+
+**À faire.** Quand `narrerTourSoloSansFaillir` ne rend rien, le dire à l'écran : une mention discrète sous le tour (« narration indisponible — le fournisseur d'IA n'a pas répondu »), jamais une erreur bloquante, jamais un tour perdu. Distinguer si possible « aucun fournisseur configuré » de « appel échoué ». Le mode solo doit rester jouable sans IA (`docs/backlog-v3/00-cadre.md` §3) : cette mention est la preuve visible que c'est le cas, pas un avertissement anxiogène.
+
+**Critères d'acceptation**
+- [ ] Un tour joué sans fournisseur joignable affiche sa mention, garde ses faits, et ne casse rien.
+- [ ] Vérifié à l'écran, ordinateur et 390 px.
+
+---
+
 ### ☐ V3.1-12 — « Voir comme » accessible aux MJ de campagne, pas seulement au superadmin · `M` · sans modèle IA — **fait le 9 octobre (ADR 0051, 0052) ; vérifié en direct en MJ le 19 octobre, reste le superadmin**
 
 **Modèle conseillé : Opus** — « voir comme » : usurpation d'identité, portée de sécurité.
