@@ -1182,6 +1182,7 @@
     "sections": {
       "identite": "Identité",
       "connexion": "Connexion",
+      "ia": "Mon fournisseur d'IA",
       "invitation": "Mon lien d'invitation",
       "apparence": "Apparence",
       "langue": "Langue",

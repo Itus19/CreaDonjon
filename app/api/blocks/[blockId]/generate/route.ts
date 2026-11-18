@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { drawGeneratorSchema } from "@/lib/blocks/schemas";
 import { drawTableSlotsFromGeneratorBlock, type GeneratorResult } from "@/src/server/services/generators";
 import { resolveGeneratorProseSlots } from "@/src/server/ai/generatorProse";
-import { getOpenAiCompatibleProviderFromEnv } from "@/src/server/ai/adapters/openAiCompatible";
+import { resolveProviderForUser } from "@/src/server/ai/resolveProvider";
 import { AiRateLimitError } from "@/src/server/ai/callAi";
 import { renderGeneratorTemplate } from "@/src/core/generators/render";
 import { serverRng } from "@/src/server/services/rng";
@@ -60,7 +60,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (draw.proseSlots.length > 0) {
     let provider;
     try {
-      provider = getOpenAiCompatibleProviderFromEnv();
+      // V3.1-224 (ADR 0103) : le fournisseur de CE compte, sinon celui de l'environnement.
+      provider = await resolveProviderForUser(supabase, user.id);
+      if (!provider) throw new Error("aucun fournisseur");
     } catch (erreur) {
       // Pas de fournisseur configure : les emplacements de prose restent vides.
       console.error("Fournisseur d'IA indisponible", erreur);

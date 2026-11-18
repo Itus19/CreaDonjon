@@ -1181,6 +1181,7 @@
     "sections": {
       "identite": "Identity",
       "connexion": "Sign-in",
+      "ia": "My AI provider",
       "invitation": "My invitation link",
       "apparence": "Appearance",
       "langue": "Language",

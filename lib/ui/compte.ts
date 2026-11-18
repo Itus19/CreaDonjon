@@ -24,10 +24,11 @@ export function compteDuContexte(mondes: MondeAccueil[]): DonneesCompte["context
   return { mene: jeMene.length, joue: jeJoue.length, solo: enSolo.length };
 }
 
-export type SectionCompte = "identite" | "connexion" | "invitation" | "apparence" | "langue" | "suppression";
+export type SectionCompte = "identite" | "connexion" | "ia" | "invitation" | "apparence" | "langue" | "suppression";
 
 /** Les sections dans l'ordre décidé ; « Mon lien d'invitation » seulement pour qui a rejoint par un lien. */
 export function sectionsCompte(params: { aRejointParUnLien: boolean }): SectionCompte[] {
-  const toutes: SectionCompte[] = ["identite", "connexion", "invitation", "apparence", "langue", "suppression"];
+  // V3.1-224 : « Mon fournisseur d'IA » juste après la connexion — c'est un réglage du compte, pas un goût d'affichage.
+  const toutes: SectionCompte[] = ["identite", "connexion", "ia", "invitation", "apparence", "langue", "suppression"];
   return params.aRejointParUnLien ? toutes : toutes.filter((s) => s !== "invitation");
 }

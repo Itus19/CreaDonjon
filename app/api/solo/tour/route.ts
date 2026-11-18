@@ -12,7 +12,7 @@ import type { Locale } from "@/src/i18n/request";
 // La narration n'est appelee QU'APRES que playTurn a rendu son resultat,
 // jamais avant (garde-fou de turnIntent.noAi.test.ts, desormais reecrit
 // pour verifier cet ORDRE plutot que l'absence totale de ces imports).
-import { getOpenAiCompatibleProviderFromEnv } from "@/src/server/ai/adapters/openAiCompatible";
+import { resolveProviderForUser } from "@/src/server/ai/resolveProvider";
 import { narrateSoloTurn } from "@/src/server/ai/soloNarration";
 import { anchorSketchesNamedInText } from "@/src/server/services/sceneSketches";
 import type { PendingTurnResponse, TurnOutcome } from "@/lib/solo/types";
@@ -177,7 +177,9 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-      const provider = getOpenAiCompatibleProviderFromEnv();
+      // V3.1-224 (ADR 0103) : le fournisseur de CE compte ; sans lui, le tour reste joué, muet.
+      const provider = await resolveProviderForUser(supabase, user.id);
+      if (!provider) return NextResponse.json(result, { status: 200 });
       const viewer = await buildViewerForWorld(supabase, world.id, user.id);
       const outcome = await narrateSoloTurn(supabase, provider, {
         worldId: world.id,

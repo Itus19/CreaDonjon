@@ -131,6 +131,7 @@ Chaque faille trouvée : sa date, sa correction et son état. **État** : *corri
 | `ANTHROPIC_API_KEY`, `VOYAGE_API_KEY` | **serveur seulement** | Facturées à l'usage : volées, elles se vident. |
 | `MANUAL_TEST_PASSWORD` | **serveur et scripts** | Mot de passe des comptes de test (`docs/TESTS.md`). |
 | `ENGINE_SIGNING_KEY`, `ENGINE_SIGNING_KEY_ID` | **serveur seulement** | Signe les changements que le moteur écrit au nom d'un joueur (ADR 0041, V3.1-104) : volée, elle permet de fabriquer des changements acceptés par la base. Même valeur dans `app_private.engine_signing_keys`, que seule la fonction `apply_engine_change` lit. Rotation : `docs/CLE-MOTEUR.md`. |
+| `AI_SECRETS_KEY` | **serveur seulement** | Chiffre (AES-256-GCM) les clés d'API que les comptes déclarent dans leurs options (V3.1-224, ADR 0103). Volée **avec** une copie de la base, elle rend les clés de tous les comptes ; seule, elle ne sert à rien. Sans elle, l'application tourne : seule la pose d'une clé est refusée, avec un message. |
 | `AI_LOCAL_API_KEY` | **serveur seulement**, facultative | Le jeton du serveur d'IA local quand LM Studio exige l'authentification (en-tête `Bearer`). Indispensable si le serveur est exposé par un tunnel : sans elle, n'importe qui sur Internet utilise le modèle. Lue par le seul adaptateur `openAiCompatible.ts`. |
 
 **Où vivent les valeurs.**
@@ -139,6 +140,13 @@ Chaque faille trouvée : sa date, sa correction et son état. **État** : *corri
 - **Jamais** dans le code, un commit, un message de discussion ou une capture d'écran. Une valeur collée par erreur se change aussitôt dans Supabase (« API keys », régénérer) ou chez le fournisseur, puis partout où elle sert.
 
 **La vérification.** Après un build, `npm run verifier:secrets` parcourt `.next/static`, c'est-à-dire tout ce que le navigateur télécharge. Il y cherche la valeur et le nom de chaque variable secrète, sans jamais les afficher. Il sort en erreur s'il en trouve une. Vérifié le 12 octobre : 148 fichiers, aucun secret ; un faux secret placé exprès est bien détecté. À relancer avant une mise en ligne qui touche un fichier `"use client"` ou une variable d'environnement.
+
+**Les clés des autres.** Depuis V3.1-224, la base porte des secrets qui n'appartiennent pas à l'hébergeur : la clé d'API que chaque compte déclare. Trois règles s'y appliquent, et aucune n'est négociable.
+- Elle est **chiffrée avant de quitter le processus** (`src/server/ai/secrets.ts`) : ni la requête SQL, ni les journaux du serveur de base ne voient la valeur.
+- Elle ne **redescend jamais vers un client**, pas même vers son propriétaire : l'écran dit « une clé est posée depuis le 18 novembre », et le champ reste vide. Un champ pré-rempli la remettrait dans le HTML, donc dans le cache du navigateur et dans n'importe quelle capture d'écran. La changer veut dire la retaper.
+- La RLS de `ai_providers` exige `user_id = auth.uid()` **sur les quatre opérations** : aucun rôle applicatif, pas même l'administrateur d'un monde, ne lit la ligne d'un autre (vérifié par `aiProviders.integration.test.ts`).
+
+**L'adresse que l'utilisateur fournit est une SSRF.** Une URL saisie dans les options sera appelée par **notre** serveur, avec ses privilèges réseau. `verifierUrlFournisseur` (noyau pur, testé) la refuse si elle n'est pas en `http(s)`, si elle porte des identifiants, si elle est en clair hors machine locale, ou si elle désigne une adresse privée en production — `169.254.169.254`, les métadonnées d'instance, en tête. Elle est revérifiée **avant chaque appel**, pas seulement à l'enregistrement, parce qu'une ligne peut avoir été écrite autrement depuis. Limite connue et assumée : un nom public qui résout vers une adresse privée (*DNS rebinding*) passerait ; les deux autres gardes (aucune redirection suivie, délai court) bornent ce que cela permettrait.
 
 **Les données, pas seulement les clés.** Un secret du MJ envoyé au navigateur est exposé comme une clé : il ne se cache ni par CSS, ni par `spoiler`, ni dans un champ inutilisé du JSON (règles absolues 5 et 6). Le filtrage se fait sur le serveur, avant l'envoi.
 

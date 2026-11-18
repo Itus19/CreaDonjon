@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { buildViewerForWorld } from "@/src/server/services/visibility";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
-import { getOpenAiCompatibleProviderFromEnv } from "@/src/server/ai/adapters/openAiCompatible";
+import { resolveProviderForUser } from "@/src/server/ai/resolveProvider";
 import { askSoloGm } from "@/src/server/ai/soloGmQuestion";
 import { AiRateLimitError } from "@/src/server/ai/callAi";
 
@@ -43,11 +43,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Monde introuvable." }, { status: 404 });
   }
 
-  let provider;
-  try {
-    provider = getOpenAiCompatibleProviderFromEnv();
-  } catch {
-    return NextResponse.json({ error: "Aucun fournisseur IA local configuré." }, { status: 503 });
+  // V3.1-224 (ADR 0103) : le fournisseur de CE compte, sinon celui de l'environnement.
+  const provider = await resolveProviderForUser(supabase, user.id);
+  if (!provider) {
+    return NextResponse.json({ error: "Aucun fournisseur d'IA : déclare le tien dans ton compte." }, { status: 503 });
   }
 
   const [viewer, sessionId] = await Promise.all([

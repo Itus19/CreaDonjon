@@ -10,7 +10,7 @@ import { proposeWorldNote } from "@/src/server/services/soloWorldNotes";
 import { findEventByFromEvent, getSessionEventById, insertSessionEvent, nextEventSeq } from "@/src/server/repos/sessions";
 import { buildViewerForWorld } from "@/src/server/services/visibility";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
-import { getOpenAiCompatibleProviderFromEnv } from "./adapters/openAiCompatible";
+import { resolveProviderForUser } from "./resolveProvider";
 import type { AiProvider } from "./provider";
 import { runAiCompletion } from "./callAi";
 
@@ -324,7 +324,10 @@ export async function narrerTourSoloSansFaillir(
   params: Omit<SoloNarrationParams, "viewer" | "sessionId">,
 ): Promise<{ text: string; npcReaction: { npcId: string; text: string } | null } | null> {
   try {
-    const provider = getOpenAiCompatibleProviderFromEnv();
+    // V3.1-224 (ADR 0103) : le fournisseur du COMPTE qui joue, sinon celui de
+    // l'environnement, sinon aucun — et le tour reste joué, muet (V3.1-223).
+    const provider = await resolveProviderForUser(supabase, params.userId);
+    if (!provider) return null;
     const [viewer, sessionId] = await Promise.all([
       buildViewerForWorld(supabase, params.worldId, params.userId),
       getOrOpenSessionForCampaign(supabase, params.campaignId),

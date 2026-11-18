@@ -1531,3 +1531,22 @@ scene_states
 **Tenue par le moteur, jamais par un modèle.** L'heure avance parce que le code la fait avancer (repos, voyage, action longue). Un modèle *reçoit* cet état ; il ne le modifie que par une proposition passée par `ai_proposals` (§16). C'est le trou n° 1 de l'ADR 0009, où les PNJ « présents » restaient une liste figée toute la session.
 
 ---
+
+## 27. Le fournisseur d'IA d'un compte (V3.1-224)
+
+`ai_providers` — **une ligne par compte**, `user_id` en clé primaire (`references auth.users on delete cascade`). Chacun déclare le sien : sa clé chez un fournisseur distant, ou l'adresse de sa propre machine. Personne ne consomme les ressources d'un autre. Décision : [ADR 0103](adr/0103-le-fournisseur-d-ia-de-chaque-compte.md).
+
+| Colonne | Type | Rôle |
+|---|---|---|
+| `user_id` | `uuid` | clé primaire, et seule clé de la RLS |
+| `label` | `text` | ce que l'utilisateur en dit (« Venice », « mon PC ») |
+| `base_url` | `text` | l'adresse de l'API, compatible OpenAI (`…/v1`) |
+| `model` | `text` | l'identifiant du modèle |
+| `secret` | `text` | la clé d'API **déjà chiffrée** par l'application ; `null` pour un fournisseur sans clé |
+| `created_at`, `updated_at` | `timestamptz` | — |
+
+**`secret` n'est jamais écrit en clair, nulle part.** Le chiffrement (AES-256-GCM, `src/server/ai/secrets.ts`) a lieu **avant** que la valeur quitte le processus : ni la requête SQL, ni les journaux du serveur de base ne la voient. Et elle ne redescend jamais vers un client, pas même vers son propriétaire (`docs/SECURITE.md` §4).
+
+**RLS : chacun chez soi, sur les quatre opérations.** `user_id = auth.uid()` en lecture, insertion, modification et suppression. Aucun rôle applicatif n'a de raison de lire la ligne d'un autre — pas même l'administrateur d'un monde, qui n'a rien à faire du fournisseur de ses joueurs. C'est la seule table du schéma dont **aucune** politique ne mentionne un monde ou une campagne.
+
+**L'adresse est revérifiée avant chaque appel**, pas seulement à l'enregistrement : `verifierUrlFournisseur` (noyau pur) refuse les schémas autres que `http(s)`, les identifiants dans l'URL, le clair hors machine locale, et les adresses privées en production. Une ligne peut avoir été écrite autrement depuis, et c'est notre serveur qui appellera l'adresse.

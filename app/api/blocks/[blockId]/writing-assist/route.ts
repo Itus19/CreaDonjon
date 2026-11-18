@@ -4,7 +4,7 @@ import { writingAssistSchema } from "@/lib/blocks/schemas";
 import { getBlockById } from "@/src/server/repos/blocks";
 import { getEntityById } from "@/src/server/repos/entities";
 import { proposeTextForBlock } from "@/src/server/ai/writingAssist";
-import { getOpenAiCompatibleProviderFromEnv } from "@/src/server/ai/adapters/openAiCompatible";
+import { resolveProviderForUser } from "@/src/server/ai/resolveProvider";
 import { AiRateLimitError } from "@/src/server/ai/callAi";
 
 /**
@@ -42,11 +42,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "Entité introuvable." }, { status: 404 });
   }
 
-  let provider;
-  try {
-    provider = getOpenAiCompatibleProviderFromEnv();
-  } catch {
-    return NextResponse.json({ error: "Aucun fournisseur IA local configuré." }, { status: 503 });
+  // V3.1-224 (ADR 0103) : le fournisseur de CE compte, sinon celui de l'environnement.
+  const provider = await resolveProviderForUser(supabase, user.id);
+  if (!provider) {
+    return NextResponse.json({ error: "Aucun fournisseur d'IA : déclare le tien dans ton compte." }, { status: 503 });
   }
 
   try {

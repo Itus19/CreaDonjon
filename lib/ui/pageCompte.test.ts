@@ -16,9 +16,9 @@ describe("ligne de contexte (V3.1-80)", () => {
 
 describe("sommaire (V3.1-80)", () => {
   it("Apparence n'existe que si elle est fournie", () => {
-    expect(entreesSommaire({ aRejointParUnLien: false, avecApparence: false })).toEqual(["identite", "connexion", "langue", "suppression"]);
+    expect(entreesSommaire({ aRejointParUnLien: false, avecApparence: false })).toEqual(["identite", "connexion", "ia", "langue", "suppression"]);
     expect(entreesSommaire({ aRejointParUnLien: true, avecApparence: true })).toEqual([
-      "identite", "connexion", "invitation", "apparence", "langue", "suppression",
+      "identite", "connexion", "ia", "invitation", "apparence", "langue", "suppression",
     ]);
   });
 });

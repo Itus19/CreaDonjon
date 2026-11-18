@@ -136,6 +136,12 @@ Les tests, les mesures et les scripts tournent **contre la vraie base**, celle d
 - **Mode solo** (V3.1-132) : le même calcul à l'ouverture de l'écran solo, pour avertir des règles non jouables du personnage ; jamais en boucle.
 - **Le point de décision du tour solo** (V3.1-216) : **rien** pour la quasi-totalité des tours — la garde est la fiche déjà chargée (aucune activation à déclencheur de jet : aucune lecture de plus). Quand le personnage en porte une : la scène, le combat en cours et ses participants, les effets du personnage, son état de jeu, et les activations de ses sorts. Écriture : une ligne de `roll_windows` **seulement** si une réaction se propose vraiment ; la reprise rejoue le tour sans relancer de dé, et n'ajoute aucune écriture à un tour ordinaire.
 
+### Ce que consomme le fournisseur d'IA par compte (V3.1-224)
+
+- **Un appel d'IA** : **une lecture de plus**, sur `ai_providers`, par sa clé primaire (une ligne par compte). Rien n'est mis en cache : un compte peut changer de fournisseur entre deux tours, et une clé révoquée doit cesser de servir tout de suite.
+- **L'écran du compte** : une lecture à l'ouverture de la page, aucun sondage.
+- **Aucun appel de vérification** : l'application ne teste jamais le fournisseur « pour voir ». Son état se lit du dernier tour joué (V3.2-3).
+
 ## 5. Où cette règle est appliquée
 
 - `CLAUDE.md` : la ligne de ce document dans le tableau, et la méthode de travail.

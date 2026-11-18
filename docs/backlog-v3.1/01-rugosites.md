@@ -215,6 +215,25 @@ lint et tests verts.
 
 ---
 
+### ☐ V3.1-228 — Le registre des migrations ne dit plus la vérité · `M` · sans modèle IA — **prêt (Opus)**
+
+**Constaté le 18 novembre**, en préparant la table de V3.1-224. `supabase migration list --remote` annonce **dix migrations locales absentes de la production** — or leurs tables et colonnes **existent bel et bien** en base (`save_requests`, `availability_requests`, `combat_participants.pos_x`, vérifiés un par un). Elles ont donc été appliquées **à la main**, par l'éditeur SQL, sans être inscrites au registre `supabase_migrations`.
+
+Les dix : `20260929120000` (availability_requests), `20260929130000` (native_password_accounts), `20261001120000`, `20261001130000`, `20261001140000`, `20261010120000` (combats_gm_only), `20261010130000`, `20261102130000` (session_journal_devoir), `20261107160000`, `20261109150000`.
+
+**Trois conséquences, dont une sérieuse.**
+1. **`supabase db push` est inutilisable** : il tenterait de rejouer dix scripts déjà passés. Au mieux des erreurs « already exists », au pire des effets de bord sur ceux qui ne sont pas idempotents.
+2. **Un doublon de numéro** : `20261108120000_combat_positions.sql` et `20261108120000_player_save_requests.sql` portent le **même timestamp**. Le registre ne retient que le numéro : l'un est marqué appliqué, l'autre jamais, et la CLI ne pourra jamais distinguer les deux. Le second est passé à la main, lui aussi.
+3. **On ne sait plus ce qui est déployé** sans vérifier table par table, ce qui est exactement ce que le registre existe pour éviter.
+
+**À faire.** Décider, puis s'y tenir : soit on réaligne le registre (insérer les dix numéros dans `supabase_migrations.schema_migrations` après avoir vérifié chaque objet en base), soit on assume l'application manuelle et on l'écrit dans `docs/SCHEMA.md` comme procédure. Dans les deux cas, renommer la migration en doublon (règle absolue 14 : une migration appliquée ne se modifie pas — mais celle-ci ne l'a jamais été sous ce nom).
+
+**Critères d'acceptation**
+- [ ] `supabase migration list --remote` ne montre plus d'écart, ou la procédure manuelle est écrite et suivie.
+- [ ] Plus aucun doublon de numéro dans `supabase/migrations/`.
+
+---
+
 ### ☐ V3.1-225 — Le solo ne peut PAS faire apparaître un figurant · `M` · **avec modèle IA** — **prêt (Opus)**
 
 **Constaté en jouant, le 18 novembre.** L'auteur entre dans une auberge ; le modèle décrit « plusieurs silhouettes », « un membre du personnel », « les membres du personnel derrière le comptoir ». Aucun n'existe : la scène ne contient que le PJ, et l'onglet « Présents » le dit. Son mot : « le moteur n'a pas l'air d'être branché ».
@@ -265,7 +284,7 @@ Sa proposition, à prendre telle quelle : un présent inconnu apparaît comme **
 
 ---
 
-### ☐ V3.1-224 — L'IA, un réglage du COMPTE : sa machine ou sa clé · `L` · sans modèle IA — **à concevoir (Opus, ADR)**
+### ☑ V3.1-224 — L'IA, un réglage du COMPTE : sa machine ou sa clé · `L` · sans modèle IA — **conçu et fait le 18 novembre (ADR 0103)**
 
 **Demandé par l'auteur le 18 novembre**, en découvrant que le site en ligne ne peut pas joindre son LM Studio (V3.1-223). Direction voulue : **chacun joue sur ses propres ressources d'IA**, déclarées sur son compte — soit un **lien vers sa machine** (tunnel vers son fournisseur local), soit une **clé d'API** chez un fournisseur distant (Claude, OpenAI…). Personne ne consomme celles d'un autre, et l'hébergeur ne paie pour personne.
 
@@ -279,8 +298,20 @@ La spec l'annonce déjà à demi-mot : « le choix du modèle est un réglage du
 **À prévoir aussi.** L'adaptateur existe (`AiProvider`, `openAiCompatible`, et `AI_LOCAL_API_KEY` depuis le 18 novembre) : brancher un fournisseur par utilisateur ne demande pas de réécrire les appels, qui restent confinés à `src/server/ai/` (règle 12). Le collage assisté sur du contenu d'ouvrage reste réservé à un fournisseur **local** (`specs/cible-locale-et-ia.md` : avec un distant, le texte quitte la machine).
 
 **Critères d'acceptation (de la conception)**
-- [ ] ADR écrit : forme du réglage, stockage du secret, défense contre la SSRF, rattachement de l'usage, comportement sans fournisseur.
-- [ ] Tickets prêts découpés et ajoutés à l'index.
+- [x] ADR écrit : forme du réglage, stockage du secret, défense contre la SSRF, rattachement de l'usage, comportement sans fournisseur.
+- [x] ~~Tickets prêts découpés~~ — fait d'un bloc le même jour plutôt que découpé.
+
+*Fait le 18 novembre ([ADR 0103](../adr/0103-le-fournisseur-d-ia-de-chaque-compte.md)).*
+
+- **La table** `ai_providers`, une ligne par compte, RLS `user_id = auth.uid()` sur les **quatre** opérations : c'est la seule table du schéma dont aucune politique ne parle d'un monde ni d'une campagne (`docs/SCHEMA.md` §27).
+- **Le secret** est chiffré en AES-256-GCM **avant de quitter le processus** (`src/server/ai/secrets.ts`, 7 tests) : la requête SQL ne le voit pas. Il ne redescend **jamais** vers un client, pas même son propriétaire — l'écran dit « une clé est posée depuis le … », le champ reste vide, et la changer veut dire la retaper.
+- **La SSRF** : `verifierUrlFournisseur` (noyau pur, 8 tests) refuse les schémas autres que `http(s)`, les identifiants dans l'adresse, le clair hors machine locale, et les plages privées en production — `169.254.169.254` nommément. Revérifiée **avant chaque appel**, pas seulement à l'enregistrement. Limite assumée et écrite : le *DNS rebinding* passerait.
+- **La cascade** (`resolveProviderForUser`) : le fournisseur du compte, sinon celui de l'environnement, sinon **aucun** — et le tour reste joué, muet. Les six routes qui construisaient leur fournisseur depuis l'environnement passent désormais par là ; plus aucune ne le fait elle-même (règle absolue 12).
+- **L'écran** : une section « Mon fournisseur d'IA » dans la page Compte, qui dit aussi ce qui quitte la machine avec un fournisseur distant.
+
+Vérifié : `aiProviders.integration.test.ts` (6 cas — la RLS dans les deux sens, l'écriture au nom d'un autre refusée, l'adresse devenue invalide et le secret indéchiffrable qui retombent sur « pas de fournisseur »), et au navigateur : `file://` refusé, identifiants dans l'URL refusés, enregistrement accepté, et **le secret illisible en base** (`v1:…`, vérifié ligne par ligne).
+
+*Reste* : `ai_usage_log` ne dit pas encore **quel** fournisseur a servi (prévu par l'ADR) ; et `AI_SECRETS_KEY` doit être posée en production avant que quiconque y enregistre une clé.
 
 ---
 

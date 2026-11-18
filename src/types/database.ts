@@ -41,6 +41,36 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_providers: {
+        Row: {
+          base_url: string
+          created_at: string
+          label: string
+          model: string
+          secret: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          base_url: string
+          created_at?: string
+          label: string
+          model: string
+          secret?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          base_url?: string
+          created_at?: string
+          label?: string
+          model?: string
+          secret?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       ai_proposals: {
         Row: {
           applied_at: string | null

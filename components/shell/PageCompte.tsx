@@ -9,6 +9,7 @@ import DisplayNameForm from "./DisplayNameForm";
 import PasswordForm from "./PasswordForm";
 import MyInvitePanel from "./MyInvitePanel";
 import DeleteAccountSection from "./DeleteAccountSection";
+import FournisseurIaSection from "./FournisseurIaSection";
 
 const idSection = (s: SectionCompte) => `compte-section-${s}`;
 
@@ -147,6 +148,7 @@ export default function PageCompte({ compte, apparence }: { compte: DonneesCompt
         <p className="text-xs text-ink-muted">{t("langueNote")}</p>
       </>
     ),
+    ia: <FournisseurIaSection />,
     suppression: <DeleteAccountSection mondesPossedes={compte.mondesPossedes} />,
   };
 

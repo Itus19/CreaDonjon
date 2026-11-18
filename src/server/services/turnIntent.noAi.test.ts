@@ -72,7 +72,10 @@ describe("la route du tour appelle l'IA, mais jamais avant playTurn", () => {
     // Les CALLS, jamais les imports : un `import { x } from "..."` ne
     // contient pas `x(`, seul un site d'appel reel le fait — inutile de
     // filtrer les imports a part, la forme textuelle les exclut deja.
-    for (const call of ["getOpenAiCompatibleProviderFromEnv(", "narrateSoloTurn("]) {
+    // V3.1-224 : la route ne construit plus son fournisseur depuis l'environnement,
+    // elle résout celui du COMPTE (`resolveProviderForUser`). Le verrou est inchangé :
+    // quel que soit son nom, l'appel d'IA vient APRÈS que le tour est joué et journalisé.
+    for (const call of ["resolveProviderForUser(", "narrateSoloTurn("]) {
       const callIndex = lines.findIndex((line) => line.includes(call));
       expect(callIndex, `${call} doit apparaitre dans ce fichier`).toBeGreaterThanOrEqual(0);
       expect(callIndex, `${call} doit venir APRES playTurn(`).toBeGreaterThan(playTurnCallIndex);

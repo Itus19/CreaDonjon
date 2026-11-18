@@ -24,10 +24,11 @@ describe("ligne de contexte du Compte (V3.1-80)", () => {
 });
 
 describe("sections du Compte (V3.1-80)", () => {
-  it("six sections dans l'ordre décidé quand on a rejoint par un lien", () => {
-    expect(sectionsCompte({ aRejointParUnLien: true })).toEqual(["identite", "connexion", "invitation", "apparence", "langue", "suppression"]);
+  it("sept sections dans l'ordre décidé quand on a rejoint par un lien", () => {
+    // V3.1-224 : « Mon fournisseur d'IA » juste après la connexion — un réglage du compte, pas un goût d'affichage.
+    expect(sectionsCompte({ aRejointParUnLien: true })).toEqual(["identite", "connexion", "ia", "invitation", "apparence", "langue", "suppression"]);
   });
   it("sans lien d'invitation, la section et son entrée de sommaire disparaissent", () => {
-    expect(sectionsCompte({ aRejointParUnLien: false })).toEqual(["identite", "connexion", "apparence", "langue", "suppression"]);
+    expect(sectionsCompte({ aRejointParUnLien: false })).toEqual(["identite", "connexion", "ia", "apparence", "langue", "suppression"]);
   });
 });
