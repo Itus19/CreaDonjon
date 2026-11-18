@@ -145,6 +145,7 @@ sa partie, avec « avec modèle IA » ou « sans modèle IA » dans son titre, e
 | V3.1-9 | ☑ | sans | Bouton « Prochaine session » mal calibré selon l'écran | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-10 | ☑ | sans | Connexion par identifiant/mot de passe plutôt que lien à retrouver | [`termines.md`](backlog-v3.1/termines.md) |
 | V3.1-11 | ☑ | sans | Onglet « Solo » visible même avec un MJ humain déjà présent | [`termines.md`](backlog-v3.1/termines.md) |
+| V3.1-222 | ☑ | sans | « Rejoindre » un monde solo ouvre le jeu, pas l'atelier | [`01-rugosites.md`](backlog-v3.1/01-rugosites.md) |
 | V3.1-12 | ☐ | sans | « Voir comme » accessible aux MJ de campagne, pas seulement au superadmin | [`01-rugosites.md`](backlog-v3.1/01-rugosites.md) |
 | V3.1-13 | ☐ | sans | Sous-classes manquantes pour les classes des 4 joueuses actives | [`01-rugosites.md`](backlog-v3.1/01-rugosites.md) |
 | V3.1-14 | ☑ | sans | Aucun moyen pour une joueuse de créer elle-même son PJ sans personnage déjà assigné | [`termines.md`](backlog-v3.1/termines.md) |

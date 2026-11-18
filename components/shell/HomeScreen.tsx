@@ -97,7 +97,11 @@ function WorldDetail({ world, currentUserId, canUseSoloMode }: { world: HomeWorl
   // coquille allegee (Fiche/Notes/Wiki/Regles), jamais directement a la
   // fiche brute — celle-ci gere elle-meme le cas "personnage pas encore
   // reclame".
-  const href = isPlayer ? `/m/${world.slug}/joueur` : `/m/${world.slug}`;
+  // V3.1-222 : en solo, le propriétaire EST le joueur. « Rejoindre » ouvrait
+  // son atelier de MJ parce qu'un rôle `owner` l'emporte sur son rôle
+  // `player` dans la campagne — on arrivait sur la liste des fiches au lieu
+  // du jeu. L'atelier reste à une porte de là, dans le rail joueur.
+  const href = world.mode === "solo" ? `/m/${world.slug}/joueur/solo` : isPlayer ? `/m/${world.slug}/joueur` : `/m/${world.slug}`;
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">

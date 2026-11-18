@@ -59,6 +59,7 @@ export default function PlayerShell({
   worldSlug,
   worldName,
   hasHumanGm,
+  estAdminDuMonde,
   prochaineSession,
   devoir,
   children,
@@ -67,6 +68,8 @@ export default function PlayerShell({
   worldName: string;
   /** V3.1-11 : masque l'onglet Solo — ce mode (V3, IA locale) n'a de sens que sans MJ humain sur ce monde. */
   hasHumanGm: boolean;
+  /** V3.1-222 : l'appelant administre ce monde (propriétaire ou éditeur) — il garde une porte vers l'atelier. */
+  estAdminDuMonde: boolean;
   /** Badge « Prochaine session », lu par le layout joueur (`null` : monde sans campagne). */
   prochaineSession: ProchaineSession | null;
   /** V3.1-150 : le devoir de journal pas encore validé, lu par le layout joueur (`null` : aucun). */
@@ -233,6 +236,20 @@ export default function PlayerShell({
               libelle={t("apparence")}
               actif={pathname === `${base}/apparence`}
             />
+            {/* V3.1-222 : la porte vers l'atelier, pour qui administre ce monde —
+                règles, fiches, outils du MJ. Sans elle, « Rejoindre » menant
+                désormais au jeu, un monde solo n'aurait plus d'entrée côté MJ. */}
+            {estAdminDuMonde && (
+              <RailRow
+                href={`/m/${worldSlug}`}
+                icone={
+                  <TraitSvg>
+                    <path d="M12 3l7 3v5c0 4.2-2.8 7.6-7 10-4.2-2.4-7-5.8-7-10V6z" />
+                  </TraitSvg>
+                }
+                libelle={t("atelier")}
+              />
+            )}
             <RailRow
               href="/"
               icone={

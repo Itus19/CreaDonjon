@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import { resolveCampaignId, hasHumanGm } from "@/src/server/services/campaigns";
+import { isWorldAdmin } from "@/src/server/services/permissions";
 import { countUnansweredRequests, getNextSession } from "@/src/server/services/scheduling";
 import PlayerShell from "@/components/shell/PlayerShell";
 import { getMyOpenDevoir } from "@/src/server/services/sessionJournal";
@@ -39,16 +40,18 @@ export default async function JoueurLayout({
   // V3.1-190 : le nombre de demandes qui attendent ma réponse (la pastille),
   // dans la même vague — quatre lectures légères quel que soit le nombre de
   // demandes (`countUnansweredRequests`).
-  const [humanGm, nextSession, demandesEnAttente, devoir] = await Promise.all([
+  const [humanGm, nextSession, demandesEnAttente, devoir, estAdmin] = await Promise.all([
     campaignId ? hasHumanGm(supabase, campaignId) : Promise.resolve(false),
     campaignId ? getNextSession(supabase, campaignId) : Promise.resolve(null),
     campaignId ? countUnansweredRequests(supabase, campaignId, user.id) : Promise.resolve(0),
     campaignId ? getMyOpenDevoir(supabase, { worldId: world.id, campaignId, userId: user.id }) : Promise.resolve(null),
+    // V3.1-222 : dans la même vague (docs/CABLAGE.md C1), jamais un appel de plus après l'affichage.
+    isWorldAdmin(supabase, { worldId: world.id, userId: user.id }),
   ]);
   const prochaineSession = campaignId ? { date: nextSession?.scheduled_date ?? null, demandesEnAttente } : null;
 
   return (
-    <PlayerShell worldSlug={worldSlug} worldName={world.name} hasHumanGm={humanGm} prochaineSession={prochaineSession} devoir={devoir}>
+    <PlayerShell worldSlug={worldSlug} worldName={world.name} hasHumanGm={humanGm} estAdminDuMonde={estAdmin} prochaineSession={prochaineSession} devoir={devoir}>
       {children}
     </PlayerShell>
   );

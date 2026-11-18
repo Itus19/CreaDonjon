@@ -203,6 +203,18 @@ lint et tests verts.
 
 ---
 
+### ☑ V3.1-222 — « Rejoindre » un monde solo ouvre le jeu, pas l'atelier · `S` · sans modèle IA — **fait le 18 novembre**
+
+**Constaté par l'auteur en allant jouer** (18 novembre) : « Rejoindre », depuis l'accueil, menait à la liste des fiches du monde — l'atelier du MJ — et non à l'écran de jeu solo.
+
+**Pourquoi.** La carte de l'accueil calculait `href = isPlayer ? …/joueur : /m/<slug>`, et `isPlayer` vaut `myRole === "player"`. Or `getMyRolePerWorld` donne « gm » à qui possède le monde, et dit explicitement de ne jamais écraser ce rôle par celui de la campagne. En solo, l'auteur est **propriétaire du monde ET joueur de la campagne** : il tombait donc toujours côté MJ, alors que la carte affichait « SOLO ». Aucune autre porte n'existait : dans toute l'application, un seul endroit construisait un lien vers `/joueur`, cette carte.
+
+**Fait.** Un monde en mode `solo` mène désormais à `…/joueur/solo` quel que soit le rôle. Et comme ce clic ne mène plus à l'atelier, le rail joueur gagne une entrée **« Atelier »** (vers `/m/<slug>`, règles, fiches et outils du MJ), affichée seulement à qui administre le monde — `isWorldAdmin`, lu dans la même vague que le reste du layout (docs/CABLAGE.md C1), jamais une requête de plus après l'affichage.
+
+**Vérifié au navigateur** (monde solo d'un compte de test, qui en est propriétaire) : « Rejoindre » pointe sur `/m/<slug>/joueur/solo`, l'écran de jeu s'ouvre avec sa scène et sa barre d'intention, et « Atelier » ramène à `/m/<slug>`.
+
+---
+
 ### ☐ V3.1-12 — « Voir comme » accessible aux MJ de campagne, pas seulement au superadmin · `M` · sans modèle IA — **fait le 9 octobre (ADR 0051, 0052) ; vérifié en direct en MJ le 19 octobre, reste le superadmin**
 
 **Modèle conseillé : Opus** — « voir comme » : usurpation d'identité, portée de sécurité.
