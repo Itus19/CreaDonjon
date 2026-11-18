@@ -1,11 +1,5 @@
 import type { FractionsAnneau, TonAnneau } from "@/lib/ui/initiative";
 
-/**
- * Bleu des PV temporaires, celui de la planche « Décidé · initiative ». Aucun
- * jeton de la charte ne le porte encore : à promouvoir en jeton quand la
- * seconde jauge bleue de la fiche (V3.1-26) arrivera au même endroit.
- */
-const BLEU_PV_TEMPORAIRES = "oklch(0.72 0.13 235)";
 
 const TRAIT_PAR_TON: Record<TonAnneau, string> = {
   plein: "stroke-accent",
@@ -27,7 +21,7 @@ export default function AnneauPv({ fractions }: { fractions: FractionsAnneau }) 
         <circle cx="22" cy="22" r="16" strokeWidth="5" strokeLinecap="round" pathLength="100" strokeDasharray={`${fractions.pv} 100`} className={TRAIT_PAR_TON[fractions.ton]} />
       )}
       {fractions.temp > 0 && (
-        <circle cx="22" cy="22" r="20" strokeWidth="2.5" strokeLinecap="round" pathLength="100" strokeDasharray={`${fractions.temp} 100`} style={{ stroke: BLEU_PV_TEMPORAIRES }} />
+        <circle cx="22" cy="22" r="20" strokeWidth="2.5" strokeLinecap="round" pathLength="100" strokeDasharray={`${fractions.temp} 100`} className="stroke-hp-temp" />
       )}
     </svg>
   );

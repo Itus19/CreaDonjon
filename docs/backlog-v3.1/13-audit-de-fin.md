@@ -53,3 +53,18 @@ critique d'un jet ciblé (un 20 naturel).
 **Critères d'acceptation**
 - [ ] Chaque point ci-dessus est corrigé, ou écarté avec sa raison.
 - [ ] Vérifié au navigateur, ordinateur et 390 px.
+
+---
+
+## Passe du 18 novembre — ce qui est fait
+
+**Corrigés (code, sans vérification à l'écran encore).**
+- *V3.1-106, création d'un combat* : les clés sont résolues **avant** la moindre écriture (`createCombatFromMonsters`) ; une créature que le ruleset ne connaît pas rend `unknown_monster`, la route répond 400, et plus rien n'est créé — ni participant sans CA ni PV, ni combat vide. Au passage, une lecture par **clé** au lieu d'une par figurine (huit gobelins = une lecture, pas huit).
+- *V3.1-112, sauvegardes orphelines* : `cancelPendingSaveRequestsForCombat` passe à `cancelled` les demandes encore en attente ; appelée quand un combat se termine (`endCombat`) et **avant** sa suppression (après, la ligne a perdu son `combat_id` et devient introuvable). Aucune migration : le statut `cancelled` existait déjà dans la contrainte, et la RLS `save_requests_admin_update` autorise déjà le MJ.
+- *V3.1-112, historique des jets* : les dégâts d'un sort s'intitulent par le **nom traduit** (`resolved.name`, déjà chargé — aucune lecture de plus) ; l'attaque de sort ciblée nomme le sort comme la branche « sauvegarde » le faisait déjà.
+- *V3.1-38, bleu des PV temporaires* : promu en jeton `--hp-temp` dans les six blocs de thème de `tokens.css` (même luminance que `--players` dans chacun, teinte et chroma du bleu d'origine) et exposé en `--color-hp-temp` ; `AnneauPv` porte `stroke-hp-temp` au lieu d'une constante. **Le bleu change très légèrement en thème sombre** (L 0,72 → 0,76) : c'est le prix de la cohérence entre thèmes, à regarder à la vérification.
+
+**Écarté, avec sa raison.**
+- *V3.1-57, `::details-content`* : le sélecteur est aujourd'hui supporté par les trois moteurs (Chromium 131+, Firefox 143+, Safari 18.4+), et le repli ne touche qu'un atelier secondaire de l'écran Règles. Le rendre portable demanderait soit de dupliquer le contenu (formulaires et identifiants en double), soit de montrer le summary sur grand écran, c'est-à-dire de défaire le dessin décidé. Coût réel supérieur au défaut ; à reprendre si un navigateur de la table l'exige.
+
+**Reste de cette liste** : les noms tronqués de l'initiative au téléphone, le volet de dés qui s'ouvre par-dessus la fiche après l'initiative, la bascule silencieuse du fond de wiki à la suppression d'une image, la page partagée qui ne se supprime pas depuis le cahier (aucune route), et les deux parcours « à rejouer en direct ». Les trois premiers se jugent à l'écran, pas dans le code.

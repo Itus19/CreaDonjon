@@ -664,7 +664,8 @@ export async function castSpell(
         attribution: { entityId: ctx.entityId, kind: "damage" },
         detail: {
           who: ctx.entityName,
-          what: `Sort — ${params.spellKey}`,
+          // V3.1-144 : le nom traduit, jamais la clé (« Sort — Flamme sacrée », pas « Sort — sacred-flame »). `resolved` l'a déjà.
+          what: `Sort — ${resolved.name ?? params.spellKey}`,
           trace: damage.trace,
           spellKey: params.spellKey,
           slotLevel: params.slotLevel,

@@ -86,6 +86,26 @@ export async function listPendingSaveRequests(supabase: TypedClient, campaignId:
   return data;
 }
 
+/**
+ * V3.1-144 — les sauvegardes encore en attente d'un combat qui se termine ou
+ * qui disparaît. Sans cela, elles survivaient au combat (`combat_id` remis à
+ * nul par la suppression) : la joueuse pouvait encore y répondre, le MJ non
+ * (« Cible introuvable », sa ligne de participant n'existant plus).
+ *
+ * Écriture directe, réservée au MJ par la RLS (`save_requests_admin_update`).
+ * Rend le nombre de demandes annulées, pour le journal de l'appelant.
+ */
+export async function cancelPendingSaveRequestsForCombat(supabase: TypedClient, combatId: string): Promise<number> {
+  const { data, error } = await supabase
+    .from("save_requests")
+    .update({ status: "cancelled" })
+    .eq("combat_id", combatId)
+    .eq("status", "pending")
+    .select("id");
+  if (error) throw new Error(error.message);
+  return data?.length ?? 0;
+}
+
 /** `public.answer_save_request` : la ligne répondue, ou `null` si refusé (mauvais compte, déjà répondue, annulée). */
 export async function answerSaveRequestRow(
   supabase: TypedClient,

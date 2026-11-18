@@ -1013,15 +1013,17 @@ export async function resolveTargetedRoll(
     if (input.kind === "spell_attack") {
       const rolled = await rollSpellAttack(supabase, { entityId: ctx.entityId, campaignId: params.campaignId, spellKey: action.spellKey, advantage: input.advantage, locale: params.locale });
       if ("error" in rolled) return { ok: false, reason: rolled.error };
+      // V3.1-144 : le fait nomme le sort comme la branche « sauvegarde » le fait déjà — son nom traduit, jamais sa clé.
+      const spellNameAtt = (await getRuleEntryForWorld(supabase, campaign.worldId, action.spellKey, params.locale))?.name ?? action.spellKey;
       shown.push(rolled.attack);
       verdict = attackVerdict(rolled.attack, target.ac);
       const cast = await castSpell(supabase, { ...castBase, critical: rolled.attack.isCritical, rollDamage: verdict === "hit" });
       if ("error" in cast) return { ok: false, reason: cast.error };
       fait(
-        `${actorName} lance ${action.spellKey} sur ${target.label} : ${rolled.attack.total}` +
+        `${actorName} lance ${spellNameAtt} sur ${target.label} : ${rolled.attack.total}` +
           (target.ac === null ? " — CA inconnue, la table tranche" : ` contre CA ${target.ac} — ${verdict === "hit" ? "touché" : "raté"}`) +
           ".",
-        attackFactForPlayer({ actor: actorName, target: target.label, label: action.spellKey, total: rolled.attack.total, verdict: target.ac === null ? null : verdict, critical: rolled.attack.isCritical, criticalFail: rolled.attack.isCriticalFail })
+        attackFactForPlayer({ actor: actorName, target: target.label, label: spellNameAtt, total: rolled.attack.total, verdict: target.ac === null ? null : verdict, critical: rolled.attack.isCritical, criticalFail: rolled.attack.isCriticalFail })
       );
       if (verdict === "hit" && cast.damage) {
         amount = cast.damage.total;

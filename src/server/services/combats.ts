@@ -46,6 +46,7 @@ import { serverRng } from "@/src/server/services/rng";
 import { advanceTurnSkipping, isOutOfFight, retreatTurnSkipping } from "@/src/core/rules/targeting";
 import { isWorldAdmin } from "@/src/server/services/permissions";
 import { decideCombatAccess, type CombatAccess } from "@/src/core/permissions/combatAccess";
+import { cancelPendingSaveRequestsForCombat } from "@/src/server/repos/saveRequests";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
 import { getEntityRuntimeState } from "@/src/server/services/runtimeState";
 import { getOrInitializeRuntimeState, resolveCharacterActionContext } from "@/src/server/services/characterActions";
@@ -217,15 +218,31 @@ async function nextDisplayOrder(supabase: TypedClient, combatId: string): Promis
  * l'utilisateur. Les PJ ne sont PAS ajoutes automatiquement — le MJ les
  * ajoute depuis l'ecran d'initiative (`addEntityParticipant`).
  */
+/** V3.1-144 : une clé de créature que le ruleset ne connaît pas — rien n'est écrit, ni combat ni participant. */
+export type CreateCombatOutcome = CombatRow | { error: "unknown_monster"; key: string };
+
 export async function createCombatFromMonsters(
   supabase: TypedClient,
   params: { campaignId: string; rulesetId: string; name: string | null; monsters: readonly StartCombatMonsterInput[] }
-): Promise<CombatRow> {
+): Promise<CreateCombatOutcome> {
+  // V3.1-144 — les clés sont résolues AVANT la moindre écriture. Avant, une
+  // clé inconnue du ruleset (« goblin » dans un monde 2024) passait : le
+  // combat se créait et ses participants arrivaient sans CA, sans PV ni
+  // actions, inutilisables. Une par clé, et non une par figurine : autant de
+  // lectures en moins quand on lance huit gobelins (QUOTAS Q1).
+  const statsParCle = new Map<string, Awaited<ReturnType<typeof getMonsterCombatStats>>>();
+  for (const monster of params.monsters) {
+    if (statsParCle.has(monster.entryKey)) continue;
+    const lues = await getMonsterCombatStats(supabase, params.rulesetId, monster.entryKey);
+    if (!lues) return { error: "unknown_monster", key: monster.entryKey };
+    statsParCle.set(monster.entryKey, lues);
+  }
+
   const sessionId = await getOrOpenSessionForCampaign(supabase, params.campaignId);
   const combat = await insertCombat(supabase, { campaignId: params.campaignId, sessionId, name: params.name });
   let order = 0;
   for (const monster of params.monsters) {
-    const stats = await getMonsterCombatStats(supabase, params.rulesetId, monster.entryKey);
+    const stats = statsParCle.get(monster.entryKey) ?? null;
     for (let i = 1; i <= monster.count; i++) {
       order += 1;
       await insertCombatParticipant(supabase, {
@@ -343,6 +360,8 @@ export async function removeParticipant(supabase: TypedClient, participantId: st
 
 /** Suppression definitive d'un combat depuis "Mes combats" (V1-E4) — jamais suivie par l'annulation, comme le retrait d'un participant. */
 export async function deleteCombatById(supabase: TypedClient, combatId: string): Promise<void> {
+  // V3.1-144 : AVANT la suppression — après, la ligne a perdu son `combat_id` et on ne la retrouve plus.
+  await cancelPendingSaveRequestsForCombat(supabase, combatId);
   await deleteCombat(supabase, combatId);
 }
 
@@ -441,8 +460,12 @@ export async function setCombatStatus(
 export const beginCombat = (supabase: TypedClient, params: { combatId: string; actorUserId: string }) =>
   setCombatStatus(supabase, { ...params, status: "running" });
 
-export const endCombat = (supabase: TypedClient, params: { combatId: string; actorUserId: string }) =>
-  setCombatStatus(supabase, { ...params, status: "ended" });
+/** V3.1-144 : un combat qui se termine annule ses sauvegardes encore en attente — elles n'ont plus de cible. */
+export async function endCombat(supabase: TypedClient, params: { combatId: string; actorUserId: string }): Promise<CombatRow> {
+  const combat = await setCombatStatus(supabase, { ...params, status: "ended" });
+  await cancelPendingSaveRequestsForCombat(supabase, params.combatId);
+  return combat;
+}
 
 /**
  * V3.1-38 — les trois gestes de « Quitter le combat ». `null` : le combat

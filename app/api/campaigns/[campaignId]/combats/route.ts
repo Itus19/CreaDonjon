@@ -36,5 +36,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     name: parsed.data.name,
     monsters: parsed.data.monsters,
   });
+  // V3.1-144 : l'écran ne propose que des créatures du système, mais la route doit dire non elle aussi.
+  if ("error" in combat) {
+    return NextResponse.json({ error: `Créature inconnue dans ce système de règles : « ${combat.key} ».` }, { status: 400 });
+  }
   return NextResponse.json(combat, { status: 201 });
 }

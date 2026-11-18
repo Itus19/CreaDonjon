@@ -21,6 +21,8 @@
   --color-gm: var(--gm);
   /* V3.1-63 : la visibilité « Joueurs » (pastille bleue), même luminance que --gm. */
   --color-players: var(--players);
+  /* V3.1-144 : les PV temporaires, en jeton plutôt qu'en constante de composant. */
+  --color-hp-temp: var(--hp-temp);
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
   --color-accent-ink: var(--accent-ink);
