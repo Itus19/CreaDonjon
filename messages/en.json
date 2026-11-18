@@ -1365,6 +1365,10 @@
     "echec": "error — {message}"
   },
   "solo": {
+    "enCours": "Writing the story…",
+    "iaRepond": "AI provider: the last turn was narrated",
+    "iaMuette": "AI provider unreachable: the last turn stayed silent",
+    "iaInconnue": "AI provider: no turn played yet",
     "annulerTour": {
       "bouton": "Undo last turn",
       "question": "Undo this turn? What it changed is reverted; the log keeps it.",

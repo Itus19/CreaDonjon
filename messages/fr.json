@@ -1366,6 +1366,10 @@
     "echec": "erreur — {message}"
   },
   "solo": {
+    "enCours": "Le récit s'écrit…",
+    "iaRepond": "Fournisseur d'IA : le dernier tour a été raconté",
+    "iaMuette": "Fournisseur d'IA injoignable : le dernier tour est resté muet",
+    "iaInconnue": "Fournisseur d'IA : aucun tour joué pour l'instant",
     "annulerTour": {
       "bouton": "Annuler le dernier tour",
       "question": "Annuler ce tour ? Ce qu'il a changé est défait ; le journal le garde.",

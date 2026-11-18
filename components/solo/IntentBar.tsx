@@ -12,6 +12,10 @@ import { preReglageDepuisDemande, sortieAttenteReactions, sortieJetDepuisTour } 
 import { encaisserDepuisFiche } from "@/lib/ui/soloApi";
 
 /**
+ * V3.2-2 : le bloc d'interprétation est séparé par un FILET, jamais par un
+ * troisième cadre — le panneau en porte un, le champ aussi, et trois
+ * bordures emboîtées se lisaient comme un défaut de dessin.
+ *
  * V3-B1 — La barre d'intention.
  *
  * Le joueur ecrit librement ; **rien ne part avant que la mecanique soit
@@ -92,6 +96,8 @@ export default function IntentBar({
   pending,
   onPendingChange,
   onActed,
+  onEnCours,
+  onNarration,
 }: {
   worldSlug: string;
   campaignId: string | null;
@@ -102,6 +108,10 @@ export default function IntentBar({
   onPendingChange: (next: PendingRequest | null) => void;
   /** Appelé après toute action confirmée par le serveur (pose ou encaissement) — `SoloScreen.tsx` en profite pour rafraîchir le fil tout de suite, sans attendre son sondage. */
   onActed?: () => void;
+  /** V3.2-3 : un tour est en route — l'écran montre que quelque chose se passe pendant les 10 à 20 s du modèle local. */
+  onEnCours?: (enCours: boolean) => void;
+  /** V3.2-3 : le modèle a répondu, ou non. Lu du DERNIER tour, jamais d'un sondage (docs/QUOTAS.md). */
+  onNarration?: (repondu: boolean) => void;
 }) {
   const [text, setText] = useState("");
   const [overrideActionId, setOverrideActionId] = useState<string | null>(null);
@@ -228,6 +238,10 @@ export default function IntentBar({
         setError(payload?.error ?? "Le tour n'a pas pu être joué.");
         return;
       }
+      // V3.2-4 : le serveur a accepté — la phrase a fait son office, la zone repart
+      // vide, comme le fait déjà la question au MJ (un refus, lui, sort plus haut et
+      // rend sa phrase au joueur). `changeText` remet aussi la correction à zéro.
+      changeText("");
       const body = (await res.json()) as TurnOutcome | PendingTurnResponse;
       // V3-B5 — un choix mecanique en campagne ne rend plus un tour joue :
       // il rend la demande posee, en attente du de annonce (`encash`).
@@ -236,6 +250,8 @@ export default function IntentBar({
         onPendingChange(body.pending);
         ouvrirOutil(body.pending);
       } else {
+        // V3.2-3 : un tour joué sans narration, c'est un fournisseur injoignable (V3.1-223).
+        onNarration?.(body.narration !== null);
         onPendingChange(null);
         setDc("");
       }
@@ -275,6 +291,8 @@ export default function IntentBar({
         setError(payload?.error ?? "Le jet n'a pas pu être encaissé.");
         return;
       }
+      // V3.2-4 : le dé annoncé est encaissé, le champ se libère pour la suite.
+      changeText("");
       const outcome = (await res.json()) as EncashedTurnResponse;
       // V3.1-216 : même attente que ci-dessus, pour le dé annoncé à la main.
       if ("fenetre" in outcome) return;
@@ -323,6 +341,11 @@ export default function IntentBar({
       setBusy(false);
     }
   }
+
+  // V3.2-3 : un seul endroit porte « ça travaille », pour les trois chemins.
+  useEffect(() => {
+    onEnCours?.(busy);
+  }, [busy, onEnCours]);
 
   function retry() {
     if (lastAttempt === "mj") void askMj();
@@ -398,7 +421,7 @@ export default function IntentBar({
               Écris ton action. Le moteur dit ce qu&apos;il a compris avant de lancer quoi que ce soit.
             </p>
           ) : (
-            <div className="flex flex-col gap-3 rounded-md border border-edge bg-panel-sunken p-3">
+            <div className="flex flex-col gap-3 border-t border-edge pt-3">
               {chosenAction ? (
                 <div className="flex flex-wrap items-center gap-2 text-sm text-ink">
                   <span className={CHIP}>{KIND_LABELS[chosenAction.kind]}</span>

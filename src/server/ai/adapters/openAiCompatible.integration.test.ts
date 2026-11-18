@@ -65,7 +65,14 @@ describe.skipIf(!hasEnv)("OpenAiCompatibleProvider (integration, serveur local r
     // avec le vrai schema qui a un champ dedie pour le mode a deux mains).
     expect(result.toolCalls.length).toBeGreaterThanOrEqual(1);
     expect(result.toolCalls[0].name).toBe("propose_weapon");
-    expect(result.toolCalls[0].input).toMatchObject({ damage_type: "tranchant" });
+    // La CASSE n'est pas ce qui se vérifie ici : un modèle local rend « tranchant »
+    // ou « Tranchant » d'une fois sur l'autre, et ce test a échoué pour cette seule
+    // raison le 18 novembre, au milieu d'une suite verte. L'application, elle, est
+    // déjà insensible à la casse d'un type de dégâts (correctif du 17 novembre,
+    // « un type de dégâts stocké avec une majuscule ne bloque plus la modification
+    // d'un sort maison ») : exiger ici plus que ce que le code exige ne prouvait rien.
+    const entree = result.toolCalls[0].input as { damage_type?: unknown };
+    expect(String(entree.damage_type).toLowerCase()).toBe("tranchant");
     expect(result.inputTokens).toBeGreaterThan(0);
   }, 20_000);
 });

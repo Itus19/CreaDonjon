@@ -16,6 +16,22 @@ import type { FilItem } from "@/lib/solo/types";
 
 const CARD = "rounded-md border border-edge bg-panel-sunken px-3 py-2";
 
+/**
+ * V3.2-1 — qui parle, et comment on le voit.
+ *
+ * Trois voix, trois traitements, et surtout PAS trois bulles : la narration
+ * est du texte long ; l'emballer la rendrait illisible au bout de six tours.
+ * - le joueur : une bulle à droite, dans le bleu `players` (le jeton porte
+ *   déjà ce sens, V3.1-63) ;
+ * - la narration : pas de bulle, un liseré terracotta `gm` — la même marque
+ *   que les passages du MJ dans le wiki ;
+ * - un PNJ qui parle : une bulle à gauche, posée sur `panel-raised`.
+ * Le MJ hors du temps de jeu garde son liseré d'accent (`NoteRow`), qui ne
+ * doit jamais se confondre avec le récit.
+ */
+const BULLE_JOUEUR = "max-w-[85%] self-end rounded-lg rounded-br-sm border border-players bg-panel-raised px-3 py-2";
+const BULLE_PNJ = "max-w-[85%] self-start rounded-lg rounded-bl-sm border border-edge bg-panel-raised px-3 py-2";
+
 function verdictColorClass(verdict: "success" | "fail" | null): string {
   if (verdict === "success") return "text-success";
   if (verdict === "fail") return "text-danger";
@@ -31,19 +47,18 @@ function originLabel(origin: string | null): string | null {
 
 function NarrationRow({ item }: { item: Extract<FilItem, { kind: "narration" }> }) {
   return (
-    <div className="flex flex-col gap-1">
-      <p className="text-sm leading-relaxed text-ink">{item.text}</p>
-      {item.npcReaction && <p className="text-sm italic leading-relaxed text-ink-soft">« {item.npcReaction.text} »</p>}
+    <div className="flex flex-col gap-2">
+      {/* `text-base` : la narration est ce qui se lit vraiment (docs/CHARTE-UI.md §4). */}
+      <p className="border-l-2 border-gm pl-3 text-base leading-relaxed text-ink">{item.text}</p>
+      {item.npcReaction && (
+        <p className={`${BULLE_PNJ} text-sm italic leading-relaxed text-ink-soft`}>« {item.npcReaction.text} »</p>
+      )}
     </div>
   );
 }
 
 function PlayerActionRow({ item }: { item: Extract<FilItem, { kind: "player_action" }> }) {
-  return (
-    <div className="flex flex-col items-end gap-0.5 text-right">
-      <p className="text-sm text-ink-soft">{item.text}</p>
-    </div>
-  );
+  return <p className={`${BULLE_JOUEUR} text-sm text-ink`}>{item.text}</p>;
 }
 
 function RollRow({ item }: { item: Extract<FilItem, { kind: "roll" }> }) {
@@ -136,7 +151,7 @@ export default function Fil({ items }: { items: FilItem[] | null }) {
     );
   }
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col items-stretch gap-2">
       {items.map((item) => {
         switch (item.kind) {
           case "narration":

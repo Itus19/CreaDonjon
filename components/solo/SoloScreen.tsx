@@ -78,6 +78,9 @@ export default function SoloScreen({
   const [filItems, setFilItems] = useState<FilItem[] | null>(null);
   const [consequences, setConsequences] = useState<ConsequencesDrawerData | null>(null);
   const [announce, setAnnounce] = useState("");
+  // V3.2-3 : l'attente et l'état du fournisseur, lus des tours eux-mêmes — aucun sondage.
+  const [tourEnCours, setTourEnCours] = useState(false);
+  const [narrationEtat, setNarrationEtat] = useState<"inconnu" | "repond" | "muet">("inconnu");
   const scrollRef = useRef<HTMLDivElement>(null);
   const autoScrollRef = useRef(true);
   const lastSeqRef = useRef<number | null>(null);
@@ -176,6 +179,16 @@ export default function SoloScreen({
         />
         <div className="mt-4">
           <Fil items={filItems} />
+          {/* V3.2-3 : pendant que le modèle écrit (10 à 20 s en local), le fil montre qu'il
+              se passe quelque chose, au lieu de rester figé. `prefers-reduced-motion` est
+              déjà traité dans tokens.css : rien à réimplémenter ici (docs/CHARTE-UI.md §4). */}
+          {tourEnCours && (
+            <p className="mt-2 flex max-w-[85%] items-center gap-1 self-start rounded-lg rounded-bl-sm border border-edge bg-panel-raised px-3 py-2" aria-label={t("enCours")}>
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-ink-muted" />
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-ink-muted [animation-delay:200ms]" />
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-ink-muted [animation-delay:400ms]" />
+            </p>
+          )}
         </div>
         <div className="mt-2 max-md:hidden">
           <ConsequencesDrawer data={consequences} onChanged={apresGeste} annulation={annulable} />
@@ -190,6 +203,16 @@ export default function SoloScreen({
       {/* `bg-bg` : le fil passe DERRIÈRE la barre en défilant, il ne doit
           pas se lire au travers. */}
       <div className="sticky bottom-0 shrink-0 bg-bg pb-1 pt-2">
+        {/* V3.2-3 : l'état du fournisseur, lu du dernier tour joué — vert s'il a raconté,
+            rouge s'il est resté muet, éteint tant qu'aucun tour n'a été joué. Aucun appel
+            n'est fait pour l'allumer : un sondage coûterait une requête par tic (QUOTAS). */}
+        <p className="mb-1 flex items-center gap-1.5 text-xs text-ink-muted">
+          <span
+            aria-hidden="true"
+            className={`h-1.5 w-1.5 rounded-full ${narrationEtat === "repond" ? "bg-success" : narrationEtat === "muet" ? "bg-danger" : "bg-ink-muted"}`}
+          />
+          {narrationEtat === "repond" ? t("iaRepond") : narrationEtat === "muet" ? t("iaMuette") : t("iaInconnue")}
+        </p>
         <IntentBar
           worldSlug={worldSlug}
           campaignId={campaignId}
@@ -198,6 +221,8 @@ export default function SoloScreen({
           pending={pending}
           onPendingChange={setPending}
           onActed={apresGeste}
+          onEnCours={setTourEnCours}
+          onNarration={(repondu) => setNarrationEtat(repondu ? "repond" : "muet")}
         />
       </div>
       {feuilleConsequences && (
