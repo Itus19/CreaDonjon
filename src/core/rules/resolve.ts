@@ -150,6 +150,31 @@ export function applyOverrides(base: ResolvableEntry | null, overrides: Override
 }
 
 /**
+ * Id stable de chaque bloc resolu, pour l'affichage (cle React). Un bloc
+ * retrouve sa ligne d'origine par `(block_type, display_order)` — la cle
+ * unique de `ruleset_entry_blocks` — et non par son seul type : une fiche
+ * peut porter plusieurs blocs du meme type (deux `custom_table` sur
+ * `standard-exchange-rates`). Sans ligne source (bloc introduit par une
+ * surcharge), un id synthetique ; un id deja pris recoit un suffixe, pour
+ * qu'aucune liste ne rende deux fois la meme cle.
+ */
+export function assignBlockIds(
+  blocks: readonly Pick<ResolvableBlock, "block_type" | "display_order">[],
+  rows: readonly { id: string; block_type: string; display_order: number }[]
+): string[] {
+  const rowIdByKey = new Map(rows.map((row) => [`${row.block_type}#${row.display_order}`, row.id]));
+  const used = new Set<string>();
+  return blocks.map((block) => {
+    const base =
+      rowIdByKey.get(`${block.block_type}#${block.display_order}`) ?? `override:${block.block_type}:${block.display_order}`;
+    let id = base;
+    for (let n = 2; used.has(id); n++) id = `${base}:${n}`;
+    used.add(id);
+    return id;
+  });
+}
+
+/**
  * Fusionne, pour une LISTE de fiches (barre laterale, auto-completion —
  * V1-D4), les fiches heritees d'une base avec les fiches maison d'une
  * variante (surcharges `add_entry` sans aucune fiche de base correspondante
