@@ -212,6 +212,40 @@ export default function NotebookWorkspace({
     setNotes(fraiches);
   }
 
+  /**
+   * V3.1-144 — supprimer une page partagée : le serveur retire l'entité ET le
+   * lien, donc la version du cahier change. On la relit, comme le partage le
+   * fait, avant de retirer l'élément localement.
+   */
+  async function supprimerPagePartagee(itemId: string) {
+    setPartageEnCours(true);
+    setErreurPartage(null);
+    try {
+      if (!(await toutEnregistrer())) throw new Error("Le cahier n'a pas pu être enregistré : la suppression est annulée.");
+      const res = await fetch(`/api/worlds/${worldSlug}/notes/delete-shared`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ itemId }),
+      });
+      if (!res.ok) {
+        const corps = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(corps?.error ?? MESSAGE_PARTAGE);
+      }
+      const cahier = await fetch(`/api/worlds/${worldSlug}/notes`);
+      if (!cahier.ok) throw new Error(MESSAGE_PARTAGE);
+      versionRef.current = ((await cahier.json()) as { version: number }).version;
+      const next = removeItemAndDescendants(itemsRef.current, itemId);
+      itemsRef.current = next;
+      setItems(next);
+      if (selection?.kind === "item" && selection.itemId === itemId) setSelection(null);
+      await rafraichirNotes();
+    } catch (erreur: unknown) {
+      setErreurPartage(erreur instanceof Error ? erreur.message : MESSAGE_PARTAGE);
+    } finally {
+      setPartageEnCours(false);
+    }
+  }
+
   async function changerPartage(itemId: string, partager: boolean) {
     setPartageEnCours(true);
     setErreurPartage(null);
@@ -304,7 +338,13 @@ export default function NotebookWorkspace({
   }
 
   function remove(id: string) {
-    // Garde-fou : retirer une page partagée du cahier la laisserait lisible de la table, sans plus aucun moyen de la reprendre.
+    // V3.1-144 : une page partagée (ou qui l'a été) emporte son entité `shared_note` ; le serveur retire les deux.
+    if (items.find((i) => i.id === id)?.kind === "shared_page") {
+      setPendingDeleteId(null);
+      void supprimerPagePartagee(id);
+      return;
+    }
+    // Garde-fou : retirer une page qui en CONTIENT une partagée la laisserait lisible de la table, sans plus aucun moyen de la reprendre.
     if (contientPageSharee(items, id)) {
       setPendingDeleteId(null);
       return;
@@ -416,7 +456,7 @@ export default function NotebookWorkspace({
       onTitre={(titre) => changerTitre(pageOuverte, titre)}
       onContenu={(segments) => changerContenu(pageOuverte, segments)}
       onPartage={(valeur) => partager(pageOuverte, valeur)}
-      onSupprimer={() => pageOuverte.mode === "page" && setPendingDeleteId(pageOuverte.itemId)}
+      onSupprimer={() => (pageOuverte.mode === "page" || pageOuverte.mode === "partagee") && setPendingDeleteId(pageOuverte.itemId)}
       onOuvrirFiche={(slug) => setCompanion({ kind: "entity", slug })}
       onOuvrirRegle={(key) => setCompanion({ kind: "rule", key })}
     />
@@ -430,7 +470,11 @@ export default function NotebookWorkspace({
     <ConfirmDialog
       open={pendingDeleteId !== null}
       title="Supprimer cet élément ?"
-      message="Cet élément (et ses sous-éléments) seront définitivement supprimés du cahier."
+      message={
+        pendingDeleteId !== null && items.find((i) => i.id === pendingDeleteId)?.kind === "shared_page"
+          ? "Cette page a été partagée : elle disparaîtra de votre cahier ET de « Partagées à la table », pour tout le monde."
+          : "Cet élément (et ses sous-éléments) seront définitivement supprimés du cahier."
+      }
       confirmLabel="Supprimer"
       danger
       onConfirm={() => pendingDeleteId && remove(pendingDeleteId)}

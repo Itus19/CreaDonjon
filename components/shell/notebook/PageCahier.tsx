@@ -87,7 +87,8 @@ export default function PageCahier({
           ) : (
             <>
               <SelecteurPartage valeur={page.mode === "partagee" && page.partagee ? "table" : "privee"} occupe={occupe} onChange={onPartage} />
-              {page.mode === "page" && page.peutSupprimer && (
+              {/* V3.1-144 : une page partagée se supprime aussi — son entité part avec elle. */}
+              {((page.mode === "page" && page.peutSupprimer) || page.mode === "partagee") && (
                 <button type="button" onClick={onSupprimer} className={BOUTON_DANGER}>
                   Supprimer
                 </button>

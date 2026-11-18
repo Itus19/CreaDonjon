@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
 import { pageToSharedLink, SHARED_NOTE_ENTITY_NAME, SHARED_NOTE_KIND, unlinkUnknownEntityRefs } from "@/src/core/notebook/share";
+import { removeItemAndDescendants } from "@/src/core/notebook/tree";
 import { zTextBlockData } from "@/src/core/schemas/blocks/text";
 import type { NarrativeContent } from "@/src/core/schemas/entities/segments";
 import { filterSegments } from "@/src/core/visibility";
@@ -138,6 +139,42 @@ export async function unshareNotebookPage(
   const item = items.find((i) => i.id === params.itemId);
   if (!item || item.kind !== "shared_page") return { ok: false, reason: "not_found" };
   return setSharedVisibility(supabase, { entityId: item.targetId, userId: params.userId, shared: false });
+}
+
+/**
+ * V3.1-144 — supprimer une page partagée DEPUIS le cahier. Jusqu'ici aucune
+ * route ne retirait l'entité `shared_note` : une page partagée, ou qui
+ * l'avait été, ne se supprimait plus du tout (l'écran n'offrait même pas le
+ * bouton, et le lien restait dans l'arbre).
+ *
+ * L'entité part d'abord, le lien ensuite — même ordre de prudence que
+ * `shareNotebookPage` en sens inverse. Si le cahier a changé entre-temps
+ * (`conflict`), la page est déjà supprimée et le lien reste : un second
+ * essai le retire, `softDeleteEntity` étant sans effet sur une entité déjà
+ * supprimée. L'inverse laisserait une page visible de la table sans que son
+ * autrice ait encore le moyen de la retrouver.
+ */
+export async function deleteSharedNotebookPage(
+  supabase: TypedClient,
+  params: { worldId: string; userId: string; itemId: string }
+): Promise<{ ok: true } | { ok: false; reason: ShareError }> {
+  const tree = await loadNotebookTree(supabase, params);
+  const item = tree.items.find((i) => i.id === params.itemId);
+  if (!item || item.kind !== "shared_page") return { ok: false, reason: "not_found" };
+
+  // La RLS tranche : `app.soft_delete_entity` refuse à qui n'a pas le droit d'écrire la fiche.
+  if (!(await softDeleteEntity(supabase, item.targetId)).deleted) return { ok: false, reason: "forbidden" };
+
+  const saved = await updateBlockContent(supabase, {
+    id: tree.block.id,
+    expectedVersion: tree.block.version,
+    display: tree.block.display,
+    data: { __v: 1, items: removeItemAndDescendants(tree.items, params.itemId) },
+    visibilityLevel: tree.block.visibility_level,
+    visibilityScopeId: tree.block.visibility_scope_id,
+    changedBy: params.userId,
+  });
+  return saved.ok ? { ok: true } : { ok: false, reason: saved.reason };
 }
 
 export interface SharedNoteView {
