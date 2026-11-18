@@ -215,6 +215,56 @@ lint et tests verts.
 
 ---
 
+### ☐ V3.1-225 — Le solo ne peut PAS faire apparaître un figurant · `M` · **avec modèle IA** — **prêt (Opus)**
+
+**Constaté en jouant, le 18 novembre.** L'auteur entre dans une auberge ; le modèle décrit « plusieurs silhouettes », « un membre du personnel », « les membres du personnel derrière le comptoir ». Aucun n'existe : la scène ne contient que le PJ, et l'onglet « Présents » le dit. Son mot : « le moteur n'a pas l'air d'être branché ».
+
+**Il a raison, et la cause est précise.** V3-C2 prévoit qu'un personnage incident soit **tiré par le générateur**, jamais inventé par le modèle (`narrateSoloTurn` : `new_character` → `drawSketchForScene`). Or ce tirage passe par le générateur de clé `pnj`, qui vit dans une entité `generateur` que **seule la route des fenêtres d'outils MJ crée** (`ensureGeneratorToolsEntity`, appelée par `app/api/worlds/[slug]/mj/[tool]/window`). En solo, on ne va jamais côté MJ : l'entité n'existe pas, le tirage échoue, et `narrateSoloTurn` « laisse `first` tel quel » — la narration garde ses figurants fantômes. Pire : même créée, l'entité naît avec des blocs `generator` **vides** ; un tirage y rendrait « nom manquant au tirage ».
+
+Vérifié en base le 18 novembre : ni « Solo test Gab » ni le monde de test ne portent d'entité `generateur`.
+
+**Conséquence** : la règle « l'IA narre, le code arbitre » est tenue pour les dés, pas pour le peuplement du monde. Le modèle meuble, et rien ne le rattrape.
+
+**À faire.**
+- Garantir le générateur de PNJ là où le solo en dépend : l'entité ET des tables non vides (un jeu de départ, ou un tirage de secours sans table).
+- Ne plus avaler l'échec : un tirage impossible se journalise et se voit (lié à V3.1-223).
+- Décider ce que fait la narration quand aucun figurant ne peut être tiré : se taire sur les présents plutôt que les inventer.
+
+**Critères d'acceptation**
+- [ ] Dans un monde neuf, un tour qui appelle un personnage incident produit une esquisse réelle, visible dans « Présents ».
+- [ ] Sans générateur possible, le tour reste joué, l'échec est visible, et la narration n'invente personne.
+
+---
+
+### ☐ V3.1-226 — Une question posée DANS la fiction n'est pas une question au MJ · `S` · sans modèle IA — **prêt (Sonnet)**
+
+**Constaté en jouant, le 18 novembre.** « Y a-t-il quelqu'un qui est responsable du service ? » s'adresse à un PNJ, dans le temps de jeu. L'app met en avant le bouton « MJ », c'est-à-dire la question hors-jeu.
+
+**Cause** : `looksLikeQuestion` (`src/core/rules/intent.ts`) rend `true` dès que le texte finit par « ? », avant même de regarder le lexique. Rien n'est rerouté — les deux boutons restent cliquables, et c'est heureux — mais le bouton mis en avant est le mauvais, et qui s'y fie envoie sa réplique hors du temps de jeu.
+
+**À faire.** Distinguer la parole adressée au monde de la question adressée au MJ : des guillemets, « je demande à … », un verbe de parole à la première personne, un destinataire présent dans la scène → c'est une action. Garder « MJ » devant pour le hors-fiction (« est-ce que je peux… », « que sais-je de… »). Le « ? » seul ne décide de rien.
+
+**Critères d'acceptation**
+- [ ] « Je dis : "y a-t-il un responsable ?" » et « je demande à Mabelle si… » mettent « Jouer » devant (tests du noyau).
+- [ ] « est-ce que je peux escalader ce mur ? » garde « MJ » devant.
+
+---
+
+### ☐ V3.1-227 — « Présents » doit montrer les inconnus, avec ce qu'on en voit · `M` · sans modèle IA — **à concevoir (Opus)**
+
+**Demandé par l'auteur le 18 novembre**, en voyant la contradiction : le fil parle de gens, l'onglet « Présents » n'affiche que lui.
+
+Sa proposition, à prendre telle quelle : un présent inconnu apparaît comme **« inconnu »**, avec sa fiche de wiki, où seule la **description physique** est lisible — le reste (nom véritable, intentions, mécanique) reste caché jusqu'à ce qu'on le découvre. C'est le prolongement naturel des découvertes (V3-C4) et des esquisses (V3-C2) : on sait qu'il y a quelqu'un, on ne sait pas encore qui.
+
+**À trancher par l'ADR** : ce qu'un présent non découvert montre et cache (la visibilité joue déjà par bloc, règle absolue 5 : le filtrage se fait côté serveur) ; si une esquisse non ancrée a droit à une fiche ; comment on passe d'« inconnu » à son nom ; ce que le contexte du modèle reçoit de lui (règle 11 : borné par l'audience).
+
+**Dépend de** V3.1-225 : tant qu'aucun figurant n'est tiré, il n'y a rien à lister.
+
+**Critères d'acceptation (de la conception)**
+- [ ] ADR écrit ; tickets prêts découpés.
+
+---
+
 ### ☐ V3.1-224 — L'IA, un réglage du COMPTE : sa machine ou sa clé · `L` · sans modèle IA — **à concevoir (Opus, ADR)**
 
 **Demandé par l'auteur le 18 novembre**, en découvrant que le site en ligne ne peut pas joindre son LM Studio (V3.1-223). Direction voulue : **chacun joue sur ses propres ressources d'IA**, déclarées sur son compte — soit un **lien vers sa machine** (tunnel vers son fournisseur local), soit une **clé d'API** chez un fournisseur distant (Claude, OpenAI…). Personne ne consomme celles d'un autre, et l'hébergeur ne paie pour personne.
