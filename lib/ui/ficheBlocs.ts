@@ -28,6 +28,16 @@ export const FAMILLES_PALETTE: readonly FamillePalette[] = [
  */
 export const TYPES_HORS_PALETTE: readonly string[] = ["generator", "note_tree", "session_journal_meta"];
 
+/**
+ * AG-9 — sur une fiche du Livre de sessions, le bloc « Séance » ne se
+ * supprime pas : les infos de séance s'affichent depuis le devoir, avec ou
+ * sans bloc, et la joueuse ne pourrait plus le rajouter. Le supprimer ne
+ * ferait disparaître le bloc qu'à moitié.
+ */
+export function blocSupprimable(entityKind: string | undefined, blockType: string): boolean {
+  return !(entityKind === "session_journal" && blockType === "session_journal_meta");
+}
+
 /** Un seul exemplaire par fiche (index `blocks_personality_worldview_uniq`). */
 const TYPES_UNIQUES: readonly string[] = ["personality", "worldview"];
 

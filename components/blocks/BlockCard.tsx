@@ -93,7 +93,8 @@ export default function BlockCard({
   onMonter: () => void;
   onDescendre: () => void;
   onDupliquer: () => void;
-  onSupprimer: () => void;
+  /** AG-9 : absent quand le bloc ne se supprime pas (bloc « Séance » d'un journal de session). */
+  onSupprimer?: () => void;
   conflit: boolean;
   erreurSauvegarde: boolean;
   children: React.ReactNode;
@@ -114,7 +115,7 @@ export default function BlockCard({
       : []),
     { label: t("dupliquer"), onSelect: onDupliquer },
     { label: t("choisirVisibilite"), onSelect: () => setChoixOuvert(true) },
-    { label: t("supprimer"), onSelect: onSupprimer, danger: true },
+    ...(onSupprimer ? [{ label: t("supprimer"), onSelect: onSupprimer, danger: true }] : []),
   ];
 
   return (

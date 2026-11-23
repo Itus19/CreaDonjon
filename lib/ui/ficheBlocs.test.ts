@@ -3,6 +3,7 @@ import {
   FAMILLES_PALETTE,
   TYPES_HORS_PALETTE,
   annonceReordonnancement,
+  blocSupprimable,
   famillesAjoutables,
   positionApresDeplacement,
 } from "./ficheBlocs";
@@ -92,5 +93,16 @@ describe("annonceReordonnancement", () => {
   });
   it("renvoie null quand le bloc est inconnu", () => {
     expect(annonceReordonnancement("prise", ids, libelles, "zzz", null)).toBeNull();
+  });
+});
+
+describe("blocSupprimable (AG-9)", () => {
+  it("garde le bloc « Séance » d'une fiche du Livre de sessions", () => {
+    expect(blocSupprimable("session_journal", "session_journal_meta")).toBe(false);
+  });
+  it("laisse supprimer tout autre bloc, et le bloc « Séance » posé ailleurs", () => {
+    expect(blocSupprimable("session_journal", "text")).toBe(true);
+    expect(blocSupprimable("character", "session_journal_meta")).toBe(true);
+    expect(blocSupprimable(undefined, "session_journal_meta")).toBe(true);
   });
 });

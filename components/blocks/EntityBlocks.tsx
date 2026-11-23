@@ -1,5 +1,6 @@
 "use client";
 
+import { blocSupprimable } from "@/lib/ui/ficheBlocs";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
@@ -1429,7 +1430,7 @@ function SortableBlockCard({
       onMonter={() => onMoveBlock(block.id, "up")}
       onDescendre={() => onMoveBlock(block.id, "down")}
       onDupliquer={() => onDuplicateBlock(block.id)}
-      onSupprimer={() => onRequestDelete(block.id)}
+      onSupprimer={blocSupprimable(entityKind, block.blockType) ? () => onRequestDelete(block.id) : undefined}
       conflit={hasConflict}
       erreurSauvegarde={hasSaveError}
     >
