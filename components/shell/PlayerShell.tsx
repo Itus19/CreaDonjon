@@ -59,6 +59,7 @@ export default function PlayerShell({
   worldSlug,
   worldName,
   hasHumanGm,
+  jeuADistance = false,
   estAdminDuMonde,
   prochaineSession,
   devoir,
@@ -68,6 +69,8 @@ export default function PlayerShell({
   worldName: string;
   /** V3.1-11 : masque l'onglet Solo — ce mode (V3, IA locale) n'a de sens que sans MJ humain sur ce monde. */
   hasHumanGm: boolean;
+  /** ADR 0103 : la campagne se joue à distance (« À distance » ou « Les deux ») — l'onglet du jeu à distance s'affiche. */
+  jeuADistance?: boolean;
   /** V3.1-222 : l'appelant administre ce monde (propriétaire ou éditeur) — il garde une porte vers l'atelier. */
   estAdminDuMonde: boolean;
   /** Badge « Prochaine session », lu par le layout joueur (`null` : monde sans campagne). */
@@ -79,6 +82,7 @@ export default function PlayerShell({
   const pathname = usePathname();
   const t = useTranslations("shell");
   const tSolo = useTranslations("solo");
+  const tDistance = useTranslations("distance");
   const vueSolo = vueDepuisAdresse(useSearchParams().get("vue"));
   const base = `/m/${worldSlug}/joueur`;
   const { unreadCount } = useChatUnread();
@@ -95,6 +99,8 @@ export default function PlayerShell({
     // retiree quand la campagne a deja un MJ humain, le mode solo (IA
     // locale) n'a de sens que sans lui.
     ...(hasHumanGm ? [] : [{ href: `${base}/solo`, label: "Solo", icon: "dice", match: (p: string) => p.startsWith(`${base}/solo`) }]),
+    // ADR 0103 : le jeu à distance, quand la façon de jouer de la campagne l'ouvre.
+    ...(jeuADistance ? [{ href: `${base}/distance`, label: tDistance("nav"), icon: "remote", match: (p: string) => p.startsWith(`${base}/distance`) }] : []),
     { href: `${base}/notes`, label: "Notes", icon: "notes", match: (p) => p.startsWith(`${base}/notes`) },
     { href: `${base}/wiki`, label: "Wiki", icon: "map", match: (p) => p.startsWith(`${base}/wiki`) },
     // V3.1-99 : la frise des joueurs, juste après Wiki. Rail seulement : la barre
@@ -113,8 +119,10 @@ export default function PlayerShell({
     books: t("regles"),
     chat: t("chat"),
     dice: t("solo"),
+    remote: tDistance("nav"),
   };
-  const ordreBarre = ["user", "card", "notes", "map", "books", hasHumanGm ? "chat" : "dice"];
+  // ADR 0103 : à distance, la dernière place va au jeu à distance (le chat privé du MJ y est, onglet « MJ, en privé »).
+  const ordreBarre = ["user", "card", "notes", "map", "books", jeuADistance ? "remote" : hasHumanGm ? "chat" : "dice"];
   const entreesBarre: EntreeBarre[] = ordreBarre.flatMap((icon) => {
     const d = destinations.find((dest) => dest.icon === icon);
     if (!d) return [];
@@ -134,13 +142,16 @@ export default function PlayerShell({
   });
 
   // V3.1-36 : la barre du solo. Une vue ne recharge rien : on ecrit l'adresse, la page la relit.
-  const surSolo = pathname.startsWith(`${base}/solo`);
+  // ADR 0103 : le jeu à distance reprend la coquille du solo, donc sa barre de vues.
+  const surDistance = pathname.startsWith(`${base}/distance`);
+  const surSolo = pathname.startsWith(`${base}/solo`) || surDistance;
+  const cheminVues = surDistance ? `${base}/distance` : `${base}/solo`;
   const entreeVue = (vue: VueSolo, icon: string, libelle: string): EntreeBarre => ({
     cle: `solo-${vue}`,
     libelle,
     icone: <Icon name={icon} />,
     actif: vueSolo === vue,
-    href: adresseVue(`${base}/solo`, "", vue),
+    href: adresseVue(cheminVues, "", vue),
     onClick: (e) => {
       e.preventDefault();
       window.history.replaceState(null, "", adresseVue(pathname, window.location.search, vue));
@@ -333,6 +344,7 @@ function Icon({ name }: { name: string }) {
         </svg>
       );
     case "chat":
+    case "remote":
       return (
         <svg {...common}>
           <path d="M4 5h16v11H8l-4 4V5Z" />

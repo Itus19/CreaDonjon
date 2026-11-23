@@ -28,12 +28,14 @@ export default function CreateWorldForm({
   const [state, formAction, pending] = useActionState(createWorldAction, initialState);
   const [rulesetId, setRulesetId] = useState("");
   const [mode, setMode] = useState<"campaign" | "solo">(canUseSoloMode ? modeInitial : "campaign");
-  const modeOptions = canUseSoloMode
-    ? [
-        { value: "campaign", label: "Campagne (MJ humain)" },
-        { value: "solo", label: "Solo (MJ IA)" },
-      ]
-    : [{ value: "campaign", label: "Campagne (MJ humain)" }];
+  // ADR 0103 : une campagne à MJ humain choisit dès ici sa façon de jouer ; elle ne changera ensuite que dans Gestion de campagne, après confirmation.
+  const [playStyle, setPlayStyle] = useState<"table" | "remote" | "both">("table");
+  const campagnes = [
+    { value: "campaign:table", label: "Campagne, à table" },
+    { value: "campaign:remote", label: "Campagne, à distance" },
+    { value: "campaign:both", label: "Campagne, les deux" },
+  ];
+  const modeOptions = canUseSoloMode ? [...campagnes, { value: "solo", label: "Solo (MJ IA)" }] : campagnes;
 
   return (
     // `contents` : ce formulaire ne genere pas sa propre boite de mise en
@@ -62,9 +64,17 @@ export default function CreateWorldForm({
         triggerClassName="rounded-md border border-edge bg-transparent px-3 py-2 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
       />
       <input type="hidden" name="mode" value={mode} />
+      <input type="hidden" name="playStyle" value={playStyle} />
       <Dropdown
-        value={mode}
-        onChange={(v) => setMode(v as "campaign" | "solo")}
+        value={mode === "solo" ? "solo" : `campaign:${playStyle}`}
+        onChange={(v) => {
+          if (v === "solo") {
+            setMode("solo");
+            return;
+          }
+          setMode("campaign");
+          setPlayStyle(v.split(":")[1] as "table" | "remote" | "both");
+        }}
         options={modeOptions}
         aria-label="Mode de jeu"
         triggerClassName="rounded-md border border-edge bg-transparent px-3 py-2 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"

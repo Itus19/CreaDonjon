@@ -1,4 +1,5 @@
 import "server-only";
+import type { PlayStyle } from "@/src/core/remote/feed";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import {
@@ -83,7 +84,7 @@ export async function getCampaignRulesetOrigin(supabase: TypedClient, campaignId
  */
 export async function createCampaign(
   supabase: TypedClient,
-  params: { worldId: string; createdBy: string; name: string; rulesetId: string; mode: "campaign" | "solo" }
+  params: { worldId: string; createdBy: string; name: string; rulesetId: string; mode: "campaign" | "solo"; playStyle?: PlayStyle }
 ): Promise<CampaignSummary | "world_already_has_campaign"> {
   const partyEntity = await createEntity(supabase, {
     worldId: params.worldId,
@@ -100,6 +101,8 @@ export async function createCampaign(
     mode: params.mode,
     gmUserId: params.mode === "campaign" ? params.createdBy : null,
     partyEntityId: partyEntity.id,
+    // ADR 0103 : la façon de jouer choisie à la création ; un solo se joue toujours « à table » (sans MJ humain, rien à distance).
+    ...(params.playStyle && params.mode === "campaign" ? { tableSettings: { play_style: params.playStyle } } : {}),
   });
   if (campaign === "world_already_has_campaign") return campaign;
 

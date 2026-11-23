@@ -1,4 +1,5 @@
 import "server-only";
+import type { PlayStyle } from "@/src/core/remote/feed";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import type { Locale } from "@/src/i18n/request";
@@ -219,7 +220,7 @@ export async function createWorld(
  */
 export async function createWorldWithCampaign(
   supabase: TypedClient,
-  params: { ownerId: string; name: string; rulesetId: string; mode: "campaign" | "solo" }
+  params: { ownerId: string; name: string; rulesetId: string; mode: "campaign" | "solo"; playStyle?: PlayStyle }
 ): Promise<{ world: WorldSummary; campaign: CampaignSummary }> {
   const world = await createWorld(supabase, { ownerId: params.ownerId, name: params.name });
   await setWorldDefaultRuleset(supabase, world.id, params.rulesetId);
@@ -229,6 +230,7 @@ export async function createWorldWithCampaign(
     name: params.name,
     rulesetId: params.rulesetId,
     mode: params.mode,
+    playStyle: params.playStyle,
   });
   // Un monde tout juste cree ne peut jamais avoir de campagne existante —
   // si cette branche est atteinte, c'est un bug ailleurs (cle generee deux
