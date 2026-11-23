@@ -13,9 +13,11 @@ import type { Rng } from "@/src/core/dice/rng";
 import {
   getOfficialBaseRulesetId,
   getRulesetEntryByKey,
+  listBlocksForRulesetEntries,
   listBlocksForRulesetEntry,
   listTranslationsForEntries,
 } from "@/src/server/repos/rules";
+import { champsMonstre } from "@/src/core/rules/champsMonstre";
 import { entryNameFrom, listChainEntries } from "@/src/server/services/rules";
 import { getCampaign } from "@/src/server/services/campaigns";
 import {
@@ -97,20 +99,8 @@ export interface EncounterMonsterSummary {
   size: string;
 }
 
-/** Lit `xp`/`challenge_rating`/`type`/`size` de `source_raw` (forme SRD verifiee en base pour les deux editions) — `null` si l'un des deux champs numeriques manque, jamais un monstre a PX invente dans le catalogue. */
-function monsterFieldsFrom(sourceRaw: unknown): { xp: number; challengeRating: number; type: string; size: string } | null {
-  if (!sourceRaw || typeof sourceRaw !== "object") return null;
-  const raw = sourceRaw as Record<string, unknown>;
-  const xp = raw.xp;
-  const cr = raw.challenge_rating;
-  if (typeof xp !== "number" || typeof cr !== "number") return null;
-  return {
-    xp,
-    challengeRating: cr,
-    type: typeof raw.type === "string" ? raw.type : "",
-    size: typeof raw.size === "string" ? raw.size : "",
-  };
-}
+/** AG-1 : un monstre pour l'Initiative, avec ou sans PX (un monstre saisi à la main peut ne pas en avoir). */
+export type MonstreInitiative = Omit<EncounterMonsterSummary, "xp"> & { xp: number | null };
 
 /**
  * Catalogue de monstres du ruleset (V1-E3, specs/outils-mj.md §4.2) — pour
@@ -128,19 +118,41 @@ export async function listMonstersForRuleset(
   rulesetId: string,
   locale: Locale
 ): Promise<EncounterMonsterSummary[]> {
+  // Le budget d'une rencontre se compte en PX : un monstre sans PX n'y entre pas.
+  const tous = await listMonstersForInitiative(supabase, rulesetId, locale);
+  return tous.filter((m): m is EncounterMonsterSummary => m.xp !== null);
+}
+
+/**
+ * AG-1 — tous les monstres du ruleset, PX connus ou non, pour la recherche de
+ * l'Initiative. Les valeurs viennent de `source_raw` (import SRD) ou, à
+ * défaut, du bloc `stat_block` (monstre saisi à la main) : une seule lecture
+ * groupée des blocs, pour les seuls monstres qui en ont besoin.
+ */
+export async function listMonstersForInitiative(
+  supabase: TypedClient,
+  rulesetId: string,
+  locale: Locale
+): Promise<MonstreInitiative[]> {
   // Toute la chaîne : une variante hérite des monstres de sa base.
   const monsters = await listChainEntries(supabase, rulesetId, ["monster"]);
   if (monsters.length === 0) return [];
 
+  const sansImport = monsters.filter((e) => champsMonstre(e.source_raw, null) === null).map((e) => e.id);
+  const [translations, blocs] = await Promise.all([
+    locale !== "en" ? listTranslationsForEntries(supabase, monsters.map((e) => e.id), locale) : Promise.resolve([]),
+    listBlocksForRulesetEntries(supabase, sansImport),
+  ]);
   const translationByEntryId = new Map<string, string>();
-  if (locale !== "en") {
-    const translations = await listTranslationsForEntries(supabase, monsters.map((e) => e.id), locale);
-    for (const t of translations) translationByEntryId.set(t.entry_id, t.name);
+  for (const t of translations) translationByEntryId.set(t.entry_id, t.name);
+  const statBlockParEntree = new Map<string, unknown>();
+  for (const b of blocs) {
+    if (b.block_type === "stat_block" && !statBlockParEntree.has(b.entry_id)) statBlockParEntree.set(b.entry_id, b.data);
   }
 
-  const summaries: EncounterMonsterSummary[] = [];
+  const summaries: MonstreInitiative[] = [];
   for (const entry of monsters) {
-    const fields = monsterFieldsFrom(entry.source_raw);
+    const fields = champsMonstre(entry.source_raw, statBlockParEntree.get(entry.id) ?? null);
     if (!fields) continue;
     summaries.push({
       key: entry.entry_key,

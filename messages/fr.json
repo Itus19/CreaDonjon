@@ -1916,6 +1916,7 @@
     "quitterOui": "Quitter",
     "quitterQuestion": "Quitter sans terminer ? Les joueurs reviennent à leur fiche ; le combat reste enregistré.",
     "rechercherMonstre": "Rechercher un monstre…",
+    "aucunMonstreTrouve": "Aucun monstre trouvé dans les règles de ce monde.",
     "recommencer": "Recommencer (relancer l'initiative)",
     "relancer": "Relancer",
     "relancerInitiative": "Relancer l'initiative",

@@ -1915,6 +1915,7 @@
     "quitterOui": "Leave",
     "quitterQuestion": "Leave without ending? Players go back to their sheet; the combat stays saved.",
     "rechercherMonstre": "Search for a monster…",
+    "aucunMonstreTrouve": "No monster found in this world's rules.",
     "recommencer": "Start over (roll initiative again)",
     "relancer": "Reroll",
     "relancerInitiative": "Reroll the initiative",
