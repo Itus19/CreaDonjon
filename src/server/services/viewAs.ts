@@ -66,6 +66,8 @@ export const VIEW_AS_RETURN_COOKIE = "view_as_return";
  */
 export const VIEW_AS_RETURN_SESSION_COOKIE = "view_as_return_session";
 /** Ancien cookie (identifiant en clair) : efface au retour, jamais relu. */
+/** AG-6 : la page d'où « voir comme » est parti, pour y revenir (contrôlée par `cheminInterne` à l'écriture et à la lecture). */
+export const VIEW_AS_RETURN_TO_COOKIE = "view_as_return_to";
 export const LEGACY_VIEW_AS_COOKIE = "view_as_admin_uid";
 
 const zSessionClaims = z.object({ session_id: z.string().min(1) });

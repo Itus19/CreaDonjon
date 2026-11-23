@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { LEGACY_VIEW_AS_COOKIE, VIEW_AS_RETURN_COOKIE, VIEW_AS_RETURN_SESSION_COOKIE, returnFromViewAs } from "@/src/server/services/viewAs";
+import { LEGACY_VIEW_AS_COOKIE, VIEW_AS_RETURN_COOKIE, VIEW_AS_RETURN_SESSION_COOKIE, VIEW_AS_RETURN_TO_COOKIE, returnFromViewAs } from "@/src/server/services/viewAs";
+import { cheminInterne } from "@/src/core/accounts/cheminInterne";
 
 /**
  * Retour de "voir comme" (bandeau, ADR 0051) — reprend la session mise de
@@ -16,6 +17,7 @@ export async function POST(request: NextRequest) {
     const response = NextResponse.json({ error: "Aucune session à restaurer : reconnectez-vous." }, { status: 400 });
     response.cookies.delete(LEGACY_VIEW_AS_COOKIE);
     response.cookies.delete(VIEW_AS_RETURN_SESSION_COOKIE);
+    response.cookies.delete(VIEW_AS_RETURN_TO_COOKIE);
     return response;
   }
 
@@ -24,11 +26,14 @@ export async function POST(request: NextRequest) {
   // si la session courante est encore celle d'origine (confirmation abandonnée).
   const sessionId = request.cookies.get(VIEW_AS_RETURN_SESSION_COOKIE)?.value ?? null;
   const result = await returnFromViewAs(supabase, { refreshToken, sessionId });
+  // AG-6 : retour a la page de depart ; relue au travers du meme controle, un cookie se forge.
+  const retour = cheminInterne(request.cookies.get(VIEW_AS_RETURN_TO_COOKIE)?.value) ?? "/";
   const response = result.ok
-    ? NextResponse.json({ url: "/" }, { status: 200 })
+    ? NextResponse.json({ url: retour }, { status: 200 })
     : NextResponse.json({ error: "Session d'origine expirée : reconnectez-vous." }, { status: 401 });
   response.cookies.delete(VIEW_AS_RETURN_COOKIE);
   response.cookies.delete(VIEW_AS_RETURN_SESSION_COOKIE);
+  response.cookies.delete(VIEW_AS_RETURN_TO_COOKIE);
   response.cookies.delete(LEGACY_VIEW_AS_COOKIE);
   return response;
 }

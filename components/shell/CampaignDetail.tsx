@@ -192,7 +192,7 @@ export default function CampaignDetail({
     const res = await fetch("/api/admin/view-as", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ targetUserId: userId, campaignId }),
+      body: JSON.stringify({ targetUserId: userId, campaignId, returnTo: window.location.pathname + window.location.search }),
     });
     if (!res.ok) {
       const body = (await res.json().catch(() => null)) as { error?: string } | null;

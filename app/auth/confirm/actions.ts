@@ -3,6 +3,7 @@
 import { type EmailOtpType } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { cheminInterne } from "@/src/core/accounts/cheminInterne";
 
 export type ActionState = { error: string } | null;
 
@@ -21,7 +22,8 @@ export async function confirmEmailLink(
 ): Promise<ActionState> {
   const token_hash = formData.get("token_hash");
   const type = formData.get("type") as EmailOtpType | null;
-  const next = (formData.get("next") as string | null) ?? "/";
+  // AG-6 (relu en passant) : `next` vient de l'adresse du lien ; hors de l'app, on revient a l'accueil.
+  const next = cheminInterne(formData.get("next")) ?? "/";
 
   if (typeof token_hash !== "string" || !type) {
     redirect("/login?error=lien-invalide");
