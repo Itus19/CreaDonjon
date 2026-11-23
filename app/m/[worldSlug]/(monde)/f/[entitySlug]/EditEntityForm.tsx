@@ -125,10 +125,30 @@ export default function EditEntityForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /**
+   * AG-24 : l'assistant vient d'écrire les blocs (fiche, sac, sorts).
+   * `router.refresh()` ne suffit pas : `EntityBlocks` garde son propre état
+   * après le premier rendu, et une fiche ouverte en volet ne passe pas par la
+   * page. On relit donc les blocs (une lecture) et on remonte `EntityBlocks`
+   * avec eux, comme après l'éditeur plein écran.
+   */
+  async function recevoirBlocsApresAssistant() {
+    const res = await fetch(`/api/entities/${entity.id}/blocks`);
+    if (!res.ok) {
+      setStatus("error");
+      setErrorMessage("La fiche est enregistrée, mais l'affichage n'a pas pu se mettre à jour : rouvre la fiche.");
+      return;
+    }
+    const blocs = (await res.json()) as BlockItem[];
+    setBlocsDeDepart(blocs);
+    blocsCourantsRef.current = blocs;
+    setCleBlocs((n) => n + 1);
+  }
+
   if (wizardOpen) {
-    const characterBlock = initialBlocks.find((b) => b.blockType === "character");
-    const inventoryBlock = initialBlocks.find((b) => b.blockType === "inventory");
-    const spellcastingBlock = initialBlocks.find((b) => b.blockType === "spellcasting");
+    const characterBlock = blocsDeDepart.find((b) => b.blockType === "character");
+    const inventoryBlock = blocsDeDepart.find((b) => b.blockType === "inventory");
+    const spellcastingBlock = blocsDeDepart.find((b) => b.blockType === "spellcasting");
     return (
       <CharacterCreatorWizard
         worldSlug={worldSlug}
@@ -147,6 +167,7 @@ export default function EditEntityForm({
             setWizardVersion(result.version);
             setWizardOpen(false);
             router.refresh();
+            void recevoirBlocsApresAssistant();
           },
         }}
       />
