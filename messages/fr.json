@@ -24,7 +24,8 @@
       "retablirVolet": "Rétablir le volet",
       "fermerFiche": "Fermer la fiche affichée",
       "deposerSecondVolet": "Déposer ici pour ouvrir un second volet",
-      "separateur": "Largeur des volets"
+      "separateur": "Largeur des volets",
+      "ongletMasque": "{nom}, dans l'autre volet : rétablir les deux volets"
     },
     "kindLabels": {
       "session_journal": "Livre de sessions",

@@ -23,7 +23,8 @@
       "retablirVolet": "Restore the pane",
       "fermerFiche": "Close the displayed sheet",
       "deposerSecondVolet": "Drop here to open a second pane",
-      "separateur": "Pane width"
+      "separateur": "Pane width",
+      "ongletMasque": "{nom}, in the other pane: restore both panes"
     },
     "kindLabels": {
       "session_journal": "Session journal",

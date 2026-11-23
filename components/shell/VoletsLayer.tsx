@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
-import { PARTAGE_DEFAUT, PARTAGE_MAX, PARTAGE_MIN, voletDe } from "@/lib/ui/volets";
+import { ongletsMasques, PARTAGE_DEFAUT, PARTAGE_MAX, PARTAGE_MIN, voletDe } from "@/lib/ui/volets";
 import { useDesktopWindowsState } from "./DesktopWindowsProvider";
 import { refId, windowContentLabel, type WindowRef } from "./windowRefs";
 import { useMatchMedia, WINDOWS_MOBILE_QUERY } from "./useMatchMedia";
@@ -252,6 +252,27 @@ export default function VoletsLayer({ worldSlug }: { worldSlug: string }) {
                     </div>
                   );
                 })}
+                {/* AG-7 : agrandi, ce volet garde en vue les onglets de l'autre ; un clic rétablit les deux volets sur cette fiche. */}
+                {agrandi === i &&
+                  ongletsMasques(d, agrandi).map((id) => {
+                    const fiche = fiches.find((f) => f.id === id);
+                    if (!fiche) return null;
+                    const { nom } = etiquette(fiche);
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        title={t("volets.ongletMasque", { nom })}
+                        onClick={() => {
+                          state.basculerAgrandi(i);
+                          state.activerOnglet(id);
+                        }}
+                        className="flex min-w-[5.5rem] max-w-[220px] shrink items-center border-b-2 border-r border-dashed border-b-transparent border-r-edge px-3 py-1 text-sm italic text-ink-muted transition-colors hover:bg-panel-raised hover:text-ink motion-reduce:transition-none"
+                      >
+                        <span className="truncate font-chrome">{nom}</span>
+                      </button>
+                    );
+                  })}
               </div>
               <div className="flex shrink-0 items-center gap-1 px-2">
                 {deux && (
