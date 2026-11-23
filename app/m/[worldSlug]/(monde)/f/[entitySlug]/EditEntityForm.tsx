@@ -1,5 +1,6 @@
 "use client";
 
+import { useFichesLiables } from "@/components/shared/fichesCreees";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -36,7 +37,7 @@ export default function EditEntityForm({
   worldSlug,
   initialBlocks,
   initialRelations,
-  otherEntities,
+  otherEntities: otherEntitiesInitiales,
   worldCustomKinds,
   campaignId,
   initialIsPc,
@@ -62,6 +63,8 @@ export default function EditEntityForm({
   /** Fiche de personnage calculee par la page en meme temps qu'elle (V3.1-62, ADR 0056) ; `null` sans fiche de personnage. */
   ficheAvecPage?: Promise<FicheAvecPage> | null;
 }) {
+  // AG-2 : une fiche créée depuis l'éditeur de texte devient liable tout de suite.
+  const otherEntities = useFichesLiables(otherEntitiesInitiales);
   useAmorcerFicheAvecPage({ worldSlug, entityId: entity.id, blocks: initialBlocks, promesse: ficheAvecPage });
   const router = useRouter();
   const t = useTranslations("fiche");

@@ -17,6 +17,7 @@ import { VISIBILITY_OPTIONS } from "@/components/shared/visibilityOptions";
 import { docToSegments, segmentsToDoc, type DocJSON } from "@/src/core/richtext/tiptapSync";
 import type { Segment } from "@/src/core/schemas/entities/segments";
 import type { OtherEntityOption } from "@/components/entities/RelationsChips";
+import { annoncerFicheCreee } from "@/components/shared/fichesCreees";
 import { useDesktop } from "@/components/shell/DesktopContext";
 import { windowHref, type WindowRef } from "@/components/shell/windowRefs";
 import { useWorldRuleEntries } from "@/components/blocks/useWorldRuleEntries";
@@ -112,6 +113,7 @@ export default function RichTextEditor({
   const [initialDoc] = useState<DocJSON>(() => segmentsToDoc(segments));
   const [, forceUpdate] = useState(0);
   const [linkPopoverOpen, setLinkPopoverOpen] = useState(false);
+  const [erreurCreation, setErreurCreation] = useState<string | null>(null);
   const [showDetect, setShowDetect] = useState(false);
   const [suggestions, setSuggestions] = useState<DetectedSuggestion[]>([]);
   const [hasDetected, setHasDetected] = useState(false);
@@ -277,9 +279,17 @@ export default function RichTextEditor({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ worldId, name: label.trim(), entityKind: "other" }),
     });
-    if (!res.ok) return;
-    const created = (await res.json()) as { id: string };
+    if (!res.ok) {
+      // AG-2 : l'échec se dit, il ne passe plus en silence.
+      const body = (await res.json().catch(() => null)) as { error?: string } | null;
+      setErreurCreation(body?.error ?? "Impossible de créer la fiche.");
+      return;
+    }
+    setErreurCreation(null);
+    const created = (await res.json()) as { id: string; slug: string; name: string; entity_kind: string };
     linkSelectionTo({ kind: "entity", id: created.id, name: label.trim() });
+    // AG-2 : sommaire et liens possibles l'apprennent tout de suite.
+    annoncerFicheCreee({ id: created.id, name: created.name, slug: created.slug, entity_kind: created.entity_kind });
   }
 
   function unlinkRefMention() {
@@ -661,6 +671,11 @@ export default function RichTextEditor({
         </button>
       </FloatingMenu>
       <EditorContent editor={editor} />
+      {erreurCreation && (
+        <p role="alert" className="text-xs text-danger">
+          {erreurCreation}
+        </p>
+      )}
       {worldSlug && otherEntities && (
         <div className="flex flex-col gap-1.5 rounded-md border border-edge/50 bg-panel-sunken p-2">
           <button

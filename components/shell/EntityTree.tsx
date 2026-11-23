@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -21,6 +21,7 @@ import { useCollapsedGroups } from "./useCollapsedGroups";
 import { useDesktopWindowsState } from "./DesktopWindowsProvider";
 import ActionsMenu from "@/components/shared/ActionsMenu";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
+import { useSurFicheCreee } from "@/components/shared/fichesCreees";
 
 /**
  * Le nom de la fiche, plus l'état d'attente de SON lien (V2.1-20 lot 1).
@@ -284,11 +285,17 @@ export default function EntityTree({
     setLocalGroups(groups);
   }
 
-  async function reloadTree() {
+  const reloadTree = useCallback(async () => {
     const res = await fetch(`/api/worlds/${worldSlug}/entity-tree`);
     if (!res.ok) return;
     setLocalGroups(await res.json());
-  }
+  }, [worldSlug]);
+  // AG-2 : une fiche créée depuis l'éditeur de texte entre au sommaire sans recharger la page.
+  // Seul le sommaire modifiable écoute : la peau publique ne montre pas une fiche neuve, non publique.
+  const surFicheCreee = useCallback(() => {
+    if (editable) void reloadTree();
+  }, [editable, reloadTree]);
+  useSurFicheCreee(surFicheCreee);
   let currentSlug: string | null = null;
   if (hrefBase) {
     // Peau « livre » (/partage/:token/:slug ou /m/:worldSlug/apercu/:slug) :
