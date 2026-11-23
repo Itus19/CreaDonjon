@@ -39,6 +39,8 @@ export interface ContexteEcranChoix {
   nomSort: (cle: string) => string;
   libelleOption: (sous: SousEtape) => (cle: string) => string;
   dejaAcquis: (sous: SousEtape) => Set<string>;
+  /** AG-5 : les sorts déjà obtenus ailleurs que par ce choix, et leur source. */
+  sortsPris: (cleChoix: string) => ReadonlyMap<string, string>;
   onChoisir: (cleChoix: string, valeurs: string[]) => void;
   /** V3.1-118 : le catalogue des dons du monde (catégorie de chaque carte). */
   dons: Readonly<Record<string, FeatChoiceData>>;
@@ -133,6 +135,7 @@ function Choix({
           onBasculer={(cle) => onChoisir(sous.choisis.includes(cle) ? sous.choisis.filter((c) => c !== cle) : sous.nombre === 1 ? [cle] : [...sous.choisis, cle])}
           touche={dansGroupe ? touche : undefined}
           onToucher={dansGroupe ? onToucher : undefined}
+          dejaPris={ctx.sortsPris(sous.cle)}
         />
       );
     }

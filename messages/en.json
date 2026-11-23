@@ -3135,7 +3135,9 @@
       "voirRegle": "Open the rules entry",
       "aucuneClasse": "None of the chosen classes casts spells at this level.",
       "sortsMineurs": "Cantrips",
-      "sortsPrepares": "Prepared spells ({classe}, max level {max})"
+      "sortsPrepares": "Prepared spells ({classe}, max level {max})",
+      "dejaPrisPar": "Already taken by {source}",
+      "parClasse": "your class"
     },
     "caracIncantation": {
       "explication": "This ability sets the save DC and the attack of this trait's spells, nothing else.",

@@ -134,11 +134,14 @@ export default function SpellSelectionStep({
   character,
   spellcasting,
   onUpdateSpellcasting,
+  dejaPris,
 }: {
   worldSlug: string;
   character: CharacterBlockData;
   spellcasting: SpellcastingBlockData;
   onUpdateSpellcasting: (data: SpellcastingBlockData) => void;
+  /** AG-5 : les sorts qu'une autre source (espèce, don, sous-classe) donne déjà. */
+  dejaPris?: ReadonlyMap<string, string>;
 }) {
   const t = useTranslations("creation.sorts");
   const [touche, setTouche] = useState<string | null>(null);
@@ -181,6 +184,8 @@ export default function SpellSelectionStep({
       });
       return;
     }
+
+    if (dejaPris?.has(spellKey)) return;
 
     const pool = spellEntries.filter((e) => {
       const { classes, level } = spellClassesAndLevel(blocksByKey[e.key]);
@@ -238,6 +243,7 @@ export default function SpellSelectionStep({
                 onBasculer={(key) => toggleSpell(budget, key, "cantrip")}
                 touche={touche}
                 onToucher={setTouche}
+                dejaPris={dejaPris}
               />
             )}
 
@@ -255,6 +261,7 @@ export default function SpellSelectionStep({
                 onBasculer={(key) => toggleSpell(budget, key, "spell")}
                 touche={touche}
                 onToucher={setTouche}
+                dejaPris={dejaPris}
               />
             )}
           </div>

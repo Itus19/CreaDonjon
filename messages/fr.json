@@ -3136,7 +3136,9 @@
       "voirRegle": "Voir la fiche de règle",
       "aucuneClasse": "Aucune des classes choisies n'incante à ce niveau.",
       "sortsMineurs": "Sorts mineurs",
-      "sortsPrepares": "Sorts préparés ({classe}, niveau max {max})"
+      "sortsPrepares": "Sorts préparés ({classe}, niveau max {max})",
+      "dejaPrisPar": "Déjà pris par {source}",
+      "parClasse": "votre classe"
     },
     "caracIncantation": {
       "explication": "Cette caractéristique sert au DD de sauvegarde et à l'attaque des sorts de ce trait, rien d'autre.",
