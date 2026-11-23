@@ -7,7 +7,14 @@ import type { TextBlockData } from "@/src/core/schemas/blocks/text";
 import Dropdown from "@/components/shared/Dropdown";
 import type { ImageBackgroundMode } from "@/src/core/images/backgroundMode";
 import { placeImageInText, textHostOf } from "@/src/core/images/inlineImagePlacement";
-import { CHOIX_FOND, appliquerFond, fondDe, reglagesFondVisibles } from "@/lib/ui/imageBloc";
+import { CHOIX_FOND, TAILLE_MAX, TAILLE_MIN, appliquerFond, fondDe, reglagesFondVisibles, tailleSuivante } from "@/lib/ui/imageBloc";
+
+/** AG-3 : les trois places d'une image seule dans son bloc (rendu : `PublicImageBlock`). */
+const ALIGNEMENTS = [
+  { align: "left", cle: "alignGauche" },
+  { align: "center", cle: "alignCentre" },
+  { align: "right", cle: "alignDroite" },
+] as const;
 
 /** Forme minimale d'un bloc frere pour cet editeur — `BlockItem` (EntityBlocks) la satisfait. */
 export interface ImageAnchorSibling {
@@ -61,6 +68,10 @@ function Pastille({
  * la bulle de l'éditeur de texte. Le curseur à crans, l'aperçu et la barre
  * d'alignement de V2.1-11 / V3.1-67 ont quitté ce bloc. Restent ici la
  * légende, la parallaxe et tout le fond de page.
+ *
+ * AG-3 : une image « seule, à sa place » n'est dans aucun texte, donc aucune
+ * bulle ne la règle. Sa taille et son alignement reviennent ici, pour ce cas
+ * seulement.
  */
 export default function ImageBlockEditor({
   blockId,
@@ -244,6 +255,48 @@ export default function ImageBlockEditor({
                     </>
                   )}
                 </div>
+
+                {/* AG-3 : une image seule n'est dans aucun texte, donc la bulle
+                    de l'editeur de texte (V3.1-189) ne la regle pas. Sa taille
+                    et son alignement se reglent ici, et seulement ici. */}
+                {!hote && (
+                  <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">{t("taille")}</span>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => onChange({ ...data, sizePct: tailleSuivante(data.sizePct, -1) })}
+                          disabled={data.sizePct <= TAILLE_MIN}
+                          aria-label={t("taillePlusPetite")}
+                          className="h-7 w-7 rounded-full border border-edge text-ink transition-colors hover:bg-panel-raised disabled:opacity-40"
+                        >
+                          −
+                        </button>
+                        <span className="min-w-[3rem] text-center text-ink">{data.sizePct} %</span>
+                        <button
+                          type="button"
+                          onClick={() => onChange({ ...data, sizePct: tailleSuivante(data.sizePct, 1) })}
+                          disabled={data.sizePct >= TAILLE_MAX}
+                          aria-label={t("taillePlusGrande")}
+                          className="h-7 w-7 rounded-full border border-edge text-ink transition-colors hover:bg-panel-raised disabled:opacity-40"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-ink-muted">{t("alignement")}</span>
+                      <div role="group" aria-label={t("alignement")} className="flex flex-wrap items-center gap-1.5">
+                        {ALIGNEMENTS.map((a) => (
+                          <Pastille key={a.align} actif={data.align === a.align} onClick={() => onChange({ ...data, align: a.align })}>
+                            {t(a.cle)}
+                          </Pastille>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Pas de case a cocher a cote : `0` eteint l'effet, donc le
                     curseur EST l'interrupteur. */}
