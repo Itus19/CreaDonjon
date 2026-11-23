@@ -10,7 +10,6 @@ import {
   groupesDeCompteurs,
   ligneRepliee,
   lireMontant,
-  progressionXp,
 } from "./outilTable";
 
 function etatDeJeu(patch: Partial<RuntimeState> = {}): RuntimeState {
@@ -100,15 +99,6 @@ describe("ligneRepliee", () => {
   it("à 0 PV : mourant, puis mort à trois échecs", () => {
     expect(ligneRepliee(pj({}, { hp: { current: 0, temp: 0 } })).etat).toBe("mourant");
     expect(ligneRepliee(pj({}, { hp: { current: 0, temp: 0 }, death_saves: { success: 0, fail: 3 } })).etat).toBe("mort");
-  });
-});
-
-describe("progressionXp", () => {
-  it("part de l'anneau entre le seuil du niveau et celui du suivant", () => {
-    expect(progressionXp(2, 600)).toEqual({ xpCeiling: 900, xpPct: 50 });
-  });
-  it("au niveau 20, l'anneau est plein", () => {
-    expect(progressionXp(20, 400000).xpPct).toBe(100);
   });
 });
 

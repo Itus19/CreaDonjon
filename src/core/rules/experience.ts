@@ -18,3 +18,36 @@ export function hasReachedNextLevel(totalLevel: number, xpCurrent: number): bool
   const threshold = nextLevelThreshold(totalLevel);
   return threshold !== null && xpCurrent >= threshold;
 }
+
+export interface JaugeXp {
+  /** PX gagnés depuis le seuil du niveau actuel, jamais négatif. */
+  dansNiveau: number;
+  /** PX qui séparent le niveau actuel du suivant (0 au niveau 20). */
+  versSuivant: number;
+  /** Part remplie de la jauge, de 0 à 100. */
+  pourcentage: number;
+  /** PX cumulés : ce que la règle compte, montré au survol. */
+  total: number;
+  niveauSuivant: number | null;
+}
+
+/**
+ * AG-4 — ce que montre la jauge d'XP. En D&D les PX se cumulent et ne
+ * repartent jamais à zéro : 900 PX est le seuil du niveau 3. Afficher ce
+ * total juste après une montée de niveau donne l'impression que rien n'a
+ * bougé ; on montre donc le chemin vers le niveau suivant, depuis le seuil du
+ * niveau actuel, et le total à part. Un personnage créé au niveau 3 avec 0 PX
+ * (sous le seuil) affiche 0, pas -900.
+ */
+export function jaugeXp(totalLevel: number, xpCurrent: number): JaugeXp {
+  const niveau = Math.max(1, Math.min(totalLevel, XP_LEVEL_THRESHOLDS.length));
+  const plancher = XP_LEVEL_THRESHOLDS[niveau - 1] ?? 0;
+  const plafond = nextLevelThreshold(niveau);
+  if (plafond === null) {
+    return { dansNiveau: 0, versSuivant: 0, pourcentage: 100, total: xpCurrent, niveauSuivant: null };
+  }
+  const versSuivant = plafond - plancher;
+  const dansNiveau = Math.max(0, xpCurrent - plancher);
+  const pourcentage = Math.min(100, Math.round((dansNiveau / versSuivant) * 100));
+  return { dansNiveau, versSuivant, pourcentage, total: xpCurrent, niveauSuivant: niveau + 1 };
+}

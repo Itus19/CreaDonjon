@@ -4,7 +4,6 @@ import { lbToKg } from "@/src/core/rules/encumbrance";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import RangeeChiffree from "@/components/blocks/RangeeChiffree";
-import { XP_LEVEL_THRESHOLDS } from "@/src/core/rules/experience";
 import { applyCurrencyDelta, CURRENCY_ORDER, type CoinType } from "@/src/core/rules/currency";
 import { pvSousUnTiers } from "@/lib/ui/commandeE";
 import { etatMourant as lireEtatMourant } from "@/lib/ui/etatMourant";
@@ -14,7 +13,6 @@ import {
   fusionnerEtat,
   groupesDeCompteurs,
   ligneRepliee,
-  progressionXp,
   type DeltaPieces,
 } from "@/lib/ui/outilTable";
 import { lireBourse, posterGeste, relirePj, type Resultat } from "@/lib/ui/tableApi";
@@ -346,7 +344,6 @@ function ContenuPj({
   const t = useTranslations("table");
   const etat = pc.runtimeState.state;
   const hpMax = pc.runtimeState.hpMax;
-  const { xpCeiling, xpPct } = progressionXp(pc.level, etat.xp);
   const groupes = groupesDeCompteurs(pc.resources);
   const encombrement = pc.sheet.encumbrance;
   const nomGroupe = { reposCourt: t("groupeReposCourt"), reposLong: t("groupeReposLong"), autres: t("groupeAutres") } as const;
@@ -369,10 +366,7 @@ function ContenuPj({
         hpLow={pvSousUnTiers(etat.hp.current, hpMax)}
         onChangeHp={(delta) => geste(pc, "hp", { delta })}
         xpCurrent={etat.xp}
-        xpCeiling={xpCeiling}
-        xpPct={xpPct}
         totalLevel={pc.level}
-        xpLevelThresholdsLength={XP_LEVEL_THRESHOLDS.length}
         onChangeXp={(delta) => geste(pc, "xp", { delta })}
         etatMourant={lireEtatMourant({ current: etat.hp.current }, etat.death_saves)}
         deathSaves={etat.death_saves}

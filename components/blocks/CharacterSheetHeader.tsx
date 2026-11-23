@@ -354,10 +354,7 @@ export default function CharacterSheetHeader({
   hpLow,
   onChangeHp,
   xpCurrent,
-  xpCeiling,
-  xpPct,
   totalLevel,
-  xpLevelThresholdsLength,
   onChangeXp,
   canLevelUp,
   onLevelUp,
@@ -407,10 +404,7 @@ export default function CharacterSheetHeader({
   /** Les trois commandes ne transmettent qu'un ECART (V3.1-26) : le serveur l'applique et le borne. */
   onChangeHp: (delta: number) => void;
   xpCurrent: number;
-  xpCeiling: number;
-  xpPct: number;
   totalLevel: number;
-  xpLevelThresholdsLength: number;
   onChangeXp: (delta: number) => void;
   /** Seuil de PX du niveau suivant atteint (V2-G1, montee de niveau accompagnee) — voir `hasReachedNextLevel`, `src/core/rules/experience.ts`. */
   canLevelUp: boolean;
@@ -618,10 +612,7 @@ export default function CharacterSheetHeader({
         hpLow={hpLow}
         onChangeHp={onChangeHp}
         xpCurrent={xpCurrent}
-        xpCeiling={xpCeiling}
-        xpPct={xpPct}
         totalLevel={totalLevel}
-        xpLevelThresholdsLength={xpLevelThresholdsLength}
         onChangeXp={onChangeXp}
         onRollInitiative={onRollInitiative}
         etatMourant={etatMourant}

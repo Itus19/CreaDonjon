@@ -8,7 +8,7 @@ import type { InventoryBlockData } from "@/src/core/schemas/blocks/inventory";
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
 import type { ResourcesBlockData } from "@/src/core/schemas/blocks/resources";
 import { ABILITY_LABELS as ABILITY_NAMES, PASSIVE_SKILLS, SKILL_ABILITIES, type Ability } from "@/src/core/rules/sheet";
-import { XP_LEVEL_THRESHOLDS, hasReachedNextLevel } from "@/src/core/rules/experience";
+import { hasReachedNextLevel } from "@/src/core/rules/experience";
 import { applyDamageToHp } from "@/src/core/rules/tempHp";
 import { pvSousUnTiers } from "@/lib/ui/commandeE";
 import { etatMourant } from "@/lib/ui/etatMourant";
@@ -448,7 +448,6 @@ export default function PlayableCharacterSheet({
   const pret = rulesetPret && (apercu || remote !== null);
 
   const totalLevel = Math.max(1, character.classes.reduce((sum, c) => sum + c.level, 0));
-  const levelIndex = Math.min(totalLevel, XP_LEVEL_THRESHOLDS.length) - 1;
   // V3.1-131 : ressources calculées, capacités jouables et effets viennent de la fiche calculée par le serveur (déjà chargée) ; rien de plus à l'ouverture.
   const fiche = remote?.sheet;
   /** Le nom d'un sort pour sa carte : celui du sort connu, sinon l'aptitude qui l'accorde, sinon sa clé. */
@@ -490,10 +489,7 @@ export default function PlayableCharacterSheet({
         busy,
       }
     : null;
-  const xpFloor = XP_LEVEL_THRESHOLDS[levelIndex] ?? 0;
-  const xpCeiling = XP_LEVEL_THRESHOLDS[levelIndex + 1] ?? xpFloor;
   const xpCurrent = runtimeState?.xp ?? 0;
-  const xpPct = xpCeiling > xpFloor ? Math.min(100, Math.max(0, ((xpCurrent - xpFloor) / (xpCeiling - xpFloor)) * 100)) : 100;
   const canLevelUp = hasReachedNextLevel(totalLevel, xpCurrent);
   const resume = resumerCompetences(
     SORTED_SKILLS.map((skill) => ({ nom: SKILL_LABELS_FR[skill], mod: sheet.skills[skill].mod, proficiency: sheet.skills[skill].proficiency }))
@@ -525,10 +521,7 @@ export default function PlayableCharacterSheet({
         hpLow={hpLow}
         onChangeHp={changeHp}
         xpCurrent={xpCurrent}
-        xpCeiling={xpCeiling}
-        xpPct={xpPct}
         totalLevel={totalLevel}
-        xpLevelThresholdsLength={XP_LEVEL_THRESHOLDS.length}
         onChangeXp={changeXp}
         canLevelUp={canLevelUp}
         onLevelUp={() => onMonterDeNiveau?.()}
