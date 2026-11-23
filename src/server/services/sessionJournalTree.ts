@@ -24,18 +24,21 @@ export { SESSION_JOURNAL_KIND };
  * `getPublicEntityTree`) le prepend au resultat de `buildEntityTree`, apres
  * en avoir retire ce kind (jamais un groupe alphabetique en plus de
  * celui-ci). `publicOnly` filtre aux fiches `is_public` (apercu/partage).
+ * AG-8 : `avecBrouillons` ajoute les pages dont le devoir n'est pas rendu,
+ * marquées `enCours` ; l'appelant DOIT les passer au filtre de visibilité
+ * (`getEntityTree` le fait pour tout lecteur qui n'est pas MJ).
  */
 export async function getSessionJournalTreeGroup(
   supabase: TypedClient,
   worldId: string,
-  opts: { publicOnly: boolean } = { publicOnly: false }
+  opts: { publicOnly: boolean; avecBrouillons?: boolean } = { publicOnly: false }
 ): Promise<EntityTreeGroup | null> {
-  const entries = await listWrittenEntriesForWorld(supabase, worldId);
+  const entries = await listWrittenEntriesForWorld(supabase, worldId, { avecBrouillons: opts.avecBrouillons === true && !opts.publicOnly });
   const visible = opts.publicOnly ? entries.filter((e) => e.isPublic) : entries;
   if (visible.length === 0) return null;
   return {
     kind: SESSION_JOURNAL_KIND,
-    items: visible.map((e, i) => ({ id: e.entityId, name: e.name, slug: e.slug, displayOrder: i, version: 1, children: [] })),
+    items: visible.map((e, i) => ({ id: e.entityId, name: e.name, slug: e.slug, displayOrder: i, version: 1, children: [], ...(e.enCours ? { enCours: true as const } : {}) })),
   };
 }
 

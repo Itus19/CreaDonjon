@@ -4,6 +4,7 @@ import { getWorldBySlug } from "@/src/server/services/worlds";
 import { isWorldAdmin } from "@/src/server/services/permissions";
 import { listCampaigns, resolveCampaignId } from "@/src/server/services/campaigns";
 import { countRequestsReadyToFix } from "@/src/server/services/scheduling";
+import { countDevoirsAValider } from "@/src/server/services/sessionJournal";
 import MjSidebar from "@/components/shell/MjSidebar";
 import WindowsDesktop from "@/components/shell/WindowsDesktop";
 
@@ -57,14 +58,18 @@ export default async function MjLayout({
   }
 
   // V3.1-190 : la pastille « à fixer » de Calendrier réel (quatre lectures
-  // légères, `countRequestsReadyToFix`). Le layout ne se relit qu'au
-  // chargement d'une page, pas à chaque navigation entre outils.
+  // légères, `countRequestsReadyToFix`). AG-8 : celle de Livre de sessions,
+  // les devoirs rendus à valider (une lecture de comptage), dans la même
+  // vague. Le layout ne se relit qu'au chargement d'une page, pas à chaque
+  // navigation entre outils.
   const campaignId = await resolveCampaignId(supabase, world.id);
-  const demandesAFixer = campaignId ? await countRequestsReadyToFix(supabase, campaignId) : 0;
+  const [demandesAFixer, devoirsAValider] = campaignId
+    ? await Promise.all([countRequestsReadyToFix(supabase, campaignId), countDevoirsAValider(supabase, campaignId)])
+    : [0, 0];
 
   return (
     <>
-      <MjSidebar worldSlug={worldSlug} worldName={world.name} campaignName={campaignName} demandesAFixer={demandesAFixer} />
+      <MjSidebar worldSlug={worldSlug} worldName={world.name} campaignName={campaignName} demandesAFixer={demandesAFixer} devoirsAValider={devoirsAValider} />
       <WindowsDesktop>{children}</WindowsDesktop>
     </>
   );

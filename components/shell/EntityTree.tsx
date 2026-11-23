@@ -150,6 +150,8 @@ function NodeRow({
           }`}
         >
           <NomDuLien nom={node.name} />
+          {/* AG-8 : un devoir de journal pas encore rendu, que seuls l'autrice et le MJ voient. */}
+          {node.enCours && <span className="ml-1.5 text-xs italic text-ink-muted">{t("enCoursDEcriture")}</span>}
         </Link>
         {editable && (
           <ActionsMenu

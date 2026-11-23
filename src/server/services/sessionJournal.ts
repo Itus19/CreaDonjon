@@ -8,6 +8,7 @@ import {
   getAssignmentByEntityId,
   submitAssignment,
   markValidated,
+  countSubmittedAssignments,
   listAssignmentsForCampaign,
   listOpenAssignmentsForUser,
   type SessionJournalEntryRow,
@@ -313,6 +314,16 @@ export async function submitMyJournalAssignment(supabase: TypedClient, params: {
 }
 
 export type ValidateResult = { ok: true } | { ok: false; reason: "not_found" | "forbidden" | "not_submitted" };
+
+/**
+ * AG-8 — « Devoir fait » prévient le MJ dans l'app : la pastille de l'outil
+ * Livre de sessions compte les devoirs rendus qu'il n'a pas encore validés.
+ * Elle s'éteint à la validation. Aucune table de notifications : l'état du
+ * devoir suffit.
+ */
+export async function countDevoirsAValider(supabase: TypedClient, campaignId: string): Promise<number> {
+  return countSubmittedAssignments(supabase, campaignId);
+}
 
 /** Le MJ valide un devoir rendu (V3.1-150) : la mention quitte la barre de l'autrice. */
 export async function validateJournalAssignment(

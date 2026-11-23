@@ -168,7 +168,8 @@ export async function getEntityTree(
     listPlayerCharacterEntityIds(supabase, worldId),
     getWorldEntityKindOrder(supabase, worldId),
     userId ? isWorldAdmin(supabase, { worldId, userId }) : Promise.resolve(false),
-    getSessionJournalTreeGroup(supabase, worldId),
+    // AG-8 : brouillons compris ; le filtre ci-dessous les retire à qui n'est ni l'autrice ni le MJ.
+    getSessionJournalTreeGroup(supabase, worldId, { publicOnly: false, avecBrouillons: true }),
   ]);
   let visibleEntities = excludeWikiHidden(excludeSessionJournalEntries(excludeOthersPrivateNotes(entities, userId)));
   let journal = journalGroup;
