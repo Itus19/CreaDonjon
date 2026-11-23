@@ -17,7 +17,6 @@ export function cheminInterne(valeur: unknown): string | null {
   if (valeur.length === 0 || valeur.length > LONGUEUR_MAX) return null;
   if (!valeur.startsWith("/") || valeur.startsWith("//")) return null;
   if (valeur.includes("\\")) return null;
-  // eslint-disable-next-line no-control-regex -- c'est exactement ce qu'on refuse
   if (/[\u0000-\u001f\u007f]/.test(valeur)) return null;
   return valeur;
 }
