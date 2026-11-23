@@ -24,7 +24,7 @@ const eslintConfig = defineConfig([
     // echoue sur du code pourtant conforme.
     ".claude/worktrees/**",
   ]),
-  // src/core est un noyau pur (CLAUDE.md, regle absolue 14) : aucun import
+  // src/core est un noyau pur (CLAUDE.md, regle absolue 19) : aucun import
   // de framework ni de reseau. Verifie mecaniquement, pas seulement par
   // convention.
   {
@@ -53,7 +53,7 @@ const eslintConfig = defineConfig([
   },
   // Le client service-role (lib/supabase/service.ts) contourne TOUTE la
   // RLS : confine a src/server/services/publicShare.ts (CLAUDE.md, regle
-  // absolue 4 ter). Verifie mecaniquement (V1 D-01), pas seulement par le
+  // absolue 2). Verifie mecaniquement (V1 D-01), pas seulement par le
   // commentaire en tete de service.ts.
   {
     files: ["**/*.{ts,tsx}"],
@@ -66,7 +66,7 @@ const eslintConfig = defineConfig([
             {
               group: ["*/lib/supabase/service", "@/lib/supabase/service", "./service", "../service"],
               message:
-                "Le client service-role est confine a src/server/services/publicShare.ts (CLAUDE.md regle 4 ter). Passe par les fonctions exportees de ce fichier plutot que de construire ce client ici.",
+                "Le client service-role est confine a src/server/services/publicShare.ts (CLAUDE.md, regle absolue 2). Passe par les fonctions exportees de ce fichier plutot que de construire ce client ici.",
             },
           ],
         },
