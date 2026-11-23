@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { zPlayStyle, type PlayStyle } from "../remote/feed";
 
 /**
  * V3.1-108 (ADR 0036 §5, ADR 0043) — « Ce que les joueurs modifient
@@ -14,12 +15,20 @@ export type PlayerEditableField = (typeof PLAYER_EDITABLE_FIELDS)[number];
 
 export interface CampaignTableSettings {
   inspiration_max: number;
+  /**
+   * ADR 0103 — la façon de jouer : à table, à distance, ou les deux. Elle ne
+   * règle que ce que l'app montre. Absente du schéma d'écriture ci-dessous :
+   * elle ne change que par sa route à elle, avec confirmation, jamais au
+   * passage d'un autre réglage.
+   */
+  play_style: PlayStyle;
   player_can_edit: Record<PlayerEditableField, boolean>;
 }
 
 /** Decides par l'auteur le 4 octobre : etats et inspiration au MJ, le reste a la joueuse. */
 export const DEFAULT_TABLE_SETTINGS: CampaignTableSettings = {
   inspiration_max: 1,
+  play_style: "table",
   player_can_edit: { conditions: false, inspiration: false, hp: true, currency: true, spell_slots: true, hit_dice: true },
 };
 
@@ -47,6 +56,7 @@ export function parseTableSettings(raw: unknown): CampaignTableSettings {
   const edits = source.player_can_edit !== null && typeof source.player_can_edit === "object" ? (source.player_can_edit as Record<string, unknown>) : {};
   return {
     inspiration_max: typeof max === "number" && Number.isInteger(max) && max >= 1 && max <= 5 ? max : DEFAULT_TABLE_SETTINGS.inspiration_max,
+    play_style: zPlayStyle.safeParse(source.play_style).data ?? DEFAULT_TABLE_SETTINGS.play_style,
     player_can_edit: Object.fromEntries(
       PLAYER_EDITABLE_FIELDS.map((f) => [f, typeof edits[f] === "boolean" ? (edits[f] as boolean) : DEFAULT_TABLE_SETTINGS.player_can_edit[f]])
     ) as Record<PlayerEditableField, boolean>,
@@ -57,6 +67,7 @@ export function parseTableSettings(raw: unknown): CampaignTableSettings {
 export function mergeTableSettings(current: CampaignTableSettings, patch: CampaignTableSettingsPatch): CampaignTableSettings {
   return {
     inspiration_max: patch.inspiration_max ?? current.inspiration_max,
+    play_style: current.play_style,
     player_can_edit: Object.fromEntries(
       PLAYER_EDITABLE_FIELDS.map((f) => [f, patch.player_can_edit?.[f] ?? current.player_can_edit[f]])
     ) as Record<PlayerEditableField, boolean>,
@@ -78,4 +89,14 @@ export function sheetControls(settings: CampaignTableSettings | null, caller: { 
   return Object.fromEntries(
     PLAYER_EDITABLE_FIELDS.map((f) => [f, settings === null || mayPlayerChange(f, settings, caller)])
   ) as Record<PlayerEditableField, boolean>;
+}
+
+/** ADR 0103 — change la seule façon de jouer, en gardant tout le reste. */
+export function withPlayStyle(current: CampaignTableSettings, playStyle: PlayStyle): CampaignTableSettings {
+  return { ...current, play_style: playStyle };
+}
+
+/** L'écran « Jeu à distance » existe pour cette campagne. */
+export function showsRemotePlay(settings: CampaignTableSettings): boolean {
+  return settings.play_style !== "table";
 }

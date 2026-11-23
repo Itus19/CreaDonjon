@@ -1,7 +1,8 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
-import { mergeTableSettings, parseTableSettings, type CampaignTableSettings, type CampaignTableSettingsPatch } from "@/src/core/campaigns/tableSettings";
+import { mergeTableSettings, parseTableSettings, withPlayStyle, type CampaignTableSettings, type CampaignTableSettingsPatch } from "@/src/core/campaigns/tableSettings";
+import type { PlayStyle } from "@/src/core/remote/feed";
 import { getCampaignById, getCampaignTableSettingsRaw, updateCampaignTableSettings } from "@/src/server/repos/campaigns";
 import { isWorldAdmin } from "@/src/server/services/permissions";
 
@@ -27,6 +28,24 @@ export async function writeTableSettings(
   if (!(await isWorldAdmin(supabase, { worldId: campaign.world_id, userId: params.userId }))) return "forbidden";
   const current = parseTableSettings(await getCampaignTableSettingsRaw(supabase, params.campaignId));
   const next = mergeTableSettings(current, params.patch);
+  const written = await updateCampaignTableSettings(supabase, { campaignId: params.campaignId, settings: next as unknown as Json });
+  return written ? next : "forbidden";
+}
+
+/**
+ * ADR 0103 — change la façon de jouer (à table, à distance, les deux). Une
+ * route à elle, appelée seulement après la confirmation de Gestion de
+ * campagne : l'auteur ne veut jamais changer de mode par accident.
+ */
+export async function writePlayStyle(
+  supabase: TypedClient,
+  params: { userId: string; campaignId: string; playStyle: PlayStyle }
+): Promise<CampaignTableSettings | "forbidden" | "not_found"> {
+  const campaign = await getCampaignById(supabase, params.campaignId);
+  if (!campaign) return "not_found";
+  if (!(await isWorldAdmin(supabase, { worldId: campaign.world_id, userId: params.userId }))) return "forbidden";
+  const current = parseTableSettings(await getCampaignTableSettingsRaw(supabase, params.campaignId));
+  const next = withPlayStyle(current, params.playStyle);
   const written = await updateCampaignTableSettings(supabase, { campaignId: params.campaignId, settings: next as unknown as Json });
   return written ? next : "forbidden";
 }

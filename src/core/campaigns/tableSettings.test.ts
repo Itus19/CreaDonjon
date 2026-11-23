@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_TABLE_SETTINGS, mayPlayerChange, mergeTableSettings, parseTableSettings, sheetControls, zCampaignTableSettings } from "./tableSettings";
+import { DEFAULT_TABLE_SETTINGS, mayPlayerChange, mergeTableSettings, parseTableSettings, sheetControls, showsRemotePlay, withPlayStyle, zCampaignTableSettings } from "./tableSettings";
 
 describe("réglages de table (V3.1-108, ADR 0036 §5 et 0043)", () => {
   it("donne les valeurs par défaut décidées à une colonne vide", () => {
     expect(parseTableSettings({})).toEqual({
       inspiration_max: 1,
+      play_style: "table",
       player_can_edit: { conditions: false, inspiration: false, hp: true, currency: true, spell_slots: true, hit_dice: true },
     });
     expect(DEFAULT_TABLE_SETTINGS.player_can_edit.hp).toBe(true);
@@ -78,5 +79,24 @@ describe("sheetControls (V3.1-109)", () => {
     const controles = sheetControls(DEFAULT_TABLE_SETTINGS, { callerIsGm: false });
     controles.hp = false;
     expect(DEFAULT_TABLE_SETTINGS.player_can_edit.hp).toBe(true);
+  });
+});
+
+describe("la façon de jouer (ADR 0103)", () => {
+  it("se lit, retombe sur « à table » si illisible", () => {
+    expect(parseTableSettings({ play_style: "remote" }).play_style).toBe("remote");
+    expect(parseTableSettings({ play_style: "partout" }).play_style).toBe("table");
+  });
+
+  it("ne passe jamais par le schéma d'écriture commun, ni ne bouge au passage d'un autre réglage", () => {
+    expect(zCampaignTableSettings.safeParse({ play_style: "remote" }).success).toBe(false);
+    const distance = withPlayStyle(DEFAULT_TABLE_SETTINGS, "remote");
+    expect(mergeTableSettings(distance, { inspiration_max: 2 }).play_style).toBe("remote");
+  });
+
+  it("l'écran à distance existe pour « à distance » et « les deux »", () => {
+    expect(showsRemotePlay(withPlayStyle(DEFAULT_TABLE_SETTINGS, "table"))).toBe(false);
+    expect(showsRemotePlay(withPlayStyle(DEFAULT_TABLE_SETTINGS, "remote"))).toBe(true);
+    expect(showsRemotePlay(withPlayStyle(DEFAULT_TABLE_SETTINGS, "both"))).toBe(true);
   });
 });
