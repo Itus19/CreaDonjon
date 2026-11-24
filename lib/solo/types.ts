@@ -1,4 +1,7 @@
 import type { IntentCatalog } from "@/src/core/rules/intent";
+import type { RaisonSansNarration } from "@/src/core/ai/providerError";
+
+export type { RaisonSansNarration };
 import type { PendingRequest } from "@/src/core/schemas/runtimeState";
 import type { TraceStep } from "@/src/core/formula/evaluate";
 
@@ -149,6 +152,12 @@ export interface TurnOutcome {
    * est complet et journalisé que ce champ soit rempli ou non.
    */
   narration: { text: string; npcReaction: { npcId: string; text: string } | null } | null;
+  /**
+   * V3.1-223 — pourquoi `narration` est restée `null`, quand un appel était
+   * attendu (tour en campagne) : aucun fournisseur, quota épuisé, clé
+   * refusée… Absent quand la narration a abouti ou n'était pas attendue.
+   */
+  sansNarration?: RaisonSansNarration;
 }
 
 /**

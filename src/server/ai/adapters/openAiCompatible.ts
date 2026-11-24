@@ -1,5 +1,17 @@
 import "server-only";
-import type { AiCapabilities, AiProvider, AiToolCall, CompletionRequest, CompletionResult } from "../provider";
+import { classerReponseFournisseur } from "@/src/core/ai/providerError";
+import { estAdresseLocale } from "@/src/core/ai/providerUrl";
+import { AiProviderError, type AiCapabilities, type AiProvider, type AiToolCall, type CompletionRequest, type CompletionResult } from "../provider";
+
+/**
+ * Délai d'un appel (ADR 0103 : « délai court »). Assez pour un gros modèle
+ * distant qui raconte un tour, assez court pour qu'un fournisseur pendu ne
+ * retienne pas la requête jusqu'à ce que l'hébergeur la coupe.
+ */
+const DELAI_PAR_DEFAUT_MS = 45_000;
+
+/** Taille maximale d'une réponse lue (ADR 0103 : « taille de réponse bornée »). Une narration pèse quelques kilo-octets. */
+const TAILLE_MAX_REPONSE = 4 * 1024 * 1024;
 
 export interface OpenAiCompatibleConfig {
   baseUrl: string;
@@ -8,6 +20,8 @@ export interface OpenAiCompatibleConfig {
   embedDim?: number;
   /** Jeton exigé par le serveur local (LM Studio « Require Authentication ») ; absent : aucun en-tête. Serveur uniquement (règle 1). */
   apiKey?: string;
+  /** Délai maximal d'un appel, en millisecondes. */
+  timeoutMs?: number;
 }
 
 interface OpenAiToolCall {
@@ -36,8 +50,9 @@ function parseToolArguments(raw: string): unknown {
 }
 
 /**
- * Adaptateur partage pour Ollama et LM Studio : les deux exposent un point
- * d'acces compatible OpenAI (specs/cible-locale-et-ia.md §3 — "deux
+ * Adaptateur partage pour Ollama et LM Studio, et pour tout fournisseur
+ * distant compatible OpenAI (OpenAI, OpenRouter, Venice — ADR 0103) : tous
+ * exposent un point d'acces compatible OpenAI (specs/cible-locale-et-ia.md §3 — "deux
  * implementations seulement a ecrire, le troisieme est l'API distante").
  * Configure par variables d'environnement pour l'instant, pas encore un
  * reglage par monde/utilisateur — un seul fournisseur actif dans ce ticket
@@ -51,6 +66,8 @@ export class OpenAiCompatibleProvider implements AiProvider {
   private readonly contextWindow: number;
   private readonly embedDim: number;
   private readonly apiKey: string | undefined;
+  private readonly timeoutMs: number;
+  private readonly isLocal: boolean;
 
   constructor(config: OpenAiCompatibleConfig) {
     this.model = config.model;
@@ -58,6 +75,8 @@ export class OpenAiCompatibleProvider implements AiProvider {
     this.contextWindow = config.contextWindow ?? 8192;
     this.embedDim = config.embedDim ?? 1024;
     this.apiKey = config.apiKey?.trim() || undefined;
+    this.timeoutMs = config.timeoutMs ?? DELAI_PAR_DEFAUT_MS;
+    this.isLocal = estAdresseLocale(this.baseUrl);
   }
 
   private headers(): Record<string, string> {
@@ -65,7 +84,43 @@ export class OpenAiCompatibleProvider implements AiProvider {
   }
 
   capabilities(): AiCapabilities {
-    return { toolCalls: true, contextWindow: this.contextWindow, embedDim: this.embedDim, isLocal: true };
+    return { toolCalls: true, contextWindow: this.contextWindow, embedDim: this.embedDim, isLocal: this.isLocal };
+  }
+
+  /**
+   * Le seul endroit qui appelle le fournisseur. Les gardes de l'ADR 0103 :
+   * aucune redirection suivie (une adresse publique pourrait renvoyer vers une
+   * adresse privée), un délai, une réponse bornée. Toute défaillance devient
+   * une `AiProviderError` qui dit pourquoi.
+   */
+  private async post(chemin: string, body: unknown): Promise<unknown> {
+    let res: Response;
+    try {
+      res = await fetch(`${this.baseUrl}${chemin}`, {
+        method: "POST",
+        headers: this.headers(),
+        body: JSON.stringify(body),
+        redirect: "manual",
+        signal: AbortSignal.timeout(this.timeoutMs),
+      });
+    } catch (erreur) {
+      const delai = erreur instanceof Error && (erreur.name === "TimeoutError" || erreur.name === "AbortError");
+      throw new AiProviderError(delai ? "delai" : "echec", `Fournisseur IA (${this.model}) : ${delai ? "délai dépassé" : "injoignable"}`);
+    }
+    if (!res.ok) {
+      const text = res.status >= 300 && res.status < 400 ? "" : await res.text().catch(() => "");
+      throw new AiProviderError(classerReponseFournisseur(res.status, text), `Fournisseur IA (${this.model}) : ${res.status} ${text.slice(0, 300)}`);
+    }
+    const longueur = Number(res.headers.get("content-length") ?? "0");
+    if (longueur > TAILLE_MAX_REPONSE) throw new AiProviderError("echec", `Fournisseur IA (${this.model}) : réponse trop lourde`);
+    const text = await res.text();
+    if (text.length > TAILLE_MAX_REPONSE) throw new AiProviderError("echec", `Fournisseur IA (${this.model}) : réponse trop lourde`);
+    try {
+      return JSON.parse(text);
+    } catch {
+      // catch-attendu : un corps qui n'est pas du JSON est une réponse invalide du fournisseur, dite comme telle.
+      throw new AiProviderError("echec", `Fournisseur IA (${this.model}) : réponse illisible`);
+    }
   }
 
   async complete(request: CompletionRequest): Promise<CompletionResult> {
@@ -88,16 +143,7 @@ export class OpenAiCompatibleProvider implements AiProvider {
       body.tool_choice = "auto";
     }
 
-    const res = await fetch(`${this.baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: this.headers(),
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      throw new Error(`Fournisseur IA local (${this.model}) : ${res.status} ${text.slice(0, 300)}`);
-    }
-    const data = (await res.json()) as OpenAiChatCompletionResponse;
+    const data = (await this.post("/chat/completions", body)) as OpenAiChatCompletionResponse;
     const message = data.choices?.[0]?.message;
     const toolCalls: AiToolCall[] = (message?.tool_calls ?? []).map((tc) => ({
       name: tc.function.name,
@@ -114,16 +160,7 @@ export class OpenAiCompatibleProvider implements AiProvider {
   }
 
   async embed(texts: string[]): Promise<number[][]> {
-    const res = await fetch(`${this.baseUrl}/embeddings`, {
-      method: "POST",
-      headers: this.headers(),
-      body: JSON.stringify({ model: this.model, input: texts }),
-    });
-    if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      throw new Error(`Fournisseur IA local (${this.model}) : ${res.status} ${text.slice(0, 300)}`);
-    }
-    const data = (await res.json()) as OpenAiEmbeddingResponse;
+    const data = (await this.post("/embeddings", { model: this.model, input: texts })) as OpenAiEmbeddingResponse;
     return data.data.map((d) => d.embedding);
   }
 }

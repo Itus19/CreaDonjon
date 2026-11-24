@@ -62,3 +62,18 @@ export function verifierUrlFournisseur(brut: string, options: { adressesPriveesA
   if (url.protocol === "http:" && !(privee && options.adressesPriveesAutorisees)) return { ok: false, raison: "http" };
   return { ok: true };
 }
+
+/**
+ * Le fournisseur tourne-t-il sur la machine de l'utilisateur ou sur son réseau
+ * privé ? C'est ce qui dit si le texte de la partie quitte la machine
+ * (`AiCapabilities.isLocal`, `specs/cible-locale-et-ia.md` §4.5). Une adresse
+ * illisible compte comme distante : dans le doute, on suppose que le texte part.
+ */
+export function estAdresseLocale(brut: string): boolean {
+  try {
+    return estAdressePrivee(new URL(brut.trim()).hostname);
+  } catch {
+    // catch-attendu : `new URL` lève sur une adresse illisible, et la réponse prudente est « distante ».
+    return false;
+  }
+}

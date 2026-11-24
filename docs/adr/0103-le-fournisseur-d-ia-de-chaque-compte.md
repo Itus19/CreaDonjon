@@ -89,3 +89,7 @@ La résolution vit dans `src/server/ai/` (règle absolue 12), à côté de l'ada
 - Le texte de la partie quitte la machine dès qu'un fournisseur distant est choisi : l'écran le dit au moment de la saisie (`specs/cible-locale-et-ia.md`), et le collage assisté sur du contenu d'ouvrage reste réservé à un fournisseur local.
 - Une clé perdue ne se récupère pas, elle se remplace. C'est le prix de ne jamais la rendre.
 - Sans `AI_SECRETS_KEY`, l'application fonctionne : seule la pose d'une clé est refusée.
+
+## Suivi (24 novembre)
+
+Les gardes « aucune redirection suivie, délai court, réponse bornée » n'étaient pas dans l'adaptateur : elles y sont (`openAiCompatible.ts`, `docs/SECURITE.md` §3). `isLocal` se déduit de l'adresse (`estAdresseLocale`) au lieu d'être toujours vrai. Une défaillance du fournisseur porte sa raison (`AiProviderError`), que l'écran du solo affiche (V3.1-223). Reste : `ai_usage_log` ne dit toujours pas quel fournisseur a servi.

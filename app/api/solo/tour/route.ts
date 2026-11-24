@@ -13,7 +13,7 @@ import type { Locale } from "@/src/i18n/request";
 // jamais avant (garde-fou de turnIntent.noAi.test.ts, desormais reecrit
 // pour verifier cet ORDRE plutot que l'absence totale de ces imports).
 import { resolveProviderForUser } from "@/src/server/ai/resolveProvider";
-import { narrateSoloTurn } from "@/src/server/ai/soloNarration";
+import { narrateSoloTurn, raisonSansNarration } from "@/src/server/ai/soloNarration";
 import { anchorSketchesNamedInText } from "@/src/server/services/sceneSketches";
 import type { PendingTurnResponse, TurnOutcome } from "@/lib/solo/types";
 
@@ -179,7 +179,7 @@ export async function POST(request: NextRequest) {
     try {
       // V3.1-224 (ADR 0103) : le fournisseur de CE compte ; sans lui, le tour reste joué, muet.
       const provider = await resolveProviderForUser(supabase, user.id);
-      if (!provider) return NextResponse.json(result, { status: 200 });
+      if (!provider) return NextResponse.json({ ...result, sansNarration: "aucun_fournisseur" }, { status: 200 });
       const viewer = await buildViewerForWorld(supabase, world.id, user.id);
       const outcome = await narrateSoloTurn(supabase, provider, {
         worldId: world.id,
@@ -196,11 +196,14 @@ export async function POST(request: NextRequest) {
       });
       if (outcome.ok) {
         result.narration = { text: outcome.narration!, npcReaction: outcome.npcReaction ?? null };
+      } else {
+        result.sansNarration = "echec";
       }
     } catch (erreur) {
-      // Aucun fournisseur configure, ou l'appel a echoue : le tour reste
-      // valide sans narration, jamais une erreur renvoyee au joueur pour ca.
+      // L'appel a echoue : le tour reste valide sans narration, jamais une
+      // erreur renvoyee au joueur pour ca — seulement sa raison (V3.1-223).
       console.error("Narration du tour impossible", erreur);
+      result.sansNarration = raisonSansNarration(erreur);
     }
   }
 

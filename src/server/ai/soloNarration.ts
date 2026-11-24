@@ -11,8 +11,9 @@ import { findEventByFromEvent, getSessionEventById, insertSessionEvent, nextEven
 import { buildViewerForWorld } from "@/src/server/services/visibility";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
 import { resolveProviderForUser } from "./resolveProvider";
-import type { AiProvider } from "./provider";
-import { runAiCompletion } from "./callAi";
+import type { RaisonSansNarration } from "@/src/core/ai/providerError";
+import { AiProviderError, type AiProvider } from "./provider";
+import { AiRateLimitError, runAiCompletion } from "./callAi";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -309,11 +310,25 @@ export async function reconstructTurnForNarration(supabase: TypedClient, session
 }
 
 /**
+ * V3.1-223 — pourquoi la narration n'a pas abouti, pour l'écran. Le détail
+ * (corps d'erreur, nom du modèle) reste dans la console du serveur.
+ */
+export function raisonSansNarration(erreur: unknown): RaisonSansNarration {
+  if (erreur instanceof AiProviderError) return erreur.raison;
+  if (erreur instanceof AiRateLimitError) return "limite";
+  return "echec";
+}
+
+export type NarrationDuTour =
+  | { ok: true; text: string; npcReaction: { npcId: string; text: string } | null }
+  | { ok: false; raison: RaisonSansNarration };
+
+/**
  * V3.1-216 — la narration d'un tour solo, telle que les routes l'appellent :
  * toujours APRÈS que le tour est écrit, toujours best-effort (specs/
  * cible-locale-et-ia.md §4 : aucune fonction essentielle ne dépend du succès
  * d'un appel de modèle). Un échec, un fournisseur absent : le tour reste
- * joué, et rien ne remonte au joueur.
+ * joué, et la raison remonte à l'écran (V3.1-223), jamais une erreur.
  *
  * Elle existe parce qu'un quatrième chemin la demande (le tour repris après
  * une fenêtre de réaction) : quatre copies du même bloc `try` dans quatre
@@ -322,20 +337,22 @@ export async function reconstructTurnForNarration(supabase: TypedClient, session
 export async function narrerTourSoloSansFaillir(
   supabase: TypedClient,
   params: Omit<SoloNarrationParams, "viewer" | "sessionId">,
-): Promise<{ text: string; npcReaction: { npcId: string; text: string } | null } | null> {
+): Promise<NarrationDuTour> {
   try {
     // V3.1-224 (ADR 0103) : le fournisseur du COMPTE qui joue, sinon celui de
     // l'environnement, sinon aucun — et le tour reste joué, muet (V3.1-223).
     const provider = await resolveProviderForUser(supabase, params.userId);
-    if (!provider) return null;
+    if (!provider) return { ok: false, raison: "aucun_fournisseur" };
     const [viewer, sessionId] = await Promise.all([
       buildViewerForWorld(supabase, params.worldId, params.userId),
       getOrOpenSessionForCampaign(supabase, params.campaignId),
     ]);
     const narrated = await narrateSoloTurn(supabase, provider, { ...params, viewer, sessionId });
-    return narrated.ok && narrated.narration ? { text: narrated.narration, npcReaction: narrated.npcReaction ?? null } : null;
+    return narrated.ok && narrated.narration
+      ? { ok: true, text: narrated.narration, npcReaction: narrated.npcReaction ?? null }
+      : { ok: false, raison: "echec" };
   } catch (erreur) {
     console.error("Narration du tour impossible", erreur);
-    return null;
+    return { ok: false, raison: raisonSansNarration(erreur) };
   }
 }
