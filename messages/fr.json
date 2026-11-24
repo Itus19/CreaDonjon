@@ -3476,5 +3476,8 @@
     "faconConfirmer": "Oui, changer",
     "faconErreur": "La façon de jouer n'a pas changé.",
     "ouvrirJeuADistance": "Ouvrir le jeu à distance"
+  },
+  "squelette": {
+    "ecran": "Chargement de l'écran"
   }
 }

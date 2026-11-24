@@ -18,7 +18,7 @@ export default function ContenuCartePersonnage({ carte }: { carte: CartePersonna
       <div className="relative flex h-[250px] items-center justify-center overflow-hidden bg-panel-sunken md:h-[280px] lg:h-[330px]">
         {carte?.portraitUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- portrait servi par /api/entities/[id]/portrait
-          <img src={carte.portraitUrl} alt="" draggable={false} className="h-full w-full object-cover" />
+          <img loading="lazy" src={carte.portraitUrl} alt="" draggable={false} className="h-full w-full object-cover" />
         ) : (
           <span aria-hidden className={`font-display text-[96px] font-bold ${carte ? "text-ink-muted" : "text-accent"}`}>
             {carte ? (nom.trim()[0] ?? "").toUpperCase() : "+"}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -123,7 +123,9 @@ export function RuleTypeGroup({
       {expanded && (
         <ul>
           {items.map((entry) => (
-            <li key={entry.key}>
+            // AG-23 — des centaines de monstres : le navigateur ne met en page
+            // que les lignes visibles du rail ; « auto » retient la vraie hauteur.
+            <li key={entry.key} className="[contain-intrinsic-size:auto_1.75rem] [content-visibility:auto]">
               <RuleEntryLink
                 entry={entry}
                 worldSlug={worldSlug}
@@ -263,7 +265,10 @@ export default function SommaireRegles({ worldSlug, joueur = false, rail = false
   const { isCollapsed, toggle } = useCollapsedGroups(`creadonjon:collapsed:rules:${worldSlug}`);
   const currentKey = useCleRegleCourante();
   const recents = useRecents(worldSlug, joueur ? "joueur-regles" : "mj-regles");
-  const { groups, subclassesByParent, subspeciesByParent, classNameByKey } = useGroupesRegles(entries, query);
+  // AG-23 — la saisie reste fluide : le filtre sur des milliers de règles suit
+  // en différé, React l'abandonne si une autre lettre arrive entre-temps.
+  const requeteDifferee = useDeferredValue(query);
+  const { groups, subclassesByParent, subspeciesByParent, classNameByKey } = useGroupesRegles(entries, requeteDifferee);
 
 
   const base = joueur ? `/m/${worldSlug}/joueur/regles` : undefined;

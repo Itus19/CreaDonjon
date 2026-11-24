@@ -63,7 +63,7 @@ export default async function JoueurNouveauPersonnagePage({
         <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-edge bg-panel-sunken">
           {carte.portraitUrl ? (
             // eslint-disable-next-line @next/next/no-img-element -- portrait servi par /api/entities/[id]/portrait
-            <img src={carte.portraitUrl} alt="" className="h-full w-full object-cover" />
+            <img loading="lazy" src={carte.portraitUrl} alt="" className="h-full w-full object-cover" />
           ) : (
             <span aria-hidden className="font-display text-2xl font-bold text-ink-muted">
               {(entity.name.trim()[0] ?? "").toUpperCase()}

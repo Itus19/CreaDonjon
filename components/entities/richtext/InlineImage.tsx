@@ -60,7 +60,7 @@ function InlineImageView({ node, selected }: NodeViewProps) {
       style={{ "--img-w": `${widthPx}px` } as CSSProperties & Record<`--${string}`, string>}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={data.url} alt={data.caption} draggable={false} className="block w-full rounded-md object-cover" />
+      <img loading="lazy" src={data.url} alt={data.caption} draggable={false} className="block w-full rounded-md object-cover" />
       {data.caption && <span className="block text-xs italic text-ink-muted">{data.caption}</span>}
     </NodeViewWrapper>
   );

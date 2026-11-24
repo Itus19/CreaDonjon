@@ -1,23 +1,27 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import type { MjToolWindowData } from "./mjToolWindows";
-import CampaignsPanel from "./CampaignsPanel";
-import ChatThreadsPanel from "./ChatThreadsPanel";
-import JournalEtCorbeille from "./journal/JournalEtCorbeille";
-import PartyProbabilityTable from "./PartyProbabilityTable";
-import EncounterBuilder from "./EncounterBuilder";
-import InitiativeTracker from "./InitiativeTracker";
-import OutilTable from "./OutilTable";
-import CalendarSettingsPanel from "./CalendarSettingsPanel";
-import PersonnalisationPanel from "./PersonnalisationPanel";
-import PublicationPanel from "./PublicationPanel";
-import GeneratorToolPanel from "./GeneratorToolPanel";
-import NotebookWorkspace from "./notebook/NotebookWorkspace";
-import SchedulingMjPanel from "./scheduling/SchedulingMjPanel";
-import SessionJournalMjPanel from "./sessionJournal/SessionJournalMjPanel";
-import ReglesActivesPanel from "@/components/rules/ReglesActivesPanel";
-import CharacterCreatorWizard from "@/components/blocks/CharacterCreatorWizard";
+
+// AG-23 — un chunk par outil : ouvrir la fenêtre « Table » ne télécharge plus
+// l'éditeur de texte du bloc-notes ni l'assistant de création (mesuré au build).
+const CampaignsPanel = dynamic(() => import("./CampaignsPanel"));
+const ChatThreadsPanel = dynamic(() => import("./ChatThreadsPanel"));
+const JournalEtCorbeille = dynamic(() => import("./journal/JournalEtCorbeille"));
+const PartyProbabilityTable = dynamic(() => import("./PartyProbabilityTable"));
+const EncounterBuilder = dynamic(() => import("./EncounterBuilder"));
+const InitiativeTracker = dynamic(() => import("./InitiativeTracker"));
+const OutilTable = dynamic(() => import("./OutilTable"));
+const CalendarSettingsPanel = dynamic(() => import("./CalendarSettingsPanel"));
+const PersonnalisationPanel = dynamic(() => import("./PersonnalisationPanel"));
+const PublicationPanel = dynamic(() => import("./PublicationPanel"));
+const GeneratorToolPanel = dynamic(() => import("./GeneratorToolPanel"));
+const NotebookWorkspace = dynamic(() => import("./notebook/NotebookWorkspace"));
+const SchedulingMjPanel = dynamic(() => import("./scheduling/SchedulingMjPanel"));
+const SessionJournalMjPanel = dynamic(() => import("./sessionJournal/SessionJournalMjPanel"));
+const ReglesActivesPanel = dynamic(() => import("@/components/rules/ReglesActivesPanel"));
+const CharacterCreatorWizard = dynamic(() => import("@/components/blocks/CharacterCreatorWizard"));
 
 const NO_CAMPAIGN_MESSAGE = "Aucune campagne dans ce monde — créez-en une dans l'onglet Campagnes.";
 
