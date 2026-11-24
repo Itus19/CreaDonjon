@@ -1227,6 +1227,8 @@
     "suppressionTape": "Tape SUPPRIMER pour confirmer"
   },
   "accueil": {
+    "ouvrir": "Ouvrir",
+    "nouveauMondeSousTitre": "Mener, jouer ou partir en solo",
     "navigation": "Navigation de l'accueil",
     "destMondes": "Mondes",
     "destCompte": "Compte",

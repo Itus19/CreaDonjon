@@ -108,13 +108,14 @@ function WorldDetail({ world, currentUserId, canUseSoloMode }: { world: HomeWorl
       <div className="shrink-0">
         <div className="flex items-center justify-between gap-2">
           <p className="font-medium text-ink">{world.name}</p>
-          <span className="shrink-0 rounded-full border border-edge px-2 py-0.5 text-[10px] uppercase tracking-wider text-ink-muted">
+          <span className="shrink-0 rounded-full border border-edge px-2 py-0.5 text-xs uppercase tracking-wider text-ink-muted">
             {roleLabel}
           </span>
         </div>
-        {world.campaignName && <p className="text-xs text-ink-muted">{t("campagne", { nom: world.campaignName })}</p>}
+        {/* AG-17 : deux tailles seulement, le titre et le texte. */}
+        {world.campaignName && <p className="text-sm text-ink-muted">{t("campagne", { nom: world.campaignName })}</p>}
         {!isPlayer && (
-          <p className="text-xs text-ink-muted">
+          <p className="text-sm text-ink-muted">
             {world.rulesetName ?? "Aucun ruleset"} · Modifié le {formatDate(world.lastModified)}
           </p>
         )}
@@ -231,11 +232,12 @@ function WorldDetail({ world, currentUserId, canUseSoloMode }: { world: HomeWorl
         </div>
       )}
 
+      {/* AG-17 : un seul bouton principal par monde (« Reprendre », en haut) ; celui-ci est en contour. */}
       <Link
         href={href}
-        className="shrink-0 self-end rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover"
+        className="shrink-0 self-end rounded-full border border-accent px-4 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent/10"
       >
-        Rejoindre
+        {t("ouvrir")}
       </Link>
     </div>
   );
@@ -379,17 +381,18 @@ export default function HomeScreen({
     );
   }
 
+  // AG-17 : la bande du haut et le contenu partagent la même grille à trois
+  // colonnes (même écart, mêmes bords) ; les trois cases du haut ont la même hauteur.
+  const colonnes = "xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.3fr)]";
   return (
     <div className="flex h-full min-h-0 flex-col gap-4 overflow-y-auto xl:overflow-hidden">
-      <div className="flex shrink-0 flex-col gap-3 lg:flex-row lg:items-start">
-        {nouveauMonde}
-        <div className="min-w-0 flex-1">
-          <AccueilHaut mondes={worlds} />
-        </div>
+      <div className={`grid shrink-0 gap-4 md:grid-cols-2 xl:h-[88px] ${colonnes}`}>
+        <NouveauMonde menerPartie={menerPartie} jouerSolo={jouerSolo} enCase />
+        <AccueilHaut mondes={worlds} enCases />
       </div>
 
       {/* `min-w-0` sur les pistes : le contenu le plus large ne doit pas pousser la colonne au-dela du cadre. */}
-      <div className="grid min-h-0 gap-4 md:grid-cols-2 xl:flex-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.3fr)] xl:overflow-hidden">
+      <div className={`grid min-h-0 gap-4 md:grid-cols-2 xl:flex-1 xl:overflow-hidden ${colonnes}`}>
         <div className="flex min-h-0 min-w-0 flex-col gap-2 xl:overflow-y-auto">
           <TitreColonne>{t("colMene")}</TitreColonne>
           <ListeMondes mondes={repartition.jeMene} selectedId={selectedId} onSelect={setSelectedId} />

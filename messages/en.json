@@ -1226,6 +1226,8 @@
     "suppressionTape": "Type DELETE to confirm"
   },
   "accueil": {
+    "ouvrir": "Open",
+    "nouveauMondeSousTitre": "Run, play or go solo",
     "navigation": "Home navigation",
     "destMondes": "Worlds",
     "destCompte": "Account",
