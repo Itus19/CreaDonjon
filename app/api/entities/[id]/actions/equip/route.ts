@@ -18,7 +18,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!guard.ok) return guard.response;
   const { supabase, userId, entityId, body } = guard;
 
-  const result = await setItemEquipped(supabase, { entityId, itemId: body.itemId, equipped: body.equipped, actorUserId: userId });
+  const result = await setItemEquipped(supabase, { entityId, itemId: body.itemId, equipped: body.equipped, attuned: body.attuned, actorUserId: userId });
   if ("error" in result) {
     const { message, status } = ERROR_RESPONSES[result.error];
     return NextResponse.json({ error: message }, { status });

@@ -28,6 +28,7 @@ export default function InventoryTab({
   server,
   monnaieLectureSeule,
   currencySystem,
+  harmonisables,
 }: {
   worldSlug: string;
   inventory: InventoryBlockData | undefined;
@@ -47,6 +48,8 @@ export default function InventoryTab({
   monnaieLectureSeule?: boolean;
   /** V3.1-219 : le système monétaire du monde. */
   currencySystem?: CurrencySystem;
+  /** AG-19 : les objets (identifiants du sac) qui demandent une harmonisation. */
+  harmonisables?: ReadonlySet<string>;
 }) {
   return (
     <div className="pt-3">
@@ -67,6 +70,7 @@ export default function InventoryTab({
         server={server}
         monnaieLectureSeule={monnaieLectureSeule}
         currencySystem={currencySystem}
+        harmonisables={harmonisables}
       />
     </div>
   );

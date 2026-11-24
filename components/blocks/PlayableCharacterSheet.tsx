@@ -194,6 +194,7 @@ export default function PlayableCharacterSheet({
     masteredWeaponKeys,
     openChoices,
     currencySystem,
+    equippedItems,
   } = useCharacterSheetContext(worldSlug, character, inventory, spellcasting, effetsPortes);
   const t = useTranslations("creation");
   const aRappeler = rulesetPret ? choixOuverts(remainingChoices, openChoices, character.choices) : [];
@@ -885,6 +886,7 @@ export default function PlayableCharacterSheet({
                 server={{ entityId, campaignId, onBlockRefreshed }}
                 monnaieLectureSeule={!commandes.currency}
                 currencySystem={currencySystem}
+                harmonisables={new Set(equippedItems.filter((e) => e.requiresAttunement).map((e) => e.key))}
               />
             )}
 

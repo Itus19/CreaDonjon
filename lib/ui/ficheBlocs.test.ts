@@ -12,7 +12,7 @@ describe("FAMILLES_PALETTE", () => {
   it("range les types en quatre familles, dans l'ordre du ticket V3.1-63", () => {
     expect(FAMILLES_PALETTE.map((f) => f.cle)).toEqual(["recit", "personnage", "psyche", "outils"]);
     expect(FAMILLES_PALETTE[0].types).toEqual(["text", "infobox", "image", "custom_table", "timeline"]);
-    expect(FAMILLES_PALETTE[1].types).toEqual(["character", "inventory", "spellcasting", "resources", "statblock"]);
+    expect(FAMILLES_PALETTE[1].types).toEqual(["character", "inventory", "spellcasting", "resources", "statblock", "equippable"]);
     expect(FAMILLES_PALETTE[2].types).toEqual(["personality", "relationship", "worldview", "relations_graph", "genealogy"]);
     expect(FAMILLES_PALETTE[3].types).toEqual(["random_table", "quest", "music", "map"]);
   });

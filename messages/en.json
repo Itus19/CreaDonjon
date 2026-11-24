@@ -2105,6 +2105,31 @@
     "enAttente": "Waiting for the saving throw…"
   },
   "fiche": {
+    "equipable": {
+      "seulementEquipe": "Only when equipped",
+      "harmonisation": "Requires attunement",
+      "effets": "Effects on the wearer",
+      "sorts": "Granted spells",
+      "caracteristique": "Ability",
+      "caracteristiqueClasse": "The class one",
+      "uneFoisRepos": "Once per {repos}",
+      "maitriseRepos": "Proficiency bonus per {repos}",
+      "actions": "Actions with charges",
+      "nomAction": "Action name",
+      "charges": "Charges",
+      "recharge": "Recharge",
+      "description": "What the action does",
+      "retirerAction": "Remove action",
+      "ajouterAction": "+ Add an action",
+      "nouvelleAction": "New action",
+      "recharges": {
+        "short_rest": "Short rest",
+        "short_rest_one": "One per short rest",
+        "long_rest": "Long rest",
+        "dawn": "At dawn",
+        "never": "Never"
+      }
+    },
     "monnaie": {
       "horsSysteme": "Not in this world's currency system: counted at its standard value, no longer formed.",
       "inconnue": "Coin unknown to this world: counted as 0, never spent."

@@ -177,11 +177,15 @@ export const currencyChangeSchema = z.object({
 });
 
 /** V3.1-24 : équiper ou déséquiper un objet de l'inventaire. */
-export const equipItemSchema = z.object({
-  campaignId: campaignIdField,
-  itemId: z.string().min(1),
-  equipped: z.boolean(),
-});
+/** Équiper ou déséquiper, et (AG-19) lier ou délier un artéfact qui demande une harmonisation : au moins l'un des deux. */
+export const equipItemSchema = z
+  .object({
+    campaignId: campaignIdField,
+    itemId: z.string().min(1),
+    equipped: z.boolean().optional(),
+    attuned: z.boolean().optional(),
+  })
+  .refine((b) => b.equipped !== undefined || b.attuned !== undefined, { message: "Rien à changer." });
 
 export const resourceUsageSchema = z.object({
   campaignId: campaignIdField,

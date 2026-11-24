@@ -2106,6 +2106,31 @@
     "enAttente": "En attente de la sauvegarde…"
   },
   "fiche": {
+    "equipable": {
+      "seulementEquipe": "Seulement équipé",
+      "harmonisation": "Harmonisation requise",
+      "effets": "Effets sur qui le porte",
+      "sorts": "Sorts accordés",
+      "caracteristique": "Caractéristique",
+      "caracteristiqueClasse": "Celle de la classe",
+      "uneFoisRepos": "1 fois par {repos}",
+      "maitriseRepos": "Bonus de maîtrise par {repos}",
+      "actions": "Actions à charges",
+      "nomAction": "Nom de l'action",
+      "charges": "Charges",
+      "recharge": "Recharge",
+      "description": "Ce que fait l'action",
+      "retirerAction": "Retirer l'action",
+      "ajouterAction": "+ Ajouter une action",
+      "nouvelleAction": "Nouvelle action",
+      "recharges": {
+        "short_rest": "Repos court",
+        "short_rest_one": "Une au repos court",
+        "long_rest": "Repos long",
+        "dawn": "À l'aube",
+        "never": "Jamais"
+      }
+    },
     "monnaie": {
       "horsSysteme": "Hors du système monétaire de ce monde : comptée à sa valeur standard, plus formée.",
       "inconnue": "Pièce inconnue de ce monde : comptée à 0, jamais dépensée."

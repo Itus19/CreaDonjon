@@ -22,6 +22,7 @@ import { zRelationsGraphBlockData } from "./relationsGraph";
 import { zTimelineBlockData } from "./timeline";
 import { zMapBlockData, DEFAULT_MAP_BLOCK_DATA } from "./map";
 import { zSessionJournalMetaBlockData } from "./sessionJournalMeta";
+import { zEquippableBlockData, DEFAULT_EQUIPPABLE_BLOCK_DATA } from "./equippable";
 import { PERSONALITY_POLE_KEYS, WORLDVIEW_POLE_KEYS } from "@/src/core/psyche/keys";
 
 /**
@@ -101,6 +102,9 @@ import { PERSONALITY_POLE_KEYS, WORLDVIEW_POLE_KEYS } from "@/src/core/psyche/ke
  * redaction, seance reelle). Jamais dans "+ Ajouter un bloc"
  * (EntityBlocks.tsx l'exclut explicitement), pose une seule fois par
  * `assignJournalEntry` (V3.1-150).
+ * AG-19 (ADR 0107) : equippable — « Objet équipable », ce qu'un artéfact
+ * fait à la fiche de qui le porte (modificateurs, sorts accordés, actions à
+ * charges), lu par `effetsDeLObjet` quand l'objet est dans un sac.
  */
 export const BLOCK_TYPES = [
   "text",
@@ -125,6 +129,7 @@ export const BLOCK_TYPES = [
   "timeline",
   "map",
   "session_journal_meta",
+  "equippable",
 ] as const;
 export type BlockType = (typeof BLOCK_TYPES)[number];
 
@@ -151,6 +156,7 @@ export const DEFAULT_LAYOUT_BY_BLOCK_TYPE: Record<BlockType, BlockDisplayLayout>
   timeline: "timeline",
   map: "map",
   session_journal_meta: "key_values",
+  equippable: "key_values",
 };
 type BlockDisplayLayout = z.infer<typeof zBlockDisplay>["layout"];
 
@@ -177,6 +183,7 @@ const DATA_SCHEMA_BY_BLOCK_TYPE = {
   timeline: zTimelineBlockData,
   map: zMapBlockData,
   session_journal_meta: zSessionJournalMetaBlockData,
+  equippable: zEquippableBlockData,
 } satisfies Record<BlockType, z.ZodTypeAny>;
 
 const DEFAULT_DATA_BY_BLOCK_TYPE: Record<BlockType, unknown> = {
@@ -260,6 +267,7 @@ const DEFAULT_DATA_BY_BLOCK_TYPE: Record<BlockType, unknown> = {
     writtenAt: null,
     realSession: null,
   },
+  equippable: DEFAULT_EQUIPPABLE_BLOCK_DATA,
 };
 
 /**

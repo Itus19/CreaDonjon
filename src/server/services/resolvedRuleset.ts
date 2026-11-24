@@ -1,4 +1,5 @@
 import "server-only";
+import { chargerArtefacts, type ArtefactsEquipables } from "@/src/server/services/artefacts";
 import { zCharacterRulesBlockData, type CharacterRules, type MulticlassPrerequisites } from "@/src/core/schemas/rule-blocks/characterRules";
 import {
   zClassBasicsBlockData,
@@ -1297,6 +1298,7 @@ const EMPTY_RULESET_VIEW = {
   cost: {},
   spellLevels: {},
   currencySystem: DEFAULT_CURRENCY_SYSTEM,
+  artefacts: {} as ArtefactsEquipables,
 };
 
 /**
@@ -1308,25 +1310,33 @@ const EMPTY_RULESET_VIEW = {
 export async function buildResolvedRulesetView(
   supabase: TypedClient,
   worldId: string,
-  selection: { species?: string; background?: string; classes: { key: string; level: number }[]; equipmentKeys?: string[]; spellKeys?: string[] },
+  selection: { species?: string; background?: string; classes: { key: string; level: number }[]; equipmentKeys?: string[]; spellKeys?: string[]; artifactIds?: string[] },
   locale: Locale
 ) {
   const rulesetId = await getWorldDefaultRulesetId(supabase, worldId);
   if (!rulesetId) return EMPTY_RULESET_VIEW;
+  const artifactIds = selection.artifactIds ?? [];
   // V3.1-219 (ADR 0102) : le système monétaire du monde voyage avec le ruleset résolu
   // (une résolution de fiche de plus, en parallèle ; la réponse est mise en cache 30 s côté écran).
-  const [assembled, equipmentData, spellLevels, currencySystem] = await Promise.all([
+  // AG-19 : les artéfacts du sac et leur bloc « Objet équipable », une requête de plus seulement s'il y en a.
+  const [assembled, equipmentData, spellLevels, currencySystem, artefacts] = await Promise.all([
     assembleResolvedRuleset(supabase, rulesetId, selection, locale),
     resolveEquipmentData(supabase, rulesetId, selection.equipmentKeys ?? []),
     resolveSpellLevels(supabase, rulesetId, selection.spellKeys ?? []),
     readCurrencySystem(supabase, rulesetId),
+    artifactIds.length > 0 ? chargerArtefacts(supabase, artifactIds) : Promise.resolve({} as ArtefactsEquipables),
   ]);
   const { armor: equipment, weapon: weaponByKey, weight, cost } = equipmentData;
   // Les sorts qu'une aptitude accorde (sous-classe) se lancent depuis la fiche comme les connus :
   // leur niveau se lit aussi, en une requête de plus, seulement s'il y en a hors des connus.
-  const accordes = [...new Set(Object.values(assembled.ruleset.features).flatMap((f) => (f.spells ?? []).map((sp) => sp.key)))].filter(
+  const accordes = [
+    ...new Set([
+      ...Object.values(assembled.ruleset.features).flatMap((f) => (f.spells ?? []).map((sp) => sp.key)),
+      ...Object.values(artefacts).flatMap((a) => a.data.spells.map((sp) => sp.key)),
+    ]),
+  ].filter(
     (k) => !(k in spellLevels)
   );
   const niveauxAccordes = accordes.length > 0 ? await resolveSpellLevels(supabase, rulesetId, accordes) : {};
-  return { ...assembled, equipment, weaponByKey, weight, cost, spellLevels: { ...spellLevels, ...niveauxAccordes }, currencySystem };
+  return { ...assembled, equipment, weaponByKey, weight, cost, spellLevels: { ...spellLevels, ...niveauxAccordes }, currencySystem, artefacts };
 }
