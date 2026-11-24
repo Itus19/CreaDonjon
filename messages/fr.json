@@ -1290,6 +1290,9 @@
     "survol": "{face} : {nombre} fois"
   },
   "table": {
+    "niveauJoueursTitre": "Utiliser le niveau « Joueurs »",
+    "niveauJoueursAide": "Coupé, la visibilité se résume à Public, MJ et Privé. Ce qui est déjà « Joueurs » le reste.",
+    "niveauJoueursErreur": "Réglage non enregistré.",
     "enReserve": "En réserve",
     "reserveAide": "Pas cochés d'office dans « Toute la table ».",
     "mettreEnReserve": "Mettre en réserve",

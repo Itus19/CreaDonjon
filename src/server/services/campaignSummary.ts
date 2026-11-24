@@ -3,6 +3,7 @@ import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import { listCampaignsForWorld, type CampaignRow } from "@/src/server/repos/campaigns";
+import { parseTableSettings } from "@/src/core/campaigns/tableSettings";
 
 /**
  * Module feuille (V3.1-120) : il n'importe aucun service. Sorti de
@@ -20,6 +21,8 @@ export interface CampaignSummary {
   gmUserId: string | null;
   mode: string;
   partyEntityId: string | null;
+  /** AG-10 : la campagne se sert du niveau de visibilité « Joueurs ». */
+  playersLevel: boolean;
   createdAt: string;
 }
 
@@ -32,6 +35,7 @@ export function toSummary(row: CampaignRow): CampaignSummary {
     gmUserId: row.gm_user_id,
     mode: row.mode,
     partyEntityId: row.party_entity_id,
+    playersLevel: parseTableSettings(row.table_settings).players_level,
     createdAt: row.created_at,
   };
 }

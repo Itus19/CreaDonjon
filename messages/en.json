@@ -1289,6 +1289,9 @@
     "survol": "{face}: {nombre, plural, one {# time} other {# times}}"
   },
   "table": {
+    "niveauJoueursTitre": "Use the \"Players\" level",
+    "niveauJoueursAide": "Off, visibility is just Public, GM and Private. Content already set to \"Players\" keeps it.",
+    "niveauJoueursErreur": "Setting not saved.",
     "enReserve": "In reserve",
     "reserveAide": "Not ticked by default in “Whole table”.",
     "mettreEnReserve": "Move to reserve",

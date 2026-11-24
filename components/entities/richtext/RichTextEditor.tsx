@@ -14,6 +14,8 @@ import { InlineImage, InlineImageBubble, InlineImagesProvider, selectedInlineIma
 import type { ImageBlockData } from "@/src/core/schemas/blocks/image";
 import { useMatchMedia, WINDOWS_MOBILE_QUERY } from "@/components/shell/useMatchMedia";
 import { VISIBILITY_OPTIONS } from "@/components/shared/visibilityOptions";
+import { useNiveauJoueurs } from "@/components/shared/NiveauJoueursProvider";
+import { optionsVisibilite } from "@/lib/ui/visibilitePastille";
 import { docToSegments, segmentsToDoc, type DocJSON } from "@/src/core/richtext/tiptapSync";
 import type { Segment } from "@/src/core/schemas/entities/segments";
 import type { OtherEntityOption } from "@/components/entities/RelationsChips";
@@ -122,6 +124,7 @@ export default function RichTextEditor({
   const ruleEntries = useWorldRuleEntries(worldSlug ?? "");
   // Le seuil du telephone de l'app : pas de glisser au doigt dans un texte qui defile.
   const estTelephone = useMatchMedia(WINDOWS_MOBILE_QUERY);
+  const niveauJoueurs = useNiveauJoueurs();
 
   const editor = useEditor({
     extensions: [
@@ -648,7 +651,7 @@ export default function RichTextEditor({
         <span className="mx-0.5 h-4 w-px bg-edge" />
         <BubbleSelect
           value={currentVisibility}
-          options={VISIBILITY_OPTIONS}
+          options={optionsVisibilite(VISIBILITY_OPTIONS, niveauJoueurs, currentVisibility)}
           onChange={setVisibilityForSelection}
           aria-label="Visibilité du passage"
         />

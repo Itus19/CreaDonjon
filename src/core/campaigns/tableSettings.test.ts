@@ -6,6 +6,7 @@ describe("réglages de table (V3.1-108, ADR 0036 §5 et 0043)", () => {
     expect(parseTableSettings({})).toEqual({
       inspiration_max: 1,
       play_style: "table",
+      players_level: true,
       player_can_edit: { conditions: false, inspiration: false, hp: true, currency: true, spell_slots: true, hit_dice: true },
       reserve: [],
     });
@@ -122,5 +123,20 @@ describe("les PJ en réserve (AG-14)", () => {
     const s = mergeTableSettings(DEFAULT_TABLE_SETTINGS, { reserve: [A] });
     expect(estEnReserve(s, A)).toBe(true);
     expect(estEnReserve(s, B)).toBe(false);
+  });
+});
+
+describe("le niveau « Joueurs » (AG-10)", () => {
+  it("est utilisé par défaut, et une valeur illisible le garde", () => {
+    expect(parseTableSettings({}).players_level).toBe(true);
+    expect(parseTableSettings({ players_level: "non" }).players_level).toBe(true);
+    expect(parseTableSettings({ players_level: false }).players_level).toBe(false);
+  });
+  it("se coupe par le schéma d'écriture, sans toucher au reste", () => {
+    expect(zCampaignTableSettings.safeParse({ players_level: false }).success).toBe(true);
+    const coupe = mergeTableSettings(withPlayStyle(DEFAULT_TABLE_SETTINGS, "remote"), { players_level: false });
+    expect(coupe.players_level).toBe(false);
+    expect(coupe.play_style).toBe("remote");
+    expect(mergeTableSettings(coupe, { inspiration_max: 2 }).players_level).toBe(false);
   });
 });

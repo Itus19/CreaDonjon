@@ -11,6 +11,7 @@ import AppShell from "@/components/shell/AppShell";
 import DesktopWindowsProvider from "@/components/shell/DesktopWindowsProvider";
 import VoletsLayer from "@/components/shell/VoletsLayer";
 import WorldCalendarProvider from "@/components/shared/WorldCalendarProvider";
+import NiveauJoueursProvider from "@/components/shared/NiveauJoueursProvider";
 
 export default async function WorldLayout({
   children,
@@ -63,6 +64,8 @@ export default async function WorldLayout({
     // section doit pouvoir replier la fenetre primaire dans `avec` avant
     // de naviguer, sans quoi changer de section la ferme).
     <Suspense fallback={null}>
+      {/* AG-10 : au-dessus d'AppShell, car les volets (overlay) proposent aussi la visibilité. */}
+      <NiveauJoueursProvider actif={campaigns[0]?.playersLevel ?? true}>
       <DesktopWindowsProvider worldSlug={world.slug}>
         <AppShell
           worldSlug={world.slug}
@@ -78,6 +81,7 @@ export default async function WorldLayout({
           </WorldCalendarProvider>
         </AppShell>
       </DesktopWindowsProvider>
+      </NiveauJoueursProvider>
     </Suspense>
   );
 }

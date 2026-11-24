@@ -22,6 +22,12 @@ export interface CampaignTableSettings {
    * passage d'un autre réglage.
    */
   play_style: PlayStyle;
+  /**
+   * AG-10 — la campagne se sert du niveau de visibilité « Joueurs ». Coupé,
+   * l'interface ne le propose plus (le contenu déjà « Joueurs » le garde) ;
+   * rien ne change côté base ni filtrage.
+   */
+  players_level: boolean;
   player_can_edit: Record<PlayerEditableField, boolean>;
   /**
    * AG-14 — les PJ « en réserve » (identifiants d'entité) : un PJ invité qui
@@ -35,6 +41,7 @@ export interface CampaignTableSettings {
 export const DEFAULT_TABLE_SETTINGS: CampaignTableSettings = {
   inspiration_max: 1,
   play_style: "table",
+  players_level: true,
   player_can_edit: { conditions: false, inspiration: false, hp: true, currency: true, spell_slots: true, hit_dice: true },
   reserve: [],
 };
@@ -46,6 +53,7 @@ const RESERVE_MAX = 50;
 export const zCampaignTableSettings = z
   .object({
     inspiration_max: z.number().int().min(1).max(5).optional(),
+    players_level: z.boolean().optional(),
     player_can_edit: z
       .object(Object.fromEntries(PLAYER_EDITABLE_FIELDS.map((f) => [f, z.boolean().optional()])) as Record<PlayerEditableField, z.ZodOptional<z.ZodBoolean>>)
       .strict()
@@ -69,6 +77,7 @@ export function parseTableSettings(raw: unknown): CampaignTableSettings {
   return {
     inspiration_max: typeof max === "number" && Number.isInteger(max) && max >= 1 && max <= 5 ? max : DEFAULT_TABLE_SETTINGS.inspiration_max,
     play_style: zPlayStyle.safeParse(source.play_style).data ?? DEFAULT_TABLE_SETTINGS.play_style,
+    players_level: typeof source.players_level === "boolean" ? source.players_level : DEFAULT_TABLE_SETTINGS.players_level,
     player_can_edit: Object.fromEntries(
       PLAYER_EDITABLE_FIELDS.map((f) => [f, typeof edits[f] === "boolean" ? (edits[f] as boolean) : DEFAULT_TABLE_SETTINGS.player_can_edit[f]])
     ) as Record<PlayerEditableField, boolean>,
@@ -92,6 +101,7 @@ export function mergeTableSettings(current: CampaignTableSettings, patch: Campai
   return {
     inspiration_max: patch.inspiration_max ?? current.inspiration_max,
     play_style: current.play_style,
+    players_level: patch.players_level ?? current.players_level,
     player_can_edit: Object.fromEntries(
       PLAYER_EDITABLE_FIELDS.map((f) => [f, patch.player_can_edit?.[f] ?? current.player_can_edit[f]])
     ) as Record<PlayerEditableField, boolean>,

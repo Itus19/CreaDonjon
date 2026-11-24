@@ -11,18 +11,35 @@ export const CYCLE_VISIBILITE = ["public", "players", "gm", "private"] as const;
 
 /**
  * Les niveaux du cycle pour ce lecteur : sans « Privé » quand il n'est pas
- * l'auteur du bloc (« son auteur seul » : la base refuserait).
+ * l'auteur du bloc (« son auteur seul » : la base refuserait) ; sans
+ * « Joueurs » quand la campagne ne s'en sert pas (AG-10).
  */
-export function cycleVisibilite(sansPrive = false): readonly string[] {
-  return sansPrive ? CYCLE_VISIBILITE.filter((n) => n !== "private") : CYCLE_VISIBILITE;
+export function cycleVisibilite(sansPrive = false, sansJoueurs = false): readonly string[] {
+  if (!sansPrive && !sansJoueurs) return CYCLE_VISIBILITE;
+  return CYCLE_VISIBILITE.filter((n) => !(sansPrive && n === "private") && !(sansJoueurs && n === "players"));
 }
 
-/** Le niveau suivant du cycle ; tout niveau hors cycle (campagne, utilisateur, Privé sauté) passe à Public. */
-export function niveauSuivant(niveau: string, sansPrive = false): string {
-  const cycle = cycleVisibilite(sansPrive);
+/**
+ * Le niveau suivant du cycle ; tout niveau hors cycle (campagne, utilisateur,
+ * Privé sauté) passe à Public. Un bloc resté « Joueurs » alors que le niveau
+ * est coupé avance comme dans le cycle complet (vers MJ).
+ */
+export function niveauSuivant(niveau: string, sansPrive = false, sansJoueurs = false): string {
+  if (sansJoueurs && niveau === "players") return "gm";
+  const cycle = cycleVisibilite(sansPrive, sansJoueurs);
   const i = cycle.indexOf(niveau);
   if (i === -1) return "public";
   return cycle[(i + 1) % cycle.length]!;
+}
+
+/**
+ * AG-10 — une liste d'options de visibilité, sans « Joueurs » quand la
+ * campagne ne s'en sert pas. La valeur actuelle reste proposée : un contenu
+ * déjà « Joueurs » garde son niveau tant qu'on ne le change pas.
+ */
+export function optionsVisibilite<T extends { value: string }>(options: T[], niveauJoueurs: boolean, actuel?: string): T[] {
+  if (niveauJoueurs) return options;
+  return options.filter((o) => o.value !== "players" || o.value === actuel);
 }
 
 /** Plus le rang est haut, plus le bloc est vu de monde. Campagne = la table, utilisateur = une personne. */

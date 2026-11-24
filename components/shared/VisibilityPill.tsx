@@ -8,6 +8,7 @@ import {
   isVisibilityLevelKey,
 } from "@/components/shared/visibilityOptions";
 import { niveauSuivant } from "@/lib/ui/visibilitePastille";
+import { useNiveauJoueurs } from "@/components/shared/NiveauJoueursProvider";
 
 /**
  * V3.1-64 — la pastille de visibilité : vert Public, bleu Joueurs, orange MJ,
@@ -37,7 +38,8 @@ export default function VisibilityPill({
   const style = VISIBILITY_PILL_STYLES[niveau] ?? VISIBILITY_PILL_FALLBACK;
   const libelle = (n: string) =>
     isVisibilityLevelKey(n) ? t(`niveaux.${n}`) : n;
-  const suivant = niveauSuivant(niveau, sansPrive);
+  // AG-10 : « Joueurs » sauté quand la campagne ne s'en sert pas.
+  const suivant = niveauSuivant(niveau, sansPrive, !useNiveauJoueurs());
 
   return (
     <button
