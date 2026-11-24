@@ -4,7 +4,7 @@
   "boards": {
     "Controles.dc.html": {
       "expand": "fill",
-      "h": 4900,
+      "h": 5250,
       "is_interactive": true,
       "title": "2 · Boutons et champs",
       "w": 1280,
@@ -13,7 +13,7 @@
     },
     "Ecrans.dc.html": {
       "expand": "fill",
-      "h": 4000,
+      "h": 4310,
       "is_interactive": true,
       "title": "5 · Éléments d'écran",
       "w": 1280,
@@ -22,7 +22,7 @@
     },
     "Fiche.dc.html": {
       "expand": "fill",
-      "h": 7959,
+      "h": 9070,
       "is_interactive": true,
       "title": "6 · Fiche de personnage",
       "w": 1280,
@@ -40,7 +40,7 @@
     },
     "Navigation.dc.html": {
       "expand": "fill",
-      "h": 7500,
+      "h": 8150,
       "is_interactive": true,
       "title": "3 · Onglets, puces, menus",
       "w": 1280,
@@ -49,7 +49,7 @@
     },
     "OutilsMJ.dc.html": {
       "expand": "fill",
-      "h": 21360,
+      "h": 22780,
       "is_interactive": true,
       "title": "9 · Outils du MJ",
       "w": 1280,
