@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import type { CombatRow, CombatParticipantRow } from "@/src/server/repos/combats";
 import type { CombatDetail } from "@/src/server/services/combats";
-import type { EncounterMonsterSummary } from "@/src/server/services/encounters";
+import type { MonstreInitiative } from "@/src/server/services/encounters";
 import {
   adversairesSansInitiative,
   estUnPj,
@@ -56,7 +56,7 @@ export default function InitiativeTracker({
   initialCombat: CombatDetail | null;
   savedCombats: CombatRow[];
   pcOptions: { id: string; name: string }[];
-  monsters: EncounterMonsterSummary[];
+  monsters: MonstreInitiative[];
   conditions: string[];
 }) {
   const t = useTranslations("initiative");
@@ -81,7 +81,11 @@ export default function InitiativeTracker({
 
   const phase = combat ? phaseDe(combat.status) : "draft";
   const enCours = phase === "running";
-  const xpParCle = useMemo(() => Object.fromEntries(monsters.map((m) => [m.key, m.xp])), [monsters]);
+  // Un monstre sans PX (saisi à la main) ne compte pas dans la menace restante.
+  const xpParCle = useMemo(
+    () => Object.fromEntries(monsters.flatMap((m) => (m.xp === null ? [] : [[m.key, m.xp] as const]))),
+    [monsters]
+  );
   const nomsParCle = useMemo(() => Object.fromEntries(monsters.map((m) => [m.key, m.name])), [monsters]);
   const menace = useMemo(() => menaceRestante(participants, xpParCle), [participants, xpParCle]);
   const joueusesQuiManquent = joueusesEnAttente(participants);

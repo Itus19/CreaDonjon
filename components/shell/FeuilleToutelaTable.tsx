@@ -42,7 +42,8 @@ export default function FeuilleToutelaTable({
 }) {
   const t = useTranslations("table");
   const estTelephone = useMatchMedia(WINDOWS_MOBILE_QUERY);
-  const [coches, setCoches] = useState<Set<string>>(() => new Set(pcs.map((pc) => pc.entityId)));
+  // AG-14 : un PJ en réserve reste dans la liste, mais n'est pas coché d'office.
+  const [coches, setCoches] = useState<Set<string>>(() => new Set(pcs.filter((pc) => !pc.enReserve).map((pc) => pc.entityId)));
   const [texte, setTexte] = useState("");
   const [partage, setPartage] = useState<ModePartage>("partager");
   const [piece, setPiece] = useState<CoinType>("gp");

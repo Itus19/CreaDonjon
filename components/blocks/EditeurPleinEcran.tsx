@@ -5,6 +5,8 @@ import { createPortal } from "react-dom";
 import Dropdown from "@/components/shared/Dropdown";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import { VISIBILITY_OPTIONS } from "@/components/shared/visibilityOptions";
+import { useNiveauJoueurs } from "@/components/shared/NiveauJoueursProvider";
+import { optionsVisibilite } from "@/lib/ui/visibilitePastille";
 import {
   BLOCK_TYPE_LABELS,
   BarreAjoutBloc,
@@ -100,6 +102,7 @@ export default function EditeurPleinEcran({
   const [annonce, setAnnonce] = useState("");
   const [glisseId, setGlisseId] = useState<string | null>(null);
   const lignesRef = useRef<Map<string, HTMLElement>>(new Map());
+  const niveauJoueurs = useNiveauJoueurs();
 
   // Le document ne défile pas derrière la couche.
   useEffect(() => {
@@ -521,7 +524,7 @@ export default function EditeurPleinEcran({
                       />
                       <Dropdown
                         value={bloc.visibilityLevel}
-                        options={VISIBILITY_OPTIONS}
+                        options={optionsVisibilite(VISIBILITY_OPTIONS, niveauJoueurs, bloc.visibilityLevel)}
                         onChange={(v) => patchBrouillon(bloc.id, { visibilityLevel: v, visibilityScopeId: null })}
                         aria-label="Visibilité du bloc"
                         triggerClassName="rounded-full border border-edge bg-panel-raised px-2 py-1 text-xs text-ink transition-colors hover:bg-panel"

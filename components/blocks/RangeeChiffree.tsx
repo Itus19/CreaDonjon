@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { ftToM } from "@/src/core/rules/encumbrance";
+import { jaugeXp } from "@/src/core/rules/experience";
 import { lignesSensVitesses } from "@/lib/ui/valeursCalculees";
 import { squaresFromMeters } from "@/src/core/rules/gridSquares";
 import type { DerivedSheet } from "@/src/core/rules/sheet";
@@ -229,11 +230,9 @@ export interface RangeeChiffreeProps {
   hpMax: number;
   hpLow: boolean;
   onChangeHp: (delta: number) => void;
+  /** PX cumulés ; la jauge montre le chemin vers le niveau suivant (AG-4, `jaugeXp`). */
   xpCurrent: number;
-  xpCeiling: number;
-  xpPct: number;
   totalLevel: number;
-  xpLevelThresholdsLength: number;
   onChangeXp: (delta: number) => void;
   /** Initiative cliquable seulement si fourni : le MJ de l'outil Table n'a aucune commande sur les valeurs dérivées. */
   onRollInitiative?: () => void;
@@ -287,10 +286,7 @@ export default function RangeeChiffree({
   hpLow,
   onChangeHp,
   xpCurrent,
-  xpCeiling,
-  xpPct,
   totalLevel,
-  xpLevelThresholdsLength,
   onChangeXp,
   onRollInitiative,
   etatMourant = "vivant",
@@ -324,6 +320,7 @@ export default function RangeeChiffree({
   // V3.1-157 : vitesses spéciales et sens accordés par les règles (rien tant que le personnage n'en a pas).
   const tv = useTranslations("valeursCalculees");
   const sensEtVitesses = lignesSensVitesses(sheet);
+  const xp = jaugeXp(totalLevel, xpCurrent);
 
   return (
     <>
@@ -350,9 +347,10 @@ export default function RangeeChiffree({
             )}
             <CommandeE
               libelle={`Niveau ${totalLevel}`}
-              valeur={xpCurrent}
-              progression={xpPct}
-              complement={totalLevel < xpLevelThresholdsLength ? `niveau ${totalLevel + 1} à ${xpCeiling}` : undefined}
+              valeur={xp.niveauSuivant === null ? xp.total : xp.dansNiveau}
+              maximum={xp.niveauSuivant === null ? undefined : xp.versSuivant}
+              progression={xp.pourcentage}
+              complement={xp.niveauSuivant === null ? undefined : `vers le niveau ${xp.niveauSuivant} · ${xp.total} PX au total`}
               desactive={busy}
               onDelta={onChangeXp}
             />

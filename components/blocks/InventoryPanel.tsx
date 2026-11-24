@@ -156,6 +156,7 @@ export function ItemCard({
   onAttack,
   onDamage,
   onToggleEquipped,
+  onToggleAttuned,
   onChangeQty,
   onRemove,
   rollModifiers,
@@ -181,6 +182,8 @@ export function ItemCard({
   onAttack?: () => void;
   onDamage?: (versatile: boolean) => void;
   onToggleEquipped?: () => void;
+  /** AG-19 : lier ou délier un artéfact qui demande une harmonisation ; absent pour tout autre objet. */
+  onToggleAttuned?: () => void;
   onChangeQty?: (qty: number) => void;
   onRemove?: () => void;
   /** V3.1-157 : les modificateurs d'attaque, de dégâts et de critique de la fiche (`sheet.rollModifiers`) ; absents hors fiche de personnage. */
@@ -366,6 +369,19 @@ export function ItemCard({
                   )}
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
+                  {onToggleAttuned && (
+                    <button
+                      type="button"
+                      onClick={onToggleAttuned}
+                      aria-pressed={item.attuned === true}
+                      title={item.attuned ? "Lié : ses effets comptent s'il est équipé. Cliquer pour délier" : "Harmonisation requise : cliquer pour lier l'objet"}
+                      className={`rounded-full border px-2 py-0.5 text-xs transition-colors ${
+                        item.attuned ? "border-accent/50 bg-accent/20 text-accent" : "border-edge text-ink-muted hover:bg-panel-raised"
+                      }`}
+                    >
+                      {item.attuned ? "Lié" : "Non lié"}
+                    </button>
+                  )}
                   {weightLb !== null && (
                     <span className="mech w-12 text-right text-ink-muted" style={{ fontSize: "0.625rem" }}>
                       {lbToKg(weightLb)} kg
@@ -575,6 +591,7 @@ export default function InventoryPanel({
   server,
   monnaieLectureSeule = false,
   currencySystem = DEFAULT_CURRENCY_SYSTEM,
+  harmonisables,
 }: {
   worldSlug: string;
   inventory: InventoryBlockData | undefined;
@@ -598,6 +615,8 @@ export default function InventoryPanel({
   encumbrance?: { carried: number; capacity: number; tier: "none" | "encumbered" | "heavily_encumbered" };
   /** V3.1-109 : l'interrupteur « pièces » du MJ est coupé — les pièces se voient, sans saisie ni ▲▼. */
   monnaieLectureSeule?: boolean;
+  /** AG-19 : les objets qui demandent une harmonisation ; chacun reçoit sa bascule « Lié ». */
+  harmonisables?: ReadonlySet<string>;
   /** V3.1-219 (ADR 0102) : le système monétaire du monde (défaut : celui du 13 octobre). */
   currencySystem?: CurrencySystem;
 }) {
@@ -851,6 +870,14 @@ export default function InventoryPanel({
                 server && inventory
                   ? void postInventoryAction("equip", { itemId: item.id, equipped: !item.equipped })
                   : updateInventoryItem(index, { equipped: !item.equipped })
+              }
+              onToggleAttuned={
+                harmonisables?.has(item.id)
+                  ? () =>
+                      server && inventory
+                        ? void postInventoryAction("equip", { itemId: item.id, attuned: !item.attuned })
+                        : updateInventoryItem(index, { attuned: !item.attuned })
+                  : undefined
               }
               onChangeQty={(qty) => updateInventoryItem(index, { qty })}
               onRemove={() => removeInventoryItem(index)}

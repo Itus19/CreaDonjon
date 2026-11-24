@@ -6,6 +6,8 @@ import { addTimelineEventAction } from "@/app/m/[worldSlug]/(monde)/chronologie/
 import Dropdown from "@/components/shared/Dropdown";
 import GameDateInput from "@/components/shared/GameDateInput";
 import { VISIBILITY_OPTIONS } from "@/components/shared/visibilityOptions";
+import { useNiveauJoueurs } from "@/components/shared/NiveauJoueursProvider";
+import { optionsVisibilite } from "@/lib/ui/visibilitePastille";
 
 /**
  * Sans « Privé » : une date de la frise ne retient pas son auteur, le filtre
@@ -50,6 +52,7 @@ export default function FriseEvenementForm({
   const [cible, setCible] = useState<string>("monde");
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
+  const niveauJoueurs = useNiveauJoueurs();
 
   async function ajouter() {
     setEnCours(true);
@@ -105,7 +108,7 @@ export default function FriseEvenementForm({
         <textarea value={resume} onChange={(e) => setResume(e.target.value)} rows={2} maxLength={4000} className={CHAMP} />
       </label>
       <div className="flex flex-wrap items-center gap-3">
-        <Dropdown size="md" value={visibilite} options={NIVEAUX_FRISE} onChange={setVisibilite} aria-label={t("visibilite")} />
+        <Dropdown size="md" value={visibilite} options={optionsVisibilite(NIVEAUX_FRISE, niveauJoueurs, visibilite)} onChange={setVisibilite} aria-label={t("visibilite")} />
         <Dropdown
           size="md"
           value={portee}

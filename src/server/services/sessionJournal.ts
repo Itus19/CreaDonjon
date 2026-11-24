@@ -8,8 +8,10 @@ import {
   getAssignmentByEntityId,
   submitAssignment,
   markValidated,
+  countSubmittedAssignments,
   listAssignmentsForCampaign,
   listOpenAssignmentsForUser,
+  listWrittenEntriesForWorld,
   type SessionJournalEntryRow,
   type SessionJournalAssignmentView,
   type WrittenJournalEntry,
@@ -17,7 +19,8 @@ import {
 import { createEntity, updateEntity } from "@/src/server/services/entities";
 import { updateBlockContent } from "@/src/server/services/blocks";
 import { insertBlock, listBlocksForEntity } from "@/src/server/repos/blocks";
-import { getEntityById, softDeleteEntity } from "@/src/server/repos/entities";
+import { getEntityById, softDeleteEntity, updateEntityDisplayOrders } from "@/src/server/repos/entities";
+import { ordresDepuisListe } from "@/src/core/entities/ordreLivre";
 import { grantEntityAccess } from "@/src/server/repos/entityGrants";
 import { defaultBlockData, defaultBlockDisplay } from "@/src/core/schemas/blocks/registry";
 import { zSessionJournalMetaBlockData } from "@/src/core/schemas/blocks/sessionJournalMeta";
@@ -314,6 +317,16 @@ export async function submitMyJournalAssignment(supabase: TypedClient, params: {
 
 export type ValidateResult = { ok: true } | { ok: false; reason: "not_found" | "forbidden" | "not_submitted" };
 
+/**
+ * AG-8 — « Devoir fait » prévient le MJ dans l'app : la pastille de l'outil
+ * Livre de sessions compte les devoirs rendus qu'il n'a pas encore validés.
+ * Elle s'éteint à la validation. Aucune table de notifications : l'état du
+ * devoir suffit.
+ */
+export async function countDevoirsAValider(supabase: TypedClient, campaignId: string): Promise<number> {
+  return countSubmittedAssignments(supabase, campaignId);
+}
+
 /** Le MJ valide un devoir rendu (V3.1-150) : la mention quitte la barre de l'autrice. */
 export async function validateJournalAssignment(
   supabase: TypedClient,
@@ -328,5 +341,31 @@ export async function validateJournalAssignment(
   const valide = await markValidated(supabase, devoir.id);
   if (!valide) return { ok: false, reason: "not_submitted" };
   await journaliserDevoir(supabase, { campaignId: devoir.campaign_id, action: "validate", assignmentId: devoir.id, assignedTo: devoir.assigned_to, callerId: params.callerId });
+  return { ok: true };
+}
+
+export type ReorderJournalResult = { ok: true } | { ok: false; reason: "forbidden" | "mismatch" };
+
+/**
+ * AG-13 — le MJ range les pages du Livre de sessions (glisser-déposer du
+ * sommaire) ; le wiki public reprend cet ordre. `order` doit lister
+ * exactement les pages du monde, brouillons compris : jamais l'identifiant
+ * d'une autre fiche, dont on réécrirait le rang.
+ */
+export async function reorderSessionJournal(
+  supabase: TypedClient,
+  params: { worldId: string; userId: string; order: string[] }
+): Promise<ReorderJournalResult> {
+  const [admin, entries] = await Promise.all([
+    isWorldAdmin(supabase, { worldId: params.worldId, userId: params.userId }),
+    listWrittenEntriesForWorld(supabase, params.worldId, { avecBrouillons: true }),
+  ]);
+  if (!admin) return { ok: false, reason: "forbidden" };
+  const pages = new Set(entries.map((e) => e.entityId));
+  const demandees = new Set(params.order);
+  if (demandees.size !== params.order.length || demandees.size !== pages.size || params.order.some((id) => !pages.has(id))) {
+    return { ok: false, reason: "mismatch" };
+  }
+  await updateEntityDisplayOrders(supabase, params.worldId, ordresDepuisListe(params.order));
   return { ok: true };
 }

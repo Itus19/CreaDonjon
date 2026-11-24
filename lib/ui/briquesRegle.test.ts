@@ -32,6 +32,8 @@ import {
   basculerDans,
   nouvelleAura,
   nouvelleRetouche,
+  modificateursEcrits,
+  modificateursVersBrouillons,
 } from "./briquesRegle";
 import { zModifiersBlockData } from "@/src/core/schemas/rule-blocks/blocks";
 
@@ -958,5 +960,22 @@ describe("V3.1-163 (ADR 0101) — un jeton qui porte des valeurs figées", () =>
     const r = brouillonVersBlocs(relu, NOMS_VIDES);
     if (!r.ok) throw new Error(r.erreurs.join(" ; "));
     expect(r.activation?.durable_effects.find((d) => d.id === "de")?.token).toEqual({ uses: 1, grants: "lancer", values: { die: num(8) } });
+  });
+});
+
+describe("modificateurs d'un objet équipable (AG-19)", () => {
+  it("aller-retour : un nombre reste un nombre, une formule reste une formule", () => {
+    const mods = [
+      { target: "ac", op: "add" as const, value: 1 },
+      { target: "save.all", op: "add" as const, value: { op: "ref" as const, name: "proficiency" } },
+      { target: "skill.stealth", op: "advantage" as const },
+    ];
+    const { modifiers, erreurs } = modificateursEcrits(modificateursVersBrouillons(mods));
+    expect(erreurs).toEqual([]);
+    expect(modifiers).toEqual(mods);
+  });
+  it("une formule illisible est une erreur, pas un zéro écrit en silence", () => {
+    const { erreurs } = modificateursEcrits([nouveauModificateur("ac", "add", "1 +")]);
+    expect(erreurs).toHaveLength(1);
   });
 });

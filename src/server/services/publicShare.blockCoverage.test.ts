@@ -85,6 +85,9 @@ const SELF_CONTAINED: readonly BlockType[] = [
   "random_table",
   "generator",
   "music",
+  // equippable (AG-19) : modificateurs, clés de sorts du ruleset, actions à
+  // charges. Aucun identifiant d'entité à résoudre : la visibilité du bloc suffit.
+  "equippable",
   // session_journal_meta (V2.1-3 suite) : instantane pose une seule fois par
   // assignJournalEntry (id + libelle deja resolus, ex. { userId, name }) —
   // aucun champ n'est une reference a revalider, la visibilite du bloc

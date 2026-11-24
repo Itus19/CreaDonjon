@@ -1,4 +1,6 @@
 import "server-only";
+import { effetsDeLObjet } from "@/src/core/rules/objetEquipable";
+import { chargerArtefacts, type ArtefactsEquipables } from "@/src/server/services/artefacts";
 import { planResourceRegain } from "@/src/core/rules/resourceRegain";
 import type { OpenChoice, ResolvedChoices } from "@/src/core/rules/choices";
 import { choicesToRefresh, isValidRefreshAnswer, withoutRefresh } from "@/src/core/rules/choiceRefresh";
@@ -211,8 +213,13 @@ export async function resolveCharacterActionContext(
     .map(itemRef)
     .filter((r): r is { kind: "rule"; key: string } => r?.kind === "rule")
     .map((r) => r.key);
+  // AG-19 : les objets qui pointent vers une fiche du wiki (artéfacts), lus avec leur bloc « Objet équipable ».
+  const artefactIds = (inventoryData?.items ?? [])
+    .map(itemRef)
+    .filter((r): r is { kind: "entity"; id: string } => r?.kind === "entity")
+    .map((r) => r.id);
   // Le ruleset assemble et l'equipement ne dependent pas l'un de l'autre (V3.1-62, C3).
-  const [assembled, { armor: armorByKey, weapon: weaponByKey, weight: weightByKey }] = await Promise.all([
+  const [assembled, { armor: armorByKey, weapon: weaponByKey, weight: weightByKey }, artefacts] = await Promise.all([
     assembleResolvedRuleset(
       supabase,
       rulesetId,
@@ -220,6 +227,7 @@ export async function resolveCharacterActionContext(
       locale
     ),
     resolveEquipmentData(supabase, rulesetId, equipmentKeys),
+    artefactIds.length > 0 ? chargerArtefacts(supabase, artefactIds) : Promise.resolve({} as ArtefactsEquipables),
   ]);
   const carriedWeight = totalCarriedWeight(inventoryData?.items ?? [], weightByKey);
 
@@ -227,6 +235,8 @@ export async function resolveCharacterActionContext(
   const dexMod = Math.floor((dexScore - 10) / 2);
   const equippedItems: EquippedItem[] = (inventoryData?.items ?? []).map((item) => {
     const ref = itemRef(item);
+    const artefact = ref?.kind === "entity" ? artefacts[ref.id] : undefined;
+    if (artefact) return effetsDeLObjet({ id: item.id, label: artefact.name, equipped: item.equipped ?? false, attuned: item.attuned ?? false }, artefact.data);
     const armor = ref?.kind === "rule" ? armorByKey[ref.key] : null;
     return {
       key: item.id,

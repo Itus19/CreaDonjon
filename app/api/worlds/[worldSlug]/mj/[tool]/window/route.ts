@@ -11,7 +11,7 @@ import { isSuperadmin } from "@/src/server/services/account";
 import { isWorldAdmin } from "@/src/server/services/permissions";
 import { getPartyCheckLines } from "@/src/server/services/partyProbabilities";
 import { getTableParty } from "@/src/server/services/tableParty";
-import { listMonstersForRuleset } from "@/src/server/services/encounters";
+import { listMonstersForInitiative } from "@/src/server/services/encounters";
 import { chargerAtelierRencontres } from "@/src/server/services/encounterWorkshop";
 import { getActiveCombatForCampaign, getCombatDetail, listCombatsForCampaign, listConditionNames } from "@/src/server/services/combats";
 import { listEntitiesByIds } from "@/src/server/repos/entities";
@@ -129,14 +129,14 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       let activeCombat = null;
       let combats: Awaited<ReturnType<typeof listCombatsForCampaign>> = [];
       let pcOptions: { id: string; name: string }[] = [];
-      let monsters: Awaited<ReturnType<typeof listMonstersForRuleset>> = [];
+      let monsters: Awaited<ReturnType<typeof listMonstersForInitiative>> = [];
       let conditions: string[] = [];
       if (selected) {
         const [active, combatList, characters, monsterList, conditionList] = await Promise.all([
           getActiveCombatForCampaign(supabase, selected.id),
           listCombatsForCampaign(supabase, selected.id),
           getCampaignCharacters(supabase, selected.id),
-          listMonstersForRuleset(supabase, selected.rulesetId, locale),
+          listMonstersForInitiative(supabase, selected.rulesetId, locale),
           listConditionNames(supabase, selected.rulesetId, locale),
         ]);
         combats = combatList;

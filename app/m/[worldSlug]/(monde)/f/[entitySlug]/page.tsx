@@ -68,6 +68,7 @@ export default async function EntityPage({
         campaignCharacterUserId={data.campaignCharacterUserId}
         initialPortraitLayout={data.portraitLayout}
         ficheAvecPage={ficheAvecPage}
+        initialTableName={data.tableName}
       />
     </>
   );

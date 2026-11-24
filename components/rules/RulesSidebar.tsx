@@ -6,20 +6,21 @@ import { useTranslations } from "next-intl";
 import { useOpenRuleToolLink } from "@/components/shell/useOpenRuleToolLink";
 import { useCollapsedGroups } from "@/components/shell/useCollapsedGroups";
 import { useMatchMedia, WINDOWS_MOBILE_QUERY } from "@/components/shell/useMatchMedia";
-import { OutilsDalle, Rail, RailPart, useRailReplie } from "@/components/shell/Rail";
+import { IconeRail, OutilsDalle, Rail, RailFilet, RailPart, RailRow, useRailReplie } from "@/components/shell/Rail";
 import { SectionRailRows } from "@/components/shell/SectionToggle";
 import { SectionRecemment } from "@/components/shell/ListeRecents";
 import { EnTeteRail } from "@/components/shell/WorldSidebarHeader";
 import { useWorldRuleEntries } from "@/components/blocks/useWorldRuleEntries";
 import AddRuleMenu from "@/components/rules/AddRuleMenu";
-import { RuleTypeGroup, useCleRegleCourante, useGroupesRegles } from "@/components/rules/SommaireRegles";
+import SommaireRegles, { NouvelleRegleMenu, RuleTypeGroup, useCleRegleCourante, useGroupesRegles } from "@/components/rules/SommaireRegles";
 
 /**
- * Barre de l'onglet Regles. V3.1-93 : la liste des regles a quitte la barre
- * pour la zone de travail (`SommaireRegles`, montee par `WindowsDesktop`) ; sur
- * ordinateur il ne reste ici que le rail commun (en-tete, sections, de et
- * radio). Sous 768 px (V3.1-30, inchange) la feuille du bas garde « Recemment »,
- * le filtre, la liste et les boutons d'ajout.
+ * Barre de l'onglet Regles. AG-15 (revient sur V3.1-93) : comme l'onglet
+ * Monde, sous le trait qui suit « MJ » le rail montre la recherche et la
+ * liste des regles (`SommaireRegles`, mode `rail`), et au pied un seul
+ * bouton « Nouvelle regle ». Rail replie : une loupe le redeplie. Sous
+ * 768 px (V3.1-30, inchange) la feuille du bas garde « Recemment », le
+ * filtre, la liste et les boutons d'ajout.
  */
 export default function RulesSidebar({ worldSlug, worldName }: { worldSlug: string; worldName: string }) {
   const t = useTranslations("regles");
@@ -51,6 +52,21 @@ export default function RulesSidebar({ worldSlug, worldName }: { worldSlug: stri
             <SectionRailRows worldSlug={worldSlug} />
           </div>
           {estTelephone && <ListeTelephone worldSlug={worldSlug} onNavigate={() => setOpen(false)} />}
+          {!estTelephone && (
+            <div className="flex min-h-0 flex-1 flex-col px-2 pb-2">
+              <RailFilet />
+              {replie ? (
+                <>
+                  <RailRow icone={<IconeRail nom="loupe" />} libelle={t("rechercherRegle")} onClick={basculer} />
+                  <div className="mt-auto pt-1">
+                    <NouvelleRegleMenu worldSlug={worldSlug} />
+                  </div>
+                </>
+              ) : (
+                <SommaireRegles worldSlug={worldSlug} rail />
+              )}
+            </div>
+          )}
         </RailPart>
         <OutilsDalle worldSlug={worldSlug} />
       </Rail>

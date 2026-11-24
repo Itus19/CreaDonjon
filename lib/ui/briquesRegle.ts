@@ -1779,3 +1779,19 @@ export function numeroterEffets(listes: readonly (readonly BrouillonEffet[])[]):
   listes.forEach(parcourir);
   return numeros;
 }
+
+/**
+ * AG-19 — les modificateurs d'un bloc « Objet équipable » vers l'écran
+ * (`EditeurModificateurs`), et retour. Même conversion que les effets
+ * temporaires : un nombre reste un nombre, le reste est une formule.
+ */
+export function modificateursVersBrouillons(modificateurs: readonly Modifier[]): BrouillonModificateur[] {
+  return modificateurs.map(modificateurVersBrouillon);
+}
+
+/** Les modificateurs écrits, ou les erreurs de saisie (formule illisible, dé sur une cible fixe) : rien n'est écrit tant qu'il en reste. */
+export function modificateursEcrits(brouillons: readonly BrouillonModificateur[]): { modifiers: Modifier[]; erreurs: string[] } {
+  const ctx: CtxEcriture = { erreurs: [], durables: [], conserves: new Map(), nomsEtats: {}, activationIds: new Set() };
+  const modifiers = brouillons.map((m, i) => modificateurEcrit(m, `Effet ${i + 1}`, ctx));
+  return { modifiers, erreurs: ctx.erreurs };
+}

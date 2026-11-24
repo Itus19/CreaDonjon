@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import { listWrittenEntriesForWorld } from "@/src/server/repos/sessionJournal";
 import type { EntityTreeGroup } from "@/src/core/entity-tree/build-tree";
+import { plusRecente, trierLivre } from "@/src/core/entities/ordreLivre";
 
 /**
  * Module feuille (V3.1-120) : il n'importe aucun service. Ce que l'arbre
@@ -20,22 +21,26 @@ export { SESSION_JOURNAL_KIND };
 /**
  * Groupe epingle du sommaire (retour utilisateur : "Livre de sessions" en
  * tout premier, meme presentation que les autres fiches, titres tries par
- * date IRL de redaction decroissante) — l'appelant (`getEntityTree`/
+ * date IRL de redaction decroissante ; AG-13 : rangees a la main par le MJ) — l'appelant (`getEntityTree`/
  * `getPublicEntityTree`) le prepend au resultat de `buildEntityTree`, apres
  * en avoir retire ce kind (jamais un groupe alphabetique en plus de
  * celui-ci). `publicOnly` filtre aux fiches `is_public` (apercu/partage).
+ * AG-8 : `avecBrouillons` ajoute les pages dont le devoir n'est pas rendu,
+ * marquées `enCours` ; l'appelant DOIT les passer au filtre de visibilité
+ * (`getEntityTree` le fait pour tout lecteur qui n'est pas MJ).
  */
 export async function getSessionJournalTreeGroup(
   supabase: TypedClient,
   worldId: string,
-  opts: { publicOnly: boolean } = { publicOnly: false }
+  opts: { publicOnly: boolean; avecBrouillons?: boolean } = { publicOnly: false }
 ): Promise<EntityTreeGroup | null> {
-  const entries = await listWrittenEntriesForWorld(supabase, worldId);
-  const visible = opts.publicOnly ? entries.filter((e) => e.isPublic) : entries;
+  const entries = await listWrittenEntriesForWorld(supabase, worldId, { avecBrouillons: opts.avecBrouillons === true && !opts.publicOnly });
+  // AG-13 : l'ordre rangé à la main par le MJ, le même pour le wiki public.
+  const visible = trierLivre(opts.publicOnly ? entries.filter((e) => e.isPublic) : entries);
   if (visible.length === 0) return null;
   return {
     kind: SESSION_JOURNAL_KIND,
-    items: visible.map((e, i) => ({ id: e.entityId, name: e.name, slug: e.slug, displayOrder: i, version: 1, children: [] })),
+    items: visible.map((e, i) => ({ id: e.entityId, name: e.name, slug: e.slug, displayOrder: i, version: 1, children: [], ...(e.enCours ? { enCours: true as const } : {}) })),
   };
 }
 
@@ -47,5 +52,5 @@ export async function getLatestSessionJournalSlug(
 ): Promise<string | null> {
   const entries = await listWrittenEntriesForWorld(supabase, worldId);
   const visible = opts.publicOnly ? entries.filter((e) => e.isPublic) : entries;
-  return visible[0]?.slug ?? null;
+  return plusRecente(visible)?.slug ?? null;
 }

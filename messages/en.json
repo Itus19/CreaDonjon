@@ -1,5 +1,6 @@
 {
   "shell": {
+    "enCoursDEcriture": "being written",
     "atelier": "Workshop",
     "mesMondes": "My worlds",
     "monde": "World",
@@ -22,7 +23,8 @@
       "retablirVolet": "Restore the pane",
       "fermerFiche": "Close the displayed sheet",
       "deposerSecondVolet": "Drop here to open a second pane",
-      "separateur": "Pane width"
+      "separateur": "Pane width",
+      "ongletMasque": "{nom}, in the other pane: restore both panes"
     },
     "kindLabels": {
       "session_journal": "Session journal",
@@ -205,6 +207,18 @@
     "maitrisesAccordees": "Granted by a rule"
   },
   "regles": {
+    "copie": "Copy",
+    "miseAJour": {
+      "titre": "Update available",
+      "aide": "\"{source}\" has changed since this world's copy was made. Choose rule by rule: nothing changes here without you.",
+      "modifiee": "Changed",
+      "nouvelle": "New",
+      "retiree": "Removed",
+      "reprendre": "Take it",
+      "garder": "Keep mine",
+      "erreur": "Could not apply this choice. Try again."
+    },
+    "nouvelleRegle": "New rule",
     "monnaie": {
       "modifierSysteme": "Edit the currency system",
       "titre": "Currency system",
@@ -1223,6 +1237,8 @@
     "suppressionTape": "Type DELETE to confirm"
   },
   "accueil": {
+    "ouvrir": "Open",
+    "nouveauMondeSousTitre": "Run, play or go solo",
     "navigation": "Home navigation",
     "destMondes": "Worlds",
     "destCompte": "Account",
@@ -1287,6 +1303,14 @@
     "survol": "{face}: {nombre, plural, one {# time} other {# times}}"
   },
   "table": {
+    "niveauJoueursTitre": "Use the \"Players\" level",
+    "niveauJoueursAide": "Off, visibility is just Public, GM and Private. Content already set to \"Players\" keeps it.",
+    "niveauJoueursErreur": "Setting not saved.",
+    "enReserve": "In reserve",
+    "reserveAide": "Not ticked by default in “Whole table”.",
+    "mettreEnReserve": "Move to reserve",
+    "remettreALaTable": "Back to the table",
+    "erreurReserve": "The reserve could not be saved.",
     "titre": "Table",
     "description": "The campaign's player characters: game state, counters, purse and rests, one action at a time.",
     "aucuneCampagne": "No campaign in this world — create one in the Campaigns tab.",
@@ -1920,6 +1944,7 @@
     "quitterOui": "Leave",
     "quitterQuestion": "Leave without ending? Players go back to their sheet; the combat stays saved.",
     "rechercherMonstre": "Search for a monster…",
+    "aucunMonstreTrouve": "No monster found in this world's rules.",
     "recommencer": "Start over (roll initiative again)",
     "relancer": "Reroll",
     "relancerInitiative": "Reroll the initiative",
@@ -2085,6 +2110,31 @@
     "enAttente": "Waiting for the saving throw…"
   },
   "fiche": {
+    "equipable": {
+      "seulementEquipe": "Only when equipped",
+      "harmonisation": "Requires attunement",
+      "effets": "Effects on the wearer",
+      "sorts": "Granted spells",
+      "caracteristique": "Ability",
+      "caracteristiqueClasse": "The class one",
+      "uneFoisRepos": "Once per {repos}",
+      "maitriseRepos": "Proficiency bonus per {repos}",
+      "actions": "Actions with charges",
+      "nomAction": "Action name",
+      "charges": "Charges",
+      "recharge": "Recharge",
+      "description": "What the action does",
+      "retirerAction": "Remove action",
+      "ajouterAction": "+ Add an action",
+      "nouvelleAction": "New action",
+      "recharges": {
+        "short_rest": "Short rest",
+        "short_rest_one": "One per short rest",
+        "long_rest": "Long rest",
+        "dawn": "At dawn",
+        "never": "Never"
+      }
+    },
     "monnaie": {
       "horsSysteme": "Not in this world's currency system: counted at its standard value, no longer formed.",
       "inconnue": "Coin unknown to this world: counted as 0, never spent."
@@ -2177,6 +2227,9 @@
       }
     },
     "musique": {
+      "morceau": "Track {n}",
+      "morceauSur": "Track {n} of {total}",
+      "morceaux": "Playlist tracks",
       "sansTitre": "Unnamed track",
       "progression": "Track progress",
       "debut": "start",
@@ -2256,6 +2309,9 @@
       "erreurObjectif": "Could not update this objective."
     },
     "table": {
+      "importer": "Replace from a file…",
+      "importerAide": "A text file (one entry per line) or JSON. Current entries are replaced.",
+      "importerErreur": "Could not read the file.",
       "tirer": "Roll · {de}",
       "tirageEnCours": "Rolling…",
       "sansRepetition": "No repeats",
@@ -2523,6 +2579,13 @@
       "aucunBlocTexte": "No text block in this page",
       "bloc": "Text block that hosts the image",
       "blocOption": "In \u201c{bloc}\u201d",
+      "taille": "Size",
+      "taillePlusPetite": "Smaller",
+      "taillePlusGrande": "Larger",
+      "alignement": "Alignment",
+      "alignGauche": "Left",
+      "alignCentre": "Centre",
+      "alignDroite": "Right",
       "parallaxe": "Parallax",
       "parallaxeLabel": "Parallax strength when scrolling",
       "parallaxeZero": "Parallax at 0% — no effect. The slider is the switch.",
@@ -2683,6 +2746,11 @@
       "annulee": "Move cancelled. Block “{bloc}”: position {position} of {total}."
     },
     "entete": {
+      "nomTable": "For the table",
+      "nomTableAide": "A name the table sees instead of the real one. Empty: the table sees the real name.",
+      "nomTablePlaceholder": "Empty: the table sees the real name",
+      "nomTableActif": "The table does not see the real name",
+      "nomTableLiensEnEchec": "{n, plural, one {# link could not be renamed} other {# links could not be renamed}}: changed meanwhile, fix them by hand.",
       "titrePlaceholder": "New entity",
       "typeDeFiche": "Sheet type",
       "alias": "Aliases",
@@ -3132,7 +3200,9 @@
       "voirRegle": "Open the rules entry",
       "aucuneClasse": "None of the chosen classes casts spells at this level.",
       "sortsMineurs": "Cantrips",
-      "sortsPrepares": "Prepared spells ({classe}, max level {max})"
+      "sortsPrepares": "Prepared spells ({classe}, max level {max})",
+      "dejaPrisPar": "Already taken by {source}",
+      "parClasse": "your class"
     },
     "caracIncantation": {
       "explication": "This ability sets the save DC and the attack of this trait's spells, nothing else.",

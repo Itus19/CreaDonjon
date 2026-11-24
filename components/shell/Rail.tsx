@@ -296,11 +296,12 @@ export function RailFilet() {
 
 // ---- lignes ----------------------------------------------------------------
 
-const CLASSE_LIGNE =
+/** Exportées pour un déclencheur qui a l'allure d'une ligne du rail (« Nouvelle règle », AG-15). */
+export const CLASSE_LIGNE =
   "relative flex w-full items-center rounded-xl px-2.5 py-[9px] text-left text-ink-soft transition-colors hover:bg-panel-raised hover:text-ink";
 
 /** Contenu d'une ligne : icone de 18 px, libelle qui s'efface, pastille, point actif. */
-function ContenuLigne({
+export function ContenuLigne({
   icone,
   libelle,
   actif,

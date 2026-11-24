@@ -1,7 +1,7 @@
 import type { CampaignSummaryView } from "./CampaignsPanel";
 import type { PartyMemberProbabilities } from "@/src/server/services/partyProbabilities";
 import type { EncounterBudgetRow } from "@/src/core/rules/encounter";
-import type { EncounterMonsterSummary } from "@/src/server/services/encounters";
+import type { EncounterMonsterSummary, MonstreInitiative } from "@/src/server/services/encounters";
 import type { CampaignEncounterRow } from "@/src/server/repos/encounters";
 import type { EncounterPartyMember } from "@/src/server/services/encounterWorkshop";
 import type { CombatDetail } from "@/src/server/services/combats";
@@ -59,7 +59,7 @@ export type MjToolWindowData =
       initialCombat: CombatDetail | null;
       savedCombats: CombatRow[];
       pcOptions: { id: string; name: string }[];
-      monsters: EncounterMonsterSummary[];
+      monsters: MonstreInitiative[];
       conditions: string[];
     }
   | { tool: "creation-personnage"; worldId: string }

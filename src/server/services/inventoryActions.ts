@@ -115,11 +115,13 @@ export async function changeCurrency(
 /** Équipe ou déséquipe un objet de l'inventaire. */
 export async function setItemEquipped(
   supabase: TypedClient,
-  params: { entityId: string; itemId: string; equipped: boolean; actorUserId: string }
+  params: { entityId: string; itemId: string; equipped?: boolean; attuned?: boolean; actorUserId: string }
 ): Promise<InventoryActionOutcome | { error: InventoryActionError }> {
   const current = await loadInventory(supabase, params.entityId);
   if (!current) return { error: "item_not_found" };
   if (!current.data.items.some((item) => item.id === params.itemId)) return { error: "item_not_found" };
-  const items = current.data.items.map((item) => (item.id === params.itemId ? { ...item, equipped: params.equipped } : item));
+  // AG-19 : l'harmonisation se coche au même endroit que l'équipement.
+  const changement = { ...(params.equipped !== undefined ? { equipped: params.equipped } : {}), ...(params.attuned !== undefined ? { attuned: params.attuned } : {}) };
+  const items = current.data.items.map((item) => (item.id === params.itemId ? { ...item, ...changement } : item));
   return writeInventory(supabase, current, { ...current.data, items }, params.actorUserId);
 }

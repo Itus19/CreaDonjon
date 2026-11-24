@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useEditCommit } from "./EditCommitContext";
 
 export interface DropdownOption {
   value: string;
   label: string;
+  /** Titre de section, affiché au-dessus de la première option qui le porte (AG-18 : « Bases officielles », « Mes rulesets »). */
+  groupe?: string;
 }
 
 /**
@@ -183,28 +185,34 @@ export default function Dropdown({
             className="fixed z-[1200] max-h-60 overflow-auto rounded-md border border-edge-strong bg-panel-raised shadow-2xl"
             style={{ top: rect.top, bottom: rect.bottom, left: rect.left, minWidth: rect.width }}
           >
-            {options.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                role="option"
-                aria-selected={opt.value === value}
-                // Empeche le mousedown de deplacer le focus DOM vers ce
-                // bouton, qui vit dans un portail hors du conteneur du bloc
-                // (`document.body`) : sans ce garde, le focus quittait le
-                // bloc AVANT que `onClick` n'applique la selection, ce qui
-                // declenchait la sauvegarde au blur (EntityBlocks.tsx,
-                // handleBlockBlur) avec l'ETAT PRECEDENT — la valeur tout
-                // juste choisie disparaissait silencieusement au premier
-                // rechargement, sans qu'aucun message ne le signale.
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => select(opt.value)}
-                className={`block w-full whitespace-nowrap px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-panel ${
-                  opt.value === value ? "text-accent" : "text-ink"
-                }`}
-              >
-                {opt.label}
-              </button>
+            {options.map((opt, i) => (
+              <Fragment key={opt.value}>
+                {opt.groupe && opt.groupe !== options[i - 1]?.groupe && (
+                  <div role="presentation" className="px-2.5 pb-1 pt-2 text-xs font-medium uppercase tracking-wide text-ink-muted">
+                    {opt.groupe}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={opt.value === value}
+                  // Empeche le mousedown de deplacer le focus DOM vers ce
+                  // bouton, qui vit dans un portail hors du conteneur du bloc
+                  // (`document.body`) : sans ce garde, le focus quittait le
+                  // bloc AVANT que `onClick` n'applique la selection, ce qui
+                  // declenchait la sauvegarde au blur (EntityBlocks.tsx,
+                  // handleBlockBlur) avec l'ETAT PRECEDENT — la valeur tout
+                  // juste choisie disparaissait silencieusement au premier
+                  // rechargement, sans qu'aucun message ne le signale.
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => select(opt.value)}
+                  className={`block w-full whitespace-nowrap px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-panel ${
+                    opt.value === value ? "text-accent" : "text-ink"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              </Fragment>
             ))}
           </div>,
           document.body

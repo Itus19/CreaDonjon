@@ -101,6 +101,17 @@ export function deplacer(d: Disposition, id: string, vers: 0 | 1): Disposition {
   return reste === null ? sansVolet(avant, i, vers) : avant;
 }
 
+/**
+ * AG-7 — les onglets que cache un volet agrandi : ceux de l'autre volet.
+ * Sans eux, agrandir un volet faisait disparaître l'onglet de la fiche
+ * voisine, qui semblait perdue. Le volet agrandi les montre à la suite des
+ * siens ; un clic rétablit les deux volets sur cette fiche.
+ */
+export function ongletsMasques(d: Disposition, agrandi: number | null): string[] {
+  if (agrandi === null || d.volets.length < 2) return [];
+  return d.volets[agrandi === 0 ? 1 : 0]?.onglets ?? [];
+}
+
 /** Position du séparateur, bornée pour qu'aucun volet ne disparaisse. */
 export function fixerPartage(d: Disposition, pourcent: number): Disposition {
   const borne = Math.min(PARTAGE_MAX, Math.max(PARTAGE_MIN, Number.isFinite(pourcent) ? pourcent : PARTAGE_DEFAUT));

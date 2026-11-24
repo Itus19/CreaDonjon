@@ -295,3 +295,20 @@ export async function deleteBlock(supabase: TypedClient, id: string): Promise<vo
   const { error } = await supabase.from("blocks").delete().eq("id", id);
   if (error) throw new Error(error.message);
 }
+
+/**
+ * AG-19 (ADR 0107) — le bloc « Objet équipable » des artéfacts d'un sac, avec
+ * le nom de leur fiche, en une requête. Sous la RLS de l'appelant : un bloc ou
+ * une fiche qu'il ne voit pas n'arrive pas (règle 5), et l'objet n'apporte
+ * alors rien à sa fiche.
+ */
+export async function listEquippableBlocksForEntities(supabase: TypedClient, entityIds: string[]): Promise<{ entityId: string; name: string; data: Json }[]> {
+  if (entityIds.length === 0) return [];
+  const { data, error } = await supabase.from("blocks").select("entity_id, data, entities!inner(name)").in("entity_id", entityIds).eq("block_type", "equippable");
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((row) => {
+    const entite = row.entities as { name: string } | { name: string }[] | null;
+    const name = Array.isArray(entite) ? (entite[0]?.name ?? "") : (entite?.name ?? "");
+    return { entityId: row.entity_id, name, data: row.data };
+  });
+}

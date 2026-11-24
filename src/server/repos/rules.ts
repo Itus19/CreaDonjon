@@ -46,6 +46,8 @@ export interface SelectableRulesetRow {
   content_origin: string;
   /** V3.1-57 : pour ranger les variantes en arbre sous leur base. */
   parent_ruleset_id: string | null;
+  /** AG-18 : non nul pour la copie d'un ruleset propre à un monde (ADR 0106). */
+  copied_from_ruleset_id: string | null;
 }
 
 /**
@@ -59,7 +61,7 @@ export interface SelectableRulesetRow {
 export async function listSelectableRulesets(supabase: TypedClient, userId: string): Promise<SelectableRulesetRow[]> {
   const { data, error } = await supabase
     .from("rulesets")
-    .select("id, name, is_official_base, base_system, version, published_at, content_origin, parent_ruleset_id")
+    .select("id, name, is_official_base, base_system, version, published_at, content_origin, parent_ruleset_id, copied_from_ruleset_id")
     .or(`is_official_base.eq.true,created_by.eq.${userId}`)
     .order("is_official_base", { ascending: false })
     .order("name", { ascending: true });
@@ -318,6 +320,47 @@ export async function upsertRulesetOverride(
     p_payload: params.payload,
     p_patch: params.patch,
     p_note: params.note as unknown as string,
+  });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/**
+ * AG-18 (ADR 0106) — copie un ruleset de l'appelant pour un monde : le
+ * ruleset, ses surcharges et la référence, d'un seul tenant (RPC). La base
+ * refuse une base officielle et le ruleset d'un autre compte.
+ */
+export async function copyRulesetForWorld(supabase: TypedClient, sourceId: string, name: string): Promise<string> {
+  const { data, error } = await supabase.rpc("copy_ruleset_for_world", { p_source_id: sourceId, p_name: name });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/** AG-18 — la source et la référence d'une copie ; `null` si ce n'est pas une copie lisible. */
+export async function getRulesetCopyInfo(supabase: TypedClient, rulesetId: string): Promise<{ sourceId: string; baseline: Json | null } | null> {
+  const { data, error } = await supabase.from("rulesets").select("copied_from_ruleset_id, copy_baseline").eq("id", rulesetId).maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data?.copied_from_ruleset_id) return null;
+  return { sourceId: data.copied_from_ruleset_id, baseline: data.copy_baseline };
+}
+
+/** AG-18 — l'empreinte de chaque règle d'un ruleset (RPC, sous la RLS de l'appelant). */
+export async function listOverrideDigests(supabase: TypedClient, rulesetId: string): Promise<{ entryKey: string; digest: string; label: string }[]> {
+  const { data, error } = await supabase.rpc("ruleset_override_digests", { p_ruleset_id: rulesetId });
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((d) => ({ entryKey: d.entry_key, digest: d.digest, label: d.label }));
+}
+
+/** AG-18 — reprendre (`take`) ou garder la sienne pour une règle d'une copie ; `false` si la source a changé depuis l'affichage. */
+export async function syncRulesetCopyEntry(
+  supabase: TypedClient,
+  params: { copyId: string; entryKey: string; take: boolean; expectedDigest: string | null }
+): Promise<boolean> {
+  const { data, error } = await supabase.rpc("sync_ruleset_copy_entry", {
+    p_copy_id: params.copyId,
+    p_entry_key: params.entryKey,
+    p_take: params.take,
+    p_expected_digest: params.expectedDigest as unknown as string,
   });
   if (error) throw new Error(error.message);
   return data;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ensureSubclassFeatureEntrySchema, createHomebrewSpellSchema, createHomebrewSubclassSchema } from "./schemas";
+import { ensureSubclassFeatureEntrySchema, createHomebrewSpellSchema, createHomebrewSubclassSchema, syncRulesetCopyEntrySchema } from "./schemas";
 
 describe("createHomebrewSubclassSchema (V2-N1)", () => {
   const valid = {
@@ -102,5 +102,17 @@ describe("createHomebrewSubclassSchema — sorts accordés (V3.1-203)", () => {
   it("refuse une clé de sort qui n'est pas un identifiant, ou un repos inconnu", () => {
     expect(createHomebrewSubclassSchema.safeParse({ ...base, features: [{ ...base.features[0], spells: [{ key: "Injonction !", alwaysPrepared: true }] }] }).success).toBe(false);
     expect(createHomebrewSubclassSchema.safeParse({ ...base, features: [{ ...base.features[0], spells: [{ key: "command", alwaysPrepared: true, freeCast: { uses: 1, refresh: "dawn" } }] }] }).success).toBe(false);
+  });
+});
+
+describe("syncRulesetCopyEntrySchema (AG-18)", () => {
+  const ok = { rulesetId: "11111111-1111-4111-8111-111111111111", entryKey: "arc", take: true, digest: "037a04bfc92a38ceca3afc5da33870cc" };
+  it("accepte un choix complet, et une règle retirée sans empreinte", () => {
+    expect(syncRulesetCopyEntrySchema.safeParse(ok).success).toBe(true);
+    expect(syncRulesetCopyEntrySchema.safeParse({ ...ok, digest: null }).success).toBe(true);
+  });
+  it("refuse une empreinte qui n'est pas un md5, ou un choix absent", () => {
+    expect(syncRulesetCopyEntrySchema.safeParse({ ...ok, digest: "x" }).success).toBe(false);
+    expect(syncRulesetCopyEntrySchema.safeParse({ ...ok, take: undefined }).success).toBe(false);
   });
 });

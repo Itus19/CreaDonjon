@@ -3,6 +3,7 @@ import {
   FAMILLES_PALETTE,
   TYPES_HORS_PALETTE,
   annonceReordonnancement,
+  blocSupprimable,
   famillesAjoutables,
   positionApresDeplacement,
 } from "./ficheBlocs";
@@ -11,7 +12,7 @@ describe("FAMILLES_PALETTE", () => {
   it("range les types en quatre familles, dans l'ordre du ticket V3.1-63", () => {
     expect(FAMILLES_PALETTE.map((f) => f.cle)).toEqual(["recit", "personnage", "psyche", "outils"]);
     expect(FAMILLES_PALETTE[0].types).toEqual(["text", "infobox", "image", "custom_table", "timeline"]);
-    expect(FAMILLES_PALETTE[1].types).toEqual(["character", "inventory", "spellcasting", "resources", "statblock"]);
+    expect(FAMILLES_PALETTE[1].types).toEqual(["character", "inventory", "spellcasting", "resources", "statblock", "equippable"]);
     expect(FAMILLES_PALETTE[2].types).toEqual(["personality", "relationship", "worldview", "relations_graph", "genealogy"]);
     expect(FAMILLES_PALETTE[3].types).toEqual(["random_table", "quest", "music", "map"]);
   });
@@ -92,5 +93,16 @@ describe("annonceReordonnancement", () => {
   });
   it("renvoie null quand le bloc est inconnu", () => {
     expect(annonceReordonnancement("prise", ids, libelles, "zzz", null)).toBeNull();
+  });
+});
+
+describe("blocSupprimable (AG-9)", () => {
+  it("garde le bloc « Séance » d'une fiche du Livre de sessions", () => {
+    expect(blocSupprimable("session_journal", "session_journal_meta")).toBe(false);
+  });
+  it("laisse supprimer tout autre bloc, et le bloc « Séance » posé ailleurs", () => {
+    expect(blocSupprimable("session_journal", "text")).toBe(true);
+    expect(blocSupprimable("character", "session_journal_meta")).toBe(true);
+    expect(blocSupprimable(undefined, "session_journal_meta")).toBe(true);
   });
 });

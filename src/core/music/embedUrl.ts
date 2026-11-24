@@ -115,6 +115,17 @@ export function youtubeVideoId(url: string): string | null {
   return id || null;
 }
 
+/**
+ * AG-20 — identifiant de playlist YouTube (`list=`), ou `null`. Une piste qui
+ * en porte un passe par le lecteur pilote, morceau par morceau, même si le
+ * lien nomme aussi une vidéo de départ. Même validation de domaine.
+ */
+export function youtubePlaylistId(url: string): string | null {
+  if (detectProvider(url) !== "youtube") return null;
+  const id = new URL(url).searchParams.get("list");
+  return id && /^[A-Za-z0-9_-]+$/.test(id) ? id : null;
+}
+
 export const PROVIDER_LABELS: Record<MusicProvider, string> = {
   spotify: "Spotify",
   soundcloud: "SoundCloud",

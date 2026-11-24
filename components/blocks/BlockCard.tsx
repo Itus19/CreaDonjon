@@ -11,6 +11,7 @@ import LettrineBouton from "@/components/blocks/LettrineBouton";
 import VisibilityPill from "@/components/shared/VisibilityPill";
 import { useChangerVisibilite } from "@/components/shared/useChangerVisibilite";
 import { VISIBILITY_PILL_STYLES } from "@/components/shared/visibilityOptions";
+import { useNiveauJoueurs } from "@/components/shared/NiveauJoueursProvider";
 
 /** Les quatre niveaux du choix direct (« Choisir la visibilité… ») ; campagne et utilisateur demandent un identifiant et n'y figurent pas. */
 const NIVEAUX_CHOIX = ["public", "players", "gm", "private"] as const;
@@ -93,12 +94,14 @@ export default function BlockCard({
   onMonter: () => void;
   onDescendre: () => void;
   onDupliquer: () => void;
-  onSupprimer: () => void;
+  /** AG-9 : absent quand le bloc ne se supprime pas (bloc « Séance » d'un journal de session). */
+  onSupprimer?: () => void;
   conflit: boolean;
   erreurSauvegarde: boolean;
   children: React.ReactNode;
 }) {
   const t = useTranslations("fiche");
+  const niveauJoueurs = useNiveauJoueurs();
   // Le choix direct du ⋮ (« Choisir la visibilité… ») s'ouvre sous l'en-tête ; le toucher sur la pastille, lui, passe au niveau suivant (V3.1-64).
   const [choixOuvert, setChoixOuvert] = useState(false);
   const changerVisibilite = useChangerVisibilite({
@@ -114,7 +117,7 @@ export default function BlockCard({
       : []),
     { label: t("dupliquer"), onSelect: onDupliquer },
     { label: t("choisirVisibilite"), onSelect: () => setChoixOuvert(true) },
-    { label: t("supprimer"), onSelect: onSupprimer, danger: true },
+    ...(onSupprimer ? [{ label: t("supprimer"), onSelect: onSupprimer, danger: true }] : []),
   ];
 
   return (
@@ -189,7 +192,7 @@ export default function BlockCard({
           aria-label={t("choisirVisibilite")}
           className="flex flex-wrap items-center gap-2 border-b border-edge px-3 py-2"
         >
-          {NIVEAUX_CHOIX.filter((niveau) => !(nonAuteur && niveau === "private")).map((niveau) => {
+          {NIVEAUX_CHOIX.filter((niveau) => !(nonAuteur && niveau === "private") && (niveauJoueurs || niveau !== "players" || niveau === niveauVisibilite)).map((niveau) => {
             const s = VISIBILITY_PILL_STYLES[niveau];
             return (
               <button

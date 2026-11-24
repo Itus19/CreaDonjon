@@ -1,5 +1,6 @@
 {
   "shell": {
+    "enCoursDEcriture": "en cours d'écriture",
     "atelier": "Atelier",
     "mesMondes": "Mes mondes",
     "monde": "Monde",
@@ -23,7 +24,8 @@
       "retablirVolet": "Rétablir le volet",
       "fermerFiche": "Fermer la fiche affichée",
       "deposerSecondVolet": "Déposer ici pour ouvrir un second volet",
-      "separateur": "Largeur des volets"
+      "separateur": "Largeur des volets",
+      "ongletMasque": "{nom}, dans l'autre volet : rétablir les deux volets"
     },
     "kindLabels": {
       "session_journal": "Livre de sessions",
@@ -206,6 +208,18 @@
     "maitrisesAccordees": "Accordées par une règle"
   },
   "regles": {
+    "copie": "Copie",
+    "miseAJour": {
+      "titre": "Mise à jour disponible",
+      "aide": "« {source} » a changé depuis la copie faite pour ce monde. Choisis règle par règle : rien ne change ici sans toi.",
+      "modifiee": "Modifiée",
+      "nouvelle": "Nouvelle",
+      "retiree": "Retirée",
+      "reprendre": "Reprendre",
+      "garder": "Garder la mienne",
+      "erreur": "Impossible d'appliquer ce choix. Réessaie."
+    },
+    "nouvelleRegle": "Nouvelle règle",
     "monnaie": {
       "modifierSysteme": "Modifier le système monétaire",
       "titre": "Système monétaire",
@@ -1224,6 +1238,8 @@
     "suppressionTape": "Tape SUPPRIMER pour confirmer"
   },
   "accueil": {
+    "ouvrir": "Ouvrir",
+    "nouveauMondeSousTitre": "Mener, jouer ou partir en solo",
     "navigation": "Navigation de l'accueil",
     "destMondes": "Mondes",
     "destCompte": "Compte",
@@ -1288,6 +1304,14 @@
     "survol": "{face} : {nombre} fois"
   },
   "table": {
+    "niveauJoueursTitre": "Utiliser le niveau « Joueurs »",
+    "niveauJoueursAide": "Coupé, la visibilité se résume à Public, MJ et Privé. Ce qui est déjà « Joueurs » le reste.",
+    "niveauJoueursErreur": "Réglage non enregistré.",
+    "enReserve": "En réserve",
+    "reserveAide": "Pas cochés d'office dans « Toute la table ».",
+    "mettreEnReserve": "Mettre en réserve",
+    "remettreALaTable": "Remettre à la table",
+    "erreurReserve": "La réserve n'a pas pu être enregistrée.",
     "titre": "Table",
     "description": "Les personnages joueurs de la campagne : état de jeu, compteurs, bourse et repos, geste par geste.",
     "aucuneCampagne": "Aucune campagne dans ce monde — créez-en une dans l'onglet Campagnes.",
@@ -1921,6 +1945,7 @@
     "quitterOui": "Quitter",
     "quitterQuestion": "Quitter sans terminer ? Les joueurs reviennent à leur fiche ; le combat reste enregistré.",
     "rechercherMonstre": "Rechercher un monstre…",
+    "aucunMonstreTrouve": "Aucun monstre trouvé dans les règles de ce monde.",
     "recommencer": "Recommencer (relancer l'initiative)",
     "relancer": "Relancer",
     "relancerInitiative": "Relancer l'initiative",
@@ -2086,6 +2111,31 @@
     "enAttente": "En attente de la sauvegarde…"
   },
   "fiche": {
+    "equipable": {
+      "seulementEquipe": "Seulement équipé",
+      "harmonisation": "Harmonisation requise",
+      "effets": "Effets sur qui le porte",
+      "sorts": "Sorts accordés",
+      "caracteristique": "Caractéristique",
+      "caracteristiqueClasse": "Celle de la classe",
+      "uneFoisRepos": "1 fois par {repos}",
+      "maitriseRepos": "Bonus de maîtrise par {repos}",
+      "actions": "Actions à charges",
+      "nomAction": "Nom de l'action",
+      "charges": "Charges",
+      "recharge": "Recharge",
+      "description": "Ce que fait l'action",
+      "retirerAction": "Retirer l'action",
+      "ajouterAction": "+ Ajouter une action",
+      "nouvelleAction": "Nouvelle action",
+      "recharges": {
+        "short_rest": "Repos court",
+        "short_rest_one": "Une au repos court",
+        "long_rest": "Repos long",
+        "dawn": "À l'aube",
+        "never": "Jamais"
+      }
+    },
     "monnaie": {
       "horsSysteme": "Hors du système monétaire de ce monde : comptée à sa valeur standard, plus formée.",
       "inconnue": "Pièce inconnue de ce monde : comptée à 0, jamais dépensée."
@@ -2178,6 +2228,9 @@
       }
     },
     "musique": {
+      "morceau": "Morceau {n}",
+      "morceauSur": "Morceau {n} sur {total}",
+      "morceaux": "Morceaux de la playlist",
       "sansTitre": "Piste sans nom",
       "progression": "Progression de la piste",
       "debut": "début",
@@ -2257,6 +2310,9 @@
       "erreurObjectif": "Impossible de mettre à jour cet objectif."
     },
     "table": {
+      "importer": "Remplacer par un fichier…",
+      "importerAide": "Un texte (une entrée par ligne) ou un JSON. Les entrées actuelles sont remplacées.",
+      "importerErreur": "Lecture du fichier impossible.",
       "tirer": "Tirer · {de}",
       "tirageEnCours": "Tirage…",
       "sansRepetition": "Sans répétition",
@@ -2524,6 +2580,13 @@
       "aucunBlocTexte": "Aucun bloc de texte dans cette fiche",
       "bloc": "Bloc de texte qui accueille l'image",
       "blocOption": "Dans « {bloc} »",
+      "taille": "Taille",
+      "taillePlusPetite": "Plus petite",
+      "taillePlusGrande": "Plus grande",
+      "alignement": "Alignement",
+      "alignGauche": "À gauche",
+      "alignCentre": "Au centre",
+      "alignDroite": "À droite",
       "parallaxe": "Parallaxe",
       "parallaxeLabel": "Intensité de la parallaxe au défilement",
       "parallaxeZero": "Parallaxe à 0 % — aucun effet. Le curseur est l'interrupteur.",
@@ -2684,6 +2747,11 @@
       "annulee": "Déplacement annulé. Bloc « {bloc} » : position {position} sur {total}."
     },
     "entete": {
+      "nomTable": "Pour la table",
+      "nomTableAide": "Un nom que voit la table à la place du vrai. Vide : la table voit le vrai nom.",
+      "nomTablePlaceholder": "Vide : la table voit le vrai nom",
+      "nomTableActif": "La table ne voit pas le vrai nom",
+      "nomTableLiensEnEchec": "{n, plural, one {# lien n'a pas pu être renommé} other {# liens n'ont pas pu être renommés}} : modifiés entre-temps, à reprendre à la main.",
       "titrePlaceholder": "Nouvelle entité",
       "typeDeFiche": "Type de fiche",
       "alias": "Alias",
@@ -3133,7 +3201,9 @@
       "voirRegle": "Voir la fiche de règle",
       "aucuneClasse": "Aucune des classes choisies n'incante à ce niveau.",
       "sortsMineurs": "Sorts mineurs",
-      "sortsPrepares": "Sorts préparés ({classe}, niveau max {max})"
+      "sortsPrepares": "Sorts préparés ({classe}, niveau max {max})",
+      "dejaPrisPar": "Déjà pris par {source}",
+      "parClasse": "votre classe"
     },
     "caracIncantation": {
       "explication": "Cette caractéristique sert au DD de sauvegarde et à l'attaque des sorts de ce trait, rien d'autre.",

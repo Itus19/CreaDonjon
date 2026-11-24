@@ -6,6 +6,7 @@ import {
   ecrireDisposition,
   fixerPartage,
   lireDisposition,
+  ongletsMasques,
   placer,
   retirer,
   type Disposition,
@@ -146,5 +147,24 @@ describe("adresse : même disposition au rechargement", () => {
       { onglets: ["a"], actif: "a" },
       { onglets: ["b", "p"], actif: "p" },
     ]);
+  });
+});
+
+describe("ongletsMasques (AG-7)", () => {
+  const deux: Disposition = {
+    volets: [
+      { onglets: ["entite:a", "entite:b"], actif: "entite:a" },
+      { onglets: ["regle:c"], actif: "regle:c" },
+    ],
+    voletActif: 0,
+    partage: 50,
+  };
+  it("rend les onglets de l'autre volet quand un volet est agrandi", () => {
+    expect(ongletsMasques(deux, 0)).toEqual(["regle:c"]);
+    expect(ongletsMasques(deux, 1)).toEqual(["entite:a", "entite:b"]);
+  });
+  it("ne cache rien sans volet agrandi, ni avec un seul volet", () => {
+    expect(ongletsMasques(deux, null)).toEqual([]);
+    expect(ongletsMasques({ ...deux, volets: [deux.volets[0]] }, 0)).toEqual([]);
   });
 });

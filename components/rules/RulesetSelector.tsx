@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
@@ -64,12 +64,15 @@ export default function RulesetSelector({
   current: courantRecu,
   classeRuleset,
   classeAtelier,
+  children,
 }: {
   worldSlug: string;
   options: SelectableRulesetRow[];
   current: string | null;
   classeRuleset: string;
   classeAtelier: string;
+  /** AG-18 : affiché sous la liste, dans la carte du ruleset (« Mise à jour disponible »). */
+  children?: ReactNode;
 }) {
   const t = useTranslations("regles");
   const router = useRouter();
@@ -158,6 +161,7 @@ export default function RulesetSelector({
         published_at: null,
         content_origin: personalReference ? "personal_reference" : "user_created",
         parent_ruleset_id: parent.id,
+        copied_from_ruleset_id: null,
       },
     ]);
     setVariantName("");
@@ -324,6 +328,9 @@ export default function RulesetSelector({
                     {t("referencePersonnelle")}
                   </span>
                 )}
+                {ruleset.copied_from_ruleset_id && (
+                  <span className="rounded-full border border-edge px-2 py-0.5 text-xs text-ink-muted">{t("copie")}</span>
+                )}
                 <span className="min-w-0 break-words text-sm text-ink">{ruleset.name}</span>
               </div>
               <div className="flex items-center gap-2">
@@ -365,6 +372,7 @@ export default function RulesetSelector({
             </li>
           ))}
         </ul>
+        {children}
       </section>
 
       <details

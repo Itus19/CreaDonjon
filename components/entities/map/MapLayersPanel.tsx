@@ -4,6 +4,8 @@ import { useState } from "react";
 import Dropdown from "@/components/shared/Dropdown";
 import EyeIcon from "@/components/shared/EyeIcon";
 import { VISIBILITY_OPTIONS } from "@/components/shared/visibilityOptions";
+import { useNiveauJoueurs } from "@/components/shared/NiveauJoueursProvider";
+import { optionsVisibilite } from "@/lib/ui/visibilitePastille";
 import type { VisibleMapLayer } from "@/src/server/services/mapLayers";
 
 /**
@@ -38,6 +40,7 @@ export default function MapLayersPanel({
   onClose: () => void;
 }) {
   const [newLayerName, setNewLayerName] = useState("");
+  const niveauJoueurs = useNiveauJoueurs();
 
   function submitNewLayer() {
     const name = newLayerName.trim();
@@ -72,7 +75,7 @@ export default function MapLayersPanel({
               <LayerNameInput name={layer.name} onRename={(name) => onRename(layer.id, name)} />
               <Dropdown
                 value={layer.visibilityLevel}
-                options={VISIBILITY_OPTIONS}
+                options={optionsVisibilite(VISIBILITY_OPTIONS, niveauJoueurs, layer.visibilityLevel)}
                 onChange={(v) => onChangeVisibility(layer.id, v)}
                 aria-label={`Visibilité de la couche « ${layer.name} »`}
                 triggerClassName="shrink-0 rounded-full border border-edge bg-panel-raised px-2 py-0.5 text-xs text-ink transition-colors hover:bg-panel"

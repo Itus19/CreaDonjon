@@ -1,5 +1,6 @@
 "use client";
 
+import { blocSupprimable } from "@/lib/ui/ficheBlocs";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
@@ -70,6 +71,7 @@ const SpellcastingBlockEditor = dynamic(
 );
 const ResourcesBlockEditor = dynamic(() => import("./ResourcesBlockEditor"));
 const MusicBlockEditor = dynamic(() => import("./MusicBlockEditor"));
+const EquippableBlockEditor = dynamic(() => import("./EquippableBlockEditor"));
 const GenealogyBlockEditor = dynamic(() => import("./GenealogyBlockEditor"));
 const QuestBlockEditor = dynamic(() => import("./QuestBlockEditor"));
 const PersonalityBlockEditor = dynamic(
@@ -100,6 +102,7 @@ import type { CharacterBlockData } from "@/src/core/schemas/blocks/character";
 import type { InventoryBlockData } from "@/src/core/schemas/blocks/inventory";
 import type { SpellcastingBlockData } from "@/src/core/schemas/blocks/spellcasting";
 import type { ResourcesBlockData } from "@/src/core/schemas/blocks/resources";
+import type { EquippableBlockData } from "@/src/core/schemas/blocks/equippable";
 import type { MusicBlockData } from "@/src/core/schemas/blocks/music";
 import type { StatblockBlockData } from "@/src/core/schemas/blocks/statblock";
 import type { GenealogyBlockData } from "@/src/core/schemas/blocks/genealogy";
@@ -149,6 +152,7 @@ export const BLOCK_TYPE_LABELS: Record<string, string> = {
   timeline: "Chronologie",
   map: "Carte",
   session_journal_meta: "Séance",
+  equippable: "Objet équipable",
 };
 
 /** V3.1-189 : les blocs image de la fiche, par identifiant, pour les images posees dans le texte. */
@@ -303,6 +307,8 @@ export function BlockDataEditor({
           onChange={(d) => onChange(d)}
         />
       );
+    case "equippable":
+      return <EquippableBlockEditor data={block.data as EquippableBlockData} onChange={(d) => onChange(d)} worldSlug={worldSlug} />;
     case "music":
       return (
         <MusicBlockEditor
@@ -1429,7 +1435,7 @@ function SortableBlockCard({
       onMonter={() => onMoveBlock(block.id, "up")}
       onDescendre={() => onMoveBlock(block.id, "down")}
       onDupliquer={() => onDuplicateBlock(block.id)}
-      onSupprimer={() => onRequestDelete(block.id)}
+      onSupprimer={blocSupprimable(entityKind, block.blockType) ? () => onRequestDelete(block.id) : undefined}
       conflit={hasConflict}
       erreurSauvegarde={hasSaveError}
     >
