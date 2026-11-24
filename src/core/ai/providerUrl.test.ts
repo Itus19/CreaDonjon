@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { verifierUrlFournisseur } from "./providerUrl";
+import { estAdresseLocale, verifierUrlFournisseur } from "./providerUrl";
 
 /**
  * V3.1-224 (ADR 0103) — une adresse fournie par l'utilisateur sera appelée par
@@ -49,5 +49,22 @@ describe("l'adresse d'un fournisseur d'IA", () => {
 
   it("refuse une adresse qui porte déjà des identifiants", () => {
     expect(verifierUrlFournisseur("https://moi:motdepasse@api.exemple.net/v1", prod)).toEqual({ ok: false, raison: "identifiants" });
+  });
+});
+
+describe("un fournisseur local ou distant", () => {
+  it("la machine et le réseau privé sont locaux", () => {
+    expect(estAdresseLocale("http://localhost:1234/v1")).toBe(true);
+    expect(estAdresseLocale("http://127.0.0.1:11434/v1")).toBe(true);
+    expect(estAdresseLocale("http://192.168.1.20:1234/v1")).toBe(true);
+  });
+
+  it("une adresse publique est distante : le texte de la partie quitte la machine", () => {
+    expect(estAdresseLocale("https://api.venice.ai/api/v1")).toBe(false);
+    expect(estAdresseLocale("https://api.openai.com/v1")).toBe(false);
+  });
+
+  it("une adresse illisible compte comme distante, par prudence", () => {
+    expect(estAdresseLocale("pas une adresse")).toBe(false);
   });
 });

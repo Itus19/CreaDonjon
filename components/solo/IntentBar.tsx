@@ -5,7 +5,7 @@ import Dropdown from "@/components/shared/Dropdown";
 import { interpretIntent, looksLikeQuestion, type IntentAction, type MechanicalIntentKind } from "@/src/core/rules/intent";
 import { GM_QUESTION_MARKERS_FR } from "@/src/i18n/fr";
 import type { AdvantageState } from "@/src/core/rules/action";
-import type { EncashedTurnResponse, IntentBarData, PendingRequest, PendingTurnResponse, TurnOutcome } from "@/lib/solo/types";
+import type { EncashedTurnResponse, IntentBarData, PendingRequest, PendingTurnResponse, RaisonSansNarration, TurnOutcome } from "@/lib/solo/types";
 import { useDiceRoll } from "@/components/shell/DiceRollPanel";
 import { ErreurLancer, type SortieJet } from "@/lib/ui/outilDes";
 import { preReglageDepuisDemande, sortieAttenteReactions, sortieJetDepuisTour } from "@/lib/ui/solo";
@@ -110,8 +110,8 @@ export default function IntentBar({
   onActed?: () => void;
   /** V3.2-3 : un tour est en route — l'écran montre que quelque chose se passe pendant les 10 à 20 s du modèle local. */
   onEnCours?: (enCours: boolean) => void;
-  /** V3.2-3 : le modèle a répondu, ou non. Lu du DERNIER tour, jamais d'un sondage (docs/QUOTAS.md). */
-  onNarration?: (repondu: boolean) => void;
+  /** V3.2-3 : le modèle a répondu (`null`), ou pourquoi il est resté muet (V3.1-223). Lu du DERNIER tour, jamais d'un sondage (docs/QUOTAS.md). */
+  onNarration?: (sansNarration: RaisonSansNarration | null) => void;
 }) {
   const [text, setText] = useState("");
   const [overrideActionId, setOverrideActionId] = useState<string | null>(null);
@@ -250,8 +250,9 @@ export default function IntentBar({
         onPendingChange(body.pending);
         ouvrirOutil(body.pending);
       } else {
-        // V3.2-3 : un tour joué sans narration, c'est un fournisseur injoignable (V3.1-223).
-        onNarration?.(body.narration !== null);
+        // V3.2-3 : un tour joué sans narration dit pourquoi (V3.1-223) ; sans raison
+        // donnée par le serveur, c'est un échec générique.
+        onNarration?.(body.narration !== null ? null : (body.sansNarration ?? "echec"));
         onPendingChange(null);
         setDc("");
       }
