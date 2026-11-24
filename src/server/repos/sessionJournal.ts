@@ -157,6 +157,8 @@ export interface WrittenJournalEntry {
   ingameDate: GameDate;
   /** AG-8 : vrai pour un brouillon, lu seulement avec `avecBrouillons`. */
   enCours: boolean;
+  /** AG-13 : rang rangé à la main (`entities.display_order`, plus grand = plus haut). */
+  displayOrder: number;
 }
 
 /** Entrees redigees d'un monde, triees par date IRL de redaction decroissante (retour utilisateur) — jointure sur `entities` pour le titre/slug/`is_public`, jamais duplique dans cette table (regle absolue n°16 par analogie). L'appelant filtre par `isPublic` pour les surfaces anonymes (aperçu/partage). */
@@ -167,7 +169,7 @@ export async function listWrittenEntriesForWorld(
 ): Promise<WrittenJournalEntry[]> {
   const { data, error } = await supabase
     .from("session_journal_entries")
-    .select("id, entity_id, status, written_at, ingame_date, campaigns!inner(world_id), entities(name, slug, is_public)")
+    .select("id, entity_id, status, written_at, ingame_date, campaigns!inner(world_id), entities(name, slug, is_public, display_order)")
     .eq("campaigns.world_id", worldId)
     // V3.1-150 : rendu, validé ou non. AG-8 : le sommaire lit aussi les
     // brouillons (en tête, sans date de rendu) ; le filtre de visibilité les
@@ -176,7 +178,7 @@ export async function listWrittenEntriesForWorld(
     .order("written_at", { ascending: false, nullsFirst: true });
   if (error) throw new Error(error.message);
   return data
-    .filter((row): row is typeof row & { entity_id: string; entities: { name: string; slug: string; is_public: boolean } } => row.entity_id !== null && row.entities !== null)
+    .filter((row): row is typeof row & { entity_id: string; entities: { name: string; slug: string; is_public: boolean; display_order: number } } => row.entity_id !== null && row.entities !== null)
     .map((row) => ({
       id: row.id,
       entityId: row.entity_id,
@@ -186,5 +188,6 @@ export async function listWrittenEntriesForWorld(
       writtenAt: row.written_at,
       ingameDate: row.ingame_date as unknown as GameDate,
       enCours: row.status === "pending",
+      displayOrder: Number(row.entities.display_order),
     }));
 }

@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import { listWrittenEntriesForWorld } from "@/src/server/repos/sessionJournal";
 import type { EntityTreeGroup } from "@/src/core/entity-tree/build-tree";
+import { plusRecente, trierLivre } from "@/src/core/entities/ordreLivre";
 
 /**
  * Module feuille (V3.1-120) : il n'importe aucun service. Ce que l'arbre
@@ -20,7 +21,7 @@ export { SESSION_JOURNAL_KIND };
 /**
  * Groupe epingle du sommaire (retour utilisateur : "Livre de sessions" en
  * tout premier, meme presentation que les autres fiches, titres tries par
- * date IRL de redaction decroissante) — l'appelant (`getEntityTree`/
+ * date IRL de redaction decroissante ; AG-13 : rangees a la main par le MJ) — l'appelant (`getEntityTree`/
  * `getPublicEntityTree`) le prepend au resultat de `buildEntityTree`, apres
  * en avoir retire ce kind (jamais un groupe alphabetique en plus de
  * celui-ci). `publicOnly` filtre aux fiches `is_public` (apercu/partage).
@@ -34,7 +35,8 @@ export async function getSessionJournalTreeGroup(
   opts: { publicOnly: boolean; avecBrouillons?: boolean } = { publicOnly: false }
 ): Promise<EntityTreeGroup | null> {
   const entries = await listWrittenEntriesForWorld(supabase, worldId, { avecBrouillons: opts.avecBrouillons === true && !opts.publicOnly });
-  const visible = opts.publicOnly ? entries.filter((e) => e.isPublic) : entries;
+  // AG-13 : l'ordre rangé à la main par le MJ, le même pour le wiki public.
+  const visible = trierLivre(opts.publicOnly ? entries.filter((e) => e.isPublic) : entries);
   if (visible.length === 0) return null;
   return {
     kind: SESSION_JOURNAL_KIND,
@@ -50,5 +52,5 @@ export async function getLatestSessionJournalSlug(
 ): Promise<string | null> {
   const entries = await listWrittenEntriesForWorld(supabase, worldId);
   const visible = opts.publicOnly ? entries.filter((e) => e.isPublic) : entries;
-  return visible[0]?.slug ?? null;
+  return plusRecente(visible)?.slug ?? null;
 }

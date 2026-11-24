@@ -22,6 +22,7 @@ import { useDesktopWindowsState } from "./DesktopWindowsProvider";
 import ActionsMenu from "@/components/shared/ActionsMenu";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
 import { useSurFicheCreee } from "@/components/shared/fichesCreees";
+import { SESSION_JOURNAL_KIND } from "@/src/core/entities/systemKinds";
 
 /**
  * Le nom de la fiche, plus l'état d'attente de SON lien (V2.1-20 lot 1).
@@ -58,6 +59,7 @@ function NodeRow({
   hrefBase,
   editable,
   onTreeChanged,
+  glissable,
 }: {
   node: EntityTreeNode;
   worldSlug: string;
@@ -65,6 +67,8 @@ function NodeRow({
   currentSlug: string | null;
   hrefBase?: string;
   editable?: boolean;
+  /** AG-13 : la ligne se range à la main (Livre de sessions) — réf., style et poignée fournis par `SortableNodeRow`. */
+  glissable?: { ref: (el: HTMLElement | null) => void; style: React.CSSProperties; poignee: React.ReactNode };
   /** Retour utilisateur : dupliquer/supprimer "mettait un temps vraiment long" — recharge SEULEMENT l'arborescence (jamais `router.refresh()`, meme motif que RelationsChips.tsx). */
   onTreeChanged?: () => void;
 }) {
@@ -94,12 +98,12 @@ function NodeRow({
   }
 
   return (
-    <li>
+    <li ref={glissable?.ref} style={glissable?.style}>
       {/* `group` porte le survol (retour utilisateur) : le menu "..." ne
           s'affiche qu'au survol de la ligne, jamais en permanence — une
           ligne de sommaire n'est pas un bloc, pas de chrome systematique. */}
       <div className="group flex items-center" style={{ paddingLeft: `${depth * 14}px` }}>
-        {hasChildren ? (
+        {glissable ? glissable.poignee : hasChildren ? (
           <button
             type="button"
             onClick={() => setExpanded((e) => !e)}
@@ -199,6 +203,35 @@ function NodeRow({
  * `useSortable` s'appelle une fois PAR INSTANCE, jamais dans la `.map()` du
  * parent.
  */
+/**
+ * AG-13 — une page du Livre de sessions, rangée à la main par le MJ : la
+ * poignée prend la place de la flèche (une page du Livre n'a pas d'enfant).
+ */
+function SortableNodeRow(props: Omit<React.ComponentProps<typeof NodeRow>, "glissable">) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: props.node.id });
+  return (
+    <NodeRow
+      {...props}
+      glissable={{
+        ref: setNodeRef,
+        style: { transform: CSS.Transform.toString(transform), transition, ...(isDragging ? { position: "relative", zIndex: 10, opacity: 0.9 } : {}) },
+        poignee: (
+          <button
+            type="button"
+            {...attributes}
+            {...listeners}
+            className="w-4 shrink-0 touch-none cursor-grab text-xs text-ink-muted opacity-0 transition-opacity hover:text-ink focus-visible:opacity-100 group-hover:opacity-100 active:cursor-grabbing"
+            title="Glisser pour réordonner"
+            aria-label={`Réordonner la page ${props.node.name}`}
+          >
+            ⠿
+          </button>
+        ),
+      }}
+    />
+  );
+}
+
 /** Cherche `slug` dans une liste de nœuds, enfants `part_of` compris (recursif). */
 function containsSlug(nodes: EntityTreeNode[], slug: string | null): boolean {
   if (!slug) return false;
@@ -316,8 +349,8 @@ export default function EntityTree({
   );
 
   /**
-   * Categories seulement (V2-G9) — le classement des fiches DANS une
-   * categorie est desormais fixe (alphabetique, `buildEntityTree`, retour
+   * Categories (V2-G9), et les pages du Livre de sessions (AG-13). Le
+   * classement des autres fiches DANS une categorie est desormais fixe (alphabetique, `buildEntityTree`, retour
    * utilisateur "faciliter la recherche") : plus de glisser-depose par
    * fiche, qui n'aurait plus d'effet visible des le prochain rendu.
    */
@@ -326,6 +359,31 @@ export default function EntityTree({
     if (!over || active.id === over.id) return;
     const activeId = String(active.id);
     const overId = String(over.id);
+
+    // AG-13 : une page du Livre de sessions, rangée parmi les autres pages.
+    const livre = localGroups.find((g) => g.kind === SESSION_JOURNAL_KIND);
+    const pages = livre?.items.map((n) => n.id) ?? [];
+    if (pages.includes(activeId)) {
+      if (!pages.includes(overId)) return;
+      const avant = localGroups;
+      const ordre = arrayMove(pages, pages.indexOf(activeId), pages.indexOf(overId));
+      const parId = new Map(livre!.items.map((n) => [n.id, n]));
+      setLocalGroups(localGroups.map((g) => (g.kind === SESSION_JOURNAL_KIND ? { ...g, items: ordre.map((id) => parId.get(id)!) } : g)));
+      void fetch(`/api/worlds/${worldSlug}/session-journal-order`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order: ordre }),
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        })
+        .catch((e) => {
+          // Le serveur a refusé : le sommaire reprend l'ordre d'avant plutôt que de mentir.
+          console.error("Ordre du Livre de sessions non enregistré", e);
+          setLocalGroups(avant);
+        });
+      return;
+    }
 
     const groupKinds = localGroups.map((g) => g.kind);
     if (!groupKinds.includes(activeId) || !groupKinds.includes(overId)) return;
@@ -370,7 +428,25 @@ export default function EntityTree({
                   editable={editable}
                   onToggle={() => toggle(group.kind)}
                 />
-                {!collapsed && (
+                {!collapsed && editable && group.kind === SESSION_JOURNAL_KIND && (
+                  <SortableContext items={group.items.map((n) => n.id)} strategy={verticalListSortingStrategy}>
+                    <ul>
+                      {group.items.map((node) => (
+                        <SortableNodeRow
+                          key={node.id}
+                          node={node}
+                          worldSlug={worldSlug}
+                          depth={0}
+                          currentSlug={currentSlug}
+                          hrefBase={hrefBase}
+                          editable={editable}
+                          onTreeChanged={reloadTree}
+                        />
+                      ))}
+                    </ul>
+                  </SortableContext>
+                )}
+                {!collapsed && !(editable && group.kind === SESSION_JOURNAL_KIND) && (
                   <ul>
                     {group.items.map((node) => (
                       <NodeRow
