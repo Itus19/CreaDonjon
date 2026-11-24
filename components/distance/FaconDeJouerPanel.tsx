@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import ConfirmDialog from "@/components/shared/ConfirmDialog";
+import { annoncerFaconDeJouer } from "./useJeuADistance";
 import type { PlayStyle } from "@/src/core/remote/feed";
 
 /**
@@ -35,6 +36,7 @@ export default function FaconDeJouerPanel({ worldSlug, campaignId, initial }: { 
       }
       setActuelle(cible);
       setErreur(null);
+      annoncerFaconDeJouer(cible);
     } catch (e) {
       console.error("Façon de jouer non changée", e);
       setErreur(t("faconErreur"));

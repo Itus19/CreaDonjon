@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useJeuADistance } from "@/components/distance/useJeuADistance";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { classeItemFlyout, IconeRail, OutilsDalle, Rail, RailFilet, RailPart, RailRow, useRailReplie } from "./Rail";
@@ -80,7 +81,7 @@ export default function MjSidebar({
   worldName,
   campaignName,
   demandesAFixer = 0,
-  jeuADistance = false,
+  jeuADistance: jeuADistanceInitial = false,
 }: {
   worldSlug: string;
   worldName: string;
@@ -95,6 +96,8 @@ export default function MjSidebar({
   const tShell = useTranslations("shell");
   const tDistance = useTranslations("distance");
   const hrefDistance = `/m/${worldSlug}/mj/distance`;
+  // Suit aussi un changement fait dans Gestion de campagne, sans recharger la page.
+  const jeuADistance = useJeuADistance(jeuADistanceInitial);
   const pathname = usePathname();
   const { unreadCount } = useChatUnread();
   const { replie, basculer } = useRailReplie();
