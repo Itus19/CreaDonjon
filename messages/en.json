@@ -2186,6 +2186,9 @@
       }
     },
     "musique": {
+      "morceau": "Track {n}",
+      "morceauSur": "Track {n} of {total}",
+      "morceaux": "Playlist tracks",
       "sansTitre": "Unnamed track",
       "progression": "Track progress",
       "debut": "start",

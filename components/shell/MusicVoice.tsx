@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { toEmbedUrl, youtubeVideoId } from "@/src/core/music/embedUrl";
+import { toEmbedUrl, youtubePlaylistId, youtubeVideoId } from "@/src/core/music/embedUrl";
+import { indexDepart, morceauVoisin } from "@/src/core/music/playlist";
 import { FADE_STEP_MS, fadeVolumeAt } from "@/src/core/music/fade";
 import { actionReleve, bornerPosition } from "@/lib/ui/musique";
-import { YT_ENDED, YT_PAUSED, YT_PLAYING, loadYouTubeApi, type YouTubePlayer } from "./youtubeApi";
+import { YT_CUED, YT_ENDED, YT_PAUSED, YT_PLAYING, loadYouTubeApi, type YouTubePlayer } from "./youtubeApi";
 
 /**
  * Une « voix » : UNE piste en train de sonner (V2.1-6 lot 2,
@@ -42,22 +43,37 @@ export interface MusicVoiceProps {
   onEnded: () => void;
   /** V3.1-146 : position et durée de la piste, relevées toutes les secondes PENDANT LA LECTURE ; `null` quand la voix s'arrête. YouTube seulement. */
   onReleve?: (releve: { position: number; duree: number } | null) => void;
+  /** AG-20 : une playlist YouTube — ses vidéos, le morceau en cours et son titre s'il est connu ; `null` quand la voix s'arrête. */
+  onPlaylist?: (etat: EtatPlaylist | null) => void;
+  /** AG-20 : de quoi changer de morceau dans la playlist ; `null` au démontage. */
+  onCommandes?: (commandes: CommandesPlaylist | null) => void;
+}
+
+export interface EtatPlaylist {
+  ids: string[];
+  index: number;
+  /** Titre du morceau en cours, lu sur le lecteur (peut manquer). */
+  titre: string | null;
+}
+
+export interface CommandesPlaylist {
+  allerA: (index: number) => void;
 }
 
 export default function MusicVoice(props: MusicVoiceProps) {
-  return youtubeVideoId(props.url) ? <VoixYouTube {...props} /> : <VoixIframe {...props} />;
+  return youtubeVideoId(props.url) || youtubePlaylistId(props.url) ? <VoixYouTube {...props} /> : <VoixIframe {...props} />;
 }
 
-function VoixYouTube({ url, startSeconds, endSeconds, fadeInMs, fadingOut, fadeOutMs, onFadedOut, onEnded, onReleve }: MusicVoiceProps) {
+function VoixYouTube({ url, startSeconds, endSeconds, fadeInMs, fadingOut, fadeOutMs, onFadedOut, onEnded, onReleve, onPlaylist, onCommandes }: MusicVoiceProps) {
   const hote = useRef<HTMLDivElement | null>(null);
   const lecteur = useRef<YouTubePlayer | null>(null);
   const rampe = useRef<ReturnType<typeof setInterval> | null>(null);
   // Les rappels changent d'identite a chaque rendu du contexte ; les garder
   // dans une ref evite de reconstruire le lecteur (donc de couper le son) a
   // chaque fois qu'un parent se redessine.
-  const rappels = useRef({ onFadedOut, onEnded, onReleve });
+  const rappels = useRef({ onFadedOut, onEnded, onReleve, onPlaylist, onCommandes });
   useEffect(() => {
-    rappels.current = { onFadedOut, onEnded, onReleve };
+    rappels.current = { onFadedOut, onEnded, onReleve, onPlaylist, onCommandes };
   });
   // V3.1-146 : le relevé de position. Une minuterie d'une seconde, vivante
   // seulement tant que le lecteur joue (`actionReleve`) : arrêtée en pause, à la
@@ -124,9 +140,31 @@ function VoixYouTube({ url, startSeconds, endSeconds, fadeInMs, fadingOut, fadeO
   // et continuerait de jouer.
   useEffect(() => {
     const videoId = youtubeVideoId(url);
+    // AG-20 : une playlist se joue morceau par morceau. Le lecteur la prépare
+    // (`cuePlaylist`), on lit ses vidéos, puis on charge chacune à son tour :
+    // la fin d'un morceau passe au suivant, et « Précédent · Suivant » ou la
+    // liste n'ont qu'à charger un autre index. Les bornes ne valent pas ici.
+    const listId = youtubePlaylistId(url);
     const conteneur = hote.current;
-    if (!videoId || !conteneur) return;
+    if ((!videoId && !listId) || !conteneur) return;
     let annule = false;
+    let ids: string[] | null = null;
+    let index = 0;
+
+    function publierPlaylist() {
+      if (!ids) return;
+      const titre = lecteur.current?.getVideoData?.()?.title || null;
+      rappels.current.onPlaylist?.({ ids, index, titre });
+    }
+
+    function jouerMorceau(i: number) {
+      const lu = lecteur.current;
+      if (!lu || !ids || i < 0 || i >= ids.length) return;
+      index = i;
+      lu.loadVideoById({ videoId: ids[i]! });
+      lu.playVideo();
+      publierPlaylist();
+    }
 
     // `YT.Player` REMPLACE l'element qu'on lui donne par son iframe. Lui
     // confier un noeud rendu par React ferait planter le demontage
@@ -154,15 +192,40 @@ function VoixYouTube({ url, startSeconds, endSeconds, fadeInMs, fadingOut, fadeO
             // Volume a zero AVANT de lancer : sinon la premiere fraction de
             // seconde sort a plein volume, et le fondu ne fonde plus rien.
             event.target.setVolume(0);
-            event.target.loadVideoById({ videoId, startSeconds, endSeconds });
+            if (listId) {
+              event.target.cuePlaylist({ listType: "playlist", list: listId });
+              return;
+            }
+            event.target.loadVideoById({ videoId: videoId!, startSeconds, endSeconds });
             event.target.playVideo();
             fondre(0, 100, fadeInMs);
           },
           onStateChange: (event) => {
+            if (listId && event.data === YT_CUED && ids === null) {
+              ids = event.target.getPlaylist() ?? [];
+              if (ids.length === 0) {
+                console.warn("Playlist YouTube vide ou privée", listId);
+                rappels.current.onEnded();
+                return;
+              }
+              rappels.current.onCommandes?.({ allerA: jouerMorceau });
+              jouerMorceau(indexDepart(ids, videoId));
+              fondre(0, 100, fadeInMs);
+              return;
+            }
             const action = actionReleve(event.data, { enLecture: YT_PLAYING, enPause: YT_PAUSED, fini: YT_ENDED });
             if (action === "demarrer") demarrerReleve();
             if (action === "arreter") arreterReleve();
+            // Le titre n'est connu qu'une fois la vidéo partie.
+            if (listId && event.data === YT_PLAYING) publierPlaylist();
             if (event.data === YT_ENDED) {
+              if (listId && ids) {
+                const suivant = morceauVoisin(index, ids.length, 1);
+                if (suivant !== null) {
+                  jouerMorceau(suivant);
+                  return;
+                }
+              }
               rappels.current.onReleve?.(null);
               rappels.current.onEnded();
             }
@@ -176,6 +239,10 @@ function VoixYouTube({ url, startSeconds, endSeconds, fadeInMs, fadingOut, fadeO
       arreterRampe();
       arreterReleve();
       rappels.current.onReleve?.(null);
+      if (listId) {
+        rappels.current.onPlaylist?.(null);
+        rappels.current.onCommandes?.(null);
+      }
       lecteur.current?.destroy();
       lecteur.current = null;
       // `destroy()` retire deja l'iframe ; ce retrait ne couvre que le cas ou

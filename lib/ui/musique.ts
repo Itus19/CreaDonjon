@@ -5,7 +5,7 @@
  */
 
 import { zMusicBlockData, type MusicTrack } from "@/src/core/schemas/blocks/music";
-import { detectProvider, youtubeVideoId, type MusicProvider } from "@/src/core/music/embedUrl";
+import { detectProvider, youtubeVideoId, type MusicProvider, youtubePlaylistId } from "@/src/core/music/embedUrl";
 
 /** `m:ss`, `h:mm:ss` ou des secondes seules ; `""` = absent (la borne n'existe pas). */
 export type LectureTemps = { ok: true; secondes: number | undefined } | { ok: false };
@@ -74,8 +74,10 @@ export interface Capacites {
 
 /** Ce que le service d'un lien permet. Seul l'API de YouTube pilote le volume, les bornes et la fin de piste. */
 export function capacites(url: string): Capacites {
-  const pilotable = youtubeVideoId(url) !== null;
-  return { service: detectProvider(url), bornes: pilotable, fondus: pilotable };
+  // AG-20 : une playlist YouTube est pilotée elle aussi (fondus) ; les bornes, elles, ne valent que pour une vidéo seule.
+  const playlist = youtubePlaylistId(url) !== null;
+  const pilotable = youtubeVideoId(url) !== null || playlist;
+  return { service: detectProvider(url), bornes: pilotable && !playlist, fondus: pilotable };
 }
 
 /** « 0:12 → fin », « début → 1:30 », « 0:12 → 1:30 » ; `null` pour une piste entière. */

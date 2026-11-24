@@ -2187,6 +2187,9 @@
       }
     },
     "musique": {
+      "morceau": "Morceau {n}",
+      "morceauSur": "Morceau {n} sur {total}",
+      "morceaux": "Morceaux de la playlist",
       "sansTitre": "Piste sans nom",
       "progression": "Progression de la piste",
       "debut": "début",

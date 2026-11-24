@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useRef, useState } from "react";
 import type { MusicTrack } from "@/src/core/schemas/blocks/music";
 import { nextTrackIndex } from "@/src/core/music/nextTrack";
-import MusicVoice from "./MusicVoice";
+import MusicVoice, { type CommandesPlaylist, type EtatPlaylist } from "./MusicVoice";
 
 /** Ce qu'on demande a jouer : une liste ordonnee de pistes, et les fondus qui l'encadrent. */
 export interface MusicSource {
@@ -22,6 +22,10 @@ interface MusicPlaybackContextValue {
   currentKey: string | null;
   play: (source: MusicSource) => void;
   stop: () => void;
+  /** AG-20 : la playlist YouTube de la source en cours (ses vidéos, le morceau joué), `null` sinon. */
+  playlist: (EtatPlaylist & { cle: string; titres: Record<string, string> }) | null;
+  /** AG-20 : jouer un autre morceau de cette playlist (sans effet hors playlist). */
+  allerAMorceau: (index: number) => void;
 }
 
 const MusicPlaybackContext = createContext<MusicPlaybackContextValue | null>(null);
@@ -81,6 +85,29 @@ export function MusicPlaybackProvider({ children }: { children: React.ReactNode 
   const [releve, setReleve] = useState<{ instanceId: number; cle: string; position: number; duree: number } | null>(null);
   const [durees, setDurees] = useState<Record<string, number>>({});
   const prochainId = useRef(0);
+  // AG-20 : l'état de playlist de chaque voix, ses commandes, et les titres déjà lus sur le lecteur.
+  const [playlists, setPlaylists] = useState<Record<number, EtatPlaylist>>({});
+  const [titres, setTitres] = useState<Record<string, string>>({});
+  const commandes = useRef(new Map<number, CommandesPlaylist>());
+
+  const surPlaylist = useCallback((instanceId: number, etat: EtatPlaylist | null) => {
+    setPlaylists((prev) => {
+      if (etat === null) {
+        if (!(instanceId in prev)) return prev;
+        const reste = { ...prev };
+        delete reste[instanceId];
+        return reste;
+      }
+      return { ...prev, [instanceId]: etat };
+    });
+    const id = etat?.ids[etat.index];
+    if (etat?.titre && id) setTitres((prev) => (prev[id] === etat.titre ? prev : { ...prev, [id]: etat.titre! }));
+  }, []);
+
+  const surCommandes = useCallback((instanceId: number, c: CommandesPlaylist | null) => {
+    if (c) commandes.current.set(instanceId, c);
+    else commandes.current.delete(instanceId);
+  }, []);
 
   /**
    * Fait sortir la voix active : elle passe en extinction et se demontera
@@ -147,6 +174,14 @@ export function MusicPlaybackProvider({ children }: { children: React.ReactNode 
   }, []);
 
   const active = voices.find((v) => !v.fadingOut) ?? null;
+  const etatPlaylist = active ? playlists[active.instanceId] : undefined;
+  const playlist = active && etatPlaylist ? { ...etatPlaylist, cle: active.source.key, titres } : null;
+  const allerAMorceau = useCallback(
+    (index: number) => {
+      if (active) commandes.current.get(active.instanceId)?.allerA(index);
+    },
+    [active]
+  );
   // Seule la voix active publie : une voix qui s'éteint ne vole pas la barre.
   const progression: MusicProgress =
     releve && active && releve.instanceId === active.instanceId
@@ -154,7 +189,7 @@ export function MusicPlaybackProvider({ children }: { children: React.ReactNode 
       : { ...PROGRESSION_VIDE, durees };
 
   return (
-    <MusicPlaybackContext.Provider value={{ currentKey: active?.source.key ?? null, play, stop }}>
+    <MusicPlaybackContext.Provider value={{ currentKey: active?.source.key ?? null, play, stop, playlist, allerAMorceau }}>
       <MusicProgressContext.Provider value={progression}>
       {children}
       {voices.map((voix) => {
@@ -176,6 +211,8 @@ export function MusicPlaybackProvider({ children }: { children: React.ReactNode 
             onFadedOut={() => retirer(voix.instanceId)}
             onEnded={() => pisteTerminee(voix.instanceId)}
             onReleve={(r) => relever(voix.instanceId, voix.source.key, r)}
+            onPlaylist={(etat) => surPlaylist(voix.instanceId, etat)}
+            onCommandes={(c) => surCommandes(voix.instanceId, c)}
           />
         );
       })}
