@@ -2696,6 +2696,11 @@
       "annulee": "Move cancelled. Block “{bloc}”: position {position} of {total}."
     },
     "entete": {
+      "nomTable": "For the table",
+      "nomTableAide": "A name the table sees instead of the real one. Empty: the table sees the real name.",
+      "nomTablePlaceholder": "Empty: the table sees the real name",
+      "nomTableActif": "The table does not see the real name",
+      "nomTableLiensEnEchec": "{n, plural, one {# link could not be renamed} other {# links could not be renamed}}: changed meanwhile, fix them by hand.",
       "titrePlaceholder": "New entity",
       "typeDeFiche": "Sheet type",
       "alias": "Aliases",

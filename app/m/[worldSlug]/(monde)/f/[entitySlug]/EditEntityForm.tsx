@@ -45,8 +45,11 @@ export default function EditEntityForm({
   initialPortraitLayout,
   playerRestricted,
   ficheAvecPage = null,
+  initialTableName = null,
 }: {
   entity: EntitySummary;
+  /** AG-12 : le nom que voit la table (MJ seul) ; `entity.name` est alors le vrai nom. */
+  initialTableName?: string | null;
   worldSlug: string;
   initialBlocks: BlockItem[];
   initialRelations: RelationChip[];
@@ -74,6 +77,9 @@ export default function EditEntityForm({
   const [isPc, setIsPc] = useState(initialIsPc);
   const [aliases, setAliases] = useState<string[]>(entity.aliases);
   const [newAlias, setNewAlias] = useState("");
+  // AG-12 : brouillon du champ et dernière valeur enregistrée.
+  const [tableName, setTableName] = useState(initialTableName ?? "");
+  const tableNameEnregistreRef = useRef(initialTableName ?? "");
   // Categorie personnalisee (V2-G7) : `null` hors edition, une chaine
   // (meme vide) pendant la composition du nom — rien n'est sauvegarde tant
   // que ce champ n'est pas confirme (Entree) ou abandonne (Echap/blur vide).
@@ -259,6 +265,51 @@ export default function EditEntityForm({
     enregistreRef.current = comparable;
     setStatus("saved");
     if (rafraichir) rafraichirPage();
+  }
+
+  /**
+   * AG-12 (ADR 0105) — remplir, changer ou vider le nom pour la table. Passe
+   * par la même chaîne que l'en-tête : la version suit, jamais de 409 entre
+   * deux écritures rapprochées. Les liens qui affichaient l'ancien nom sont
+   * renommés côté serveur ; la page se recharge pour les montrer.
+   */
+  function saveTableName() {
+    const run = async () => {
+      const valeur = tableName.trim();
+      if (valeur === tableNameEnregistreRef.current) return;
+      setStatus("saving");
+      setErrorMessage(null);
+      const res = await fetch(`/api/entities/${entity.id}/table-name`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ version: versionRef.current, tableName: valeur === "" ? null : valeur }),
+      });
+      if (res.status === 409) {
+        setStatus("conflict");
+        return;
+      }
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        setErrorMessage(body?.error ?? "Erreur inattendue.");
+        setStatus("error");
+        return;
+      }
+      const result = (await res.json()) as { entity: EntitySummary; tableName: string | null; liensEnEchec: number };
+      versionRef.current = result.entity.version;
+      tableNameEnregistreRef.current = result.tableName ?? "";
+      setTableName(result.tableName ?? "");
+      setName(result.entity.name);
+      setAliases(result.entity.aliases);
+      enregistreRef.current = enTeteComparable(result.entity.name, entityKind, result.entity.aliases, isPublic);
+      if (result.liensEnEchec > 0) {
+        setErrorMessage(t("entete.nomTableLiensEnEchec", { n: result.liensEnEchec }));
+        setStatus("error");
+      } else setStatus("saved");
+      rafraichirPage();
+    };
+    const next = saveChainRef.current.then(run, run);
+    saveChainRef.current = next;
+    return next;
   }
 
   function addAlias() {
@@ -559,6 +610,29 @@ export default function EditEntityForm({
               className="w-24 rounded-full border border-dashed border-edge-strong bg-transparent px-2.5 py-1 text-accent outline-none placeholder:text-accent focus:border-accent"
             />
           </div>
+
+          {!playerRestricted && (
+            <label className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
+              <span className="mr-1 w-20 shrink-0 text-xs uppercase tracking-wider text-ink-muted" title={t("entete.nomTableAide")}>
+                {t("entete.nomTable")}
+              </span>
+              <input
+                value={tableName}
+                onChange={(e) => setTableName(e.target.value)}
+                onBlur={() => void saveTableName()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    void saveTableName();
+                  }
+                }}
+                maxLength={200}
+                placeholder={t("entete.nomTablePlaceholder")}
+                className={`min-w-0 flex-1 rounded-full border bg-transparent px-2.5 py-1 text-ink outline-none placeholder:text-ink-muted focus:border-accent ${tableName.trim() ? "border-gm/55" : "border-dashed border-edge-strong"}`}
+              />
+              {tableName.trim() !== "" && <span className="text-xs text-gm">{t("entete.nomTableActif")}</span>}
+            </label>
+          )}
 
           <div className="mt-3 flex flex-col gap-1.5 text-xs">
             <span className="text-xs uppercase tracking-wider text-ink-muted">{t("entete.relations")}</span>

@@ -97,3 +97,9 @@ export { ENTITY_KINDS };
 export const reorderSessionJournalSchema = z.object({
   order: z.array(z.string().uuid()).min(1).max(500),
 });
+
+/** AG-12 : le nom pour la table (vide ou `null` : révéler le vrai nom). */
+export const setTableNameSchema = z.object({
+  tableName: z.string().max(200).nullable(),
+  version: z.number().int().min(1),
+});

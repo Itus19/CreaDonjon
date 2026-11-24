@@ -261,6 +261,10 @@ Pas de table `characters`, `npcs`, `locations`. La distinction se fait par les b
 - `shared_note` (V3.1-41, ADR 0037) : une page du cahier partagée avec la table. Son bloc `text` porte le titre (son libellé) et le contenu. Il est en visibilité `players` quand la page est partagée, `user` de l'autrice sinon. L'autrice écrit par un octroi (`entity_grants`) qu'elle ne peut réclamer qu'à la création (`public.claim_shared_note_grant`, migration `20261013130000`), et que le MJ peut reprendre. Le nom de l'entité est toujours « Page du cahier » : la RLS d'`entities` laisse lire tout nom à tout membre du monde, le titre n'y est donc jamais.
 - `world_timeline` (V3.1-96, ADR 0048) : la **Chronologie du monde**, une par monde (index unique partiel `entities_world_timeline_unique`), créée au premier événement ajouté directement à la frise générale. Son bloc `timeline` porte ces événements. Seul un MJ du monde peut la créer (`entities_insert`, migration `20261013160000`). La liste de ces genres vit dans `src/core/entities/systemKinds.ts` (`WIKI_HIDDEN_KINDS`), sauf `notes` et `session_journal`, traités à part. Un genre système (`SYSTEM_KINDS` : `session_journal`, `shared_note`, `world_timeline`) ne se choisit jamais à la main : le sélecteur de type ne le propose pas, et `updateEntity` refuse d'y entrer ou d'en sortir (`canChangeEntityKind`, V3.1-150).
 
+**Le nom pour la table** (AG-12, ADR 0105). `entity_true_names (entity_id pk, world_id, true_name, true_aliases text[])`, RLS : MJ du monde seul. Une ligne existe tant que le MJ a rempli le « Nom pour la table » d'une fiche : `entities.name` est alors ce nom (le seul que lise la table) et le vrai nom, avec ses alias, vit ici. `public.blocks_citing_entity(world, entity)` (security invoker) liste les blocs texte et Encadré qui citent la fiche, pour renommer leurs liens.
+
+**L'ordre du Livre de sessions** (AG-13) suit `entities.display_order`, décroissant, rangé à la main par le MJ ; le wiki public le reprend.
+
 **Une entrée de chronologie** (bloc `timeline`) porte une portée facultative `scope` (`major`, `notable`, `detail`) ; absente, elle vaut le défaut de son genre (`resolveScope`, `src/core/timeline/worldTimeline.ts`). La frise générale (`getWorldTimeline`) lit les blocs `timeline` et `character` du monde en une requête, et filtre chaque date pour le lecteur (visibilité du bloc, puis de l'entrée).
 
 ---
@@ -1109,6 +1113,8 @@ create table entity_revisions (
 ```
 
 Snapshot complet plutôt que diff : simple, robuste, et le volume est négligeable au regard du coût d'une reconstruction de diff bugguée.
+
+Parce que l'instantané contient les blocs réservés au MJ, sa lecture est réservée au MJ du monde, au superadmin et à qui peut modifier la fiche (migration `20261124130000`, ADR 0105) : jamais à tout membre.
 
 ---
 

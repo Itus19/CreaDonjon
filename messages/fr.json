@@ -2697,6 +2697,11 @@
       "annulee": "Déplacement annulé. Bloc « {bloc} » : position {position} sur {total}."
     },
     "entete": {
+      "nomTable": "Pour la table",
+      "nomTableAide": "Un nom que voit la table à la place du vrai. Vide : la table voit le vrai nom.",
+      "nomTablePlaceholder": "Vide : la table voit le vrai nom",
+      "nomTableActif": "La table ne voit pas le vrai nom",
+      "nomTableLiensEnEchec": "{n, plural, one {# lien n'a pas pu être renommé} other {# liens n'ont pas pu être renommés}} : modifiés entre-temps, à reprendre à la main.",
       "titrePlaceholder": "Nouvelle entité",
       "typeDeFiche": "Type de fiche",
       "alias": "Alias",
