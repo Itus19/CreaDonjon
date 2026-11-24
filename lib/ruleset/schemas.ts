@@ -212,3 +212,19 @@ export const ensureSubclassFeatureEntrySchema = z.object({
   subclassKey: z.string().trim().min(1).max(80).regex(/^[a-z0-9_-]+$/),
   featureIndex: z.number().int().min(0).max(50),
 });
+
+/**
+ * AG-18 (ADR 0106) — un choix sur une règle d'une copie de ruleset :
+ * reprendre la version de la source (`take`) ou garder la sienne. `digest` :
+ * l'empreinte que l'écran a montrée (md5), `null` pour une règle retirée de la
+ * source ; si la source a changé depuis, rien n'est appliqué.
+ */
+export const syncRulesetCopyEntrySchema = z.object({
+  rulesetId: z.string().uuid(),
+  entryKey: z.string().min(1).max(200),
+  take: z.boolean(),
+  digest: z
+    .string()
+    .regex(/^[0-9a-f]{32}$/)
+    .nullable(),
+});

@@ -208,6 +208,17 @@
     "maitrisesAccordees": "Accordées par une règle"
   },
   "regles": {
+    "copie": "Copie",
+    "miseAJour": {
+      "titre": "Mise à jour disponible",
+      "aide": "« {source} » a changé depuis la copie faite pour ce monde. Choisis règle par règle : rien ne change ici sans toi.",
+      "modifiee": "Modifiée",
+      "nouvelle": "Nouvelle",
+      "retiree": "Retirée",
+      "reprendre": "Reprendre",
+      "garder": "Garder la mienne",
+      "erreur": "Impossible d'appliquer ce choix. Réessaie."
+    },
     "nouvelleRegle": "Nouvelle règle",
     "monnaie": {
       "modifierSysteme": "Modifier le système monétaire",

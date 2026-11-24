@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import Interrupteur from "@/components/rules/Interrupteur";
 import RulesetSelector from "@/components/rules/RulesetSelector";
+import MiseAJourRuleset from "@/components/rules/MiseAJourRuleset";
 import ParticipantCharacterSheet from "@/components/shell/ParticipantCharacterSheet";
 import type { FicheAvecPage } from "@/components/blocks/useAmorcerFicheAvecPage";
 import { bornerInspirationMax, enregistrerReglagesTable, INTERRUPTEURS_TABLE, reglagesParDefaut } from "@/lib/ui/reglesActives";
@@ -65,7 +66,9 @@ export default function ReglesActivesPanel({
           current={data.current}
           classeRuleset="order-1 @md:order-2 @3xl:order-none @3xl:col-start-1"
           classeAtelier="order-3 @md:order-3 @3xl:order-none @3xl:col-start-1"
-        />
+        >
+          {data.miseAJour && data.miseAJour.copieId === data.current && <MiseAJourRuleset key={data.miseAJour.copieId} worldSlug={worldSlug} miseAJour={data.miseAJour} />}
+        </RulesetSelector>
 
         <div className="order-2 flex flex-col gap-4 @md:order-1 @3xl:order-none @3xl:col-start-2 @3xl:row-span-3 @3xl:row-start-1">
           {campaign && reglages && commandesJoueuse ? (

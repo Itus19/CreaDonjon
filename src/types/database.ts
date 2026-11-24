@@ -2580,6 +2580,8 @@ export type Database = {
         Row: {
           base_system: string
           content_origin: string
+          copied_from_ruleset_id: string | null
+          copy_baseline: Json | null
           created_at: string
           created_by: string | null
           id: string
@@ -2593,6 +2595,8 @@ export type Database = {
         Insert: {
           base_system: string
           content_origin?: string
+          copied_from_ruleset_id?: string | null
+          copy_baseline?: Json | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -2606,6 +2610,8 @@ export type Database = {
         Update: {
           base_system?: string
           content_origin?: string
+          copied_from_ruleset_id?: string | null
+          copy_baseline?: Json | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -3137,6 +3143,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      ruleset_override_digests: {
+        Args: { p_ruleset_id: string }
+        Returns: { digest: string; entry_key: string; label: string }[]
+      }
+      sync_ruleset_copy_entry: {
+        Args: { p_copy_id: string; p_entry_key: string; p_expected_digest: string | null; p_take: boolean }
+        Returns: boolean
+      }
+      copy_ruleset_for_world: {
+        Args: { p_name: string; p_source_id: string }
+        Returns: string
+      }
       blocks_citing_entity: {
         Args: { p_entity_id: string; p_world_id: string }
         Returns: {

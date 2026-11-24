@@ -207,6 +207,17 @@
     "maitrisesAccordees": "Granted by a rule"
   },
   "regles": {
+    "copie": "Copy",
+    "miseAJour": {
+      "titre": "Update available",
+      "aide": "\"{source}\" has changed since this world's copy was made. Choose rule by rule: nothing changes here without you.",
+      "modifiee": "Changed",
+      "nouvelle": "New",
+      "retiree": "Removed",
+      "reprendre": "Take it",
+      "garder": "Keep mine",
+      "erreur": "Could not apply this choice. Try again."
+    },
     "nouvelleRegle": "New rule",
     "monnaie": {
       "modifierSysteme": "Edit the currency system",

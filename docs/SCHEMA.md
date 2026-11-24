@@ -594,6 +594,8 @@ create unique index overrides_target_uniq
 
 L'algorithme de résolution (remontée de la chaîne, empilement des patchs, détection de cycles, profondeur maximale 8) est une fonction pure de `src/core/rules/resolve.ts`, appliquée bloc par bloc. Spécification en §3.3 de `Spec_Couche_Regles_v0_1.md`, révisée par §8 de `Spec_Blocs_de_Regles_v0_1.md`.
 
+**Copie propre à un monde (AG-18, ADR 0106).** `rulesets.copied_from_ruleset_id` (source, `on delete set null`) et `rulesets.copy_baseline` (jsonb, `entry_key` → empreinte md5 des surcharges de la source au dernier choix). Un ruleset personnel choisi à la création d'un monde devient une copie de même parent, avec ses lignes de `ruleset_overrides` copiées (`copy_ruleset_for_world`). `ruleset_override_digests` donne l'empreinte de chaque règle, `sync_ruleset_copy_entry` reprend ou ignore une règle changée dans la source. Migration `20261124150000`.
+
 ### 9.5 Protection des bases officielles
 
 Le principe PDD 3.6 doit être appliqué par la base, pas seulement par convention :
