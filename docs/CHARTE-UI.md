@@ -391,3 +391,13 @@ Ce que l'esquisse a vérifié contre le code et qui fait donc foi. Les propositi
 - **Deux comportements seulement** : sous 768 px et à partir de 768 px. Une tablette en portrait reçoit la mise en page desktop — zone d'ombre connue (~490 px pour la fenêtre de fiche à 820 px), à trancher avec la refonte.
 - **Piège CSS** : une liste qui défile dans un conteneur dont la largeur change pose `overflow-y: auto` **et** `overflow-x: hidden`, sinon une barre horizontale apparaît pendant la transition.
 
+
+## 12. L'écriture inclusive (AG-22)
+
+L'interface s'adresse à toute la table, quel que soit le genre de chaque personne. Trois niveaux, dans cet ordre de préférence :
+
+1. **Une tournure épicène** quand elle existe : « la table », « chaque membre », « les personnes invitées », « ton personnage », « la ou le MJ » évité au profit de « le MJ » (sigle épicène). Un verbe à l'infinitif ou un nom d'action évite souvent l'accord : « Inviter », « Invitation envoyée ».
+2. **Le point médian** quand aucune tournure ne tient : « joueur·euse », « joueur·euses », « invité·e ». Un seul point médian par mot ; jamais de parenthèses ni de barre oblique.
+3. **Pour un personnage précis**, l'accord suit son genre (`gender` de la fiche) ; le neutre prend « iel » et l'accord épicène ou au point médian. « Non précisé » se traite comme le neutre.
+
+En pratique : on écrit d'abord la phrase sans genre ; on ne recourt au point médian que si la phrase devient lourde. Les identifiants techniques ne sont pas concernés. Le récit de l'IA en solo suit la même règle (V3.2-5).
