@@ -2305,6 +2305,9 @@
       "erreurObjectif": "Impossible de mettre à jour cet objectif."
     },
     "table": {
+      "importer": "Remplacer par un fichier…",
+      "importerAide": "Un texte (une entrée par ligne) ou un JSON. Les entrées actuelles sont remplacées.",
+      "importerErreur": "Lecture du fichier impossible.",
       "tirer": "Tirer · {de}",
       "tirageEnCours": "Tirage…",
       "sansRepetition": "Sans répétition",

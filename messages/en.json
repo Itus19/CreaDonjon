@@ -2304,6 +2304,9 @@
       "erreurObjectif": "Could not update this objective."
     },
     "table": {
+      "importer": "Replace from a file…",
+      "importerAide": "A text file (one entry per line) or JSON. Current entries are replaced.",
+      "importerErreur": "Could not read the file.",
       "tirer": "Roll · {de}",
       "tirageEnCours": "Rolling…",
       "sansRepetition": "No repeats",
