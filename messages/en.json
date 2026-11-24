@@ -1369,6 +1369,11 @@
     "enCours": "Writing the story…",
     "iaRepond": "AI provider: the last turn was narrated",
     "iaMuette": "AI provider unreachable: the last turn stayed silent",
+    "iaAucunFournisseur": "No AI provider: the turn is played without narration (set one in the Account page)",
+    "iaQuota": "AI provider quota reached (credit used up or daily limit): the last turn stayed silent",
+    "iaLimite": "Too many AI calls at once: the last turn stayed silent, try again in a moment",
+    "iaCleRefusee": "API key rejected by the provider: the last turn stayed silent (check the Account page)",
+    "iaDelai": "The AI provider took too long to answer: the last turn stayed silent",
     "iaInconnue": "AI provider: no turn played yet",
     "annulerTour": {
       "bouton": "Undo last turn",

@@ -10,7 +10,7 @@ import ScenePanel from "@/components/solo/ScenePanel";
 import IntentBar from "@/components/solo/IntentBar";
 import Fil from "@/components/solo/Fil";
 import ConsequencesDrawer, { type ConsequencesDrawerData } from "@/components/solo/ConsequencesDrawer";
-import type { FilItem, IntentBarData, SceneView } from "@/lib/solo/types";
+import type { FilItem, IntentBarData, RaisonSansNarration, SceneView } from "@/lib/solo/types";
 
 /**
  * V3-B2 — Les deux moitiés de l'écran solo : la scène, puis le tour.
@@ -33,6 +33,18 @@ import type { FilItem, IntentBarData, SceneView } from "@/lib/solo/types";
  * 4 s (docs/QUOTAS.md).
  */
 const POLL_MS = 4000;
+
+/** V3.1-223 — le libellé de l'état du fournisseur d'IA, sous la barre d'intention. */
+const LIBELLE_ETAT_IA = {
+  inconnu: "iaInconnue",
+  repond: "iaRepond",
+  aucun_fournisseur: "iaAucunFournisseur",
+  quota: "iaQuota",
+  limite: "iaLimite",
+  cle_refusee: "iaCleRefusee",
+  delai: "iaDelai",
+  echec: "iaMuette",
+} as const satisfies Record<"inconnu" | "repond" | RaisonSansNarration, string>;
 
 function summarizeForAnnounce(item: FilItem): string {
   switch (item.kind) {
@@ -80,7 +92,7 @@ export default function SoloScreen({
   const [announce, setAnnounce] = useState("");
   // V3.2-3 : l'attente et l'état du fournisseur, lus des tours eux-mêmes — aucun sondage.
   const [tourEnCours, setTourEnCours] = useState(false);
-  const [narrationEtat, setNarrationEtat] = useState<"inconnu" | "repond" | "muet">("inconnu");
+  const [narrationEtat, setNarrationEtat] = useState<"inconnu" | "repond" | RaisonSansNarration>("inconnu");
   const scrollRef = useRef<HTMLDivElement>(null);
   const autoScrollRef = useRef(true);
   const lastSeqRef = useRef<number | null>(null);
@@ -204,14 +216,15 @@ export default function SoloScreen({
           pas se lire au travers. */}
       <div className="sticky bottom-0 shrink-0 bg-bg pb-1 pt-2">
         {/* V3.2-3 : l'état du fournisseur, lu du dernier tour joué — vert s'il a raconté,
-            rouge s'il est resté muet, éteint tant qu'aucun tour n'a été joué. Aucun appel
-            n'est fait pour l'allumer : un sondage coûterait une requête par tic (QUOTAS). */}
+            rouge s'il est resté muet (avec sa raison, V3.1-223), éteint tant qu'aucun tour
+            n'a été joué ou qu'aucun fournisseur n'est déclaré. Aucun appel n'est fait pour
+            l'allumer : un sondage coûterait une requête par tic (QUOTAS). */}
         <p className="mb-1 flex items-center gap-1.5 text-xs text-ink-muted">
           <span
             aria-hidden="true"
-            className={`h-1.5 w-1.5 rounded-full ${narrationEtat === "repond" ? "bg-success" : narrationEtat === "muet" ? "bg-danger" : "bg-ink-muted"}`}
+            className={`h-1.5 w-1.5 rounded-full ${narrationEtat === "repond" ? "bg-success" : narrationEtat === "inconnu" || narrationEtat === "aucun_fournisseur" ? "bg-ink-muted" : "bg-danger"}`}
           />
-          {narrationEtat === "repond" ? t("iaRepond") : narrationEtat === "muet" ? t("iaMuette") : t("iaInconnue")}
+          {t(LIBELLE_ETAT_IA[narrationEtat])}
         </p>
         <IntentBar
           worldSlug={worldSlug}
@@ -222,7 +235,7 @@ export default function SoloScreen({
           onPendingChange={setPending}
           onActed={apresGeste}
           onEnCours={setTourEnCours}
-          onNarration={(repondu) => setNarrationEtat(repondu ? "repond" : "muet")}
+          onNarration={(raison) => setNarrationEtat(raison ?? "repond")}
         />
       </div>
       {feuilleConsequences && (

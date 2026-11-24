@@ -1,4 +1,5 @@
 import "server-only";
+import type { RaisonSansNarration } from "@/src/core/ai/providerError";
 
 export type AiCompletionRole = "system" | "user" | "assistant";
 
@@ -53,4 +54,19 @@ export interface AiProvider {
   complete(request: CompletionRequest): Promise<CompletionResult>;
   embed(texts: string[]): Promise<number[][]>;
   capabilities(): AiCapabilities;
+}
+
+/**
+ * Un appel refusé ou perdu par le fournisseur, avec sa raison lisible par
+ * l'écran (crédit épuisé, clé refusée, délai dépassé…). Le message, lui, reste
+ * pour la console du serveur : il peut contenir un extrait du corps d'erreur.
+ */
+export class AiProviderError extends Error {
+  constructor(
+    public readonly raison: Exclude<RaisonSansNarration, "aucun_fournisseur">,
+    message: string,
+  ) {
+    super(message);
+    this.name = "AiProviderError";
+  }
 }
