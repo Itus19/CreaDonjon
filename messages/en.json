@@ -1289,6 +1289,11 @@
     "survol": "{face}: {nombre, plural, one {# time} other {# times}}"
   },
   "table": {
+    "enReserve": "In reserve",
+    "reserveAide": "Not ticked by default in “Whole table”.",
+    "mettreEnReserve": "Move to reserve",
+    "remettreALaTable": "Back to the table",
+    "erreurReserve": "The reserve could not be saved.",
     "titre": "Table",
     "description": "The campaign's player characters: game state, counters, purse and rests, one action at a time.",
     "aucuneCampagne": "No campaign in this world — create one in the Campaigns tab.",

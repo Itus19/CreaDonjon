@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_TABLE_SETTINGS } from "@/src/core/campaigns/tableSettings";
+import { DEFAULT_TABLE_SETTINGS, zCampaignTableSettings } from "@/src/core/campaigns/tableSettings";
 import { arbreRulesets, baseDeRetour, bornerInspirationMax, peutExporter, reglagesParDefaut, type RulesetListe } from "./reglesActives";
 
 function r(id: string, parent: string | null, extra: Partial<RulesetListe> = {}): RulesetListe {
@@ -51,7 +51,9 @@ describe("baseDeRetour", () => {
 
 describe("réglages de table", () => {
   it("« Par défaut » remet les six réglages et l'inspiration au plus", () => {
-    expect(reglagesParDefaut()).toEqual(DEFAULT_TABLE_SETTINGS);
+    expect(reglagesParDefaut()).toEqual({ inspiration_max: DEFAULT_TABLE_SETTINGS.inspiration_max, player_can_edit: DEFAULT_TABLE_SETTINGS.player_can_edit });
+    // Le schéma d'écriture l'accepte : ni la façon de jouer ni la réserve n'y figurent.
+    expect(zCampaignTableSettings.safeParse(reglagesParDefaut()).success).toBe(true);
     expect(reglagesParDefaut().player_can_edit).not.toBe(DEFAULT_TABLE_SETTINGS.player_can_edit);
   });
 

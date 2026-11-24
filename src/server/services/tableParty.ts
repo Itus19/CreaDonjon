@@ -9,6 +9,8 @@ import { evaluate } from "@/src/core/formula/evaluate";
 import { resolveCharacterActionContext, getOrInitializeRuntimeState, type RuntimeStateView } from "@/src/server/services/characterActions";
 import { listWorldPlayerCharacters } from "@/src/server/services/worldPlayerCharacters";
 import { getDisplayNamesForUsers } from "@/src/server/repos/activityJournal";
+import { getCampaignTableSettingsRaw } from "@/src/server/repos/campaigns";
+import { estEnReserve, parseTableSettings } from "@/src/core/campaigns/tableSettings";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -40,6 +42,8 @@ export interface TablePc {
   runtimeState: RuntimeStateView;
   resources: TableResource[];
   currency: Currency;
+  /** AG-14 : le PJ est « en réserve » (réglages de la campagne). */
+  enReserve: boolean;
 }
 
 const NEVER_ROLLS = {
@@ -74,7 +78,8 @@ export async function getTableParty(
   // joueuses partent avec eux. Un PJ après l'autre coûtait une quinzaine de
   // vagues par PJ (33 pour deux PJ). La chaîne de rulesets, gardée en promesse
   // sur le client de la requête (`walkRulesetChain`), est partagée.
-  const [names, resolus] = await Promise.all([
+  // AG-14 : les réglages (la réserve) partent dans la même vague, une lecture d'une colonne.
+  const [names, resolus, reglagesBruts] = await Promise.all([
     getDisplayNamesForUsers(
       supabase,
       pcs.map((pc) => pc.claimedByUserId).filter((id): id is string => id !== null)
@@ -87,7 +92,9 @@ export async function getTableParty(
         return { pc, ctx, runtimeState };
       })
     ),
+    getCampaignTableSettingsRaw(supabase, params.campaignId),
   ]);
+  const reglages = parseTableSettings(reglagesBruts);
 
   const table: TablePc[] = [];
   for (const resolu of resolus) {
@@ -113,6 +120,7 @@ export async function getTableParty(
         used: used[t.id] ?? 0,
       })),
       currency: ctx.inventoryData?.currency ?? { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 },
+      enReserve: estEnReserve(reglages, pc.entityId),
     });
   }
   return table;

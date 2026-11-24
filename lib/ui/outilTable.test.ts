@@ -36,6 +36,7 @@ function pj(patch: Partial<TablePc> = {}, etat: Partial<RuntimeState> = {}): Tab
   return {
     entityId: "e1",
     entitySlug: "perrin",
+    enReserve: false,
     name: "Perrin",
     playerName: "Gaby",
     speciesLabel: "Humain",

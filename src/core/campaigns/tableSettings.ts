@@ -23,6 +23,12 @@ export interface CampaignTableSettings {
    */
   play_style: PlayStyle;
   player_can_edit: Record<PlayerEditableField, boolean>;
+  /**
+   * AG-14 — les PJ « en réserve » (identifiants d'entité) : un PJ invité qui
+   * n'est pas toujours là. Rien n'est supprimé : l'outil Table replie leur
+   * carte et « Toute la table » ne les coche plus d'office.
+   */
+  reserve: string[];
 }
 
 /** Decides par l'auteur le 4 octobre : etats et inspiration au MJ, le reste a la joueuse. */
@@ -30,7 +36,11 @@ export const DEFAULT_TABLE_SETTINGS: CampaignTableSettings = {
   inspiration_max: 1,
   play_style: "table",
   player_can_edit: { conditions: false, inspiration: false, hp: true, currency: true, spell_slots: true, hit_dice: true },
+  reserve: [],
 };
+
+/** Une campagne compte quelques PJ : la borne protège seulement la colonne d'une écriture démesurée. */
+const RESERVE_MAX = 50;
 
 /** Schema d'ECRITURE : partiel (un reglage a la fois), strict (aucune cle inconnue), bornes. */
 export const zCampaignTableSettings = z
@@ -40,6 +50,8 @@ export const zCampaignTableSettings = z
       .object(Object.fromEntries(PLAYER_EDITABLE_FIELDS.map((f) => [f, z.boolean().optional()])) as Record<PlayerEditableField, z.ZodOptional<z.ZodBoolean>>)
       .strict()
       .optional(),
+    /** AG-14 : la liste entière, écrite d'un bloc. */
+    reserve: z.array(z.string().uuid()).max(RESERVE_MAX).optional(),
   })
   .strict();
 export type CampaignTableSettingsPatch = z.infer<typeof zCampaignTableSettings>;
@@ -60,7 +72,19 @@ export function parseTableSettings(raw: unknown): CampaignTableSettings {
     player_can_edit: Object.fromEntries(
       PLAYER_EDITABLE_FIELDS.map((f) => [f, typeof edits[f] === "boolean" ? (edits[f] as boolean) : DEFAULT_TABLE_SETTINGS.player_can_edit[f]])
     ) as Record<PlayerEditableField, boolean>,
+    reserve: lireReserve(source.reserve),
   };
+}
+
+function lireReserve(valeur: unknown): string[] {
+  if (!Array.isArray(valeur)) return [];
+  const ids = valeur.filter((v): v is string => typeof v === "string" && z.string().uuid().safeParse(v).success);
+  return [...new Set(ids)].slice(0, RESERVE_MAX);
+}
+
+/** AG-14 : ce PJ est-il en réserve ? */
+export function estEnReserve(settings: CampaignTableSettings, entityId: string): boolean {
+  return settings.reserve.includes(entityId);
 }
 
 /** Applique un reglage partiel sur les reglages courants (route d'ecriture du MJ). */
@@ -71,6 +95,7 @@ export function mergeTableSettings(current: CampaignTableSettings, patch: Campai
     player_can_edit: Object.fromEntries(
       PLAYER_EDITABLE_FIELDS.map((f) => [f, patch.player_can_edit?.[f] ?? current.player_can_edit[f]])
     ) as Record<PlayerEditableField, boolean>,
+    reserve: patch.reserve ? [...new Set(patch.reserve)] : current.reserve,
   };
 }
 

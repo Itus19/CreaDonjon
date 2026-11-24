@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_TABLE_SETTINGS, mayPlayerChange, mergeTableSettings, parseTableSettings, sheetControls, showsRemotePlay, withPlayStyle, zCampaignTableSettings } from "./tableSettings";
+import { DEFAULT_TABLE_SETTINGS, estEnReserve, mayPlayerChange, mergeTableSettings, parseTableSettings, sheetControls, showsRemotePlay, withPlayStyle, zCampaignTableSettings } from "./tableSettings";
 
 describe("réglages de table (V3.1-108, ADR 0036 §5 et 0043)", () => {
   it("donne les valeurs par défaut décidées à une colonne vide", () => {
@@ -7,6 +7,7 @@ describe("réglages de table (V3.1-108, ADR 0036 §5 et 0043)", () => {
       inspiration_max: 1,
       play_style: "table",
       player_can_edit: { conditions: false, inspiration: false, hp: true, currency: true, spell_slots: true, hit_dice: true },
+      reserve: [],
     });
     expect(DEFAULT_TABLE_SETTINGS.player_can_edit.hp).toBe(true);
   });
@@ -98,5 +99,28 @@ describe("la façon de jouer (ADR 0103)", () => {
     expect(showsRemotePlay(withPlayStyle(DEFAULT_TABLE_SETTINGS, "table"))).toBe(false);
     expect(showsRemotePlay(withPlayStyle(DEFAULT_TABLE_SETTINGS, "remote"))).toBe(true);
     expect(showsRemotePlay(withPlayStyle(DEFAULT_TABLE_SETTINGS, "both"))).toBe(true);
+  });
+});
+
+describe("les PJ en réserve (AG-14)", () => {
+  const A = "11111111-1111-4111-8111-111111111111";
+  const B = "22222222-2222-4222-8222-222222222222";
+  it("se lisent comme une liste d'identifiants, sans doublon ni valeur illisible", () => {
+    expect(parseTableSettings({ reserve: [A, A, 42, "pas-un-id", B] }).reserve).toEqual([A, B]);
+    expect(parseTableSettings({ reserve: "x" }).reserve).toEqual([]);
+  });
+  it("s'écrivent d'un bloc, et ne touchent ni à la façon de jouer ni aux autres réglages", () => {
+    expect(zCampaignTableSettings.safeParse({ reserve: [A] }).success).toBe(true);
+    expect(zCampaignTableSettings.safeParse({ reserve: ["pas-un-id"] }).success).toBe(false);
+    const distance = withPlayStyle(DEFAULT_TABLE_SETTINGS, "remote");
+    const apres = mergeTableSettings(distance, { reserve: [A] });
+    expect(apres.reserve).toEqual([A]);
+    expect(apres.play_style).toBe("remote");
+    expect(mergeTableSettings(apres, { inspiration_max: 2 }).reserve).toEqual([A]);
+  });
+  it("dit si un PJ est en réserve", () => {
+    const s = mergeTableSettings(DEFAULT_TABLE_SETTINGS, { reserve: [A] });
+    expect(estEnReserve(s, A)).toBe(true);
+    expect(estEnReserve(s, B)).toBe(false);
   });
 });

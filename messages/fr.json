@@ -1290,6 +1290,11 @@
     "survol": "{face} : {nombre} fois"
   },
   "table": {
+    "enReserve": "En réserve",
+    "reserveAide": "Pas cochés d'office dans « Toute la table ».",
+    "mettreEnReserve": "Mettre en réserve",
+    "remettreALaTable": "Remettre à la table",
+    "erreurReserve": "La réserve n'a pas pu être enregistrée.",
     "titre": "Table",
     "description": "Les personnages joueurs de la campagne : état de jeu, compteurs, bourse et repos, geste par geste.",
     "aucuneCampagne": "Aucune campagne dans ce monde — créez-en une dans l'onglet Campagnes.",

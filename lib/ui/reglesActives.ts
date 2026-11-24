@@ -1,7 +1,6 @@
 import {
   DEFAULT_TABLE_SETTINGS,
   PLAYER_EDITABLE_FIELDS,
-  type CampaignTableSettings,
   type CampaignTableSettingsPatch,
   type PlayerEditableField,
 } from "@/src/core/campaigns/tableSettings";
@@ -59,9 +58,13 @@ export function baseDeRetour(options: readonly RulesetListe[], id: string): Rule
 /** Les six interrupteurs, dans l'ordre de la planche. */
 export const INTERRUPTEURS_TABLE: readonly PlayerEditableField[] = PLAYER_EDITABLE_FIELDS;
 
-/** « Par défaut » : un seul patch complet, les six réglages ET l'inspiration au plus. */
-export function reglagesParDefaut(): CampaignTableSettings {
-  return { inspiration_max: DEFAULT_TABLE_SETTINGS.inspiration_max, play_style: DEFAULT_TABLE_SETTINGS.play_style, player_can_edit: { ...DEFAULT_TABLE_SETTINGS.player_can_edit } };
+/**
+ * « Par défaut » : un seul patch, les six réglages ET l'inspiration au plus.
+ * Ni la façon de jouer (sa route à elle, ADR 0103 : le schéma d'écriture la
+ * refuse) ni les PJ en réserve (AG-14) : ce bouton ne les remet pas à zéro.
+ */
+export function reglagesParDefaut(): CampaignTableSettingsPatch {
+  return { inspiration_max: DEFAULT_TABLE_SETTINGS.inspiration_max, player_can_edit: { ...DEFAULT_TABLE_SETTINGS.player_can_edit } };
 }
 
 /** L'inspiration au plus reste entre 1 et 5 (bornes du schéma d'écriture). */
