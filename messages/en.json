@@ -207,6 +207,7 @@
     "maitrisesAccordees": "Granted by a rule"
   },
   "regles": {
+    "nouvelleRegle": "New rule",
     "monnaie": {
       "modifierSysteme": "Edit the currency system",
       "titre": "Currency system",

@@ -208,6 +208,7 @@
     "maitrisesAccordees": "Accordées par une règle"
   },
   "regles": {
+    "nouvelleRegle": "Nouvelle règle",
     "monnaie": {
       "modifierSysteme": "Modifier le système monétaire",
       "titre": "Système monétaire",

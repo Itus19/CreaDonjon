@@ -10,6 +10,7 @@ import { useOpenRuleToolLink } from "@/components/shell/useOpenRuleToolLink";
 import { useCollapsedGroups } from "@/components/shell/useCollapsedGroups";
 import { useRecents } from "@/components/shell/useRecents";
 import { useWorldRuleEntries } from "@/components/blocks/useWorldRuleEntries";
+import { IconeRail } from "@/components/shell/Rail";
 import AddRuleMenu from "@/components/rules/AddRuleMenu";
 
 /** Lien vers une règle : s'ouvre dans la zone de travail (volets) sur ordinateur, navigue sur téléphone. */
@@ -254,7 +255,7 @@ function PastilleRecente({ worldSlug, href, titre, joueur }: { worldSlug: string
  * « Récemment » de l'espace `joueur-regles`, catégories) mais sans « Ajouter »
  * ni bacs à sable, et des liens ordinaires vers `/joueur/regles/<clé>`.
  */
-export default function SommaireRegles({ worldSlug, joueur = false }: { worldSlug: string; joueur?: boolean }) {
+export default function SommaireRegles({ worldSlug, joueur = false, rail = false }: { worldSlug: string; joueur?: boolean; rail?: boolean }) {
   const entries = useWorldRuleEntries(worldSlug);
   const t = useTranslations("regles");
   const tLecteur = useTranslations("lecteur");
@@ -264,21 +265,12 @@ export default function SommaireRegles({ worldSlug, joueur = false }: { worldSlu
   const recents = useRecents(worldSlug, joueur ? "joueur-regles" : "mj-regles");
   const { groups, subclassesByParent, subspeciesByParent, classNameByKey } = useGroupesRegles(entries, query);
 
-  // Fenetres de creation de regle et bacs a sable : memes hooks que l'ancienne
-  // barre, jamais une navigation qui fermerait le brouillon d'une autre fiche.
-  const openNouvelleArme = useOpenRuleToolLink(worldSlug, "nouvelle-arme");
-  const openNouvelHistorique = useOpenRuleToolLink(worldSlug, "nouvel-historique");
-  const openNouveauDon = useOpenRuleToolLink(worldSlug, "nouveau-don");
-  const openNouvelleSousClasse = useOpenRuleToolLink(worldSlug, "nouvelle-sous-classe");
-  const openNouveauSort = useOpenRuleToolLink(worldSlug, "nouveau-sort");
-  const openBacASable = useOpenRuleToolLink(worldSlug, "bac-a-sable");
-  const openBacASableDeclencheurs = useOpenRuleToolLink(worldSlug, "bac-a-sable-declencheurs");
 
   const base = joueur ? `/m/${worldSlug}/joueur/regles` : undefined;
   const recentes = query.trim() === "" ? recents.slice(0, 5) : [];
 
   return (
-    <div className={`flex h-full min-h-0 w-full flex-col gap-2 ${joueur ? "" : "border-r border-edge bg-panel-sunken px-2.5 py-3"}`}>
+    <div className={`flex h-full min-h-0 w-full flex-col gap-2 ${joueur || rail ? "" : "border-r border-edge bg-panel-sunken px-2.5 py-3"}`}>
       <input
         value={query}
         onChange={(e) => setQuery(e.target.value)}
@@ -316,35 +308,44 @@ export default function SommaireRegles({ worldSlug, joueur = false }: { worldSlu
         ))}
       </nav>
 
-      {!joueur && (
-      <div className="flex shrink-0 flex-col gap-1.5 border-t border-edge pt-2">
-        <AddRuleMenu
-          label={t("ajouterUneRegleMenu")}
-          items={[
-            { href: openNouvelleArme.href, label: t("creerArmeMaison"), onClick: openNouvelleArme.onClick },
-            { href: openNouvelHistorique.href, label: t("creerHistoriqueMaison"), onClick: openNouvelHistorique.onClick },
-            { href: openNouveauDon.href, label: t("creerDonMaison"), onClick: openNouveauDon.onClick },
-            { href: openNouvelleSousClasse.href, label: t("creerSousClasseMaison"), onClick: openNouvelleSousClasse.onClick },
-            { href: openNouveauSort.href, label: t("creerSortMaison"), onClick: openNouveauSort.onClick },
-          ]}
-        />
-        <AddRuleMenu
-          contour
-          label={t("bacsASableMenu")}
-          items={[
-            { href: openBacASable.href, label: t("bacASable"), onClick: openBacASable.onClick },
-            { href: openBacASableDeclencheurs.href, label: t("bacASableDeclencheurs"), onClick: openBacASableDeclencheurs.onClick },
-          ]}
-        />
-        {/* V3.1-132 : la vue des règles à rendre jouables (page serveur, MJ seulement). */}
-        <Link
-          href={`/m/${encodeURIComponent(worldSlug)}/regles/non-jouables`}
-          className="block w-full rounded-full border border-edge px-3 py-1.5 text-center text-[12.5px] text-ink transition-colors hover:bg-panel-raised"
-        >
-          {t("briques.nonJouablesLien")}
-        </Link>
-      </div>
+      {!joueur && rail && (
+        <div className="shrink-0 pt-1">
+          <NouvelleRegleMenu worldSlug={worldSlug} />
+        </div>
       )}
     </div>
+  );
+}
+
+/**
+ * AG-15 — un seul bouton « Nouvelle règle », toujours visible au pied du rail
+ * comme « Nouvelle entité » ; il regroupe les trois boutons d'avant (créer,
+ * bacs à sable, règles à rendre jouables). Chaque création s'ouvre en volet.
+ */
+export function NouvelleRegleMenu({ worldSlug }: { worldSlug: string }) {
+  const t = useTranslations("regles");
+  const openNouvelleArme = useOpenRuleToolLink(worldSlug, "nouvelle-arme");
+  const openNouvelHistorique = useOpenRuleToolLink(worldSlug, "nouvel-historique");
+  const openNouveauDon = useOpenRuleToolLink(worldSlug, "nouveau-don");
+  const openNouvelleSousClasse = useOpenRuleToolLink(worldSlug, "nouvelle-sous-classe");
+  const openNouveauSort = useOpenRuleToolLink(worldSlug, "nouveau-sort");
+  const openBacASable = useOpenRuleToolLink(worldSlug, "bac-a-sable");
+  const openBacASableDeclencheurs = useOpenRuleToolLink(worldSlug, "bac-a-sable-declencheurs");
+  return (
+    <AddRuleMenu
+      rail={{ icone: <IconeRail nom="plus" /> }}
+      label={t("nouvelleRegle")}
+      items={[
+        { href: openNouvelleArme.href, label: t("creerArmeMaison"), onClick: openNouvelleArme.onClick },
+        { href: openNouvelHistorique.href, label: t("creerHistoriqueMaison"), onClick: openNouvelHistorique.onClick },
+        { href: openNouveauDon.href, label: t("creerDonMaison"), onClick: openNouveauDon.onClick },
+        { href: openNouvelleSousClasse.href, label: t("creerSousClasseMaison"), onClick: openNouvelleSousClasse.onClick },
+        { href: openNouveauSort.href, label: t("creerSortMaison"), onClick: openNouveauSort.onClick },
+        { href: openBacASable.href, label: t("bacASable"), onClick: openBacASable.onClick, separateurAvant: true },
+        { href: openBacASableDeclencheurs.href, label: t("bacASableDeclencheurs"), onClick: openBacASableDeclencheurs.onClick },
+        // V3.1-132 : la vue des règles à rendre jouables (page serveur, MJ seulement).
+        { href: `/m/${encodeURIComponent(worldSlug)}/regles/non-jouables`, label: t("briques.nonJouablesLien") },
+      ]}
+    />
   );
 }

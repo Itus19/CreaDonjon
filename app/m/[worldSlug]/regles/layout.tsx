@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getWorldBySlug } from "@/src/server/services/worlds";
 import RulesSidebar from "@/components/rules/RulesSidebar";
-import SommaireRegles from "@/components/rules/SommaireRegles";
 import WindowsDesktop from "@/components/shell/WindowsDesktop";
 
 /**
@@ -28,7 +27,7 @@ export default async function ReglesLayout({
   return (
     <>
       <RulesSidebar worldSlug={worldSlug} worldName={world.name} />
-      <WindowsDesktop worldSlug={worldSlug} sommaire={<SommaireRegles worldSlug={worldSlug} />}>{children}</WindowsDesktop>
+      <WindowsDesktop worldSlug={worldSlug}>{children}</WindowsDesktop>
     </>
   );
 }
