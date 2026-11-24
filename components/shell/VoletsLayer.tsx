@@ -83,8 +83,14 @@ function useRectZone(zone: HTMLElement | null): Mesure | null {
  * dessous (`top-10`).
  */
 const MIME_ONGLET = "text/plain";
-/** Ecart (px) entre les volets et le rail ou les bords de l'ecran. */
+/** Ecart (px) entre les volets et le rail ou le bord droit de l'ecran. */
 const MARGE = 8;
+/**
+ * AG-16 — ecart (px) en haut et en bas : celui du rail (`md:my-5`, 1,25 rem,
+ * `Rail.tsx`), pour que les volets aient exactement la hauteur de la barre
+ * laterale. Le contenu d'une fiche defile dans son volet, jamais la page.
+ */
+const MARGE_VERTICALE = 20;
 
 /**
  * Les fenetres du MJ en deux volets a onglets (V3.1-20, ADR 0066) — montee
@@ -102,9 +108,11 @@ export default function VoletsLayer({ worldSlug }: { worldSlug: string }) {
   const state = useDesktopWindowsState();
   const isMobile = useMatchMedia(WINDOWS_MOBILE_QUERY);
   const zone = useRectZone(state?.zone ?? null);
-  // Les volets se tiennent a 8 px du rail et des bords de l'ecran : le fond
-  // du monde se voit autour, comme autour du rail.
-  const rect = zone ? { left: zone.left + MARGE, top: zone.top + MARGE, width: zone.width - 2 * MARGE, height: zone.height - 2 * MARGE } : null;
+  // Les volets se tiennent a 8 px du rail et du bord droit, et a la hauteur
+  // du rail (AG-16) : le fond du monde se voit autour, comme autour du rail.
+  const rect = zone
+    ? { left: zone.left + MARGE, top: zone.top + MARGE_VERTICALE, width: zone.width - 2 * MARGE, height: zone.height - 2 * MARGE_VERTICALE }
+    : null;
   const [partageGlisse, setPartageGlisse] = useState<number | null>(null);
   const [glisse, setGlisse] = useState<string | null>(null);
   const [cible, setCible] = useState<number | null>(null);
