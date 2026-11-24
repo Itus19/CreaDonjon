@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { zPlayStyle } from "@/src/core/remote/feed";
 import { zWorldExport } from "@/src/core/schemas/worldExport";
 import { zCalendarConfig } from "@/src/core/schemas/calendar";
 
@@ -13,6 +14,8 @@ export const createWorldSchema = z.object({
   name: z.string().trim().min(1, "Le nom est requis.").max(100, "100 caractères maximum."),
   rulesetId: z.string().uuid("Choisissez un ruleset."),
   mode: z.enum(["campaign", "solo"]),
+  /** ADR 0103 : la façon de jouer d'une campagne à MJ humain, choisie dès la création. Absente : à table. */
+  playStyle: zPlayStyle.default("table"),
 });
 
 /** Import de monde (V2-G1, dernier point) : mode choisi par la personne qui importe, jamais impose par le fichier — meme logique qu'a la creation. */

@@ -8,6 +8,9 @@ import { isSuperadmin } from "@/src/server/services/account";
 import { isWorldAdmin } from "@/src/server/services/permissions";
 import CampaignsPanel from "@/components/shell/CampaignsPanel";
 import RegisterPrimaryWindow from "@/components/shell/RegisterPrimaryWindow";
+import FaconDeJouerPanel from "@/components/distance/FaconDeJouerPanel";
+import { getCampaignTableSettingsRaw } from "@/src/server/repos/campaigns";
+import { parseTableSettings } from "@/src/core/campaigns/tableSettings";
 
 /**
  * Gestion de campagne (V2-M7 suite, retour utilisateur : "separe les deux
@@ -44,6 +47,9 @@ export default async function MjGestionCampagnePage({
     user ? isSuperadmin(supabase, user.id) : Promise.resolve(false),
     user ? isWorldAdmin(supabase, { worldId: world.id, userId: user.id }) : Promise.resolve(false),
   ]);
+  // ADR 0103 : la façon de jouer, lue seulement pour le MJ d'une campagne existante.
+  const campagne = campaigns[0] ?? null;
+  const reglages = gm && campagne ? await getCampaignTableSettingsRaw(supabase, campagne.id) : undefined;
 
   return (
     <div className="flex flex-col gap-4">
@@ -68,6 +74,9 @@ export default async function MjGestionCampagnePage({
         canUseSoloMode={superadmin}
         canManage={gm}
       />
+      {campagne && reglages !== undefined && (
+        <FaconDeJouerPanel worldSlug={worldSlug} campaignId={campagne.id} initial={parseTableSettings(reglages).play_style} />
+      )}
     </div>
   );
 }

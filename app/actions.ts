@@ -28,6 +28,7 @@ export async function createWorldAction(
     name: formData.get("name"),
     rulesetId: formData.get("rulesetId"),
     mode: formData.get("mode"),
+    playStyle: formData.get("playStyle") ?? undefined,
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Formulaire invalide." };
@@ -53,6 +54,7 @@ export async function createWorldAction(
     name: parsed.data.name,
     rulesetId: parsed.data.rulesetId,
     mode: parsed.data.mode,
+    playStyle: parsed.data.playStyle,
   });
   revalidatePath("/");
   redirect(parsed.data.mode === "solo" ? `/m/${world.slug}/mj/creation-personnage` : `/m/${world.slug}`);

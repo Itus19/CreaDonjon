@@ -5,6 +5,8 @@ import { isWorldAdmin } from "@/src/server/services/permissions";
 import { listCampaigns, resolveCampaignId } from "@/src/server/services/campaigns";
 import { countRequestsReadyToFix } from "@/src/server/services/scheduling";
 import MjSidebar from "@/components/shell/MjSidebar";
+import { getCampaignTableSettingsRaw } from "@/src/server/repos/campaigns";
+import { parseTableSettings, showsRemotePlay } from "@/src/core/campaigns/tableSettings";
 import WindowsDesktop from "@/components/shell/WindowsDesktop";
 
 /**
@@ -60,11 +62,20 @@ export default async function MjLayout({
   // légères, `countRequestsReadyToFix`). Le layout ne se relit qu'au
   // chargement d'une page, pas à chaque navigation entre outils.
   const campaignId = await resolveCampaignId(supabase, world.id);
-  const demandesAFixer = campaignId ? await countRequestsReadyToFix(supabase, campaignId) : 0;
+  // ADR 0103 : la façon de jouer, dans la même vague que la pastille.
+  const [demandesAFixer, reglages] = campaignId
+    ? await Promise.all([countRequestsReadyToFix(supabase, campaignId), getCampaignTableSettingsRaw(supabase, campaignId)])
+    : [0, undefined];
 
   return (
     <>
-      <MjSidebar worldSlug={worldSlug} worldName={world.name} campaignName={campaignName} demandesAFixer={demandesAFixer} />
+      <MjSidebar
+        worldSlug={worldSlug}
+        worldName={world.name}
+        campaignName={campaignName}
+        demandesAFixer={demandesAFixer}
+        jeuADistance={reglages !== undefined && showsRemotePlay(parseTableSettings(reglages))}
+      />
       <WindowsDesktop>{children}</WindowsDesktop>
     </>
   );

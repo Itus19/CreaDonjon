@@ -6,6 +6,8 @@ import { isWorldAdmin } from "@/src/server/services/permissions";
 import { countUnansweredRequests, getNextSession } from "@/src/server/services/scheduling";
 import PlayerShell from "@/components/shell/PlayerShell";
 import { getMyOpenDevoir } from "@/src/server/services/sessionJournal";
+import { getCampaignTableSettingsRaw } from "@/src/server/repos/campaigns";
+import { parseTableSettings, showsRemotePlay } from "@/src/core/campaigns/tableSettings";
 
 /**
  * Coquille joueur (V2-M7b) — a l'ecart de `MondeShell`/`WindowsDesktop`
@@ -40,18 +42,20 @@ export default async function JoueurLayout({
   // V3.1-190 : le nombre de demandes qui attendent ma réponse (la pastille),
   // dans la même vague — quatre lectures légères quel que soit le nombre de
   // demandes (`countUnansweredRequests`).
-  const [humanGm, nextSession, demandesEnAttente, devoir, estAdmin] = await Promise.all([
+  const [humanGm, nextSession, demandesEnAttente, devoir, estAdmin, reglages] = await Promise.all([
     campaignId ? hasHumanGm(supabase, campaignId) : Promise.resolve(false),
     campaignId ? getNextSession(supabase, campaignId) : Promise.resolve(null),
     campaignId ? countUnansweredRequests(supabase, campaignId, user.id) : Promise.resolve(0),
     campaignId ? getMyOpenDevoir(supabase, { worldId: world.id, campaignId, userId: user.id }) : Promise.resolve(null),
     // V3.1-222 : dans la même vague (docs/CABLAGE.md C1), jamais un appel de plus après l'affichage.
     isWorldAdmin(supabase, { worldId: world.id, userId: user.id }),
+    // ADR 0103 : la façon de jouer décide si l'onglet du jeu à distance s'affiche ; une lecture légère, même vague.
+    campaignId ? getCampaignTableSettingsRaw(supabase, campaignId) : Promise.resolve(undefined),
   ]);
   const prochaineSession = campaignId ? { date: nextSession?.scheduled_date ?? null, demandesEnAttente } : null;
 
   return (
-    <PlayerShell worldSlug={worldSlug} worldName={world.name} hasHumanGm={humanGm} estAdminDuMonde={estAdmin} prochaineSession={prochaineSession} devoir={devoir}>
+    <PlayerShell worldSlug={worldSlug} worldName={world.name} hasHumanGm={humanGm} jeuADistance={reglages !== undefined && showsRemotePlay(parseTableSettings(reglages))} estAdminDuMonde={estAdmin} prochaineSession={prochaineSession} devoir={devoir}>
       {children}
     </PlayerShell>
   );

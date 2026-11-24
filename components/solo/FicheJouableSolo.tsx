@@ -90,12 +90,19 @@ export default function FicheJouableSolo({
   entityId,
   campaignId,
   entityName,
+  sonder = true,
 }: {
   worldSlug: string;
   entityId: string;
   campaignId: string;
   /** Le nom vient de l'entité, jamais du bloc `character` — qui ne porte pas ce champ. */
   entityName: string;
+  /**
+   * ADR 0103 : le jeu à distance n'a pas de demande en cours à suivre (ses
+   * demandes de jet vivent dans le fil, en temps réel) ; il lit la fiche une
+   * fois, sans sonder (QUOTAS Q2). Le solo garde son sondage.
+   */
+  sonder?: boolean;
 }) {
   const [blocks, setBlocks] = useState<BlockItem[] | "loading" | "error">("loading");
   const [remote, setRemote] = useState<SheetApiResponse | null>(null);
@@ -146,12 +153,12 @@ export default function FicheJouableSolo({
       if (!cancelled && res.ok) setRemote(await res.json());
     }
     poll();
-    const interval = setInterval(poll, 4000);
+    const interval = sonder ? setInterval(poll, 4000) : null;
     return () => {
       cancelled = true;
-      clearInterval(interval);
+      if (interval) clearInterval(interval);
     };
-  }, [entityId, campaignId]);
+  }, [entityId, campaignId, sonder]);
 
   // Le Jeu ne sonde plus `/sheet` : il lit la demande en cours que CE sondage publie, et demande une recharge après un geste.
   useEffect(() => {

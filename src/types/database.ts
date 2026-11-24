@@ -2232,6 +2232,87 @@ export type Database = {
           },
         ]
       }
+      roll_request_gm_details: {
+        Row: {
+          dc: number
+          request_id: string
+        }
+        Insert: {
+          dc: number
+          request_id: string
+        }
+        Update: {
+          dc?: number
+          request_id?: string
+        }
+        Relationships: []
+      }
+      roll_requests: {
+        Row: {
+          advantage: string
+          answer_event_id: string | null
+          answered_at: string | null
+          author_user_id: string
+          by_hand: boolean | null
+          campaign_id: string
+          check_key: string
+          check_kind: string
+          created_at: string
+          dc_shown: number | null
+          event_id: string | null
+          id: string
+          label: string
+          natural_roll: number | null
+          session_id: string
+          status: string
+          target_entity_id: string | null
+          target_user_id: string
+          total: number | null
+        }
+        Insert: {
+          advantage?: string
+          answer_event_id?: string | null
+          answered_at?: string | null
+          author_user_id?: string
+          by_hand?: boolean | null
+          campaign_id: string
+          check_key: string
+          check_kind: string
+          created_at?: string
+          dc_shown?: number | null
+          event_id?: string | null
+          id?: string
+          label: string
+          natural_roll?: number | null
+          session_id: string
+          status?: string
+          target_entity_id?: string | null
+          target_user_id: string
+          total?: number | null
+        }
+        Update: {
+          advantage?: string
+          answer_event_id?: string | null
+          answered_at?: string | null
+          author_user_id?: string
+          by_hand?: boolean | null
+          campaign_id?: string
+          check_key?: string
+          check_kind?: string
+          created_at?: string
+          dc_shown?: number | null
+          event_id?: string | null
+          id?: string
+          label?: string
+          natural_roll?: number | null
+          session_id?: string
+          status?: string
+          target_entity_id?: string | null
+          target_user_id?: string
+          total?: number | null
+        }
+        Relationships: []
+      }
       ruleset_entries: {
         Row: {
           ai_digest: string | null
@@ -2682,6 +2763,7 @@ export type Database = {
           payload: Json
           seq: number
           session_id: string
+          visible_to: string[] | null
         }
         Insert: {
           actor: string
@@ -2692,6 +2774,7 @@ export type Database = {
           payload?: Json
           seq: number
           session_id: string
+          visible_to?: string[] | null
         }
         Update: {
           actor?: string
@@ -2702,6 +2785,7 @@ export type Database = {
           payload?: Json
           seq?: number
           session_id?: string
+          visible_to?: string[] | null
         }
         Relationships: [
           {
@@ -2766,6 +2850,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      session_reads: {
+        Row: {
+          last_seq: number
+          session_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          last_seq?: number
+          session_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          last_seq?: number
+          session_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       sessions: {
         Row: {
@@ -3113,6 +3218,10 @@ export type Database = {
       }
       answer_roll_window: {
         Args: { p_index: number; p_use: boolean; p_window: string }
+        Returns: Json
+      }
+      answer_roll_request: {
+        Args: { p_answer_event: string | null; p_by_hand: boolean; p_natural: number; p_request: string; p_total: number }
         Returns: Json
       }
       answer_save_request: {
