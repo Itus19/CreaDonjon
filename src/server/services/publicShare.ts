@@ -12,6 +12,7 @@ import { zTextBlockData } from "@/src/core/schemas/blocks/text";
 import { infoboxEntityRefIds, zInfoboxBlockData } from "@/src/core/schemas/blocks/infobox";
 import { zNoteTreeBlockData } from "@/src/core/schemas/blocks/noteTree";
 import { collectRefTargetIds } from "@/src/core/linker/refTargets";
+import { retirerCiblesCachees } from "@/src/core/linker/refsCachees";
 import { relationLabel, type RelationType } from "@/src/core/relations/inverses";
 import { RELATION_LABELS_FR } from "@/src/i18n/fr";
 import { type BlockRow, getBlockById, listBlocksForEntity } from "@/src/server/repos/blocks";
@@ -806,7 +807,10 @@ export async function getPublicEntityDetail(
   // publique ; sinon son identifiant quitte la donnée du bloc.
   const fichesPubliques = new Map(entitesDuMonde.filter((e) => e.is_public).map((e) => [e.id, { name: e.name, slug: e.slug }]));
 
-  const blocksWithQuestRefs = blocksWithTimelineCalendar.map((block) => {
+  // AG-11 : un lien vers une fiche non publique devient du texte, sans son identifiant.
+  const fichesPubliquesIds = new Set(fichesPubliques.keys());
+  const blocksWithQuestRefs = blocksWithTimelineCalendar.map((brut) => {
+    const block = { ...brut, data: retirerCiblesCachees(brut.blockType, brut.data, fichesPubliquesIds) };
     if (block.blockType === "statblock") return resolveLair(block, fichesPubliques);
     if (block.blockType === "text" && entityLookup) {
       const text = zTextBlockData.safeParse(block.data);
