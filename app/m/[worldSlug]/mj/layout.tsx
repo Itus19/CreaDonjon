@@ -6,6 +6,8 @@ import { listCampaigns, resolveCampaignId } from "@/src/server/services/campaign
 import { countRequestsReadyToFix } from "@/src/server/services/scheduling";
 import { countDevoirsAValider } from "@/src/server/services/sessionJournal";
 import MjSidebar from "@/components/shell/MjSidebar";
+import { getCampaignTableSettingsRaw } from "@/src/server/repos/campaigns";
+import { parseTableSettings, showsRemotePlay } from "@/src/core/campaigns/tableSettings";
 import WindowsDesktop from "@/components/shell/WindowsDesktop";
 
 /**
@@ -63,13 +65,25 @@ export default async function MjLayout({
   // vague. Le layout ne se relit qu'au chargement d'une page, pas à chaque
   // navigation entre outils.
   const campaignId = await resolveCampaignId(supabase, world.id);
-  const [demandesAFixer, devoirsAValider] = campaignId
-    ? await Promise.all([countRequestsReadyToFix(supabase, campaignId), countDevoirsAValider(supabase, campaignId)])
-    : [0, 0];
+  // ADR 0103 : la façon de jouer ; AG-8 : les devoirs rendus à valider. Même vague que la pastille.
+  const [demandesAFixer, reglages, devoirsAValider] = campaignId
+    ? await Promise.all([
+        countRequestsReadyToFix(supabase, campaignId),
+        getCampaignTableSettingsRaw(supabase, campaignId),
+        countDevoirsAValider(supabase, campaignId),
+      ])
+    : [0, undefined, 0];
 
   return (
     <>
-      <MjSidebar worldSlug={worldSlug} worldName={world.name} campaignName={campaignName} demandesAFixer={demandesAFixer} devoirsAValider={devoirsAValider} />
+      <MjSidebar
+        worldSlug={worldSlug}
+        worldName={world.name}
+        campaignName={campaignName}
+        demandesAFixer={demandesAFixer}
+        devoirsAValider={devoirsAValider}
+        jeuADistance={reglages !== undefined && showsRemotePlay(parseTableSettings(reglages))}
+      />
       <WindowsDesktop>{children}</WindowsDesktop>
     </>
   );

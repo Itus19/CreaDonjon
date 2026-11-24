@@ -289,6 +289,7 @@ function FeuilleOutils({
 }) {
   const t = useTranslations("shell");
   const tMj = useTranslations("mj");
+  const tDistance = useTranslations("distance");
 
   const libelles: Record<OutilFeuille, string> = {
     initiative: tMj("initiative"),
@@ -325,6 +326,21 @@ function FeuilleOutils({
     <FeuilleDuBas titre={t("outils")} titreVisible onFermer={onFermer}>
       <div className="flex flex-col gap-4 pb-1">
         <RadioWidget worldSlug={worldSlug} variante="feuille" />
+        {/* ADR 0103 : l'écran du jeu à distance (il dit lui-même s'il n'est pas ouvert pour cette campagne). */}
+        <Link
+          href={`/m/${worldSlug}/mj/distance`}
+          prefetch={false}
+          onClick={(e) => {
+            if (e.metaKey || e.ctrlKey || e.shiftKey || e.button === 1) return;
+            e.preventDefault();
+            onAller(`/m/${worldSlug}/mj/distance`);
+          }}
+          className={`flex min-h-11 items-center rounded-2xl border bg-panel px-3 py-2 text-sm transition-colors hover:bg-panel-raised ${
+            pathname === `/m/${worldSlug}/mj/distance` ? "border-accent text-accent" : "border-edge text-ink"
+          }`}
+        >
+          {tDistance("navMj")}
+        </Link>
         {groupes.map((groupe) => (
           <section key={groupe.cle}>
             <h3 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-ink-muted">{groupe.titre}</h3>

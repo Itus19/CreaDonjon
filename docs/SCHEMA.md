@@ -897,6 +897,41 @@ create table session_event_gm_details (
 -- RLS : lecture et écriture par app.is_world_admin (lecture aussi par le superadmin).
 ```
 
+### 12.0 bis Jeu à distance (ADR 0103)
+
+Le fil d'une partie à distance EST le journal de session : le MJ humain y écrit en `narration` / `gm` (`payload.text`), un joueur en `player_action` / `player`.
+
+```sql
+alter table session_events add column visible_to uuid[];  -- null = toute la table ; liste = ces joueurs ; '{}' = le MJ seul
+-- + l'administrateur du monde et l'auteur lisent toujours.
+
+create table roll_requests (
+  id uuid primary key, campaign_id uuid not null, session_id uuid not null,
+  event_id uuid,                 -- le message du MJ qui porte la demande
+  author_user_id uuid not null default auth.uid(),
+  target_user_id uuid not null,  -- le joueur qui répond
+  target_entity_id uuid,         -- son personnage, pour le bonus
+  check_kind text not null check (check_kind in ('skill','ability','save')),
+  check_key text not null, label text not null,
+  advantage text not null default 'none' check (advantage in ('none','advantage','disadvantage')),
+  dc_shown int,                  -- le DD annoncé ; nul quand il est caché
+  status text not null default 'pending' check (status in ('pending','answered','cancelled')),
+  natural_roll int, total int, by_hand boolean, answer_event_id uuid,
+  created_at timestamptz not null default now(), answered_at timestamptz
+);
+create table roll_request_gm_details (request_id uuid primary key references roll_requests(id) on delete cascade, dc int not null);
+create table session_reads (session_id uuid, user_id uuid, last_seq int not null default 0, updated_at timestamptz, primary key (session_id, user_id));
+```
+
+RLS :
+- `session_events` : lecture selon `visible_to` (plus l'administrateur et l'auteur). Insertion : `actor_user_id` nul ou soi-même ; `narration` / `gm` réservé à l'administrateur ; un joueur ne restreint qu'au MJ (`'{}'`).
+- `roll_requests` : lecture par les membres du monde (« Lyra doit lancer ») ; création, modification, suppression par l'administrateur. La réponse passe par `public.answer_roll_request(p_request, p_natural, p_total, p_by_hand, p_answer_event)`, le joueur visé seul, une fois.
+- `roll_request_gm_details` : l'administrateur seul (le DD caché ne part jamais chez le joueur).
+- `session_reads` : sa propre ligne seulement.
+- Temps réel : `session_events` et `roll_requests` sont publiés ; Realtime applique la RLS.
+
+La façon de jouer (`table`, `remote`, `both`) vit dans `campaigns.table_settings.play_style`.
+
 ### 12.0 Chat de campagne (V2-M12/M13, V3.1-22, ADR 0038)
 
 ```sql

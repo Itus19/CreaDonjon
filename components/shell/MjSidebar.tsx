@@ -81,6 +81,7 @@ export default function MjSidebar({
   campaignName,
   demandesAFixer = 0,
   devoirsAValider = 0,
+  jeuADistance = false,
 }: {
   worldSlug: string;
   worldName: string;
@@ -88,11 +89,15 @@ export default function MjSidebar({
   demandesAFixer?: number;
   /** AG-8 : devoirs de journal rendus que le MJ n'a pas encore validés — la pastille de « Livre de sessions ». */
   devoirsAValider?: number;
+  /** ADR 0103 : la campagne se joue à distance — l'écran du jeu à distance a son entrée en tête des outils. */
+  jeuADistance?: boolean;
   /** Seule section a l'afficher, comme le faisait l'en-tete avant V2.1-16 — `null` si le monde n'a pas encore de campagne. */
   campaignName: string | null;
 }) {
   const t = useTranslations("mj");
   const tShell = useTranslations("shell");
+  const tDistance = useTranslations("distance");
+  const hrefDistance = `/m/${worldSlug}/mj/distance`;
   const pathname = usePathname();
   const { unreadCount } = useChatUnread();
   const { replie, basculer } = useRailReplie();
@@ -149,6 +154,16 @@ export default function MjSidebar({
               sous la taille de son contenu — sans lui, `flex-1` ne borne rien
               et l'imposerait a son parent. */}
           <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto md:gap-0.5 md:overflow-x-hidden md:p-2">
+            {jeuADistance && !replie && (
+              <Link
+                href={hrefDistance}
+                className={`flex items-center justify-between rounded px-2 py-1.5 text-sm font-medium transition-colors hover:bg-panel-raised ${
+                  pathname === hrefDistance ? "bg-panel-raised text-accent" : "text-ink"
+                }`}
+              >
+                {tDistance("navMj")}
+              </Link>
+            )}
             {replie ? (
               // Replie : une seule ligne « Outils », dont le menu flottant liste les outils.
               <RailRow

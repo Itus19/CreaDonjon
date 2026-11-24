@@ -10,11 +10,13 @@ Fichier lu au démarrage de chaque session. Court volontairement : un fichier de
 
 Seule exception : les **identifiants techniques** restent en anglais `snake_case` ou `camelCase` (noms de tables, de colonnes, de fonctions, clés de blocs, valeurs de colonnes). Les libellés français vivent dans `messages/` et `src/i18n/`.
 
+**Écriture inclusive**, dans l'interface comme dans la documentation : une tournure épicène d'abord (« les personnes qui jouent », « la table », « chaque membre ») ; le point médian (« joueur·euse ») et le neutre (« iel ») seulement quand aucune tournure épicène ne fonctionne. Les identifiants techniques ne sont pas concernés.
+
 ---
 
 ## Le projet
 
-CreaDonjon est un outil personnel : un wiki structuré, un moteur de règles D&D 2024 personnalisable, et à terme un mode de jeu solo avec une IA locale. Il sert son auteur et sa table de jeu.
+CreaDonjon est un outil personnel : un wiki structuré, un moteur de règles D&D 2024 personnalisable, et à terme un mode de jeu solo avec une IA locale. Il sert son auteur et sa table de jeu, n'est pas vendu et ne le sera jamais : une dépendance sous GPL est donc acceptable.
 
 Le point d'architecture qui définit tout le reste : **le wiki et le moteur de règles ne sont pas deux systèmes**. Chaque entité possède une facette narrative et une facette mécanique dans un modèle de données unique.
 
@@ -32,10 +34,11 @@ L'auteur apprend à coder sur ce projet. Explique tes choix. Ne livre pas de cod
 | `docs/TESTS.md` | Niveaux de test, comptes de test (jamais de compte neuf), Banc d'essai, parcours de vérification à la main | Avant d'écrire un test d'intégration ou de vérifier à la main |
 | `docs/CHARTE-UI.md` | Jetons, recettes de boutons/champs/listes, états d'écran | **Avant tout code d'interface** |
 | `docs/catalogue/` | Catalogue d'interface : chaque élément, ses états, ses animations (index au §9 de la charte) | Avant de créer ou modifier un élément d'interface |
-| `docs/BACKLOG_V2.md` | Tickets en cours | Au début de chaque tâche |
-| `docs/BACKLOG_V3.md` | **Index** du mode solo : feuille de route, ordre recommandé, table ticket → fichier. Les tickets (lots A à F, R, Z) vivent dans `docs/backlog-v3/`, un fichier par lot, plus `00-cadre.md` (critères transverses). Chaque titre dit s'il faut un **modèle d'IA** joignable. **Ne lis que le fichier du ticket en cours** | Tickets V3 |
-| `docs/BACKLOG_V3.1.md` | **Index** : feuille de route, ordre recommandé, et table ticket → fichier. Les tickets (rugosités et refonte « verre minéral », V3.1-1 à 119) vivent dans `docs/backlog-v3.1/`, un fichier par partie ; chaque ticket prêt dit son modèle et ses sous-tâches Haiku, et chaque titre s'il faut un **modèle d'IA** joignable. **Ne lis que le fichier du ticket en cours** | Avant tout ticket qui répare un détail, et avant tout ticket de la refonte |
-| `docs/BACKLOG_V3.2.md` | **Index** du solo à l'usage : ce qui gêne en JOUANT, relevé séance après séance (V3.2-1 et suivants). Les tickets vivent dans `docs/backlog-v3.2/`, un fichier par partie. **Ne lis que le fichier du ticket en cours** | Tickets V3.2 |
+| `docs/BACKLOG_V3.2.md`, `docs/BACKLOG_V3.1.md`, `docs/BACKLOG_V3.md` | **Backlogs actifs**, par ordre de priorité : V3.2 (le solo à l'usage, ce qui gêne en jouant), V3.1 (rugosités et refonte « verre minéral »), V3 (le mode solo, lots A à F, R, Z). Chacun est un **index** (feuille de route, ordre, table ticket → fichier) ; les tickets vivent dans `docs/backlog-v3*/`, un fichier par partie. Chaque ticket dit son modèle conseillé, et son titre s'il faut un **modèle d'IA** joignable. **Ne lis que le fichier du ticket en cours.** Les backlogs V1, V2 et V2.1 sont clos : archives | Au début de chaque tâche |
+| `docs/adr/0104-le-cap-du-mode-solo.md` | Les décisions de l'auteur sur le solo (voir « Le cap du mode solo » ci-dessous) | **Avant tout ticket du solo, du moteur de jeu ou des prompts** |
+| `specs/module-joueur-et-solo.md` | Compagnon joueur et interface solo | Tickets solo ou compagnon |
+| `docs/etude-regles-jouables.md` | Les briques qui rendent toute règle jouable par le moteur (ADR 0059, 0060) | Avant de saisir ou de câbler une règle jouable |
+| `docs/CLE-MOTEUR.md` | La clé qui signe les écritures du moteur (ADR 0041) | Avant de toucher au ciblage, aux signatures ou à leurs variables d'environnement |
 | `docs/PDD.md` | Source de vérité fonctionnelle | Avant toute décision produit |
 | `docs/adr/` | Décisions d'architecture et leurs raisons | Avant de « corriger » quelque chose qui semble étrange |
 | `specs/regles-couche.md` | Fiches de règles, renvois, surcharge, contrat moteur/IA | Tickets règles |
@@ -79,6 +82,8 @@ supabase gen types typescript --local > src/types/database.ts
 
 Ces règles ne se négocient pas ticket par ticket. Si une tâche semble les exiger, **arrête-toi et signale la contradiction**.
 
+Leurs numéros sont **stables** : on les cite dans le code et les ADR. Une règle nouvelle prend le numéro suivant (25, 26…) même si elle appartient à une famille plus haut ; une règle retirée laisse son numéro vide. D'anciens commentaires citent une numérotation antérieure (« règle 4 ter », « 16 bis ») : fie-toi au texte de la règle, pas au numéro.
+
 ### Sécurité
 
 1. `SUPABASE_SERVICE_ROLE_KEY`, les clés de fournisseurs d'IA : **serveur uniquement**. Jamais derrière `NEXT_PUBLIC_`, jamais importées dans un fichier `'use client'`.
@@ -117,6 +122,18 @@ Ces règles ne se négocient pas ticket par ticket. Si une tâche semble les exi
 
 ---
 
+## Le cap du mode solo
+
+Décisions de l'auteur, détaillées dans `docs/adr/0104-le-cap-du-mode-solo.md`. Un ticket qui s'en écarte s'arrête et demande.
+
+- **L'IA propose, le moteur décide et mémorise.** Une invention de l'IA est une proposition structurée, validée contre le wiki et les règles ; ses chiffres viennent des règles, jamais de l'IA.
+- **Le wiki l'emporte toujours.** Une invention qui le contredit est refusée ; une invention validée devient une page du wiki.
+- **Les PNJ et les détails émergent d'agrégats** (population, richesse, métiers, biome), matérialisés par tirage à graine fixe quand on les découvre.
+- **Le moteur choisit la compétence et le DD**, avec réussite automatique quand l'action est triviale pour ce personnage.
+- **Des espaces abstraits avant toute grille.** Carte du monde : Azgaar. Histoire du monde : la méthode de Dwarf Fortress, pas son contenu. Catalogue : Wikidata (données CC0), SRD, contenu maison.
+
+---
+
 ## Saisir des règles
 
 Tu peux créer, structurer et compléter des fiches de règles — sous-classes, dons, historiques, espèces, monstres, objets — à la demande de l'auteur, y compris à partir de contenu qu'il te fournit.
@@ -143,7 +160,7 @@ Une fiche créée ainsi appartient à un ruleset `personal_reference`, jamais à
 
 **Les plans gratuits sont une contrainte de conception** (`docs/QUOTAS.md`). Un débordement ne facture rien : il coupe l'app pour toute la table. Tout nouveau chargement, sondage, abonnement temps réel ou script contre la vraie base dit ce qu'il consomme. On teste sobrement : jamais de compte neuf, et pas de suite complète en boucle.
 
-**Avant de dire qu'une tâche est terminée :** `npm run typecheck && npm run lint && npm run test` passent. Sinon la tâche n'est pas terminée.
+**Avant de dire qu'une tâche est terminée :** `npm run typecheck && npm run lint && npm run test` passent. Sinon la tâche n'est pas terminée. En itérant, ne relance que le fichier de test concerné ou `npm run test:core` : la suite complète coûte quelques milliers de requêtes à la base (`docs/QUOTAS.md` T2), on la lance une fois, avant de pousser.
 
 **Commits :** petits, en français, à l'impératif. `feat: ajoute la table des déclencheurs`, `fix: corrige la récursion RLS sur campaign_members`.
 

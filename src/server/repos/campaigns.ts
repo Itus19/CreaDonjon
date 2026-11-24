@@ -55,7 +55,7 @@ export async function getCampaignById(supabase: TypedClient, id: string): Promis
 /** `"world_already_has_campaign"` : violation de `campaigns_world_id_unique` (migration 20260826100001, "un monde = une campagne") — jamais une exception non geree, un monde deja complete peut re-tenter cet appel (double-soumission, etat client perime). */
 export async function insertCampaign(
   supabase: TypedClient,
-  params: { worldId: string; name: string; rulesetId: string; mode: string; gmUserId: string | null; partyEntityId: string }
+  params: { worldId: string; name: string; rulesetId: string; mode: string; gmUserId: string | null; partyEntityId: string; tableSettings?: Json }
 ): Promise<CampaignRow | "world_already_has_campaign"> {
   const { data, error } = await supabase
     .from("campaigns")
@@ -66,6 +66,7 @@ export async function insertCampaign(
       mode: params.mode,
       gm_user_id: params.gmUserId,
       party_entity_id: params.partyEntityId,
+      ...(params.tableSettings !== undefined ? { table_settings: params.tableSettings } : {}),
     })
     .select(CAMPAIGN_COLUMNS)
     .single();

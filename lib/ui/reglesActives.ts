@@ -61,7 +61,7 @@ export const INTERRUPTEURS_TABLE: readonly PlayerEditableField[] = PLAYER_EDITAB
 
 /** « Par défaut » : un seul patch complet, les six réglages ET l'inspiration au plus. */
 export function reglagesParDefaut(): CampaignTableSettings {
-  return { inspiration_max: DEFAULT_TABLE_SETTINGS.inspiration_max, player_can_edit: { ...DEFAULT_TABLE_SETTINGS.player_can_edit } };
+  return { inspiration_max: DEFAULT_TABLE_SETTINGS.inspiration_max, play_style: DEFAULT_TABLE_SETTINGS.play_style, player_can_edit: { ...DEFAULT_TABLE_SETTINGS.player_can_edit } };
 }
 
 /** L'inspiration au plus reste entre 1 et 5 (bornes du schéma d'écriture). */

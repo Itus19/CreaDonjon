@@ -212,6 +212,8 @@ export async function insertSessionEvent(
      * Seul un administrateur du monde peut les écrire.
      */
     gmDetails?: Json;
+    /** ADR 0103 : nul ou absent = toute la table ; une liste = ces joueurs ; vide = le MJ seul (filtré par la RLS). */
+    visibleTo?: string[] | null;
   }
 ): Promise<SessionEventRow> {
   const { data, error } = await supabase
@@ -223,6 +225,7 @@ export async function insertSessionEvent(
       actor: params.actor,
       actor_user_id: params.actorUserId,
       payload: params.payload,
+      ...(params.visibleTo !== undefined ? { visible_to: params.visibleTo } : {}),
     })
     .select("id, session_id, seq, kind, actor, actor_user_id, payload, created_at")
     .single();
