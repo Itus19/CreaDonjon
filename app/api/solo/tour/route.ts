@@ -197,7 +197,7 @@ export async function POST(request: NextRequest) {
       if (outcome.ok) {
         result.narration = { text: outcome.narration!, npcReaction: outcome.npcReaction ?? null };
       } else {
-        result.sansNarration = "echec";
+        result.sansNarration = "inutilisable";
       }
     } catch (erreur) {
       // L'appel a echoue : le tour reste valide sans narration, jamais une

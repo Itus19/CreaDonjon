@@ -315,7 +315,7 @@ export async function reconstructTurnForNarration(supabase: TypedClient, session
  */
 export function raisonSansNarration(erreur: unknown): RaisonSansNarration {
   if (erreur instanceof AiProviderError) return erreur.raison;
-  if (erreur instanceof AiRateLimitError) return "limite";
+  if (erreur instanceof AiRateLimitError) return "limite_app";
   return "echec";
 }
 
@@ -350,7 +350,7 @@ export async function narrerTourSoloSansFaillir(
     const narrated = await narrateSoloTurn(supabase, provider, { ...params, viewer, sessionId });
     return narrated.ok && narrated.narration
       ? { ok: true, text: narrated.narration, npcReaction: narrated.npcReaction ?? null }
-      : { ok: false, raison: "echec" };
+      : { ok: false, raison: "inutilisable" };
   } catch (erreur) {
     console.error("Narration du tour impossible", erreur);
     return { ok: false, raison: raisonSansNarration(erreur) };

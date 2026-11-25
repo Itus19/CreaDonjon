@@ -343,7 +343,7 @@ Vérifié : `aiProviders.integration.test.ts` (6 cas — la RLS dans les deux se
 - [ ] Un tour joué sans fournisseur joignable affiche sa mention, garde ses faits, et ne casse rien.
 - [ ] Vérifié à l'écran, ordinateur et 390 px.
 
-*Codé le 24 novembre*, en préparant le branchement d'une IA distante : le voyant sous la barre d'intention (V3.2-3) dit désormais **pourquoi** le tour est resté muet. Les routes du tour rendent `sansNarration` (`aucun_fournisseur`, `quota`, `limite`, `cle_refusee`, `delai`, `echec`), classé par `classerReponseFournisseur` (noyau pur, testé) à partir de la réponse du fournisseur : un 402 ou un 429 qui parle de crédit, de quota ou de limite du jour, c'est le quota ; un 429 ordinaire, une limite de débit. Reste la vérification à l'écran.
+*Codé le 24 novembre*, en préparant le branchement d'une IA distante : le voyant sous la barre d'intention (V3.2-3) dit désormais **pourquoi** le tour est resté muet. Les routes du tour rendent `sansNarration` (`aucun_fournisseur`, `quota`, `limite`, `limite_app`, `cle_refusee`, `delai`, `refusee`, `inutilisable`, `echec`), classé par `classerReponseFournisseur` (noyau pur, testé) à partir de la réponse du fournisseur : un 402 ou un 429 qui parle de crédit, de quota ou de limite du jour, c'est le quota ; un 429 ordinaire, une limite de débit. Reste la vérification à l'écran.
 
 ---
 

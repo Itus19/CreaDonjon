@@ -71,4 +71,16 @@ describe("OpenAiCompatibleProvider — gardes d'un fournisseur distant", () => {
     expect(new OpenAiCompatibleProvider({ baseUrl: "http://localhost:1234/v1", model: "m" }).capabilities().isLocal).toBe(true);
     expect(new OpenAiCompatibleProvider({ baseUrl: "https://api.venice.ai/api/v1", model: "m" }).capabilities().isLocal).toBe(false);
   });
+
+  it("retire un /chat/completions collé en trop à la fin de l'adresse", async () => {
+    const f = fetchFactice();
+    vi.stubGlobal("fetch", f);
+    await new OpenAiCompatibleProvider({ baseUrl: "https://openrouter.ai/api/v1/chat/completions/", model: "m" }).complete(demande);
+    expect(f.mock.calls[0]![0]).toBe("https://openrouter.ai/api/v1/chat/completions");
+  });
+
+  it("un modèle inconnu ou inadapté remonte comme une requête refusée, pas un fournisseur injoignable", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response('{"error":{"message":"No endpoints found"}}', { status: 404 })));
+    await expect(new OpenAiCompatibleProvider({ baseUrl: "https://x.exemple/v1", model: "m" }).complete(demande)).rejects.toMatchObject({ raison: "refusee" });
+  });
 });
