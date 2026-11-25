@@ -71,6 +71,12 @@ describe("le message d'un refus du fournisseur", () => {
     expect(extraireMessageFournisseur(429, corps)).toBe("429 : model:free is temporarily rate-limited upstream.");
   });
 
+  it("Gemini : l'erreur arrive dans un tableau", () => {
+    expect(extraireMessageFournisseur(503, '[{"error":{"code":503,"message":"The model is overloaded. Please try again later.","status":"UNAVAILABLE"}}]')).toBe(
+      "503 : The model is overloaded. Please try again later.",
+    );
+  });
+
   it("un corps vide ou illisible", () => {
     expect(extraireMessageFournisseur(404, "")).toBe("404, sans message");
     expect(extraireMessageFournisseur(500, "  boom \n  total ")).toBe("500 : boom total");

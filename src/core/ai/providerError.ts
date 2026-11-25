@@ -78,7 +78,9 @@ function champObjet(objet: unknown, cle: string): unknown {
 export function extraireMessageFournisseur(status: number, corps: string): string {
   let message: string | undefined;
   try {
-    const json: unknown = JSON.parse(corps);
+    const brut: unknown = JSON.parse(corps);
+    // Gemini (compatibilité OpenAI) renvoie ses erreurs dans un tableau : `[{"error":{…}}]`.
+    const json: unknown = Array.isArray(brut) ? brut[0] : brut;
     const erreur = champObjet(json, "error");
     message = champTexte(champObjet(erreur, "metadata"), "raw") ?? champTexte(erreur, "message") ?? champTexte(json, "message");
   } catch {
