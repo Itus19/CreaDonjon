@@ -77,8 +77,9 @@ function RepliquePnj({ reaction }: { reaction: Replique }) {
 function NarrationRow({ item }: { item: Extract<FilItem, { kind: "narration" }> }) {
   return (
     <div className="flex flex-col gap-2">
-      {/* `text-base` : la narration est ce qui se lit vraiment (docs/CHARTE-UI.md §4). */}
-      <p className="border-l-2 border-gm pl-3 text-base leading-relaxed text-ink">{item.text}</p>
+      {/* `text-base` : la narration est ce qui se lit vraiment (docs/CHARTE-UI.md §4).
+          V3.2-12 : le fil s'étale quand les volets se replient, mais le paragraphe garde un plafond de 110 caractères : au-delà, l'œil perd le début de la ligne suivante. Le plafond est sur le paragraphe, pas sur la colonne, pour que bulles et défilement prennent toute la largeur. */}
+      <p className="max-w-[110ch] border-l-2 border-gm pl-3 text-base leading-relaxed text-ink">{item.text}</p>
       {item.npcReaction && <RepliquePnj reaction={item.npcReaction} />}
     </div>
   );

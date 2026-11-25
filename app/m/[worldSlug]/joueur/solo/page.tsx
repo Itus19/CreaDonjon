@@ -17,6 +17,7 @@ import FicheJouableSolo from "@/components/solo/FicheJouableSolo";
 import AvertissementReglesNonJouables from "@/components/solo/AvertissementReglesNonJouables";
 import SoloScreen from "@/components/solo/SoloScreen";
 import SoloShell from "@/components/solo/SoloShell";
+import BandeMonde from "@/components/solo/BandeMonde";
 import type { Locale } from "@/src/i18n/request";
 
 /**
@@ -116,6 +117,7 @@ export default async function JoueurSoloPage({ params }: { params: Promise<{ wor
             sketches={scene?.sketches ?? []}
           />
         }
+        bandeMonde={<BandeMonde />}
         quetes={<QuetesTelephone quests={quests} />}
         jeu={
           <SoloScreen

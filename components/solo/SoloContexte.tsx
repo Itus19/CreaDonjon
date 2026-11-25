@@ -21,7 +21,12 @@ import type { JaugesBande } from "@/lib/ui/solo";
  * - `rechargerFiche` : après un geste du Jeu (tour encaissé, conséquence
  *   appliquée), la fiche se recharge tout de suite au lieu d'attendre son
  *   prochain tick. La fiche s'y inscrit (`inscrireRecharge`).
+ * - V3.2-12 — l'onglet du Monde (`ongletMonde`) : il vit ici, et non dans
+ *   `ColonneMonde`, parce que la bande du Monde replié rouvre le volet SUR un
+ *   onglet (`deplierMonde`) alors qu'elle est un arbre voisin de la colonne.
  */
+export type OngletMonde = "wiki" | "quetes" | "presents" | "regles";
+
 interface SoloContexteValeur {
   replie: boolean;
   jauges: JaugesBande | null;
@@ -30,6 +35,10 @@ interface SoloContexteValeur {
   definirDemande: (demande: PendingRequest | null) => void;
   rechargerFiche: () => void;
   inscrireRecharge: (recharger: (() => void) | null) => void;
+  ongletMonde: OngletMonde;
+  choisirOngletMonde: (onglet: OngletMonde) => void;
+  /** Déplie le Monde (s'il est replié) et l'ouvre sur cet onglet. */
+  deplierMonde: (onglet: OngletMonde) => void;
 }
 
 const SoloContexte = createContext<SoloContexteValeur>({
@@ -40,6 +49,9 @@ const SoloContexte = createContext<SoloContexteValeur>({
   definirDemande: () => {},
   rechargerFiche: () => {},
   inscrireRecharge: () => {},
+  ongletMonde: "wiki",
+  choisirOngletMonde: () => {},
+  deplierMonde: () => {},
 });
 
 export const SoloContexteProvider = SoloContexte.Provider;

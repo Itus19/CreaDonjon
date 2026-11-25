@@ -1444,6 +1444,14 @@
     "deplierMonde": "Expand the World",
     "replierFiche": "Collapse the Sheet",
     "deplierFiche": "Expand the Sheet",
+    "bandeMonde": {
+      "aria": "World tabs",
+      "ouvrir": "Open the World on “{onglet}”",
+      "wiki": "Wiki",
+      "quetes": "Quests",
+      "presents": "Present",
+      "regles": "Rules"
+    },
     "barre": {
       "jeu": "Game",
       "monde": "World",

@@ -9,6 +9,7 @@ import { filtrerWiki } from "@/lib/ui/solo";
 import Tabs, { TabPanel } from "@/components/shared/Tabs";
 import PlayerRulesSidebar from "@/components/rules/PlayerRulesSidebar";
 import { ZONE_LABELS } from "@/components/solo/ScenePanel";
+import { useSoloContexte } from "@/components/solo/SoloContexte";
 import type { QuestColumnEntry, SceneView, WikiColumnGroup } from "@/lib/solo/types";
 
 /**
@@ -34,7 +35,6 @@ const PANNEAU = "mt-2 rounded-lg border border-edge bg-panel p-3";
 const LIGNE_CLIQUABLE =
   "flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-panel-sunken";
 
-type Onglet = "wiki" | "quetes" | "presents" | "regles";
 
 function OngletWiki({ worldSlug, groups }: { worldSlug: string; groups: WikiColumnGroup[] }) {
   const [ouverteId, setOuverteId] = useState<string | null>(null);
@@ -188,7 +188,8 @@ export default function ColonneMonde({
   present: SceneView["present"];
   sketches: SceneView["sketches"];
 }) {
-  const [onglet, setOnglet] = useState<Onglet>("wiki");
+  // V3.2-12 : l'onglet vit dans le contexte de la coquille, pour que la bande du Monde replié puisse rouvrir le volet sur un onglet.
+  const { ongletMonde: onglet, choisirOngletMonde: setOnglet } = useSoloContexte();
 
   return (
     <div className="flex h-full min-h-0 flex-col">
