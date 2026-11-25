@@ -10,6 +10,8 @@ import { promoteToEntity, type PromotedBlockSpec } from "@/src/server/services/p
 import { getRuleEntryForWorld } from "@/src/server/services/rules";
 import { statblockFromMonsterBlocks } from "@/src/core/rules/srdMapping";
 import { GENERATOR_TOOLS } from "@/src/core/generators/tools";
+import { buildPriceList } from "@/src/core/rules/priceList";
+import type { PriceListBlockData } from "@/src/core/schemas/blocks/priceList";
 import { randomPoles, priorityFromPoles } from "@/src/core/psyche/random";
 import { PERSONALITY_POLE_KEYS, WORLDVIEW_POLE_KEYS } from "@/src/core/psyche/keys";
 import { serverRng } from "@/src/server/services/rng";
@@ -67,8 +69,19 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "Tirez d'abord le nom avant de créer la fiche." }, { status: 400 });
   }
 
+  // V3.2-9 (ADR 0110) : le Menu devient un bloc « Carte et tarifs » à prix
+  // structurés, que le moteur sait lire. La richesse n'est pas connue ici
+  // (le panneau ne l'envoie pas) : pas de nuit à l'auberge, que le MJ ajoute
+  // à la main. Sans aucun prix (tables anciennes), le Menu reste un paragraphe.
+  let priceList: { label: string; data: PriceListBlockData } | null = null;
+  if (tool.promote.priceListSectionKey) {
+    const pricedSlots = parsed.data.sections[tool.promote.priceListSectionKey]?.pricedSlots ?? [];
+    const data = buildPriceList({ wealth: null, seed: null, lodging: null, menuSlots: pricedSlots });
+    if (data.offers.length > 0) priceList = { label: "Carte et tarifs", data };
+  }
+
   const structuredSectionKeys = new Set(
-    [tool.promote.nameSectionKey, tool.promote.personalitySectionKey, tool.promote.questSectionKey].filter(
+    [tool.promote.nameSectionKey, tool.promote.personalitySectionKey, tool.promote.questSectionKey, priceList ? tool.promote.priceListSectionKey : undefined].filter(
       (k): k is string => Boolean(k)
     )
   );
@@ -181,6 +194,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     personality,
     worldview,
     quest,
+    priceList,
   });
   if (!promoted.ok) {
     return NextResponse.json({ error: "Impossible de créer la fiche." }, { status: 403 });

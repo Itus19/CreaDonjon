@@ -4,6 +4,7 @@ import type { Database } from "@/src/types/database";
 import { zTextBlockData } from "@/src/core/schemas/blocks/text";
 import { zStatblockBlockData, type StatblockBlockData } from "@/src/core/schemas/blocks/statblock";
 import { zQuestBlockData, type QuestBlockData } from "@/src/core/schemas/blocks/quest";
+import { zPriceListBlockData, type PriceListBlockData } from "@/src/core/schemas/blocks/priceList";
 import { type PersonalityBlockData } from "@/src/core/schemas/blocks/personality";
 import { type WorldviewBlockData } from "@/src/core/schemas/blocks/worldview";
 import type { SegmentContentNode } from "@/src/core/schemas/entities/segments";
@@ -129,6 +130,8 @@ export async function promoteToEntity(
     worldview?: { label: string; poleDeltas: Record<string, number>; rest: Omit<WorldviewBlockData, "__v" | "poles"> } | null;
     /** Bloc `quest` optionnel (V2-J-PNJ) — objectif/recompense tires depuis la section "Quête". */
     quest?: { label: string; data: QuestBlockData } | null;
+    /** Bloc `price_list` optionnel (V3.2-9) — la carte deja composee depuis le Menu de la Taverne (`buildPriceList`). */
+    priceList?: { label: string; data: PriceListBlockData } | null;
   }
 ): Promise<PromoteToEntityResult> {
   const entity = await createEntity(supabase, {
@@ -217,6 +220,19 @@ export async function promoteToEntity(
       visibilityScopeId: params.visibilityScopeId,
       createdBy: params.createdBy,
       data: zQuestBlockData.parse(params.quest.data),
+    });
+    if (!filled.ok) return { ok: false, reason: "forbidden" };
+  }
+
+  if (params.priceList) {
+    const filled = await createFilledBlock(supabase, {
+      entityId: entity.id,
+      blockType: "price_list",
+      label: params.priceList.label,
+      visibilityLevel: params.visibilityLevel,
+      visibilityScopeId: params.visibilityScopeId,
+      createdBy: params.createdBy,
+      data: zPriceListBlockData.parse(params.priceList.data),
     });
     if (!filled.ok) return { ok: false, reason: "forbidden" };
   }

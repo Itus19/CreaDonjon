@@ -46,6 +46,8 @@ export interface GeneratorToolPromoteConfig {
   personalitySectionKey?: string;
   withWorldview?: boolean;
   questSectionKey?: string;
+  /** V3.2-9 (ADR 0110) : section dont les prix structures deviennent un bloc « Carte et tarifs » plutot qu'un paragraphe. */
+  priceListSectionKey?: string;
 }
 
 export interface GeneratorToolConfig {
@@ -103,7 +105,7 @@ export const GENERATOR_TOOLS: readonly GeneratorToolConfig[] = [
         ],
       },
     ],
-    promote: { nameSectionKey: "taverne-nom", entityKind: "location" },
+    promote: { nameSectionKey: "taverne-nom", entityKind: "location", priceListSectionKey: "taverne-menu" },
   },
   {
     key: "pnj",

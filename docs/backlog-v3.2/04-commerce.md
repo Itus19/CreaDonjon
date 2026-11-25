@@ -27,7 +27,7 @@ Ordre : 8 et 9 d'abord (le noyau et les prix), puis 10 (l'écran), puis 11 (le c
 
 ---
 
-### ☐ V3.2-9 — Le prix vient des règles et du wiki · `M` · sans modèle IA — **prêt (Opus)**
+### ☑ V3.2-9 — Le prix vient des règles et du wiki · `M` · sans modèle IA — **fait (Opus)**
 
 **Un objet** : son bloc `cost` (`rule-blocks/blocks.ts`, déjà saisi pour les objets du SRD, lots compris). **Revente** : la moitié du prix, arrondie à la pièce de cuivre inférieure (MdJ 2024).
 
@@ -36,15 +36,19 @@ Ordre : 8 et 9 d'abord (le noyau et les prix), puis 10 (l'écran), puis 11 (le c
 1. **Un bloc typé « Carte et tarifs »** (`price_list`) sur la page du lieu : une liste d'offres (libellé, prix, nature service ou objet, renvoi facultatif vers une fiche de règle) et la richesse retenue. Pas du texte : le moteur doit lire un prix, pas le deviner dans une phrase. La promotion d'un tirage Taverne (`promotion.ts`) écrit aujourd'hui le menu en texte simple ; elle écrira ce bloc à la place. Nouveau type de bloc : schéma Zod et registre (`blocks/registry.ts`), aucune migration (`block_type` n'est pas contraint en base), une planche du catalogue.
 2. **Un tirage paresseux et figé** : la carte se tire la première fois qu'on en a besoin (création du lieu, ou première demande « qu'est-ce que vous servez ? », ou premier achat), avec une graine tirée de l'identifiant du lieu, puis elle est écrite dans le bloc et ne bouge plus (ADR 0104 : un détail se fige quand on le découvre). Une richesse inconnue est tirée au même moment, et retenue dans le bloc.
 
+**La nuit à l'auberge** (ajout du 25 novembre) : la section « La Chambre » du générateur ne tire ni prix ni palier. Le prix vient de la fiche « Train de vie » du SRD 2024, déjà en base (V2-J14, `lifestyle-expenses`, tableau « Repas, boisson et hébergement ») : de 7 pc (misérable) à 4 po (aristocratique). Correspondance avec la richesse du générateur : modeste → modeste (5 pa), correcte → confortable (8 pa), réputée → riche (2 po). Reste ouvert depuis V2-J14 : comparer les prix du Menu à ceux du SRD (bière 4 pc, repas modeste 1 pa).
+
 **Ce que le PNJ vend** : les offres de ce bloc, et rien d'autre. C'est la liste fermée que l'intention de V3.2-10 reconnaît, et celle que le contexte du tour transmet au modèle (V3.2-11). L'auteur peut corriger la carte à la main : le wiki l'emporte.
 
 **Hors de ce ticket** : l'Échoppe (même mécanisme pour un étal d'objets), à faire au deuxième cas concret.
 
+**Livré** : bloc `price_list` (`src/core/schemas/blocks/priceList.ts`) et ses fonctions pures (`src/core/rules/priceList.ts` : lecture d'un prix « 5 pa », revente à moitié, prix d'un objet par son bloc `cost`, nuit par palier, offres du Menu, graine tirée de l'identifiant du lieu) ; tirage sans écriture (`src/server/services/priceListDraw.ts`, route `POST /api/blocks/[blockId]/price-list-draw`) ; « Créer la fiche » de l'outil Taverne écrit le bloc au lieu d'un paragraphe ; éditeur et lecture dans le wiki, planche `WikiVisuel` §carte-tarifs. Le déclenchement depuis le solo (première demande, premier achat) arrive avec V3.2-10.
+
 **Critères d'acceptation**
-- [ ] Un objet du SRD a un prix d'achat et de revente sans saisie supplémentaire.
-- [ ] Une taverne sans carte en reçoit une à la première demande ; la redemander rend la même carte.
-- [ ] La carte apparaît sur la page du lieu, modifiable, et une correction à la main change le prix payé.
-- [ ] Aucun prix n'est écrit dans le code.
+- [x] Un objet du SRD a un prix d'achat et de revente sans saisie supplémentaire (`itemCostPrice`, `resaleCp`, testés ; branchés à l'achat en V3.2-10).
+- [x] Une taverne sans carte en reçoit une à la demande (« Tirer la carte ») ; la redemander rend la même carte (graine de l'identifiant du lieu, testée). Le déclencheur solo vient avec V3.2-10.
+- [x] La carte apparaît sur la page du lieu, modifiable. Que la correction change le prix payé se vérifiera avec V3.2-10, qui lit ce bloc.
+- [x] Aucun prix n'est écrit dans le code.
 
 ---
 

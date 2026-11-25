@@ -18,7 +18,7 @@ export const FAMILLES_PALETTE: readonly FamillePalette[] = [
   { cle: "recit", types: ["text", "infobox", "image", "custom_table", "timeline"] },
   { cle: "personnage", types: ["character", "inventory", "spellcasting", "resources", "statblock", "equippable"] },
   { cle: "psyche", types: ["personality", "relationship", "worldview", "relations_graph", "genealogy"] },
-  { cle: "outils", types: ["random_table", "quest", "music", "map"] },
+  { cle: "outils", types: ["random_table", "quest", "music", "map", "price_list"] },
 ];
 
 /**
