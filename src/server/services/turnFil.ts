@@ -27,12 +27,20 @@ type TypedClient = SupabaseClient<Database>;
  */
 
 function mapNarration(base: { id: string; seq: number; createdAt: string }, payload: Record<string, unknown>): FilItem {
-  const npc = payload.npc_reaction as { npc_id: string; text: string } | null | undefined;
+  const npc = payload.npc_reaction as { npc_id: string; text: string; npc_name?: unknown; npc_attitude?: unknown } | null | undefined;
   return {
     ...base,
     kind: "narration",
     text: String(payload.text ?? ""),
-    npcReaction: npc ? { npcId: npc.npc_id, text: npc.text } : null,
+    npcReaction: npc
+      ? {
+          npcId: npc.npc_id,
+          text: npc.text,
+          // Absents des répliques écrites avant qu'on les garde : `null`, jamais un nom deviné.
+          npcName: typeof npc.npc_name === "string" && npc.npc_name !== "" ? npc.npc_name : null,
+          attitude: typeof npc.npc_attitude === "string" && npc.npc_attitude !== "" ? npc.npc_attitude : null,
+        }
+      : null,
   };
 }
 

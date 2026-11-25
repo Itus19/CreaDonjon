@@ -56,8 +56,24 @@ export interface TurnContextQuest {
   openObjectives: string[];
 }
 
+export interface TurnContextPlayer {
+  /** Le nom du personnage joué : c'est lui que la narration tutoie. */
+  name: string;
+  /** Comment l'accorder (« tu es surpris·e »), absent quand rien n'est choisi. */
+  pronouns?: string;
+}
+
 export interface TurnContextInput {
   locationName: string;
+  /**
+   * Le personnage joué, que la narration tutoie. Sans lui, le modèle lit son
+   * nom dans les faits et le raconte à la troisième personne, comme un PNJ
+   * de plus. `null` quand l'entité est introuvable : la consigne du « tu »
+   * reste dans le prompt système.
+   */
+  player: TurnContextPlayer | null;
+  /** L'id du PNJ à qui le joueur parle dans ce tour (`npcAddressedBy`), `null` si personne n'est clairement désigné. */
+  addressedNpcId: string | null;
   time: { day: number; hour: number; minute: number };
   lighting: "bright" | "dim" | "dark";
   npcs: TurnContextNpc[];
@@ -113,6 +129,9 @@ export function buildTurnContext(input: TurnContextInput): string {
 
   const parts: (string | null)[] = [
     fenceUntrustedData("lieu", locationText),
+    input.player
+      ? fenceUntrustedData("personnage-joue", `${input.player.name}${input.player.pronouns ? ` (pronoms : ${input.player.pronouns})` : ""}`)
+      : null,
     input.npcs.length > 0 ? fenceUntrustedData("pnjs-presents", input.npcs.map(npcLine).join("\n")) : null,
     input.quests.length > 0 ? fenceUntrustedData("quetes-en-cours", input.quests.map(questLine).join("\n")) : null,
     input.hints.length > 0 ? fenceUntrustedData("indices-de-narration", input.hints.join("\n")) : null,
@@ -126,6 +145,11 @@ export function buildTurnContext(input: TurnContextInput): string {
     `Faits établis de ce tour :\n${input.facts.length > 0 ? input.facts.map((f) => `- ${f}`).join("\n") : "(aucun)"}`,
     input.changes.length > 0 ? `Changements :\n${input.changes.map((c) => `- ${c}`).join("\n")}` : null,
     `Action du joueur : ${input.playerAction}`,
+    // L'id, jamais le nom : un nom est du contenu du monde, il reste dans sa
+    // balise ; cette ligne-ci est une vraie consigne du système.
+    input.addressedNpcId && input.npcs.some((n) => n.id === input.addressedNpcId)
+      ? `Consigne : le joueur parle au PNJ d'id ${input.addressedNpcId}. Ce PNJ lui répond dans npc_reaction (npc_id = ${input.addressedNpcId}), au discours direct, avec ses propres mots.`
+      : null,
   ];
 
   return parts.filter((p): p is string => p !== null).join("\n\n");

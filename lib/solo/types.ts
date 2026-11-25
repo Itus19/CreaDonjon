@@ -200,7 +200,15 @@ export type EncashedTurnResponse = EncashedTurnOutcome | FenetreReactionResponse
  * Phase 3) est la réponse du MJ à une question posée hors du temps de jeu.
  */
 export type FilItem =
-  | { id: string; seq: number; createdAt: string; kind: "narration"; text: string; npcReaction: { npcId: string; text: string } | null }
+  | {
+      id: string;
+      seq: number;
+      createdAt: string;
+      kind: "narration";
+      text: string;
+      /** `npcName`/`attitude` : `null` pour une réplique écrite avant qu'on les garde (le fil montre alors la bulle seule). */
+      npcReaction: { npcId: string; text: string; npcName: string | null; attitude: string | null } | null;
+    }
   | { id: string; seq: number; createdAt: string; kind: "player_action"; text: string; facts: string[] }
   | {
       id: string;

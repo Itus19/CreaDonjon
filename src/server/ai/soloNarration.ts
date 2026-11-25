@@ -28,12 +28,26 @@ const TOOL_NAME = "narrate_turn";
  */
 const SIMILARITY_THRESHOLD = 0.6;
 
+/**
+ * Narration solo — la personne qui joue lit le récit de SON personnage : on
+ * la tutoie (« Tu pousses la porte »), comme un MJ à sa table. Son nom est
+ * dans la balise `personnage-joue` du contexte ; sans la consigne du « tu »,
+ * un modèle le lisait dans les faits et le racontait comme un PNJ de plus.
+ *
+ * Quand le joueur parle à quelqu'un, ce quelqu'un répond : une réplique au
+ * discours direct dans `npc_reaction`, jamais une description de geste.
+ */
 const SYSTEM_PROMPT =
-  "Tu es le narrateur d'une session de jeu de role solo. Le moteur du jeu calcule deja tous les " +
+  "Tu es le narrateur d'une session de jeu de role solo, comme un MJ a sa table. Le moteur du jeu calcule deja tous les " +
   "resultats mecaniques (jets, degats, changements d'etat) : ils te sont donnes comme des FAITS deja " +
-  "etablis, jamais a recalculer, jamais a re-narrer differemment. Ta seule tache : raconter ce tour en " +
-  "deux a quatre phrases, en francais, en integrant les faits fournis sans les contredire. Si un PNJ " +
-  "present reagit, utilise UNIQUEMENT un identifiant de PNJ fourni dans le contexte — n'en invente " +
+  "etablis, jamais a recalculer, jamais a re-narrer differemment. Ta tache : raconter ce tour en " +
+  "deux a quatre phrases, en francais, en integrant les faits fournis sans les contredire. " +
+  "Raconte a la DEUXIEME personne du singulier : tu t'adresses directement a la personne qui joue, dont le personnage est " +
+  "donne dans personnage-joue (« Tu t'approches du comptoir », jamais « Il s'approche » ni son nom a la troisieme personne). " +
+  "L'action du joueur vient d'etre faite par SON personnage : ne l'attribue jamais a un PNJ, ne la repete pas mot pour mot. " +
+  "Quand le joueur parle a un PNJ present, ce PNJ lui REPOND : mets sa reponse dans npc_reaction, au discours direct, " +
+  "avec ses propres mots (une a deux phrases, sans guillemets, sans narration autour), et nomme dans ta narration qui prend la parole. " +
+  "Si un PNJ present reagit, utilise UNIQUEMENT un identifiant de PNJ fourni dans le contexte — n'en invente " +
   "jamais. Si un personnage incident, absent de cette liste, doit reagir MAINTENANT, ne l'invente pas : " +
   "demande-le via new_character avec seulement son role (jamais un nom ni un trait, le moteur les tire). " +
   "Si un fait meriterait d'etre ajoute a la fiche d'un lieu ou d'un PNJ REELLEMENT present, suggere-le " +
@@ -155,7 +169,7 @@ async function attemptNarration(
  * les deux, un seul événement `narration` s'écrit.
  */
 export async function narrateSoloTurn(supabase: TypedClient, provider: AiProvider, params: SoloNarrationParams): Promise<SoloNarrationOutcome> {
-  const { text: context, npcIds, knownEntityIds, recentNarrations } = await buildSoloTurnContext(supabase, {
+  const { text: context, npcIds, knownEntityIds, recentNarrations, addressedNpcId, npcs } = await buildSoloTurnContext(supabase, {
     worldId: params.worldId,
     campaignId: params.campaignId,
     playerEntityId: params.playerEntityId,
@@ -171,6 +185,9 @@ export async function narrateSoloTurn(supabase: TypedClient, provider: AiProvide
   if (!first.ok) return first;
 
   let chosen = first;
+  // Les présents vus par l'essai retenu : le second essai d'un nouveau
+  // personnage voit une esquisse de plus, absente de `npcs`.
+  let chosenNpcs = npcs;
   if (first.newCharacterRequest) {
     // V3-C2 — jamais le modele qui invente un nom : le generateur tire une
     // esquisse (dés réels, journalisée), et SEULEMENT ALORS un second essai
@@ -196,8 +213,18 @@ export async function narrateSoloTurn(supabase: TypedClient, provider: AiProvide
         hints: params.hints,
       });
       const second = await attemptNarration(supabase, provider, retry.text, retry.npcIds, retry.knownEntityIds, params.userId, params.campaignId);
-      if (second.ok) chosen = second;
+      if (second.ok) {
+        chosen = second;
+        chosenNpcs = retry.npcs;
+      }
     }
+  } else if (addressedNpcId && first.npcReaction?.npcId !== addressedNpcId) {
+    // Le joueur a parlé à un PNJ désigné par le code (`npcAddressedBy`) et
+    // le modèle ne l'a pas fait répondre : UN second essai, même contexte
+    // (la consigne y est déjà). On garde celui où ce PNJ répond ; sinon le
+    // premier, déjà valide — un tour sans réplique vaut mieux qu'aucun.
+    const second = await attemptNarration(supabase, provider, context, npcIds, knownEntityIds, params.userId, params.campaignId);
+    if (second.ok && second.npcReaction?.npcId === addressedNpcId) chosen = second;
   } else if (recentNarrations.length > 0 && maxSimilarityToRecent(first.narration!, recentNarrations) > SIMILARITY_THRESHOLD) {
     const second = await attemptNarration(supabase, provider, context, npcIds, knownEntityIds, params.userId, params.campaignId);
     if (second.ok) {
@@ -210,6 +237,12 @@ export async function narrateSoloTurn(supabase: TypedClient, provider: AiProvide
     // pire qu'un tour sans narration du tout.
   }
 
+  // Le nom et l'attitude du PNJ qui parle, figés au moment de la réplique :
+  // le fil les affiche sous la bulle sans relire la scène, et un journal
+  // garde ce qui était vrai à ce moment-là (l'attitude peut changer ensuite).
+  // Le nom est celui que le JOUEUR connaît (`known_as`), jamais un secret.
+  const speaker = chosen.npcReaction ? chosenNpcs.find((n) => n.id === chosen.npcReaction!.npcId) : undefined;
+
   const seq = await nextEventSeq(supabase, params.sessionId);
   const event = await insertSessionEvent(supabase, {
     sessionId: params.sessionId,
@@ -221,7 +254,14 @@ export async function narrateSoloTurn(supabase: TypedClient, provider: AiProvide
       __v: 1,
       from_event: params.fromEventId,
       text: chosen.narration,
-      npc_reaction: chosen.npcReaction ? { npc_id: chosen.npcReaction.npcId, text: chosen.npcReaction.text } : null,
+      npc_reaction: chosen.npcReaction
+        ? {
+            npc_id: chosen.npcReaction.npcId,
+            text: chosen.npcReaction.text,
+            npc_name: speaker?.name ?? null,
+            npc_attitude: speaker?.attitudeLabel ?? null,
+          }
+        : null,
     } as unknown as Json,
   });
 

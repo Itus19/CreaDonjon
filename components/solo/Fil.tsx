@@ -25,12 +25,17 @@ const CARD = "rounded-md border border-edge bg-panel-sunken px-3 py-2";
  *   déjà ce sens, V3.1-63) ;
  * - la narration : pas de bulle, un liseré terracotta `gm` — la même marque
  *   que les passages du MJ dans le wiki ;
- * - un PNJ qui parle : une bulle à gauche, posée sur `panel-raised`.
+ * - un PNJ qui parle : une bulle à gauche, posée sur `panel-raised`, et son
+ *   nom (petites capitales accent) suivi de son attitude dans un onglet
+ *   accroché sous la bulle : coin bas gauche carré, même fond, la bordure du
+ *   bas de la bulle sert de haut à l'onglet. Bulle et nom font un seul objet,
+ *   on ne rattache jamais un nom à la mauvaise réplique.
+ * Bulles : `py-1`, pas `py-2` : le fil gagne de la hauteur à chaque tour.
  * Le MJ hors du temps de jeu garde son liseré d'accent (`NoteRow`), qui ne
  * doit jamais se confondre avec le récit.
  */
-const BULLE_JOUEUR = "max-w-[85%] self-end rounded-lg rounded-br-sm border border-players bg-panel-raised px-3 py-2";
-const BULLE_PNJ = "max-w-[85%] self-start rounded-lg rounded-bl-sm border border-edge bg-panel-raised px-3 py-2";
+const BULLE_JOUEUR = "max-w-[85%] self-end rounded-lg rounded-br-sm border border-players bg-panel-raised px-3 py-1";
+const BULLE_PNJ = "rounded-lg border border-edge bg-panel-raised px-3 py-1";
 
 function verdictColorClass(verdict: "success" | "fail" | null): string {
   if (verdict === "success") return "text-success";
@@ -45,14 +50,36 @@ function originLabel(origin: string | null): string | null {
   return null;
 }
 
+type Replique = NonNullable<Extract<FilItem, { kind: "narration" }>["npcReaction"]>;
+
+function RepliquePnj({ reaction }: { reaction: Replique }) {
+  const texte = <p className={`${BULLE_PNJ} text-sm italic leading-relaxed text-ink-soft ${reaction.npcName ? "rounded-bl-none" : "rounded-bl-sm"}`}>« {reaction.text} »</p>;
+  // Une réplique écrite avant qu'on garde le nom : la bulle seule, comme avant.
+  if (!reaction.npcName) return <div className="max-w-[85%] self-start">{texte}</div>;
+  return (
+    <figure className="m-0 flex max-w-[85%] flex-col self-start">
+      {texte}
+      <figcaption className="-mt-px flex items-baseline gap-1.5 self-start rounded-b-md border border-t-0 border-edge bg-panel-raised px-2.5 pb-0.5 text-xs">
+        <span className="font-semibold uppercase tracking-wide text-accent">{reaction.npcName}</span>
+        {reaction.attitude && (
+          <>
+            <span aria-hidden="true" className="text-ink-muted">
+              ·
+            </span>
+            <span className="text-ink-muted">{reaction.attitude}</span>
+          </>
+        )}
+      </figcaption>
+    </figure>
+  );
+}
+
 function NarrationRow({ item }: { item: Extract<FilItem, { kind: "narration" }> }) {
   return (
     <div className="flex flex-col gap-2">
       {/* `text-base` : la narration est ce qui se lit vraiment (docs/CHARTE-UI.md §4). */}
       <p className="border-l-2 border-gm pl-3 text-base leading-relaxed text-ink">{item.text}</p>
-      {item.npcReaction && (
-        <p className={`${BULLE_PNJ} text-sm italic leading-relaxed text-ink-soft`}>« {item.npcReaction.text} »</p>
-      )}
+      {item.npcReaction && <RepliquePnj reaction={item.npcReaction} />}
     </div>
   );
 }
