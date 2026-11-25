@@ -56,6 +56,16 @@ export interface SceneSketch {
   locationId: string;
 }
 
+/** V3.2-11 — une ligne de l'ardoise (`tab.ts`) : ce qui est dû, où, et à qui. */
+export interface SceneTabLine {
+  locationId: string;
+  /** Le libellé de l'offre de la carte (« Bière »). */
+  label: string;
+  priceCp: number;
+  /** Le nom de la personne qui a servi, si la phrase la désignait ; sinon dû « au lieu ». */
+  creditor: string | null;
+}
+
 export interface SceneState {
   /**
    * V3-B2 : passe de 1 a 2 en ajoutant `budgets`. V3-C2 : passe de 2 a 3 en
@@ -92,6 +102,12 @@ export interface SceneState {
    * regle, V3-D2).
    */
   weather: string | null;
+  /**
+   * V3.2-11 — l'ardoise de la personne qui joue, tous lieux confondus
+   * (`tab.ts`). Facultative et sans changer `__v` : une scène écrite avant
+   * ce ticket n'a simplement rien de dû.
+   */
+  tabs?: SceneTabLine[];
 }
 
 export const RECENT_EVENTS_KEPT = 5;
@@ -129,6 +145,17 @@ export const zSceneState = z.object({
   budgets: z.record(z.string(), zActionBudget),
   sketches: z.array(zSceneSketch),
   weather: z.string().min(1).nullable(),
+  tabs: z
+    .array(
+      z.object({
+        locationId: z.string().min(1),
+        label: z.string().min(1).max(160),
+        priceCp: z.number().int().nonnegative(),
+        creditor: z.string().min(1).max(160).nullable(),
+      })
+    )
+    .max(60)
+    .optional(),
 });
 
 export function emptyScene(locationId: string, time: GameTime = { day: 1, hour: 8, minute: 0 }): SceneState {

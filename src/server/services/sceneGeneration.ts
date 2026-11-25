@@ -70,7 +70,7 @@ export interface SceneGenerationResult {
 export type SceneGenerationError = "unknown_tool" | "no_scene" | "no_generators";
 
 /** Le lieu courant puis ses parents `part_of`, du plus proche au plus lointain. */
-function placeChain(locationId: string, edges: { source_entity_id: string; target_entity_id: string }[]): string[] {
+export function placeChain(locationId: string, edges: { source_entity_id: string; target_entity_id: string }[]): string[] {
   const chain = [locationId];
   while (chain.length < MAX_PLACE_DEPTH) {
     const parent = edges.find((e) => e.source_entity_id === chain[chain.length - 1])?.target_entity_id;
@@ -80,7 +80,7 @@ function placeChain(locationId: string, edges: { source_entity_id: string; targe
   return chain;
 }
 
-async function infoboxEntriesByPlace(supabase: TypedClient, placeIds: string[]): Promise<InfoboxEntry[][]> {
+export async function infoboxEntriesByPlace(supabase: TypedClient, placeIds: string[]): Promise<InfoboxEntry[][]> {
   const rows = await listBlocksByTypeForEntities(supabase, placeIds, "infobox");
   const sorted = [...rows].sort((a, b) => a.display_order - b.display_order);
   return placeIds.map((id) =>

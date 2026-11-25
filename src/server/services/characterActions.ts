@@ -35,7 +35,7 @@ import {
   type AttackRollResult,
   type DamageRollResult,
 } from "@/src/core/rules/action";
-import { armorAcModifier, mapChosenSkillModifiers, weaponRollProperties, type WeaponData } from "@/src/core/rules/srdMapping";
+import { armorAcModifier, mapChosenSkillModifiers, weaponRollProperties, type ItemCost, type WeaponData } from "@/src/core/rules/srdMapping";
 import { totalCarriedWeight } from "@/src/core/rules/encumbrance";
 import { resolveScaledFormulaText } from "@/src/core/rules/scaling";
 import { formatFormulaNode } from "@/src/core/formula/format";
@@ -145,6 +145,8 @@ export interface CharacterActionContext {
   rulesetId: string;
   sheet: DerivedSheet;
   weaponByKey: Record<string, WeaponData | null>;
+  /** V3.2-10 : le prix unitaire des objets de règle du sac, déjà lu avec l'équipement (aucune lecture de plus) — pour la revente. */
+  costByKey: Record<string, ItemCost | null>;
   /** Total de des de vie par de ("d10" -> 5), pour l'initialisation et les repos longs. */
   hitDiceTotals: Record<string, number>;
   /** Choix non resolus (competences/langues/maitrise d'armes) du personnage — V2-G1, necessaire au repos long pour retrouver les cles de maitrise d'armes a effacer. */
@@ -219,7 +221,7 @@ export async function resolveCharacterActionContext(
     .filter((r): r is { kind: "entity"; id: string } => r?.kind === "entity")
     .map((r) => r.id);
   // Le ruleset assemble et l'equipement ne dependent pas l'un de l'autre (V3.1-62, C3).
-  const [assembled, { armor: armorByKey, weapon: weaponByKey, weight: weightByKey }, artefacts] = await Promise.all([
+  const [assembled, { armor: armorByKey, weapon: weaponByKey, weight: weightByKey, cost: costByKey }, artefacts] = await Promise.all([
     assembleResolvedRuleset(
       supabase,
       rulesetId,
@@ -340,6 +342,7 @@ export async function resolveCharacterActionContext(
     rulesetId,
     sheet,
     weaponByKey,
+    costByKey,
     hitDiceTotals,
     openChoices: grantedChoices.open,
     resolveChoicesWith: (choices) => resolveCharacterChoices(supabase, rulesetId, assembled, choices, characterLevel, classLevels, autresAptitudes),

@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
+import type { TableEntryPrice } from "@/src/core/tables/types";
 import { DEFAULT_PROSE_LENGTH, type ProseLength } from "@/src/core/generators/types";
 import type { GeneratorSlotResult, GeneratorToolWindowData } from "@/src/server/services/generators";
 
@@ -18,6 +19,7 @@ export interface SectionResult {
   text: string;
   refs: BlockReference[];
   slots: Record<string, string>;
+  pricedSlots: { key: string; text: string; price?: TableEntryPrice; items?: { text: string; price?: TableEntryPrice }[] }[];
 }
 
 /** Etat d'une section : un SEUL exemplaire, remonte au panneau — la colonne des tirages et l'apercu de la fiche affichent exactement les memes resultats. */
@@ -146,6 +148,10 @@ export function useTirages() {
         text: etat.text,
         refs: slots.flatMap((s) => s.refs),
         slots: Object.fromEntries(slots.map((s) => [s.key, s.text])),
+        // V3.2-9 : les prix structurés du Menu, pour le bloc « Carte et tarifs ».
+        pricedSlots: slots
+          .filter((s) => s.price || (s.items && s.items.length > 0))
+          .map((s) => ({ key: s.key, text: s.text, ...(s.price ? { price: s.price } : {}), ...(s.items ? { items: s.items } : {}) })),
       };
     }
     return resultats;

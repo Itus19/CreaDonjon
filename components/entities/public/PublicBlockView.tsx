@@ -28,6 +28,8 @@ import PublicTimelineBlock from "./PublicTimelineBlock";
 import PublicMapBlock from "./PublicMapBlock";
 import PublicEquippableBlock from "./PublicEquippableBlock";
 import type { EquippableBlockData } from "@/src/core/schemas/blocks/equippable";
+import type { PriceListBlockData } from "@/src/core/schemas/blocks/priceList";
+import PriceListView from "@/components/blocks/PriceListView";
 
 /**
  * V3-R3 (suite) — seul bloc public charge a la demande.
@@ -646,6 +648,7 @@ export default function PublicBlockView({
         />
       )}
       {block.blockType === "equippable" && <PublicEquippableBlock data={block.data as unknown as EquippableBlockData} />}
+      {block.blockType === "price_list" && <PriceListView data={block.data as unknown as PriceListBlockData} />}
       {block.blockType === "map" && (
         <PublicMapBlock
           data={block.data as unknown as MapBlockData}

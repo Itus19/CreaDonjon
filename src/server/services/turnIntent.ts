@@ -1,5 +1,7 @@
 import type { DiceRollKind } from "@/src/core/dice/rollAttribution";
 import "server-only";
+import { applyTrade, readInventorySnapshot } from "@/src/server/services/inventoryActions";
+import { readCurrencySystemForEntity } from "@/src/server/services/currencySystem";
 import { weaponRollProperties } from "@/src/core/rules/srdMapping";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
@@ -16,7 +18,9 @@ import {
   type Skill,
   type Source,
 } from "@/src/core/rules/sheet";
-import { SKILL_LABELS_FR, INTENT_VERBS_FR } from "@/src/i18n/fr";
+import { SKILL_LABELS_FR, INTENT_VERBS_FR, TRADE_VERBS_FR, TRADE_LODGING_TERMS_FR, TRADE_TAB_TERMS_FR, formatCpFr } from "@/src/i18n/fr";
+import { addToTab, clearTabAt, tabAt, tabTotalCp } from "@/src/core/rules/tab";
+import { putSceneState } from "@/src/server/repos/sceneStates";
 import { type IntentAction, type IntentTarget } from "@/src/core/rules/intent";
 import type { ResolvedEffect, FiredEvent } from "@/src/core/rules/triggers";
 import { resolveCheckRoll, resolveDamageRoll, weaponAttackAbility, type AdvantageState } from "@/src/core/rules/action";
@@ -44,6 +48,14 @@ import {
 } from "@/src/server/services/checkRolls";
 import { resolveBlockReferences } from "@/src/server/services/referenceChips";
 import { getSceneState } from "@/src/server/repos/sceneStates";
+import { listBlocksByTypeForEntities } from "@/src/server/repos/blocks";
+import type { SceneState } from "@/src/core/rules/scene";
+import { zPriceListBlockData, type PriceListBlockData } from "@/src/core/schemas/blocks/priceList";
+import { itemCostPrice, priceCp, resaleCp } from "@/src/core/rules/priceList";
+import { totalValueCp } from "@/src/core/rules/currency";
+import { tradeForGift, tradeForOffer, tradeForSale, tradeForTab, tradeOffersFromPriceList, type TradeCatalog, type TradeDirection, type TradeItemEntry } from "@/src/core/rules/tradeIntent";
+import type { Trade, TradeMissing } from "@/src/core/rules/trade";
+import type { InventoryBlockData } from "@/src/core/schemas/blocks/inventory";
 import { listCombatsForCampaign, listCombatParticipants } from "@/src/server/repos/combats";
 import { listEntitiesByIds } from "@/src/server/repos/entities";
 import { insertSessionEvent, nextEventSeq } from "@/src/server/repos/sessions";
@@ -140,7 +152,7 @@ function targetTerms(label: string): string[] {
  */
 async function loadTargets(
   supabase: TypedClient,
-  params: { campaignId: string | null; actorEntityId: string }
+  params: { campaignId: string | null; actorEntityId: string; scene: SceneState | null }
 ): Promise<IntentTargetDetail[]> {
   if (!params.campaignId) return [];
 
@@ -163,8 +175,7 @@ async function loadTargets(
     }
   }
 
-  const scene = await getSceneState(supabase, params.campaignId);
-  const scenePresent = (scene?.present ?? []).map((p) => p.entityId).filter((id) => !seenEntityIds.has(id));
+  const scenePresent = (params.scene?.present ?? []).map((p) => p.entityId).filter((id) => !seenEntityIds.has(id));
   if (scenePresent.length > 0) {
     for (const entity of await listEntitiesByIds(supabase, scenePresent)) {
       details.push({ id: `entity:${entity.id}`, label: entity.name, ac: null, hpCurrent: null, source: "scene" });
@@ -172,6 +183,57 @@ async function loadTargets(
   }
 
   return details;
+}
+
+/**
+ * V3.2-10 — la carte du lieu de la scène (bloc `price_list`, V3.2-9), lue sous
+ * la RLS de la personne qui joue : une carte qu'elle ne peut pas voir n'existe
+ * pas pour elle. Une lecture ciblée par affichage de l'écran (docs/QUOTAS.md).
+ * Une carte illisible est signalée et traitée comme absente, jamais devinée.
+ */
+async function readPriceList(supabase: TypedClient, locationId: string): Promise<PriceListBlockData | null> {
+  const row = (await listBlocksByTypeForEntities(supabase, [locationId], "price_list"))[0];
+  if (!row) return null;
+  const parsed = zPriceListBlockData.safeParse(row.data);
+  if (!parsed.success) {
+    console.error("Carte du lieu illisible", locationId, parsed.error.issues);
+    return null;
+  }
+  return parsed.data;
+}
+
+/**
+ * V3.2-10 — ce qui s'achète ici (la carte), ce qui se vend ou se donne (le
+ * sac), et la bourse. Le prix de revente vient du bloc `cost` de la fiche de
+ * règle, déjà lu avec l'équipement ; un objet libre ou un artéfact n'en a pas.
+ * La bourse est comptée au système par défaut, pour l'affichage seulement :
+ * le règlement relit le vrai système monétaire (`executeTrade`).
+ */
+function buildTradeCatalog(
+  ctx: CharacterActionContext,
+  nameOf: (item: InventoryItem) => string,
+  priceList: PriceListBlockData | null,
+  scene: SceneState | null
+): TradeCatalog {
+  const offers = tradeOffersFromPriceList(priceList?.offers ?? [], TRADE_LODGING_TERMS_FR);
+  const items: TradeItemEntry[] = (ctx.inventoryData?.items ?? []).map((item) => {
+    const ref = itemRef(item);
+    const cost = ref?.kind === "rule" ? ctx.costByKey[ref.key] : null;
+    const price = cost ? itemCostPrice({ value: cost.quantity, unit: cost.unit }) : null;
+    const name = nameOf(item);
+    return { id: item.id, label: name, terms: name ? [name] : [], resaleCp: price ? resaleCp(priceCp(price)) : null };
+  });
+  return {
+    verbs: TRADE_VERBS_FR,
+    offers,
+    items,
+    purseCp: ctx.inventoryData ? totalValueCp(ctx.inventoryData.currency) : 0,
+    // Hors scène, il n'y a pas de lieu où tirer une carte : on ne le propose pas.
+    hasPriceList: priceList !== null || scene === null,
+    // V3.2-11 : l'ardoise de CE lieu, relue par le serveur au règlement.
+    tabCp: scene ? tabTotalCp(tabAt(scene, scene.locationId)) : 0,
+    tabTerms: TRADE_TAB_TERMS_FR,
+  };
 }
 
 /**
@@ -194,20 +256,28 @@ export async function buildIntentBarData(
   // Armes equipees dont la fiche de regle resout vraiment — memes criteres
   // que l'onglet Actions de la fiche jouable (`useCharacterSheetContext`),
   // jamais une seconde definition de « ce qu'on peut degainer ».
-  const equippedWeapons = (ctx.inventoryData?.items ?? []).filter((item) => {
+  const items = ctx.inventoryData?.items ?? [];
+  const equippedWeapons = items.filter((item) => {
     if (!item.equipped) return false;
     const ref = itemRef(item);
     return ref?.kind === "rule" && Boolean(ctx.weaponByKey[ref.key]);
   });
 
-  // Le nom FRANCAIS de l'arme, pas sa cle SRD : le joueur ecrit « épée
-  // longue », jamais « longsword ».
-  const weaponRefs = equippedWeapons.map(itemRef).filter((r): r is BlockReference => r !== null);
-  const chips = await resolveBlockReferences(supabase, params.world, ctx.rulesetId, params.locale, weaponRefs);
+  // Le nom FRANCAIS d'un objet, pas sa cle SRD : le joueur ecrit « épée
+  // longue », jamais « longsword ». V3.2-10 : tout le sac, pas seulement les
+  // armes (on vend aussi une corde) — toujours une seule résolution groupée.
+  // La scène et la carte du lieu partent dans la même vague (docs/CABLAGE.md, C3).
+  const refItems = items.filter((item) => itemRef(item) !== null);
+  const [chips, scene] = await Promise.all([
+    resolveBlockReferences(supabase, params.world, ctx.rulesetId, params.locale, refItems.map((item) => itemRef(item)!)),
+    params.campaignId ? getSceneState(supabase, params.campaignId) : Promise.resolve(null),
+  ]);
+  const nameByItemId = new Map<string, string>(refItems.map((item, index) => [item.id, chips[index]?.found ? chips[index].name : itemLabel(item)]));
+  const nameOf = (item: InventoryItem) => nameByItemId.get(item.id) ?? itemLabel(item);
 
   const actions: IntentAction[] = [];
-  equippedWeapons.forEach((item, index) => {
-    const name = chips[index]?.name ?? "";
+  equippedWeapons.forEach((item) => {
+    const name = nameByItemId.get(item.id) ?? "";
     actions.push({
       id: item.id,
       kind: "weapon_attack",
@@ -235,12 +305,16 @@ export async function buildIntentBarData(
     });
   }
 
-  const targetDetails = await loadTargets(supabase, { campaignId: params.campaignId, actorEntityId: params.entityId });
+  const [targetDetails, priceList] = await Promise.all([
+    loadTargets(supabase, { campaignId: params.campaignId, actorEntityId: params.entityId, scene }),
+    scene ? readPriceList(supabase, scene.locationId) : Promise.resolve(null),
+  ]);
   const targets: IntentTarget[] = targetDetails.map((t) => ({ id: t.id, label: t.label, terms: targetTerms(t.label) }));
 
   return {
     actor: { entityId: ctx.entityId, name: ctx.entityName },
     catalog: { actions, targets, verbs: INTENT_VERBS_FR },
+    trade: buildTradeCatalog(ctx, nameOf, priceList, scene),
     targetDetails,
     ruleKeys: ctx.sheet.features.map((f) => f.key).filter((k) => !k.startsWith("choice:")),
   };
@@ -251,10 +325,30 @@ export type IntentChoice =
   | { kind: "skill_check"; actionId: Skill; targetId: TargetId | null; advantage: AdvantageState; dc: number | null }
   | { kind: "ability_check"; actionId: Ability; targetId: TargetId | null; advantage: AdvantageState; dc: number | null }
   | { kind: "saving_throw"; actionId: Ability; targetId: TargetId | null; advantage: AdvantageState; dc: number | null }
+  /** V3.2-10 : un achat (offre de la carte), une vente ou un don (objet du sac). Le prix n'en fait pas partie : le serveur le relit. */
+  | {
+      kind: "trade";
+      direction: TradeDirection;
+      entryId: string;
+      targetId: TargetId | null;
+      /** V3.2-11 : un achat consommé sur place, mis sur l'ardoise du lieu plutôt que payé. */
+      onTab?: boolean;
+    }
   | { kind: "free" };
 
+/**
+ * V3.2-10 — les refus propres à un échange : l'offre a quitté la carte, l'objet
+ * n'a pas de prix de revente, l'inventaire a changé entre-temps (`conflict`),
+ * ou le système monétaire ne connaît pas la pièce du prix (`trade_refused`).
+ * Un manque d'argent n'en est PAS un : c'est un fait que le PNJ joue.
+ */
+/** Un choix qui se résout par un jet (posé, puis encaissé en campagne) : ni l'action libre, ni l'échange. */
+export type RollChoice = Exclude<IntentChoice, { kind: "free" } | { kind: "trade" }>;
+
+export type TradeErrorReason = "offer_not_found" | "no_resale_price" | "conflict" | "trade_refused" | "no_tab_here" | "tab_full" | "tab_services_only";
+
 /** Les raisons des deux resolveurs reutilises, sans en inventer une : `characterActions` pour les armes, `checkRolls` pour les tests. */
-export type IntentErrorReason = ActionErrorReason | CheckRollErrorReason;
+export type IntentErrorReason = ActionErrorReason | CheckRollErrorReason | TradeErrorReason;
 
 
 function advantageLabel(advantage: AdvantageState): string {
@@ -311,6 +405,10 @@ async function journalTurn(
     entityId: string;
     kind: "roll" | "player_action";
     payload: Record<string, unknown>;
+    /** V3.2-10 : l'inventaire déjà relevé AVANT un échange appliqué juste avant le journal ; absent, il est lu ici. */
+    inventoryBefore?: InventoryBlockData | null;
+    /** V3.2-11 : la scène déjà relevée AVANT qu'un échange y écrive l'ardoise ; absente, elle est lue ici. */
+    sceneBefore?: SceneState | null;
   }
 ): Promise<string | null> {
   if (!params.campaignId) return null;
@@ -318,7 +416,12 @@ async function journalTurn(
   // V3-F2 (PDD §29) : l'état du personnage et la scène AVANT ce que le tour va appliquer (les effets des jets
   // partent ensuite, dans la boucle du tour) ; « annuler ce tour » les restaure. Deux lectures de plus par tour.
   // L'état tel qu'il est EN BASE : `null` quand le personnage n'a pas encore de ligne (sa fiche montre alors ses PV pleins).
-  const [ligneEtat, scene] = await Promise.all([getRuntimeState(supabase, params.entityId, params.campaignId), getSceneState(supabase, params.campaignId)]);
+  // V3.2-8 : l'inventaire aussi (un échange le modifie) — une troisième lecture, ciblée sur le bloc `inventory`.
+  const [ligneEtat, scene, inventory] = await Promise.all([
+    getRuntimeState(supabase, params.entityId, params.campaignId),
+    params.sceneBefore !== undefined ? Promise.resolve(params.sceneBefore) : getSceneState(supabase, params.campaignId),
+    params.inventoryBefore !== undefined ? Promise.resolve(params.inventoryBefore) : readInventorySnapshot(supabase, params.entityId),
+  ]);
   const runtime = ligneEtat?.state ?? null;
   const seq = await nextEventSeq(supabase, sessionId);
   const event = await insertSessionEvent(supabase, {
@@ -327,9 +430,163 @@ async function journalTurn(
     kind: params.kind,
     actor: "player",
     actorUserId: params.callerId,
-    payload: { __v: 1, ...params.payload, undo_before: { entity_id: params.entityId, runtime, scene } } as unknown as Json,
+    payload: { __v: 1, ...params.payload, undo_before: { entity_id: params.entityId, runtime, scene, inventory } } as unknown as Json,
   });
   return event.id;
+}
+
+/** « Une nuit à l'auberge » entre guillemets, un objet du sac tel quel : la phrase se lit comme à la table. */
+function quoted(label: string): string {
+  return `« ${label} »`;
+}
+
+/**
+ * V3.2-10 (ADR 0110) — règle un achat, une vente ou un don choisi dans la
+ * barre d'intention. Le PRIX est relu ici, dans la carte du lieu et le bloc
+ * `cost` (le même catalogue que l'écran a affiché, reconstruit côté serveur) :
+ * le client n'envoie que l'identifiant de l'offre ou de l'objet.
+ *
+ * L'ordre tient la promesse d'annulation : l'inventaire et la scène sont
+ * relevés, l'échange appliqué (une révision du bloc, `applyTrade` ; l'ardoise
+ * dans la scène), puis le tour est journalisé avec les relevés d'AVANT —
+ * « annuler ce tour » rend pièces, objets et ardoise. Si l'écriture échoue,
+ * rien n'est journalisé.
+ *
+ * **Un manque ne bloque pas.** L'échange court n'écrit rien, mais le tour
+ * part avec un fait (« Edran tend 3 pa ; il manque 2 pa… ») : la narration le
+ * reçoit comme tout autre fait, et c'est le PNJ qui réagit.
+ *
+ * V3.2-11 : un achat consommé sur place peut aller sur l'ardoise du lieu
+ * (rien n'est payé, une ligne est due) ; régler l'ardoise paie tout ce qui
+ * est dû ici, au total relu dans la scène.
+ */
+async function executeTrade(
+  supabase: TypedClient,
+  params: {
+    entityId: string;
+    campaignId: string | null;
+    callerId: string;
+    choice: Extract<IntentChoice, { kind: "trade" }>;
+    data: IntentBarData;
+    target: IntentTargetDetail | null;
+    intent: Record<string, unknown>;
+  }
+): Promise<ResolvedTurnRecord | { error: IntentErrorReason }> {
+  const { choice, data } = params;
+  const who = data.actor.name;
+  const to = params.target ? ` à ${params.target.label}` : "";
+  const creditor = params.target?.label ?? null;
+
+  const [system, before, sceneBefore] = await Promise.all([
+    readCurrencySystemForEntity(supabase, { entityId: params.entityId, campaignId: params.campaignId }),
+    readInventorySnapshot(supabase, params.entityId),
+    params.campaignId ? getSceneState(supabase, params.campaignId) : Promise.resolve(null),
+  ]);
+
+  let trade: Trade | null = null;
+  let label: string;
+  let priceCp: number | null = null;
+  /** La scène à écrire si l'échange tient : l'ardoise allongée (crédit) ou soldée (règlement). */
+  let sceneAfter: SceneState | null = null;
+  if (choice.direction === "settle") {
+    const dueCp = sceneBefore ? tabTotalCp(tabAt(sceneBefore, sceneBefore.locationId)) : 0;
+    if (!sceneBefore || dueCp === 0) return { error: "no_tab_here" };
+    trade = tradeForTab(dueCp);
+    label = "l'ardoise";
+    priceCp = dueCp;
+    sceneAfter = clearTabAt(sceneBefore, sceneBefore.locationId);
+  } else if (choice.direction === "buy") {
+    const offer = data.trade.offers.find((o) => o.id === choice.entryId);
+    if (!offer) return { error: "offer_not_found" };
+    label = quoted(offer.label);
+    priceCp = offer.priceCp;
+    if (choice.onTab) {
+      // Consommé sur place seulement : un objet emporté à crédit devrait aussi entrer dans le sac.
+      if (offer.ruleKey) return { error: "tab_services_only" };
+      if (!sceneBefore) return { error: "no_tab_here" };
+      sceneAfter = addToTab(sceneBefore, { label: offer.label, priceCp: offer.priceCp, creditor });
+      if (!sceneAfter) return { error: "tab_full" };
+    } else {
+      trade = tradeForOffer(offer);
+    }
+  } else {
+    const item = data.trade.items.find((i) => i.id === choice.entryId);
+    if (!item) return { error: "item_not_found" };
+    label = item.label;
+    if (choice.direction === "sell") {
+      if (item.resaleCp === null) return { error: "no_resale_price" };
+      trade = tradeForSale(item.id, item.resaleCp);
+      priceCp = item.resaleCp;
+    } else {
+      trade = tradeForGift(item.id);
+    }
+  }
+
+  let missing: TradeMissing[] = [];
+  if (trade) {
+    const applied = await applyTrade(supabase, { entityId: params.entityId, trade, actorUserId: params.callerId, system });
+    if ("error" in applied) {
+      if (applied.error === "not_found" || applied.error === "forbidden" || applied.error === "item_not_found" || applied.error === "conflict") return { error: applied.error };
+      return { error: "trade_refused" };
+    }
+    if ("status" in applied) missing = applied.missing;
+  }
+  const status: "settled" | "short" | "tab" = missing.length > 0 ? "short" : trade ? "settled" : "tab";
+  if (status !== "short" && sceneAfter && params.campaignId) {
+    await putSceneState(supabase, { campaignId: params.campaignId, state: sceneAfter, updatedBy: params.callerId });
+  }
+
+  const facts: string[] = [];
+  const price = priceCp === null || priceCp === 0 ? "" : formatCpFr(priceCp);
+  if (status === "short") {
+    const purseCp = before ? totalValueCp(before.currency, system) : 0;
+    for (const line of missing) {
+      if (line.kind === "coins") {
+        const cost = price ? ` (${price})` : "";
+        facts.push(
+          purseCp > 0
+            ? `${who} tend ${formatCpFr(purseCp)}${to} ; il manque ${formatCpFr(line.missingCp)} pour ${label}${cost}. Rien n'est payé.`
+            : `${who} n'a aucune pièce pour payer ${label}${cost}${to}. Rien n'est payé.`
+        );
+      } else {
+        facts.push(`${who} n'a plus ${label} sur soi. Rien n'est échangé.`);
+      }
+    }
+  } else if (status === "tab") {
+    facts.push(`${who} prend ${label}${to}, sur l'ardoise${price ? ` (${price})` : ""}. Rien n'est payé pour l'instant.`);
+  } else {
+    const forPrice = price ? ` pour ${price}` : "";
+    if (choice.direction === "settle") facts.push(`${who} règle l'ardoise${to} : ${price}. C'est payé, plus rien n'est dû ici.`);
+    else if (choice.direction === "buy") facts.push(`${who} achète ${label}${to}${forPrice}. C'est payé.`);
+    else if (choice.direction === "sell") facts.push(`${who} vend ${label}${to}${forPrice}. C'est payé.`);
+    else facts.push(`${who} donne ${label}${to}.`);
+  }
+
+  const resolution = { settled: "échange réglé", short: "échange court", tab: "mis sur l'ardoise" }[status];
+  const payload = {
+    intent: params.intent,
+    facts,
+    resolution,
+    trade: {
+      direction: choice.direction,
+      entry_id: choice.entryId,
+      label,
+      price_cp: priceCp,
+      target_label: creditor,
+      status,
+      ...(missing.length > 0 ? { missing } : {}),
+    },
+  };
+  const eventId = await journalTurn(supabase, {
+    campaignId: params.campaignId,
+    callerId: params.callerId,
+    entityId: params.entityId,
+    kind: "player_action",
+    payload,
+    inventoryBefore: before,
+    sceneBefore,
+  });
+  return { kind: "player_action", facts, eventId, detail: payload, effects: [] };
 }
 
 /**
@@ -371,7 +628,7 @@ export async function executeIntent(
   const intent = {
     text: params.text,
     kind: choice.kind,
-    action_id: choice.kind === "free" ? null : choice.actionId,
+    action_id: choice.kind === "free" ? null : choice.kind === "trade" ? choice.entryId : choice.actionId,
     target_id: target?.id ?? null,
     target_label: target?.label ?? null,
     corrected: params.corrected,
@@ -391,6 +648,10 @@ export async function executeIntent(
     payload,
   });
     return { kind: "player_action", facts, eventId, detail: payload, effects: [] };
+  }
+
+  if (choice.kind === "trade") {
+    return executeTrade(supabase, { ...params, choice, data, target, intent });
   }
 
   if (choice.kind === "weapon_attack") {
@@ -578,7 +839,7 @@ function diceFormulaMax(formula: string): number {
 /** Ce qu'une intention mécanique demanderait — sans rien lancer. Même trio de resolveurs que `executeIntent` (armes : `characterActions.ts` ; tests/sauvegardes : la fiche dérivée directement, comme `checkRolls.ts` le fait déjà), jamais une quatrième lecture de la fiche. */
 function buildPendingBasis(
   ctx: CharacterActionContext,
-  choice: Exclude<IntentChoice, { kind: "free" }>
+  choice: RollChoice
 ): PendingBasis | { error: IntentErrorReason } {
   if (choice.kind === "weapon_attack") {
     const item = ctx.inventoryData?.items.find((i) => i.id === choice.actionId);
@@ -677,7 +938,7 @@ export async function proposeIntentRequest(
     locale: Locale;
     text: string;
     corrected: boolean;
-    choice: Exclude<IntentChoice, { kind: "free" }>;
+    choice: RollChoice;
   }
 ): Promise<ProposeIntentOutcome> {
   const data = await buildIntentBarData(supabase, params);
