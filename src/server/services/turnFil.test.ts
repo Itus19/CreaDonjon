@@ -25,7 +25,7 @@ function row(overrides: Partial<SessionEventRow>): SessionEventRow {
 }
 
 describe("mapSessionEventToFilItem", () => {
-  it("narration : texte et reaction de PNJ eventuelle", () => {
+  it("narration écrite avant qu'on garde le nom : texte et réaction, nom et attitude à null", () => {
     const item = mapSessionEventToFilItem(
       row({ kind: "narration", payload: { __v: 1, text: "La porte grince.", npc_reaction: { npc_id: "pnj-1", text: "Qui va la ?" } } })
     );
@@ -35,8 +35,25 @@ describe("mapSessionEventToFilItem", () => {
       createdAt: "2026-09-24T10:00:00Z",
       kind: "narration",
       text: "La porte grince.",
-      npcReaction: { npcId: "pnj-1", text: "Qui va la ?" },
+      npcReaction: { npcId: "pnj-1", text: "Qui va la ?", npcName: null, attitude: null },
     });
+  });
+
+  it("narration : le nom et l'attitude du PNJ qui parle, figés dans le journal", () => {
+    const item = mapSessionEventToFilItem(
+      row({
+        kind: "narration",
+        payload: { __v: 1, text: "Mabelle te jauge.", npc_reaction: { npc_id: "pnj-1", text: "Il m'en reste une.", npc_name: "Mabelle, du Fanal", npc_attitude: "accueillante" } },
+      })
+    );
+    expect((item as { npcReaction: unknown }).npcReaction).toEqual({ npcId: "pnj-1", text: "Il m'en reste une.", npcName: "Mabelle, du Fanal", attitude: "accueillante" });
+  });
+
+  it("narration : une esquisse sans attitude suivie garde son nom, l'attitude reste null", () => {
+    const item = mapSessionEventToFilItem(
+      row({ kind: "narration", payload: { text: "…", npc_reaction: { npc_id: "esq-1", text: "Bonsoir.", npc_name: "Une elfe", npc_attitude: null } } })
+    );
+    expect((item as { npcReaction: unknown }).npcReaction).toEqual({ npcId: "esq-1", text: "Bonsoir.", npcName: "Une elfe", attitude: null });
   });
 
   it("narration sans reaction de PNJ : npcReaction reste null, jamais absent", () => {

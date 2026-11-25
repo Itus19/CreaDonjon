@@ -160,6 +160,8 @@ export interface SoloTurnContext {
   recentNarrations: string[];
   /** Le PNJ à qui le joueur parle, s'il est clairement désigné : `narrateSoloTurn` exige alors sa réplique. */
   addressedNpcId: string | null;
+  /** Les présents tels que le modèle les a vus (nom déjà résolu par `known_as`, bande d'attitude) : la réplique retenue garde le nom et l'attitude de son PNJ pour le fil. */
+  npcs: TurnContextNpc[];
 }
 
 export async function buildSoloTurnContext(
@@ -208,7 +210,7 @@ export async function buildSoloTurnContext(
   };
 
   const knownEntityIds = [...(locationEntity ? [locationEntity.id] : []), ...realNpcs.map((n) => n.id)];
-  return { text: buildTurnContext(input), npcIds: npcs.map((n) => n.id), knownEntityIds, recentNarrations, addressedNpcId };
+  return { text: buildTurnContext(input), npcIds: npcs.map((n) => n.id), knownEntityIds, recentNarrations, addressedNpcId, npcs };
 }
 
 /**
