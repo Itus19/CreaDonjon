@@ -1575,16 +1575,17 @@ scene_states
 
 ---
 
-## 27. Le fournisseur d'IA d'un compte (V3.1-224)
+## 27. Les fournisseurs d'IA d'un compte (V3.1-224, ADR 0108)
 
-`ai_providers` — **une ligne par compte**, `user_id` en clé primaire (`references auth.users on delete cascade`). Chacun déclare le sien : sa clé chez un fournisseur distant, ou l'adresse de sa propre machine. Personne ne consomme les ressources d'un autre. Décision : [ADR 0103](adr/0103-le-fournisseur-d-ia-de-chaque-compte.md).
+`ai_providers` — **les fournisseurs d'un compte, dix au plus** (`id` en clé primaire, `user_id references auth.users on delete cascade`). Chacun déclare les siens : sa clé chez un fournisseur distant, ou l'adresse de sa propre machine. Personne ne consomme les ressources d'un autre. Décisions : [ADR 0103](adr/0103-le-fournisseur-d-ia-de-chaque-compte.md), puis [ADR 0108](adr/0108-plusieurs-fournisseurs-ia.md) (plusieurs fournisseurs, plusieurs modèles ; migration `20261125120000_plusieurs_fournisseurs_ia`).
 
 | Colonne | Type | Rôle |
 |---|---|---|
-| `user_id` | `uuid` | clé primaire, et seule clé de la RLS |
+| `id` | `uuid` | clé primaire |
+| `user_id` | `uuid` | le compte, seule clé de la RLS |
 | `label` | `text` | ce que l'utilisateur en dit (« Venice », « mon PC ») |
 | `base_url` | `text` | l'adresse de l'API, compatible OpenAI (`…/v1`) |
-| `model` | `text` | l'identifiant du modèle |
+| `models` | `text[]` | les identifiants de modèles proposés, 1 à 12 (contrainte `check`) |
 | `secret` | `text` | la clé d'API **déjà chiffrée** par l'application ; `null` pour un fournisseur sans clé |
 | `created_at`, `updated_at` | `timestamptz` | — |
 
@@ -1593,3 +1594,7 @@ scene_states
 **RLS : chacun chez soi, sur les quatre opérations.** `user_id = auth.uid()` en lecture, insertion, modification et suppression. Aucun rôle applicatif n'a de raison de lire la ligne d'un autre — pas même l'administrateur d'un monde, qui n'a rien à faire du fournisseur de ses joueurs. C'est la seule table du schéma dont **aucune** politique ne mentionne un monde ou une campagne.
 
 **L'adresse est revérifiée avant chaque appel**, pas seulement à l'enregistrement : `verifierUrlFournisseur` (noyau pur) refuse les schémas autres que `http(s)`, les identifiants dans l'URL, le clair hors machine locale, et les adresses privées en production. Une ligne peut avoir été écrite autrement depuis, et c'est notre serveur qui appellera l'adresse.
+
+`ai_provider_choices` — **le couple qui sert**, une ligne par compte au plus (`user_id` en clé primaire). `provider_id references ai_providers(id) on delete cascade` : retirer un fournisseur emporte le choix qui le désignait. `model` n'a pas de clé étrangère (un tableau ne s'y prête pas) : un modèle retiré de la liste laisse un choix caduc, que `choixEffectif` (`src/core/ai/providerChoice.ts`) corrige à la lecture, avec la même règle pour l'écran et l'appel (premier modèle du même fournisseur ; sans choix valable, premier modèle du fournisseur modifié le plus récemment).
+
+**RLS du choix.** `user_id = auth.uid()` sur les quatre opérations, et en insertion comme en modification, **le fournisseur désigné doit être au compte** (`exists` sur `ai_providers`). Sans ce second test, un compte pourrait désigner le fournisseur d'un autre, et la résolution, qui lit sous l'identité de l'appelant, ne le trouverait pas ; mais la règle ne doit pas reposer sur cette coïncidence.
