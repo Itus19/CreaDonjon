@@ -27,19 +27,23 @@ Ordre : 8 et 9 d'abord (le noyau et les prix), puis 10 (l'écran), puis 11 (le c
 
 ---
 
-### ☐ V3.2-9 — Le prix vient des règles · `M` · sans modèle IA — **à confirmer avec l'auteur (Opus)**
+### ☐ V3.2-9 — Le prix vient des règles et du wiki · `M` · sans modèle IA — **prêt (Opus)**
 
 **Un objet** : son bloc `cost` (`rule-blocks/blocks.ts`, déjà saisi pour les objets du SRD, lots compris). **Revente** : la moitié du prix, arrondie à la pièce de cuivre inférieure (MdJ 2024).
 
-**Un service sans fiche** (une nuit, un repas, une boisson, un bain) : une table de prix de la partie, rangée par niveau de richesse du lieu, sur le même axe `wealth` que le générateur Menu de taverne. Le contenu de la table est de la donnée de ruleset (`data/personnel/` ou base), jamais du code ni une migration (CLAUDE.md, « Saisir des règles »).
+**Un service ou une consommation** (une nuit, un repas, une boisson) : **la carte du lieu, sur sa page de wiki** (idée de l'auteur, 25 novembre). Le générateur Taverne tire déjà un menu à prix structurés (`GeneratorSlotItem.price` : montant et pièce) selon la richesse du lieu (axe `wealth` : modeste, correcte, réputée). Il manque deux choses :
 
-**Ce que le PNJ vend** : la liste fermée des offres du lieu (services de sa table, objets de son étal). C'est elle que l'intention de V3.2-10 reconnaît ; un objet absent de la liste ne s'achète pas.
+1. **Un bloc typé « Carte et tarifs »** (`price_list`) sur la page du lieu : une liste d'offres (libellé, prix, nature service ou objet, renvoi facultatif vers une fiche de règle) et la richesse retenue. Pas du texte : le moteur doit lire un prix, pas le deviner dans une phrase. La promotion d'un tirage Taverne (`promotion.ts`) écrit aujourd'hui le menu en texte simple ; elle écrira ce bloc à la place. Nouveau type de bloc : schéma Zod et registre (`blocks/registry.ts`), aucune migration (`block_type` n'est pas contraint en base), une planche du catalogue.
+2. **Un tirage paresseux et figé** : la carte se tire la première fois qu'on en a besoin (création du lieu, ou première demande « qu'est-ce que vous servez ? », ou premier achat), avec une graine tirée de l'identifiant du lieu, puis elle est écrite dans le bloc et ne bouge plus (ADR 0104 : un détail se fige quand on le découvre). Une richesse inconnue est tirée au même moment, et retenue dans le bloc.
 
-**À trancher avec l'auteur avant de coder** : où vit la table de prix des services (un bloc de règle, une table aléatoire existante détournée, un réglage de partie), et d'où vient la richesse d'un lieu tant que les agrégats de lieux (ADR 0104) n'existent pas.
+**Ce que le PNJ vend** : les offres de ce bloc, et rien d'autre. C'est la liste fermée que l'intention de V3.2-10 reconnaît, et celle que le contexte du tour transmet au modèle (V3.2-11). L'auteur peut corriger la carte à la main : le wiki l'emporte.
+
+**Hors de ce ticket** : l'Échoppe (même mécanisme pour un étal d'objets), à faire au deuxième cas concret.
 
 **Critères d'acceptation**
 - [ ] Un objet du SRD a un prix d'achat et de revente sans saisie supplémentaire.
-- [ ] Une nuit à l'auberge coûte un prix différent selon la richesse du lieu.
+- [ ] Une taverne sans carte en reçoit une à la première demande ; la redemander rend la même carte.
+- [ ] La carte apparaît sur la page du lieu, modifiable, et une correction à la main change le prix payé.
 - [ ] Aucun prix n'est écrit dans le code.
 
 ---
