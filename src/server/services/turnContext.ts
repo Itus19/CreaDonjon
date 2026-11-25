@@ -26,6 +26,7 @@ import { filtrerBlocsVisibles } from "@/src/server/services/blocks";
 import { filterSegments } from "@/src/core/visibility";
 import { zTextBlockData } from "@/src/core/schemas/blocks/text";
 import { premierParagraphe } from "@/src/core/entities/premierePhrase";
+import { zRoomsBlockData, type Room } from "@/src/core/schemas/blocks/rooms";
 import { estQuestionDirecte } from "@/src/core/ai/npcAddressed";
 import { undoneEventIds } from "@/src/core/rules/turnUndo";
 import { getCurrentAttitude } from "@/src/server/services/psyche";
@@ -185,20 +186,27 @@ async function resolveRecentHistory(
 }
 
 /**
- * Le premier paragraphe visible de la page du lieu : ses blocs `text`,
- * filtrés pour CE viewer (règle 5), puis leurs segments. Une lecture de plus
- * par tour narré.
+ * Le premier paragraphe visible de la page du lieu (ses blocs `text`,
+ * filtrés pour CE viewer, règle 5, puis leurs segments) et ses pièces
+ * visibles (blocs `rooms`, V3.2-19). Une seule lecture de plus par tour narré.
  */
-async function resolveLocationDescription(supabase: TypedClient, locationId: string, viewer: Viewer): Promise<string | null> {
-  const blocs = filtrerBlocsVisibles(await listBlocksByTypesForEntities(supabase, [locationId], ["text"]), viewer).sort((a, b) => a.display_order - b.display_order);
+async function resolveLocationPage(supabase: TypedClient, locationId: string, viewer: Viewer): Promise<{ description: string | null; rooms: Room[] }> {
+  const blocs = filtrerBlocsVisibles(await listBlocksByTypesForEntities(supabase, [locationId], ["text", "rooms"]), viewer).sort((a, b) => a.display_order - b.display_order);
+  let description: string | null = null;
+  const rooms: Room[] = [];
   for (const bloc of blocs) {
+    if (bloc.block_type === "rooms") {
+      const lu = zRoomsBlockData.safeParse(bloc.data);
+      if (lu.success) rooms.push(...lu.data.rooms);
+      continue;
+    }
+    if (description !== null) continue;
     const parsed = zTextBlockData.safeParse(bloc.data);
     if (!parsed.success) continue;
     const aware = parsed.data.segments.map((segment) => ({ ...segment, visibility: { ...segment.visibility, createdBy: null } }));
-    const paragraphe = premierParagraphe(filterSegments(aware, viewer));
-    if (paragraphe) return paragraphe;
+    description = premierParagraphe(filterSegments(aware, viewer));
   }
-  return null;
+  return { description, rooms };
 }
 
 /**
@@ -234,6 +242,14 @@ export interface SoloTurnContext {
   addressedNpcId: string | null;
   /** V3.2-19 — les ids des lieux accessibles : ce qui borne l'enum `location_id` de `move_to`. */
   moveTargetIds: string[];
+  /** V3.2-19 — les mêmes avec leur nom : le contrôle d'une pièce inventée refuse le nom d'un lieu voisin. */
+  moveTargets: { id: string; name: string }[];
+  /** V3.2-19 — les pièces du bloc « Pièces » visibles du joueur, telles qu'écrites. */
+  wikiRooms: Room[];
+  /** V3.2-19 — le nom du lieu courant, pour le même contrôle. */
+  locationName: string | null;
+  /** V3.2-19 — vrai si l'on est dans une esquisse de pièce : le joueur qui la nomme la fait entrer dans le wiki. */
+  inSketchRoom: boolean;
   /** Vrai si le joueur pose une question : `narrateSoloTurn` n'exige la réplique du PNJ désigné (et ne réessaie) que dans ce cas. */
   addressedIsQuestion: boolean;
   /** Les présents tels que le modèle les a vus (nom déjà résolu par `known_as`, bande d'attitude) : la réplique retenue garde le nom et l'attitude de son PNJ pour le fil. */
@@ -301,7 +317,7 @@ export async function buildSoloTurnContext(
 ): Promise<SoloTurnContext> {
   const scene = await getSceneState(supabase, params.campaignId);
 
-  const [locationEntity, realNpcs, quests, history, player, money, locationDescription, moveTargets] = await Promise.all([
+  const [locationEntity, realNpcs, quests, history, player, money, locationPage, moveTargets] = await Promise.all([
     scene ? listEntitiesByIds(supabase, [scene.locationId]).then((rows) => rows[0] ?? null) : Promise.resolve(null),
     scene
       ? resolvePresentNpcs(supabase, { worldId: params.worldId, campaignId: params.campaignId, playerEntityId: params.playerEntityId, present: scene.present })
@@ -310,10 +326,15 @@ export async function buildSoloTurnContext(
     resolveRecentHistory(supabase, params.sessionId, params.fromEventId ?? null),
     resolvePlayer(supabase, params.playerEntityId),
     resolveMoney(supabase, { playerEntityId: params.playerEntityId, scene }),
-    scene ? resolveLocationDescription(supabase, scene.locationId, params.viewer) : Promise.resolve(null),
+    scene ? resolveLocationPage(supabase, scene.locationId, params.viewer) : Promise.resolve({ description: null, rooms: [] as Room[] }),
     scene ? resolveMoveTargets(supabase, params.worldId, scene.locationId, params.viewer) : Promise.resolve([]),
   ]);
   const recentNarrations = history.narrations;
+  const locationDescription = locationPage.description;
+  // V3.2-19 : les pièces connues ici, celles du wiki puis les esquisses de la scène ; et celle où l'on est.
+  const roomSketchesHere = (scene?.roomSketches ?? []).filter((r) => r.locationId === scene?.locationId);
+  const knownRooms = [...locationPage.rooms.map((r) => ({ name: r.name, description: r.description })), ...roomSketchesHere.map((r) => ({ name: r.name, description: r.description }))];
+  const currentRoom = scene?.room && scene.room.locationId === scene.locationId ? { name: scene.room.name, description: scene.room.description } : null;
   const npcs = [...realNpcs, ...sketchesAsNpcs(scene?.sketches ?? [])];
   const addressedNpcId = npcAddressedBy(params.playerAction, npcs);
   const addressedIsQuestion = estQuestionDirecte(params.playerAction);
@@ -337,10 +358,12 @@ export async function buildSoloTurnContext(
     recentPlayerActions: history.playerActions,
     addressedIsQuestion,
     moveTargets,
+    rooms: knownRooms,
+    currentRoom,
   };
 
   const knownEntityIds = [...(locationEntity ? [locationEntity.id] : []), ...realNpcs.map((n) => n.id)];
-  return { text: buildTurnContext(input), npcIds: npcs.map((n) => n.id), knownEntityIds, recentNarrations, addressedNpcId, addressedIsQuestion, npcs, moveTargetIds: moveTargets.map((l) => l.id) };
+  return { text: buildTurnContext(input), npcIds: npcs.map((n) => n.id), knownEntityIds, recentNarrations, addressedNpcId, addressedIsQuestion, npcs, moveTargetIds: moveTargets.map((l) => l.id), moveTargets, wikiRooms: locationPage.rooms, locationName: locationEntity?.name ?? null, inSketchRoom: scene?.room?.anchored === false };
 }
 
 /**

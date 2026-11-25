@@ -105,6 +105,8 @@ import type { ResourcesBlockData } from "@/src/core/schemas/blocks/resources";
 import type { EquippableBlockData } from "@/src/core/schemas/blocks/equippable";
 import type { PriceListBlockData } from "@/src/core/schemas/blocks/priceList";
 import PriceListBlockEditor from "./PriceListBlockEditor";
+import type { RoomsBlockData } from "@/src/core/schemas/blocks/rooms";
+import RoomsBlockEditor from "./RoomsBlockEditor";
 import type { MusicBlockData } from "@/src/core/schemas/blocks/music";
 import type { StatblockBlockData } from "@/src/core/schemas/blocks/statblock";
 import type { GenealogyBlockData } from "@/src/core/schemas/blocks/genealogy";
@@ -156,6 +158,7 @@ export const BLOCK_TYPE_LABELS: Record<string, string> = {
   session_journal_meta: "Séance",
   equippable: "Objet équipable",
   price_list: "Carte et tarifs",
+  rooms: "Pièces",
 };
 
 /** V3.1-189 : les blocs image de la fiche, par identifiant, pour les images posees dans le texte. */
@@ -312,6 +315,8 @@ export function BlockDataEditor({
       );
     case "price_list":
       return <PriceListBlockEditor data={block.data as PriceListBlockData} onChange={(d) => onChange(d)} blockId={block.id} />;
+    case "rooms":
+      return <RoomsBlockEditor data={block.data as RoomsBlockData} onChange={(d) => onChange(d)} />;
     case "equippable":
       return <EquippableBlockEditor data={block.data as EquippableBlockData} onChange={(d) => onChange(d)} worldSlug={worldSlug} />;
     case "music":

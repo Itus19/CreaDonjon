@@ -73,6 +73,8 @@ export interface SceneView {
    * si son parent n'est pas un lieu.
    */
   nearestCity: { name: string; slug: string } | null;
+  /** V3.2-19 — la pièce où se trouve le personnage dans ce lieu (bloc « Pièces » ou esquisse) ; `null` hors de toute pièce. */
+  roomName: string | null;
   time: { day: number; hour: number; minute: number };
   lighting: "bright" | "dim" | "dark";
   /** V3-C6 — tirée au générateur `meteo`, jamais inventée. `null` sans table réelle à tirer dans ce monde. */

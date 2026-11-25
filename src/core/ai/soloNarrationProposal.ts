@@ -48,6 +48,10 @@ export function soloNarrationSchema(npcIds: string[], knownEntityIds: string[] =
       elapsed: z.object({ kind: z.enum(ELAPSED_CHOICES), hours: z.number().int().min(1).max(24).optional() }).optional(),
       /** V3.2-19 — un déplacement PROPOSÉ vers un lieu voisin fourni ; `with` : les PNJ présents qui suivent. Le moteur l'applique comme le panneau de scène. */
       move_to: z.object({ location_id: z.string().min(1), with: z.array(z.string().min(1)).max(10).optional() }).optional(),
+      /** V3.2-19 — entrer dans une pièce du lieu, connue ou nouvelle ; le moteur contrôle le nom (`validerNouvellePiece`) avant de l'accepter. */
+      enter_room: z.object({ name: z.string().trim().min(1).max(80), description: z.string().trim().max(600).optional() }).optional(),
+      /** V3.2-19 — ressortir de la pièce, dans le lieu lui-même. */
+      leave_room: z.boolean().optional(),
     })
     .strict()
     .superRefine((value, ctx) => {
@@ -136,6 +140,17 @@ export function soloNarrationToolSchema(npcIds: string[], knownEntityIds: string
             },
           }
         : {}),
+      enter_room: {
+        type: "object",
+        description:
+          "Optionnel : ta narration fait entrer le personnage dans une piece de ce lieu (la cuisine, une chambre, la cave). Reprends le nom exact d'une piece de pieces-du-lieu, ou donne un nom court pour une piece nouvelle avec sa description en deux phrases. Le moteur controle et memorise.",
+        properties: {
+          name: { type: "string", description: "Le nom de la piece, court, sans chiffre (ex: \"la cuisine\")" },
+          description: { type: "string", description: "Seulement pour une piece nouvelle : deux phrases concretes (lumiere, odeurs, ce qui s'y trouve)" },
+        },
+        required: ["name"],
+      },
+      leave_room: { type: "boolean", description: "Optionnel : vrai si le personnage ressort de la piece ou il etait, dans le lieu lui-meme" },
       elapsed: {
         type: "object",
         description:

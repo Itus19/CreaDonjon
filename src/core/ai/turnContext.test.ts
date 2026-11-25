@@ -20,6 +20,8 @@ function input(partial: Partial<TurnContextInput> = {}): TurnContextInput {
     recentPlayerActions: [],
     addressedIsQuestion: false,
     moveTargets: [],
+    rooms: [],
+    currentRoom: null,
     ...partial,
   };
 }
@@ -210,6 +212,21 @@ describe("buildTurnContext — ce qui fait vivre la scène (retour de jeu du 25 
 
   it("V3.2-19 — aucun lieu accessible : aucune balise", () => {
     expect(buildTurnContext(input())).not.toContain("lieux-accessibles");
+  });
+
+  it("V3.2-19 — la pièce actuelle et les pièces du lieu voyagent dans leurs balises", () => {
+    const out = buildTurnContext(
+      input({ currentRoom: { name: "La cuisine", description: "Basse et enfumée." }, rooms: [{ name: "La cuisine", description: "Basse et enfumée." }, { name: "La cave", description: "" }] })
+    );
+    expect(out.slice(out.indexOf('<donnee source="piece-actuelle">'))).toContain("La cuisine — Basse et enfumée.");
+    const pieces = out.slice(out.indexOf('<donnee source="pieces-du-lieu">'));
+    expect(pieces).toContain("- La cave");
+  });
+
+  it("V3.2-19 — hors de toute pièce, ni balise de pièce actuelle ni liste vide", () => {
+    const out = buildTurnContext(input());
+    expect(out).not.toContain("piece-actuelle");
+    expect(out).not.toContain("pieces-du-lieu");
   });
 });
 

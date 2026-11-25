@@ -7,7 +7,7 @@ import { maxSimilarityToRecent } from "@/src/core/ai/narrationSimilarity";
 import { buildSoloTurnContext } from "@/src/server/services/turnContext";
 import { drawSketchForScene, recordSketchSpeechAndMaybeAnchor } from "@/src/server/services/sceneSketches";
 import { proposeWorldNote } from "@/src/server/services/soloWorldNotes";
-import { advanceSceneAfterNarration, moveSceneAfterNarration } from "@/src/server/services/narrationTime";
+import { advanceSceneAfterNarration, applyRoomAfterNarration, moveSceneAfterNarration } from "@/src/server/services/narrationScene";
 import type { ElapsedProposal } from "@/src/core/rules/elapsed";
 import type { GameTime } from "@/src/core/rules/scene";
 import type { SceneView } from "@/lib/solo/types";
@@ -74,6 +74,7 @@ const SYSTEM_PROMPT = [
   "",
   "CE QUE TU PROPOSES AU MOTEUR (il valide, il peut refuser)",
   "- move_to : si ta narration emmene le personnage dans un des lieux-accessibles (la cuisine, la rue, sa chambre), propose ce lieu, avec les PNJ presents qui le suivent. Decris le trajet et l'arrivee.",
+  "- enter_room / leave_room : si ta narration fait entrer le personnage dans une piece de ce lieu (reprends le nom de pieces-du-lieu, ou invente une piece plausible avec deux phrases de description), ou l'en fait ressortir. Decris la piece a l'arrivee.",
   "- elapsed : combien de temps ce tour a dure dans l'histoire, s'il dure plus que quelques instants. Si les changements disent deja combien de temps passe, n'en propose pas.",
   "- world_note : un fait qui meriterait d'etre ajoute a la fiche d'un lieu ou d'un PNJ REELLEMENT present (un identifiant fourni). Un humain la relira : ne l'ecris jamais comme un fait acquis dans ta narration.",
   "Tu n'ecris jamais l'heure exacte toi-meme : le moteur la calcule. Quand les changements la donnent, tu peux la reprendre telle quelle.",
@@ -123,6 +124,9 @@ interface NarrationAttempt {
   elapsed?: ElapsedProposal;
   /** V3.2-19 — un déplacement proposé vers un lieu voisin fourni ; `moveSceneAfterNarration` l'applique. */
   moveTo?: { locationId: string; with: string[] };
+  /** V3.2-19 — une pièce proposée ; `applyRoomAfterNarration` la tranche. */
+  enterRoom?: { name: string; description?: string };
+  leaveRoom?: boolean;
   invalidReason?: string;
   inputTokens: number;
   outputTokens: number;
@@ -171,6 +175,8 @@ async function attemptNarration(
     worldNote: parsed.data.world_note ? { entityId: parsed.data.world_note.entity_id, text: parsed.data.world_note.text } : undefined,
     elapsed: parsed.data.elapsed,
     moveTo: parsed.data.move_to ? { locationId: parsed.data.move_to.location_id, with: parsed.data.move_to.with ?? [] } : undefined,
+    enterRoom: parsed.data.enter_room,
+    leaveRoom: parsed.data.leave_room ?? false,
     inputTokens: result.inputTokens,
     outputTokens: result.outputTokens,
   };
@@ -207,7 +213,7 @@ async function attemptNarration(
  * les deux, un seul événement `narration` s'écrit.
  */
 export async function narrateSoloTurn(supabase: TypedClient, provider: AiProvider, params: SoloNarrationParams): Promise<SoloNarrationOutcome> {
-  const { text: context, npcIds, knownEntityIds, moveTargetIds, recentNarrations, addressedNpcId, addressedIsQuestion, npcs } = await buildSoloTurnContext(supabase, {
+  const firstContext = await buildSoloTurnContext(supabase, {
     worldId: params.worldId,
     campaignId: params.campaignId,
     playerEntityId: params.playerEntityId,
@@ -220,6 +226,7 @@ export async function narrateSoloTurn(supabase: TypedClient, provider: AiProvide
     hints: params.hints,
   });
 
+  const { text: context, npcIds, knownEntityIds, moveTargetIds, recentNarrations, addressedNpcId, addressedIsQuestion, npcs } = firstContext;
   const first = await attemptNarration(supabase, provider, context, npcIds, knownEntityIds, moveTargetIds, params.userId, params.campaignId);
   if (!first.ok) return first;
 
@@ -380,6 +387,30 @@ export async function narrateSoloTurn(supabase: TypedClient, provider: AiProvide
     } catch (erreur) {
       // Ignoré volontairement : la narration ci-dessus est déjà acquise.
       console.error("Déplacement de la scène après la narration impossible", erreur);
+    }
+  }
+
+  // V3.2-19 — la pièce proposée, seulement si la scène n'a pas changé de
+  // lieu : un déplacement l'emporte, et laisse les pièces derrière.
+  if (!chosen.moveTo && (chosen.enterRoom || chosen.leaveRoom || firstContext.inSketchRoom) && firstContext.locationName) {
+    try {
+      const roomChanged = await applyRoomAfterNarration(supabase, {
+        worldId: params.worldId,
+        campaignId: params.campaignId,
+        callerId: params.userId,
+        viewer: params.viewer,
+        sessionEventId: event.id,
+        playerAction: params.playerAction,
+        enter: chosen.enterRoom,
+        leave: chosen.leaveRoom ?? false,
+        wikiRooms: firstContext.wikiRooms,
+        locationName: firstContext.locationName,
+        neighbourNames: firstContext.moveTargets.map((l) => l.name),
+      });
+      if (roomChanged) scene = await loadSceneView(supabase, { campaignId: params.campaignId, worldId: params.worldId });
+    } catch (erreur) {
+      // Ignoré volontairement : la narration ci-dessus est déjà acquise.
+      console.error("Pièce proposée par la narration impossible à poser", erreur);
     }
   }
 

@@ -124,3 +124,15 @@ describe("V3.2-19 — move_to, un déplacement vers un lieu voisin fourni", () =
   });
 });
 
+describe("V3.2-19 — enter_room et leave_room", () => {
+  it("accepte une pièce avec ou sans description, et la sortie", () => {
+    expect(soloNarrationSchema([]).safeParse({ narration: "x", enter_room: { name: "la cuisine", description: "Basse." } }).success).toBe(true);
+    expect(soloNarrationSchema([]).safeParse({ narration: "x", enter_room: { name: "la cuisine" } }).success).toBe(true);
+    expect(soloNarrationSchema([]).safeParse({ narration: "x", leave_room: true }).success).toBe(true);
+  });
+  it("rejette un nom vide ou trop long", () => {
+    expect(soloNarrationSchema([]).safeParse({ narration: "x", enter_room: { name: "" } }).success).toBe(false);
+    expect(soloNarrationSchema([]).safeParse({ narration: "x", enter_room: { name: "x".repeat(81) } }).success).toBe(false);
+  });
+});
+

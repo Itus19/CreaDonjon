@@ -45,7 +45,7 @@ Quatre défauts, trois tickets : la consigne (V3.2-17), l'horloge (V3.2-18), le 
 
 ---
 
-### ☐ V3.2-19 — L'IA t'emmène ailleurs : lieux et pièces · `M` · **avec modèle IA** — **en cours (Opus)** : point 1 livré, points 2 et 3 à suivre
+### ☐ V3.2-19 — L'IA t'emmène ailleurs : lieux et pièces · `M` · **avec modèle IA** — **codé (Opus)**, reste la vérification en jeu
 
 **Ce qui est prévu**
 1. `move_to` vers un lieu du wiki rattaché au lieu actuel et connu du joueur (liste fermée) ; le moteur change le lieu de la scène, comme le panneau de scène.
@@ -55,3 +55,16 @@ Quatre défauts, trois tickets : la consigne (V3.2-17), l'horloge (V3.2-18), le 
 **Point 1, livré** : `lieuxVoisins` (`src/core/rules/moveTargets.ts`) donne les lieux reliés par `part_of` (contenus, contenant, voisins du même parent) ; seuls ceux dont un bloc est visible du joueur entrent dans le contexte (`lieux-accessibles`) et dans l'enum de `move_to`. Après la narration, `moveSceneAfterNarration` appelle `setScene` avec le personnage joué et les PNJ réels qui suivent (`with`). La réponse du tour porte la nouvelle scène ; l'écran la pose et se rafraîchit par le même chemin que le panneau de scène (aucun `router.refresh()` de plus).
 
 **Ce que ça consomme** : trois lectures de plus par tour narré (arêtes `part_of`, visibilité des blocs voisins, leurs noms) ; un déplacement coûte ce que coûte `setScene` depuis le panneau, plus la relecture de la scène pour l'écran.
+
+**Points 2 et 3, livrés** (choix de l'auteur du 25 novembre : une pièce inventée entre seule dans la page du lieu, après le contrôle du moteur)
+- Bloc `rooms` « Pièces » (`src/core/schemas/blocks/rooms.ts`) : nom et description par pièce. Une pièce secrète va dans un second bloc réservé au MJ, filtré comme tout bloc.
+- La narration propose `enter_room` (nom, et description pour une pièce nouvelle) ou `leave_room`. `deciderPiece` (noyau pur) tranche : pièce du wiki, esquisse déjà vue (une visite de plus), ou pièce nouvelle si `validerNouvellePiece` l'accepte (nom court, sans chiffre ni balise, ni le nom du lieu ni d'un lieu voisin).
+- À la seconde visite, ou dès que le joueur la nomme, l'esquisse s'ajoute au premier bloc « Pièces » visible de la page du lieu (ou à un bloc créé, visible des joueurs), par `updateBlockContent` / `createBlockWithData` et leurs barrières habituelles, avec une ligne `ai_proposals` déjà appliquée. Sans droit d'écriture sur la page, la pièce reste une esquisse.
+- Le contexte du tour porte la pièce actuelle et les pièces du lieu ; le bandeau affiche la pièce après le lieu.
+
+**Limites connues** : annuler le tour restaure la scène, mais une pièce déjà écrite dans le wiki y reste (elle se retire à la main) ; changer de lieu laisse les esquisses de pièces derrière.
+
+**Critères d'acceptation**
+- [x] Tests du noyau : voisins `part_of`, reconnaissance et contrôle d'une pièce, décision (wiki, esquisse, seconde visite, nommée, refus), schéma `move_to` / `enter_room`.
+- [ ] Rejoué : « je la suis » mène en cuisine, le bandeau affiche « La cuisine » ; y revenir l'ajoute au bloc « Pièces » de l'auberge.
+

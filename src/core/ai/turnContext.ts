@@ -129,6 +129,10 @@ export interface TurnContextInput {
    * encadrés ; l'id borne l'enum de l'outil.
    */
   moveTargets: { id: string; name: string }[];
+  /** V3.2-19 — les pièces connues du lieu (bloc « Pièces » visible, puis esquisses de la scène). Contenu du monde : encadré. */
+  rooms: { name: string; description: string }[];
+  /** V3.2-19 — la pièce où se trouve le personnage, `null` s'il est dans le lieu sans pièce précise. Encadrée. */
+  currentRoom: { name: string; description: string } | null;
 }
 
 /** Exportes : V3-D4 (`gmQuestionContext.ts`) en est le second consommateur — meme lieu, memes PNJ, memes quetes, pour une question hors du temps de jeu plutot qu'une narration de tour. */
@@ -178,6 +182,10 @@ export function buildTurnContext(input: TurnContextInput): string {
     input.player
       ? fenceUntrustedData("personnage-joue", `${input.player.name}${input.player.pronouns ? ` (pronoms : ${input.player.pronouns})` : ""}`)
       : null,
+    input.currentRoom
+      ? fenceUntrustedData("piece-actuelle", `${input.currentRoom.name}${input.currentRoom.description ? ` — ${input.currentRoom.description}` : ""}`)
+      : null,
+    input.rooms.length > 0 ? fenceUntrustedData("pieces-du-lieu", input.rooms.map((r) => `- ${r.name}${r.description ? ` : ${r.description}` : ""}`).join("\n")) : null,
     input.moveTargets.length > 0 ? fenceUntrustedData("lieux-accessibles", input.moveTargets.map((l) => `- ${l.name} (id: ${l.id})`).join("\n")) : null,
     input.npcs.length > 0 ? fenceUntrustedData("pnjs-presents", input.npcs.map(npcLine).join("\n")) : null,
     input.quests.length > 0 ? fenceUntrustedData("quetes-en-cours", input.quests.map(questLine).join("\n")) : null,
