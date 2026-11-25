@@ -30,7 +30,7 @@ Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été
 2. **Ce qui change le texte lui-même** : V3.2-5 (la deuxième personne) — une ligne de consigne, un réglage de partie.
 3. **Ce qui demande du dessin** : V3.2-1 (les bulles), puis V3.2-7 (l'onglet Wiki).
 4. **Ce qui demande de la conception** : V3.2-6 (les liens automatiques), le plus risqué des huit.
-5. **Ce qui casse le jeu à chaque auberge** : V3.2-8 et 9 (le moteur règle un échange, au prix des règles), puis 10 (l'écran), puis 11 (le PNJ sait ce que tu as et ce que tu dois). Décision : ADR 0109.
+5. **Ce qui casse le jeu à chaque auberge** : V3.2-8 et 9 (le moteur règle un échange, au prix des règles), puis 10 (l'écran), puis 11 (le PNJ sait ce que tu as et ce que tu dois). Décision : ADR 0110.
 
 ---
 

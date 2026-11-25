@@ -1,4 +1,4 @@
-# 0109 — Acheter, vendre, échanger en solo : le moteur règle, le PNJ réagit
+# 0110 — Acheter, vendre, échanger en solo : le moteur règle, le PNJ réagit
 
 **Date :** 2026-11-25
 **Statut :** proposée (demande de l'auteur du 25 novembre, à confirmer avant tout code)

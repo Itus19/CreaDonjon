@@ -1,6 +1,6 @@
 # V3.2 — Acheter, vendre, échanger
 
-*Partie du backlog V3.2. L'index et la feuille de route : [`docs/BACKLOG_V3.2.md`](../BACKLOG_V3.2.md). La décision : [ADR 0109](../adr/0109-acheter-vendre-echanger-en-solo.md).*
+*Partie du backlog V3.2. L'index et la feuille de route : [`docs/BACKLOG_V3.2.md`](../BACKLOG_V3.2.md). La décision : [ADR 0110](../adr/0110-acheter-vendre-echanger-en-solo.md).*
 
 **Constaté le 25 novembre** : Mabelle, du Fanal, demande « cinq pièces pour la nuit ». Accepter ne débiterait rien : l'achat est une action libre, sans résolution. Une bière servie plus tôt n'a jamais été réclamée, parce que le modèle ne sait ni ce que la personne possède, ni ce qu'elle doit. Le prix lui-même est inventé.
 
