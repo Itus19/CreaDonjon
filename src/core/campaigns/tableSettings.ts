@@ -35,6 +35,13 @@ export interface CampaignTableSettings {
    * carte et « Toute la table » ne les coche plus d'office.
    */
   reserve: string[];
+  /**
+   * V3.2-20 — le solo montre-t-il le DD (ou la CA) et l'issue d'un jet ?
+   * Coupé par défaut (décision de l'auteur, 25 novembre) : c'est le récit qui
+   * dit si l'on a réussi. Ce n'est que de l'affichage : le moteur calcule
+   * toujours l'issue et la donne au narrateur (règle absolue 8).
+   */
+  solo_show_outcome: boolean;
 }
 
 /** Decides par l'auteur le 4 octobre : etats et inspiration au MJ, le reste a la joueuse. */
@@ -44,6 +51,7 @@ export const DEFAULT_TABLE_SETTINGS: CampaignTableSettings = {
   players_level: true,
   player_can_edit: { conditions: false, inspiration: false, hp: true, currency: true, spell_slots: true, hit_dice: true },
   reserve: [],
+  solo_show_outcome: false,
 };
 
 /** Une campagne compte quelques PJ : la borne protège seulement la colonne d'une écriture démesurée. */
@@ -60,6 +68,8 @@ export const zCampaignTableSettings = z
       .optional(),
     /** AG-14 : la liste entière, écrite d'un bloc. */
     reserve: z.array(z.string().uuid()).max(RESERVE_MAX).optional(),
+    /** V3.2-20 : DD et issue des jets, visibles ou non dans le solo. */
+    solo_show_outcome: z.boolean().optional(),
   })
   .strict();
 export type CampaignTableSettingsPatch = z.infer<typeof zCampaignTableSettings>;
@@ -82,6 +92,7 @@ export function parseTableSettings(raw: unknown): CampaignTableSettings {
       PLAYER_EDITABLE_FIELDS.map((f) => [f, typeof edits[f] === "boolean" ? (edits[f] as boolean) : DEFAULT_TABLE_SETTINGS.player_can_edit[f]])
     ) as Record<PlayerEditableField, boolean>,
     reserve: lireReserve(source.reserve),
+    solo_show_outcome: typeof source.solo_show_outcome === "boolean" ? source.solo_show_outcome : DEFAULT_TABLE_SETTINGS.solo_show_outcome,
   };
 }
 
@@ -106,6 +117,7 @@ export function mergeTableSettings(current: CampaignTableSettings, patch: Campai
       PLAYER_EDITABLE_FIELDS.map((f) => [f, patch.player_can_edit?.[f] ?? current.player_can_edit[f]])
     ) as Record<PlayerEditableField, boolean>,
     reserve: patch.reserve ? [...new Set(patch.reserve)] : current.reserve,
+    solo_show_outcome: patch.solo_show_outcome ?? current.solo_show_outcome,
   };
 }
 

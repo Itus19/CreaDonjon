@@ -705,6 +705,21 @@
         "videDescription": "Chaque aptitude, sort, objet magique, espèce, sous-classe et monstre de ce ruleset est jouable."
       },
       "solo": {
+        "jet": {
+          "lancer": "Lancer · {quoi}",
+          "roule": "Le dé roule…",
+          "reactions": "En attente des réactions…",
+          "echec": "Le jet n'a pas pu être lancé.",
+          "reussite": "réussite",
+          "echecJet": "échec",
+          "touche": "touché",
+          "rate": "raté",
+          "reglage": "DD et réussites",
+          "reglageAffiches": "affichés",
+          "reglageMasques": "masqués",
+          "reglageTitre": "Afficher ou masquer le DD et l'issue des jets. Masqués, c'est le récit qui dit si tu as réussi.",
+          "reglageEchec": "Le réglage n'a pas pu être changé."
+        },
         "titre": "{n, plural, one {# règle de ton personnage n'est pas entièrement jouable} other {# règles de ton personnage ne sont pas entièrement jouables}}",
         "aide": "Le jeu ne les applique pas seul : le MJ ou toi les jouez à la main. Ouvre une fiche pour voir ce qui reste en texte."
       },

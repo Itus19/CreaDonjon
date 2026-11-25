@@ -230,6 +230,8 @@ export type FilItem =
       verdict: "success" | "fail" | null;
       trace: TraceStep[];
       origin: string | null;
+      /** V3.2-20 : la phrase du joueur qui a demandé ce jet ; `null` pour des dégâts chaînés ou un jet sans phrase. */
+      actionText: string | null;
     }
   | { id: string; seq: number; createdAt: string; kind: "rule_application"; changes: string[]; hints: string[]; ignored: string[] }
   | { id: string; seq: number; createdAt: string; kind: "world_update"; note: string }

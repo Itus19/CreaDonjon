@@ -77,11 +77,13 @@ describe("mapSessionEventToFilItem", () => {
           facts: ["Perrin — Athlétisme : 14 contre DD 12 — réussite."],
           check: { what: "Athlétisme", expression: "14 (annoncé) + 2", total: 14, dc: 12, verdict: "success", trace: [{ text: "annoncé", value: 12 }] },
           origin: "a_la_main",
+          intent: { text: "j'escalade le mur", kind: "skill_check" },
         },
       })
     );
     expect(item).toMatchObject({
       kind: "roll",
+      actionText: "j'escalade le mur",
       facts: ["Perrin — Athlétisme : 14 contre DD 12 — réussite."],
       total: 14,
       verdict: "success",
@@ -105,7 +107,7 @@ describe("mapSessionEventToFilItem", () => {
     const item = mapSessionEventToFilItem(
       row({ kind: "roll", payload: { facts: ["7 degats"], attack: null, ac: null, verdict: null, damage: { expression: "1d6+3", total: 7, trace: [] }, origin: "volet" } })
     );
-    expect(item).toMatchObject({ kind: "roll", total: 7, verdict: null, origin: "volet" });
+    expect(item).toMatchObject({ kind: "roll", total: 7, verdict: null, origin: "volet", actionText: null });
   });
 
   it("rule_application : relit changes_text/hints_text/ignored_text, jamais recalcule depuis `changes`", () => {

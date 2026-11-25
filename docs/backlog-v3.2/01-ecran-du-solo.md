@@ -87,3 +87,29 @@ Vérifié au navigateur : trois points animés pendant les 11 s du modèle local
 - [x] Un tour refusé garde le texte, et le dit.
 
 *Fait le 18 novembre.* La question au MJ vidait déjà la zone (`changeText("")`) ; le tour joué et le dé annoncé l'avaient oublié. Même appel, au même endroit : **après** la réponse du serveur, jamais avant — un refus sort plus haut et rend sa phrase au joueur. Vérifié au navigateur : la zone est vide après le tour.
+
+---
+
+### ☑ V3.2-20 — Le jet demandé se lance depuis le récit, DD et issue masqués au choix · `M` · sans modèle IA
+
+**Constaté le 25 novembre.** « Le lanceur de dés s'est ouvert automatiquement et a donc caché l'écran central. » Quand le moteur demandait un jet, `IntentBar` ouvrait l'outil de dés par-dessus le fil, et le rouvrait encore pour les dégâts d'une attaque qui touche.
+
+**Décidé par l'auteur, le 25 novembre** (canevas d'esquisses : https://claude.ai/artifact/SXFnxb2cctxMo2VciqttBm) :
+- **Option C, la pastille** : le jet se lance d'une pastille posée dans le fil, **juste sous la phrase du joueur**, sans phrase de mise en scène avant (donc aucun appel d'IA en plus). Le dé y défile, puis se fige.
+- **Le DD et l'issue masqués par défaut** : « c'est le récit qui le dira ». Un **réglage de partie** les montre pour qui le veut.
+
+**Fait.**
+- `PastilleJet.tsx` (nouveau) : un clic encaisse par la route de l'outil de dés (`encaisserDepuisFiche`), le carré de dé (`CarreDe`, `useBruit`) défile au moins 450 ms, se fige sur le naturel tiré par le serveur, et le résultat reste 1,2 s avant que la carte du jet prenne le relais. Mouvement réduit : ni défilement ni pause. Une fenêtre de réaction (V3.1-216) laisse la pastille « en attente des réactions ».
+- `IntentBar.tsx` : l'outil de dés ne s'ouvre plus ni à la pose d'une demande ni pour des dégâts chaînés. Il reste derrière le bouton dé de la barre, et l'annonce d'un dé à la main ne change pas.
+- Réglage `solo_show_outcome` dans `campaigns.table_settings` (JSON existant, **aucune migration**), défaut `false`, écrit par la route des réglages de table (administrateur du monde). Il se bascule depuis la dernière rangée de la barre (« DD et réussites : masqués »).
+- Réglage coupé, le fil tait le DD (ou la CA) et l'issue (`factSansIssue`, noyau pur, testé), le total reste en encre, et l'en-tête de la demande tait le DD. **Le moteur, lui, calcule toujours l'issue et la donne au narrateur** : masquer ne change que l'écran.
+- La phrase du joueur s'affiche désormais en bulle au-dessus d'un tour à jet (`FilItem.actionText`), puisque c'est sous elle que la pastille se pose.
+
+**Limite connue.** L'encaissement attend la narration avant de répondre (le récit s'écrit côté serveur, dans la même requête) : avec un modèle local, le dé peut défiler une quinzaine de secondes avant de se figer. Le séparer demanderait de rendre le dé avant de narrer, un ticket à part.
+
+**Critères d'acceptation**
+- [x] Un jet demandé ne recouvre plus l'écran central : il se lance d'une pastille sous la phrase du joueur.
+- [x] Le dé défile puis se fige sur le naturel du serveur ; rien sous `prefers-reduced-motion`.
+- [x] Par défaut, ni DD ni issue à l'écran ; le réglage les montre, et persiste pour la partie.
+- [x] Le narrateur reçoit toujours le DD et l'issue quand il y en a.
+- [x] Planche du catalogue à jour (`docs/catalogue/Solo.dc.html`, section `pastille-jet`).

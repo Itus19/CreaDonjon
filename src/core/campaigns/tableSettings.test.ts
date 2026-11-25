@@ -9,6 +9,7 @@ describe("réglages de table (V3.1-108, ADR 0036 §5 et 0043)", () => {
       players_level: true,
       player_can_edit: { conditions: false, inspiration: false, hp: true, currency: true, spell_slots: true, hit_dice: true },
       reserve: [],
+      solo_show_outcome: false,
     });
     expect(DEFAULT_TABLE_SETTINGS.player_can_edit.hp).toBe(true);
   });
@@ -138,5 +139,21 @@ describe("le niveau « Joueurs » (AG-10)", () => {
     expect(coupe.players_level).toBe(false);
     expect(coupe.play_style).toBe("remote");
     expect(mergeTableSettings(coupe, { inspiration_max: 2 }).players_level).toBe(false);
+  });
+});
+
+describe("le DD et l'issue des jets dans le solo (V3.2-20)", () => {
+  it("sont masqués par défaut, et une valeur illisible les garde masqués", () => {
+    expect(parseTableSettings({}).solo_show_outcome).toBe(false);
+    expect(parseTableSettings({ solo_show_outcome: "oui" }).solo_show_outcome).toBe(false);
+    expect(parseTableSettings({ solo_show_outcome: true }).solo_show_outcome).toBe(true);
+  });
+  it("s'affichent par le schéma d'écriture, sans toucher au reste", () => {
+    expect(zCampaignTableSettings.safeParse({ solo_show_outcome: true }).success).toBe(true);
+    expect(zCampaignTableSettings.safeParse({ solo_show_outcome: "oui" }).success).toBe(false);
+    const montre = mergeTableSettings(withPlayStyle(DEFAULT_TABLE_SETTINGS, "remote"), { solo_show_outcome: true });
+    expect(montre.solo_show_outcome).toBe(true);
+    expect(montre.play_style).toBe("remote");
+    expect(mergeTableSettings(montre, { inspiration_max: 2 }).solo_show_outcome).toBe(true);
   });
 });
