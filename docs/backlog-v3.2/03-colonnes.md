@@ -61,7 +61,7 @@
 **À trancher par l'ADR.**
 - **Où vit la façade.** Une attitude affichée distincte de l'attitude réelle : seconde série d'axes par paire, champ « feint » sur le bloc `relationship`, ou dérivation (perçu = réel sauf dissimulation déclarée). Toute option qui touche au schéma passe par une migration nouvelle et `docs/SCHEMA.md` (règle 14) : **s'arrêter et demander** avant de l'écrire.
 - **Ce qui part au client.** Seulement la bande perçue d'amitié (et d'attirance, voir plus bas), en mots, jamais le nombre (`specs/psyche-pnj.md` §1.5). La vraie valeur, quand elle diffère, ne quitte jamais le serveur (règle absolue 5) — pas même dans un champ inutilisé du JSON.
-- **L'attirance.** La spécification la range du côté MJ par défaut, désactivable pour tout un monde. Proposition faite le 25 novembre, à confirmer par l'auteur : le rose ne s'affiche que si le monde active l'axe **et** que le PNJ l'a montré.
+- **L'attirance.** Décision de l'auteur, le 25 novembre : comme le reste, le cercle rose montre ce que le PNJ **laisse voir** en réaction aux actions du personnage, et n'apparaît que lorsque c'est pertinent (le PNJ a montré de l'attirance). Les romances sont **activées par défaut dans tous les mondes**, ce qui corrige la recommandation de `specs/psyche-pnj.md` §3 (« visibilité `gm` par défaut ») : l'ADR met la spécification à jour. Un monde peut toujours la désactiver.
 - **Ce que reçoit le modèle** (règle 11). Pour jouer une tromperie, le narrateur doit-il connaître l'attitude réelle ? Si oui, sous quelle consigne, pour qu'il narre la façade sans la trahir (même fuite que `known_as`, §3).
 - **Les esquisses** (V3-C2) : un personnage sans fiche a-t-il une attitude perçue, et d'où vient-elle (tirage à graine fixe, ADR 0104) ?
 - **Quand la perception change** : qui l'écrit (moteur, proposition de l'IA validée, règle 9), et le signal de deux crans ou plus déjà prévu par la spécification.
@@ -79,7 +79,7 @@
 
 **À faire.**
 - **L'anneau est une jauge.** Couleur du cran d'amitié perçu (du rouge « haineux » au vert-bleu « dévoué ») **et** longueur de l'arc (un petit bout pour « haineux », la moitié pour « indifférent », le tour complet pour « dévoué ») : même langage que l'anneau des PV, et lisible sans distinguer le rouge du vert. Couleurs par jetons (`src/styles/tokens.css`), contraste vérifié.
-- **L'attirance a son cercle.** Un second cercle fin, rose, à l'extérieur, rempli au tiers, aux deux tiers ou en entier (intrigué·e, attiré·e, épris·e), seulement quand V3.2-13 l'autorise.
+- **L'attirance a son cercle.** Un second cercle fin, rose, à l'extérieur, rempli au tiers, aux deux tiers ou en entier (intrigué·e, attiré·e, épris·e), seulement quand le PNJ a montré de l'attirance (V3.2-13).
 - **Rangés par distance** (au contact, proche, loin), séparés d'un trait ; les lointains un peu pâlis.
 - **Pointillés** pour une esquisse sans fiche, comme sa carte dans l'onglet Présents.
 - **Halo** léger sur le PNJ qui a parlé au dernier tour.
@@ -94,5 +94,5 @@
 **Critères d'acceptation**
 - [ ] Les cinq personnes des esquisses s'affichent avec le bon cran, dans l'ordre des distances.
 - [ ] Un PNJ qui feint l'amitié montre l'anneau de l'amitié feinte ; sa vraie attitude n'est nulle part dans la réponse du serveur.
-- [ ] Monde sans axe d'attirance : aucun cercle rose, jamais.
+- [ ] Un PNJ qui n'a montré aucune attirance n'a pas de cercle rose ; un monde qui a désactivé les romances n'en montre jamais.
 - [ ] En niveaux de gris, les sept crans restent distincts par la longueur de l'arc.
