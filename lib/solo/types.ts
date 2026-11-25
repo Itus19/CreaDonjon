@@ -158,6 +158,8 @@ export interface TurnOutcome {
    * refusée… Absent quand la narration a abouti ou n'était pas attendue.
    */
   sansNarration?: RaisonSansNarration;
+  /** La phrase du fournisseur quand il a refusé l'appel (« 402 : You need a subscription… »), clés masquées. */
+  sansNarrationDetail?: string;
 }
 
 /**

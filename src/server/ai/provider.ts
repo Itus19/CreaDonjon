@@ -60,11 +60,14 @@ export interface AiProvider {
  * Un appel refusé ou perdu par le fournisseur, avec sa raison lisible par
  * l'écran (crédit épuisé, clé refusée, délai dépassé…). Le message, lui, reste
  * pour la console du serveur : il peut contenir un extrait du corps d'erreur.
+ * `detail` est la phrase du fournisseur, nettoyée (`extraireMessageFournisseur`),
+ * que l'écran montre sous le voyant.
  */
 export class AiProviderError extends Error {
   constructor(
     public readonly raison: Exclude<RaisonSansNarration, "aucun_fournisseur">,
     message: string,
+    public readonly detail?: string,
   ) {
     super(message);
     this.name = "AiProviderError";

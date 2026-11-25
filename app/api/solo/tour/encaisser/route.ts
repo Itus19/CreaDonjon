@@ -110,7 +110,10 @@ export async function POST(request: NextRequest) {
       hints: result.hints,
     });
     if (narre.ok) result.narration = { text: narre.text, npcReaction: narre.npcReaction };
-    else result.sansNarration = narre.raison;
+    else {
+    result.sansNarration = narre.raison;
+    result.sansNarrationDetail = narre.detail;
+  }
   }
 
   return NextResponse.json(result, { status: 200 });

@@ -310,8 +310,9 @@ export async function reconstructTurnForNarration(supabase: TypedClient, session
 }
 
 /**
- * V3.1-223 — pourquoi la narration n'a pas abouti, pour l'écran. Le détail
- * (corps d'erreur, nom du modèle) reste dans la console du serveur.
+ * V3.1-223 — pourquoi la narration n'a pas abouti, pour l'écran. Le corps
+ * d'erreur complet reste dans la console du serveur ; l'écran n'en reçoit que
+ * la phrase utile (`detailSansNarration`).
  */
 export function raisonSansNarration(erreur: unknown): RaisonSansNarration {
   if (erreur instanceof AiProviderError) return erreur.raison;
@@ -319,9 +320,14 @@ export function raisonSansNarration(erreur: unknown): RaisonSansNarration {
   return "echec";
 }
 
+/** La phrase du fournisseur quand il a refusé l'appel ; rien pour les autres causes. */
+export function detailSansNarration(erreur: unknown): string | undefined {
+  return erreur instanceof AiProviderError ? erreur.detail : undefined;
+}
+
 export type NarrationDuTour =
   | { ok: true; text: string; npcReaction: { npcId: string; text: string } | null }
-  | { ok: false; raison: RaisonSansNarration };
+  | { ok: false; raison: RaisonSansNarration; detail?: string };
 
 /**
  * V3.1-216 — la narration d'un tour solo, telle que les routes l'appellent :
@@ -353,6 +359,6 @@ export async function narrerTourSoloSansFaillir(
       : { ok: false, raison: "inutilisable" };
   } catch (erreur) {
     console.error("Narration du tour impossible", erreur);
-    return { ok: false, raison: raisonSansNarration(erreur) };
+    return { ok: false, raison: raisonSansNarration(erreur), detail: detailSansNarration(erreur) };
   }
 }
