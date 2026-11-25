@@ -28,8 +28,8 @@ Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été
 
 1. **Ce qui coûte peu et gêne à chaque tour** : V3.2-4 (la zone qui ne se vide pas), V3.2-3 (on ne sait pas si c'est parti), V3.2-2 (le contour).
 2. **Ce qui change le texte lui-même** : V3.2-5 (la deuxième personne) — une ligne de consigne, un réglage de partie.
-3. **Ce qui demande du dessin** : V3.2-1 (les bulles), puis V3.2-7 (l'onglet Wiki).
-4. **Ce qui demande de la conception** : V3.2-6 (les liens automatiques), le plus risqué des huit.
+3. **Ce qui demande du dessin** : V3.2-1 (les bulles), V3.2-8 (les volets), puis V3.2-7 (l'onglet Wiki).
+4. **Ce qui demande de la conception** : V3.2-6 (les liens automatiques), le plus risqué ; V3.2-9 (l'attitude perçue), puis V3.2-10 qui en dépend.
 
 ---
 
@@ -39,7 +39,7 @@ Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été
 |---|---|
 | [`01-ecran-du-solo.md`](backlog-v3.2/01-ecran-du-solo.md) | L'écran central : bulles, contour, chargement, envoi (V3.2-1 à 4) |
 | [`02-recit-et-liens.md`](backlog-v3.2/02-recit-et-liens.md) | Le texte : la personne du récit, les liens vers les fiches (V3.2-5, 6) |
-| [`03-colonnes.md`](backlog-v3.2/03-colonnes.md) | Les colonnes : l'onglet Wiki (V3.2-7) |
+| [`03-colonnes.md`](backlog-v3.2/03-colonnes.md) | Les colonnes : l'onglet Wiki, les volets, les présents (V3.2-7 à 10) |
 
 | Ticket | État | Modèle IA | Titre | Fichier |
 |---|---|---|---|---|
@@ -50,6 +50,9 @@ Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été
 | V3.2-5 | ☐ | **avec** | Le récit s'adresse au joueur : tu, ou vous | [`02-recit-et-liens.md`](backlog-v3.2/02-recit-et-liens.md) |
 | V3.2-6 | ☐ | **avec** | Les fiches citées par le récit deviennent des liens | [`02-recit-et-liens.md`](backlog-v3.2/02-recit-et-liens.md) |
 | V3.2-7 | ☐ | sans | L'onglet Wiki : chercher et lire sur place | [`03-colonnes.md`](backlog-v3.2/03-colonnes.md) |
+| V3.2-8 | ☐ | sans | Les volets : le fil s'étale, un onglet au bord de chaque volet | [`03-colonnes.md`](backlog-v3.2/03-colonnes.md) |
+| V3.2-9 | ☐ | sans | L'attitude perçue des présents arrive à l'écran (à concevoir) | [`03-colonnes.md`](backlog-v3.2/03-colonnes.md) |
+| V3.2-10 | ☐ | sans | Les présents dans la bande du Monde fermé | [`03-colonnes.md`](backlog-v3.2/03-colonnes.md) |
 
 ---
 
