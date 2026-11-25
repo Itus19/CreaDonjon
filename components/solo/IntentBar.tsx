@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Dropdown from "@/components/shared/Dropdown";
 import { interpretIntent, looksLikeQuestion, type IntentAction, type MechanicalIntentKind } from "@/src/core/rules/intent";
 import { GM_QUESTION_MARKERS_FR } from "@/src/i18n/fr";
@@ -98,6 +98,7 @@ export default function IntentBar({
   onActed,
   onEnCours,
   onNarration,
+  pied,
 }: {
   worldSlug: string;
   campaignId: string | null;
@@ -112,6 +113,8 @@ export default function IntentBar({
   onEnCours?: (enCours: boolean) => void;
   /** V3.2-3 : le modèle a répondu (`null`), ou pourquoi il est resté muet (V3.1-223). Lu du DERNIER tour, jamais d'un sondage (docs/QUOTAS.md). */
   onNarration?: (sansNarration: RaisonSansNarration | null) => void;
+  /** Une ligne posée tout en bas du cadre de saisie (l'état du fournisseur d'IA, `SoloScreen.tsx`). */
+  pied?: ReactNode;
 }) {
   const [text, setText] = useState("");
   const [overrideActionId, setOverrideActionId] = useState<string | null>(null);
@@ -384,6 +387,13 @@ export default function IntentBar({
                 e.preventDefault();
                 submit();
               }
+              // Tab, champ vide : la proposition grisée devient le texte, comme une
+              // complétion. Champ rempli, ou jet demandé (son indication n'est pas une
+              // action à jouer) : Tab garde son rôle, passer au contrôle suivant.
+              if (e.key === "Tab" && !e.shiftKey && !pending && text === "") {
+                e.preventDefault();
+                handleChange(placeholder);
+              }
             }}
             placeholder={placeholder}
             maxLength={pending ? (pending.die_max >= 100 ? 3 : 2) : 500}
@@ -538,6 +548,8 @@ export default function IntentBar({
             </button>
           </div>
         )}
+
+        {pied}
       </section>
     </div>
   );
