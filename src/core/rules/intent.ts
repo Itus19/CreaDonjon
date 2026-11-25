@@ -110,7 +110,7 @@ function linkable(items: readonly { id: string; terms: string[] }[]): LinkableEn
  * l'ordre du texte, la plus longue d'abord a position egale (V0-05) : on
  * herite donc de « épée longue » plutot que « épée » sans rien recoder.
  */
-function firstMatch<T extends { id: string; terms: string[] }>(
+export function firstMatch<T extends { id: string; terms: string[] }>(
   text: string,
   items: readonly T[],
   predicate: (item: T) => boolean = () => true

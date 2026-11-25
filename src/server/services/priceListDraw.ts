@@ -6,9 +6,11 @@ import { GENERATOR_TOOLS } from "@/src/core/generators/tools";
 import { resolveSceneVariant } from "@/src/core/generators/sceneVariant";
 import { zCustomTableBlockData } from "@/src/core/schemas/blocks/customTable";
 import { buildPriceList, lodgingPriceFromRows, lodgingTierForWealth, seedFromId, type MenuSlotDraw } from "@/src/core/rules/priceList";
-import type { OfferPrice, PriceListBlockData } from "@/src/core/schemas/blocks/priceList";
+import { zPriceListBlockData, type OfferPrice, type PriceListBlockData } from "@/src/core/schemas/blocks/priceList";
 import { findEntityByKind, getEntityById } from "@/src/server/repos/entities";
-import { getBlockById } from "@/src/server/repos/blocks";
+import { getBlockById, listBlocksByTypeForEntities } from "@/src/server/repos/blocks";
+import { getSceneState } from "@/src/server/repos/sceneStates";
+import { createBlockWithData } from "@/src/server/services/blocks";
 import { canUserEditEntityById } from "@/src/server/services/permissions";
 import { listPartOfRelationsForWorld } from "@/src/server/repos/relations";
 import { drawTableSlotsFromGeneratorBlock, findGeneratorBlockIdByKey } from "@/src/server/services/generators";
@@ -26,6 +28,7 @@ const LIFESTYLE_ENTRY_KEY = "lifestyle-expenses";
 
 export type PriceListDrawError = "no_generators" | "no_menu";
 export type PriceListBlockDrawError = PriceListDrawError | "not_found" | "not_a_price_list" | "forbidden";
+export type ScenePriceListError = PriceListDrawError | "no_scene" | "not_found" | "forbidden" | "write_failed";
 
 /** Le prix d'une nuit au palier donné, lu dans les tableaux de la fiche « Train de vie » du monde ; `null` si la fiche ou la ligne manque. */
 async function lodgingPrice(supabase: TypedClient, worldId: string, tier: string, locale: Locale): Promise<OfferPrice | null> {
@@ -111,4 +114,54 @@ export async function drawPriceListForBlock(
   const entity = await getEntityById(supabase, block.entity_id);
   if (!entity) return { error: "not_found" };
   return drawPriceListForLocation(supabase, { worldId: entity.world_id, locationId: entity.id, locale: params.locale });
+}
+
+/**
+ * V3.2-10 — « Tirer la carte du lieu », depuis le solo : un achat demandé dans
+ * un lieu qui n'a pas encore de carte. Tire la carte du lieu de la scène (même
+ * tirage, même graine que le bouton du wiki) et l'ÉCRIT sur sa page, dans un
+ * bloc « Carte et tarifs » public : elle ne bouge plus ensuite (ADR 0104, un
+ * détail se fige quand on le découvre), et l'auteur peut la corriger.
+ *
+ * Un lieu qui a déjà une carte la garde : rien n'est retiré ni réécrit, et
+ * elle est rendue telle quelle. La carte rendue part à l'écran, qui la lit
+ * aussitôt sans relire toute la page (docs/CABLAGE.md). Le
+ * droit d'écrire est vérifié avant le tirage (docs/SECURITE.md §2) ; il est
+ * vérifié une seconde fois par `createBlock`, qui reste la seule porte.
+ *
+ * Coût (docs/QUOTAS.md) : la scène, une lecture des cartes du lieu, le droit,
+ * le tirage (voir `drawPriceListForLocation`), puis la création du bloc (une
+ * insertion, une mise à jour, deux révisions). Sur un geste, une fois par lieu.
+ */
+export async function drawPriceListForScene(
+  supabase: TypedClient,
+  params: { campaignId: string; worldId: string; userId: string; locale: Locale }
+): Promise<{ created: boolean; priceList: PriceListBlockData } | { error: ScenePriceListError }> {
+  const scene = await getSceneState(supabase, params.campaignId);
+  if (!scene) return { error: "no_scene" };
+  const location = await getEntityById(supabase, scene.locationId);
+  if (!location || location.world_id !== params.worldId) return { error: "not_found" };
+  const allowed = await canUserEditEntityById(supabase, { entityId: location.id, userId: params.userId });
+  if (!allowed) return { error: "forbidden" };
+
+  const existing = await listBlocksByTypeForEntities(supabase, [location.id], "price_list");
+  if (existing.length > 0) {
+    const parsed = zPriceListBlockData.safeParse(existing[0].data);
+    if (parsed.success) return { created: false, priceList: parsed.data };
+    console.error("Carte du lieu illisible, gardée telle quelle", location.id, parsed.error.issues);
+    return { error: "write_failed" };
+  }
+
+  const drawn = await drawPriceListForLocation(supabase, { worldId: params.worldId, locationId: location.id, locale: params.locale });
+  if ("error" in drawn) return drawn;
+  const written = await createBlockWithData(supabase, {
+    entityId: location.id,
+    blockType: "price_list",
+    label: "Carte et tarifs",
+    visibilityLevel: "public",
+    visibilityScopeId: null,
+    createdBy: params.userId,
+    data: drawn.data,
+  });
+  return written.ok ? { created: true, priceList: drawn.data } : { error: "write_failed" };
 }

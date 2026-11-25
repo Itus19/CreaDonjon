@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
-import { drawPriceListForBlock } from "./priceListDraw";
+import { drawPriceListForBlock, drawPriceListForScene } from "./priceListDraw";
 import { getReusableTestAccount } from "../testUtils/reusableTestAccounts";
 import { cleanupCreated } from "../testUtils/cleanupCreated";
 
@@ -10,7 +10,12 @@ import { cleanupCreated } from "../testUtils/cleanupCreated";
  * refusée ; un compte hors du monde ne trouve rien ; la propriétaire passe
  * la porte et reçoit le motif honnête d'un monde sans générateurs.
  *
- * Coût (docs/QUOTAS.md T1-T2) : un monde, une fiche, un bloc, trois tirages.
+ * V3.2-10 — « Tirer la carte du lieu » depuis le solo : sans scène, le motif
+ * le dit ; une joueuse sans droit d'écriture sur le lieu est refusée ; un lieu
+ * qui a déjà une carte la garde, rien n'est réécrit.
+ *
+ * Coût (docs/QUOTAS.md T1-T2) : un monde, une campagne, une scène, une fiche,
+ * un bloc, six appels.
  * Se saute sans `.env.local`.
  */
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -25,6 +30,8 @@ describe.skipIf(!hasCreds)("tirage de la carte d'un lieu (integration, base reel
   let outsider: { id: string; client: SupabaseClient };
   let worldId: string;
   let blockId: string;
+  let locationId: string;
+  let campaignId: string;
 
   beforeAll(async () => {
     admin = createSupabaseClient(SUPABASE_URL!, SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
@@ -48,6 +55,7 @@ describe.skipIf(!hasCreds)("tirage de la carte d'un lieu (integration, base reel
       .select("id")
       .single();
     if (entityError || !entity) throw new Error(entityError?.message ?? "creation fiche echouee");
+    locationId = entity.id;
     const { data: block, error: blockError } = await admin
       .from("blocks")
       .insert({
@@ -62,6 +70,18 @@ describe.skipIf(!hasCreds)("tirage de la carte d'un lieu (integration, base reel
       .single();
     if (blockError || !block) throw new Error(blockError?.message ?? "creation bloc echouee");
     blockId = block.id;
+
+    const { data: official, error: officialError } = await admin.from("rulesets").select("id").eq("is_official_base", true).limit(1).single();
+    if (officialError || !official) throw new Error(officialError?.message ?? "aucun ruleset officiel en base");
+    const { data: campaign, error: campaignError } = await admin
+      .from("campaigns")
+      .insert({ world_id: worldId, name: "Campagne de test — carte", ruleset_id: official.id, mode: "solo" })
+      .select("id")
+      .single();
+    if (campaignError || !campaign) throw new Error(campaignError?.message ?? "creation campagne echouee");
+    campaignId = campaign.id;
+    const { error: membersError } = await admin.from("campaign_members").insert([{ campaign_id: campaignId, user_id: player.id, role: "player" }]);
+    if (membersError) throw new Error(membersError.message);
   });
 
   afterAll(async () => {
@@ -81,5 +101,30 @@ describe.skipIf(!hasCreds)("tirage de la carte d'un lieu (integration, base reel
   it("laisse passer la propriétaire, qui apprend que le monde n'a pas de générateurs", async () => {
     const result = await drawPriceListForBlock(owner.client, { blockId, userId: owner.id, locale: "fr" });
     expect(result).toEqual({ error: "no_generators" });
+  });
+
+  it("solo : sans scène posée, le motif le dit", async () => {
+    const result = await drawPriceListForScene(owner.client, { campaignId, worldId, userId: owner.id, locale: "fr" });
+    expect(result).toEqual({ error: "no_scene" });
+  });
+
+  it("solo : refuse une joueuse sans droit d'écriture sur le lieu, et garde la carte existante", async () => {
+    const state = {
+      __v: 4,
+      locationId,
+      present: [],
+      time: { day: 1, hour: 20, minute: 0 },
+      lighting: "dim",
+      activeCombatId: null,
+      recentEvents: [],
+      budgets: {},
+      sketches: [],
+      weather: null,
+    };
+    const { error: sceneError } = await admin.from("scene_states").upsert({ campaign_id: campaignId, state }, { onConflict: "campaign_id" });
+    if (sceneError) throw new Error(sceneError.message);
+
+    expect(await drawPriceListForScene(player.client, { campaignId, worldId, userId: player.id, locale: "fr" })).toEqual({ error: "forbidden" });
+    expect(await drawPriceListForScene(owner.client, { campaignId, worldId, userId: owner.id, locale: "fr" })).toMatchObject({ created: false, priceList: { offers: [] } });
   });
 });

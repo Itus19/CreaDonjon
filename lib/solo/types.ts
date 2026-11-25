@@ -1,4 +1,5 @@
 import type { IntentCatalog } from "@/src/core/rules/intent";
+import type { TradeCatalog } from "@/src/core/rules/tradeIntent";
 import type { RaisonSansNarration } from "@/src/core/ai/providerError";
 
 export type { RaisonSansNarration };
@@ -32,6 +33,8 @@ export interface IntentTargetDetail {
 export interface IntentBarData {
   actor: { entityId: string; name: string };
   catalog: IntentCatalog;
+  /** V3.2-10 : ce qui s'achète, se vend ou se donne ici, et la bourse — lu par `interpretTrade` dans le navigateur. */
+  trade: TradeCatalog;
   targetDetails: IntentTargetDetail[];
   /** V3.1-132 : les clés des règles du personnage (aptitudes de classe, d'espèce, dons), pour l'avertissement « règle non jouable » du mode solo. */
   ruleKeys: string[];

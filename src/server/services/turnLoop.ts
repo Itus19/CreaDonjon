@@ -52,6 +52,8 @@ const BUDGET_COST: Record<IntentChoice["kind"], BudgetKind> = {
   skill_check: "action",
   ability_check: "action",
   saving_throw: "free",
+  // V3.2-10 : payer ou vendre ne coûte pas d'action — un échange se fait hors combat, en conversation.
+  trade: "free",
   free: "free",
 };
 

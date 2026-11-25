@@ -34,6 +34,11 @@ const REASON_STATUS = {
   item_not_found: 404,
   not_a_weapon: 400,
   not_a_spellcaster: 400,
+  // V3.2-10 : les refus d'un échange (turnIntent.ts, `TradeErrorReason`).
+  offer_not_found: 404,
+  no_resale_price: 400,
+  conflict: 409,
+  trade_refused: 400,
   no_pending_request: 409,
   out_of_range: 400,
 } as const;
@@ -43,6 +48,10 @@ const REASON_MESSAGE = {
   item_not_found: "Cet objet n'est plus dans l'inventaire.",
   not_a_weapon: "Cet objet n'est pas une arme.",
   not_a_spellcaster: "Cette fiche ne lance pas de sorts.",
+  offer_not_found: "Cette offre n'est plus à la carte du lieu.",
+  no_resale_price: "Cet objet n'a pas de prix connu : il ne se vend pas au prix de la table.",
+  conflict: "L'inventaire a changé entre-temps : réessaie.",
+  trade_refused: "Le système monétaire du monde ne connaît pas la pièce de ce prix.",
   no_pending_request: "Aucun jet n'est demandé en ce moment.",
   out_of_range: "Un dé annoncé se lit entre 1 et 20.",
 } as const;

@@ -54,19 +54,23 @@ Ordre : 8 et 9 d'abord (le noyau et les prix), puis 10 (l'écran), puis 11 (le c
 
 ---
 
-### ☐ V3.2-10 — Acheter, vendre, échanger depuis « Que fais-tu ? » · `M` · sans modèle IA — **prêt après 8 et 9 (Sonnet)**
+### ☑ V3.2-10 — Acheter, vendre, donner depuis « Que fais-tu ? » · `M` · sans modèle IA — **fait (Opus)**
 
-**Une intention `trade`** à côté des jets (`IntentChoice`, `turnIntent.ts`) : verbes « acheter, prendre, payer, vendre, échanger, donner, commander » ajoutés à `INTENT_VERBS_FR`, offres du lieu et objets de l'inventaire ajoutés au catalogue.
+**Une intention `trade`** à côté des jets (`IntentChoice`, `turnIntent.ts`) : verbes d'achat, de vente et de don (`TRADE_VERBS_FR`), offres de la carte du lieu et objets de l'inventaire au catalogue.
 
-**La carte « ce que le moteur a compris »** montre l'échange et son prix : « Acheter : une nuit (auberge modeste) à Mabelle, 5 pa. » Deux boutons : « Payer » et « Mettre sur l'ardoise » (quand il s'agit de consommer sur place), plus « Annuler ».
+**La carte « ce que le moteur a compris »** montre l'échange et son prix : « Acheter : « Une nuit à l'auberge », à Mabelle — 5 pa ». Boutons « Payer » (ou « Vendre », « Donner »), « Annuler », « ce n'est pas ça ».
 
-**Un manque ne bloque pas.** La carte le signale (« tu as 3 pa sur 5 ») mais laisse envoyer. Le moteur n'écrit rien et produit un fait : « Edran tend 3 pa ; il en manque 2 pour la nuit (5 pa). » Ce fait part à la narration, et c'est le PNJ qui réagit.
+**Un manque ne bloque pas.** La carte le signale (« tu as 3 pa sur 5 pa ») mais laisse envoyer. Le moteur n'écrit rien et produit un fait : « Edran tend 3 pa ; il manque 2 pa pour « Une nuit à l'auberge » (5 pa). Rien n'est payé. » Ce fait part à la narration, et c'est le PNJ qui réagit.
+
+**Livré** : lecture pure `interpretTrade`, `tradeForOffer`, `tradeForSale`, `tradeForGift`, `splitCp` (`src/core/rules/tradeIntent.ts`, 17 tests) ; catalogue d'échange dans `buildIntentBarData` (une lecture ciblée de plus par affichage : le bloc `price_list` du lieu ; le prix de revente vient du bloc `cost`, déjà lu avec l'équipement) ; `executeTrade` relit le prix côté serveur, applique (`applyTrade`), puis journalise avec l'inventaire d'avant, donc le tour s'annule ; un échange ne coûte pas d'action. Un lieu sans carte propose « Tirer la carte du lieu » (`POST /api/solo/scene/carte`, `drawPriceListForScene`), qui l'écrit sur sa page, une fois. Planche `Solo` §echange.
+
+**Écarts décidés en codant** : « Mettre sur l'ardoise » passe au V3.2-11, qui tient l'ardoise (un bouton sans mémoire ne servirait à rien). « Échanger » et « troquer » restent hors lexique : un troc objet contre objet demande les objets du PNJ, qu'aucun catalogue ne porte. Une phrase exige un verbe ET un objet du catalogue : « je prends la porte » reste une action libre.
 
 **Critères d'acceptation**
-- [ ] « Je prends la chambre » propose un achat au prix de la table, et Payer débite la bourse.
-- [ ] « Je vends ma dague » retire la dague et crédite la moitié de son prix.
-- [ ] Un achat sans assez de pièces part quand même, n'écrit rien, et le fait du manque est journalisé.
-- [ ] Planche du catalogue mise à jour pour la carte (`docs/catalogue/`).
+- [x] « Je prends la chambre » propose un achat au prix de la table, et Payer débite la bourse (lecture testée ; règlement par `applyTrade`, testé au V3.2-8). À vérifier à la main au Fanal.
+- [x] « Je vends ma dague » retire la dague et crédite la moitié de son prix (lecture et échange testés).
+- [x] Un achat sans assez de pièces part quand même, n'écrit rien, et le fait du manque est journalisé.
+- [x] Planche du catalogue mise à jour pour la carte (`docs/catalogue/Solo.dc.html` §echange).
 
 ---
 
@@ -74,7 +78,7 @@ Ordre : 8 et 9 d'abord (le noyau et les prix), puis 10 (l'écran), puis 11 (le c
 
 **Deux lignes de plus dans le contexte du tour** (`buildTurnContext`), encadrées comme le reste : la bourse en clair (« 12 pa, 3 pc »), et l'ardoise du lieu (« 1 bière, 4 pc, due à Mabelle »). Le fait d'un manque (V3.2-10) y arrive comme tout autre fait.
 
-**L'ardoise** est tenue par le moteur dans `scene_states.state` (`zSceneState`, aucune migration), indexée par lieu et par créancier pour survivre au changement de scène. Elle se remplit par « Mettre sur l'ardoise » et se vide par un paiement.
+**L'ardoise** est tenue par le moteur dans `scene_states.state` (`zSceneState`, aucune migration), indexée par lieu et par créancier pour survivre au changement de scène. Elle se remplit par un bouton « Mettre sur l'ardoise » sur la carte d'un achat (déplacé du V3.2-10, quand il s'agit de consommer sur place) et se vide par un paiement.
 
 **Une consigne** : un PNJ qui a servi quelque chose d'impayé peut le réclamer ; il ne fixe jamais un prix lui-même et cite ceux du contexte. Ce qu'il propose (rabais, troc) reste de la narration : rien n'est appliqué sans un nouvel échange réglé par le moteur.
 

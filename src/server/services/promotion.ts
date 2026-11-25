@@ -9,7 +9,7 @@ import { type PersonalityBlockData } from "@/src/core/schemas/blocks/personality
 import { type WorldviewBlockData } from "@/src/core/schemas/blocks/worldview";
 import type { SegmentContentNode } from "@/src/core/schemas/entities/segments";
 import { createEntity } from "@/src/server/services/entities";
-import { createBlock, updateBlockContent } from "@/src/server/services/blocks";
+import { createBlock, createBlockWithData, updateBlockContent } from "@/src/server/services/blocks";
 import { addPersonalityEvent, addWorldviewEvent } from "@/src/server/services/psyche";
 import type { PersonalityPoleKey, WorldviewPoleKey } from "@/src/core/psyche/keys";
 import type { EntitySummary } from "@/src/server/repos/entities";
@@ -31,32 +31,6 @@ export interface PromotedBlockSpec {
 }
 
 export type PromoteToEntityResult = { ok: true; entity: EntitySummary } | { ok: false; reason: "forbidden" };
-
-/** Cree un bloc puis lui donne tout de suite son contenu — le pas commun a `statblock`/`quest` (jamais `personality`/`worldview` : leurs poles passent par le journal de psyche, cf. `createPsycheBlock` plus bas). */
-async function createFilledBlock(
-  supabase: TypedClient,
-  params: { entityId: string; blockType: string; label: string; visibilityLevel: string; visibilityScopeId: string | null; createdBy: string; data: unknown }
-): Promise<{ ok: true } | { ok: false }> {
-  const created = await createBlock(supabase, {
-    entityId: params.entityId,
-    blockType: params.blockType,
-    label: params.label,
-    visibilityLevel: params.visibilityLevel,
-    visibilityScopeId: params.visibilityScopeId,
-    createdBy: params.createdBy,
-  });
-  if (!created.ok) return { ok: false };
-  const saved = await updateBlockContent(supabase, {
-    id: created.block.id,
-    expectedVersion: created.block.version,
-    display: created.block.display,
-    data: params.data,
-    visibilityLevel: created.block.visibilityLevel,
-    visibilityScopeId: created.block.visibilityScopeId,
-    changedBy: params.createdBy,
-  });
-  return saved.ok ? { ok: true } : { ok: false };
-}
 
 /**
  * Cree un bloc `personality`/`worldview` et lui donne son contenu non-pole
@@ -199,7 +173,7 @@ export async function promoteToEntity(
   }
 
   if (params.statblock) {
-    const filled = await createFilledBlock(supabase, {
+    const filled = await createBlockWithData(supabase, {
       entityId: entity.id,
       blockType: "statblock",
       label: params.statblock.label,
@@ -212,7 +186,7 @@ export async function promoteToEntity(
   }
 
   if (params.quest) {
-    const filled = await createFilledBlock(supabase, {
+    const filled = await createBlockWithData(supabase, {
       entityId: entity.id,
       blockType: "quest",
       label: params.quest.label,
@@ -225,7 +199,7 @@ export async function promoteToEntity(
   }
 
   if (params.priceList) {
-    const filled = await createFilledBlock(supabase, {
+    const filled = await createBlockWithData(supabase, {
       entityId: entity.id,
       blockType: "price_list",
       label: params.priceList.label,

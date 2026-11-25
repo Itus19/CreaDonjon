@@ -3,7 +3,10 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Dropdown from "@/components/shared/Dropdown";
 import { interpretIntent, looksLikeQuestion, type IntentAction, type MechanicalIntentKind } from "@/src/core/rules/intent";
-import { GM_QUESTION_MARKERS_FR } from "@/src/i18n/fr";
+import { z } from "zod";
+import { GM_QUESTION_MARKERS_FR, TRADE_LODGING_TERMS_FR, formatCpFr } from "@/src/i18n/fr";
+import { interpretTrade, tradeOffersFromPriceList, type TradeDirection, type TradeOfferEntry, type TradeReading } from "@/src/core/rules/tradeIntent";
+import { zPriceListBlockData } from "@/src/core/schemas/blocks/priceList";
 import type { AdvantageState } from "@/src/core/rules/action";
 import type { EncashedTurnResponse, IntentBarData, PendingRequest, PendingTurnResponse, RaisonSansNarration, TurnOutcome } from "@/lib/solo/types";
 import { useDiceRoll } from "@/components/shell/DiceRollPanel";
@@ -84,6 +87,21 @@ const DELAI_ENCHAINEMENT_MS = 2200;
 const FIELD_PADDING_PX = 12;
 const MAX_LINES = 8;
 
+/** V3.2-10 : la famille d'un échange, et le verbe de son bouton. */
+const TRADE_LABELS: Record<TradeDirection, { chip: string; verb: string; button: string }> = {
+  buy: { chip: "Achat", verb: "Acheter", button: "Payer" },
+  sell: { chip: "Vente", verb: "Vendre", button: "Vendre" },
+  give: { chip: "Don", verb: "Donner", button: "Donner" },
+};
+
+/** « Acheter : « Une nuit à l'auberge », à Mabelle — 5 pa », la phrase que le moteur a comprise. */
+function tradeSentence(trade: TradeReading): string {
+  const what = trade.direction === "buy" ? `« ${trade.label} »` : trade.label;
+  const to = trade.target ? `, à ${trade.target.label}` : "";
+  const price = trade.direction === "give" ? "" : trade.priceCp === null ? " — prix inconnu" : ` — ${trade.priceCp === 0 ? "gratuit" : formatCpFr(trade.priceCp)}`;
+  return `${TRADE_LABELS[trade.direction].verb} : ${what}${to}${price}`;
+}
+
 function actionOptionLabel(action: IntentAction): string {
   return action.kind === "weapon_attack" ? `${action.label} — attaque` : action.label;
 }
@@ -120,6 +138,12 @@ export default function IntentBar({
   const [overrideActionId, setOverrideActionId] = useState<string | null>(null);
   const [overrideTargetId, setOverrideTargetId] = useState<string | null>(null);
   const [correcting, setCorrecting] = useState(false);
+  /** V3.2-10 : « ce n'est pas ça » sur un échange — la phrase repart dans la lecture ordinaire (jet ou action libre). */
+  const [tradeDismissed, setTradeDismissed] = useState(false);
+  const [drawingCarte, setDrawingCarte] = useState(false);
+  /** V3.2-10 : la carte tout juste tirée, lue sur place plutôt que par un rafraîchissement complet de la page (docs/CABLAGE.md). */
+  const [carteTiree, setCarteTiree] = useState<TradeOfferEntry[] | null>(null);
+  const tradeCatalog = useMemo(() => (carteTiree ? { ...data.trade, offers: carteTiree, hasPriceList: true } : data.trade), [carteTiree, data.trade]);
   const [advantage, setAdvantage] = useState<AdvantageState>("normal");
   const [dc, setDc] = useState<string>("");
   const [busy, setBusy] = useState(false);
@@ -130,6 +154,12 @@ export default function IntentBar({
   const { openDiceTool } = useDiceRoll();
 
   const proposal = useMemo(() => interpretIntent(text, data.catalog), [text, data.catalog]);
+  // V3.2-10 : un échange (verbe ET offre de la carte ou objet du sac) passe
+  // avant les jets — sinon « je vends ma dague » proposerait une attaque à la dague.
+  const tradeReading = useMemo(() => interpretTrade(text, tradeCatalog, data.catalog.targets), [text, tradeCatalog, data.catalog.targets]);
+  const trade = !tradeDismissed && tradeReading?.kind === "trade" ? tradeReading : null;
+  const tradeShortCp = trade?.direction === "buy" && trade.priceCp !== null && trade.priceCp > data.trade.purseCp ? trade.priceCp - data.trade.purseCp : 0;
+  const tradeBlocked = trade?.direction === "sell" && trade.priceCp === null;
 
   /**
    * Une correction porte sur LA phrase corrigee. Reecrire la phrase repart
@@ -145,6 +175,7 @@ export default function IntentBar({
     setOverrideActionId(null);
     setOverrideTargetId(null);
     setCorrecting(false);
+    setTradeDismissed(false);
   }
 
   // Le champ change de role des qu'une demande apparait ou disparait —
@@ -216,7 +247,9 @@ export default function IntentBar({
     setBusy(true);
     setError(null);
     try {
-      const choice = chosenAction
+      const choice = trade
+        ? { kind: "trade" as const, direction: trade.direction, entryId: trade.entryId, targetId: trade.target?.id ?? null }
+        : chosenAction
         ? chosenAction.kind === "weapon_attack"
           ? { kind: "weapon_attack" as const, actionId: chosenAction.id, targetId: chosenTargetId, advantage }
           : {
@@ -346,6 +379,39 @@ export default function IntentBar({
     }
   }
 
+  /**
+   * V3.2-10 — un achat dans un lieu sans carte : la tirer et l'écrire sur sa
+   * page (`POST /api/solo/scene/carte`), qui la rend : la même phrase se lit
+   * aussitôt comme un achat, sans relire la page. Une fois par lieu.
+   */
+  async function tirerCarte() {
+    if (campaignId === null) return;
+    setDrawingCarte(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/solo/scene/carte", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ campaignId }),
+      });
+      if (!res.ok) {
+        const payload = (await res.json().catch(() => null)) as { error?: string } | null;
+        setError(payload?.error ?? "La carte du lieu n'a pas pu être tirée.");
+        return;
+      }
+      const parsed = z.object({ data: z.object({ priceList: zPriceListBlockData }) }).safeParse(await res.json().catch(() => null));
+      if (!parsed.success) {
+        setError("La carte du lieu est arrivée illisible.");
+        return;
+      }
+      setCarteTiree(tradeOffersFromPriceList(parsed.data.data.priceList.offers, TRADE_LODGING_TERMS_FR));
+    } catch {
+      setError("Le serveur n'a pas répondu.");
+    } finally {
+      setDrawingCarte(false);
+    }
+  }
+
   // V3.2-3 : un seul endroit porte « ça travaille », pour les trois chemins.
   useEffect(() => {
     onEnCours?.(busy);
@@ -431,6 +497,35 @@ export default function IntentBar({
             <p className="text-sm text-ink-muted">
               Écris ton action. Le moteur dit ce qu&apos;il a compris avant de lancer quoi que ce soit.
             </p>
+          ) : trade ? (
+            <div className="flex flex-col gap-3 border-t border-edge pt-3">
+              <div className="flex flex-wrap items-center gap-2 text-sm text-ink">
+                <span className={CHIP}>{TRADE_LABELS[trade.direction].chip}</span>
+                <span className="font-medium">{tradeSentence(trade)}</span>
+              </div>
+              {tradeShortCp > 0 && (
+                <p className="text-xs text-ink-soft">
+                  {data.trade.purseCp === 0 ? "Ta bourse est vide." : `Tu as ${formatCpFr(data.trade.purseCp)} sur ${formatCpFr(trade.priceCp ?? 0)}.`} Le tour part quand
+                  même : rien ne sera payé, et {trade.target ? trade.target.label : "la personne en face"} verra qu&apos;il manque {formatCpFr(tradeShortCp)}.
+                </p>
+              )}
+              {tradeBlocked && (
+                <p className="text-xs text-ink-soft">
+                  Cet objet n&apos;a pas de prix connu : il ne se vend pas au prix de la table. Tu peux le donner, ou jouer la vente en action libre.
+                </p>
+              )}
+              <div className="flex flex-wrap items-center gap-2">
+                <button type="button" className={BTN_PRIMARY} onClick={() => void play()} disabled={busy || tradeBlocked}>
+                  {busy && lastAttempt === "submit" ? "…" : TRADE_LABELS[trade.direction].button}
+                </button>
+                <button type="button" className={BTN_SECONDARY} onClick={() => changeText("")} disabled={busy}>
+                  Annuler
+                </button>
+                <button type="button" className={BTN_SECONDARY} onClick={() => setTradeDismissed(true)} disabled={busy}>
+                  ce n&apos;est pas ça
+                </button>
+              </div>
+            </div>
           ) : (
             <div className="flex flex-col gap-3 border-t border-edge pt-3">
               {chosenAction ? (
@@ -455,6 +550,14 @@ export default function IntentBar({
                       ? "Le verbe est compris, mais cette fiche n'a rien pour le faire — aucun jet ne sera lancé."
                       : "Aucune mécanique reconnue — ce tour partira sans jet."}
                   </span>
+                  {tradeReading?.kind === "no_price_list" && campaignId !== null && (
+                    <span className="flex flex-wrap items-center gap-2 text-xs text-ink-muted">
+                      Ce lieu n&apos;a pas encore de carte : rien à acheter au prix de la table.
+                      <button type="button" className={BTN_SECONDARY} onClick={() => void tirerCarte()} disabled={busy || drawingCarte}>
+                        {drawingCarte ? "…" : "Tirer la carte du lieu"}
+                      </button>
+                    </span>
+                  )}
                 </div>
               )}
 

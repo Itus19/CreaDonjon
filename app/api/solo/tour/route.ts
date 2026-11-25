@@ -63,6 +63,13 @@ const bodySchema = z.object({
       advantage: advantageField,
       dc: dcField,
     }),
+    // V3.2-10 : un échange ne porte que l'identifiant de l'offre ou de l'objet — jamais un prix, relu par le serveur.
+    z.object({
+      kind: z.literal("trade"),
+      direction: z.enum(["buy", "sell", "give"]),
+      entryId: z.string().min(1).max(120),
+      targetId: targetField,
+    }),
     z.object({ kind: z.literal("free") }),
   ]),
 });
@@ -80,6 +87,11 @@ const REASON_STATUS = {
   item_not_found: 404,
   not_a_weapon: 400,
   not_a_spellcaster: 400,
+  // V3.2-10 : les refus d'un échange (turnIntent.ts, `TradeErrorReason`).
+  offer_not_found: 404,
+  no_resale_price: 400,
+  conflict: 409,
+  trade_refused: 400,
 } as const;
 const REASON_MESSAGE = {
   not_found: "Fiche de personnage introuvable ou sans ruleset résolvable.",
@@ -87,6 +99,10 @@ const REASON_MESSAGE = {
   item_not_found: "Cet objet n'est plus dans l'inventaire.",
   not_a_weapon: "Cet objet n'est pas une arme.",
   not_a_spellcaster: "Cette fiche ne lance pas de sorts.",
+  offer_not_found: "Cette offre n'est plus à la carte du lieu.",
+  no_resale_price: "Cet objet n'a pas de prix connu : il ne se vend pas au prix de la table.",
+  conflict: "L'inventaire a changé entre-temps : réessaie.",
+  trade_refused: "Le système monétaire du monde ne connaît pas la pièce de ce prix.",
 } as const;
 
 export async function POST(request: NextRequest) {
@@ -125,7 +141,8 @@ export async function POST(request: NextRequest) {
   // elle-meme ; c'est `POST .../encaisser` qui recevra le nombre annonce.
   // L'action libre garde son chemin d'avant ce ticket — rien a differer
   // quand aucun jet n'est en jeu.
-  if (parsed.data.choice.kind !== "free" && parsed.data.campaignId) {
+  // V3.2-10 : un échange non plus — il se règle tout de suite, sans dé.
+  if (parsed.data.choice.kind !== "free" && parsed.data.choice.kind !== "trade" && parsed.data.campaignId) {
     const outcome = await proposeIntentRequest(supabase, { ...common, campaignId: parsed.data.campaignId, choice: parsed.data.choice });
     if ("error" in outcome) {
       return NextResponse.json({ error: REASON_MESSAGE[outcome.error] }, { status: REASON_STATUS[outcome.error] });
