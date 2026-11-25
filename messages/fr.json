@@ -1398,8 +1398,11 @@
     "iaAucunFournisseur": "Aucun fournisseur d'IA : le tour est joué sans narration (à déclarer dans la page Compte)",
     "iaQuota": "Quota du fournisseur d'IA atteint (crédit épuisé ou limite du jour) : le dernier tour est resté muet",
     "iaLimite": "Trop d'appels à l'IA d'un coup : le dernier tour est resté muet, réessayer dans un instant",
+    "iaLimiteApp": "Limite de l'app atteinte (30 appels d'IA par heure) : le dernier tour est resté muet, réessayer un peu plus tard",
     "iaCleRefusee": "Clé d'API refusée par le fournisseur : le dernier tour est resté muet (à vérifier dans la page Compte)",
     "iaDelai": "Le fournisseur d'IA a mis trop de temps à répondre : le dernier tour est resté muet",
+    "iaRefusee": "Le fournisseur d'IA a refusé la requête (modèle introuvable, sans outils ou qui n'écrit pas de texte, ou adresse incorrecte) : le dernier tour est resté muet",
+    "iaInutilisable": "Le modèle a répondu sans récit utilisable (il gère peut-être mal les outils) : le dernier tour est resté muet",
     "iaInconnue": "Fournisseur d'IA : aucun tour joué pour l'instant",
     "annulerTour": {
       "bouton": "Annuler le dernier tour",

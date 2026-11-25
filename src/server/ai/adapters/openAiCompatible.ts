@@ -71,7 +71,10 @@ export class OpenAiCompatibleProvider implements AiProvider {
 
   constructor(config: OpenAiCompatibleConfig) {
     this.model = config.model;
-    this.baseUrl = config.baseUrl.replace(/\/+$/, "");
+    // Une adresse collée avec son chemin final (`…/v1/chat/completions`, erreur
+    // fréquente en copiant la doc d'un fournisseur) : on le retire, puisque ce
+    // chemin est ajouté à chaque appel.
+    this.baseUrl = config.baseUrl.trim().replace(/\/+$/, "").replace(/\/(chat\/completions|embeddings)$/, "");
     this.contextWindow = config.contextWindow ?? 8192;
     this.embedDim = config.embedDim ?? 1024;
     this.apiKey = config.apiKey?.trim() || undefined;

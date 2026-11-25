@@ -1397,8 +1397,11 @@
     "iaAucunFournisseur": "No AI provider: the turn is played without narration (set one in the Account page)",
     "iaQuota": "AI provider quota reached (credit used up or daily limit): the last turn stayed silent",
     "iaLimite": "Too many AI calls at once: the last turn stayed silent, try again in a moment",
+    "iaLimiteApp": "App limit reached (30 AI calls per hour): the last turn stayed silent, try again a bit later",
     "iaCleRefusee": "API key rejected by the provider: the last turn stayed silent (check the Account page)",
     "iaDelai": "The AI provider took too long to answer: the last turn stayed silent",
+    "iaRefusee": "The AI provider rejected the request (model not found, without tool support or not writing text, or wrong address): the last turn stayed silent",
+    "iaInutilisable": "The model answered without a usable narration (it may not handle tools well): the last turn stayed silent",
     "iaInconnue": "AI provider: no turn played yet",
     "annulerTour": {
       "bouton": "Undo last turn",

@@ -18,6 +18,7 @@ describe("la raison d'un refus du fournisseur", () => {
     expect(classerReponseFournisseur(429, '{"error":{"message":"Rate limit reached for tokens per day (TPD)"}}')).toBe("quota");
     expect(classerReponseFournisseur(429, '{"error":{"message":"Daily token limit exceeded"}}')).toBe("quota");
     expect(classerReponseFournisseur(429, "insufficient balance")).toBe("quota");
+    expect(classerReponseFournisseur(429, '{"error":{"message":"Rate limit exceeded: free-models-per-day"}}')).toBe("quota");
   });
 
   it("429 ordinaire : trop d'appels d'un coup, réessayer plus tard suffit", () => {
@@ -34,8 +35,14 @@ describe("la raison d'un refus du fournisseur", () => {
     expect(classerReponseFournisseur(302, "")).toBe("echec");
   });
 
+  it("400, 404, 422 : le fournisseur a répondu mais refusé la requête (modèle ou adresse)", () => {
+    expect(classerReponseFournisseur(404, "model not found")).toBe("refusee");
+    expect(classerReponseFournisseur(400, '{"error":{"message":"No endpoints found that support tool use"}}')).toBe("refusee");
+    expect(classerReponseFournisseur(422, "")).toBe("refusee");
+  });
+
   it("le reste est un échec générique", () => {
     expect(classerReponseFournisseur(500, "boom")).toBe("echec");
-    expect(classerReponseFournisseur(404, "model not found")).toBe("echec");
+    expect(classerReponseFournisseur(503, "")).toBe("echec");
   });
 });

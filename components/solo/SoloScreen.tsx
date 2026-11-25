@@ -41,8 +41,11 @@ const LIBELLE_ETAT_IA = {
   aucun_fournisseur: "iaAucunFournisseur",
   quota: "iaQuota",
   limite: "iaLimite",
+  limite_app: "iaLimiteApp",
   cle_refusee: "iaCleRefusee",
   delai: "iaDelai",
+  refusee: "iaRefusee",
+  inutilisable: "iaInutilisable",
   echec: "iaMuette",
 } as const satisfies Record<"inconnu" | "repond" | RaisonSansNarration, string>;
 
@@ -56,9 +59,12 @@ const COULEUR_ETAT_IA = {
   repond: "bg-success",
   quota: "bg-accent",
   limite: "bg-accent",
+  limite_app: "bg-accent",
   aucun_fournisseur: "bg-danger",
   cle_refusee: "bg-danger",
   delai: "bg-danger",
+  refusee: "bg-danger",
+  inutilisable: "bg-danger",
   echec: "bg-danger",
 } as const satisfies Record<"inconnu" | "repond" | RaisonSansNarration, string>;
 
@@ -228,9 +234,10 @@ export default function SoloScreen({
       <div aria-live="polite" className="sr-only">
         {announce}
       </div>
-      {/* `bg-bg` : le fil passe DERRIÈRE la barre en défilant, il ne doit
-          pas se lire au travers. */}
-      <div className="sticky bottom-0 shrink-0 bg-bg pb-1 pt-2">
+      {/* Le fil défile dans son propre conteneur au-dessus : la barre ne le
+          recouvre jamais, elle n'a donc pas besoin d'un fond (il dessinait une
+          bande sombre au-dessus du cadre de saisie). */}
+      <div className="sticky bottom-0 shrink-0 pb-1 pt-1">
         <IntentBar
           worldSlug={worldSlug}
           campaignId={campaignId}
