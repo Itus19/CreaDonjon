@@ -27,7 +27,7 @@
 
 ---
 
-### ☐ V3.2-8 — Les volets : le fil s'étale, un onglet au bord de chaque volet · `M` · sans modèle IA — **prêt (Sonnet)**
+### ☐ V3.2-12 — Les volets : le fil s'étale, un onglet au bord de chaque volet · `M` · sans modèle IA — **prêt (Sonnet)**
 
 **Demandé le 25 novembre**, captures à l'appui : volets fermés, le texte reste étroit au centre ; les languettes de repli sont mal placées (surtout la gauche, isolée loin du texte) et touchent la barre de défilement du fil et les bulles des PNJ. Esquisses et choix de l'auteur : <https://claude.ai/artifact/SY2zL6VoSLivR8tuu8yxgh> (options **A2** et **C1**).
 
@@ -52,7 +52,7 @@
 
 ---
 
-### ☐ V3.2-9 — L'attitude **perçue** des présents arrive à l'écran · `M` · sans modèle IA — **à concevoir (Opus)**
+### ☐ V3.2-13 — L'attitude **perçue** des présents arrive à l'écran · `M` · sans modèle IA — **à concevoir (Opus)**
 
 **Demandé le 25 novembre**, avec une précision qui fait tout le ticket : ce que l'écran montre est **la perception du joueur**. Un PNJ peut ne pas ressentir ce qu'il montre, et tromper le joueur.
 
@@ -73,13 +73,13 @@
 
 ---
 
-### ☐ V3.2-10 — Les présents dans la bande du Monde fermé · `S` · sans modèle IA — **prêt (Sonnet) après V3.2-8 et V3.2-9**
+### ☐ V3.2-14 — Les présents dans la bande du Monde fermé · `S` · sans modèle IA — **prêt (Sonnet) après V3.2-12 et V3.2-13**
 
 **Demandé le 25 novembre.** Volet gauche fermé, la bande montre un rond par personne présente, avec ses initiales et un anneau qui dit comment elle **semble** percevoir le personnage. Esquisses : <https://claude.ai/artifact/SY2zL6VoSLivR8tuu8yxgh#presents>, option **D2** choisie.
 
 **À faire.**
 - **L'anneau est une jauge.** Couleur du cran d'amitié perçu (du rouge « haineux » au vert-bleu « dévoué ») **et** longueur de l'arc (un petit bout pour « haineux », la moitié pour « indifférent », le tour complet pour « dévoué ») : même langage que l'anneau des PV, et lisible sans distinguer le rouge du vert. Couleurs par jetons (`src/styles/tokens.css`), contraste vérifié.
-- **L'attirance a son cercle.** Un second cercle fin, rose, à l'extérieur, rempli au tiers, aux deux tiers ou en entier (intrigué·e, attiré·e, épris·e), seulement quand V3.2-9 l'autorise.
+- **L'attirance a son cercle.** Un second cercle fin, rose, à l'extérieur, rempli au tiers, aux deux tiers ou en entier (intrigué·e, attiré·e, épris·e), seulement quand V3.2-13 l'autorise.
 - **Rangés par distance** (au contact, proche, loin), séparés d'un trait ; les lointains un peu pâlis.
 - **Pointillés** pour une esquisse sans fiche, comme sa carte dans l'onglet Présents.
 - **Halo** léger sur le PNJ qui a parlé au dernier tour.
@@ -87,7 +87,7 @@
 - Le même rond devant chaque carte de l'onglet Présents ouvert.
 - Un changement de deux crans ou plus fait pulser l'anneau une fois (rien si les animations sont réduites).
 
-**Câblage** : aucune requête de plus, la scène arrive déjà avec la page ; les données viennent du champ posé par V3.2-9.
+**Câblage** : aucune requête de plus, la scène arrive déjà avec la page ; les données viennent du champ posé par V3.2-13.
 
 **Catalogue** : nouvelle entrée « rond de présent » sur `docs/catalogue/Solo.dc.html`.
 
