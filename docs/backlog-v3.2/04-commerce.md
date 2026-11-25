@@ -74,18 +74,20 @@ Ordre : 8 et 9 d'abord (le noyau et les prix), puis 10 (l'écran), puis 11 (le c
 
 ---
 
-### ☐ V3.2-11 — Le PNJ sait ce que tu as et ce que tu dois · `S` · **avec modèle IA** — **prêt après 10 (Opus)**
+### ☑ V3.2-11 — Le PNJ sait ce que tu as et ce que tu dois · `S` · **avec modèle IA** — **fait (Opus), à vérifier avec le fournisseur**
 
-**Deux lignes de plus dans le contexte du tour** (`buildTurnContext`), encadrées comme le reste : la bourse en clair (« 12 pa, 3 pc »), et l'ardoise du lieu (« 1 bière, 4 pc, due à Mabelle »). Le fait d'un manque (V3.2-10) y arrive comme tout autre fait.
+**Trois blocs de plus dans le contexte du tour** (`buildTurnContext`) : la bourse en clair (« 12 pa, 3 pc », composée par le serveur, hors balise comme les faits), la carte du lieu (« Bière : 4 pc », encadrée) et l'ardoise du lieu (« « Bière », 4 pc, due à Mabelle », encadrée). Le fait d'un manque (V3.2-10) y arrive comme tout autre fait.
 
-**L'ardoise** est tenue par le moteur dans `scene_states.state` (`zSceneState`, aucune migration), indexée par lieu et par créancier pour survivre au changement de scène. Elle se remplit par un bouton « Mettre sur l'ardoise » sur la carte d'un achat (déplacé du V3.2-10, quand il s'agit de consommer sur place) et se vide par un paiement.
+**L'ardoise** est tenue par le moteur dans `scene_states.state` (`SceneState.tabs`, facultatif, aucune migration ni changement de `__v`), indexée par lieu et par créancier pour survivre au changement de scène. Elle se remplit par « Mettre sur l'ardoise » sur la carte d'un achat consommé sur place, et se vide par « je règle l'ardoise » (ou « je paie ma note »), réglé par le moteur au total relu dans la scène. Annuler le tour la restaure avec la scène.
 
-**Une consigne** : un PNJ qui a servi quelque chose d'impayé peut le réclamer ; il ne fixe jamais un prix lui-même et cite ceux du contexte. Ce qu'il propose (rabais, troc) reste de la narration : rien n'est appliqué sans un nouvel échange réglé par le moteur.
+**Une consigne** hors balise (`MONEY_INSTRUCTION`) : un PNJ qui a servi quelque chose d'impayé peut le réclamer ; il ne fixe jamais un prix lui-même et cite ceux du contexte. Ce qu'il propose (rabais, troc) reste de la narration : rien n'est appliqué sans un nouvel échange réglé par le moteur.
+
+**Livré** : `src/core/rules/tab.ts` (6 tests), direction `settle` dans `interpretTrade` (4 tests), `onTab` et `settle` dans `executeTrade`, `resolveMoney` dans `buildSoloTurnContext` (une lecture groupée de plus par tour narré : inventaire du personnage et carte du lieu), consigne et encadrement testés (`turnContext.test.ts`). Planche `Solo` §echange. Un objet de règle ne va pas sur l'ardoise : seul ce qui se consomme sur place.
 
 **Critères d'acceptation**
-- [ ] Après une bière mise sur l'ardoise, le PNJ la réclame dans les trois tours suivants (vérifié avec le fournisseur choisi).
-- [ ] Après un achat court, le PNJ réagit au manque sans inventer de nouveau prix.
-- [ ] Aucun appel d'IA de plus ; `ai_usage_log` inchangé.
+- [ ] Après une bière mise sur l'ardoise, le PNJ la réclame dans les trois tours suivants (vérifié avec le fournisseur choisi). **À jouer par l'auteur** : ce conteneur n'a ni base ni modèle.
+- [ ] Après un achat court, le PNJ réagit au manque sans inventer de nouveau prix. **À jouer par l'auteur**, même raison.
+- [x] Aucun appel d'IA de plus ; `ai_usage_log` inchangé (le contexte grossit, le nombre d'appels ne bouge pas).
 
 ---
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildTurnContext, type TurnContextInput } from "./turnContext";
+import { MONEY_INSTRUCTION, buildTurnContext, type TurnContextInput } from "./turnContext";
 
 function input(partial: Partial<TurnContextInput> = {}): TurnContextInput {
   return {
@@ -140,5 +140,19 @@ describe("V3.1-193 — les pronoms d'un PNJ présent", () => {
 
   it("un id de PNJ absent de la scène ne produit aucune consigne", () => {
     expect(buildTurnContext(input({ addressedNpcId: "inconnu" }))).not.toContain("Consigne : le joueur parle");
+  });
+
+  it("V3.2-11 — la bourse voyage hors balise, la carte et l'ardoise dans les leurs, puis la consigne sur l'argent", () => {
+    const text = buildTurnContext(input({ purse: "3 pa", priceList: ["Bière : 4 pc"], tab: ["« Bière », 4 pc, due à Mabelle"] }));
+    expect(text).toContain("Bourse du personnage joué : 3 pa");
+    expect(text).not.toMatch(/<donnee[^>]*>[^<]*Bourse du personnage/);
+    expect(text).toMatch(/carte-du-lieu[\s\S]*Bière : 4 pc/);
+    expect(text).toMatch(/ardoise[\s\S]*due à Mabelle/);
+    expect(text).toContain(MONEY_INSTRUCTION);
+    expect(text.indexOf(MONEY_INSTRUCTION)).toBeGreaterThan(text.indexOf("due à Mabelle"));
+  });
+
+  it("V3.2-11 — sans bourse, carte ni ardoise, aucune consigne sur l'argent", () => {
+    expect(buildTurnContext(input())).not.toContain(MONEY_INSTRUCTION);
   });
 });

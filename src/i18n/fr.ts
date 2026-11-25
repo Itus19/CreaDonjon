@@ -125,7 +125,12 @@ export const TRADE_VERBS_FR: TradeVerb[] = [
   },
   { direction: "sell", terms: ["vends", "vendre", "vend", "revends", "revendre"] },
   { direction: "give", terms: ["donne", "donner", "donnes", "offre", "offrir", "offres"] },
+  // V3.2-11 : régler l'ardoise. Ces verbes ne visent QUE l'ardoise ; « payer » (achat) la vise aussi.
+  { direction: "settle", terms: ["regle", "regler", "regles", "solde", "solder", "rembourse", "rembourser"] },
 ];
+
+/** V3.2-11 — ce qu'on écrit pour désigner l'ardoise d'un lieu. */
+export const TRADE_TAB_TERMS_FR: string[] = ["l'ardoise", "ardoise", "ma note", "la note", "l'addition", "addition", "ce que je dois", "ma dette", "mes dettes"];
 
 /** V3.2-10 — ce qu'on écrit pour désigner la nuit à l'auberge (offre du groupe `lodging`), en plus de son libellé. */
 export const TRADE_LODGING_TERMS_FR: string[] = ["une chambre", "la chambre", "chambre", "une nuit", "la nuit", "nuit", "un lit", "lit"];

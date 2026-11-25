@@ -22,7 +22,8 @@ import type { PriceListOffer } from "../schemas/blocks/priceList";
  * moitié prix tombe juste (`resaleCp`, `priceList.ts`).
  */
 
-export type TradeDirection = "buy" | "sell" | "give";
+/** `settle` (V3.2-11) : régler l'ardoise du lieu. */
+export type TradeDirection = "buy" | "sell" | "give" | "settle";
 
 export interface TradeVerb {
   direction: TradeDirection;
@@ -57,7 +58,14 @@ export interface TradeCatalog {
   purseCp: number;
   /** Le lieu de la scène porte-t-il une carte ? Sans elle, un achat propose de la tirer. */
   hasPriceList: boolean;
+  /** V3.2-11 : ce qui est dû sur l'ardoise de ce lieu, en cuivre ; 0 si rien. */
+  tabCp: number;
+  /** V3.2-11 : ce qu'on écrit pour désigner l'ardoise (« l'ardoise », « ma note », « l'addition »). */
+  tabTerms: string[];
 }
+
+/** L'identifiant de l'ardoise comme objet d'un règlement : elle n'a pas d'autre entrée au catalogue. */
+export const TAB_ENTRY_ID = "tab";
 
 export interface TradeReading {
   kind: "trade";
@@ -88,13 +96,31 @@ export function interpretTrade(rawText: string, catalog: TradeCatalog, targets: 
   const verbHit = firstMatch(text, indexedVerbs(catalog.verbs));
   if (!verbHit) return null;
   const direction = verbHit.item.direction;
+  const targetHit = firstMatch(text, targets);
+
+  // V3.2-11 : « je paie l'ardoise », « je règle ma note » — un verbe d'achat
+  // ou de règlement, et l'ardoise nommée. Sans rien de dû ici, rien à régler.
+  if (direction === "buy" || direction === "settle") {
+    const tabHit = firstMatch(text, [{ id: TAB_ENTRY_ID, terms: catalog.tabTerms }]);
+    if (tabHit && catalog.tabCp > 0) {
+      return {
+        kind: "trade",
+        direction: "settle",
+        entryId: TAB_ENTRY_ID,
+        label: "L'ardoise",
+        priceCp: catalog.tabCp,
+        target: targetHit?.item ?? null,
+        matched: { verb: verbHit.matchedText, object: tabHit.matchedText, target: targetHit?.matchedText ?? null },
+      };
+    }
+    if (direction === "settle") return null;
+  }
 
   const objectHit = direction === "buy" ? firstMatch(text, catalog.offers) : firstMatch(text, catalog.items);
   if (!objectHit) {
     return direction === "buy" && !catalog.hasPriceList ? { kind: "no_price_list", verb: verbHit.matchedText } : null;
   }
 
-  const targetHit = firstMatch(text, targets);
   const entry = objectHit.item;
   const priceCp = direction === "buy" ? (entry as TradeOfferEntry).priceCp : direction === "sell" ? (entry as TradeItemEntry).resaleCp : null;
   return {
@@ -155,6 +181,11 @@ export function tradeForOffer(offer: TradeOfferEntry): Trade {
 /** Vendre un objet du sac : il sort, son prix de revente entre. */
 export function tradeForSale(itemId: string, resaleCp: number): Trade {
   return { give: [{ kind: "item", itemId, qty: 1 }], receive: coinLines(resaleCp) };
+}
+
+/** Régler l'ardoise : ce qui est dû, en pièces, contre rien de nouveau. */
+export function tradeForTab(tabCp: number): Trade {
+  return { give: coinLines(tabCp), receive: [] };
 }
 
 /** Donner un objet du sac : il sort, rien n'entre. */

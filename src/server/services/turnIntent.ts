@@ -18,7 +18,9 @@ import {
   type Skill,
   type Source,
 } from "@/src/core/rules/sheet";
-import { SKILL_LABELS_FR, INTENT_VERBS_FR, TRADE_VERBS_FR, TRADE_LODGING_TERMS_FR, formatCpFr } from "@/src/i18n/fr";
+import { SKILL_LABELS_FR, INTENT_VERBS_FR, TRADE_VERBS_FR, TRADE_LODGING_TERMS_FR, TRADE_TAB_TERMS_FR, formatCpFr } from "@/src/i18n/fr";
+import { addToTab, clearTabAt, tabAt, tabTotalCp } from "@/src/core/rules/tab";
+import { putSceneState } from "@/src/server/repos/sceneStates";
 import { type IntentAction, type IntentTarget } from "@/src/core/rules/intent";
 import type { ResolvedEffect, FiredEvent } from "@/src/core/rules/triggers";
 import { resolveCheckRoll, resolveDamageRoll, weaponAttackAbility, type AdvantageState } from "@/src/core/rules/action";
@@ -51,8 +53,8 @@ import type { SceneState } from "@/src/core/rules/scene";
 import { zPriceListBlockData, type PriceListBlockData } from "@/src/core/schemas/blocks/priceList";
 import { itemCostPrice, priceCp, resaleCp } from "@/src/core/rules/priceList";
 import { totalValueCp } from "@/src/core/rules/currency";
-import { tradeForGift, tradeForOffer, tradeForSale, tradeOffersFromPriceList, type TradeCatalog, type TradeDirection, type TradeItemEntry } from "@/src/core/rules/tradeIntent";
-import type { Trade } from "@/src/core/rules/trade";
+import { tradeForGift, tradeForOffer, tradeForSale, tradeForTab, tradeOffersFromPriceList, type TradeCatalog, type TradeDirection, type TradeItemEntry } from "@/src/core/rules/tradeIntent";
+import type { Trade, TradeMissing } from "@/src/core/rules/trade";
 import type { InventoryBlockData } from "@/src/core/schemas/blocks/inventory";
 import { listCombatsForCampaign, listCombatParticipants } from "@/src/server/repos/combats";
 import { listEntitiesByIds } from "@/src/server/repos/entities";
@@ -211,7 +213,7 @@ function buildTradeCatalog(
   ctx: CharacterActionContext,
   nameOf: (item: InventoryItem) => string,
   priceList: PriceListBlockData | null,
-  inScene: boolean
+  scene: SceneState | null
 ): TradeCatalog {
   const offers = tradeOffersFromPriceList(priceList?.offers ?? [], TRADE_LODGING_TERMS_FR);
   const items: TradeItemEntry[] = (ctx.inventoryData?.items ?? []).map((item) => {
@@ -227,7 +229,10 @@ function buildTradeCatalog(
     items,
     purseCp: ctx.inventoryData ? totalValueCp(ctx.inventoryData.currency) : 0,
     // Hors scène, il n'y a pas de lieu où tirer une carte : on ne le propose pas.
-    hasPriceList: priceList !== null || !inScene,
+    hasPriceList: priceList !== null || scene === null,
+    // V3.2-11 : l'ardoise de CE lieu, relue par le serveur au règlement.
+    tabCp: scene ? tabTotalCp(tabAt(scene, scene.locationId)) : 0,
+    tabTerms: TRADE_TAB_TERMS_FR,
   };
 }
 
@@ -309,7 +314,7 @@ export async function buildIntentBarData(
   return {
     actor: { entityId: ctx.entityId, name: ctx.entityName },
     catalog: { actions, targets, verbs: INTENT_VERBS_FR },
-    trade: buildTradeCatalog(ctx, nameOf, priceList, scene !== null),
+    trade: buildTradeCatalog(ctx, nameOf, priceList, scene),
     targetDetails,
     ruleKeys: ctx.sheet.features.map((f) => f.key).filter((k) => !k.startsWith("choice:")),
   };
@@ -321,7 +326,14 @@ export type IntentChoice =
   | { kind: "ability_check"; actionId: Ability; targetId: TargetId | null; advantage: AdvantageState; dc: number | null }
   | { kind: "saving_throw"; actionId: Ability; targetId: TargetId | null; advantage: AdvantageState; dc: number | null }
   /** V3.2-10 : un achat (offre de la carte), une vente ou un don (objet du sac). Le prix n'en fait pas partie : le serveur le relit. */
-  | { kind: "trade"; direction: TradeDirection; entryId: string; targetId: TargetId | null }
+  | {
+      kind: "trade";
+      direction: TradeDirection;
+      entryId: string;
+      targetId: TargetId | null;
+      /** V3.2-11 : un achat consommé sur place, mis sur l'ardoise du lieu plutôt que payé. */
+      onTab?: boolean;
+    }
   | { kind: "free" };
 
 /**
@@ -333,7 +345,7 @@ export type IntentChoice =
 /** Un choix qui se résout par un jet (posé, puis encaissé en campagne) : ni l'action libre, ni l'échange. */
 export type RollChoice = Exclude<IntentChoice, { kind: "free" } | { kind: "trade" }>;
 
-export type TradeErrorReason = "offer_not_found" | "no_resale_price" | "conflict" | "trade_refused";
+export type TradeErrorReason = "offer_not_found" | "no_resale_price" | "conflict" | "trade_refused" | "no_tab_here" | "tab_full" | "tab_services_only";
 
 /** Les raisons des deux resolveurs reutilises, sans en inventer une : `characterActions` pour les armes, `checkRolls` pour les tests. */
 export type IntentErrorReason = ActionErrorReason | CheckRollErrorReason | TradeErrorReason;
@@ -395,6 +407,8 @@ async function journalTurn(
     payload: Record<string, unknown>;
     /** V3.2-10 : l'inventaire déjà relevé AVANT un échange appliqué juste avant le journal ; absent, il est lu ici. */
     inventoryBefore?: InventoryBlockData | null;
+    /** V3.2-11 : la scène déjà relevée AVANT qu'un échange y écrive l'ardoise ; absente, elle est lue ici. */
+    sceneBefore?: SceneState | null;
   }
 ): Promise<string | null> {
   if (!params.campaignId) return null;
@@ -405,7 +419,7 @@ async function journalTurn(
   // V3.2-8 : l'inventaire aussi (un échange le modifie) — une troisième lecture, ciblée sur le bloc `inventory`.
   const [ligneEtat, scene, inventory] = await Promise.all([
     getRuntimeState(supabase, params.entityId, params.campaignId),
-    getSceneState(supabase, params.campaignId),
+    params.sceneBefore !== undefined ? Promise.resolve(params.sceneBefore) : getSceneState(supabase, params.campaignId),
     params.inventoryBefore !== undefined ? Promise.resolve(params.inventoryBefore) : readInventorySnapshot(supabase, params.entityId),
   ]);
   const runtime = ligneEtat?.state ?? null;
@@ -432,14 +446,19 @@ function quoted(label: string): string {
  * `cost` (le même catalogue que l'écran a affiché, reconstruit côté serveur) :
  * le client n'envoie que l'identifiant de l'offre ou de l'objet.
  *
- * L'ordre tient la promesse d'annulation : l'inventaire est relevé, l'échange
- * appliqué (une révision du bloc, `applyTrade`), puis le tour est journalisé
- * avec le relevé d'AVANT — « annuler ce tour » rend pièces et objets. Si
- * l'écriture échoue, rien n'est journalisé.
+ * L'ordre tient la promesse d'annulation : l'inventaire et la scène sont
+ * relevés, l'échange appliqué (une révision du bloc, `applyTrade` ; l'ardoise
+ * dans la scène), puis le tour est journalisé avec les relevés d'AVANT —
+ * « annuler ce tour » rend pièces, objets et ardoise. Si l'écriture échoue,
+ * rien n'est journalisé.
  *
  * **Un manque ne bloque pas.** L'échange court n'écrit rien, mais le tour
  * part avec un fait (« Edran tend 3 pa ; il manque 2 pa… ») : la narration le
  * reçoit comme tout autre fait, et c'est le PNJ qui réagit.
+ *
+ * V3.2-11 : un achat consommé sur place peut aller sur l'ardoise du lieu
+ * (rien n'est payé, une ligne est due) ; régler l'ardoise paie tout ce qui
+ * est dû ici, au total relu dans la scène.
  */
 async function executeTrade(
   supabase: TypedClient,
@@ -456,16 +475,40 @@ async function executeTrade(
   const { choice, data } = params;
   const who = data.actor.name;
   const to = params.target ? ` à ${params.target.label}` : "";
+  const creditor = params.target?.label ?? null;
 
-  let trade: Trade;
+  const [system, before, sceneBefore] = await Promise.all([
+    readCurrencySystemForEntity(supabase, { entityId: params.entityId, campaignId: params.campaignId }),
+    readInventorySnapshot(supabase, params.entityId),
+    params.campaignId ? getSceneState(supabase, params.campaignId) : Promise.resolve(null),
+  ]);
+
+  let trade: Trade | null = null;
   let label: string;
   let priceCp: number | null = null;
-  if (choice.direction === "buy") {
+  /** La scène à écrire si l'échange tient : l'ardoise allongée (crédit) ou soldée (règlement). */
+  let sceneAfter: SceneState | null = null;
+  if (choice.direction === "settle") {
+    const dueCp = sceneBefore ? tabTotalCp(tabAt(sceneBefore, sceneBefore.locationId)) : 0;
+    if (!sceneBefore || dueCp === 0) return { error: "no_tab_here" };
+    trade = tradeForTab(dueCp);
+    label = "l'ardoise";
+    priceCp = dueCp;
+    sceneAfter = clearTabAt(sceneBefore, sceneBefore.locationId);
+  } else if (choice.direction === "buy") {
     const offer = data.trade.offers.find((o) => o.id === choice.entryId);
     if (!offer) return { error: "offer_not_found" };
-    trade = tradeForOffer(offer);
     label = quoted(offer.label);
     priceCp = offer.priceCp;
+    if (choice.onTab) {
+      // Consommé sur place seulement : un objet emporté à crédit devrait aussi entrer dans le sac.
+      if (offer.ruleKey) return { error: "tab_services_only" };
+      if (!sceneBefore) return { error: "no_tab_here" };
+      sceneAfter = addToTab(sceneBefore, { label: offer.label, priceCp: offer.priceCp, creditor });
+      if (!sceneAfter) return { error: "tab_full" };
+    } else {
+      trade = tradeForOffer(offer);
+    }
   } else {
     const item = data.trade.items.find((i) => i.id === choice.entryId);
     if (!item) return { error: "item_not_found" };
@@ -479,53 +522,59 @@ async function executeTrade(
     }
   }
 
-  const [system, before] = await Promise.all([
-    readCurrencySystemForEntity(supabase, { entityId: params.entityId, campaignId: params.campaignId }),
-    readInventorySnapshot(supabase, params.entityId),
-  ]);
-  const applied = await applyTrade(supabase, { entityId: params.entityId, trade, actorUserId: params.callerId, system });
-  if ("error" in applied) {
-    if (applied.error === "not_found" || applied.error === "forbidden" || applied.error === "item_not_found" || applied.error === "conflict") return { error: applied.error };
-    return { error: "trade_refused" };
+  let missing: TradeMissing[] = [];
+  if (trade) {
+    const applied = await applyTrade(supabase, { entityId: params.entityId, trade, actorUserId: params.callerId, system });
+    if ("error" in applied) {
+      if (applied.error === "not_found" || applied.error === "forbidden" || applied.error === "item_not_found" || applied.error === "conflict") return { error: applied.error };
+      return { error: "trade_refused" };
+    }
+    if ("status" in applied) missing = applied.missing;
+  }
+  const status: "settled" | "short" | "tab" = missing.length > 0 ? "short" : trade ? "settled" : "tab";
+  if (status !== "short" && sceneAfter && params.campaignId) {
+    await putSceneState(supabase, { campaignId: params.campaignId, state: sceneAfter, updatedBy: params.callerId });
   }
 
   const facts: string[] = [];
-  let status: "settled" | "short";
-  if ("status" in applied) {
-    status = "short";
+  const price = priceCp === null || priceCp === 0 ? "" : formatCpFr(priceCp);
+  if (status === "short") {
     const purseCp = before ? totalValueCp(before.currency, system) : 0;
-    for (const missing of applied.missing) {
-      if (missing.kind === "coins") {
-        const price = priceCp === null ? "" : ` (${formatCpFr(priceCp)})`;
+    for (const line of missing) {
+      if (line.kind === "coins") {
+        const cost = price ? ` (${price})` : "";
         facts.push(
           purseCp > 0
-            ? `${who} tend ${formatCpFr(purseCp)}${to} ; il manque ${formatCpFr(missing.missingCp)} pour ${label}${price}. Rien n'est payé.`
-            : `${who} n'a aucune pièce pour payer ${label}${price}${to}. Rien n'est payé.`
+            ? `${who} tend ${formatCpFr(purseCp)}${to} ; il manque ${formatCpFr(line.missingCp)} pour ${label}${cost}. Rien n'est payé.`
+            : `${who} n'a aucune pièce pour payer ${label}${cost}${to}. Rien n'est payé.`
         );
       } else {
         facts.push(`${who} n'a plus ${label} sur soi. Rien n'est échangé.`);
       }
     }
+  } else if (status === "tab") {
+    facts.push(`${who} prend ${label}${to}, sur l'ardoise${price ? ` (${price})` : ""}. Rien n'est payé pour l'instant.`);
   } else {
-    status = "settled";
-    const price = priceCp === null || priceCp === 0 ? "" : ` pour ${formatCpFr(priceCp)}`;
-    if (choice.direction === "buy") facts.push(`${who} achète ${label}${to}${price}. C'est payé.`);
-    else if (choice.direction === "sell") facts.push(`${who} vend ${label}${to}${price}. C'est payé.`);
+    const forPrice = price ? ` pour ${price}` : "";
+    if (choice.direction === "settle") facts.push(`${who} règle l'ardoise${to} : ${price}. C'est payé, plus rien n'est dû ici.`);
+    else if (choice.direction === "buy") facts.push(`${who} achète ${label}${to}${forPrice}. C'est payé.`);
+    else if (choice.direction === "sell") facts.push(`${who} vend ${label}${to}${forPrice}. C'est payé.`);
     else facts.push(`${who} donne ${label}${to}.`);
   }
 
+  const resolution = { settled: "échange réglé", short: "échange court", tab: "mis sur l'ardoise" }[status];
   const payload = {
     intent: params.intent,
     facts,
-    resolution: status === "settled" ? "échange réglé" : "échange court",
+    resolution,
     trade: {
       direction: choice.direction,
       entry_id: choice.entryId,
       label,
       price_cp: priceCp,
-      target_label: params.target?.label ?? null,
+      target_label: creditor,
       status,
-      ...("status" in applied ? { missing: applied.missing } : {}),
+      ...(missing.length > 0 ? { missing } : {}),
     },
   };
   const eventId = await journalTurn(supabase, {
@@ -535,6 +584,7 @@ async function executeTrade(
     kind: "player_action",
     payload,
     inventoryBefore: before,
+    sceneBefore,
   });
   return { kind: "player_action", facts, eventId, detail: payload, effects: [] };
 }

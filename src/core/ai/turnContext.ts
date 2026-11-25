@@ -93,6 +93,16 @@ export interface TurnContextInput {
    * pas une donnée du monde que le modèle aurait le droit d'ignorer.
    */
   recentNarrations: string[];
+  /**
+   * V3.2-11 (ADR 0110) — la bourse du personnage joué, composée par le serveur
+   * à partir de nombres (« 1 po, 12 pa, 3 pc », « vide ») : comme les faits,
+   * jamais encadrée. Absente hors scène.
+   */
+  purse?: string;
+  /** V3.2-11 — la carte du lieu (« Bière : 4 pc ») : des libellés écrits dans le wiki, donc ENCADRÉS. */
+  priceList?: string[];
+  /** V3.2-11 — l'ardoise du lieu (« « Bière », 4 pc, due à Mabelle ») : libellés et noms du monde, ENCADRÉS. */
+  tab?: string[];
 }
 
 /** Exportes : V3-D4 (`gmQuestionContext.ts`) en est le second consommateur — meme lieu, memes PNJ, memes quetes, pour une question hors du temps de jeu plutot qu'une narration de tour. */
@@ -107,6 +117,14 @@ const ZONE_LABELS: Record<TurnContextNpc["zone"], string> = {
   near: "à portée",
   far: "au loin",
 };
+
+/**
+ * V3.2-11 — l'argent se règle au moteur, jamais en narration : le PNJ cite les
+ * prix qu'on lui donne, peut réclamer ce qui est dû, et ce qu'il propose
+ * (rabais, troc) reste de la parole tant qu'aucun échange n'est réglé.
+ */
+export const MONEY_INSTRUCTION =
+  "Consigne sur l'argent : ne fixe jamais un prix toi-même, cite seulement ceux de la carte du lieu et de l'ardoise ci-dessus. Un PNJ qui a servi quelque chose d'impayé (sur l'ardoise) peut le réclamer. Un rabais ou un troc qu'un PNJ propose reste une parole : rien n'est payé, donné ni retiré tant que le moteur n'a pas réglé un échange dans les faits.";
 
 export function npcLine(npc: TurnContextNpc): string {
   const attitude = npc.attitudeLabel ?? "attitude inconnue";
@@ -135,6 +153,12 @@ export function buildTurnContext(input: TurnContextInput): string {
     input.npcs.length > 0 ? fenceUntrustedData("pnjs-presents", input.npcs.map(npcLine).join("\n")) : null,
     input.quests.length > 0 ? fenceUntrustedData("quetes-en-cours", input.quests.map(questLine).join("\n")) : null,
     input.hints.length > 0 ? fenceUntrustedData("indices-de-narration", input.hints.join("\n")) : null,
+    // V3.2-11 : ce que la personne a et doit, et ce que le lieu vend. La
+    // consigne qui suit est une vraie instruction du système, hors balise.
+    input.priceList && input.priceList.length > 0 ? fenceUntrustedData("carte-du-lieu", input.priceList.join("\n")) : null,
+    input.purse ? `Bourse du personnage joué : ${input.purse}` : null,
+    input.tab && input.tab.length > 0 ? fenceUntrustedData("ardoise", input.tab.join("\n")) : null,
+    input.purse !== undefined || (input.priceList?.length ?? 0) > 0 || (input.tab?.length ?? 0) > 0 ? MONEY_INSTRUCTION : null,
     // V3-B4 : la prose vient dans l'encadrement (c'est de la donnee de
     // reference, deja produite par un modele), la consigne reste DEHORS —
     // une vraie instruction du systeme, jamais quelque chose que le modele

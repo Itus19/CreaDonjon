@@ -10,6 +10,13 @@ import { buildGmQuestionContext } from "@/src/core/ai/gmQuestionContext";
 import { relationshipAxisLabel } from "@/src/core/psyche/bands";
 import { zRelationshipBlockData } from "@/src/core/schemas/blocks/relationship";
 import { getSceneState } from "@/src/server/repos/sceneStates";
+import { listBlocksByTypesForEntities } from "@/src/server/repos/blocks";
+import { zInventoryBlockData } from "@/src/core/schemas/blocks/inventory";
+import { zPriceListBlockData } from "@/src/core/schemas/blocks/priceList";
+import { CURRENCY_ORDER, type Currency } from "@/src/core/rules/currency";
+import { tabAt } from "@/src/core/rules/tab";
+import type { SceneState } from "@/src/core/rules/scene";
+import { CURRENCY_LABELS_FR, formatCpFr, formatTableEntryPrice } from "@/src/i18n/fr";
 import { listBlocksForEntity } from "@/src/server/repos/blocks";
 import { listEntitiesByIds } from "@/src/server/repos/entities";
 import { listRecentEventsByKind } from "@/src/server/repos/sessions";
@@ -164,6 +171,47 @@ export interface SoloTurnContext {
   npcs: TurnContextNpc[];
 }
 
+/** Au-delà, la carte est tronquée : le contexte d'un modèle local est compté. */
+const MAX_PRICE_LIST_LINES = 40;
+
+/** « 1 po, 12 pa, 3 pc » : les pièces telles qu'elles sont dans la bourse, sans les recomposer ; « vide » sinon. */
+function purseText(currency: Currency | null): string {
+  if (!currency) return "vide";
+  const parts = CURRENCY_ORDER.filter((coin) => currency[coin] > 0).map((coin) => `${currency[coin]} ${CURRENCY_LABELS_FR[coin]}`);
+  for (const [key, amount] of Object.entries(currency.extra ?? {})) if (amount > 0) parts.push(`${amount} ${key}`);
+  return parts.length > 0 ? parts.join(", ") : "vide";
+}
+
+/**
+ * V3.2-11 (ADR 0110) — ce que la personne a, ce qu'elle doit ici, et ce que le
+ * lieu vend : la bourse (bloc `inventory` du personnage), la carte (bloc
+ * `price_list` du lieu) et l'ardoise du lieu (dans la scène, déjà lue). Une
+ * seule lecture de plus par tour narré, sous la RLS de la personne qui joue :
+ * une carte qu'elle ne voit pas n'entre pas dans le contexte (règle 11).
+ */
+async function resolveMoney(
+  supabase: TypedClient,
+  params: { playerEntityId: string; scene: SceneState | null }
+): Promise<Pick<TurnContextInput, "purse" | "priceList" | "tab">> {
+  if (!params.scene) return {};
+  const locationId = params.scene.locationId;
+  const rows = await listBlocksByTypesForEntities(supabase, [params.playerEntityId, locationId], ["inventory", "price_list"]);
+  const inventoryRow = rows.find((r) => r.entity_id === params.playerEntityId && r.block_type === "inventory");
+  const priceListRow = rows.find((r) => r.entity_id === locationId && r.block_type === "price_list");
+  const inventory = inventoryRow ? zInventoryBlockData.safeParse(inventoryRow.data) : null;
+  const priceList = priceListRow ? zPriceListBlockData.safeParse(priceListRow.data) : null;
+  if (inventory && !inventory.success) console.error("Inventaire illisible, bourse omise du contexte", params.playerEntityId, inventory.error.issues);
+  if (priceList && !priceList.success) console.error("Carte du lieu illisible, omise du contexte", locationId, priceList.error.issues);
+
+  return {
+    purse: purseText(inventory?.success ? inventory.data.currency : null),
+    priceList: priceList?.success
+      ? priceList.data.offers.slice(0, MAX_PRICE_LIST_LINES).map((o) => `${o.label} : ${formatTableEntryPrice(o.price) ?? ""}`)
+      : [],
+    tab: tabAt(params.scene, locationId).map((line) => `« ${line.label} », ${formatCpFr(line.priceCp)}, ${line.creditor ? `due à ${line.creditor}` : "due au lieu"}`),
+  };
+}
+
 export async function buildSoloTurnContext(
   supabase: TypedClient,
   params: {
@@ -182,7 +230,7 @@ export async function buildSoloTurnContext(
 ): Promise<SoloTurnContext> {
   const scene = await getSceneState(supabase, params.campaignId);
 
-  const [locationEntity, realNpcs, quests, recentNarrations, player] = await Promise.all([
+  const [locationEntity, realNpcs, quests, recentNarrations, player, money] = await Promise.all([
     scene ? listEntitiesByIds(supabase, [scene.locationId]).then((rows) => rows[0] ?? null) : Promise.resolve(null),
     scene
       ? resolvePresentNpcs(supabase, { worldId: params.worldId, campaignId: params.campaignId, playerEntityId: params.playerEntityId, present: scene.present })
@@ -190,6 +238,7 @@ export async function buildSoloTurnContext(
     resolveQuests(supabase, params.worldId, params.viewer),
     resolveRecentNarrations(supabase, params.sessionId),
     resolvePlayer(supabase, params.playerEntityId),
+    resolveMoney(supabase, { playerEntityId: params.playerEntityId, scene }),
   ]);
   const npcs = [...realNpcs, ...sketchesAsNpcs(scene?.sketches ?? [])];
   const addressedNpcId = npcAddressedBy(params.playerAction, npcs);
@@ -207,6 +256,7 @@ export async function buildSoloTurnContext(
     hints: params.hints,
     playerAction: params.playerAction,
     recentNarrations,
+    ...money,
   };
 
   const knownEntityIds = [...(locationEntity ? [locationEntity.id] : []), ...realNpcs.map((n) => n.id)];

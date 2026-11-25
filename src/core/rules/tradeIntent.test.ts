@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { interpretTrade, splitCp, tradeForGift, tradeForOffer, tradeForSale, tradeOffersFromPriceList, type TradeCatalog } from "./tradeIntent";
+import { interpretTrade, splitCp, tradeForGift, tradeForOffer, tradeForSale, tradeForTab, tradeOffersFromPriceList, type TradeCatalog } from "./tradeIntent";
 import type { IntentTarget } from "./intent";
 
 /**
@@ -11,6 +11,7 @@ const CATALOG: TradeCatalog = {
     { direction: "buy", terms: ["prends", "prendre", "achete", "acheter", "commande"] },
     { direction: "sell", terms: ["vends", "vendre"] },
     { direction: "give", terms: ["donne", "donner"] },
+    { direction: "settle", terms: ["regle", "regler"] },
   ],
   offers: [
     { id: "lodging-1", label: "Une nuit à l'auberge", terms: ["une nuit à l'auberge", "chambre", "nuit"], priceCp: 50, ruleKey: null },
@@ -23,6 +24,8 @@ const CATALOG: TradeCatalog = {
   ],
   purseCp: 30,
   hasPriceList: true,
+  tabCp: 0,
+  tabTerms: ["ardoise", "ma note", "l'addition"],
 };
 
 const TARGETS: IntentTarget[] = [{ id: "entity:mabelle", label: "Mabelle", terms: ["mabelle"] }];
@@ -145,5 +148,28 @@ describe("tradeOffersFromPriceList — la carte en catalogue", () => {
       { id: "lodging-1", label: "Une nuit à l'auberge", terms: ["Une nuit à l'auberge", "chambre"], priceCp: 50, ruleKey: null },
       { id: "drinks-1", label: "Bière", terms: ["Bière"], priceCp: 4, ruleKey: "ale" },
     ]);
+  });
+});
+
+describe("V3.2-11 — régler l'ardoise", () => {
+  const avecArdoise: TradeCatalog = { ...CATALOG, tabCp: 34 };
+
+  it("« je règle l'ardoise » propose de payer ce qui est dû ici", () => {
+    expect(interpretTrade("je règle l'ardoise", avecArdoise, TARGETS)).toMatchObject({ kind: "trade", direction: "settle", entryId: "tab", priceCp: 34 });
+  });
+
+  it("« je paie ma note à Mabelle » aussi, avec un verbe d'achat", () => {
+    expect(interpretTrade("je paie ma note à Mabelle", { ...avecArdoise, verbs: [...avecArdoise.verbs, { direction: "buy", terms: ["paie"] }] }, TARGETS)).toMatchObject({
+      direction: "settle",
+      target: { id: "entity:mabelle" },
+    });
+  });
+
+  it("rien de dû : rien à régler", () => {
+    expect(interpretTrade("je règle l'ardoise", CATALOG, TARGETS)).toBeNull();
+  });
+
+  it("régler, c'est des pièces contre rien de nouveau", () => {
+    expect(tradeForTab(34)).toEqual({ give: [{ kind: "coins", coin: "sp", amount: 3 }, { kind: "coins", coin: "cp", amount: 4 }], receive: [] });
   });
 });

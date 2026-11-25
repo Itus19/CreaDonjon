@@ -66,9 +66,11 @@ const bodySchema = z.object({
     // V3.2-10 : un échange ne porte que l'identifiant de l'offre ou de l'objet — jamais un prix, relu par le serveur.
     z.object({
       kind: z.literal("trade"),
-      direction: z.enum(["buy", "sell", "give"]),
+      direction: z.enum(["buy", "sell", "give", "settle"]),
       entryId: z.string().min(1).max(120),
       targetId: targetField,
+      // V3.2-11 : « Mettre sur l'ardoise » — un achat consommé sur place, dû plutôt que payé.
+      onTab: z.boolean().optional(),
     }),
     z.object({ kind: z.literal("free") }),
   ]),
@@ -92,6 +94,9 @@ const REASON_STATUS = {
   no_resale_price: 400,
   conflict: 409,
   trade_refused: 400,
+  no_tab_here: 409,
+  tab_full: 409,
+  tab_services_only: 400,
 } as const;
 const REASON_MESSAGE = {
   not_found: "Fiche de personnage introuvable ou sans ruleset résolvable.",
@@ -103,6 +108,9 @@ const REASON_MESSAGE = {
   no_resale_price: "Cet objet n'a pas de prix connu : il ne se vend pas au prix de la table.",
   conflict: "L'inventaire a changé entre-temps : réessaie.",
   trade_refused: "Le système monétaire du monde ne connaît pas la pièce de ce prix.",
+  no_tab_here: "Rien n'est dû sur l'ardoise de ce lieu.",
+  tab_full: "L'ardoise est pleine : règle-la avant d'y ajouter quelque chose.",
+  tab_services_only: "Seul ce qui se consomme sur place va sur l'ardoise.",
 } as const;
 
 export async function POST(request: NextRequest) {

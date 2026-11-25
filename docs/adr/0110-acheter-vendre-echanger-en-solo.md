@@ -1,7 +1,7 @@
 # 0110 — Acheter, vendre, échanger en solo : le moteur règle, le PNJ réagit
 
 **Date :** 2026-11-25
-**Statut :** acceptée le 25 novembre 2026 ; pièce 1 livrée par V3.2-8, pièce 2 par V3.2-9, pièce 3 par V3.2-10 ; pièce 4 à venir (V3.2-11, avec l'ardoise)
+**Statut :** acceptée le 25 novembre 2026 ; pièce 1 livrée par V3.2-8, pièce 2 par V3.2-9, pièce 3 par V3.2-10, pièce 4 par V3.2-11 (ardoise comprise)
 
 ## Contexte
 

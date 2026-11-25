@@ -92,11 +92,12 @@ const TRADE_LABELS: Record<TradeDirection, { chip: string; verb: string; button:
   buy: { chip: "Achat", verb: "Acheter", button: "Payer" },
   sell: { chip: "Vente", verb: "Vendre", button: "Vendre" },
   give: { chip: "Don", verb: "Donner", button: "Donner" },
+  settle: { chip: "Ardoise", verb: "Régler", button: "Payer" },
 };
 
 /** « Acheter : « Une nuit à l'auberge », à Mabelle — 5 pa », la phrase que le moteur a comprise. */
 function tradeSentence(trade: TradeReading): string {
-  const what = trade.direction === "buy" ? `« ${trade.label} »` : trade.label;
+  const what = trade.direction === "buy" ? `« ${trade.label} »` : trade.direction === "settle" ? trade.label.toLowerCase() : trade.label;
   const to = trade.target ? `, à ${trade.target.label}` : "";
   const price = trade.direction === "give" ? "" : trade.priceCp === null ? " — prix inconnu" : ` — ${trade.priceCp === 0 ? "gratuit" : formatCpFr(trade.priceCp)}`;
   return `${TRADE_LABELS[trade.direction].verb} : ${what}${to}${price}`;
@@ -158,8 +159,11 @@ export default function IntentBar({
   // avant les jets — sinon « je vends ma dague » proposerait une attaque à la dague.
   const tradeReading = useMemo(() => interpretTrade(text, tradeCatalog, data.catalog.targets), [text, tradeCatalog, data.catalog.targets]);
   const trade = !tradeDismissed && tradeReading?.kind === "trade" ? tradeReading : null;
-  const tradeShortCp = trade?.direction === "buy" && trade.priceCp !== null && trade.priceCp > data.trade.purseCp ? trade.priceCp - data.trade.purseCp : 0;
+  const tradeShortCp = (trade?.direction === "buy" || trade?.direction === "settle") && trade.priceCp !== null && trade.priceCp > data.trade.purseCp ? trade.priceCp - data.trade.purseCp : 0;
   const tradeBlocked = trade?.direction === "sell" && trade.priceCp === null;
+  // V3.2-11 : ce qui se consomme sur place (une offre sans fiche de règle) peut aller sur l'ardoise, en campagne seulement.
+  const canPutOnTab =
+    campaignId !== null && trade?.direction === "buy" && tradeCatalog.offers.some((o) => o.id === trade.entryId && o.ruleKey === null);
 
   /**
    * Une correction porte sur LA phrase corrigee. Reecrire la phrase repart
@@ -241,14 +245,14 @@ export default function IntentBar({
     return sortieJetDepuisTour(demande, outcome);
   }
 
-  async function play() {
+  async function play(onTab = false) {
     if (text.trim().length === 0) return;
     setLastAttempt("submit");
     setBusy(true);
     setError(null);
     try {
       const choice = trade
-        ? { kind: "trade" as const, direction: trade.direction, entryId: trade.entryId, targetId: trade.target?.id ?? null }
+        ? { kind: "trade" as const, direction: trade.direction, entryId: trade.entryId, targetId: trade.target?.id ?? null, ...(onTab ? { onTab: true } : {}) }
         : chosenAction
         ? chosenAction.kind === "weapon_attack"
           ? { kind: "weapon_attack" as const, actionId: chosenAction.id, targetId: chosenTargetId, advantage }
@@ -518,6 +522,11 @@ export default function IntentBar({
                 <button type="button" className={BTN_PRIMARY} onClick={() => void play()} disabled={busy || tradeBlocked}>
                   {busy && lastAttempt === "submit" ? "…" : TRADE_LABELS[trade.direction].button}
                 </button>
+                {canPutOnTab && (
+                  <button type="button" className={BTN_SECONDARY} onClick={() => void play(true)} disabled={busy}>
+                    Mettre sur l&apos;ardoise
+                  </button>
+                )}
                 <button type="button" className={BTN_SECONDARY} onClick={() => changeText("")} disabled={busy}>
                   Annuler
                 </button>

@@ -55,7 +55,7 @@ Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été
 | V3.2-8 | ☑ | sans | Le moteur règle un échange | [`04-commerce.md`](backlog-v3.2/04-commerce.md) |
 | V3.2-9 | ☑ | sans | Le prix vient des règles et du wiki | [`04-commerce.md`](backlog-v3.2/04-commerce.md) |
 | V3.2-10 | ☑ | sans | Acheter, vendre, échanger depuis « Que fais-tu ? » | [`04-commerce.md`](backlog-v3.2/04-commerce.md) |
-| V3.2-11 | ☐ | **avec** | Le PNJ sait ce que tu as et ce que tu dois | [`04-commerce.md`](backlog-v3.2/04-commerce.md) |
+| V3.2-11 | ☑ | **avec** | Le PNJ sait ce que tu as et ce que tu dois | [`04-commerce.md`](backlog-v3.2/04-commerce.md) |
 
 ---
 
