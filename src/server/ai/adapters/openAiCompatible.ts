@@ -1,5 +1,5 @@
 import "server-only";
-import { classerReponseFournisseur } from "@/src/core/ai/providerError";
+import { classerReponseFournisseur, extraireMessageFournisseur } from "@/src/core/ai/providerError";
 import { estAdresseLocale } from "@/src/core/ai/providerUrl";
 import { AiProviderError, type AiCapabilities, type AiProvider, type AiToolCall, type CompletionRequest, type CompletionResult } from "../provider";
 
@@ -112,7 +112,11 @@ export class OpenAiCompatibleProvider implements AiProvider {
     }
     if (!res.ok) {
       const text = res.status >= 300 && res.status < 400 ? "" : await res.text().catch(() => "");
-      throw new AiProviderError(classerReponseFournisseur(res.status, text), `Fournisseur IA (${this.model}) : ${res.status} ${text.slice(0, 300)}`);
+      throw new AiProviderError(
+        classerReponseFournisseur(res.status, text),
+        `Fournisseur IA (${this.model}) : ${res.status} ${text.slice(0, 300)}`,
+        extraireMessageFournisseur(res.status, text),
+      );
     }
     const longueur = Number(res.headers.get("content-length") ?? "0");
     if (longueur > TAILLE_MAX_REPONSE) throw new AiProviderError("echec", `Fournisseur IA (${this.model}) : réponse trop lourde`);

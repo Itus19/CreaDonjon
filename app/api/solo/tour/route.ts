@@ -13,7 +13,7 @@ import type { Locale } from "@/src/i18n/request";
 // jamais avant (garde-fou de turnIntent.noAi.test.ts, desormais reecrit
 // pour verifier cet ORDRE plutot que l'absence totale de ces imports).
 import { resolveProviderForUser } from "@/src/server/ai/resolveProvider";
-import { narrateSoloTurn, raisonSansNarration } from "@/src/server/ai/soloNarration";
+import { narrateSoloTurn, raisonSansNarration, detailSansNarration } from "@/src/server/ai/soloNarration";
 import { anchorSketchesNamedInText } from "@/src/server/services/sceneSketches";
 import type { PendingTurnResponse, TurnOutcome } from "@/lib/solo/types";
 
@@ -204,6 +204,7 @@ export async function POST(request: NextRequest) {
       // erreur renvoyee au joueur pour ca — seulement sa raison (V3.1-223).
       console.error("Narration du tour impossible", erreur);
       result.sansNarration = raisonSansNarration(erreur);
+      result.sansNarrationDetail = detailSansNarration(erreur);
     }
   }
 

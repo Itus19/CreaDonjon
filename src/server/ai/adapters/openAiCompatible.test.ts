@@ -62,6 +62,14 @@ describe("OpenAiCompatibleProvider — gardes d'un fournisseur distant", () => {
     await expect(new OpenAiCompatibleProvider({ baseUrl: "https://x.exemple/v1", model: "m" }).complete(demande)).rejects.toMatchObject({ raison: "quota" });
   });
 
+  it("le refus porte la phrase du fournisseur, pour l'écran", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response('{"object":"error","message":"You need a subscription to access this API."}', { status: 402 })));
+    await expect(new OpenAiCompatibleProvider({ baseUrl: "https://x.exemple/v1", model: "m" }).complete(demande)).rejects.toMatchObject({
+      raison: "quota",
+      detail: "402 : You need a subscription to access this API.",
+    });
+  });
+
   it("un délai dépassé remonte comme tel", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => { throw new DOMException("trop long", "TimeoutError"); }));
     await expect(new OpenAiCompatibleProvider({ baseUrl: "https://x.exemple/v1", model: "m" }).complete(demande)).rejects.toMatchObject({ raison: "delai" });

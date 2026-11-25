@@ -112,7 +112,7 @@ export default function IntentBar({
   /** V3.2-3 : un tour est en route — l'écran montre que quelque chose se passe pendant les 10 à 20 s du modèle local. */
   onEnCours?: (enCours: boolean) => void;
   /** V3.2-3 : le modèle a répondu (`null`), ou pourquoi il est resté muet (V3.1-223). Lu du DERNIER tour, jamais d'un sondage (docs/QUOTAS.md). */
-  onNarration?: (sansNarration: RaisonSansNarration | null) => void;
+  onNarration?: (sansNarration: RaisonSansNarration | null, detail?: string) => void;
   /** Une ligne posée tout en bas du cadre de saisie (l'état du fournisseur d'IA, `SoloScreen.tsx`). */
   pied?: ReactNode;
 }) {
@@ -255,7 +255,7 @@ export default function IntentBar({
       } else {
         // V3.2-3 : un tour joué sans narration dit pourquoi (V3.1-223) ; sans raison
         // donnée par le serveur, c'est un échec générique.
-        onNarration?.(body.narration !== null ? null : (body.sansNarration ?? "echec"));
+        onNarration?.(body.narration !== null ? null : (body.sansNarration ?? "echec"), body.narration !== null ? undefined : body.sansNarrationDetail);
         onPendingChange(null);
         setDc("");
       }

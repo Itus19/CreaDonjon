@@ -117,6 +117,8 @@ export default function SoloScreen({
   // V3.2-3 : l'attente et l'état du fournisseur, lus des tours eux-mêmes — aucun sondage.
   const [tourEnCours, setTourEnCours] = useState(false);
   const [narrationEtat, setNarrationEtat] = useState<"inconnu" | "repond" | RaisonSansNarration>("inconnu");
+  /** La phrase du fournisseur quand il a refusé le dernier tour : de quoi corriger sans ouvrir les journaux du serveur. */
+  const [narrationDetail, setNarrationDetail] = useState<string | undefined>(undefined);
   // ADR 0108 : les modèles déclarés au compte, pour en changer à côté du voyant. Lus une fois.
   const [fournisseursIa, setFournisseursIa] = useState<FournisseursIaReponse | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -199,6 +201,7 @@ export default function SoloScreen({
     }
     setFournisseursIa((f) => (f ? { ...f, actif: choix } : f));
     setNarrationEtat("inconnu");
+    setNarrationDetail(undefined);
   }
 
   const optionsModeles = fournisseursIa ? optionsChoix(fournisseursIa.fournisseurs) : [];
@@ -284,17 +287,25 @@ export default function SoloScreen({
           onPendingChange={setPending}
           onActed={apresGeste}
           onEnCours={setTourEnCours}
-          onNarration={(raison) => setNarrationEtat(raison ?? "repond")}
+          onNarration={(raison, detail) => {
+            setNarrationEtat(raison ?? "repond");
+            setNarrationDetail(detail);
+          }}
           pied={
             /* V3.2-3 : l'état du fournisseur, lu du dernier tour joué, avec sa raison (V3.1-223) :
                vert s'il a raconté, orange si le quota ou la limite est atteint, rouge pour un
                souci de branchement, gris tant qu'aucun tour n'a été joué. Aucun appel n'est
                fait pour l'allumer : un sondage coûterait une requête par tic (QUOTAS). */
             <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-              <p className="flex min-w-0 items-center gap-1.5 text-xs text-ink-muted">
-                <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${COULEUR_ETAT_IA[narrationEtat]}`} />
-                {t(LIBELLE_ETAT_IA[narrationEtat])}
-              </p>
+              <div className="flex min-w-0 flex-col gap-0.5">
+                <p className="flex min-w-0 items-center gap-1.5 text-xs text-ink-muted">
+                  <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${COULEUR_ETAT_IA[narrationEtat]}`} />
+                  {t(LIBELLE_ETAT_IA[narrationEtat])}
+                </p>
+                {narrationDetail && (
+                  <p className="break-words pl-3.5 text-xs text-ink-muted">{t("iaDetailFournisseur", { detail: narrationDetail })}</p>
+                )}
+              </div>
               {optionsModeles.length > 0 && (
                 <Dropdown
                   size="sm"

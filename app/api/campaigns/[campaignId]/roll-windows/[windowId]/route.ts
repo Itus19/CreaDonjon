@@ -81,5 +81,8 @@ async function narrerSiTourSolo(
     hints: tour.hints,
   });
   if (narre.ok) tour.narration = { text: narre.text, npcReaction: narre.npcReaction };
-    else tour.sansNarration = narre.raison;
+    else {
+    tour.sansNarration = narre.raison;
+    tour.sansNarrationDetail = narre.detail;
+  }
 }
