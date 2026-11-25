@@ -31,9 +31,10 @@ import { ELAPSED_CHOICES } from "../rules/elapsed";
  * toute `npc_reaction` quand `npcIds` est vide, plutot que de laisser Zod
  * ignorer silencieusement une cle inconnue.
  */
-export function soloNarrationSchema(npcIds: string[], knownEntityIds: string[] = []) {
+export function soloNarrationSchema(npcIds: string[], knownEntityIds: string[] = [], moveTargetIds: string[] = []) {
   const npcIdSet = new Set(npcIds);
   const knownEntityIdSet = new Set(knownEntityIds);
+  const moveTargetIdSet = new Set(moveTargetIds);
   return z
     .object({
       /** V3.2-17 — 1 800 caractères : deux paragraphes, pour une activité longue racontée en accéléré. */
@@ -45,6 +46,8 @@ export function soloNarrationSchema(npcIds: string[], knownEntityIds: string[] =
       world_note: z.object({ entity_id: z.string().min(1), text: z.string().min(1).max(400) }).optional(),
       /** V3.2-18 — une durée PROPOSÉE dans une liste fermée ; le moteur la borne (`minutesProposees`) et peut la refuser. */
       elapsed: z.object({ kind: z.enum(ELAPSED_CHOICES), hours: z.number().int().min(1).max(24).optional() }).optional(),
+      /** V3.2-19 — un déplacement PROPOSÉ vers un lieu voisin fourni ; `with` : les PNJ présents qui suivent. Le moteur l'applique comme le panneau de scène. */
+      move_to: z.object({ location_id: z.string().min(1), with: z.array(z.string().min(1)).max(10).optional() }).optional(),
     })
     .strict()
     .superRefine((value, ctx) => {
@@ -53,6 +56,14 @@ export function soloNarrationSchema(npcIds: string[], knownEntityIds: string[] =
           ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["npc_reaction"], message: "aucun PNJ present, aucune reaction possible" });
         } else if (!npcIdSet.has(value.npc_reaction.npc_id)) {
           ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["npc_reaction", "npc_id"], message: "identifiant de PNJ inconnu — jamais invente" });
+        }
+      }
+      if (value.move_to) {
+        if (!moveTargetIdSet.has(value.move_to.location_id)) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["move_to", "location_id"], message: "lieu hors des lieux accessibles — jamais invente" });
+        }
+        for (const id of value.move_to.with ?? []) {
+          if (!npcIdSet.has(id)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["move_to", "with"], message: "PNJ absent de la scene — jamais invente" });
         }
       }
       if (value.world_note) {
@@ -66,7 +77,7 @@ export function soloNarrationSchema(npcIds: string[], knownEntityIds: string[] =
 }
 export type SoloNarrationProposal = z.infer<ReturnType<typeof soloNarrationSchema>>;
 
-export function soloNarrationToolSchema(npcIds: string[], knownEntityIds: string[] = []) {
+export function soloNarrationToolSchema(npcIds: string[], knownEntityIds: string[] = [], moveTargetIds: string[] = []) {
   return {
     type: "object",
     properties: {
@@ -108,6 +119,20 @@ export function soloNarrationToolSchema(npcIds: string[], knownEntityIds: string
                 text: { type: "string", description: "La phrase suggeree, un seul fait" },
               },
               required: ["entity_id", "text"],
+            },
+          }
+        : {}),
+      ...(moveTargetIds.length > 0
+        ? {
+            move_to: {
+              type: "object",
+              description:
+                "Optionnel : ta narration emmene le personnage dans un des lieux accessibles (la cuisine, la rue). Le moteur deplace la scene. Les PNJ presents qui le suivent vont dans with.",
+              properties: {
+                location_id: { type: "string", enum: moveTargetIds, description: "Identifiant EXACT d'un lieu accessible, jamais invente" },
+                ...(npcIds.length > 0 ? { with: { type: "array", items: { type: "string", enum: npcIds }, description: "Les PNJ presents qui suivent le personnage" } } : {}),
+              },
+              required: ["location_id"],
             },
           }
         : {}),

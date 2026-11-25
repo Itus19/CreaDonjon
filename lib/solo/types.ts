@@ -151,6 +151,8 @@ export interface TurnOutcome {
   ignored: string[];
   /** L'heure de jeu après le tour, `null` si la campagne n'a pas encore de scène. */
   time: { day: number; hour: number; minute: number } | null;
+  /** V3.2-19 — la scène après un déplacement proposé par la narration et appliqué par le moteur ; absente sinon. */
+  scene?: SceneView;
   /**
    * La narration IA de ce tour (câblage de V3-B2) — `null` dans TOUS les cas
    * où elle n'a pas abouti : pas de fournisseur configuré, appel raté,

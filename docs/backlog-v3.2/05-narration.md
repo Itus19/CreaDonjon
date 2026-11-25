@@ -45,9 +45,13 @@ Quatre défauts, trois tickets : la consigne (V3.2-17), l'horloge (V3.2-18), le 
 
 ---
 
-### ☐ V3.2-19 — L'IA t'emmène ailleurs : lieux et pièces · `M` · **avec modèle IA** — **prêt (Opus)**
+### ☐ V3.2-19 — L'IA t'emmène ailleurs : lieux et pièces · `M` · **avec modèle IA** — **en cours (Opus)** : point 1 livré, points 2 et 3 à suivre
 
 **Ce qui est prévu**
 1. `move_to` vers un lieu du wiki rattaché au lieu actuel et connu du joueur (liste fermée) ; le moteur change le lieu de la scène, comme le panneau de scène.
 2. Une pièce qui n'existe pas encore (« la cuisine ») : esquisse de pièce dans l'état de scène, comme les esquisses de PNJ. Elle rejoint le **bloc typé `rooms`** de la page du lieu (nom, deux ou trois phrases, visibilité par pièce) quand on y revient ou qu'on la nomme. Pas de page à part, pas de migration (le type de bloc est un texte validé par Zod).
 3. Le contexte d'un tour dans une pièce porte la description de la pièce, tirée du bloc.
+
+**Point 1, livré** : `lieuxVoisins` (`src/core/rules/moveTargets.ts`) donne les lieux reliés par `part_of` (contenus, contenant, voisins du même parent) ; seuls ceux dont un bloc est visible du joueur entrent dans le contexte (`lieux-accessibles`) et dans l'enum de `move_to`. Après la narration, `moveSceneAfterNarration` appelle `setScene` avec le personnage joué et les PNJ réels qui suivent (`with`). La réponse du tour porte la nouvelle scène ; l'écran la pose et se rafraîchit par le même chemin que le panneau de scène (aucun `router.refresh()` de plus).
+
+**Ce que ça consomme** : trois lectures de plus par tour narré (arêtes `part_of`, visibilité des blocs voisins, leurs noms) ; un déplacement coûte ce que coûte `setScene` depuis le panneau, plus la relecture de la scène pour l'écran.

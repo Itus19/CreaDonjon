@@ -19,6 +19,7 @@ function input(partial: Partial<TurnContextInput> = {}): TurnContextInput {
     weather: null,
     recentPlayerActions: [],
     addressedIsQuestion: false,
+    moveTargets: [],
     ...partial,
   };
 }
@@ -199,6 +200,16 @@ describe("buildTurnContext — ce qui fait vivre la scène (retour de jeu du 25 
 
   it("aucune action passée : pas de section", () => {
     expect(buildTurnContext(input())).not.toContain("actions précédentes");
+  });
+
+  it("V3.2-19 — les lieux accessibles voyagent dans leur balise, avec leur id", () => {
+    const out = buildTurnContext(input({ moveTargets: [{ id: "loc-cuisine", name: "La cuisine du Fanal" }] }));
+    const section = out.slice(out.indexOf('<donnee source="lieux-accessibles">'));
+    expect(section).toContain("La cuisine du Fanal (id: loc-cuisine)");
+  });
+
+  it("V3.2-19 — aucun lieu accessible : aucune balise", () => {
+    expect(buildTurnContext(input())).not.toContain("lieux-accessibles");
   });
 });
 

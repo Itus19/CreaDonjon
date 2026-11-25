@@ -1,5 +1,8 @@
 import "server-only";
-import { listBlocksByTypeForEntities, listBlocksByTypesForEntities } from "@/src/server/repos/blocks";
+import { listBlockVisibilityForEntities, listBlocksByTypeForEntities, listBlocksByTypesForEntities } from "@/src/server/repos/blocks";
+import { listPartOfRelationsForWorld } from "@/src/server/repos/relations";
+import { lieuxVoisins } from "@/src/core/rules/moveTargets";
+import { filterBlocks, type VisibilityLevel } from "@/src/core/visibility";
 import { pronounGuidance, zPronouns } from "@/src/core/rules/pronouns";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
@@ -198,6 +201,26 @@ async function resolveLocationDescription(supabase: TypedClient, locationId: str
   return null;
 }
 
+/**
+ * V3.2-19 — Les lieux voisins (`lieuxVoisins`, relation `part_of`) que CE
+ * viewer peut voir : un lieu compte s'il a au moins un bloc visible pour lui
+ * (même règle que la liste du wiki, sans les cas du Livre de séance, qui ne
+ * sont jamais des lieux). Trois lectures par tour narré : les arêtes, la
+ * visibilité des blocs, les noms.
+ */
+async function resolveMoveTargets(supabase: TypedClient, worldId: string, locationId: string, viewer: Viewer): Promise<{ id: string; name: string }[]> {
+  const voisins = lieuxVoisins(locationId, await listPartOfRelationsForWorld(supabase, worldId));
+  if (voisins.length === 0) return [];
+  const [rows, entities] = await Promise.all([listBlockVisibilityForEntities(supabase, voisins), listEntitiesByIds(supabase, voisins)]);
+  const visibles = new Set(
+    filterBlocks(
+      rows.map((r) => ({ ...r, visibility: { level: r.visibility_level as VisibilityLevel, scopeId: r.visibility_scope_id, createdBy: r.created_by } })),
+      viewer
+    ).map((r) => r.entity_id)
+  );
+  return entities.filter((e) => e.entity_kind === "location" && visibles.has(e.id)).map((e) => ({ id: e.id, name: e.name }));
+}
+
 export interface SoloTurnContext {
   /** Le texte pret a poser en message `user`. */
   text: string;
@@ -209,6 +232,8 @@ export interface SoloTurnContext {
   recentNarrations: string[];
   /** Le PNJ à qui le joueur parle, s'il est clairement désigné. */
   addressedNpcId: string | null;
+  /** V3.2-19 — les ids des lieux accessibles : ce qui borne l'enum `location_id` de `move_to`. */
+  moveTargetIds: string[];
   /** Vrai si le joueur pose une question : `narrateSoloTurn` n'exige la réplique du PNJ désigné (et ne réessaie) que dans ce cas. */
   addressedIsQuestion: boolean;
   /** Les présents tels que le modèle les a vus (nom déjà résolu par `known_as`, bande d'attitude) : la réplique retenue garde le nom et l'attitude de son PNJ pour le fil. */
@@ -276,7 +301,7 @@ export async function buildSoloTurnContext(
 ): Promise<SoloTurnContext> {
   const scene = await getSceneState(supabase, params.campaignId);
 
-  const [locationEntity, realNpcs, quests, history, player, money, locationDescription] = await Promise.all([
+  const [locationEntity, realNpcs, quests, history, player, money, locationDescription, moveTargets] = await Promise.all([
     scene ? listEntitiesByIds(supabase, [scene.locationId]).then((rows) => rows[0] ?? null) : Promise.resolve(null),
     scene
       ? resolvePresentNpcs(supabase, { worldId: params.worldId, campaignId: params.campaignId, playerEntityId: params.playerEntityId, present: scene.present })
@@ -286,6 +311,7 @@ export async function buildSoloTurnContext(
     resolvePlayer(supabase, params.playerEntityId),
     resolveMoney(supabase, { playerEntityId: params.playerEntityId, scene }),
     scene ? resolveLocationDescription(supabase, scene.locationId, params.viewer) : Promise.resolve(null),
+    scene ? resolveMoveTargets(supabase, params.worldId, scene.locationId, params.viewer) : Promise.resolve([]),
   ]);
   const recentNarrations = history.narrations;
   const npcs = [...realNpcs, ...sketchesAsNpcs(scene?.sketches ?? [])];
@@ -310,10 +336,11 @@ export async function buildSoloTurnContext(
     weather: scene?.weather ?? null,
     recentPlayerActions: history.playerActions,
     addressedIsQuestion,
+    moveTargets,
   };
 
   const knownEntityIds = [...(locationEntity ? [locationEntity.id] : []), ...realNpcs.map((n) => n.id)];
-  return { text: buildTurnContext(input), npcIds: npcs.map((n) => n.id), knownEntityIds, recentNarrations, addressedNpcId, addressedIsQuestion, npcs };
+  return { text: buildTurnContext(input), npcIds: npcs.map((n) => n.id), knownEntityIds, recentNarrations, addressedNpcId, addressedIsQuestion, npcs, moveTargetIds: moveTargets.map((l) => l.id) };
 }
 
 /**

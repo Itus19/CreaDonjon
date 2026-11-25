@@ -110,3 +110,17 @@ describe("V3.2-18 — elapsed, une durée proposée dans une liste fermée", () 
   });
 });
 
+describe("V3.2-19 — move_to, un déplacement vers un lieu voisin fourni", () => {
+  it("accepte un lieu accessible et des PNJ présents qui suivent", () => {
+    expect(soloNarrationSchema(["mabelle"], [], ["cuisine"]).safeParse({ narration: "x", move_to: { location_id: "cuisine", with: ["mabelle"] } }).success).toBe(true);
+  });
+  it("rejette un lieu inventé ou un PNJ absent", () => {
+    expect(soloNarrationSchema(["mabelle"], [], ["cuisine"]).safeParse({ narration: "x", move_to: { location_id: "cave" } }).success).toBe(false);
+    expect(soloNarrationSchema(["mabelle"], [], ["cuisine"]).safeParse({ narration: "x", move_to: { location_id: "cuisine", with: ["inconnu"] } }).success).toBe(false);
+  });
+  it("sans lieu accessible, l'outil n'offre pas move_to", () => {
+    expect("move_to" in soloNarrationToolSchema([]).properties).toBe(false);
+    expect("move_to" in soloNarrationToolSchema([], [], ["cuisine"]).properties).toBe(true);
+  });
+});
+

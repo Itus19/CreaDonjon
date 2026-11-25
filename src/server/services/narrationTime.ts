@@ -5,6 +5,7 @@ import { advanceSceneTime, type GameTime } from "@/src/core/rules/scene";
 import { compterMots, dureeExplicite, minutesDeParole, minutesProposees, type ElapsedProposal } from "@/src/core/rules/elapsed";
 import { contientParole } from "@/src/core/ai/npcAddressed";
 import { getSceneState, putSceneState } from "@/src/server/repos/sceneStates";
+import { setScene } from "@/src/server/services/soloScene";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -42,4 +43,25 @@ export async function advanceSceneAfterNarration(
   const next = advanceSceneTime(scene, minutes);
   await putSceneState(supabase, { campaignId: params.campaignId, state: next, updatedBy: params.callerId });
   return next.time;
+}
+
+/**
+ * V3.2-19 — Le déplacement que la narration propose (`move_to`), appliqué
+ * par la même fonction que le panneau de scène (`setScene` : découverte du
+ * lieu, météo fraîche, esquisses laissées derrière). Le lieu a déjà été
+ * borné par le schéma (un des `lieuxVoisins` visibles) ; ici, le moteur
+ * garde le personnage joué et les PNJ RÉELS présents qui le suivent, jamais
+ * une esquisse (elle ne survit pas à son lieu) ni un absent. Rien en combat.
+ * Rend vrai si la scène a changé de lieu.
+ */
+export async function moveSceneAfterNarration(
+  supabase: TypedClient,
+  params: { campaignId: string; worldId: string; callerId: string; playerEntityId: string; locationId: string; followers: string[] }
+): Promise<boolean> {
+  const scene = await getSceneState(supabase, params.campaignId);
+  if (!scene || scene.activeCombatId || scene.locationId === params.locationId) return false;
+  const suivent = new Set([params.playerEntityId, ...params.followers]);
+  const present = scene.present.map((p) => p.entityId).filter((id) => suivent.has(id));
+  await setScene(supabase, { campaignId: params.campaignId, worldId: params.worldId, locationId: params.locationId, present, callerId: params.callerId });
+  return true;
 }

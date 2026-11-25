@@ -123,6 +123,12 @@ export interface TurnContextInput {
    * geste, et la scène avance sans dialogue forcé.
    */
   addressedIsQuestion: boolean;
+  /**
+   * V3.2-19 — les lieux voisins (`lieuxVoisins`) que le joueur peut voir : là
+   * où la narration peut proposer de l'emmener (`move_to`). Noms du monde :
+   * encadrés ; l'id borne l'enum de l'outil.
+   */
+  moveTargets: { id: string; name: string }[];
 }
 
 /** Exportes : V3-D4 (`gmQuestionContext.ts`) en est le second consommateur — meme lieu, memes PNJ, memes quetes, pour une question hors du temps de jeu plutot qu'une narration de tour. */
@@ -172,6 +178,7 @@ export function buildTurnContext(input: TurnContextInput): string {
     input.player
       ? fenceUntrustedData("personnage-joue", `${input.player.name}${input.player.pronouns ? ` (pronoms : ${input.player.pronouns})` : ""}`)
       : null,
+    input.moveTargets.length > 0 ? fenceUntrustedData("lieux-accessibles", input.moveTargets.map((l) => `- ${l.name} (id: ${l.id})`).join("\n")) : null,
     input.npcs.length > 0 ? fenceUntrustedData("pnjs-presents", input.npcs.map(npcLine).join("\n")) : null,
     input.quests.length > 0 ? fenceUntrustedData("quetes-en-cours", input.quests.map(questLine).join("\n")) : null,
     input.hints.length > 0 ? fenceUntrustedData("indices-de-narration", input.hints.join("\n")) : null,
