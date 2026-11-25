@@ -17,6 +17,8 @@ import FicheJouableSolo from "@/components/solo/FicheJouableSolo";
 import AvertissementReglesNonJouables from "@/components/solo/AvertissementReglesNonJouables";
 import SoloScreen from "@/components/solo/SoloScreen";
 import SoloShell from "@/components/solo/SoloShell";
+import BandeMonde from "@/components/solo/BandeMonde";
+import RondsPresents from "@/components/solo/RondsPresents";
 import type { Locale } from "@/src/i18n/request";
 
 /**
@@ -81,7 +83,7 @@ export default async function JoueurSoloPage({ params }: { params: Promise<{ wor
   const viewer = await buildViewerForWorld(supabase, world.id, user.id);
   const t = await getTranslations("shell");
   const [scene, choices, calendar, wiki, quests, nonJouables] = await Promise.all([
-    loadSceneView(supabase, { campaignId: campaign.id, worldId: world.id }),
+    loadSceneView(supabase, { campaignId: campaign.id, worldId: world.id, perceivedBy: entityId }),
     listSceneChoices(supabase, world.id),
     getCalendar(supabase, world.id),
     buildWikiColumn(supabase, world.id, user.id, viewer, t.raw("kindLabels") as Record<string, string>, campaign.id, entityId),
@@ -115,6 +117,11 @@ export default async function JoueurSoloPage({ params }: { params: Promise<{ wor
             present={scene?.present ?? []}
             sketches={scene?.sketches ?? []}
           />
+        }
+        bandeMonde={
+          <BandeMonde>
+            <RondsPresents present={scene?.present ?? []} sketches={scene?.sketches ?? []} />
+          </BandeMonde>
         }
         quetes={<QuetesTelephone quests={quests} />}
         jeu={

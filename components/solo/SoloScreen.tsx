@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import FeuilleDuBas from "@/components/shared/FeuilleDuBas";
@@ -109,10 +109,19 @@ export default function SoloScreen({
 }) {
   const router = useRouter();
   const t = useTranslations("solo");
-  const { jauges, demande: pending, definirDemande: setPending, rechargerFiche } = useSoloContexte();
+  const { jauges, demande: pending, definirDemande: setPending, rechargerFiche, definirInterlocuteur } = useSoloContexte();
   const [feuilleConsequences, setFeuilleConsequences] = useState(false);
   const [sceneView, setSceneView] = useState(scene);
   const [filItems, setFilItems] = useState<FilItem[] | null>(null);
+  // V3.2-14 : le PNJ qui a parlé au dernier tour (sa réplique la plus récente), pour le halo de la bande du Monde.
+  const interlocuteur = useMemo(() => {
+    for (let i = (filItems?.length ?? 0) - 1; i >= 0; i--) {
+      const item = filItems?.[i];
+      if (item?.kind === "narration") return item.npcReaction?.npcName ?? null;
+    }
+    return null;
+  }, [filItems]);
+  useEffect(() => definirInterlocuteur(interlocuteur), [interlocuteur, definirInterlocuteur]);
   const [consequences, setConsequences] = useState<ConsequencesDrawerData | null>(null);
   const [announce, setAnnounce] = useState("");
   // V3.2-3 : l'attente et l'état du fournisseur, lus des tours eux-mêmes — aucun sondage.

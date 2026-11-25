@@ -320,6 +320,7 @@ export type Database = {
           occurred_at_ingame: Json | null
           origin: string
           session_event_id: string | null
+          shown_deltas: Json
           source_entity_id: string
           summary: string
           target_entity_id: string
@@ -333,6 +334,7 @@ export type Database = {
           occurred_at_ingame?: Json | null
           origin: string
           session_event_id?: string | null
+          shown_deltas?: Json
           source_entity_id: string
           summary: string
           target_entity_id: string
@@ -346,6 +348,7 @@ export type Database = {
           occurred_at_ingame?: Json | null
           origin?: string
           session_event_id?: string | null
+          shown_deltas?: Json
           source_entity_id?: string
           summary?: string
           target_entity_id?: string
@@ -1482,6 +1485,7 @@ export type Database = {
           axes: Json
           campaign_id: string
           id: string
+          shown_axes: Json | null
           source_entity_id: string
           target_entity_id: string
           updated_at: string
@@ -1490,6 +1494,7 @@ export type Database = {
           axes?: Json
           campaign_id: string
           id?: string
+          shown_axes?: Json | null
           source_entity_id: string
           target_entity_id: string
           updated_at?: string
@@ -1498,6 +1503,7 @@ export type Database = {
           axes?: Json
           campaign_id?: string
           id?: string
+          shown_axes?: Json | null
           source_entity_id?: string
           target_entity_id?: string
           updated_at?: string

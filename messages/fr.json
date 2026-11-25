@@ -452,11 +452,6 @@
       },
       "montantBudget": "Quantité (formule)",
       "zone": "Zone",
-      "zones": {
-        "engaged": "Au contact",
-        "near": "Proche",
-        "far": "Loin"
-      },
       "libelleJet": "Libellé du jet",
       "formuleJet": "Formule",
       "indication": "Indication",
@@ -1445,6 +1440,21 @@
     "deplierMonde": "Déplier le Monde",
     "replierFiche": "Replier la Fiche",
     "deplierFiche": "Déplier la Fiche",
+    "bandeMonde": {
+      "presentsAria": "Les personnes présentes",
+      "sansFiche": "sans fiche",
+      "zones": {
+        "engaged": "au contact",
+        "near": "proche",
+        "far": "loin"
+      },
+      "aria": "Onglets du monde",
+      "ouvrir": "Ouvrir le Monde sur « {onglet} »",
+      "wiki": "Wiki",
+      "quetes": "Quêtes",
+      "presents": "Présents",
+      "regles": "Règles"
+    },
     "barre": {
       "jeu": "Jeu",
       "monde": "Monde",
@@ -1460,6 +1470,12 @@
     "bandeNiveau": "Niv.",
     "bandeCharge": "Charge",
     "bandeEpuisement": "Épuis.",
+    "bandePvTitre": "{pv} points de vie sur {max}",
+    "bandeNiveauCourt": "Niv. {niveau}",
+    "bandeXpTitre": "{xp} / {plafond} XP vers le niveau {niveau}",
+    "bandeChargeTitre": "Charge : {porte} / {capacite} kg",
+    "bandeChargeTitreEncombre": "Charge : {porte} / {capacite} kg — encombrement",
+    "bandeEpuisementTitre": "Épuisement {niveau} sur 6",
     "bandeKg": "{valeur} kg",
     "consequencesOuvrir": "Changements dans le monde : {nombre}",
     "consequencesTitre": "Changements dans le monde",
