@@ -10,7 +10,7 @@ Ordre : 8 et 9 d'abord (le noyau et les prix), puis 10 (l'écran), puis 11 (le c
 
 ---
 
-### ☐ V3.2-8 — Le moteur règle un échange · `M` · sans modèle IA — **prêt (Opus)**
+### ☑ V3.2-8 — Le moteur règle un échange · `M` · sans modèle IA — **fait (Opus)**
 
 **Le noyau d'abord, testé d'abord.** `src/core/rules/trade.ts` : un échange porte une contrepartie, ce que la personne donne et ce qu'elle reçoit. Chaque ligne est des pièces (dans le système monétaire du monde, `currency.ts`), un objet de l'inventaire (identifiant, quantité) ou un service (qui ne s'inscrit pas dans l'inventaire). Une fonction pure `settleTrade(inventory, trade, system)` rend soit `{ status: "settled", inventory }`, soit `{ status: "short", missing }`.
 
@@ -20,10 +20,12 @@ Ordre : 8 et 9 d'abord (le noyau et les prix), puis 10 (l'écran), puis 11 (le c
 
 **Annulable comme un tour** : `undo_before` (`turnIntent.ts`) garde aujourd'hui l'état d'exécution et la scène ; il gagne l'inventaire de la personne qui joue, et `turnUndo.ts` le restaure.
 
+**Livré** : `settleTrade` (`src/core/rules/trade.ts`) ; `applyTrade`, `readInventorySnapshot` et `restoreInventory` (`src/server/services/inventoryActions.ts`) ; `undo_before.inventory` relevé par `journalTurn` (une lecture ciblée de plus par tour, `docs/QUOTAS.md`) et remis par `undoLastSoloTurn`. Un objet reçu rejoint la pile du même objet, sauf si elle est équipée ou harmonisée. Rien ne déclenche encore un échange depuis le solo : c'est V3.2-10.
+
 **Critères d'acceptation**
-- [ ] Tests du noyau : achat exact, achat avec monnaie rendue, vente, échange objet contre objet, échange court (pièces, objet absent, quantité insuffisante), quantité d'un lot.
-- [ ] Un échange réglé crée une révision de l'inventaire ; un échange court n'en crée aucune.
-- [ ] Annuler le tour restitue pièces et objets.
+- [x] Tests du noyau : achat exact, achat avec monnaie rendue, vente, échange objet contre objet, échange court (pièces, objet absent, quantité insuffisante), partie d'une pile (`trade.test.ts`, 12 tests).
+- [x] Un échange réglé crée une révision de l'inventaire ; un échange court n'en crée aucune (`inventoryTrade.integration.test.ts`, à lancer avec `.env.local`).
+- [x] Annuler le tour restitue pièces et objets (`turnUndo.test.ts` pour la lecture du relevé, `inventoryTrade.integration.test.ts` pour la restauration).
 
 ---
 

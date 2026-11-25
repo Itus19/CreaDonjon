@@ -1,5 +1,6 @@
 import type { DiceRollKind } from "@/src/core/dice/rollAttribution";
 import "server-only";
+import { readInventorySnapshot } from "@/src/server/services/inventoryActions";
 import { weaponRollProperties } from "@/src/core/rules/srdMapping";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
@@ -318,7 +319,12 @@ async function journalTurn(
   // V3-F2 (PDD §29) : l'état du personnage et la scène AVANT ce que le tour va appliquer (les effets des jets
   // partent ensuite, dans la boucle du tour) ; « annuler ce tour » les restaure. Deux lectures de plus par tour.
   // L'état tel qu'il est EN BASE : `null` quand le personnage n'a pas encore de ligne (sa fiche montre alors ses PV pleins).
-  const [ligneEtat, scene] = await Promise.all([getRuntimeState(supabase, params.entityId, params.campaignId), getSceneState(supabase, params.campaignId)]);
+  // V3.2-8 : l'inventaire aussi (un échange le modifie) — une troisième lecture, ciblée sur le bloc `inventory`.
+  const [ligneEtat, scene, inventory] = await Promise.all([
+    getRuntimeState(supabase, params.entityId, params.campaignId),
+    getSceneState(supabase, params.campaignId),
+    readInventorySnapshot(supabase, params.entityId),
+  ]);
   const runtime = ligneEtat?.state ?? null;
   const seq = await nextEventSeq(supabase, sessionId);
   const event = await insertSessionEvent(supabase, {
@@ -327,7 +333,7 @@ async function journalTurn(
     kind: params.kind,
     actor: "player",
     actorUserId: params.callerId,
-    payload: { __v: 1, ...params.payload, undo_before: { entity_id: params.entityId, runtime, scene } } as unknown as Json,
+    payload: { __v: 1, ...params.payload, undo_before: { entity_id: params.entityId, runtime, scene, inventory } } as unknown as Json,
   });
   return event.id;
 }

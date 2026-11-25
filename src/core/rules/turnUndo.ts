@@ -14,11 +14,13 @@ export interface JournalEvent {
   payload: Record<string, unknown>;
 }
 
-/** L'état relevé au début du tour (`undo_before` du premier événement) : le personnage et la scène. */
+/** L'état relevé au début du tour (`undo_before` du premier événement) : le personnage, la scène et, depuis V3.2-8, l'inventaire. */
 export interface TurnBefore {
   entity_id: string;
   runtime: unknown;
   scene: unknown;
+  /** V3.2-8 : l'inventaire du personnage (`null` : il n'en avait pas). Absent d'un tour journalisé avant : rien à restaurer. */
+  inventory?: unknown;
 }
 
 export interface UndoableTurn {
@@ -49,7 +51,7 @@ const commenceUnTour = (e: JournalEvent): boolean => e.actor === "player" && (e.
 function avantDe(e: JournalEvent): TurnBefore | null {
   const b = e.payload.undo_before;
   if (!estObjet(b) || typeof b.entity_id !== "string") return null;
-  return { entity_id: b.entity_id, runtime: b.runtime ?? null, scene: b.scene ?? null };
+  return { entity_id: b.entity_id, runtime: b.runtime ?? null, scene: b.scene ?? null, ...("inventory" in b ? { inventory: b.inventory ?? null } : {}) };
 }
 
 /** Le dernier tour encore annulable, ou `null`. Un second appel, après annulation, remonte d'un tour. */

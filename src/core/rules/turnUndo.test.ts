@@ -28,6 +28,13 @@ describe("lastUndoableTurn", () => {
     expect(lastUndoableTurn(apres)).toMatchObject({ startId: "a1", eventIds: ["a1", "n1"] });
   });
 
+  it("V3.2-8 : rend l'inventaire relevé, y compris « pas d'inventaire » (null), et rien pour un tour d'avant", () => {
+    const releve = { __v: 1, items: [], containers: [], currency: { pp: 0, gp: 1, ep: 0, sp: 0, cp: 0 } };
+    expect(lastUndoableTurn([ev("a", 1, "player_action", "player", { undo_before: { entity_id: "pj", runtime: null, scene: null, inventory: releve } })])?.before?.inventory).toEqual(releve);
+    expect(lastUndoableTurn([ev("a", 1, "player_action", "player", { undo_before: { entity_id: "pj", runtime: null, scene: null, inventory: null } })])?.before?.inventory).toBeNull();
+    expect(lastUndoableTurn([ev("a", 1, "player_action", "player", { undo_before: { entity_id: "pj", runtime: null, scene: null } })])?.before?.inventory).toBeUndefined();
+  });
+
   it("un tour sans état relevé (journal d'avant V3-F2) se défait sans restaurer d'état", () => {
     expect(lastUndoableTurn([ev("a", 1, "player_action", "player"), ev("n", 2, "narration", "ai")])).toMatchObject({ startId: "a", before: null });
   });
