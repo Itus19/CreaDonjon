@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import type { Locale } from "@/src/i18n/request";
 import { advanceSceneTime, budgetOf, rememberEvent, startTurn, type SceneState } from "@/src/core/rules/scene";
+import { dureeExplicite, minutesExplicites, phraseDuree } from "@/src/core/rules/elapsed";
 import { spendFromBudget, type ActionBudget, type BudgetKind } from "@/src/core/rules/actionBudget";
 import { eventsForAttack } from "@/src/core/rules/gameEvents";
 import type { AttackRollResult } from "@/src/core/rules/action";
@@ -278,6 +279,7 @@ async function applyResolvedTurn(
     combatId,
   });
 
+  let elapsedChange: string | null = null;
   // 6. La scene avance — l'heure, les zones que les effets ont changees,
   //    et les evenements recents. Ecrite en dernier : si tout ce qui
   //    precede a tenu, elle est le resume de ce tour.
@@ -286,7 +288,14 @@ async function applyResolvedTurn(
     // Meme raison que la depense ci-dessus : une resolution chainee ne fait
     // pas avancer l'horloge une seconde fois pour le meme coup.
     if (params.choiceKind !== null) {
-      scene = advanceSceneTime(scene, minutesForTurn(scene));
+      // V3.2-18 (ADR 0112) — une durée écrite par le joueur (« ces trois
+      // heures de travail ») fait avancer l'horloge d'autant, AVANT la
+      // narration : le fait part dans `changes`, l'IA raconte l'ellipse en
+      // connaissant l'heure. Jamais en combat, qui a son propre temps.
+      const explicite = scene.activeCombatId ? null : dureeExplicite(params.text);
+      const minutes = explicite ? minutesExplicites(explicite, scene.time) : minutesForTurn(scene);
+      scene = advanceSceneTime(scene, minutes);
+      if (explicite && minutes > 0) elapsedChange = phraseDuree(minutes, scene.time);
     }
     // V3.1-216 — la reaction se paie ici, et pas avant : `startTurn` vient de
     // remettre le budget a neuf, une depense posee plus tot aurait disparu.
@@ -302,7 +311,7 @@ async function applyResolvedTurn(
 
   return {
     record: { kind: record.kind, facts: record.facts, eventId: record.eventId, detail: record.detail },
-    changes,
+    changes: elapsedChange ? [...changes, elapsedChange] : changes,
     hints,
     ignored,
     time: scene?.time ?? null,

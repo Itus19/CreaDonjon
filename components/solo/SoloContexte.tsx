@@ -2,6 +2,7 @@
 
 import { createContext, useContext } from "react";
 import type { PendingRequest } from "@/lib/solo/types";
+import type { GameTime } from "@/src/core/rules/scene";
 import type { JaugesBande } from "@/lib/ui/solo";
 
 /**
@@ -26,6 +27,11 @@ import type { JaugesBande } from "@/lib/ui/solo";
  *   onglet (`deplierMonde`) alors qu'elle est un arbre voisin de la colonne.
  * - V3.2-14 — `interlocuteur` : le nom du PNJ qui a parlé au dernier tour,
  *   publié par le Jeu (il lit le fil), relu par la bande du Monde (halo).
+ * - `heure` : l'heure de jeu rendue par le dernier tour (V3.2-18). Le bandeau
+ *   est rendu par la page serveur et ne se recharge pas après un tour ; la
+ *   barre d'intention pose l'heure ici (`definirHeure`), le bandeau la relit
+ *   (`HeureScene`). `null` : aucun tour depuis l'ouverture, l'heure de la
+ *   page fait foi.
  */
 export type OngletMonde = "wiki" | "quetes" | "presents" | "regles";
 
@@ -43,6 +49,8 @@ interface SoloContexteValeur {
   deplierMonde: (onglet: OngletMonde) => void;
   interlocuteur: string | null;
   definirInterlocuteur: (nom: string | null) => void;
+  heure: GameTime | null;
+  definirHeure: (heure: GameTime) => void;
 }
 
 const SoloContexte = createContext<SoloContexteValeur>({
@@ -58,6 +66,8 @@ const SoloContexte = createContext<SoloContexteValeur>({
   deplierMonde: () => {},
   interlocuteur: null,
   definirInterlocuteur: () => {},
+  heure: null,
+  definirHeure: () => {},
 });
 
 export const SoloContexteProvider = SoloContexte.Provider;

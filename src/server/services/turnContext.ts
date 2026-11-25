@@ -10,7 +10,6 @@ import { buildGmQuestionContext } from "@/src/core/ai/gmQuestionContext";
 import { relationshipAxisLabel } from "@/src/core/psyche/bands";
 import { zRelationshipBlockData } from "@/src/core/schemas/blocks/relationship";
 import { getSceneState } from "@/src/server/repos/sceneStates";
-import { listBlocksByTypesForEntities } from "@/src/server/repos/blocks";
 import { zInventoryBlockData } from "@/src/core/schemas/blocks/inventory";
 import { zPriceListBlockData } from "@/src/core/schemas/blocks/priceList";
 import { CURRENCY_ORDER, type Currency } from "@/src/core/rules/currency";

@@ -26,7 +26,7 @@ Quatre défauts, trois tickets : la consigne (V3.2-17), l'horloge (V3.2-18), le 
 
 ---
 
-### ☐ V3.2-18 — L'horloge suit l'histoire · `M` · sans modèle IA pour le cœur — **prêt (Opus, ADR)**
+### ☐ V3.2-18 — L'horloge suit l'histoire · `M` · sans modèle IA pour le cœur — **en cours (Opus, [ADR 0112](../adr/0112-l-horloge-suit-l-histoire.md))**
 
 **Constat.** Une action libre vaut une minute, codée en dur (`minutesForTurn`, `turnLoop.ts`) ; l'IA n'a aucun moyen d'annoncer une ellipse ; et l'en-tête de l'écran solo, rendu par la page serveur, ne se recharge pas après un tour.
 
@@ -36,6 +36,12 @@ Quatre défauts, trois tickets : la consigne (V3.2-17), l'horloge (V3.2-18), le 
 3. Le temps de parole : au moins 2 minutes, plus 1 par tranche de 100 mots échangés.
 4. L'en-tête se rafraîchit après chaque tour.
 5. ADR : le moteur accepte une durée proposée par l'IA dans une liste fermée.
+
+**Ce que ça consomme** : une lecture de la scène après chaque narration, et une écriture seulement si l'horloge bouge. Aucun chargement de plus à l'écran : l'heure revient dans la réponse du tour.
+
+**Critères d'acceptation**
+- [x] Tests du noyau : durées écrites (lettres, chiffres, fractions, matin), heure du jour ignorée, bornes de la proposition, temps de parole, phrase de durée, `elapsed` fermé dans le schéma.
+- [ ] Rejoué : « je fais ces trois heures de travail » à 19:54 affiche 22:54 sans recharger la page.
 
 ---
 

@@ -33,7 +33,8 @@ function normaliser(texte: string): string {
     .toLowerCase();
 }
 
-function contientParole(action: string): boolean {
+/** Le texte du joueur contient-il une parole (guillemets, deux-points, question, verbe de parole) ? Sert aussi au temps de parole (V3.2-18). */
+export function contientParole(action: string): boolean {
   return /["«»“”:?]/.test(action) || VERBES_DE_PAROLE.test(normaliser(action));
 }
 

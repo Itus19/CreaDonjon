@@ -96,3 +96,17 @@ describe("soloNarrationToolSchema", () => {
     expect("world_note" in schema.properties).toBe(false);
   });
 });
+
+describe("V3.2-18 — elapsed, une durée proposée dans une liste fermée", () => {
+  it("accepte un choix de la liste, avec ses heures", () => {
+    expect(soloNarrationSchema([]).safeParse({ narration: "Les heures passent.", elapsed: { kind: "plusieurs_heures", hours: 3 } }).success).toBe(true);
+  });
+  it("rejette une durée hors liste : jamais un nombre de minutes libre", () => {
+    expect(soloNarrationSchema([]).safeParse({ narration: "x", elapsed: { kind: "180 minutes" } }).success).toBe(false);
+  });
+  it("l'outil offre la liste fermée", () => {
+    const tool = soloNarrationToolSchema([]);
+    expect(tool.properties.elapsed.properties.kind.enum).toContain("jusqu_au_matin");
+  });
+});
+

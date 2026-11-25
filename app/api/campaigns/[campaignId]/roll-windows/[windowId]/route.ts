@@ -80,7 +80,11 @@ async function narrerSiTourSolo(
     changes: tour.changes,
     hints: tour.hints,
   });
-  if (narre.ok) tour.narration = { text: narre.text, npcReaction: narre.npcReaction };
+  if (narre.ok) {
+    tour.narration = { text: narre.text, npcReaction: narre.npcReaction };
+    // V3.2-18 : l'heure atteinte après la narration, pour l'en-tête.
+    if (narre.time) tour.time = narre.time;
+  }
     else {
     tour.sansNarration = narre.raison;
     tour.sansNarrationDetail = narre.detail;

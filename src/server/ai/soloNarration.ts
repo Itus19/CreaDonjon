@@ -7,6 +7,9 @@ import { maxSimilarityToRecent } from "@/src/core/ai/narrationSimilarity";
 import { buildSoloTurnContext } from "@/src/server/services/turnContext";
 import { drawSketchForScene, recordSketchSpeechAndMaybeAnchor } from "@/src/server/services/sceneSketches";
 import { proposeWorldNote } from "@/src/server/services/soloWorldNotes";
+import { advanceSceneAfterNarration } from "@/src/server/services/narrationTime";
+import type { ElapsedProposal } from "@/src/core/rules/elapsed";
+import type { GameTime } from "@/src/core/rules/scene";
 import { findEventByFromEvent, getSessionEventById, insertSessionEvent, nextEventSeq } from "@/src/server/repos/sessions";
 import { buildViewerForWorld } from "@/src/server/services/visibility";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
@@ -68,7 +71,9 @@ const SYSTEM_PROMPT = [
   "- N'utilise que les identifiants de PNJ fournis, n'en invente jamais. Un personnage incident, absent de la liste, qui doit agir MAINTENANT : demande-le via new_character avec seulement son role (jamais un nom ni un trait, le moteur les tire).",
   "",
   "CE QUE TU PROPOSES AU MOTEUR (il valide, il peut refuser)",
+  "- elapsed : combien de temps ce tour a dure dans l'histoire, s'il dure plus que quelques instants. Si les changements disent deja combien de temps passe, n'en propose pas.",
   "- world_note : un fait qui meriterait d'etre ajoute a la fiche d'un lieu ou d'un PNJ REELLEMENT present (un identifiant fourni). Un humain la relira : ne l'ecris jamais comme un fait acquis dans ta narration.",
+  "Tu n'ecris jamais l'heure exacte toi-meme : le moteur la calcule. Quand les changements la donnent, tu peux la reprendre telle quelle.",
   "",
   `Reponds toujours via l'outil ${TOOL_NAME}, une seule fois.`,
 ].join("\n");
@@ -94,6 +99,8 @@ export interface SoloNarrationOutcome {
   eventId?: string;
   narration?: string;
   npcReaction?: { npcId: string; text: string };
+  /** V3.2-18 — la nouvelle heure quand la narration a fait passer du temps (durée proposée ou temps de parole) ; absente sinon. */
+  time?: GameTime;
   invalidReason?: string;
   inputTokens: number;
   outputTokens: number;
@@ -107,6 +114,8 @@ interface NarrationAttempt {
   newCharacterRequest?: { role: string };
   /** V3-C3 — une suggestion redactionnelle, jamais ecrite directement (`proposeWorldNote`). */
   worldNote?: { entityId: string; text: string };
+  /** V3.2-18 — une durée proposée, jamais appliquée telle quelle : `advanceSceneAfterNarration` la borne. */
+  elapsed?: ElapsedProposal;
   invalidReason?: string;
   inputTokens: number;
   outputTokens: number;
@@ -152,6 +161,7 @@ async function attemptNarration(
     npcReaction: parsed.data.npc_reaction ? { npcId: parsed.data.npc_reaction.npc_id, text: parsed.data.npc_reaction.text } : undefined,
     newCharacterRequest: parsed.data.new_character ? { role: parsed.data.new_character.role } : undefined,
     worldNote: parsed.data.world_note ? { entityId: parsed.data.world_note.entity_id, text: parsed.data.world_note.text } : undefined,
+    elapsed: parsed.data.elapsed,
     inputTokens: result.inputTokens,
     outputTokens: result.outputTokens,
   };
@@ -327,11 +337,29 @@ export async function narrateSoloTurn(supabase: TypedClient, provider: AiProvide
     }
   }
 
+  // V3.2-18 — le temps que ce tour a pris, APRÈS la narration : best-effort,
+  // même discipline que ci-dessus. Le moteur borne la proposition ; une
+  // durée écrite par le joueur a déjà été appliquée par `playTurn`.
+  let time: GameTime | null = null;
+  try {
+    time = await advanceSceneAfterNarration(supabase, {
+      campaignId: params.campaignId,
+      callerId: params.userId,
+      playerAction: params.playerAction,
+      elapsed: chosen.elapsed ?? null,
+      npcReplyText: chosen.npcReaction?.text ?? null,
+    });
+  } catch (erreur) {
+    // Ignoré volontairement : la narration ci-dessus est déjà acquise.
+    console.error("Avance de l'horloge après la narration impossible", erreur);
+  }
+
   return {
     ok: true,
     eventId: event.id,
     narration: chosen.narration,
     npcReaction: chosen.npcReaction,
+    ...(time ? { time } : {}),
     // Le cout de CHAQUE essai (garde ou non) est deja dans `ai_usage_log`,
     // un appel = une ligne, sans exception (regle absolue 13) — ce qui est
     // rendu ici decrit seulement l'essai retenu, jamais un total a
@@ -389,7 +417,7 @@ export function detailSansNarration(erreur: unknown): string | undefined {
 }
 
 export type NarrationDuTour =
-  | { ok: true; text: string; npcReaction: { npcId: string; text: string } | null }
+  | { ok: true; text: string; npcReaction: { npcId: string; text: string } | null; time: GameTime | null }
   | { ok: false; raison: RaisonSansNarration; detail?: string };
 
 /**
@@ -418,7 +446,7 @@ export async function narrerTourSoloSansFaillir(
     ]);
     const narrated = await narrateSoloTurn(supabase, provider, { ...params, viewer, sessionId });
     return narrated.ok && narrated.narration
-      ? { ok: true, text: narrated.narration, npcReaction: narrated.npcReaction ?? null }
+      ? { ok: true, text: narrated.narration, npcReaction: narrated.npcReaction ?? null, time: narrated.time ?? null }
       : { ok: false, raison: "inutilisable" };
   } catch (erreur) {
     console.error("Narration du tour impossible", erreur);

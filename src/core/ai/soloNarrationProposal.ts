@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ELAPSED_CHOICES } from "../rules/elapsed";
 
 /**
  * V3-B2 (câblage de la narration) — Généralise `spikeSoloProposal.ts` (S2,
@@ -42,6 +43,8 @@ export function soloNarrationSchema(npcIds: string[], knownEntityIds: string[] =
       new_character: z.object({ role: z.string().min(1).max(200) }).optional(),
       /** V3-C3 — une suggestion redactionnelle, jamais ecrite directement : elle passe par `ai_proposals`, en attente d'une relecture humaine. */
       world_note: z.object({ entity_id: z.string().min(1), text: z.string().min(1).max(400) }).optional(),
+      /** V3.2-18 — une durée PROPOSÉE dans une liste fermée ; le moteur la borne (`minutesProposees`) et peut la refuser. */
+      elapsed: z.object({ kind: z.enum(ELAPSED_CHOICES), hours: z.number().int().min(1).max(24).optional() }).optional(),
     })
     .strict()
     .superRefine((value, ctx) => {
@@ -108,6 +111,16 @@ export function soloNarrationToolSchema(npcIds: string[], knownEntityIds: string
             },
           }
         : {}),
+      elapsed: {
+        type: "object",
+        description:
+          "Optionnel : combien de temps ce tour a dure dans l'histoire, s'il dure plus que quelques instants (une activite longue, une attente, un trajet). Le moteur valide et calcule l'heure. Ne le remplis pas si les changements disent deja combien de temps passe.",
+        properties: {
+          kind: { type: "string", enum: [...ELAPSED_CHOICES], description: "La duree, choisie dans la liste" },
+          hours: { type: "integer", description: "Seulement pour plusieurs_heures : le nombre d'heures, de 2 a 8" },
+        },
+        required: ["kind"],
+      },
     },
     required: ["narration"],
   } as const;

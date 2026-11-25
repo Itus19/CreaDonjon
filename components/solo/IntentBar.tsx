@@ -15,6 +15,7 @@ import { useDiceRoll } from "@/components/shell/DiceRollPanel";
 import { ErreurLancer, type SortieJet } from "@/lib/ui/outilDes";
 import { preReglageDepuisDemande, sortieAttenteReactions, sortieJetDepuisTour } from "@/lib/ui/solo";
 import { encaisserDepuisFiche } from "@/lib/ui/soloApi";
+import { useSoloContexte } from "@/components/solo/SoloContexte";
 
 /**
  * **La bulle à hauteur fixe** (esquisse validée par l'auteur le 25 novembre).
@@ -180,6 +181,8 @@ export default function IntentBar({
   suivreEnvoi?: (texte: string, genre: "tour" | "mj") => () => Promise<boolean>;
 }) {
   const [text, setText] = useState("");
+  // V3.2-18 : l'heure rendue par chaque tour, pour le bandeau (rendu une fois par la page serveur).
+  const { definirHeure } = useSoloContexte();
   const [overrideActionId, setOverrideActionId] = useState<string | null>(null);
   const [overrideTargetId, setOverrideTargetId] = useState<string | null>(null);
   const [correcting, setCorrecting] = useState(false);
@@ -283,6 +286,7 @@ export default function IntentBar({
     // demande reste posée, et le bandeau de réaction prend la main. L'outil
     // n'affiche ni total ni verdict jusqu'à la reprise.
     if ("fenetre" in outcome) return sortieAttenteReactions(demande, outcome.fenetre);
+    if (outcome.time) definirHeure(outcome.time);
     onPendingChange(outcome.chained);
     if (outcome.chained === null) setDc("");
     onActed?.();
@@ -362,6 +366,7 @@ export default function IntentBar({
         // V3.2-3 : un tour joué sans narration dit pourquoi (V3.1-223) ; sans raison
         // donnée par le serveur, c'est un échec générique.
         onNarration?.(body.narration !== null ? null : (body.sansNarration ?? "echec"), body.narration !== null ? undefined : body.sansNarrationDetail);
+        if (body.time) definirHeure(body.time);
         onPendingChange(null);
         setDc("");
       }
@@ -406,6 +411,7 @@ export default function IntentBar({
       const outcome = (await res.json()) as EncashedTurnResponse;
       // V3.1-216 : même attente que ci-dessus, pour le dé annoncé à la main.
       if ("fenetre" in outcome) return;
+      if (outcome.time) definirHeure(outcome.time);
       onPendingChange(outcome.chained);
       if (outcome.chained === null) setDc("");
       onActed?.();

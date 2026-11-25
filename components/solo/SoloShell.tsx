@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import Tabs from "@/components/shared/Tabs";
 import { SoloContexteProvider, type OngletMonde } from "@/components/solo/SoloContexte";
+import type { GameTime } from "@/src/core/rules/scene";
 import { useMatchMedia } from "@/components/shell/useMatchMedia";
 import type { PendingRequest } from "@/lib/solo/types";
 import { jaugesEgales, memeDemande, vueDepuisAdresse, type JaugesBande } from "@/lib/ui/solo";
@@ -168,9 +169,11 @@ export default function SoloShell({
     rechargeRef.current = recharger;
   }, []);
   const rechargerFiche = useCallback(() => rechargeRef.current?.(), []);
+  // V3.2-18 : l'heure rendue par le dernier tour, pour le bandeau (rendu une fois par la page serveur).
+  const [heure, definirHeure] = useState<GameTime | null>(null);
   const contexte = useMemo(
-    () => ({ replie: ficheRepliee, jauges, publier, demande, definirDemande, rechargerFiche, inscrireRecharge, ongletMonde, choisirOngletMonde, deplierMonde, interlocuteur, definirInterlocuteur }),
-    [ficheRepliee, jauges, publier, demande, definirDemande, rechargerFiche, inscrireRecharge, ongletMonde, deplierMonde, interlocuteur]
+    () => ({ replie: ficheRepliee, jauges, publier, demande, definirDemande, rechargerFiche, inscrireRecharge, ongletMonde, choisirOngletMonde, deplierMonde, interlocuteur, definirInterlocuteur, heure, definirHeure }),
+    [ficheRepliee, jauges, publier, demande, definirDemande, rechargerFiche, inscrireRecharge, ongletMonde, deplierMonde, interlocuteur, heure]
   );
 
   /**

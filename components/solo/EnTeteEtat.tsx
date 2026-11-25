@@ -1,4 +1,5 @@
 import Link from "next/link";
+import HeureScene from "@/components/solo/HeureScene";
 import type { SceneView } from "@/lib/solo/types";
 
 /**
@@ -27,8 +28,6 @@ export default function EnTeteEtat({
   if (scene === null) {
     return <p className="text-sm text-ink-muted">Aucune scène posée — pose-la depuis le panneau ci-dessous.</p>;
   }
-
-  const heure = `${String(scene.time.hour).padStart(2, "0")}:${String(scene.time.minute).padStart(2, "0")}`;
 
   return (
     <>
@@ -61,7 +60,7 @@ export default function EnTeteEtat({
           devinée. */}
       <div className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1">
         {dateLabel && <span className="text-sm text-ink-soft">{dateLabel}</span>}
-        <span className="text-sm text-ink">{heure}</span>
+        <HeureScene initiale={scene.time} />
         {scene.weather && <span className="text-sm text-ink-soft">· {scene.weather}</span>}
       </div>
     </>
