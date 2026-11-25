@@ -3475,5 +3475,8 @@
     "faconConfirmer": "Yes, change",
     "faconErreur": "The play style did not change.",
     "ouvrirJeuADistance": "Open remote play"
+  },
+  "squelette": {
+    "ecran": "Loading screen"
   }
 }
