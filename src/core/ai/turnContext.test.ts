@@ -4,6 +4,8 @@ import { buildTurnContext, type TurnContextInput } from "./turnContext";
 function input(partial: Partial<TurnContextInput> = {}): TurnContextInput {
   return {
     locationName: "L'Ancre Rouillée",
+    player: { name: "Perrin" },
+    addressedNpcId: null,
     time: { day: 3, hour: 22, minute: 15 },
     lighting: "dim",
     npcs: [{ id: "npc-1", name: "Bram", attitudeLabel: "cordial", zone: "near" }],
@@ -115,5 +117,28 @@ describe("V3.1-193 — les pronoms d'un PNJ présent", () => {
 
   it("sans pronoms choisis, la ligne n'en parle pas", () => {
     expect(buildTurnContext(input())).not.toContain("pronoms");
+  });
+
+  it("le personnage joué voyage dans sa propre balise, avec ses pronoms quand ils existent", () => {
+    const out = buildTurnContext(input({ player: { name: "Perrin", pronouns: "il, accords au masculin" } }));
+    const section = out.slice(out.indexOf('<donnee source="personnage-joue">'));
+    expect(section.slice(0, section.indexOf("</donnee>"))).toContain("Perrin (pronoms : il, accords au masculin)");
+  });
+
+  it("sans personnage joué connu, aucune balise pour rien", () => {
+    expect(buildTurnContext(input({ player: null }))).not.toContain("personnage-joue");
+  });
+
+  it("le PNJ à qui l'on parle est désigné par son id, hors balise, jamais par son nom", () => {
+    const out = buildTurnContext(input({ addressedNpcId: "npc-1" }));
+    const consigne = out.slice(out.indexOf("Consigne : le joueur parle"));
+    expect(consigne).toContain("npc_id = npc-1");
+    expect(consigne).not.toContain("Bram");
+    const before = out.slice(0, out.indexOf("Consigne : le joueur parle"));
+    expect((before.match(/<donnee /g) ?? []).length).toBe((before.match(/<\/donnee>/g) ?? []).length);
+  });
+
+  it("un id de PNJ absent de la scène ne produit aucune consigne", () => {
+    expect(buildTurnContext(input({ addressedNpcId: "inconnu" }))).not.toContain("Consigne : le joueur parle");
   });
 });

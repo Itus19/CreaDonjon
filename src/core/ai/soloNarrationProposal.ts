@@ -66,15 +66,15 @@ export function soloNarrationToolSchema(npcIds: string[], knownEntityIds: string
   return {
     type: "object",
     properties: {
-      narration: { type: "string", description: "2 a 4 phrases de narration en francais, jamais de calcul ni de jet" },
+      narration: { type: "string", description: "2 a 4 phrases de narration en francais, a la deuxieme personne (tu) pour le personnage joue, jamais de calcul ni de jet" },
       ...(npcIds.length > 0
         ? {
             npc_reaction: {
               type: "object",
-              description: "Optionnel : un PNJ present reagit a ce tour",
+              description: "Un PNJ present reagit a ce tour. Obligatoire quand le joueur lui parle : il lui repond",
               properties: {
                 npc_id: { type: "string", enum: npcIds, description: "Identifiant EXACT d'un PNJ present, jamais invente" },
-                text: { type: "string", description: "La reaction du PNJ, une phrase" },
+                text: { type: "string", description: "Ce que dit le PNJ, au discours direct, avec ses propres mots (une a deux phrases, sans guillemets)" },
               },
               required: ["npc_id", "text"],
             },

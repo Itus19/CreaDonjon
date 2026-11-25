@@ -4,7 +4,8 @@ import { pronounGuidance, zPronouns } from "@/src/core/rules/pronouns";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import type { Viewer } from "@/src/core/visibility";
-import { buildTurnContext, type TurnContextInput, type TurnContextNpc, type TurnContextQuest } from "@/src/core/ai/turnContext";
+import { buildTurnContext, type TurnContextInput, type TurnContextNpc, type TurnContextPlayer, type TurnContextQuest } from "@/src/core/ai/turnContext";
+import { npcAddressedBy } from "@/src/core/ai/npcAddressed";
 import { buildGmQuestionContext } from "@/src/core/ai/gmQuestionContext";
 import { relationshipAxisLabel } from "@/src/core/psyche/bands";
 import { zRelationshipBlockData } from "@/src/core/schemas/blocks/relationship";
@@ -107,6 +108,23 @@ function sketchesAsNpcs(sketches: { id: string; name: string; trait: string; zon
   return sketches.map((s) => ({ id: s.id, name: s.name, attitudeLabel: null, zone: s.zone, note: s.trait }));
 }
 
+/**
+ * Le personnage joué, que la narration tutoie : son nom et ses pronoms.
+ * Deux lectures de plus par tour narré (l'entité, son bloc `character`),
+ * lancées en parallèle du reste du contexte.
+ */
+async function resolvePlayer(supabase: TypedClient, playerEntityId: string): Promise<TurnContextPlayer | null> {
+  const [entities, characterBlocks] = await Promise.all([
+    listEntitiesByIds(supabase, [playerEntityId]),
+    listBlocksByTypeForEntities(supabase, [playerEntityId], "character"),
+  ]);
+  const entity = entities[0];
+  if (!entity) return null;
+  const lu = zPronouns.safeParse((characterBlocks[0]?.data as { pronouns?: unknown } | null)?.pronouns);
+  const pronouns = lu.success ? pronounGuidance(lu.data) : null;
+  return { name: entity.name, ...(pronouns ? { pronouns } : {}) };
+}
+
 async function resolveQuests(supabase: TypedClient, worldId: string, viewer: Viewer): Promise<TurnContextQuest[]> {
   const quests = await listActiveQuestsForWorld(supabase, worldId, viewer);
   return quests.map((q) => ({
@@ -140,6 +158,8 @@ export interface SoloTurnContext {
   knownEntityIds: string[];
   /** V3-B4 — Rendues telles quelles (pas seulement injectees dans `text`) pour que l'appelant (`narrateSoloTurn`) puisse mesurer la similarite d'un essai SANS relire la session une seconde fois. */
   recentNarrations: string[];
+  /** Le PNJ à qui le joueur parle, s'il est clairement désigné : `narrateSoloTurn` exige alors sa réplique. */
+  addressedNpcId: string | null;
 }
 
 export async function buildSoloTurnContext(
@@ -160,18 +180,22 @@ export async function buildSoloTurnContext(
 ): Promise<SoloTurnContext> {
   const scene = await getSceneState(supabase, params.campaignId);
 
-  const [locationEntity, realNpcs, quests, recentNarrations] = await Promise.all([
+  const [locationEntity, realNpcs, quests, recentNarrations, player] = await Promise.all([
     scene ? listEntitiesByIds(supabase, [scene.locationId]).then((rows) => rows[0] ?? null) : Promise.resolve(null),
     scene
       ? resolvePresentNpcs(supabase, { worldId: params.worldId, campaignId: params.campaignId, playerEntityId: params.playerEntityId, present: scene.present })
       : Promise.resolve([]),
     resolveQuests(supabase, params.worldId, params.viewer),
     resolveRecentNarrations(supabase, params.sessionId),
+    resolvePlayer(supabase, params.playerEntityId),
   ]);
   const npcs = [...realNpcs, ...sketchesAsNpcs(scene?.sketches ?? [])];
+  const addressedNpcId = npcAddressedBy(params.playerAction, npcs);
 
   const input: TurnContextInput = {
     locationName: locationEntity?.name ?? "Hors scène",
+    player,
+    addressedNpcId,
     time: scene?.time ?? { day: 1, hour: 8, minute: 0 },
     lighting: scene?.lighting ?? "bright",
     npcs,
@@ -184,7 +208,7 @@ export async function buildSoloTurnContext(
   };
 
   const knownEntityIds = [...(locationEntity ? [locationEntity.id] : []), ...realNpcs.map((n) => n.id)];
-  return { text: buildTurnContext(input), npcIds: npcs.map((n) => n.id), knownEntityIds, recentNarrations };
+  return { text: buildTurnContext(input), npcIds: npcs.map((n) => n.id), knownEntityIds, recentNarrations, addressedNpcId };
 }
 
 /**
