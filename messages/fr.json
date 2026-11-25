@@ -1407,6 +1407,20 @@
     "iaChoixModele": "Modèle d'IA utilisé",
     "iaChoixEchec": "Le changement de modèle a échoué.",
     "iaDetailFournisseur": "Réponse du fournisseur : {detail}",
+    "iaDetailOuvrir": "Détail de l'état du fournisseur d'IA",
+    "iaCourt": {
+      "inconnu": "IA : aucun tour joué",
+      "repond": "IA : dernier tour raconté",
+      "aucun_fournisseur": "Aucune IA déclarée",
+      "quota": "IA muette : quota atteint",
+      "limite": "IA muette : trop d'appels",
+      "limite_app": "IA muette : 30 appels/h atteints",
+      "cle_refusee": "IA muette : clé refusée",
+      "delai": "IA muette : délai dépassé",
+      "refusee": "IA muette : requête refusée",
+      "inutilisable": "IA muette : réponse sans récit",
+      "echec": "IA muette : injoignable"
+    },
     "annulerTour": {
       "bouton": "Annuler le dernier tour",
       "question": "Annuler ce tour ? Ce qu'il a changé est défait ; le journal le garde.",

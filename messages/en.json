@@ -1406,6 +1406,20 @@
     "iaChoixModele": "AI model in use",
     "iaChoixEchec": "Switching the model failed.",
     "iaDetailFournisseur": "Provider response: {detail}",
+    "iaDetailOuvrir": "AI provider status details",
+    "iaCourt": {
+      "inconnu": "AI: no turn played",
+      "repond": "AI: last turn narrated",
+      "aucun_fournisseur": "No AI set up",
+      "quota": "AI silent: quota reached",
+      "limite": "AI silent: too many calls",
+      "limite_app": "AI silent: 30 calls/h reached",
+      "cle_refusee": "AI silent: key rejected",
+      "delai": "AI silent: timed out",
+      "refusee": "AI silent: request rejected",
+      "inutilisable": "AI silent: no usable narration",
+      "echec": "AI silent: unreachable"
+    },
     "annulerTour": {
       "bouton": "Undo last turn",
       "question": "Undo this turn? What it changed is reverted; the log keeps it.",
