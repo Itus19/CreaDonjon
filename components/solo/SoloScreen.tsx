@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import FeuilleDuBas from "@/components/shared/FeuilleDuBas";
@@ -11,6 +11,7 @@ import IntentBar from "@/components/solo/IntentBar";
 import Fil from "@/components/solo/Fil";
 import ConsequencesDrawer, { type ConsequencesDrawerData } from "@/components/solo/ConsequencesDrawer";
 import type { FilItem, IntentBarData, RaisonSansNarration, SceneView } from "@/lib/solo/types";
+import BulleFlottante from "@/components/shared/BulleFlottante";
 import Dropdown from "@/components/shared/Dropdown";
 import { choixDepuisValeur, optionsChoix, valeurChoix, type FournisseursIaReponse } from "@/lib/ia/fournisseurs";
 
@@ -121,6 +122,9 @@ export default function SoloScreen({
   const [narrationDetail, setNarrationDetail] = useState<string | undefined>(undefined);
   // ADR 0108 : les modèles déclarés au compte, pour en changer à côté du voyant. Lus une fois.
   const [fournisseursIa, setFournisseursIa] = useState<FournisseursIaReponse | null>(null);
+  /** La bulle « i » de l'état du fournisseur : la phrase complète et la réponse brute. */
+  const [detailIaOuvert, setDetailIaOuvert] = useState(false);
+  const fermerDetailIa = useCallback(() => setDetailIaOuvert(false), []);
   const scrollRef = useRef<HTMLDivElement>(null);
   const autoScrollRef = useRef(true);
   const lastSeqRef = useRef<number | null>(null);
@@ -147,6 +151,29 @@ export default function SoloScreen({
         if (consequencesRes.ok) setConsequences((await consequencesRes.json()) as ConsequencesDrawerData);
       }),
     ]);
+  }
+
+  /**
+   * Appelé par la barre au moment d'envoyer. Rend une vérification pour le cas où
+   * la réponse se perd (délai, réseau) alors que le serveur a enregistré le tour :
+   * une seule lecture du fil, et seulement après un échec (docs/QUOTAS.md), qui
+   * cherche, APRÈS le dernier élément connu à l'envoi, l'action ou la question
+   * de ce texte exact. Un tour mécanique n'en a pas besoin : sa demande de jet,
+   * publiée par la fiche, vide déjà le champ en changeant son rôle.
+   */
+  function suivreEnvoi(texte: string, genre: "tour" | "mj") {
+    const avant = lastSeqRef.current ?? -1;
+    return async () => {
+      const res = await fetch(`/api/campaigns/${campaignId}/fil`);
+      if (!res.ok) return false;
+      const body = (await res.json()) as { items: FilItem[] };
+      setFilItems(body.items);
+      return body.items.some(
+        (i) =>
+          i.seq > avant &&
+          (genre === "tour" ? i.kind === "player_action" && i.text.trim() === texte : i.kind === "note" && i.question.trim() === texte)
+      );
+    };
   }
 
   /** V3-F2 : un tour de la joueuse figure au fil (le serveur retrouve lui-même lequel annuler). */
@@ -291,32 +318,48 @@ export default function SoloScreen({
             setNarrationEtat(raison ?? "repond");
             setNarrationDetail(detail);
           }}
-          pied={
+          suivreEnvoi={suivreEnvoi}
+          etatIa={
             /* V3.2-3 : l'état du fournisseur, lu du dernier tour joué, avec sa raison (V3.1-223) :
                vert s'il a raconté, orange si le quota ou la limite est atteint, rouge pour un
                souci de branchement, gris tant qu'aucun tour n'a été joué. Aucun appel n'est
-               fait pour l'allumer : un sondage coûterait une requête par tic (QUOTAS). */
-            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-              <div className="flex min-w-0 flex-col gap-0.5">
-                <p className="flex min-w-0 items-center gap-1.5 text-xs text-ink-muted">
-                  <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${COULEUR_ETAT_IA[narrationEtat]}`} />
-                  {t(LIBELLE_ETAT_IA[narrationEtat])}
-                </p>
-                {narrationDetail && (
-                  <p className="break-words pl-3.5 text-xs text-ink-muted">{t("iaDetailFournisseur", { detail: narrationDetail })}</p>
-                )}
-              </div>
-              {optionsModeles.length > 0 && (
-                <Dropdown
-                  size="sm"
-                  className="max-w-[16rem] shrink-0"
-                  aria-label={t("iaChoixModele")}
-                  value={fournisseursIa?.actif ? valeurChoix(fournisseursIa.actif) : ""}
-                  options={optionsModeles}
-                  onChange={(v) => void choisirModele(v)}
-                />
+               fait pour l'allumer : un sondage coûterait une requête par tic (QUOTAS).
+               Forme courte sur la ligne (elle tient sans retour à la ligne, même sur
+               téléphone) ; la phrase complète et la réponse du fournisseur derrière « i ». */
+            <span className="relative flex min-w-0 items-center gap-1.5 text-ink-muted">
+              <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${COULEUR_ETAT_IA[narrationEtat]}`} />
+              <span className="min-w-0 truncate">{t(`iaCourt.${narrationEtat}`)}</span>
+              {narrationEtat !== "inconnu" && narrationEtat !== "repond" && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setDetailIaOuvert((v) => !v)}
+                    aria-expanded={detailIaOuvert}
+                    aria-haspopup="dialog"
+                    aria-label={t("iaDetailOuvrir")}
+                    className="relative grid h-4 w-4 shrink-0 place-items-center rounded-full border border-edge-strong font-mono text-xs leading-none text-ink-soft transition-colors hover:bg-panel-raised before:absolute before:-inset-1 before:content-['']"
+                  >
+                    i
+                  </button>
+                  <BulleFlottante ouverte={detailIaOuvert} onFermer={fermerDetailIa} alignement="debut" aria-label={t("iaDetailOuvrir")}>
+                    <p className="text-ink-soft">{t(LIBELLE_ETAT_IA[narrationEtat])}</p>
+                    {narrationDetail && <p className="mt-2 break-words font-mono text-xs text-ink-muted">{t("iaDetailFournisseur", { detail: narrationDetail })}</p>}
+                  </BulleFlottante>
+                </>
               )}
-            </div>
+            </span>
+          }
+          choixModele={
+            optionsModeles.length > 0 && (
+              <Dropdown
+                size="sm"
+                className="max-w-[10rem] shrink-0"
+                aria-label={t("iaChoixModele")}
+                value={fournisseursIa?.actif ? valeurChoix(fournisseursIa.actif) : ""}
+                options={optionsModeles}
+                onChange={(v) => void choisirModele(v)}
+              />
+            )
           }
         />
       </div>
