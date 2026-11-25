@@ -45,20 +45,44 @@ describe("adresseVue", () => {
 });
 
 describe("jaugesBande", () => {
-  it("convertit la charge de livres en kg et calcule le pourcentage de PV", () => {
-    const jauges = jaugesBande({ ac: 16, hpCurrent: 12, hpMax: 24, level: 3, exhaustion: 1, carriedLb: 50 });
-    expect(jauges).toEqual({ ac: 16, hpCurrent: 12, hpMax: 24, pctPv: 50, level: 3, exhaustion: 1, chargeKg: 22.7 });
+  const base = { ac: 16, hpCurrent: 12, hpMax: 24, level: 3, exhaustion: 1, carriedLb: 50, capacityLb: 200, encumbered: false, xp: 1500 };
+
+  it("convertit la charge de livres en kg et calcule les parts des quatre jauges", () => {
+    expect(jaugesBande(base)).toEqual({
+      ac: 16,
+      hpCurrent: 12,
+      hpMax: 24,
+      pctPv: 50,
+      level: 3,
+      exhaustion: 1,
+      pctEpuisement: 17,
+      chargeKg: 22.7,
+      capaciteKg: 90.7,
+      pctCharge: 25,
+      encombre: false,
+      // Niveau 3 : de 900 à 2 700 PX, 600 de faits sur 1 800.
+      xpDansNiveau: 600,
+      xpVersSuivant: 1800,
+      pctXp: 33,
+    });
   });
 
-  it("ne divise pas par zero quand le maximum est nul", () => {
-    expect(jaugesBande({ ac: 10, hpCurrent: 0, hpMax: 0, level: 1, exhaustion: 0, carriedLb: 0 }).pctPv).toBe(0);
+  it("ne divise pas par zero quand un maximum est nul", () => {
+    const j = jaugesBande({ ...base, hpCurrent: 0, hpMax: 0, carriedLb: 0, capacityLb: 0 });
+    expect(j.pctPv).toBe(0);
+    expect(j.pctCharge).toBe(0);
+  });
+
+  it("plafonne la jauge de charge a 100 quand on porte plus que la capacite", () => {
+    expect(jaugesBande({ ...base, carriedLb: 300, encumbered: true }).pctCharge).toBe(100);
   });
 
   it("compare deux bandes par valeur", () => {
-    const a = jaugesBande({ ac: 10, hpCurrent: 5, hpMax: 10, level: 1, exhaustion: 0, carriedLb: 0 });
-    const b = jaugesBande({ ac: 10, hpCurrent: 5, hpMax: 10, level: 1, exhaustion: 0, carriedLb: 0 });
+    const a = jaugesBande(base);
+    const b = jaugesBande(base);
     expect(jaugesEgales(a, b)).toBe(true);
     expect(jaugesEgales(a, { ...b, hpCurrent: 4 })).toBe(false);
+    expect(jaugesEgales(a, { ...b, xpDansNiveau: 601 })).toBe(false);
     expect(jaugesEgales(null, b)).toBe(false);
     expect(jaugesEgales(null, null)).toBe(true);
   });

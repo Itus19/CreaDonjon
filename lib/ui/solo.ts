@@ -1,5 +1,6 @@
 import { DIE_TYPES, type DieType } from "@/src/core/dice/roll";
 import { lbToKg } from "@/src/core/rules/encumbrance";
+import { jaugeXp } from "@/src/core/rules/experience";
 import type { EncashedTurnOutcome, PendingRequest, QuestColumnEntry, WikiColumnGroup } from "@/lib/solo/types";
 import type { PreReglage, SortieJet } from "@/lib/ui/outilDes";
 
@@ -42,8 +43,19 @@ export interface JaugesBande {
   level: number;
   /** 0 à 6. */
   exhaustion: number;
+  /** 0 à 100 : l'épuisement remplit son anneau quand ça va mal. */
+  pctEpuisement: number;
   /** La charge portée, en kg (le moteur compte en livres). */
   chargeKg: number;
+  /** V3.2-16 : la capacité de port, en kg, et la part portée (0 à 100, plafonnée). */
+  capaciteKg: number;
+  pctCharge: number;
+  /** Au-delà du premier palier d'encombrement : l'anneau passe en ton d'alerte. */
+  encombre: boolean;
+  /** V3.2-16 : la marche vers le niveau suivant (AG-4, `jaugeXp`), jamais le total cumulé. */
+  xpDansNiveau: number;
+  xpVersSuivant: number;
+  pctXp: number;
 }
 
 export function jaugesBande(entree: {
@@ -53,7 +65,11 @@ export function jaugesBande(entree: {
   level: number;
   exhaustion: number;
   carriedLb: number;
+  capacityLb: number;
+  encumbered: boolean;
+  xp: number;
 }): JaugesBande {
+  const xp = jaugeXp(entree.level, entree.xp);
   return {
     ac: entree.ac,
     hpCurrent: entree.hpCurrent,
@@ -61,21 +77,25 @@ export function jaugesBande(entree: {
     pctPv: entree.hpMax > 0 ? Math.round((entree.hpCurrent / entree.hpMax) * 100) : 0,
     level: entree.level,
     exhaustion: entree.exhaustion,
+    pctEpuisement: Math.round((Math.max(0, Math.min(6, entree.exhaustion)) / 6) * 100),
     chargeKg: lbToKg(entree.carriedLb),
+    capaciteKg: lbToKg(entree.capacityLb),
+    pctCharge: entree.capacityLb > 0 ? Math.min(100, Math.round((entree.carriedLb / entree.capacityLb) * 100)) : 0,
+    encombre: entree.encumbered,
+    xpDansNiveau: xp.dansNiveau,
+    xpVersSuivant: xp.versSuivant,
+    pctXp: Math.round(xp.pourcentage),
   };
 }
 
+const CLES_JAUGES: (keyof JaugesBande)[] = [
+  "ac", "hpCurrent", "hpMax", "pctPv", "level", "exhaustion", "pctEpuisement",
+  "chargeKg", "capaciteKg", "pctCharge", "encombre", "xpDansNiveau", "xpVersSuivant", "pctXp",
+];
+
 export function jaugesEgales(a: JaugesBande | null, b: JaugesBande | null): boolean {
   if (a === null || b === null) return a === b;
-  return (
-    a.ac === b.ac &&
-    a.hpCurrent === b.hpCurrent &&
-    a.hpMax === b.hpMax &&
-    a.pctPv === b.pctPv &&
-    a.level === b.level &&
-    a.exhaustion === b.exhaustion &&
-    a.chargeKg === b.chargeKg
-  );
+  return CLES_JAUGES.every((cle) => a[cle] === b[cle]);
 }
 
 /**

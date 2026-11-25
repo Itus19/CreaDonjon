@@ -451,11 +451,6 @@
       },
       "montantBudget": "Amount (formula)",
       "zone": "Zone",
-      "zones": {
-        "engaged": "Engaged",
-        "near": "Near",
-        "far": "Far"
-      },
       "libelleJet": "Roll label",
       "formuleJet": "Formula",
       "indication": "Hint",
@@ -1406,6 +1401,20 @@
     "iaChoixModele": "AI model in use",
     "iaChoixEchec": "Switching the model failed.",
     "iaDetailFournisseur": "Provider response: {detail}",
+    "iaDetailOuvrir": "AI provider status details",
+    "iaCourt": {
+      "inconnu": "AI: no turn played",
+      "repond": "AI: last turn narrated",
+      "aucun_fournisseur": "No AI set up",
+      "quota": "AI silent: quota reached",
+      "limite": "AI silent: too many calls",
+      "limite_app": "AI silent: 30 calls/h reached",
+      "cle_refusee": "AI silent: key rejected",
+      "delai": "AI silent: timed out",
+      "refusee": "AI silent: request rejected",
+      "inutilisable": "AI silent: no usable narration",
+      "echec": "AI silent: unreachable"
+    },
     "annulerTour": {
       "bouton": "Undo last turn",
       "question": "Undo this turn? What it changed is reverted; the log keeps it.",
@@ -1430,6 +1439,21 @@
     "deplierMonde": "Expand the World",
     "replierFiche": "Collapse the Sheet",
     "deplierFiche": "Expand the Sheet",
+    "bandeMonde": {
+      "presentsAria": "People present",
+      "sansFiche": "no sheet",
+      "zones": {
+        "engaged": "engaged",
+        "near": "near",
+        "far": "far"
+      },
+      "aria": "World tabs",
+      "ouvrir": "Open the World on “{onglet}”",
+      "wiki": "Wiki",
+      "quetes": "Quests",
+      "presents": "Present",
+      "regles": "Rules"
+    },
     "barre": {
       "jeu": "Game",
       "monde": "World",
@@ -1445,6 +1469,12 @@
     "bandeNiveau": "Lvl",
     "bandeCharge": "Load",
     "bandeEpuisement": "Exh.",
+    "bandePvTitre": "{pv} hit points out of {max}",
+    "bandeNiveauCourt": "Lvl {niveau}",
+    "bandeXpTitre": "{xp} / {plafond} XP to level {niveau}",
+    "bandeChargeTitre": "Load: {porte} / {capacite} kg",
+    "bandeChargeTitreEncombre": "Load: {porte} / {capacite} kg — encumbered",
+    "bandeEpuisementTitre": "Exhaustion {niveau} of 6",
     "bandeKg": "{valeur} kg",
     "consequencesOuvrir": "Changes in the world: {nombre}",
     "consequencesTitre": "Changes in the world",

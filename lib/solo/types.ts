@@ -1,5 +1,6 @@
 import type { IntentCatalog } from "@/src/core/rules/intent";
 import type { TradeCatalog } from "@/src/core/rules/tradeIntent";
+import type { PerceptionPercue } from "@/src/core/psyche/perception";
 import type { RaisonSansNarration } from "@/src/core/ai/providerError";
 
 export type { RaisonSansNarration };
@@ -83,6 +84,8 @@ export interface SceneView {
     zone: "engaged" | "near" | "far";
     /** Un mot sur l'attitude ("mefiant"), pose a l'entree en scene — `undefined` : rien n'ecrit ce champ aujourd'hui (V3-D3, colonne Présents). */
     disposition?: string;
+    /** V3.2-14 (ADR 0111) : ce que ce present LAISSE VOIR envers le personnage, en bandes. `null` : aucune attitude connue. Absent hors du solo. */
+    perception?: PerceptionPercue | null;
   }[];
   /** V3-C2 — les personnages incidents de la scene : un nom et un trait tires au generateur, jamais une fiche. */
   sketches: {

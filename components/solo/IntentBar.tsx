@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import BulleFlottante from "@/components/shared/BulleFlottante";
 import Dropdown from "@/components/shared/Dropdown";
 import { interpretIntent, looksLikeQuestion, type IntentAction, type MechanicalIntentKind } from "@/src/core/rules/intent";
 import { z } from "zod";
@@ -9,12 +10,23 @@ import { interpretTrade, tradeOffersFromPriceList, type TradeDirection, type Tra
 import { zPriceListBlockData } from "@/src/core/schemas/blocks/priceList";
 import type { AdvantageState } from "@/src/core/rules/action";
 import type { EncashedTurnResponse, IntentBarData, PendingRequest, PendingTurnResponse, RaisonSansNarration, TurnOutcome } from "@/lib/solo/types";
+import DieIcon from "@/components/shared/DieIcon";
 import { useDiceRoll } from "@/components/shell/DiceRollPanel";
 import { ErreurLancer, type SortieJet } from "@/lib/ui/outilDes";
 import { preReglageDepuisDemande, sortieAttenteReactions, sortieJetDepuisTour } from "@/lib/ui/solo";
 import { encaisserDepuisFiche } from "@/lib/ui/soloApi";
 
 /**
+ * **La bulle à hauteur fixe** (esquisse validée par l'auteur le 25 novembre).
+ * Trois rangées, quel que soit l'état : l'en-tête, où le moteur dit ce qu'il a
+ * compris (type, arme, cible, en pastilles cliquables) ; le champ, avec Jouer
+ * et MJ collés à sa droite ; la ligne d'état de l'IA, que l'erreur et l'attente
+ * remplacent au lieu de s'y ajouter, avec le choix du modèle au bout. Ce qui
+ * était une rangée de plus (correction, détail du fournisseur) s'ouvre en bulle
+ * flottante par-dessus le récit. Avant, le cadre passait de 175 à plus de
+ * 380 px selon l'état et faisait sauter le fil à chaque frappe. Seul un texte
+ * long le fait encore grandir, jusqu'à trois lignes, vers le haut.
+ *
  * V3.2-2 : le bloc d'interprétation est séparé par un FILET, jamais par un
  * troisième cadre — le panneau en porte un, le champ aussi, et trois
  * bordures emboîtées se lisaient comme un défaut de dessin.
@@ -68,26 +80,44 @@ const KIND_LABELS: Record<MechanicalIntentKind, string> = {
   saving_throw: "Sauvegarde",
 };
 
+/** Les familles du menu « Arme ou action ». */
+const KIND_GROUPS: Record<MechanicalIntentKind, string> = {
+  weapon_attack: "Attaques",
+  skill_check: "Tests de compétence",
+  ability_check: "Tests de caractéristique",
+  saving_throw: "Sauvegardes",
+};
+
 const ADVANTAGE_LABELS: Record<AdvantageState, string> = {
   disadvantage: "désavantage",
   normal: "normal",
   advantage: "avantage",
 };
 
+/**
+ * Jouer et MJ, collés au champ : même hauteur que lui sur une ligne (36 px),
+ * d'où `py-2 text-sm` pour les deux, le principal comme le secondaire (charte §3,
+ * versions confortables).
+ */
 const BTN_PRIMARY =
-  "rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50";
+  "shrink-0 rounded-full bg-accent px-4 py-2 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover disabled:opacity-50";
 const BTN_SECONDARY =
+  "shrink-0 rounded-full border border-edge px-4 py-2 text-sm text-ink transition-colors hover:bg-panel-raised disabled:opacity-50";
+/** Le bouton du dé, à côté d'« Annoncer » : même hauteur, icône seule. */
+const BTN_ICONE =
+  "shrink-0 rounded-full border border-edge px-3 py-2 text-ink transition-colors hover:bg-panel-raised disabled:opacity-50";
+/** Le petit bouton de la ligne d'état (« Réessayer ») et des bulles. */
+const BTN_PETIT =
   "rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised disabled:opacity-50";
-const CHIP = "rounded-full border border-edge px-3 py-1 text-xs text-ink";
+/**
+ * Une pastille de l'en-tête (charte §3, « Puce » en version dense) : 20 px de haut
+ * pour tenir dans la rangée, zone cliquable étendue à 28 px par le pseudo-élément
+ * (charte §4). Même dessin que `Dropdown forme="pastille"`.
+ */
+const PASTILLE =
+  "relative inline-flex max-w-[11rem] shrink-0 items-center gap-1 rounded-full border px-2 text-xs leading-[18px] transition-colors hover:bg-panel-raised before:absolute before:inset-x-0 before:-inset-y-1 before:content-['']";
 
-/** 1 à 8 lignes (critère du ticket) — mesuré sur `text-sm` (20px de ligne) plus le padding vertical du champ (2 × 6px). */
-const LINE_HEIGHT_PX = 20;
-/** V3.1-36 : le temps de lire une attaque dans l'outil de dés avant qu'il se rouvre sur les dégâts. */
-const DELAI_ENCHAINEMENT_MS = 2200;
-const FIELD_PADDING_PX = 12;
-const MAX_LINES = 8;
-
-/** V3.2-10 : la famille d'un échange, et le verbe de son bouton. */
+/** V3.2-10 : la famille d'un échange, et le verbe de son bouton. V3.2-11 : régler l'ardoise. */
 const TRADE_LABELS: Record<TradeDirection, { chip: string; verb: string; button: string }> = {
   buy: { chip: "Achat", verb: "Acheter", button: "Payer" },
   sell: { chip: "Vente", verb: "Vendre", button: "Vendre" },
@@ -95,17 +125,20 @@ const TRADE_LABELS: Record<TradeDirection, { chip: string; verb: string; button:
   settle: { chip: "Ardoise", verb: "Régler", button: "Payer" },
 };
 
-/** « Acheter : « Une nuit à l'auberge », à Mabelle — 5 pa », la phrase que le moteur a comprise. */
+/** « « Une nuit à l'auberge », à Mabelle — 5 pa », ce que le moteur a compris de l'échange. */
 function tradeSentence(trade: TradeReading): string {
   const what = trade.direction === "buy" ? `« ${trade.label} »` : trade.direction === "settle" ? trade.label.toLowerCase() : trade.label;
   const to = trade.target ? `, à ${trade.target.label}` : "";
   const price = trade.direction === "give" ? "" : trade.priceCp === null ? " — prix inconnu" : ` — ${trade.priceCp === 0 ? "gratuit" : formatCpFr(trade.priceCp)}`;
-  return `${TRADE_LABELS[trade.direction].verb} : ${what}${to}${price}`;
+  return `${what}${to}${price}`;
 }
 
-function actionOptionLabel(action: IntentAction): string {
-  return action.kind === "weapon_attack" ? `${action.label} — attaque` : action.label;
-}
+/** 1 à 3 lignes — mesuré sur `text-sm` (20px de ligne) plus le padding vertical du champ (2 × 8px). */
+const LINE_HEIGHT_PX = 20;
+/** V3.1-36 : le temps de lire une attaque dans l'outil de dés avant qu'il se rouvre sur les dégâts. */
+const DELAI_ENCHAINEMENT_MS = 2200;
+const FIELD_PADDING_PX = 16;
+const MAX_LINES = 3;
 
 export default function IntentBar({
   worldSlug,
@@ -117,7 +150,9 @@ export default function IntentBar({
   onActed,
   onEnCours,
   onNarration,
-  pied,
+  etatIa,
+  choixModele,
+  suivreEnvoi,
 }: {
   worldSlug: string;
   campaignId: string | null;
@@ -132,13 +167,23 @@ export default function IntentBar({
   onEnCours?: (enCours: boolean) => void;
   /** V3.2-3 : le modèle a répondu (`null`), ou pourquoi il est resté muet (V3.1-223). Lu du DERNIER tour, jamais d'un sondage (docs/QUOTAS.md). */
   onNarration?: (sansNarration: RaisonSansNarration | null, detail?: string) => void;
-  /** Une ligne posée tout en bas du cadre de saisie (l'état du fournisseur d'IA, `SoloScreen.tsx`). */
-  pied?: ReactNode;
+  /** Le voyant et le message court de l'état du fournisseur d'IA (`SoloScreen.tsx`), à gauche de la dernière rangée. Une erreur ou l'attente le remplacent. */
+  etatIa?: ReactNode;
+  /** Le choix du modèle (`SoloScreen.tsx`), au bout de la dernière rangée. */
+  choixModele?: ReactNode;
+  /**
+   * Appelé au moment d'envoyer ; rend de quoi vérifier, après un échec, si le
+   * tour ou la question est QUAND MÊME arrivé au fil. Le serveur enregistre le
+   * récit avant de répondre : une réponse perdue (délai, réseau) laissait
+   * l'erreur affichée et la phrase dans le champ alors que l'IA avait raconté.
+   */
+  suivreEnvoi?: (texte: string, genre: "tour" | "mj") => () => Promise<boolean>;
 }) {
   const [text, setText] = useState("");
   const [overrideActionId, setOverrideActionId] = useState<string | null>(null);
   const [overrideTargetId, setOverrideTargetId] = useState<string | null>(null);
   const [correcting, setCorrecting] = useState(false);
+  const fermerCorrection = useCallback(() => setCorrecting(false), []);
   /** V3.2-10 : « ce n'est pas ça » sur un échange — la phrase repart dans la lecture ordinaire (jet ou action libre). */
   const [tradeDismissed, setTradeDismissed] = useState(false);
   const [drawingCarte, setDrawingCarte] = useState(false);
@@ -159,7 +204,8 @@ export default function IntentBar({
   // avant les jets — sinon « je vends ma dague » proposerait une attaque à la dague.
   const tradeReading = useMemo(() => interpretTrade(text, tradeCatalog, data.catalog.targets), [text, tradeCatalog, data.catalog.targets]);
   const trade = !tradeDismissed && tradeReading?.kind === "trade" ? tradeReading : null;
-  const tradeShortCp = (trade?.direction === "buy" || trade?.direction === "settle") && trade.priceCp !== null && trade.priceCp > data.trade.purseCp ? trade.priceCp - data.trade.purseCp : 0;
+  const tradeShortCp =
+    (trade?.direction === "buy" || trade?.direction === "settle") && trade.priceCp !== null && trade.priceCp > tradeCatalog.purseCp ? trade.priceCp - tradeCatalog.purseCp : 0;
   const tradeBlocked = trade?.direction === "sell" && trade.priceCp === null;
   // V3.2-11 : ce qui se consomme sur place (une offre sans fiche de règle) peut aller sur l'ardoise, en campagne seulement.
   const canPutOnTab =
@@ -245,11 +291,33 @@ export default function IntentBar({
     return sortieJetDepuisTour(demande, outcome);
   }
 
+  /**
+   * Après un échec qui n'est pas un refus (5xx, délai, réseau) : le tour est
+   * peut-être arrivé quand même. S'il est au fil, la phrase a fait son office —
+   * le champ se vide et aucune erreur ne s'affiche (rend `true`). Sinon, l'appelant
+   * montre l'erreur d'origine.
+   * Un refus (4xx) ne passe pas par ici : le serveur n'a rien enregistré.
+   */
+  async function arriveQuandMeme(verifier: (() => Promise<boolean>) | undefined): Promise<boolean> {
+    if (!verifier) return false;
+    const arrive = await verifier().catch((erreur: unknown) => {
+      // La vérification elle-même a échoué : on ne sait rien de plus, l'appelant montre l'erreur d'origine.
+      console.error("Vérification de l'arrivée du tour impossible", erreur);
+      return false;
+    });
+    if (arrive) {
+      changeText("");
+      onActed?.();
+    }
+    return arrive;
+  }
+
   async function play(onTab = false) {
     if (text.trim().length === 0) return;
     setLastAttempt("submit");
     setBusy(true);
     setError(null);
+    const verifier = suivreEnvoi?.(text.trim(), "tour");
     try {
       const choice = trade
         ? { kind: "trade" as const, direction: trade.direction, entryId: trade.entryId, targetId: trade.target?.id ?? null, ...(onTab ? { onTab: true } : {}) }
@@ -275,7 +343,8 @@ export default function IntentBar({
       // attente d'un tour qui n'arrivera jamais.
       if (!res.ok) {
         const payload = (await res.json().catch(() => null)) as { error?: string } | null;
-        setError(payload?.error ?? "Le tour n'a pas pu être joué.");
+        const message = payload?.error ?? "Le tour n'a pas pu être joué.";
+        if (res.status < 500 || !(await arriveQuandMeme(verifier))) setError(message);
         return;
       }
       // V3.2-4 : le serveur a accepté — la phrase a fait son office, la zone repart
@@ -298,7 +367,7 @@ export default function IntentBar({
       }
       onActed?.();
     } catch {
-      setError("Le serveur n'a pas répondu.");
+      if (!(await arriveQuandMeme(verifier))) setError("Le serveur n'a pas répondu.");
     } finally {
       setBusy(false);
     }
@@ -363,6 +432,7 @@ export default function IntentBar({
     setLastAttempt("mj");
     setBusy(true);
     setError(null);
+    const verifier = suivreEnvoi?.(text.trim(), "mj");
     try {
       const res = await fetch("/api/solo/mj", {
         method: "POST",
@@ -371,13 +441,14 @@ export default function IntentBar({
       });
       if (!res.ok) {
         const payload = (await res.json().catch(() => null)) as { error?: string } | null;
-        setError(payload?.error ?? "La question n'a pas abouti.");
+        const message = payload?.error ?? "La question n'a pas abouti.";
+        if (res.status < 500 || !(await arriveQuandMeme(verifier))) setError(message);
         return;
       }
       changeText("");
       onActed?.();
     } catch {
-      setError("Le serveur n'a pas répondu.");
+      if (!(await arriveQuandMeme(verifier))) setError("Le serveur n'a pas répondu.");
     } finally {
       setBusy(false);
     }
@@ -439,230 +510,289 @@ export default function IntentBar({
   const canAskMj = campaignId !== null;
 
   const label = pending ? "Jet demandé" : "Que fais-tu ?";
-  const placeholder = pending
-    ? `${pending.what}${pending.target_label ? ` sur ${pending.target_label}` : ""} — lance depuis ta fiche, ou écris ton résultat (1-${pending.die_max})`
-    : "je frappe le gobelin avec mon épée";
+  // Le texte temporaire du jet tient sur une ligne, même sur téléphone : lancer
+  // depuis la fiche ou avec le dé voisin se voit déjà, il ne reste qu'à dire quoi écrire.
+  const placeholder = pending ? `Résultat du dé (1-${pending.die_max})` : "je frappe le gobelin avec mon épée";
+  const vide = text.trim().length === 0;
+
+  // L'en-tête : ce que le moteur a compris, en pastilles. Le type ouvre la
+  // correction complète ; l'arme et la cible sont des raccourcis vers les deux
+  // listes les plus utiles en attaque.
+  const libelleType = isQuestion ? "Question au MJ" : chosenAction ? KIND_LABELS[chosenAction.kind] : "Action libre";
+  const aucuneActionSurLaFiche = proposal.kind === "free" && proposal.reason === "aucune_action_disponible";
+  const detailType = isQuestion ? "le temps ne bouge pas" : chosenAction ? null : aucuneActionSurLaFiche ? "rien sur ta fiche pour le faire" : "sans jet";
+  const explicationType = isQuestion
+    ? "Ça ressemble à une question : MJ ne fait pas avancer le temps. Clique pour corriger l'action."
+    : chosenAction
+      ? "Ce n'est pas ça ? Clique pour corriger l'action, la cible, l'avantage ou le DD."
+      : aucuneActionSurLaFiche
+        ? "Le verbe est compris, mais cette fiche n'a rien pour le faire : aucun jet ne sera lancé. Clique pour corriger."
+        : "Aucune mécanique reconnue : ce tour partira sans jet. Clique pour corriger.";
+  const montrerCible = chosenAction !== null && (chosenAction.kind === "weapon_attack" || chosenTarget !== null) && data.targetDetails.length > 0;
+  const cibleAChoisir = chosenAction?.kind === "weapon_attack" && chosenTarget === null;
+  // Triées par famille : `Dropdown` pose un titre à chaque changement de `groupe`.
+  const ordreFamilles = Object.keys(KIND_GROUPS);
+  const optionsAction = [...data.catalog.actions]
+    .sort((a, b) => ordreFamilles.indexOf(a.kind) - ordreFamilles.indexOf(b.kind))
+    .map((a) => ({ value: optionKey(a), label: a.label, groupe: KIND_GROUPS[a.kind] }));
+  const optionsCible = [
+    { value: "", label: "Aucune cible", labelCourt: cibleAChoisir ? "cible à choisir" : "aucune cible" },
+    ...data.targetDetails.map((t) => ({
+      value: t.id,
+      label: t.ac === null ? t.label : `${t.label} — CA ${t.ac}`,
+      labelCourt: t.ac === null ? t.label : `${t.label} · CA ${t.ac}`,
+    })),
+  ];
+
+  const enTete = pending ? (
+    <span className="flex min-w-0 items-center gap-1.5">
+      <span className={`${PASTILLE} border-accent text-accent hover:bg-transparent`}>
+        <span className="truncate">{pending.what}</span>
+      </span>
+      <span className="min-w-0 truncate text-xs text-ink-soft">
+        {pending.target_label ? `sur ${pending.target_label} · ` : ""}mod. {pending.modifier >= 0 ? "+" : "−"}
+        {Math.abs(pending.modifier)}
+        {pending.dc !== null && ` · ${pending.kind === "weapon_attack" ? "CA" : "DD"} ${pending.dc}`}
+        {pending.advantage !== "normal" && ` · ${ADVANTAGE_LABELS[pending.advantage]}`}
+      </span>
+    </span>
+  ) : vide ? (
+    <span className="min-w-0 truncate text-xs text-ink-muted">Le moteur dit ce qu&apos;il a compris avant de jouer</span>
+  ) : trade ? (
+    // V3.2-10 : l'échange compris. La pastille rend la phrase à la lecture
+    // ordinaire (« ce n'est pas ça ») ; un manque se lit à côté, sans bloquer.
+    <span className="flex min-w-0 items-center justify-end gap-1.5">
+      <button
+        type="button"
+        onClick={() => setTradeDismissed(true)}
+        title="Ce n'est pas un échange ? Clique pour revenir à la lecture ordinaire (jet ou action libre)."
+        className={`${PASTILLE} border-edge-strong text-ink`}
+      >
+        <span className="truncate">{TRADE_LABELS[trade.direction].chip}</span>
+        <span aria-hidden="true" className="text-ink-muted">
+          ×
+        </span>
+      </button>
+      <span className="min-w-0 truncate text-xs text-ink" title={tradeSentence(trade)}>
+        {tradeSentence(trade)}
+      </span>
+      {tradeShortCp > 0 && (
+        <span
+          className="shrink-0 text-xs text-danger"
+          title={`Le tour part quand même : rien ne sera payé, et ${trade.target ? trade.target.label : "la personne en face"} verra qu'il manque ${formatCpFr(tradeShortCp)}.`}
+        >
+          {tradeCatalog.purseCp === 0 ? "bourse vide" : `tu as ${formatCpFr(tradeCatalog.purseCp)}`}
+        </span>
+      )}
+      {tradeBlocked && (
+        <span className="shrink-0 text-xs text-ink-soft" title="Cet objet n'a pas de prix connu : il ne se vend pas au prix de la table. Tu peux le donner, ou jouer la vente en action libre.">
+          sans prix
+        </span>
+      )}
+    </span>
+  ) : (
+    <span className="flex min-w-0 items-center justify-end gap-1.5">
+      <span className="relative flex shrink-0">
+        <button
+          type="button"
+          onClick={() => setCorrecting((v) => !v)}
+          aria-expanded={correcting}
+          aria-haspopup="dialog"
+          title={explicationType}
+          className={`${PASTILLE} ${correcting ? "border-accent bg-accent/10" : isQuestion ? "border-gm text-gm" : "border-edge-strong text-ink"}`}
+        >
+          <span className="truncate">{libelleType}</span>
+          <span aria-hidden="true" className="text-ink-muted">
+            ▾
+          </span>
+        </button>
+        <BulleFlottante ouverte={correcting} onFermer={fermerCorrection} alignement="fin" aria-label="Correction de l'action">
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <Dropdown
+                aria-label="Action à résoudre"
+                size="md"
+                className="w-64"
+                value={chosenAction ? optionKey(chosenAction) : ""}
+                options={[{ value: "", label: "Action libre — aucun jet" }, ...optionsAction.map(({ value, label, groupe }) => ({ value, label, groupe }))]}
+                onChange={(v) => setOverrideActionId(v)}
+              />
+              <Dropdown
+                aria-label="Cible de l'action"
+                size="md"
+                className="w-56"
+                value={chosenTargetId ?? ""}
+                options={optionsCible.map(({ value, label }) => ({ value, label }))}
+                onChange={(v) => setOverrideTargetId(v)}
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="text-ink-muted">Jet :</span>
+              {(["disadvantage", "normal", "advantage"] as AdvantageState[]).map((a) => (
+                <button
+                  key={a}
+                  type="button"
+                  onClick={() => setAdvantage(a)}
+                  className={`rounded-full border px-3 py-1 transition-colors ${
+                    advantage === a ? "border-accent text-accent" : "border-edge text-ink-muted hover:bg-panel-raised"
+                  }`}
+                >
+                  {ADVANTAGE_LABELS[a]}
+                </button>
+              ))}
+              {needsDc && (
+                <label className="flex items-center gap-1">
+                  <span className="text-ink-muted">DD</span>
+                  <input
+                    value={dc}
+                    onChange={(e) => setDc(e.target.value.replace(/[^0-9]/g, ""))}
+                    inputMode="numeric"
+                    maxLength={2}
+                    placeholder="—"
+                    className="w-12 rounded-md border border-edge bg-transparent px-2 py-1 text-xs text-ink outline-none"
+                  />
+                </label>
+              )}
+            </div>
+          </div>
+        </BulleFlottante>
+      </span>
+      {chosenAction ? (
+        <Dropdown
+          aria-label="Arme ou action"
+          forme="pastille"
+          className="min-w-0 max-w-[11rem]"
+          value={optionKey(chosenAction)}
+          options={optionsAction}
+          onChange={(v) => setOverrideActionId(v)}
+        />
+      ) : (
+        detailType && <span className="min-w-0 truncate text-xs text-ink-soft max-md:hidden">{detailType}</span>
+      )}
+      {montrerCible && (
+        <Dropdown
+          aria-label="Cible de l'action"
+          forme={cibleAChoisir ? "pastille-accent" : "pastille"}
+          className="min-w-0 max-w-[11rem]"
+          value={chosenTargetId ?? ""}
+          options={optionsCible}
+          onChange={(v) => setOverrideTargetId(v)}
+        />
+      )}
+      {corrected && <span className="shrink-0 text-xs text-ink-muted max-md:hidden">corrigé</span>}
+      {tradeReading?.kind === "no_price_list" && campaignId !== null && (
+        <button
+          type="button"
+          className={`${BTN_PETIT} shrink-0`}
+          onClick={() => void tirerCarte()}
+          disabled={busy || drawingCarte}
+          title="Ce lieu n'a pas encore de carte : rien à acheter au prix de la table. La tirer l'écrit sur sa page."
+        >
+          {drawingCarte ? "…" : "Tirer la carte du lieu"}
+        </button>
+      )}
+    </span>
+  );
+
+  // La dernière rangée : l'erreur, puis l'attente, remplacent l'état de l'IA
+  // au lieu de s'y ajouter. Le modèle reste au bout dans les trois cas.
+  const etat =
+    error !== null ? (
+      <span className="flex min-w-0 items-center gap-2 text-danger">
+        <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full bg-danger" />
+        <span className="min-w-0 truncate" title={error}>
+          {error}
+        </span>
+        <button type="button" className={`${BTN_PETIT} shrink-0`} onClick={() => retry()} disabled={busy}>
+          Réessayer
+        </button>
+      </span>
+    ) : busy ? (
+      <span className="flex min-w-0 items-center gap-1.5 text-ink-muted">
+        <span aria-hidden="true" className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-ink-soft" />
+        <span className="min-w-0 truncate">Le récit s&apos;écrit…</span>
+      </span>
+    ) : (
+      etatIa
+    );
 
   return (
-    <div className="flex flex-col gap-4">
-      <section className="flex flex-col gap-3 rounded-lg border border-edge bg-panel p-6">
-        <label className="flex flex-col gap-1">
-          <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">{label}</span>
-          <textarea
-            ref={textareaRef}
-            value={text}
-            onChange={(e) => handleChange(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey && !busy) {
-                e.preventDefault();
-                submit();
-              }
-              // Tab, champ vide : la proposition grisée devient le texte, comme une
-              // complétion. Champ rempli, ou jet demandé (son indication n'est pas une
-              // action à jouer) : Tab garde son rôle, passer au contrôle suivant.
-              if (e.key === "Tab" && !e.shiftKey && !pending && text === "") {
-                e.preventDefault();
-                handleChange(placeholder);
-              }
-            }}
-            placeholder={placeholder}
-            maxLength={pending ? (pending.die_max >= 100 ? 3 : 2) : 500}
-            rows={1}
-            className={`resize-none overflow-y-auto rounded-md border bg-transparent px-2 py-1.5 text-sm text-ink outline-none ${
-              pending ? "border-accent" : "border-edge"
-            }`}
-          />
-        </label>
+    // `px-4 py-3` et non le `p-6` des panneaux (charte §3) : cette barre reste
+    // ancrée sous le fil, chaque pixel qu'elle prend lui est retiré.
+    <section className="flex flex-col gap-2 rounded-lg border border-edge bg-panel px-4 py-3">
+      <div className="flex h-6 min-w-0 items-center justify-between gap-3">
+        {/* Sur téléphone, dès qu'on écrit, le titre laisse sa place aux pastilles :
+            le champ porte le même nom pour un lecteur d'écran (`aria-label`). */}
+        <span
+          className={`shrink-0 text-xs font-semibold uppercase tracking-wide ${pending ? "text-accent" : "text-ink-muted"} ${!pending && !vide ? "max-md:hidden" : ""}`}
+        >
+          {label}
+        </span>
+        {enTete}
+      </div>
 
-        {pending && (
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-wrap items-center gap-2 text-xs text-ink-muted">
-              <span>
-                modificateur {pending.modifier >= 0 ? "+" : "−"}
-                {Math.abs(pending.modifier)}
-              </span>
-              {pending.dc !== null && (
-                <span>
-                  · {pending.kind === "weapon_attack" ? "CA" : "DD"} {pending.dc}
-                </span>
-              )}
-              {pending.advantage !== "normal" && <span>· {ADVANTAGE_LABELS[pending.advantage]}</span>}
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <button type="button" className={BTN_PRIMARY} onClick={() => void encash()} disabled={busy || text.trim() === ""}>
-                {busy ? "…" : "Annoncer"}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {!pending &&
-          (text.trim().length === 0 ? (
-            <p className="text-sm text-ink-muted">
-              Écris ton action. Le moteur dit ce qu&apos;il a compris avant de lancer quoi que ce soit.
-            </p>
-          ) : trade ? (
-            <div className="flex flex-col gap-3 border-t border-edge pt-3">
-              <div className="flex flex-wrap items-center gap-2 text-sm text-ink">
-                <span className={CHIP}>{TRADE_LABELS[trade.direction].chip}</span>
-                <span className="font-medium">{tradeSentence(trade)}</span>
-              </div>
-              {tradeShortCp > 0 && (
-                <p className="text-xs text-ink-soft">
-                  {data.trade.purseCp === 0 ? "Ta bourse est vide." : `Tu as ${formatCpFr(data.trade.purseCp)} sur ${formatCpFr(trade.priceCp ?? 0)}.`} Le tour part quand
-                  même : rien ne sera payé, et {trade.target ? trade.target.label : "la personne en face"} verra qu&apos;il manque {formatCpFr(tradeShortCp)}.
-                </p>
-              )}
-              {tradeBlocked && (
-                <p className="text-xs text-ink-soft">
-                  Cet objet n&apos;a pas de prix connu : il ne se vend pas au prix de la table. Tu peux le donner, ou jouer la vente en action libre.
-                </p>
-              )}
-              <div className="flex flex-wrap items-center gap-2">
-                <button type="button" className={BTN_PRIMARY} onClick={() => void play()} disabled={busy || tradeBlocked}>
-                  {busy && lastAttempt === "submit" ? "…" : TRADE_LABELS[trade.direction].button}
-                </button>
-                {canPutOnTab && (
-                  <button type="button" className={BTN_SECONDARY} onClick={() => void play(true)} disabled={busy}>
-                    Mettre sur l&apos;ardoise
-                  </button>
-                )}
-                <button type="button" className={BTN_SECONDARY} onClick={() => changeText("")} disabled={busy}>
-                  Annuler
-                </button>
-                <button type="button" className={BTN_SECONDARY} onClick={() => setTradeDismissed(true)} disabled={busy}>
-                  ce n&apos;est pas ça
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-3 border-t border-edge pt-3">
-              {chosenAction ? (
-                <div className="flex flex-wrap items-center gap-2 text-sm text-ink">
-                  <span className={CHIP}>{KIND_LABELS[chosenAction.kind]}</span>
-                  <span className="font-medium">{chosenAction.label}</span>
-                  {chosenTarget && (
-                    <>
-                      <span className="text-ink-muted">·</span>
-                      <span>
-                        cible : <span className="font-medium">{chosenTarget.label}</span>
-                        {chosenTarget.ac !== null && <span className="text-ink-muted"> (CA {chosenTarget.ac})</span>}
-                      </span>
-                    </>
-                  )}
-                </div>
-              ) : (
-                <div className="flex flex-col gap-1 text-sm text-ink">
-                  <span className={CHIP}>Action libre</span>
-                  <span className="text-ink-soft">
-                    {proposal.kind === "free" && proposal.reason === "aucune_action_disponible"
-                      ? "Le verbe est compris, mais cette fiche n'a rien pour le faire — aucun jet ne sera lancé."
-                      : "Aucune mécanique reconnue — ce tour partira sans jet."}
-                  </span>
-                  {tradeReading?.kind === "no_price_list" && campaignId !== null && (
-                    <span className="flex flex-wrap items-center gap-2 text-xs text-ink-muted">
-                      Ce lieu n&apos;a pas encore de carte : rien à acheter au prix de la table.
-                      <button type="button" className={BTN_SECONDARY} onClick={() => void tirerCarte()} disabled={busy || drawingCarte}>
-                        {drawingCarte ? "…" : "Tirer la carte du lieu"}
-                      </button>
-                    </span>
-                  )}
-                </div>
-              )}
-
-              <div className="flex flex-wrap items-center gap-2">
-                <button type="button" className={isQuestion ? BTN_SECONDARY : BTN_PRIMARY} onClick={() => void play()} disabled={busy}>
-                  {busy && lastAttempt === "submit" ? "…" : "Jouer"}
-                </button>
-                <button
-                  type="button"
-                  className={isQuestion ? BTN_PRIMARY : BTN_SECONDARY}
-                  onClick={() => void askMj()}
-                  disabled={busy || !canAskMj}
-                  title={canAskMj ? undefined : "Sans campagne, il n'y a pas de MJ à qui demander."}
-                >
-                  {busy && lastAttempt === "mj" ? "…" : "MJ"}
-                </button>
-                <button type="button" className={BTN_SECONDARY} onClick={() => setCorrecting((v) => !v)} disabled={busy}>
-                  ce n&apos;est pas ça
-                </button>
-                {corrected && <span className="text-xs text-ink-muted">corrigé</span>}
-              </div>
-              {isQuestion && <p className="text-xs text-ink-muted">Ça ressemble à une question — MJ ne fait pas avancer le temps.</p>}
-
-              {correcting && (
-                <div className="flex flex-col gap-2 border-t border-edge pt-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Dropdown
-                      aria-label="Action à résoudre"
-                      size="md"
-                      className="w-64"
-                      value={chosenAction ? optionKey(chosenAction) : ""}
-                      options={[
-                        { value: "", label: "Action libre — aucun jet" },
-                        ...data.catalog.actions.map((a) => ({ value: optionKey(a), label: actionOptionLabel(a) })),
-                      ]}
-                      onChange={(v) => setOverrideActionId(v)}
-                    />
-                    <Dropdown
-                      aria-label="Cible de l'action"
-                      size="md"
-                      className="w-56"
-                      value={chosenTargetId ?? ""}
-                      options={[
-                        { value: "", label: "Aucune cible" },
-                        ...data.targetDetails.map((t) => ({
-                          value: t.id,
-                          label: t.ac === null ? t.label : `${t.label} — CA ${t.ac}`,
-                        })),
-                      ]}
-                      onChange={(v) => setOverrideTargetId(v)}
-                    />
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 text-xs">
-                    <span className="text-ink-muted">Jet :</span>
-                    {(["disadvantage", "normal", "advantage"] as AdvantageState[]).map((a) => (
-                      <button
-                        key={a}
-                        type="button"
-                        onClick={() => setAdvantage(a)}
-                        className={`rounded-full border px-3 py-1 transition-colors ${
-                          advantage === a ? "border-accent text-accent" : "border-edge text-ink-muted hover:bg-panel-raised"
-                        }`}
-                      >
-                        {ADVANTAGE_LABELS[a]}
-                      </button>
-                    ))}
-                    {needsDc && (
-                      <label className="flex items-center gap-1">
-                        <span className="text-ink-muted">DD</span>
-                        <input
-                          value={dc}
-                          onChange={(e) => setDc(e.target.value.replace(/[^0-9]/g, ""))}
-                          inputMode="numeric"
-                          maxLength={2}
-                          placeholder="—"
-                          className="w-12 rounded-md border border-edge bg-transparent px-2 py-1 text-xs text-ink outline-none"
-                        />
-                      </label>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-
-        {error !== null && (
-          <div className="flex flex-wrap items-center gap-3 rounded-md border border-edge bg-panel-sunken p-3 text-sm text-danger">
-            <span>{error}</span>
-            <button type="button" className={BTN_SECONDARY} onClick={() => retry()} disabled={busy}>
-              Réessayer
+      <div className="flex min-w-0 items-end gap-1.5">
+        <textarea
+          ref={textareaRef}
+          aria-label={label}
+          value={text}
+          onChange={(e) => handleChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey && !busy) {
+              e.preventDefault();
+              submit();
+            }
+            // Tab, champ vide : la proposition grisée devient le texte, comme une
+            // complétion. Champ rempli, ou jet demandé (son indication n'est pas une
+            // action à jouer) : Tab garde son rôle, passer au contrôle suivant.
+            if (e.key === "Tab" && !e.shiftKey && !pending && text === "") {
+              e.preventDefault();
+              handleChange(placeholder);
+            }
+          }}
+          placeholder={placeholder}
+          maxLength={pending ? (pending.die_max >= 100 ? 3 : 2) : 500}
+          rows={1}
+          className={`min-w-0 flex-1 resize-none overflow-y-auto rounded-md border bg-transparent px-3 py-2 text-sm text-ink outline-none ${
+            pending ? "border-accent" : "border-edge"
+          }`}
+        />
+        {pending ? (
+          <>
+            <button type="button" className={BTN_ICONE} onClick={() => ouvrirOutil(pending)} disabled={busy} aria-label="Ouvrir l'outil de dés" title="Ouvrir l'outil de dés">
+              <DieIcon sides={20} className="h-5 w-5" />
             </button>
-          </div>
+            <button type="button" className={BTN_PRIMARY} onClick={() => void encash()} disabled={busy || text.trim() === ""}>
+              {busy ? "…" : "Annoncer"}
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              type="button"
+              className={isQuestion ? BTN_PRIMARY : BTN_SECONDARY}
+              onClick={() => void askMj()}
+              disabled={busy || vide || !canAskMj}
+              title={canAskMj ? "Poser la phrase au MJ, hors du temps de jeu" : "Sans campagne, il n'y a pas de MJ à qui demander."}
+            >
+              {busy && lastAttempt === "mj" ? "…" : "MJ"}
+            </button>
+            {canPutOnTab && (
+              <button type="button" className={BTN_SECONDARY} onClick={() => void play(true)} disabled={busy} title="Consommer sur place, et le devoir : rien n'est payé">
+                Ardoise
+              </button>
+            )}
+            <button type="button" className={isQuestion ? BTN_SECONDARY : BTN_PRIMARY} onClick={() => void play()} disabled={busy || vide || tradeBlocked}>
+              {busy && lastAttempt === "submit" ? "…" : trade ? TRADE_LABELS[trade.direction].button : "Jouer"}
+            </button>
+          </>
         )}
+      </div>
 
-        {pied}
-      </section>
-    </div>
+      <div className="flex h-6 min-w-0 items-center justify-between gap-3 text-xs">
+        {etat}
+        {choixModele}
+      </div>
+    </section>
   );
 }

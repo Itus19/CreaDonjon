@@ -1598,3 +1598,17 @@ scene_states
 `ai_provider_choices` — **le couple qui sert**, une ligne par compte au plus (`user_id` en clé primaire). `provider_id references ai_providers(id) on delete cascade` : retirer un fournisseur emporte le choix qui le désignait. `model` n'a pas de clé étrangère (un tableau ne s'y prête pas) : un modèle retiré de la liste laisse un choix caduc, que `choixEffectif` (`src/core/ai/providerChoice.ts`) corrige à la lecture, avec la même règle pour l'écran et l'appel (premier modèle du même fournisseur ; sans choix valable, premier modèle du fournisseur modifié le plus récemment).
 
 **RLS du choix.** `user_id = auth.uid()` sur les quatre opérations, et en insertion comme en modification, **le fournisseur désigné doit être au compte** (`exists` sur `ai_providers`). Sans ce second test, un compte pourrait désigner le fournisseur d'un autre, et la résolution, qui lit sous l'identité de l'appelant, ne le trouverait pas ; mais la règle ne doit pas reposer sur cette coïncidence.
+
+---
+
+## Attitude perçue (ADR 0111, V3.2-13)
+
+`entity_attitudes` et `attitude_events` sont créées par `20260829120001_psyche_tables.sql` (ADR 0013). La migration `20261125150000_attitude_percue.sql` leur ajoute ce qu'un PNJ **laisse voir**, à côté de ce qu'il ressent :
+
+```sql
+alter table entity_attitudes add column shown_axes jsonb;                                     -- NULL = il montre ce qu'il ressent
+alter table attitude_events  add column shown_deltas jsonb not null default '{}'::jsonb;    -- journal de la façade, rejoué comme deltas
+```
+
+La perception se calcule par `perceptionPercue` (`src/core/psyche/perception.ts`) : la façade l'emporte axe par axe, un axe absent retombe sur le ressenti. Seules des bandes partent vers l'écran ; la valeur ressentie jamais (règle absolue 5).
+

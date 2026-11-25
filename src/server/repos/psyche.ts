@@ -99,6 +99,28 @@ export async function getAttitude(
   return data;
 }
 
+/**
+ * V3.2-14 — Les attitudes de plusieurs sources envers UNE cible (les
+ * présents d'une scène envers le personnage joué), en une seule requête.
+ * Une source sans ligne n'apparaît pas : absence, pas zéro.
+ */
+export async function listAttitudesTowardTarget(
+  supabase: TypedClient,
+  params: { campaignId: string; sourceEntityIds: string[]; targetEntityId: string }
+): Promise<{ source_entity_id: string; axes: Json; shown_axes: Json | null }[]> {
+  if (params.sourceEntityIds.length === 0) return [];
+  // `*` plutôt que la liste des colonnes : tant que la migration 20261125150000 (ADR 0111) n'est pas
+  // appliquée, `shown_axes` n'existe pas et une sélection nommée ferait échouer l'écran solo entier.
+  const { data, error } = await supabase
+    .from("entity_attitudes")
+    .select("*")
+    .eq("campaign_id", params.campaignId)
+    .eq("target_entity_id", params.targetEntityId)
+    .in("source_entity_id", params.sourceEntityIds);
+  if (error) throw new Error(error.message);
+  return data.map((row) => ({ source_entity_id: row.source_entity_id, axes: row.axes, shown_axes: row.shown_axes ?? null }));
+}
+
 /** Cache reconstructible (docs/adr/0013-tables-psyche-pnj.md) : upsert sur (campaign_id, source_entity_id, target_entity_id), jamais un insert qui dupliquerait la paire. */
 export async function upsertAttitude(
   supabase: TypedClient,
