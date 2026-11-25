@@ -45,14 +45,53 @@ function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString("fr-FR", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-type DetailTab = "journal" | "joueurs" | "acces" | "reglages";
+type DetailTab = "personnage" | "journal" | "joueurs" | "acces" | "reglages";
 
-const DETAIL_TAB_LABELS: Record<DetailTab, string> = {
+const DETAIL_TAB_LABELS: Record<Exclude<DetailTab, "personnage">, string> = {
   journal: "Journal",
   joueurs: "Joueurs",
   acces: "Accès",
   reglages: "Réglages",
 };
+
+/**
+ * Le volet de la personne qui joue : son personnage, ses dés et ses titres
+ * (`StatsJoueur`). Un seul composant pour deux places — tout le panneau d'un
+ * monde où l'on est Joueur·euse, et le premier onglet d'un monde solo, où le
+ * propriétaire est aussi la personne qui joue (retour de l'auteur : « le même
+ * encadré que le mode joueur à une table »). En solo, ni séance ni MJ humain :
+ * ces deux lignes ne s'affichent qu'à une table.
+ */
+function VoletJoueur({ world, aUneTable }: { world: HomeWorldCard; aUneTable: boolean }) {
+  const t = useTranslations("accueil");
+  const locale = useLocale();
+  const perso = monPersonnage(world);
+  return (
+    <>
+      <div>
+        <span className="text-xs font-bold uppercase tracking-widest text-ink-muted">{t("monPersonnage")}</span>
+        {perso ? (
+          <p className="text-sm text-ink">
+            {perso.nom}
+            {perso.detail && <span className="text-ink-muted"> — {perso.detail}</span>}
+          </p>
+        ) : (
+          <p className="text-sm text-ink-muted">{t("personnageIntrouvable")}</p>
+        )}
+      </div>
+      {aUneTable && (
+        <div>
+          <span className="text-xs font-bold uppercase tracking-widest text-ink-muted">{t("prochaineSeance")}</span>
+          <p className="text-sm text-ink">
+            {world.nextSession ? formaterSeance(world.nextSession.startsAt, locale) : <span className="text-ink-muted">{t("aucuneSeance")}</span>}
+          </p>
+        </div>
+      )}
+      {aUneTable && world.gmNames.length > 0 && <p className="text-sm text-ink-muted">{t("mjNoms", { noms: world.gmNames.join(", ") })}</p>}
+      <StatsJoueur campaignId={world.campaignId} />
+    </>
+  );
+}
 
 /**
  * Detail du monde selectionne. Cote MJ, ses sections vivent depuis V2.1-24
@@ -71,28 +110,37 @@ const DETAIL_TAB_LABELS: Record<DetailTab, string> = {
  */
 function WorldDetail({ world, currentUserId, canUseSoloMode }: { world: HomeWorldCard; currentUserId: string; canUseSoloMode: boolean }) {
   const t = useTranslations("accueil");
-  const locale = useLocale();
   const isPlayer = world.myRole === "player";
+  // En solo, le rôle `owner` l'emporte (« MJ ») alors que le propriétaire est aussi
+  // la personne qui joue : il garde son classeur, ouvert sur un onglet « Personnage ».
+  const estSolo = world.mode === "solo";
   const [entries, setEntries] = useState<JournalEntry[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [tab, setTab] = useState<DetailTab>("journal");
+  // Un monde solo s'ouvre sur le volet joueur : c'est ce qu'on vient y chercher.
+  const [tab, setTab] = useState<DetailTab>(estSolo ? "personnage" : "journal");
   // « Accès » disparaît quand le monde n'a pas de campagne : `InviteLinkPanel`
   // ne sait inviter que dans une campagne, et un onglet qui ne peut rien
   // montrer vaut moins qu'un onglet absent.
-  const tabs: DetailTab[] = world.campaignId
-    ? ["journal", "joueurs", "acces", "reglages"]
-    : ["journal", "joueurs", "reglages"];
+  const tabs: DetailTab[] = [
+    ...(estSolo ? (["personnage"] as const) : []),
+    "journal",
+    "joueurs",
+    ...(world.campaignId ? (["acces"] as const) : []),
+    "reglages",
+  ];
 
+  // Le journal ne se charge que lorsqu'on ouvre son onglet (docs/QUOTAS.md Q1) :
+  // un monde solo s'ouvre sur « Personnage », inutile de lire un journal qu'on ne regarde pas.
+  const journalVisible = !isPlayer && tab === "journal";
   useEffect(() => {
-    if (isPlayer) return;
+    if (!journalVisible || entries !== null) return;
     fetch(`/api/worlds/${world.slug}/journal/mine`)
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error())))
       .then((body: { entries: JournalEntry[] }) => setEntries(body.entries))
       .catch(() => setLoadError("Impossible de charger le journal."));
-  }, [world.slug, isPlayer]);
+  }, [world.slug, journalVisible, entries]);
 
   const roleLabel = t(cleRole(world));
-  const perso = monPersonnage(world);
   // V2-M7b (Lot M, coquille joueur) : un role Joueur mene desormais a la
   // coquille allegee (Fiche/Notes/Wiki/Regles), jamais directement a la
   // fiche brute — celle-ci gere elle-meme le cas "personnage pas encore
@@ -125,25 +173,7 @@ function WorldDetail({ world, currentUserId, canUseSoloMode }: { world: HomeWorl
           classeur a un onglet est un cadre, pas des onglets. */}
       {isPlayer ? (
         <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto">
-          <div>
-            <span className="text-xs font-bold uppercase tracking-widest text-ink-muted">{t("monPersonnage")}</span>
-            {perso ? (
-              <p className="text-sm text-ink">
-                {perso.nom}
-                {perso.detail && <span className="text-ink-muted"> — {perso.detail}</span>}
-              </p>
-            ) : (
-              <p className="text-sm text-ink-muted">{t("personnageIntrouvable")}</p>
-            )}
-          </div>
-          <div>
-            <span className="text-xs font-bold uppercase tracking-widest text-ink-muted">{t("prochaineSeance")}</span>
-            <p className="text-sm text-ink">
-              {world.nextSession ? formaterSeance(world.nextSession.startsAt, locale) : <span className="text-ink-muted">{t("aucuneSeance")}</span>}
-            </p>
-          </div>
-          {world.gmNames.length > 0 && <p className="text-sm text-ink-muted">{t("mjNoms", { noms: world.gmNames.join(", ") })}</p>}
-          <StatsJoueur campaignId={world.campaignId} />
+          <VoletJoueur world={world} aUneTable />
         </div>
       ) : (
         <div className="flex min-h-0 flex-1 flex-col">
@@ -152,12 +182,18 @@ function WorldDetail({ world, currentUserId, canUseSoloMode }: { world: HomeWorl
             value={tab}
             onChange={setTab}
             aria-label="Sections du monde"
-            items={tabs.map((t) => ({ value: t, label: DETAIL_TAB_LABELS[t] }))}
+            items={tabs.map((v) => ({ value: v, label: v === "personnage" ? t("ongletPersonnage") : DETAIL_TAB_LABELS[v] }))}
           />
 
           {/* Seul le panneau defile : Rejoindre reste toujours visible,
               jamais au fond d'une zone qui defile. */}
           <TabPanel idPrefix="accueil" value={tab} className="mt-2 min-h-0 flex-1 overflow-y-auto rounded-lg border border-edge bg-panel p-3">
+            {tab === "personnage" && (
+              <div className="flex flex-col gap-3">
+                <VoletJoueur world={world} aUneTable={false} />
+              </div>
+            )}
+
             {tab === "journal" && (
               <>
                 {loadError && <p className="text-xs text-danger">{loadError}</p>}
