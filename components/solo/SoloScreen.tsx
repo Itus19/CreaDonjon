@@ -46,6 +46,22 @@ const LIBELLE_ETAT_IA = {
   echec: "iaMuette",
 } as const satisfies Record<"inconnu" | "repond" | RaisonSansNarration, string>;
 
+/**
+ * La couleur du voyant : vert, tout est branché ; orange (l'or de l'accent, pas de
+ * jeton « avertissement » dans la charte), plus de tokens ou trop d'appels ; rouge,
+ * un souci de branchement ; gris, rien n'est encore su.
+ */
+const COULEUR_ETAT_IA = {
+  inconnu: "bg-ink-muted",
+  repond: "bg-success",
+  quota: "bg-accent",
+  limite: "bg-accent",
+  aucun_fournisseur: "bg-danger",
+  cle_refusee: "bg-danger",
+  delai: "bg-danger",
+  echec: "bg-danger",
+} as const satisfies Record<"inconnu" | "repond" | RaisonSansNarration, string>;
+
 function summarizeForAnnounce(item: FilItem): string {
   switch (item.kind) {
     case "narration":
@@ -215,17 +231,6 @@ export default function SoloScreen({
       {/* `bg-bg` : le fil passe DERRIÈRE la barre en défilant, il ne doit
           pas se lire au travers. */}
       <div className="sticky bottom-0 shrink-0 bg-bg pb-1 pt-2">
-        {/* V3.2-3 : l'état du fournisseur, lu du dernier tour joué — vert s'il a raconté,
-            rouge s'il est resté muet (avec sa raison, V3.1-223), éteint tant qu'aucun tour
-            n'a été joué ou qu'aucun fournisseur n'est déclaré. Aucun appel n'est fait pour
-            l'allumer : un sondage coûterait une requête par tic (QUOTAS). */}
-        <p className="mb-1 flex items-center gap-1.5 text-xs text-ink-muted">
-          <span
-            aria-hidden="true"
-            className={`h-1.5 w-1.5 rounded-full ${narrationEtat === "repond" ? "bg-success" : narrationEtat === "inconnu" || narrationEtat === "aucun_fournisseur" ? "bg-ink-muted" : "bg-danger"}`}
-          />
-          {t(LIBELLE_ETAT_IA[narrationEtat])}
-        </p>
         <IntentBar
           worldSlug={worldSlug}
           campaignId={campaignId}
@@ -236,6 +241,16 @@ export default function SoloScreen({
           onActed={apresGeste}
           onEnCours={setTourEnCours}
           onNarration={(raison) => setNarrationEtat(raison ?? "repond")}
+          pied={
+            /* V3.2-3 : l'état du fournisseur, lu du dernier tour joué, avec sa raison (V3.1-223) :
+               vert s'il a raconté, orange si le quota ou la limite est atteint, rouge pour un
+               souci de branchement, gris tant qu'aucun tour n'a été joué. Aucun appel n'est
+               fait pour l'allumer : un sondage coûterait une requête par tic (QUOTAS). */
+            <p className="flex items-center gap-1.5 text-xs text-ink-muted">
+              <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${COULEUR_ETAT_IA[narrationEtat]}`} />
+              {t(LIBELLE_ETAT_IA[narrationEtat])}
+            </p>
+          }
         />
       </div>
       {feuilleConsequences && (
