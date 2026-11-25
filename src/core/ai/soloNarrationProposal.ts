@@ -35,7 +35,8 @@ export function soloNarrationSchema(npcIds: string[], knownEntityIds: string[] =
   const knownEntityIdSet = new Set(knownEntityIds);
   return z
     .object({
-      narration: z.string().min(1).max(1000),
+      /** V3.2-17 — 1 800 caractères : deux paragraphes, pour une activité longue racontée en accéléré. */
+      narration: z.string().min(1).max(1800),
       npc_reaction: z.object({ npc_id: z.string().min(1), text: z.string().min(1).max(400) }).optional(),
       /** V3-C2 — jamais un nom : un ROLE seulement, le generateur tire l'identite. */
       new_character: z.object({ role: z.string().min(1).max(200) }).optional(),
@@ -66,12 +67,16 @@ export function soloNarrationToolSchema(npcIds: string[], knownEntityIds: string
   return {
     type: "object",
     properties: {
-      narration: { type: "string", description: "2 a 4 phrases de narration en francais, a la deuxieme personne (tu) pour le personnage joue, jamais de calcul ni de jet" },
+      narration: {
+        type: "string",
+        description:
+          "La narration en francais, a la deuxieme personne (tu) : deux a trois phrases pour un echange, un a deux paragraphes pour une activite longue ou un lieu nouveau. Jamais de calcul ni de jet",
+      },
       ...(npcIds.length > 0
         ? {
             npc_reaction: {
               type: "object",
-              description: "Un PNJ present reagit a ce tour. Obligatoire quand le joueur lui parle : il lui repond",
+              description: "Optionnel : un PNJ present dit quelque chose qui apporte a la scene. Obligatoire quand le joueur lui pose une question directe ; sinon laisse-le vide si un geste suffit",
               properties: {
                 npc_id: { type: "string", enum: npcIds, description: "Identifiant EXACT d'un PNJ present, jamais invente" },
                 text: { type: "string", description: "Ce que dit le PNJ, au discours direct, avec ses propres mots (une a deux phrases, sans guillemets)" },

@@ -60,3 +60,17 @@ export function npcAddressedBy(playerAction: string, npcs: AddressableNpc[]): st
   }
   return meilleur?.id ?? null;
 }
+
+const VERBES_DE_QUESTION = /\b(demande|demandes|demander|interroge|interroger|questionne|questionner)\b/;
+
+/**
+ * Le joueur attend-il une RÉPONSE parlée ? Une question (point
+ * d'interrogation) ou un verbe qui demande. Seul ce cas justifie d'exiger la
+ * réplique d'un PNJ et de réessayer si elle manque : saluer, accepter, ou
+ * s'engager dans une tâche n'appelle pas forcément de dialogue, et un PNJ qui
+ * parle à chaque tour rend la scène bavarde et plate (retour de jeu du
+ * 25 novembre 2026).
+ */
+export function estQuestionDirecte(playerAction: string): boolean {
+  return playerAction.includes("?") || VERBES_DE_QUESTION.test(normaliser(playerAction));
+}

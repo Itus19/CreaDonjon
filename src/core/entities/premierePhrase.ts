@@ -40,3 +40,34 @@ export function premierePhrase(segments: readonly SegmentLu[], max = 160): strin
   }
   return null;
 }
+
+const PHRASES = /[^.!?…]+(?:[.!?…]+(?=\s|$)|$)/g;
+
+/**
+ * Le premier paragraphe d'un bloc de texte, borné à `max` caractères : la
+ * description d'un lieu que la narration solo reçoit pour pouvoir décrire
+ * quelque chose de vrai. Même contrat que `premierePhrase` : segments déjà
+ * filtrés par l'appelant (règle 5), passages `spoiler` jamais repris.
+ * Trop long, il garde les phrases entières qui tiennent ; une seule phrase
+ * trop longue est coupée à un mot.
+ */
+export function premierParagraphe(segments: readonly SegmentLu[], max = 600): string | null {
+  for (const segment of segments) {
+    if (segment.blockType !== "paragraph") continue;
+    const texte = texteDuParagraphe(segment.content);
+    if (texte === "") continue;
+    if (texte.length <= max) return texte;
+    let garde = "";
+    for (const phrase of texte.match(PHRASES) ?? []) {
+      const suivant = `${garde}${phrase}`;
+      if (suivant.trim().length > max) break;
+      garde = suivant;
+    }
+    if (garde.trim() !== "") return garde.trim();
+    const coupe = texte.slice(0, max);
+    const dernierEspace = coupe.lastIndexOf(" ");
+    return `${(dernierEspace > 0 ? coupe.slice(0, dernierEspace) : coupe).trimEnd()}…`;
+  }
+  return null;
+}
+

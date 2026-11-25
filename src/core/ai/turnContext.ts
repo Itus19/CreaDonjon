@@ -103,6 +103,26 @@ export interface TurnContextInput {
   priceList?: string[];
   /** V3.2-11 — l'ardoise du lieu (« « Bière », 4 pc, due à Mabelle ») : libellés et noms du monde, ENCADRÉS. */
   tab?: string[];
+  /**
+   * Le premier paragraphe visible de la page du lieu (`premierParagraphe`,
+   * déjà filtré pour le joueur). Sans lui, le modèle ne peut rien décrire de
+   * vrai et reste dans le vague. Contenu du monde : encadré.
+   */
+  locationDescription: string | null;
+  /** La météo déjà tirée (V3-C6), jamais inventée ; `null` si aucun tirage. */
+  weather: string | null;
+  /**
+   * Les dernières actions du joueur AVANT ce tour, de la plus ancienne à la
+   * plus récente : le fil de la scène, pour que le modèle sache où elle va.
+   * Texte du joueur, comme `playerAction` : jamais encadré.
+   */
+  recentPlayerActions: string[];
+  /**
+   * Vrai quand le joueur pose une question (`estQuestionDirecte`) : la
+   * réplique du PNJ désigné est alors due. Sinon il peut se taire, faire un
+   * geste, et la scène avance sans dialogue forcé.
+   */
+  addressedIsQuestion: boolean;
 }
 
 /** Exportes : V3-D4 (`gmQuestionContext.ts`) en est le second consommateur — meme lieu, memes PNJ, memes quetes, pour une question hors du temps de jeu plutot qu'une narration de tour. */
@@ -143,10 +163,12 @@ export function questLine(quest: TurnContextQuest): string {
  * derrière `AiProvider` (`src/server/ai/soloNarration.ts`, V3-B2).
  */
 export function buildTurnContext(input: TurnContextInput): string {
-  const locationText = `${input.locationName} — jour ${input.time.day}, ${String(input.time.hour).padStart(2, "0")}h${String(input.time.minute).padStart(2, "0")} — ${LIGHTING_LABELS[input.lighting]}`;
+  const locationText = `${input.locationName} — jour ${input.time.day}, ${String(input.time.hour).padStart(2, "0")}h${String(input.time.minute).padStart(2, "0")} — ${LIGHTING_LABELS[input.lighting]}${input.weather ? ` — ${input.weather}` : ""}`;
+  const addressed = input.addressedNpcId && input.npcs.some((n) => n.id === input.addressedNpcId) ? input.addressedNpcId : null;
 
   const parts: (string | null)[] = [
     fenceUntrustedData("lieu", locationText),
+    input.locationDescription ? fenceUntrustedData("description-du-lieu", input.locationDescription) : null,
     input.player
       ? fenceUntrustedData("personnage-joue", `${input.player.name}${input.player.pronouns ? ` (pronoms : ${input.player.pronouns})` : ""}`)
       : null,
@@ -166,13 +188,19 @@ export function buildTurnContext(input: TurnContextInput): string {
     input.recentNarrations.length > 0
       ? `${fenceUntrustedData("dernieres-narrations", input.recentNarrations.map((n, i) => `${i + 1}. ${n}`).join("\n"))}\n\nConsigne : ne répète pas ces phrases ni leurs formulations dans ta nouvelle narration.`
       : null,
+    input.recentPlayerActions.length > 0
+      ? `Les actions précédentes du joueur dans cette scène, de la plus ancienne à la plus récente :\n${input.recentPlayerActions.map((a) => `- ${a}`).join("\n")}`
+      : null,
     `Faits établis de ce tour :\n${input.facts.length > 0 ? input.facts.map((f) => `- ${f}`).join("\n") : "(aucun)"}`,
     input.changes.length > 0 ? `Changements :\n${input.changes.map((c) => `- ${c}`).join("\n")}` : null,
     `Action du joueur : ${input.playerAction}`,
     // L'id, jamais le nom : un nom est du contenu du monde, il reste dans sa
     // balise ; cette ligne-ci est une vraie consigne du système.
-    input.addressedNpcId && input.npcs.some((n) => n.id === input.addressedNpcId)
-      ? `Consigne : le joueur parle au PNJ d'id ${input.addressedNpcId}. Ce PNJ lui répond dans npc_reaction (npc_id = ${input.addressedNpcId}), au discours direct, avec ses propres mots.`
+    addressed && input.addressedIsQuestion
+      ? `Consigne : le joueur parle au PNJ d'id ${addressed} et lui pose une question. Ce PNJ lui répond dans npc_reaction (npc_id = ${addressed}), au discours direct, avec ses propres mots.`
+      : null,
+    addressed && !input.addressedIsQuestion
+      ? `Consigne : le joueur parle au PNJ d'id ${addressed}. Fais-le parler (npc_reaction, npc_id = ${addressed}) seulement si sa parole apporte quelque chose ; sinon un geste ou un silence suffit, et la scène avance.`
       : null,
   ];
 

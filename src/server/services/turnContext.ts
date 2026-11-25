@@ -1,5 +1,5 @@
 import "server-only";
-import { listBlocksByTypeForEntities } from "@/src/server/repos/blocks";
+import { listBlocksByTypeForEntities, listBlocksByTypesForEntities } from "@/src/server/repos/blocks";
 import { pronounGuidance, zPronouns } from "@/src/core/rules/pronouns";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
@@ -19,7 +19,12 @@ import type { SceneState } from "@/src/core/rules/scene";
 import { CURRENCY_LABELS_FR, formatCpFr, formatTableEntryPrice } from "@/src/i18n/fr";
 import { listBlocksForEntity } from "@/src/server/repos/blocks";
 import { listEntitiesByIds } from "@/src/server/repos/entities";
-import { listRecentEventsByKind } from "@/src/server/repos/sessions";
+import { listRecentEventsByKind, listRecentEventsByKinds } from "@/src/server/repos/sessions";
+import { filtrerBlocsVisibles } from "@/src/server/services/blocks";
+import { filterSegments } from "@/src/core/visibility";
+import { zTextBlockData } from "@/src/core/schemas/blocks/text";
+import { premierParagraphe } from "@/src/core/entities/premierePhrase";
+import { estQuestionDirecte } from "@/src/core/ai/npcAddressed";
 import { undoneEventIds } from "@/src/core/rules/turnUndo";
 import { getCurrentAttitude } from "@/src/server/services/psyche";
 import { listActiveQuestsForWorld } from "@/src/server/services/quests";
@@ -140,20 +145,58 @@ async function resolveQuests(supabase: TypedClient, worldId: string, viewer: Vie
   }));
 }
 
-/** V3-B4 — Les textes des dernières narrations de CETTE session, plus récente en tête ; une ligne dont `payload.text` ne serait pas une chaîne (jamais écrit par ce code, mais un payload reste une donnée non typée en base) est ignorée plutôt que de casser tout le contexte pour ça. */
-async function resolveRecentNarrations(supabase: TypedClient, sessionId: string): Promise<string[]> {
-  // V3-F2 : une narration d'un tour annulé ne revient pas dans le contexte. Les annulations sont des
-  // événements `system` ; on lit les plus récentes avec les narrations (une lecture de plus par tour).
+/** Combien d'actions passées du joueur la narration reçoit : assez pour suivre le fil d'une scène, peu pour ne pas noyer le tour présent. */
+export const RECENT_PLAYER_ACTIONS_KEPT = 3;
+
+/**
+ * Les dernières narrations (plus récente en tête, comme avant) et les
+ * dernières actions du joueur AVANT ce tour (plus ancienne en tête), en une
+ * seule lecture de plus que l'existant : les deux sortes viennent de la même
+ * requête, les annulations (V3-F2) de la seconde. Le tour en cours est déjà
+ * journalisé quand la narration part : `fromEventId` l'écarte, et tout ce
+ * qui le suit.
+ */
+async function resolveRecentHistory(
+  supabase: TypedClient,
+  sessionId: string,
+  fromEventId: string | null
+): Promise<{ narrations: string[]; playerActions: string[] }> {
   const [events, annulations] = await Promise.all([
-    listRecentEventsByKind(supabase, sessionId, "narration", RECENT_NARRATIONS_KEPT * 3),
+    listRecentEventsByKinds(supabase, sessionId, ["narration", "player_action", "roll"], RECENT_NARRATIONS_KEPT * 3 + RECENT_PLAYER_ACTIONS_KEPT * 3),
     listRecentEventsByKind(supabase, sessionId, "system", 50),
   ]);
   const defaits = undoneEventIds(annulations.map((e) => ({ id: e.id, seq: e.seq, kind: e.kind, actor: e.actor, payload: (e.payload as Record<string, unknown> | null) ?? {} })));
-  return events
-    .filter((e) => !defaits.has(e.id))
+  const vivants = events.filter((e) => !defaits.has(e.id));
+  const narrations = vivants
+    .filter((e) => e.kind === "narration")
     .slice(0, RECENT_NARRATIONS_KEPT)
     .map((e) => (e.payload as { text?: unknown } | null)?.text)
     .filter((text): text is string => typeof text === "string");
+  const courant = fromEventId ? vivants.find((e) => e.id === fromEventId) : undefined;
+  const playerActions = vivants
+    .filter((e) => (e.kind === "player_action" || e.kind === "roll") && e.id !== fromEventId && (courant === undefined || e.seq < courant.seq))
+    .slice(0, RECENT_PLAYER_ACTIONS_KEPT)
+    .map((e) => (e.payload as { intent?: { text?: unknown } } | null)?.intent?.text)
+    .filter((text): text is string => typeof text === "string" && text.trim() !== "")
+    .reverse();
+  return { narrations, playerActions };
+}
+
+/**
+ * Le premier paragraphe visible de la page du lieu : ses blocs `text`,
+ * filtrés pour CE viewer (règle 5), puis leurs segments. Une lecture de plus
+ * par tour narré.
+ */
+async function resolveLocationDescription(supabase: TypedClient, locationId: string, viewer: Viewer): Promise<string | null> {
+  const blocs = filtrerBlocsVisibles(await listBlocksByTypesForEntities(supabase, [locationId], ["text"]), viewer).sort((a, b) => a.display_order - b.display_order);
+  for (const bloc of blocs) {
+    const parsed = zTextBlockData.safeParse(bloc.data);
+    if (!parsed.success) continue;
+    const aware = parsed.data.segments.map((segment) => ({ ...segment, visibility: { ...segment.visibility, createdBy: null } }));
+    const paragraphe = premierParagraphe(filterSegments(aware, viewer));
+    if (paragraphe) return paragraphe;
+  }
+  return null;
 }
 
 export interface SoloTurnContext {
@@ -165,8 +208,10 @@ export interface SoloTurnContext {
   knownEntityIds: string[];
   /** V3-B4 — Rendues telles quelles (pas seulement injectees dans `text`) pour que l'appelant (`narrateSoloTurn`) puisse mesurer la similarite d'un essai SANS relire la session une seconde fois. */
   recentNarrations: string[];
-  /** Le PNJ à qui le joueur parle, s'il est clairement désigné : `narrateSoloTurn` exige alors sa réplique. */
+  /** Le PNJ à qui le joueur parle, s'il est clairement désigné. */
   addressedNpcId: string | null;
+  /** Vrai si le joueur pose une question : `narrateSoloTurn` n'exige la réplique du PNJ désigné (et ne réessaie) que dans ce cas. */
+  addressedIsQuestion: boolean;
   /** Les présents tels que le modèle les a vus (nom déjà résolu par `known_as`, bande d'attitude) : la réplique retenue garde le nom et l'attitude de son PNJ pour le fil. */
   npcs: TurnContextNpc[];
 }
@@ -223,6 +268,8 @@ export async function buildSoloTurnContext(
     /** V3-B4 — sert à relire les dernières narrations de CETTE session, pour la consigne de ne pas les répéter. */
     sessionId: string;
     playerAction: string;
+    /** L'événement que ce tour raconte, déjà journalisé : écarté des « actions précédentes ». */
+    fromEventId?: string;
     facts: string[];
     changes: string[];
     hints: string[];
@@ -230,18 +277,21 @@ export async function buildSoloTurnContext(
 ): Promise<SoloTurnContext> {
   const scene = await getSceneState(supabase, params.campaignId);
 
-  const [locationEntity, realNpcs, quests, recentNarrations, player, money] = await Promise.all([
+  const [locationEntity, realNpcs, quests, history, player, money, locationDescription] = await Promise.all([
     scene ? listEntitiesByIds(supabase, [scene.locationId]).then((rows) => rows[0] ?? null) : Promise.resolve(null),
     scene
       ? resolvePresentNpcs(supabase, { worldId: params.worldId, campaignId: params.campaignId, playerEntityId: params.playerEntityId, present: scene.present })
       : Promise.resolve([]),
     resolveQuests(supabase, params.worldId, params.viewer),
-    resolveRecentNarrations(supabase, params.sessionId),
+    resolveRecentHistory(supabase, params.sessionId, params.fromEventId ?? null),
     resolvePlayer(supabase, params.playerEntityId),
     resolveMoney(supabase, { playerEntityId: params.playerEntityId, scene }),
+    scene ? resolveLocationDescription(supabase, scene.locationId, params.viewer) : Promise.resolve(null),
   ]);
+  const recentNarrations = history.narrations;
   const npcs = [...realNpcs, ...sketchesAsNpcs(scene?.sketches ?? [])];
   const addressedNpcId = npcAddressedBy(params.playerAction, npcs);
+  const addressedIsQuestion = estQuestionDirecte(params.playerAction);
 
   const input: TurnContextInput = {
     locationName: locationEntity?.name ?? "Hors scène",
@@ -257,10 +307,14 @@ export async function buildSoloTurnContext(
     playerAction: params.playerAction,
     recentNarrations,
     ...money,
+    locationDescription,
+    weather: scene?.weather ?? null,
+    recentPlayerActions: history.playerActions,
+    addressedIsQuestion,
   };
 
   const knownEntityIds = [...(locationEntity ? [locationEntity.id] : []), ...realNpcs.map((n) => n.id)];
-  return { text: buildTurnContext(input), npcIds: npcs.map((n) => n.id), knownEntityIds, recentNarrations, addressedNpcId, npcs };
+  return { text: buildTurnContext(input), npcIds: npcs.map((n) => n.id), knownEntityIds, recentNarrations, addressedNpcId, addressedIsQuestion, npcs };
 }
 
 /**
@@ -290,7 +344,7 @@ export async function buildSoloGmQuestionContext(
       ? resolvePresentNpcs(supabase, { worldId: params.worldId, campaignId: params.campaignId, playerEntityId: params.playerEntityId, present: scene.present })
       : Promise.resolve([]),
     resolveQuests(supabase, params.worldId, params.viewer),
-    resolveRecentNarrations(supabase, params.sessionId),
+    resolveRecentHistory(supabase, params.sessionId, null).then((h) => h.narrations),
   ]);
   const npcs = [...realNpcs, ...sketchesAsNpcs(scene?.sketches ?? [])];
 

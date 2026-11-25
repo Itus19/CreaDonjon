@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { npcAddressedBy } from "./npcAddressed";
+import { estQuestionDirecte, npcAddressedBy } from "./npcAddressed";
 
 const npcs = [
   { id: "edran", name: "Edran Vauclair" },
@@ -44,3 +44,23 @@ describe("npcAddressedBy — à qui le joueur parle, décidé par le code", () =
     expect(npcAddressedBy("je demande « bonsoir ? »", [])).toBeNull();
   });
 });
+
+describe("estQuestionDirecte — quand une réplique est due", () => {
+  it("un point d'interrogation, ou un verbe qui demande, appelle une réponse", () => {
+    expect(estQuestionDirecte("Je lui demane combien de temps ?")).toBe(true);
+    expect(estQuestionDirecte("Je lui demande combien de temps de travail cela correspond")).toBe(true);
+    expect(estQuestionDirecte("j'interroge le sergent sur la route")).toBe(true);
+    expect(estQuestionDirecte("Je questionne Mabelle")).toBe(true);
+  });
+
+  it("une affirmation, un engagement, une salutation : aucune réplique n'est due", () => {
+    expect(estQuestionDirecte("Ok alors je fais ces trois heures de travail")).toBe(false);
+    expect(estQuestionDirecte("« Oui, j'aime mériter mon logement ! » et je l'aide à nettoyer")).toBe(false);
+    expect(estQuestionDirecte("je salue Mabelle")).toBe(false);
+  });
+
+  it("« demande » au sens d'exiger compte aussi : la personne attend une réaction parlée", () => {
+    expect(estQuestionDirecte("je demande une chambre")).toBe(true);
+  });
+});
+

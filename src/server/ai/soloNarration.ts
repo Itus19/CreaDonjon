@@ -29,30 +29,49 @@ const TOOL_NAME = "narrate_turn";
 const SIMILARITY_THRESHOLD = 0.6;
 
 /**
- * Narration solo — la personne qui joue lit le récit de SON personnage : on
- * la tutoie (« Tu pousses la porte »), comme un MJ à sa table. Son nom est
- * dans la balise `personnage-joue` du contexte ; sans la consigne du « tu »,
- * un modèle le lisait dans les faits et le racontait comme un PNJ de plus.
+ * Narration solo — la consigne d'un MJ, pas d'un greffier.
  *
- * Quand le joueur parle à quelqu'un, ce quelqu'un répond : une réplique au
- * discours direct dans `npc_reaction`, jamais une description de geste.
+ * La première version demandait « deux à quatre phrases qui intègrent les
+ * faits ». Pour une action libre, le seul fait est le texte du joueur : le
+ * modèle le reformulait, faisait parler le PNJ à chaque tour et citait les
+ * présents « qui restent immobiles ». Rien n'avançait (retour de jeu du
+ * 25 novembre 2026, docs/backlog-v3.2/05-narration.md, V3.2-17).
+ *
+ * Celle-ci garde les garde-fous (les faits du moteur ne se recalculent pas,
+ * le « tu », jamais un PNJ inventé) et ajoute ce qui manquait : un but
+ * (chaque tour change quelque chose), un rythme (bref pour un échange,
+ * accéléré pour une activité longue, descriptif pour un lieu nouveau), et
+ * quand un PNJ parle (seulement si sa parole apporte quelque chose).
  */
-const SYSTEM_PROMPT =
-  "Tu es le narrateur d'une session de jeu de role solo, comme un MJ a sa table. Le moteur du jeu calcule deja tous les " +
-  "resultats mecaniques (jets, degats, changements d'etat) : ils te sont donnes comme des FAITS deja " +
-  "etablis, jamais a recalculer, jamais a re-narrer differemment. Ta tache : raconter ce tour en " +
-  "deux a quatre phrases, en francais, en integrant les faits fournis sans les contredire. " +
-  "Raconte a la DEUXIEME personne du singulier : tu t'adresses directement a la personne qui joue, dont le personnage est " +
-  "donne dans personnage-joue (« Tu t'approches du comptoir », jamais « Il s'approche » ni son nom a la troisieme personne). " +
-  "L'action du joueur vient d'etre faite par SON personnage : ne l'attribue jamais a un PNJ, ne la repete pas mot pour mot. " +
-  "Quand le joueur parle a un PNJ present, ce PNJ lui REPOND : mets sa reponse dans npc_reaction, au discours direct, " +
-  "avec ses propres mots (une a deux phrases, sans guillemets, sans narration autour), et nomme dans ta narration qui prend la parole. " +
-  "Si un PNJ present reagit, utilise UNIQUEMENT un identifiant de PNJ fourni dans le contexte — n'en invente " +
-  "jamais. Si un personnage incident, absent de cette liste, doit reagir MAINTENANT, ne l'invente pas : " +
-  "demande-le via new_character avec seulement son role (jamais un nom ni un trait, le moteur les tire). " +
-  "Si un fait meriterait d'etre ajoute a la fiche d'un lieu ou d'un PNJ REELLEMENT present, suggere-le " +
-  "via world_note (un identifiant fourni, jamais invente) — un humain la relira, ne l'ecris jamais comme " +
-  `un fait acquis dans ta narration. Reponds toujours via l'outil ${TOOL_NAME}, une seule fois.`;
+const SYSTEM_PROMPT = [
+  "Tu es le MJ d'une partie de jeu de role solo. Ton travail : faire vivre la scene et faire avancer l'histoire. " +
+    "Le moteur du jeu, lui, decide de tout ce qui se compte (des, degats, heure, argent) : ses faits te sont donnes, tu ne les recalcules jamais et tu ne les contredis jamais.",
+  "",
+  "TU RACONTES",
+  "- A la deuxieme personne du singulier : tu t'adresses a la personne qui joue (« Tu pousses la porte »), jamais « il » ni son nom. Son personnage est dans personnage-joue.",
+  "- Tu ne repetes pas son action : tu racontes ce qu'elle PRODUIT. Ce que son personnage pense, ressent ou decide en plus, c'est a elle de le dire, pas a toi. Ne l'attribue jamais a un PNJ.",
+  "",
+  "CHAQUE TOUR FAIT AVANCER QUELQUE CHOSE",
+  "Termine chaque narration sur une situation qui a change : une information nouvelle, un lieu nouveau, une consequence, un detail qui intrigue, une occasion. " +
+    "Jamais une scene figee ou tout le monde attend. Ne finis pas par « Que fais-tu ? » : l'ecran le demande deja.",
+  "",
+  "LE RYTHME",
+  "- Un echange bref : deux a trois phrases.",
+  "- Une activite longue que le joueur s'engage a faire (travailler, voyager, attendre, dormir, fouiller) : raconte-la en ACCELERE, en un a deux paragraphes. " +
+    "Le lieu, trois details sensoriels precis, le temps qui passe, une petite peripetie ou une rencontre, puis la fin de l'activite.",
+  "- Un lieu ou le personnage arrive pour la premiere fois : decris-le en deux ou trois phrases (lumiere, bruits, odeurs, qui s'y trouve), en t'appuyant sur description-du-lieu quand elle existe.",
+  "",
+  "LES PNJ",
+  "- Un PNJ ne parle que si sa parole apporte quelque chose : repondre a une question directe, refuser, reveler, menacer, proposer. Sinon un geste, un regard ou rien du tout suffit, et npc_reaction reste vide.",
+  "- Quand le joueur pose une question directe a un PNJ, ce PNJ repond dans npc_reaction, au discours direct, avec ses propres mots, et ta narration ne decrit pas qu'il « prend la parole ».",
+  "- Ne cite un PNJ present que s'il fait quelque chose qui compte. Ne decris jamais des PNJ qui « restent immobiles » ou « observent sans bouger ».",
+  "- N'utilise que les identifiants de PNJ fournis, n'en invente jamais. Un personnage incident, absent de la liste, qui doit agir MAINTENANT : demande-le via new_character avec seulement son role (jamais un nom ni un trait, le moteur les tire).",
+  "",
+  "CE QUE TU PROPOSES AU MOTEUR (il valide, il peut refuser)",
+  "- world_note : un fait qui meriterait d'etre ajoute a la fiche d'un lieu ou d'un PNJ REELLEMENT present (un identifiant fourni). Un humain la relira : ne l'ecris jamais comme un fait acquis dans ta narration.",
+  "",
+  `Reponds toujours via l'outil ${TOOL_NAME}, une seule fois.`,
+].join("\n");
 
 export interface SoloNarrationParams {
   worldId: string;
@@ -169,13 +188,14 @@ async function attemptNarration(
  * les deux, un seul événement `narration` s'écrit.
  */
 export async function narrateSoloTurn(supabase: TypedClient, provider: AiProvider, params: SoloNarrationParams): Promise<SoloNarrationOutcome> {
-  const { text: context, npcIds, knownEntityIds, recentNarrations, addressedNpcId, npcs } = await buildSoloTurnContext(supabase, {
+  const { text: context, npcIds, knownEntityIds, recentNarrations, addressedNpcId, addressedIsQuestion, npcs } = await buildSoloTurnContext(supabase, {
     worldId: params.worldId,
     campaignId: params.campaignId,
     playerEntityId: params.playerEntityId,
     viewer: params.viewer,
     sessionId: params.sessionId,
     playerAction: params.playerAction,
+    fromEventId: params.fromEventId,
     facts: params.facts,
     changes: params.changes,
     hints: params.hints,
@@ -208,6 +228,7 @@ export async function narrateSoloTurn(supabase: TypedClient, provider: AiProvide
         viewer: params.viewer,
         sessionId: params.sessionId,
         playerAction: params.playerAction,
+        fromEventId: params.fromEventId,
         facts: params.facts,
         changes: params.changes,
         hints: params.hints,
@@ -218,11 +239,13 @@ export async function narrateSoloTurn(supabase: TypedClient, provider: AiProvide
         chosenNpcs = retry.npcs;
       }
     }
-  } else if (addressedNpcId && first.npcReaction?.npcId !== addressedNpcId) {
-    // Le joueur a parlé à un PNJ désigné par le code (`npcAddressedBy`) et
-    // le modèle ne l'a pas fait répondre : UN second essai, même contexte
-    // (la consigne y est déjà). On garde celui où ce PNJ répond ; sinon le
-    // premier, déjà valide — un tour sans réplique vaut mieux qu'aucun.
+  } else if (addressedNpcId && addressedIsQuestion && first.npcReaction?.npcId !== addressedNpcId) {
+    // Le joueur a posé une QUESTION à un PNJ désigné par le code
+    // (`npcAddressedBy`, `estQuestionDirecte`) et le modèle ne l'a pas fait
+    // répondre : UN second essai, même contexte (la consigne y est déjà). On
+    // garde celui où ce PNJ répond ; sinon le premier, déjà valide. Sans
+    // question, le silence du PNJ est un choix légitime du narrateur : pas
+    // de second essai (V3.2-17).
     const second = await attemptNarration(supabase, provider, context, npcIds, knownEntityIds, params.userId, params.campaignId);
     if (second.ok && second.npcReaction?.npcId === addressedNpcId) chosen = second;
   } else if (recentNarrations.length > 0 && maxSimilarityToRecent(first.narration!, recentNarrations) > SIMILARITY_THRESHOLD) {

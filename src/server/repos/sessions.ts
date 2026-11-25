@@ -98,6 +98,19 @@ export async function listRecentEventsByKind(supabase: TypedClient, sessionId: s
   return data;
 }
 
+/** Comme `listRecentEventsByKind`, pour plusieurs sortes en UNE requête : la narration solo relit ses narrations, les actions du joueur et les annulations d'un coup (docs/QUOTAS.md Q1). */
+export async function listRecentEventsByKinds(supabase: TypedClient, sessionId: string, kinds: string[], limit: number): Promise<SessionEventRow[]> {
+  const { data, error } = await supabase
+    .from("session_events")
+    .select("id, session_id, seq, kind, actor, actor_user_id, payload, created_at")
+    .eq("session_id", sessionId)
+    .in("kind", kinds)
+    .order("seq", { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 export async function getSessionEventById(supabase: TypedClient, id: string): Promise<SessionEventRow | null> {
   const { data, error } = await supabase
     .from("session_events")
