@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ELAPSED_CHOICES } from "../rules/elapsed";
 
 /**
  * V3-B2 (câblage de la narration) — Généralise `spikeSoloProposal.ts` (S2,
@@ -30,17 +31,27 @@ import { z } from "zod";
  * toute `npc_reaction` quand `npcIds` est vide, plutot que de laisser Zod
  * ignorer silencieusement une cle inconnue.
  */
-export function soloNarrationSchema(npcIds: string[], knownEntityIds: string[] = []) {
+export function soloNarrationSchema(npcIds: string[], knownEntityIds: string[] = [], moveTargetIds: string[] = []) {
   const npcIdSet = new Set(npcIds);
   const knownEntityIdSet = new Set(knownEntityIds);
+  const moveTargetIdSet = new Set(moveTargetIds);
   return z
     .object({
-      narration: z.string().min(1).max(1000),
+      /** V3.2-17 — 1 800 caractères : deux paragraphes, pour une activité longue racontée en accéléré. */
+      narration: z.string().min(1).max(1800),
       npc_reaction: z.object({ npc_id: z.string().min(1), text: z.string().min(1).max(400) }).optional(),
       /** V3-C2 — jamais un nom : un ROLE seulement, le generateur tire l'identite. */
       new_character: z.object({ role: z.string().min(1).max(200) }).optional(),
       /** V3-C3 — une suggestion redactionnelle, jamais ecrite directement : elle passe par `ai_proposals`, en attente d'une relecture humaine. */
       world_note: z.object({ entity_id: z.string().min(1), text: z.string().min(1).max(400) }).optional(),
+      /** V3.2-18 — une durée PROPOSÉE dans une liste fermée ; le moteur la borne (`minutesProposees`) et peut la refuser. */
+      elapsed: z.object({ kind: z.enum(ELAPSED_CHOICES), hours: z.number().int().min(1).max(24).optional() }).optional(),
+      /** V3.2-19 — un déplacement PROPOSÉ vers un lieu voisin fourni ; `with` : les PNJ présents qui suivent. Le moteur l'applique comme le panneau de scène. */
+      move_to: z.object({ location_id: z.string().min(1), with: z.array(z.string().min(1)).max(10).optional() }).optional(),
+      /** V3.2-19 — entrer dans une pièce du lieu, connue ou nouvelle ; le moteur contrôle le nom (`validerNouvellePiece`) avant de l'accepter. */
+      enter_room: z.object({ name: z.string().trim().min(1).max(80), description: z.string().trim().max(600).optional() }).optional(),
+      /** V3.2-19 — ressortir de la pièce, dans le lieu lui-même. */
+      leave_room: z.boolean().optional(),
     })
     .strict()
     .superRefine((value, ctx) => {
@@ -49,6 +60,14 @@ export function soloNarrationSchema(npcIds: string[], knownEntityIds: string[] =
           ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["npc_reaction"], message: "aucun PNJ present, aucune reaction possible" });
         } else if (!npcIdSet.has(value.npc_reaction.npc_id)) {
           ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["npc_reaction", "npc_id"], message: "identifiant de PNJ inconnu — jamais invente" });
+        }
+      }
+      if (value.move_to) {
+        if (!moveTargetIdSet.has(value.move_to.location_id)) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["move_to", "location_id"], message: "lieu hors des lieux accessibles — jamais invente" });
+        }
+        for (const id of value.move_to.with ?? []) {
+          if (!npcIdSet.has(id)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["move_to", "with"], message: "PNJ absent de la scene — jamais invente" });
         }
       }
       if (value.world_note) {
@@ -62,16 +81,20 @@ export function soloNarrationSchema(npcIds: string[], knownEntityIds: string[] =
 }
 export type SoloNarrationProposal = z.infer<ReturnType<typeof soloNarrationSchema>>;
 
-export function soloNarrationToolSchema(npcIds: string[], knownEntityIds: string[] = []) {
+export function soloNarrationToolSchema(npcIds: string[], knownEntityIds: string[] = [], moveTargetIds: string[] = []) {
   return {
     type: "object",
     properties: {
-      narration: { type: "string", description: "2 a 4 phrases de narration en francais, a la deuxieme personne (tu) pour le personnage joue, jamais de calcul ni de jet" },
+      narration: {
+        type: "string",
+        description:
+          "La narration en francais, a la deuxieme personne (tu) : deux a trois phrases pour un echange, un a deux paragraphes pour une activite longue ou un lieu nouveau. Jamais de calcul ni de jet",
+      },
       ...(npcIds.length > 0
         ? {
             npc_reaction: {
               type: "object",
-              description: "Un PNJ present reagit a ce tour. Obligatoire quand le joueur lui parle : il lui repond",
+              description: "Optionnel : un PNJ present dit quelque chose qui apporte a la scene. Obligatoire quand le joueur lui pose une question directe ; sinon laisse-le vide si un geste suffit",
               properties: {
                 npc_id: { type: "string", enum: npcIds, description: "Identifiant EXACT d'un PNJ present, jamais invente" },
                 text: { type: "string", description: "Ce que dit le PNJ, au discours direct, avec ses propres mots (une a deux phrases, sans guillemets)" },
@@ -103,6 +126,41 @@ export function soloNarrationToolSchema(npcIds: string[], knownEntityIds: string
             },
           }
         : {}),
+      ...(moveTargetIds.length > 0
+        ? {
+            move_to: {
+              type: "object",
+              description:
+                "Optionnel : ta narration emmene le personnage dans un des lieux accessibles (la cuisine, la rue). Le moteur deplace la scene. Les PNJ presents qui le suivent vont dans with.",
+              properties: {
+                location_id: { type: "string", enum: moveTargetIds, description: "Identifiant EXACT d'un lieu accessible, jamais invente" },
+                ...(npcIds.length > 0 ? { with: { type: "array", items: { type: "string", enum: npcIds }, description: "Les PNJ presents qui suivent le personnage" } } : {}),
+              },
+              required: ["location_id"],
+            },
+          }
+        : {}),
+      enter_room: {
+        type: "object",
+        description:
+          "Optionnel : ta narration fait entrer le personnage dans une piece de ce lieu (la cuisine, une chambre, la cave). Reprends le nom exact d'une piece de pieces-du-lieu, ou donne un nom court pour une piece nouvelle avec sa description en deux phrases. Le moteur controle et memorise.",
+        properties: {
+          name: { type: "string", description: "Le nom de la piece, court, sans chiffre (ex: \"la cuisine\")" },
+          description: { type: "string", description: "Seulement pour une piece nouvelle : deux phrases concretes (lumiere, odeurs, ce qui s'y trouve)" },
+        },
+        required: ["name"],
+      },
+      leave_room: { type: "boolean", description: "Optionnel : vrai si le personnage ressort de la piece ou il etait, dans le lieu lui-meme" },
+      elapsed: {
+        type: "object",
+        description:
+          "Optionnel : combien de temps ce tour a dure dans l'histoire, s'il dure plus que quelques instants (une activite longue, une attente, un trajet). Le moteur valide et calcule l'heure. Ne le remplis pas si les changements disent deja combien de temps passe.",
+        properties: {
+          kind: { type: "string", enum: [...ELAPSED_CHOICES], description: "La duree, choisie dans la liste" },
+          hours: { type: "integer", description: "Seulement pour plusieurs_heures : le nombre d'heures, de 2 a 8" },
+        },
+        required: ["kind"],
+      },
     },
     required: ["narration"],
   } as const;

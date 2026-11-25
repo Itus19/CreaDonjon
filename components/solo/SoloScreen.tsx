@@ -188,6 +188,17 @@ export default function SoloScreen({
   /** V3-F2 : un tour de la joueuse figure au fil (le serveur retrouve lui-même lequel annuler). */
   const annulable = campaignId && (filItems ?? []).some((i) => i.kind === "player_action" || i.kind === "roll") ? { campaignId } : null;
 
+  /**
+   * La scène a changé de lieu ou de présents : depuis le panneau de scène, ou
+   * (V3.2-19) parce que la narration a emmené le personnage ailleurs. Tout
+   * l'écran en dépend (bandeau, Monde, présents) : `router.refresh()` est
+   * justifié (docs/CABLAGE.md C5), un seul pour les deux chemins.
+   */
+  function apresChangementDeScene(next: SceneView) {
+    setSceneView(next);
+    router.refresh();
+  }
+
   /** Après un geste de cette colonne : le fil, les conséquences, ET la fiche (PV, demande) sans attendre son prochain tick. */
   function apresGeste() {
     rechargerFiche();
@@ -282,10 +293,7 @@ export default function SoloScreen({
           scene={sceneView}
           locations={locations}
           candidates={candidates}
-          onChanged={(next) => {
-            setSceneView(next);
-            router.refresh();
-          }}
+          onChanged={apresChangementDeScene}
         />
         <div className="mt-4">
           <Fil items={filItems} />
@@ -322,6 +330,7 @@ export default function SoloScreen({
           pending={pending}
           onPendingChange={setPending}
           onActed={apresGeste}
+          onSceneMoved={apresChangementDeScene}
           onEnCours={setTourEnCours}
           onNarration={(raison, detail) => {
             setNarrationEtat(raison ?? "repond");

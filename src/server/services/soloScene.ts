@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
-import { dropSketchesOutsideLocation, emptyScene, enterScene, leaveScene, sceneCalendarDate, type SceneState } from "@/src/core/rules/scene";
+import { dropRoomsOutsideLocation, dropSketchesOutsideLocation, emptyScene, enterScene, leaveScene, sceneCalendarDate, type SceneState } from "@/src/core/rules/scene";
 import { formatGameDate } from "@/src/core/calendar/formatDate";
 import { weekdayNameForDate } from "@/src/core/calendar/weekday";
 import type { CalendarConfigInput } from "@/src/core/schemas/calendar";
@@ -112,6 +112,7 @@ export async function loadSceneView(
     locationName: location?.name ?? "Lieu inconnu",
     locationSlug: location?.slug ?? null,
     nearestCity,
+    roomName: scene.room && scene.room.locationId === scene.locationId ? scene.room.name : null,
     time: scene.time,
     lighting: scene.lighting,
     weather: scene.weather,
@@ -175,6 +176,8 @@ export async function setScene(
   let scene = existing ? { ...existing, locationId: params.locationId } : emptyScene(params.locationId);
   // V3-C2 : une esquisse ne survit qu'a son lieu de tirage — changer de lieu la laisse derriere.
   scene = dropSketchesOutsideLocation(scene, params.locationId);
+  // V3.2-19 : la pièce et ses esquisses ne survivent pas non plus au changement de lieu.
+  scene = dropRoomsOutsideLocation(scene, params.locationId);
 
   const wanted = new Set(params.present);
   for (const current of scene.present) {

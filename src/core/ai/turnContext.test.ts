@@ -15,6 +15,13 @@ function input(partial: Partial<TurnContextInput> = {}): TurnContextInput {
     hints: ["Une ouverture : l'occasion d'une attaque."],
     playerAction: "je fouille la pièce",
     recentNarrations: [],
+    locationDescription: null,
+    weather: null,
+    recentPlayerActions: [],
+    addressedIsQuestion: false,
+    moveTargets: [],
+    rooms: [],
+    currentRoom: null,
     ...partial,
   };
 }
@@ -130,7 +137,7 @@ describe("V3.1-193 — les pronoms d'un PNJ présent", () => {
   });
 
   it("le PNJ à qui l'on parle est désigné par son id, hors balise, jamais par son nom", () => {
-    const out = buildTurnContext(input({ addressedNpcId: "npc-1" }));
+    const out = buildTurnContext(input({ addressedNpcId: "npc-1", addressedIsQuestion: true }));
     const consigne = out.slice(out.indexOf("Consigne : le joueur parle"));
     expect(consigne).toContain("npc_id = npc-1");
     expect(consigne).not.toContain("Bram");
@@ -155,4 +162,71 @@ describe("V3.1-193 — les pronoms d'un PNJ présent", () => {
   it("V3.2-11 — sans bourse, carte ni ardoise, aucune consigne sur l'argent", () => {
     expect(buildTurnContext(input())).not.toContain(MONEY_INSTRUCTION);
   });
+
+  it("une question directe exige la réplique ; une parole sans question la laisse au jugement du narrateur", () => {
+    const question = buildTurnContext(input({ addressedNpcId: "npc-1", addressedIsQuestion: true }));
+    expect(question).toContain("Ce PNJ lui répond dans npc_reaction");
+    const parole = buildTurnContext(input({ addressedNpcId: "npc-1", addressedIsQuestion: false }));
+    expect(parole).not.toContain("Ce PNJ lui répond dans npc_reaction");
+    expect(parole).toContain("npc_id = npc-1");
+    expect(parole).toContain("un geste ou un silence");
+  });
 });
+
+describe("buildTurnContext — ce qui fait vivre la scène (retour de jeu du 25 novembre 2026)", () => {
+  it("la description du lieu voyage dans sa propre balise, comme tout contenu du monde", () => {
+    const out = buildTurnContext(input({ locationDescription: "Une auberge basse, enfumée." }));
+    const section = out.slice(out.indexOf('<donnee source="description-du-lieu">'));
+    expect(section).toContain("Une auberge basse, enfumée.");
+    expect(section.indexOf("</donnee>")).toBeGreaterThan(section.indexOf("Une auberge"));
+  });
+
+  it("sans description, aucune balise pour rien", () => {
+    expect(buildTurnContext(input())).not.toContain("description-du-lieu");
+  });
+
+  it("la météo tirée voyage avec l'heure, dans la balise du lieu", () => {
+    const out = buildTurnContext(input({ weather: "pluie fine" }));
+    const lieu = out.slice(out.indexOf('<donnee source="lieu">'), out.indexOf("</donnee>"));
+    expect(lieu).toContain("pluie fine");
+  });
+
+  it("les dernières actions du joueur sont listées hors balise : c'est son texte, pas une donnée du monde", () => {
+    const out = buildTurnContext(input({ recentPlayerActions: ["je propose mes services", "je demande le prix"] }));
+    const idx = out.indexOf("je propose mes services");
+    expect(idx).toBeGreaterThan(-1);
+    const before = out.slice(0, idx);
+    expect((before.match(/<donnee /g) ?? []).length).toBe((before.match(/<\/donnee>/g) ?? []).length);
+    expect(out.indexOf("je propose mes services")).toBeLessThan(out.indexOf("je demande le prix"));
+  });
+
+  it("aucune action passée : pas de section", () => {
+    expect(buildTurnContext(input())).not.toContain("actions précédentes");
+  });
+
+  it("V3.2-19 — les lieux accessibles voyagent dans leur balise, avec leur id", () => {
+    const out = buildTurnContext(input({ moveTargets: [{ id: "loc-cuisine", name: "La cuisine du Fanal" }] }));
+    const section = out.slice(out.indexOf('<donnee source="lieux-accessibles">'));
+    expect(section).toContain("La cuisine du Fanal (id: loc-cuisine)");
+  });
+
+  it("V3.2-19 — aucun lieu accessible : aucune balise", () => {
+    expect(buildTurnContext(input())).not.toContain("lieux-accessibles");
+  });
+
+  it("V3.2-19 — la pièce actuelle et les pièces du lieu voyagent dans leurs balises", () => {
+    const out = buildTurnContext(
+      input({ currentRoom: { name: "La cuisine", description: "Basse et enfumée." }, rooms: [{ name: "La cuisine", description: "Basse et enfumée." }, { name: "La cave", description: "" }] })
+    );
+    expect(out.slice(out.indexOf('<donnee source="piece-actuelle">'))).toContain("La cuisine — Basse et enfumée.");
+    const pieces = out.slice(out.indexOf('<donnee source="pieces-du-lieu">'));
+    expect(pieces).toContain("- La cave");
+  });
+
+  it("V3.2-19 — hors de toute pièce, ni balise de pièce actuelle ni liste vide", () => {
+    const out = buildTurnContext(input());
+    expect(out).not.toContain("piece-actuelle");
+    expect(out).not.toContain("pieces-du-lieu");
+  });
+});
+

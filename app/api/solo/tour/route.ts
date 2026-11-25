@@ -221,6 +221,9 @@ export async function POST(request: NextRequest) {
       });
       if (outcome.ok) {
         result.narration = { text: outcome.narration!, npcReaction: outcome.npcReaction ?? null };
+        // V3.2-18 : l'heure atteinte après la narration, pour l'en-tête.
+        if (outcome.time) result.time = outcome.time;
+        if (outcome.scene) result.scene = outcome.scene;
       } else {
         result.sansNarration = "inutilisable";
       }

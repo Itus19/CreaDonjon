@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { premierePhrase, type SegmentLu } from "./premierePhrase";
+import { premierParagraphe, premierePhrase, type SegmentLu } from "./premierePhrase";
 
 const p = (...content: SegmentLu["content"]): SegmentLu => ({ blockType: "paragraph", content });
 const txt = (v: string, marks?: ("bold" | "spoiler")[]) => ({ t: "text" as const, v, ...(marks ? { marks } : {}) });
@@ -42,3 +42,24 @@ describe("premierePhrase (V3.1-82)", () => {
     expect(premierePhrase([])).toBeNull();
   });
 });
+
+describe("premierParagraphe — la description d'un lieu pour la narration", () => {
+  it("le premier paragraphe entier, titres sautés", () => {
+    expect(
+      premierParagraphe([{ blockType: "h2", content: [txt("Aperçu")] }, p(txt("Une auberge basse. Le toit fuit.")), p(txt("Second paragraphe."))])
+    ).toBe("Une auberge basse. Le toit fuit.");
+  });
+  it("trop long : coupé à la dernière phrase entière qui tient", () => {
+    expect(premierParagraphe([p(txt("Une auberge basse. Le toit fuit depuis des années."))], 25)).toBe("Une auberge basse.");
+  });
+  it("une seule phrase trop longue : coupée à un mot, avec points de suspension", () => {
+    const coupe = premierParagraphe([p(txt("mot ".repeat(40).trim()))], 30);
+    expect(coupe!.length).toBeLessThanOrEqual(31);
+    expect(coupe!.endsWith("…")).toBe(true);
+  });
+  it("un passage spoiler n'est jamais repris ; aucun paragraphe : null", () => {
+    expect(premierParagraphe([p(txt("Secret.", ["spoiler"]))])).toBeNull();
+    expect(premierParagraphe([])).toBeNull();
+  });
+});
+

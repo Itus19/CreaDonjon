@@ -73,6 +73,8 @@ export interface SceneView {
    * si son parent n'est pas un lieu.
    */
   nearestCity: { name: string; slug: string } | null;
+  /** V3.2-19 — la pièce où se trouve le personnage dans ce lieu (bloc « Pièces » ou esquisse) ; `null` hors de toute pièce. */
+  roomName: string | null;
   time: { day: number; hour: number; minute: number };
   lighting: "bright" | "dim" | "dark";
   /** V3-C6 — tirée au générateur `meteo`, jamais inventée. `null` sans table réelle à tirer dans ce monde. */
@@ -151,6 +153,8 @@ export interface TurnOutcome {
   ignored: string[];
   /** L'heure de jeu après le tour, `null` si la campagne n'a pas encore de scène. */
   time: { day: number; hour: number; minute: number } | null;
+  /** V3.2-19 — la scène après un déplacement proposé par la narration et appliqué par le moteur ; absente sinon. */
+  scene?: SceneView;
   /**
    * La narration IA de ce tour (câblage de V3-B2) — `null` dans TOUS les cas
    * où elle n'a pas abouti : pas de fournisseur configuré, appel raté,

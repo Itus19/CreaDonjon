@@ -124,7 +124,12 @@ export async function POST(request: NextRequest) {
       changes: result.changes,
       hints: result.hints,
     });
-    if (narre.ok) result.narration = { text: narre.text, npcReaction: narre.npcReaction };
+    if (narre.ok) {
+      result.narration = { text: narre.text, npcReaction: narre.npcReaction };
+      // V3.2-18 : l'heure atteinte après la narration, pour l'en-tête.
+      if (narre.time) result.time = narre.time;
+      if (narre.scene) result.scene = narre.scene;
+    }
     else {
     result.sansNarration = narre.raison;
     result.sansNarrationDetail = narre.detail;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
+import { dropRoomsOutsideLocation,
   DAY_MINUTES,
   SKETCH_SPOKEN_ANCHOR_THRESHOLD,
   addSketch,
@@ -286,5 +286,28 @@ describe("les esquisses (V3-C2) : un personnage incident, jamais une fiche", () 
     expect(textNamesSketch("je demande son nom à l'elfe taciturne", "elfe taciturne")).toBe(true);
     expect(textNamesSketch("je regarde le brame du cerf", "bram")).toBe(false);
     expect(textNamesSketch("Bram me sert une bière", "bram")).toBe(true);
+  });
+});
+
+describe("V3.2-19 — dropRoomsOutsideLocation", () => {
+  it("garde la pièce et les esquisses du lieu, laisse le reste derrière", () => {
+    const base = emptyScene("fanal");
+    const scene = {
+      ...base,
+      room: { locationId: "fanal", name: "Cuisine", description: "", anchored: false },
+      roomSketches: [
+        { locationId: "fanal", name: "Cuisine", description: "", visits: 1 },
+        { locationId: "forge", name: "Atelier", description: "", visits: 1 },
+      ],
+    };
+    const ici = dropRoomsOutsideLocation(scene, "fanal");
+    expect(ici.room?.name).toBe("Cuisine");
+    expect(ici.roomSketches).toHaveLength(1);
+    const ailleurs = dropRoomsOutsideLocation(scene, "forge");
+    expect(ailleurs.room).toBeNull();
+    expect(ailleurs.roomSketches?.map((r) => r.name)).toEqual(["Atelier"]);
+  });
+  it("une scène écrite avant ce ticket passe Zod sans pièce", () => {
+    expect(zSceneState.safeParse(emptyScene("fanal")).success).toBe(true);
   });
 });

@@ -9,12 +9,13 @@ import { GM_QUESTION_MARKERS_FR, TRADE_LODGING_TERMS_FR, formatCpFr } from "@/sr
 import { interpretTrade, tradeOffersFromPriceList, type TradeDirection, type TradeOfferEntry, type TradeReading } from "@/src/core/rules/tradeIntent";
 import { zPriceListBlockData } from "@/src/core/schemas/blocks/priceList";
 import type { AdvantageState } from "@/src/core/rules/action";
-import type { EncashedTurnResponse, IntentBarData, PendingRequest, PendingTurnResponse, RaisonSansNarration, TurnOutcome } from "@/lib/solo/types";
+import type { EncashedTurnResponse, IntentBarData, PendingRequest, PendingTurnResponse, RaisonSansNarration, SceneView, TurnOutcome } from "@/lib/solo/types";
 import DieIcon from "@/components/shared/DieIcon";
 import { useDiceRoll } from "@/components/shell/DiceRollPanel";
 import { ErreurLancer, type SortieJet } from "@/lib/ui/outilDes";
 import { preReglageDepuisDemande, sortieAttenteReactions, sortieJetDepuisTour } from "@/lib/ui/solo";
 import { encaisserDepuisFiche } from "@/lib/ui/soloApi";
+import { useSoloContexte } from "@/components/solo/SoloContexte";
 
 /**
  * **La bulle à hauteur fixe** (esquisse validée par l'auteur le 25 novembre).
@@ -148,6 +149,7 @@ export default function IntentBar({
   pending,
   onPendingChange,
   onActed,
+  onSceneMoved,
   onEnCours,
   onNarration,
   etatIa,
@@ -163,6 +165,8 @@ export default function IntentBar({
   onPendingChange: (next: PendingRequest | null) => void;
   /** Appelé après toute action confirmée par le serveur (pose ou encaissement) — `SoloScreen.tsx` en profite pour rafraîchir le fil tout de suite, sans attendre son sondage. */
   onActed?: () => void;
+  /** V3.2-19 — la narration a déplacé la scène : la nouvelle, telle que le moteur l'a posée. */
+  onSceneMoved?: (scene: SceneView) => void;
   /** V3.2-3 : un tour est en route — l'écran montre que quelque chose se passe pendant les 10 à 20 s du modèle local. */
   onEnCours?: (enCours: boolean) => void;
   /** V3.2-3 : le modèle a répondu (`null`), ou pourquoi il est resté muet (V3.1-223). Lu du DERNIER tour, jamais d'un sondage (docs/QUOTAS.md). */
@@ -180,6 +184,8 @@ export default function IntentBar({
   suivreEnvoi?: (texte: string, genre: "tour" | "mj") => () => Promise<boolean>;
 }) {
   const [text, setText] = useState("");
+  // V3.2-18 : l'heure rendue par chaque tour, pour le bandeau (rendu une fois par la page serveur).
+  const { definirHeure } = useSoloContexte();
   const [overrideActionId, setOverrideActionId] = useState<string | null>(null);
   const [overrideTargetId, setOverrideTargetId] = useState<string | null>(null);
   const [correcting, setCorrecting] = useState(false);
@@ -283,6 +289,8 @@ export default function IntentBar({
     // demande reste posée, et le bandeau de réaction prend la main. L'outil
     // n'affiche ni total ni verdict jusqu'à la reprise.
     if ("fenetre" in outcome) return sortieAttenteReactions(demande, outcome.fenetre);
+    if (outcome.time) definirHeure(outcome.time);
+    if (outcome.scene) onSceneMoved?.(outcome.scene);
     onPendingChange(outcome.chained);
     if (outcome.chained === null) setDc("");
     onActed?.();
@@ -362,6 +370,8 @@ export default function IntentBar({
         // V3.2-3 : un tour joué sans narration dit pourquoi (V3.1-223) ; sans raison
         // donnée par le serveur, c'est un échec générique.
         onNarration?.(body.narration !== null ? null : (body.sansNarration ?? "echec"), body.narration !== null ? undefined : body.sansNarrationDetail);
+        if (body.time) definirHeure(body.time);
+        if (body.scene) onSceneMoved?.(body.scene);
         onPendingChange(null);
         setDc("");
       }
@@ -406,6 +416,8 @@ export default function IntentBar({
       const outcome = (await res.json()) as EncashedTurnResponse;
       // V3.1-216 : même attente que ci-dessus, pour le dé annoncé à la main.
       if ("fenetre" in outcome) return;
+      if (outcome.time) definirHeure(outcome.time);
+      if (outcome.scene) onSceneMoved?.(outcome.scene);
       onPendingChange(outcome.chained);
       if (outcome.chained === null) setDc("");
       onActed?.();
