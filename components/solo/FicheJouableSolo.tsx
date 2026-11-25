@@ -279,6 +279,9 @@ export default function FicheJouableSolo({
       level: niveauTotal(character),
       exhaustion: remote?.runtimeState.state.exhaustion ?? 0,
       carriedLb: sheet.encumbrance.carried,
+      capacityLb: sheet.encumbrance.capacity,
+      encumbered: sheet.encumbrance.tier !== "none",
+      xp: remote?.runtimeState.state.xp ?? 0,
     });
   }, [character, sheet, remote]);
 

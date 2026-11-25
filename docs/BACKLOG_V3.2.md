@@ -39,7 +39,7 @@ Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été
 |---|---|
 | [`01-ecran-du-solo.md`](backlog-v3.2/01-ecran-du-solo.md) | L'écran central : bulles, contour, chargement, envoi (V3.2-1 à 4) |
 | [`02-recit-et-liens.md`](backlog-v3.2/02-recit-et-liens.md) | Le texte : la personne du récit, les liens vers les fiches (V3.2-5, 6) |
-| [`03-colonnes.md`](backlog-v3.2/03-colonnes.md) | Les colonnes : l'onglet Wiki, les volets, les présents (V3.2-7, 12 à 15) |
+| [`03-colonnes.md`](backlog-v3.2/03-colonnes.md) | Les colonnes : l'onglet Wiki, les volets, les présents (V3.2-7, 12 à 16) |
 
 | Ticket | État | Modèle IA | Titre | Fichier |
 |---|---|---|---|---|
@@ -54,6 +54,7 @@ Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été
 | V3.2-13 | ☑ | sans | L'attitude perçue des présents arrive à l'écran (ADR 0111) | [`03-colonnes.md`](backlog-v3.2/03-colonnes.md) |
 | V3.2-14 | ☐ | sans | Les présents dans la bande du Monde fermé | [`03-colonnes.md`](backlog-v3.2/03-colonnes.md) |
 | V3.2-15 | ☐ | **avec** | Écrire la façade d'un PNJ, et la faire jouer au narrateur | [`03-colonnes.md`](backlog-v3.2/03-colonnes.md) |
+| V3.2-16 | ☐ | sans | La fiche repliée montre des jauges circulaires | [`03-colonnes.md`](backlog-v3.2/03-colonnes.md) |
 
 ---
 

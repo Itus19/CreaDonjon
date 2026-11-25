@@ -115,3 +115,16 @@
 - [ ] Rejouer le journal reconstruit exactement `axes` et `shown_axes`.
 - [ ] Un PNJ qui hait le personnage mais feint l'amitié : la bande affiche « amical », le narrateur le décrit aimable, le contexte du modèle porte les deux sous la consigne.
 - [ ] Aucune valeur ressentie dans une réponse envoyée à l'écran de la personne qui joue.
+
+---
+
+### ☐ V3.2-16 — La fiche repliée montre des jauges circulaires · `S` · sans modèle IA — **codé le 25 novembre, à vérifier à l'écran**
+
+**Demandé le 25 novembre** : la bande de la fiche repliée devrait afficher les jauges circulaires des éléments principaux, PV, XP, encombrement et épuisement, plutôt que des chiffres et une barre.
+
+**Fait.** La bande garde le bouclier de CA en tête, puis quatre `JaugeCirculaire`, celles du bandeau de la fiche ouverte : PV ; marche vers le niveau suivant (dedans les PX du niveau, dessous « Niv. N », AG-4) ; charge en kg sur la capacité, en ton d'alerte une fois encombré ; épuisement sur 6, en ton d'alerte. Un clic sur une jauge bascule en pourcentage, comme ailleurs. `jaugesBande` (`lib/ui/solo.ts`) calcule les parts, testées.
+
+**Critères d'acceptation**
+- [x] Les quatre jauges sont calculées par `jaugesBande`, sans requête de plus (la fiche publie déjà ses jauges).
+- [ ] À l'écran, fiche repliée : CA, puis PV, niveau, charge, épuisement, dans 96 px, sans débordement.
+- [ ] Encombré : l'anneau de charge passe en ton d'alerte.
