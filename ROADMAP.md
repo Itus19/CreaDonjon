@@ -74,7 +74,10 @@ rapports d'audit sont datés et se relisent ; ce tableau de bord, non.
 
 ## Plus tard, volontairement
 
-Simulation procédurale du monde · immersion audiovisuelle · génération
-procédurale de cartes · collaboration multi-MJ au-delà de V2-M8. Voir
-`docs/PDD.md` §22. Aucune de ces lignes n'est un ticket, et aucune ne le
-devient tant que la V3 n'est pas jouable.
+Immersion audiovisuelle · collaboration multi-MJ au-delà de V2-M8. Voir
+`docs/PDD.md` §22. Aucune de ces lignes n'est un ticket.
+
+**Génération du monde** (carte Azgaar, villes en agrégat, histoire simulée) :
+sortie de cette liste le 25 novembre 2026 par l'ADR 0109. Son noyau pur avance
+en parallèle du solo ; son branchement sur le tour attend que le tour tienne.
+Référence : `specs/generation-du-monde.md`.
