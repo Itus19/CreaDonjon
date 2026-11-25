@@ -1281,7 +1281,8 @@
     "personnageIntrouvable": "Character not found",
     "prochaineSeance": "Next session",
     "aucuneSeance": "No session planned",
-    "mjNoms": "GM: {noms}"
+    "mjNoms": "GM: {noms}",
+    "ongletPersonnage": "Character"
   },
   "statsJoueur": {
     "titre": "Your dice and your titles",

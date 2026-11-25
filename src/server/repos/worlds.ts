@@ -242,7 +242,7 @@ export interface WorldCard {
    * campagne (cas theorique, jamais produit par un flux existant).
    */
   myRole: "gm" | "player" | null;
-  /** Rempli seulement si `myRole === 'player'` et qu'un personnage est deja reclame dans la campagne de ce monde. */
+  /** Rempli seulement si `myRole === 'player'` (ou si la campagne est en solo) et qu'un personnage est deja reclame dans la campagne de ce monde. */
   myCharacter: { entityId: string; entitySlug: string; name: string } | null;
 }
 
@@ -299,7 +299,11 @@ export async function listWorldCardsForCurrentUser(supabase: TypedClient, userId
     const entityLast = lastEntityEditByWorld.get(w.id);
     const lastModified = entityLast && entityLast > w.updated_at ? entityLast : w.updated_at;
     const myRole = w.owner_id === userId ? "gm" : (myRoleByWorld.get(w.id) ?? null);
-    const myCharacter = myRole === "player" && campaign ? (myCharacterByCampaign.get(campaign.id) ?? null) : null;
+    // En solo, le propriétaire (rôle « gm ») est aussi la personne qui joue : son personnage réclamé
+    // nourrit le volet « Mon personnage » de l'accueil, comme pour un rôle Joueur. Aucune lecture de
+    // plus : `myCharacterByCampaign` couvre déjà toutes les campagnes de la liste.
+    const joueCeMonde = myRole === "player" || campaign?.mode === "solo";
+    const myCharacter = joueCeMonde && campaign ? (myCharacterByCampaign.get(campaign.id) ?? null) : null;
     return {
       id: w.id,
       ownerId: w.owner_id,

@@ -1282,7 +1282,8 @@
     "personnageIntrouvable": "Personnage introuvable",
     "prochaineSeance": "Prochaine séance",
     "aucuneSeance": "Aucune séance prévue",
-    "mjNoms": "MJ : {noms}"
+    "mjNoms": "MJ : {noms}",
+    "ongletPersonnage": "Personnage"
   },
   "statsJoueur": {
     "titre": "Tes dés et tes titres",
