@@ -10,6 +10,7 @@ import Tabs, { TabPanel } from "@/components/shared/Tabs";
 import PlayerRulesSidebar from "@/components/rules/PlayerRulesSidebar";
 import { ZONE_LABELS } from "@/components/solo/ScenePanel";
 import { useSoloContexte } from "@/components/solo/SoloContexte";
+import { AvatarPresent, libellePerception } from "@/components/solo/RondsPresents";
 import type { QuestColumnEntry, SceneView, WikiColumnGroup } from "@/lib/solo/types";
 
 /**
@@ -145,17 +146,25 @@ function OngletPresents({
   return (
     <div className="flex flex-col gap-2">
       {present.map((p) => (
-        <div key={p.entityId} className="flex flex-col gap-0.5 rounded-md border border-edge p-2">
-          <span className="text-sm text-ink">{p.name}</span>
-          <span className="text-xs text-ink-muted">
-            {p.disposition ? `${p.disposition} · ` : ""}
-            {ZONE_LABELS[p.zone]}
-          </span>
+        // V3.2-14 : le même rond que dans la bande du Monde replié — ouvert ou fermé, une personne a la même tête.
+        <div key={p.entityId} className="flex items-center gap-2 rounded-md border border-edge p-2">
+          <AvatarPresent nom={p.name} perception={p.perception ?? null} esquisse={false} />
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <span className="text-sm text-ink">{p.name}</span>
+            <span className="text-xs text-ink-muted">
+              {libellePerception(p.perception ?? null) ?? p.disposition ?? ""}
+              {(p.perception || p.disposition) && " · "}
+              {ZONE_LABELS[p.zone]}
+            </span>
+          </div>
         </div>
       ))}
       {sketches.map((s) => (
         <div key={s.id} className="flex flex-col gap-1 rounded-md border border-dashed border-edge p-2">
-          <span className="text-sm text-ink">{s.name}</span>
+          <span className="flex items-center gap-2 text-sm text-ink">
+            <AvatarPresent nom={s.name} perception={null} esquisse />
+            {s.name}
+          </span>
           <span className="text-xs text-ink-muted">
             {s.trait} · {ZONE_LABELS[s.zone]}
           </span>

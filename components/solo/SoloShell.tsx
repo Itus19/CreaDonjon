@@ -152,6 +152,7 @@ export default function SoloShell({
   // Meme chose pour la bande du Monde : sur tablette, le Monde reste entier dans son onglet.
   const mondeReplie = gaucheRepliee && ordinateur;
   const [ongletMonde, choisirOngletMonde] = useState<OngletMonde>("wiki");
+  const [interlocuteur, definirInterlocuteur] = useState<string | null>(null);
   const deplierMonde = useCallback(
     (onglet: OngletMonde) => {
       choisirOngletMonde(onglet);
@@ -168,8 +169,8 @@ export default function SoloShell({
   }, []);
   const rechargerFiche = useCallback(() => rechargeRef.current?.(), []);
   const contexte = useMemo(
-    () => ({ replie: ficheRepliee, jauges, publier, demande, definirDemande, rechargerFiche, inscrireRecharge, ongletMonde, choisirOngletMonde, deplierMonde }),
-    [ficheRepliee, jauges, publier, demande, definirDemande, rechargerFiche, inscrireRecharge, ongletMonde, deplierMonde]
+    () => ({ replie: ficheRepliee, jauges, publier, demande, definirDemande, rechargerFiche, inscrireRecharge, ongletMonde, choisirOngletMonde, deplierMonde, interlocuteur, definirInterlocuteur }),
+    [ficheRepliee, jauges, publier, demande, definirDemande, rechargerFiche, inscrireRecharge, ongletMonde, deplierMonde, interlocuteur]
   );
 
   /**

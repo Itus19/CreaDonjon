@@ -452,11 +452,6 @@
       },
       "montantBudget": "Quantité (formule)",
       "zone": "Zone",
-      "zones": {
-        "engaged": "Au contact",
-        "near": "Proche",
-        "far": "Loin"
-      },
       "libelleJet": "Libellé du jet",
       "formuleJet": "Formule",
       "indication": "Indication",
@@ -1446,6 +1441,13 @@
     "replierFiche": "Replier la Fiche",
     "deplierFiche": "Déplier la Fiche",
     "bandeMonde": {
+      "presentsAria": "Les personnes présentes",
+      "sansFiche": "sans fiche",
+      "zones": {
+        "engaged": "au contact",
+        "near": "proche",
+        "far": "loin"
+      },
       "aria": "Onglets du monde",
       "ouvrir": "Ouvrir le Monde sur « {onglet} »",
       "wiki": "Wiki",

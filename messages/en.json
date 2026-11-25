@@ -451,11 +451,6 @@
       },
       "montantBudget": "Amount (formula)",
       "zone": "Zone",
-      "zones": {
-        "engaged": "Engaged",
-        "near": "Near",
-        "far": "Far"
-      },
       "libelleJet": "Roll label",
       "formuleJet": "Formula",
       "indication": "Hint",
@@ -1445,6 +1440,13 @@
     "replierFiche": "Collapse the Sheet",
     "deplierFiche": "Expand the Sheet",
     "bandeMonde": {
+      "presentsAria": "People present",
+      "sansFiche": "no sheet",
+      "zones": {
+        "engaged": "engaged",
+        "near": "near",
+        "far": "far"
+      },
       "aria": "World tabs",
       "ouvrir": "Open the World on “{onglet}”",
       "wiki": "Wiki",

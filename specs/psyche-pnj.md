@@ -187,6 +187,8 @@ Deux remarques de conception.
 
 **`attirance ↔ répulsion` demande une précaution produit.** Un axe romantique sur des fiches partagées avec des joueurs, ce n'est pas neutre. Recommandation : visibilité `gm` par défaut, et l'axe désactivable au niveau du monde. Certaines tables n'en voudront pas.
 
+> **Révisé le 25 novembre 2026 (ADR 0111).** Décision de l'auteur : les romances sont **activées par défaut dans tous les mondes**. Ce que l'écran montre est l'attirance **perçue** (ce que le PNJ laisse voir, `entity_attitudes.shown_axes`), et seulement quand elle est positive. La désactivation par monde reste prévue, pas construite.
+
 ### Chaque bande est nommée
 
 Sept bandes par axe, seuils de §1.5. Valeurs stockées de −100 à +100.
@@ -317,7 +319,7 @@ Le groupe de joueurs est une entité de type `faction`, créée avec la campagne
 - [ ] Rejouer les événements reconstruit exactement `entity_attitudes.axes`.
 - [ ] Un delta brut supérieur à 40 exige une confirmation explicite.
 - [ ] Après 50 événements simulés d'ampleur « notable », aucun axe n'est saturé à l'extrême.
-- [ ] L'axe `attraction_repulsion` est en visibilité `gm` par défaut et désactivable au niveau du monde.
+- [ ] ~~L'axe `attraction_repulsion` est en visibilité `gm` par défaut~~ (révisé, ADR 0111 : visible par défaut, en attirance perçue) et désactivable au niveau du monde.
 - [ ] Le contexte envoyé au modèle pour un PNJ ne dépasse pas 80 tokens : résumé plus 5 dernières entrées.
 - [ ] Une proposition IA modifiant une conviction ou une aspiration n'est jamais appliquée sans revue, y compris en solo.
 - [ ] `known_as` est respecté : le contexte IA ne révèle pas l'identité réelle d'une cible que le PNJ ne connaît pas.

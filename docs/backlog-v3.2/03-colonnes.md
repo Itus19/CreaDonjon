@@ -27,7 +27,7 @@
 
 ---
 
-### ☐ V3.2-12 — Les volets : le fil s'étale, un onglet au bord de chaque volet · `M` · sans modèle IA — **prêt (Sonnet)**
+### ☐ V3.2-12 — Les volets : le fil s'étale, un onglet au bord de chaque volet · `M` · sans modèle IA — **codé le 25 novembre, à vérifier à l'écran**
 
 **Demandé le 25 novembre**, captures à l'appui : volets fermés, le texte reste étroit au centre ; les languettes de repli sont mal placées (surtout la gauche, isolée loin du texte) et touchent la barre de défilement du fil et les bulles des PNJ. Esquisses et choix de l'auteur : <https://claude.ai/artifact/SY2zL6VoSLivR8tuu8yxgh> (options **A2** et **C1**).
 
@@ -52,7 +52,7 @@
 
 ---
 
-### ☐ V3.2-13 — L'attitude **perçue** des présents arrive à l'écran · `M` · sans modèle IA — **à concevoir (Opus)**
+### ☑ V3.2-13 — L'attitude **perçue** des présents arrive à l'écran · `M` · sans modèle IA — **conçu le 25 novembre (ADR 0111)**
 
 **Demandé le 25 novembre**, avec une précision qui fait tout le ticket : ce que l'écran montre est **la perception du joueur**. Un PNJ peut ne pas ressentir ce qu'il montre, et tromper le joueur.
 
@@ -68,12 +68,14 @@
 
 **Lien** : V3.1-227 (les inconnus dans Présents) tranche ce qu'un présent non découvert montre ; les deux ADR doivent rester cohérents.
 
+**Décidé le 25 novembre (ADR 0111)** : une seconde série d'axes par paire (`entity_attitudes.shown_axes`, `attitude_events.shown_deltas`, migration `20261125150000`). L'écran lit déjà la façade ; l'écrire et la donner au narrateur est V3.2-15.
+
 **Critères d'acceptation (de la conception)**
-- [ ] ADR écrit ; tickets prêts découpés.
+- [x] ADR écrit ; tickets prêts découpés (V3.2-14, V3.2-15).
 
 ---
 
-### ☐ V3.2-14 — Les présents dans la bande du Monde fermé · `S` · sans modèle IA — **prêt (Sonnet) après V3.2-12 et V3.2-13**
+### ☐ V3.2-14 — Les présents dans la bande du Monde fermé · `S` · sans modèle IA — **codé le 25 novembre, à vérifier à l'écran**
 
 **Demandé le 25 novembre.** Volet gauche fermé, la bande montre un rond par personne présente, avec ses initiales et un anneau qui dit comment elle **semble** percevoir le personnage. Esquisses : <https://claude.ai/artifact/SY2zL6VoSLivR8tuu8yxgh#presents>, option **D2** choisie.
 
@@ -96,3 +98,20 @@
 - [ ] Un PNJ qui feint l'amitié montre l'anneau de l'amitié feinte ; sa vraie attitude n'est nulle part dans la réponse du serveur.
 - [ ] Un PNJ qui n'a montré aucune attirance n'a pas de cercle rose ; un monde qui a désactivé les romances n'en montre jamais.
 - [ ] En niveaux de gris, les sept crans restent distincts par la longueur de l'arc.
+
+---
+
+### ☐ V3.2-15 — Écrire la façade d'un PNJ, et la faire jouer au narrateur · `M` · **avec** modèle IA — **prêt (Opus : IA, prompts)**
+
+**Suite de V3.2-13 (ADR 0111).** Les colonnes existent et l'écran les lit ; rien ne les écrit encore.
+
+**À faire.**
+- **Le rejeu** reconstruit `shown_axes` à partir de `attitude_events.shown_deltas`, avec le même amortissement que `axes` (`src/core/psyche/apply.ts`). Une façade remise à « ce qu'il ressent » repasse `shown_axes` à NULL.
+- **Le MJ** pose ou corrige une façade depuis le bloc `relationship` (un second curseur « ce qu'il laisse voir », replié par défaut), ce qui écrit un `attitude_event` d'origine `gm`.
+- **L'IA** propose une façade par `ai_proposals` (règle 9), validée par Zod puis par le moteur, avec les seuils de signalement des vraies attitudes.
+- **Le narrateur** reçoit la vérité ET la façade, sous une consigne explicite : narrer seulement ce que le PNJ laisse voir, laisser filtrer au plus un indice (règle 11, même discipline que `known_as`).
+
+**Critères d'acceptation**
+- [ ] Rejouer le journal reconstruit exactement `axes` et `shown_axes`.
+- [ ] Un PNJ qui hait le personnage mais feint l'amitié : la bande affiche « amical », le narrateur le décrit aimable, le contexte du modèle porte les deux sous la consigne.
+- [ ] Aucune valeur ressentie dans une réponse envoyée à l'écran de la personne qui joue.

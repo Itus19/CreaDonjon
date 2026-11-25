@@ -24,6 +24,8 @@ import type { JaugesBande } from "@/lib/ui/solo";
  * - V3.2-12 — l'onglet du Monde (`ongletMonde`) : il vit ici, et non dans
  *   `ColonneMonde`, parce que la bande du Monde replié rouvre le volet SUR un
  *   onglet (`deplierMonde`) alors qu'elle est un arbre voisin de la colonne.
+ * - V3.2-14 — `interlocuteur` : le nom du PNJ qui a parlé au dernier tour,
+ *   publié par le Jeu (il lit le fil), relu par la bande du Monde (halo).
  */
 export type OngletMonde = "wiki" | "quetes" | "presents" | "regles";
 
@@ -39,6 +41,8 @@ interface SoloContexteValeur {
   choisirOngletMonde: (onglet: OngletMonde) => void;
   /** Déplie le Monde (s'il est replié) et l'ouvre sur cet onglet. */
   deplierMonde: (onglet: OngletMonde) => void;
+  interlocuteur: string | null;
+  definirInterlocuteur: (nom: string | null) => void;
 }
 
 const SoloContexte = createContext<SoloContexteValeur>({
@@ -52,6 +56,8 @@ const SoloContexte = createContext<SoloContexteValeur>({
   ongletMonde: "wiki",
   choisirOngletMonde: () => {},
   deplierMonde: () => {},
+  interlocuteur: null,
+  definirInterlocuteur: () => {},
 });
 
 export const SoloContexteProvider = SoloContexte.Provider;
