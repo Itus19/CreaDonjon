@@ -41,12 +41,42 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_provider_choices: {
+        Row: {
+          model: string
+          provider_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          model: string
+          provider_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          model?: string
+          provider_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_provider_choices_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "ai_providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_providers: {
         Row: {
           base_url: string
           created_at: string
+          id: string
           label: string
-          model: string
+          models: string[]
           secret: string | null
           updated_at: string
           user_id: string
@@ -54,8 +84,9 @@ export type Database = {
         Insert: {
           base_url: string
           created_at?: string
+          id?: string
           label: string
-          model: string
+          models: string[]
           secret?: string | null
           updated_at?: string
           user_id: string
@@ -63,8 +94,9 @@ export type Database = {
         Update: {
           base_url?: string
           created_at?: string
+          id?: string
           label?: string
-          model?: string
+          models?: string[]
           secret?: string | null
           updated_at?: string
           user_id?: string

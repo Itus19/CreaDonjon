@@ -1404,6 +1404,8 @@
     "iaRefusee": "Le fournisseur d'IA a refusé la requête (modèle introuvable, sans outils ou qui n'écrit pas de texte, ou adresse incorrecte) : le dernier tour est resté muet",
     "iaInutilisable": "Le modèle a répondu sans récit utilisable (il gère peut-être mal les outils) : le dernier tour est resté muet",
     "iaInconnue": "Fournisseur d'IA : aucun tour joué pour l'instant",
+    "iaChoixModele": "Modèle d'IA utilisé",
+    "iaChoixEchec": "Le changement de modèle a échoué.",
     "annulerTour": {
       "bouton": "Annuler le dernier tour",
       "question": "Annuler ce tour ? Ce qu'il a changé est défait ; le journal le garde.",

@@ -1403,6 +1403,8 @@
     "iaRefusee": "The AI provider rejected the request (model not found, without tool support or not writing text, or wrong address): the last turn stayed silent",
     "iaInutilisable": "The model answered without a usable narration (it may not handle tools well): the last turn stayed silent",
     "iaInconnue": "AI provider: no turn played yet",
+    "iaChoixModele": "AI model in use",
+    "iaChoixEchec": "Switching the model failed.",
     "annulerTour": {
       "bouton": "Undo last turn",
       "question": "Undo this turn? What it changed is reverted; the log keeps it.",

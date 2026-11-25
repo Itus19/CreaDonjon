@@ -11,6 +11,8 @@ import IntentBar from "@/components/solo/IntentBar";
 import Fil from "@/components/solo/Fil";
 import ConsequencesDrawer, { type ConsequencesDrawerData } from "@/components/solo/ConsequencesDrawer";
 import type { FilItem, IntentBarData, RaisonSansNarration, SceneView } from "@/lib/solo/types";
+import Dropdown from "@/components/shared/Dropdown";
+import { choixDepuisValeur, optionsChoix, valeurChoix, type FournisseursIaReponse } from "@/lib/ia/fournisseurs";
 
 /**
  * V3-B2 — Les deux moitiés de l'écran solo : la scène, puis le tour.
@@ -115,6 +117,8 @@ export default function SoloScreen({
   // V3.2-3 : l'attente et l'état du fournisseur, lus des tours eux-mêmes — aucun sondage.
   const [tourEnCours, setTourEnCours] = useState(false);
   const [narrationEtat, setNarrationEtat] = useState<"inconnu" | "repond" | RaisonSansNarration>("inconnu");
+  // ADR 0108 : les modèles déclarés au compte, pour en changer à côté du voyant. Lus une fois.
+  const [fournisseursIa, setFournisseursIa] = useState<FournisseursIaReponse | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const autoScrollRef = useRef(true);
   const lastSeqRef = useRef<number | null>(null);
@@ -165,6 +169,39 @@ export default function SoloScreen({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campaignId, entityId]);
+
+  /**
+   * ADR 0108 — les fournisseurs du compte, lus UNE fois à l'ouverture de
+   * l'écran (docs/QUOTAS.md : une requête par chargement, aucun sondage).
+   */
+  useEffect(() => {
+    let vivant = true;
+    fetch("/api/compte/ia")
+      .then(async (res) => {
+        if (res.ok && vivant) setFournisseursIa((await res.json()) as FournisseursIaReponse);
+      })
+      .catch(() => {
+        // catch-attendu : erreur reseau ; sans la liste, le menu ne s'affiche pas et le voyant reste seul.
+      });
+    return () => {
+      vivant = false;
+    };
+  }, []);
+
+  /** Change le modèle qui sert. Le voyant repart à « inconnu » : son état valait pour l'ancien modèle. */
+  async function choisirModele(valeur: string) {
+    const choix = choixDepuisValeur(valeur);
+    if (!choix) return;
+    const res = await fetch("/api/compte/ia/choix", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(choix) });
+    if (!res.ok) {
+      setAnnounce(t("iaChoixEchec"));
+      return;
+    }
+    setFournisseursIa((f) => (f ? { ...f, actif: choix } : f));
+    setNarrationEtat("inconnu");
+  }
+
+  const optionsModeles = fournisseursIa ? optionsChoix(fournisseursIa.fournisseurs) : [];
 
   // Défile jusqu'en bas à chaque nouveau contenu, SAUF si le joueur a
   // remonté lire quelque chose plus haut — cas classique et
@@ -253,10 +290,22 @@ export default function SoloScreen({
                vert s'il a raconté, orange si le quota ou la limite est atteint, rouge pour un
                souci de branchement, gris tant qu'aucun tour n'a été joué. Aucun appel n'est
                fait pour l'allumer : un sondage coûterait une requête par tic (QUOTAS). */
-            <p className="flex items-center gap-1.5 text-xs text-ink-muted">
-              <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${COULEUR_ETAT_IA[narrationEtat]}`} />
-              {t(LIBELLE_ETAT_IA[narrationEtat])}
-            </p>
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+              <p className="flex min-w-0 items-center gap-1.5 text-xs text-ink-muted">
+                <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${COULEUR_ETAT_IA[narrationEtat]}`} />
+                {t(LIBELLE_ETAT_IA[narrationEtat])}
+              </p>
+              {optionsModeles.length > 0 && (
+                <Dropdown
+                  size="sm"
+                  className="max-w-[16rem] shrink-0"
+                  aria-label={t("iaChoixModele")}
+                  value={fournisseursIa?.actif ? valeurChoix(fournisseursIa.actif) : ""}
+                  options={optionsModeles}
+                  onChange={(v) => void choisirModele(v)}
+                />
+              )}
+            </div>
           }
         />
       </div>
