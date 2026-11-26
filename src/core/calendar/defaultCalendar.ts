@@ -22,4 +22,6 @@ export const DEFAULT_CALENDAR: CalendarConfig = {
   currentDate: null,
   // Retour utilisateur : "le 1er Vendémiaire de l'an 0 était un Primidi" — 0 est l'indice de "Primidi" dans DEFAULT_WEEKDAY_NAMES.
   weekdayEpoch: 0,
+  // Nivôse (21 décembre - 19 janvier) : le calendrier républicain commence à l'équinoxe d'automne.
+  coldestMonth: 4,
 };

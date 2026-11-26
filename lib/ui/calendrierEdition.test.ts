@@ -170,3 +170,23 @@ describe("modifications et validité", () => {
     expect(calendrierValide(reduireCalendrier(calendrier(), { type: "moisRenommer", index: 0, nom: "  " }))).toBe(false);
   });
 });
+
+describe("mois le plus froid (ME-5)", () => {
+  it("se règle sur le mois choisi", () => {
+    expect(reduireCalendrier(calendrier(), { type: "moisLePlusFroid", index: 2 }).coldestMonth).toBe(3);
+  });
+
+  it("suit son mois quand on le déplace", () => {
+    const c = reduireCalendrier(calendrier({ coldestMonth: 1 }), { type: "moisDeplacer", index: 0, sens: 1 });
+    expect(c.coldestMonth).toBe(2);
+  });
+
+  it("retombe sur le premier mois quand on supprime le sien", () => {
+    const c = reduireCalendrier(calendrier({ coldestMonth: 3 }), { type: "moisSupprimer", index: 2 });
+    expect(c.coldestMonth).toBe(1);
+  });
+
+  it("reste absent quand il n'a jamais été réglé", () => {
+    expect(reduireCalendrier(calendrier(), { type: "moisSupprimer", index: 2 }).coldestMonth).toBeUndefined();
+  });
+});

@@ -1401,6 +1401,38 @@
     "echec": "error — {message}"
   },
   "solo": {
+    "meteo": {
+      "dehors": "Outside: {condition}",
+      "abri": "Sheltered: {condition}",
+      "temperature": "{n} °C",
+      "ciel": {
+        "clear": "Clear sky",
+        "hazy": "Hazy",
+        "cloudy": "Cloudy",
+        "overcast": "Overcast"
+      },
+      "precipitation": {
+        "drizzle": "Drizzle",
+        "rain": "Rain",
+        "downpour": "Downpour",
+        "thunderstorm": "Thunderstorm",
+        "snow": "Snow",
+        "sleet": "Sleet",
+        "hail": "Hail"
+      },
+      "brouillard": "Fog",
+      "vent": {
+        "wind": "strong wind",
+        "gale": "gale"
+      },
+      "saison": {
+        "winter": "winter",
+        "spring": "spring",
+        "summer": "summer",
+        "autumn": "autumn"
+      },
+      "titre": "Weather computed by the engine"
+    },
     "jet": {
       "lancer": "Roll · {quoi}",
       "roule": "Rolling…",
@@ -1812,6 +1844,7 @@
     "descendre": "Move down",
     "ajouterMoisApres": "+ Add a month after",
     "supprimerMois": "Delete this month",
+    "moisLePlusFroid": "Coldest month of the year (sets the weather's seasons)",
     "nouveauMois": "Month {n}",
     "jourChoisi": "{jourSemaine} {jour} {mois} {annee}",
     "jourChoisiSansSemaine": "{jour} {mois} {annee}",

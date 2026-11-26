@@ -12,7 +12,7 @@ import { npcAddressedBy } from "@/src/core/ai/npcAddressed";
 import { buildGmQuestionContext } from "@/src/core/ai/gmQuestionContext";
 import { relationshipAxisLabel } from "@/src/core/psyche/bands";
 import { zRelationshipBlockData } from "@/src/core/schemas/blocks/relationship";
-import { esquissesAilleurs, esquissesIci, presentsAilleurs, presentsIci } from "@/src/core/rules/scenePresence";
+import { esquissesAilleurs, esquissesIci, pieceCourante, presentsAilleurs, presentsIci } from "@/src/core/rules/scenePresence";
 import { getSceneState } from "@/src/server/repos/sceneStates";
 import { zInventoryBlockData } from "@/src/core/schemas/blocks/inventory";
 import { zPriceListBlockData } from "@/src/core/schemas/blocks/priceList";
@@ -29,6 +29,9 @@ import { zTextBlockData } from "@/src/core/schemas/blocks/text";
 import { premierParagraphe } from "@/src/core/entities/premierePhrase";
 import { paragraphesDe, secretsEntre } from "@/src/core/ai/secretsMj";
 import { zRoomsBlockData, type Room } from "@/src/core/schemas/blocks/rooms";
+import { loadWeatherContext } from "@/src/server/services/sceneWeather";
+import { weatherForScene } from "@/src/core/weather/sceneWeather";
+import { describeWeatherForAi } from "@/src/core/ai/weatherText";
 import { estQuestionDirecte } from "@/src/core/ai/npcAddressed";
 import { undoneEventIds } from "@/src/core/rules/turnUndo";
 import { getCurrentAttitude } from "@/src/server/services/psyche";
@@ -419,7 +422,7 @@ export async function buildSoloTurnContext(
   const scene = await getSceneState(supabase, params.campaignId);
 
   // V3.2-28 : l'IA ne voit avec le personnage que ceux de sa pièce ; les autres, à part.
-  const [locationEntity, presents, quests, history, player, money, locationPage, moveTargets, elsewhere] = await Promise.all([
+  const [locationEntity, presents, quests, history, player, money, locationPage, moveTargets, elsewhere, weatherCtx] = await Promise.all([
     scene ? listEntitiesByIds(supabase, [scene.locationId]).then((rows) => rows[0] ?? null) : Promise.resolve(null),
     scene
       ? resolvePresentNpcs(supabase, { worldId: params.worldId, campaignId: params.campaignId, playerEntityId: params.playerEntityId, viewer: params.viewer, present: presentsIci(scene) })
@@ -433,6 +436,8 @@ export async function buildSoloTurnContext(
       : Promise.resolve({ description: null, rooms: [] as Room[], secret: null }),
     scene ? resolveMoveTargets(supabase, params.worldId, scene.locationId, params.viewer) : Promise.resolve([]),
     resolveElsewhere(supabase, { playerEntityId: params.playerEntityId, scene }),
+    // ME-5 : de quoi calculer la météo de la scène (calendrier, climat, pièces).
+    scene ? loadWeatherContext(supabase, { worldId: params.worldId, locationId: scene.locationId }) : Promise.resolve(null),
   ]);
   const recentNarrations = history.narrations;
   const locationDescription = locationPage.description;
@@ -462,7 +467,7 @@ export async function buildSoloTurnContext(
     recentNarrations,
     ...money,
     locationDescription,
-    weather: scene?.weather ?? null,
+    weather: scene && weatherCtx ? describeWeatherForAi(weatherForScene(weatherCtx, scene.time, pieceCourante(scene))) : null,
     recentPlayerActions: history.playerActions,
     addressedIsQuestion,
     moveTargets,

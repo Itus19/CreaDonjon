@@ -1,3 +1,4 @@
+import MeteoScene from "@/components/solo/MeteoScene";
 import type { QuestColumnEntry, SceneView } from "@/lib/solo/types";
 
 /**
@@ -13,7 +14,7 @@ export default function ColonneSceneMj({ scene, quests }: { scene: SceneView | n
         {scene ? (
           <>
             <p className="font-semibold text-ink">{scene.locationName}</p>
-            {scene.weather && <p className="text-sm text-ink-soft">{scene.weather}</p>}
+            {scene.weather && <MeteoScene weather={scene.weather} className="text-sm text-ink-soft" />}
           </>
         ) : (
           <p className="text-sm text-ink-muted">Aucune scène posée.</p>
