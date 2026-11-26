@@ -390,8 +390,10 @@ create table relations (
   relation_type     text not null check (relation_type in (
                       -- famille
                       'parent_of','sibling_of','married_to','adopted_by','ancestor_of',
+                      'partner_of','ex_partner_of','half_sibling_of','step_parent_of',
                       -- social
                       'friend_of','rival_of','mentor_of','serves','member_of','leads',
+                      'works_at',
                       -- spatial
                       'part_of','located_in','origin_of',
                       -- possession
@@ -421,6 +423,8 @@ create index relations_world_idx  on relations (world_id, relation_type);
 ```
 
 **Vocabulaire fermé.** Sans contrainte, chacun écrira `pere_de`, `parent` et `father_of` — et le bloc `genealogy`, qui lit ce graphe, deviendra inexploitable. Ajouter un type est une migration d'une ligne ; c'est le bon niveau de friction.
+
+**`works_at`** (personne → lieu, migration `20261126160000_relation_works_at.sql`, V3.2-30) : le lien de travail. Une entité reliée à un lieu par `works_at` fait partie de son personnel et prend la place de l'occupant tiré de même rang (`src/core/worldgen/occupants.ts`, `specs/vie-du-monde.md` §3). Les quatre types de la généalogie (`partner_of` à `step_parent_of`) viennent de `20260827170001_genealogy_relations.sql`.
 
 Chaque type déclare son inverse dans `src/core/relations/inverses.ts` (`parent_of` ↔ `child_of`, `owns` ↔ `owned_by`, `married_to` ↔ lui-même) : une seule ligne stockée, deux sens navigables. Stocker les deux sens en base crée un problème de synchronisation sans bénéfice.
 

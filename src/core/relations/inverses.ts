@@ -22,6 +22,9 @@ export const RELATION_TYPES = [
   "serves",
   "member_of",
   "leads",
+  // V3.2-30 : le lien de travail (personne → lieu), qui place un PNJ du wiki
+  // dans le personnel d'un lieu (specs/vie-du-monde.md §3).
+  "works_at",
   "part_of",
   "located_in",
   "origin_of",
@@ -57,6 +60,7 @@ const INVERSE: Record<RelationType, string> = {
   serves: "served_by",
   member_of: "has_member",
   leads: "led_by",
+  works_at: "employs",
   part_of: "contains",
   located_in: "contains",
   origin_of: "originates_from",
