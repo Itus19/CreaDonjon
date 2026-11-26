@@ -250,8 +250,21 @@ Le bloc `personality` gagne une facette facultative, `intimacy` :
 - **attirance** : vers quels genres (y compris aucun, et le neutre), pour que l'axe d'attirance d'une relation ne puisse monter que là où c'est cohérent ;
 - **rapport à l'intimité** : un pôle `pudeur ↔ liberté`, et un pôle `engagement ↔ légèreté` ;
 - **situation** : seul, en couple, marié, veuf, avec un lien vers la fiche du partenaire quand il existe (relations `married_to`, `partner_of`).
+- **appétence** : la place du désir dans sa vie, de −100 à +100 comme les pôles, nommée en bandes à l'écran (de « indifférent » à « dévorant »). Elle se lit comme l'intensité de l'intérêt « sexualité » (§10.2) et ne vaut que si la facette est remplie.
 
 Le questionnaire a une **partie facultative** sur l'intimité, qu'on peut sauter, et qui ne s'affiche que si les romances sont actives dans le monde. Les PNJ de fond tirent cette facette à graine fixe selon leur culture. L'IA ne la reçoit que si le réglage « Récit » le permet, et jamais pour un personnage qui ne serait pas adulte.
+
+### 10.2 Les centres d'intérêt
+
+Les aspirations disent ce qu'une personne **veut obtenir** (un but, avec un horizon). Les centres d'intérêt disent ce qui l'**attire durablement**, et avec quelle force : la musique, la foi, la magie, le combat, le commerce, le jeu, la boisson, le savoir, la nature, l'artisanat, la politique, la famille, les voyages, la séduction et la sexualité (seulement si la facette intimité est remplie).
+
+Le bloc `personality` gagne une liste `interests` : `{ key, intensity, practice }`.
+- `intensity`, de 0 à 100, dit **à quel point la personne priorise le sujet**, nommée en bandes à l'écran (« curieux », « passionné », « obsédé »).
+- `practice` dit **comment** elle s'y adonne : elle l'étudie, le pratique, le collectionne, en parle, ou l'évite (attirée mais en lutte, comme un ancien buveur).
+
+Ce que ça change : un intérêt fort **ajoute des créneaux à la routine** (le joueur de cartes va au tripot le jeudi soir, la dévote au temple à l'aube) ; il donne à l'IA **des sujets de conversation** et des réactions (un passionné d'histoire s'anime si on lui parle de ruines) ; il fait **monter l'attitude** envers qui le partage. Inspirations : les préférences et les besoins de Dwarf Fortress (un besoin non satisfait pèse sur l'humeur, à garder pour plus tard), les passions de RimWorld, les centres d'intérêt des Sims.
+
+La liste est fermée, avec un champ libre ; trois à cinq intérêts par personne suffisent. Le questionnaire en propose à la fin (« qu'est-ce qui te fait perdre la notion du temps ? »). Les PNJ de fond en tirent un à trois selon leur archétype et leur culture.
 
 ## 11. Ce qui est stocké, et ce qui ne l'est jamais
 
