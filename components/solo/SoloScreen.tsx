@@ -11,7 +11,7 @@ import IntentBar from "@/components/solo/IntentBar";
 import Fil from "@/components/solo/Fil";
 import PastilleJet from "@/components/solo/PastilleJet";
 import { raconterTour } from "@/lib/ui/soloApi";
-import ConsequencesDrawer, { type ConsequencesDrawerData } from "@/components/solo/ConsequencesDrawer";
+import OngletChangements from "@/components/solo/OngletChangements";
 import type { EncashedTurnOutcome, FilItem, IntentBarData, RaisonSansNarration, SceneView } from "@/lib/solo/types";
 import BulleFlottante from "@/components/shared/BulleFlottante";
 import Dropdown from "@/components/shared/Dropdown";
@@ -87,6 +87,7 @@ function summarizeForAnnounce(item: FilItem): string {
       return item.note;
     case "note":
       return item.answer;
+    case "turn_summary":
     case "other":
       return "";
   }
@@ -114,7 +115,7 @@ export default function SoloScreen({
 }) {
   const router = useRouter();
   const t = useTranslations("solo");
-  const { jauges, demande: pending, definirDemande: setPending, rechargerFiche, definirInterlocuteur, definirHeure } = useSoloContexte();
+  const { jauges, demande: pending, definirDemande: setPending, rechargerFiche, definirInterlocuteur, definirHeure, deplierMonde } = useSoloContexte();
   // V3.2-20 : DD et issue des jets, visibles ou non. Changé ici, écrit dans les réglages de la partie.
   const [montrerIssue, setMontrerIssue] = useState(montrerIssueInitial);
   const [reglageErreur, setReglageErreur] = useState<string | null>(null);
@@ -130,7 +131,6 @@ export default function SoloScreen({
     return null;
   }, [filItems]);
   useEffect(() => definirInterlocuteur(interlocuteur), [interlocuteur, definirInterlocuteur]);
-  const [consequences, setConsequences] = useState<ConsequencesDrawerData | null>(null);
   const [announce, setAnnounce] = useState("");
   // V3.2-3 : l'attente et l'état du fournisseur, lus des tours eux-mêmes — aucun sondage.
   const [tourEnCours, setTourEnCours] = useState(false);
@@ -147,27 +147,28 @@ export default function SoloScreen({
   const lastSeqRef = useRef<number | null>(null);
 
   /**
-   * Rafraîchit le fil et le tiroir de conséquences, chacun dès que SA
-   * réponse arrive : attendre les deux ensemble retardait le fil sur la plus
-   * lente. Tous deux changent sans passer par cette colonne (un jet résolu
-   * depuis la fiche, une proposition acceptée depuis le tiroir lui-même).
+   * Rafraîchit le fil, qui change aussi sans passer par cette colonne (un
+   * jet résolu depuis la fiche). V3.2-27 : les conséquences ne sont plus
+   * sondées ici ; l'onglet « Changements » les lit lui-même, seulement
+   * quand il est ouvert (docs/QUOTAS.md).
    */
   async function reloadCenter() {
-    await Promise.all([
-      fetch(`/api/campaigns/${campaignId}/fil`).then(async (filRes) => {
-        if (!filRes.ok) return;
-        const body = (await filRes.json()) as { items: FilItem[] };
-        const newest = body.items[body.items.length - 1];
-        if (newest && newest.seq !== lastSeqRef.current) {
-          lastSeqRef.current = newest.seq;
-          setAnnounce(summarizeForAnnounce(newest));
-        }
-        setFilItems(body.items);
-      }),
-      fetch(`/api/campaigns/${campaignId}/consequences`).then(async (consequencesRes) => {
-        if (consequencesRes.ok) setConsequences((await consequencesRes.json()) as ConsequencesDrawerData);
-      }),
-    ]);
+    const filRes = await fetch(`/api/campaigns/${campaignId}/fil`);
+    if (!filRes.ok) return;
+    const body = (await filRes.json()) as { items: FilItem[] };
+    // La ligne du tour (V3.2-27) n'est pas annoncée : le récit qu'elle suit l'est.
+    const newest = body.items.findLast((i) => i.kind !== "turn_summary");
+    if (newest && newest.seq !== lastSeqRef.current) {
+      lastSeqRef.current = newest.seq;
+      setAnnounce(summarizeForAnnounce(newest));
+    }
+    setFilItems(body.items);
+  }
+
+  /** V3.2-27 : l'onglet « Changements » — dans la colonne Monde sur ordinateur, en feuille du bas sur téléphone. */
+  function voirChangements() {
+    if (window.matchMedia("(min-width: 768px)").matches) deplierMonde("changements");
+    else setFeuilleConsequences(true);
   }
 
   /**
@@ -315,26 +316,20 @@ export default function SoloScreen({
     autoScrollRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 48;
   }
 
-  const nombreConsequences = consequences ? consequences.pending.length + consequences.applied.length : 0;
-
   return (
     <div className="flex h-full min-h-0 flex-col gap-4">
-      {/* Téléphone (V3.1-36) : la bande de jauges en ligne, et ✦ qui ouvre les conséquences en feuille du bas. */}
+      {/* Téléphone (V3.1-36) : la bande de jauges en ligne, et ✦ qui ouvre l'onglet « Changements » en feuille du bas (V3.2-27 : « Annuler ce tour » vit désormais au bout du dernier tour, dans le fil). */}
       <div className="flex shrink-0 items-stretch gap-2 md:hidden">
         <BandeFiche jauges={jauges} variante="ligne" />
-        {/* V3-F2 : ✦ aussi quand un tour peut être annulé, même si le monde n'a rien écrit (le geste vit dans la feuille). */}
-        {(nombreConsequences > 0 || annulable) && (
-          <button
-            type="button"
-            onClick={() => setFeuilleConsequences(true)}
-            aria-haspopup="dialog"
-            aria-label={t("consequencesOuvrir", { nombre: nombreConsequences })}
-            className="flex shrink-0 flex-col items-center justify-center rounded-lg border border-edge bg-panel px-3 text-accent transition-colors hover:bg-panel-raised"
-          >
-            <span aria-hidden="true">✦</span>
-            {nombreConsequences > 0 && <span className="text-xs tabular-nums text-ink-soft">{nombreConsequences}</span>}
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => setFeuilleConsequences(true)}
+          aria-haspopup="dialog"
+          aria-label={t("consequencesOuvrir")}
+          className="flex shrink-0 flex-col items-center justify-center rounded-lg border border-edge bg-panel px-3 text-accent transition-colors hover:bg-panel-raised"
+        >
+          <span aria-hidden="true">✦</span>
+        </button>
       </div>
       <div ref={scrollRef} onScroll={onScroll} className="min-h-0 flex-1 overflow-y-auto">
         <ScenePanel
@@ -345,7 +340,7 @@ export default function SoloScreen({
           onChanged={apresChangementDeScene}
         />
         <div className="mt-4">
-          <Fil items={filItems} montrerIssue={montrerIssue} />
+          <Fil items={filItems} montrerIssue={montrerIssue} annulation={annulable} onAnnule={() => void apresGeste()} onVoirChangements={voirChangements} />
           {/* V3.2-20 (option C) : le jet demandé se lance d'ici, sous la phrase du joueur.
               La clé remet la pastille à zéro quand une demande en remplace une autre (dégâts après une attaque). */}
           {pending && (
@@ -372,9 +367,6 @@ export default function SoloScreen({
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-ink-muted [animation-delay:400ms]" />
             </p>
           )}
-        </div>
-        <div className="mt-2 max-md:hidden">
-          <ConsequencesDrawer data={consequences} onChanged={apresGeste} annulation={annulable} />
         </div>
       </div>
       {/* Region discrete : annonce chaque nouveau tour sans deplacer le
@@ -461,7 +453,7 @@ export default function SoloScreen({
       {feuilleConsequences && (
         <FeuilleDuBas titre={t("consequencesTitre")} titreVisible onFermer={() => setFeuilleConsequences(false)}>
           <div className="pb-2">
-            <ConsequencesDrawer data={consequences} onChanged={apresGeste} ouvertParDefaut annulation={annulable} />
+            <OngletChangements campaignId={campaignId} />
           </div>
         </FeuilleDuBas>
       )}

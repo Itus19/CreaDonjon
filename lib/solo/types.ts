@@ -243,4 +243,11 @@ export type FilItem =
   | { id: string; seq: number; createdAt: string; kind: "rule_application"; changes: string[]; hints: string[]; ignored: string[] }
   | { id: string; seq: number; createdAt: string; kind: "world_update"; note: string }
   | { id: string; seq: number; createdAt: string; kind: "note"; question: string; answer: string }
+  /**
+   * V3.2-27 (ADR 0114) — la ligne du tour, sous son dernier événement : l'heure
+   * (`null` : pas de relevé), puis ce que le tour a changé. Elle remplace, DANS
+   * un tour, les lignes `rule_application` et `world_update`. `last` : le seul
+   * tour qu'on peut annuler. Construite à la lecture, jamais écrite.
+   */
+  | { id: string; seq: number; createdAt: string; kind: "turn_summary"; time: string | null; changes: string[]; hints: string[]; ignored: string[]; worldNotes: number; last: boolean }
   | { id: string; seq: number; createdAt: string; kind: "other"; label: string };

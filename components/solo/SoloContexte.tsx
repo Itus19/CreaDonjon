@@ -33,7 +33,7 @@ import type { JaugesBande } from "@/lib/ui/solo";
  *   (`HeureScene`). `null` : aucun tour depuis l'ouverture, l'heure de la
  *   page fait foi.
  */
-export type OngletMonde = "wiki" | "quetes" | "presents" | "regles";
+export type OngletMonde = "wiki" | "quetes" | "presents" | "regles" | "changements";
 
 interface SoloContexteValeur {
   replie: boolean;

@@ -68,3 +68,32 @@ Quatre défauts, trois tickets : la consigne (V3.2-17), l'horloge (V3.2-18), le 
 - [x] Tests du noyau : voisins `part_of`, reconnaissance et contrôle d'une pièce, décision (wiki, esquisse, seconde visite, nommée, refus), schéma `move_to` / `enter_room`.
 - [ ] Rejoué : « je la suis » mène en cuisine, le bandeau affiche « La cuisine » ; y revenir l'ajoute au bloc « Pièces » de l'auberge.
 
+
+---
+
+### ☑ V3.2-26 — Dormir dans le récit fait un repos long · `S` · sans modèle IA — **codé (Opus)**, reste la vérification en jeu
+
+**Constaté le 25 novembre** : le personnage dort jusqu'à l'aube, aucun repos long n'est validé. Seul le bouton « Repos long » de la fiche l'appliquait ; un saut de temps du récit avançait l'horloge sans rien d'autre.
+
+**Décidé par l'auteur le 26 novembre** : le moteur l'applique seul. Le sommeil vient du texte du joueur (« je dors », « je me couche », « repos long »), jamais de la narration (ADR 0112, amendement). `sommeilDemande` et `decideLongRest` (`src/core/rules/sleepRest.ts`, purs) : sans durée écrite, dormir vaut 8 h ; moins de 8 h, le temps passe sans repos ; jamais en combat ; 16 h après la fin du précédent (`scene.lastLongRestEnd`, sans changer `__v`). `turnLoop.ts` avance l'horloge, puis appelle `takeLongRest` (le même que la fiche) avec `advanceClock: false`. La phrase « Repos long : … » part dans les changements du tour.
+
+**Critères d'acceptation**
+- [x] Tests du noyau : tournures reconnues, négations et paroles ignorées, 8 h, 16 h, combat.
+- [ ] Rejoué : « je vais me coucher » le soir, l'horloge passe au matin, PV et emplacements reviennent ; un second « je dors » deux heures plus tard ne rend rien.
+
+### ☑ V3.2-27 — La ligne du tour, les notes du monde d'office, le temps du combat · `M` · sans modèle IA — **codé (Opus, [ADR 0114](../adr/0114-notes-du-monde-d-office-et-ligne-du-tour.md))**, reste la vérification en jeu
+
+**Constaté le 25 novembre** : le bandeau « Changements dans le monde » compte toute la séance ; on ne sait pas ce que ce tour a changé. Chaque note de l'IA attend un clic. L'heure ne se lit que dans l'en-tête, et un tour de combat ne dit pas qu'il dure 6 secondes.
+
+**Décidé par l'auteur le 26 novembre**, sur esquisses : l'option A (une ligne par tour, le reste dans un onglet du Monde), l'heure à chaque tour, le temps du combat selon les règles 2024, et les notes acceptées par défaut, corrigeables après coup.
+
+- `summarizeTurns` (`src/core/rules/turnSummary.ts`, pur) relit le journal : l'heure de chaque tour vient des relevés `undo_before.scene`, celle du dernier de la scène actuelle (lue par `/fil`). Les lignes `rule_application` et `world_update` d'un tour passent dans sa ligne (`withTurnSummaries`, `turnFil.ts`).
+- `proposeWorldNote` ajoute le paragraphe d'office (identifiant = celui de la proposition), écrit une ligne `world_update` ; repli en attente si l'écriture échoue. `correctAppliedNote` et `removeAppliedNote` (`aiProposals.ts`), routes `POST /api/ai-proposals/[id]/correct` et `/remove`. L'annulation du tour retire le paragraphe.
+- Onglet « Changements » (`OngletChangements.tsx`) dans la colonne Monde et la feuille du bas du téléphone ; le bandeau `ConsequencesDrawer` disparaît, « Annuler ce tour » (`AnnulerTour.tsx`) s'accroche au dernier tour du fil.
+- `endCombat` avance l'horloge de `minutesDeCombat(round)` (6 s par round) et oublie `activeCombatId`.
+
+**Critères d'acceptation**
+- [x] Tests du noyau : heure par tour, dernier tour fermé par l'heure de la scène, combat, phrase de durée non répétée, 6 s par round.
+- [x] Tests de câblage : note ajoutée d'office (identifiant partagé, ligne du tour), repli en attente.
+- [ ] Rejoué : « je vais me coucher » montre « +8 h · 06:08, jour 2 » et la puce du repos ; une note de l'IA apparaît dans le wiki, se corrige et se retire depuis l'onglet ; « Annuler ce tour » la retire aussi.
+- [ ] Rejoué : un combat de 12 rounds terminé fait avancer l'horloge de 2 minutes.

@@ -63,7 +63,7 @@ Chaque réflexe renvoie à une règle déjà écrite ailleurs. Ce sont les même
 - il s'arrête quand l'onglet est caché (`document.visibilityState`) ;
 - il dit son intervalle et sa raison en commentaire.
 
-Aujourd'hui, seul le mode solo sonde (superadmin seulement). *18 octobre* : il lisait `/sheet` deux fois toutes les 4 s (le Jeu pour la demande en cours, la fiche pour elle-même) ; seule la fiche la lit désormais et publie la demande par `SoloContexte`. Par tick : `/sheet`, `/fil`, `/consequences`, soit trois appels au lieu de quatre.
+Aujourd'hui, seul le mode solo sonde (superadmin seulement). *18 octobre* : il lisait `/sheet` deux fois toutes les 4 s (le Jeu pour la demande en cours, la fiche pour elle-même) ; seule la fiche la lit désormais et publie la demande par `SoloContexte`. Par tick : `/sheet`, `/fil`, `/consequences`, soit trois appels au lieu de quatre. *26 novembre* (V3.2-27) : `/consequences` n'est plus sondé qu'onglet « Changements » ouvert (toutes les 8 s) ; `/fil` lit en plus la scène (une ligne). Par tick : `/sheet` et `/fil`.
 
 **Q3. Un abonnement temps réel par besoin, refermé au démontage.** Chaque `channel()` ouvert compte dans les 200 connexions simultanées. Un abonnement filtre côté serveur (`filter`) au lieu de recevoir toute une table.
 

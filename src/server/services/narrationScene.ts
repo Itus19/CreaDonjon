@@ -41,7 +41,7 @@ export async function advanceSceneAfterNarration(
   const scene = await getSceneState(supabase, params.campaignId);
   if (!scene || scene.activeCombatId) return null;
 
-  const proposees = params.elapsed ? minutesProposees(params.elapsed, scene.time, false) : 0;
+  const proposees = params.elapsed ? minutesProposees(params.elapsed, false) : 0;
   const parle = contientParole(params.playerAction) || params.npcReplyText !== null;
   const parole = parle ? minutesDeParole(compterMots(params.playerAction) + compterMots(params.npcReplyText ?? "")) : 0;
   const minutes = Math.max(proposees, parole) - MINUTES_DEJA_COMPTEES;

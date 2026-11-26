@@ -42,7 +42,7 @@ Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été
 | [`02-recit-et-liens.md`](backlog-v3.2/02-recit-et-liens.md) | Le texte : la personne du récit, les liens vers les fiches (V3.2-5, 6) |
 | [`03-colonnes.md`](backlog-v3.2/03-colonnes.md) | Les colonnes : l'onglet Wiki, les volets, les présents (V3.2-7, 12 à 16, 25) |
 | [`04-commerce.md`](backlog-v3.2/04-commerce.md) | Acheter, vendre, échanger : le moteur règle, le PNJ réagit (V3.2-8 à 11) |
-| [`05-narration.md`](backlog-v3.2/05-narration.md) | La narration qui fait avancer l'histoire : consigne, horloge, déplacement (V3.2-17 à 19) |
+| [`05-narration.md`](backlog-v3.2/05-narration.md) | La narration qui fait avancer l'histoire : consigne, horloge, déplacement, repos long, ligne du tour (V3.2-17 à 19, 26, 27) |
 | [`06-jet-ou-pas.md`](backlog-v3.2/06-jet-ou-pas.md) | Faut-il un jet ? L'IA classe, le moteur fixe le DD (V3.2-22 à 24, ADR 0113) |
 
 | Ticket | État | Modèle IA | Titre | Fichier |
@@ -51,7 +51,7 @@ Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été
 | V3.2-2 | ☑ | sans | Le contour de « Que fais-tu ? » | [`01-ecran-du-solo.md`](backlog-v3.2/01-ecran-du-solo.md) |
 | V3.2-3 | ☑ | sans | On ne sait pas si c'est parti, ni si l'IA répond | [`01-ecran-du-solo.md`](backlog-v3.2/01-ecran-du-solo.md) |
 | V3.2-4 | ☑ | sans | La zone de texte se vide à l'envoi | [`01-ecran-du-solo.md`](backlog-v3.2/01-ecran-du-solo.md) |
-| V3.2-5 | ☐ | **avec** | Le récit s'adresse au joueur : tu, ou vous | [`02-recit-et-liens.md`](backlog-v3.2/02-recit-et-liens.md) |
+| V3.2-5 | ☑ | **avec** | Le récit s'adresse au joueur : tu, ou vous, son registre et les scènes intimes | [`02-recit-et-liens.md`](backlog-v3.2/02-recit-et-liens.md) |
 | V3.2-6 | ☐ | **avec** | Les fiches citées par le récit deviennent des liens | [`02-recit-et-liens.md`](backlog-v3.2/02-recit-et-liens.md) |
 | V3.2-7 | ☐ | sans | L'onglet Wiki : chercher et lire sur place | [`03-colonnes.md`](backlog-v3.2/03-colonnes.md) |
 | V3.2-8 | ☑ | sans | Le moteur règle un échange | [`04-commerce.md`](backlog-v3.2/04-commerce.md) |
@@ -72,6 +72,8 @@ Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été
 | V3.2-23 | ☐ | **avec** | Le classifieur, son prompt et son corpus | [`06-jet-ou-pas.md`](backlog-v3.2/06-jet-ou-pas.md) |
 | V3.2-24 | ☐ | sans | Le classement joue le tour, la pastille propose | [`06-jet-ou-pas.md`](backlog-v3.2/06-jet-ou-pas.md) |
 | V3.2-25 | ☑ | sans | Deux bandes de même largeur | [`03-colonnes.md`](backlog-v3.2/03-colonnes.md) |
+| V3.2-26 | ☑ | sans | Dormir dans le récit fait un repos long | [`05-narration.md`](backlog-v3.2/05-narration.md) |
+| V3.2-27 | ☑ | sans | La ligne du tour, les notes du monde d'office, le temps du combat | [`05-narration.md`](backlog-v3.2/05-narration.md) |
 
 ---
 

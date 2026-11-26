@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  estPhraseDuree,
+  minutesDeCombat,
   ELAPSED_CHOICES,
-  MAX_PROPOSED_MINUTES,
   dureeExplicite,
   minutesDeParole,
   minutesJusquAuMatin,
@@ -56,23 +57,17 @@ describe("minutesJusquAuMatin", () => {
 });
 
 describe("minutesProposees — le moteur valide la durée proposée par l'IA", () => {
-  const soir = { day: 1, hour: 20, minute: 0 };
-  it("chaque choix fermé a sa durée", () => {
-    expect(minutesProposees({ kind: "instant" }, soir, false)).toBe(0);
-    expect(minutesProposees({ kind: "quelques_minutes" }, soir, false)).toBe(5);
-    expect(minutesProposees({ kind: "une_heure" }, soir, false)).toBe(60);
-    expect(minutesProposees({ kind: "plusieurs_heures", hours: 3 }, soir, false)).toBe(180);
-    expect(minutesProposees({ kind: "jusqu_au_matin" }, soir, false)).toBe(11 * 60);
+  it("chaque choix fermé a sa durée, une heure au plus", () => {
+    expect(minutesProposees({ kind: "instant" }, false)).toBe(0);
+    expect(minutesProposees({ kind: "quelques_minutes" }, false)).toBe(5);
+    expect(minutesProposees({ kind: "une_heure" }, false)).toBe(60);
   });
-  it("plusieurs heures : de 2 à 8, jamais plus", () => {
-    expect(minutesProposees({ kind: "plusieurs_heures", hours: 30 }, soir, false)).toBe(MAX_PROPOSED_MINUTES);
-    expect(minutesProposees({ kind: "plusieurs_heures", hours: 1 }, soir, false)).toBe(120);
+  it("aucune durée en combat", () => {
+    expect(minutesProposees({ kind: "une_heure" }, true)).toBe(0);
   });
-  it("aucune ellipse en combat", () => {
-    expect(minutesProposees({ kind: "une_heure" }, soir, true)).toBe(0);
-  });
-  it("la liste fermée est exposée pour l'outil", () => {
-    expect(ELAPSED_CHOICES).toContain("jusqu_au_matin");
+  it("aucune ellipse dans la liste : sauter des heures ou une nuit, c'est le joueur qui l'écrit (ADR 0112, amendement)", () => {
+    expect(ELAPSED_CHOICES).not.toContain("jusqu_au_matin");
+    expect(ELAPSED_CHOICES).not.toContain("plusieurs_heures");
   });
 });
 
@@ -90,5 +85,19 @@ describe("phraseDuree — le fait que la narration reçoit", () => {
     expect(phraseDuree(180, { day: 1, hour: 22, minute: 54 })).toBe("3 h passent. Il est maintenant 22h54 (jour 1).");
     expect(phraseDuree(30, { day: 2, hour: 7, minute: 5 })).toBe("30 min passent. Il est maintenant 07h05 (jour 2).");
     expect(phraseDuree(150, { day: 2, hour: 7, minute: 5 })).toBe("2 h 30 passent. Il est maintenant 07h05 (jour 2).");
+  });
+});
+
+describe("estPhraseDuree et minutesDeCombat", () => {
+  it("reconnaît la phrase de durée, et elle seule", () => {
+    expect(estPhraseDuree(phraseDuree(480, { day: 2, hour: 6, minute: 8 }))).toBe(true);
+    expect(estPhraseDuree("Repos long : points de vie au maximum.")).toBe(false);
+  });
+
+  it("un round dure 6 secondes : dix rounds font une minute, arrondie au-dessus", () => {
+    expect(minutesDeCombat(0)).toBe(0);
+    expect(minutesDeCombat(1)).toBe(1);
+    expect(minutesDeCombat(10)).toBe(1);
+    expect(minutesDeCombat(11)).toBe(2);
   });
 });
