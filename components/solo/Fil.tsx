@@ -3,6 +3,7 @@
 import { useState } from "react";
 import EmptyState from "@/components/shell/EmptyState";
 import type { FilItem } from "@/lib/solo/types";
+import { factSansIssue } from "@/src/core/rules/rollFactDisplay";
 
 /**
  * V3-D4 — Le fil : `session_events` rendu, un gabarit par genre.
@@ -89,26 +90,35 @@ function PlayerActionRow({ item }: { item: Extract<FilItem, { kind: "player_acti
   return <p className={`${BULLE_JOUEUR} text-sm text-ink`}>{item.text}</p>;
 }
 
-function RollRow({ item }: { item: Extract<FilItem, { kind: "roll" }> }) {
+/**
+ * V3.2-20 — un jet du tour : la phrase du joueur en bulle (elle n'apparaît pas
+ * ailleurs pour un tour à jet), puis la carte du jet. Réglage coupé
+ * (`montrerIssue`), la carte tait le DD et l'issue : c'est le récit qui les dit.
+ */
+function RollRow({ item, montrerIssue }: { item: Extract<FilItem, { kind: "roll" }>; montrerIssue: boolean }) {
   const [open, setOpen] = useState(false);
   const label = originLabel(item.origin);
+  const faits = montrerIssue ? item.facts : item.facts.map(factSansIssue);
   return (
-    <div className={CARD}>
-      <button type="button" className="flex w-full items-center justify-between gap-2 text-left" onClick={() => setOpen((v) => !v)} disabled={item.trace.length === 0}>
-        <span className="text-sm text-ink">{item.facts.join(" ")}</span>
-        {item.total !== null && <span className={`shrink-0 text-sm font-semibold ${verdictColorClass(item.verdict)}`}>{item.total}</span>}
-      </button>
-      {label && <p className="mt-0.5 text-xs text-ink-muted">{label}</p>}
-      {open && item.trace.length > 0 && (
-        <ul className="mt-2 flex flex-col gap-0.5 border-t border-edge pt-2">
-          {item.trace.map((step, i) => (
-            <li key={i} className="text-xs text-ink-muted">
-              {step.text} = {step.value}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+    <>
+      {item.actionText && <p className={`${BULLE_JOUEUR} text-sm text-ink`}>{item.actionText}</p>}
+      <div className={CARD}>
+        <button type="button" className="flex w-full items-center justify-between gap-2 text-left" onClick={() => setOpen((v) => !v)} disabled={item.trace.length === 0}>
+          <span className="text-sm text-ink">{faits.join(" ")}</span>
+          {item.total !== null && <span className={`shrink-0 text-sm font-semibold ${montrerIssue ? verdictColorClass(item.verdict) : "text-ink"}`}>{item.total}</span>}
+        </button>
+        {label && <p className="mt-0.5 text-xs text-ink-muted">{label}</p>}
+        {open && item.trace.length > 0 && (
+          <ul className="mt-2 flex flex-col gap-0.5 border-t border-edge pt-2">
+            {item.trace.map((step, i) => (
+              <li key={i} className="text-xs text-ink-muted">
+                {step.text} = {step.value}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </>
   );
 }
 
@@ -166,7 +176,7 @@ function filRowKey(item: FilItem): string {
   return item.id;
 }
 
-export default function Fil({ items }: { items: FilItem[] | null }) {
+export default function Fil({ items, montrerIssue }: { items: FilItem[] | null; /** V3.2-20 : réglage de partie, DD et issue des jets visibles. */ montrerIssue: boolean }) {
   if (items === null) {
     return <p className="text-sm text-ink-muted">Chargement…</p>;
   }
@@ -187,7 +197,7 @@ export default function Fil({ items }: { items: FilItem[] | null }) {
           case "player_action":
             return <PlayerActionRow key={filRowKey(item)} item={item} />;
           case "roll":
-            return <RollRow key={filRowKey(item)} item={item} />;
+            return <RollRow key={filRowKey(item)} item={item} montrerIssue={montrerIssue} />;
           case "rule_application":
             return <RuleApplicationRow key={filRowKey(item)} item={item} />;
           case "world_update":

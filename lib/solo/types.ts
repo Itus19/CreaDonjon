@@ -203,6 +203,13 @@ export interface FenetreReactionResponse {
 export type EncashedTurnResponse = EncashedTurnOutcome | FenetreReactionResponse;
 
 /**
+ * V3.2-20 — la narration d'un jet déjà encaissé, demandée à part
+ * (`POST /api/solo/tour/[eventId]/raconter`) pour que le dé s'affiche sans
+ * attendre le modèle. Mêmes champs que dans `TurnOutcome`.
+ */
+export type NarrationTourResponse = Pick<TurnOutcome, "narration" | "sansNarration" | "sansNarrationDetail" | "time" | "scene">;
+
+/**
  * V3-D4 — le fil, tel que `session_events` le rend. Un item par `kind`
  * RÉELLEMENT écrit par ce module (`turnFil.ts`) — `system` n'existe
  * encore nulle part dans le code : `other` est un repli défensif, jamais un
@@ -230,6 +237,8 @@ export type FilItem =
       verdict: "success" | "fail" | null;
       trace: TraceStep[];
       origin: string | null;
+      /** V3.2-20 : la phrase du joueur qui a demandé ce jet ; `null` pour des dégâts chaînés ou un jet sans phrase. */
+      actionText: string | null;
     }
   | { id: string; seq: number; createdAt: string; kind: "rule_application"; changes: string[]; hints: string[]; ignored: string[] }
   | { id: string; seq: number; createdAt: string; kind: "world_update"; note: string }

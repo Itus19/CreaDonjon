@@ -9,8 +9,10 @@ import { useSoloContexte } from "@/components/solo/SoloContexte";
 import ScenePanel from "@/components/solo/ScenePanel";
 import IntentBar from "@/components/solo/IntentBar";
 import Fil from "@/components/solo/Fil";
+import PastilleJet from "@/components/solo/PastilleJet";
+import { raconterTour } from "@/lib/ui/soloApi";
 import ConsequencesDrawer, { type ConsequencesDrawerData } from "@/components/solo/ConsequencesDrawer";
-import type { FilItem, IntentBarData, RaisonSansNarration, SceneView } from "@/lib/solo/types";
+import type { EncashedTurnOutcome, FilItem, IntentBarData, RaisonSansNarration, SceneView } from "@/lib/solo/types";
 import BulleFlottante from "@/components/shared/BulleFlottante";
 import Dropdown from "@/components/shared/Dropdown";
 import { choixDepuisValeur, optionsChoix, valeurChoix, type FournisseursIaReponse } from "@/lib/ia/fournisseurs";
@@ -98,6 +100,7 @@ export default function SoloScreen({
   scene,
   locations,
   candidates,
+  montrerIssue: montrerIssueInitial,
 }: {
   worldSlug: string;
   campaignId: string;
@@ -106,10 +109,15 @@ export default function SoloScreen({
   scene: SceneView | null;
   locations: { id: string; name: string }[];
   candidates: { id: string; name: string }[];
+  /** V3.2-20 : réglage de partie `solo_show_outcome`, lu avec la page. */
+  montrerIssue: boolean;
 }) {
   const router = useRouter();
   const t = useTranslations("solo");
-  const { jauges, demande: pending, definirDemande: setPending, rechargerFiche, definirInterlocuteur } = useSoloContexte();
+  const { jauges, demande: pending, definirDemande: setPending, rechargerFiche, definirInterlocuteur, definirHeure } = useSoloContexte();
+  // V3.2-20 : DD et issue des jets, visibles ou non. Changé ici, écrit dans les réglages de la partie.
+  const [montrerIssue, setMontrerIssue] = useState(montrerIssueInitial);
+  const [reglageErreur, setReglageErreur] = useState<string | null>(null);
   const [feuilleConsequences, setFeuilleConsequences] = useState(false);
   const [sceneView, setSceneView] = useState(scene);
   const [filItems, setFilItems] = useState<FilItem[] | null>(null);
@@ -197,6 +205,47 @@ export default function SoloScreen({
   function apresChangementDeScene(next: SceneView) {
     setSceneView(next);
     router.refresh();
+  }
+
+  /** V3.2-20 : le jet lancé depuis la pastille est joué — la suite du tour, puis son récit, demandé à part. */
+  async function apresJet(tour: EncashedTurnOutcome) {
+    if (tour.time) definirHeure(tour.time);
+    if (tour.scene) apresChangementDeScene(tour.scene);
+    setPending(tour.chained);
+    void apresGeste();
+    // V3.2-20 : le dé est déjà à l'écran ; le récit arrive ensuite, avec l'attente visible du fil.
+    if (!tour.record.eventId) return;
+    setTourEnCours(true);
+    const recit = await raconterTour(tour.record.eventId, { entityId, campaignId, worldSlug });
+    setTourEnCours(false);
+    setNarrationEtat(recit.narration !== null ? "repond" : (recit.sansNarration ?? "echec"));
+    setNarrationDetail(recit.narration !== null ? undefined : recit.sansNarrationDetail);
+    if (recit.time) definirHeure(recit.time);
+    if (recit.scene) apresChangementDeScene(recit.scene);
+    await apresGeste();
+  }
+
+  /**
+   * V3.2-20 : bascule le réglage « DD et réussites ». L'écran change tout de
+   * suite ; un refus du serveur le remet comme avant et le dit. Une écriture
+   * par clic, aucune lecture de plus (docs/QUOTAS.md).
+   */
+  async function basculerIssue() {
+    const suivant = !montrerIssue;
+    setMontrerIssue(suivant);
+    setReglageErreur(null);
+    try {
+      const res = await fetch(`/api/campaigns/${campaignId}/table-settings`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ solo_show_outcome: suivant }),
+      });
+      if (!res.ok) throw new Error(String(res.status));
+    } catch (erreur) {
+      console.error("Réglage « DD et réussites » non enregistré", erreur);
+      setMontrerIssue(!suivant);
+      setReglageErreur(t("jet.reglageEchec"));
+    }
   }
 
   /** Après un geste de cette colonne : le fil, les conséquences, ET la fiche (PV, demande) sans attendre son prochain tick. */
@@ -296,7 +345,23 @@ export default function SoloScreen({
           onChanged={apresChangementDeScene}
         />
         <div className="mt-4">
-          <Fil items={filItems} />
+          <Fil items={filItems} montrerIssue={montrerIssue} />
+          {/* V3.2-20 (option C) : le jet demandé se lance d'ici, sous la phrase du joueur.
+              La clé remet la pastille à zéro quand une demande en remplace une autre (dégâts après une attaque). */}
+          {pending && (
+            <div className="mt-2 flex flex-col items-stretch gap-2">
+              {pending.player_action_text && <p className="max-w-[85%] self-end rounded-lg rounded-br-sm border border-players bg-panel-raised px-3 py-1 text-sm text-ink">{pending.player_action_text}</p>}
+              <PastilleJet
+                key={`${pending.kind}:${pending.action_id}:${pending.player_action_text}`}
+                demande={pending}
+                montrerIssue={montrerIssue}
+                entityId={entityId}
+                campaignId={campaignId}
+                worldSlug={worldSlug}
+                onEncaisse={(tour) => void apresJet(tour)}
+              />
+            </div>
+          )}
           {/* V3.2-3 : pendant que le modèle écrit (10 à 20 s en local), le fil montre qu'il
               se passe quelque chose, au lieu de rester figé. `prefers-reduced-motion` est
               déjà traité dans tokens.css : rien à réimplémenter ici (docs/CHARTE-UI.md §4). */}
@@ -337,6 +402,7 @@ export default function SoloScreen({
             setNarrationDetail(detail);
           }}
           suivreEnvoi={suivreEnvoi}
+          montrerIssue={montrerIssue}
           etatIa={
             /* V3.2-3 : l'état du fournisseur, lu du dernier tour joué, avec sa raison (V3.1-223) :
                vert s'il a raconté, orange si le quota ou la limite est atteint, rouge pour un
@@ -368,7 +434,17 @@ export default function SoloScreen({
             </span>
           }
           choixModele={
-            optionsModeles.length > 0 && (
+            <span className="flex min-w-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={() => void basculerIssue()}
+                aria-pressed={montrerIssue}
+                title={reglageErreur ?? t("jet.reglageTitre")}
+                className={`shrink-0 rounded-full border px-2.5 py-1 text-xs transition-colors hover:bg-panel-raised ${reglageErreur ? "border-danger text-danger" : montrerIssue ? "border-accent text-accent" : "border-edge text-ink-muted"}`}
+              >
+                {t("jet.reglage")} : {t(montrerIssue ? "jet.reglageAffiches" : "jet.reglageMasques")}
+              </button>
+            {optionsModeles.length > 0 && (
               <Dropdown
                 size="sm"
                 className="max-w-[10rem] shrink-0"
@@ -377,7 +453,8 @@ export default function SoloScreen({
                 options={optionsModeles}
                 onChange={(v) => void choisirModele(v)}
               />
-            )
+            )}
+            </span>
           }
         />
       </div>

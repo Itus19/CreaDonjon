@@ -56,21 +56,25 @@ function mapRoll(base: { id: string; seq: number; createdAt: string }, payload: 
   const attack = payload.attack as { total: number; trace: TraceStep[] } | null | undefined;
   const damage = payload.damage as { total: number; trace: TraceStep[] } | null | undefined;
   const attackVerdict = payload.verdict as "hit" | "miss" | null | undefined;
+  // V3.2-20 : la phrase du joueur, montrée en bulle au-dessus du jet. Pas pour
+  // les dégâts chaînés : ils portent la même phrase que l'attaque qui les précède.
+  const intent = payload.intent as { text?: unknown; kind?: unknown } | undefined;
+  const actionText = typeof intent?.text === "string" && intent.text !== "" && intent.kind !== "weapon_damage" ? intent.text : null;
 
   if (check) {
-    return { ...base, kind: "roll", facts, total: check.total, verdict: check.verdict, trace: check.trace, origin };
+    return { ...base, kind: "roll", facts, total: check.total, verdict: check.verdict, trace: check.trace, origin, actionText };
   }
   if (attack) {
     const verdict = attackVerdict === "hit" ? "success" : attackVerdict === "miss" ? "fail" : null;
-    return { ...base, kind: "roll", facts, total: attack.total, verdict, trace: attack.trace, origin };
+    return { ...base, kind: "roll", facts, total: attack.total, verdict, trace: attack.trace, origin, actionText };
   }
   if (damage) {
-    return { ...base, kind: "roll", facts, total: damage.total, verdict: null, trace: damage.trace, origin };
+    return { ...base, kind: "roll", facts, total: damage.total, verdict: null, trace: damage.trace, origin, actionText };
   }
   // Ne devrait jamais arriver (un `roll` porte toujours l'une des trois cles
   // depuis `finishResolution`, turnIntent.ts) : un repli honnete plutot
   // qu'un ecran qui casse si un jour un appelant en ecrit un autrement.
-  return { ...base, kind: "roll", facts, total: null, verdict: null, trace: [], origin };
+  return { ...base, kind: "roll", facts, total: null, verdict: null, trace: [], origin, actionText };
 }
 
 function mapRuleApplication(base: { id: string; seq: number; createdAt: string }, payload: Record<string, unknown>): FilItem {

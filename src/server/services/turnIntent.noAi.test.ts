@@ -132,3 +132,16 @@ describe("le journal precede tout le reste", () => {
     expect(source).toContain("const eventId = await journalTurn(");
   });
 });
+
+describe("le récit demandé à part (V3.2-20) ne rejoue jamais le tour", () => {
+  /** La route ne fait que raconter un jet déjà journalisé : aucun dé, aucun effet, aucune écriture de tour. */
+  const MARKERS = ["playTurn(", "playEncashedTurnFromRoll(", "executeIntent(", "resolveIntentRequest(", "resolveIntentRequestFromRoll(", "applyRuntimeStateChange("];
+  const file = "app/api/solo/tour/[eventId]/raconter/route.ts";
+  it(`${file} n'appelle aucune fonction qui joue un tour`, () => {
+    const lines = codeLines(sourceOf(file));
+    for (const marker of MARKERS) {
+      const offending = lines.filter((line) => line.includes(marker));
+      expect(offending, `${file} mentionne ${marker}`).toEqual([]);
+    }
+  });
+});

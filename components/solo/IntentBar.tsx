@@ -14,7 +14,7 @@ import DieIcon from "@/components/shared/DieIcon";
 import { useDiceRoll } from "@/components/shell/DiceRollPanel";
 import { ErreurLancer, type SortieJet } from "@/lib/ui/outilDes";
 import { preReglageDepuisDemande, sortieAttenteReactions, sortieJetDepuisTour } from "@/lib/ui/solo";
-import { encaisserDepuisFiche } from "@/lib/ui/soloApi";
+import { encaisserDepuisFiche, raconterTour } from "@/lib/ui/soloApi";
 import { useSoloContexte } from "@/components/solo/SoloContexte";
 
 /**
@@ -136,8 +136,6 @@ function tradeSentence(trade: TradeReading): string {
 
 /** 1 à 3 lignes — mesuré sur `text-sm` (20px de ligne) plus le padding vertical du champ (2 × 8px). */
 const LINE_HEIGHT_PX = 20;
-/** V3.1-36 : le temps de lire une attaque dans l'outil de dés avant qu'il se rouvre sur les dégâts. */
-const DELAI_ENCHAINEMENT_MS = 2200;
 const FIELD_PADDING_PX = 16;
 const MAX_LINES = 3;
 
@@ -154,6 +152,7 @@ export default function IntentBar({
   onNarration,
   etatIa,
   choixModele,
+  montrerIssue,
   suivreEnvoi,
 }: {
   worldSlug: string;
@@ -182,6 +181,8 @@ export default function IntentBar({
    * l'erreur affichée et la phrase dans le champ alors que l'IA avait raconté.
    */
   suivreEnvoi?: (texte: string, genre: "tour" | "mj") => () => Promise<boolean>;
+  /** V3.2-20 : réglage de partie — coupé, l'en-tête de la demande tait le DD (et la CA). */
+  montrerIssue: boolean;
 }) {
   const [text, setText] = useState("");
   // V3.2-18 : l'heure rendue par chaque tour, pour le bandeau (rendu une fois par la page serveur).
@@ -246,6 +247,8 @@ export default function IntentBar({
   if (pendingKey !== lastPendingKey) {
     setLastPendingKey(pendingKey);
     setText("");
+    // V3.2-20 : la demande est honorée, d'où qu'elle soit lancée (pastille, outil, fiche) : le DD saisi ne vaut plus.
+    if (pendingKey === null) setDc("");
   }
 
   // Grandit avec son CONTENU (1 a 8 lignes) — colle a `scrollHeight`,
@@ -273,18 +276,31 @@ export default function IntentBar({
   const needsDc = chosenAction !== null && chosenAction.kind !== "weapon_attack";
 
   /**
-   * V3.1-36 — « Jouer » ouvre l'outil de dés (ADR 0035) sur la demande posée.
-   * « Lancer » y fait le même encaissement que les boutons de la fiche : le
-   * serveur tire le dé et encaisse. Une attaque qui touche chaîne la demande de
-   * dégâts : l'outil se rouvre dessus, après un instant pour lire l'attaque.
+   * V3.1-36 — le bouton dé de la barre ouvre l'outil de dés (ADR 0035) sur la
+   * demande posée. « Lancer » y fait le même encaissement que les boutons de la
+   * fiche : le serveur tire le dé et encaisse. V3.2-20 : l'outil ne s'ouvre plus
+   * tout seul (ni à la pose, ni pour des dégâts chaînés) — la pastille du fil
+   * (`PastilleJet`) est le chemin ordinaire, l'outil un recours.
    */
   function ouvrirOutil(demande: PendingRequest) {
     openDiceTool(preReglageDepuisDemande(demande, () => lancerDansOutil(demande)));
   }
 
+  /** V3.2-20 : le récit d'un jet lancé depuis l'outil, demandé après coup ; l'attente se voit dans le fil. */
+  async function raconterApres(idCampagne: string, eventId: string) {
+    onEnCours?.(true);
+    const recit = await raconterTour(eventId, { entityId, campaignId: idCampagne, worldSlug });
+    onEnCours?.(false);
+    onNarration?.(recit.narration !== null ? null : (recit.sansNarration ?? "echec"), recit.narration !== null ? undefined : recit.sansNarrationDetail);
+    if (recit.time) definirHeure(recit.time);
+    if (recit.scene) onSceneMoved?.(recit.scene);
+    onActed?.();
+  }
+
   async function lancerDansOutil(demande: PendingRequest): Promise<SortieJet | null> {
     if (campaignId === null) throw new ErreurLancer("Sans campagne, il n'y a pas de tour à jouer.");
-    const outcome = await encaisserDepuisFiche({ entityId, campaignId, worldSlug });
+    // V3.2-20 : le dé d'abord, le récit ensuite (`raconterApres`), pour que l'outil n'attende pas le modèle.
+    const outcome = await encaisserDepuisFiche({ entityId, campaignId, worldSlug, narrer: false });
     // V3.1-216 : une réaction peut intervenir — le tour n'est pas joué, la
     // demande reste posée, et le bandeau de réaction prend la main. L'outil
     // n'affiche ni total ni verdict jusqu'à la reprise.
@@ -294,8 +310,7 @@ export default function IntentBar({
     onPendingChange(outcome.chained);
     if (outcome.chained === null) setDc("");
     onActed?.();
-    const suite = outcome.chained;
-    if (suite !== null) setTimeout(() => ouvrirOutil(suite), DELAI_ENCHAINEMENT_MS);
+    if (outcome.record.eventId) void raconterApres(campaignId, outcome.record.eventId);
     return sortieJetDepuisTour(demande, outcome);
   }
 
@@ -363,9 +378,9 @@ export default function IntentBar({
       // V3-B5 — un choix mecanique en campagne ne rend plus un tour joue :
       // il rend la demande posee, en attente du de annonce (`encash`).
       // L'action libre, elle, garde son aller simple d'avant ce ticket.
+      // V3.2-20 : la demande s'affiche en pastille dans le fil, l'outil de dés ne s'ouvre plus par-dessus.
       if ("pending" in body) {
         onPendingChange(body.pending);
-        ouvrirOutil(body.pending);
       } else {
         // V3.2-3 : un tour joué sans narration dit pourquoi (V3.1-223) ; sans raison
         // donnée par le serveur, c'est un échec générique.
@@ -564,7 +579,7 @@ export default function IntentBar({
       <span className="min-w-0 truncate text-xs text-ink-soft">
         {pending.target_label ? `sur ${pending.target_label} · ` : ""}mod. {pending.modifier >= 0 ? "+" : "−"}
         {Math.abs(pending.modifier)}
-        {pending.dc !== null && ` · ${pending.kind === "weapon_attack" ? "CA" : "DD"} ${pending.dc}`}
+        {montrerIssue && pending.dc !== null && ` · ${pending.kind === "weapon_attack" ? "CA" : "DD"} ${pending.dc}`}
         {pending.advantage !== "normal" && ` · ${ADVANTAGE_LABELS[pending.advantage]}`}
       </span>
     </span>

@@ -12,6 +12,12 @@ const bodySchema = z.object({
   entityId: z.string().uuid(),
   campaignId: z.string().uuid(),
   worldSlug: z.string().min(1),
+  /**
+   * V3.2-20 — `false` : rendre le dé tout de suite, sans attendre le modèle ;
+   * l'écran demande ensuite le récit à `.../[eventId]/raconter`. Absent : la
+   * narration part dans la même requête, comme avant.
+   */
+  narrer: z.boolean().optional(),
 });
 
 /**
@@ -105,7 +111,7 @@ export async function POST(request: NextRequest) {
 
   // La narration : TOUJOURS apres, TOUJOURS best-effort — meme raison et
   // meme forme que les deux autres routes du tour solo.
-  if (result.record.eventId) {
+  if (result.record.eventId && parsed.data.narrer !== false) {
     const narre = await narrerTourSoloSansFaillir(supabase, {
       worldId: world.id,
       campaignId: parsed.data.campaignId,

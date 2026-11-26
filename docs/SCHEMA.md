@@ -716,6 +716,8 @@ create table campaign_entity_snapshots (
 
 Lecture par tout membre du monde, écriture par le MJ (`campaigns_write` : `is_world_admin`), par la route `/api/campaigns/[campaignId]/table-settings`. Les interrupteurs ne règlent que les gestes **manuels** d'une joueuse en campagne (`guardSheetActionRoute`) ; le MJ et le moteur (repos, résolution) n'y passent pas. L'épuisement compte comme un état (`conditions`).
 
+`solo_show_outcome` (booléen, défaut `false`, V3.2-20) : le mode solo affiche-t-il le DD (ou la CA) et l'issue des jets ? Réglage d'affichage seulement : le moteur calcule l'issue et la transmet au narrateur dans tous les cas.
+
 **`campaign_encounters`** (migration `20260818110001_campaign_encounters.sql`, V1-E3) — rencontres composées par le générateur MJ (outil autonome, jamais un bloc de wiki, voir §7) :
 
 ```sql
