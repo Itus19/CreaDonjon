@@ -8,6 +8,8 @@ import { soloSystemPrompt } from "@/src/core/ai/narrationPrompt";
 import { parseTableSettings } from "@/src/core/campaigns/tableSettings";
 import { getCampaignTableSettingsRaw } from "@/src/server/repos/campaigns";
 import { buildSoloTurnContext } from "@/src/server/services/turnContext";
+import { drawPriceListForScene } from "@/src/server/services/priceListDraw";
+import { demandeLaCarte } from "@/src/core/rules/demandeCarte";
 import { drawSketchForScene, recordSketchSpeechAndMaybeAnchor } from "@/src/server/services/sceneSketches";
 import { proposeWorldNote } from "@/src/server/services/soloWorldNotes";
 import { advanceSceneAfterNarration, applyRoomAfterNarration, moveSceneAfterNarration } from "@/src/server/services/narrationScene";
@@ -175,7 +177,30 @@ async function attemptNarration(
  * maximale aux narrations récentes est la plus basse est retenu — jamais
  * les deux, un seul événement `narration` s'écrit.
  */
+/**
+ * V3.2-42 — la carte se tire dès que le joueur demande à manger, à boire, une
+ * chambre ou un prix dans un lieu qui n'en a pas : le moteur la tire (tables
+ * du générateur Taverne, prix selon la richesse du lieu) et l'écrit sur la
+ * page du lieu AVANT le contexte, pour que le PNJ cite de vrais prix.
+ * Best-effort : un monde sans tables, ou sans droit d'écrire sur la page,
+ * laisse le tour se raconter sans carte (la consigne interdit alors tout prix).
+ * Coût : rien si la phrase ne demande rien ; sinon quatre lectures, et le
+ * tirage une seule fois par lieu (`drawPriceListForScene`).
+ */
+async function tirerCarteSiDemandee(supabase: TypedClient, params: SoloNarrationParams): Promise<void> {
+  if (!demandeLaCarte(params.playerAction)) return;
+  try {
+    // La narration solo est en français (consigne, lexiques) : la carte aussi.
+    const tirage = await drawPriceListForScene(supabase, { campaignId: params.campaignId, worldId: params.worldId, userId: params.userId, locale: "fr" });
+    if ("error" in tirage) console.error("Carte du lieu non tirée avant la narration", params.campaignId, tirage.error);
+  } catch (erreur) {
+    // Le tour se raconte quand même, sans carte.
+    console.error("Tirage de la carte du lieu impossible", erreur);
+  }
+}
+
 export async function narrateSoloTurn(supabase: TypedClient, provider: AiProvider, params: SoloNarrationParams): Promise<SoloNarrationOutcome> {
+  await tirerCarteSiDemandee(supabase, params);
   // V3.2-5 : le réglage « Récit » (une lecture de la ligne de campagne, en parallèle du contexte).
   const [firstContext, rawSettings] = await Promise.all([
     buildSoloTurnContext(supabase, {

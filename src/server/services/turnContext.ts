@@ -24,9 +24,10 @@ import { listBlocksForEntity } from "@/src/server/repos/blocks";
 import { listEntitiesByIds } from "@/src/server/repos/entities";
 import { listRecentEventsByKind, listRecentEventsByKinds } from "@/src/server/repos/sessions";
 import { filtrerBlocsVisibles } from "@/src/server/services/blocks";
-import { filterSegments } from "@/src/core/visibility";
+import { filterSegments, genericPlayerViewer, isAdminViewer } from "@/src/core/visibility";
 import { zTextBlockData } from "@/src/core/schemas/blocks/text";
 import { premierParagraphe } from "@/src/core/entities/premierePhrase";
+import { paragraphesDe, secretsEntre } from "@/src/core/ai/secretsMj";
 import { zRoomsBlockData, type Room } from "@/src/core/schemas/blocks/rooms";
 import { estQuestionDirecte } from "@/src/core/ai/npcAddressed";
 import { undoneEventIds } from "@/src/core/rules/turnUndo";
@@ -72,15 +73,73 @@ async function knownAsByTarget(supabase: TypedClient, playerEntityId: string): P
   return map;
 }
 
+/** Au-delà, la description d'un PNJ est coupée : il en faut assez pour savoir qui il est, pas sa biographie. */
+const NPC_DESCRIPTION_MAX = 240;
+
+/**
+ * Le premier paragraphe que CE viewer peut lire, par entité (premier bloc
+ * `text` dans l'ordre d'affichage) : la même lecture que la description du
+ * lieu (`resolveLocationPage`). Un secret de MJ n'y entre jamais (règle 11).
+ */
+function firstParagraphByEntity(blocks: Awaited<ReturnType<typeof listBlocksByTypesForEntities>>, viewer: Viewer): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const bloc of filtrerBlocsVisibles(blocks, viewer).sort((a, b) => a.display_order - b.display_order)) {
+    if (out.has(bloc.entity_id)) continue;
+    const parsed = zTextBlockData.safeParse(bloc.data);
+    if (!parsed.success) continue;
+    const aware = parsed.data.segments.map((segment) => ({ ...segment, visibility: { ...segment.visibility, createdBy: null } }));
+    const paragraphe = premierParagraphe(filterSegments(aware, viewer));
+    if (!paragraphe) continue;
+    out.set(bloc.entity_id, paragraphe.length <= NPC_DESCRIPTION_MAX ? paragraphe : `${paragraphe.slice(0, NPC_DESCRIPTION_MAX - 1).trimEnd()}…`);
+  }
+  return out;
+}
+
+/** Tous les paragraphes que CE viewer peut lire, par entité, blocs `text` dans l'ordre d'affichage (ADR 0117). */
+function paragraphsByEntity(blocks: Awaited<ReturnType<typeof listBlocksByTypesForEntities>>, viewer: Viewer): Map<string, string[]> {
+  const out = new Map<string, string[]>();
+  for (const bloc of filtrerBlocsVisibles(blocks, viewer).sort((a, b) => a.display_order - b.display_order)) {
+    const parsed = zTextBlockData.safeParse(bloc.data);
+    if (!parsed.success) continue;
+    const aware = parsed.data.segments.map((segment) => ({ ...segment, visibility: { ...segment.visibility, createdBy: null } }));
+    out.set(bloc.entity_id, [...(out.get(bloc.entity_id) ?? []), ...paragraphesDe(filterSegments(aware, viewer))]);
+  }
+  return out;
+}
+
+/**
+ * ADR 0117 — deux lectures de la même page : ce que le personnage sait (le
+ * lecteur « joueur » de la campagne : le propriétaire du monde qui joue en
+ * solo verrait sinon tout comme s'il le savait) et ce que le MJ sait. Pour un
+ * lecteur qui n'est pas MJ, les deux sont le même lecteur : aucun secret.
+ */
+export function lecteursDuTour(viewer: Viewer, campaignId: string): { joueur: Viewer; mj: Viewer } {
+  return { joueur: isAdminViewer(viewer) ? genericPlayerViewer(campaignId) : viewer, mj: viewer };
+}
+
+/** Les secrets du MJ par entité : ce que `mj` lit et que `joueur` ne lit pas. */
+function secretsByEntity(blocks: Awaited<ReturnType<typeof listBlocksByTypesForEntities>>, lecteurs: { joueur: Viewer; mj: Viewer }): Map<string, string> {
+  const out = new Map<string, string>();
+  if (lecteurs.joueur === lecteurs.mj) return out;
+  const connus = paragraphsByEntity(blocks, lecteurs.joueur);
+  for (const [entityId, complets] of paragraphsByEntity(blocks, lecteurs.mj)) {
+    const secret = secretsEntre(complets, connus.get(entityId) ?? []);
+    if (secret) out.set(entityId, secret);
+  }
+  return out;
+}
+
 async function resolvePresentNpcs(
   supabase: TypedClient,
-  params: { worldId: string; campaignId: string; playerEntityId: string; present: { entityId: string; zone: TurnContextNpc["zone"] }[] }
-): Promise<TurnContextNpc[]> {
+  params: { worldId: string; campaignId: string; playerEntityId: string; viewer: Viewer; present: { entityId: string; zone: TurnContextNpc["zone"] }[] }
+): Promise<{ npcs: TurnContextNpc[]; secrets: { name: string; text: string }[] }> {
   const others = params.present.filter((p) => p.entityId !== params.playerEntityId);
-  if (others.length === 0) return [];
+  if (others.length === 0) return { npcs: [], secrets: [] };
+  const lecteurs = lecteursDuTour(params.viewer, params.campaignId);
 
   // V3.1-193 : les blocs `character` des présents, en UNE requête avec le reste (client du joueur : la RLS ne rend que ce qu'il peut voir).
-  const [entities, knownAs, characterBlocks] = await Promise.all([
+  // 26 nov. : et leurs blocs `text`, pour dire au modèle qui ils sont (une lecture de plus, groupée).
+  const [entities, knownAs, characterBlocks, textBlocks] = await Promise.all([
     listEntitiesByIds(supabase, others.map((p) => p.entityId)),
     knownAsByTarget(supabase, params.playerEntityId),
     listBlocksByTypeForEntities(
@@ -88,7 +147,14 @@ async function resolvePresentNpcs(
       others.map((p) => p.entityId),
       "character"
     ),
+    listBlocksByTypesForEntities(
+      supabase,
+      others.map((p) => p.entityId),
+      ["text"]
+    ),
   ]);
+  const descriptionById = firstParagraphByEntity(textBlocks, lecteurs.joueur);
+  const secretById = secretsByEntity(textBlocks, lecteurs);
   const nameById = new Map(entities.map((e) => [e.id, e.name]));
   const pronounsById = new Map<string, string>();
   for (const b of characterBlocks) {
@@ -107,9 +173,11 @@ async function resolvePresentNpcs(
       attitudeLabel: value === undefined ? null : relationshipAxisLabel(GENERAL_ATTITUDE_AXIS, value),
       zone: p.zone,
       ...(pronounsById.has(p.entityId) ? { pronouns: pronounsById.get(p.entityId) } : {}),
+      ...(descriptionById.has(p.entityId) ? { description: descriptionById.get(p.entityId) } : {}),
     });
   }
-  return npcs;
+  const secrets = npcs.flatMap((n) => (secretById.has(n.id) ? [{ name: n.name, text: secretById.get(n.id)! }] : []));
+  return { npcs, secrets };
 }
 
 /**
@@ -215,8 +283,16 @@ async function resolveRecentHistory(
  * filtrés pour CE viewer, règle 5, puis leurs segments) et ses pièces
  * visibles (blocs `rooms`, V3.2-19). Une seule lecture de plus par tour narré.
  */
-async function resolveLocationPage(supabase: TypedClient, locationId: string, viewer: Viewer): Promise<{ description: string | null; rooms: Room[] }> {
-  const blocs = filtrerBlocsVisibles(await listBlocksByTypesForEntities(supabase, [locationId], ["text", "rooms"]), viewer).sort((a, b) => a.display_order - b.display_order);
+async function resolveLocationPage(
+  supabase: TypedClient,
+  locationId: string,
+  lecteurs: { joueur: Viewer; mj: Viewer }
+): Promise<{ description: string | null; rooms: Room[]; secret: string | null }> {
+  const lignes = await listBlocksByTypesForEntities(supabase, [locationId], ["text", "rooms"]);
+  // ADR 0117 : la description et les pièces sont ce que le personnage sait ; le reste de la page, le secret du MJ.
+  const viewer = lecteurs.joueur;
+  const secret = secretsByEntity(lignes.filter((l) => l.block_type === "text"), lecteurs).get(locationId) ?? null;
+  const blocs = filtrerBlocsVisibles(lignes, viewer).sort((a, b) => a.display_order - b.display_order);
   let description: string | null = null;
   const rooms: Room[] = [];
   for (const bloc of blocs) {
@@ -231,7 +307,7 @@ async function resolveLocationPage(supabase: TypedClient, locationId: string, vi
     const aware = parsed.data.segments.map((segment) => ({ ...segment, visibility: { ...segment.visibility, createdBy: null } }));
     description = premierParagraphe(filterSegments(aware, viewer));
   }
-  return { description, rooms };
+  return { description, rooms, secret };
 }
 
 /**
@@ -343,16 +419,18 @@ export async function buildSoloTurnContext(
   const scene = await getSceneState(supabase, params.campaignId);
 
   // V3.2-28 : l'IA ne voit avec le personnage que ceux de sa pièce ; les autres, à part.
-  const [locationEntity, realNpcs, quests, history, player, money, locationPage, moveTargets, elsewhere] = await Promise.all([
+  const [locationEntity, presents, quests, history, player, money, locationPage, moveTargets, elsewhere] = await Promise.all([
     scene ? listEntitiesByIds(supabase, [scene.locationId]).then((rows) => rows[0] ?? null) : Promise.resolve(null),
     scene
-      ? resolvePresentNpcs(supabase, { worldId: params.worldId, campaignId: params.campaignId, playerEntityId: params.playerEntityId, present: presentsIci(scene) })
-      : Promise.resolve([]),
+      ? resolvePresentNpcs(supabase, { worldId: params.worldId, campaignId: params.campaignId, playerEntityId: params.playerEntityId, viewer: params.viewer, present: presentsIci(scene) })
+      : Promise.resolve({ npcs: [], secrets: [] }),
     resolveQuests(supabase, params.worldId, params.viewer),
     resolveRecentHistory(supabase, params.sessionId, params.fromEventId ?? null),
     resolvePlayer(supabase, params.playerEntityId),
     resolveMoney(supabase, { playerEntityId: params.playerEntityId, scene }),
-    scene ? resolveLocationPage(supabase, scene.locationId, params.viewer) : Promise.resolve({ description: null, rooms: [] as Room[] }),
+    scene
+      ? resolveLocationPage(supabase, scene.locationId, lecteursDuTour(params.viewer, params.campaignId))
+      : Promise.resolve({ description: null, rooms: [] as Room[], secret: null }),
     scene ? resolveMoveTargets(supabase, params.worldId, scene.locationId, params.viewer) : Promise.resolve([]),
     resolveElsewhere(supabase, { playerEntityId: params.playerEntityId, scene }),
   ]);
@@ -362,6 +440,9 @@ export async function buildSoloTurnContext(
   const roomSketchesHere = (scene?.roomSketches ?? []).filter((r) => r.locationId === scene?.locationId);
   const knownRooms = [...locationPage.rooms.map((r) => ({ name: r.name, description: r.description })), ...roomSketchesHere.map((r) => ({ name: r.name, description: r.description }))];
   const currentRoom = scene?.room && scene.room.locationId === scene.locationId ? { name: scene.room.name, description: scene.room.description } : null;
+  const realNpcs = presents.npcs;
+  // ADR 0117 : ce que seul le MJ sait du lieu et des présents, à part.
+  const secrets = [...(locationPage.secret && locationEntity ? [{ name: locationEntity.name, text: locationPage.secret }] : []), ...presents.secrets];
   const npcs = [...realNpcs, ...sketchesAsNpcs(scene ? esquissesIci(scene) : [])];
   const addressedNpcId = npcAddressedBy(params.playerAction, npcs);
   const addressedIsQuestion = estQuestionDirecte(params.playerAction);
@@ -388,6 +469,7 @@ export async function buildSoloTurnContext(
     rooms: knownRooms,
     currentRoom,
     elsewhere,
+    secrets,
   };
 
   const knownEntityIds = [...(locationEntity ? [locationEntity.id] : []), ...realNpcs.map((n) => n.id)];
@@ -415,15 +497,16 @@ export async function buildSoloGmQuestionContext(
 ): Promise<{ text: string }> {
   const scene = await getSceneState(supabase, params.campaignId);
 
-  const [locationEntity, realNpcs, quests, recentNarrations] = await Promise.all([
+  // La question hors du temps de jeu ne reçoit pas les secrets (ADR 0117 : seule la narration du tour les voit).
+  const [locationEntity, presents, quests, recentNarrations] = await Promise.all([
     scene ? listEntitiesByIds(supabase, [scene.locationId]).then((rows) => rows[0] ?? null) : Promise.resolve(null),
     scene
-      ? resolvePresentNpcs(supabase, { worldId: params.worldId, campaignId: params.campaignId, playerEntityId: params.playerEntityId, present: presentsIci(scene) })
-      : Promise.resolve([]),
+      ? resolvePresentNpcs(supabase, { worldId: params.worldId, campaignId: params.campaignId, playerEntityId: params.playerEntityId, viewer: params.viewer, present: presentsIci(scene) })
+      : Promise.resolve({ npcs: [], secrets: [] }),
     resolveQuests(supabase, params.worldId, params.viewer),
     resolveRecentHistory(supabase, params.sessionId, null).then((h) => h.narrations),
   ]);
-  const npcs = [...realNpcs, ...sketchesAsNpcs(scene ? esquissesIci(scene) : [])];
+  const npcs = [...presents.npcs, ...sketchesAsNpcs(scene ? esquissesIci(scene) : [])];
 
   return {
     text: buildGmQuestionContext({
