@@ -1,7 +1,7 @@
 # 0112 — L'horloge suit l'histoire : le joueur écrit une durée, ou l'IA la propose dans une liste fermée
 
 **Date :** 2026-11-25
-**Statut :** acceptée le 25 novembre 2026 (choix de l'auteur dans le fil « Faire avancer l'intrigue en narration solo ») ; livrée par V3.2-18
+**Statut :** acceptée le 25 novembre 2026 (choix de l'auteur dans le fil « Faire avancer l'intrigue en narration solo ») ; livrée par V3.2-18 ; **amendée le 26 novembre 2026** (voir la fin)
 
 ## Contexte
 
@@ -29,3 +29,9 @@ L'heure est un résultat du moteur (règle absolue 8, ADR 0104) : un modèle ne 
 - L'annulation du tour (V3-F2) restaure la scène d'avant le tour : le temps passé est défait avec le reste.
 - La date du bandeau (jour du calendrier) ne se met pas encore à jour sans recharger la page quand une ellipse passe minuit. À reprendre si ça gêne en jouant.
 - « Raconter autrement » relit les changements journalisés : la phrase de durée n'y est pas, l'horloge, elle, a déjà avancé.
+
+## Amendement du 26 novembre 2026 : une ellipse est une décision du joueur
+
+L'auteur a posé une règle d'écriture : « les ellipses temporelles, sauter des heures, des jours ou davantage, sont une décision exclusive du joueur ; le MJ ne prend jamais cette initiative ». La séance de la veille l'a montré : la personne qui joue écrit « je m'y installe », et l'IA fait dormir le personnage jusqu'à l'aube, ce qui prend aussi la main sur le personnage joué.
+
+Le point 2 change : `elapsed` ne garde que les durées naturelles d'un geste, `instant`, `quelques_minutes`, `quart_d_heure`, `demi_heure` et `une_heure`. `plusieurs_heures` et `jusqu_au_matin` sont retirés de la liste. Une valeur hors liste envoyée quand même est **ignorée** (`.catch(undefined)`), pas fatale : la narration reste, seul le temps ne passe pas. La consigne le dit au modèle (`src/core/ai/narrationPrompt.ts`). La durée écrite par le joueur (point 1) ne change pas : « je dors jusqu'au matin » fait toujours passer la nuit.

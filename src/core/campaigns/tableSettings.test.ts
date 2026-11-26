@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DEFAULT_RECIT } from "./recit";
 import { DEFAULT_TABLE_SETTINGS, estEnReserve, mayPlayerChange, mergeTableSettings, parseTableSettings, sheetControls, showsRemotePlay, withPlayStyle, zCampaignTableSettings } from "./tableSettings";
 
 describe("réglages de table (V3.1-108, ADR 0036 §5 et 0043)", () => {
@@ -10,6 +11,7 @@ describe("réglages de table (V3.1-108, ADR 0036 §5 et 0043)", () => {
       player_can_edit: { conditions: false, inspiration: false, hp: true, currency: true, spell_slots: true, hit_dice: true },
       reserve: [],
       solo_show_outcome: false,
+      recit: DEFAULT_RECIT,
     });
     expect(DEFAULT_TABLE_SETTINGS.player_can_edit.hp).toBe(true);
   });

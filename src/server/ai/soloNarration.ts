@@ -4,6 +4,9 @@ import type { Database, Json } from "@/src/types/database";
 import type { Viewer } from "@/src/core/visibility";
 import { soloNarrationSchema, soloNarrationToolSchema } from "@/src/core/ai/soloNarrationProposal";
 import { maxSimilarityToRecent } from "@/src/core/ai/narrationSimilarity";
+import { soloSystemPrompt } from "@/src/core/ai/narrationPrompt";
+import { parseTableSettings } from "@/src/core/campaigns/tableSettings";
+import { getCampaignTableSettingsRaw } from "@/src/server/repos/campaigns";
 import { buildSoloTurnContext } from "@/src/server/services/turnContext";
 import { drawSketchForScene, recordSketchSpeechAndMaybeAnchor } from "@/src/server/services/sceneSketches";
 import { proposeWorldNote } from "@/src/server/services/soloWorldNotes";
@@ -34,53 +37,9 @@ const TOOL_NAME = "narrate_turn";
 const SIMILARITY_THRESHOLD = 0.6;
 
 /**
- * Narration solo — la consigne d'un MJ, pas d'un greffier.
- *
- * La première version demandait « deux à quatre phrases qui intègrent les
- * faits ». Pour une action libre, le seul fait est le texte du joueur : le
- * modèle le reformulait, faisait parler le PNJ à chaque tour et citait les
- * présents « qui restent immobiles ». Rien n'avançait (retour de jeu du
- * 25 novembre 2026, docs/backlog-v3.2/05-narration.md, V3.2-17).
- *
- * Celle-ci garde les garde-fous (les faits du moteur ne se recalculent pas,
- * le « tu », jamais un PNJ inventé) et ajoute ce qui manquait : un but
- * (chaque tour change quelque chose), un rythme (bref pour un échange,
- * accéléré pour une activité longue, descriptif pour un lieu nouveau), et
- * quand un PNJ parle (seulement si sa parole apporte quelque chose).
+ * Narration solo — la consigne vit dans `src/core/ai/narrationPrompt.ts`
+ * (fonction pure, testée), réglée par le « Récit » de la partie (V3.2-5).
  */
-const SYSTEM_PROMPT = [
-  "Tu es le MJ d'une partie de jeu de role solo. Ton travail : faire vivre la scene et faire avancer l'histoire. " +
-    "Le moteur du jeu, lui, decide de tout ce qui se compte (des, degats, heure, argent) : ses faits te sont donnes, tu ne les recalcules jamais et tu ne les contredis jamais.",
-  "",
-  "TU RACONTES",
-  "- A la deuxieme personne du singulier : tu t'adresses a la personne qui joue (« Tu pousses la porte »), jamais « il » ni son nom. Son personnage est dans personnage-joue.",
-  "- Tu ne repetes pas son action : tu racontes ce qu'elle PRODUIT. Ce que son personnage pense, ressent ou decide en plus, c'est a elle de le dire, pas a toi. Ne l'attribue jamais a un PNJ.",
-  "",
-  "CHAQUE TOUR FAIT AVANCER QUELQUE CHOSE",
-  "Termine chaque narration sur une situation qui a change : une information nouvelle, un lieu nouveau, une consequence, un detail qui intrigue, une occasion. " +
-    "Jamais une scene figee ou tout le monde attend. Ne finis pas par « Que fais-tu ? » : l'ecran le demande deja.",
-  "",
-  "LE RYTHME",
-  "- Un echange bref : deux a trois phrases.",
-  "- Une activite longue que le joueur s'engage a faire (travailler, voyager, attendre, dormir, fouiller) : raconte-la en ACCELERE, en un a deux paragraphes. " +
-    "Le lieu, trois details sensoriels precis, le temps qui passe, une petite peripetie ou une rencontre, puis la fin de l'activite.",
-  "- Un lieu ou le personnage arrive pour la premiere fois : decris-le en deux ou trois phrases (lumiere, bruits, odeurs, qui s'y trouve), en t'appuyant sur description-du-lieu quand elle existe.",
-  "",
-  "LES PNJ",
-  "- Un PNJ ne parle que si sa parole apporte quelque chose : repondre a une question directe, refuser, reveler, menacer, proposer. Sinon un geste, un regard ou rien du tout suffit, et npc_reaction reste vide.",
-  "- Quand le joueur pose une question directe a un PNJ, ce PNJ repond dans npc_reaction, au discours direct, avec ses propres mots, et ta narration ne decrit pas qu'il « prend la parole ».",
-  "- Ne cite un PNJ present que s'il fait quelque chose qui compte. Ne decris jamais des PNJ qui « restent immobiles » ou « observent sans bouger ».",
-  "- N'utilise que les identifiants de PNJ fournis, n'en invente jamais. Un personnage incident, absent de la liste, qui doit agir MAINTENANT : demande-le via new_character avec seulement son role (jamais un nom ni un trait, le moteur les tire).",
-  "",
-  "CE QUE TU PROPOSES AU MOTEUR (il valide, il peut refuser)",
-  "- move_to : si ta narration emmene le personnage dans un des lieux-accessibles (la cuisine, la rue, sa chambre), propose ce lieu, avec les PNJ presents qui le suivent. Decris le trajet et l'arrivee.",
-  "- enter_room / leave_room : si ta narration fait entrer le personnage dans une piece de ce lieu (reprends le nom de pieces-du-lieu, ou invente une piece plausible avec deux phrases de description), ou l'en fait ressortir. Decris la piece a l'arrivee.",
-  "- elapsed : combien de temps ce tour a dure dans l'histoire, s'il dure plus que quelques instants. Si les changements disent deja combien de temps passe, n'en propose pas.",
-  "- world_note : un fait qui meriterait d'etre ajoute a la fiche d'un lieu ou d'un PNJ REELLEMENT present (un identifiant fourni). Un humain la relira : ne l'ecris jamais comme un fait acquis dans ta narration.",
-  "Tu n'ecris jamais l'heure exacte toi-meme : le moteur la calcule. Quand les changements la donnent, tu peux la reprendre telle quelle.",
-  "",
-  `Reponds toujours via l'outil ${TOOL_NAME}, une seule fois.`,
-].join("\n");
 
 export interface SoloNarrationParams {
   worldId: string;
@@ -136,6 +95,7 @@ interface NarrationAttempt {
 async function attemptNarration(
   supabase: TypedClient,
   provider: AiProvider,
+  systemPrompt: string,
   context: string,
   npcIds: string[],
   knownEntityIds: string[],
@@ -149,7 +109,7 @@ async function attemptNarration(
     { userId, campaignId, purpose: "solo_turn" },
     {
       messages: [
-        { role: "system", content: SYSTEM_PROMPT },
+        { role: "system", content: systemPrompt },
         { role: "user", content: context },
       ],
       tools: [{ name: TOOL_NAME, description: "Raconte ce tour de jeu solo", inputSchema: soloNarrationToolSchema(npcIds, knownEntityIds, moveTargetIds) }],
@@ -213,21 +173,26 @@ async function attemptNarration(
  * les deux, un seul événement `narration` s'écrit.
  */
 export async function narrateSoloTurn(supabase: TypedClient, provider: AiProvider, params: SoloNarrationParams): Promise<SoloNarrationOutcome> {
-  const firstContext = await buildSoloTurnContext(supabase, {
-    worldId: params.worldId,
-    campaignId: params.campaignId,
-    playerEntityId: params.playerEntityId,
-    viewer: params.viewer,
-    sessionId: params.sessionId,
-    playerAction: params.playerAction,
-    fromEventId: params.fromEventId,
-    facts: params.facts,
-    changes: params.changes,
-    hints: params.hints,
-  });
+  // V3.2-5 : le réglage « Récit » (une lecture de la ligne de campagne, en parallèle du contexte).
+  const [firstContext, rawSettings] = await Promise.all([
+    buildSoloTurnContext(supabase, {
+      worldId: params.worldId,
+      campaignId: params.campaignId,
+      playerEntityId: params.playerEntityId,
+      viewer: params.viewer,
+      sessionId: params.sessionId,
+      playerAction: params.playerAction,
+      fromEventId: params.fromEventId,
+      facts: params.facts,
+      changes: params.changes,
+      hints: params.hints,
+    }),
+    getCampaignTableSettingsRaw(supabase, params.campaignId),
+  ]);
+  const systemPrompt = soloSystemPrompt(parseTableSettings(rawSettings).recit, TOOL_NAME);
 
   const { text: context, npcIds, knownEntityIds, moveTargetIds, recentNarrations, addressedNpcId, addressedIsQuestion, npcs } = firstContext;
-  const first = await attemptNarration(supabase, provider, context, npcIds, knownEntityIds, moveTargetIds, params.userId, params.campaignId);
+  const first = await attemptNarration(supabase, provider, systemPrompt, context, npcIds, knownEntityIds, moveTargetIds, params.userId, params.campaignId);
   if (!first.ok) return first;
 
   let chosen = first;
@@ -259,7 +224,7 @@ export async function narrateSoloTurn(supabase: TypedClient, provider: AiProvide
         changes: params.changes,
         hints: params.hints,
       });
-      const second = await attemptNarration(supabase, provider, retry.text, retry.npcIds, retry.knownEntityIds, retry.moveTargetIds, params.userId, params.campaignId);
+      const second = await attemptNarration(supabase, provider, systemPrompt, retry.text, retry.npcIds, retry.knownEntityIds, retry.moveTargetIds, params.userId, params.campaignId);
       if (second.ok) {
         chosen = second;
         chosenNpcs = retry.npcs;
@@ -272,10 +237,10 @@ export async function narrateSoloTurn(supabase: TypedClient, provider: AiProvide
     // garde celui où ce PNJ répond ; sinon le premier, déjà valide. Sans
     // question, le silence du PNJ est un choix légitime du narrateur : pas
     // de second essai (V3.2-17).
-    const second = await attemptNarration(supabase, provider, context, npcIds, knownEntityIds, moveTargetIds, params.userId, params.campaignId);
+    const second = await attemptNarration(supabase, provider, systemPrompt, context, npcIds, knownEntityIds, moveTargetIds, params.userId, params.campaignId);
     if (second.ok && second.npcReaction?.npcId === addressedNpcId) chosen = second;
   } else if (recentNarrations.length > 0 && maxSimilarityToRecent(first.narration!, recentNarrations) > SIMILARITY_THRESHOLD) {
-    const second = await attemptNarration(supabase, provider, context, npcIds, knownEntityIds, moveTargetIds, params.userId, params.campaignId);
+    const second = await attemptNarration(supabase, provider, systemPrompt, context, npcIds, knownEntityIds, moveTargetIds, params.userId, params.campaignId);
     if (second.ok) {
       const firstScore = maxSimilarityToRecent(first.narration!, recentNarrations);
       const secondScore = maxSimilarityToRecent(second.narration!, recentNarrations);

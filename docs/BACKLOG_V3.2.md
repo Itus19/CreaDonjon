@@ -50,7 +50,7 @@ Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été
 | V3.2-2 | ☑ | sans | Le contour de « Que fais-tu ? » | [`01-ecran-du-solo.md`](backlog-v3.2/01-ecran-du-solo.md) |
 | V3.2-3 | ☑ | sans | On ne sait pas si c'est parti, ni si l'IA répond | [`01-ecran-du-solo.md`](backlog-v3.2/01-ecran-du-solo.md) |
 | V3.2-4 | ☑ | sans | La zone de texte se vide à l'envoi | [`01-ecran-du-solo.md`](backlog-v3.2/01-ecran-du-solo.md) |
-| V3.2-5 | ☐ | **avec** | Le récit s'adresse au joueur : tu, ou vous | [`02-recit-et-liens.md`](backlog-v3.2/02-recit-et-liens.md) |
+| V3.2-5 | ☑ | **avec** | Le récit s'adresse au joueur : tu, ou vous, son registre et les scènes intimes | [`02-recit-et-liens.md`](backlog-v3.2/02-recit-et-liens.md) |
 | V3.2-6 | ☐ | **avec** | Les fiches citées par le récit deviennent des liens | [`02-recit-et-liens.md`](backlog-v3.2/02-recit-et-liens.md) |
 | V3.2-7 | ☐ | sans | L'onglet Wiki : chercher et lire sur place | [`03-colonnes.md`](backlog-v3.2/03-colonnes.md) |
 | V3.2-8 | ☑ | sans | Le moteur règle un échange | [`04-commerce.md`](backlog-v3.2/04-commerce.md) |

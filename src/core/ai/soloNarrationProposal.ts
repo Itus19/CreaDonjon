@@ -38,14 +38,16 @@ export function soloNarrationSchema(npcIds: string[], knownEntityIds: string[] =
   return z
     .object({
       /** V3.2-17 — 1 800 caractères : deux paragraphes, pour une activité longue racontée en accéléré. */
-      narration: z.string().min(1).max(1800),
+      narration: z.string().min(1).max(3000),
       npc_reaction: z.object({ npc_id: z.string().min(1), text: z.string().min(1).max(400) }).optional(),
       /** V3-C2 — jamais un nom : un ROLE seulement, le generateur tire l'identite. */
       new_character: z.object({ role: z.string().min(1).max(200) }).optional(),
       /** V3-C3 — une suggestion redactionnelle, jamais ecrite directement : elle passe par `ai_proposals`, en attente d'une relecture humaine. */
       world_note: z.object({ entity_id: z.string().min(1), text: z.string().min(1).max(400) }).optional(),
       /** V3.2-18 — une durée PROPOSÉE dans une liste fermée ; le moteur la borne (`minutesProposees`) et peut la refuser. */
-      elapsed: z.object({ kind: z.enum(ELAPSED_CHOICES), hours: z.number().int().min(1).max(24).optional() }).optional(),
+      // ADR 0112, amendement du 26 novembre : une durée hors liste (une ellipse que l'IA tenterait
+      // encore, « jusqu_au_matin ») est ignorée, pas fatale : la narration reste bonne, seul le temps ne passe pas.
+      elapsed: z.object({ kind: z.enum(ELAPSED_CHOICES) }).optional().catch(undefined),
       /** V3.2-19 — un déplacement PROPOSÉ vers un lieu voisin fourni ; `with` : les PNJ présents qui suivent. Le moteur l'applique comme le panneau de scène. */
       move_to: z.object({ location_id: z.string().min(1), with: z.array(z.string().min(1)).max(10).optional() }).optional(),
       /** V3.2-19 — entrer dans une pièce du lieu, connue ou nouvelle ; le moteur contrôle le nom (`validerNouvellePiece`) avant de l'accepter. */
@@ -154,10 +156,9 @@ export function soloNarrationToolSchema(npcIds: string[], knownEntityIds: string
       elapsed: {
         type: "object",
         description:
-          "Optionnel : combien de temps ce tour a dure dans l'histoire, s'il dure plus que quelques instants (une activite longue, une attente, un trajet). Le moteur valide et calcule l'heure. Ne le remplis pas si les changements disent deja combien de temps passe.",
+          "Optionnel : la duree naturelle de ce que le personnage vient de faire (une conversation, un trajet court, une fouille), une heure au plus. Jamais une ellipse : sauter des heures ou une nuit, c'est le joueur qui le decide en l'ecrivant. Ne le remplis pas si les changements disent deja combien de temps passe.",
         properties: {
           kind: { type: "string", enum: [...ELAPSED_CHOICES], description: "La duree, choisie dans la liste" },
-          hours: { type: "integer", description: "Seulement pour plusieurs_heures : le nombre d'heures, de 2 a 8" },
         },
         required: ["kind"],
       },

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { zPlayStyle, type PlayStyle } from "../remote/feed";
+import { DEFAULT_RECIT, mergeRecit, parseRecit, zRecitPatch, type RecitSettings } from "./recit";
 
 /**
  * V3.1-108 (ADR 0036 §5, ADR 0043) — « Ce que les joueurs modifient
@@ -42,6 +43,8 @@ export interface CampaignTableSettings {
    * toujours l'issue et la donne au narrateur (règle absolue 8).
    */
   solo_show_outcome: boolean;
+  /** V3.2-5 : comment la narration solo s'adresse à la table, son registre, les scènes intimes (`recit.ts`). */
+  recit: RecitSettings;
 }
 
 /** Decides par l'auteur le 4 octobre : etats et inspiration au MJ, le reste a la joueuse. */
@@ -51,6 +54,7 @@ export const DEFAULT_TABLE_SETTINGS: CampaignTableSettings = {
   players_level: true,
   player_can_edit: { conditions: false, inspiration: false, hp: true, currency: true, spell_slots: true, hit_dice: true },
   reserve: [],
+  recit: DEFAULT_RECIT,
   solo_show_outcome: false,
 };
 
@@ -70,6 +74,8 @@ export const zCampaignTableSettings = z
     reserve: z.array(z.string().uuid()).max(RESERVE_MAX).optional(),
     /** V3.2-20 : DD et issue des jets, visibles ou non dans le solo. */
     solo_show_outcome: z.boolean().optional(),
+    /** V3.2-5 : le réglage « Récit », champ par champ. */
+    recit: zRecitPatch.optional(),
   })
   .strict();
 export type CampaignTableSettingsPatch = z.infer<typeof zCampaignTableSettings>;
@@ -93,6 +99,7 @@ export function parseTableSettings(raw: unknown): CampaignTableSettings {
     ) as Record<PlayerEditableField, boolean>,
     reserve: lireReserve(source.reserve),
     solo_show_outcome: typeof source.solo_show_outcome === "boolean" ? source.solo_show_outcome : DEFAULT_TABLE_SETTINGS.solo_show_outcome,
+    recit: parseRecit(source.recit),
   };
 }
 
@@ -118,6 +125,7 @@ export function mergeTableSettings(current: CampaignTableSettings, patch: Campai
     ) as Record<PlayerEditableField, boolean>,
     reserve: patch.reserve ? [...new Set(patch.reserve)] : current.reserve,
     solo_show_outcome: patch.solo_show_outcome ?? current.solo_show_outcome,
+    recit: mergeRecit(current.recit, patch.recit),
   };
 }
 
