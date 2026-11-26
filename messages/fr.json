@@ -1846,6 +1846,13 @@
     "ajouterMoisApres": "+ Ajouter un mois après",
     "supprimerMois": "Supprimer ce mois",
     "moisLePlusFroid": "Mois le plus froid de l'année (règle les saisons de la météo)",
+    "modeleTitre": "Modèle",
+    "modeleAppliquer": "Appliquer ce modèle",
+    "modeleAide": "Remplace les mois et la semaine ; les ères et le jour actuel restent. Rien n'est enregistré avant « Enregistrer ».",
+    "modeles": {
+      "gregorian": "Normal (janvier, février…)",
+      "republican": "Républicain (vendémiaire, floréal…)"
+    },
     "nouveauMois": "Mois {n}",
     "jourChoisi": "{jourSemaine} {jour} {mois} {annee}",
     "jourChoisiSansSemaine": "{jour} {mois} {annee}",

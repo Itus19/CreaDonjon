@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import FeuilleDuBas from "@/components/shared/FeuilleDuBas";
 import type { CalendarConfigInput } from "@/src/core/schemas/calendar";
 import { aDesModifications, calendrierValide, reduireCalendrier } from "@/lib/ui/calendrierEdition";
+import { CALENDAR_PRESET_KEYS, type CalendarPresetKey } from "@/src/core/calendar/presets";
 import FriseEres from "./calendrier/FriseEres";
 import JourActuel from "./calendrier/JourActuel";
 import ReglageEres from "./calendrier/ReglageEres";
@@ -41,6 +42,7 @@ export default function CalendarSettingsPanel({
   const [selection, setSelection] = useState<Selection>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [modele, setModele] = useState<CalendarPresetKey>("gregorian");
 
   const modifie = aDesModifications(enregistre, calendar);
   const valide = calendrierValide(calendar);
@@ -106,6 +108,31 @@ export default function CalendarSettingsPanel({
           <p className="text-sm text-ink-muted">{t("intro")}</p>
         </div>
         {mobile && boutonEnregistrer}
+      </div>
+      {/* Modèles de calendrier (26 novembre) : la forme de l'année en un clic, enregistrée ensuite comme le reste. */}
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="flex items-center gap-2 text-sm text-ink-soft">
+          {t("modeleTitre")}
+          <select
+            value={modele}
+            onChange={(e) => setModele(e.target.value as CalendarPresetKey)}
+            className="rounded-md border border-edge bg-transparent px-2 py-1 text-sm text-ink outline-none focus:border-accent"
+          >
+            {CALENDAR_PRESET_KEYS.map((cle) => (
+              <option key={cle} value={cle}>
+                {t(`modeles.${cle}`)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          type="button"
+          onClick={() => dispatch({ type: "modele", cle: modele })}
+          className="rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel-raised"
+        >
+          {t("modeleAppliquer")}
+        </button>
+        <span className="text-xs text-ink-muted">{t("modeleAide")}</span>
       </div>
       {mobile && (
         <div className="flex flex-wrap items-center gap-2">
