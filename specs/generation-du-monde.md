@@ -2,7 +2,7 @@
 
 *Spécification de la V4 « Simulation » : la carte, les villes, l'histoire d'un monde généré, et la façon dont ses détails apparaissent quand on les découvre. Les principes viennent de l'[ADR 0104](../docs/adr/0104-le-cap-du-mode-solo.md) ; les choix qui engagent le schéma, de l'[ADR 0109](../docs/adr/0109-la-generation-du-monde-demarre.md).*
 
-**État au 26 novembre 2026** : spécifiée. Existent dans `src/core/worldgen/` : la ville en agrégat (G-2), le monde abstrait et l'histoire couche 1 (G-6).
+**État au 26 novembre 2026** : spécifiée. Existent dans `src/core/worldgen/` : la ville en agrégat (G-2), le monde abstrait et l'histoire couche 1 (G-6), la lecture d'une carte Azgaar (G-7a).
 
 ---
 
@@ -102,6 +102,18 @@ L'**export JSON** d'Azgaar d'abord (ADR 0109, décision G2), pas son code : aucu
 
 Le format d'export change avec les versions d'Azgaar : l'import dit la version qu'il connaît et refuse proprement un fichier qu'il ne sait pas lire. La notice MIT d'Azgaar va dans `NOTICE.md` dès qu'une ligne de son code ou de son format est reprise.
 
+### 8.0 La lecture, telle qu'elle est construite
+
+`azgaarToAbstractWorld(zAzgaarExport.parse(json))` (`src/core/worldgen/azgaar/import.ts`) :
+
+- **la graine** du monde est celle de la carte ; **le présent** est l'année du calendrier d'Azgaar (`options.map.lore.calendar.year`), sinon la dernière année d'événement ;
+- **une ville** par `burg` non retiré : population × `populationRate`, biome de sa cellule, graine dérivée de celle du monde. **Le rang** : capitale si Azgaar le dit, ville pour `city` et `town`, bourg pour `village` et `fort`. **La richesse**, qu'Azgaar ne donne pas, vient de la population (réputée dès 20 000 habitants, correcte dès 2 000) ;
+- **les États** sans « Neutrals », **les peuples** sans « Wildlands », rien de ce qui est retiré ;
+- **un lien** entre deux villes qui se suivent sur une route, un sentier ou une route maritime, long du tracé en kilomètres (`distanceScale`) ; entre deux mêmes villes, le plus court ;
+- **les guerres** de `pack.events` deviennent des événements imposés ; les vassalités attendent la couche 3.
+
+Une version d'Azgaar antérieure à 1.100 est refusée. Sur la carte *Anteau* : 681 villes, 9 États, 14 peuples, 779 liens et 7 guerres, lus et simulés sur 300 ans en moins d'une seconde (`npm run apercu:azgaar -- <fichier.json>`).
+
 ### 8.1 Ce que contient un export réel
 
 Lu sur l'export « Complet » de la carte *Anteau* de l'auteur (Azgaar 1.159.0, 26 novembre 2026, 7 Mo ; copie dans les fichiers du projet, `azgaar/`) :
@@ -179,4 +191,5 @@ Le simulateur est **pur** (`src/core/worldgen/history/`), donc il tourne n'impor
 | G-5 | Le catalogue : type de fiche, bloc « élément du monde », import Wikidata limité au biome tempéré | Opus | à faire |
 | G-6 | Le monde abstrait et l'histoire, couche 1 : format calqué sur l'export d'Azgaar (§8.1), monde de test écrit à la main, chronique convertie en entrées de frise, aperçu par `npm run apercu:histoire` | Opus | fait |
 | G-6b | Figer la chronique dans la frise d'un monde : action serveur validée par Zod, écriture en une fois sur la fiche `world_timeline`, refusée quand une chronique y est déjà | Opus | à faire |
-| G-7 | L'import Azgaar remplit le monde abstrait : villes avec leur bloc `settlement`, États, punaises sur l'image SVG | Opus | à faire, après G-3 et G-6 |
+| G-7a | La lecture d'un export Azgaar en monde abstrait, aperçu par `npm run apercu:azgaar` | Opus | fait |
+| G-7b | Créer un monde depuis une carte Azgaar : entités des villes avec leur bloc `settlement`, factions des États, image SVG et punaises, puis chronique figée (G-6b) | Opus | à faire, après G-3 |

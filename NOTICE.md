@@ -13,6 +13,10 @@ sous CC-BY-4.0, le contenu reste disponible à ces conditions.
 
 > This work includes material from the System Reference Document 5.2.1 ("SRD 5.2.1") by Wizards of the Coast LLC, available at https://www.dndbeyond.com/srd. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at https://creativecommons.org/licenses/by/4.0/legalcode.
 
+## Azgaar's Fantasy Map Generator
+
+`src/core/worldgen/azgaar/` lit le format d'export JSON d'Azgaar's Fantasy Map Generator (https://github.com/Azgaar/Fantasy-Map-Generator), logiciel sous licence MIT. Aucune ligne de son code n'est reprise : seul son format de fichier est lu. Les cartes importées appartiennent à la personne qui les a générées.
+
 ## Rappels
 
 - Aucune autre attribution à Wizards of the Coast que celle prescrite ci-dessus.
