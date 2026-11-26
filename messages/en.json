@@ -1845,6 +1845,13 @@
     "ajouterMoisApres": "+ Add a month after",
     "supprimerMois": "Delete this month",
     "moisLePlusFroid": "Coldest month of the year (sets the weather's seasons)",
+    "modeleTitre": "Template",
+    "modeleAppliquer": "Apply this template",
+    "modeleAide": "Replaces months and week; eras and today stay. Nothing is saved before “Save”.",
+    "modeles": {
+      "gregorian": "Standard (January, February…)",
+      "republican": "French Republican (Vendémiaire, Floréal…)"
+    },
     "nouveauMois": "Month {n}",
     "jourChoisi": "{jourSemaine} {jour} {mois} {annee}",
     "jourChoisiSansSemaine": "{jour} {mois} {annee}",

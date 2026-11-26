@@ -1,6 +1,7 @@
 import { clampDayToCalendar, shiftDate, type DayDate } from "@/src/core/calendar/navigation";
 import type { GameDate } from "@/src/core/calendar/types";
 import type { CalendarConfigInput } from "@/src/core/schemas/calendar";
+import { CALENDAR_PRESETS, type CalendarPresetKey } from "@/src/core/calendar/presets";
 
 /**
  * Edition locale du calendrier ingame (V3.1-55) : un reducteur pur
@@ -34,7 +35,8 @@ export type ActionCalendrier =
   | { type: "jourDecaler"; n: number }
   | { type: "jourRegler"; date: DayDate }
   | { type: "jourInitialiser" }
-  | { type: "jourEffacer" };
+  | { type: "jourEffacer" }
+  | { type: "modele"; cle: CalendarPresetKey };
 
 /** Point de depart du « jour actuel » : an 0, 1er jour du 1er mois, jamais suppose. */
 export function jourActuelVierge(): GameDate {
@@ -146,6 +148,11 @@ function appliquer(c: CalendarConfigInput, action: ActionCalendrier): CalendarCo
     }
     case "jourInitialiser":
       return { ...c, currentDate: c.currentDate ?? jourActuelVierge() };
+    case "modele": {
+      // La forme de l'année change ; les ères restent, le jour actuel garde son rang de mois et de jour (recalé ensuite).
+      const modele = CALENDAR_PRESETS[action.cle];
+      return { ...c, months: modele.months.map((m) => ({ ...m })), weekdays: modele.weekdays.map((w) => ({ ...w })), weekdayEpoch: modele.weekdayEpoch, coldestMonth: modele.coldestMonth };
+    }
     case "jourEffacer":
       // Retour à « non réglé » (demande de l'auteur, 19 octobre) : le monde n'a plus de jour actuel.
       return c.currentDate === null ? c : { ...c, currentDate: null };
