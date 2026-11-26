@@ -250,21 +250,35 @@ Le bloc `personality` gagne une facette facultative, `intimacy` :
 - **attirance** : vers quels genres (y compris aucun, et le neutre), pour que l'axe d'attirance d'une relation ne puisse monter que là où c'est cohérent ;
 - **rapport à l'intimité** : un pôle `pudeur ↔ liberté`, et un pôle `engagement ↔ légèreté` ;
 - **situation** : seul, en couple, marié, veuf, avec un lien vers la fiche du partenaire quand il existe (relations `married_to`, `partner_of`).
-- **appétence** : la place du désir dans sa vie, de −100 à +100 comme les pôles, nommée en bandes à l'écran (de « indifférent » à « dévorant »). Elle se lit comme l'intensité de l'intérêt « sexualité » (§10.2) et ne vaut que si la facette est remplie.
+- le **désir** n'est pas un champ à part : c'est l'intérêt « sexualité » de la liste commune (§10.2), avec sa jauge comme les autres.
 
 Le questionnaire a une **partie facultative** sur l'intimité, qu'on peut sauter, et qui ne s'affiche que si les romances sont actives dans le monde. Les PNJ de fond tirent cette facette à graine fixe selon leur culture. L'IA ne la reçoit que si le réglage « Récit » le permet, et jamais pour un personnage qui ne serait pas adulte.
 
 ### 10.2 Les centres d'intérêt
 
-Les aspirations disent ce qu'une personne **veut obtenir** (un but, avec un horizon). Les centres d'intérêt disent ce qui l'**attire durablement**, et avec quelle force : la musique, la foi, la magie, le combat, le commerce, le jeu, la boisson, le savoir, la nature, l'artisanat, la politique, la famille, les voyages, la séduction et la sexualité (seulement si la facette intimité est remplie).
+Les aspirations disent ce qu'une personne **veut obtenir** (un but, avec un horizon). Les centres d'intérêt disent ce qui l'**attire ou la rebute durablement**, et avec quelle force.
 
-Le bloc `personality` gagne une liste `interests` : `{ key, intensity, practice }`.
-- `intensity`, de 0 à 100, dit **à quel point la personne priorise le sujet**, nommée en bandes à l'écran (« curieux », « passionné », « obsédé »).
-- `practice` dit **comment** elle s'y adonne : elle l'étudie, le pratique, le collectionne, en parle, ou l'évite (attirée mais en lutte, comme un ancien buveur).
+**Tout le monde a tous les centres d'intérêt** (décision de l'auteur, 26 novembre), sur une jauge de −100 à +100, comme les pôles :
+- **+100** : passion, la personne le priorise, l'étudie, le pratique, l'explore ;
+- **0** : indifférence (« ne s'en soucie pas », une information, pas une absence, `specs/psyche-pnj.md` §2) ;
+- **−100** : dégoût, elle l'évite, le méprise, s'en indigne.
 
-Ce que ça change : un intérêt fort **ajoute des créneaux à la routine** (le joueur de cartes va au tripot le jeudi soir, la dévote au temple à l'aube) ; il donne à l'IA **des sujets de conversation** et des réactions (un passionné d'histoire s'anime si on lui parle de ruines) ; il fait **monter l'attitude** envers qui le partage. Inspirations : les préférences et les besoins de Dwarf Fortress (un besoin non satisfait pèse sur l'humeur, à garder pour plus tard), les passions de RimWorld, les centres d'intérêt des Sims.
+À l'écran, des bandes nommées (de « dégoûté » à « passionné ») ; la fiche montre les **quatre ou cinq plus marqués**, et le reste se déroule, dégoûts compris. On ne stocke que les valeurs différentes de zéro : le reste vaut indifférence.
 
-La liste est fermée, avec un champ libre ; trois à cinq intérêts par personne suffisent. Le questionnaire en propose à la fin (« qu'est-ce qui te fait perdre la notion du temps ? »). Les PNJ de fond en tirent un à trois selon leur archétype et leur culture.
+**La liste** est fermée et commune, une trentaine d'entrées, modifiable par monde plus tard : musique, danse, contes et poésie, foi, magie, savoir et histoire, nature et chasse, animaux, artisanat, art, commerce et argent, jeu et paris, boisson, bonne chère, combat et duel, sport et épreuves de force, politique et pouvoir, intrigue et ragots, voyages, mer, famille et enfants, amitié et fêtes, séduction, sexualité, luxe et parure, solitude et méditation, justice et ordre, crime, mort et occulte, nouveauté et inventions. **La sexualité est une entrée comme une autre**, avec une seule différence : elle n'est affichée, remplie par le questionnaire et envoyée à l'IA que si les romances sont actives dans le monde, le réglage « Récit » le permet et le personnage est adulte.
+
+**Ce que ça change en jeu** :
+- une passion **ajoute des créneaux à la routine** (le joueur au tripot le jeudi soir, la dévote au temple à l'aube) ; un dégoût **en retire** (l'abstinent fuit la taverne) ;
+- l'IA reçoit les **trois intérêts les plus forts et le dégoût le plus fort** de chaque présent (le contexte d'un modèle local est compté), pour des sujets de conversation et des réactions ;
+- partager une passion **rapproche**, heurter un dégoût **éloigne** : l'attitude bouge par les événements, avec l'amortissement existant (`applyDelta`).
+
+**Ce que font les jeux de référence**
+- **Dwarf Fortress** : chaque nain a **toutes** ses facettes de personnalité et **toutes** ses valeurs, chacune sur une échelle, plus des préférences et des aversions (matériaux, créatures, mets). C'est le modèle le plus riche, et celui qu'on suit : une liste complète, une valeur pour chaque entrée, signée.
+- **Les Sims 4** : des **goûts et dégoûts** sur des activités, de la musique, des couleurs, qui orientent le choix des actions et les conversations. Retenu : le dégoût est aussi utile que la passion.
+- **RimWorld** : une **passion** (aucune, mineure, majeure) sur chaque compétence ; travailler sur une passion rend heureux. Retenu : la passion donne envie de faire, pas seulement de parler.
+- **Crusader Kings 3** : des traits et des styles de vie, mais pas de jauge par sujet ; deux personnages aux traits opposés se détestent. Retenu : l'effet sur l'attitude.
+
+Le questionnaire finit par quelques questions sur les intérêts (« qu'est-ce qui te fait perdre la notion du temps ? », « qu'est-ce que tu ne supportes pas ? »). Les PNJ de fond tirent les leurs selon leur archétype et leur culture : la plupart des entrées restent à zéro, quelques-unes marquées.
 
 ## 11. Ce qui est stocké, et ce qui ne l'est jamais
 
