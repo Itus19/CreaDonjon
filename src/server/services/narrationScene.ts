@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import { advanceSceneTime, type GameTime } from "@/src/core/rules/scene";
+import { marquerDites } from "@/src/core/rules/sceneLife";
 import { compterMots, dureeExplicite, minutesDeParole, minutesProposees, type ElapsedProposal } from "@/src/core/rules/elapsed";
 import { contientParole } from "@/src/core/ai/npcAddressed";
 import { getSceneState, putSceneState } from "@/src/server/repos/sceneStates";
@@ -38,15 +39,27 @@ export async function advanceSceneAfterNarration(
   supabase: TypedClient,
   params: { campaignId: string; callerId: string; playerAction: string; elapsed: ElapsedProposal | null; npcReplyText: string | null }
 ): Promise<GameTime | null> {
-  if (dureeExplicite(params.playerAction)) return null;
-  const scene = await getSceneState(supabase, params.campaignId);
-  if (!scene || scene.activeCombatId) return null;
+  const lue = await getSceneState(supabase, params.campaignId);
+  if (!lue) return null;
+  // V3.2-31 : cette narration a reçu les allées et venues en attente ; elles sont dites.
+  // Celles que le temps d'après va produire attendront le tour suivant.
+  const scene = marquerDites(lue);
+  const ecrireSiDites = async () => {
+    if (scene !== lue) await putSceneState(supabase, { campaignId: params.campaignId, state: scene, updatedBy: params.callerId });
+  };
+  if (dureeExplicite(params.playerAction) || scene.activeCombatId) {
+    await ecrireSiDites();
+    return null;
+  }
 
   const proposees = params.elapsed ? minutesProposees(params.elapsed, false) : 0;
   const parle = contientParole(params.playerAction) || params.npcReplyText !== null;
   const parole = parle ? minutesDeParole(compterMots(params.playerAction) + compterMots(params.npcReplyText ?? "")) : 0;
   const minutes = Math.max(proposees, parole) - MINUTES_DEJA_COMPTEES;
-  if (minutes <= 0) return null;
+  if (minutes <= 0) {
+    await ecrireSiDites();
+    return null;
+  }
 
   const next = advanceSceneTime(scene, minutes);
   await putSceneState(supabase, { campaignId: params.campaignId, state: next, updatedBy: params.callerId });

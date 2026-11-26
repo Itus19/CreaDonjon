@@ -14,6 +14,8 @@ import { listAttitudesTowardTarget } from "@/src/server/repos/psyche";
 import { axesDepuisJson, perceptionPercue } from "@/src/core/psyche/perception";
 import { generateForScene } from "@/src/server/services/sceneGeneration";
 import { esquissesIci, oublierLesPieces, presentsIci, ramenerIci } from "@/src/core/rules/scenePresence";
+import { poserLaVie } from "@/src/core/rules/sceneLife";
+import { lireLaVieDuLieu } from "@/src/server/services/sceneLife";
 import type { SceneView } from "@/lib/solo/types";
 
 type TypedClient = SupabaseClient<Database>;
@@ -199,6 +201,12 @@ export async function setScene(
   const running = (await listCombatsForCampaign(supabase, params.campaignId)).find((c) => c.status === "running");
   scene = { ...scene, activeCombatId: running?.id ?? null };
 
+  // V3.2-31 : un autre lieu (ou une scène d'avant ce ticket), on relit ce qui le fait vivre ; ensuite l'heure suffit.
+  const edges = await listPartOfRelationsForWorld(supabase, params.worldId);
+  if (locationChanged || !scene.life) {
+    scene = poserLaVie(scene, await lireLaVieDuLieu(supabase, { worldId: params.worldId, locationId: params.locationId, edges }));
+  }
+
   await putSceneState(supabase, { campaignId: params.campaignId, state: scene, updatedBy: params.callerId });
 
   if (locationChanged) {
@@ -206,7 +214,6 @@ export async function setScene(
     await putSceneState(supabase, { campaignId: params.campaignId, state: scene, updatedBy: params.callerId });
   }
 
-  const edges = await listPartOfRelationsForWorld(supabase, params.worldId);
   const nearestCityId = edges.find((e) => e.source_entity_id === params.locationId)?.target_entity_id ?? null;
   await discoverEntity(supabase, { campaignId: params.campaignId, userId: params.callerId, entityId: params.locationId, level: "known" });
   if (nearestCityId) {

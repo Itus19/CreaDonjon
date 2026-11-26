@@ -79,7 +79,7 @@ Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été
 | V3.2-28 | ☑ | sans | Les présents suivent la pièce | [`05-narration.md`](backlog-v3.2/05-narration.md) |
 | V3.2-29 | ☑ | sans | Archétypes de vie et `position()` | [`07-vie-du-monde.md`](backlog-v3.2/07-vie-du-monde.md) |
 | V3.2-30 | ☑ | sans | Les gens attachés à un lieu | [`07-vie-du-monde.md`](backlog-v3.2/07-vie-du-monde.md) |
-| V3.2-31 | ☐ | sans | La présence calculée dans le solo | [`07-vie-du-monde.md`](backlog-v3.2/07-vie-du-monde.md) |
+| V3.2-31 | ☑ | sans | La présence calculée dans le solo | [`07-vie-du-monde.md`](backlog-v3.2/07-vie-du-monde.md) |
 | V3.2-32 | ☐ | avec | L'agenda : exceptions datées | [`07-vie-du-monde.md`](backlog-v3.2/07-vie-du-monde.md) |
 | V3.2-33 | ☐ | sans | Le régime d'une ville | [`07-vie-du-monde.md`](backlog-v3.2/07-vie-du-monde.md) |
 | V3.2-34 | ☐ | sans | Les événements à l'heure autour du personnage | [`07-vie-du-monde.md`](backlog-v3.2/07-vie-du-monde.md) |
@@ -89,6 +89,7 @@ Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été
 | V3.2-38 | ☐ | avec | Les absents : témoignages et personnalités publiques | [`07-vie-du-monde.md`](backlog-v3.2/07-vie-du-monde.md) |
 | V3.2-39 | ☐ | sans | Un événement non remarqué se découvre plus tard | [`07-vie-du-monde.md`](backlog-v3.2/07-vie-du-monde.md) |
 | V3.2-40 | ☐ | sans | Franchise, centres d'intérêt, normes et façades | [`07-vie-du-monde.md`](backlog-v3.2/07-vie-du-monde.md) |
+| V3.2-41 | ☐ | sans | Le nom d'une personne calculée, au premier contact | [`07-vie-du-monde.md`](backlog-v3.2/07-vie-du-monde.md) |
 | V3.2-41 | ☑ | sans | Les PNJ restent dans leur rôle, les prix se disent, la pluie reste dehors | [`05-narration.md`](backlog-v3.2/05-narration.md) |
 | V3.2-42 | ☑ | sans | La carte se tire dès qu'on la demande | [`05-narration.md`](backlog-v3.2/05-narration.md) |
 | V3.2-43 | ☑ | sans | En solo, l'IA sait ce que sait le MJ (ADR 0117) | [`05-narration.md`](backlog-v3.2/05-narration.md) |

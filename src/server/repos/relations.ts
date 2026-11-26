@@ -154,3 +154,21 @@ export async function updateRelationVisibility(
     .eq("id", id);
   if (error) throw new Error(error.message);
 }
+
+/**
+ * V3.2-30/31 — Les entités reliées à un lieu par `works_at` (personne → lieu),
+ * dans l'ordre de création : la première tient la place du responsable
+ * (l'aubergiste), les suivantes celles du personnel. La RLS borne déjà ce
+ * que la personne qui joue peut lire.
+ */
+export async function listWorksAtForPlace(supabase: TypedClient, worldId: string, placeId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("relations")
+    .select("source_entity_id")
+    .eq("world_id", worldId)
+    .eq("relation_type", "works_at")
+    .eq("target_entity_id", placeId)
+    .order("created_at", { ascending: true });
+  if (error) throw new Error(error.message);
+  return data.map((r) => r.source_entity_id);
+}

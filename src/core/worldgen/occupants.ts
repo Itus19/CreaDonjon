@@ -67,6 +67,11 @@ export interface Occupant {
   entityId?: string;
 }
 
+/** Une personne présente, et le type de lieu où `position()` la met (`home` : dans ses quartiers ; `null` : un rendez-vous d'agenda). */
+export interface PresentOccupant extends Occupant {
+  at: PlaceKind | null;
+}
+
 /** Un PNJ du wiki relié au lieu par `works_at`, avec l'archétype de sa fiche s'il en a un. */
 export interface WikiWorker {
   entityId: string;
@@ -357,15 +362,16 @@ function patronsAt(settlement: SettlementBlockData, place: OccupantPlace, moment
  * veille dort encore à l'auberge ; le sergent est dans la rue pendant son
  * tour de garde, pas à la caserne.
  */
-export function materializeOccupants(settlement: SettlementBlockData, place: OccupantPlace, moment: OccupantMoment, workers: readonly WikiWorker[] = []): Occupant[] {
+export function materializeOccupants(settlement: SettlementBlockData, place: OccupantPlace, moment: OccupantMoment, workers: readonly WikiWorker[] = []): PresentOccupant[] {
   if (!Number.isInteger(moment.hour) || moment.hour < 0 || moment.hour > 23) {
     throw new RangeError("L'heure doit être un entier de 0 à 23");
   }
-  const present = attachedPeople(settlement, place, moment.day, workers).filter((o) => {
+  const present: PresentOccupant[] = [];
+  for (const o of attachedPeople(settlement, place, moment.day, workers)) {
     const archetype = archetypeParCle(o.archetype);
-    if (!archetype) return false;
+    if (!archetype) continue;
     const where = position({ seed: o.seed, archetype, places: o.places, ...(o.stay ? { stay: o.stay } : {}) }, moment);
-    return where.kind === "place" && where.placeKey === place.key;
-  });
-  return [...present, ...patronsAt(settlement, place, moment)];
+    if (where.kind === "place" && where.placeKey === place.key) present.push({ ...o, at: where.where });
+  }
+  return [...present, ...patronsAt(settlement, place, moment).map((o) => ({ ...o, at: TEMPLATES[place.type].kind }))];
 }
