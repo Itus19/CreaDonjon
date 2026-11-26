@@ -30,6 +30,8 @@ import PublicEquippableBlock from "./PublicEquippableBlock";
 import type { EquippableBlockData } from "@/src/core/schemas/blocks/equippable";
 import type { PriceListBlockData } from "@/src/core/schemas/blocks/priceList";
 import PriceListView from "@/components/blocks/PriceListView";
+import type { SettlementBlockData } from "@/src/core/schemas/blocks/settlement";
+import SettlementView from "@/components/blocks/SettlementView";
 import type { RoomsBlockData } from "@/src/core/schemas/blocks/rooms";
 import RoomsView from "@/components/blocks/RoomsView";
 
@@ -651,6 +653,7 @@ export default function PublicBlockView({
       )}
       {block.blockType === "equippable" && <PublicEquippableBlock data={block.data as unknown as EquippableBlockData} />}
       {block.blockType === "price_list" && <PriceListView data={block.data as unknown as PriceListBlockData} />}
+      {block.blockType === "settlement" && <SettlementView data={block.data as unknown as SettlementBlockData} />}
       {block.blockType === "rooms" && <RoomsView data={block.data as unknown as RoomsBlockData} />}
       {block.blockType === "map" && (
         <PublicMapBlock

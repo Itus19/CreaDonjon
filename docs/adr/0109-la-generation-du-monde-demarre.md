@@ -35,5 +35,5 @@ Et deux arbitrages entre documents :
 - `specs/generation-du-monde.md` devient la référence de la V4 ; `ROADMAP.md` le dit.
 - Les parties d'un lieu s'appellent **espaces** (`space`), jamais « zones », mot déjà pris par les distances de scène et les régions de carte.
 - Le catalogue (G5) demandera une migration et une mise à jour de `docs/SCHEMA.md` à son ticket. Le bloc `settlement` n'en demande pas : `blocks.block_type` n'a pas de contrainte, c'est le registre Zod qui fait foi.
-- Le bloc `settlement` n'est pas encore dans le registre des blocs : son schéma existe, son éditeur viendra au ticket G-3.
+- Le bloc `settlement` est dans le registre des blocs depuis le ticket G-3 : il se pose et s'édite sur une fiche (famille Outils).
 - **L'histoire passe avant la carte** (décidé avec l'auteur le 26 novembre) : le simulateur travaille sur un monde abstrait calqué sur l'export d'Azgaar, testé sur un monde écrit à la main ; l'import Azgaar vient ensuite le remplir. La simulation doit aboutir au présent que montre la carte.
