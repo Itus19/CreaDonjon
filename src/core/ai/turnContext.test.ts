@@ -175,7 +175,7 @@ describe("V3.1-193 — les pronoms d'un PNJ présent", () => {
     expect(MONEY_INSTRUCTION).toMatch(/sans renvoyer à un tableau ou à une ardoise/);
   });
 
-  it("ADR 0116 — les secrets du MJ voyagent à part, encadrés, suivis de la consigne de ne jamais les dire", () => {
+  it("ADR 0117 — les secrets du MJ voyagent à part, encadrés, suivis de la consigne de ne jamais les dire", () => {
     const text = buildTurnContext(input({ secrets: [{ name: "Mabelle", text: "Elle cache son frère." }] }));
     expect(text).toMatch(/<donnee source="secrets-du-mj">[\s\S]*Mabelle : Elle cache son frère\./);
     expect(text).not.toMatch(/<donnee source="pnjs-presents">[^<]*Elle cache/);

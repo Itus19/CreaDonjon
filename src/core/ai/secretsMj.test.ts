@@ -4,7 +4,7 @@ import type { SegmentLu } from "@/src/core/entities/premierePhrase";
 
 const p = (v: string): SegmentLu => ({ blockType: "paragraph", content: [{ t: "text", v }] });
 
-describe("secrets du MJ (ADR 0116)", () => {
+describe("secrets du MJ (ADR 0117)", () => {
   it("garde les paragraphes non vides, en texte brut", () => {
     expect(paragraphesDe([p("  Aubergiste   du Fanal. "), p(""), { blockType: "divider", content: [] }])).toEqual(["Aubergiste du Fanal."]);
   });

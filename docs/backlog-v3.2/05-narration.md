@@ -141,7 +141,7 @@ Coût : une lecture groupée de plus par tour narré (les blocs `text` des prés
 - [x] Tests du noyau : demandes reconnues (paroles comprises), actions sans rapport ignorées, « la carte du royaume » ignorée.
 - [ ] Rejoué : au Fanal sans carte, « c'est combien ? » tire la carte, et Mabelle cite un prix de la carte.
 
-### ☑ V3.2-43 — En solo, l'IA sait ce que sait le MJ · `S` · sans modèle IA pour le cœur — **codé (Opus, [ADR 0116](../adr/0116-en-solo-l-ia-sait-ce-que-sait-le-mj.md))**, reste la vérification en jeu
+### ☑ V3.2-43 — En solo, l'IA sait ce que sait le MJ · `S` · sans modèle IA pour le cœur — **codé (Opus, [ADR 0117](../adr/0117-en-solo-l-ia-sait-ce-que-sait-le-mj.md))**, reste la vérification en jeu
 
 **Décidé par l'auteur le 26 novembre** : « le moteur et l'IA sont les deux hémisphères du cerveau du MJ ». L'IA reçoit aussi les secrets, en deux parts séparées.
 

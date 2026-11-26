@@ -1,4 +1,4 @@
-# 0116 — En solo, l'IA sait ce que sait le MJ, à part de ce que sait le personnage
+# 0117 — En solo, l'IA sait ce que sait le MJ, à part de ce que sait le personnage
 
 **Date :** 2026-11-26
 **Statut :** acceptée le 26 novembre 2026 (choix de l'auteur dans le fil « Faire avancer l'intrigue en narration solo », option « Oui, en deux parts séparées ») ; amende la règle absolue 11 pour la seule narration du tour solo.

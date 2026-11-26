@@ -95,7 +95,7 @@ function firstParagraphByEntity(blocks: Awaited<ReturnType<typeof listBlocksByTy
   return out;
 }
 
-/** Tous les paragraphes que CE viewer peut lire, par entité, blocs `text` dans l'ordre d'affichage (ADR 0116). */
+/** Tous les paragraphes que CE viewer peut lire, par entité, blocs `text` dans l'ordre d'affichage (ADR 0117). */
 function paragraphsByEntity(blocks: Awaited<ReturnType<typeof listBlocksByTypesForEntities>>, viewer: Viewer): Map<string, string[]> {
   const out = new Map<string, string[]>();
   for (const bloc of filtrerBlocsVisibles(blocks, viewer).sort((a, b) => a.display_order - b.display_order)) {
@@ -108,7 +108,7 @@ function paragraphsByEntity(blocks: Awaited<ReturnType<typeof listBlocksByTypesF
 }
 
 /**
- * ADR 0116 — deux lectures de la même page : ce que le personnage sait (le
+ * ADR 0117 — deux lectures de la même page : ce que le personnage sait (le
  * lecteur « joueur » de la campagne : le propriétaire du monde qui joue en
  * solo verrait sinon tout comme s'il le savait) et ce que le MJ sait. Pour un
  * lecteur qui n'est pas MJ, les deux sont le même lecteur : aucun secret.
@@ -289,7 +289,7 @@ async function resolveLocationPage(
   lecteurs: { joueur: Viewer; mj: Viewer }
 ): Promise<{ description: string | null; rooms: Room[]; secret: string | null }> {
   const lignes = await listBlocksByTypesForEntities(supabase, [locationId], ["text", "rooms"]);
-  // ADR 0116 : la description et les pièces sont ce que le personnage sait ; le reste de la page, le secret du MJ.
+  // ADR 0117 : la description et les pièces sont ce que le personnage sait ; le reste de la page, le secret du MJ.
   const viewer = lecteurs.joueur;
   const secret = secretsByEntity(lignes.filter((l) => l.block_type === "text"), lecteurs).get(locationId) ?? null;
   const blocs = filtrerBlocsVisibles(lignes, viewer).sort((a, b) => a.display_order - b.display_order);
@@ -441,7 +441,7 @@ export async function buildSoloTurnContext(
   const knownRooms = [...locationPage.rooms.map((r) => ({ name: r.name, description: r.description })), ...roomSketchesHere.map((r) => ({ name: r.name, description: r.description }))];
   const currentRoom = scene?.room && scene.room.locationId === scene.locationId ? { name: scene.room.name, description: scene.room.description } : null;
   const realNpcs = presents.npcs;
-  // ADR 0116 : ce que seul le MJ sait du lieu et des présents, à part.
+  // ADR 0117 : ce que seul le MJ sait du lieu et des présents, à part.
   const secrets = [...(locationPage.secret && locationEntity ? [{ name: locationEntity.name, text: locationPage.secret }] : []), ...presents.secrets];
   const npcs = [...realNpcs, ...sketchesAsNpcs(scene ? esquissesIci(scene) : [])];
   const addressedNpcId = npcAddressedBy(params.playerAction, npcs);
@@ -497,7 +497,7 @@ export async function buildSoloGmQuestionContext(
 ): Promise<{ text: string }> {
   const scene = await getSceneState(supabase, params.campaignId);
 
-  // La question hors du temps de jeu ne reçoit pas les secrets (ADR 0116 : seule la narration du tour les voit).
+  // La question hors du temps de jeu ne reçoit pas les secrets (ADR 0117 : seule la narration du tour les voit).
   const [locationEntity, presents, quests, recentNarrations] = await Promise.all([
     scene ? listEntitiesByIds(supabase, [scene.locationId]).then((rows) => rows[0] ?? null) : Promise.resolve(null),
     scene

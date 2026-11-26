@@ -107,7 +107,7 @@ export interface TurnContextInput {
    */
   purse?: string;
   /**
-   * ADR 0116 — ce que seul le MJ sait du lieu et des PNJ présents : les
+   * ADR 0117 — ce que seul le MJ sait du lieu et des PNJ présents : les
    * paragraphes de leurs pages que la personne qui joue ne lit pas. Contenu du
    * monde, encadré, À PART de ce que le personnage sait ; la consigne qui le
    * suit interdit de le dire. Absent ou vide : rien de caché.
@@ -195,7 +195,7 @@ export const WEATHER_INSTRUCTION =
   "Consigne : la météo du lieu est celle du dehors. Quand le personnage est à l'intérieur, elle ne se perçoit que par les fenêtres, le toit, la porte ou les vêtements de ceux qui entrent ; elle ne mouille ni n'abîme rien de ce qui est dedans.";
 
 /**
- * ADR 0116 — en solo, le moteur et l'IA sont les deux moitiés du MJ : l'IA
+ * ADR 0117 — en solo, le moteur et l'IA sont les deux moitiés du MJ : l'IA
  * sait ce que le personnage ignore, et s'en sert pour rester cohérente.
  */
 export const SECRETS_INSTRUCTION =

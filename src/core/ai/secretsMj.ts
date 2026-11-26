@@ -2,7 +2,7 @@ import { nodeText } from "@/src/core/richtext/nodeText";
 import type { SegmentLu } from "@/src/core/entities/premierePhrase";
 
 /**
- * ADR 0116 — En solo, le moteur et l'IA forment à eux deux le MJ : l'IA reçoit
+ * ADR 0117 — En solo, le moteur et l'IA forment à eux deux le MJ : l'IA reçoit
  * aussi ce que seul le MJ sait, À PART de ce que le personnage sait. Ces
  * fonctions pures font la différence entre les deux lectures d'une même page
  * (filtrées par l'appelant, règle 5) : ce qui est lisible par le MJ et pas
