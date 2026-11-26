@@ -1,6 +1,6 @@
 # Spécification — La vie du monde : routines, événements, psyché
 
-**Statut :** proposition du 26 novembre 2026, à relire par l'auteur. Décisions de départ dans l'[ADR 0115](../docs/adr/0115-la-vie-du-monde-se-calcule.md).
+**Statut :** décisions de l'auteur reportées le 26 novembre 2026 (§0.1). Décisions de départ dans l'[ADR 0115](../docs/adr/0115-la-vie-du-monde-se-calcule.md).
 **Lien :** prolonge `specs/generation-du-monde.md` (PR #17, ville en agrégat et `materializeOccupants`) et `specs/psyche-pnj.md` (bloc `personality`). Respecte l'[ADR 0104](../docs/adr/0104-le-cap-du-mode-solo.md).
 
 ---
@@ -12,6 +12,30 @@ Séance du 26 novembre : le personnage dort dix heures dans sa chambre de l'aube
 L'auteur veut une approche **organique** : la plupart des gens ont une routine et des aspirations ; certains sont des piliers de bar, d'autres sont de passage ; la ville vit sans le personnage, plus ou moins selon sa taille, son régime et sa stabilité ; un régime répressif étouffe ce qui se voit et pousse le reste dans l'ombre.
 
 Cette spec dit **comment rendre tout cela réel et cohérent sans simuler chaque habitant minute par minute**.
+
+## 0.1 Décisions de l'auteur (26 novembre 2026)
+
+| N° | Question | Décision |
+|---|---|---|
+| 1 | La ville en agrégat (PR #17) | relue et fusionnée avant tout |
+| 2 | Population et régime d'un lieu fait main | déduits de l'infobox (Richesse, Zone), bloc ville facultatif pour préciser |
+| 3 | Le mot « archétype » | l'archétype visuel actuel (deux pôles dominants) est **remplacé** par l'archétype de vie : même place sur la fiche, même structure (nom, couleur), mais un vrai profil avec sa routine (§4.4) |
+| 4 | Le lien personne ↔ lieu de travail | une relation du wiki, `works_at` (migration) |
+| 5 | La liste des archétypes | une liste de départ dans le code, modifiable par monde plus tard |
+| 6 | La densité | selon le lieu (un ermite seul dans sa forêt, du monde dans une grande ville), douze personnes attachées au plus pour commencer |
+| 7 | Quand un inconnu entre dans le wiki | au-delà de trois répliques, comme aujourd'hui ; les personnalités publiques sont connues d'avance, et un informateur peut faire naître la page d'un absent (§3.1) |
+| 8 | Le régime | cinq agrégats de départ, réservés au MJ ; les joueurs n'en voient que des signes ; s'inspirer des jeux qui le font bien (§6.1) |
+| 9 | Qui gouverne | la ville est reliée à la faction au pouvoir (`leads`) |
+| 10 | Le catalogue d'événements | une trentaine de types rédigés par Claude, relus par l'auteur, inspirés de Dwarf Fortress et d'autres (§6.1) |
+| 11 | Ce que la simulation peut faire à un PNJ du wiki | des états avec une cause, et des changements durables par l'onglet « Changements », toujours cohérents : un mort ne ressuscite pas (sauf magie très puissante prévue par les règles), un prisonnier l'est pour un crime (§7.4) |
+| 12 | Un événement qui vise le personnage joué | oui, avec un jet du moteur |
+| 13 | Où se voit un événement | narration et ligne du tour, **seulement si le personnage s'en aperçoit** ; un vol non remarqué se découvre plus tard (§7.5) |
+| 14 | Le rattrapage | à la semaine, au mois au-delà d'un an |
+| 15 | Ce que remplit le questionnaire | tempérament et convictions, plus une partie facultative sur l'intimité (§10.1) |
+| 16 | Les aspirations | des listes plus un champ libre |
+| 17 | Les personnages existants | bouton « Passer le questionnaire », aperçu avant d'écraser |
+| 18 | Les dilemmes | une trentaine rédigés par Claude, dix tirés par passage, relus par l'auteur |
+| 19 | L'ordre | PR #17, puis VM-1 et VM-2, puis VM-3 ; le questionnaire (VM-8) en parallèle |
 
 ## 1. Principes
 
@@ -52,7 +76,20 @@ Un lieu de la ville (l'auberge, le marché, la caserne) a ses **gens attachés**
 
 Une personne de passage a une **arrivée** et une **durée de séjour** tirées par semaine : elle repart vraiment, et une autre prend sa place. Les clients d'un soir qui ne reviendront pas restent ce que PR #17 tire déjà (graine du jour et de l'heure).
 
+Un lieu porte un **gabarit de peuplement** selon son type et la taille de sa ville : une cabane d'ermite a une personne, une auberge de hameau quatre ou cinq, une taverne de capitale atteint le plafond de douze personnes attachées (décision 6). Le lien de travail est une relation du wiki, `works_at` (décision 4) : un PNJ écrit à la main relié à l'auberge en fait partie, et remplace l'occupant tiré de même rôle.
+
 Une personne attachée n'est **pas** écrite en base : elle n'existe que comme graine et archétype, jusqu'à ce qu'on interagisse avec elle (ancrage, `promoteSketch`).
+
+### 3.1 Les personnalités publiques et les absents
+
+**Les personnalités publiques** (le roi, la grande prêtresse, le chef de la guilde) sont connues de tous sans avoir été rencontrées : leur page existe, et la découverte de départ est `mentioned` pour quiconque vit dans leur domaine. Elles ont une routine comme les autres, mais leurs lieux sont rarement accessibles.
+
+**Un informateur peut parler d'un absent.** Quand un PNJ décrit quelqu'un qui n'est pas là (« le forgeron ? un colosse roux, il boit au Chaudron »), cette personne existe déjà dans la simulation (un PNJ du wiki, ou un habitant tiré à graine fixe). Le moteur :
+- la retrouve, ou la matérialise par sa graine ;
+- lui crée une page si elle n'en a pas, découverte `mentioned` ;
+- y note ce qui a été dit **comme un témoignage attribué** (« selon Mabelle : boit au Chaudron »), jamais comme un fait.
+
+**Le témoignage peut être faux.** L'informateur ne sait que ce que sa position lui permet de savoir, et il peut mentir (ADR 0111 : l'attitude réelle reste côté serveur). La vérité est celle de la simulation ; le joueur la découvre en allant voir. Ce que l'IA fait dire à l'informateur passe par la même validation qu'une note du monde : un détail qui contredit la simulation est soit refusé, soit marqué comme rumeur fausse si l'informateur a une raison de mentir.
 
 ## 4. Archétypes et routines
 
@@ -86,7 +123,9 @@ Personnel de lieu (aubergiste, servante), artisan, journalier, marchand établi,
 
 Les pôles du bloc `personality` modulent les probabilités, sans changer l'archétype : un extraverti reste plus longtemps à la taverne, un prudent rentre avant la nuit, un curieux passe au marché. Une aspiration peut ajouter un créneau (celle qui « cherche un mari pour sa fille » va au temple le jour de la fête). L'effet est borné, pour qu'un archétype reste reconnaissable.
 
-### 4.4 L'archétype d'un PNJ écrit à la main
+### 4.4 L'archétype sur la fiche, et celui d'un PNJ écrit à la main
+
+L'archétype de vie **remplace** l'archétype visuel actuel du bloc `personality` (`src/core/psyche/archetype.ts`, deux pôles dominants : « Curieux et impulsif »), qui n'apportait rien de plus (décision 3). Il garde sa place sur la fiche et sa structure (un nom, une couleur de jeton), mais désigne désormais un vrai profil, avec sa routine. Le nom reste « archétype ».
 
 **Déduit, corrigeable** (décision de l'auteur, 26 novembre). Le moteur propose l'archétype depuis le métier du PNJ (« aubergiste » → personnel de lieu, attaché à l'auberge où il est décrit) ; la fiche l'affiche dans le bloc `personality` (champ `routine`) et l'auteur le change à la main. Sans métier lisible : « reste où il est », ce qui garde le comportement d'aujourd'hui.
 
@@ -125,6 +164,16 @@ Le bloc `settlement` (PR #17) gagne des agrégats sociopolitiques, chacun de −
 
 La richesse et la population existent déjà (PR #17). La liste est fermée mais extensible par monde, comme les pôles.
 
+### 6.1 S'inspirer des jeux qui le font bien
+
+- **Victoria 3** : des **groupes d'intérêt** (marchands, clergé, armée, paysans) dont la satisfaction fait la légitimité ; quand l'un d'eux est mécontent, il se radicalise. Retenu : chaque ville a deux à quatre groupes d'intérêt tirés de ses métiers, avec leur satisfaction ; la légitimité en découle en partie.
+- **Crusader Kings 3** : le **contrôle** d'un domaine (l'emprise réelle du pouvoir, distinct de sa forme), l'**opinion** des vassaux, les **factions** qui se forment contre un dirigeant, et les **intrigues** qui progressent en secret jusqu'à éclater. Retenu : les événements cachés peuvent être des intrigues à plusieurs étapes, avec un avancement par semaine, qui éclatent en événement visible (un assassinat, un coup d'État).
+- **Dwarf Fortress** : un **système de justice** (crimes, témoins, enquête, condamnation, prison), des **positions** (le bourgmestre, le capitaine de la garde) tenues par des personnes réelles, et des **rumeurs** qui voyagent de bouche à oreille. Retenu : un crime a des témoins ou n'en a pas ; une arrestation suppose qu'on sache ; la peine dépend du régime ; les postes clés de la ville sont des personnes de la simulation.
+- **Tropico et Frostpunk** : les **lois** et la **police** comme leviers, avec leur coût sur le mécontentement. Retenu : l'emprise a un prix, la légitimité baisse doucement sous un régime répressif.
+- **Shadows of Doubt** : des habitants à routine, des crimes qui laissent des **traces** dans un lieu (objets, témoins, horaires). Retenu : un événement caché laisse des indices découvrables, rattachés à un lieu et à une heure.
+
+Deux agrégats de plus viennent de ces lectures : la **criminalité** (la place de la pègre, qui nourrit les événements cachés) et la **corruption** (la justice qui ferme les yeux, qui transforme des arrestations en pots-de-vin). La liste du tableau ci-dessus devient donc sept agrégats, plus les groupes d'intérêt.
+
 ## 7. Les événements
 
 ### 7.1 Le catalogue
@@ -151,7 +200,13 @@ Un événement caché passe par les **découvertes** existantes (`discovery`) : 
 
 ### 7.4 Les effets et les boucles
 
-Un événement touche les agrégats (une émeute fait baisser la stabilité) et les personnes (un état, une entrée d'agenda, un changement d'attitude). Une stabilité basse rend les émeutes plus probables : c'est voulu, c'est ce qui fait qu'une ville glisse. Chaque effet est **borné** et **amorti** (rendements décroissants, comme `specs/psyche-pnj.md` §1.5), et les agrégats reviennent lentement vers leur point d'équilibre : sans cela, une ville s'effondre ou se fige en quelques semaines.
+Un événement touche les agrégats (une émeute fait baisser la stabilité) et les personnes (un état, une entrée d'agenda, un changement d'attitude). Une stabilité basse rend les émeutes plus probables : c'est voulu, c'est ce qui fait qu'une ville glisse. Les effets restent **logiques** (décision 11) : un mort ne ressuscite pas, sauf par une magie très puissante que les règles prévoient (`Résurrection`, `Souhait`) ; un prisonnier l'est pour un crime, avec une peine qui dépend du régime et qui finit ; un blessé guérit au rythme des règles. Une mort ou un changement durable d'un PNJ du wiki passe par l'onglet « Changements », appliqué d'office et annulable (ADR 0114). Chaque effet est **borné** et **amorti** (rendements décroissants, comme `specs/psyche-pnj.md` §1.5), et les agrégats reviennent lentement vers leur point d'équilibre : sans cela, une ville s'effondre ou se fige en quelques semaines.
+
+### 7.5 Un événement qui vise le personnage joué
+
+Il passe par les règles (décision 12) : un vol à la tire oppose l'Escamotage du voleur à la Perception passive du personnage, jet du moteur. **Le joueur ne voit que ce que son personnage remarque** (décision 13) :
+- remarqué : l'événement entre dans la narration et la ligne du tour ;
+- pas remarqué : l'effet s'applique (l'objet quitte l'inventaire), mais rien n'est dit. Le moteur garde une **découverte différée** : la prochaine fois que le personnage voudrait utiliser l'objet, ou au plus tard quelques heures après, un fait annonce qu'il manque (« ta bourse n'est plus à ta ceinture »). Le joueur peut alors enquêter : le voleur existe, il a une routine, on peut le retrouver.
 
 ## 8. Les deux niveaux de détail
 
@@ -171,6 +226,7 @@ Un événement touche les agrégats (une émeute fait baisser la stabilité) et 
 
 - **Le volet Monde** montre la présence calculée, dans la pièce du personnage (V3.2-28).
 - **À chaque tour**, le moteur compare la présence avant et après le temps écoulé. Les arrivées et les départs partent à l'IA comme **faits établis** (« le sergent sort », « un marchand entre, trempé ») ; elle les raconte, elle ne les invente pas.
+- **Un événement ne se montre que si le personnage s'en aperçoit** (sens, Perception passive, jet du moteur). Il entre alors dans la narration et dans la ligne du tour (décision 13).
 - **Les événements visibles** de la pièce ou du lieu partent aussi comme faits ; les événements étouffés, comme indices discrets ; les événements cachés, jamais, tant qu'ils ne sont pas découverts (règle absolue 11 : le contexte est borné par l'audience).
 - **Les rumeurs** d'ailleurs arrivent par les PNJ : une personne de passage les porte.
 
@@ -178,13 +234,24 @@ Un événement touche les agrégats (une émeute fait baisser la stabilité) et 
 
 À la création d'un personnage joué, ou d'un PNJ par le MJ, **au choix** de la personne qui le crée, un questionnaire remplit le bloc `personality`. Le modèle est celui d'Ultima IV : une suite de dilemmes, chacun opposant deux valeurs, dont les réponses placent les pôles.
 
-- **Une dizaine de dilemmes**, tirés d'une banque, chacun lié à deux pôles du bloc (« Un ami te demande de mentir pour lui devant le juge… » : autorité ↔ indépendance, altruisme ↔ égoïsme). La réponse déplace ces deux pôles d'un cran.
+- **Une dizaine de dilemmes**, tirés d'une banque d'une trentaine, chacun lié à deux pôles : du tempérament (bloc `personality`) ou des convictions (bloc `worldview`, ordre ↔ liberté, miséricorde ↔ justice…). Ultima IV portait sur des vertus : les convictions en sont l'équivalent (décision 15). Exemple lié à deux pôles du bloc (« Un ami te demande de mentir pour lui devant le juge… » : autorité ↔ indépendance, altruisme ↔ égoïsme). La réponse déplace ces deux pôles d'un cran.
 - **Puis les aspirations** : trois questions ouvertes ou à choix (ce que tu veux de ta vie, ce que tu poursuis en ce moment, ce que tu veux ce soir), qui remplissent les trois horizons (`life`, `arc`, `session`) déjà prévus.
 - **Pour un PNJ**, l'archétype de routine se propose à la fin, déduit du métier (§4.4).
 - **Rien n'est figé** : le résultat se corrige à la main, comme toute la fiche. Le questionnaire est une aide à la création, pas une vérité.
 - **Les PNJ de fond** ne passent pas de questionnaire : leurs pôles et leur aspiration du soir se tirent à graine fixe selon l'archétype et la culture, et se corrigent quand l'un d'eux entre dans le wiki.
 
 Le questionnaire est le même pour le MJ humain et pour le solo. L'IA n'y répond jamais à la place de quelqu'un.
+
+### 10.1 L'intimité
+
+Ce qui existe : l'axe `attirance ↔ répulsion` des relations (`specs/psyche-pnj.md` §3, romances actives par défaut, attirance perçue, ADR 0111) et le réglage « Récit » de la campagne (scènes intimes coupées par défaut, entre adultes seulement, V3.2-5). Ce qui manque : rien, dans la fiche, ne dit **qui attire** un personnage ni **son rapport à l'intimité**. L'attirance d'un PNJ pour le personnage joué tombe donc au hasard des événements.
+
+Le bloc `personality` gagne une facette facultative, `intimacy` :
+- **attirance** : vers quels genres (y compris aucun, et le neutre), pour que l'axe d'attirance d'une relation ne puisse monter que là où c'est cohérent ;
+- **rapport à l'intimité** : un pôle `pudeur ↔ liberté`, et un pôle `engagement ↔ légèreté` ;
+- **situation** : seul, en couple, marié, veuf, avec un lien vers la fiche du partenaire quand il existe (relations `married_to`, `partner_of`).
+
+Le questionnaire a une **partie facultative** sur l'intimité, qu'on peut sauter, et qui ne s'affiche que si les romances sont actives dans le monde. Les PNJ de fond tirent cette facette à graine fixe selon leur culture. L'IA ne la reçoit que si le réglage « Récit » le permet, et jamais pour un personnage qui ne serait pas adulte.
 
 ## 11. Ce qui est stocké, et ce qui ne l'est jamais
 
@@ -237,7 +304,9 @@ Rien n'existe encore pour les archétypes de routine, l'agenda, le régime d'une
 | VM-5 | Régime : agrégats du bloc `settlement`, retour à l'équilibre | Opus | G-3 |
 | VM-6 | Événements : catalogue, fréquence, visibilité, effets bornés, tirage à l'heure autour du personnage | Opus | VM-4, VM-5 |
 | VM-7 | Rattrapage et nouvelles qui voyagent | Opus | VM-6 |
-| VM-8 | Questionnaire de psyché à la création, banque de dilemmes, aspirations | Sonnet (interface), Opus (banque) | — |
+| VM-8 | Questionnaire de psyché à la création, banque de dilemmes, aspirations, partie intimité | Sonnet (interface), Opus (banque) | — |
+| VM-10 | Les absents : page née d'un témoignage attribué, personnalités publiques connues d'avance | Opus | VM-3 |
+| VM-11 | Découverte différée d'un événement non remarqué (vol à la tire) | Opus | VM-6 |
 | VM-9 | Archétype déduit du métier, corrigeable dans la fiche ; pôles qui teintent la routine | Sonnet | VM-1 |
 
 VM-8 ne dépend de rien et peut se faire à tout moment. VM-1 et VM-2 sont du noyau pur, testables en millisecondes.

@@ -1,7 +1,7 @@
 # 0115 — La vie du monde se calcule : routines déterministes, événements à deux niveaux de détail, régime qui règle leur visibilité
 
 **Date :** 2026-11-26
-**Statut :** proposée le 26 novembre 2026 (fil « Mettre à jour les présents selon la pièce ») ; points 2, 3 et 6 choisis par l'auteur ; le reste à relire. Détail : `specs/vie-du-monde.md`.
+**Statut :** acceptée le 26 novembre 2026 (fil « Mettre à jour les présents selon la pièce »), décisions de l'auteur reportées dans `specs/vie-du-monde.md` §0.1.
 
 ## Contexte
 
@@ -21,7 +21,11 @@ En solo, les présents d'un lieu ne bougent pas : le personnage dort dix heures 
 4. **Les événements se tirent à l'heure autour du personnage, à la semaine ailleurs**, avec un rattrapage paresseux à l'arrivée dans une ville.
 5. **Leur fréquence dépend de la taille de la ville et de son régime** (stabilité, emprise, légitimité, cohésion, prospérité). **Leur visibilité dépend de l'emprise** : un régime répressif étouffe ce qui se voit et pousse le reste dans l'ombre. Un événement caché ne se révèle que par les découvertes.
 6. **Des événements arrivent sans le personnage** (choix de l'auteur), proportionnés à la ville.
-7. **Un questionnaire de dilemmes à la Ultima IV**, au choix de qui crée le personnage, remplit le bloc `personality` (pôles et aspirations). Les PNJ de fond tirent leur psyché à graine fixe.
+7. **L'archétype de vie remplace l'archétype visuel** du bloc `personality` : même place, vraie routine.
+8. **Le lien de travail est une relation du wiki** (`works_at`), et la densité dépend du type de lieu (douze personnes au plus pour commencer).
+9. **Un événement ne se montre que si le personnage s'en aperçoit** ; un effet non remarqué se découvre plus tard.
+10. **Les effets restent logiques** : pas de résurrection hors magie prévue par les règles, pas de prison sans crime.
+11. **Un questionnaire de dilemmes à la Ultima IV**, au choix de qui crée le personnage, remplit le bloc `personality` (tempérament, aspirations, facette intimité facultative) et le bloc `worldview` (convictions). Les PNJ de fond tirent leur psyché à graine fixe.
 
 ## Conséquences
 
