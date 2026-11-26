@@ -20,7 +20,7 @@ L'auteur veut une météo qui dépend **du lieu géographique** (biome, climat, 
 | `deriveSeed` (FNV-1a), `SeededRng` | `src/core/worldgen/seed.ts` | Toute part de hasard de la météo |
 | La ville la plus proche d'un lieu (relation `part_of`) | `setScene`, en-tête | Un lieu sans bloc `settlement` prend le climat de sa ville |
 | Bloc `rooms` (nom, description) | `src/core/schemas/blocks/rooms.ts` | Gagne une exposition (§6) |
-| Export Azgaar complet | `azgaar/anteau-full-2026-11-26.json` (dossier du projet) | Par cellule de la grille : `temp` (moyenne annuelle en °C, de −15 à 17 sur Anteau) et `prec` (précipitations, de 0 à 57) ; par cellule du pack : `h` (altitude), `biome`, `g` (cellule de grille) ; `mapCoordinates` (latitudes 49,7° N à 13,7° N) ; chaque ville a sa `cell` |
+| Export Azgaar complet (exemple : Anteau, une carte parmi d'autres) | `azgaar/anteau-full-2026-11-26.json` (dossier du projet) | Par cellule de la grille : `temp` (moyenne annuelle en °C, de −15 à 17 sur Anteau) et `prec` (précipitations, de 0 à 57) ; par cellule du pack : `h` (altitude), `biome`, `g` (cellule de grille) ; `mapCoordinates` (latitudes 49,7° N à 13,7° N) ; chaque ville a sa `cell` |
 
 Rien ne calcule de température, de saison ou de climat. Les tickets G-3 (éditeur du bloc `settlement`) et G-7 (import Azgaar) ne sont pas faits : **aucun lieu n'a encore de climat**. D'où le climat par défaut du monde (§3.3).
 
@@ -31,6 +31,7 @@ Rien ne calcule de température, de saison ou de climat. Les tickets G-3 (édite
 3. **Aucun coût de fond** (`docs/QUOTAS.md`) : calculée au moment d'un tour ou d'un affichage que le jeu fait déjà, sans requête de plus que la lecture du bloc `settlement` de la ville (déjà chargé pour les occupants).
 4. **Le moteur décide, l'IA narre** (règle absolue 8, ADR 0104). L'IA reçoit la météo comme un fait, et ce que le personnage en perçoit selon qu'il est dehors ou dedans. Elle ne la change jamais.
 5. **Le wiki l'emporte** : un MJ peut forcer une météo (§7), qui prime sur le calcul.
+6. **Chaque partie a son monde, donc sa carte** (remarque de l'auteur, 26 novembre 2026). Le climat se lit toujours dans les fiches du monde de la partie en cours, jamais dans une carte Azgaar fixe ni dans un fichier du dépôt. L'import Azgaar (ME-7) recopie le climat de **la carte de ce monde-là** dans ses propres blocs `settlement` ; une autre partie importe sa carte à elle. Le climat par défaut est un réglage de la campagne, et toutes les graines dérivent de la graine de la ville, donc du monde. Aucun code de la météo ne connaît Anteau : l'export d'Anteau ne sert que d'exemple pour lire le format.
 
 ## 3. Le climat d'un lieu
 
@@ -149,7 +150,7 @@ Le Guide du maître 2024 donne des effets au froid et à la chaleur extrêmes, a
 | ME-4 | Exposition dans le bloc `rooms` et `perceivedWeather`, éditeur, libellés | Sonnet |
 | ME-5 | Branchement solo : calcul à chaque tour, en-tête, contexte de l'IA, ligne du tour ; fin de `SceneState.weather` ; climat par défaut dans les réglages | Sonnet, relu par Opus |
 | ME-6 | Forçage du MJ (`weather_override`), depuis la fenêtre du MJ et la colonne de scène à distance | Sonnet |
-| ME-7 | Import du climat depuis Azgaar dans le bloc `settlement` (à faire avec G-7) | Opus |
+| ME-7 | Import du climat depuis la carte Azgaar **du monde importé** dans ses blocs `settlement` (à faire avec G-7) ; test avec deux cartes différentes qui donnent deux climats différents | Opus |
 | ME-8 | Effets en jeu du Guide du maître 2024 (froid, chaleur, précipitations, vent) | Opus, plus tard |
 
 Ordre : ME-2, ME-3, ME-4, ME-5 donnent une météo vivante dès maintenant, avec le climat par défaut. ME-7 la rend géographique quand l'import Azgaar existe.

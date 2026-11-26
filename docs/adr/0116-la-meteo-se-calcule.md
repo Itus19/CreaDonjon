@@ -16,7 +16,7 @@ La météo du solo est tirée une fois à la table MJ `meteo` quand le personnag
 ## Décision
 
 1. `weatherAt(climat, date, heure, graine)` dans `src/core/weather/` : normale saisonnière + perturbations lisses de quelques jours + courbe de la journée. Rien n'est stocké que les données du climat.
-2. Le climat vient du bloc `settlement` (importé d'Azgaar : température moyenne, humidité, latitude, altitude, côte), sinon des normales du biome, sinon d'un climat par défaut du monde.
+2. Le climat vient du bloc `settlement` du monde de la partie (importé de **sa** carte Azgaar, jamais d'une carte fixe : chaque partie solo aura son monde et sa carte : température moyenne, humidité, latitude, altitude, côte), sinon des normales du biome, sinon d'un climat par défaut du monde.
 3. La saison vient du calendrier : jour de l'année, hémisphère par la latitude, cœur de l'hiver réglable.
 4. Le moteur rend ce que le personnage **perçoit** selon l'exposition de sa pièce (`outdoor`, `sheltered`, `indoor`). L'IA reçoit le temps et le perçu, séparés.
 5. La table MJ devient un forçage facultatif, avec échéance, qui prime sur le calcul.
