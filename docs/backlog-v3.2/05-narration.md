@@ -68,3 +68,15 @@ Quatre défauts, trois tickets : la consigne (V3.2-17), l'horloge (V3.2-18), le 
 - [x] Tests du noyau : voisins `part_of`, reconnaissance et contrôle d'une pièce, décision (wiki, esquisse, seconde visite, nommée, refus), schéma `move_to` / `enter_room`.
 - [ ] Rejoué : « je la suis » mène en cuisine, le bandeau affiche « La cuisine » ; y revenir l'ajoute au bloc « Pièces » de l'auberge.
 
+
+---
+
+### ☑ V3.2-21 — Dormir dans le récit fait un repos long · `S` · sans modèle IA — **codé (Opus)**, reste la vérification en jeu
+
+**Constaté le 25 novembre** : le personnage dort jusqu'à l'aube, aucun repos long n'est validé. Seul le bouton « Repos long » de la fiche l'appliquait ; un saut de temps du récit avançait l'horloge sans rien d'autre.
+
+**Décidé par l'auteur le 26 novembre** : le moteur l'applique seul. Le sommeil vient du texte du joueur (« je dors », « je me couche », « repos long »), jamais de la narration (ADR 0112, amendement). `sommeilDemande` et `decideLongRest` (`src/core/rules/sleepRest.ts`, purs) : sans durée écrite, dormir vaut 8 h ; moins de 8 h, le temps passe sans repos ; jamais en combat ; 16 h après la fin du précédent (`scene.lastLongRestEnd`, sans changer `__v`). `turnLoop.ts` avance l'horloge, puis appelle `takeLongRest` (le même que la fiche) avec `advanceClock: false`. La phrase « Repos long : … » part dans les changements du tour.
+
+**Critères d'acceptation**
+- [x] Tests du noyau : tournures reconnues, négations et paroles ignorées, 8 h, 16 h, combat.
+- [ ] Rejoué : « je vais me coucher » le soir, l'horloge passe au matin, PV et emplacements reviennent ; un second « je dors » deux heures plus tard ne rend rien.

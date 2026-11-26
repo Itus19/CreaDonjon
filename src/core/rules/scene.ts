@@ -117,6 +117,11 @@ export interface SceneState {
   room?: SceneRoom | null;
   /** V3.2-19 — les pièces inventées et pas encore entrées dans le wiki, avec leurs visites. Laissées derrière quand on change de lieu. */
   roomSketches?: SceneRoomSketch[];
+  /**
+   * La fin du dernier repos long pris en dormant dans le récit, par entité
+   * (`sleepRest.ts`, règle des 16 heures). Facultative et sans changer `__v`.
+   */
+  lastLongRestEnd?: Record<string, GameTime>;
 }
 
 export interface SceneRoom {
@@ -187,6 +192,7 @@ export const zSceneState = z.object({
     .array(z.object({ locationId: z.string().min(1), name: z.string().min(1).max(80), description: z.string().max(600), visits: z.number().int().positive() }))
     .max(40)
     .optional(),
+  lastLongRestEnd: z.record(z.string(), zGameTime).optional(),
 });
 
 export function emptyScene(locationId: string, time: GameTime = { day: 1, hour: 8, minute: 0 }): SceneState {
