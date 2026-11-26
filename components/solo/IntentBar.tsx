@@ -14,7 +14,7 @@ import DieIcon from "@/components/shared/DieIcon";
 import { useDiceRoll } from "@/components/shell/DiceRollPanel";
 import { ErreurLancer, type SortieJet } from "@/lib/ui/outilDes";
 import { preReglageDepuisDemande, sortieAttenteReactions, sortieJetDepuisTour } from "@/lib/ui/solo";
-import { encaisserDepuisFiche } from "@/lib/ui/soloApi";
+import { encaisserDepuisFiche, raconterTour } from "@/lib/ui/soloApi";
 import { useSoloContexte } from "@/components/solo/SoloContexte";
 
 /**
@@ -286,9 +286,21 @@ export default function IntentBar({
     openDiceTool(preReglageDepuisDemande(demande, () => lancerDansOutil(demande)));
   }
 
+  /** V3.2-20 : le récit d'un jet lancé depuis l'outil, demandé après coup ; l'attente se voit dans le fil. */
+  async function raconterApres(idCampagne: string, eventId: string) {
+    onEnCours?.(true);
+    const recit = await raconterTour(eventId, { entityId, campaignId: idCampagne, worldSlug });
+    onEnCours?.(false);
+    onNarration?.(recit.narration !== null ? null : (recit.sansNarration ?? "echec"), recit.narration !== null ? undefined : recit.sansNarrationDetail);
+    if (recit.time) definirHeure(recit.time);
+    if (recit.scene) onSceneMoved?.(recit.scene);
+    onActed?.();
+  }
+
   async function lancerDansOutil(demande: PendingRequest): Promise<SortieJet | null> {
     if (campaignId === null) throw new ErreurLancer("Sans campagne, il n'y a pas de tour à jouer.");
-    const outcome = await encaisserDepuisFiche({ entityId, campaignId, worldSlug });
+    // V3.2-20 : le dé d'abord, le récit ensuite (`raconterApres`), pour que l'outil n'attende pas le modèle.
+    const outcome = await encaisserDepuisFiche({ entityId, campaignId, worldSlug, narrer: false });
     // V3.1-216 : une réaction peut intervenir — le tour n'est pas joué, la
     // demande reste posée, et le bandeau de réaction prend la main. L'outil
     // n'affiche ni total ni verdict jusqu'à la reprise.
@@ -298,6 +310,7 @@ export default function IntentBar({
     onPendingChange(outcome.chained);
     if (outcome.chained === null) setDc("");
     onActed?.();
+    if (outcome.record.eventId) void raconterApres(campaignId, outcome.record.eventId);
     return sortieJetDepuisTour(demande, outcome);
   }
 

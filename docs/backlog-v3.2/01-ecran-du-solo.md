@@ -105,7 +105,7 @@ Vérifié au navigateur : trois points animés pendant les 11 s du modèle local
 - Réglage coupé, le fil tait le DD (ou la CA) et l'issue (`factSansIssue`, noyau pur, testé), le total reste en encre, et l'en-tête de la demande tait le DD. **Le moteur, lui, calcule toujours l'issue et la donne au narrateur** : masquer ne change que l'écran.
 - La phrase du joueur s'affiche désormais en bulle au-dessus d'un tour à jet (`FilItem.actionText`), puisque c'est sous elle que la pastille se pose.
 
-**Limite connue.** L'encaissement attend la narration avant de répondre (le récit s'écrit côté serveur, dans la même requête) : avec un modèle local, le dé peut défiler une quinzaine de secondes avant de se figer. Le séparer demanderait de rendre le dé avant de narrer, un ticket à part.
+**Le dé n'attend plus le récit** (demandé le 26 novembre). Avant, l'encaissement attendait la narration avant de répondre : avec un modèle local, le dé défilait une quinzaine de secondes alors que le serveur le connaissait déjà. Désormais la pastille et l'outil de dés encaissent avec `narrer: false`, affichent le dé tout de suite, puis demandent le récit à `POST /api/solo/tour/[eventId]/raconter`. Cette route relit les faits dans le journal (`reconstructTurnForNarration`), ne relance rien, et refuse d'écrire une seconde première narration (409). Pendant que le modèle écrit, le fil montre son attente habituelle. Coût : une invocation de plus par jet et trois lectures légères. L'annonce d'un dé à la main garde son aller simple.
 
 **Critères d'acceptation**
 - [x] Un jet demandé ne recouvre plus l'écran central : il se lance d'une pastille sous la phrase du joueur.
@@ -113,3 +113,4 @@ Vérifié au navigateur : trois points animés pendant les 11 s du modèle local
 - [x] Par défaut, ni DD ni issue à l'écran ; le réglage les montre, et persiste pour la partie.
 - [x] Le narrateur reçoit toujours le DD et l'issue quand il y en a.
 - [x] Planche du catalogue à jour (`docs/catalogue/Solo.dc.html`, section `pastille-jet`).
+- [x] Le dé se fige dès que le serveur l'a tiré, sans attendre le récit ; une route de récit ne joue jamais de tour (test `turnIntent.noAi.test.ts`).

@@ -10,6 +10,7 @@ import ScenePanel from "@/components/solo/ScenePanel";
 import IntentBar from "@/components/solo/IntentBar";
 import Fil from "@/components/solo/Fil";
 import PastilleJet from "@/components/solo/PastilleJet";
+import { raconterTour } from "@/lib/ui/soloApi";
 import ConsequencesDrawer, { type ConsequencesDrawerData } from "@/components/solo/ConsequencesDrawer";
 import type { EncashedTurnOutcome, FilItem, IntentBarData, RaisonSansNarration, SceneView } from "@/lib/solo/types";
 import BulleFlottante from "@/components/shared/BulleFlottante";
@@ -206,12 +207,22 @@ export default function SoloScreen({
     router.refresh();
   }
 
-  /** V3.2-20 : le jet lancé depuis la pastille est joué — même suite que depuis l'outil de dés. */
-  function apresJet(tour: EncashedTurnOutcome) {
+  /** V3.2-20 : le jet lancé depuis la pastille est joué — la suite du tour, puis son récit, demandé à part. */
+  async function apresJet(tour: EncashedTurnOutcome) {
     if (tour.time) definirHeure(tour.time);
     if (tour.scene) apresChangementDeScene(tour.scene);
     setPending(tour.chained);
     void apresGeste();
+    // V3.2-20 : le dé est déjà à l'écran ; le récit arrive ensuite, avec l'attente visible du fil.
+    if (!tour.record.eventId) return;
+    setTourEnCours(true);
+    const recit = await raconterTour(tour.record.eventId, { entityId, campaignId, worldSlug });
+    setTourEnCours(false);
+    setNarrationEtat(recit.narration !== null ? "repond" : (recit.sansNarration ?? "echec"));
+    setNarrationDetail(recit.narration !== null ? undefined : recit.sansNarrationDetail);
+    if (recit.time) definirHeure(recit.time);
+    if (recit.scene) apresChangementDeScene(recit.scene);
+    await apresGeste();
   }
 
   /**
@@ -347,7 +358,7 @@ export default function SoloScreen({
                 entityId={entityId}
                 campaignId={campaignId}
                 worldSlug={worldSlug}
-                onEncaisse={apresJet}
+                onEncaisse={(tour) => void apresJet(tour)}
               />
             </div>
           )}

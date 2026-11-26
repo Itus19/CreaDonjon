@@ -52,7 +52,7 @@ export default function PastilleJet({
   entityId: string;
   campaignId: string;
   worldSlug: string;
-  /** Le tour est joué : le parent pose la demande chaînée (ou aucune) et recharge le fil. */
+  /** Le tour est joué : le parent pose la demande chaînée (ou aucune), recharge le fil et demande le récit. */
   onEncaisse: (tour: EncashedTurnOutcome) => void;
 }) {
   const t = useTranslations("solo.jet");
@@ -81,7 +81,8 @@ export default function PastilleJet({
     const debut = Date.now();
     const reduit = mouvementReduit(typeof window === "undefined" ? undefined : window.matchMedia.bind(window));
     try {
-      const reponse = await encaisserDepuisFiche({ entityId, campaignId, worldSlug });
+      // V3.2-20 : le dé d'abord, sans attendre le récit, que le parent demande ensuite.
+      const reponse = await encaisserDepuisFiche({ entityId, campaignId, worldSlug, narrer: false });
       const reste = attenteMinimale(reduit) - (Date.now() - debut);
       if (reste > 0) await new Promise((r) => setTimeout(r, reste));
       // V3.1-216 : une réaction peut intervenir ; le tour n'est pas joué, la demande reste posée.

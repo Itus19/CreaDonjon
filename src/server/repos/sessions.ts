@@ -135,6 +135,24 @@ export async function findEventByFromEvent(supabase: TypedClient, sessionId: str
 }
 
 /**
+ * V3.2-20 — Un événement de ce genre porte-t-il déjà ce `from_event` ? Le
+ * garde-fou de `POST .../raconter` : une première narration ne s'écrit
+ * qu'une fois, même si le client rappelle la route (`findEventByFromEvent`
+ * refuserait de choisir entre plusieurs narrations, d'où `limit(1)`).
+ */
+export async function hasEventFromEvent(supabase: TypedClient, sessionId: string, kind: string, fromEventId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("session_events")
+    .select("id")
+    .eq("session_id", sessionId)
+    .eq("kind", kind)
+    .eq("payload->>from_event", fromEventId)
+    .limit(1);
+  if (error) throw new Error(error.message);
+  return (data ?? []).length > 0;
+}
+
+/**
  * V3-C2 — Les esquisses deja tirees sous ce nom (`payload.source === "sketch"`,
  * ecrit par `sceneSketches.ts`), pour detecter « une esquisse apparait dans
  * une deuxieme scene » : le nom filtre directement en base plutot que de
