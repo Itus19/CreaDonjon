@@ -1402,6 +1402,38 @@
     "echec": "erreur — {message}"
   },
   "solo": {
+    "meteo": {
+      "dehors": "Dehors : {condition}",
+      "abri": "À l'abri : {condition}",
+      "temperature": "{n} °C",
+      "ciel": {
+        "clear": "Ciel dégagé",
+        "hazy": "Ciel voilé",
+        "cloudy": "Nuageux",
+        "overcast": "Couvert"
+      },
+      "precipitation": {
+        "drizzle": "Bruine",
+        "rain": "Pluie",
+        "downpour": "Pluie battante",
+        "thunderstorm": "Orage",
+        "snow": "Neige",
+        "sleet": "Grésil",
+        "hail": "Grêle"
+      },
+      "brouillard": "Brouillard",
+      "vent": {
+        "wind": "vent soutenu",
+        "gale": "tempête"
+      },
+      "saison": {
+        "winter": "hiver",
+        "spring": "printemps",
+        "summer": "été",
+        "autumn": "automne"
+      },
+      "titre": "Météo calculée par le moteur"
+    },
     "jet": {
       "lancer": "Lancer · {quoi}",
       "roule": "Le dé roule…",
@@ -1813,6 +1845,7 @@
     "descendre": "Descendre",
     "ajouterMoisApres": "+ Ajouter un mois après",
     "supprimerMois": "Supprimer ce mois",
+    "moisLePlusFroid": "Mois le plus froid de l'année (règle les saisons de la météo)",
     "nouveauMois": "Mois {n}",
     "jourChoisi": "{jourSemaine} {jour} {mois} {annee}",
     "jourChoisiSansSemaine": "{jour} {mois} {annee}",

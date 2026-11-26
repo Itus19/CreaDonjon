@@ -48,4 +48,6 @@ export type CalendarConfig = {
   currentDate: GameDate | null;
   /** Indice (dans `weekdays`) du jour de la semaine du 1er jour du 1er mois de l'an 0 (retour utilisateur, V2.1-3 suite) — point de reference qui permet de calculer le jour de la semaine de N'IMPORTE QUELLE date, plutot que de le saisir a la main pour chaque date. Reglable (pas fige a "Primidi") : un monde qui renomme ses jours de semaine peut vouloir un decalage different. Defaut 0 (le premier jour de `weekdays`). */
   weekdayEpoch: number;
+  /** ME-5 (specs/meteo.md §4) — le mois le plus froid de l'année (1-indexé) : son milieu est le cœur de l'hiver dans l'hémisphère nord. Absent : le premier mois. */
+  coldestMonth?: number;
 };

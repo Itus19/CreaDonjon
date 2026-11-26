@@ -48,5 +48,7 @@ export const zCalendarConfig = z.object({
   currentDate: zGameDate.nullable().default(null),
   /** Voir `CalendarConfig.weekdayEpoch` (src/core/calendar/types.ts) — indice du jour de semaine du 1er jour de l'an 0. `.default(0)` : les calendriers deja enregistres sans ce champ retombent sur "le premier jour de la liste", jamais une erreur de validation. */
   weekdayEpoch: z.number().int().min(0).default(0),
+  /** ME-5 — voir `CalendarConfig.coldestMonth`. Facultatif : un calendrier enregistré avant n'a pas de saison réglée et retombe sur le premier mois. */
+  coldestMonth: z.number().int().min(1).max(24).optional(),
 });
 export type CalendarConfigInput = z.infer<typeof zCalendarConfig>;

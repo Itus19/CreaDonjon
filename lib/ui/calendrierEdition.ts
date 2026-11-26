@@ -26,6 +26,7 @@ export type ActionCalendrier =
   | { type: "semaineSupprimer"; index: number }
   | { type: "semaineAjouter"; nom: string }
   | { type: "epoque"; index: number }
+  | { type: "moisLePlusFroid"; index: number }
   | { type: "ereAjouter"; nom: string }
   | { type: "ereRenommer"; index: number; nom: string }
   | { type: "ereDebut"; index: number; annee: number }
@@ -69,10 +70,12 @@ function recaler(calendrier: CalendarConfigInput): CalendarConfigInput {
  * disparu (il garde alors son numéro, et `recaler` le ramène dans le calendrier).
  */
 function suivreMois(c: CalendarConfigInput, rang: (mois: number) => number | null): CalendarConfigInput {
-  const courant = c.currentDate;
-  if (!courant || courant.month === null) return c;
+  // ME-5 : le mois le plus froid suit son mois quand on déplace ou supprime ; supprimé, il retombe sur le premier.
+  const froid = c.coldestMonth === undefined ? c : { ...c, coldestMonth: rang(c.coldestMonth) ?? 1 };
+  const courant = froid.currentDate;
+  if (!courant || courant.month === null) return froid;
   const nouveau = rang(courant.month);
-  return nouveau === null || nouveau === courant.month ? c : { ...c, currentDate: { ...courant, month: nouveau } };
+  return nouveau === null || nouveau === courant.month ? froid : { ...froid, currentDate: { ...courant, month: nouveau } };
 }
 
 function appliquer(c: CalendarConfigInput, action: ActionCalendrier): CalendarConfigInput {
@@ -120,6 +123,8 @@ function appliquer(c: CalendarConfigInput, action: ActionCalendrier): CalendarCo
       return { ...c, weekdays: [...c.weekdays, { name: action.nom }] };
     case "epoque":
       return { ...c, weekdayEpoch: borne(action.index, 0, c.weekdays.length - 1) };
+    case "moisLePlusFroid":
+      return { ...c, coldestMonth: borne(action.index, 0, c.months.length - 1) + 1 };
     case "ereAjouter":
       if (c.eras.length >= ERES_MAX) return c;
       return { ...c, eras: [...c.eras, { name: action.nom, startYear: 0 }] };

@@ -109,7 +109,11 @@ export interface TurnContextInput {
    * vrai et reste dans le vague. Contenu du monde : encadré.
    */
   locationDescription: string | null;
-  /** La météo déjà tirée (V3-C6), jamais inventée ; `null` si aucun tirage. */
+  /**
+   * ME-5 — la météo calculée par le moteur (`describeWeatherForAi`) : le
+   * temps dehors et ce que le personnage en perçoit là où il est. Un fait du
+   * moteur, jamais encadré ; `null` hors scène.
+   */
   weather: string | null;
   /**
    * Les dernières actions du joueur AVANT ce tour, de la plus ancienne à la
@@ -180,11 +184,13 @@ export function questLine(quest: TurnContextQuest): string {
  * derrière `AiProvider` (`src/server/ai/soloNarration.ts`, V3-B2).
  */
 export function buildTurnContext(input: TurnContextInput): string {
-  const locationText = `${input.locationName} — jour ${input.time.day}, ${String(input.time.hour).padStart(2, "0")}h${String(input.time.minute).padStart(2, "0")} — ${LIGHTING_LABELS[input.lighting]}${input.weather ? ` — ${input.weather}` : ""}`;
+  const locationText = `${input.locationName} — jour ${input.time.day}, ${String(input.time.hour).padStart(2, "0")}h${String(input.time.minute).padStart(2, "0")} — ${LIGHTING_LABELS[input.lighting]}`;
   const addressed = input.addressedNpcId && input.npcs.some((n) => n.id === input.addressedNpcId) ? input.addressedNpcId : null;
 
   const parts: (string | null)[] = [
     fenceUntrustedData("lieu", locationText),
+    // ME-5 : un fait calculé par le moteur, hors balise, avec sa consigne.
+    input.weather ? `Météo (calculée par le moteur, ne la change pas) :\n${input.weather}` : null,
     input.locationDescription ? fenceUntrustedData("description-du-lieu", input.locationDescription) : null,
     input.player
       ? fenceUntrustedData("personnage-joue", `${input.player.name}${input.player.pronouns ? ` (pronoms : ${input.player.pronouns})` : ""}`)

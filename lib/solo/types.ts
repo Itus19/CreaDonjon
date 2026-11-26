@@ -60,6 +60,17 @@ export interface TurnRecord {
  * client n'a jamais à retraduire un `uuid` : le serveur envoie ce qui
  * s'affiche.
  */
+/** ME-5 — la météo telle que l'écran l'affiche : des clés, libellées par `messages/` (`solo.meteo`). */
+export interface SceneWeatherView {
+  sky: "clear" | "hazy" | "cloudy" | "overcast";
+  precipitation: "none" | "drizzle" | "rain" | "downpour" | "thunderstorm" | "snow" | "sleet" | "hail";
+  wind: "calm" | "breeze" | "wind" | "gale";
+  fog: boolean;
+  temperatureC: number;
+  season: "winter" | "spring" | "summer" | "autumn" | null;
+  exposure: "outdoor" | "sheltered" | "indoor";
+}
+
 export interface SceneView {
   locationId: string;
   locationName: string;
@@ -77,8 +88,13 @@ export interface SceneView {
   roomName: string | null;
   time: { day: number; hour: number; minute: number };
   lighting: "bright" | "dim" | "dark";
-  /** V3-C6 — tirée au générateur `meteo`, jamais inventée. `null` sans table réelle à tirer dans ce monde. */
-  weather: string | null;
+  /**
+   * ME-5 (specs/meteo.md) — calculée par le moteur à l'heure de la scène
+   * (climat du lieu, saison du calendrier), jamais inventée ni stockée ; avec
+   * l'exposition de l'endroit où se tient le personnage (dedans, à l'abri,
+   * dehors). `null` : la météo n'a pas pu être calculée.
+   */
+  weather: SceneWeatherView | null;
   inCombat: boolean;
   present: {
     entityId: string;
