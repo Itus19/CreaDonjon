@@ -134,8 +134,8 @@ L'archétype de vie **remplace** l'archétype visuel actuel du bloc `personality
 `position(personne, jour, heure)` :
 
 1. **Mort** : nulle part.
-2. **Agenda** : un rendez-vous daté pour ce créneau l'emporte.
-3. **État** : en prison (à la prison de la ville), blessé (chez lui ou au temple), en fuite (hors de la ville).
+2. **État** : en prison (à la prison de la ville), blessé (chez lui), en fuite (hors de la ville). On ne tient pas un rendez-vous depuis une cellule : l'état passe avant l'agenda (critère du ticket V3.2-29).
+3. **Agenda** : un rendez-vous daté pour ce créneau l'emporte sur le séjour et la routine.
 4. **Séjour** : une personne de passage hors de son séjour n'est pas en ville.
 5. **Routine** : le créneau de l'archétype, la gigue et les absences, teintés par la psyché.
 
