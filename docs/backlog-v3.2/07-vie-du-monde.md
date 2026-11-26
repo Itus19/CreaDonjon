@@ -27,7 +27,7 @@ Spécification : `specs/vie-du-monde.md` §3 à §5, §9. Dépend de la PR #17.
 
 **Réalisé** : `src/core/worldgen/archetypes.ts` (format Zod, seize archétypes) et `position.ts`. Un créneau peut passer minuit (la nuit de garde) ; ses jours sont `all`, `workdays`, `restday` (le dernier jour de la semaine du calendrier) ou un cycle propre à la personne (`{ cycle: 3, on: [0] }`) ; hors de tout créneau, on est chez soi. Le tirage d'un créneau se fait une fois par jour, pas par heure. La teinte de la psyché est un paramètre borné à ±0,2, neutre tant que V3.2-40 n'existe pas.
 
-### ☐ V3.2-30 — Les gens attachés à un lieu · `M` · sans modèle IA
+### ☑ V3.2-30 — Les gens attachés à un lieu · `M` · sans modèle IA — **fait le 26 novembre**
 
 **Modèle conseillé : Opus.**
 
@@ -37,9 +37,11 @@ Spécification : `specs/vie-du-monde.md` §3 à §5, §9. Dépend de la PR #17.
 - Une entité du wiki reliée au lieu par `works_at` remplace l'occupant de même rôle (décision 4) : migration qui ajoute `works_at` à la contrainte de `relations` et à `RELATION_TYPES`.
 
 **Critères d'acceptation**
-- [ ] Revenir dans la même auberge redonne le même personnel et les mêmes habitués ; une personne de passage repart à la fin de son séjour.
-- [ ] Un PNJ relié par `works_at` apparaît à la place de l'occupant tiré.
-- [ ] Migration appliquée sur une copie locale, `docs/SCHEMA.md` §8 à jour.
+- [x] Revenir dans la même auberge redonne le même personnel et les mêmes habitués ; une personne de passage repart à la fin de son séjour.
+- [x] Un PNJ relié par `works_at` apparaît à la place de l'occupant tiré (dans le noyau : le service qui lit la relation vient avec V3.2-31).
+- [x] Migration appliquée sur une copie locale, `docs/SCHEMA.md` §8 à jour.
+
+**Réalisé** : `src/core/worldgen/occupants.ts`. `attachedPeople(ville, lieu, jour, workers)` rend les gens attachés (responsable, personnel, habitués, logés, gens de passage) ; `materializeOccupants(ville, lieu, moment, workers)` garde ceux que `position()` place ici à cette heure, plus les clients d'un soir (arrivée et durée de une à trois heures tirées avec le jour). Sept gabarits : auberge, taverne, temple, marché, caserne, atelier, ermitage. Un séjour de logé ou de passage est tiré par semaine et ne déborde pas sur la suivante, pour qu'une chambre n'ait jamais deux occupants. Le plafond de douze s'applique aux gens tirés ; les PNJ du wiki passent au-dessus. `dayPeriod` disparaît. Migration `20261126160000_relation_works_at.sql`.
 
 ### ☐ V3.2-31 — La présence calculée dans le solo · `M` · sans modèle IA
 

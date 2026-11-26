@@ -48,6 +48,13 @@ export interface TurnContextNpc {
   note?: string;
   /** V3.1-193 — comment l'accorder (`pronounGuidance` de son bloc `character`) ; absent quand rien n'est choisi. */
   pronouns?: string;
+  /**
+   * Qui est ce PNJ : le premier paragraphe de sa page que la personne qui joue
+   * peut lire (« aubergiste du Fanal », « orphelin qui traîne au port »),
+   * tronqué. Sans lui, le modèle devine un métier à partir du nom (un client
+   * qui propose de servir). Absent d'une page vide ou d'une esquisse.
+   */
+  description?: string;
 }
 
 export interface TurnContextQuest {
@@ -99,6 +106,13 @@ export interface TurnContextInput {
    * jamais encadrée. Absente hors scène.
    */
   purse?: string;
+  /**
+   * ADR 0117 — ce que seul le MJ sait du lieu et des PNJ présents : les
+   * paragraphes de leurs pages que la personne qui joue ne lit pas. Contenu du
+   * monde, encadré, À PART de ce que le personnage sait ; la consigne qui le
+   * suit interdit de le dire. Absent ou vide : rien de caché.
+   */
+  secrets?: { name: string; text: string }[];
   /** V3.2-11 — la carte du lieu (« Bière : 4 pc ») : des libellés écrits dans le wiki, donc ENCADRÉS. */
   priceList?: string[];
   /** V3.2-11 — l'ardoise du lieu (« « Bière », 4 pc, due à Mabelle ») : libellés et noms du monde, ENCADRÉS. */
@@ -164,14 +178,43 @@ const ZONE_LABELS: Record<TurnContextNpc["zone"], string> = {
  * prix qu'on lui donne, peut réclamer ce qui est dû, et ce qu'il propose
  * (rabais, troc) reste de la parole tant qu'aucun échange n'est réglé.
  */
+/**
+ * V3.2-11, revue le 26 novembre : quand on demande un prix, le PNJ le DIT, lu
+ * sur la carte. « L'ardoise dit le prix » sans le prix était une esquive : le
+ * mot « ardoise » désignait à la fois la dette et le tableau des prix, et sans
+ * carte la consigne ne laissait au modèle que cette dérobade.
+ */
 export const MONEY_INSTRUCTION =
-  "Consigne sur l'argent : ne fixe jamais un prix toi-même, cite seulement ceux de la carte du lieu et de l'ardoise ci-dessus. Un PNJ qui a servi quelque chose d'impayé (sur l'ardoise) peut le réclamer. Un rabais ou un troc qu'un PNJ propose reste une parole : rien n'est payé, donné ni retiré tant que le moteur n'a pas réglé un échange dans les faits.";
+  "Consigne sur l'argent : ne fixe jamais un prix toi-même. Quand le personnage demande ce que coûte quelque chose, le PNJ dit le prix à voix haute, tel qu'il est sur la carte-du-lieu (« la soupe et le pain, 3 pc »), sans renvoyer à un tableau ou à une ardoise. Ce qui n'est pas sur la carte, le PNJ dit qu'il n'en a pas ou propose ce qui y est. Un PNJ peut réclamer ce que le personnage doit ici (dettes-du-personnage). Un rabais ou un troc qu'un PNJ propose reste une parole : rien n'est payé, donné ni retiré tant que le moteur n'a pas réglé un échange dans les faits.";
+
+/** Le même, quand le lieu n'a pas de carte : aucun prix à citer, donc aucun renvoi à un prix affiché. */
+export const MONEY_INSTRUCTION_NO_PRICE_LIST =
+  "Consigne sur l'argent : ce lieu n'a pas de carte des prix, et tu ne fixes jamais un prix toi-même. Aucun PNJ ne cite de prix, ni ne renvoie à un tableau, une ardoise ou un prix affiché, et le décor n'en montre aucun (pas de prix effacés ni illisibles : il n'y a rien d'écrit). Si le personnage demande ce que coûte quelque chose, le PNJ répond sans chiffre (« on verra ça à la fin », « ce que tu jugeras juste ») ou dit qu'il ne vend pas cela. Un PNJ peut réclamer ce que le personnage doit ici (dettes-du-personnage). Un rabais ou un troc reste une parole : rien n'est payé, donné ni retiré tant que le moteur n'a pas réglé un échange dans les faits.";
+
+/**
+ * La météo tirée (V3-C6) est celle du dehors. Sans cette consigne, la pluie
+ * tombait sur une ardoise au milieu d'une salle d'auberge (26 novembre).
+ */
+export const WEATHER_INSTRUCTION =
+  "Consigne : la météo du lieu est celle du dehors. Quand le personnage est à l'intérieur, elle ne se perçoit que par les fenêtres, le toit, la porte ou les vêtements de ceux qui entrent ; elle ne mouille ni n'abîme rien de ce qui est dedans.";
+
+/**
+ * ADR 0117 — en solo, le moteur et l'IA sont les deux moitiés du MJ : l'IA
+ * sait ce que le personnage ignore, et s'en sert pour rester cohérente.
+ */
+export const SECRETS_INSTRUCTION =
+  "Consigne : secrets-du-mj est ce que seul le MJ sait ; le personnage joué l'ignore. Sers-t'en pour que les PNJ et le monde agissent de façon cohérente (motifs, gestes, mensonges, hésitations, ce qui se trouve où). N'en écris jamais le contenu, ni dans la narration, ni dans une réplique, ni dans une world_note, sauf ce que les faits établis de ce tour font découvrir au personnage. Un PNJ peut mentir ou se taire pour le cacher.";
+
+/** Les PNJ restent ce que leur page dit qu'ils sont : c'est ce qui empêche un client d'offrir de servir. */
+export const NPC_ROLE_INSTRUCTION =
+  "Consigne : chaque PNJ agit selon ce que pnjs-presents dit de lui. Seul le personnel du lieu sert, encaisse ou loue une chambre. Un PNJ dont rien n'est dit n'est pas du personnel : n'invente pas son métier.";
 
 export function npcLine(npc: TurnContextNpc): string {
   const attitude = npc.attitudeLabel ?? "attitude inconnue";
   const note = npc.note ? `, ${npc.note}` : "";
   const pronoms = npc.pronouns ? `, pronoms : ${npc.pronouns}` : "";
-  return `- ${npc.name} (id: ${npc.id}) — ${ZONE_LABELS[npc.zone]}, ${attitude}${note}${pronoms}`;
+  const qui = npc.description ? ` — ${npc.description}` : "";
+  return `- ${npc.name} (id: ${npc.id}) — ${ZONE_LABELS[npc.zone]}, ${attitude}${note}${pronoms}${qui}`;
 }
 
 export function questLine(quest: TurnContextQuest): string {
@@ -189,8 +232,8 @@ export function buildTurnContext(input: TurnContextInput): string {
 
   const parts: (string | null)[] = [
     fenceUntrustedData("lieu", locationText),
-    // ME-5 : un fait calculé par le moteur, hors balise, avec sa consigne.
-    input.weather ? `Météo (calculée par le moteur, ne la change pas) :\n${input.weather}` : null,
+    // ME-5 : un fait calculé par le moteur, hors balise ; la consigne générale de V3.2-41 suit.
+    input.weather ? `Météo (calculée par le moteur, ne la change pas) :\n${input.weather}\n\n${WEATHER_INSTRUCTION}` : null,
     input.locationDescription ? fenceUntrustedData("description-du-lieu", input.locationDescription) : null,
     input.player
       ? fenceUntrustedData("personnage-joue", `${input.player.name}${input.player.pronouns ? ` (pronoms : ${input.player.pronouns})` : ""}`)
@@ -201,6 +244,10 @@ export function buildTurnContext(input: TurnContextInput): string {
     input.rooms.length > 0 ? fenceUntrustedData("pieces-du-lieu", input.rooms.map((r) => `- ${r.name}${r.description ? ` : ${r.description}` : ""}`).join("\n")) : null,
     input.moveTargets.length > 0 ? fenceUntrustedData("lieux-accessibles", input.moveTargets.map((l) => `- ${l.name} (id: ${l.id})`).join("\n")) : null,
     input.npcs.length > 0 ? fenceUntrustedData("pnjs-presents", input.npcs.map(npcLine).join("\n")) : null,
+    input.npcs.length > 0 ? NPC_ROLE_INSTRUCTION : null,
+    (input.secrets?.length ?? 0) > 0
+      ? `${fenceUntrustedData("secrets-du-mj", (input.secrets ?? []).map((x) => `- ${x.name} : ${x.text}`).join("\n"))}\n\n${SECRETS_INSTRUCTION}`
+      : null,
     // V3.2-28 : qui est ailleurs dans le lieu, et une vraie consigne (hors balise) sur ce qu'on en fait.
     (input.elsewhere?.length ?? 0) > 0
       ? `${fenceUntrustedData("ailleurs-dans-le-lieu", (input.elsewhere ?? []).map((e) => `- ${e.name} (${e.room ?? "espace principal du lieu"})`).join("\n"))}\n\nConsigne : les personnes d'ailleurs-dans-le-lieu ne sont pas avec le personnage. Il peut les entendre de loin ou les retrouver en changeant de pièce, mais elles ne parlent ni n'agissent à côté de lui.`
@@ -214,8 +261,8 @@ export function buildTurnContext(input: TurnContextInput): string {
     // consigne qui suit est une vraie instruction du système, hors balise.
     input.priceList && input.priceList.length > 0 ? fenceUntrustedData("carte-du-lieu", input.priceList.join("\n")) : null,
     input.purse ? `Bourse du personnage joué : ${input.purse}` : null,
-    input.tab && input.tab.length > 0 ? fenceUntrustedData("ardoise", input.tab.join("\n")) : null,
-    input.purse !== undefined || (input.priceList?.length ?? 0) > 0 || (input.tab?.length ?? 0) > 0 ? MONEY_INSTRUCTION : null,
+    input.tab && input.tab.length > 0 ? fenceUntrustedData("dettes-du-personnage", input.tab.join("\n")) : null,
+    (input.priceList?.length ?? 0) > 0 ? MONEY_INSTRUCTION : input.purse !== undefined || (input.tab?.length ?? 0) > 0 ? MONEY_INSTRUCTION_NO_PRICE_LIST : null,
     // V3-B4 : la prose vient dans l'encadrement (c'est de la donnee de
     // reference, deja produite par un modele), la consigne reste DEHORS —
     // une vraie instruction du systeme, jamais quelque chose que le modele
