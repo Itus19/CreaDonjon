@@ -2202,6 +2202,40 @@
     "enAttente": "Waiting for the saving throw…"
   },
   "fiche": {
+    "ville": {
+      "population": "Population",
+      "rang": "Rank",
+      "richesse": "Wealth",
+      "biome": "Biome",
+      "peuples": "Peoples",
+      "metiers": "Trades",
+      "cle": "Name",
+      "poids": "Weight",
+      "ajouterPeuple": "Add a people",
+      "ajouterMetier": "Add a trade",
+      "retirer": "Remove",
+      "graine": "Seed",
+      "tirerGraine": "Draw a seed",
+      "aucun": "None",
+      "poidsEntre": "{cle} ({poids})",
+      "zones": { "bourg": "Town", "ville": "City", "capitale": "Capital" },
+      "richesses": { "modeste": "Modest", "correcte": "Comfortable", "reputee": "Renowned" },
+      "biomes": {
+        "marine": "Ocean",
+        "hot_desert": "Hot desert",
+        "cold_desert": "Cold desert",
+        "savanna": "Savanna",
+        "grassland": "Grassland",
+        "tropical_seasonal_forest": "Tropical dry forest",
+        "temperate_deciduous_forest": "Temperate forest",
+        "tropical_rainforest": "Tropical rainforest",
+        "temperate_rainforest": "Temperate rainforest",
+        "taiga": "Taiga",
+        "tundra": "Tundra",
+        "glacier": "Glacier",
+        "wetland": "Wetland"
+      }
+    },
     "equipable": {
       "seulementEquipe": "Only when equipped",
       "harmonisation": "Requires attunement",

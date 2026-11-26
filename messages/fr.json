@@ -2203,6 +2203,40 @@
     "enAttente": "En attente de la sauvegarde…"
   },
   "fiche": {
+    "ville": {
+      "population": "Population",
+      "rang": "Rang",
+      "richesse": "Richesse",
+      "biome": "Biome",
+      "peuples": "Peuples",
+      "metiers": "Métiers",
+      "cle": "Nom",
+      "poids": "Poids",
+      "ajouterPeuple": "Ajouter un peuple",
+      "ajouterMetier": "Ajouter un métier",
+      "retirer": "Retirer",
+      "graine": "Graine",
+      "tirerGraine": "Tirer une graine",
+      "aucun": "Aucun",
+      "poidsEntre": "{cle} ({poids})",
+      "zones": { "bourg": "Bourg", "ville": "Ville", "capitale": "Capitale" },
+      "richesses": { "modeste": "Modeste", "correcte": "Correcte", "reputee": "Réputée" },
+      "biomes": {
+        "marine": "Océan",
+        "hot_desert": "Désert chaud",
+        "cold_desert": "Désert froid",
+        "savanna": "Savane",
+        "grassland": "Prairie",
+        "tropical_seasonal_forest": "Forêt tropicale sèche",
+        "temperate_deciduous_forest": "Forêt tempérée",
+        "tropical_rainforest": "Forêt tropicale humide",
+        "temperate_rainforest": "Forêt pluviale tempérée",
+        "taiga": "Taïga",
+        "tundra": "Toundra",
+        "glacier": "Glacier",
+        "wetland": "Marais"
+      }
+    },
     "equipable": {
       "seulementEquipe": "Seulement équipé",
       "harmonisation": "Harmonisation requise",
