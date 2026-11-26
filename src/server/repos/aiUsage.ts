@@ -20,6 +20,8 @@ type TypedClient = SupabaseClient<Database>;
 export type AiUsagePurpose =
   | "solo_turn"
   | "solo_gm_question"
+  // V3.2-23 (ADR 0113) : faut-il un jet ? Un appel court avant chaque tour libre.
+  | "solo_classify"
   | "generate_npc"
   | "structure_rule"
   | "embed"

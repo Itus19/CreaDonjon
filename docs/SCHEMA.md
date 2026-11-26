@@ -1171,7 +1171,7 @@ create table ai_usage_log (
   id            uuid primary key default gen_random_uuid(),
   user_id       uuid references auth.users(id),
   campaign_id   uuid references campaigns(id) on delete set null,
-  purpose       text not null,   -- 'solo_turn','generate_npc','structure_rule','embed','summarize'
+  purpose       text not null,   -- 'solo_turn','solo_classify','generate_npc','structure_rule','embed','summarize'
   model         text not null,
   input_tokens  int not null default 0,
   output_tokens int not null default 0,
