@@ -8,7 +8,8 @@ import type { JaugesBande } from "@/lib/ui/solo";
  * V3.1-36 — Les jauges de la fiche, en raccourci : CA, PV, Niveau, Charge
  * (et Épuisement en ligne). Deux formes d'une même donnée, calculée par la
  * fiche (`FicheJouableSolo`) — ce composant ne charge rien :
- * - `colonne` : la bande de 96 px de la fiche repliée, sur ordinateur.
+ * - `colonne` : la bande de 64 px de la fiche repliée, sur ordinateur
+ *   (`px-1` : 64 moins deux bordures moins 8 px laissent 54 px, la jauge en fait 48).
  *   **V3.2-16** : la CA, puis quatre jauges circulaires, celles du bandeau de
  *   la fiche (`JaugeCirculaire`) : PV, marche vers le niveau suivant, charge,
  *   épuisement. Même forme, même lecture, ouverte ou repliée ;
@@ -36,7 +37,7 @@ export default function BandeFiche({ jauges, variante }: { jauges: JaugesBande |
       <div
         role="group"
         aria-label={t("bandeTitre")}
-        className="flex h-full flex-col items-center gap-3 overflow-y-auto rounded-lg border border-edge bg-panel px-2 py-3 text-center"
+        className="flex h-full flex-col items-center gap-3 overflow-y-auto rounded-lg border border-edge bg-panel px-1 py-3 text-center"
       >
         <Bouclier valeur={jauges.ac} />
         <JaugeCirculaire libelle={t("bandePv")} valeur={pv} pct={jauges.pctPv} titre={t("bandePvTitre", { pv: jauges.hpCurrent, max: jauges.hpMax })} />

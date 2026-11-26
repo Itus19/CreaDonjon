@@ -128,3 +128,14 @@
 - [x] Les quatre jauges sont calculées par `jaugesBande`, sans requête de plus (la fiche publie déjà ses jauges).
 - [ ] À l'écran, fiche repliée : CA, puis PV, niveau, charge, épuisement, dans 96 px, sans débordement.
 - [ ] Encombré : l'anneau de charge passe en ton d'alerte.
+
+---
+
+### ☑ V3.2-20 — Deux bandes de même largeur · `S` · sans modèle IA — **fait le 26 novembre**
+
+**Demandé le 25 novembre au soir** : la bande de la fiche repliée plus fine, ses éléments à leur taille actuelle, et la bande du Monde à la même largeur. Esquisse : <https://claude.ai/artifact/SY2zL6VoSLivR8tuu8yxgh#bandes>, option **E1** choisie.
+
+**Fait.** Les deux bandes passent à 64 px (le Monde gagne 20 px, la fiche en perd 32, rendus au fil). La bande de la fiche passe de `px-2` à `px-1` pour que la jauge de 48 px tienne entière.
+
+**Critères d'acceptation**
+- [x] Les deux bandes repliées font 64 px ; bouclier et jauges gardent leur taille.
