@@ -59,7 +59,7 @@ Spécification : `specs/vie-du-monde.md` §3 à §5, §9. Dépend de la PR #17.
 
 **Réalisé** : `src/core/worldgen/placePresence.ts` (type du lieu lu dans l'infobox ou le nom, ville déduite des infobox du lieu et de ses parents, pièce et libellé d'une personne calculée), `src/core/rules/sceneLife.ts` (la vie du lieu rangée dans la scène, recalculée par `advanceSceneTime`, nouvelles de ce que le personnage voit changer dans sa pièce), `src/server/services/sceneLife.ts` (lecture au changement de lieu). Les personnes calculées entrent comme esquisses `calc-<graine>` au libellé sans nom (« aubergiste, d'âge mûr »), les PNJ `works_at` comme présents ; le moteur ne fait sortir que ceux qu'il a fait entrer. Une scène posée avant ce ticket se peuple au prochain enregistrement du panneau de scène ou au prochain déplacement.
 
-**Écarts** : l'ajout à la main reste celui du panneau (l'entrée d'agenda « ici jusqu'à… » vient avec V3.2-32) ; les jours de semaine ne sont pas encore passés à `position()` (tous les jours sont ouvrés) ; le nom au premier contact est V3.2-41.
+**Écarts** : l'ajout à la main reste celui du panneau (l'entrée d'agenda « ici jusqu'à… » vient avec V3.2-32) ; les jours de semaine ne sont pas encore passés à `position()` (tous les jours sont ouvrés) ; le nom au premier contact est V3.2-45.
 
 ### ☐ V3.2-32 — L'agenda : exceptions datées · `M` · avec modèle IA (pour vérifier)
 
@@ -156,7 +156,7 @@ Spécification : `specs/vie-du-monde.md` §6 à §8.
 
 Spécification : `specs/vie-du-monde.md` §10. Ne dépend pas de la PR #17.
 
-### ☐ V3.2-41 — Le nom d'une personne calculée, au premier contact · `S` · sans modèle IA
+### ☑ V3.2-45 — Le nom d'une personne calculée, au premier contact · `S` · sans modèle IA — **fait le 26 novembre**
 
 **Modèle conseillé : Opus.** Décision de l'auteur (26 novembre 2026).
 
@@ -165,8 +165,12 @@ Spécification : `specs/vie-du-monde.md` §10. Ne dépend pas de la PR #17.
 - Tant que le personnage joué ne connaît pas ce nom, sa page et la narration l'appellent par le libellé : même mécanisme que pour les PNJ à table (nom officiel, et nom connu du joueur dans le journal du PNJ ou `known_as`).
 
 **Critères d'acceptation**
-- [ ] Parler trois fois à « aubergiste, d'âge mûr » crée sa page sous un nom tiré ; le volet et la narration disent toujours « aubergiste, d'âge mûr ».
-- [ ] Quand le personnage apprend le nom, il remplace le libellé partout pour ce joueur.
+- [x] Parler trois fois à « aubergiste, d'âge mûr » crée sa page sous un nom tiré ; le volet et la narration disent toujours « aubergiste, d'âge mûr ». (Tests du câblage ; à rejouer.)
+- [x] Quand le personnage apprend le nom, il remplace le libellé partout pour ce joueur.
+
+**Réalisé** : à l'ancrage d'une esquisse `calc-<graine>` (`promoteSketch`), la fiche prend le libellé comme nom pour la table et le nom tiré au générateur PNJ part dans `entity_true_names` (ADR 0105), si la personne qui joue est MJ du monde. Une personne du personnel reçoit un lien `works_at` avec sa graine (`relations.metadata`) ; dans la scène, `life.workers` la garde avec sa graine : elle reprend exactement sa place et son esquisse ne revient jamais (`attachedPeople`, `ancrerPersonneCalculee`). La narration reçoit le vrai nom en secret du MJ (ADR 0117), avec la consigne de ne l'écrire que si le PNJ se présente ; quand une narration l'écrit (nom entier, tête avant la virgule ou prénom de trois lettres et plus, `nomsDitsDans`), le moteur vide le nom pour la table (`revelerNomsDits` → `setTableName`), liens renommés compris.
+
+**Écart** : un habitué ancré n'a pas de lien durable vers le lieu (pas de relation « fréquente ») ; il garde sa place tant que la scène reste dans ce lieu. À revoir avec V3.2-37 (l'archétype sur la fiche).
 
 ### ☐ V3.2-40 — Franchise, centres d'intérêt, normes et façades · `M` · sans modèle IA
 

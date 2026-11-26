@@ -1,6 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/src/types/database";
+import type { Database, Json } from "@/src/types/database";
 import type { PartOfEdge } from "@/src/core/entity-tree/build-tree";
 import { FAMILY_RELATION_TYPES, type FamilyRelationType } from "@/src/core/genealogy/buildFamilyTree";
 
@@ -120,9 +120,12 @@ export async function insertRelation(
     visibilityLevel: string;
     visibilityScopeId: string | null;
     createdBy: string;
+    /** V3.2-45 — `{ seed }` pour un `works_at` né d'une personne calculée. */
+    metadata?: Json;
   }
 ): Promise<InsertRelationResult> {
   const { error } = await supabase.from("relations").insert({
+    ...(params.metadata !== undefined ? { metadata: params.metadata } : {}),
     world_id: params.worldId,
     source_entity_id: params.sourceEntityId,
     target_entity_id: params.targetEntityId,
@@ -161,14 +164,14 @@ export async function updateRelationVisibility(
  * (l'aubergiste), les suivantes celles du personnel. La RLS borne déjà ce
  * que la personne qui joue peut lire.
  */
-export async function listWorksAtForPlace(supabase: TypedClient, worldId: string, placeId: string): Promise<string[]> {
+export async function listWorksAtForPlace(supabase: TypedClient, worldId: string, placeId: string): Promise<{ entityId: string; metadata: Json }[]> {
   const { data, error } = await supabase
     .from("relations")
-    .select("source_entity_id")
+    .select("source_entity_id, metadata")
     .eq("world_id", worldId)
     .eq("relation_type", "works_at")
     .eq("target_entity_id", placeId)
     .order("created_at", { ascending: true });
   if (error) throw new Error(error.message);
-  return data.map((r) => r.source_entity_id);
+  return data.map((r) => ({ entityId: r.source_entity_id, metadata: r.metadata }));
 }

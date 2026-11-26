@@ -1,4 +1,5 @@
 import "server-only";
+import { listTrueNamesForEntities } from "@/src/server/repos/entityTrueNames";
 import { nouvellesNonDites, phraseDeNouvelle } from "@/src/core/rules/sceneLife";
 import { listBlockVisibilityForEntities, listBlocksByTypeForEntities, listBlocksByTypesForEntities } from "@/src/server/repos/blocks";
 import { listPartOfRelationsForWorld } from "@/src/server/repos/relations";
@@ -133,17 +134,23 @@ function secretsByEntity(blocks: Awaited<ReturnType<typeof listBlocksByTypesForE
   return out;
 }
 
+/** V3.2-45 — le vrai nom d'un PNJ que le personnage ne connaît que par son libellé, en secret du MJ (ADR 0117). */
+function vraiNomSecret(trueName: string): string {
+  return `Son vrai nom est ${trueName}. Le personnage ne le connaît pas : ne l'écris pas, sauf si ce PNJ se présente ou qu'on le lui apprend.`;
+}
+
 async function resolvePresentNpcs(
   supabase: TypedClient,
   params: { worldId: string; campaignId: string; playerEntityId: string; viewer: Viewer; present: { entityId: string; zone: TurnContextNpc["zone"] }[] }
-): Promise<{ npcs: TurnContextNpc[]; secrets: { name: string; text: string }[] }> {
+): Promise<{ npcs: TurnContextNpc[]; secrets: { name: string; text: string }[]; trueNames: { entityId: string; trueName: string }[] }> {
   const others = params.present.filter((p) => p.entityId !== params.playerEntityId);
-  if (others.length === 0) return { npcs: [], secrets: [] };
+  if (others.length === 0) return { npcs: [], secrets: [], trueNames: [] };
   const lecteurs = lecteursDuTour(params.viewer, params.campaignId);
 
   // V3.1-193 : les blocs `character` des présents, en UNE requête avec le reste (client du joueur : la RLS ne rend que ce qu'il peut voir).
   // 26 nov. : et leurs blocs `text`, pour dire au modèle qui ils sont (une lecture de plus, groupée).
-  const [entities, knownAs, characterBlocks, textBlocks] = await Promise.all([
+  // V3.2-45 : les vrais noms tenus secrets (nom pour la table, ADR 0105), seulement pour le MJ du monde.
+  const [entities, knownAs, characterBlocks, textBlocks, trueNames] = await Promise.all([
     listEntitiesByIds(supabase, others.map((p) => p.entityId)),
     knownAsByTarget(supabase, params.playerEntityId),
     listBlocksByTypeForEntities(
@@ -156,6 +163,7 @@ async function resolvePresentNpcs(
       others.map((p) => p.entityId),
       ["text"]
     ),
+    lecteurs.joueur !== lecteurs.mj ? listTrueNamesForEntities(supabase, others.map((p) => p.entityId)) : Promise.resolve([]),
   ]);
   const descriptionById = firstParagraphByEntity(textBlocks, lecteurs.joueur);
   const secretById = secretsByEntity(textBlocks, lecteurs);
@@ -180,8 +188,12 @@ async function resolvePresentNpcs(
       ...(descriptionById.has(p.entityId) ? { description: descriptionById.get(p.entityId) } : {}),
     });
   }
-  const secrets = npcs.flatMap((n) => (secretById.has(n.id) ? [{ name: n.name, text: secretById.get(n.id)! }] : []));
-  return { npcs, secrets };
+  const trueNameById = new Map(trueNames.map((t) => [t.entityId, t.trueName]));
+  const secrets = npcs.flatMap((n) => {
+    const text = [secretById.get(n.id), trueNameById.has(n.id) ? vraiNomSecret(trueNameById.get(n.id)!) : undefined].filter((t): t is string => t !== undefined).join(" ");
+    return text ? [{ name: n.name, text }] : [];
+  });
+  return { npcs, secrets, trueNames };
 }
 
 /**
@@ -385,6 +397,8 @@ export interface SoloTurnContext {
   addressedIsQuestion: boolean;
   /** Les présents tels que le modèle les a vus (nom déjà résolu par `known_as`, bande d'attitude) : la réplique retenue garde le nom et l'attitude de son PNJ pour le fil. */
   npcs: TurnContextNpc[];
+  /** V3.2-45 — les vrais noms secrets des présents : une narration qui en écrit un le révèle (`revelerNomsDits`). */
+  trueNames: { entityId: string; trueName: string }[];
 }
 
 /** Au-delà, la carte est tronquée : le contexte d'un modèle local est compté. */
@@ -453,7 +467,7 @@ export async function buildSoloTurnContext(
     scene ? listEntitiesByIds(supabase, [scene.locationId]).then((rows) => rows[0] ?? null) : Promise.resolve(null),
     scene
       ? resolvePresentNpcs(supabase, { worldId: params.worldId, campaignId: params.campaignId, playerEntityId: params.playerEntityId, viewer: params.viewer, present: presentsIci(scene) })
-      : Promise.resolve({ npcs: [], secrets: [] }),
+      : Promise.resolve({ npcs: [], secrets: [], trueNames: [] }),
     resolveQuests(supabase, params.worldId, params.viewer),
     resolveRecentHistory(supabase, params.sessionId, params.fromEventId ?? null),
     resolvePlayer(supabase, params.playerEntityId),
@@ -506,7 +520,7 @@ export async function buildSoloTurnContext(
   };
 
   const knownEntityIds = [...(locationEntity ? [locationEntity.id] : []), ...realNpcs.map((n) => n.id)];
-  return { text: buildTurnContext(input), npcIds: npcs.map((n) => n.id), knownEntityIds, recentNarrations, addressedNpcId, addressedIsQuestion, npcs, moveTargetIds: moveTargets.map((l) => l.id), moveTargets, wikiRooms: locationPage.rooms, locationName: locationEntity?.name ?? null, inSketchRoom: scene?.room?.anchored === false };
+  return { text: buildTurnContext(input), npcIds: npcs.map((n) => n.id), knownEntityIds, recentNarrations, addressedNpcId, addressedIsQuestion, npcs, trueNames: presents.trueNames, moveTargetIds: moveTargets.map((l) => l.id), moveTargets, wikiRooms: locationPage.rooms, locationName: locationEntity?.name ?? null, inSketchRoom: scene?.room?.anchored === false };
 }
 
 /**
@@ -535,7 +549,7 @@ export async function buildSoloGmQuestionContext(
     scene ? listEntitiesByIds(supabase, [scene.locationId]).then((rows) => rows[0] ?? null) : Promise.resolve(null),
     scene
       ? resolvePresentNpcs(supabase, { worldId: params.worldId, campaignId: params.campaignId, playerEntityId: params.playerEntityId, viewer: params.viewer, present: presentsIci(scene) })
-      : Promise.resolve({ npcs: [], secrets: [] }),
+      : Promise.resolve({ npcs: [], secrets: [], trueNames: [] }),
     resolveQuests(supabase, params.worldId, params.viewer),
     resolveRecentHistory(supabase, params.sessionId, null).then((h) => h.narrations),
   ]);

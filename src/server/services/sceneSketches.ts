@@ -9,6 +9,11 @@ import { generateForScene } from "@/src/server/services/sceneGeneration";
 import { promoteToEntity, type PromoteToEntityResult } from "@/src/server/services/promotion";
 import { discoverEntity } from "@/src/server/services/discoveries";
 import type { EntitySummary } from "@/src/server/repos/entities";
+import type { SceneState } from "@/src/core/rules/scene";
+import { ancrerPersonneCalculee, graineCalculee, roleCalcule } from "@/src/core/rules/sceneLife";
+import { insertRelation } from "@/src/server/repos/relations";
+import { upsertTrueName } from "@/src/server/repos/entityTrueNames";
+import { isWorldAdmin } from "@/src/server/services/permissions";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -111,7 +116,13 @@ export async function promoteSketch(
   if (!promoted.ok) return promoted;
 
   const withoutSketch = removeSketch(scene, sketch.id);
-  const withEntity = enterScene(withoutSketch, { entityId: promoted.entity.id, zone: sketch.zone, disposition: sketch.disposition, ...(sketch.room !== undefined ? { room: sketch.room } : {}) });
+  let withEntity = enterScene(withoutSketch, { entityId: promoted.entity.id, zone: sketch.zone, disposition: sketch.disposition, ...(sketch.room !== undefined ? { room: sketch.room } : {}) });
+  // V3.2-45 : une personne calculée reçoit son vrai nom en s'ancrant, et garde sa place dans le lieu.
+  const seed = graineCalculee(sketch.id);
+  if (seed !== null) {
+    await nommerPersonneCalculee(supabase, { ...params, scene, entityId: promoted.entity.id, seed });
+    withEntity = ancrerPersonneCalculee(withEntity, { sketchId: sketch.id, entityId: promoted.entity.id });
+  }
   await putSceneState(supabase, { campaignId: params.campaignId, state: withEntity, updatedBy: params.callerId });
   const eventId = await journalSketchNote(supabase, params.sessionId, params.callerId, `${sketch.name} a rejoint le monde`, {
     source: "anchor",
@@ -120,6 +131,50 @@ export async function promoteSketch(
   });
   await recordAnchorProposal(supabase, { worldId: params.worldId, campaignId: params.campaignId, sessionEventId: eventId, entity: promoted.entity, name: sketch.name, trait: sketch.trait, callerId: params.callerId });
   return promoted;
+}
+
+/**
+ * V3.2-45 (décision de l'auteur, 26 novembre 2026) — Une personne calculée
+ * (« aubergiste, d'âge mûr ») qui s'ancre reçoit un vrai nom, tiré au
+ * générateur PNJ (dés réels, journalisé), jamais inventé par l'IA. Ce nom
+ * reste secret tant que le personnage ne l'a pas appris : c'est le « nom pour
+ * la table » des parties à table (ADR 0105). La fiche s'appelle par le
+ * libellé, et le vrai nom part dans `entity_true_names`, que seul le MJ lit.
+ *
+ * Personne du personnel : un lien `works_at` vers le lieu, avec sa graine,
+ * pour qu'elle reprenne sa place en revenant plus tard (`lireLaVieDuLieu`).
+ *
+ * Sans droit de MJ sur le monde, ou sans générateur, la fiche garde son
+ * libellé comme seul nom : rien n'est perdu, rien n'est inventé.
+ */
+async function nommerPersonneCalculee(
+  supabase: TypedClient,
+  params: { worldId: string; campaignId: string; callerId: string; scene: SceneState; entityId: string; seed: number }
+): Promise<void> {
+  const role = roleCalcule(params.scene, params.seed);
+  if (params.scene.life && (role === "head" || role === "staff")) {
+    const lien = await insertRelation(supabase, {
+      worldId: params.worldId,
+      sourceEntityId: params.entityId,
+      targetEntityId: params.scene.life.locationId,
+      relationType: "works_at",
+      visibilityLevel: "public",
+      visibilityScopeId: null,
+      createdBy: params.callerId,
+      metadata: { seed: params.seed },
+    });
+    if (!lien.ok) console.warn(`Lien works_at non créé pour une personne ancrée (${lien.reason})`);
+  }
+
+  if (!(await isWorldAdmin(supabase, { worldId: params.worldId, userId: params.callerId }))) return;
+  const drawn = await generateForScene(supabase, { campaignId: params.campaignId, worldId: params.worldId, toolKey: PNJ_TOOL_KEY, callerId: params.callerId });
+  if ("error" in drawn) {
+    console.warn(`Pas de vrai nom pour une personne ancrée : ${drawn.error}`);
+    return;
+  }
+  const trueName = drawn.sections.find((s) => s.key === NAME_SECTION_KEY)?.text.trim();
+  if (!trueName) return;
+  await upsertTrueName(supabase, { entityId: params.entityId, worldId: params.worldId, secret: { trueName, trueAliases: [] } });
 }
 
 /**
