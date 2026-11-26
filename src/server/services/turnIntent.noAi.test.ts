@@ -75,11 +75,31 @@ describe("la route du tour appelle l'IA, mais jamais avant playTurn", () => {
     // V3.1-224 : la route ne construit plus son fournisseur depuis l'environnement,
     // elle résout celui du COMPTE (`resolveProviderForUser`). Le verrou est inchangé :
     // quel que soit son nom, l'appel d'IA vient APRÈS que le tour est joué et journalisé.
-    for (const call of ["resolveProviderForUser(", "narrateSoloTurn("]) {
-      const callIndex = lines.findIndex((line) => line.includes(call));
-      expect(callIndex, `${call} doit apparaitre dans ce fichier`).toBeGreaterThanOrEqual(0);
-      expect(callIndex, `${call} doit venir APRES playTurn(`).toBeGreaterThan(playTurnCallIndex);
+    // V3.2-24 (ADR 0113) : le fournisseur se résout désormais AVANT le tour,
+    // pour le classement « faut-il un jet ? » ; la NARRATION, elle, reste après.
+    const callIndex = lines.findIndex((line) => line.includes("narrateSoloTurn("));
+    expect(callIndex, "narrateSoloTurn( doit apparaitre dans ce fichier").toBeGreaterThanOrEqual(0);
+    expect(callIndex, "narrateSoloTurn( doit venir APRES playTurn(").toBeGreaterThan(playTurnCallIndex);
+  });
+
+  it("avant playTurn(, le seul appel d'IA est le classement (ADR 0113), qui ne raconte rien", () => {
+    const lines = codeLines(sourceOf("app/api/solo/tour/route.ts"));
+    const before = lines.slice(0, lines.findIndex((line) => line.includes("playTurn(")));
+    const aiCalls = before.filter((line) => /\b(narrate\w*|askSoloGm|runAiCompletion|classifySoloAction)\(/.test(line));
+    expect(aiCalls.length, "le classement doit être appelé avant le tour").toBe(1);
+    expect(aiCalls[0]).toContain("classifySoloAction(");
+  });
+});
+
+describe("le classement (V3.2-23) ne touche jamais au tour", () => {
+  const TURN_MARKERS = ["playTurn(", "executeIntent(", "applyRuntimeStateChange(", "insertSessionEvent(", "putSceneState(", "advanceTime("];
+
+  it("src/server/ai/soloClassify.ts n'écrit rien et ne joue rien", () => {
+    const lines = codeLines(sourceOf("src/server/ai/soloClassify.ts"));
+    for (const marker of TURN_MARKERS) {
+      expect(lines.filter((line) => line.includes(marker)), `soloClassify.ts mentionne ${marker}`).toEqual([]);
     }
+    expect(sourceOf("src/server/ai/soloClassify.ts")).toContain("runAiCompletion(");
   });
 });
 

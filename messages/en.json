@@ -717,7 +717,10 @@
           "reglageAffiches": "shown",
           "reglageMasques": "hidden",
           "reglageTitre": "Show or hide the DC and the outcome of rolls. When hidden, the story tells you whether you succeeded.",
-          "reglageEchec": "The setting could not be changed."
+          "reglageEchec": "The setting could not be changed.",
+          "sansJet": "No roll",
+          "changer": "Change check",
+          "rejoue": "One moment…"
         },
         "titre": "{n, plural, one {# rule of your character is not fully playable} other {# rules of your character are not fully playable}}",
         "aide": "The game does not apply them on its own: the GM or you play them by hand. Open an entry to see what stays as text."

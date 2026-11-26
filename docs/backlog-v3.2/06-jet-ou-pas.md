@@ -10,7 +10,7 @@
 
 Le noyau pur, tests d'abord.
 
-- `src/core/rules/checkDifficulty.ts` : le type `CheckTier` (`tres_facile` à `quasi_impossible`), `dcForTier` (5, 10, 15, 20, 25, 30), `autoSuccess({ tier, modifier, trivial })` : vrai si `trivial`, ou si 1 + modificateur ≥ DD.
+- `src/core/rules/checkDifficulty.ts` : le type `CheckTier` (`tres_facile` à `quasi_impossible`), `dcForTier` (5, 10, 15, 20, 25, 30), `autoSuccess({ tier, modifier })` : vrai si 1 + modificateur ≥ DD ; le `trivial` du modèle se lit sur le classement.
 - Le type de classement (`none` | `trivial` | `check` + action + palier) et son schéma Zod, partagés par le serveur.
 
 **Critères d'acceptation**
@@ -20,7 +20,7 @@ Le noyau pur, tests d'abord.
 
 ---
 
-### ☐ V3.2-23 — Le classifieur, son prompt et son corpus · `M` · **avec modèle IA** · Modèle conseillé : Opus
+### ☐ V3.2-23 — Le classifieur, son prompt et son corpus · `M` · **avec modèle IA** · Modèle conseillé : Opus — **codé le 26 novembre ; reste à rejouer le corpus contre le modèle local**
 
 - `src/server/ai/soloClassify.ts` : un appel court, sortie structurée (outil forcé), validée par le schéma de V3.2-22. La liste des actions autorisées vient de la fiche ; une action hors liste est refusée.
 - Contexte : la phrase du joueur, le lieu, les présents, les noms des actions de la fiche, encadrés comme données (règle 10), bornés au joueur (règle 11).
@@ -31,17 +31,20 @@ Le noyau pur, tests d'abord.
 **Ce que ça consomme** : un appel de modèle par tour libre, aucune requête de base de plus.
 
 **Critères d'acceptation**
-- [ ] Tests du noyau et du service avec un faux fournisseur : `none`, `trivial`, `check`, réponse invalide (repli), fournisseur absent (repli, journal écrit).
-- [ ] Corpus rejoué avec le fournisseur local : taux d'accord noté dans ce ticket.
+- [x] Tests du noyau : message (phrase encadrée), schéma de l'outil, lecture de `none`, `trivial`, `check`, réponse invalide ou test hors liste (repli) — `src/core/ai/checkClassify.test.ts`. Le service est mince (`soloClassify.ts`) : il rend `null` sur toute erreur, et un garde-fou vérifie qu'il n'écrit ni ne joue rien (`turnIntent.noAi.test.ts`).
+- [x] Corpus de 48 phrases (`src/core/ai/checkClassifyCorpus.ts`), dont les deux pièges du 25 novembre.
+- [ ] Corpus rejoué avec le fournisseur local (`AI_EVAL_CLASSEMENT=1 npx vitest run src/server/ai/soloClassify.eval.integration.test.ts`) : taux d'accord à noter ici.
 
 ---
 
-### ☐ V3.2-24 — Le classement joue le tour, la pastille propose · `M` · sans modèle IA pour le cœur · Modèle conseillé : Opus
+### ☐ V3.2-24 — Le classement joue le tour, la pastille propose · `M` · sans modèle IA pour le cœur · Modèle conseillé : Opus — **codé le 26 novembre ; reste à vérifier en jouant**
 
 - Le tour libre passe d'abord par le classifieur : `none` joue le tour directement ; `trivial` ou réussite automatique joue un tour réussi sans dé, avec un fait « réussite automatique » ; `check` pose la demande de jet avec le DD du moteur.
 - La pastille (V3.2-20) gagne « Sans jet » et « Changer » (autre action de la fiche, même palier). Le DD reste caché sauf `solo_show_outcome`.
 - Le narrateur reçoit DD et verdict dans le fait du jet ; l'affichage masqué reste de la mise en forme (`factSansIssue`).
 - Un indicateur d'attente pendant le classement ; planche `pastille-jet` du catalogue mise à jour.
+
+**Fait.** La route du tour (`app/api/solo/tour/route.ts`) classe la phrase avant de jouer, sauf choix corrigé à la main, attaque ou DD saisi ; `none` joue une action libre, `trivial` une action libre avec le fait « réussite sans jet », `check` pose la demande avec le palier, et `proposeIntentRequest` en tire le DD ou rend une réussite automatique (jouée sans dé, avec son fait). « Sans jet » abandonne la demande au journal et joue la phrase ; « Changer » repose un autre test au même DD (`rejouerDemande`). L'attente du classement est celle du tour (les trois points du fil).
 
 **Critères d'acceptation**
 - [ ] « je négocie : trois pièces, pas plus » : pastille Persuasion, DD fixé par le moteur, verdict transmis au récit.

@@ -134,6 +134,7 @@ describe.skipIf(!hasCreds)("V3-B5 — proposer puis encaisser (integration, base
       choice: { kind: "skill_check", actionId: "athletics", targetId: null, advantage: "normal", dc: 12 },
     });
     if ("error" in outcome || "window" in outcome) throw new Error("echec inattendu");
+    if (outcome.kind !== "pending") throw new Error("réussite automatique inattendue");
     expect(outcome.request.kind).toBe("skill_check");
     expect(outcome.request.die_max).toBe(20); // un test se lit sur un d20, jamais sur le de de l'arme
     expect(outcome.request.dc).toBe(12);
@@ -184,6 +185,7 @@ describe.skipIf(!hasCreds)("V3-B5 — proposer puis encaisser (integration, base
       choice: { kind: "ability_check", actionId: "dex", targetId: null, advantage: "normal", dc: null },
     });
     if ("error" in pose) throw new Error(`echec inattendu : ${pose.error}`);
+    if (pose.kind !== "pending") throw new Error("réussite automatique inattendue");
     expect(pose.request.die_max).toBe(20);
 
     // 21 depasse le plafond de LA demande posee (un d20) — refuse contre
@@ -203,6 +205,7 @@ describe.skipIf(!hasCreds)("V3-B5 — proposer puis encaisser (integration, base
       choice: { kind: "ability_check", actionId: "str", targetId: null, advantage: "normal", dc: 10 },
     });
     if ("error" in first) throw new Error(`echec inattendu : ${first.error}`);
+    if (first.kind !== "pending") throw new Error("réussite automatique inattendue");
 
     const second = await proposeIntentRequest(admin, {
       ...common(),
@@ -211,6 +214,7 @@ describe.skipIf(!hasCreds)("V3-B5 — proposer puis encaisser (integration, base
       choice: { kind: "skill_check", actionId: "perception", targetId: null, advantage: "normal", dc: null },
     });
     if ("error" in second) throw new Error(`echec inattendu : ${second.error}`);
+    if (second.kind !== "pending") throw new Error("réussite automatique inattendue");
 
     const sessionId = await getOrOpenSessionForCampaign(admin, campaignId);
     const events = await listSessionEvents(admin, sessionId);
@@ -253,6 +257,7 @@ describe.skipIf(!hasCreds)("V3-B5 — proposer puis encaisser (integration, base
       choice: { kind: "weapon_attack", actionId: weaponItemId, targetId: `participant:${participant.id}`, advantage: "normal" },
     });
     if ("error" in attackPose) throw new Error(`echec inattendu : ${attackPose.error}`);
+    if (attackPose.kind !== "pending") throw new Error("réussite automatique inattendue");
     expect(attackPose.request.dc).toBe(1);
     expect(attackPose.request.die_max).toBe(20);
 
@@ -296,6 +301,7 @@ describe.skipIf(!hasCreds)("V3-B5 — proposer puis encaisser (integration, base
         choice: { kind: "weapon_attack", actionId: weaponItemId, targetId: `participant:${participantId}`, advantage: "normal" },
       });
       if ("error" in posed) throw new Error(`echec inattendu : ${posed.error}`);
+      if (posed.kind !== "pending") throw new Error("réussite automatique inattendue");
     };
 
     // 20 naturel + modificateur, tres en dessous de la CA 30 : touche quand meme.
@@ -339,6 +345,7 @@ describe.skipIf(!hasCreds)("V3-B5 — proposer puis encaisser (integration, base
       choice: { kind: "weapon_attack", actionId: weaponItemId, targetId: `participant:${participant.id}`, advantage: "normal" },
     });
     if ("error" in pose) throw new Error(`echec inattendu : ${pose.error}`);
+    if (pose.kind !== "pending") throw new Error("réussite automatique inattendue");
 
     const resolved = await resolveIntentRequest(admin, { ...common(), natural: 20, origin: "a_la_main" });
     if ("error" in resolved || "window" in resolved) throw new Error("echec inattendu");
@@ -367,6 +374,7 @@ describe.skipIf(!hasCreds)("V3-B5 — proposer puis encaisser (integration, base
         choice: { kind: "skill_check", actionId: "investigation", targetId: null, advantage: "normal", dc: null },
       });
       if ("error" in pose) throw new Error(`echec inattendu : ${pose.error}`);
+      if (pose.kind !== "pending") throw new Error("réussite automatique inattendue");
 
       const outcome = await resolveIntentRequestFromRoll(admin, common());
       if ("error" in outcome || "window" in outcome) throw new Error("echec inattendu");
@@ -411,6 +419,7 @@ describe.skipIf(!hasCreds)("V3-B5 — proposer puis encaisser (integration, base
         choice: { kind: "weapon_attack", actionId: weaponItemId, targetId: `participant:${participant.id}`, advantage: "normal" },
       });
       if ("error" in pose) throw new Error(`echec inattendu : ${pose.error}`);
+      if (pose.kind !== "pending") throw new Error("réussite automatique inattendue");
 
       const attackOutcome = await resolveIntentRequestFromRoll(admin, common());
       if ("error" in attackOutcome || "window" in attackOutcome) throw new Error("echec inattendu");
