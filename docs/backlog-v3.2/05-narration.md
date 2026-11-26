@@ -111,3 +111,21 @@ Quatre défauts, trois tickets : la consigne (V3.2-17), l'horloge (V3.2-18), le 
 - [x] Tests du noyau : entrer seul, entrer accompagné (esquisses comprises), ressortir, arrivée dans la pièce, changement de lieu, contexte de l'IA.
 - [x] Tests de câblage : le panneau ne fait pas sortir l'absent d'une autre pièce, le fait venir quand on le nomme.
 - [ ] Rejoué : entrer dans sa chambre vide le volet Monde ; en ressortir rend le hall.
+
+### ☑ V3.2-41 — Les PNJ restent dans leur rôle, les prix se disent, la pluie reste dehors · `S` · sans modèle IA pour le cœur — **codé (Opus)**, reste la vérification en jeu
+
+**Constaté le 26 novembre** (au Fanal, Gué-aux-Corbeaux) : Petit Wil, qui n'est pas employé, propose de servir la soupe ; à « c'est combien ? », Mabelle répond « l'ardoise dit le prix » sans prix ; en regardant l'ardoise, les prix sont « illisibles, le charbon a dégouliné sous la pluie », alors qu'on est dans la salle.
+
+**Causes** : le modèle ne recevait des PNJ réels que leur nom, leur attitude et leurs pronoms, jamais qui ils sont ; il devinait. La consigne sur l'argent disait « cite seulement les prix de la carte et de l'ardoise » même quand le lieu n'a pas de carte, et « ardoise » désignait la dette du personnage : la seule issue était d'esquiver. La météo arrivait sur la ligne du lieu sans dire qu'elle est celle du dehors.
+
+**Ce qui change** (`src/core/ai/turnContext.ts`, `src/server/services/turnContext.ts`) :
+- chaque PNJ réel présent porte le premier paragraphe de sa page que la personne qui joue peut lire (240 caractères au plus), dans la balise `pnjs-presents` ; une consigne dit que seul le personnel du lieu sert, et qu'un PNJ sans description n'est pas du personnel ;
+- avec une carte, le PNJ dit le prix à voix haute, sans renvoyer à un tableau ; sans carte, une autre consigne : aucun prix cité ni affiché, ni illisible ; la dette devient `dettes-du-personnage` ;
+- la météo devient « dehors : … », avec la consigne qu'à l'intérieur elle ne se perçoit que par les fenêtres, le toit ou la porte.
+
+Coût : une lecture groupée de plus par tour narré (les blocs `text` des présents).
+
+**Critères d'acceptation**
+- [x] Tests du noyau : description dans la balise, consigne de rôle, deux consignes d'argent, météo du dehors.
+- [ ] Rejoué : au Fanal, Petit Wil ne sert plus ; « c'est combien ? » donne un prix de la carte (ou, sans carte, aucun prix inventé) ; la pluie ne touche plus l'ardoise de la salle.
+

@@ -72,15 +72,38 @@ async function knownAsByTarget(supabase: TypedClient, playerEntityId: string): P
   return map;
 }
 
+/** Au-delà, la description d'un PNJ est coupée : il en faut assez pour savoir qui il est, pas sa biographie. */
+const NPC_DESCRIPTION_MAX = 240;
+
+/**
+ * Le premier paragraphe que CE viewer peut lire, par entité (premier bloc
+ * `text` dans l'ordre d'affichage) : la même lecture que la description du
+ * lieu (`resolveLocationPage`). Un secret de MJ n'y entre jamais (règle 11).
+ */
+function firstParagraphByEntity(blocks: Awaited<ReturnType<typeof listBlocksByTypesForEntities>>, viewer: Viewer): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const bloc of filtrerBlocsVisibles(blocks, viewer).sort((a, b) => a.display_order - b.display_order)) {
+    if (out.has(bloc.entity_id)) continue;
+    const parsed = zTextBlockData.safeParse(bloc.data);
+    if (!parsed.success) continue;
+    const aware = parsed.data.segments.map((segment) => ({ ...segment, visibility: { ...segment.visibility, createdBy: null } }));
+    const paragraphe = premierParagraphe(filterSegments(aware, viewer));
+    if (!paragraphe) continue;
+    out.set(bloc.entity_id, paragraphe.length <= NPC_DESCRIPTION_MAX ? paragraphe : `${paragraphe.slice(0, NPC_DESCRIPTION_MAX - 1).trimEnd()}…`);
+  }
+  return out;
+}
+
 async function resolvePresentNpcs(
   supabase: TypedClient,
-  params: { worldId: string; campaignId: string; playerEntityId: string; present: { entityId: string; zone: TurnContextNpc["zone"] }[] }
+  params: { worldId: string; campaignId: string; playerEntityId: string; viewer: Viewer; present: { entityId: string; zone: TurnContextNpc["zone"] }[] }
 ): Promise<TurnContextNpc[]> {
   const others = params.present.filter((p) => p.entityId !== params.playerEntityId);
   if (others.length === 0) return [];
 
   // V3.1-193 : les blocs `character` des présents, en UNE requête avec le reste (client du joueur : la RLS ne rend que ce qu'il peut voir).
-  const [entities, knownAs, characterBlocks] = await Promise.all([
+  // 26 nov. : et leurs blocs `text`, pour dire au modèle qui ils sont (une lecture de plus, groupée).
+  const [entities, knownAs, characterBlocks, textBlocks] = await Promise.all([
     listEntitiesByIds(supabase, others.map((p) => p.entityId)),
     knownAsByTarget(supabase, params.playerEntityId),
     listBlocksByTypeForEntities(
@@ -88,7 +111,13 @@ async function resolvePresentNpcs(
       others.map((p) => p.entityId),
       "character"
     ),
+    listBlocksByTypesForEntities(
+      supabase,
+      others.map((p) => p.entityId),
+      ["text"]
+    ),
   ]);
+  const descriptionById = firstParagraphByEntity(textBlocks, params.viewer);
   const nameById = new Map(entities.map((e) => [e.id, e.name]));
   const pronounsById = new Map<string, string>();
   for (const b of characterBlocks) {
@@ -107,6 +136,7 @@ async function resolvePresentNpcs(
       attitudeLabel: value === undefined ? null : relationshipAxisLabel(GENERAL_ATTITUDE_AXIS, value),
       zone: p.zone,
       ...(pronounsById.has(p.entityId) ? { pronouns: pronounsById.get(p.entityId) } : {}),
+      ...(descriptionById.has(p.entityId) ? { description: descriptionById.get(p.entityId) } : {}),
     });
   }
   return npcs;
@@ -346,7 +376,7 @@ export async function buildSoloTurnContext(
   const [locationEntity, realNpcs, quests, history, player, money, locationPage, moveTargets, elsewhere] = await Promise.all([
     scene ? listEntitiesByIds(supabase, [scene.locationId]).then((rows) => rows[0] ?? null) : Promise.resolve(null),
     scene
-      ? resolvePresentNpcs(supabase, { worldId: params.worldId, campaignId: params.campaignId, playerEntityId: params.playerEntityId, present: presentsIci(scene) })
+      ? resolvePresentNpcs(supabase, { worldId: params.worldId, campaignId: params.campaignId, playerEntityId: params.playerEntityId, viewer: params.viewer, present: presentsIci(scene) })
       : Promise.resolve([]),
     resolveQuests(supabase, params.worldId, params.viewer),
     resolveRecentHistory(supabase, params.sessionId, params.fromEventId ?? null),
@@ -418,7 +448,7 @@ export async function buildSoloGmQuestionContext(
   const [locationEntity, realNpcs, quests, recentNarrations] = await Promise.all([
     scene ? listEntitiesByIds(supabase, [scene.locationId]).then((rows) => rows[0] ?? null) : Promise.resolve(null),
     scene
-      ? resolvePresentNpcs(supabase, { worldId: params.worldId, campaignId: params.campaignId, playerEntityId: params.playerEntityId, present: presentsIci(scene) })
+      ? resolvePresentNpcs(supabase, { worldId: params.worldId, campaignId: params.campaignId, playerEntityId: params.playerEntityId, viewer: params.viewer, present: presentsIci(scene) })
       : Promise.resolve([]),
     resolveQuests(supabase, params.worldId, params.viewer),
     resolveRecentHistory(supabase, params.sessionId, null).then((h) => h.narrations),
