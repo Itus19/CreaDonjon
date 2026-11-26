@@ -2,7 +2,7 @@
 
 *Spécification de la V4 « Simulation » : la carte, les villes, l'histoire d'un monde généré, et la façon dont ses détails apparaissent quand on les découvre. Les principes viennent de l'[ADR 0104](../docs/adr/0104-le-cap-du-mode-solo.md) ; les choix qui engagent le schéma, de l'[ADR 0109](../docs/adr/0109-la-generation-du-monde-demarre.md).*
 
-**État au 25 novembre 2026** : spécifiée. Le noyau de la ville en agrégat existe (`src/core/worldgen/`) ; rien d'autre n'est construit.
+**État au 26 novembre 2026** : spécifiée. Le noyau de la ville en agrégat existe (`src/core/worldgen/`) ; rien d'autre n'est construit.
 
 ---
 
@@ -102,17 +102,40 @@ L'**export JSON** d'Azgaar d'abord (ADR 0109, décision G2), pas son code : aucu
 
 Le format d'export change avec les versions d'Azgaar : l'import dit la version qu'il connaît et refuse proprement un fichier qu'il ne sait pas lire. La notice MIT d'Azgaar va dans `NOTICE.md` dès qu'une ligne de son code ou de son format est reprise.
 
+### 8.1 Ce que contient un export réel
+
+Lu sur l'export « Complet » de la carte *Anteau* de l'auteur (Azgaar 1.159.0, 26 novembre 2026, 7 Mo ; copie dans les fichiers du projet, `azgaar/`) :
+
+| Clé | Nombre | Ce qu'on en tire |
+|---|---|---|
+| `info` | 1 | Version, graine de la carte (`seed`), nom, largeur et hauteur |
+| `settings.populationRate` | 1 | Multiplicateur de population : `burg.population` × 1 000 habitants. La capitale de Grania compte 48 739 habitants, la ville médiane environ 4 150 |
+| `pack.cells` | 4 741 | Pour chaque cellule : biome, voisines (`c`), État, culture, religion, province, ville. C'est par elle qu'une ville trouve son biome |
+| `pack.biomes` | 13 | Exactement la liste et l'ordre de §5 |
+| `pack.burgs` | 682 | Nom, cellule, position x/y (mêmes coordonnées que l'image SVG), population, État, culture, capitale, port, murs, temple, `group` (village, town, city, capital, fort) |
+| `pack.states` | 10 (dont « Neutrals ») | Nom, forme (royaume, théocratie…), capitale, culture, voisins, diplomatie (allié, ennemi, méfiance…) |
+| `pack.cultures`, `pack.religions`, `pack.provinces` | 15, 25, 157 | Peuples, cultes, découpage administratif |
+| `pack.routes` | 532 | Routes, sentiers et routes maritimes, par suite de cellules : le graphe des voisinages entre villes |
+| `pack.events` | 8 | Guerres et vassalités datées (années 194 à 354) : Azgaar fait déjà un peu d'histoire |
+| `nameBases` | 43 | Les bases de noms par culture, utiles aux tables de noms |
+
+L'image SVG de la même carte (900 ko) se pose telle quelle dans le bloc carte : les `x`/`y` des villes s'y placent sans conversion.
+
 ## 9. L'histoire du monde
 
 ### 9.1 La méthode
 
 Faire passer des siècles sur la carte, au niveau des **groupes et des figures**, jamais des individus, puis figer le résultat (ADR 0104 §7). On génère d'abord les faits, puis on leur donne une explication cohérente après coup (méthode de Caves of Qud) : l'IA peut rédiger l'explication, jamais décider d'un fait.
 
+**Le présent est fixé par la carte.** Azgaar donne l'état du monde *aujourd'hui* : ses États, leurs frontières, leurs capitales, leurs guerres en cours. La simulation ne part donc pas d'une page blanche vers un résultat libre : elle doit **aboutir** à ce présent. Les capitales sont fondées tôt, chaque État actuel existe à la fin, et les événements d'Azgaar (`pack.events`) sont gardés comme des faits imposés près de la fin. La simulation remplit ce qui se passe entre ces ancres.
+
+**Un monde abstrait, pas une carte.** Le simulateur ne lit jamais l'export d'Azgaar directement. Il reçoit un « monde abstrait » : des lieux avec leur bloc `settlement`, leurs voisinages et distances, des peuples, des États et leurs relations, et des ancres datées. Ce format est calqué sur ce que contient l'export (§8.1). On peut donc l'écrire à la main pour tester (cinq villes), et l'import Azgaar le remplira ensuite.
+
 ### 9.2 Les couches
 
 | Couche | Contenu | Écrit dans |
 |---|---|---|
-| 1 | Trois types d'événements : fondation, guerre, mort d'un chef. Une petite carte | La frise du monde (`world_timeline`, ADR 0048), portée `major` ou `notable` |
+| 1 | Trois types d'événements : fondation, guerre, mort d'un chef, sur un monde abstrait de test écrit à la main | La frise du monde (`world_timeline`, ADR 0048), portée `major` ou `notable` |
 | 2 | Les figures notables, leurs liens, leurs descendants | Des entités avec bloc `character`, `relations`, la généalogie (`src/core/genealogy/`) |
 | 3 | Les conséquences en chaîne (famine → guerre → chute → exil), l'explication après coup | La frise, et le texte des pages |
 | 4 | Les artefacts, les religions, les légendes | Des entités, des blocs `timeline` |
@@ -142,5 +165,5 @@ Le simulateur est **pur** (`src/core/worldgen/history/`), donc il tourne n'impor
 | G-3 | Le bloc `settlement` enregistré : registre des blocs, éditeur, vue publique, planche du catalogue, libellés | Sonnet | à faire |
 | G-4 | La tranche ville + auberge du solo : tables de départ du biome tempéré (noms, PNJ, taverne), peuplement à l'entrée d'un lieu, l'entité existante remplace l'occupant, même tirage depuis la fenêtre du MJ | Opus | à faire, après les étapes 1 et 2 du Backlog solo |
 | G-5 | Le catalogue : type de fiche, bloc « élément du monde », import Wikidata limité au biome tempéré | Opus | à faire |
-| G-6 | L'import Azgaar : villes, États, punaises | Opus | à faire, après G-3 |
-| G-7 | L'histoire, couche 1 | Opus | à faire, après G-6 |
+| G-6 | Le monde abstrait et l'histoire, couche 1 : format calqué sur l'export d'Azgaar (§8.1), monde de test écrit à la main, chronique lisible dans la frise | Opus | à faire |
+| G-7 | L'import Azgaar remplit le monde abstrait : villes avec leur bloc `settlement`, États, punaises sur l'image SVG | Opus | à faire, après G-3 et G-6 |
