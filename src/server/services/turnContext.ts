@@ -1,4 +1,5 @@
 import "server-only";
+import { nouvellesNonDites, phraseDeNouvelle } from "@/src/core/rules/sceneLife";
 import { listBlockVisibilityForEntities, listBlocksByTypeForEntities, listBlocksByTypesForEntities } from "@/src/server/repos/blocks";
 import { listPartOfRelationsForWorld } from "@/src/server/repos/relations";
 import { lieuxVoisins } from "@/src/core/rules/moveTargets";
@@ -213,6 +214,32 @@ async function resolveElsewhere(
     return name ? [{ name, room: p.room ?? null }] : [];
   });
   return [...nommes, ...esquisses];
+}
+
+/**
+ * V3.2-31 — Les allées et venues que le personnage a vues depuis la dernière
+ * narration (`sceneLife.ts`), en faits établis : l'IA les raconte, elle ne
+ * les invente pas (§9). Une esquisse garde le libellé qu'elle avait ; une
+ * entité est nommée comme le joueur la connaît, et tue si la RLS la cache
+ * (règle 11). Une lecture de plus seulement quand une entité partie n'est
+ * plus parmi les présents, ce qui reste rare.
+ */
+async function resolveLifeNews(
+  supabase: TypedClient,
+  params: { scene: SceneState; playerEntityId: string; npcs: TurnContextNpc[] }
+): Promise<string[]> {
+  const news = nouvellesNonDites(params.scene);
+  if (news.length === 0) return [];
+  const known = new Map(params.npcs.map((n) => [n.id, n.name]));
+  const missing = news.filter((n) => n.name === null && !known.has(n.id)).map((n) => n.id);
+  if (missing.length > 0) {
+    const [entities, knownAs] = await Promise.all([listEntitiesByIds(supabase, missing), knownAsByTarget(supabase, params.playerEntityId)]);
+    for (const e of entities) known.set(e.id, knownAs.get(e.id) ?? e.name);
+  }
+  return news.flatMap((n) => {
+    const name = n.name ?? known.get(n.id);
+    return name ? [phraseDeNouvelle(name, n.change)] : [];
+  });
 }
 
 function sketchesAsNpcs(sketches: { id: string; name: string; trait: string; zone: TurnContextNpc["zone"] }[]): TurnContextNpc[] {
@@ -451,6 +478,7 @@ export async function buildSoloTurnContext(
   const npcs = [...realNpcs, ...sketchesAsNpcs(scene ? esquissesIci(scene) : [])];
   const addressedNpcId = npcAddressedBy(params.playerAction, npcs);
   const addressedIsQuestion = estQuestionDirecte(params.playerAction);
+  const lifeFacts = scene ? await resolveLifeNews(supabase, { scene, playerEntityId: params.playerEntityId, npcs: realNpcs }) : [];
 
   const input: TurnContextInput = {
     locationName: locationEntity?.name ?? "Hors scène",
@@ -460,7 +488,7 @@ export async function buildSoloTurnContext(
     lighting: scene?.lighting ?? "bright",
     npcs,
     quests,
-    facts: params.facts,
+    facts: [...params.facts, ...lifeFacts],
     changes: params.changes,
     hints: params.hints,
     playerAction: params.playerAction,

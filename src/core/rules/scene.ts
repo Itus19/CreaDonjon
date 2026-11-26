@@ -3,6 +3,7 @@ import { TRIGGER_ZONES, type TriggerZone } from "./triggers";
 import { budgetForTurn, zActionBudget, type ActionBudget } from "./actionBudget";
 import { computeSortKey, dateFromSortKey } from "../calendar/sortKey";
 import type { CalendarConfig, GameDate } from "../calendar/types";
+import { rafraichirLaVie, zSceneLife, type SceneLife } from "./sceneLife";
 
 /**
  * V3-A4 — L'etat de scene (specs/moteur-de-jeu.md §6).
@@ -130,6 +131,12 @@ export interface SceneState {
    * (`sleepRest.ts`, règle des 16 heures). Facultative et sans changer `__v`.
    */
   lastLongRestEnd?: Record<string, GameTime>;
+  /**
+   * V3.2-31 — la vie du lieu (`sceneLife.ts`) : de quoi recalculer qui s'y
+   * trouve à chaque heure, ceux que le moteur a fait entrer, et les
+   * nouvelles à raconter. Facultative et sans changer `__v`.
+   */
+  life?: SceneLife;
 }
 
 export interface SceneRoom {
@@ -203,6 +210,7 @@ export const zSceneState = z.object({
     .max(40)
     .optional(),
   lastLongRestEnd: z.record(z.string(), zGameTime).optional(),
+  life: zSceneLife.optional(),
 });
 
 export function emptyScene(locationId: string, time: GameTime = { day: 1, hour: 8, minute: 0 }): SceneState {
@@ -263,7 +271,8 @@ export function advanceTime(time: GameTime, minutes: number): GameTime {
  */
 export function advanceSceneTime(scene: SceneState, minutes: number): SceneState {
   const time = advanceTime(scene.time, minutes);
-  return { ...scene, time, lighting: lightingAt(time) };
+  // V3.2-31 : les gens du lieu vont et viennent avec l'heure, au même endroit pour la même raison.
+  return rafraichirLaVie({ ...scene, time, lighting: lightingAt(time) });
 }
 
 /**

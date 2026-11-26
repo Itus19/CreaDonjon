@@ -43,7 +43,7 @@ Spécification : `specs/vie-du-monde.md` §3 à §5, §9. Dépend de la PR #17.
 
 **Réalisé** : `src/core/worldgen/occupants.ts`. `attachedPeople(ville, lieu, jour, workers)` rend les gens attachés (responsable, personnel, habitués, logés, gens de passage) ; `materializeOccupants(ville, lieu, moment, workers)` garde ceux que `position()` place ici à cette heure, plus les clients d'un soir (arrivée et durée de une à trois heures tirées avec le jour). Sept gabarits : auberge, taverne, temple, marché, caserne, atelier, ermitage. Un séjour de logé ou de passage est tiré par semaine et ne déborde pas sur la suivante, pour qu'une chambre n'ait jamais deux occupants. Le plafond de douze s'applique aux gens tirés ; les PNJ du wiki passent au-dessus. `dayPeriod` disparaît. Migration `20261126160000_relation_works_at.sql`.
 
-### ☐ V3.2-31 — La présence calculée dans le solo · `M` · sans modèle IA
+### ☑ V3.2-31 — La présence calculée dans le solo · `M` · sans modèle IA — **fait le 26 novembre**
 
 **Modèle conseillé : Opus.**
 
@@ -53,9 +53,13 @@ Spécification : `specs/vie-du-monde.md` §3 à §5, §9. Dépend de la PR #17.
 - Lieux faits main sans bloc ville : population et richesse déduites de l'infobox (décision 2).
 
 **Critères d'acceptation**
-- [ ] Rejoué : dormir dix heures à l'auberge, le hall du matin n'a pas les mêmes gens que celui du soir.
-- [ ] Une ligne de tour dit « le sergent sort », et la narration le raconte sans l'inventer.
-- [ ] Coût mesuré : une requête de plus par tour au plus (`docs/QUOTAS.md`).
+- [ ] Rejoué : dormir dix heures à l'auberge, le hall du matin n'a pas les mêmes gens que celui du soir. (Vérifié par les tests du noyau ; à rejouer dans l'app.)
+- [x] Une ligne de tour dit « le sergent sort », et la narration le raconte sans l'inventer : les allées et venues partent dans les « faits établis de ce tour ».
+- [x] Coût mesuré : aucune requête de plus par tour. Trois lectures en parallèle au changement de lieu ; une écriture de plus seulement quand une narration a reçu des allées et venues sans faire passer de temps ; une lecture de plus, rare, quand une entité du wiki partie n'est plus parmi les présents.
+
+**Réalisé** : `src/core/worldgen/placePresence.ts` (type du lieu lu dans l'infobox ou le nom, ville déduite des infobox du lieu et de ses parents, pièce et libellé d'une personne calculée), `src/core/rules/sceneLife.ts` (la vie du lieu rangée dans la scène, recalculée par `advanceSceneTime`, nouvelles de ce que le personnage voit changer dans sa pièce), `src/server/services/sceneLife.ts` (lecture au changement de lieu). Les personnes calculées entrent comme esquisses `calc-<graine>` au libellé sans nom (« aubergiste, d'âge mûr »), les PNJ `works_at` comme présents ; le moteur ne fait sortir que ceux qu'il a fait entrer. Une scène posée avant ce ticket se peuple au prochain enregistrement du panneau de scène ou au prochain déplacement.
+
+**Écarts** : l'ajout à la main reste celui du panneau (l'entrée d'agenda « ici jusqu'à… » vient avec V3.2-32) ; les jours de semaine ne sont pas encore passés à `position()` (tous les jours sont ouvrés) ; le nom au premier contact est V3.2-41.
 
 ### ☐ V3.2-32 — L'agenda : exceptions datées · `M` · avec modèle IA (pour vérifier)
 
@@ -151,6 +155,18 @@ Spécification : `specs/vie-du-monde.md` §6 à §8.
 ## 3. La psyché
 
 Spécification : `specs/vie-du-monde.md` §10. Ne dépend pas de la PR #17.
+
+### ☐ V3.2-41 — Le nom d'une personne calculée, au premier contact · `S` · sans modèle IA
+
+**Modèle conseillé : Opus.** Décision de l'auteur (26 novembre 2026).
+
+- Une personne calculée n'a qu'un libellé (« aubergiste, d'âge mûr ») tant qu'on n'a pas interagi avec elle (V3.2-31).
+- Quand elle s'ancre (`promoteSketch` : elle parle trois fois, le joueur la nomme, « garder cette fiche »), son nom officiel est tiré au générateur PNJ et gardé sur sa page.
+- Tant que le personnage joué ne connaît pas ce nom, sa page et la narration l'appellent par le libellé : même mécanisme que pour les PNJ à table (nom officiel, et nom connu du joueur dans le journal du PNJ ou `known_as`).
+
+**Critères d'acceptation**
+- [ ] Parler trois fois à « aubergiste, d'âge mûr » crée sa page sous un nom tiré ; le volet et la narration disent toujours « aubergiste, d'âge mûr ».
+- [ ] Quand le personnage apprend le nom, il remplace le libellé partout pour ce joueur.
 
 ### ☐ V3.2-40 — Franchise, centres d'intérêt, normes et façades · `M` · sans modèle IA
 

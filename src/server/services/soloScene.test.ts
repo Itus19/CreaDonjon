@@ -39,6 +39,15 @@ vi.mock("@/src/server/services/sceneGeneration", () => ({
   },
 }));
 
+let lifeInputs: unknown = null;
+const lifeReads: string[] = [];
+vi.mock("@/src/server/services/sceneLife", () => ({
+  lireLaVieDuLieu: async (_s: unknown, params: { locationId: string }) => {
+    lifeReads.push(params.locationId);
+    return lifeInputs;
+  },
+}));
+
 const { setScene } = await import("./soloScene");
 const supabase = {} as SupabaseClient<Database>;
 const base = { campaignId: "c", worldId: "w", callerId: "u" };
@@ -47,6 +56,8 @@ beforeEach(() => {
   scene = null;
   discoverCalls.length = 0;
   seenLocationIdAtDraw.length = 0;
+  lifeInputs = null;
+  lifeReads.length = 0;
   generateResult = { sections: [{ key: "meteo-condition", label: "Condition", text: "Pluie battante", slots: [] }] };
 });
 
@@ -100,5 +111,34 @@ describe("setScene — les pièces (V3.2-28)", () => {
     scene = dansLaChambre();
     const out = await setScene(supabase, { ...base, locationId: "rue", present: ["pj"] });
     expect(out.present).toEqual([{ entityId: "pj", zone: "near" }]);
+  });
+});
+
+describe("setScene — la vie du lieu (V3.2-31)", () => {
+  const auberge = {
+    placeType: "inn",
+    settlement: { __v: 1, seed: 5, population: 8000, zone: "ville", wealth: "correcte", biome: "temperate_deciduous_forest", peoples: [], trades: [] },
+    workers: [],
+  };
+
+  it("un lieu dont on sait le type se peuple à l'heure de la scène", async () => {
+    lifeInputs = auberge;
+    const out = await setScene(supabase, { ...base, locationId: "chaudron", present: [] });
+    expect(out.life?.locationId).toBe("chaudron");
+    expect(out.sketches.some((s) => s.id.startsWith("calc-"))).toBe(true);
+  });
+
+  it("le lieu ne se relit qu'au changement de lieu, pas à chaque présent retouché", async () => {
+    lifeInputs = auberge;
+    await setScene(supabase, { ...base, locationId: "chaudron", present: [] });
+    await setScene(supabase, { ...base, locationId: "chaudron", present: ["bram"] });
+    expect(lifeReads).toEqual(["chaudron"]);
+  });
+
+  it("un lieu sans type connu garde la présence posée à la main", async () => {
+    const out = await setScene(supabase, { ...base, locationId: "la-plaine", present: ["bram"] });
+    expect(out.life).toBeUndefined();
+    expect(out.sketches).toEqual([]);
+    expect(out.present.map((p) => p.entityId)).toEqual(["bram"]);
   });
 });
