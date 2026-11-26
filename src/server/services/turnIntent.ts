@@ -19,7 +19,7 @@ import {
   type Skill,
   type Source,
 } from "@/src/core/rules/sheet";
-import { SKILL_LABELS_FR, INTENT_VERBS_FR, TRADE_VERBS_FR, TRADE_LODGING_TERMS_FR, TRADE_TAB_TERMS_FR, formatCpFr } from "@/src/i18n/fr";
+import { SKILL_LABELS_FR, INTENT_VERBS_FR, INTENT_HYPOTHETICAL_MARKERS_FR, TRADE_VERBS_FR, TRADE_LODGING_TERMS_FR, TRADE_TAB_TERMS_FR, formatCpFr } from "@/src/i18n/fr";
 import { addToTab, clearTabAt, tabAt, tabTotalCp } from "@/src/core/rules/tab";
 import { putSceneState } from "@/src/server/repos/sceneStates";
 import { type IntentAction, type IntentTarget } from "@/src/core/rules/intent";
@@ -320,7 +320,7 @@ export async function buildIntentBarData(
 
   return {
     actor: { entityId: ctx.entityId, name: ctx.entityName },
-    catalog: { actions, targets, verbs: INTENT_VERBS_FR },
+    catalog: { actions, targets, verbs: INTENT_VERBS_FR, hypotheticalMarkers: INTENT_HYPOTHETICAL_MARKERS_FR },
     trade: buildTradeCatalog(ctx, nameOf, priceList, scene),
     targetDetails,
     ruleKeys: ctx.sheet.features.map((f) => f.key).filter((k) => !k.startsWith("choice:")),
