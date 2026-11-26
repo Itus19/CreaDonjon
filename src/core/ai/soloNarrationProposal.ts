@@ -54,6 +54,8 @@ export function soloNarrationSchema(npcIds: string[], knownEntityIds: string[] =
       enter_room: z.object({ name: z.string().trim().min(1).max(80), description: z.string().trim().max(600).optional() }).optional(),
       /** V3.2-19 — ressortir de la pièce, dans le lieu lui-même. */
       leave_room: z.boolean().optional(),
+      /** V3.2-28 — les PNJ présents qui accompagnent le personnage quand il entre dans une pièce ou en ressort ; les autres restent où ils sont. */
+      room_with: z.array(z.string().min(1)).max(10).optional(),
     })
     .strict()
     .superRefine((value, ctx) => {
@@ -63,6 +65,9 @@ export function soloNarrationSchema(npcIds: string[], knownEntityIds: string[] =
         } else if (!npcIdSet.has(value.npc_reaction.npc_id)) {
           ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["npc_reaction", "npc_id"], message: "identifiant de PNJ inconnu — jamais invente" });
         }
+      }
+      for (const id of value.room_with ?? []) {
+        if (!npcIdSet.has(id)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["room_with"], message: "PNJ absent de la piece — jamais invente" });
       }
       if (value.move_to) {
         if (!moveTargetIdSet.has(value.move_to.location_id)) {
@@ -153,6 +158,15 @@ export function soloNarrationToolSchema(npcIds: string[], knownEntityIds: string
         required: ["name"],
       },
       leave_room: { type: "boolean", description: "Optionnel : vrai si le personnage ressort de la piece ou il etait, dans le lieu lui-meme" },
+      ...(npcIds.length > 0
+        ? {
+            room_with: {
+              type: "array",
+              items: { type: "string", enum: npcIds },
+              description: "Optionnel, avec enter_room ou leave_room : les PNJ presents qui accompagnent le personnage. Les autres restent ou ils sont.",
+            },
+          }
+        : {}),
       elapsed: {
         type: "object",
         description:
