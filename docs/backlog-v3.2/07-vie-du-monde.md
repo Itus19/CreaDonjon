@@ -10,20 +10,22 @@ Les gens ont une routine, des goûts et des façades ; la ville vit sans le pers
 
 Spécification : `specs/vie-du-monde.md` §3 à §5, §9. Dépend de la PR #17.
 
-### ☐ V3.2-29 — Archétypes de vie et `position()` · `M` · sans modèle IA
+### ☑ V3.2-29 — Archétypes de vie et `position()` · `M` · sans modèle IA — **fait le 26 novembre**
 
 **Modèle conseillé : Opus** (noyau pur, tests d'abord).
 
 - Format d'archétype (§4.1) en données, Zod ; liste de départ d'une quinzaine (§4.2) dans `src/core/worldgen/archetypes.ts`.
-- `position(personne, jour, heure)` (§5) : mort, agenda, état, séjour, routine ; gigue et jours d'absence à graine fixe (`deriveSeed`) ; créneaux à l'heure (décision 2) ; jours de la semaine du calendrier du monde.
+- `position(personne, jour, heure)` (§5) : mort, état, agenda, séjour, routine ; gigue et jours d'absence à graine fixe (`deriveSeed`) ; créneaux à l'heure (décision 2) ; jours de la semaine du calendrier du monde.
 - Les pôles et les centres d'intérêt teintent les probabilités, bornés (§4.3) : branché quand V3.2-40 existe, neutre sinon.
 
 **Critères d'acceptation**
-- [ ] Même graine, même jour, même heure : même position, toujours.
-- [ ] Un pilier de bar est à la taverne environ 8 soirs sur 10 sur un an simulé ; un garde suit ses tours ; un voyageur hors séjour n'est pas en ville.
-- [ ] Un agenda l'emporte sur la routine, un état sur l'agenda, la mort sur tout.
+- [x] Même graine, même jour, même heure : même position, toujours.
+- [x] Un pilier de bar est à la taverne environ 8 soirs sur 10 sur un an simulé ; un garde suit ses tours ; un voyageur hors séjour n'est pas en ville.
+- [x] Un agenda l'emporte sur la routine, un état sur l'agenda, la mort sur tout.
 
-**Sous-tâches Haiku** : recenser les usages de `dayPeriod` (PR #17) à remplacer par l'heure.
+**Sous-tâches Haiku** : recenser les usages de `dayPeriod` (PR #17) à remplacer par l'heure. Fait : un seul usage, `materializeOccupants` (`src/core/worldgen/occupants.ts`), que V3.2-30 remplace.
+
+**Réalisé** : `src/core/worldgen/archetypes.ts` (format Zod, seize archétypes) et `position.ts`. Un créneau peut passer minuit (la nuit de garde) ; ses jours sont `all`, `workdays`, `restday` (le dernier jour de la semaine du calendrier) ou un cycle propre à la personne (`{ cycle: 3, on: [0] }`) ; hors de tout créneau, on est chez soi. Le tirage d'un créneau se fait une fois par jour, pas par heure. La teinte de la psyché est un paramètre borné à ±0,2, neutre tant que V3.2-40 n'existe pas.
 
 ### ☐ V3.2-30 — Les gens attachés à un lieu · `M` · sans modèle IA
 
