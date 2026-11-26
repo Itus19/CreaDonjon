@@ -93,3 +93,32 @@ describe("setScene — reutilise emptyScene, jamais un second etat par defaut", 
     expect(out.lighting).toBe(expected.lighting);
   });
 });
+
+describe("setScene — les pièces (V3.2-28)", () => {
+  const dansLaChambre = (): SceneState => ({
+    ...emptyScene("auberge"),
+    present: [
+      { entityId: "pj", zone: "near", room: "la chambre" },
+      { entityId: "mabelle", zone: "near", room: null },
+    ],
+    room: { locationId: "auberge", name: "la chambre", description: "", anchored: false },
+  });
+
+  it("le panneau ne fait pas sortir ceux d'une autre pièce qu'il ne montrait pas", async () => {
+    scene = dansLaChambre();
+    const out = await setScene(supabase, { ...base, locationId: "auberge", present: ["pj"] });
+    expect(out.present.map((p) => p.entityId)).toEqual(["pj", "mabelle"]);
+  });
+
+  it("nommer quelqu'un d'une autre pièce le fait venir dans celle du personnage", async () => {
+    scene = dansLaChambre();
+    const out = await setScene(supabase, { ...base, locationId: "auberge", present: ["pj", "mabelle"] });
+    expect(out.present.find((p) => p.entityId === "mabelle")?.room).toBe("la chambre");
+  });
+
+  it("changer de lieu laisse derrière ceux qui ne suivent pas, et oublie les pièces", async () => {
+    scene = dansLaChambre();
+    const out = await setScene(supabase, { ...base, locationId: "rue", present: ["pj"] });
+    expect(out.present).toEqual([{ entityId: "pj", zone: "near" }]);
+  });
+});

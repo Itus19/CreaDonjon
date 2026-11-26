@@ -33,6 +33,12 @@ export interface ScenePresence {
   zone: TriggerZone;
   /** Un mot sur l'attitude ("mefiant"), pour la colonne « Présents » de V3-D3. */
   disposition?: string;
+  /**
+   * V3.2-28 — la pièce du lieu où se tient cette personne (`scenePresence.ts`).
+   * `null` : l'espace principal du lieu. Absente : elle suit le personnage
+   * (scène écrite avant ce ticket, ou personne entrée hors de toute pièce).
+   */
+  room?: string | null;
 }
 
 /**
@@ -54,6 +60,8 @@ export interface SceneSketch {
   timesSpoken: number;
   /** Le lieu ou elle a ete tiree — ce qui la fait disparaitre quand la scene change de lieu. */
   locationId: string;
+  /** V3.2-28 — sa pièce dans le lieu, même sens que `ScenePresence.room`. */
+  room?: string | null;
 }
 
 /** V3.2-11 — une ligne de l'ardoise (`tab.ts`) : ce qui est dû, où, et à qui. */
@@ -154,6 +162,7 @@ const zSceneSketch = z.object({
   disposition: z.string().min(1).optional(),
   timesSpoken: z.number().int().nonnegative(),
   locationId: z.string().min(1),
+  room: z.string().min(1).max(80).nullable().optional(),
 });
 
 export const zSceneState = z.object({
@@ -164,6 +173,7 @@ export const zSceneState = z.object({
       entityId: z.string().min(1),
       zone: z.enum(TRIGGER_ZONES),
       disposition: z.string().min(1).optional(),
+      room: z.string().min(1).max(80).nullable().optional(),
     }),
   ),
   time: zGameTime,
@@ -273,15 +283,25 @@ export function sceneZoneOf(scene: SceneState, entityId: string): TriggerZone | 
   return scene.present.find((p) => p.entityId === entityId)?.zone;
 }
 
-/** Idempotent : quelqu'un de deja present n'entre pas deux fois. Arrive par defaut a portee de vue. */
+/** V3.2-28 — le nom de la pièce où se trouve le personnage dans le lieu courant, `null` hors de toute pièce. */
+export function pieceCourante(scene: SceneState): string | null {
+  return scene.room && scene.room.locationId === scene.locationId ? scene.room.name : null;
+}
+
+/**
+ * Idempotent : quelqu'un de deja present n'entre pas deux fois. Arrive par defaut a portee de vue,
+ * et (V3.2-28) dans la piece ou se trouve le personnage.
+ */
 export function enterScene(
   scene: SceneState,
-  who: { entityId: string; zone?: TriggerZone; disposition?: string },
+  who: { entityId: string; zone?: TriggerZone; disposition?: string; room?: string | null },
 ): SceneState {
   if (scene.present.some((p) => p.entityId === who.entityId)) return scene;
+  const ici = pieceCourante(scene);
+  const room = who.room !== undefined ? { room: who.room } : ici !== null ? { room: ici } : {};
   return {
     ...scene,
-    present: [...scene.present, { entityId: who.entityId, zone: who.zone ?? "far", disposition: who.disposition }],
+    present: [...scene.present, { entityId: who.entityId, zone: who.zone ?? "far", disposition: who.disposition, ...room }],
   };
 }
 
@@ -320,7 +340,10 @@ export const SKETCH_SPOKEN_ANCHOR_THRESHOLD = 3;
 /** Ajoute une esquisse a la scene — jamais deux fois le meme identifiant local. */
 export function addSketch(scene: SceneState, sketch: SceneSketch): SceneState {
   if (scene.sketches.some((s) => s.id === sketch.id)) return scene;
-  return { ...scene, sketches: [...scene.sketches, sketch] };
+  // V3.2-28 : tirée là où se trouve le personnage, sauf pièce déjà dite.
+  const room = pieceCourante(scene);
+  const placed = sketch.room === undefined && room !== null ? { ...sketch, room } : sketch;
+  return { ...scene, sketches: [...scene.sketches, placed] };
 }
 
 /** Retire une esquisse — ancree en entite reelle, ou disparue avec la scene. Une esquisse absente ne leve pas : elle est deja dans l'etat vise. */

@@ -133,6 +133,13 @@ export interface TurnContextInput {
   rooms: { name: string; description: string }[];
   /** V3.2-19 — la pièce où se trouve le personnage, `null` s'il est dans le lieu sans pièce précise. Encadrée. */
   currentRoom: { name: string; description: string } | null;
+  /**
+   * V3.2-28 — les présents du lieu qui sont dans une AUTRE pièce
+   * (`presentsAilleurs`) : nom tel que le joueur le connaît, et leur pièce
+   * (`null` : l'espace principal). Le modèle les sait là sans les faire agir
+   * dans celle du personnage. Encadrés.
+   */
+  elsewhere?: { name: string; room: string | null }[];
 }
 
 /** Exportes : V3-D4 (`gmQuestionContext.ts`) en est le second consommateur — meme lieu, memes PNJ, memes quetes, pour une question hors du temps de jeu plutot qu'une narration de tour. */
@@ -188,6 +195,13 @@ export function buildTurnContext(input: TurnContextInput): string {
     input.rooms.length > 0 ? fenceUntrustedData("pieces-du-lieu", input.rooms.map((r) => `- ${r.name}${r.description ? ` : ${r.description}` : ""}`).join("\n")) : null,
     input.moveTargets.length > 0 ? fenceUntrustedData("lieux-accessibles", input.moveTargets.map((l) => `- ${l.name} (id: ${l.id})`).join("\n")) : null,
     input.npcs.length > 0 ? fenceUntrustedData("pnjs-presents", input.npcs.map(npcLine).join("\n")) : null,
+    // V3.2-28 : qui est ailleurs dans le lieu, et une vraie consigne (hors balise) sur ce qu'on en fait.
+    (input.elsewhere?.length ?? 0) > 0
+      ? `${fenceUntrustedData("ailleurs-dans-le-lieu", (input.elsewhere ?? []).map((e) => `- ${e.name} (${e.room ?? "espace principal du lieu"})`).join("\n"))}\n\nConsigne : les personnes d'ailleurs-dans-le-lieu ne sont pas avec le personnage. Il peut les entendre de loin ou les retrouver en changeant de pièce, mais elles ne parlent ni n'agissent à côté de lui.`
+      : null,
+    input.npcs.length === 0 && (input.currentRoom !== null || (input.elsewhere?.length ?? 0) > 0)
+      ? "Consigne : personne d'autre n'est avec le personnage là où il se trouve. N'y fais apparaître personne, sauf si le joueur fait venir quelqu'un."
+      : null,
     input.quests.length > 0 ? fenceUntrustedData("quetes-en-cours", input.quests.map(questLine).join("\n")) : null,
     input.hints.length > 0 ? fenceUntrustedData("indices-de-narration", input.hints.join("\n")) : null,
     // V3.2-11 : ce que la personne a et doit, et ce que le lieu vend. La

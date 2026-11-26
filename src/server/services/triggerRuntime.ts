@@ -1,4 +1,5 @@
 import "server-only";
+import { presentsIci } from "@/src/core/rules/scenePresence";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import { ABILITIES, type DerivedSheet } from "@/src/core/rules/sheet";
@@ -139,7 +140,7 @@ export async function fireTriggersForCharacter(
       params.scene ? sceneZoneOf(params.scene, params.subject) ?? "far" : "engaged"
     ),
   };
-  for (const other of params.scene?.present ?? []) {
+  for (const other of params.scene ? presentsIci(params.scene) : []) {
     if (other.entityId === params.subject) continue;
     actors[other.entityId] = { conditions: [], features: [], numbers: {}, zone: other.zone };
   }

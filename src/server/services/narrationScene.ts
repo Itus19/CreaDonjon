@@ -8,6 +8,7 @@ import { getSceneState, putSceneState } from "@/src/server/repos/sceneStates";
 import { setScene } from "@/src/server/services/soloScene";
 import type { Viewer } from "@/src/core/visibility";
 import { ajouterPiece, deciderPiece, pieceAncree } from "@/src/core/rules/rooms";
+import { changerDePiece, pieceCourante, presentsIci } from "@/src/core/rules/scenePresence";
 import { zRoomsBlockData, DEFAULT_ROOMS_BLOCK_DATA, type Room } from "@/src/core/schemas/blocks/rooms";
 import { listBlocksByTypesForEntities } from "@/src/server/repos/blocks";
 import { filtrerBlocsVisibles, createBlockWithData, updateBlockContent } from "@/src/server/services/blocks";
@@ -68,7 +69,8 @@ export async function moveSceneAfterNarration(
   const scene = await getSceneState(supabase, params.campaignId);
   if (!scene || scene.activeCombatId || scene.locationId === params.locationId) return false;
   const suivent = new Set([params.playerEntityId, ...params.followers]);
-  const present = scene.present.map((p) => p.entityId).filter((id) => suivent.has(id));
+  // V3.2-28 : seuls ceux de la même pièce peuvent suivre.
+  const present = presentsIci(scene).map((p) => p.entityId).filter((id) => suivent.has(id));
   await setScene(supabase, { campaignId: params.campaignId, worldId: params.worldId, locationId: params.locationId, present, callerId: params.callerId });
   return true;
 }
@@ -99,6 +101,10 @@ export async function applyRoomAfterNarration(
     playerAction: string;
     enter: { name: string; description?: string } | undefined;
     leave: boolean;
+    /** V3.2-28 — le personnage joué, qui change toujours de pièce avec lui-même. */
+    playerEntityId: string;
+    /** V3.2-28 — les présents (PNJ réels ou esquisses) qui l'accompagnent ; déjà bornés aux présents de sa pièce par le schéma. */
+    followers: string[];
     wikiRooms: Room[];
     locationName: string;
     neighbourNames: string[];
@@ -111,6 +117,10 @@ export async function applyRoomAfterNarration(
   if (decision.scene === scene) return false;
 
   let next = decision.scene;
+  // V3.2-28 : changer de pièce, c'est quitter ceux qui restent.
+  if (decision.changed) {
+    next = changerDePiece(next, { avant: pieceCourante(scene), apres: pieceCourante(next), suivent: [params.playerEntityId, ...params.followers] });
+  }
   if (decision.anchor && (await ancrerPiece(supabase, { ...params, locationId: scene.locationId, piece: decision.anchor }))) {
     next = pieceAncree(next, decision.anchor.name);
   }

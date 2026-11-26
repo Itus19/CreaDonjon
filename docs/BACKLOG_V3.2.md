@@ -31,6 +31,7 @@ Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été
 3. **Ce qui demande du dessin** : V3.2-1 (les bulles), V3.2-12 (les volets), puis V3.2-7 (l'onglet Wiki).
 4. **Ce qui demande de la conception** : V3.2-6 (les liens automatiques), le plus risqué ; V3.2-13 (l'attitude perçue), puis V3.2-14 qui en dépend.
 5. **Ce qui casse le jeu à chaque auberge** : V3.2-8 et 9 (le moteur règle un échange, au prix des règles), puis 10 (l'écran), puis 11 (le PNJ sait ce que tu as et ce que tu dois). Décision : ADR 0110.
+6. **La vie du monde** (`07-vie-du-monde.md`, ADR 0115) : après la fusion de la PR #17, V3.2-29 à 40.
 
 ---
 
@@ -44,6 +45,7 @@ Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été
 | [`04-commerce.md`](backlog-v3.2/04-commerce.md) | Acheter, vendre, échanger : le moteur règle, le PNJ réagit (V3.2-8 à 11) |
 | [`05-narration.md`](backlog-v3.2/05-narration.md) | La narration qui fait avancer l'histoire : consigne, horloge, déplacement, repos long, ligne du tour (V3.2-17 à 19, 26, 27) |
 | [`06-jet-ou-pas.md`](backlog-v3.2/06-jet-ou-pas.md) | Faut-il un jet ? L'IA classe, le moteur fixe le DD (V3.2-22 à 24, ADR 0113) |
+| [`07-vie-du-monde.md`](backlog-v3.2/07-vie-du-monde.md) | La vie du monde : routines, régime, événements, psyché (V3.2-29 à 40, ADR 0115) |
 
 | Ticket | État | Modèle IA | Titre | Fichier |
 |---|---|---|---|---|
@@ -74,6 +76,19 @@ Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été
 | V3.2-25 | ☑ | sans | Deux bandes de même largeur | [`03-colonnes.md`](backlog-v3.2/03-colonnes.md) |
 | V3.2-26 | ☑ | sans | Dormir dans le récit fait un repos long | [`05-narration.md`](backlog-v3.2/05-narration.md) |
 | V3.2-27 | ☑ | sans | La ligne du tour, les notes du monde d'office, le temps du combat | [`05-narration.md`](backlog-v3.2/05-narration.md) |
+| V3.2-28 | ☑ | sans | Les présents suivent la pièce | [`05-narration.md`](backlog-v3.2/05-narration.md) |
+| V3.2-29 | ☐ | sans | Archétypes de vie et `position()` | [`07-vie-du-monde.md`](backlog-v3.2/07-vie-du-monde.md) |
+| V3.2-30 | ☐ | sans | Les gens attachés à un lieu | [`07-vie-du-monde.md`](backlog-v3.2/07-vie-du-monde.md) |
+| V3.2-31 | ☐ | sans | La présence calculée dans le solo | [`07-vie-du-monde.md`](backlog-v3.2/07-vie-du-monde.md) |
+| V3.2-32 | ☐ | avec | L'agenda : exceptions datées | [`07-vie-du-monde.md`](backlog-v3.2/07-vie-du-monde.md) |
+| V3.2-33 | ☐ | sans | Le régime d'une ville | [`07-vie-du-monde.md`](backlog-v3.2/07-vie-du-monde.md) |
+| V3.2-34 | ☐ | sans | Les événements à l'heure autour du personnage | [`07-vie-du-monde.md`](backlog-v3.2/07-vie-du-monde.md) |
+| V3.2-35 | ☐ | sans | Le rattrapage et les nouvelles qui voyagent | [`07-vie-du-monde.md`](backlog-v3.2/07-vie-du-monde.md) |
+| V3.2-36 | ☐ | sans | Le questionnaire de psyché à la Ultima IV | [`07-vie-du-monde.md`](backlog-v3.2/07-vie-du-monde.md) |
+| V3.2-37 | ☐ | sans | L'archétype de vie sur la fiche, déduit du métier | [`07-vie-du-monde.md`](backlog-v3.2/07-vie-du-monde.md) |
+| V3.2-38 | ☐ | avec | Les absents : témoignages et personnalités publiques | [`07-vie-du-monde.md`](backlog-v3.2/07-vie-du-monde.md) |
+| V3.2-39 | ☐ | sans | Un événement non remarqué se découvre plus tard | [`07-vie-du-monde.md`](backlog-v3.2/07-vie-du-monde.md) |
+| V3.2-40 | ☐ | sans | Franchise, centres d'intérêt, normes et façades | [`07-vie-du-monde.md`](backlog-v3.2/07-vie-du-monde.md) |
 
 ---
 

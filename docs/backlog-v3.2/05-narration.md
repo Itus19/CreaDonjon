@@ -97,3 +97,17 @@ Quatre défauts, trois tickets : la consigne (V3.2-17), l'horloge (V3.2-18), le 
 - [x] Tests de câblage : note ajoutée d'office (identifiant partagé, ligne du tour), repli en attente.
 - [ ] Rejoué : « je vais me coucher » montre « +8 h · 06:08, jour 2 » et la puce du repos ; une note de l'IA apparaît dans le wiki, se corrige et se retire depuis l'onglet ; « Annuler ce tour » la retire aussi.
 - [ ] Rejoué : un combat de 12 rounds terminé fait avancer l'horloge de 2 minutes.
+
+### ☑ V3.2-28 — Les présents suivent la pièce · `S` · sans modèle IA — **codé (Opus)**, reste la vérification en jeu
+
+**Constaté le 26 novembre** : entrer dans sa chambre de l'auberge laissait le volet Monde inchangé, et l'IA recevait toujours l'aubergiste et les clients du hall comme « présents ». Les présents étaient une seule liste pour tout le lieu ; la pièce (V3.2-19) ne changeait que le bandeau.
+
+- Chaque présent et chaque esquisse garde sa pièce (`room` : un nom, `null` pour l'espace principal, absente pour « suit le personnage », état des scènes écrites avant). Champ facultatif de l'état de scène, sans changer `__v`. Module pur `src/core/rules/scenePresence.ts`.
+- Changer de pièce (`applyRoomAfterNarration`) emmène le personnage et ceux que la narration nomme dans `room_with` ; les autres restent où ils sont. Une personne ou une esquisse qui entre arrive dans la pièce du personnage. Changer de lieu oublie les pièces.
+- Le volet Monde, le panneau de scène, les cibles d'une action et les déclencheurs ne voient que la pièce du personnage. Le panneau dit « qui est avec moi » : il ne fait pas sortir ceux d'une autre pièce, et nommer l'un d'eux le fait venir.
+- L'IA reçoit les présents de la pièce, puis ceux d'ailleurs dans le lieu dans une balise à part (`ailleurs-dans-le-lieu`), avec la consigne de ne pas les faire agir à côté du personnage ; seul, la consigne de n'y faire apparaître personne.
+
+**Critères d'acceptation**
+- [x] Tests du noyau : entrer seul, entrer accompagné (esquisses comprises), ressortir, arrivée dans la pièce, changement de lieu, contexte de l'IA.
+- [x] Tests de câblage : le panneau ne fait pas sortir l'absent d'une autre pièce, le fait venir quand on le nomme.
+- [ ] Rejoué : entrer dans sa chambre vide le volet Monde ; en ressortir rend le hall.
