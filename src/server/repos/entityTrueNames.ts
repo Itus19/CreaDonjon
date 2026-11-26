@@ -49,3 +49,11 @@ export async function listBlocksCitingEntity(supabase: TypedClient, worldId: str
   if (error) throw new Error(error.message);
   return data;
 }
+
+/** V3.2-45 — les vrais noms de plusieurs fiches, en une lecture. Vide pour qui n'est pas MJ du monde (RLS). */
+export async function listTrueNamesForEntities(supabase: TypedClient, entityIds: string[]): Promise<{ entityId: string; trueName: string }[]> {
+  if (entityIds.length === 0) return [];
+  const { data, error } = await supabase.from("entity_true_names").select("entity_id, true_name").in("entity_id", entityIds);
+  if (error) throw new Error(error.message);
+  return data.map((r) => ({ entityId: r.entity_id, trueName: r.true_name }));
+}

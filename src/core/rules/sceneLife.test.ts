@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { advanceSceneTime, emptyScene, enterScene, type SceneState } from "./scene";
-import { marquerDites, nouvellesNonDites, poserLaVie, rafraichirLaVie } from "./sceneLife";
+import { ancrerPersonneCalculee, graineCalculee, marquerDites, nouvellesNonDites, poserLaVie, rafraichirLaVie, roleCalcule } from "./sceneLife";
 import { esquissesIci, presentsIci } from "./scenePresence";
 import type { SettlementBlockData } from "../schemas/blocks/settlement";
 
@@ -84,5 +84,34 @@ describe("la vie du lieu dans la scène (V3.2-31)", () => {
   it("sans type de lieu, poser la vie la retire", () => {
     const scene = aLAuberge(20);
     expect(poserLaVie(scene, null).life).toBeUndefined();
+  });
+});
+
+describe("ancrer une personne calculée (V3.2-45)", () => {
+  it("lit la graine d'un identifiant calculé, et rien d'autre", () => {
+    expect(graineCalculee("calc-123")).toBe(123);
+    expect(graineCalculee("mabelle")).toBeNull();
+    expect(graineCalculee("calc-abc")).toBeNull();
+  });
+
+  it("donne le rôle de la personne calculée", () => {
+    const scene = aLAuberge(14);
+    const aubergiste = scene.sketches.find((s) => s.name.startsWith("aubergiste"))!;
+    expect(roleCalcule(scene, graineCalculee(aubergiste.id)!)).toBe("head");
+    expect(roleCalcule(scene, 1)).toBeNull();
+  });
+
+  it("l'entité ancrée va et vient à sa place, et l'esquisse ne revient jamais", () => {
+    let scene = aLAuberge(14);
+    const aubergiste = scene.sketches.find((s) => s.name.startsWith("aubergiste"))!;
+    // Ce que fait `promoteSketch` : l'esquisse sort, l'entité entre, puis la vie apprend le lien.
+    scene = { ...scene, sketches: scene.sketches.filter((s) => s.id !== aubergiste.id), present: [...scene.present, { entityId: "aubergiste-ancre", zone: "near", room: null }] };
+    scene = ancrerPersonneCalculee(scene, { sketchId: aubergiste.id, entityId: "aubergiste-ancre" });
+    for (let h = 1; h <= 48; h++) {
+      scene = advanceSceneTime(scene, 60);
+      expect(scene.sketches.some((s) => s.id === aubergiste.id)).toBe(false);
+      expect(scene.present.filter((p) => p.entityId === "aubergiste-ancre").length).toBeLessThanOrEqual(1);
+    }
+    expect(nouvellesNonDites(scene).some((n) => n.id === "aubergiste-ancre")).toBe(true);
   });
 });

@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { SceneState } from "./scene";
 import { zSettlementBlockData, type SettlementBlockData } from "../schemas/blocks/settlement";
 import { archetypeParCle } from "../worldgen/archetypes";
-import { materializeOccupants, OCCUPANT_PLACE_TYPES, type OccupantPlaceType, type WikiWorker } from "../worldgen/occupants";
+import { attachedPeople, materializeOccupants, OCCUPANT_PLACE_TYPES, type Occupant, type OccupantPlaceType, type WikiWorker } from "../worldgen/occupants";
 import { occupantId, occupantLabel, occupantRoom, presenceDiff } from "../worldgen/placePresence";
 
 /**
@@ -54,7 +54,7 @@ export const zSceneLife = z.object({
   locationId: z.string().min(1),
   placeType: z.enum(OCCUPANT_PLACE_TYPES),
   settlement: zSettlementBlockData,
-  workers: z.array(z.object({ entityId: z.string().min(1), archetype: z.string().min(1).optional() })).max(40),
+  workers: z.array(z.object({ entityId: z.string().min(1), archetype: z.string().min(1).optional(), seed: z.number().int().min(0).max(0xffffffff).optional() })).max(40),
   computed: z.array(z.object({ id: z.string().min(1), room: z.string().min(1).max(80).nullable() })).max(80),
   news: z
     .array(z.object({ id: z.string().min(1), name: z.string().min(1).max(160).nullable(), change: z.enum(["arrive", "leave"]), told: z.boolean() }))
@@ -167,6 +167,39 @@ function appliquer(scene: SceneState, life: SceneLife, options: { nouvelles: boo
     : [];
   const news = [...life.news, ...nouvelles].slice(-NEWS_KEPT);
   return { ...apres, life: { ...life, computed: maintenant.map((c) => ({ id: c.id, room: c.room })), news } };
+}
+
+/** La graine d'une personne calculée (`calc-<graine>`), `null` pour tout autre identifiant. */
+export function graineCalculee(id: string): number | null {
+  const m = /^calc-(\d+)$/.exec(id);
+  return m ? Number(m[1]) : null;
+}
+
+/** Le rôle de la personne calculée de cette graine dans le lieu, aujourd'hui (`head`, `staff`, `regular`…), `null` si elle n'en est pas. */
+export function roleCalcule(scene: SceneState, seed: number): Occupant["role"] | null {
+  const life = scene.life;
+  if (!life || life.locationId !== scene.locationId) return null;
+  return attachedPeople(life.settlement, { key: life.locationId, type: life.placeType }, scene.time.day, life.workers).find((o) => o.seed === seed)?.role ?? null;
+}
+
+/**
+ * V3.2-45 — Une personne calculée s'est ancrée dans le wiki : elle devient
+ * un PNJ qui travaille ou passe là avec sa graine (`workers`), pour que le
+ * moteur la fasse aller et venir sous sa nouvelle identité, sans jamais
+ * refaire surgir son esquisse.
+ */
+export function ancrerPersonneCalculee(scene: SceneState, params: { sketchId: string; entityId: string }): SceneState {
+  const seed = graineCalculee(params.sketchId);
+  const life = scene.life;
+  if (seed === null || !life) return scene;
+  return {
+    ...scene,
+    life: {
+      ...life,
+      workers: [...life.workers.filter((w) => w.entityId !== params.entityId), { entityId: params.entityId, seed }],
+      computed: life.computed.map((c) => (c.id === params.sketchId ? { ...c, id: params.entityId } : c)),
+    },
+  };
 }
 
 /** Les nouvelles pas encore racontées. */

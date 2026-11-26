@@ -1,4 +1,5 @@
 import "server-only";
+import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import type { PartOfEdge } from "@/src/core/entity-tree/build-tree";
@@ -13,6 +14,8 @@ import { listEntitiesByIds } from "@/src/server/repos/entities";
 import { listWorksAtForPlace } from "@/src/server/repos/relations";
 
 type TypedClient = SupabaseClient<Database>;
+
+const zWorksAtMetadata = z.object({ seed: z.number().int().min(0).max(0xffffffff).optional() });
 
 /**
  * V3.2-31 — Ce qu'il faut lire du wiki pour faire vivre un lieu
@@ -51,5 +54,10 @@ export async function lireLaVieDuLieu(
   const placeType = placeTypeOf(name, facts[0]?.entries ?? []);
   const settlement = settlementOf(facts);
   if (!placeType || !settlement) return null;
-  return { placeType, settlement, workers: workerIds.map((entityId) => ({ entityId })) };
+  // V3.2-45 : une personne calculée ancrée garde sa graine dans la relation, pour reprendre sa place.
+  const workers = workerIds.map((w) => {
+    const seed = zWorksAtMetadata.safeParse(w.metadata);
+    return seed.success && seed.data.seed !== undefined ? { entityId: w.entityId, seed: seed.data.seed } : { entityId: w.entityId };
+  });
+  return { placeType, settlement, workers };
 }
