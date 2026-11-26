@@ -71,7 +71,7 @@ Quatre défauts, trois tickets : la consigne (V3.2-17), l'horloge (V3.2-18), le 
 
 ---
 
-### ☑ V3.2-21 — Dormir dans le récit fait un repos long · `S` · sans modèle IA — **codé (Opus)**, reste la vérification en jeu
+### ☑ V3.2-26 — Dormir dans le récit fait un repos long · `S` · sans modèle IA — **codé (Opus)**, reste la vérification en jeu
 
 **Constaté le 25 novembre** : le personnage dort jusqu'à l'aube, aucun repos long n'est validé. Seul le bouton « Repos long » de la fiche l'appliquait ; un saut de temps du récit avançait l'horloge sans rien d'autre.
 
@@ -81,7 +81,7 @@ Quatre défauts, trois tickets : la consigne (V3.2-17), l'horloge (V3.2-18), le 
 - [x] Tests du noyau : tournures reconnues, négations et paroles ignorées, 8 h, 16 h, combat.
 - [ ] Rejoué : « je vais me coucher » le soir, l'horloge passe au matin, PV et emplacements reviennent ; un second « je dors » deux heures plus tard ne rend rien.
 
-### ☑ V3.2-22 — La ligne du tour, les notes du monde d'office, le temps du combat · `M` · sans modèle IA — **codé (Opus, [ADR 0113](../adr/0113-notes-du-monde-d-office-et-ligne-du-tour.md))**, reste la vérification en jeu
+### ☑ V3.2-27 — La ligne du tour, les notes du monde d'office, le temps du combat · `M` · sans modèle IA — **codé (Opus, [ADR 0114](../adr/0114-notes-du-monde-d-office-et-ligne-du-tour.md))**, reste la vérification en jeu
 
 **Constaté le 25 novembre** : le bandeau « Changements dans le monde » compte toute la séance ; on ne sait pas ce que ce tour a changé. Chaque note de l'IA attend un clic. L'heure ne se lit que dans l'en-tête, et un tour de combat ne dit pas qu'il dure 6 secondes.
 

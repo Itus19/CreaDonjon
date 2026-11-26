@@ -17,7 +17,7 @@ function extrait(texte: string): string {
 }
 
 /**
- * V3-C3, puis V3.2-22 (ADR 0113) — une note rédactionnelle du modèle
+ * V3-C3, puis V3.2-27 (ADR 0114) — une note rédactionnelle du modèle
  * (`world_note`, `soloNarrationProposal.ts`), déjà validée par Zod et rattachée
  * à une entité connue, est **ajoutée d'office** au wiki : la personne qui joue
  * la corrige ou la retire après coup (onglet « Changements »), au lieu de

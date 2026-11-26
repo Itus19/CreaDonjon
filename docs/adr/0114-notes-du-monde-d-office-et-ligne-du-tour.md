@@ -1,7 +1,7 @@
-# 0113 — Les notes du monde s'écrivent d'office, la ligne du tour dit ce qui a changé
+# 0114 — Les notes du monde s'écrivent d'office, la ligne du tour dit ce qui a changé
 
 **Date :** 2026-11-26
-**Statut :** acceptée le 26 novembre 2026 (choix de l'auteur dans le fil « Faire avancer l'intrigue en narration solo », sur esquisses) ; livrée par V3.2-22. Amende V1-F3 et V3-C3 (« relecture humaine obligatoire ») pour les seules notes du monde du solo.
+**Statut :** acceptée le 26 novembre 2026 (choix de l'auteur dans le fil « Faire avancer l'intrigue en narration solo », sur esquisses) ; livrée par V3.2-27. Amende V1-F3 et V3-C3 (« relecture humaine obligatoire ») pour les seules notes du monde du solo.
 
 ## Contexte
 

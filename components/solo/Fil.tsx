@@ -166,7 +166,7 @@ function WorldUpdateRow({ item }: { item: Extract<FilItem, { kind: "world_update
 const PUCE = "rounded-full border border-edge bg-panel-sunken px-2 py-0.5 text-xs text-ink-soft";
 
 /**
- * V3.2-22 (option A, ADR 0113) — la ligne du tour : l'heure, toujours en
+ * V3.2-27 (option A, ADR 0114) — la ligne du tour : l'heure, toujours en
  * tête (« +8 h · 06:08, jour 2 », « Round · 6 s » en combat), puis une puce
  * par chose que le tour a changé. Les conseils et ce que le moteur n'a pas pu
  * appliquer restent derrière « détails », jamais tus. Le dernier tour porte
@@ -252,10 +252,10 @@ export default function Fil({
   items: FilItem[] | null;
   /** V3.2-20 : réglage de partie, DD et issue des jets visibles. */
   montrerIssue: boolean;
-  /** V3.2-22 : la campagne solo, pour « Annuler ce tour » au bout du dernier tour ; `null` : pas de geste. */
+  /** V3.2-27 : la campagne solo, pour « Annuler ce tour » au bout du dernier tour ; `null` : pas de geste. */
   annulation?: { campaignId: string } | null;
   onAnnule?: () => void;
-  /** V3.2-22 : ouvre l'onglet « Changements » (colonne Monde, ou feuille du bas sur téléphone). */
+  /** V3.2-27 : ouvre l'onglet « Changements » (colonne Monde, ou feuille du bas sur téléphone). */
   onVoirChangements?: () => void;
 }) {
   if (items === null) {

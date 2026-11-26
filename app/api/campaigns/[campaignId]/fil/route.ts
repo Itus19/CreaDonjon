@@ -11,7 +11,7 @@ import { getSceneState } from "@/src/server/repos/sceneStates";
  * voir, aucun second contrôle ici) : cette route ne fait qu'ouvrir/retrouver
  * la session puis relire son fil, rien d'écrit.
  *
- * V3.2-22 : l'heure de la scène ferme la ligne du dernier tour (une ligne de
+ * V3.2-27 : l'heure de la scène ferme la ligne du dernier tour (une ligne de
  * `scene_states` de plus par lecture ; le sondage des conséquences, lui, ne
  * tourne plus que quand leur onglet est ouvert : le compte baisse).
  */

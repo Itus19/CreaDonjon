@@ -36,4 +36,4 @@ L'auteur a posé une règle d'écriture : « les ellipses temporelles, sauter de
 
 Le point 2 change : `elapsed` ne garde que les durées naturelles d'un geste, `instant`, `quelques_minutes`, `quart_d_heure`, `demi_heure` et `une_heure`. `plusieurs_heures` et `jusqu_au_matin` sont retirés de la liste. Une valeur hors liste envoyée quand même est **ignorée** (`.catch(undefined)`), pas fatale : la narration reste, seul le temps ne passe pas. La consigne le dit au modèle (`src/core/ai/narrationPrompt.ts`). La durée écrite par le joueur (point 1) ne change pas : « je dors jusqu'au matin » fait toujours passer la nuit.
 
-Conséquence : dormir est une ellipse comme une autre. Quand le joueur écrit que son personnage dort, le moteur fait passer 8 h (ou la durée écrite) et applique le repos long s'il est valide (V3.2-21, `sleepRest.ts`) ; la narration ne peut plus le déclencher.
+Conséquence : dormir est une ellipse comme une autre. Quand le joueur écrit que son personnage dort, le moteur fait passer 8 h (ou la durée écrite) et applique le repos long s'il est valide (V3.2-26, `sleepRest.ts`) ; la narration ne peut plus le déclencher.

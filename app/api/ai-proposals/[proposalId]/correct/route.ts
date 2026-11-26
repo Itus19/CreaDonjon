@@ -18,7 +18,7 @@ const paramsSchema = z.object({ proposalId: z.string().uuid() });
 const bodySchema = z.object({ text: z.string().trim().min(1).max(400) }).strict();
 
 /**
- * V3.2-22 (ADR 0113) — « Corriger » une note du monde déjà ajoutée au wiki.
+ * V3.2-27 (ADR 0114) — « Corriger » une note du monde déjà ajoutée au wiki.
  * Droits : la RLS d'`ai_proposals` (membre du monde) pour la lire, et
  * `updateBlockContent` (`canUserEditEntityById`) pour réécrire le bloc.
  */

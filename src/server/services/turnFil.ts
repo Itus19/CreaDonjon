@@ -133,7 +133,7 @@ export async function buildFilForSession(supabase: TypedClient, sessionId: strin
 const versJournal = (e: SessionEventRow): JournalEvent => ({ id: e.id, seq: e.seq, kind: e.kind, actor: e.actor, payload: (e.payload as Record<string, unknown> | null) ?? {} });
 
 /**
- * V3.2-22 (ADR 0113) — le fil avec la ligne de chaque tour. Dans un tour, les
+ * V3.2-27 (ADR 0114) — le fil avec la ligne de chaque tour. Dans un tour, les
  * changements du moteur et du monde passent dans cette ligne au lieu de
  * s'afficher chacun à part ; hors tour (une scène posée avant toute action),
  * ils restent comme avant. `maintenant` : l'heure actuelle de la scène, qui

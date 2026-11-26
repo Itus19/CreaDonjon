@@ -47,12 +47,12 @@ async function editTextBlock(
   return { ok: false, reason: result.reason === "forbidden" ? "forbidden" : "conflict" };
 }
 
-/** Le paragraphe public qu'une proposition ajoute. Son identifiant est celui de la proposition (V3.2-22) : on le retrouve pour le corriger ou le retirer. */
+/** Le paragraphe public qu'une proposition ajoute. Son identifiant est celui de la proposition (V3.2-27) : on le retrouve pour le corriger ou le retirer. */
 function paragraph(id: string, text: string): Segment {
   return { id, blockType: "paragraph", visibility: { level: "public", scopeId: null }, content: [{ t: "text", v: text }], align: "left" };
 }
 
-/** V3.2-22 — ajoute le paragraphe d'une note du monde à la fin du bloc. */
+/** V3.2-27 — ajoute le paragraphe d'une note du monde à la fin du bloc. */
 export function appendNoteSegment(supabase: TypedClient, params: { blockId: string; entityId: string; segmentId: string; text: string; userId: string }): Promise<TextBlockEditOutcome> {
   return editTextBlock(supabase, { ...params, change: (segments) => [...segments, paragraph(params.segmentId, params.text)] });
 }
@@ -61,7 +61,7 @@ export function appendNoteSegment(supabase: TypedClient, params: { blockId: stri
  * Relecture humaine (V1-F3) : applique une proposition `pending` qu'une
  * personne a acceptée. Le texte proposé devient un nouveau segment ajouté à
  * la fin du bloc (jamais un remplacement), visibilité publique par défaut.
- * Depuis ADR 0113, une note du monde du solo est ajoutée d'office
+ * Depuis ADR 0114, une note du monde du solo est ajoutée d'office
  * (`proposeWorldNote`) ; elle ne passe ici que si cet ajout a échoué.
  *
  * **V3-C5 — « modifier ».** `overrideText` remplace le texte proposé avant
@@ -110,7 +110,7 @@ async function appliedNote(supabase: TypedClient, proposalId: string) {
 }
 
 /**
- * V3.2-22 (ADR 0113) — « Corriger » : la personne qui joue réécrit une note
+ * V3.2-27 (ADR 0114) — « Corriger » : la personne qui joue réécrit une note
  * que le moteur a ajoutée au wiki. Le paragraphe garde sa place et sa
  * visibilité ; la proposition garde le texte réellement écrit.
  */
@@ -130,7 +130,7 @@ export async function correctAppliedNote(supabase: TypedClient, params: { propos
 }
 
 /**
- * V3.2-22 (ADR 0113) — retire du wiki le paragraphe d'une note du monde
+ * V3.2-27 (ADR 0114) — retire du wiki le paragraphe d'une note du monde
  * (« Retirer », ou l'annulation du tour qui l'a ajoutée). La proposition
  * passe `reverted` : sa ligne reste, comme toute annulation.
  * `segment_not_found` : le paragraphe a déjà disparu (effacé à la main) ;

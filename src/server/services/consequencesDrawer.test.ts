@@ -50,7 +50,7 @@ describe("buildConsequencesDrawer", () => {
     expect(drawer.pending).toEqual([{ id: "p-1", kind: "update_block", text: "Un ajout.", targetName: "Village test", fixable: false }]);
     expect(drawer.applied).toEqual([
       { id: "a-1", kind: "create_entity", text: "Grelin — cicatrice", targetName: "Grelin", fixable: false },
-      // V3.2-22 : une note du monde écrite se corrige ou se retire.
+      // V3.2-27 : une note du monde écrite se corrige ou se retire.
       { id: "a-2", kind: "update_block", text: "Une note.", targetName: "Village test", fixable: true },
     ]);
   });

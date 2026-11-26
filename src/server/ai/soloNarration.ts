@@ -301,7 +301,7 @@ export async function narrateSoloTurn(supabase: TypedClient, provider: AiProvide
   }
 
   if (chosen.worldNote) {
-    // V3-C3, V3.2-22 — même discipline best-effort : une note du monde
+    // V3-C3, V3.2-27 — même discipline best-effort : une note du monde
     // n'est jamais essentielle (specs/cible-locale-et-ia.md §4), la
     // narration reste acquise même si `ai_proposals` échoue à l'écrire.
     try {

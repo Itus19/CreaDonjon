@@ -148,7 +148,7 @@ export default function SoloScreen({
 
   /**
    * Rafraîchit le fil, qui change aussi sans passer par cette colonne (un
-   * jet résolu depuis la fiche). V3.2-22 : les conséquences ne sont plus
+   * jet résolu depuis la fiche). V3.2-27 : les conséquences ne sont plus
    * sondées ici ; l'onglet « Changements » les lit lui-même, seulement
    * quand il est ouvert (docs/QUOTAS.md).
    */
@@ -156,7 +156,7 @@ export default function SoloScreen({
     const filRes = await fetch(`/api/campaigns/${campaignId}/fil`);
     if (!filRes.ok) return;
     const body = (await filRes.json()) as { items: FilItem[] };
-    // La ligne du tour (V3.2-22) n'est pas annoncée : le récit qu'elle suit l'est.
+    // La ligne du tour (V3.2-27) n'est pas annoncée : le récit qu'elle suit l'est.
     const newest = body.items.findLast((i) => i.kind !== "turn_summary");
     if (newest && newest.seq !== lastSeqRef.current) {
       lastSeqRef.current = newest.seq;
@@ -165,7 +165,7 @@ export default function SoloScreen({
     setFilItems(body.items);
   }
 
-  /** V3.2-22 : l'onglet « Changements » — dans la colonne Monde sur ordinateur, en feuille du bas sur téléphone. */
+  /** V3.2-27 : l'onglet « Changements » — dans la colonne Monde sur ordinateur, en feuille du bas sur téléphone. */
   function voirChangements() {
     if (window.matchMedia("(min-width: 768px)").matches) deplierMonde("changements");
     else setFeuilleConsequences(true);
@@ -318,7 +318,7 @@ export default function SoloScreen({
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-4">
-      {/* Téléphone (V3.1-36) : la bande de jauges en ligne, et ✦ qui ouvre l'onglet « Changements » en feuille du bas (V3.2-22 : « Annuler ce tour » vit désormais au bout du dernier tour, dans le fil). */}
+      {/* Téléphone (V3.1-36) : la bande de jauges en ligne, et ✦ qui ouvre l'onglet « Changements » en feuille du bas (V3.2-27 : « Annuler ce tour » vit désormais au bout du dernier tour, dans le fil). */}
       <div className="flex shrink-0 items-stretch gap-2 md:hidden">
         <BandeFiche jauges={jauges} variante="ligne" />
         <button

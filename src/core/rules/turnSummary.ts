@@ -3,7 +3,7 @@ import { estPhraseDuree, libelleDuree, SECONDES_PAR_ROUND } from "./elapsed";
 import type { JournalEvent } from "./turnUndo";
 
 /**
- * V3.2-22 — La ligne du tour (option A, ADR 0113) : sous chaque tour de la
+ * V3.2-27 — La ligne du tour (option A, ADR 0114) : sous chaque tour de la
  * personne qui joue, ce que ce tour a changé, en une ligne de pastilles.
  *
  * Rien n'est écrit pour la construire : elle se relit du journal tel qu'il

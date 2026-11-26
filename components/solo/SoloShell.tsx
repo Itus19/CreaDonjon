@@ -22,7 +22,7 @@ import { jaugesEgales, memeDemande, vueDepuisAdresse, type JaugesBande } from "@
  * - A partir de 1024 px : trois colonnes. **V3.2-12** : le repli se commande
  *   par deux ONGLETS accroches en haut du bord interieur de chaque volet,
  *   dans un couloir de 20 px (meme recette que l'onglet du menu, `Rail.tsx`).
- *   Replie, chaque volet devient une bande de 64 px (V3.2-20 : meme largeur
+ *   Replie, chaque volet devient une bande de 64 px (V3.2-25 : meme largeur
  *   des deux cotes, la jauge de 48 px de la Fiche et ses marges) : icones et
  *   presents pour le Monde, jauges pour la Fiche ; l'onglet garde sa hauteur et suit le
  *   bord. Les anciennes poignees, a mi-hauteur dans 12 px, touchaient la barre

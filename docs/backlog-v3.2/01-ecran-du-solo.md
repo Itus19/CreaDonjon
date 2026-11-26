@@ -114,3 +114,23 @@ Vérifié au navigateur : trois points animés pendant les 11 s du modèle local
 - [x] Le narrateur reçoit toujours le DD et l'issue quand il y en a.
 - [x] Planche du catalogue à jour (`docs/catalogue/Solo.dc.html`, section `pastille-jet`).
 - [x] Le dé se fige dès que le serveur l'a tiré, sans attendre le récit ; une route de récit ne joue jamais de tour (test `turnIntent.noAi.test.ts`).
+
+---
+
+### ☑ V3.2-21 — Un nom de compétence ou d'arme au milieu d'une phrase ne lance plus de jet · `S` · sans modèle IA
+
+**Constaté le 25 novembre.** « Le moteur m'a demandé un jet d'Histoire, je ne sais pas pourquoi. » Sans verbe du lexique, `interpretIntent` lançait un jet dès qu'une phrase contenait le nom d'une action de la fiche : « histoire », « nature », « religion », « survie »… ou le nom d'une arme qu'on range.
+
+**Fait** (choix de l'auteur, le 26 novembre : ce correctif d'abord, le détecteur de sens par l'IA ensuite). Sans verbe, une action ne se lit plus que :
+- **en toutes lettres** : « jet d'Histoire », « test de Persuasion », où qu'ils soient dans la phrase (`IntentAction.explicitTerms`, élision et apostrophe courbe comprises) ;
+- **ou quand son nom est toute la phrase** : « Persuasion ? ».
+
+Le reste est une action libre, avec sa raison. Avec un verbe, rien ne change. Les tests et sauvegardes de caractéristique (« test de Force ») étaient déjà des formes explicites.
+
+Ce correctif reste le filet du futur détecteur : il sert quand aucun modèle ne répond.
+
+**Critères d'acceptation**
+- [x] « je me raconte une histoire », « je range mon épée » : action libre, aucun jet.
+- [x] « je tente un jet de persuasion sur le tavernier » : test de Persuasion, sur le tavernier.
+- [x] « Persuasion ! » seul : test de Persuasion.
+- [x] Les verbes du lexique et le choix de l'arme nommée marchent comme avant (`intent.test.ts`).

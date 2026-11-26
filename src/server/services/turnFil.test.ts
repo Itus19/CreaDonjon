@@ -169,7 +169,7 @@ describe("V3-F2 — visibleInFil", () => {
 });
 
 
-describe("V3.2-22 — withTurnSummaries", () => {
+describe("V3.2-27 — withTurnSummaries", () => {
   it("pose la ligne après le dernier événement du tour et y replie les changements ; hors tour, ils restent", () => {
     const evts = [
       row({ id: "w0", seq: 1, kind: "world_update", actor: "system", payload: { note: "Scène posée" } }),

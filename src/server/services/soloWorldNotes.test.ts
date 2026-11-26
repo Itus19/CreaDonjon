@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 
 /**
- * V3-C3, V3.2-22 — Même méthode que `sceneSketches.test.ts` : les accès base
+ * V3-C3, V3.2-27 — Même méthode que `sceneSketches.test.ts` : les accès base
  * sont simulés, ce qui se vérifie ici c'est le CÂBLAGE (quel bloc, quel
  * statut, quel motif de rejet, la ligne du tour), jamais l'écriture du bloc
  * elle-même (`aiProposals.integration.test.ts`).

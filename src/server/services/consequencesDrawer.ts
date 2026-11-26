@@ -14,7 +14,7 @@ export interface ConsequenceEntry {
   text: string;
   /** `null` : l'entite visee a disparu depuis, ou la proposition n'en vise aucune (rare). */
   targetName: string | null;
-  /** V3.2-22 : une note du monde déjà écrite, que la personne qui joue peut « Corriger » ou « Retirer ». */
+  /** V3.2-27 : une note du monde déjà écrite, que la personne qui joue peut « Corriger » ou « Retirer ». */
   fixable: boolean;
 }
 

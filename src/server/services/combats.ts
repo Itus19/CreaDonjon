@@ -465,7 +465,7 @@ export const beginCombat = (supabase: TypedClient, params: { combatId: string; a
 
 /**
  * V3.1-144 : un combat qui se termine annule ses sauvegardes encore en attente — elles n'ont plus de cible.
- * V3.2-22 : et l'horloge de la scène avance du temps qu'il a pris (6 s par round, règles 2024).
+ * V3.2-27 : et l'horloge de la scène avance du temps qu'il a pris (6 s par round, règles 2024).
  */
 export async function endCombat(supabase: TypedClient, params: { combatId: string; actorUserId: string }): Promise<CombatRow> {
   const combat = await setCombatStatus(supabase, { ...params, status: "ended" });
@@ -480,7 +480,7 @@ export async function endCombat(supabase: TypedClient, params: { combatId: strin
 }
 
 /**
- * V3.2-22 (ADR 0113) — pendant le combat, un tour du solo ne fait pas passer
+ * V3.2-27 (ADR 0114) — pendant le combat, un tour du solo ne fait pas passer
  * de minute (`minutesForTurn`, `turnLoop.ts`) : le combat compte en rounds.
  * À la fin, la scène avance de `minutesDeCombat(rounds)` et oublie ce combat
  * (`activeCombatId`, relu d'un combat qui ne tourne plus). Rien si la scène

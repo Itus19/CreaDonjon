@@ -72,7 +72,7 @@ function toRow(r: AiProposalRawRow): AiProposalRow {
 export async function insertAiProposal(
   supabase: TypedClient,
   params: {
-    /** V3.2-22 : un identifiant choisi d'avance, quand le segment ajouté au wiki porte le même (ADR 0113). */
+    /** V3.2-27 : un identifiant choisi d'avance, quand le segment ajouté au wiki porte le même (ADR 0114). */
     id?: string;
     worldId: string;
     campaignId: string | null;
@@ -185,7 +185,7 @@ export async function updateAiProposalStatus(
   return data ? toRow(data) : null;
 }
 
-/** V3.2-22 — le texte d'une note du monde corrigée après coup : la proposition garde ce qui est réellement écrit. */
+/** V3.2-27 — le texte d'une note du monde corrigée après coup : la proposition garde ce qui est réellement écrit. */
 export async function updateAiProposalPayload(supabase: TypedClient, params: { id: string; payload: Json }): Promise<void> {
   const { error } = await supabase.from("ai_proposals").update({ payload: params.payload }).eq("id", params.id);
   if (error) throw new Error(error.message);

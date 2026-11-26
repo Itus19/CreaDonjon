@@ -34,7 +34,7 @@ export type UndoTurnResult =
  * est retiré ou restauré :
  * - les fiches nées automatiquement (`auto_applied`) passent à la corbeille
  *   (suppression douce), leur proposition à `reverted` ; une note du monde
- *   ajoutée d'office (V3.2-22) quitte le wiki ; une proposition en
+ *   ajoutée d'office (V3.2-27) quitte le wiki ; une proposition en
  *   attente aussi. Une proposition acceptée à la main reste : c'était un choix ;
  * - les découvertes posées par le tour sont retirées ;
  * - l'état de jeu du personnage et la scène reviennent à ceux relevés au début
@@ -66,7 +66,7 @@ export async function undoLastSoloTurn(supabase: TypedClient, params: { campaign
   let proposals = 0;
   for (const p of await listAiProposalsBySessionEventIds(supabase, tour.eventIds)) {
     if (p.status === "applied" && p.autoApplied) {
-      // V3.2-22 : une note du monde ajoutée d'office quitte le wiki avec son tour.
+      // V3.2-27 : une note du monde ajoutée d'office quitte le wiki avec son tour.
       if (p.kind === "update_block") {
         const retrait = await removeAppliedNote(supabase, { proposalId: p.id, userId: params.callerId });
         if (retrait.ok) proposals += 1;

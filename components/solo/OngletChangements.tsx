@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 
 /**
- * V3.2-22 (ADR 0113) — L'onglet « Changements » du Monde : ce que le monde a
+ * V3.2-27 (ADR 0114) — L'onglet « Changements » du Monde : ce que le monde a
  * gagné pendant la séance, au même endroit.
  *
  * - « À relire » : une note que le moteur n'a pas pu écrire d'office (droit,

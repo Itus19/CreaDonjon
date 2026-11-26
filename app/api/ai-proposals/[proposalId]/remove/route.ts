@@ -16,7 +16,7 @@ const REASON_STATUS: Record<string, number> = {
 const paramsSchema = z.object({ proposalId: z.string().uuid() });
 
 /**
- * V3.2-22 (ADR 0113) — « Retirer » une note du monde déjà ajoutée au wiki :
+ * V3.2-27 (ADR 0114) — « Retirer » une note du monde déjà ajoutée au wiki :
  * son paragraphe quitte le bloc, la proposition passe `reverted`. Sans corps.
  * Droits : la RLS d'`ai_proposals` et `updateBlockContent`.
  */

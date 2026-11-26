@@ -17,8 +17,8 @@ import type { QuestColumnEntry, SceneView, WikiColumnGroup } from "@/lib/solo/ty
 /**
  * V3-D3 — La colonne gauche : le monde connu. Quatre onglets de classeur,
  * repris à l'identique de l'esquisse (`components/solo/esquisse/`, jetable,
- * jamais importée ici) : Wiki, Quêtes, Présents, Règles ; et depuis V3.2-22,
- * Changements (ce que la séance a écrit dans le monde, ADR 0113).
+ * jamais importée ici) : Wiki, Quêtes, Présents, Règles ; et depuis V3.2-27,
+ * Changements (ce que la séance a écrit dans le monde, ADR 0114).
  *
  * **Aucun marqueur de découverte.** Dépend d'une donnée que rien n'écrit
  * encore — `entity_discoveries` (V3-C4). Ce composant l'omet plutôt que

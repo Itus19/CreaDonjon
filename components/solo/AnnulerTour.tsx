@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 
 /**
- * V3-F2, puis V3.2-22 — « Annuler ce tour » : un geste en deux temps
+ * V3-F2, puis V3.2-27 — « Annuler ce tour » : un geste en deux temps
  * (demander, puis confirmer), une requête. Le serveur défait le tour entier
  * (fiches nées d'office, notes du monde ajoutées d'office, découvertes, état
  * du personnage et scène d'avant), écrit l'annulation au journal sans rien
