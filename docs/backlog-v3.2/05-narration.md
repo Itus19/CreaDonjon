@@ -141,3 +141,15 @@ Coût : une lecture groupée de plus par tour narré (les blocs `text` des prés
 - [x] Tests du noyau : demandes reconnues (paroles comprises), actions sans rapport ignorées, « la carte du royaume » ignorée.
 - [ ] Rejoué : au Fanal sans carte, « c'est combien ? » tire la carte, et Mabelle cite un prix de la carte.
 
+### ☑ V3.2-43 — En solo, l'IA sait ce que sait le MJ · `S` · sans modèle IA pour le cœur — **codé (Opus, [ADR 0116](../adr/0116-en-solo-l-ia-sait-ce-que-sait-le-mj.md))**, reste la vérification en jeu
+
+**Décidé par l'auteur le 26 novembre** : « le moteur et l'IA sont les deux hémisphères du cerveau du MJ ». L'IA reçoit aussi les secrets, en deux parts séparées.
+
+- Chaque page (lieu, PNJ présents) est lue deux fois : par un joueur de la campagne (ce que le personnage sait) et par le MJ. La différence part dans la balise `secrets-du-mj`, 500 caractères par entité, suivie de la consigne de ne jamais la dire (`SECRETS_INSTRUCTION`).
+- La description du lieu et la ligne de chaque PNJ viennent désormais du lecteur « joueur » : le propriétaire du monde qui joue en solo ne fait plus passer un secret pour un savoir du personnage.
+- La question au MJ hors du temps de jeu ne reçoit pas les secrets.
+
+**Critères d'acceptation**
+- [x] Tests du noyau : différence MJ/joueur, borne, balise à part, consigne après la balise.
+- [ ] Rejoué : un PNJ dont la page porte un paragraphe réservé au MJ agit en conséquence (hésite, ment) sans que la narration le dise.
+

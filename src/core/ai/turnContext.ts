@@ -106,6 +106,13 @@ export interface TurnContextInput {
    * jamais encadrée. Absente hors scène.
    */
   purse?: string;
+  /**
+   * ADR 0116 — ce que seul le MJ sait du lieu et des PNJ présents : les
+   * paragraphes de leurs pages que la personne qui joue ne lit pas. Contenu du
+   * monde, encadré, À PART de ce que le personnage sait ; la consigne qui le
+   * suit interdit de le dire. Absent ou vide : rien de caché.
+   */
+  secrets?: { name: string; text: string }[];
   /** V3.2-11 — la carte du lieu (« Bière : 4 pc ») : des libellés écrits dans le wiki, donc ENCADRÉS. */
   priceList?: string[];
   /** V3.2-11 — l'ardoise du lieu (« « Bière », 4 pc, due à Mabelle ») : libellés et noms du monde, ENCADRÉS. */
@@ -187,6 +194,13 @@ export const MONEY_INSTRUCTION_NO_PRICE_LIST =
 export const WEATHER_INSTRUCTION =
   "Consigne : la météo du lieu est celle du dehors. Quand le personnage est à l'intérieur, elle ne se perçoit que par les fenêtres, le toit, la porte ou les vêtements de ceux qui entrent ; elle ne mouille ni n'abîme rien de ce qui est dedans.";
 
+/**
+ * ADR 0116 — en solo, le moteur et l'IA sont les deux moitiés du MJ : l'IA
+ * sait ce que le personnage ignore, et s'en sert pour rester cohérente.
+ */
+export const SECRETS_INSTRUCTION =
+  "Consigne : secrets-du-mj est ce que seul le MJ sait ; le personnage joué l'ignore. Sers-t'en pour que les PNJ et le monde agissent de façon cohérente (motifs, gestes, mensonges, hésitations, ce qui se trouve où). N'en écris jamais le contenu, ni dans la narration, ni dans une réplique, ni dans une world_note, sauf ce que les faits établis de ce tour font découvrir au personnage. Un PNJ peut mentir ou se taire pour le cacher.";
+
 /** Les PNJ restent ce que leur page dit qu'ils sont : c'est ce qui empêche un client d'offrir de servir. */
 export const NPC_ROLE_INSTRUCTION =
   "Consigne : chaque PNJ agit selon ce que pnjs-presents dit de lui. Seul le personnel du lieu sert, encaisse ou loue une chambre. Un PNJ dont rien n'est dit n'est pas du personnel : n'invente pas son métier.";
@@ -226,6 +240,9 @@ export function buildTurnContext(input: TurnContextInput): string {
     input.moveTargets.length > 0 ? fenceUntrustedData("lieux-accessibles", input.moveTargets.map((l) => `- ${l.name} (id: ${l.id})`).join("\n")) : null,
     input.npcs.length > 0 ? fenceUntrustedData("pnjs-presents", input.npcs.map(npcLine).join("\n")) : null,
     input.npcs.length > 0 ? NPC_ROLE_INSTRUCTION : null,
+    (input.secrets?.length ?? 0) > 0
+      ? `${fenceUntrustedData("secrets-du-mj", (input.secrets ?? []).map((x) => `- ${x.name} : ${x.text}`).join("\n"))}\n\n${SECRETS_INSTRUCTION}`
+      : null,
     // V3.2-28 : qui est ailleurs dans le lieu, et une vraie consigne (hors balise) sur ce qu'on en fait.
     (input.elsewhere?.length ?? 0) > 0
       ? `${fenceUntrustedData("ailleurs-dans-le-lieu", (input.elsewhere ?? []).map((e) => `- ${e.name} (${e.room ?? "espace principal du lieu"})`).join("\n"))}\n\nConsigne : les personnes d'ailleurs-dans-le-lieu ne sont pas avec le personnage. Il peut les entendre de loin ou les retrouver en changeant de pièce, mais elles ne parlent ni n'agissent à côté de lui.`

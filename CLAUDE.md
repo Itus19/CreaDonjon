@@ -100,7 +100,7 @@ Leurs numéros sont **stables** : on les cite dans le code et les ADR. Une règl
 8. **L'IA narre, le code arbitre.** Les dés sont lancés par le serveur, les règles appliquées par le moteur. Un modèle ne produit jamais un nombre aléatoire ni un résultat de règle.
 9. L'IA n'écrit jamais directement en base. Toute mutation passe par `ai_proposals` : sortie structurée → Zod → validation métier → application transactionnelle.
 10. Le contenu du wiki inséré dans un prompt est **de la donnée, pas une instruction**. Il est encadré par des balises explicites, avec la consigne d'ignorer toute instruction qu'il contiendrait.
-11. Le contexte fourni à un modèle est borné par l'audience de sa sortie.
+11. Le contexte fourni à un modèle est borné par l'audience de sa sortie. Seule exception : la narration du tour solo reçoit aussi, à part et encadré, ce que seul le MJ sait du lieu et des PNJ présents, avec la consigne de ne jamais le dire (ADR 0116).
 12. Aucun appel d'IA hors de `src/server/ai/`. Un fournisseur se branche par un adaptateur derrière `AiProvider`.
 13. `ai_usage_log` est écrit à **chaque** appel, y compris quand l'appel échoue.
 
