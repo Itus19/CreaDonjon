@@ -12,6 +12,8 @@
  * seul, guidé par la consigne générale du prompt.
  */
 
+import { textNamesSketch } from "../rules/scene";
+
 export interface AddressableNpc {
   id: string;
   name: string;
@@ -74,4 +76,20 @@ const VERBES_DE_QUESTION = /\b(demande|demandes|demander|interroge|interroger|qu
  */
 export function estQuestionDirecte(playerAction: string): boolean {
   return playerAction.includes("?") || VERBES_DE_QUESTION.test(normaliser(playerAction));
+}
+
+/**
+ * V3.2-44 — Les esquisses avec qui ce tour a été un ÉCHANGE, chacune une
+ * fois : celle qui a répliqué (`npc_reaction`), et celles que la narration
+ * fait agir quand le joueur s'adresse à quelqu'un (« je demande un bout de
+ * pain » : la tavernière le sert sans un mot, c'est un échange). Une
+ * esquisse seulement nommée en décor ne compte pas. Le compteur d'ancrage
+ * (V3-C2) avance d'autant : sans réplique écrite, une tavernière servie dix
+ * fois ne devenait jamais une fiche.
+ */
+export function esquissesDeLEchange(params: { playerAction: string; narration: string; reactionNpcId: string | null; esquisses: readonly AddressableNpc[] }): string[] {
+  const parle = contientParole(params.playerAction);
+  return params.esquisses
+    .filter((e) => e.id === params.reactionNpcId || (parle && textNamesSketch(params.narration, e.name)))
+    .map((e) => e.id);
 }

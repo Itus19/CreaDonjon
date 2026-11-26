@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { estQuestionDirecte, npcAddressedBy } from "./npcAddressed";
+import { esquissesDeLEchange, estQuestionDirecte, npcAddressedBy } from "./npcAddressed";
 
 const npcs = [
   { id: "edran", name: "Edran Vauclair" },
@@ -64,3 +64,30 @@ describe("estQuestionDirecte — quand une réplique est due", () => {
   });
 });
 
+
+describe("esquissesDeLEchange — V3.2-44, un échange compte même sans réplique", () => {
+  const esquisses = [
+    { id: "s-mabelle", name: "Mabelle, du Fanal" },
+    { id: "s-wil", name: "Petit Wil" },
+  ];
+
+  it("la réplique d'une esquisse compte", () => {
+    expect(esquissesDeLEchange({ playerAction: "je regarde la salle", narration: "La salle est calme.", reactionNpcId: "s-wil", esquisses })).toEqual(["s-wil"]);
+  });
+
+  it("le joueur demande, la narration fait agir l'esquisse sans qu'elle parle : c'est un échange", () => {
+    const narration = "Mabelle hoche la tête, tranche une mie épaisse et te dépose l'assiette.";
+    expect(esquissesDeLEchange({ playerAction: "je demande un bout de pain avec du beurre", narration, reactionNpcId: null, esquisses })).toEqual(["s-mabelle"]);
+  });
+
+  it("une esquisse seulement nommée en décor, sans que le joueur s'adresse à quelqu'un, ne compte pas", () => {
+    const narration = "Mabelle essuie une chope derrière le comptoir.";
+    expect(esquissesDeLEchange({ playerAction: "je m'assieds près du feu", narration, reactionNpcId: null, esquisses })).toEqual([]);
+  });
+
+  it("une seule fois par tour, et jamais un id qui n'est pas une esquisse", () => {
+    const narration = "Mabelle répond sèchement.";
+    expect(esquissesDeLEchange({ playerAction: "je demande le prix", narration, reactionNpcId: "s-mabelle", esquisses })).toEqual(["s-mabelle"]);
+    expect(esquissesDeLEchange({ playerAction: "je demande le prix", narration: "Rien.", reactionNpcId: "pnj-reel", esquisses })).toEqual([]);
+  });
+});

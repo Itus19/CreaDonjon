@@ -287,6 +287,13 @@ describe("les esquisses (V3-C2) : un personnage incident, jamais une fiche", () 
     expect(textNamesSketch("je regarde le brame du cerf", "bram")).toBe(false);
     expect(textNamesSketch("Bram me sert une bière", "bram")).toBe(true);
   });
+
+  it("V3.2-44 — nommée par son prénom : la tête du nom, avant la virgule, suffit", () => {
+    expect(textNamesSketch("je demande à Mabelle le prix du ragoût", "Mabelle, du Fanal")).toBe(true);
+    expect(textNamesSketch("je dis bonjour à mabelle", "Mabelle, du Fanal")).toBe(true);
+    expect(textNamesSketch("je sors vers le fanal", "Mabelle, du Fanal")).toBe(false);
+    expect(textNamesSketch("je prends un petit pain", "Petit Wil")).toBe(false);
+  });
 });
 
 describe("V3.2-19 — dropRoomsOutsideLocation", () => {

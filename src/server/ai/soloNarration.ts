@@ -5,6 +5,7 @@ import type { Viewer } from "@/src/core/visibility";
 import { soloNarrationSchema, soloNarrationToolSchema } from "@/src/core/ai/soloNarrationProposal";
 import { maxSimilarityToRecent } from "@/src/core/ai/narrationSimilarity";
 import { soloSystemPrompt } from "@/src/core/ai/narrationPrompt";
+import { esquissesDeLEchange } from "@/src/core/ai/npcAddressed";
 import { parseTableSettings } from "@/src/core/campaigns/tableSettings";
 import { getCampaignTableSettingsRaw } from "@/src/server/repos/campaigns";
 import { buildSoloTurnContext } from "@/src/server/services/turnContext";
@@ -307,24 +308,30 @@ export async function narrateSoloTurn(supabase: TypedClient, provider: AiProvide
     } as unknown as Json,
   });
 
-  if (chosen.npcReaction) {
-    // V3-C2 — best-effort, APRÈS que la narration est déjà journalisée : un
-    // échec ici (base indisponible, esquisse déjà ancrée par ailleurs) ne
-    // doit jamais faire disparaître une narration réussie, même raison que
-    // le reste de ce fichier vis-à-vis de `playTurn`. Sans effet si
-    // `npc_id` désigne un vrai PNJ plutôt qu'une esquisse (garde-fou
-    // interne à `recordSketchSpeechAndMaybeAnchor`).
+  // V3-C2, V3.2-44 — chaque esquisse avec qui ce tour a été un échange
+  // (réplique, ou servie sans un mot quand le joueur s'adresse à quelqu'un)
+  // avance son compteur d'ancrage. Best-effort, APRÈS que la narration est
+  // déjà journalisée : un échec ici ne doit jamais faire disparaître une
+  // narration réussie. Un id de vrai PNJ est ignoré
+  // (`recordSketchSpeechAndMaybeAnchor` ne touche qu'aux esquisses).
+  const echanges = esquissesDeLEchange({
+    playerAction: params.playerAction,
+    narration: chosen.narration ?? "",
+    reactionNpcId: chosen.npcReaction?.npcId ?? null,
+    esquisses: chosenNpcs,
+  });
+  for (const sketchId of echanges) {
     try {
       await recordSketchSpeechAndMaybeAnchor(supabase, {
         campaignId: params.campaignId,
         worldId: params.worldId,
         sessionId: params.sessionId,
-        sketchId: chosen.npcReaction.npcId,
+        sketchId,
         callerId: params.userId,
       });
     } catch (erreur) {
-      // Ignoré volontairement : la narration ci-dessus est déjà acquise.
-      console.error("Mémorisation de la réplique de l'esquisse impossible", erreur);
+      // Journalisé, pas propagé : la narration ci-dessus est déjà acquise.
+      console.error("Mémorisation de l'échange avec l'esquisse impossible", erreur);
     }
   }
 
