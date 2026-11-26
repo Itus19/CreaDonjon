@@ -359,8 +359,8 @@ Neuf planches, en deux rangées sur le canevas : les briques (1 à 7), puis les 
 | 4 · Surfaces et retours | `ConfirmDialog`, panneaux et `EmptyState`, ascenseur, info-bulle, aperçu de renvoi, bulles de chat, cartes de jet du salon, pastilles des fils privés, bandeaux et badges, volets à onglets, pastille chrome |
 | 5 · Éléments d'écran | grille de disponibilités, curseur horaire, curseur natif, `Stepper`, bouton de dés et volet, barres, chargement, texte de fiche, règle au centre et son menu ⋮ (V3.1-94), panneau de renvoi et badge « Règle de la table » (V3.1-95) |
 | 6 · Fiche de personnage | bouclier de CA, `StatBadge`, caractéristiques et sauvegardes, compétences et pastilles de maîtrise, `ActionButton`, `DieIcon`, égaliseur (emplacements, pacte et ressources), carte d'objet, états, bouton de jet de monstre, jauge à commandes (`CommandeE`), jets contre la mort (`BlocMourant`), nom de règle (`NomDeRegle`), choix rouverts par le repos (`ChoixRouverts`, V3.1-119) |
-| 7 · Mode solo | `JaugeCirculaire`, fiche compacte, fil |
-| 8 · Wiki visuel | épingles et calques de carte, carte et liste par couches (V3.1-78), Généalogie (grands portraits, traits arrondis, barre) et Réseau (vignettes, filtres, survol), blocs Personnalité et Convictions (radar à bandes, barres, comparer avec), bloc Relation (face-à-face, fils à perle), frise, blocs Encadré, Tableau, Image et Chronologie (V3.1-66, 67, 68, 70, 71, 72, 73) |
+| 7 · Mode solo | `JaugeCirculaire`, fiche compacte, fil, barre d'intention « Que fais-tu ? » (pastilles cliquables, `BulleFlottante`, `Dropdown forme="pastille"`), échange compris par le moteur (V3.2-10), pastille de jet dans le fil et réglage « DD et réussites » (`PastilleJet`, V3.2-20), réglage « Récit » de Gestion de campagne (`RecitPanel`, V3.2-5), ligne du tour et onglet « Changements » (`TurnSummaryRow`, `AnnulerTour`, `OngletChangements`, V3.2-27) |
+| 8 · Wiki visuel | épingles et calques de carte, carte et liste par couches (V3.1-78), Généalogie (grands portraits, traits arrondis, barre) et Réseau (vignettes, filtres, survol), blocs Personnalité et Convictions (radar à bandes, barres, comparer avec), bloc Relation (face-à-face, fils à perle), frise, blocs Encadré, Tableau, Image et Chronologie (V3.1-66, 67, 68, 70, 71, 72, 73), bloc Carte et tarifs (V3.2-9), bloc Pièces (V3.2-19) |
 | 9 · Outils du MJ | suivi d'initiative, table aléatoire et dé animé (V3.1-75), quête repliable (V3.1-76), musique : platine, bornes, fondus (V3.1-77), progression YouTube (V3.1-146), fiche de créature hors combat et en combat (V3.1-79), repaire et défenses (V3.1-147), budget de rencontre, assistant de création (chemin qui se ramifie, V3.1-49 ; caractéristiques, V3.1-52 ; équipement, V3.1-53 ; don de niveau, V3.1-118), accueil et personnalisation, statistiques du joueur (V3.1-91), éditeur des titres des joueurs (V3.1-92) |
 | 10 · Téléphone | feuille du bas (`FeuilleDuBas`), barre flottante, accueil du lecteur (`AccueilLecteur`) et consultées récemment, éditeur plein écran (`EditeurPleinEcran`) |
 
@@ -391,3 +391,13 @@ Ce que l'esquisse a vérifié contre le code et qui fait donc foi. Les propositi
 - **Deux comportements seulement** : sous 768 px et à partir de 768 px. Une tablette en portrait reçoit la mise en page desktop — zone d'ombre connue (~490 px pour la fenêtre de fiche à 820 px), à trancher avec la refonte.
 - **Piège CSS** : une liste qui défile dans un conteneur dont la largeur change pose `overflow-y: auto` **et** `overflow-x: hidden`, sinon une barre horizontale apparaît pendant la transition.
 
+
+## 12. L'écriture inclusive (AG-22)
+
+L'interface s'adresse à toute la table, quel que soit le genre de chaque personne. Trois niveaux, dans cet ordre de préférence :
+
+1. **Une tournure épicène** quand elle existe : « la table », « chaque membre », « les personnes invitées », « ton personnage », « la ou le MJ » évité au profit de « le MJ » (sigle épicène). Un verbe à l'infinitif ou un nom d'action évite souvent l'accord : « Inviter », « Invitation envoyée ».
+2. **Le point médian** quand aucune tournure ne tient : « joueur·euse », « joueur·euses », « invité·e ». Un seul point médian par mot ; jamais de parenthèses ni de barre oblique.
+3. **Pour un personnage précis**, l'accord suit son genre (`gender` de la fiche) ; le neutre prend « iel » et l'accord épicène ou au point médian. « Non précisé » se traite comme le neutre.
+
+En pratique : on écrit d'abord la phrase sans genre ; on ne recourt au point médian que si la phrase devient lourde. Les identifiants techniques ne sont pas concernés. Le récit de l'IA en solo suit la même règle (V3.2-5).

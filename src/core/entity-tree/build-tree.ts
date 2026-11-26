@@ -47,6 +47,8 @@ export interface EntityTreeNode {
   /** Concurrence optimiste (V2-G9) — porte jusqu'au client pour la requete de reordonnancement. */
   version: number;
   children: EntityTreeNode[];
+  /** AG-8 : une page du Livre de sessions dont le devoir n'est pas encore rendu. */
+  enCours?: true;
 }
 
 export interface EntityTreeGroup {

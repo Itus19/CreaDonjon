@@ -56,6 +56,16 @@ export interface SceneSketch {
   locationId: string;
 }
 
+/** V3.2-11 — une ligne de l'ardoise (`tab.ts`) : ce qui est dû, où, et à qui. */
+export interface SceneTabLine {
+  locationId: string;
+  /** Le libellé de l'offre de la carte (« Bière »). */
+  label: string;
+  priceCp: number;
+  /** Le nom de la personne qui a servi, si la phrase la désignait ; sinon dû « au lieu ». */
+  creditor: string | null;
+}
+
 export interface SceneState {
   /**
    * V3-B2 : passe de 1 a 2 en ajoutant `budgets`. V3-C2 : passe de 2 a 3 en
@@ -92,6 +102,40 @@ export interface SceneState {
    * regle, V3-D2).
    */
   weather: string | null;
+  /**
+   * V3.2-11 — l'ardoise de la personne qui joue, tous lieux confondus
+   * (`tab.ts`). Facultative et sans changer `__v` : une scène écrite avant
+   * ce ticket n'a simplement rien de dû.
+   */
+  tabs?: SceneTabLine[];
+  /**
+   * V3.2-19 — la pièce où se trouve le personnage, dans le lieu courant.
+   * `anchored` : elle vient du bloc « Pièces » de la page du lieu ; sinon
+   * c'est une esquisse (`roomSketches`). Facultative et sans changer `__v`,
+   * comme `tabs` : absente, on est dans le lieu sans pièce précise.
+   */
+  room?: SceneRoom | null;
+  /** V3.2-19 — les pièces inventées et pas encore entrées dans le wiki, avec leurs visites. Laissées derrière quand on change de lieu. */
+  roomSketches?: SceneRoomSketch[];
+  /**
+   * La fin du dernier repos long pris en dormant dans le récit, par entité
+   * (`sleepRest.ts`, règle des 16 heures). Facultative et sans changer `__v`.
+   */
+  lastLongRestEnd?: Record<string, GameTime>;
+}
+
+export interface SceneRoom {
+  locationId: string;
+  name: string;
+  description: string;
+  anchored: boolean;
+}
+
+export interface SceneRoomSketch {
+  locationId: string;
+  name: string;
+  description: string;
+  visits: number;
 }
 
 export const RECENT_EVENTS_KEPT = 5;
@@ -129,6 +173,26 @@ export const zSceneState = z.object({
   budgets: z.record(z.string(), zActionBudget),
   sketches: z.array(zSceneSketch),
   weather: z.string().min(1).nullable(),
+  tabs: z
+    .array(
+      z.object({
+        locationId: z.string().min(1),
+        label: z.string().min(1).max(160),
+        priceCp: z.number().int().nonnegative(),
+        creditor: z.string().min(1).max(160).nullable(),
+      })
+    )
+    .max(60)
+    .optional(),
+  room: z
+    .object({ locationId: z.string().min(1), name: z.string().min(1).max(80), description: z.string().max(600), anchored: z.boolean() })
+    .nullable()
+    .optional(),
+  roomSketches: z
+    .array(z.object({ locationId: z.string().min(1), name: z.string().min(1).max(80), description: z.string().max(600), visits: z.number().int().positive() }))
+    .max(40)
+    .optional(),
+  lastLongRestEnd: z.record(z.string(), zGameTime).optional(),
 });
 
 export function emptyScene(locationId: string, time: GameTime = { day: 1, hour: 8, minute: 0 }): SceneState {
@@ -283,6 +347,14 @@ export function sketchShouldAnchorForSpeaking(sketch: SceneSketch): boolean {
  * retrouvables : leur tirage est deja journalise (`world_update`), disparaitre
  * de `scene_states` ne les efface pas du journal.
  */
+/** V3.2-19 — changer de lieu laisse la pièce et les esquisses de pièces des autres lieux derrière. */
+export function dropRoomsOutsideLocation(scene: SceneState, locationId: string): SceneState {
+  const room = scene.room && scene.room.locationId === locationId ? scene.room : null;
+  const roomSketches = (scene.roomSketches ?? []).filter((r) => r.locationId === locationId);
+  if (room === (scene.room ?? null) && roomSketches.length === (scene.roomSketches ?? []).length) return scene;
+  return { ...scene, room, roomSketches };
+}
+
 export function dropSketchesOutsideLocation(scene: SceneState, locationId: string): SceneState {
   const kept = scene.sketches.filter((s) => s.locationId === locationId);
   if (kept.length === scene.sketches.length) return scene;

@@ -17,11 +17,15 @@ import type { EntityPortraitLayout } from "@/src/server/repos/entityPortraits";
 import { isWorldAdmin } from "@/src/server/services/permissions";
 import { listPlayerVisibleEntityIds } from "@/src/server/services/entities";
 import { timed } from "@/src/server/perf";
+import { getTrueName } from "@/src/server/repos/entityTrueNames";
 
 type TypedClient = SupabaseClient<Database>;
 
 export interface EntityWindowData {
+  /** AG-12 : pour le MJ, `name` et `aliases` sont le VRAI nom quand le nom pour la table est rempli. */
   entity: EntitySummary;
+  /** AG-12 : le nom que voit la table, `null` sans secret (toujours `null` pour qui n'est pas MJ). */
+  tableName: string | null;
   worldSlug: string;
   blocks: VisibleBlock[];
   relations: VisibleRelation[];
@@ -75,8 +79,8 @@ export async function getEntityWindowData(
   const entity = await timed("entityWindow/fiche", () => getEntityBySlug(supabase, world.id, entitySlug));
   if (!entity) return null;
 
-  const [blocks, relations, allEntities, worldCustomKinds, campaigns, portraitLayout, admin] = await timed(
-    "entityWindow/contenu (7 requetes en parallele)",
+  const [blocks, relations, allEntities, worldCustomKinds, campaigns, portraitLayout, admin, secret] = await timed(
+    "entityWindow/contenu (8 requetes en parallele)",
     () =>
       Promise.all([
         listVisibleBlocks(supabase, world.id, entity.id, user.id),
@@ -86,6 +90,8 @@ export async function getEntityWindowData(
         listCampaigns(supabase, world.id),
         getPortraitLayout(supabase, entity.id),
         isWorldAdmin(supabase, { worldId: world.id, userId: user.id }),
+        // AG-12 : une lecture par clé, que la RLS réserve au MJ.
+        getTrueName(supabase, entity.id),
       ])
   );
 
@@ -111,7 +117,8 @@ export async function getEntityWindowData(
     : undefined;
 
   return {
-    entity,
+    entity: secret ? { ...entity, name: secret.trueName, aliases: secret.trueAliases } : entity,
+    tableName: secret ? entity.name : null,
     worldSlug,
     blocks,
     relations,

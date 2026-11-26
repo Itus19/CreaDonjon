@@ -13,11 +13,13 @@ export interface CampaignRow {
   gm_user_id: string | null;
   mode: string;
   party_entity_id: string | null;
+  /** Réglages de table bruts (lus par `parseTableSettings`) : AG-10 en tire le niveau « Joueurs », sans requête de plus. */
+  table_settings: Json;
   created_at: string;
   updated_at: string;
 }
 
-const CAMPAIGN_COLUMNS = "id, world_id, name, ruleset_id, gm_user_id, mode, party_entity_id, created_at, updated_at";
+const CAMPAIGN_COLUMNS = "id, world_id, name, ruleset_id, gm_user_id, mode, party_entity_id, table_settings, created_at, updated_at";
 
 /**
  * `React.cache()` (audit P-01, meme motif que `listEntitiesForWorld`) —

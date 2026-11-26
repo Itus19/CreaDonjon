@@ -4,6 +4,8 @@ import { useState } from "react";
 import MapWorkspace from "./MapWorkspace";
 import Dropdown from "@/components/shared/Dropdown";
 import { VISIBILITY_OPTIONS } from "@/components/shared/visibilityOptions";
+import { useNiveauJoueurs } from "@/components/shared/NiveauJoueursProvider";
+import { optionsVisibilite } from "@/lib/ui/visibilitePastille";
 import type { BlockItem } from "@/components/blocks/EntityBlocks";
 import type { MapBlockData } from "@/src/core/schemas/blocks/map";
 import type { OtherEntityOption } from "@/components/entities/RelationsChips";
@@ -28,6 +30,7 @@ export default function CarteMapPanel({
   const [data, setData] = useState(block.data as MapBlockData);
   const [visibilityLevel, setVisibilityLevel] = useState(block.visibilityLevel);
   const [error, setError] = useState<string | null>(null);
+  const niveauJoueurs = useNiveauJoueurs();
 
   async function patch(overrides: { data?: MapBlockData; visibilityLevel?: string }) {
     setError(null);
@@ -61,7 +64,7 @@ export default function CarteMapPanel({
         {error && <p className="text-xs text-danger">{error}</p>}
         <Dropdown
           value={visibilityLevel}
-          options={VISIBILITY_OPTIONS}
+          options={optionsVisibilite(VISIBILITY_OPTIONS, niveauJoueurs, visibilityLevel)}
           onChange={(v) => patch({ visibilityLevel: v })}
           aria-label="Visibilité de la carte"
           triggerClassName="rounded-full border border-edge bg-panel-raised px-2 py-0.5 text-xs text-ink transition-colors hover:bg-panel"

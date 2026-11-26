@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <title>Catalogue — Éléments d'écran</title>
 <script src="./support.js"></script>
-<link rel="stylesheet" href="/_blob/3f5bb2c93af8e210d6729558aabc598e">
+<link rel="stylesheet" href="/_blob/a9862d2e87defb58154373bec53a4c7a">
 </head>
 <body>
 <x-dc>
@@ -170,12 +170,16 @@ code{font-family:'Geist Mono',ui-monospace,monospace;font-size:0.92em}
 <section id="chargement" class="flex scroll-mt-28 flex-col gap-4 rounded-2xl border border-edge bg-panel p-6">
 <div class="flex flex-wrap items-baseline justify-between gap-3">
 <h2 class="font-display text-2xl font-bold text-ink">Chargement</h2>
-<span class="text-xs text-ink-muted">WikiFicheSkeleton.tsx · EntityTree.tsx</span>
+<span class="text-xs text-ink-muted">WikiFicheSkeleton.tsx · SqueletteEcran.tsx · EntityTree.tsx</span>
 </div>
-<p class="max-w-3xl text-sm text-ink-soft">Squelette d'une fiche du wiki public : des blocs pâles qui pulsent. Un nom d'entité en cours de création pulse aussi, en accent, dans l'arborescence.</p>
+<p class="max-w-3xl text-sm text-ink-soft">Squelette d'une fiche du wiki public : des blocs pâles qui pulsent. Un nom d'entité en cours de création pulse aussi, en accent, dans l'arborescence. AG-23 : <code>SqueletteEcran</code> sert de <code>loading.tsx</code> aux écrans d'outils MJ et de règles (et à la fiche et aux règles du joueur) : la coquille et la barre latérale restent montées par le layout, seul le contenu est esquissé, avec ce que tout écran possède, un titre, une ligne d'aide et quatre rangées. Aucune valeur provisoire (règle C6 de <code>docs/CABLAGE.md</code>). Annoncé « Chargement de l'écran » aux lecteurs d'écran.</p>
 <div class="flex flex-wrap gap-x-6 gap-y-1 text-xs text-ink-muted"><span>Mouvement : <span class="text-ink">pulsation 2 s en boucle (<code>animate-pulse</code>), coupée si l'utilisateur réduit les animations</span></span></div>
 <div class="flex flex-wrap items-start gap-8"><div class="animate-pulse flex flex-col gap-3" style="width: 320px"><div class="h-7 w-2/3 rounded-md bg-panel-raised"></div><div class="h-3 w-full rounded bg-panel-raised"></div><div class="h-3 w-5/6 rounded bg-panel-raised"></div><div class="h-3 w-4/6 rounded bg-panel-raised"></div></div>
 <span class="animate-pulse text-sm text-accent">Nouvelle entité…</span></div>
+<div class="flex flex-col gap-1.5">
+<span class="text-xs font-semibold uppercase tracking-wider text-ink-muted">Squelette d'écran (<code>SqueletteEcran</code>)</span>
+<div class="rounded-lg bg-panel-sunken p-4" style="max-width: 520px"><div role="status" aria-label="Chargement de l'écran" class="flex animate-pulse flex-col gap-4 p-1"><div class="h-7 w-1/3 rounded-md bg-panel-raised" aria-hidden="true"></div><div class="h-3.5 w-1/2 rounded-md bg-panel" aria-hidden="true"></div><div class="mt-2 flex flex-col gap-3"><div class="h-10 rounded-md bg-panel" style="width: 100%" aria-hidden="true"></div><div class="h-10 rounded-md bg-panel" style="width: 92%" aria-hidden="true"></div><div class="h-10 rounded-md bg-panel" style="width: 96%" aria-hidden="true"></div><div class="h-10 rounded-md bg-panel" style="width: 78%" aria-hidden="true"></div></div></div></div>
+</div>
 
 </section>
 <section id="texte" class="flex scroll-mt-28 flex-col gap-4 rounded-2xl border border-edge bg-panel p-6">
@@ -289,7 +293,7 @@ code{font-family:'Geist Mono',ui-monospace,monospace;font-size:0.92em}
 </main>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":5600}}'>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":5980}}'>
 class Component extends DCLogic {
   constructor(props) {
     super(props);

@@ -22,6 +22,9 @@ import { zRelationsGraphBlockData } from "./relationsGraph";
 import { zTimelineBlockData } from "./timeline";
 import { zMapBlockData, DEFAULT_MAP_BLOCK_DATA } from "./map";
 import { zSessionJournalMetaBlockData } from "./sessionJournalMeta";
+import { zEquippableBlockData, DEFAULT_EQUIPPABLE_BLOCK_DATA } from "./equippable";
+import { zPriceListBlockData, DEFAULT_PRICE_LIST_BLOCK_DATA } from "./priceList";
+import { zRoomsBlockData, DEFAULT_ROOMS_BLOCK_DATA } from "./rooms";
 import { PERSONALITY_POLE_KEYS, WORLDVIEW_POLE_KEYS } from "@/src/core/psyche/keys";
 
 /**
@@ -101,6 +104,15 @@ import { PERSONALITY_POLE_KEYS, WORLDVIEW_POLE_KEYS } from "@/src/core/psyche/ke
  * redaction, seance reelle). Jamais dans "+ Ajouter un bloc"
  * (EntityBlocks.tsx l'exclut explicitement), pose une seule fois par
  * `assignJournalEntry` (V3.1-150).
+ * AG-19 (ADR 0107) : equippable — « Objet équipable », ce qu'un artéfact
+ * fait à la fiche de qui le porte (modificateurs, sorts accordés, actions à
+ * charges), lu par `effetsDeLObjet` quand l'objet est dans un sac.
+ * V3.2-9 (ADR 0110) : price_list — « Carte et tarifs » d'un lieu, la liste
+ * fermée de ce qu'on y achète et à quel prix, tirée une fois par le
+ * générateur Taverne puis figée (`src/core/rules/priceList.ts`).
+ * V3.2-19 : rooms — « Pièces » d'un lieu, les espaces d'un bâtiment avec
+ * leur description ; la narration solo y entre, et une pièce inventée par
+ * l'IA puis contrôlée par le moteur s'y ajoute (`src/core/rules/rooms.ts`).
  */
 export const BLOCK_TYPES = [
   "text",
@@ -125,6 +137,9 @@ export const BLOCK_TYPES = [
   "timeline",
   "map",
   "session_journal_meta",
+  "equippable",
+  "price_list",
+  "rooms",
 ] as const;
 export type BlockType = (typeof BLOCK_TYPES)[number];
 
@@ -151,6 +166,9 @@ export const DEFAULT_LAYOUT_BY_BLOCK_TYPE: Record<BlockType, BlockDisplayLayout>
   timeline: "timeline",
   map: "map",
   session_journal_meta: "key_values",
+  equippable: "key_values",
+  price_list: "table",
+  rooms: "key_values",
 };
 type BlockDisplayLayout = z.infer<typeof zBlockDisplay>["layout"];
 
@@ -177,6 +195,9 @@ const DATA_SCHEMA_BY_BLOCK_TYPE = {
   timeline: zTimelineBlockData,
   map: zMapBlockData,
   session_journal_meta: zSessionJournalMetaBlockData,
+  equippable: zEquippableBlockData,
+  price_list: zPriceListBlockData,
+  rooms: zRoomsBlockData,
 } satisfies Record<BlockType, z.ZodTypeAny>;
 
 const DEFAULT_DATA_BY_BLOCK_TYPE: Record<BlockType, unknown> = {
@@ -260,6 +281,9 @@ const DEFAULT_DATA_BY_BLOCK_TYPE: Record<BlockType, unknown> = {
     writtenAt: null,
     realSession: null,
   },
+  equippable: DEFAULT_EQUIPPABLE_BLOCK_DATA,
+  price_list: DEFAULT_PRICE_LIST_BLOCK_DATA,
+  rooms: DEFAULT_ROOMS_BLOCK_DATA,
 };
 
 /**

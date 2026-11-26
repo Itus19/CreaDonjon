@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import type { RandomTableBlockData } from "@/src/core/schemas/blocks/randomTable";
 import { nextEntryRange } from "@/src/core/tables/roll";
+import { lireTableImportee } from "@/src/core/tables/importTable";
 import type { TableEntry } from "@/src/core/tables/types";
 import { CURRENCY_ORDER, type CoinType } from "@/src/core/rules/currency";
 import { CURRENCY_LABELS_FR, formatTableEntryPrice } from "@/src/i18n/fr";
@@ -61,6 +62,21 @@ export default function RandomTableBlockEditor({
   const t = useTranslations("fiche.table");
   const reduit = useMatchMedia(REDUIT_QUERY);
   const [edition, setEdition] = useState(false);
+  const [erreurImport, setErreurImport] = useState<string | null>(null);
+
+  /** AG-21 : remplace les entrées par celles d'un fichier (texte ou JSON), lu dans le navigateur ; l'enregistrement habituel du bloc revalide. */
+  async function importer(fichier: File) {
+    setErreurImport(null);
+    try {
+      const lecture = lireTableImportee(await fichier.text());
+      if (!lecture.ok) return setErreurImport(lecture.erreur);
+      const { key, attribution, die, entries } = lecture.table;
+      onChange({ ...data, die, entries, ...(key ? { key } : {}), ...(attribution ? { attribution } : {}) });
+    } catch (e) {
+      console.error("Lecture du fichier de table impossible", e);
+      setErreurImport(t("importerErreur"));
+    }
+  }
   const [tirage, setTirage] = useState<Tirage | null>(null);
   const [figes, setFiges] = useState(0);
   const [sorties, setSorties] = useState<number[]>([]);
@@ -395,6 +411,21 @@ export default function RandomTableBlockEditor({
             </button>
           </div>
           <span className="text-xs text-ink-muted">{t("aide")}</span>
+          <label className="flex flex-col gap-1 text-xs text-ink-muted">
+            <span className="w-fit cursor-pointer rounded-full border border-edge px-3 py-1 text-ink transition-colors hover:bg-panel-raised">{t("importer")}</span>
+            <input
+              type="file"
+              accept=".txt,.json,text/plain,application/json"
+              className="sr-only"
+              onChange={(e) => {
+                const fichier = e.target.files?.[0];
+                e.target.value = "";
+                if (fichier) void importer(fichier);
+              }}
+            />
+            <span>{t("importerAide")}</span>
+          </label>
+          {erreurImport && <p className="text-xs text-danger">{erreurImport}</p>}
         </div>
       )}
     </div>

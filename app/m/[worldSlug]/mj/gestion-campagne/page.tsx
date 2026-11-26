@@ -9,6 +9,8 @@ import { isWorldAdmin } from "@/src/server/services/permissions";
 import CampaignsPanel from "@/components/shell/CampaignsPanel";
 import RegisterPrimaryWindow from "@/components/shell/RegisterPrimaryWindow";
 import FaconDeJouerPanel from "@/components/distance/FaconDeJouerPanel";
+import NiveauJoueursPanel from "@/components/shell/NiveauJoueursPanel";
+import RecitPanel from "@/components/shell/RecitPanel";
 import { getCampaignTableSettingsRaw } from "@/src/server/repos/campaigns";
 import { parseTableSettings } from "@/src/core/campaigns/tableSettings";
 
@@ -77,6 +79,10 @@ export default async function MjGestionCampagnePage({
       {campagne && reglages !== undefined && (
         <FaconDeJouerPanel worldSlug={worldSlug} campaignId={campagne.id} initial={parseTableSettings(reglages).play_style} />
       )}
+      {campagne && reglages !== undefined && gm && (
+        <NiveauJoueursPanel campaignId={campagne.id} initial={parseTableSettings(reglages).players_level} />
+      )}
+      {campagne && reglages !== undefined && gm && <RecitPanel campaignId={campagne.id} initial={parseTableSettings(reglages).recit} />}
     </div>
   );
 }

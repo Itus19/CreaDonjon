@@ -72,6 +72,8 @@ function toRow(r: AiProposalRawRow): AiProposalRow {
 export async function insertAiProposal(
   supabase: TypedClient,
   params: {
+    /** V3.2-27 : un identifiant choisi d'avance, quand le segment ajouté au wiki porte le même (ADR 0114). */
+    id?: string;
     worldId: string;
     campaignId: string | null;
     /** V3-C3 — le `session_event` qui a fait naître cette proposition, condition de « annuler ce tour » (V3-F2, pas encore fait) : sans lui, une mutation `auto_applied` ne serait pas retrouvable par son tour. */
@@ -90,6 +92,7 @@ export async function insertAiProposal(
   const { data, error } = await supabase
     .from("ai_proposals")
     .insert({
+      ...(params.id ? { id: params.id } : {}),
       world_id: params.worldId,
       campaign_id: params.campaignId,
       session_event_id: params.sessionEventId ?? null,
@@ -180,4 +183,10 @@ export async function updateAiProposalStatus(
     .maybeSingle();
   if (error) throw new Error(error.message);
   return data ? toRow(data) : null;
+}
+
+/** V3.2-27 — le texte d'une note du monde corrigée après coup : la proposition garde ce qui est réellement écrit. */
+export async function updateAiProposalPayload(supabase: TypedClient, params: { id: string; payload: Json }): Promise<void> {
+  const { error } = await supabase.from("ai_proposals").update({ payload: params.payload }).eq("id", params.id);
+  if (error) throw new Error(error.message);
 }

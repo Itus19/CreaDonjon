@@ -1,4 +1,5 @@
 import { detectEntityReferences, type LinkableEntity } from "../linker/detect";
+import { normalizeForMatching } from "../linker/normalize";
 
 /**
  * V3-B1 — Lire une intention ecrite en francais, et n'en rien resoudre.
@@ -38,6 +39,13 @@ export interface IntentAction {
   label: string;
   /** Ce qu'un joueur ECRIT pour la designer. Le premier terme n'a aucun privilege. */
   terms: string[];
+  /**
+   * V3.2-21 — les formes qui demandent le jet en toutes lettres (« jet
+   * d'Histoire », « test de Persuasion »). Seules elles déclenchent un jet
+   * SANS verbe au milieu d'une phrase ; un nom nu (`terms`) ne le fait que
+   * s'il est toute la phrase. Absent : aucune forme explicite.
+   */
+  explicitTerms?: string[];
 }
 
 export interface IntentTarget {
@@ -110,7 +118,7 @@ function linkable(items: readonly { id: string; terms: string[] }[]): LinkableEn
  * l'ordre du texte, la plus longue d'abord a position egale (V0-05) : on
  * herite donc de « épée longue » plutot que « épée » sans rien recoder.
  */
-function firstMatch<T extends { id: string; terms: string[] }>(
+export function firstMatch<T extends { id: string; terms: string[] }>(
   text: string,
   items: readonly T[],
   predicate: (item: T) => boolean = () => true
@@ -135,6 +143,11 @@ function indexedVerbs(verbs: readonly IntentVerb[]): (IntentVerb & { id: string 
   return verbs.map((verb, index) => ({ ...verb, id: String(index) }));
 }
 
+/** « Persuasion ! » ou « Histoire ? » se lisent comme « Persuasion », « Histoire ». */
+function withoutEndPunctuation(text: string): string {
+  return text.replace(/[\s.!?…]+$/u, "").trim();
+}
+
 export function interpretIntent(rawText: string, catalog: IntentCatalog): IntentProposal {
   const text = rawText.trim();
   const free = (reason: FreeIntentReason, wantedKind?: MechanicalIntentKind): FreeIntent =>
@@ -146,10 +159,19 @@ export function interpretIntent(rawText: string, catalog: IntentCatalog): Intent
   const targetHit = firstMatch(text, catalog.targets);
   const target = targetHit ? { target: targetHit.item, matchedText: targetHit.matchedText } : null;
 
-  // Aucun verbe : une action nommee seule suffit ("persuasion"), sinon on
-  // ne devine pas.
+  // Aucun verbe (V3.2-21) : une action ne se lit que si elle est demandée en
+  // toutes lettres (« jet d'Histoire », où qu'il soit dans la phrase) ou si
+  // son nom EST toute la phrase (« Persuasion ? »). Un nom pris au milieu
+  // d'une phrase (« je me raconte une histoire », « je range mon épée ») ne
+  // lance rien : ces mots sont trop courants pour valoir une demande de jet.
   if (!verbHit) {
-    const actionHit = firstMatch(text, catalog.actions);
+    const explicitHit = firstMatch(
+      text,
+      catalog.actions.map((a) => ({ ...a, terms: a.explicitTerms ?? [] }))
+    );
+    const nameHit = explicitHit ? null : firstMatch(text, catalog.actions);
+    const isWholeSentence = nameHit !== null && normalizeForMatching(nameHit.matchedText) === normalizeForMatching(withoutEndPunctuation(text));
+    const actionHit = explicitHit ?? (isWholeSentence ? nameHit : null);
     if (!actionHit) return free("aucun_verbe_reconnu");
     return {
       kind: "mechanical",

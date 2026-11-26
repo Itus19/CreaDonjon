@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import Dropdown from "@/components/shared/Dropdown";
-import type { EncounterMonsterSummary } from "@/src/server/services/encounters";
+import type { MonstreInitiative } from "@/src/server/services/encounters";
 import type { AjoutParticipant } from "@/lib/ui/initiativeApi";
 
 type Mode = "entity" | "statblock" | "custom";
@@ -18,14 +18,14 @@ export default function FormulaireAjout({
   onAjouter,
 }: {
   pcOptions: { id: string; name: string }[];
-  monsters: EncounterMonsterSummary[];
+  monsters: MonstreInitiative[];
   occupe: boolean;
   onAjouter: (ajout: AjoutParticipant) => Promise<boolean>;
 }) {
   const t = useTranslations("initiative");
   const [mode, setMode] = useState<Mode>("statblock");
   const [recherche, setRecherche] = useState("");
-  const [monstre, setMonstre] = useState<EncounterMonsterSummary | null>(null);
+  const [monstre, setMonstre] = useState<MonstreInitiative | null>(null);
   const [pcId, setPcId] = useState(pcOptions[0]?.id ?? "");
   const [nom, setNom] = useState("");
   const [ca, setCa] = useState("");
@@ -77,6 +77,7 @@ export default function FormulaireAjout({
           />
           {recherche && !monstre && (
             <div className="max-h-40 overflow-y-auto rounded-md border border-edge">
+              {trouves.length === 0 && <p className="px-2 py-1 text-xs text-ink-muted">{t("aucunMonstreTrouve")}</p>}
               {trouves.map((m) => (
                 <button key={m.key} type="button" onClick={() => setMonstre(m)} className="block w-full px-2 py-1 text-left text-xs text-ink hover:bg-panel-raised">
                   {m.name} ({t("fp", { fp: m.challengeRatingLabel })})

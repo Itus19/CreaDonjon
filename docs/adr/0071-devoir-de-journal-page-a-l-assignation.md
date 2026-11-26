@@ -31,3 +31,8 @@ Jusqu'ici (V2.1-3), assigner un devoir de journal n'écrivait qu'une ligne `pend
 - L'autrice garde son octroi après la validation ; le retirer reste un geste du MJ, comme pour toute fiche.
 - Limite connue : la RLS d'`entities` laisse tout membre du monde lire le **nom** d'une fiche. Le titre provisoire d'un brouillon (« Journal · date ») est donc lisible par l'API, jamais son contenu ni sa page. Il ne révèle qu'un devoir en cours, ce que le journal de la campagne dit déjà.
 - Coût (`docs/QUOTAS.md`) : une requête de plus par page joueuse (le devoir, dans la vague du layout) et une par filtre de visibilité côté joueur (les brouillons du monde, dans la vague existante).
+
+## Amendement (2026-11-23, AG-8)
+
+- Le sommaire montre aussi les brouillons dans le groupe « Livre de sessions », en tête et marqués « en cours d'écriture ». Même lecture qu'avant (les états `pending` s'ajoutent au filtre), puis le filtre de visibilité habituel : seuls l'autrice (octroi d'édition) et le MJ les voient. Le Livre public et la page la plus récente restent limités aux devoirs rendus.
+- « Devoir fait » prévient le MJ par une pastille sur l'outil Livre de sessions : le nombre de devoirs `written`, pas encore validés. Aucune table de notifications : l'état du devoir suffit. Coût : une lecture de comptage par chargement de page MJ, dans la vague existante du layout.

@@ -20,6 +20,8 @@ type TypedClient = SupabaseClient<Database>;
 export type AiUsagePurpose =
   | "solo_turn"
   | "solo_gm_question"
+  // V3.2-23 (ADR 0113) : faut-il un jet ? Un appel court avant chaque tour libre.
+  | "solo_classify"
   | "generate_npc"
   | "structure_rule"
   | "embed"
@@ -59,6 +61,14 @@ export interface AiUsageWindowStats {
 }
 
 /** Fenetre glissante pour la limite de debit (V1-F1) — index deja pose sur (user_id, created_at desc) par la migration 009. */
+/**
+ * V3.2-24 (choix de l'auteur, 26 novembre) : les appels qui ne comptent pas
+ * dans la limite de débit. Le classement « faut-il un jet ? » est court, ne
+ * produit aucun texte, et doublerait sinon le coût de chaque tour libre. Il
+ * reste journalisé comme les autres (règle 13).
+ */
+export const PURPOSES_HORS_LIMITE: readonly AiUsagePurpose[] = ["solo_classify"];
+
 export async function getAiUsageWindowStats(
   supabase: TypedClient,
   userId: string,
@@ -69,6 +79,7 @@ export async function getAiUsageWindowStats(
     .select("created_at")
     .eq("user_id", userId)
     .gte("created_at", sinceIso)
+    .not("purpose", "in", `(${PURPOSES_HORS_LIMITE.join(",")})`)
     .order("created_at", { ascending: true });
   if (error) throw new Error(error.message);
   const rows = data ?? [];

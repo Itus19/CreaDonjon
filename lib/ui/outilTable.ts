@@ -8,7 +8,7 @@
  */
 import type { TablePc, TableResource } from "@/src/server/services/tableParty";
 import { partagerEgalement } from "@/src/core/rules/partage";
-import { XP_LEVEL_THRESHOLDS, hasReachedNextLevel } from "@/src/core/rules/experience";
+import { hasReachedNextLevel } from "@/src/core/rules/experience";
 import { applyCurrencyDelta, CURRENCY_ORDER, type CoinType, type Currency } from "@/src/core/rules/currency";
 import { etatMourant, type EtatMourant } from "./etatMourant";
 
@@ -79,17 +79,6 @@ export function ligneRepliee(pc: TablePc): LigneRepliee {
     classes: pc.classesLabel,
     etat: etatMourant({ current: hp.current }, death_saves),
   };
-}
-
-// ---- XP (anneau de la carte) ----
-
-/** Plafond et part de l'anneau d'XP : même calcul que la fiche (PlayableCharacterSheet). */
-export function progressionXp(niveau: number, xp: number): { xpCeiling: number; xpPct: number } {
-  const index = Math.min(niveau, XP_LEVEL_THRESHOLDS.length) - 1;
-  const plancher = XP_LEVEL_THRESHOLDS[index] ?? 0;
-  const plafond = XP_LEVEL_THRESHOLDS[index + 1] ?? plancher;
-  const pct = plafond > plancher ? Math.min(100, Math.max(0, ((xp - plancher) / (plafond - plancher)) * 100)) : 100;
-  return { xpCeiling: plafond, xpPct: pct };
 }
 
 // ---- Fusion d'une relecture ----

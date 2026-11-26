@@ -14,7 +14,7 @@ import { SKILL_LABELS_FR } from "@/src/i18n/fr";
 import type { RuntimeState } from "@/src/core/schemas/runtimeState";
 import type { AdvantageState } from "@/src/core/rules/action";
 import type { BlockItem } from "@/components/blocks/EntityBlocks";
-import { XP_LEVEL_THRESHOLDS } from "@/src/core/rules/experience";
+import { jaugeXp } from "@/src/core/rules/experience";
 import { useCharacterSheetContext } from "@/components/blocks/useCharacterSheetContext";
 import { useReferenceChips, refIdentity } from "@/components/blocks/useReferenceChips";
 import { useDiceRoll } from "@/components/shell/DiceRollPanel";
@@ -279,6 +279,9 @@ export default function FicheJouableSolo({
       level: niveauTotal(character),
       exhaustion: remote?.runtimeState.state.exhaustion ?? 0,
       carriedLb: sheet.encumbrance.carried,
+      capacityLb: sheet.encumbrance.capacity,
+      encumbered: sheet.encumbrance.tier !== "none",
+      xp: remote?.runtimeState.state.xp ?? 0,
     });
   }, [character, sheet, remote]);
 
@@ -405,10 +408,8 @@ export default function FicheJouableSolo({
   const conditions = runtimeState?.conditions ?? [];
 
   const totalLevel = niveauTotal(character);
-  const levelIndex = Math.min(totalLevel, XP_LEVEL_THRESHOLDS.length) - 1;
-  const xpFloor = XP_LEVEL_THRESHOLDS[levelIndex] ?? 0;
-  const xpCeiling = XP_LEVEL_THRESHOLDS[levelIndex + 1] ?? xpFloor;
-  const xpCurrent = runtimeState?.xp ?? 0;
+  // AG-4 : le chemin vers le niveau suivant, jamais négatif (un PJ créé au niveau 3 sans PX affichait -900).
+  const xp = jaugeXp(totalLevel, runtimeState?.xp ?? 0);
 
   const speciesName = character.species ? (buildChips.get(refIdentity(character.species))?.name ?? null) : null;
   const backgroundName = character.background ? (buildChips.get(refIdentity(character.background))?.name ?? null) : null;
@@ -446,8 +447,8 @@ export default function FicheJouableSolo({
         hpCurrent={hpCurrent}
         hpMax={hpMax}
         level={totalLevel}
-        xpCurrent={xpCurrent - xpFloor}
-        xpCeiling={xpCeiling - xpFloor}
+        xpCurrent={xp.dansNiveau}
+        xpCeiling={xp.versSuivant}
         exhaustion={exhaustion}
         speed={`${sheet.speed.value} m`}
         proficiencyBonus={`${sheet.proficiencyBonus >= 0 ? "+" : ""}${sheet.proficiencyBonus}`}

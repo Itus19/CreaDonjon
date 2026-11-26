@@ -184,7 +184,7 @@ export default function FicheJouableEnTete({
           libelle={`Niv. ${level}`}
           valeur={xpCurrent.toLocaleString("fr-FR")}
           pct={pctXp}
-          titre={`${xpCurrent.toLocaleString("fr-FR")} XP — niveau ${level + 1} à ${xpCeiling.toLocaleString("fr-FR")}`}
+          titre={`${xpCurrent.toLocaleString("fr-FR")} / ${xpCeiling.toLocaleString("fr-FR")} XP vers le niveau ${level + 1}`}
         />
         {/* L'épuisement monte quand ça va mal : son anneau se remplit à l'envers des deux autres, d'où le ton d'alerte. */}
         <JaugeCirculaire libelle="Épuis." valeur={`${exhaustion}/6`} pct={pctEpuisement} ton="danger" titre={`Épuisement ${exhaustion} sur 6`} />

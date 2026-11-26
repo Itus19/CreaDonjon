@@ -4,7 +4,6 @@ import { lbToKg } from "@/src/core/rules/encumbrance";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import RangeeChiffree from "@/components/blocks/RangeeChiffree";
-import { XP_LEVEL_THRESHOLDS } from "@/src/core/rules/experience";
 import { applyCurrencyDelta, CURRENCY_ORDER, type CoinType } from "@/src/core/rules/currency";
 import { pvSousUnTiers } from "@/lib/ui/commandeE";
 import { etatMourant as lireEtatMourant } from "@/lib/ui/etatMourant";
@@ -14,7 +13,6 @@ import {
   fusionnerEtat,
   groupesDeCompteurs,
   ligneRepliee,
-  progressionXp,
   type DeltaPieces,
 } from "@/lib/ui/outilTable";
 import { lireBourse, posterGeste, relirePj, type Resultat } from "@/lib/ui/tableApi";
@@ -25,6 +23,7 @@ import type { DemandeSauvegarde } from "@/lib/ui/sauvegardes";
 import FeuilleToutelaTable, { type ModeToutelaTable } from "./FeuilleToutelaTable";
 import { useMatchMedia, WINDOWS_MOBILE_QUERY } from "./useMatchMedia";
 import { conditionLabel } from "@/src/core/rules/weaponMastery";
+import { enregistrerReglagesTable } from "@/lib/ui/reglesActives";
 
 const PILULE = "rounded-full border border-edge px-3 py-1 text-xs text-ink transition-colors hover:bg-panel disabled:opacity-50";
 const PETIT_BOUTON =
@@ -68,6 +67,7 @@ export default function OutilTable({
   const [d20, setD20] = useState<Record<string, number | null>>({});
   const [deplie, setDeplie] = useState<string | null>(null);
   const [feuille, setFeuille] = useState<ModeToutelaTable | null>(null);
+  const [erreurReserve, setErreurReserve] = useState<string | null>(null);
 
   function marquer(entityId: string, occupe: boolean) {
     setOccupes((prev) => ({ ...prev, [entityId]: occupe }));
@@ -124,11 +124,32 @@ export default function OutilTable({
     }
   }
 
+  /**
+   * AG-14 : un PJ passe en réserve, ou revient à la table. L'écran change
+   * tout de suite (C5) ; la liste entière part dans les réglages de la
+   * campagne, et un refus remet l'écran comme avant.
+   */
+  async function basculerReserve(pc: TablePc) {
+    if (!campaignId) return;
+    const avant = pcs;
+    const apres = pcs.map((p) => (p.entityId === pc.entityId ? { ...p, enReserve: !p.enReserve } : p));
+    setPcs(apres);
+    setErreurReserve(null);
+    const echec = await enregistrerReglagesTable(campaignId, { reserve: apres.filter((p) => p.enReserve).map((p) => p.entityId) }, t("erreurReserve"));
+    if (echec) {
+      setPcs(avant);
+      setErreurReserve(echec);
+    }
+  }
+
   if (!campaignId) {
     return <p className="text-sm italic text-ink-muted">{t("aucuneCampagne")}</p>;
   }
 
-  const cartes = pcs.map((pc) => (
+  const presents = pcs.filter((pc) => !pc.enReserve);
+  const enReserve = pcs.filter((pc) => pc.enReserve);
+
+  const cartes = presents.map((pc) => (
     <ContenuPj
       key={pc.entityId}
       worldSlug={worldSlug}
@@ -183,7 +204,7 @@ export default function OutilTable({
 
           {estTelephone ? (
             <ul className="no-scrollbar flex flex-col gap-2">
-              {pcs.map((pc, index) => (
+              {presents.map((pc, index) => (
                 <LigneTelephone
                   key={pc.entityId}
                   pc={pc}
@@ -193,18 +214,52 @@ export default function OutilTable({
                   onSoigner={() => geste(pc, "hp", { delta: 1 })}
                 >
                   {cartes[index]}
+                  <button type="button" onClick={() => void basculerReserve(pc)} className={`${PILULE} self-start text-ink-muted`}>
+                    {t("mettreEnReserve")}
+                  </button>
                 </LigneTelephone>
               ))}
             </ul>
           ) : (
             <div className="grid grid-cols-1 items-start gap-3 @min-[56rem]:grid-cols-2">
-              {pcs.map((pc, index) => (
+              {presents.map((pc, index) => (
                 <section key={pc.entityId} className="@container flex flex-col gap-3 rounded-md border border-edge/60 bg-panel-raised p-3">
                   <EnTetePj pc={pc} />
                   {cartes[index]}
+                  <button type="button" onClick={() => void basculerReserve(pc)} className={`${PILULE} self-start text-ink-muted`}>
+                    {t("mettreEnReserve")}
+                  </button>
                 </section>
               ))}
             </div>
+          )}
+
+          {/* AG-14 : les PJ en réserve, une ligne chacun ; rien n'est supprimé. */}
+          {enReserve.length > 0 && (
+            <section className="flex flex-col gap-2" aria-label={t("enReserve")}>
+              <div>
+                <span className="text-xs font-bold uppercase tracking-wide text-ink-muted">{t("enReserve")}</span>
+                <p className="text-xs text-ink-muted">{t("reserveAide")}</p>
+              </div>
+              <ul className="flex flex-col gap-1.5">
+                {enReserve.map((pc) => (
+                  <li key={pc.entityId} className="flex items-center justify-between gap-3 rounded-md border border-dashed border-edge px-3 py-2">
+                    <span className="min-w-0 truncate text-sm text-ink-soft">
+                      {pc.name} <span className="text-ink-muted">{t("niveau", { niveau: pc.level })}</span>
+                      {pc.playerName && <span className="text-ink-muted"> · {pc.playerName}</span>}
+                    </span>
+                    <button type="button" onClick={() => void basculerReserve(pc)} className={PILULE}>
+                      {t("remettreALaTable")}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+          {erreurReserve && (
+            <p role="alert" className="text-xs text-danger">
+              {erreurReserve}
+            </p>
           )}
         </>
       )}
@@ -346,7 +401,6 @@ function ContenuPj({
   const t = useTranslations("table");
   const etat = pc.runtimeState.state;
   const hpMax = pc.runtimeState.hpMax;
-  const { xpCeiling, xpPct } = progressionXp(pc.level, etat.xp);
   const groupes = groupesDeCompteurs(pc.resources);
   const encombrement = pc.sheet.encumbrance;
   const nomGroupe = { reposCourt: t("groupeReposCourt"), reposLong: t("groupeReposLong"), autres: t("groupeAutres") } as const;
@@ -369,10 +423,7 @@ function ContenuPj({
         hpLow={pvSousUnTiers(etat.hp.current, hpMax)}
         onChangeHp={(delta) => geste(pc, "hp", { delta })}
         xpCurrent={etat.xp}
-        xpCeiling={xpCeiling}
-        xpPct={xpPct}
         totalLevel={pc.level}
-        xpLevelThresholdsLength={XP_LEVEL_THRESHOLDS.length}
         onChangeXp={(delta) => geste(pc, "xp", { delta })}
         etatMourant={lireEtatMourant({ current: etat.hp.current }, etat.death_saves)}
         deathSaves={etat.death_saves}

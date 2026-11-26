@@ -16,6 +16,8 @@ import { CSS } from "@dnd-kit/utilities";
 import type { MusicBlockData, MusicTrack } from "@/src/core/schemas/blocks/music";
 import { PROVIDER_LABELS } from "@/src/core/music/embedUrl";
 import { useMusicPlayback, useMusicProgress } from "@/components/shell/MusicPlaybackContext";
+import { morceauVoisin } from "@/src/core/music/playlist";
+import { useTitresYouTube } from "./useTitresYouTube";
 import Checkbox from "@/components/shared/Checkbox";
 import {
   FONDU_PAR_DEFAUT_MS,
@@ -69,7 +71,7 @@ export default function MusicBlockEditor({
   const [error, setError] = useState<string | null>(null);
   const [courant, setCourant] = useState(0);
   const [ouvertId, setOuvertId] = useState<string | null>(null);
-  const { currentKey, play, stop } = useMusicPlayback();
+  const { currentKey, play, stop, playlist, allerAMorceau } = useMusicPlayback();
   const suivi = useMusicProgress();
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -94,6 +96,12 @@ export default function MusicBlockEditor({
 
   function aller(sens: 1 | -1) {
     if (tracks.length === 0) return;
+    // AG-20 : dans une playlist YouTube en cours, on passe d'un morceau à l'autre de la playlist.
+    if (playlistCourante) {
+      const voisin = morceauVoisin(playlistCourante.index, playlistCourante.ids.length, sens);
+      if (voisin !== null) allerAMorceau(voisin);
+      return;
+    }
     const suivant = (Math.min(courant, tracks.length - 1) + sens + tracks.length) % tracks.length;
     setCourant(suivant);
     if (piste && currentKey === cleDe(piste)) lancer(tracks[suivant]);
@@ -149,6 +157,9 @@ export default function MusicBlockEditor({
   const bornesPiste = piste ? texteBornes(piste.startSeconds, piste.endSeconds, { debut: t("debut"), fin: t("fin") }) : null;
   const service = piste ? capacites(piste.url).service : null;
   const joue = piste ? currentKey === cleDe(piste) : false;
+  const playlistCourante = piste && playlist && playlist.cle === cleDe(piste) ? playlist : null;
+  const titresLus = useTitresYouTube(playlistCourante?.ids ?? null);
+  const titreMorceau = (id: string, i: number) => playlistCourante?.titres[id] ?? titresLus[id] ?? t("morceau", { n: i + 1 });
   // V3.1-146 : YouTube seulement, et seulement la piste dont on relève la position.
   const progression =
     piste && capacites(piste.url).fondus && suivi.cle === cleDe(piste) ? progressionPiste(suivi.position, suivi.duree, piste.startSeconds, piste.endSeconds) : null;
@@ -161,7 +172,17 @@ export default function MusicBlockEditor({
             ♪
           </span>
           <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-semibold text-ink">{piste.title || t("sansTitre")}</div>
+            <div className="truncate text-sm font-semibold text-ink">
+              {playlistCourante
+                ? titreMorceau(playlistCourante.ids[playlistCourante.index] ?? "", playlistCourante.index)
+                : piste.title || t("sansTitre")}
+            </div>
+            {playlistCourante && (
+              <div className="truncate text-xs text-ink-muted">
+                {t("morceauSur", { n: playlistCourante.index + 1, total: playlistCourante.ids.length })}
+                {piste.title ? ` · ${piste.title}` : ""}
+              </div>
+            )}
             <div className="flex flex-wrap items-center gap-x-1.5 text-xs text-ink-muted">
               {service && <span className="rounded-full border border-edge px-2 py-0.5 text-ink-soft">{PROVIDER_LABELS[service]}</span>}
               <span>
@@ -207,6 +228,27 @@ export default function MusicBlockEditor({
             </button>
           </div>
         </div>
+      )}
+
+      {/* AG-20 : les morceaux de la playlist en cours, cliquables. */}
+      {playlistCourante && (
+        <ol aria-label={t("morceaux")} className="flex max-h-56 flex-col overflow-y-auto rounded-xl border border-edge">
+          {playlistCourante.ids.map((id, i) => (
+            <li key={`${id}-${i}`}>
+              <button
+                type="button"
+                onClick={() => allerAMorceau(i)}
+                aria-current={i === playlistCourante.index ? "true" : undefined}
+                className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm transition-colors hover:bg-panel-raised ${
+                  i === playlistCourante.index ? "font-semibold text-accent" : "text-ink-soft"
+                }`}
+              >
+                <span className="w-6 shrink-0 text-right text-xs tabular-nums text-ink-muted">{i + 1}</span>
+                <span className="min-w-0 truncate">{titreMorceau(id, i)}</span>
+              </button>
+            </li>
+          ))}
+        </ol>
       )}
 
       {tracks.length === 0 ? (

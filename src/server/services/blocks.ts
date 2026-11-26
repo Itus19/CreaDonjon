@@ -222,6 +222,32 @@ export async function createBlock(
   return { ok: true, block: toVisibleBlock(row) };
 }
 
+/** Cree un bloc puis lui donne tout de suite son contenu — le pas commun a `statblock`/`quest`/`price_list` (promotion d'un tirage, V3.2-10 carte tiree depuis le solo) (jamais `personality`/`worldview` : leurs poles passent par le journal de psyche, cf. `createPsycheBlock` plus bas). */
+export async function createBlockWithData(
+  supabase: TypedClient,
+  params: { entityId: string; blockType: string; label: string; visibilityLevel: string; visibilityScopeId: string | null; createdBy: string; data: unknown }
+): Promise<{ ok: true } | { ok: false }> {
+  const created = await createBlock(supabase, {
+    entityId: params.entityId,
+    blockType: params.blockType,
+    label: params.label,
+    visibilityLevel: params.visibilityLevel,
+    visibilityScopeId: params.visibilityScopeId,
+    createdBy: params.createdBy,
+  });
+  if (!created.ok) return { ok: false };
+  const saved = await updateBlockContent(supabase, {
+    id: created.block.id,
+    expectedVersion: created.block.version,
+    display: created.block.display,
+    data: params.data,
+    visibilityLevel: created.block.visibilityLevel,
+    visibilityScopeId: created.block.visibilityScopeId,
+    changedBy: params.createdBy,
+  });
+  return saved.ok ? { ok: true } : { ok: false };
+}
+
 /**
  * Recompose le nom de l'entite « Prenom Nom » quand le prenom ou le nom du
  * bloc `character` ont change (V3.1-48). Passe par `updateEntity` (droit

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { VIEW_AS_RETURN_COOKIE, VIEW_AS_RETURN_SESSION_COOKIE, captureReturnSession, startViewAs } from "@/src/server/services/viewAs";
+import { VIEW_AS_RETURN_COOKIE, VIEW_AS_RETURN_SESSION_COOKIE, VIEW_AS_RETURN_TO_COOKIE, captureReturnSession, startViewAs } from "@/src/server/services/viewAs";
+import { cheminInterne } from "@/src/core/accounts/cheminInterne";
 import { viewAsSchema } from "@/lib/auth/schemas";
 
 const REASON_STATUS = { self: 400, not_authorized: 403, not_found: 404, not_a_member: 403, ordinary_account: 400 } as const;
@@ -25,7 +26,7 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: "targetUserId requis." }, { status: 400 });
   }
-  const { targetUserId, campaignId } = parsed.data;
+  const { targetUserId, campaignId, returnTo } = parsed.data;
 
   const supabase = await createClient();
   const {
@@ -57,5 +58,9 @@ export async function POST(request: NextRequest) {
   response.cookies.set(VIEW_AS_RETURN_COOKIE, saved.refreshToken, cookieOptions);
   if (saved.sessionId) response.cookies.set(VIEW_AS_RETURN_SESSION_COOKIE, saved.sessionId, cookieOptions);
   else response.cookies.delete(VIEW_AS_RETURN_SESSION_COOKIE);
+  // AG-6 : la page de depart, seulement si elle reste dans l'app.
+  const retour = cheminInterne(returnTo);
+  if (retour) response.cookies.set(VIEW_AS_RETURN_TO_COOKIE, retour, cookieOptions);
+  else response.cookies.delete(VIEW_AS_RETURN_TO_COOKIE);
   return response;
 }

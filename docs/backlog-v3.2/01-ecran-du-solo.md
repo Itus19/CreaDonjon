@@ -87,3 +87,50 @@ Vérifié au navigateur : trois points animés pendant les 11 s du modèle local
 - [x] Un tour refusé garde le texte, et le dit.
 
 *Fait le 18 novembre.* La question au MJ vidait déjà la zone (`changeText("")`) ; le tour joué et le dé annoncé l'avaient oublié. Même appel, au même endroit : **après** la réponse du serveur, jamais avant — un refus sort plus haut et rend sa phrase au joueur. Vérifié au navigateur : la zone est vide après le tour.
+
+---
+
+### ☑ V3.2-20 — Le jet demandé se lance depuis le récit, DD et issue masqués au choix · `M` · sans modèle IA
+
+**Constaté le 25 novembre.** « Le lanceur de dés s'est ouvert automatiquement et a donc caché l'écran central. » Quand le moteur demandait un jet, `IntentBar` ouvrait l'outil de dés par-dessus le fil, et le rouvrait encore pour les dégâts d'une attaque qui touche.
+
+**Décidé par l'auteur, le 25 novembre** (canevas d'esquisses : https://claude.ai/artifact/SXFnxb2cctxMo2VciqttBm) :
+- **Option C, la pastille** : le jet se lance d'une pastille posée dans le fil, **juste sous la phrase du joueur**, sans phrase de mise en scène avant (donc aucun appel d'IA en plus). Le dé y défile, puis se fige.
+- **Le DD et l'issue masqués par défaut** : « c'est le récit qui le dira ». Un **réglage de partie** les montre pour qui le veut.
+
+**Fait.**
+- `PastilleJet.tsx` (nouveau) : un clic encaisse par la route de l'outil de dés (`encaisserDepuisFiche`), le carré de dé (`CarreDe`, `useBruit`) défile au moins 450 ms, se fige sur le naturel tiré par le serveur, et le résultat reste 1,2 s avant que la carte du jet prenne le relais. Mouvement réduit : ni défilement ni pause. Une fenêtre de réaction (V3.1-216) laisse la pastille « en attente des réactions ».
+- `IntentBar.tsx` : l'outil de dés ne s'ouvre plus ni à la pose d'une demande ni pour des dégâts chaînés. Il reste derrière le bouton dé de la barre, et l'annonce d'un dé à la main ne change pas.
+- Réglage `solo_show_outcome` dans `campaigns.table_settings` (JSON existant, **aucune migration**), défaut `false`, écrit par la route des réglages de table (administrateur du monde). Il se bascule depuis la dernière rangée de la barre (« DD et réussites : masqués »).
+- Réglage coupé, le fil tait le DD (ou la CA) et l'issue (`factSansIssue`, noyau pur, testé), le total reste en encre, et l'en-tête de la demande tait le DD. **Le moteur, lui, calcule toujours l'issue et la donne au narrateur** : masquer ne change que l'écran.
+- La phrase du joueur s'affiche désormais en bulle au-dessus d'un tour à jet (`FilItem.actionText`), puisque c'est sous elle que la pastille se pose.
+
+**Le dé n'attend plus le récit** (demandé le 26 novembre). Avant, l'encaissement attendait la narration avant de répondre : avec un modèle local, le dé défilait une quinzaine de secondes alors que le serveur le connaissait déjà. Désormais la pastille et l'outil de dés encaissent avec `narrer: false`, affichent le dé tout de suite, puis demandent le récit à `POST /api/solo/tour/[eventId]/raconter`. Cette route relit les faits dans le journal (`reconstructTurnForNarration`), ne relance rien, et refuse d'écrire une seconde première narration (409). Pendant que le modèle écrit, le fil montre son attente habituelle. Coût : une invocation de plus par jet et trois lectures légères. L'annonce d'un dé à la main garde son aller simple.
+
+**Critères d'acceptation**
+- [x] Un jet demandé ne recouvre plus l'écran central : il se lance d'une pastille sous la phrase du joueur.
+- [x] Le dé défile puis se fige sur le naturel du serveur ; rien sous `prefers-reduced-motion`.
+- [x] Par défaut, ni DD ni issue à l'écran ; le réglage les montre, et persiste pour la partie.
+- [x] Le narrateur reçoit toujours le DD et l'issue quand il y en a.
+- [x] Planche du catalogue à jour (`docs/catalogue/Solo.dc.html`, section `pastille-jet`).
+- [x] Le dé se fige dès que le serveur l'a tiré, sans attendre le récit ; une route de récit ne joue jamais de tour (test `turnIntent.noAi.test.ts`).
+
+---
+
+### ☑ V3.2-21 — Un nom de compétence ou d'arme au milieu d'une phrase ne lance plus de jet · `S` · sans modèle IA
+
+**Constaté le 25 novembre.** « Le moteur m'a demandé un jet d'Histoire, je ne sais pas pourquoi. » Sans verbe du lexique, `interpretIntent` lançait un jet dès qu'une phrase contenait le nom d'une action de la fiche : « histoire », « nature », « religion », « survie »… ou le nom d'une arme qu'on range.
+
+**Fait** (choix de l'auteur, le 26 novembre : ce correctif d'abord, le détecteur de sens par l'IA ensuite). Sans verbe, une action ne se lit plus que :
+- **en toutes lettres** : « jet d'Histoire », « test de Persuasion », où qu'ils soient dans la phrase (`IntentAction.explicitTerms`, élision et apostrophe courbe comprises) ;
+- **ou quand son nom est toute la phrase** : « Persuasion ? ».
+
+Le reste est une action libre, avec sa raison. Avec un verbe, rien ne change. Les tests et sauvegardes de caractéristique (« test de Force ») étaient déjà des formes explicites.
+
+Ce correctif reste le filet du futur détecteur : il sert quand aucun modèle ne répond.
+
+**Critères d'acceptation**
+- [x] « je me raconte une histoire », « je range mon épée » : action libre, aucun jet.
+- [x] « je tente un jet de persuasion sur le tavernier » : test de Persuasion, sur le tavernier.
+- [x] « Persuasion ! » seul : test de Persuasion.
+- [x] Les verbes du lexique et le choix de l'arme nommée marchent comme avant (`intent.test.ts`).

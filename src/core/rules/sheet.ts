@@ -121,6 +121,15 @@ export function spellNumbers(abilityMod: number, proficiencyBonus: number): { sa
   return { saveDc: 8 + proficiencyBonus + abilityMod, attackBonus: proficiencyBonus + abilityMod };
 }
 
+/**
+ * Un objet dont les effets comptent : équipé (ou porté, pour un objet qui
+ * n'exige pas d'être équipé, AG-19), et lié s'il demande un lien
+ * (harmonisation). Un objet harmonisable non lié n'apporte rien.
+ */
+export function objetActif(e: Pick<EquippedItem, "equipped" | "requiresAttunement" | "attuned">): boolean {
+  return e.equipped && (!e.requiresAttunement || e.attuned === true);
+}
+
 export function layerForFeatureSource(source: string): Layer {
   return source.startsWith("class:") ? 3 : 5;
 }
@@ -301,6 +310,8 @@ export interface EquippedItem {
   resources?: RuleResource[];
   requiresAttunement?: boolean;
   attuned?: boolean;
+  /** AG-19 (ADR 0107) : sorts accordés par l'objet (bloc « Objet équipable » d'un artéfact), comptés équipé, et lié s'il demande un lien. */
+  spells?: FeatureSpell[];
   /** V3.1-155 : la catégorie d'armure de l'objet (`Shield` pour un bouclier) — la CA sans armure en dépend. */
   armorCategory?: "Light" | "Medium" | "Heavy" | "Shield";
 }
@@ -785,7 +796,7 @@ export function characterSheet(
   const bruts: Brut[] = [
     ...features.flatMap((f) => f.modifiers.map((m): Brut => ({ m, origin: f.source }))),
     ...savingThrowProficiencyMods.map((m): Brut => ({ m })),
-    ...equipment.filter((e) => e.equipped).flatMap((e) => e.modifiers.map((m): Brut => ({ m }))),
+    ...equipment.filter(objetActif).flatMap((e) => e.modifiers.map((m): Brut => ({ m }))),
     ...activeEffects.flatMap((e) => {
       const origin = e.ruleKey ? features.find((f) => f.key === e.ruleKey)?.source : undefined;
       return e.modifiers.map((m): Brut => (origin ? { m, origin } : { m }));
@@ -1000,7 +1011,12 @@ export function characterSheet(
     };
   }
 
-  const grantedSpells: GrantedSpell[] = features.flatMap((f) =>
+  // AG-19 : un objet actif accorde ses sorts comme une aptitude, sous sa clé d'objet (`item:<id>`).
+  const sourcesDeSorts = [
+    ...features,
+    ...equipment.filter(objetActif).map((e) => ({ key: `item:${e.key}`, label: e.label, spells: e.spells })),
+  ];
+  const grantedSpells: GrantedSpell[] = sourcesDeSorts.flatMap((f) =>
     (f.spells ?? [])
       .filter((s) => s.atLevel <= (s.classKey ? (build.classes.find((c) => c.key === s.classKey)?.level ?? 0) : totalLevel))
       .map((s) => ({
@@ -1081,7 +1097,7 @@ function computeResources(p: {
   const sources: { key: string; classKey: string | null; resources: readonly RuleResource[] }[] = [
     ...p.features.map((f) => ({ key: f.key, classKey: f.source.startsWith("class:") ? f.source.slice("class:".length) : null, resources: f.resources ?? [] })),
     ...p.equipment
-      .filter((e) => e.equipped && (!e.requiresAttunement || e.attuned === true))
+      .filter(objetActif)
       .map((e) => ({ key: e.key, classKey: null, resources: e.resources ?? [] })),
   ];
 

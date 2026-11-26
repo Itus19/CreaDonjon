@@ -8,6 +8,7 @@ const REASON_STATUS: Record<string, number> = {
   not_pending: 409,
   unsupported_kind: 422,
   block_not_found: 404,
+  forbidden: 403,
   conflict: 409,
 };
 

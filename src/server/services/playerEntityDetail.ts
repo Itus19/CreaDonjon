@@ -8,6 +8,7 @@ import { buildViewerForWorld } from "@/src/server/services/visibility";
 import type { BlockDisplay } from "@/src/core/schemas/blocks/envelope";
 import { zTextBlockData } from "@/src/core/schemas/blocks/text";
 import { infoboxEntityRefIds, zInfoboxBlockData } from "@/src/core/schemas/blocks/infobox";
+import { retirerCiblesCachees } from "@/src/core/linker/refsCachees";
 import { collectRefTargetIds } from "@/src/core/linker/refTargets";
 import { RELATION_LABELS_FR } from "@/src/i18n/fr";
 import { type BlockRow, listBlocksForEntity } from "@/src/server/repos/blocks";
@@ -399,7 +400,11 @@ export async function getPlayerEntityDetail(
   }
   const entityExcerpts = await resolveEntityRefExcerpts(supabase, [...referencedEntityIds], viewer);
 
-  const blocksWithQuestRefs = blocksWithTimelineCalendar.map((block) => {
+  // AG-11 : un lien vers une fiche que ce joueur ne voit pas devient du
+  // texte, sans l'identifiant de la fiche, avant tout le reste.
+  const fichesVisibles = new Set(entityLookup.keys());
+  const blocksWithQuestRefs = blocksWithTimelineCalendar.map((brut) => {
+    const block = { ...brut, data: retirerCiblesCachees(brut.blockType, brut.data, fichesVisibles) };
     if (block.blockType === "statblock") return resolveLair(block, entityLookup);
     if (block.blockType === "text") {
       const text = zTextBlockData.safeParse(block.data);

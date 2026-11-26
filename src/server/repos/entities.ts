@@ -365,3 +365,22 @@ export async function searchEntitiesInWorld(
   if (error) throw new Error(error.message);
   return data;
 }
+
+/**
+ * AG-13 — écrit les rangs de glisser-déposer de quelques fiches d'un monde
+ * (le Livre de sessions : une page par séance, donc quelques dizaines au
+ * plus). Une écriture par fiche, en parallèle : PostgREST n'a pas de mise à
+ * jour groupée à valeurs différentes. La RLS d'`entities` s'applique ;
+ * l'appelant a déjà vérifié le MJ.
+ */
+export async function updateEntityDisplayOrders(
+  supabase: TypedClient,
+  worldId: string,
+  rows: readonly { id: string; displayOrder: number }[]
+): Promise<void> {
+  const results = await Promise.all(
+    rows.map((r) => supabase.from("entities").update({ display_order: r.displayOrder }).eq("id", r.id).eq("world_id", worldId).is("deleted_at", null))
+  );
+  const echec = results.find((r) => r.error);
+  if (echec?.error) throw new Error(echec.error.message);
+}

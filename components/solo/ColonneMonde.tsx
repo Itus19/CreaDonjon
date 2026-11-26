@@ -9,12 +9,16 @@ import { filtrerWiki } from "@/lib/ui/solo";
 import Tabs, { TabPanel } from "@/components/shared/Tabs";
 import PlayerRulesSidebar from "@/components/rules/PlayerRulesSidebar";
 import { ZONE_LABELS } from "@/components/solo/ScenePanel";
+import { useSoloContexte } from "@/components/solo/SoloContexte";
+import { AvatarPresent, libellePerception } from "@/components/solo/RondsPresents";
+import OngletChangements from "@/components/solo/OngletChangements";
 import type { QuestColumnEntry, SceneView, WikiColumnGroup } from "@/lib/solo/types";
 
 /**
  * V3-D3 — La colonne gauche : le monde connu. Quatre onglets de classeur,
  * repris à l'identique de l'esquisse (`components/solo/esquisse/`, jetable,
- * jamais importée ici) : Wiki, Quêtes, Présents, Règles.
+ * jamais importée ici) : Wiki, Quêtes, Présents, Règles ; et depuis V3.2-27,
+ * Changements (ce que la séance a écrit dans le monde, ADR 0114).
  *
  * **Aucun marqueur de découverte.** Dépend d'une donnée que rien n'écrit
  * encore — `entity_discoveries` (V3-C4). Ce composant l'omet plutôt que
@@ -34,7 +38,6 @@ const PANNEAU = "mt-2 rounded-lg border border-edge bg-panel p-3";
 const LIGNE_CLIQUABLE =
   "flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-panel-sunken";
 
-type Onglet = "wiki" | "quetes" | "presents" | "regles";
 
 function OngletWiki({ worldSlug, groups }: { worldSlug: string; groups: WikiColumnGroup[] }) {
   const [ouverteId, setOuverteId] = useState<string | null>(null);
@@ -145,17 +148,25 @@ function OngletPresents({
   return (
     <div className="flex flex-col gap-2">
       {present.map((p) => (
-        <div key={p.entityId} className="flex flex-col gap-0.5 rounded-md border border-edge p-2">
-          <span className="text-sm text-ink">{p.name}</span>
-          <span className="text-xs text-ink-muted">
-            {p.disposition ? `${p.disposition} · ` : ""}
-            {ZONE_LABELS[p.zone]}
-          </span>
+        // V3.2-14 : le même rond que dans la bande du Monde replié — ouvert ou fermé, une personne a la même tête.
+        <div key={p.entityId} className="flex items-center gap-2 rounded-md border border-edge p-2">
+          <AvatarPresent nom={p.name} perception={p.perception ?? null} esquisse={false} />
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <span className="text-sm text-ink">{p.name}</span>
+            <span className="text-xs text-ink-muted">
+              {libellePerception(p.perception ?? null) ?? p.disposition ?? ""}
+              {(p.perception || p.disposition) && " · "}
+              {ZONE_LABELS[p.zone]}
+            </span>
+          </div>
         </div>
       ))}
       {sketches.map((s) => (
         <div key={s.id} className="flex flex-col gap-1 rounded-md border border-dashed border-edge p-2">
-          <span className="text-sm text-ink">{s.name}</span>
+          <span className="flex items-center gap-2 text-sm text-ink">
+            <AvatarPresent nom={s.name} perception={null} esquisse />
+            {s.name}
+          </span>
           <span className="text-xs text-ink-muted">
             {s.trait} · {ZONE_LABELS[s.zone]}
           </span>
@@ -188,7 +199,8 @@ export default function ColonneMonde({
   present: SceneView["present"];
   sketches: SceneView["sketches"];
 }) {
-  const [onglet, setOnglet] = useState<Onglet>("wiki");
+  // V3.2-12 : l'onglet vit dans le contexte de la coquille, pour que la bande du Monde replié puisse rouvrir le volet sur un onglet.
+  const { ongletMonde: onglet, choisirOngletMonde: setOnglet } = useSoloContexte();
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -202,6 +214,7 @@ export default function ColonneMonde({
           { value: "quetes", label: "Quêtes" },
           { value: "presents", label: "Présents" },
           { value: "regles", label: "Règles" },
+          { value: "changements", label: "Changements" },
         ]}
       />
       <TabPanel idPrefix="colonne-monde" value={onglet} className={`${PANNEAU} min-h-0 flex-1 overflow-y-auto`}>
@@ -209,6 +222,7 @@ export default function ColonneMonde({
         {onglet === "quetes" && <OngletQuetes quests={quests} />}
         {onglet === "presents" && <OngletPresents present={present} sketches={sketches} worldSlug={worldSlug} campaignId={campaignId} />}
         {onglet === "regles" && <PlayerRulesSidebar worldSlug={worldSlug} />}
+        {onglet === "changements" && <OngletChangements campaignId={campaignId} />}
       </TabPanel>
     </div>
   );

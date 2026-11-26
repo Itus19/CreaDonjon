@@ -2,8 +2,9 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
 import { applyCurrencyDelta, isStandardCoin, type CurrencyDelta, type CurrencySystem } from "@/src/core/rules/currency";
-import type { InventoryBlockData } from "@/src/core/schemas/blocks/inventory";
-import { listBlocksForEntity } from "@/src/server/repos/blocks";
+import { zInventoryBlockData, type InventoryBlockData } from "@/src/core/schemas/blocks/inventory";
+import { settleTrade, type Trade, type TradeMissing } from "@/src/core/rules/trade";
+import { listBlocksByTypeForEntities, listBlocksForEntity } from "@/src/server/repos/blocks";
 import { createBlock, updateBlockContent } from "@/src/server/services/blocks";
 
 type TypedClient = SupabaseClient<Database>;
@@ -91,35 +92,104 @@ export async function changeCurrency(
   if (!currency) return { error: "insufficient_funds" };
 
   if (!current) {
-    const created = await createBlock(supabase, {
-      entityId: params.entityId,
-      blockType: "inventory",
-      label: "Inventaire",
-      visibilityLevel: "public",
-      visibilityScopeId: null,
-      createdBy: params.actorUserId,
-    });
-    if (!created.ok) return { error: created.reason === "forbidden" ? "forbidden" : "conflict" };
-    current = {
-      id: created.block.id,
-      version: created.block.version,
-      display: created.block.display as unknown as Json,
-      data: EMPTY_INVENTORY,
-      visibilityLevel: created.block.visibilityLevel,
-      visibilityScopeId: created.block.visibilityScopeId,
-    };
+    const created = await createInventory(supabase, params.entityId, params.actorUserId);
+    if ("error" in created) return created;
+    current = created;
   }
   return writeInventory(supabase, current, { ...base, currency }, params.actorUserId);
+}
+
+/** Pose un bloc `inventory` vide sur une fiche qui n'en a pas (dépôt, achat). */
+async function createInventory(supabase: TypedClient, entityId: string, actorUserId: string): Promise<LoadedInventory | { error: InventoryActionError }> {
+  const created = await createBlock(supabase, {
+    entityId,
+    blockType: "inventory",
+    label: "Inventaire",
+    visibilityLevel: "public",
+    visibilityScopeId: null,
+    createdBy: actorUserId,
+  });
+  if (!created.ok) return { error: created.reason === "forbidden" ? "forbidden" : "conflict" };
+  return {
+    id: created.block.id,
+    version: created.block.version,
+    display: created.block.display as unknown as Json,
+    data: EMPTY_INVENTORY,
+    visibilityLevel: created.block.visibilityLevel,
+    visibilityScopeId: created.block.visibilityScopeId,
+  };
+}
+
+/**
+ * V3.2-8 (ADR 0110) — règle un échange (`settleTrade`) et l'écrit : une
+ * révision du bloc `inventory`, par le même chemin que la bourse. Un échange
+ * court n'écrit rien et rend ce qui manque : ce n'est pas une erreur, c'est
+ * un fait du tour (V3.2-10). Les identifiants des objets reçus sont tirés ici
+ * (`crypto.randomUUID`), jamais par le client.
+ */
+export async function applyTrade(
+  supabase: TypedClient,
+  params: { entityId: string; trade: Trade; actorUserId: string; system: CurrencySystem }
+): Promise<InventoryActionOutcome | { status: "short"; missing: TradeMissing[] } | { error: InventoryActionError }> {
+  let current = await loadInventory(supabase, params.entityId);
+  const outcome = settleTrade(current?.data ?? EMPTY_INVENTORY, params.trade, () => crypto.randomUUID(), params.system);
+  if (outcome.status === "short") return outcome;
+  if (!current) {
+    const created = await createInventory(supabase, params.entityId, params.actorUserId);
+    if ("error" in created) return created;
+    current = created;
+  }
+  return writeInventory(supabase, current, outcome.inventory, params.actorUserId);
+}
+
+/**
+ * V3.2-8 — l'inventaire d'une fiche tel qu'il est en base, pour l'annulation
+ * d'un tour (`undo_before`). Une seule lecture ciblée (bloc `inventory`) ;
+ * `null` si la fiche n'en a pas encore.
+ */
+export async function readInventorySnapshot(supabase: TypedClient, entityId: string): Promise<InventoryBlockData | null> {
+  const row = (await listBlocksByTypeForEntities(supabase, [entityId], "inventory"))[0];
+  if (!row) return null;
+  const parsed = zInventoryBlockData.safeParse(row.data);
+  if (!parsed.success) {
+    console.error("Inventaire illisible, non relevé pour l'annulation", entityId, parsed.error.issues);
+    return null;
+  }
+  return parsed.data;
+}
+
+/**
+ * V3.2-8 — « Annuler ce tour » remet l'inventaire relevé au début du tour.
+ * `null` relevé : la fiche n'avait pas d'inventaire, il revient vide. Rien
+ * n'est écrit si l'inventaire n'a pas bougé (pas de révision inutile).
+ * Rend `true` si une écriture a eu lieu.
+ */
+export async function restoreInventory(
+  supabase: TypedClient,
+  params: { entityId: string; before: InventoryBlockData | null; actorUserId: string }
+): Promise<boolean> {
+  const current = await loadInventory(supabase, params.entityId);
+  if (!current) return false;
+  const target = params.before ?? EMPTY_INVENTORY;
+  if (JSON.stringify(current.data) === JSON.stringify(target)) return false;
+  const written = await writeInventory(supabase, current, target, params.actorUserId);
+  if ("error" in written) {
+    console.error("Inventaire non restauré à l'annulation", params.entityId, written.error);
+    return false;
+  }
+  return true;
 }
 
 /** Équipe ou déséquipe un objet de l'inventaire. */
 export async function setItemEquipped(
   supabase: TypedClient,
-  params: { entityId: string; itemId: string; equipped: boolean; actorUserId: string }
+  params: { entityId: string; itemId: string; equipped?: boolean; attuned?: boolean; actorUserId: string }
 ): Promise<InventoryActionOutcome | { error: InventoryActionError }> {
   const current = await loadInventory(supabase, params.entityId);
   if (!current) return { error: "item_not_found" };
   if (!current.data.items.some((item) => item.id === params.itemId)) return { error: "item_not_found" };
-  const items = current.data.items.map((item) => (item.id === params.itemId ? { ...item, equipped: params.equipped } : item));
+  // AG-19 : l'harmonisation se coche au même endroit que l'équipement.
+  const changement = { ...(params.equipped !== undefined ? { equipped: params.equipped } : {}), ...(params.attuned !== undefined ? { attuned: params.attuned } : {}) };
+  const items = current.data.items.map((item) => (item.id === params.itemId ? { ...item, ...changement } : item));
   return writeInventory(supabase, current, { ...current.data, items }, params.actorUserId);
 }

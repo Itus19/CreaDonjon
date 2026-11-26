@@ -18,6 +18,8 @@ export interface RulesetSelection {
   classes: { key: string; level: number; subclass?: string }[];
   equipmentKeys: string[];
   spellKeys: string[];
+  /** AG-19 : les objets du sac qui pointent vers une fiche du wiki (artéfacts), pour leur bloc « Objet équipable ». */
+  artifactIds: string[];
 }
 
 export function rulesetSelectionFromBlocks(
@@ -39,6 +41,10 @@ export function rulesetSelectionFromBlocks(
       .map(itemRef)
       .filter((r): r is { kind: "rule"; key: string } => r?.kind === "rule")
       .map((r) => r.key),
+    artifactIds: (inventory?.items ?? [])
+      .map(itemRef)
+      .filter((r): r is { kind: "entity"; id: string } => r?.kind === "entity")
+      .map((r) => r.id),
     spellKeys: (spellcasting?.known ?? [])
       .map((k) => k.ref)
       .filter((r): r is { kind: "rule"; key: string } => r.kind === "rule")
@@ -62,6 +68,7 @@ export function selectionBody(s: RulesetSelection): {
   classes: { key: string; level: number; subclass?: string }[];
   equipmentKeys: string[];
   spellKeys: string[];
+  artifactIds: string[];
 } {
   return {
     species: s.species,
@@ -69,15 +76,16 @@ export function selectionBody(s: RulesetSelection): {
     classes: s.classes,
     equipmentKeys: nonEmptyKeys(s.equipmentKeys),
     spellKeys: nonEmptyKeys(s.spellKeys),
+    artifactIds: [...new Set(nonEmptyKeys(s.artifactIds))],
   };
 }
 
 /** Identite d'une selection : deux selections de meme cle donnent la meme reponse. */
 export function selectionKey(s: RulesetSelection): string {
-  return JSON.stringify([s.species, s.background, s.classes, [...nonEmptyKeys(s.equipmentKeys)].sort(), [...nonEmptyKeys(s.spellKeys)].sort()]);
+  return JSON.stringify([s.species, s.background, s.classes, [...nonEmptyKeys(s.equipmentKeys)].sort(), [...nonEmptyKeys(s.spellKeys)].sort(), [...new Set(nonEmptyKeys(s.artifactIds))].sort()]);
 }
 
 /** La selection demande-t-elle quelque chose ? (L'equipement se resout meme sans personnage, V1-C18.) */
 export function selectionHasAnything(s: RulesetSelection): boolean {
-  return Boolean(s.species || s.background || s.classes.length > 0 || nonEmptyKeys(s.equipmentKeys).length > 0);
+  return Boolean(s.species || s.background || s.classes.length > 0 || nonEmptyKeys(s.equipmentKeys).length > 0 || nonEmptyKeys(s.artifactIds).length > 0);
 }

@@ -1,4 +1,6 @@
 import "server-only";
+import { effetsDeLObjet } from "@/src/core/rules/objetEquipable";
+import { chargerArtefacts, type ArtefactsEquipables } from "@/src/server/services/artefacts";
 import { planResourceRegain } from "@/src/core/rules/resourceRegain";
 import type { OpenChoice, ResolvedChoices } from "@/src/core/rules/choices";
 import { choicesToRefresh, isValidRefreshAnswer, withoutRefresh } from "@/src/core/rules/choiceRefresh";
@@ -33,7 +35,7 @@ import {
   type AttackRollResult,
   type DamageRollResult,
 } from "@/src/core/rules/action";
-import { armorAcModifier, mapChosenSkillModifiers, weaponRollProperties, type WeaponData } from "@/src/core/rules/srdMapping";
+import { armorAcModifier, mapChosenSkillModifiers, weaponRollProperties, type ItemCost, type WeaponData } from "@/src/core/rules/srdMapping";
 import { totalCarriedWeight } from "@/src/core/rules/encumbrance";
 import { resolveScaledFormulaText } from "@/src/core/rules/scaling";
 import { formatFormulaNode } from "@/src/core/formula/format";
@@ -143,6 +145,8 @@ export interface CharacterActionContext {
   rulesetId: string;
   sheet: DerivedSheet;
   weaponByKey: Record<string, WeaponData | null>;
+  /** V3.2-10 : le prix unitaire des objets de règle du sac, déjà lu avec l'équipement (aucune lecture de plus) — pour la revente. */
+  costByKey: Record<string, ItemCost | null>;
   /** Total de des de vie par de ("d10" -> 5), pour l'initialisation et les repos longs. */
   hitDiceTotals: Record<string, number>;
   /** Choix non resolus (competences/langues/maitrise d'armes) du personnage — V2-G1, necessaire au repos long pour retrouver les cles de maitrise d'armes a effacer. */
@@ -211,8 +215,13 @@ export async function resolveCharacterActionContext(
     .map(itemRef)
     .filter((r): r is { kind: "rule"; key: string } => r?.kind === "rule")
     .map((r) => r.key);
+  // AG-19 : les objets qui pointent vers une fiche du wiki (artéfacts), lus avec leur bloc « Objet équipable ».
+  const artefactIds = (inventoryData?.items ?? [])
+    .map(itemRef)
+    .filter((r): r is { kind: "entity"; id: string } => r?.kind === "entity")
+    .map((r) => r.id);
   // Le ruleset assemble et l'equipement ne dependent pas l'un de l'autre (V3.1-62, C3).
-  const [assembled, { armor: armorByKey, weapon: weaponByKey, weight: weightByKey }] = await Promise.all([
+  const [assembled, { armor: armorByKey, weapon: weaponByKey, weight: weightByKey, cost: costByKey }, artefacts] = await Promise.all([
     assembleResolvedRuleset(
       supabase,
       rulesetId,
@@ -220,6 +229,7 @@ export async function resolveCharacterActionContext(
       locale
     ),
     resolveEquipmentData(supabase, rulesetId, equipmentKeys),
+    artefactIds.length > 0 ? chargerArtefacts(supabase, artefactIds) : Promise.resolve({} as ArtefactsEquipables),
   ]);
   const carriedWeight = totalCarriedWeight(inventoryData?.items ?? [], weightByKey);
 
@@ -227,6 +237,8 @@ export async function resolveCharacterActionContext(
   const dexMod = Math.floor((dexScore - 10) / 2);
   const equippedItems: EquippedItem[] = (inventoryData?.items ?? []).map((item) => {
     const ref = itemRef(item);
+    const artefact = ref?.kind === "entity" ? artefacts[ref.id] : undefined;
+    if (artefact) return effetsDeLObjet({ id: item.id, label: artefact.name, equipped: item.equipped ?? false, attuned: item.attuned ?? false }, artefact.data);
     const armor = ref?.kind === "rule" ? armorByKey[ref.key] : null;
     return {
       key: item.id,
@@ -330,6 +342,7 @@ export async function resolveCharacterActionContext(
     rulesetId,
     sheet,
     weaponByKey,
+    costByKey,
     hitDiceTotals,
     openChoices: grantedChoices.open,
     resolveChoicesWith: (choices) => resolveCharacterChoices(supabase, rulesetId, assembled, choices, characterLevel, classLevels, autresAptitudes),
@@ -898,7 +911,8 @@ export async function takeShortRest(
 /** Repos long : PV au maximum, moitie des des de vie recuperee, ressources et emplacements restaures, epuisement -1. */
 export async function takeLongRest(
   supabase: TypedClient,
-  params: { entityId: string; campaignId: string | null; actorUserId: string; locale: Locale }
+  /** `advanceClock: false` : le tour solo a déjà fait passer la nuit (`turnLoop.ts`, sommeil dans le récit). */
+  params: { entityId: string; campaignId: string | null; actorUserId: string; locale: Locale; advanceClock?: boolean }
 ): Promise<{ ok: true } | { error: ActionErrorReason }> {
   const ctx = await resolveCharacterActionContext(supabase, params.entityId, params.campaignId, params.locale);
   if (!ctx) return { error: "not_found" };
@@ -959,7 +973,7 @@ export async function takeLongRest(
     actor: "player",
     actorUserId: params.actorUserId,
   });
-  await advanceSceneClockForRest(supabase, params.campaignId, LONG_REST_MINUTES, params.actorUserId);
+  if (params.advanceClock !== false) await advanceSceneClockForRest(supabase, params.campaignId, LONG_REST_MINUTES, params.actorUserId);
   // V3.1-130 : un repos fait tomber les effets « jusqu'au repos » du personnage et décompte les autres.
   if (params.campaignId) await expireOwnEffectsAtRest(supabase, { entityId: params.entityId, campaignId: params.campaignId, rest: "long", actorUserId: params.actorUserId });
 

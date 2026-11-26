@@ -5,6 +5,7 @@ import type { ResolvedRuleset } from "@/src/core/rules/sheet";
 import type { ChoiceSource, FeatChoiceData } from "@/src/core/rules/choices";
 import type { ArmorData, ItemCost, WeaponData } from "@/src/core/rules/srdMapping";
 import { DEFAULT_CURRENCY_SYSTEM, type CurrencySystem } from "@/src/core/rules/currency";
+import type { EquippableBlockData } from "@/src/core/schemas/blocks/equippable";
 import { creerChargeurParLots } from "@/lib/chargement/chargeurParLots";
 import { selectionBody, selectionHasAnything, selectionKey, type RulesetSelection } from "@/lib/resolvedRuleset/selection";
 
@@ -58,6 +59,8 @@ export interface ResolvedRulesetView {
   featCatalog: Record<string, FeatChoiceData>;
   /** V3.1-219 (ADR 0102) : le système monétaire du monde (pièces, rôles, ordre de casse). */
   currencySystem: CurrencySystem;
+  /** AG-19 : par fiche d'artéfact du sac, son nom et son bloc « Objet équipable » (ceux que le lecteur voit). */
+  artefacts: Record<string, { name: string; data: EquippableBlockData }>;
 }
 
 export type { RulesetSelection };
@@ -78,6 +81,7 @@ const EMPTY: ResolvedRulesetView = {
   choicePresets: {},
   featCatalog: {},
   currencySystem: DEFAULT_CURRENCY_SYSTEM,
+  artefacts: {},
 };
 
 

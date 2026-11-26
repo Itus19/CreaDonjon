@@ -9,6 +9,7 @@ interface Row {
   kind: string;
   targetEntityId: string | null;
   payload: unknown;
+  status?: string;
 }
 
 let pendingRows: Row[] = [];
@@ -36,15 +37,22 @@ beforeEach(() => {
 describe("buildConsequencesDrawer", () => {
   it("resout le nom de la cible, une seule fois pour pending et applied", async () => {
     pendingRows = [{ id: "p-1", kind: "update_block", targetEntityId: "e-1", payload: { text: "Un ajout." } }];
-    appliedRows = [{ id: "a-1", kind: "create_entity", targetEntityId: "e-2", payload: { name: "Grelin", trait: "cicatrice" } }];
+    appliedRows = [
+      { id: "a-1", kind: "create_entity", targetEntityId: "e-2", payload: { name: "Grelin", trait: "cicatrice" }, status: "applied" },
+      { id: "a-2", kind: "update_block", targetEntityId: "e-1", payload: { blockId: "b", text: "Une note." }, status: "applied" },
+    ];
     entities = [
       { id: "e-1", name: "Village test" },
       { id: "e-2", name: "Grelin" },
     ];
 
     const drawer = await buildConsequencesDrawer(supabase, { campaignId: "c", sessionId: "s" });
-    expect(drawer.pending).toEqual([{ id: "p-1", kind: "update_block", text: "Un ajout.", targetName: "Village test" }]);
-    expect(drawer.applied).toEqual([{ id: "a-1", kind: "create_entity", text: "Grelin — cicatrice", targetName: "Grelin" }]);
+    expect(drawer.pending).toEqual([{ id: "p-1", kind: "update_block", text: "Un ajout.", targetName: "Village test", fixable: false }]);
+    expect(drawer.applied).toEqual([
+      { id: "a-1", kind: "create_entity", text: "Grelin — cicatrice", targetName: "Grelin", fixable: false },
+      // V3.2-27 : une note du monde écrite se corrige ou se retire.
+      { id: "a-2", kind: "update_block", text: "Une note.", targetName: "Village test", fixable: true },
+    ]);
   });
 
   it("le tally ne compte que ce qui a ete APPLIQUE, jamais ce qui est en attente", async () => {

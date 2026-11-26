@@ -73,6 +73,7 @@ import {
   listRulesetEntriesByKeys,
   listSelectableRulesets,
   listTranslationsForEntries,
+  syncRulesetCopyEntry,
   upsertRulesetOverride,
   type DeleteRulesetOutcome,
   type SelectableRulesetRow,
@@ -1756,6 +1757,28 @@ export async function setActiveRuleset(supabase: TypedClient, worldSlug: string,
     await updateCampaignRuleset(supabase, { campaignId: campaigns[0].id, rulesetId });
   }
   return true;
+}
+
+/**
+ * AG-18 (ADR 0106) — un choix sur une règle de la copie active d'un monde :
+ * la reprendre de la source, ou garder la sienne. Seulement pour le ruleset
+ * ACTIF du monde nommé (l'écran Règles actives n'agit que sur lui) ; la base
+ * vérifie encore que la copie appartient à l'appelant. `stale` : la source a
+ * changé depuis l'affichage, rien n'est appliqué.
+ */
+export async function syncRulesetCopy(
+  supabase: TypedClient,
+  params: { worldSlug: string; rulesetId: string; entryKey: string; take: boolean; digest: string | null }
+): Promise<"ok" | "stale" | "not_found"> {
+  const world = await getWorldBySlug(supabase, params.worldSlug);
+  if (!world || (await getWorldDefaultRulesetId(supabase, world.id)) !== params.rulesetId) return "not_found";
+  const applique = await syncRulesetCopyEntry(supabase, {
+    copyId: params.rulesetId,
+    entryKey: params.entryKey,
+    take: params.take,
+    expectedDigest: params.digest,
+  });
+  return applique ? "ok" : "stale";
 }
 
 /**

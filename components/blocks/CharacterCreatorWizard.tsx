@@ -15,6 +15,7 @@ import IdentityStep from "./characterCreatorSteps/IdentityStep";
 import SpeciesStep from "./characterCreatorSteps/SpeciesStep";
 import BackgroundStep, { type BackgroundEquipmentChoice } from "./characterCreatorSteps/BackgroundStep";
 import SpellSelectionStep, { spellClassesAndLevel } from "./characterCreatorSteps/SpellSelectionStep";
+import { sortsDejaPris } from "@/lib/ui/sortsDejaPris";
 import PlayableCharacterSheet from "./PlayableCharacterSheet";
 import { totalValueCp } from "@/src/core/rules/currency";
 import { createCharacterFromWizardAction, type CreateCharacterFromWizardInput } from "@/app/m/[worldSlug]/mj/creation-personnage/actions";
@@ -423,6 +424,11 @@ export default function CharacterCreatorWizard({
   const sousDe = (cle: CleEtape) => chemin.etapes.find((e) => e.cle === cle)?.sous ?? [];
 
   const nomClasse = (key: string) => ruleset.classes[key]?.label ?? entryName.get(key) ?? key;
+  // AG-5 : un sort déjà obtenu ailleurs se grise, avec sa source.
+  const classesDeSorts = spellcasting.sources.map((s) => nomClasse(s.class)).join(" / ") || t("sorts.parClasse");
+  const sortsPris = (choix?: string) =>
+    sortsDejaPris({ accordes: sheet.grantedSpells, connus: spellcasting.known, sourceClasse: classesDeSorts, ...(choix !== undefined ? { choix } : {}) });
+
   const refKey = (ref: { kind: string; key?: string } | null) => (ref && ref.kind === "rule" && ref.key ? ref.key : null);
   const especeCle = refKey(character.species as { kind: string; key?: string } | null);
   const historiqueCle = refKey(character.background as { kind: string; key?: string } | null);
@@ -697,6 +703,7 @@ export default function CharacterCreatorWizard({
                 nomSort: (cle) => entryName.get(cle) ?? cle,
                 libelleOption,
                 dejaAcquis,
+                sortsPris,
                 onChoisir: choisir,
                 onChoisirSousClasse: choisirSousClasse,
                 sousEtapes: chemin.etapes.flatMap((e) => e.sous),
@@ -806,7 +813,7 @@ export default function CharacterCreatorWizard({
             />
           )}
 
-          {ici === "sorts" && <SpellSelectionStep worldSlug={worldSlug} character={character} spellcasting={spellcasting} onUpdateSpellcasting={setSpellcasting} />}
+          {ici === "sorts" && <SpellSelectionStep worldSlug={worldSlug} character={character} spellcasting={spellcasting} onUpdateSpellcasting={setSpellcasting} dejaPris={sortsPris()} />}
 
           {ici === "apercu" && montee && (
             <div className="flex flex-col gap-3">

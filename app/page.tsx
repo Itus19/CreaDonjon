@@ -46,7 +46,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ v
     mondesPossedes: worlds.filter((w) => w.ownerId === user?.id).map((w) => w.name),
     contexte: compteDuContexte(worlds),
   };
-  const officialRulesets = (selectableRulesets ?? []).filter((r) => r.is_official_base);
+  // AG-18 : bases officielles puis rulesets de la personne (la requête les trie déjà ainsi) ; jamais les copies propres à un autre monde.
+  const rulesetsCreation = (selectableRulesets ?? []).filter((r) => r.is_official_base || r.copied_from_ruleset_id === null);
 
   return (
     // Accueil en tableau de bord (V3.1-35) : trois destinations — Mondes,
@@ -93,13 +94,13 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ v
             canUseSoloMode={canUseSoloMode}
             menerPartie={
               <>
-                <CreateWorldForm officialRulesets={officialRulesets} canUseSoloMode={canUseSoloMode} />
+                <CreateWorldForm rulesets={rulesetsCreation} canUseSoloMode={canUseSoloMode} />
                 <ImportWorldForm canUseSoloMode={canUseSoloMode} />
               </>
             }
             jouerSolo={
               canUseSoloMode ? (
-                <CreateWorldForm officialRulesets={officialRulesets} canUseSoloMode={canUseSoloMode} modeInitial="solo" />
+                <CreateWorldForm rulesets={rulesetsCreation} canUseSoloMode={canUseSoloMode} modeInitial="solo" />
               ) : null
             }
           />

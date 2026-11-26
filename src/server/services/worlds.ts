@@ -28,6 +28,7 @@ import { createCampaign, type CampaignSummary } from "@/src/server/services/camp
 import { listWorldPlayerCharacters } from "@/src/server/services/worldPlayerCharacters";
 import { getDisplayNamesForUsers } from "@/src/server/repos/activityJournal";
 import { listNextSessionsForCampaigns } from "@/src/server/repos/scheduling";
+import { copyRulesetForWorld, getRulesetById } from "@/src/server/repos/rules";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -209,6 +210,20 @@ export async function createWorld(
 }
 
 /**
+ * AG-18 (ADR 0106) — le ruleset d'un monde qui naît. Une base officielle se
+ * partage telle quelle ; un ruleset de la personne devient une copie propre à
+ * ce monde (« Ma variante · Faerûn »), qui retient sa source pour proposer
+ * ensuite ses mises à jour. La copie se fait avant le monde : si elle échoue,
+ * aucun monde n'est créé avec un ruleset qu'on n'a pas choisi.
+ */
+async function rulesetPourNouveauMonde(supabase: TypedClient, rulesetId: string, worldName: string): Promise<string> {
+  const ruleset = await getRulesetById(supabase, rulesetId);
+  if (!ruleset) throw new Error("Ruleset introuvable.");
+  if (ruleset.is_official_base) return ruleset.id;
+  return copyRulesetForWorld(supabase, ruleset.id, `${ruleset.name} · ${worldName}`);
+}
+
+/**
  * Un monde = une campagne (decision produit, prepa V2-G1 export/import) :
  * la creation d'un monde cree toujours, dans la foulee, sa campagne unique
  * (contrainte d'unicite en base, migration 20260826100001) — jamais un
@@ -222,13 +237,14 @@ export async function createWorldWithCampaign(
   supabase: TypedClient,
   params: { ownerId: string; name: string; rulesetId: string; mode: "campaign" | "solo"; playStyle?: PlayStyle }
 ): Promise<{ world: WorldSummary; campaign: CampaignSummary }> {
+  const rulesetId = await rulesetPourNouveauMonde(supabase, params.rulesetId, params.name);
   const world = await createWorld(supabase, { ownerId: params.ownerId, name: params.name });
-  await setWorldDefaultRuleset(supabase, world.id, params.rulesetId);
+  await setWorldDefaultRuleset(supabase, world.id, rulesetId);
   const campaign = await createCampaign(supabase, {
     worldId: world.id,
     createdBy: params.ownerId,
     name: params.name,
-    rulesetId: params.rulesetId,
+    rulesetId,
     mode: params.mode,
     playStyle: params.playStyle,
   });

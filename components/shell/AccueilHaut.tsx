@@ -19,7 +19,7 @@ interface MondeHaut extends MondeAccueil {
  * « Reprendre » sur la dernière fiche ouverte (mémorisée dans le navigateur,
  * ADR 0036 §4). Aucun appel réseau : la liste des mondes est déjà là.
  */
-export default function AccueilHaut({ mondes }: { mondes: MondeHaut[] }) {
+export default function AccueilHaut({ mondes, enCases = false }: { mondes: MondeHaut[]; enCases?: boolean }) {
   const t = useTranslations("accueil");
   const locale = useLocale();
   const visite = useDerniereVisite();
@@ -42,48 +42,68 @@ export default function AccueilHaut({ mondes }: { mondes: MondeHaut[] }) {
     return t("ilYaMaintenant");
   }
 
-  if (seances.length === 0 && !(visite && monde)) return null;
+  // AG-17 : deux cases de la bande du haut, toujours présentes (vides au besoin) pour garder la grille.
+  if (!enCases && seances.length === 0 && !(visite && monde)) return null;
+  const classeCase = `min-w-0 rounded-lg border border-edge bg-panel p-3 ${enCases ? "flex h-full flex-col justify-center" : "flex-1"}`;
 
+  const caseSeances =
+    seances.length > 0 ? (
+      <section className={classeCase} aria-label={t("seancesTitre")}>
+        <h2 className="mb-1.5 text-xs font-bold uppercase tracking-widest text-ink-muted">{t("seancesTitre")}</h2>
+        <ul className={`flex flex-col gap-1 overflow-y-auto ${enCases ? "max-h-14" : "max-h-32"}`}>
+          {seances.map((s) => (
+            <li key={s.monde.id} className="text-sm text-ink-muted">
+              {/* AG-17 : la date dans la même police que le reste. */}
+              <span className="text-ink">{formaterSeance(s.startsAt, locale)}</span>
+              {" · "}
+              <span className="text-ink">{s.monde.name}</span>
+              {s.monde.campaignName && <> · {s.monde.campaignName}</>}
+              {" · "}
+              {libelleRole(s.monde)}
+            </li>
+          ))}
+        </ul>
+      </section>
+    ) : enCases ? (
+      <div aria-hidden="true" />
+    ) : null;
+
+  const caseReprendre =
+    visite && monde ? (
+      <section className={classeCase} aria-label={t("reprendreTitre")}>
+        <h2 className="mb-1.5 text-xs font-bold uppercase tracking-widest text-ink-muted">{t("reprendreTitre")}</h2>
+        <div className="flex items-center justify-between gap-3">
+          <p className="min-w-0 truncate text-sm text-ink-muted">
+            <span className="text-ink">{monde.name}</span>
+            {" · "}
+            {visite.titre}
+            {" · "}
+            {ilYa()}
+          </p>
+          <Link
+            href={visite.href}
+            className="shrink-0 rounded-full bg-accent px-4 py-1.5 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover"
+          >
+            {t("reprendre")}
+          </Link>
+        </div>
+      </section>
+    ) : enCases ? (
+      <div aria-hidden="true" />
+    ) : null;
+
+  if (enCases) {
+    return (
+      <>
+        {caseSeances}
+        {caseReprendre}
+      </>
+    );
+  }
   return (
     <div className="flex flex-col gap-3 md:flex-row md:items-start">
-      {seances.length > 0 && (
-        <section className="min-w-0 flex-1 rounded-lg border border-edge bg-panel p-3" aria-label={t("seancesTitre")}>
-          <h2 className="mb-1.5 text-xs font-bold uppercase tracking-widest text-ink-muted">{t("seancesTitre")}</h2>
-          <ul className="flex max-h-32 flex-col gap-1 overflow-y-auto">
-            {seances.map((s) => (
-              <li key={s.monde.id} className="text-sm text-ink-muted">
-                <span className="font-mech text-ink">{formaterSeance(s.startsAt, locale)}</span>
-                {" · "}
-                <span className="text-ink">{s.monde.name}</span>
-                {s.monde.campaignName && <> · {s.monde.campaignName}</>}
-                {" · "}
-                {libelleRole(s.monde)}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {visite && monde && (
-        <section className="min-w-0 flex-1 rounded-lg border border-edge bg-panel p-3" aria-label={t("reprendreTitre")}>
-          <h2 className="mb-1.5 text-xs font-bold uppercase tracking-widest text-ink-muted">{t("reprendreTitre")}</h2>
-          <div className="flex items-center justify-between gap-3">
-            <p className="min-w-0 text-sm text-ink-muted">
-              <span className="text-ink">{monde.name}</span>
-              {" · "}
-              {visite.titre}
-              {" · "}
-              {ilYa()}
-            </p>
-            <Link
-              href={visite.href}
-              className="shrink-0 rounded-full bg-accent px-4 py-1.5 text-sm font-medium text-accent-ink transition-colors hover:bg-accent-hover"
-            >
-              {t("reprendre")}
-            </Link>
-          </div>
-        </section>
-      )}
+      {caseSeances}
+      {caseReprendre}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
-import { dropSketchesOutsideLocation, emptyScene, enterScene, leaveScene, sceneCalendarDate, type SceneState } from "@/src/core/rules/scene";
+import { dropRoomsOutsideLocation, dropSketchesOutsideLocation, emptyScene, enterScene, leaveScene, sceneCalendarDate, type SceneState } from "@/src/core/rules/scene";
 import { formatGameDate } from "@/src/core/calendar/formatDate";
 import { weekdayNameForDate } from "@/src/core/calendar/weekday";
 import type { CalendarConfigInput } from "@/src/core/schemas/calendar";
@@ -10,6 +10,8 @@ import { listCombatsForCampaign } from "@/src/server/repos/combats";
 import { listEntitiesByIds, listEntitiesByKinds } from "@/src/server/repos/entities";
 import { listPartOfRelationsForWorld } from "@/src/server/repos/relations";
 import { discoverEntity } from "@/src/server/services/discoveries";
+import { listAttitudesTowardTarget } from "@/src/server/repos/psyche";
+import { axesDepuisJson, perceptionPercue } from "@/src/core/psyche/perception";
 import { generateForScene } from "@/src/server/services/sceneGeneration";
 import type { SceneView } from "@/lib/solo/types";
 
@@ -70,10 +72,15 @@ export async function listSceneChoices(
  * que l'ancienne version, accepte parce que cette fonction ne tourne pas a
  * chaque tour — seulement au chargement de l'ecran et quand la scene
  * change.
+ *
+ * `perceivedBy` (V3.2-14, ADR 0111) : l'entite jouee. Fournie, chaque
+ * present porte l'attitude qu'il LAISSE VOIR envers elle, en bandes — une
+ * requete groupee de plus. La valeur ressentie ne quitte jamais cette
+ * fonction (regle absolue 5) : seul le resultat de `perceptionPercue` part.
  */
 export async function loadSceneView(
   supabase: TypedClient,
-  params: { campaignId: string; worldId: string }
+  params: { campaignId: string; worldId: string; perceivedBy?: string }
 ): Promise<SceneView | null> {
   const scene = await getSceneState(supabase, params.campaignId);
   if (!scene) return null;
@@ -82,7 +89,16 @@ export async function loadSceneView(
   const nearestCityId = edges.find((e) => e.source_entity_id === scene.locationId)?.target_entity_id ?? null;
 
   const ids = [scene.locationId, ...scene.present.map((p) => p.entityId), ...(nearestCityId ? [nearestCityId] : [])];
-  const byId = new Map((await listEntitiesByIds(supabase, ids)).map((e) => [e.id, e]));
+  const presentIds = scene.present.map((p) => p.entityId);
+  const [entities, attitudes] = await Promise.all([
+    listEntitiesByIds(supabase, ids),
+    params.perceivedBy
+      ? listAttitudesTowardTarget(supabase, { campaignId: params.campaignId, sourceEntityIds: presentIds, targetEntityId: params.perceivedBy })
+      : Promise.resolve([]),
+  ]);
+  const byId = new Map(entities.map((e) => [e.id, e]));
+  // ADR 0111 : la facade l'emporte axe par axe ; sans elle, le percu est le ressenti.
+  const perceptionById = new Map(attitudes.map((a) => [a.source_entity_id, perceptionPercue(axesDepuisJson(a.axes), axesDepuisJson(a.shown_axes))]));
 
   const location = byId.get(scene.locationId);
   const nearestCityEntity = nearestCityId ? byId.get(nearestCityId) : undefined;
@@ -96,6 +112,7 @@ export async function loadSceneView(
     locationName: location?.name ?? "Lieu inconnu",
     locationSlug: location?.slug ?? null,
     nearestCity,
+    roomName: scene.room && scene.room.locationId === scene.locationId ? scene.room.name : null,
     time: scene.time,
     lighting: scene.lighting,
     weather: scene.weather,
@@ -105,6 +122,7 @@ export async function loadSceneView(
       name: byId.get(p.entityId)?.name ?? p.entityId,
       zone: p.zone,
       disposition: p.disposition,
+      perception: perceptionById.get(p.entityId) ?? null,
     })),
     sketches: scene.sketches.map((s) => ({ id: s.id, name: s.name, trait: s.trait, zone: s.zone, disposition: s.disposition })),
   };
@@ -158,6 +176,8 @@ export async function setScene(
   let scene = existing ? { ...existing, locationId: params.locationId } : emptyScene(params.locationId);
   // V3-C2 : une esquisse ne survit qu'a son lieu de tirage — changer de lieu la laisse derriere.
   scene = dropSketchesOutsideLocation(scene, params.locationId);
+  // V3.2-19 : la pièce et ses esquisses ne survivent pas non plus au changement de lieu.
+  scene = dropRoomsOutsideLocation(scene, params.locationId);
 
   const wanted = new Set(params.present);
   for (const current of scene.present) {

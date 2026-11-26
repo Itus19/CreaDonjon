@@ -63,7 +63,7 @@ Chaque réflexe renvoie à une règle déjà écrite ailleurs. Ce sont les même
 - il s'arrête quand l'onglet est caché (`document.visibilityState`) ;
 - il dit son intervalle et sa raison en commentaire.
 
-Aujourd'hui, seul le mode solo sonde (superadmin seulement). *18 octobre* : il lisait `/sheet` deux fois toutes les 4 s (le Jeu pour la demande en cours, la fiche pour elle-même) ; seule la fiche la lit désormais et publie la demande par `SoloContexte`. Par tick : `/sheet`, `/fil`, `/consequences`, soit trois appels au lieu de quatre.
+Aujourd'hui, seul le mode solo sonde (superadmin seulement). *18 octobre* : il lisait `/sheet` deux fois toutes les 4 s (le Jeu pour la demande en cours, la fiche pour elle-même) ; seule la fiche la lit désormais et publie la demande par `SoloContexte`. Par tick : `/sheet`, `/fil`, `/consequences`, soit trois appels au lieu de quatre. *26 novembre* (V3.2-27) : `/consequences` n'est plus sondé qu'onglet « Changements » ouvert (toutes les 8 s) ; `/fil` lit en plus la scène (une ligne). Par tick : `/sheet` et `/fil`.
 
 **Q3. Un abonnement temps réel par besoin, refermé au démontage.** Chaque `channel()` ouvert compte dans les 200 connexions simultanées. Un abonnement filtre côté serveur (`filter`) au lieu de recevoir toute une table.
 
@@ -135,6 +135,7 @@ Les tests, les mesures et les scripts tournent **contre la vraie base**, celle d
 - **Vue « règles non jouables »** (V3.1-132, MJ, à la demande) : la liste des règles (celle de la barre latérale, deux pages pour le SRD), les types de blocs mécaniques de la base (155 lignes pour le SRD, mesuré le 4 nov. : 0,5 s) et les surcharges des variantes, paginées.
 - **Mode solo** (V3.1-132) : le même calcul à l'ouverture de l'écran solo, pour avertir des règles non jouables du personnage ; jamais en boucle.
 - **Le point de décision du tour solo** (V3.1-216) : **rien** pour la quasi-totalité des tours — la garde est la fiche déjà chargée (aucune activation à déclencheur de jet : aucune lecture de plus). Quand le personnage en porte une : la scène, le combat en cours et ses participants, les effets du personnage, son état de jeu, et les activations de ses sorts. Écriture : une ligne de `roll_windows` **seulement** si une réaction se propose vraiment ; la reprise rejoue le tour sans relancer de dé, et n'ajoute aucune écriture à un tour ordinaire.
+- **Le classement « faut-il un jet ? »** (V3.2-24, ADR 0113) : avant chaque tour libre en campagne, quand un fournisseur est configuré et que le joueur n'a ni corrigé l'action ni saisi de DD. Trois lectures légères (la scène, le combat en cours et ses participants, le nom du personnage) et une ligne de `ai_usage_log` (`solo_classify`). Il ne compte pas dans la limite de 30 appels d'IA par heure (choix de l'auteur, `PURPOSES_HORS_LIMITE`) : un tour libre n'en consomme toujours qu'un, la narration. Une fois la limite atteinte, il est refusé comme les autres appels et le tour retombe sur le lexique.
 
 ### Ce que consomme le fournisseur d'IA par compte (V3.1-224)
 

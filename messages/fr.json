@@ -1,5 +1,6 @@
 {
   "shell": {
+    "enCoursDEcriture": "en cours d'écriture",
     "atelier": "Atelier",
     "mesMondes": "Mes mondes",
     "monde": "Monde",
@@ -23,7 +24,8 @@
       "retablirVolet": "Rétablir le volet",
       "fermerFiche": "Fermer la fiche affichée",
       "deposerSecondVolet": "Déposer ici pour ouvrir un second volet",
-      "separateur": "Largeur des volets"
+      "separateur": "Largeur des volets",
+      "ongletMasque": "{nom}, dans l'autre volet : rétablir les deux volets"
     },
     "kindLabels": {
       "session_journal": "Livre de sessions",
@@ -59,7 +61,7 @@
     "radioArretee": "Radio : à l'arrêt",
     "nouvelleEntiteRail": "Nouvelle entité",
     "barreMj": "Navigation du MJ",
-    "barreJoueur": "Navigation du joueur",
+    "barreJoueur": "Navigation de la table",
     "apparence": "Apparence",
     "fiches": "Fiches",
     "table": "Table",
@@ -81,7 +83,7 @@
   "chat": {
     "titre": "Chat",
     "salonTitre": "Salon de table",
-    "salonSousTitre": "MJ et {n, plural, one {# joueur} other {# joueurs}} · les jets publics s'y affichent",
+    "salonSousTitre": "MJ et {n, plural, one {# personne} other {# personnes}} · les jets publics s'y affichent",
     "filsPrives": "Fils privés",
     "conversations": "Conversations",
     "choixConversation": "Choisir la conversation",
@@ -94,14 +96,14 @@
     "chargement": "Chargement…",
     "filIntrouvable": "Conversation introuvable.",
     "filsImpossibles": "Impossible de charger les fils.",
-    "aucunJoueur": "Aucun joueur dans cette campagne.",
-    "choisirJoueur": "Choisissez un joueur.",
+    "aucunJoueur": "Personne ne joue encore dans cette campagne.",
+    "choisirJoueur": "Choisissez un membre de la table.",
     "aucuneCampagne": "Ce monde n'a pas encore de campagne.",
     "ecrire": "Écrire un message…",
     "envoyer": "Envoyer",
     "mj": "MJ",
     "jetSecret": "secret",
-    "jetSecretAide": "Seuls son auteur et le MJ voient ce jet.",
+    "jetSecretAide": "Seuls le MJ et la personne qui l'a lancé voient ce jet.",
     "contreDd": "contre DD {dd}",
     "contreDdInconnu": "contre DD ?",
     "reussite": "Réussite",
@@ -112,7 +114,7 @@
     "enAttenteReactions": "En attente des réactions",
     "titreLibre": "Jet libre",
     "secret": "Secret",
-    "secretAide": "Seuls vous et le MJ voyez ce jet.",
+    "secretAide": "Ce jet n'est visible que de vous et du MJ.",
     "fermer": "Fermer l'outil de dés",
     "titreFeuille": "Outil de dés",
     "des": "Dés",
@@ -206,6 +208,18 @@
     "maitrisesAccordees": "Accordées par une règle"
   },
   "regles": {
+    "copie": "Copie",
+    "miseAJour": {
+      "titre": "Mise à jour disponible",
+      "aide": "« {source} » a changé depuis la copie faite pour ce monde. Choisis règle par règle : rien ne change ici sans toi.",
+      "modifiee": "Modifiée",
+      "nouvelle": "Nouvelle",
+      "retiree": "Retirée",
+      "reprendre": "Reprendre",
+      "garder": "Garder la mienne",
+      "erreur": "Impossible d'appliquer ce choix. Réessaie."
+    },
+    "nouvelleRegle": "Nouvelle règle",
     "monnaie": {
       "modifierSysteme": "Modifier le système monétaire",
       "titre": "Système monétaire",
@@ -438,11 +452,6 @@
       },
       "montantBudget": "Quantité (formule)",
       "zone": "Zone",
-      "zones": {
-        "engaged": "Au contact",
-        "near": "Proche",
-        "far": "Loin"
-      },
       "libelleJet": "Libellé du jet",
       "formuleJet": "Formule",
       "indication": "Indication",
@@ -585,7 +594,7 @@
       "cleDeLObjet": "Clé de l'objet",
       "nombreDObjets": "Nombre d'objets",
       "quantiteChoisie": "Quantité choisie",
-      "quantiteChoisieAide": "La joueuse choisit une quantité à l'activation (de 1 au maximum) ; « amount » sert dans les formules",
+      "quantiteChoisieAide": "La personne qui joue choisit une quantité à l'activation (de 1 au maximum) ; « amount » sert dans les formules",
       "quantiteMax": "Maximum (formule)",
       "quantiteLibelle": "Libellé de la quantité",
       "cleDuSort": "Clé du sort",
@@ -696,6 +705,24 @@
         "videDescription": "Chaque aptitude, sort, objet magique, espèce, sous-classe et monstre de ce ruleset est jouable."
       },
       "solo": {
+        "jet": {
+          "lancer": "Lancer · {quoi}",
+          "roule": "Le dé roule…",
+          "reactions": "En attente des réactions…",
+          "echec": "Le jet n'a pas pu être lancé.",
+          "reussite": "réussite",
+          "echecJet": "échec",
+          "touche": "touché",
+          "rate": "raté",
+          "reglage": "DD et réussites",
+          "reglageAffiches": "affichés",
+          "reglageMasques": "masqués",
+          "reglageTitre": "Afficher ou masquer le DD et l'issue des jets. Masqués, c'est le récit qui dit si tu as réussi.",
+          "reglageEchec": "Le réglage n'a pas pu être changé.",
+          "sansJet": "Sans jet",
+          "changer": "Changer de test",
+          "rejoue": "Un instant…"
+        },
         "titre": "{n, plural, one {# règle de ton personnage n'est pas entièrement jouable} other {# règles de ton personnage ne sont pas entièrement jouables}}",
         "aide": "Le jeu ne les applique pas seul : le MJ ou toi les jouez à la main. Ouvre une fiche pour voir ce qui reste en texte."
       },
@@ -823,10 +850,10 @@
     "confirmerSuppressionVarianteMessage": "Supprimer la variante « {name} » ? Ses fiches de règles disparaissent.{actif, select, oui { La campagne revient à « {base} ».} other {}}",
     "variantesEtImport": "Variantes et import",
     "table": {
-      "titre": "Ce que les joueurs modifient eux-mêmes",
+      "titre": "Ce que la table modifie elle-même",
       "aide": "Réglage de la campagne, valable partout : fiche sur ordinateur, tablette et téléphone. Coupé : la valeur reste visible sans commande, et le serveur refuse l'écriture. Le MJ garde toutes les commandes ; le moteur (dégâts résolus, repos) n'en dépend pas.",
       "parDefaut": "Par défaut",
-      "joueuse": "la joueuse",
+      "joueuse": "la table",
       "mj": "le MJ",
       "conditions": {
         "titre": "Leurs états",
@@ -858,8 +885,8 @@
       "augmenter": "Augmenter l'inspiration au plus",
       "erreur": "Impossible d'enregistrer ce réglage — réessayez.",
       "sansCampagne": "Ce monde n'a pas encore de campagne : les réglages de table et l'aperçu apparaîtront avec la première.",
-      "apercuTitre": "Côté joueuse · fiche de {nom}",
-      "apercuAide": "Ce que la joueuse peut toucher, d'après les interrupteurs — en direct.",
+      "apercuTitre": "Côté table · fiche de {nom}",
+      "apercuAide": "Ce que la personne qui joue peut toucher, d'après les interrupteurs — en direct.",
       "apercuSansPersonnage": "Aucun personnage joueur dans la campagne : l'aperçu apparaîtra avec le premier."
     },
     "creerArmeMaison": "Créer une arme maison",
@@ -1021,7 +1048,7 @@
     "erreurEvaluationFormule": "Impossible d'évaluer cette formule — vérifiez la syntaxe.",
     "referencePersonnelle": "Référence personnelle",
     "referencePersonnelleOption": "Référence personnelle — contenu saisi depuis un ouvrage que je possède",
-    "referencePersonnelleAvertissement": "Ce contenu reste dans votre cercle de jeu privé : jamais de lien de partage, d'export, ni de bascule vers une règle maison ordinaire — vos joueurs le consultent en session, sans repartir avec une copie.",
+    "referencePersonnelleAvertissement": "Ce contenu reste dans votre cercle de jeu privé : jamais de lien de partage, d'export, ni de bascule vers une règle maison ordinaire — votre table le consulte en session, sans repartir avec une copie.",
     "referencePersonnelleFicheTitre": "Cette fiche provient d'un ruleset de référence personnelle — cercle de jeu privé uniquement, jamais partagée ni exportée.",
     "refKinds": {
       "uses_rule": "utilise",
@@ -1193,7 +1220,7 @@
       "suppression": "Supprimer"
     },
     "contexteMene": "MJ {nombre, plural, one {d'un monde} other {de # mondes}}",
-    "contexteJoue": "joueur {nombre, plural, one {dans un monde} other {dans # mondes}}",
+    "contexteJoue": "joue {nombre, plural, one {dans un monde} other {dans # mondes}}",
     "contexteSolo": "{nombre, plural, one {un monde} other {# mondes}} en solo",
     "nomAffiche": "Nom affiché",
     "identifiant": "Ton identifiant",
@@ -1224,6 +1251,8 @@
     "suppressionTape": "Tape SUPPRIMER pour confirmer"
   },
   "accueil": {
+    "ouvrir": "Ouvrir",
+    "nouveauMondeSousTitre": "Mener, jouer ou partir en solo",
     "navigation": "Navigation de l'accueil",
     "destMondes": "Mondes",
     "destCompte": "Compte",
@@ -1259,14 +1288,15 @@
     "aucunMonde": "Aucun monde pour l'instant.",
     "selectionner": "Sélectionnez un monde pour voir son détail.",
     "roleMj": "MJ",
-    "roleJoueur": "Joueur",
+    "roleJoueur": "Joueur·euse",
     "roleSolo": "Solo",
     "campagne": "Campagne : {nom}",
     "monPersonnage": "Mon personnage",
     "personnageIntrouvable": "Personnage introuvable",
     "prochaineSeance": "Prochaine séance",
     "aucuneSeance": "Aucune séance prévue",
-    "mjNoms": "MJ : {noms}"
+    "mjNoms": "MJ : {noms}",
+    "ongletPersonnage": "Personnage"
   },
   "statsJoueur": {
     "titre": "Tes dés et tes titres",
@@ -1288,6 +1318,29 @@
     "survol": "{face} : {nombre} fois"
   },
   "table": {
+    "niveauJoueursTitre": "Utiliser le niveau « Joueur·euses »",
+    "niveauJoueursAide": "Coupé, la visibilité se résume à Public, MJ et Privé. Ce qui est déjà « Joueur·euses » le reste.",
+    "niveauJoueursErreur": "Réglage non enregistré.",
+    "recitTitre": "Récit",
+    "recitExplication": "Comment l'IA raconte vos parties solo : à qui elle s'adresse, sur quel ton, et ce qu'elle a le droit de montrer. Le moteur de règles n'en lit rien.",
+    "recitPersonne": "Le récit s'adresse à la personne qui joue",
+    "recitTu": "Tu (« tu pousses la porte »)",
+    "recitVous": "Vous (« vous poussez la porte »)",
+    "recitIl": "Il, elle, iel (« Edran pousse la porte »)",
+    "recitRegistre": "Registre",
+    "recitRegistreAide": "Le ton général de la partie, en quelques phrases. Laissé vide, l'IA n'a aucune consigne de ton.",
+    "recitIntimes": "Scènes intimes",
+    "recitIntimesAide": "Coupé, elles restent hors champ. Allumé, l'IA peut les raconter, avec le style ci-dessous. Dans tous les cas, uniquement entre personnages adultes.",
+    "recitStyleIntime": "Style des scènes intimes",
+    "recitStyleIntimeAide": "Envoyé à l'IA seulement quand les scènes intimes sont allumées.",
+    "recitEnregistrer": "Enregistrer les textes",
+    "recitEnregistre": "Enregistré.",
+    "recitErreur": "Réglage du récit non enregistré.",
+    "enReserve": "En réserve",
+    "reserveAide": "Pas cochés d'office dans « Toute la table ».",
+    "mettreEnReserve": "Mettre en réserve",
+    "remettreALaTable": "Remettre à la table",
+    "erreurReserve": "La réserve n'a pas pu être enregistrée.",
     "titre": "Table",
     "description": "Les personnages joueurs de la campagne : état de jeu, compteurs, bourse et repos, geste par geste.",
     "aucuneCampagne": "Aucune campagne dans ce monde — créez-en une dans l'onglet Campagnes.",
@@ -1370,9 +1423,55 @@
     "enCours": "Le récit s'écrit…",
     "iaRepond": "Fournisseur d'IA : le dernier tour a été raconté",
     "iaMuette": "Fournisseur d'IA injoignable : le dernier tour est resté muet",
+    "iaAucunFournisseur": "Aucun fournisseur d'IA : le tour est joué sans narration (à déclarer dans la page Compte)",
+    "iaQuota": "Quota ou offre du fournisseur d'IA (crédit épuisé, aucune offre active ou limite du jour) : le dernier tour est resté muet",
+    "iaLimite": "Trop d'appels à l'IA d'un coup : le dernier tour est resté muet, réessayer dans un instant",
+    "iaLimiteApp": "Limite de l'app atteinte (30 appels d'IA par heure) : le dernier tour est resté muet, réessayer un peu plus tard",
+    "iaCleRefusee": "Clé d'API refusée par le fournisseur : le dernier tour est resté muet (à vérifier dans la page Compte)",
+    "iaDelai": "Le fournisseur d'IA a mis trop de temps à répondre : le dernier tour est resté muet",
+    "iaRefusee": "Le fournisseur d'IA a refusé la requête (modèle introuvable ou hors de ton offre, sans outils ou qui n'écrit pas de texte, ou adresse incorrecte) : le dernier tour est resté muet",
+    "iaInutilisable": "Le modèle a répondu sans récit utilisable (il gère peut-être mal les outils) : le dernier tour est resté muet",
     "iaInconnue": "Fournisseur d'IA : aucun tour joué pour l'instant",
+    "iaChoixModele": "Modèle d'IA utilisé",
+    "iaChoixEchec": "Le changement de modèle a échoué.",
+    "iaDetailFournisseur": "Réponse du fournisseur : {detail}",
+    "iaDetailOuvrir": "Détail de l'état du fournisseur d'IA",
+    "iaCourt": {
+      "inconnu": "IA : aucun tour joué",
+      "repond": "IA : dernier tour raconté",
+      "aucun_fournisseur": "Aucune IA déclarée",
+      "quota": "IA muette : quota atteint",
+      "limite": "IA muette : trop d'appels",
+      "limite_app": "IA muette : 30 appels/h atteints",
+      "cle_refusee": "IA muette : clé refusée",
+      "delai": "IA muette : délai dépassé",
+      "refusee": "IA muette : requête refusée",
+      "inutilisable": "IA muette : réponse sans récit",
+      "echec": "IA muette : injoignable"
+    },
+    "changements": {
+      "titre": "Changements",
+      "aRelire": "À relire",
+      "ajoutes": "Ajouté au monde pendant cette séance",
+      "vide": "Rien n'a changé dans le monde pendant cette séance.",
+      "chargement": "Chargement…",
+      "corriger": "Corriger",
+      "retirer": "Retirer",
+      "retirerQuestion": "Retirer ce paragraphe du wiki ?",
+      "enregistrer": "Enregistrer",
+      "annuler": "Annuler",
+      "accepter": "Accepter",
+      "modifier": "Modifier",
+      "rejeter": "Rejeter",
+      "erreur": "Le changement n'a pas pu être enregistré.",
+      "explication": "Ce que l'IA ajoute au wiki y est écrit tout de suite. Si une note est fausse, corrige-la ou retire-la ici.",
+      "ligneAria": "Ce que ce tour a changé",
+      "details": "détails",
+      "nonApplique": "Non appliqué : {raison}",
+      "voirChangements": "Voir dans l'onglet Changements"
+    },
     "annulerTour": {
-      "bouton": "Annuler le dernier tour",
+      "bouton": "Annuler ce tour",
       "question": "Annuler ce tour ? Ce qu'il a changé est défait ; le journal le garde.",
       "confirmer": "Oui, annuler",
       "garder": "Garder",
@@ -1395,6 +1494,22 @@
     "deplierMonde": "Déplier le Monde",
     "replierFiche": "Replier la Fiche",
     "deplierFiche": "Déplier la Fiche",
+    "bandeMonde": {
+      "presentsAria": "Les personnes présentes",
+      "sansFiche": "sans fiche",
+      "zones": {
+        "engaged": "au contact",
+        "near": "proche",
+        "far": "loin"
+      },
+      "aria": "Onglets du monde",
+      "ouvrir": "Ouvrir le Monde sur « {onglet} »",
+      "wiki": "Wiki",
+      "quetes": "Quêtes",
+      "presents": "Présents",
+      "regles": "Règles",
+      "changements": "Changements"
+    },
     "barre": {
       "jeu": "Jeu",
       "monde": "Monde",
@@ -1410,8 +1525,14 @@
     "bandeNiveau": "Niv.",
     "bandeCharge": "Charge",
     "bandeEpuisement": "Épuis.",
+    "bandePvTitre": "{pv} points de vie sur {max}",
+    "bandeNiveauCourt": "Niv. {niveau}",
+    "bandeXpTitre": "{xp} / {plafond} XP vers le niveau {niveau}",
+    "bandeChargeTitre": "Charge : {porte} / {capacite} kg",
+    "bandeChargeTitreEncombre": "Charge : {porte} / {capacite} kg — encombrement",
+    "bandeEpuisementTitre": "Épuisement {niveau} sur 6",
     "bandeKg": "{valeur} kg",
-    "consequencesOuvrir": "Changements dans le monde : {nombre}",
+    "consequencesOuvrir": "Ouvrir les changements dans le monde",
     "consequencesTitre": "Changements dans le monde",
     "presentsTitre": "Présents dans la scène",
     "wikiTitre": "Wiki",
@@ -1446,7 +1567,7 @@
     "noteCreation": "Pas d'email : tu te connectes avec ton nom et ce mot de passe. Un numéro (#4821) distingue deux comptes du même nom ; seul le MJ de tes campagnes le voit. Le compte n'ouvre aucun monde tant qu'on ne t'y invite pas.",
     "creerMonCompte": "Créer mon compte",
     "creationEnCours": "Création…",
-    "noteOubli": "Un seul champ pour les deux sortes de comptes : avec un email, un lien t'y est envoyé ; sans email, la demande arrive chez ton MJ (ou l'administrateur), qui réinitialise ton mot de passe.",
+    "noteOubli": "Un seul champ pour les deux sortes de comptes : avec un email, un lien t'y est envoyé ; sans email, la demande arrive chez ton MJ (ou l'administration), qui réinitialise ton mot de passe.",
     "envoyerDemande": "Envoyer la demande",
     "envoiEnCours": "Envoi…",
     "demandeEnvoyee": "Demande envoyée. Si ce compte existe, un lien part vers son email, ou ton MJ reçoit la demande dans son panneau.",
@@ -1486,7 +1607,7 @@
     "tuileComptes": "Comptes",
     "tuileLiens": "Liens d'invitation actifs",
     "tuileIdentite": "Identité de l'application",
-    "tuileTitres": "Titres des joueurs",
+    "tuileTitres": "Titres de la table",
     "demandeReinit": "{nom} a demandé une réinitialisation de mot de passe · {delai}",
     "pourMemoire": "{nom} doit changer son mot de passe à sa prochaine connexion · rien à faire, pour mémoire",
     "noteDemandes": "Les demandes de réinitialisation arrivent aussi chez le MJ de la campagne ; ici, celles de tous les comptes.",
@@ -1506,7 +1627,7 @@
     "colReclamePar": "Réclamé par",
     "colEtat": "État",
     "identite": {
-      "note": "Ce que voient tous les visiteurs : l'écran-titre, le rail, l'onglet du navigateur. Un changement s'applique à tous, aussitôt enregistré.",
+      "note": "Ce que voit toute personne qui passe : l'écran-titre, le rail, l'onglet du navigateur. Un changement s'applique à tout le monde, aussitôt enregistré.",
       "nom": "Nom",
       "phrase": "Phrase d'accueil",
       "logo": "Logo",
@@ -1520,7 +1641,7 @@
       "enregistre": "Enregistré ✓",
       "retablir": "Rétablir « {nom} »",
       "retablirTitre": "Rétablir l'identité par défaut ?",
-      "retablirMessage": "Le nom, la phrase d'accueil et le logo reviennent à ceux par défaut, pour tous les visiteurs. Un logo téléversé est supprimé.",
+      "retablirMessage": "Le nom, la phrase d'accueil et le logo reviennent à ceux par défaut, pour tout le monde. Un logo téléversé est supprimé.",
       "retablirErreur": "Impossible de rétablir l'identité.",
       "logos": {
         "d20": "Le d20",
@@ -1544,12 +1665,12 @@
         "chance": {
           "nom": "Chance",
           "sous": "les 20 naturels",
-          "mesure": "20 naturels de la joueuse ÷ moyenne des joueurs de la table"
+          "mesure": "20 naturels de la personne ÷ moyenne de la table"
         },
         "malchance": {
           "nom": "Malchance",
           "sous": "les 1 naturels",
-          "mesure": "1 naturels de la joueuse ÷ moyenne des joueurs de la table"
+          "mesure": "1 naturels de la personne ÷ moyenne de la table"
         },
         "bourse": {
           "nom": "Bourse",
@@ -1625,7 +1746,7 @@
       "enregistre": "Enregistré",
       "retablir": "Rétablir les titres par défaut",
       "retablirTitre": "Rétablir les titres par défaut ?",
-      "retablirMessage": "Tous les paliers reviennent à ceux d'origine, pour tous les joueurs et tous les mondes. Vos réglages actuels sont perdus.",
+      "retablirMessage": "Tous les paliers reviennent à ceux d'origine, pour tous les comptes et tous les mondes. Vos réglages actuels sont perdus.",
       "erreurServeur": "Le serveur n'a pas répondu ; rien n'est changé. Réessaie."
     }
   },
@@ -1809,7 +1930,7 @@
       "echec": "Impossible d'enregistrer le fond."
     },
     "apercu": {
-      "titre": "Ce que voit un visiteur",
+      "titre": "Ce que voit une personne de passage",
       "rechercher": "Rechercher…",
       "legende": "Le message d'accueil, le fond, le mode et le flou, en direct. « Prévisualiser ↗ » ouvre le vrai wiki public."
     }
@@ -1820,7 +1941,7 @@
     "lumiereVive": "Vive",
     "lumiereFaible": "Faible",
     "lumiereTenebres": "Ténèbres",
-    "masqueAuxJoueuses": "Masqué aux joueuses",
+    "masqueAuxJoueuses": "Masqué à la table",
     "invoqueePar": "Invoquée par {nom}",
     "seCacher": "Se cacher",
     "seCacherPour": "Se cacher : {nom}",
@@ -1881,7 +2002,7 @@
     "initiativeModifiee": "Initiative modifiée",
     "initiativeMoins": "Diminuer l'initiative",
     "initiativePlus": "Augmenter l'initiative",
-    "invitationEnvoyee": "Les joueurs reçoivent l'invitation à lancer leur initiative.",
+    "invitationEnvoyee": "La table reçoit l'invitation à lancer l'initiative.",
     "jetAttaque": "Attaque — {cible}",
     "jetDegats": "Dégâts — {cible}",
     "lancerDegats": "Lancer les dégâts",
@@ -1914,8 +2035,9 @@
     "pvTemporairesChamp": "PV temporaires",
     "quitter": "Quitter le combat",
     "quitterOui": "Quitter",
-    "quitterQuestion": "Quitter sans terminer ? Les joueurs reviennent à leur fiche ; le combat reste enregistré.",
+    "quitterQuestion": "Quitter sans terminer ? La table revient aux fiches ; le combat reste enregistré.",
     "rechercherMonstre": "Rechercher un monstre…",
+    "aucunMonstreTrouve": "Aucun monstre trouvé dans les règles de ce monde.",
     "recommencer": "Recommencer (relancer l'initiative)",
     "relancer": "Relancer",
     "relancerInitiative": "Relancer l'initiative",
@@ -1930,7 +2052,7 @@
     "round": "Round {n}",
     "round1": "Round 1",
     "rouvrir": "Rouvrir",
-    "saisirPourUnJoueur": "touchez « … » pour saisir la valeur d'un joueur sans l'application.",
+    "saisirPourUnJoueur": "touchez « … » pour saisir la valeur de quelqu'un qui joue sans l'application.",
     "sauvegarde": "Sauvegarde",
     "sauvegardeDd": "Sauvegarde DD {dd}",
     "soin": "Soin",
@@ -2074,13 +2196,38 @@
     "seReferme": "se referme dans {secondes} s…",
     "listeTitre": "Sauvegardes demandées",
     "attend": "attend {nom}",
-    "attendJoueuse": "attend la joueuse",
+    "attendJoueuse": "attend sa réponse",
     "aToi": "à toi",
     "saisir": "Saisir",
     "pastille": "{n, plural, one {# sauvegarde à répondre} other {# sauvegardes à répondre}}",
     "enAttente": "En attente de la sauvegarde…"
   },
   "fiche": {
+    "equipable": {
+      "seulementEquipe": "Seulement équipé",
+      "harmonisation": "Harmonisation requise",
+      "effets": "Effets sur qui le porte",
+      "sorts": "Sorts accordés",
+      "caracteristique": "Caractéristique",
+      "caracteristiqueClasse": "Celle de la classe",
+      "uneFoisRepos": "1 fois par {repos}",
+      "maitriseRepos": "Bonus de maîtrise par {repos}",
+      "actions": "Actions à charges",
+      "nomAction": "Nom de l'action",
+      "charges": "Charges",
+      "recharge": "Recharge",
+      "description": "Ce que fait l'action",
+      "retirerAction": "Retirer l'action",
+      "ajouterAction": "+ Ajouter une action",
+      "nouvelleAction": "Nouvelle action",
+      "recharges": {
+        "short_rest": "Repos court",
+        "short_rest_one": "Une au repos court",
+        "long_rest": "Repos long",
+        "dawn": "À l'aube",
+        "never": "Jamais"
+      }
+    },
     "monnaie": {
       "horsSysteme": "Hors du système monétaire de ce monde : comptée à sa valeur standard, plus formée.",
       "inconnue": "Pièce inconnue de ce monde : comptée à 0, jamais dépensée."
@@ -2173,6 +2320,9 @@
       }
     },
     "musique": {
+      "morceau": "Morceau {n}",
+      "morceauSur": "Morceau {n} sur {total}",
+      "morceaux": "Morceaux de la playlist",
       "sansTitre": "Piste sans nom",
       "progression": "Progression de la piste",
       "debut": "début",
@@ -2252,6 +2402,9 @@
       "erreurObjectif": "Impossible de mettre à jour cet objectif."
     },
     "table": {
+      "importer": "Remplacer par un fichier…",
+      "importerAide": "Un texte (une entrée par ligne) ou un JSON. Les entrées actuelles sont remplacées.",
+      "importerErreur": "Lecture du fichier impossible.",
       "tirer": "Tirer · {de}",
       "tirageEnCours": "Tirage…",
       "sansRepetition": "Sans répétition",
@@ -2331,8 +2484,8 @@
       "trouverLabel": "Trouver une fiche par son nom",
       "toutMontrer": "Tout montrer",
       "ouvrirFiche": "Ouvrir la fiche",
-      "rendreVisible": "Rendre visible aux joueurs",
-      "masquerAuxJoueurs": "Masquer aux joueurs"
+      "rendreVisible": "Rendre visible à la table",
+      "masquerAuxJoueurs": "Masquer à la table"
     },
     "relation": {
       "titreBloc": "Relation",
@@ -2519,6 +2672,13 @@
       "aucunBlocTexte": "Aucun bloc de texte dans cette fiche",
       "bloc": "Bloc de texte qui accueille l'image",
       "blocOption": "Dans « {bloc} »",
+      "taille": "Taille",
+      "taillePlusPetite": "Plus petite",
+      "taillePlusGrande": "Plus grande",
+      "alignement": "Alignement",
+      "alignGauche": "À gauche",
+      "alignCentre": "Au centre",
+      "alignDroite": "À droite",
       "parallaxe": "Parallaxe",
       "parallaxeLabel": "Intensité de la parallaxe au défilement",
       "parallaxeZero": "Parallaxe à 0 % — aucun effet. Le curseur est l'interrupteur.",
@@ -2645,19 +2805,19 @@
     "fermer": "Fermer",
     "niveaux": {
       "public": "Public",
-      "players": "Joueurs",
+      "players": "Joueur·euses",
       "gm": "MJ",
       "private": "Privé",
       "campaign": "Campagne",
-      "user": "Utilisateur"
+      "user": "Une personne"
     },
     "qui": {
       "public": "tout le monde, wiki public compris",
       "players": "la table, pas le wiki public",
-      "gm": "le MJ seul — jamais envoyé aux joueurs",
-      "private": "son auteur seul",
+      "gm": "le MJ seul — jamais envoyé à la table",
+      "private": "la personne qui l'a écrit, seulement",
       "campaign": "une campagne précise",
-      "user": "un utilisateur précis"
+      "user": "une personne précise"
     },
     "palette": {
       "ajouter": "+ Ajouter un bloc",
@@ -2679,6 +2839,11 @@
       "annulee": "Déplacement annulé. Bloc « {bloc} » : position {position} sur {total}."
     },
     "entete": {
+      "nomTable": "Pour la table",
+      "nomTableAide": "Un nom que voit la table à la place du vrai. Vide : la table voit le vrai nom.",
+      "nomTablePlaceholder": "Vide : la table voit le vrai nom",
+      "nomTableActif": "La table ne voit pas le vrai nom",
+      "nomTableLiensEnEchec": "{n, plural, one {# lien n'a pas pu être renommé} other {# liens n'ont pas pu être renommés}} : modifiés entre-temps, à reprendre à la main.",
       "titrePlaceholder": "Nouvelle entité",
       "typeDeFiche": "Type de fiche",
       "alias": "Alias",
@@ -2701,17 +2866,17 @@
         "public": "tout le monde, wiki public compris",
         "players": "la table, pas le wiki public",
         "gm": "le MJ seul",
-        "private": "son auteur seul",
+        "private": "la personne qui l'a écrit",
         "campaign": "une campagne précise",
-        "user": "un utilisateur précis"
+        "user": "une personne précise"
       }
     },
     "pastille": "Visibilité : {niveau}. Toucher pour passer à {suivant}.",
     "carte": {
       "titre": "Carte",
       "agrandirRef": "Agrandir / changer",
-      "voirCommeJoueurs": "Voir comme les joueurs",
-      "vueJoueursNote": "La carte telle que le serveur l'envoie à un joueur : rien du MJ n'y arrive.",
+      "voirCommeJoueurs": "Voir comme la table",
+      "vueJoueursNote": "La carte telle que le serveur l'envoie à la table : rien du MJ n'y arrive.",
       "agrandirOwn": "Agrandir / remplacer",
       "televerser": "+ Téléverser une carte",
       "referencer": "— référencer :",
@@ -2872,7 +3037,7 @@
       "centrerSans": "Aucun jour actuel n'est réglé dans le calendrier.",
       "eres": "Ères…",
       "evenement": "+ Événement",
-      "voirJoueurs": "Voir comme les joueurs",
+      "voirJoueurs": "Voir comme la table",
       "voirMj": "Revenir à la vue du MJ",
       "recherche": "Rechercher",
       "rechercheLabel": "Rechercher un événement",
@@ -2881,7 +3046,7 @@
       "filtreGenre": "Filtrer par genre",
       "filtreFiche": "Filtrer par fiche"
     },
-    "vueJoueurs": "Vue des joueurs : les dates réservées au MJ n'y figurent pas.",
+    "vueJoueurs": "Vue de la table : les dates réservées au MJ n'y figurent pas.",
     "carte": {
       "portee": {
         "major": "Monde",
@@ -3128,7 +3293,9 @@
       "voirRegle": "Voir la fiche de règle",
       "aucuneClasse": "Aucune des classes choisies n'incante à ce niveau.",
       "sortsMineurs": "Sorts mineurs",
-      "sortsPrepares": "Sorts préparés ({classe}, niveau max {max})"
+      "sortsPrepares": "Sorts préparés ({classe}, niveau max {max})",
+      "dejaPrisPar": "Déjà pris par {source}",
+      "parClasse": "votre classe"
     },
     "caracIncantation": {
       "explication": "Cette caractéristique sert au DD de sauvegarde et à l'attaque des sorts de ce trait, rien d'autre.",
@@ -3307,10 +3474,10 @@
     "attendLeMj": "{nom} attend",
     "attendreReponse": "Attendre la réponse de",
     "aucunJetEnCours": "Aucun jet en cours.",
-    "aucunJoueur": "Aucun joueur dans cette campagne.",
+    "aucunJoueur": "Personne ne joue encore dans cette campagne.",
     "avantage": "Avantage",
     "avantageOuNon": "Avantage ou désavantage",
-    "choisisDestinataire": "Choisis au moins un joueur, ou toute la table.",
+    "choisisDestinataire": "Choisis au moins une personne, ou toute la table.",
     "colonneDroite": "Colonne de droite",
     "dd": "DD",
     "ddAnnonce": "DD {dd}",
@@ -3335,12 +3502,12 @@
     "envoyerDemande": "Envoyer la demande",
     "fermerOutils": "Fermer les outils",
     "filVideJoueur": "Le MJ ouvrira la partie ici. Tu peux déjà écrire ce que fait ton personnage.",
-    "filVideMj": "Écris la première scène. Les joueurs la liront à leur prochaine visite.",
+    "filVideMj": "Écris la première scène. La table la lira à sa prochaine visite.",
     "filVideTitre": "La partie n'a pas commencé",
     "jaiLanceALaMain": "J'ai lancé à la main…",
     "jetDe": "Jet : {jet}",
     "jetsEnCours": "Jets en cours",
-    "joueurs": "Joueurs",
+    "joueurs": "Joueur·euses",
     "lancer": "Lancer",
     "leDeMontre": "Le dé montre",
     "ligneJet": "{jet} : {total} (d20 : {naturel})",
@@ -3401,5 +3568,8 @@
     "faconConfirmer": "Oui, changer",
     "faconErreur": "La façon de jouer n'a pas changé.",
     "ouvrirJeuADistance": "Ouvrir le jeu à distance"
+  },
+  "squelette": {
+    "ecran": "Chargement de l'écran"
   }
 }

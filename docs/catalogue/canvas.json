@@ -13,7 +13,7 @@
     },
     "Ecrans.dc.html": {
       "expand": "fill",
-      "h": 4000,
+      "h": 5980,
       "is_interactive": true,
       "title": "5 · Éléments d'écran",
       "w": 1280,
@@ -22,7 +22,7 @@
     },
     "Fiche.dc.html": {
       "expand": "fill",
-      "h": 7959,
+      "h": 12310,
       "is_interactive": true,
       "title": "6 · Fiche de personnage",
       "w": 1280,
@@ -40,7 +40,7 @@
     },
     "Navigation.dc.html": {
       "expand": "fill",
-      "h": 7500,
+      "h": 8200,
       "is_interactive": true,
       "title": "3 · Onglets, puces, menus",
       "w": 1280,
@@ -49,16 +49,16 @@
     },
     "OutilsMJ.dc.html": {
       "expand": "fill",
-      "h": 21360,
+      "h": 30230,
       "is_interactive": true,
       "title": "9 · Outils du MJ",
       "w": 1280,
       "x": 1360,
-      "y": 7700
+      "y": 8600
     },
     "Solo.dc.html": {
       "expand": "fill",
-      "h": 3000,
+      "h": 4350,
       "is_interactive": true,
       "title": "7 · Mode solo",
       "w": 1280,
@@ -67,7 +67,7 @@
     },
     "Surfaces.dc.html": {
       "expand": "fill",
-      "h": 5800,
+      "h": 6060,
       "is_interactive": true,
       "title": "4 · Surfaces et retours",
       "w": 1280,
@@ -76,12 +76,12 @@
     },
     "WikiVisuel.dc.html": {
       "expand": "fill",
-      "h": 8780,
+      "h": 8850,
       "is_interactive": true,
       "title": "8 · Wiki visuel",
       "w": 1280,
       "x": 0,
-      "y": 7700
+      "y": 8600
     },
     "Telephone.dc.html": {
       "expand": "fill",
@@ -90,7 +90,7 @@
       "title": "10 · Téléphone",
       "w": 1280,
       "x": 2720,
-      "y": 7700
+      "y": 8600
     }
   },
   "createdOnFiles": {
@@ -116,7 +116,7 @@
       "text": "Éléments d'écran riches",
       "w": 240,
       "x": 0,
-      "y": 7380
+      "y": 8280
     }
   },
   "order": [

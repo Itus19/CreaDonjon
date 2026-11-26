@@ -77,6 +77,17 @@ export async function submitAssignment(supabase: TypedClient, id: string): Promi
   return data === true;
 }
 
+/** AG-8 : les devoirs rendus que le MJ n'a pas encore validés — la pastille de « Livre de sessions ». Une lecture de comptage, sans ligne. */
+export async function countSubmittedAssignments(supabase: TypedClient, campaignId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from("session_journal_entries")
+    .select("id", { count: "exact", head: true })
+    .eq("campaign_id", campaignId)
+    .eq("status", "written");
+  if (error) throw new Error(error.message);
+  return count ?? 0;
+}
+
 /** Le MJ valide un devoir rendu ; `null` si aucune ligne `written` ne correspond (déjà validé, ou refusé par la RLS). */
 export async function markValidated(supabase: TypedClient, id: string): Promise<SessionJournalEntryRow | null> {
   const { data, error } = await supabase
@@ -141,29 +152,42 @@ export interface WrittenJournalEntry {
   name: string;
   slug: string;
   isPublic: boolean;
-  writtenAt: string;
+  /** `null` pour un brouillon (devoir pas encore rendu). */
+  writtenAt: string | null;
   ingameDate: GameDate;
+  /** AG-8 : vrai pour un brouillon, lu seulement avec `avecBrouillons`. */
+  enCours: boolean;
+  /** AG-13 : rang rangé à la main (`entities.display_order`, plus grand = plus haut). */
+  displayOrder: number;
 }
 
 /** Entrees redigees d'un monde, triees par date IRL de redaction decroissante (retour utilisateur) — jointure sur `entities` pour le titre/slug/`is_public`, jamais duplique dans cette table (regle absolue n°16 par analogie). L'appelant filtre par `isPublic` pour les surfaces anonymes (aperçu/partage). */
-export async function listWrittenEntriesForWorld(supabase: TypedClient, worldId: string): Promise<WrittenJournalEntry[]> {
+export async function listWrittenEntriesForWorld(
+  supabase: TypedClient,
+  worldId: string,
+  opts: { avecBrouillons: boolean } = { avecBrouillons: false }
+): Promise<WrittenJournalEntry[]> {
   const { data, error } = await supabase
     .from("session_journal_entries")
-    .select("id, entity_id, written_at, ingame_date, campaigns!inner(world_id), entities(name, slug, is_public)")
+    .select("id, entity_id, status, written_at, ingame_date, campaigns!inner(world_id), entities(name, slug, is_public, display_order)")
     .eq("campaigns.world_id", worldId)
-    // V3.1-150 : rendu, validé ou non — un brouillon n'est jamais dans le Livre.
-    .in("status", ["written", "validated"])
-    .order("written_at", { ascending: false });
+    // V3.1-150 : rendu, validé ou non. AG-8 : le sommaire lit aussi les
+    // brouillons (en tête, sans date de rendu) ; le filtre de visibilité les
+    // retire ensuite à toute personne autre que l'autrice et le MJ.
+    .in("status", opts.avecBrouillons ? ["pending", "written", "validated"] : ["written", "validated"])
+    .order("written_at", { ascending: false, nullsFirst: true });
   if (error) throw new Error(error.message);
   return data
-    .filter((row): row is typeof row & { entity_id: string; entities: { name: string; slug: string; is_public: boolean } } => row.entity_id !== null && row.entities !== null)
+    .filter((row): row is typeof row & { entity_id: string; entities: { name: string; slug: string; is_public: boolean; display_order: number } } => row.entity_id !== null && row.entities !== null)
     .map((row) => ({
       id: row.id,
       entityId: row.entity_id,
       name: row.entities.name,
       slug: row.entities.slug,
       isPublic: row.entities.is_public,
-      writtenAt: row.written_at as string,
+      writtenAt: row.written_at,
       ingameDate: row.ingame_date as unknown as GameDate,
+      enCours: row.status === "pending",
+      displayOrder: Number(row.entities.display_order),
     }));
 }

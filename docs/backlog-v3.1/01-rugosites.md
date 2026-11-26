@@ -331,7 +331,7 @@ Vérifié : `aiProviders.integration.test.ts` (6 cas — la RLS dans les deux se
 
 ---
 
-### ☐ V3.1-223 — Un tour sans narration doit le dire · `S` · sans modèle IA — **prêt (Opus)**
+### ☐ V3.1-223 — Un tour sans narration doit le dire · `S` · sans modèle IA — **codé le 24 novembre, reste la vérification à l'écran**
 
 **Constaté par l'auteur le 18 novembre**, en voulant jouer ses séances : ses tours partaient, s'inscrivaient au fil avec leurs faits… et restaient muets. Il jouait sur **le site en ligne**, où `AI_LOCAL_BASE_URL` vaut `http://localhost:1234/v1` : ce « localhost » est celui du serveur Vercel, jamais la machine du joueur. Son LM Studio était donc injoignable, et la narration — best-effort par conception (`specs/cible-locale-et-ia.md` §4) — échouait en silence.
 
@@ -342,6 +342,8 @@ Vérifié : `aiProviders.integration.test.ts` (6 cas — la RLS dans les deux se
 **Critères d'acceptation**
 - [ ] Un tour joué sans fournisseur joignable affiche sa mention, garde ses faits, et ne casse rien.
 - [ ] Vérifié à l'écran, ordinateur et 390 px.
+
+*Codé le 24 novembre*, en préparant le branchement d'une IA distante : le voyant sous la barre d'intention (V3.2-3) dit désormais **pourquoi** le tour est resté muet. Les routes du tour rendent `sansNarration` (`aucun_fournisseur`, `quota`, `limite`, `limite_app`, `cle_refusee`, `delai`, `refusee`, `inutilisable`, `echec`), classé par `classerReponseFournisseur` (noyau pur, testé) à partir de la réponse du fournisseur : un 402 ou un 429 qui parle de crédit, de quota ou de limite du jour, c'est le quota ; un 429 ordinaire, une limite de débit. Reste la vérification à l'écran.
 
 ---
 

@@ -20,6 +20,7 @@ import { resolveChoices, type ChoiceSource, type FeatChoiceData, type OpenChoice
 import { useResolvedRuleset, type RemainingChoiceView, type TraitGrantView } from "./useResolvedRuleset";
 import { useReferenceChips, type ResolvedChipView } from "./useReferenceChips";
 import { itemLabel, itemRef } from "./inventoryItem";
+import { effetsDeLObjet } from "@/src/core/rules/objetEquipable";
 import { rulesetSelectionFromBlocks } from "@/lib/resolvedRuleset/selection";
 import type { ResolvedRuleset } from "@/src/core/rules/sheet";
 import { LANGUAGE_LABELS_FR } from "@/src/i18n/fr";
@@ -151,6 +152,7 @@ export function useCharacterSheetContext(
     choicePresets,
     featCatalog,
     currencySystem,
+    artefacts,
     pret: rulesetPret,
   } = useResolvedRuleset(worldSlug, selection);
   const backgroundAbilityScores = (rawBackgroundAbilityScores as Ability[] | null) ?? null;
@@ -165,6 +167,9 @@ export function useCharacterSheetContext(
     () =>
       (inventory?.items ?? []).map((item) => {
         const ref = itemRef(item);
+        // AG-19 : un artéfact agit par son bloc « Objet équipable », comme côté serveur.
+        const artefact = ref?.kind === "entity" ? artefacts[ref.id] : undefined;
+        if (artefact) return effetsDeLObjet({ id: item.id, label: artefact.name, equipped: item.equipped ?? false, attuned: item.attuned ?? false }, artefact.data);
         const armor = ref?.kind === "rule" ? equipment[ref.key] : null;
         return {
           key: item.id,
@@ -175,7 +180,7 @@ export function useCharacterSheetContext(
           ...(armor ? { armorCategory: armor.category } : {}),
         };
       }),
-    [inventory, equipment, dexMod]
+    [inventory, equipment, dexMod, artefacts]
   );
 
   // V3.1-116 : les choix accordés, résolus ici avec les réponses du

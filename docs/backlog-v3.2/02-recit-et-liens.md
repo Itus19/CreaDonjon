@@ -4,7 +4,7 @@
 
 ---
 
-### ☐ V3.2-5 — Le récit s'adresse au joueur : tu, ou vous · `S` · **avec modèle IA** — **prêt (Opus)**
+### ☑ V3.2-5 — Le récit s'adresse au joueur : tu, ou vous · `S` · **avec modèle IA** — **livré le 26 novembre 2026**
 
 **Constaté le 18 novembre** : « Itus Flo se dirige résolument vers le comptoir », « Thora ouvre la porte ». Le modèle raconte le personnage **à la troisième personne**, comme un roman lu par-dessus l'épaule. L'auteur veut qu'on s'adresse à lui : « tu pousses la porte », ou « vous poussez la porte » — **au choix, dans les réglages de la partie**.
 
@@ -14,11 +14,15 @@
 
 **Attention aux PNJ** : seul le personnage du joueur change de personne. Les autres restent à la troisième — « tu pousses la porte, Mabelle lève les yeux ».
 
+**Élargi le 26 novembre 2026** (fil « Faire avancer l'intrigue en narration solo ») : l'auteur a fourni ses textes de style. Le réglage s'appelle désormais « Récit » (`table_settings.recit`, `src/core/campaigns/recit.ts`) et porte quatre champs : la personne (`tu`, `vous`, `il`), le **registre** en texte libre (défaut : le registre « sombre et réaliste, inspiré du Witcher » de l'auteur), les **scènes intimes** (coupées par défaut) et leur **style**, envoyé seulement quand elles sont allumées. Une limite fixe que le réglage ne lève pas : uniquement entre personnages adultes. Les directives d'écriture communes à toute partie (agentivité absolue, rythme variable, humour organique, détail proportionnel à la familiarité, l'inhabituel toujours décrit, jusqu'à 400 mots) entrent dans la consigne fixe (`src/core/ai/narrationPrompt.ts`). Le réglage se fait dans Gestion de campagne (`RecitPanel`). Avec l'amendement de l'ADR 0112, l'IA ne fait plus sauter le temps.
+
+**Reste à faire** : la familiarité n'a pour l'instant que le texte de la consigne ; dire au modèle « première rencontre » ou « déjà rencontré » pour chaque PNJ, puis lire l'« inhabituel » sur la fiche du personnage, viendra dans un ticket à part.
+
 **Critères d'acceptation**
-- [ ] Le réglage existe dans les paramètres de la partie, et son défaut est « tu ».
-- [ ] Trois tours d'affilée gardent la personne choisie (vérifié avec le fournisseur local).
-- [ ] Les PNJ restent à la troisième personne.
-- [ ] `ai_usage_log` inchangé ; aucun appel de plus.
+- [x] Le réglage existe dans les paramètres de la partie, et son défaut est « tu ».
+- [ ] Trois tours d'affilée gardent la personne choisie (vérifié avec le fournisseur local) : à vérifier par l'auteur.
+- [x] Les PNJ restent à la troisième personne (consigne, testée dans `narrationPrompt.test.ts`).
+- [x] `ai_usage_log` inchangé ; aucun appel de plus (une lecture de `campaigns.table_settings` en parallèle du contexte).
 
 ---
 

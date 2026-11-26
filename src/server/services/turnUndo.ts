@@ -12,6 +12,9 @@ import { deleteDiscoveriesBySourceEvents } from "@/src/server/repos/entityDiscov
 import { deleteFeatureEffectsCreatedSince } from "@/src/server/repos/activeEffects";
 import { deleteRuntimeState, putRuntimeState } from "@/src/server/repos/runtimeState";
 import { putSceneState } from "@/src/server/repos/sceneStates";
+import { zInventoryBlockData } from "@/src/core/schemas/blocks/inventory";
+import { restoreInventory } from "@/src/server/services/inventoryActions";
+import { removeAppliedNote } from "@/src/server/services/aiProposals";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -20,7 +23,7 @@ export type UndoTurnResult =
       ok: true;
       /** Les événements du tour défait (le fil les cache désormais). */
       undoneEventIds: string[];
-      reverted: { entities: number; proposals: number; discoveries: number; effects: number; state: boolean; scene: boolean };
+      reverted: { entities: number; proposals: number; discoveries: number; effects: number; state: boolean; scene: boolean; inventory: boolean };
     }
   | { ok: false; reason: "not_found" | "not_solo" | "forbidden" | "nothing_to_undo" };
 
@@ -30,11 +33,14 @@ export type UndoTurnResult =
  * les événements défaits, jamais une suppression. Ce que le tour avait écrit
  * est retiré ou restauré :
  * - les fiches nées automatiquement (`auto_applied`) passent à la corbeille
- *   (suppression douce), leur proposition à `reverted` ; une proposition en
+ *   (suppression douce), leur proposition à `reverted` ; une note du monde
+ *   ajoutée d'office (V3.2-27) quitte le wiki ; une proposition en
  *   attente aussi. Une proposition acceptée à la main reste : c'était un choix ;
  * - les découvertes posées par le tour sont retirées ;
  * - l'état de jeu du personnage et la scène reviennent à ceux relevés au début
- *   du tour (`undo_before`), et les effets posés depuis sont retirés.
+ *   du tour (`undo_before`), et les effets posés depuis sont retirés ;
+ * - l'inventaire revient à celui du début du tour (V3.2-8 : un échange l'a
+ *   peut-être modifié), s'il a été relevé.
  * Un second appel remonte d'un tour.
  *
  * Droit : le MJ de la campagne solo (la joueuse elle-même), vérifié ici.
@@ -60,6 +66,13 @@ export async function undoLastSoloTurn(supabase: TypedClient, params: { campaign
   let proposals = 0;
   for (const p of await listAiProposalsBySessionEventIds(supabase, tour.eventIds)) {
     if (p.status === "applied" && p.autoApplied) {
+      // V3.2-27 : une note du monde ajoutée d'office quitte le wiki avec son tour.
+      if (p.kind === "update_block") {
+        const retrait = await removeAppliedNote(supabase, { proposalId: p.id, userId: params.callerId });
+        if (retrait.ok) proposals += 1;
+        else console.error("Note du monde du tour non retirée", p.id, retrait.reason);
+        continue;
+      }
       if (p.kind === "create_entity" && p.targetEntityId) {
         if ((await softDeleteEntity(supabase, p.targetEntityId)).deleted) entities += 1;
       }
@@ -78,6 +91,7 @@ export async function undoLastSoloTurn(supabase: TypedClient, params: { campaign
   let effects = 0;
   let state = false;
   let scene = false;
+  let inventory = false;
   if (tour.before) {
     effects = await deleteFeatureEffectsCreatedSince(supabase, { entityId: tour.before.entity_id, campaignId: params.campaignId, since: debut });
     if (tour.before.runtime === null) {
@@ -96,10 +110,18 @@ export async function undoLastSoloTurn(supabase: TypedClient, params: { campaign
       await putSceneState(supabase, { campaignId: params.campaignId, state: sceneAvant.data, updatedBy: params.callerId });
       scene = true;
     }
+    if (tour.before.inventory !== undefined) {
+      const avant = tour.before.inventory === null ? null : zInventoryBlockData.safeParse(tour.before.inventory);
+      if (avant === null || avant.success) {
+        inventory = await restoreInventory(supabase, { entityId: tour.before.entity_id, before: avant === null ? null : avant.data, actorUserId: params.callerId });
+      } else {
+        console.error("Inventaire relevé illisible, non restauré", tour.before.entity_id, avant.error.issues);
+      }
+    }
   }
 
   // 4. Le journal : une annulation s'ajoute, rien ne s'efface.
-  const reverted = { entities, proposals, discoveries, effects, state, scene };
+  const reverted = { entities, proposals, discoveries, effects, state, scene, inventory };
   await insertSessionEvent(supabase, {
     sessionId: session.id,
     seq: await nextEventSeq(supabase, session.id),

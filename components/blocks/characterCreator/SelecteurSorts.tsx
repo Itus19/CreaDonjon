@@ -39,6 +39,7 @@ export default function SelecteurSorts({
   onBasculer,
   touche,
   onToucher,
+  dejaPris,
 }: {
   worldSlug: string;
   /** Titre de la rangée de cartes (« Deux sorts mineurs »). */
@@ -52,6 +53,8 @@ export default function SelecteurSorts({
   /** Le sort dont la fiche est montrée, si l'appelant la montre lui-même. */
   touche?: string | null;
   onToucher?: (cle: string) => void;
+  /** AG-5 : les sorts déjà obtenus par une autre source, et cette source. Grisés. */
+  dejaPris?: ReadonlyMap<string, string>;
 }) {
   const t = useTranslations("creation.sorts");
   const tc = useTranslations("creation");
@@ -110,7 +113,8 @@ export default function SelecteurSorts({
           {visibles.map((c) => {
             const estChoisi = choisis.includes(c.cle);
             const ecole = ecoleDuSort(blocs[c.cle]);
-            const bloque = !estChoisi && complet && max > 1;
+            const prisPar = dejaPris?.get(c.cle);
+            const bloque = !estChoisi && ((complet && max > 1) || prisPar !== undefined);
             return (
               <button
                 key={c.cle}
@@ -131,6 +135,7 @@ export default function SelecteurSorts({
                   {ecole && <span style={{ color: `var(${ecole.couleur})` }}>{ecole.libelle}</span>}
                   {c.niveau !== null && <span>{c.niveau === 0 ? t("mineur") : t("niveau", { n: c.niveau })}</span>}
                 </span>
+                {prisPar !== undefined && <span className="text-xs font-normal italic text-ink-muted">{t("dejaPrisPar", { source: prisPar })}</span>}
               </button>
             );
           })}

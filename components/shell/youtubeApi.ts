@@ -24,6 +24,11 @@ export interface YouTubePlayer {
   getCurrentTime(): number;
   getDuration(): number;
   loadVideoById(options: { videoId: string; startSeconds?: number; endSeconds?: number }): void;
+  /** AG-20 : prépare une playlist sans la jouer ; `getPlaylist` rend ensuite ses vidéos. */
+  cuePlaylist(options: { listType: "playlist"; list: string; index?: number }): void;
+  getPlaylist(): string[] | null;
+  /** Le titre de la vidéo chargée (méthode non documentée mais stable de l'API ; peut manquer). */
+  getVideoData?(): { title?: string; video_id?: string } | undefined;
   destroy(): void;
 }
 
@@ -86,3 +91,6 @@ export const YT_ENDED = 0;
 /** États « en lecture » et « en pause » de l'API IFrame (V3.1-146 : le relevé de position ne tourne qu'en lecture). */
 export const YT_PLAYING = 1;
 export const YT_PAUSED = 2;
+
+/** AG-20 : état « préparée » — la playlist demandée par `cuePlaylist` est chargée, ses vidéos sont lisibles. */
+export const YT_CUED = 5;

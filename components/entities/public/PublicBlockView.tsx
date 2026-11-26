@@ -26,6 +26,12 @@ import PublicWorldviewBlock from "./PublicWorldviewBlock";
 import PublicRelationshipBlock from "./PublicRelationshipBlock";
 import PublicTimelineBlock from "./PublicTimelineBlock";
 import PublicMapBlock from "./PublicMapBlock";
+import PublicEquippableBlock from "./PublicEquippableBlock";
+import type { EquippableBlockData } from "@/src/core/schemas/blocks/equippable";
+import type { PriceListBlockData } from "@/src/core/schemas/blocks/priceList";
+import PriceListView from "@/components/blocks/PriceListView";
+import type { RoomsBlockData } from "@/src/core/schemas/blocks/rooms";
+import RoomsView from "@/components/blocks/RoomsView";
 
 /**
  * V3-R3 (suite) — seul bloc public charge a la demande.
@@ -643,6 +649,9 @@ export default function PublicBlockView({
           hrefBase={hrefBase}
         />
       )}
+      {block.blockType === "equippable" && <PublicEquippableBlock data={block.data as unknown as EquippableBlockData} />}
+      {block.blockType === "price_list" && <PriceListView data={block.data as unknown as PriceListBlockData} />}
+      {block.blockType === "rooms" && <RoomsView data={block.data as unknown as RoomsBlockData} />}
       {block.blockType === "map" && (
         <PublicMapBlock
           data={block.data as unknown as MapBlockData}

@@ -10,16 +10,21 @@ const initialState: ActionState = null;
  * Un monde = une campagne (decision produit, prepa V2-G1 export/import) :
  * ruleset et mode se choisissent desormais des la creation, plus dans un
  * second formulaire (`CampaignsPanel.tsx`, qui ne sait plus creer de
- * campagne). Seuls les rulesets OFFICIELS sont proposes ici — une variante
- * personnelle se cree apres coup depuis les Reglages du monde
- * (`RulesetSelector.tsx`), jamais dupliquee dans ce formulaire.
+ * campagne).
+ *
+ * AG-18 (ADR 0106) : la liste montre les bases officielles, puis les rulesets
+ * de la personne. Un ruleset personnel choisi ici devient, cote serveur, une
+ * copie propre au nouveau monde (`createWorldWithCampaign`).
  */
+const groupeDe = (r: { is_official_base: boolean }) => (r.is_official_base ? "Bases officielles" : "Mes rulesets");
+
 export default function CreateWorldForm({
-  officialRulesets,
+  rulesets,
   canUseSoloMode,
   modeInitial = "campaign",
 }: {
-  officialRulesets: { id: string; name: string }[];
+  /** Les bases officielles d'abord, puis les rulesets de la personne (jamais les copies propres à un autre monde). */
+  rulesets: { id: string; name: string; is_official_base: boolean }[];
   /** V2-M2 (Lot M) : le mode solo est reserve au superadmin — verifie cote serveur (`createWorldAction`), cette prop ne fait qu'eviter d'afficher une option qui echouerait toujours. */
   canUseSoloMode: boolean;
   /** Accueil (V3.1-35) : le chemin « Jouer en solo » ouvre le formulaire déjà réglé sur le solo. Ignoré si le compte ne peut pas créer de solo. */
@@ -59,7 +64,7 @@ export default function CreateWorldForm({
       <Dropdown
         value={rulesetId}
         onChange={setRulesetId}
-        options={[{ value: "", label: "Ruleset…" }, ...officialRulesets.map((r) => ({ value: r.id, label: r.name }))]}
+        options={[{ value: "", label: "Ruleset…" }, ...rulesets.map((r) => ({ value: r.id, label: r.name, groupe: groupeDe(r) }))]}
         aria-label="Ruleset"
         triggerClassName="rounded-md border border-edge bg-transparent px-3 py-2 text-sm text-ink outline-none transition-colors hover:bg-panel-raised"
       />

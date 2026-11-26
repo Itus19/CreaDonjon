@@ -4,7 +4,9 @@ import type { Database } from "@/src/types/database";
 import type { FilItem } from "@/lib/solo/types";
 import type { TraceStep } from "@/src/core/formula/evaluate";
 import { listSessionEvents, type SessionEventRow } from "@/src/server/repos/sessions";
-import { undoneEventIds } from "@/src/core/rules/turnUndo";
+import { undoneEventIds, type JournalEvent } from "@/src/core/rules/turnUndo";
+import { summarizeTurns, timeChipText } from "@/src/core/rules/turnSummary";
+import type { GameTime } from "@/src/core/rules/scene";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -27,12 +29,20 @@ type TypedClient = SupabaseClient<Database>;
  */
 
 function mapNarration(base: { id: string; seq: number; createdAt: string }, payload: Record<string, unknown>): FilItem {
-  const npc = payload.npc_reaction as { npc_id: string; text: string } | null | undefined;
+  const npc = payload.npc_reaction as { npc_id: string; text: string; npc_name?: unknown; npc_attitude?: unknown } | null | undefined;
   return {
     ...base,
     kind: "narration",
     text: String(payload.text ?? ""),
-    npcReaction: npc ? { npcId: npc.npc_id, text: npc.text } : null,
+    npcReaction: npc
+      ? {
+          npcId: npc.npc_id,
+          text: npc.text,
+          // Absents des répliques écrites avant qu'on les garde : `null`, jamais un nom deviné.
+          npcName: typeof npc.npc_name === "string" && npc.npc_name !== "" ? npc.npc_name : null,
+          attitude: typeof npc.npc_attitude === "string" && npc.npc_attitude !== "" ? npc.npc_attitude : null,
+        }
+      : null,
   };
 }
 
@@ -48,21 +58,25 @@ function mapRoll(base: { id: string; seq: number; createdAt: string }, payload: 
   const attack = payload.attack as { total: number; trace: TraceStep[] } | null | undefined;
   const damage = payload.damage as { total: number; trace: TraceStep[] } | null | undefined;
   const attackVerdict = payload.verdict as "hit" | "miss" | null | undefined;
+  // V3.2-20 : la phrase du joueur, montrée en bulle au-dessus du jet. Pas pour
+  // les dégâts chaînés : ils portent la même phrase que l'attaque qui les précède.
+  const intent = payload.intent as { text?: unknown; kind?: unknown } | undefined;
+  const actionText = typeof intent?.text === "string" && intent.text !== "" && intent.kind !== "weapon_damage" ? intent.text : null;
 
   if (check) {
-    return { ...base, kind: "roll", facts, total: check.total, verdict: check.verdict, trace: check.trace, origin };
+    return { ...base, kind: "roll", facts, total: check.total, verdict: check.verdict, trace: check.trace, origin, actionText };
   }
   if (attack) {
     const verdict = attackVerdict === "hit" ? "success" : attackVerdict === "miss" ? "fail" : null;
-    return { ...base, kind: "roll", facts, total: attack.total, verdict, trace: attack.trace, origin };
+    return { ...base, kind: "roll", facts, total: attack.total, verdict, trace: attack.trace, origin, actionText };
   }
   if (damage) {
-    return { ...base, kind: "roll", facts, total: damage.total, verdict: null, trace: damage.trace, origin };
+    return { ...base, kind: "roll", facts, total: damage.total, verdict: null, trace: damage.trace, origin, actionText };
   }
   // Ne devrait jamais arriver (un `roll` porte toujours l'une des trois cles
   // depuis `finishResolution`, turnIntent.ts) : un repli honnete plutot
   // qu'un ecran qui casse si un jour un appelant en ecrit un autrement.
-  return { ...base, kind: "roll", facts, total: null, verdict: null, trace: [], origin };
+  return { ...base, kind: "roll", facts, total: null, verdict: null, trace: [], origin, actionText };
 }
 
 function mapRuleApplication(base: { id: string; seq: number; createdAt: string }, payload: Record<string, unknown>): FilItem {
@@ -111,9 +125,46 @@ export function mapSessionEventToFilItem(row: SessionEventRow): FilItem {
   }
 }
 
-export async function buildFilForSession(supabase: TypedClient, sessionId: string): Promise<FilItem[]> {
+export async function buildFilForSession(supabase: TypedClient, sessionId: string, maintenant: GameTime | null = null): Promise<FilItem[]> {
   const events = await listSessionEvents(supabase, sessionId);
-  return visibleInFil(events).map(mapSessionEventToFilItem);
+  return withTurnSummaries(visibleInFil(events), maintenant);
+}
+
+const versJournal = (e: SessionEventRow): JournalEvent => ({ id: e.id, seq: e.seq, kind: e.kind, actor: e.actor, payload: (e.payload as Record<string, unknown> | null) ?? {} });
+
+/**
+ * V3.2-27 (ADR 0114) — le fil avec la ligne de chaque tour. Dans un tour, les
+ * changements du moteur et du monde passent dans cette ligne au lieu de
+ * s'afficher chacun à part ; hors tour (une scène posée avant toute action),
+ * ils restent comme avant. `maintenant` : l'heure actuelle de la scène, qui
+ * ferme le dernier tour.
+ */
+export function withTurnSummaries(events: readonly SessionEventRow[], maintenant: GameTime | null): FilItem[] {
+  const resumes = summarizeTurns(events.map(versJournal), maintenant);
+  const parFin = new Map(resumes.map((r) => [r.afterEventId, r]));
+  // Le début du premier tour : avant lui, rien n'est replié.
+  const premierTour = events.find((e) => e.id === resumes[0]?.startEventId)?.seq ?? Infinity;
+  const items: FilItem[] = [];
+  for (const e of [...events].sort((a, b) => a.seq - b.seq)) {
+    const replie = e.seq >= premierTour && (e.kind === "rule_application" || e.kind === "world_update");
+    if (!replie) items.push(mapSessionEventToFilItem(e));
+    const r = parFin.get(e.id);
+    if (r) {
+      items.push({
+        id: `tour-${r.startEventId}`,
+        seq: r.afterSeq,
+        createdAt: e.created_at,
+        kind: "turn_summary",
+        time: r.time ? timeChipText(r.time) : null,
+        changes: r.changes,
+        hints: r.hints,
+        ignored: r.ignored,
+        worldNotes: r.worldNotes,
+        last: r.last,
+      });
+    }
+  }
+  return items;
 }
 
 /**

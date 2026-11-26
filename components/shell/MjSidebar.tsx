@@ -81,12 +81,15 @@ export default function MjSidebar({
   worldName,
   campaignName,
   demandesAFixer = 0,
+  devoirsAValider = 0,
   jeuADistance: jeuADistanceInitial = false,
 }: {
   worldSlug: string;
   worldName: string;
   /** V3.1-190 : demandes de disponibilités où tout le monde a répondu, lues par le layout MJ — la pastille de « Calendrier réel ». */
   demandesAFixer?: number;
+  /** AG-8 : devoirs de journal rendus que le MJ n'a pas encore validés — la pastille de « Livre de sessions ». */
+  devoirsAValider?: number;
   /** ADR 0103 : la campagne se joue à distance — l'écran du jeu à distance a son entrée en tête des outils. */
   jeuADistance?: boolean;
   /** Seule section a l'afficher, comme le faisait l'en-tete avant V2.1-16 — `null` si le monde n'a pas encore de campagne. */
@@ -103,7 +106,8 @@ export default function MjSidebar({
   const { replie, basculer } = useRailReplie();
 
   // V3.1-190 : chaque outil peut porter une pastille (chat : non lus ; calendrier réel : demandes à fixer).
-  const badgeDe = (key: MjToolKey) => (key === "chat" ? unreadCount : key === "calendrier-reel" ? demandesAFixer : undefined);
+  const badgeDe = (key: MjToolKey) =>
+    key === "chat" ? unreadCount : key === "calendrier-reel" ? demandesAFixer : key === "livre-de-sessions" ? devoirsAValider : undefined;
 
   const tools: { key: MjToolKey; label: string }[] = [
     { key: "notes", label: t("blocNotes") },
@@ -168,7 +172,7 @@ export default function MjSidebar({
               <RailRow
                 icone={<IconeRail nom="outils" />}
                 libelle={tShell("outils")}
-                badge={unreadCount + demandesAFixer}
+                badge={unreadCount + demandesAFixer + devoirsAValider}
                 actif={tools.some((tool) => pathname === mjToolHref(worldSlug, tool.key))}
                 menu={(fermer) =>
                   tools.map((tool) => (

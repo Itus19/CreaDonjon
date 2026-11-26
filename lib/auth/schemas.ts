@@ -34,4 +34,6 @@ export const viewAsSchema = z.object({
   targetUserId: z.string().uuid(),
   /** V3.1-12 : depuis Gestion de campagne, la campagne d'ou le MJ agit. Absent depuis Administration. */
   campaignId: z.string().uuid().optional(),
+  /** AG-6 : la page d'où l'on part, pour y revenir. Le serveur ne la garde que si `cheminInterne` l'accepte. */
+  returnTo: z.string().max(512).optional(),
 });

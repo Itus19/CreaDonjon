@@ -261,6 +261,10 @@ Pas de table `characters`, `npcs`, `locations`. La distinction se fait par les b
 - `shared_note` (V3.1-41, ADR 0037) : une page du cahier partagée avec la table. Son bloc `text` porte le titre (son libellé) et le contenu. Il est en visibilité `players` quand la page est partagée, `user` de l'autrice sinon. L'autrice écrit par un octroi (`entity_grants`) qu'elle ne peut réclamer qu'à la création (`public.claim_shared_note_grant`, migration `20261013130000`), et que le MJ peut reprendre. Le nom de l'entité est toujours « Page du cahier » : la RLS d'`entities` laisse lire tout nom à tout membre du monde, le titre n'y est donc jamais.
 - `world_timeline` (V3.1-96, ADR 0048) : la **Chronologie du monde**, une par monde (index unique partiel `entities_world_timeline_unique`), créée au premier événement ajouté directement à la frise générale. Son bloc `timeline` porte ces événements. Seul un MJ du monde peut la créer (`entities_insert`, migration `20261013160000`). La liste de ces genres vit dans `src/core/entities/systemKinds.ts` (`WIKI_HIDDEN_KINDS`), sauf `notes` et `session_journal`, traités à part. Un genre système (`SYSTEM_KINDS` : `session_journal`, `shared_note`, `world_timeline`) ne se choisit jamais à la main : le sélecteur de type ne le propose pas, et `updateEntity` refuse d'y entrer ou d'en sortir (`canChangeEntityKind`, V3.1-150).
 
+**Le nom pour la table** (AG-12, ADR 0105). `entity_true_names (entity_id pk, world_id, true_name, true_aliases text[])`, RLS : MJ du monde seul. Une ligne existe tant que le MJ a rempli le « Nom pour la table » d'une fiche : `entities.name` est alors ce nom (le seul que lise la table) et le vrai nom, avec ses alias, vit ici. `public.blocks_citing_entity(world, entity)` (security invoker) liste les blocs texte et Encadré qui citent la fiche, pour renommer leurs liens.
+
+**L'ordre du Livre de sessions** (AG-13) suit `entities.display_order`, décroissant, rangé à la main par le MJ ; le wiki public le reprend.
+
 **Une entrée de chronologie** (bloc `timeline`) porte une portée facultative `scope` (`major`, `notable`, `detail`) ; absente, elle vaut le défaut de son genre (`resolveScope`, `src/core/timeline/worldTimeline.ts`). La frise générale (`getWorldTimeline`) lit les blocs `timeline` et `character` du monde en une requête, et filtre chaque date pour le lecteur (visibilité du bloc, puis de l'entrée).
 
 ---
@@ -332,7 +336,7 @@ create index blocks_type_idx   on blocks (block_type);
 
 **`display_order` est un `numeric`.** Insérer entre le 3ᵉ et le 4ᵉ s'écrit `3.5` — une seule ligne modifiée. Avec des entiers, il faut réécrire toute la liste à chaque déplacement.
 
-**Types de blocs.** V0 : `description`, `infobox`, `gallery`, `custom_table`. V1 : `character`, `inventory`, `spellcasting`, `resources`, `statblock`, `timeline`, `relationships`. V2 : `genealogy`, `random_table`, `quest`, `loot`, `map_pins`, `quote`. V2.1 : `note_tree` (V2.1-2, cahier de notes — remplace `session_log`, jamais attachable via "+ Bloc"). Le générateur de rencontres (V1-E3) n'est **pas** un bloc de wiki : refonte en outil MJ autonome (table `campaign_encounters`), décision explicite de l'utilisateur — voir `docs/BACKLOG_V1.md` §V1-E3.
+**Types de blocs.** V0 : `description`, `infobox`, `gallery`, `custom_table`. V1 : `character`, `inventory`, `spellcasting`, `resources`, `statblock`, `timeline`, `relationships`. V2 : `genealogy`, `random_table`, `quest`, `loot`, `map_pins`, `quote`. V2.1 : `note_tree` (V2.1-2, cahier de notes — remplace `session_log`, jamais attachable via "+ Bloc"). V3.2 : `price_list` (V3.2-9, ADR 0110, « Carte et tarifs » d'un lieu : offres à prix structuré, richesse et graine du tirage ; aucune migration, `block_type` n'est pas contraint en base) ; `rooms` (V3.2-19, « Pièces » d'un lieu : nom et description de chaque espace, une pièce secrète dans un second bloc réservé au MJ). La scène solo garde la pièce courante (`room`) et les esquisses de pièces (`roomSketches`), champs facultatifs de l'état de scène, sans changer `__v`. Le générateur de rencontres (V1-E3) n'est **pas** un bloc de wiki : refonte en outil MJ autonome (table `campaign_encounters`), décision explicite de l'utilisateur — voir `docs/BACKLOG_V1.md` §V1-E3.
 
 Chaque type a un schéma Zod dans `src/core/schemas/blocks/<type>.ts` et une version stockée dans `data.__v`. Catalogue et spécification détaillée dans `Spec_Blocs_de_Wiki_v0_1.md`.
 
@@ -590,6 +594,8 @@ create unique index overrides_target_uniq
 
 L'algorithme de résolution (remontée de la chaîne, empilement des patchs, détection de cycles, profondeur maximale 8) est une fonction pure de `src/core/rules/resolve.ts`, appliquée bloc par bloc. Spécification en §3.3 de `Spec_Couche_Regles_v0_1.md`, révisée par §8 de `Spec_Blocs_de_Regles_v0_1.md`.
 
+**Copie propre à un monde (AG-18, ADR 0106).** `rulesets.copied_from_ruleset_id` (source, `on delete set null`) et `rulesets.copy_baseline` (jsonb, `entry_key` → empreinte md5 des surcharges de la source au dernier choix). Un ruleset personnel choisi à la création d'un monde devient une copie de même parent, avec ses lignes de `ruleset_overrides` copiées (`copy_ruleset_for_world`). `ruleset_override_digests` donne l'empreinte de chaque règle, `sync_ruleset_copy_entry` reprend ou ignore une règle changée dans la source. Migration `20261124150000`.
+
 ### 9.5 Protection des bases officielles
 
 Le principe PDD 3.6 doit être appliqué par la base, pas seulement par convention :
@@ -709,6 +715,8 @@ create table campaign_entity_snapshots (
 ```
 
 Lecture par tout membre du monde, écriture par le MJ (`campaigns_write` : `is_world_admin`), par la route `/api/campaigns/[campaignId]/table-settings`. Les interrupteurs ne règlent que les gestes **manuels** d'une joueuse en campagne (`guardSheetActionRoute`) ; le MJ et le moteur (repos, résolution) n'y passent pas. L'épuisement compte comme un état (`conditions`).
+
+`solo_show_outcome` (booléen, défaut `false`, V3.2-20) : le mode solo affiche-t-il le DD (ou la CA) et l'issue des jets ? Réglage d'affichage seulement : le moteur calcule l'issue et la transmet au narrateur dans tous les cas.
 
 **`campaign_encounters`** (migration `20260818110001_campaign_encounters.sql`, V1-E3) — rencontres composées par le générateur MJ (outil autonome, jamais un bloc de wiki, voir §7) :
 
@@ -1110,6 +1118,8 @@ create table entity_revisions (
 
 Snapshot complet plutôt que diff : simple, robuste, et le volume est négligeable au regard du coût d'une reconstruction de diff bugguée.
 
+Parce que l'instantané contient les blocs réservés au MJ, sa lecture est réservée au MJ du monde, au superadmin et à qui peut modifier la fiche (migration `20261124130000`, ADR 0105) : jamais à tout membre.
+
 ---
 
 ## 16. IA : propositions, contexte, quotas
@@ -1161,7 +1171,7 @@ create table ai_usage_log (
   id            uuid primary key default gen_random_uuid(),
   user_id       uuid references auth.users(id),
   campaign_id   uuid references campaigns(id) on delete set null,
-  purpose       text not null,   -- 'solo_turn','generate_npc','structure_rule','embed','summarize'
+  purpose       text not null,   -- 'solo_turn','solo_classify','generate_npc','structure_rule','embed','summarize'
   model         text not null,
   input_tokens  int not null default 0,
   output_tokens int not null default 0,
@@ -1567,16 +1577,17 @@ scene_states
 
 ---
 
-## 27. Le fournisseur d'IA d'un compte (V3.1-224)
+## 27. Les fournisseurs d'IA d'un compte (V3.1-224, ADR 0108)
 
-`ai_providers` — **une ligne par compte**, `user_id` en clé primaire (`references auth.users on delete cascade`). Chacun déclare le sien : sa clé chez un fournisseur distant, ou l'adresse de sa propre machine. Personne ne consomme les ressources d'un autre. Décision : [ADR 0103](adr/0103-le-fournisseur-d-ia-de-chaque-compte.md).
+`ai_providers` — **les fournisseurs d'un compte, dix au plus** (`id` en clé primaire, `user_id references auth.users on delete cascade`). Chacun déclare les siens : sa clé chez un fournisseur distant, ou l'adresse de sa propre machine. Personne ne consomme les ressources d'un autre. Décisions : [ADR 0103](adr/0103-le-fournisseur-d-ia-de-chaque-compte.md), puis [ADR 0108](adr/0108-plusieurs-fournisseurs-ia.md) (plusieurs fournisseurs, plusieurs modèles ; migration `20261125120000_plusieurs_fournisseurs_ia`).
 
 | Colonne | Type | Rôle |
 |---|---|---|
-| `user_id` | `uuid` | clé primaire, et seule clé de la RLS |
+| `id` | `uuid` | clé primaire |
+| `user_id` | `uuid` | le compte, seule clé de la RLS |
 | `label` | `text` | ce que l'utilisateur en dit (« Venice », « mon PC ») |
 | `base_url` | `text` | l'adresse de l'API, compatible OpenAI (`…/v1`) |
-| `model` | `text` | l'identifiant du modèle |
+| `models` | `text[]` | les identifiants de modèles proposés, 1 à 12 (contrainte `check`) |
 | `secret` | `text` | la clé d'API **déjà chiffrée** par l'application ; `null` pour un fournisseur sans clé |
 | `created_at`, `updated_at` | `timestamptz` | — |
 
@@ -1585,3 +1596,21 @@ scene_states
 **RLS : chacun chez soi, sur les quatre opérations.** `user_id = auth.uid()` en lecture, insertion, modification et suppression. Aucun rôle applicatif n'a de raison de lire la ligne d'un autre — pas même l'administrateur d'un monde, qui n'a rien à faire du fournisseur de ses joueurs. C'est la seule table du schéma dont **aucune** politique ne mentionne un monde ou une campagne.
 
 **L'adresse est revérifiée avant chaque appel**, pas seulement à l'enregistrement : `verifierUrlFournisseur` (noyau pur) refuse les schémas autres que `http(s)`, les identifiants dans l'URL, le clair hors machine locale, et les adresses privées en production. Une ligne peut avoir été écrite autrement depuis, et c'est notre serveur qui appellera l'adresse.
+
+`ai_provider_choices` — **le couple qui sert**, une ligne par compte au plus (`user_id` en clé primaire). `provider_id references ai_providers(id) on delete cascade` : retirer un fournisseur emporte le choix qui le désignait. `model` n'a pas de clé étrangère (un tableau ne s'y prête pas) : un modèle retiré de la liste laisse un choix caduc, que `choixEffectif` (`src/core/ai/providerChoice.ts`) corrige à la lecture, avec la même règle pour l'écran et l'appel (premier modèle du même fournisseur ; sans choix valable, premier modèle du fournisseur modifié le plus récemment).
+
+**RLS du choix.** `user_id = auth.uid()` sur les quatre opérations, et en insertion comme en modification, **le fournisseur désigné doit être au compte** (`exists` sur `ai_providers`). Sans ce second test, un compte pourrait désigner le fournisseur d'un autre, et la résolution, qui lit sous l'identité de l'appelant, ne le trouverait pas ; mais la règle ne doit pas reposer sur cette coïncidence.
+
+---
+
+## Attitude perçue (ADR 0111, V3.2-13)
+
+`entity_attitudes` et `attitude_events` sont créées par `20260829120001_psyche_tables.sql` (ADR 0013). La migration `20261125150000_attitude_percue.sql` leur ajoute ce qu'un PNJ **laisse voir**, à côté de ce qu'il ressent :
+
+```sql
+alter table entity_attitudes add column shown_axes jsonb;                                     -- NULL = il montre ce qu'il ressent
+alter table attitude_events  add column shown_deltas jsonb not null default '{}'::jsonb;    -- journal de la façade, rejoué comme deltas
+```
+
+La perception se calcule par `perceptionPercue` (`src/core/psyche/perception.ts`) : la façade l'emporte axe par axe, un axe absent retombe sur le ressenti. Seules des bandes partent vers l'écran ; la valeur ressentie jamais (règle absolue 5).
+

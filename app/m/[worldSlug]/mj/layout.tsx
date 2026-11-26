@@ -4,6 +4,7 @@ import { getWorldBySlug } from "@/src/server/services/worlds";
 import { isWorldAdmin } from "@/src/server/services/permissions";
 import { listCampaigns, resolveCampaignId } from "@/src/server/services/campaigns";
 import { countRequestsReadyToFix } from "@/src/server/services/scheduling";
+import { countDevoirsAValider } from "@/src/server/services/sessionJournal";
 import MjSidebar from "@/components/shell/MjSidebar";
 import { getCampaignTableSettingsRaw } from "@/src/server/repos/campaigns";
 import { parseTableSettings, showsRemotePlay } from "@/src/core/campaigns/tableSettings";
@@ -59,13 +60,19 @@ export default async function MjLayout({
   }
 
   // V3.1-190 : la pastille « à fixer » de Calendrier réel (quatre lectures
-  // légères, `countRequestsReadyToFix`). Le layout ne se relit qu'au
-  // chargement d'une page, pas à chaque navigation entre outils.
+  // légères, `countRequestsReadyToFix`). AG-8 : celle de Livre de sessions,
+  // les devoirs rendus à valider (une lecture de comptage), dans la même
+  // vague. Le layout ne se relit qu'au chargement d'une page, pas à chaque
+  // navigation entre outils.
   const campaignId = await resolveCampaignId(supabase, world.id);
-  // ADR 0103 : la façon de jouer, dans la même vague que la pastille.
-  const [demandesAFixer, reglages] = campaignId
-    ? await Promise.all([countRequestsReadyToFix(supabase, campaignId), getCampaignTableSettingsRaw(supabase, campaignId)])
-    : [0, undefined];
+  // ADR 0103 : la façon de jouer ; AG-8 : les devoirs rendus à valider. Même vague que la pastille.
+  const [demandesAFixer, reglages, devoirsAValider] = campaignId
+    ? await Promise.all([
+        countRequestsReadyToFix(supabase, campaignId),
+        getCampaignTableSettingsRaw(supabase, campaignId),
+        countDevoirsAValider(supabase, campaignId),
+      ])
+    : [0, undefined, 0];
 
   return (
     <>
@@ -74,6 +81,7 @@ export default async function MjLayout({
         worldName={world.name}
         campaignName={campaignName}
         demandesAFixer={demandesAFixer}
+        devoirsAValider={devoirsAValider}
         jeuADistance={reglages !== undefined && showsRemotePlay(parseTableSettings(reglages))}
       />
       <WindowsDesktop>{children}</WindowsDesktop>

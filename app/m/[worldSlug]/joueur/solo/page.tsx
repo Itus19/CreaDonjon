@@ -3,7 +3,8 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { createClient, getAuthUser } from "@/lib/supabase/server";
 import { getWorldBySlug, getCalendar } from "@/src/server/services/worlds";
 import { listCampaigns } from "@/src/server/services/campaigns";
-import { getClaimedCharacterEntityId } from "@/src/server/repos/campaigns";
+import { getCampaignTableSettingsRaw, getClaimedCharacterEntityId } from "@/src/server/repos/campaigns";
+import { parseTableSettings } from "@/src/core/campaigns/tableSettings";
 import { buildIntentBarData } from "@/src/server/services/turnIntent";
 import { listSceneChoices, loadSceneView, sceneDateLabel } from "@/src/server/services/soloScene";
 import { buildViewerForWorld } from "@/src/server/services/visibility";
@@ -17,6 +18,8 @@ import FicheJouableSolo from "@/components/solo/FicheJouableSolo";
 import AvertissementReglesNonJouables from "@/components/solo/AvertissementReglesNonJouables";
 import SoloScreen from "@/components/solo/SoloScreen";
 import SoloShell from "@/components/solo/SoloShell";
+import BandeMonde from "@/components/solo/BandeMonde";
+import RondsPresents from "@/components/solo/RondsPresents";
 import type { Locale } from "@/src/i18n/request";
 
 /**
@@ -80,14 +83,16 @@ export default async function JoueurSoloPage({ params }: { params: Promise<{ wor
 
   const viewer = await buildViewerForWorld(supabase, world.id, user.id);
   const t = await getTranslations("shell");
-  const [scene, choices, calendar, wiki, quests, nonJouables] = await Promise.all([
-    loadSceneView(supabase, { campaignId: campaign.id, worldId: world.id }),
+  const [scene, choices, calendar, wiki, quests, nonJouables, reglages] = await Promise.all([
+    loadSceneView(supabase, { campaignId: campaign.id, worldId: world.id, perceivedBy: entityId }),
     listSceneChoices(supabase, world.id),
     getCalendar(supabase, world.id),
     buildWikiColumn(supabase, world.id, user.id, viewer, t.raw("kindLabels") as Record<string, string>, campaign.id, entityId),
     buildQuestColumn(supabase, world.id, viewer),
     // V3.1-132 : les règles du personnage qui ne sont pas entièrement jouables (trois lectures, une fois par ouverture du solo).
     unplayableAmong(supabase, { worldId: world.id, keys: data.ruleKeys, locale }),
+    // V3.2-20 : les réglages de la partie (DD et issue des jets), une lecture légère dans la même vague.
+    getCampaignTableSettingsRaw(supabase, campaign.id),
   ]);
   const dateLabel = scene ? sceneDateLabel(scene.time.day, calendar) : null;
 
@@ -116,6 +121,11 @@ export default async function JoueurSoloPage({ params }: { params: Promise<{ wor
             sketches={scene?.sketches ?? []}
           />
         }
+        bandeMonde={
+          <BandeMonde>
+            <RondsPresents present={scene?.present ?? []} sketches={scene?.sketches ?? []} />
+          </BandeMonde>
+        }
         quetes={<QuetesTelephone quests={quests} />}
         jeu={
           <SoloScreen
@@ -126,6 +136,7 @@ export default async function JoueurSoloPage({ params }: { params: Promise<{ wor
             scene={scene}
             locations={choices.locations}
             candidates={choices.candidates}
+            montrerIssue={parseTableSettings(reglages).solo_show_outcome}
           />
         }
         fiche={<FicheJouableSolo worldSlug={worldSlug} entityId={entityId} campaignId={campaign.id} entityName={data.actor.name} />}

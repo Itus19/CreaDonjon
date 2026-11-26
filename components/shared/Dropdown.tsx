@@ -1,12 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useEditCommit } from "./EditCommitContext";
 
 export interface DropdownOption {
   value: string;
   label: string;
+  /** Titre de section, affiché au-dessus de la première option qui le porte (AG-18 : « Bases officielles », « Mes rulesets »). */
+  groupe?: string;
+  /** Ce que le déclencheur affiche quand l'option est choisie, si le libellé complet est trop long pour lui (le menu montre toujours `label`). Ex. « lfm-3-1.7b » pour « liquid/lfm-3-1.7b:free ». */
+  labelCourt?: string;
 }
 
 /**
@@ -32,7 +36,7 @@ export interface DropdownOption {
  * tous, simplement juste aux deux largeurs.
  */
 const TRIGGER_BASE =
-  "inline-flex items-center gap-1 rounded-md border border-edge bg-transparent text-left text-ink outline-none transition-colors hover:bg-panel-raised disabled:opacity-50";
+  "inline-flex items-center gap-1 border bg-transparent text-left outline-none transition-colors hover:bg-panel-raised disabled:opacity-50";
 
 /**
  * Deux tailles, fermees — la prop que docs/CHARTE-UI.md §3 prescrit
@@ -44,6 +48,23 @@ const TRIGGER_BASE =
 const TRIGGER_SIZE = {
   sm: "px-2 py-1 text-xs",
   md: "px-2 py-1.5 text-sm",
+} as const;
+
+/**
+ * La forme du déclencheur, fermée elle aussi. `champ` (défaut) est la forme
+ * historique. `pastille` est la puce cliquable de la charte (§3, « Puce,
+ * étiquette ») en version dense, pour une liste posée dans une ligne de texte :
+ * l'en-tête de la barre d'intention du solo, où le moteur dit ce qu'il a compris
+ * (arme, cible) et où l'on clique pour en changer. Elle ne fait que 20 px de
+ * haut ; le pseudo-élément étend la zone cliquable à 28 px (charte §4, « Cible
+ * de clic »). `pastille-accent` signale un choix qui reste à faire. Une pastille
+ * ignore `size` : elle n'a qu'une taille.
+ */
+const PASTILLE = "relative rounded-full px-2 text-xs leading-[18px] before:absolute before:inset-x-0 before:-inset-y-1 before:content-['']";
+const TRIGGER_FORME = {
+  champ: "rounded-md border-edge text-ink",
+  pastille: `${PASTILLE} border-edge text-ink`,
+  "pastille-accent": `${PASTILLE} border-accent text-accent`,
 } as const;
 
 /**
@@ -59,6 +80,7 @@ export default function Dropdown({
   className,
   triggerClassName,
   size = "sm",
+  forme = "champ",
   disabled,
   "aria-label": ariaLabel,
 }: {
@@ -87,6 +109,8 @@ export default function Dropdown({
   triggerClassName?: string;
   /** `sm` (defaut) pour une barre d'outils dense, `md` pour un champ de formulaire. */
   size?: keyof typeof TRIGGER_SIZE;
+  /** `champ` (défaut), `pastille` ou `pastille-accent` : voir `TRIGGER_FORME`. */
+  forme?: keyof typeof TRIGGER_FORME;
   disabled?: boolean;
   /**
    * Ce que cette liste choisit — « Visibilite du bloc », « Espece »… —, jamais
@@ -166,9 +190,12 @@ export default function Dropdown({
         aria-haspopup="listbox"
         aria-expanded={open}
         title={current?.label ?? value}
-        className={triggerClassName ?? `${TRIGGER_BASE} ${TRIGGER_SIZE[size]}${className ? ` ${className}` : ""}`}
+        className={
+          triggerClassName ??
+          `${TRIGGER_BASE} ${TRIGGER_FORME[forme]} ${forme === "champ" ? TRIGGER_SIZE[size] : ""}${className ? ` ${className}` : ""}`
+        }
       >
-        <span className="min-w-0 flex-1 truncate">{current?.label ?? value}</span>
+        <span className="min-w-0 flex-1 truncate">{current?.labelCourt ?? current?.label ?? value}</span>
         <span className="shrink-0 text-ink-muted">▾</span>
       </button>
       {open &&
@@ -183,28 +210,34 @@ export default function Dropdown({
             className="fixed z-[1200] max-h-60 overflow-auto rounded-md border border-edge-strong bg-panel-raised shadow-2xl"
             style={{ top: rect.top, bottom: rect.bottom, left: rect.left, minWidth: rect.width }}
           >
-            {options.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                role="option"
-                aria-selected={opt.value === value}
-                // Empeche le mousedown de deplacer le focus DOM vers ce
-                // bouton, qui vit dans un portail hors du conteneur du bloc
-                // (`document.body`) : sans ce garde, le focus quittait le
-                // bloc AVANT que `onClick` n'applique la selection, ce qui
-                // declenchait la sauvegarde au blur (EntityBlocks.tsx,
-                // handleBlockBlur) avec l'ETAT PRECEDENT — la valeur tout
-                // juste choisie disparaissait silencieusement au premier
-                // rechargement, sans qu'aucun message ne le signale.
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => select(opt.value)}
-                className={`block w-full whitespace-nowrap px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-panel ${
-                  opt.value === value ? "text-accent" : "text-ink"
-                }`}
-              >
-                {opt.label}
-              </button>
+            {options.map((opt, i) => (
+              <Fragment key={opt.value}>
+                {opt.groupe && opt.groupe !== options[i - 1]?.groupe && (
+                  <div role="presentation" className="px-2.5 pb-1 pt-2 text-xs font-medium uppercase tracking-wide text-ink-muted">
+                    {opt.groupe}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={opt.value === value}
+                  // Empeche le mousedown de deplacer le focus DOM vers ce
+                  // bouton, qui vit dans un portail hors du conteneur du bloc
+                  // (`document.body`) : sans ce garde, le focus quittait le
+                  // bloc AVANT que `onClick` n'applique la selection, ce qui
+                  // declenchait la sauvegarde au blur (EntityBlocks.tsx,
+                  // handleBlockBlur) avec l'ETAT PRECEDENT — la valeur tout
+                  // juste choisie disparaissait silencieusement au premier
+                  // rechargement, sans qu'aucun message ne le signale.
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => select(opt.value)}
+                  className={`block w-full whitespace-nowrap px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-panel ${
+                    opt.value === value ? "text-accent" : "text-ink"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              </Fragment>
             ))}
           </div>,
           document.body

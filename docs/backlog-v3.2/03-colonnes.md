@@ -24,3 +24,118 @@
 - [ ] Une fiche non découverte reste introuvable et illisible.
 - [ ] À 390 px, la fiche s'ouvre en feuille du bas et se referme sur la liste.
 - [ ] Aucun chargement de plus à l'ouverture de l'écran solo.
+
+---
+
+### ☐ V3.2-12 — Les volets : le fil s'étale, un onglet au bord de chaque volet · `M` · sans modèle IA — **codé le 25 novembre, à vérifier à l'écran**
+
+**Demandé le 25 novembre**, captures à l'appui : volets fermés, le texte reste étroit au centre ; les languettes de repli sont mal placées (surtout la gauche, isolée loin du texte) et touchent la barre de défilement du fil et les bulles des PNJ. Esquisses et choix de l'auteur : <https://claude.ai/artifact/SY2zL6VoSLivR8tuu8yxgh> (options **A2** et **C1**).
+
+**Aujourd'hui** (`components/solo/SoloShell.tsx`) : volets fermés, le fil est plafonné à `max-w-[80ch]` et centré (choix délibéré de V3.1-36, que l'auteur renverse). Les deux `PoigneeRepli` sont à mi-hauteur, dans la gouttière de 12 px, et le Monde replié disparaît entièrement.
+
+**À faire.**
+- **Le fil s'étale (A2).** Le cadre du fil (barre de défilement, bulles du joueur, boîte de saisie) prend toute la largeur libérée. Seuls les paragraphes de narration gardent un plafond, vers 110 caractères. Retirer le commentaire « le fil ne s'étale pas » et dire pourquoi le plafond est sur le paragraphe, pas sur la colonne.
+- **Un onglet accroché au volet (C1).** Chaque bouton de repli devient un onglet qui sort du bord intérieur de son volet, **en haut**, au niveau de la première ligne du fil. Même recette que l'onglet du menu principal (`Rail.tsx`, « replierMenu » : bordure ouverte côté volet, coins arrondis côté fil). Ouvert ou fermé, l'onglet garde sa hauteur et suit le bord.
+- **Un couloir de 20 px** entre les colonnes au lieu de 12, et la barre de défilement du fil rentrée d'un cran (marge intérieure) pour ne jamais toucher l'onglet.
+- **Le Monde replié devient une bande** d'environ 44 px, comme la fiche devient une bande de jauges. La bande montre les icônes des quatre onglets (Wiki, Quêtes, Présents, Règles) ; un clic rouvre le volet sur cet onglet. Garder le piège noté dans le code : les deux bornes de `grid-template-columns` doivent rester des `minmax()` de même forme.
+- Ne pas toucher à la boîte « Que fais-tu ? » au-delà de sa largeur (V3.2-2).
+
+**Catalogue** : mettre à jour la planche `docs/catalogue/Solo.dc.html` (onglet de volet, bande du Monde, couloir).
+
+**Critères d'acceptation**
+- [ ] À 1440 px, les deux volets fermés : la barre de défilement du fil est au bord de la bande de la fiche, les bulles du joueur à droite, la narration plafonnée vers 110 caractères.
+- [ ] Volets ouverts ou fermés, aucun onglet ne chevauche la barre de défilement, une bulle ou le nom d'un PNJ.
+- [ ] Monde fermé : bande de 44 px, onglet à son bord ; un clic sur l'icône Présents rouvre le volet sur Présents.
+- [ ] L'onglet garde sa hauteur entre ouvert et fermé ; le chevron indique ce qui va se passer.
+- [ ] Rien ne change sous 1024 px (onglets de tablette, vues du téléphone).
+- [ ] Le pli reste mémorisé par monde ; sans animation si les animations sont réduites.
+
+---
+
+### ☑ V3.2-13 — L'attitude **perçue** des présents arrive à l'écran · `M` · sans modèle IA — **conçu le 25 novembre (ADR 0111)**
+
+**Demandé le 25 novembre**, avec une précision qui fait tout le ticket : ce que l'écran montre est **la perception du joueur**. Un PNJ peut ne pas ressentir ce qu'il montre, et tromper le joueur.
+
+**Aujourd'hui** : `SceneView.present[].disposition` et `sketches[].disposition` existent mais **rien ne les écrit**. Les attitudes réelles vivent dans `entity_attitudes.axes` (sept axes, bandes nommées, `specs/psyche-pnj.md` §3), mais rien ne dit ce qu'un PNJ **laisse voir**.
+
+**À trancher par l'ADR.**
+- **Où vit la façade.** Une attitude affichée distincte de l'attitude réelle : seconde série d'axes par paire, champ « feint » sur le bloc `relationship`, ou dérivation (perçu = réel sauf dissimulation déclarée). Toute option qui touche au schéma passe par une migration nouvelle et `docs/SCHEMA.md` (règle 14) : **s'arrêter et demander** avant de l'écrire.
+- **Ce qui part au client.** Seulement la bande perçue d'amitié (et d'attirance, voir plus bas), en mots, jamais le nombre (`specs/psyche-pnj.md` §1.5). La vraie valeur, quand elle diffère, ne quitte jamais le serveur (règle absolue 5) — pas même dans un champ inutilisé du JSON.
+- **L'attirance.** Décision de l'auteur, le 25 novembre : comme le reste, le cercle rose montre ce que le PNJ **laisse voir** en réaction aux actions du personnage, et n'apparaît que lorsque c'est pertinent (le PNJ a montré de l'attirance). Les romances sont **activées par défaut dans tous les mondes**, ce qui corrige la recommandation de `specs/psyche-pnj.md` §3 (« visibilité `gm` par défaut ») : l'ADR met la spécification à jour. Un monde peut toujours la désactiver.
+- **Ce que reçoit le modèle** (règle 11). Pour jouer une tromperie, le narrateur doit-il connaître l'attitude réelle ? Si oui, sous quelle consigne, pour qu'il narre la façade sans la trahir (même fuite que `known_as`, §3).
+- **Les esquisses** (V3-C2) : un personnage sans fiche a-t-il une attitude perçue, et d'où vient-elle (tirage à graine fixe, ADR 0104) ?
+- **Quand la perception change** : qui l'écrit (moteur, proposition de l'IA validée, règle 9), et le signal de deux crans ou plus déjà prévu par la spécification.
+
+**Lien** : V3.1-227 (les inconnus dans Présents) tranche ce qu'un présent non découvert montre ; les deux ADR doivent rester cohérents.
+
+**Décidé le 25 novembre (ADR 0111)** : une seconde série d'axes par paire (`entity_attitudes.shown_axes`, `attitude_events.shown_deltas`, migration `20261125150000`). L'écran lit déjà la façade ; l'écrire et la donner au narrateur est V3.2-15.
+
+**Critères d'acceptation (de la conception)**
+- [x] ADR écrit ; tickets prêts découpés (V3.2-14, V3.2-15).
+
+---
+
+### ☐ V3.2-14 — Les présents dans la bande du Monde fermé · `S` · sans modèle IA — **codé le 25 novembre, à vérifier à l'écran**
+
+**Demandé le 25 novembre.** Volet gauche fermé, la bande montre un rond par personne présente, avec ses initiales et un anneau qui dit comment elle **semble** percevoir le personnage. Esquisses : <https://claude.ai/artifact/SY2zL6VoSLivR8tuu8yxgh#presents>, option **D2** choisie.
+
+**À faire.**
+- **L'anneau est une jauge.** Couleur du cran d'amitié perçu (du rouge « haineux » au vert-bleu « dévoué ») **et** longueur de l'arc (un petit bout pour « haineux », la moitié pour « indifférent », le tour complet pour « dévoué ») : même langage que l'anneau des PV, et lisible sans distinguer le rouge du vert. Couleurs par jetons (`src/styles/tokens.css`), contraste vérifié.
+- **L'attirance a son cercle.** Un second cercle fin, rose, à l'extérieur, rempli au tiers, aux deux tiers ou en entier (intrigué·e, attiré·e, épris·e), seulement quand le PNJ a montré de l'attirance (V3.2-13).
+- **Rangés par distance** (au contact, proche, loin), séparés d'un trait ; les lointains un peu pâlis.
+- **Pointillés** pour une esquisse sans fiche, comme sa carte dans l'onglet Présents.
+- **Halo** léger sur le PNJ qui a parlé au dernier tour.
+- **Au survol**, une étiquette : nom et crans en mots (« Mabelle du Fanal · cordiale · intriguée »). **Au clic**, le volet se rouvre sur Présents, à cette personne. Le rond est un bouton, avec un nom accessible complet.
+- Le même rond devant chaque carte de l'onglet Présents ouvert.
+- Un changement de deux crans ou plus fait pulser l'anneau une fois (rien si les animations sont réduites).
+
+**Câblage** : aucune requête de plus, la scène arrive déjà avec la page ; les données viennent du champ posé par V3.2-13.
+
+**Catalogue** : nouvelle entrée « rond de présent » sur `docs/catalogue/Solo.dc.html`.
+
+**Critères d'acceptation**
+- [ ] Les cinq personnes des esquisses s'affichent avec le bon cran, dans l'ordre des distances.
+- [ ] Un PNJ qui feint l'amitié montre l'anneau de l'amitié feinte ; sa vraie attitude n'est nulle part dans la réponse du serveur.
+- [ ] Un PNJ qui n'a montré aucune attirance n'a pas de cercle rose ; un monde qui a désactivé les romances n'en montre jamais.
+- [ ] En niveaux de gris, les sept crans restent distincts par la longueur de l'arc.
+
+---
+
+### ☐ V3.2-15 — Écrire la façade d'un PNJ, et la faire jouer au narrateur · `M` · **avec** modèle IA — **prêt (Opus : IA, prompts)**
+
+**Suite de V3.2-13 (ADR 0111).** Les colonnes existent et l'écran les lit ; rien ne les écrit encore.
+
+**À faire.**
+- **Le rejeu** reconstruit `shown_axes` à partir de `attitude_events.shown_deltas`, avec le même amortissement que `axes` (`src/core/psyche/apply.ts`). Une façade remise à « ce qu'il ressent » repasse `shown_axes` à NULL.
+- **Le MJ** pose ou corrige une façade depuis le bloc `relationship` (un second curseur « ce qu'il laisse voir », replié par défaut), ce qui écrit un `attitude_event` d'origine `gm`.
+- **L'IA** propose une façade par `ai_proposals` (règle 9), validée par Zod puis par le moteur, avec les seuils de signalement des vraies attitudes.
+- **Le narrateur** reçoit la vérité ET la façade, sous une consigne explicite : narrer seulement ce que le PNJ laisse voir, laisser filtrer au plus un indice (règle 11, même discipline que `known_as`).
+
+**Critères d'acceptation**
+- [ ] Rejouer le journal reconstruit exactement `axes` et `shown_axes`.
+- [ ] Un PNJ qui hait le personnage mais feint l'amitié : la bande affiche « amical », le narrateur le décrit aimable, le contexte du modèle porte les deux sous la consigne.
+- [ ] Aucune valeur ressentie dans une réponse envoyée à l'écran de la personne qui joue.
+
+---
+
+### ☐ V3.2-16 — La fiche repliée montre des jauges circulaires · `S` · sans modèle IA — **codé le 25 novembre, à vérifier à l'écran**
+
+**Demandé le 25 novembre** : la bande de la fiche repliée devrait afficher les jauges circulaires des éléments principaux, PV, XP, encombrement et épuisement, plutôt que des chiffres et une barre.
+
+**Fait.** La bande garde le bouclier de CA en tête, puis quatre `JaugeCirculaire`, celles du bandeau de la fiche ouverte : PV ; marche vers le niveau suivant (dedans les PX du niveau, dessous « Niv. N », AG-4) ; charge en kg sur la capacité, en ton d'alerte une fois encombré ; épuisement sur 6, en ton d'alerte. Un clic sur une jauge bascule en pourcentage, comme ailleurs. `jaugesBande` (`lib/ui/solo.ts`) calcule les parts, testées.
+
+**Critères d'acceptation**
+- [x] Les quatre jauges sont calculées par `jaugesBande`, sans requête de plus (la fiche publie déjà ses jauges).
+- [ ] À l'écran, fiche repliée : CA, puis PV, niveau, charge, épuisement, dans 96 px, sans débordement.
+- [ ] Encombré : l'anneau de charge passe en ton d'alerte.
+
+---
+
+### ☑ V3.2-25 — Deux bandes de même largeur · `S` · sans modèle IA — **fait le 26 novembre**
+
+**Demandé le 25 novembre au soir** : la bande de la fiche repliée plus fine, ses éléments à leur taille actuelle, et la bande du Monde à la même largeur. Esquisse : <https://claude.ai/artifact/SY2zL6VoSLivR8tuu8yxgh#bandes>, option **E1** choisie.
+
+**Fait.** Les deux bandes passent à 64 px (le Monde gagne 20 px, la fiche en perd 32, rendus au fil). La bande de la fiche passe de `px-2` à `px-1` pour que la jauge de 48 px tienne entière.
+
+**Critères d'acceptation**
+- [x] Les deux bandes repliées font 64 px ; bouclier et jauges gardent leur taille.

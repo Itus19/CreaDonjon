@@ -17,10 +17,16 @@ export default function NouveauMonde({
   menerPartie,
   jouerSolo,
   pleineLargeur = false,
+  enCase = false,
 }: {
   menerPartie: React.ReactNode;
   jouerSolo: React.ReactNode | null;
   pleineLargeur?: boolean;
+  /**
+   * AG-17 : une case de la bande du haut de l'accueil, de la hauteur des deux
+   * autres ; le panneau s'ouvre par-dessus, sans changer cette hauteur.
+   */
+  enCase?: boolean;
 }) {
   const t = useTranslations("accueil");
   const [ouvert, setOuvert] = useState(false);
@@ -44,20 +50,36 @@ export default function NouveauMonde({
     "rounded-lg border border-edge bg-panel-raised px-4 py-2.5 text-left text-sm text-ink transition-colors hover:border-accent";
 
   return (
-    <div className={`flex flex-col gap-2 ${pleineLargeur ? "w-full" : "items-start"}`}>
-      <button
-        type="button"
-        onClick={basculer}
-        aria-expanded={ouvert}
-        className={`rounded-full bg-accent px-6 py-3 text-base font-semibold text-accent-ink transition-colors hover:bg-accent-hover ${
-          pleineLargeur ? "w-full" : ""
-        }`}
-      >
-        {t("nouveauMonde")}
-      </button>
+    <div className={`flex flex-col gap-2 ${enCase ? "relative h-full" : pleineLargeur ? "w-full" : "items-start"}`}>
+      {enCase ? (
+        <button
+          type="button"
+          onClick={basculer}
+          aria-expanded={ouvert}
+          className="flex h-full w-full flex-col justify-center gap-1 rounded-lg bg-accent px-5 py-3 text-left text-accent-ink transition-colors hover:bg-accent-hover"
+        >
+          <span className="text-base font-semibold">{t("nouveauMonde")}</span>
+          <span className="text-sm">{t("nouveauMondeSousTitre")}</span>
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={basculer}
+          aria-expanded={ouvert}
+          className={`rounded-full bg-accent px-6 py-3 text-base font-semibold text-accent-ink transition-colors hover:bg-accent-hover ${
+            pleineLargeur ? "w-full" : ""
+          }`}
+        >
+          {t("nouveauMonde")}
+        </button>
+      )}
 
       {ouvert && (
-        <div className="flex w-full max-w-xl flex-col rounded-lg border border-edge bg-panel p-3">
+        <div
+          className={`flex w-full max-w-xl flex-col rounded-lg border border-edge bg-panel p-3 ${
+            enCase ? "absolute left-0 top-full z-30 mt-2 w-[min(36rem,80vw)] shadow-2xl" : ""
+          }`}
+        >
           {chemin === "choix" && (
             <>
               <p className="mb-2 text-sm font-medium text-ink">{t("queFaire")}</p>

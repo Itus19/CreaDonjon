@@ -2,6 +2,11 @@ import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
 
 const nextConfig: NextConfig = {
+  // AG-23 — le compilateur React mémoïse composants et valeurs à la
+  // compilation : moins de rendus inutiles sans useMemo écrits à la main.
+  // Accepté par l'auteur le 24 nov. (babel-plugin-react-compiler, MIT,
+  // outil de build seulement).
+  reactCompiler: true,
   // `sharp` embarque des binaires natifs par plateforme (libvips) — le
   // bundler de Next (Turbopack) les trace mal quand il essaie de l'inclure
   // dans le bundle serveur, provoquant "ERR_DLOPEN_FAILED: libvips-cpp.so...

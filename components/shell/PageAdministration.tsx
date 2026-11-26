@@ -378,7 +378,7 @@ function LigneLien({
     const res = await fetch("/api/admin/view-as", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ targetUserId: invite.claimedByUserId }),
+      body: JSON.stringify({ targetUserId: invite.claimedByUserId, returnTo: window.location.pathname + window.location.search }),
     });
     setBusy(false);
     if (!res.ok) {

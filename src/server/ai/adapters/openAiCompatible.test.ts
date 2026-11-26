@@ -35,3 +35,60 @@ describe("OpenAiCompatibleProvider — jeton d'accès", () => {
     expect(enTetes(f, 1).Authorization).toBe("Bearer jeton-factice");
   });
 });
+
+/**
+ * ADR 0103 — l'adresse vient de l'utilisateur et notre serveur l'appelle :
+ * aucune redirection suivie, un délai, et une raison lisible quand le
+ * fournisseur refuse (crédit épuisé, clé fausse).
+ */
+describe("OpenAiCompatibleProvider — gardes d'un fournisseur distant", () => {
+  const demande = { messages: [{ role: "user" as const, content: "a" }] };
+
+  it("ne suit aucune redirection et borne la durée de l'appel", async () => {
+    const f = fetchFactice();
+    vi.stubGlobal("fetch", f);
+    await new OpenAiCompatibleProvider({ baseUrl: "https://x.exemple/v1", model: "m" }).complete(demande);
+    expect(f.mock.calls[0]![1].redirect).toBe("manual");
+    expect(f.mock.calls[0]![1].signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("une redirection est un échec, jamais suivie", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(null, { status: 302, headers: { location: "http://169.254.169.254/" } })));
+    await expect(new OpenAiCompatibleProvider({ baseUrl: "https://x.exemple/v1", model: "m" }).complete(demande)).rejects.toMatchObject({ raison: "echec" });
+  });
+
+  it("un quota épuisé remonte comme tel", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response('{"error":{"code":"insufficient_quota"}}', { status: 429 })));
+    await expect(new OpenAiCompatibleProvider({ baseUrl: "https://x.exemple/v1", model: "m" }).complete(demande)).rejects.toMatchObject({ raison: "quota" });
+  });
+
+  it("le refus porte la phrase du fournisseur, pour l'écran", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response('{"object":"error","message":"You need a subscription to access this API."}', { status: 402 })));
+    await expect(new OpenAiCompatibleProvider({ baseUrl: "https://x.exemple/v1", model: "m" }).complete(demande)).rejects.toMatchObject({
+      raison: "quota",
+      detail: "402 : You need a subscription to access this API.",
+    });
+  });
+
+  it("un délai dépassé remonte comme tel", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new DOMException("trop long", "TimeoutError"); }));
+    await expect(new OpenAiCompatibleProvider({ baseUrl: "https://x.exemple/v1", model: "m" }).complete(demande)).rejects.toMatchObject({ raison: "delai" });
+  });
+
+  it("se dit local ou distant selon son adresse", () => {
+    expect(new OpenAiCompatibleProvider({ baseUrl: "http://localhost:1234/v1", model: "m" }).capabilities().isLocal).toBe(true);
+    expect(new OpenAiCompatibleProvider({ baseUrl: "https://api.venice.ai/api/v1", model: "m" }).capabilities().isLocal).toBe(false);
+  });
+
+  it("retire un /chat/completions collé en trop à la fin de l'adresse", async () => {
+    const f = fetchFactice();
+    vi.stubGlobal("fetch", f);
+    await new OpenAiCompatibleProvider({ baseUrl: "https://openrouter.ai/api/v1/chat/completions/", model: "m" }).complete(demande);
+    expect(f.mock.calls[0]![0]).toBe("https://openrouter.ai/api/v1/chat/completions");
+  });
+
+  it("un modèle inconnu ou inadapté remonte comme une requête refusée, pas un fournisseur injoignable", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response('{"error":{"message":"No endpoints found"}}', { status: 404 })));
+    await expect(new OpenAiCompatibleProvider({ baseUrl: "https://x.exemple/v1", model: "m" }).complete(demande)).rejects.toMatchObject({ raison: "refusee" });
+  });
+});

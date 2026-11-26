@@ -4,15 +4,24 @@ import type { Database, Json } from "@/src/types/database";
 import type { Viewer } from "@/src/core/visibility";
 import { soloNarrationSchema, soloNarrationToolSchema } from "@/src/core/ai/soloNarrationProposal";
 import { maxSimilarityToRecent } from "@/src/core/ai/narrationSimilarity";
+import { soloSystemPrompt } from "@/src/core/ai/narrationPrompt";
+import { parseTableSettings } from "@/src/core/campaigns/tableSettings";
+import { getCampaignTableSettingsRaw } from "@/src/server/repos/campaigns";
 import { buildSoloTurnContext } from "@/src/server/services/turnContext";
 import { drawSketchForScene, recordSketchSpeechAndMaybeAnchor } from "@/src/server/services/sceneSketches";
 import { proposeWorldNote } from "@/src/server/services/soloWorldNotes";
+import { advanceSceneAfterNarration, applyRoomAfterNarration, moveSceneAfterNarration } from "@/src/server/services/narrationScene";
+import type { ElapsedProposal } from "@/src/core/rules/elapsed";
+import type { GameTime } from "@/src/core/rules/scene";
+import type { SceneView } from "@/lib/solo/types";
+import { loadSceneView } from "@/src/server/services/soloScene";
 import { findEventByFromEvent, getSessionEventById, insertSessionEvent, nextEventSeq } from "@/src/server/repos/sessions";
 import { buildViewerForWorld } from "@/src/server/services/visibility";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
 import { resolveProviderForUser } from "./resolveProvider";
-import type { AiProvider } from "./provider";
-import { runAiCompletion } from "./callAi";
+import type { RaisonSansNarration } from "@/src/core/ai/providerError";
+import { AiProviderError, type AiProvider } from "./provider";
+import { AiRateLimitError, runAiCompletion } from "./callAi";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -27,17 +36,10 @@ const TOOL_NAME = "narrate_turn";
  */
 const SIMILARITY_THRESHOLD = 0.6;
 
-const SYSTEM_PROMPT =
-  "Tu es le narrateur d'une session de jeu de role solo. Le moteur du jeu calcule deja tous les " +
-  "resultats mecaniques (jets, degats, changements d'etat) : ils te sont donnes comme des FAITS deja " +
-  "etablis, jamais a recalculer, jamais a re-narrer differemment. Ta seule tache : raconter ce tour en " +
-  "deux a quatre phrases, en francais, en integrant les faits fournis sans les contredire. Si un PNJ " +
-  "present reagit, utilise UNIQUEMENT un identifiant de PNJ fourni dans le contexte — n'en invente " +
-  "jamais. Si un personnage incident, absent de cette liste, doit reagir MAINTENANT, ne l'invente pas : " +
-  "demande-le via new_character avec seulement son role (jamais un nom ni un trait, le moteur les tire). " +
-  "Si un fait meriterait d'etre ajoute a la fiche d'un lieu ou d'un PNJ REELLEMENT present, suggere-le " +
-  "via world_note (un identifiant fourni, jamais invente) — un humain la relira, ne l'ecris jamais comme " +
-  `un fait acquis dans ta narration. Reponds toujours via l'outil ${TOOL_NAME}, une seule fois.`;
+/**
+ * Narration solo — la consigne vit dans `src/core/ai/narrationPrompt.ts`
+ * (fonction pure, testée), réglée par le « Récit » de la partie (V3.2-5).
+ */
 
 export interface SoloNarrationParams {
   worldId: string;
@@ -60,6 +62,10 @@ export interface SoloNarrationOutcome {
   eventId?: string;
   narration?: string;
   npcReaction?: { npcId: string; text: string };
+  /** V3.2-18 — la nouvelle heure quand la narration a fait passer du temps (durée proposée ou temps de parole) ; absente sinon. */
+  time?: GameTime;
+  /** V3.2-19 — la nouvelle scène quand la narration l'a déplacée : l'écran la pose sans la redemander. */
+  scene?: SceneView;
   invalidReason?: string;
   inputTokens: number;
   outputTokens: number;
@@ -73,6 +79,13 @@ interface NarrationAttempt {
   newCharacterRequest?: { role: string };
   /** V3-C3 — une suggestion redactionnelle, jamais ecrite directement (`proposeWorldNote`). */
   worldNote?: { entityId: string; text: string };
+  /** V3.2-18 — une durée proposée, jamais appliquée telle quelle : `advanceSceneAfterNarration` la borne. */
+  elapsed?: ElapsedProposal;
+  /** V3.2-19 — un déplacement proposé vers un lieu voisin fourni ; `moveSceneAfterNarration` l'applique. */
+  moveTo?: { locationId: string; with: string[] };
+  /** V3.2-19 — une pièce proposée ; `applyRoomAfterNarration` la tranche. */
+  enterRoom?: { name: string; description?: string };
+  leaveRoom?: boolean;
   invalidReason?: string;
   inputTokens: number;
   outputTokens: number;
@@ -82,9 +95,11 @@ interface NarrationAttempt {
 async function attemptNarration(
   supabase: TypedClient,
   provider: AiProvider,
+  systemPrompt: string,
   context: string,
   npcIds: string[],
   knownEntityIds: string[],
+  moveTargetIds: string[],
   userId: string,
   campaignId: string
 ): Promise<NarrationAttempt> {
@@ -94,10 +109,10 @@ async function attemptNarration(
     { userId, campaignId, purpose: "solo_turn" },
     {
       messages: [
-        { role: "system", content: SYSTEM_PROMPT },
+        { role: "system", content: systemPrompt },
         { role: "user", content: context },
       ],
-      tools: [{ name: TOOL_NAME, description: "Raconte ce tour de jeu solo", inputSchema: soloNarrationToolSchema(npcIds, knownEntityIds) }],
+      tools: [{ name: TOOL_NAME, description: "Raconte ce tour de jeu solo", inputSchema: soloNarrationToolSchema(npcIds, knownEntityIds, moveTargetIds) }],
     }
   );
 
@@ -106,7 +121,7 @@ async function attemptNarration(
     return { ok: false, invalidReason: "aucun appel d'outil", inputTokens: result.inputTokens, outputTokens: result.outputTokens };
   }
 
-  const parsed = soloNarrationSchema(npcIds, knownEntityIds).safeParse(call.input);
+  const parsed = soloNarrationSchema(npcIds, knownEntityIds, moveTargetIds).safeParse(call.input);
   if (!parsed.success) {
     const reason = parsed.error.issues.map((i) => `${i.path.join(".") || "(racine)"} : ${i.message}`).join(" ; ");
     return { ok: false, invalidReason: reason, inputTokens: result.inputTokens, outputTokens: result.outputTokens };
@@ -118,6 +133,10 @@ async function attemptNarration(
     npcReaction: parsed.data.npc_reaction ? { npcId: parsed.data.npc_reaction.npc_id, text: parsed.data.npc_reaction.text } : undefined,
     newCharacterRequest: parsed.data.new_character ? { role: parsed.data.new_character.role } : undefined,
     worldNote: parsed.data.world_note ? { entityId: parsed.data.world_note.entity_id, text: parsed.data.world_note.text } : undefined,
+    elapsed: parsed.data.elapsed,
+    moveTo: parsed.data.move_to ? { locationId: parsed.data.move_to.location_id, with: parsed.data.move_to.with ?? [] } : undefined,
+    enterRoom: parsed.data.enter_room,
+    leaveRoom: parsed.data.leave_room ?? false,
     inputTokens: result.inputTokens,
     outputTokens: result.outputTokens,
   };
@@ -154,22 +173,32 @@ async function attemptNarration(
  * les deux, un seul événement `narration` s'écrit.
  */
 export async function narrateSoloTurn(supabase: TypedClient, provider: AiProvider, params: SoloNarrationParams): Promise<SoloNarrationOutcome> {
-  const { text: context, npcIds, knownEntityIds, recentNarrations } = await buildSoloTurnContext(supabase, {
-    worldId: params.worldId,
-    campaignId: params.campaignId,
-    playerEntityId: params.playerEntityId,
-    viewer: params.viewer,
-    sessionId: params.sessionId,
-    playerAction: params.playerAction,
-    facts: params.facts,
-    changes: params.changes,
-    hints: params.hints,
-  });
+  // V3.2-5 : le réglage « Récit » (une lecture de la ligne de campagne, en parallèle du contexte).
+  const [firstContext, rawSettings] = await Promise.all([
+    buildSoloTurnContext(supabase, {
+      worldId: params.worldId,
+      campaignId: params.campaignId,
+      playerEntityId: params.playerEntityId,
+      viewer: params.viewer,
+      sessionId: params.sessionId,
+      playerAction: params.playerAction,
+      fromEventId: params.fromEventId,
+      facts: params.facts,
+      changes: params.changes,
+      hints: params.hints,
+    }),
+    getCampaignTableSettingsRaw(supabase, params.campaignId),
+  ]);
+  const systemPrompt = soloSystemPrompt(parseTableSettings(rawSettings).recit, TOOL_NAME);
 
-  const first = await attemptNarration(supabase, provider, context, npcIds, knownEntityIds, params.userId, params.campaignId);
+  const { text: context, npcIds, knownEntityIds, moveTargetIds, recentNarrations, addressedNpcId, addressedIsQuestion, npcs } = firstContext;
+  const first = await attemptNarration(supabase, provider, systemPrompt, context, npcIds, knownEntityIds, moveTargetIds, params.userId, params.campaignId);
   if (!first.ok) return first;
 
   let chosen = first;
+  // Les présents vus par l'essai retenu : le second essai d'un nouveau
+  // personnage voit une esquisse de plus, absente de `npcs`.
+  let chosenNpcs = npcs;
   if (first.newCharacterRequest) {
     // V3-C2 — jamais le modele qui invente un nom : le generateur tire une
     // esquisse (dés réels, journalisée), et SEULEMENT ALORS un second essai
@@ -190,15 +219,28 @@ export async function narrateSoloTurn(supabase: TypedClient, provider: AiProvide
         viewer: params.viewer,
         sessionId: params.sessionId,
         playerAction: params.playerAction,
+        fromEventId: params.fromEventId,
         facts: params.facts,
         changes: params.changes,
         hints: params.hints,
       });
-      const second = await attemptNarration(supabase, provider, retry.text, retry.npcIds, retry.knownEntityIds, params.userId, params.campaignId);
-      if (second.ok) chosen = second;
+      const second = await attemptNarration(supabase, provider, systemPrompt, retry.text, retry.npcIds, retry.knownEntityIds, retry.moveTargetIds, params.userId, params.campaignId);
+      if (second.ok) {
+        chosen = second;
+        chosenNpcs = retry.npcs;
+      }
     }
+  } else if (addressedNpcId && addressedIsQuestion && first.npcReaction?.npcId !== addressedNpcId) {
+    // Le joueur a posé une QUESTION à un PNJ désigné par le code
+    // (`npcAddressedBy`, `estQuestionDirecte`) et le modèle ne l'a pas fait
+    // répondre : UN second essai, même contexte (la consigne y est déjà). On
+    // garde celui où ce PNJ répond ; sinon le premier, déjà valide. Sans
+    // question, le silence du PNJ est un choix légitime du narrateur : pas
+    // de second essai (V3.2-17).
+    const second = await attemptNarration(supabase, provider, systemPrompt, context, npcIds, knownEntityIds, moveTargetIds, params.userId, params.campaignId);
+    if (second.ok && second.npcReaction?.npcId === addressedNpcId) chosen = second;
   } else if (recentNarrations.length > 0 && maxSimilarityToRecent(first.narration!, recentNarrations) > SIMILARITY_THRESHOLD) {
-    const second = await attemptNarration(supabase, provider, context, npcIds, knownEntityIds, params.userId, params.campaignId);
+    const second = await attemptNarration(supabase, provider, systemPrompt, context, npcIds, knownEntityIds, moveTargetIds, params.userId, params.campaignId);
     if (second.ok) {
       const firstScore = maxSimilarityToRecent(first.narration!, recentNarrations);
       const secondScore = maxSimilarityToRecent(second.narration!, recentNarrations);
@@ -208,6 +250,12 @@ export async function narrateSoloTurn(supabase: TypedClient, provider: AiProvide
     // le premier, deja valide — une redite reste une narration, jamais
     // pire qu'un tour sans narration du tout.
   }
+
+  // Le nom et l'attitude du PNJ qui parle, figés au moment de la réplique :
+  // le fil les affiche sous la bulle sans relire la scène, et un journal
+  // garde ce qui était vrai à ce moment-là (l'attitude peut changer ensuite).
+  // Le nom est celui que le JOUEUR connaît (`known_as`), jamais un secret.
+  const speaker = chosen.npcReaction ? chosenNpcs.find((n) => n.id === chosen.npcReaction!.npcId) : undefined;
 
   const seq = await nextEventSeq(supabase, params.sessionId);
   const event = await insertSessionEvent(supabase, {
@@ -220,7 +268,14 @@ export async function narrateSoloTurn(supabase: TypedClient, provider: AiProvide
       __v: 1,
       from_event: params.fromEventId,
       text: chosen.narration,
-      npc_reaction: chosen.npcReaction ? { npc_id: chosen.npcReaction.npcId, text: chosen.npcReaction.text } : null,
+      npc_reaction: chosen.npcReaction
+        ? {
+            npc_id: chosen.npcReaction.npcId,
+            text: chosen.npcReaction.text,
+            npc_name: speaker?.name ?? null,
+            npc_attitude: speaker?.attitudeLabel ?? null,
+          }
+        : null,
     } as unknown as Json,
   });
 
@@ -246,20 +301,83 @@ export async function narrateSoloTurn(supabase: TypedClient, provider: AiProvide
   }
 
   if (chosen.worldNote) {
-    // V3-C3 — même discipline best-effort : une suggestion rédactionnelle
+    // V3-C3, V3.2-27 — même discipline best-effort : une note du monde
     // n'est jamais essentielle (specs/cible-locale-et-ia.md §4), la
     // narration reste acquise même si `ai_proposals` échoue à l'écrire.
     try {
       await proposeWorldNote(supabase, {
         worldId: params.worldId,
         campaignId: params.campaignId,
+        sessionId: params.sessionId,
         sessionEventId: event.id,
         entityId: chosen.worldNote.entityId,
         text: chosen.worldNote.text,
+        callerId: params.userId,
       });
     } catch (erreur) {
       // Ignoré volontairement : la narration ci-dessus est déjà acquise.
       console.error("Proposition de note de monde impossible", erreur);
+    }
+  }
+
+  // V3.2-18 — le temps que ce tour a pris, APRÈS la narration : best-effort,
+  // même discipline que ci-dessus. Le moteur borne la proposition ; une
+  // durée écrite par le joueur a déjà été appliquée par `playTurn`.
+  let time: GameTime | null = null;
+  try {
+    time = await advanceSceneAfterNarration(supabase, {
+      campaignId: params.campaignId,
+      callerId: params.userId,
+      playerAction: params.playerAction,
+      elapsed: chosen.elapsed ?? null,
+      npcReplyText: chosen.npcReaction?.text ?? null,
+    });
+  } catch (erreur) {
+    // Ignoré volontairement : la narration ci-dessus est déjà acquise.
+    console.error("Avance de l'horloge après la narration impossible", erreur);
+  }
+
+  // V3.2-19 — le déplacement proposé, APRÈS l'horloge : `setScene` relit la
+  // scène, l'heure avancée ci-dessus est donc conservée. Best-effort.
+  let scene: SceneView | null = null;
+  if (chosen.moveTo) {
+    try {
+      const moved = await moveSceneAfterNarration(supabase, {
+        campaignId: params.campaignId,
+        worldId: params.worldId,
+        callerId: params.userId,
+        playerEntityId: params.playerEntityId,
+        locationId: chosen.moveTo.locationId,
+        followers: chosen.moveTo.with,
+      });
+      if (moved) scene = await loadSceneView(supabase, { campaignId: params.campaignId, worldId: params.worldId });
+    } catch (erreur) {
+      // Ignoré volontairement : la narration ci-dessus est déjà acquise.
+      console.error("Déplacement de la scène après la narration impossible", erreur);
+    }
+  }
+
+  // V3.2-19 — la pièce proposée, seulement si la scène n'a pas changé de
+  // lieu : un déplacement l'emporte, et laisse les pièces derrière.
+  if (!chosen.moveTo && (chosen.enterRoom || chosen.leaveRoom || firstContext.inSketchRoom) && firstContext.locationName) {
+    try {
+      const roomChanged = await applyRoomAfterNarration(supabase, {
+        worldId: params.worldId,
+        campaignId: params.campaignId,
+        callerId: params.userId,
+        viewer: params.viewer,
+        sessionEventId: event.id,
+        playerAction: params.playerAction,
+        enter: chosen.enterRoom,
+        leave: chosen.leaveRoom ?? false,
+        wikiRooms: firstContext.wikiRooms,
+        locationName: firstContext.locationName,
+        neighbourNames: firstContext.moveTargets.map((l) => l.name),
+      });
+      if (roomChanged) scene = await loadSceneView(supabase, { campaignId: params.campaignId, worldId: params.worldId });
+    } catch (erreur) {
+      // Ignoré volontairement : la narration ci-dessus est déjà acquise.
+      console.error("Pièce proposée par la narration impossible à poser", erreur);
     }
   }
 
@@ -268,6 +386,8 @@ export async function narrateSoloTurn(supabase: TypedClient, provider: AiProvide
     eventId: event.id,
     narration: chosen.narration,
     npcReaction: chosen.npcReaction,
+    ...(time ? { time } : {}),
+    ...(scene ? { scene } : {}),
     // Le cout de CHAQUE essai (garde ou non) est deja dans `ai_usage_log`,
     // un appel = une ligne, sans exception (regle absolue 13) — ce qui est
     // rendu ici decrit seulement l'essai retenu, jamais un total a
@@ -309,11 +429,31 @@ export async function reconstructTurnForNarration(supabase: TypedClient, session
 }
 
 /**
+ * V3.1-223 — pourquoi la narration n'a pas abouti, pour l'écran. Le corps
+ * d'erreur complet reste dans la console du serveur ; l'écran n'en reçoit que
+ * la phrase utile (`detailSansNarration`).
+ */
+export function raisonSansNarration(erreur: unknown): RaisonSansNarration {
+  if (erreur instanceof AiProviderError) return erreur.raison;
+  if (erreur instanceof AiRateLimitError) return "limite_app";
+  return "echec";
+}
+
+/** La phrase du fournisseur quand il a refusé l'appel ; rien pour les autres causes. */
+export function detailSansNarration(erreur: unknown): string | undefined {
+  return erreur instanceof AiProviderError ? erreur.detail : undefined;
+}
+
+export type NarrationDuTour =
+  | { ok: true; text: string; npcReaction: { npcId: string; text: string } | null; time: GameTime | null; scene: SceneView | null }
+  | { ok: false; raison: RaisonSansNarration; detail?: string };
+
+/**
  * V3.1-216 — la narration d'un tour solo, telle que les routes l'appellent :
  * toujours APRÈS que le tour est écrit, toujours best-effort (specs/
  * cible-locale-et-ia.md §4 : aucune fonction essentielle ne dépend du succès
  * d'un appel de modèle). Un échec, un fournisseur absent : le tour reste
- * joué, et rien ne remonte au joueur.
+ * joué, et la raison remonte à l'écran (V3.1-223), jamais une erreur.
  *
  * Elle existe parce qu'un quatrième chemin la demande (le tour repris après
  * une fenêtre de réaction) : quatre copies du même bloc `try` dans quatre
@@ -322,20 +462,22 @@ export async function reconstructTurnForNarration(supabase: TypedClient, session
 export async function narrerTourSoloSansFaillir(
   supabase: TypedClient,
   params: Omit<SoloNarrationParams, "viewer" | "sessionId">,
-): Promise<{ text: string; npcReaction: { npcId: string; text: string } | null } | null> {
+): Promise<NarrationDuTour> {
   try {
     // V3.1-224 (ADR 0103) : le fournisseur du COMPTE qui joue, sinon celui de
     // l'environnement, sinon aucun — et le tour reste joué, muet (V3.1-223).
     const provider = await resolveProviderForUser(supabase, params.userId);
-    if (!provider) return null;
+    if (!provider) return { ok: false, raison: "aucun_fournisseur" };
     const [viewer, sessionId] = await Promise.all([
       buildViewerForWorld(supabase, params.worldId, params.userId),
       getOrOpenSessionForCampaign(supabase, params.campaignId),
     ]);
     const narrated = await narrateSoloTurn(supabase, provider, { ...params, viewer, sessionId });
-    return narrated.ok && narrated.narration ? { text: narrated.narration, npcReaction: narrated.npcReaction ?? null } : null;
+    return narrated.ok && narrated.narration
+      ? { ok: true, text: narrated.narration, npcReaction: narrated.npcReaction ?? null, time: narrated.time ?? null, scene: narrated.scene ?? null }
+      : { ok: false, raison: "inutilisable" };
   } catch (erreur) {
     console.error("Narration du tour impossible", erreur);
-    return null;
+    return { ok: false, raison: raisonSansNarration(erreur), detail: detailSansNarration(erreur) };
   }
 }

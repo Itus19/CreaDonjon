@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mapSessionEventToFilItem, visibleInFil } from "./turnFil";
+import { mapSessionEventToFilItem, visibleInFil, withTurnSummaries } from "./turnFil";
 import type { SessionEventRow } from "@/src/server/repos/sessions";
 
 /**
@@ -25,7 +25,7 @@ function row(overrides: Partial<SessionEventRow>): SessionEventRow {
 }
 
 describe("mapSessionEventToFilItem", () => {
-  it("narration : texte et reaction de PNJ eventuelle", () => {
+  it("narration écrite avant qu'on garde le nom : texte et réaction, nom et attitude à null", () => {
     const item = mapSessionEventToFilItem(
       row({ kind: "narration", payload: { __v: 1, text: "La porte grince.", npc_reaction: { npc_id: "pnj-1", text: "Qui va la ?" } } })
     );
@@ -35,8 +35,25 @@ describe("mapSessionEventToFilItem", () => {
       createdAt: "2026-09-24T10:00:00Z",
       kind: "narration",
       text: "La porte grince.",
-      npcReaction: { npcId: "pnj-1", text: "Qui va la ?" },
+      npcReaction: { npcId: "pnj-1", text: "Qui va la ?", npcName: null, attitude: null },
     });
+  });
+
+  it("narration : le nom et l'attitude du PNJ qui parle, figés dans le journal", () => {
+    const item = mapSessionEventToFilItem(
+      row({
+        kind: "narration",
+        payload: { __v: 1, text: "Mabelle te jauge.", npc_reaction: { npc_id: "pnj-1", text: "Il m'en reste une.", npc_name: "Mabelle, du Fanal", npc_attitude: "accueillante" } },
+      })
+    );
+    expect((item as { npcReaction: unknown }).npcReaction).toEqual({ npcId: "pnj-1", text: "Il m'en reste une.", npcName: "Mabelle, du Fanal", attitude: "accueillante" });
+  });
+
+  it("narration : une esquisse sans attitude suivie garde son nom, l'attitude reste null", () => {
+    const item = mapSessionEventToFilItem(
+      row({ kind: "narration", payload: { text: "…", npc_reaction: { npc_id: "esq-1", text: "Bonsoir.", npc_name: "Une elfe", npc_attitude: null } } })
+    );
+    expect((item as { npcReaction: unknown }).npcReaction).toEqual({ npcId: "esq-1", text: "Bonsoir.", npcName: "Une elfe", attitude: null });
   });
 
   it("narration sans reaction de PNJ : npcReaction reste null, jamais absent", () => {
@@ -60,11 +77,13 @@ describe("mapSessionEventToFilItem", () => {
           facts: ["Perrin — Athlétisme : 14 contre DD 12 — réussite."],
           check: { what: "Athlétisme", expression: "14 (annoncé) + 2", total: 14, dc: 12, verdict: "success", trace: [{ text: "annoncé", value: 12 }] },
           origin: "a_la_main",
+          intent: { text: "j'escalade le mur", kind: "skill_check" },
         },
       })
     );
     expect(item).toMatchObject({
       kind: "roll",
+      actionText: "j'escalade le mur",
       facts: ["Perrin — Athlétisme : 14 contre DD 12 — réussite."],
       total: 14,
       verdict: "success",
@@ -88,7 +107,7 @@ describe("mapSessionEventToFilItem", () => {
     const item = mapSessionEventToFilItem(
       row({ kind: "roll", payload: { facts: ["7 degats"], attack: null, ac: null, verdict: null, damage: { expression: "1d6+3", total: 7, trace: [] }, origin: "volet" } })
     );
-    expect(item).toMatchObject({ kind: "roll", total: 7, verdict: null, origin: "volet" });
+    expect(item).toMatchObject({ kind: "roll", total: 7, verdict: null, origin: "volet", actionText: null });
   });
 
   it("rule_application : relit changes_text/hints_text/ignored_text, jamais recalcule depuis `changes`", () => {
@@ -149,3 +168,17 @@ describe("V3-F2 — visibleInFil", () => {
   });
 });
 
+
+describe("V3.2-27 — withTurnSummaries", () => {
+  it("pose la ligne après le dernier événement du tour et y replie les changements ; hors tour, ils restent", () => {
+    const evts = [
+      row({ id: "w0", seq: 1, kind: "world_update", actor: "system", payload: { note: "Scène posée" } }),
+      row({ id: "a", seq: 2, payload: { intent: { text: "je dors" }, undo_before: { entity_id: "pj", runtime: null, scene: { time: { day: 1, hour: 22, minute: 0 }, activeCombatId: null } } } }),
+      row({ id: "r", seq: 3, kind: "rule_application", actor: "system", payload: { changes_text: ["Repos long"] } }),
+      row({ id: "n", seq: 4, kind: "narration", actor: "ai", payload: { text: "Tu dors." } }),
+    ];
+    const items = withTurnSummaries(evts, { day: 2, hour: 6, minute: 0 });
+    expect(items.map((i) => i.kind)).toEqual(["world_update", "player_action", "narration", "turn_summary"]);
+    expect(items[3]).toMatchObject({ id: "tour-a", seq: 4, time: "+8 h · 06:00, jour 2", changes: ["Repos long"], last: true });
+  });
+});

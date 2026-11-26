@@ -98,6 +98,19 @@ export async function listRecentEventsByKind(supabase: TypedClient, sessionId: s
   return data;
 }
 
+/** Comme `listRecentEventsByKind`, pour plusieurs sortes en UNE requête : la narration solo relit ses narrations, les actions du joueur et les annulations d'un coup (docs/QUOTAS.md Q1). */
+export async function listRecentEventsByKinds(supabase: TypedClient, sessionId: string, kinds: string[], limit: number): Promise<SessionEventRow[]> {
+  const { data, error } = await supabase
+    .from("session_events")
+    .select("id, session_id, seq, kind, actor, actor_user_id, payload, created_at")
+    .eq("session_id", sessionId)
+    .in("kind", kinds)
+    .order("seq", { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 export async function getSessionEventById(supabase: TypedClient, id: string): Promise<SessionEventRow | null> {
   const { data, error } = await supabase
     .from("session_events")
@@ -119,6 +132,24 @@ export async function findEventByFromEvent(supabase: TypedClient, sessionId: str
     .maybeSingle();
   if (error) throw new Error(error.message);
   return data ? mergeGmDetails(data as unknown as EventWithGmDetails) : null;
+}
+
+/**
+ * V3.2-20 — Un événement de ce genre porte-t-il déjà ce `from_event` ? Le
+ * garde-fou de `POST .../raconter` : une première narration ne s'écrit
+ * qu'une fois, même si le client rappelle la route (`findEventByFromEvent`
+ * refuserait de choisir entre plusieurs narrations, d'où `limit(1)`).
+ */
+export async function hasEventFromEvent(supabase: TypedClient, sessionId: string, kind: string, fromEventId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("session_events")
+    .select("id")
+    .eq("session_id", sessionId)
+    .eq("kind", kind)
+    .eq("payload->>from_event", fromEventId)
+    .limit(1);
+  if (error) throw new Error(error.message);
+  return (data ?? []).length > 0;
 }
 
 /**

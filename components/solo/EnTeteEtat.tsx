@@ -1,4 +1,5 @@
 import Link from "next/link";
+import HeureScene from "@/components/solo/HeureScene";
 import type { SceneView } from "@/lib/solo/types";
 
 /**
@@ -28,15 +29,12 @@ export default function EnTeteEtat({
     return <p className="text-sm text-ink-muted">Aucune scène posée — pose-la depuis le panneau ci-dessous.</p>;
   }
 
-  const heure = `${String(scene.time.hour).padStart(2, "0")}:${String(scene.time.minute).padStart(2, "0")}`;
-
   return (
     <>
       {/*
-       * Trois niveaux prévus par le ticket (ville, lieu, pièce) ; seuls les
-       * deux premiers ont une source de données aujourd'hui. La pièce
-       * n'est trackée nulle part dans l'état de scène — omise plutôt
-       * qu'inventée, même principe que la météo à droite.
+       * Trois niveaux (ville, lieu, pièce). Depuis V3.2-19, la pièce vient
+       * de l'état de scène (`room`) : une pièce du bloc « Pièces » du lieu,
+       * ou une esquisse que le moteur a acceptée.
        */}
       <nav className="flex flex-wrap items-baseline gap-x-2" aria-label="Où se passe la scène">
         {scene.nearestCity && (
@@ -54,6 +52,13 @@ export default function EnTeteEtat({
         ) : (
           <span className="text-sm font-medium text-ink">{scene.locationName}</span>
         )}
+        {/* V3.2-19 — la pièce, troisième niveau prévu par le ticket : du texte, elle n'a pas de page à elle. */}
+        {scene.roomName && (
+          <>
+            <span className="text-ink-muted">·</span>
+            <span className="text-sm text-ink-soft">{scene.roomName}</span>
+          </>
+        )}
       </nav>
 
       {/* V3-C6 — la météo, tirée au générateur (jamais inventée) ; la
@@ -61,7 +66,7 @@ export default function EnTeteEtat({
           devinée. */}
       <div className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1">
         {dateLabel && <span className="text-sm text-ink-soft">{dateLabel}</span>}
-        <span className="text-sm text-ink">{heure}</span>
+        <HeureScene initiale={scene.time} />
         {scene.weather && <span className="text-sm text-ink-soft">· {scene.weather}</span>}
       </div>
     </>

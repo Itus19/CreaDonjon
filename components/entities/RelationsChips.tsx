@@ -6,6 +6,8 @@ import { ENTITY_KIND_LABELS } from "@/components/shared/entityKindLabels";
 import Dropdown from "@/components/shared/Dropdown";
 import EyeIcon from "@/components/shared/EyeIcon";
 import { VISIBILITY_OPTIONS } from "@/components/shared/visibilityOptions";
+import { useNiveauJoueurs } from "@/components/shared/NiveauJoueursProvider";
+import { optionsVisibilite } from "@/lib/ui/visibilitePastille";
 import { useDesktop } from "@/components/shell/DesktopContext";
 import { RELATION_TYPES } from "@/src/core/relations/inverses";
 import { RELATION_LABELS_FR } from "@/src/i18n/fr";
@@ -71,6 +73,7 @@ export default function RelationsChips({
   // suppression, navigation vers une autre fiche), jamais a chaque rendu.
   const [prevRelations, setPrevRelations] = useState(relations);
   const [localRelations, setLocalRelations] = useState(relations);
+  const niveauJoueurs = useNiveauJoueurs();
   if (relations !== prevRelations) {
     setPrevRelations(relations);
     setLocalRelations(relations);
@@ -225,7 +228,7 @@ export default function RelationsChips({
           />
           <Dropdown
             value={visibilityLevel}
-            options={VISIBILITY_OPTIONS}
+            options={optionsVisibilite(VISIBILITY_OPTIONS, niveauJoueurs, visibilityLevel)}
             onChange={setVisibilityLevel}
             aria-label="Visibilité de la relation"
           />

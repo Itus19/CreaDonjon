@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Dropdown from "@/components/shared/Dropdown";
 import { VISIBILITY_OPTIONS } from "@/components/shared/visibilityOptions";
+import { useNiveauJoueurs } from "@/components/shared/NiveauJoueursProvider";
+import { optionsVisibilite } from "@/lib/ui/visibilitePastille";
 import type { MapElementRef } from "@/src/core/schemas/mapElementRef";
 import type { OtherEntityOption } from "@/components/entities/RelationsChips";
 import type { VisibleMapLayer } from "@/src/server/services/mapLayers";
@@ -58,6 +60,7 @@ export default function MapRegionEditorPopup({
   const [layerId, setLayerId] = useState(draft.layerId ?? NO_LAYER);
   const [fogGated, setFogGated] = useState(draft.fogGated);
   const [visibilityLevel, setVisibilityLevel] = useState(draft.visibilityLevel);
+  const niveauJoueurs = useNiveauJoueurs();
 
   function save() {
     onSave({
@@ -135,7 +138,7 @@ export default function MapRegionEditorPopup({
             Visibilité
             <Dropdown
               value={visibilityLevel}
-              options={VISIBILITY_OPTIONS}
+              options={optionsVisibilite(VISIBILITY_OPTIONS, niveauJoueurs, visibilityLevel)}
               onChange={setVisibilityLevel}
               aria-label="Visibilité de la zone"
               triggerClassName="rounded-md border border-edge bg-transparent px-2 py-1.5 text-left text-sm text-ink outline-none hover:bg-panel-raised"

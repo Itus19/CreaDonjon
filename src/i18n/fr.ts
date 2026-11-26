@@ -34,6 +34,7 @@ import { ABILITY_LABELS, type ModifierOp, type Skill } from "@/src/core/rules/sh
 import { modifierTargetOption, type ModifierTargetCategory } from "@/src/core/rules/modifierTargets";
 import type { LanguageKey } from "@/src/core/rules/srdMapping";
 import type { IntentVerb } from "@/src/core/rules/intent";
+import { splitCp, type TradeVerb } from "@/src/core/rules/tradeIntent";
 import type { PersonalityPoleKey, RelationshipAxisKey, WorldviewPoleKey } from "@/src/core/psyche/keys";
 import type { PoleEnds } from "@/src/core/psyche/poles";
 
@@ -107,6 +108,39 @@ export const INTENT_VERBS_FR: IntentVerb[] = [
   { kind: "skill_check", actionId: "animal_handling", terms: ["amadoue", "amadouer", "dresse", "dresser"] },
   { kind: "skill_check", actionId: "performance", terms: ["chante", "chanter", "danse", "danser"] },
 ];
+
+/**
+ * V3.2-10 (ADR 0110) — les verbes d'un échange, même lexique fermé que
+ * `INTENT_VERBS_FR`. Un verbe ne suffit jamais : il faut aussi une offre de
+ * la carte (achat) ou un objet du sac (vente, don), ce qui permet d'y mettre
+ * « prendre » sans que « je prends la porte » devienne un achat.
+ *
+ * « échanger » et « troquer » sont absents : un troc objet contre objet
+ * demande les objets du PNJ, qu'aucun catalogue ne porte encore.
+ */
+export const TRADE_VERBS_FR: TradeVerb[] = [
+  {
+    direction: "buy",
+    terms: ["achete", "acheter", "achetes", "prends", "prendre", "prend", "paie", "paye", "payer", "commande", "commander", "commandes", "loue", "louer"],
+  },
+  { direction: "sell", terms: ["vends", "vendre", "vend", "revends", "revendre"] },
+  { direction: "give", terms: ["donne", "donner", "donnes", "offre", "offrir", "offres"] },
+  // V3.2-11 : régler l'ardoise. Ces verbes ne visent QUE l'ardoise ; « payer » (achat) la vise aussi.
+  { direction: "settle", terms: ["regle", "regler", "regles", "solde", "solder", "rembourse", "rembourser"] },
+];
+
+/** V3.2-11 — ce qu'on écrit pour désigner l'ardoise d'un lieu. */
+export const TRADE_TAB_TERMS_FR: string[] = ["l'ardoise", "ardoise", "ma note", "la note", "l'addition", "addition", "ce que je dois", "ma dette", "mes dettes"];
+
+/** V3.2-10 — ce qu'on écrit pour désigner la nuit à l'auberge (offre du groupe `lodging`), en plus de son libellé. */
+export const TRADE_LODGING_TERMS_FR: string[] = ["une chambre", "la chambre", "chambre", "une nuit", "la nuit", "nuit", "un lit", "lit"];
+
+/** V3.2-10 — un montant en cuivre, en pièces courantes : 50 → « 5 pa », 105 → « 1 po 5 pc », 0 → « rien ». */
+export function formatCpFr(cp: number): string {
+  const parts = splitCp(cp);
+  if (parts.length === 0) return "rien";
+  return parts.map((p) => `${p.amount} ${CURRENCY_LABELS_FR[p.coin] ?? p.coin}`).join(" ");
+}
 
 /**
  * V3-D4 — Liste FERMEE de tournures interrogatives, meme discipline que

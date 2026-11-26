@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { zPlayStyle, type PlayStyle } from "../remote/feed";
+import { DEFAULT_RECIT, mergeRecit, parseRecit, zRecitPatch, type RecitSettings } from "./recit";
 
 /**
  * V3.1-108 (ADR 0036 §5, ADR 0043) — « Ce que les joueurs modifient
@@ -22,24 +23,59 @@ export interface CampaignTableSettings {
    * passage d'un autre réglage.
    */
   play_style: PlayStyle;
+  /**
+   * AG-10 — la campagne se sert du niveau de visibilité « Joueurs ». Coupé,
+   * l'interface ne le propose plus (le contenu déjà « Joueurs » le garde) ;
+   * rien ne change côté base ni filtrage.
+   */
+  players_level: boolean;
   player_can_edit: Record<PlayerEditableField, boolean>;
+  /**
+   * AG-14 — les PJ « en réserve » (identifiants d'entité) : un PJ invité qui
+   * n'est pas toujours là. Rien n'est supprimé : l'outil Table replie leur
+   * carte et « Toute la table » ne les coche plus d'office.
+   */
+  reserve: string[];
+  /**
+   * V3.2-20 — le solo montre-t-il le DD (ou la CA) et l'issue d'un jet ?
+   * Coupé par défaut (décision de l'auteur, 25 novembre) : c'est le récit qui
+   * dit si l'on a réussi. Ce n'est que de l'affichage : le moteur calcule
+   * toujours l'issue et la donne au narrateur (règle absolue 8).
+   */
+  solo_show_outcome: boolean;
+  /** V3.2-5 : comment la narration solo s'adresse à la table, son registre, les scènes intimes (`recit.ts`). */
+  recit: RecitSettings;
 }
 
 /** Decides par l'auteur le 4 octobre : etats et inspiration au MJ, le reste a la joueuse. */
 export const DEFAULT_TABLE_SETTINGS: CampaignTableSettings = {
   inspiration_max: 1,
   play_style: "table",
+  players_level: true,
   player_can_edit: { conditions: false, inspiration: false, hp: true, currency: true, spell_slots: true, hit_dice: true },
+  reserve: [],
+  recit: DEFAULT_RECIT,
+  solo_show_outcome: false,
 };
+
+/** Une campagne compte quelques PJ : la borne protège seulement la colonne d'une écriture démesurée. */
+const RESERVE_MAX = 50;
 
 /** Schema d'ECRITURE : partiel (un reglage a la fois), strict (aucune cle inconnue), bornes. */
 export const zCampaignTableSettings = z
   .object({
     inspiration_max: z.number().int().min(1).max(5).optional(),
+    players_level: z.boolean().optional(),
     player_can_edit: z
       .object(Object.fromEntries(PLAYER_EDITABLE_FIELDS.map((f) => [f, z.boolean().optional()])) as Record<PlayerEditableField, z.ZodOptional<z.ZodBoolean>>)
       .strict()
       .optional(),
+    /** AG-14 : la liste entière, écrite d'un bloc. */
+    reserve: z.array(z.string().uuid()).max(RESERVE_MAX).optional(),
+    /** V3.2-20 : DD et issue des jets, visibles ou non dans le solo. */
+    solo_show_outcome: z.boolean().optional(),
+    /** V3.2-5 : le réglage « Récit », champ par champ. */
+    recit: zRecitPatch.optional(),
   })
   .strict();
 export type CampaignTableSettingsPatch = z.infer<typeof zCampaignTableSettings>;
@@ -57,10 +93,25 @@ export function parseTableSettings(raw: unknown): CampaignTableSettings {
   return {
     inspiration_max: typeof max === "number" && Number.isInteger(max) && max >= 1 && max <= 5 ? max : DEFAULT_TABLE_SETTINGS.inspiration_max,
     play_style: zPlayStyle.safeParse(source.play_style).data ?? DEFAULT_TABLE_SETTINGS.play_style,
+    players_level: typeof source.players_level === "boolean" ? source.players_level : DEFAULT_TABLE_SETTINGS.players_level,
     player_can_edit: Object.fromEntries(
       PLAYER_EDITABLE_FIELDS.map((f) => [f, typeof edits[f] === "boolean" ? (edits[f] as boolean) : DEFAULT_TABLE_SETTINGS.player_can_edit[f]])
     ) as Record<PlayerEditableField, boolean>,
+    reserve: lireReserve(source.reserve),
+    solo_show_outcome: typeof source.solo_show_outcome === "boolean" ? source.solo_show_outcome : DEFAULT_TABLE_SETTINGS.solo_show_outcome,
+    recit: parseRecit(source.recit),
   };
+}
+
+function lireReserve(valeur: unknown): string[] {
+  if (!Array.isArray(valeur)) return [];
+  const ids = valeur.filter((v): v is string => typeof v === "string" && z.string().uuid().safeParse(v).success);
+  return [...new Set(ids)].slice(0, RESERVE_MAX);
+}
+
+/** AG-14 : ce PJ est-il en réserve ? */
+export function estEnReserve(settings: CampaignTableSettings, entityId: string): boolean {
+  return settings.reserve.includes(entityId);
 }
 
 /** Applique un reglage partiel sur les reglages courants (route d'ecriture du MJ). */
@@ -68,9 +119,13 @@ export function mergeTableSettings(current: CampaignTableSettings, patch: Campai
   return {
     inspiration_max: patch.inspiration_max ?? current.inspiration_max,
     play_style: current.play_style,
+    players_level: patch.players_level ?? current.players_level,
     player_can_edit: Object.fromEntries(
       PLAYER_EDITABLE_FIELDS.map((f) => [f, patch.player_can_edit?.[f] ?? current.player_can_edit[f]])
     ) as Record<PlayerEditableField, boolean>,
+    reserve: patch.reserve ? [...new Set(patch.reserve)] : current.reserve,
+    solo_show_outcome: patch.solo_show_outcome ?? current.solo_show_outcome,
+    recit: mergeRecit(current.recit, patch.recit),
   };
 }
 

@@ -41,12 +41,42 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_provider_choices: {
+        Row: {
+          model: string
+          provider_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          model: string
+          provider_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          model?: string
+          provider_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_provider_choices_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "ai_providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_providers: {
         Row: {
           base_url: string
           created_at: string
+          id: string
           label: string
-          model: string
+          models: string[]
           secret: string | null
           updated_at: string
           user_id: string
@@ -54,8 +84,9 @@ export type Database = {
         Insert: {
           base_url: string
           created_at?: string
+          id?: string
           label: string
-          model: string
+          models: string[]
           secret?: string | null
           updated_at?: string
           user_id: string
@@ -63,8 +94,9 @@ export type Database = {
         Update: {
           base_url?: string
           created_at?: string
+          id?: string
           label?: string
-          model?: string
+          models?: string[]
           secret?: string | null
           updated_at?: string
           user_id?: string
@@ -288,6 +320,7 @@ export type Database = {
           occurred_at_ingame: Json | null
           origin: string
           session_event_id: string | null
+          shown_deltas: Json
           source_entity_id: string
           summary: string
           target_entity_id: string
@@ -301,6 +334,7 @@ export type Database = {
           occurred_at_ingame?: Json | null
           origin: string
           session_event_id?: string | null
+          shown_deltas?: Json
           source_entity_id: string
           summary: string
           target_entity_id: string
@@ -314,6 +348,7 @@ export type Database = {
           occurred_at_ingame?: Json | null
           origin?: string
           session_event_id?: string | null
+          shown_deltas?: Json
           source_entity_id?: string
           summary?: string
           target_entity_id?: string
@@ -1450,6 +1485,7 @@ export type Database = {
           axes: Json
           campaign_id: string
           id: string
+          shown_axes: Json | null
           source_entity_id: string
           target_entity_id: string
           updated_at: string
@@ -1458,6 +1494,7 @@ export type Database = {
           axes?: Json
           campaign_id: string
           id?: string
+          shown_axes?: Json | null
           source_entity_id: string
           target_entity_id: string
           updated_at?: string
@@ -1466,6 +1503,7 @@ export type Database = {
           axes?: Json
           campaign_id?: string
           id?: string
+          shown_axes?: Json | null
           source_entity_id?: string
           target_entity_id?: string
           updated_at?: string
@@ -1542,6 +1580,48 @@ export type Database = {
             columns: ["source_event_id"]
             isOneToOne: false
             referencedRelation: "session_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      entity_true_names: {
+        Row: {
+          created_at: string
+          entity_id: string
+          true_aliases: string[]
+          true_name: string
+          updated_at: string
+          world_id: string
+        }
+        Insert: {
+          created_at?: string
+          entity_id: string
+          true_aliases?: string[]
+          true_name: string
+          updated_at?: string
+          world_id: string
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string
+          true_aliases?: string[]
+          true_name?: string
+          updated_at?: string
+          world_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_true_names_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: true
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_true_names_world_id_fkey"
+            columns: ["world_id"]
+            isOneToOne: false
+            referencedRelation: "worlds"
             referencedColumns: ["id"]
           },
         ]
@@ -2538,6 +2618,8 @@ export type Database = {
         Row: {
           base_system: string
           content_origin: string
+          copied_from_ruleset_id: string | null
+          copy_baseline: Json | null
           created_at: string
           created_by: string | null
           id: string
@@ -2551,6 +2633,8 @@ export type Database = {
         Insert: {
           base_system: string
           content_origin?: string
+          copied_from_ruleset_id?: string | null
+          copy_baseline?: Json | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -2564,6 +2648,8 @@ export type Database = {
         Update: {
           base_system?: string
           content_origin?: string
+          copied_from_ruleset_id?: string | null
+          copy_baseline?: Json | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -3095,6 +3181,41 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      ruleset_override_digests: {
+        Args: { p_ruleset_id: string }
+        Returns: { digest: string; entry_key: string; label: string }[]
+      }
+      sync_ruleset_copy_entry: {
+        Args: { p_copy_id: string; p_entry_key: string; p_expected_digest: string | null; p_take: boolean }
+        Returns: boolean
+      }
+      copy_ruleset_for_world: {
+        Args: { p_name: string; p_source_id: string }
+        Returns: string
+      }
+      blocks_citing_entity: {
+        Args: { p_entity_id: string; p_world_id: string }
+        Returns: {
+          block_type: string
+          created_at: string
+          created_by: string | null
+          data: Json
+          display: Json
+          display_order: number
+          entity_id: string
+          id: string
+          updated_at: string
+          version: number
+          visibility_level: string
+          visibility_scope_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "blocks"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       asset_reference_count: { Args: { p_asset_id: string }; Returns: number }
       claim_campaign_character: {
         Args: { p_campaign_id: string; p_entity_id: string }

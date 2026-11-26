@@ -1,4 +1,9 @@
 import type { IntentCatalog } from "@/src/core/rules/intent";
+import type { TradeCatalog } from "@/src/core/rules/tradeIntent";
+import type { PerceptionPercue } from "@/src/core/psyche/perception";
+import type { RaisonSansNarration } from "@/src/core/ai/providerError";
+
+export type { RaisonSansNarration };
 import type { PendingRequest } from "@/src/core/schemas/runtimeState";
 import type { TraceStep } from "@/src/core/formula/evaluate";
 
@@ -29,6 +34,8 @@ export interface IntentTargetDetail {
 export interface IntentBarData {
   actor: { entityId: string; name: string };
   catalog: IntentCatalog;
+  /** V3.2-10 : ce qui s'achète, se vend ou se donne ici, et la bourse — lu par `interpretTrade` dans le navigateur. */
+  trade: TradeCatalog;
   targetDetails: IntentTargetDetail[];
   /** V3.1-132 : les clés des règles du personnage (aptitudes de classe, d'espèce, dons), pour l'avertissement « règle non jouable » du mode solo. */
   ruleKeys: string[];
@@ -66,6 +73,8 @@ export interface SceneView {
    * si son parent n'est pas un lieu.
    */
   nearestCity: { name: string; slug: string } | null;
+  /** V3.2-19 — la pièce où se trouve le personnage dans ce lieu (bloc « Pièces » ou esquisse) ; `null` hors de toute pièce. */
+  roomName: string | null;
   time: { day: number; hour: number; minute: number };
   lighting: "bright" | "dim" | "dark";
   /** V3-C6 — tirée au générateur `meteo`, jamais inventée. `null` sans table réelle à tirer dans ce monde. */
@@ -77,6 +86,8 @@ export interface SceneView {
     zone: "engaged" | "near" | "far";
     /** Un mot sur l'attitude ("mefiant"), pose a l'entree en scene — `undefined` : rien n'ecrit ce champ aujourd'hui (V3-D3, colonne Présents). */
     disposition?: string;
+    /** V3.2-14 (ADR 0111) : ce que ce present LAISSE VOIR envers le personnage, en bandes. `null` : aucune attitude connue. Absent hors du solo. */
+    perception?: PerceptionPercue | null;
   }[];
   /** V3-C2 — les personnages incidents de la scene : un nom et un trait tires au generateur, jamais une fiche. */
   sketches: {
@@ -142,6 +153,8 @@ export interface TurnOutcome {
   ignored: string[];
   /** L'heure de jeu après le tour, `null` si la campagne n'a pas encore de scène. */
   time: { day: number; hour: number; minute: number } | null;
+  /** V3.2-19 — la scène après un déplacement proposé par la narration et appliqué par le moteur ; absente sinon. */
+  scene?: SceneView;
   /**
    * La narration IA de ce tour (câblage de V3-B2) — `null` dans TOUS les cas
    * où elle n'a pas abouti : pas de fournisseur configuré, appel raté,
@@ -149,6 +162,14 @@ export interface TurnOutcome {
    * est complet et journalisé que ce champ soit rempli ou non.
    */
   narration: { text: string; npcReaction: { npcId: string; text: string } | null } | null;
+  /**
+   * V3.1-223 — pourquoi `narration` est restée `null`, quand un appel était
+   * attendu (tour en campagne) : aucun fournisseur, quota épuisé, clé
+   * refusée… Absent quand la narration a abouti ou n'était pas attendue.
+   */
+  sansNarration?: RaisonSansNarration;
+  /** La phrase du fournisseur quand il a refusé l'appel (« 402 : You need a subscription… »), clés masquées. */
+  sansNarrationDetail?: string;
 }
 
 /**
@@ -182,6 +203,13 @@ export interface FenetreReactionResponse {
 export type EncashedTurnResponse = EncashedTurnOutcome | FenetreReactionResponse;
 
 /**
+ * V3.2-20 — la narration d'un jet déjà encaissé, demandée à part
+ * (`POST /api/solo/tour/[eventId]/raconter`) pour que le dé s'affiche sans
+ * attendre le modèle. Mêmes champs que dans `TurnOutcome`.
+ */
+export type NarrationTourResponse = Pick<TurnOutcome, "narration" | "sansNarration" | "sansNarrationDetail" | "time" | "scene">;
+
+/**
  * V3-D4 — le fil, tel que `session_events` le rend. Un item par `kind`
  * RÉELLEMENT écrit par ce module (`turnFil.ts`) — `system` n'existe
  * encore nulle part dans le code : `other` est un repli défensif, jamais un
@@ -189,7 +217,15 @@ export type EncashedTurnResponse = EncashedTurnOutcome | FenetreReactionResponse
  * Phase 3) est la réponse du MJ à une question posée hors du temps de jeu.
  */
 export type FilItem =
-  | { id: string; seq: number; createdAt: string; kind: "narration"; text: string; npcReaction: { npcId: string; text: string } | null }
+  | {
+      id: string;
+      seq: number;
+      createdAt: string;
+      kind: "narration";
+      text: string;
+      /** `npcName`/`attitude` : `null` pour une réplique écrite avant qu'on les garde (le fil montre alors la bulle seule). */
+      npcReaction: { npcId: string; text: string; npcName: string | null; attitude: string | null } | null;
+    }
   | { id: string; seq: number; createdAt: string; kind: "player_action"; text: string; facts: string[] }
   | {
       id: string;
@@ -201,8 +237,17 @@ export type FilItem =
       verdict: "success" | "fail" | null;
       trace: TraceStep[];
       origin: string | null;
+      /** V3.2-20 : la phrase du joueur qui a demandé ce jet ; `null` pour des dégâts chaînés ou un jet sans phrase. */
+      actionText: string | null;
     }
   | { id: string; seq: number; createdAt: string; kind: "rule_application"; changes: string[]; hints: string[]; ignored: string[] }
   | { id: string; seq: number; createdAt: string; kind: "world_update"; note: string }
   | { id: string; seq: number; createdAt: string; kind: "note"; question: string; answer: string }
+  /**
+   * V3.2-27 (ADR 0114) — la ligne du tour, sous son dernier événement : l'heure
+   * (`null` : pas de relevé), puis ce que le tour a changé. Elle remplace, DANS
+   * un tour, les lignes `rule_application` et `world_update`. `last` : le seul
+   * tour qu'on peut annuler. Construite à la lecture, jamais écrite.
+   */
+  | { id: string; seq: number; createdAt: string; kind: "turn_summary"; time: string | null; changes: string[]; hints: string[]; ignored: string[]; worldNotes: number; last: boolean }
   | { id: string; seq: number; createdAt: string; kind: "other"; label: string };

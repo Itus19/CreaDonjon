@@ -11,7 +11,7 @@ import {
   listCombatsForCampaign,
   listConditionNames,
 } from "@/src/server/services/combats";
-import { listMonstersForRuleset } from "@/src/server/services/encounters";
+import { listMonstersForInitiative } from "@/src/server/services/encounters";
 import type { Locale } from "@/src/i18n/request";
 import InitiativeTracker from "@/components/shell/InitiativeTracker";
 import RegisterPrimaryWindow from "@/components/shell/RegisterPrimaryWindow";
@@ -47,7 +47,7 @@ export default async function MjInitiativePage({
   let activeCombat = null;
   let combats: Awaited<ReturnType<typeof listCombatsForCampaign>> = [];
   let pcOptions: { id: string; name: string }[] = [];
-  let monsters: Awaited<ReturnType<typeof listMonstersForRuleset>> = [];
+  let monsters: Awaited<ReturnType<typeof listMonstersForInitiative>> = [];
   let conditions: string[] = [];
 
   if (selected) {
@@ -55,7 +55,7 @@ export default async function MjInitiativePage({
       getActiveCombatForCampaign(supabase, selected.id),
       listCombatsForCampaign(supabase, selected.id),
       getCampaignCharacters(supabase, selected.id),
-      listMonstersForRuleset(supabase, selected.rulesetId, locale),
+      listMonstersForInitiative(supabase, selected.rulesetId, locale),
       listConditionNames(supabase, selected.rulesetId, locale),
     ]);
     combats = combatList;

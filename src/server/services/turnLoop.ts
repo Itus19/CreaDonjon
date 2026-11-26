@@ -3,6 +3,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import type { Locale } from "@/src/i18n/request";
 import { advanceSceneTime, budgetOf, rememberEvent, startTurn, type SceneState } from "@/src/core/rules/scene";
+import { dureeExplicite, minutesExplicites, phraseDuree } from "@/src/core/rules/elapsed";
+import { decideLongRest, phraseRepos, sommeilDemande } from "@/src/core/rules/sleepRest";
+import { takeLongRest } from "@/src/server/services/characterActions";
 import { spendFromBudget, type ActionBudget, type BudgetKind } from "@/src/core/rules/actionBudget";
 import { eventsForAttack } from "@/src/core/rules/gameEvents";
 import type { AttackRollResult } from "@/src/core/rules/action";
@@ -52,6 +55,8 @@ const BUDGET_COST: Record<IntentChoice["kind"], BudgetKind> = {
   skill_check: "action",
   ability_check: "action",
   saving_throw: "free",
+  // V3.2-10 : payer ou vendre ne coûte pas d'action — un échange se fait hors combat, en conversation.
+  trade: "free",
   free: "free",
 };
 
@@ -276,6 +281,8 @@ async function applyResolvedTurn(
     combatId,
   });
 
+  let elapsedChange: string | null = null;
+  let sommeil: ReturnType<typeof decideLongRest> = null;
   // 6. La scene avance — l'heure, les zones que les effets ont changees,
   //    et les evenements recents. Ecrite en dernier : si tout ce qui
   //    precede a tenu, elle est le resume de ce tour.
@@ -284,7 +291,25 @@ async function applyResolvedTurn(
     // Meme raison que la depense ci-dessus : une resolution chainee ne fait
     // pas avancer l'horloge une seconde fois pour le meme coup.
     if (params.choiceKind !== null) {
-      scene = advanceSceneTime(scene, minutesForTurn(scene));
+      // V3.2-18 (ADR 0112) — une durée écrite par le joueur (« ces trois
+      // heures de travail ») fait avancer l'horloge d'autant, AVANT la
+      // narration : le fait part dans `changes`, l'IA raconte l'ellipse en
+      // connaissant l'heure. Jamais en combat, qui a son propre temps.
+      const explicite = scene.activeCombatId ? null : dureeExplicite(params.text);
+      const minutesEcrites = explicite ? minutesExplicites(explicite, scene.time) : null;
+      // Le repos long quand le joueur écrit que son personnage dort : le
+      // moteur décide (8 h, hors combat, 16 h depuis le précédent), seul.
+      sommeil = decideLongRest({
+        sommeil: sommeilDemande(params.text),
+        minutesEcrites,
+        enCombat: scene.activeCombatId !== null,
+        maintenant: scene.time,
+        dernierRepos: scene.lastLongRestEnd?.[params.entityId] ?? null,
+      });
+      const minutes = sommeil ? sommeil.minutes : (minutesEcrites ?? minutesForTurn(scene));
+      scene = advanceSceneTime(scene, minutes);
+      if ((explicite || sommeil) && minutes > 0) elapsedChange = phraseDuree(minutes, scene.time);
+      if (sommeil?.repos === "applique") scene = { ...scene, lastLongRestEnd: { ...(scene.lastLongRestEnd ?? {}), [params.entityId]: scene.time } };
     }
     // V3.1-216 — la reaction se paie ici, et pas avant : `startTurn` vient de
     // remettre le budget a neuf, une depense posee plus tot aurait disparu.
@@ -298,9 +323,21 @@ async function applyResolvedTurn(
     await putSceneState(supabase, { campaignId: params.campaignId, state: scene, updatedBy: params.callerId });
   }
 
+  // Le repos lui-même : exactement celui du bouton de la fiche, sans avancer
+  // l'horloge une seconde fois (elle vient d'avancer ci-dessus).
+  let reposChange: string | null = sommeil ? phraseRepos(sommeil.repos) : null;
+  if (sommeil?.repos === "applique") {
+    const repos = await takeLongRest(supabase, { entityId: params.entityId, campaignId: params.campaignId, actorUserId: params.callerId, locale: params.locale, advanceClock: false });
+    if ("error" in repos) {
+      console.error("Repos long du récit non appliqué", repos.error);
+      reposChange = "Le repos long n'a pas pu être appliqué à la fiche : prends-le depuis le bouton « Repos long ».";
+    }
+  }
+  const extra = [elapsedChange, reposChange].filter((c): c is string => c !== null);
+
   return {
     record: { kind: record.kind, facts: record.facts, eventId: record.eventId, detail: record.detail },
-    changes,
+    changes: extra.length > 0 ? [...changes, ...extra] : changes,
     hints,
     ignored,
     time: scene?.time ?? null,

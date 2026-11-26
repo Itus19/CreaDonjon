@@ -3,6 +3,7 @@ import { canChangeEntityKind, isWikiHiddenKind } from "@/src/core/entities/syste
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
 import { nextNumericSlug } from "@/src/core/slug/slug";
+import { getTrueName, upsertTrueName } from "@/src/server/repos/entityTrueNames";
 import { buildEntityTree, withPlayerCharacterKinds, type EntityTreeGroup } from "@/src/core/entity-tree/build-tree";
 import { filterBlocks, type VisibilityLevel } from "@/src/core/visibility";
 import {
@@ -168,7 +169,8 @@ export async function getEntityTree(
     listPlayerCharacterEntityIds(supabase, worldId),
     getWorldEntityKindOrder(supabase, worldId),
     userId ? isWorldAdmin(supabase, { worldId, userId }) : Promise.resolve(false),
-    getSessionJournalTreeGroup(supabase, worldId),
+    // AG-8 : brouillons compris ; le filtre ci-dessous les retire à qui n'est ni l'autrice ni le MJ.
+    getSessionJournalTreeGroup(supabase, worldId, { publicOnly: false, avecBrouillons: true }),
   ]);
   let visibleEntities = excludeWikiHidden(excludeSessionJournalEntries(excludeOthersPrivateNotes(entities, userId)));
   let journal = journalGroup;
@@ -257,21 +259,34 @@ export async function updateEntity(
   // seule ne permettrait pas (elle renverrait 0 ligne dans tous les cas).
   const existing = await getEntityById(supabase, params.id);
   if (!existing) return { ok: false, reason: "not_found" };
-  const allowed = await canUserEditEntity(supabase, {
-    worldId: existing.world_id,
-    entityId: params.id,
-    userId: params.changedBy,
-  });
+  // AG-12 : le vrai nom, lu dans la meme vague (la RLS le rend `null` a qui n'est pas MJ).
+  const [allowed, secret] = await Promise.all([
+    canUserEditEntity(supabase, {
+      worldId: existing.world_id,
+      entityId: params.id,
+      userId: params.changedBy,
+    }),
+    getTrueName(supabase, params.id),
+  ]);
   if (!allowed) return { ok: false, reason: "forbidden" };
   // Un type système ne s'obtient et ne se quitte que par son parcours
   // (devoir, partage du cahier, Chronologie) — voir `canChangeEntityKind`.
   if (!canChangeEntityKind(existing.entity_kind, params.entityKind)) return { ok: false, reason: "system_kind" };
 
-  const updated = await updateEntityWithVersionCheck(supabase, params);
+  // AG-12 (ADR 0105) : tant que le nom pour la table est rempli, le MJ
+  // edite le VRAI nom (et ses alias) dans l'en-tete ; `entities` garde le
+  // nom pour la table, le seul que la table puisse lire.
+  const updated = await updateEntityWithVersionCheck(
+    supabase,
+    secret ? { ...params, name: existing.name, aliases: existing.aliases } : params
+  );
   if (!updated) {
     // Version perimee (l'existence et le droit d'ecrire viennent d'etre
     // confirmes juste au-dessus) : le seul cas restant est un conflit.
     return { ok: false, reason: "conflict" };
+  }
+  if (secret && (secret.trueName !== params.name || secret.trueAliases.join("\n") !== params.aliases.join("\n"))) {
+    await upsertTrueName(supabase, { entityId: params.id, worldId: existing.world_id, secret: { trueName: params.name, trueAliases: params.aliases } });
   }
 
   await recordEntityRevision(supabase, { entity: updated, changeSource: "user", changedBy: params.changedBy });
@@ -280,7 +295,7 @@ export async function updateEntity(
     await ensureMapBlock(supabase, updated.id, params.changedBy);
   }
 
-  return { ok: true, entity: updated };
+  return { ok: true, entity: secret ? { ...updated, name: params.name, aliases: params.aliases } : updated };
 }
 
 /**

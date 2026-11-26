@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CYCLE_VISIBILITE, annonceVisibilite, devientPlusVisible, niveauSuivant, cycleVisibilite } from "./visibilitePastille";
+import { CYCLE_VISIBILITE, annonceVisibilite, devientPlusVisible, niveauSuivant, cycleVisibilite, optionsVisibilite } from "./visibilitePastille";
 
 describe("niveauSuivant", () => {
   it("suit Public, Joueurs, MJ, Privé, puis revient à Public", () => {
@@ -71,5 +71,22 @@ describe("Privé réservé à l'auteur du bloc (V3.1-64)", () => {
   it("l'auteur garde les quatre niveaux", () => {
     expect(niveauSuivant("gm")).toBe("private");
     expect(cycleVisibilite()).toEqual(["public", "players", "gm", "private"]);
+  });
+});
+
+describe("sans le niveau « Joueurs » (AG-10)", () => {
+  it("le cycle le saute", () => {
+    expect(cycleVisibilite(false, true)).toEqual(["public", "gm", "private"]);
+    expect(niveauSuivant("public", false, true)).toBe("gm");
+    expect(niveauSuivant("gm", true, true)).toBe("public");
+  });
+  it("un bloc déjà « Joueurs » passe au niveau suivant du cycle complet", () => {
+    expect(niveauSuivant("players", false, true)).toBe("gm");
+  });
+  it("une liste d'options le retire, sauf s'il est la valeur actuelle", () => {
+    const options = [{ value: "public" }, { value: "players" }, { value: "gm" }];
+    expect(optionsVisibilite(options, false, "public").map((o) => o.value)).toEqual(["public", "gm"]);
+    expect(optionsVisibilite(options, false, "players").map((o) => o.value)).toEqual(["public", "players", "gm"]);
+    expect(optionsVisibilite(options, true, "public")).toBe(options);
   });
 });

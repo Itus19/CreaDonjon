@@ -96,3 +96,47 @@ describe("soloNarrationToolSchema", () => {
     expect("world_note" in schema.properties).toBe(false);
   });
 });
+
+describe("V3.2-18 — elapsed, une durée proposée dans une liste fermée", () => {
+  it("accepte un choix de la liste", () => {
+    expect(soloNarrationSchema([]).safeParse({ narration: "La discussion s'étire.", elapsed: { kind: "demi_heure" } }).data?.elapsed).toEqual({ kind: "demi_heure" });
+  });
+  it("ignore une durée hors liste, sans perdre la narration : jamais de minutes libres ni d'ellipse décidée par l'IA", () => {
+    const libre = soloNarrationSchema([]).safeParse({ narration: "x", elapsed: { kind: "180 minutes" } });
+    expect(libre.success).toBe(true);
+    expect(libre.data?.elapsed).toBeUndefined();
+    expect(soloNarrationSchema([]).safeParse({ narration: "Tu dors.", elapsed: { kind: "jusqu_au_matin" } }).data?.elapsed).toBeUndefined();
+  });
+  it("l'outil offre la liste fermée, sans ellipse", () => {
+    const tool = soloNarrationToolSchema([]);
+    expect(tool.properties.elapsed.properties.kind.enum).toContain("une_heure");
+    expect(tool.properties.elapsed.properties.kind.enum).not.toContain("jusqu_au_matin");
+  });
+});
+
+describe("V3.2-19 — move_to, un déplacement vers un lieu voisin fourni", () => {
+  it("accepte un lieu accessible et des PNJ présents qui suivent", () => {
+    expect(soloNarrationSchema(["mabelle"], [], ["cuisine"]).safeParse({ narration: "x", move_to: { location_id: "cuisine", with: ["mabelle"] } }).success).toBe(true);
+  });
+  it("rejette un lieu inventé ou un PNJ absent", () => {
+    expect(soloNarrationSchema(["mabelle"], [], ["cuisine"]).safeParse({ narration: "x", move_to: { location_id: "cave" } }).success).toBe(false);
+    expect(soloNarrationSchema(["mabelle"], [], ["cuisine"]).safeParse({ narration: "x", move_to: { location_id: "cuisine", with: ["inconnu"] } }).success).toBe(false);
+  });
+  it("sans lieu accessible, l'outil n'offre pas move_to", () => {
+    expect("move_to" in soloNarrationToolSchema([]).properties).toBe(false);
+    expect("move_to" in soloNarrationToolSchema([], [], ["cuisine"]).properties).toBe(true);
+  });
+});
+
+describe("V3.2-19 — enter_room et leave_room", () => {
+  it("accepte une pièce avec ou sans description, et la sortie", () => {
+    expect(soloNarrationSchema([]).safeParse({ narration: "x", enter_room: { name: "la cuisine", description: "Basse." } }).success).toBe(true);
+    expect(soloNarrationSchema([]).safeParse({ narration: "x", enter_room: { name: "la cuisine" } }).success).toBe(true);
+    expect(soloNarrationSchema([]).safeParse({ narration: "x", leave_room: true }).success).toBe(true);
+  });
+  it("rejette un nom vide ou trop long", () => {
+    expect(soloNarrationSchema([]).safeParse({ narration: "x", enter_room: { name: "" } }).success).toBe(false);
+    expect(soloNarrationSchema([]).safeParse({ narration: "x", enter_room: { name: "x".repeat(81) } }).success).toBe(false);
+  });
+});
+

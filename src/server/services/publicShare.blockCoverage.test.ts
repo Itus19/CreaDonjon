@@ -85,6 +85,15 @@ const SELF_CONTAINED: readonly BlockType[] = [
   "random_table",
   "generator",
   "music",
+  // equippable (AG-19) : modificateurs, clés de sorts du ruleset, actions à
+  // charges. Aucun identifiant d'entité à résoudre : la visibilité du bloc suffit.
+  "equippable",
+  // price_list (V3.2-9) : libellés, prix et clés de règles (publiques). Aucun
+  // identifiant d'entité : la visibilité du bloc suffit.
+  "price_list",
+  // rooms (V3.2-19) : noms et descriptions de pièces, prose publique du bloc. Aucun
+  // identifiant interne, aucun secret : une pièce secrète vit dans un bloc MJ.
+  "rooms",
   // session_journal_meta (V2.1-3 suite) : instantane pose une seule fois par
   // assignJournalEntry (id + libelle deja resolus, ex. { userId, name }) —
   // aucun champ n'est une reference a revalider, la visibilite du bloc
