@@ -2,7 +2,7 @@
 
 *Spécification de la V4 « Simulation » : la carte, les villes, l'histoire d'un monde généré, et la façon dont ses détails apparaissent quand on les découvre. Les principes viennent de l'[ADR 0104](../docs/adr/0104-le-cap-du-mode-solo.md) ; les choix qui engagent le schéma, de l'[ADR 0109](../docs/adr/0109-la-generation-du-monde-demarre.md).*
 
-**État au 26 novembre 2026** : spécifiée. Le noyau de la ville en agrégat existe (`src/core/worldgen/`) ; rien d'autre n'est construit.
+**État au 26 novembre 2026** : spécifiée. Existent dans `src/core/worldgen/` : la ville en agrégat (G-2), le monde abstrait et l'histoire couche 1 (G-6).
 
 ---
 
@@ -142,6 +142,18 @@ Faire passer des siècles sur la carte, au niveau des **groupes et des figures**
 
 Chaque couche se termine par une chronique qu'on lit dans la frise du monde avant d'ouvrir la suivante.
 
+### 9.2 bis La couche 1, telle qu'elle est construite
+
+`simulateHistory(monde, { years, maxEvents })` (`src/core/worldgen/history/simulate.ts`) :
+
+- **Les États** naissent avec leur capitale dans les premiers 15 % de la période, et toujours avant leur première guerre imposée.
+- **Les autres villes** sont fondées après leur capitale et avant le présent, les plus peuplées d'abord.
+- **Les règnes** durent de 5 à 40 ans ; chaque fin de règne est un événement, numéroté (« Fin du 3e règne de Grania »). Les noms des souverains viendront avec les figures notables (couche 2).
+- **Les guerres imposées** sont gardées telles quelles. Les guerres inventées n'opposent que des États voisins déjà fondés, durent de 1 à 8 ans, finissent avant le présent et ne chevauchent aucune autre guerre de la même paire. Elles ne déplacent aucune frontière : les conquêtes attendent la couche 3.
+- **Le plafond** (500 par défaut) écarte d'abord les fins de règne, puis les fondations de villes, puis les guerres inventées ; il ne touche jamais aux fondations d'États ni aux guerres imposées.
+
+`chronicleToTimelineEntries` en fait des entrées de frise réservées au MJ (visibilité `gm`) : la toile de fond se découvre, elle ne s'affiche pas d'office.
+
 ### 9.3 Où elle tourne
 
 Le simulateur est **pur** (`src/core/worldgen/history/`), donc il tourne n'importe où (ADR 0109, décision G3). Il n'est jamais lancé dans une route `/api` : une fonction Vercel gratuite est coupée bien avant mille ans simulés. Il tourne **dans le navigateur** (un Web Worker) ou dans un **script local**, puis le résultat est écrit en une seule fois par une action serveur validée par Zod.
@@ -165,5 +177,6 @@ Le simulateur est **pur** (`src/core/worldgen/history/`), donc il tourne n'impor
 | G-3 | Le bloc `settlement` enregistré : registre des blocs, éditeur, vue publique, planche du catalogue, libellés | Sonnet | à faire |
 | G-4 | La tranche ville + auberge du solo : tables de départ du biome tempéré (noms, PNJ, taverne), peuplement à l'entrée d'un lieu, l'entité existante remplace l'occupant, même tirage depuis la fenêtre du MJ | Opus | à faire, après les étapes 1 et 2 du Backlog solo |
 | G-5 | Le catalogue : type de fiche, bloc « élément du monde », import Wikidata limité au biome tempéré | Opus | à faire |
-| G-6 | Le monde abstrait et l'histoire, couche 1 : format calqué sur l'export d'Azgaar (§8.1), monde de test écrit à la main, chronique lisible dans la frise | Opus | à faire |
+| G-6 | Le monde abstrait et l'histoire, couche 1 : format calqué sur l'export d'Azgaar (§8.1), monde de test écrit à la main, chronique convertie en entrées de frise, aperçu par `npm run apercu:histoire` | Opus | fait |
+| G-6b | Figer la chronique dans la frise d'un monde : action serveur validée par Zod, écriture en une fois sur la fiche `world_timeline`, refusée quand une chronique y est déjà | Opus | à faire |
 | G-7 | L'import Azgaar remplit le monde abstrait : villes avec leur bloc `settlement`, États, punaises sur l'image SVG | Opus | à faire, après G-3 et G-6 |
