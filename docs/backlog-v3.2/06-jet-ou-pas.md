@@ -6,7 +6,7 @@
 
 ---
 
-### ☐ V3.2-22 — Du palier au DD, et la réussite automatique · `S` · sans modèle IA · Modèle conseillé : Opus
+### ☑ V3.2-22 — Du palier au DD, et la réussite automatique · `S` · sans modèle IA · Modèle conseillé : Opus — **fait le 26 novembre**
 
 Le noyau pur, tests d'abord.
 
@@ -14,9 +14,9 @@ Le noyau pur, tests d'abord.
 - Le type de classement (`none` | `trivial` | `check` + action + palier) et son schéma Zod, partagés par le serveur.
 
 **Critères d'acceptation**
-- [ ] Chaque palier donne son DD ; un palier inconnu est refusé par le schéma.
-- [ ] Modificateur +5 contre « très facile » (DD 5) : réussite automatique ; +3 contre « facile » : non.
-- [ ] `trivial` donne toujours la réussite automatique.
+- [x] Chaque palier donne son DD ; un palier inconnu, un DD chiffré ou un champ de trop sont refusés par le schéma (`src/core/rules/checkDifficulty.ts`).
+- [x] Modificateur +5 contre « très facile » (DD 5) : réussite automatique ; +3 contre « facile » : non.
+- [x] `trivial` donne toujours la réussite automatique (lu sur le classement, V3.2-24).
 
 ---
 

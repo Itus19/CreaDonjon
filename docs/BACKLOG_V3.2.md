@@ -68,7 +68,7 @@ Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été
 | V3.2-18 | ☐ | sans | L'horloge suit l'histoire | [`05-narration.md`](backlog-v3.2/05-narration.md) |
 | V3.2-19 | ☐ | **avec** | L'IA t'emmène ailleurs : lieux et pièces | [`05-narration.md`](backlog-v3.2/05-narration.md) |
 | V3.2-20 | ☑ | sans | Le jet demandé se lance depuis le récit, DD et issue masqués au choix | [`01-ecran-du-solo.md`](backlog-v3.2/01-ecran-du-solo.md) |
-| V3.2-22 | ☐ | sans | Du palier au DD, et la réussite automatique | [`06-jet-ou-pas.md`](backlog-v3.2/06-jet-ou-pas.md) |
+| V3.2-22 | ☑ | sans | Du palier au DD, et la réussite automatique | [`06-jet-ou-pas.md`](backlog-v3.2/06-jet-ou-pas.md) |
 | V3.2-23 | ☐ | **avec** | Le classifieur, son prompt et son corpus | [`06-jet-ou-pas.md`](backlog-v3.2/06-jet-ou-pas.md) |
 | V3.2-24 | ☐ | sans | Le classement joue le tour, la pastille propose | [`06-jet-ou-pas.md`](backlog-v3.2/06-jet-ou-pas.md) |
 | V3.2-25 | ☑ | sans | Deux bandes de même largeur | [`03-colonnes.md`](backlog-v3.2/03-colonnes.md) |
