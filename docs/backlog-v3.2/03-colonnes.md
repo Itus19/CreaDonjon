@@ -131,7 +131,7 @@
 
 ---
 
-### ☑ V3.2-20 — Deux bandes de même largeur · `S` · sans modèle IA — **fait le 26 novembre**
+### ☑ V3.2-25 — Deux bandes de même largeur · `S` · sans modèle IA — **fait le 26 novembre**
 
 **Demandé le 25 novembre au soir** : la bande de la fiche repliée plus fine, ses éléments à leur taille actuelle, et la bande du Monde à la même largeur. Esquisse : <https://claude.ai/artifact/SY2zL6VoSLivR8tuu8yxgh#bandes>, option **E1** choisie.
 
