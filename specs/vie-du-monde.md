@@ -294,6 +294,8 @@ Même mécanique que l'attitude perçue (ADR 0111) : chaque centre d'intérêt a
 - **assumer** : il le montre, au risque des événements de répression (arrestation, opprobre) ;
 - **militer** : il rejoint ou fonde un groupe d'intérêt ou une faction contre la norme ; une emprise forte en fait des révolutionnaires, une emprise faible des réformateurs.
 
+**Le juste milieu.** Par défaut, on montre ce qu'on vit : pas de valeur montrée, pas de façade. Une façade n'apparaît que s'il y a **à la fois** un écart avec la norme et une pression pour le cacher ; dans une ville tolérante, presque personne ne cache rien. La psyché pèse aussi : une personne franche assume même au risque d'en payer le prix, une personne dissimulatrice se compose une façade même sans grand risque. Le moteur est calibré par des tests de répartition, à graine fixe : dans une ville moyenne, la grande majorité des gens n'a aucune façade, une minorité cache un goût, quelques-uns militent. Les seuils exacts se règleront en jouant.
+
 **Les secrets ont un usage.** Inspiré des secrets de Crusader Kings 3 : un goût caché découvert devient un **secret** connu de quelqu'un, qui peut servir de levier (chantage, faveur, dénonciation) ; dénoncé, il devient un événement visible. Les lieux cachés laissent des traces (§7.3, Shadows of Doubt), et un informateur peut en parler, vrai ou faux (§3.1).
 
 ## 11. Ce qui est stocké, et ce qui ne l'est jamais
