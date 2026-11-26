@@ -22,8 +22,9 @@ import { jaugesEgales, memeDemande, vueDepuisAdresse, type JaugesBande } from "@
  * - A partir de 1024 px : trois colonnes. **V3.2-12** : le repli se commande
  *   par deux ONGLETS accroches en haut du bord interieur de chaque volet,
  *   dans un couloir de 20 px (meme recette que l'onglet du menu, `Rail.tsx`).
- *   Replie, le Monde devient une bande de 44 px (icones de ses onglets) et la
- *   Fiche une bande de 96 px de jauges ; l'onglet garde sa hauteur et suit le
+ *   Replie, chaque volet devient une bande de 64 px (V3.2-20 : meme largeur
+ *   des deux cotes, la jauge de 48 px de la Fiche et ses marges) : icones et
+ *   presents pour le Monde, jauges pour la Fiche ; l'onglet garde sa hauteur et suit le
  *   bord. Les anciennes poignees, a mi-hauteur dans 12 px, touchaient la barre
  *   de defilement du fil et les bulles des PNJ.
  * - De 768 a 1024 px : les trois colonnes deviennent trois onglets.
@@ -148,7 +149,7 @@ export default function SoloShell({
   const [jauges, setJauges] = useState<JaugesBande | null>(null);
   const publier = useCallback((suivantes: JaugesBande | null) => setJauges((precedentes) => (jaugesEgales(precedentes, suivantes) ? precedentes : suivantes)), []);
 
-  // Le pli de la Fiche (bande de 96 px) n'existe que sur ordinateur : un pli memorise sur grand ecran ne doit pas reduire la fiche d'un telephone.
+  // Le pli de la Fiche (bande de 64 px) n'existe que sur ordinateur : un pli memorise sur grand ecran ne doit pas reduire la fiche d'un telephone.
   const ficheRepliee = droiteRepliee && ordinateur;
   // Meme chose pour la bande du Monde : sur tablette, le Monde reste entier dans son onglet.
   const mondeReplie = gaucheRepliee && ordinateur;
@@ -181,10 +182,10 @@ export default function SoloShell({
    * `grid-template-columns` n'interpole pas entre `minmax(200px,1fr)` et un
    * `0px` nu — le navigateur reste bloque sur l'ancienne valeur et la
    * colonne ne se replie jamais. Les deux bornes doivent etre des
-   * `minmax()` de meme forme. Meme raison pour les bandes de 44 et 96 px.
+   * `minmax()` de meme forme. Meme raison pour les bandes de 64 px.
    */
-  const colGauche = gaucheRepliee ? "minmax(44px,0fr)" : "minmax(200px,1fr)";
-  const colDroite = droiteRepliee ? "minmax(96px,0fr)" : "minmax(280px,1.2fr)";
+  const colGauche = gaucheRepliee ? "minmax(64px,0fr)" : "minmax(200px,1fr)";
+  const colDroite = droiteRepliee ? "minmax(64px,0fr)" : "minmax(280px,1.2fr)";
 
   // Visibilite par largeur : `max-md:` = telephone (la vue de l'adresse), `md:max-lg:` = tablette (l'onglet), `lg:` = tout est la.
   const cachee = (telephone: boolean, tablette: boolean) =>
