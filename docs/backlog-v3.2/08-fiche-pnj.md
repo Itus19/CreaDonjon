@@ -16,15 +16,18 @@ Demandé le 26 novembre, après la séance où jauger Mabelle déclenchait une a
 - [x] « et si j'attaque Mabelle ? » : aucun jet ; « j'attaque Mabelle » : une attaque.
 - [ ] En jouant : la pastille propose Perception, et le nom de l'arme s'affiche en français. Le libellé « longsword » vient d'une fiche d'arme que la résolution des noms ne trouve pas (`resolveBlockReferences`) : à reproduire sur la partie de l'auteur.
 
-### ☐ V3.2-47 — La fiche de base d'un PNJ, tirée du SRD · `M` · sans modèle IA · Modèle conseillé : Opus
+### ☐ V3.2-47 — La fiche de base d'un PNJ, tirée du SRD · `M` · sans modèle IA · Modèle conseillé : Opus — **codé le 26 novembre ; reste à vérifier en jouant**
 
 - Table pure archétype de vie → fiche du SRD 2024 (`src/core`) : personnel de lieu, journalier, enfant, vieillard → Roturier ; garde → Garde ; prêtre → Acolyte de prêtre ; pilier de bar, videur → Gros-bras ; voyageur, messager → Éclaireur… Une fiche inconnue tombe sur Roturier, en le disant.
 - Ajustements à graine fixe (`deriveSeed`) : ±2 sur une ou deux caractéristiques selon le métier, PV tirés depuis les dés de vie de la fiche.
-- Bloc `statblock` gagne `template` facultatif (`{ source: "srd-2024", key }`), sans changer `__v` ; écrit à l'ancrage (`promoteSketch`) et à la création par le générateur, en visibilité `gm`.
+- Bloc `statblock` gagne `based_on` facultatif (`{ source: "srd-2024", key }`), sans changer `__v` ; écrit à l'ancrage (`promoteSketch`) et à la création par le générateur, en visibilité `gm`.
+
+**Fait.** `src/core/rules/npcSheet.ts` (table et ajustements : métier, ±1 sur deux caractéristiques, PV tirés sur les dés de vie) ; `giveNpcSheet` (`src/server/services/npcSheet.ts`) lit la fiche de règle du monde, la convertit (`statblockFromMonsterBlocks`) et écrit le bloc « Fiche » en `gm` ; appelé par `promoteSketch` à chaque ancrage. Le générateur du MJ garde son propre choix de créature (« Créer la fiche ») : il n'est pas branché sur cette table.
 
 **Critères d'acceptation**
-- [ ] Tests du noyau d'abord : même PNJ, même graine, même fiche ; chaque archétype de départ a sa fiche.
-- [ ] Mabelle ancrée de nouveau reçoit une fiche Roturier ajustée, visible du seul MJ.
+- [x] Tests du noyau d'abord : même PNJ, même graine, même fiche ; chaque archétype de départ a sa fiche (`npcSheet.test.ts`).
+- [x] L'ancrage appelle la fiche avec l'archétype et la graine de la personne calculée, ou un Roturier pour une esquisse tirée à la main (`sceneSketches.test.ts`).
+- [ ] En jouant : une personne nouvellement ancrée reçoit une fiche Roturier ajustée, visible du seul MJ. Mabelle, déjà ancrée, n'en a pas : il faudra la lui donner à la main ou attendre un rattrapage.
 
 ### ☐ V3.2-48 — Équipement probable et bourse · `M` · sans modèle IA · Modèle conseillé : Sonnet
 
