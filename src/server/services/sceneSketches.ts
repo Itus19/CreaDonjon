@@ -123,8 +123,8 @@ export async function promoteSketch(
 }
 
 /**
- * Après qu'une narration a fait parler une esquisse (`npc_reaction`) : compte
- * la réplique, ancre au-delà du seuil (`sketchShouldAnchorForSpeaking`).
+ * Après un échange avec une esquisse (réplique, ou servie sans un mot, V3.2-44) : compte
+ * l'échange, ancre au-delà du seuil (`sketchShouldAnchorForSpeaking`).
  * Best-effort — appelé après que la narration est déjà journalisée, un échec
  * ici ne doit rien lui retirer (même discipline que `narrateSoloTurn`
  * lui-même vis-à-vis de `playTurn`).
