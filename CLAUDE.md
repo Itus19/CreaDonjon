@@ -51,6 +51,7 @@ L'auteur apprend à coder sur ce projet. Explique tes choix. Ne livre pas de cod
 | `specs/coquille-et-design.md` | Coquille, jetons de design, composants | Tickets interface |
 | `specs/cible-locale-et-ia.md` | Cible locale, fournisseurs d'IA | Avant toute dépendance d'infrastructure |
 | `specs/moteur-de-jeu.md` | Déclencheurs, économie d'action, scène | Tickets V3 |
+| `specs/generation-du-monde.md` | Carte Azgaar, villes en agrégat, histoire simulée (V4, ADR 0109) | Tickets de génération du monde |
 | `specs/ruleset-personnel.md` | Rulesets personnels et leur cadre | Saisie de règles |
 
 Ne lis que ce dont le ticket a besoin. Charger dix documents à chaque session gaspille du contexte.
