@@ -8,7 +8,7 @@ describe("azgaarFileToWorldExport", () => {
     const { data, summary } = azgaarFileToWorldExport(petiteCarte());
     expect(() => zWorldExport.parse(data)).not.toThrow();
     expect(data.world.name).toBe("Essai");
-    expect(summary).toMatchObject({ name: "Essai", sites: 3, states: 2, presentYear: 355 });
+    expect(summary).toMatchObject({ name: "Essai", sites: 3, notables: 2, states: 2, presentYear: 355 });
     expect(summary.events).toBeGreaterThan(0);
   });
 

@@ -17,9 +17,9 @@ describe("FAMILLES_PALETTE", () => {
     expect(FAMILLES_PALETTE[3].types).toEqual(["random_table", "quest", "music", "map", "price_list", "settlement"]);
   });
 
-  it("n'expose ni generator, ni note_tree, ni session_journal_meta", () => {
+  it("n'expose ni generator, ni note_tree, ni session_journal_meta, ni generated_world", () => {
     const tous = FAMILLES_PALETTE.flatMap((f) => f.types);
-    for (const exclu of ["generator", "note_tree", "session_journal_meta"]) {
+    for (const exclu of ["generator", "note_tree", "session_journal_meta", "generated_world"]) {
       expect(tous).not.toContain(exclu);
       expect(TYPES_HORS_PALETTE).toContain(exclu);
     }

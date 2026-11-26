@@ -524,7 +524,10 @@ const getPublicVisibleBlocks = cache(async function getPublicVisibleBlocks(
   // il faut savoir qu'une image vit dans un paragraphe meme quand ce
   // paragraphe est retire au filtrage ci-dessous.
   const rawInlineIds = inlineImageIdsIn(rows.map((row) => ({ id: row.id, blockType: row.block_type, data: row.data })));
-  const visible = filterBlocks(rows.map(toVisibilityAware), { kind: "anonymous" })
+  // G-7b : la carte d'un monde généré ne quitte jamais le serveur par un lien
+  // de partage, quelle que soit sa visibilité (elle nomme toutes les villes,
+  // découvertes ou non). Défense en profondeur : elle est déjà réservée au MJ.
+  const visible = filterBlocks(rows.filter((row) => row.block_type !== "generated_world").map(toVisibilityAware), { kind: "anonymous" })
     .map((row) => ({
       id: row.id,
       blockType: row.block_type,

@@ -25,6 +25,7 @@ import { zSessionJournalMetaBlockData } from "./sessionJournalMeta";
 import { zEquippableBlockData, DEFAULT_EQUIPPABLE_BLOCK_DATA } from "./equippable";
 import { zPriceListBlockData, DEFAULT_PRICE_LIST_BLOCK_DATA } from "./priceList";
 import { zSettlementBlockData } from "./settlement";
+import { zGeneratedWorldBlockData, DEFAULT_GENERATED_WORLD_BLOCK_DATA } from "./generatedWorld";
 import { zRoomsBlockData, DEFAULT_ROOMS_BLOCK_DATA } from "./rooms";
 import { PERSONALITY_POLE_KEYS, WORLDVIEW_POLE_KEYS } from "@/src/core/psyche/keys";
 
@@ -117,6 +118,9 @@ import { PERSONALITY_POLE_KEYS, WORLDVIEW_POLE_KEYS } from "@/src/core/psyche/ke
  * G-3 (ADR 0109) : settlement — « Ville », une ville décrite par ses
  * agrégats (population, rang, richesse, biome, peuples, métiers) et une
  * graine ; les habitants se tirent à la découverte (`src/core/worldgen`).
+ * G-7b (ADR 0109) : generated_world — « Monde généré », toute la carte d'un
+ * monde créé depuis Azgaar, posée sur la frise du monde, réservée au MJ ;
+ * ses villes naissent à la découverte. Jamais dans la palette.
  */
 export const BLOCK_TYPES = [
   "text",
@@ -145,6 +149,7 @@ export const BLOCK_TYPES = [
   "price_list",
   "rooms",
   "settlement",
+  "generated_world",
 ] as const;
 export type BlockType = (typeof BLOCK_TYPES)[number];
 
@@ -175,6 +180,7 @@ export const DEFAULT_LAYOUT_BY_BLOCK_TYPE: Record<BlockType, BlockDisplayLayout>
   price_list: "table",
   rooms: "key_values",
   settlement: "key_values",
+  generated_world: "key_values",
 };
 type BlockDisplayLayout = z.infer<typeof zBlockDisplay>["layout"];
 
@@ -205,6 +211,7 @@ const DATA_SCHEMA_BY_BLOCK_TYPE = {
   price_list: zPriceListBlockData,
   rooms: zRoomsBlockData,
   settlement: zSettlementBlockData,
+  generated_world: zGeneratedWorldBlockData,
 } satisfies Record<BlockType, z.ZodTypeAny>;
 
 const DEFAULT_DATA_BY_BLOCK_TYPE: Record<BlockType, unknown> = {
@@ -301,6 +308,7 @@ const DEFAULT_DATA_BY_BLOCK_TYPE: Record<BlockType, unknown> = {
     peoples: [],
     trades: [],
   },
+  generated_world: DEFAULT_GENERATED_WORLD_BLOCK_DATA,
 };
 
 /**

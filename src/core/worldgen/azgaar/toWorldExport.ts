@@ -7,6 +7,8 @@ import { azgaarToAbstractWorld, zAzgaarExport } from "./import";
 export interface AzgaarWorldSummary {
   name: string;
   sites: number;
+  /** Les villes qui ont leur page dès la création ; les autres naissent à la découverte. */
+  notables: number;
   states: number;
   events: number;
   presentYear: number;
@@ -37,6 +39,6 @@ export function azgaarFileToWorldExport(json: unknown): { data: WorldExport; sum
   const name = parsed.data.info.mapName?.trim() || "Monde Azgaar";
   return {
     data: worldToExport(world, { name, chronicle }),
-    summary: { name, sites: world.sites.length, states: world.states.length, events: chronicle.events.length, presentYear: world.presentYear },
+    summary: { name, sites: world.sites.length, notables: world.sites.filter((s) => s.notable).length, states: world.states.length, events: chronicle.events.length, presentYear: world.presentYear },
   };
 }

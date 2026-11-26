@@ -56,7 +56,7 @@ export default function ImportWorldForm({ canUseSoloMode }: { canUseSoloMode: bo
         const { data, summary } = azgaarFileToWorldExport(json);
         setParsedData(data);
         setAzgaarSummary(
-          `Carte Azgaar « ${summary.name} » : ${summary.sites} villes, ${summary.states} États, ${summary.events} événements d'histoire jusqu'en ${summary.presentYear}.`
+          `Carte Azgaar « ${summary.name} » : ${summary.states} États, ${summary.notables} villes notables créées tout de suite, ${summary.sites - summary.notables} autres gardées pour la découverte, ${summary.events} événements d'histoire jusqu'en ${summary.presentYear}.`
         );
         if (canUseSoloMode) setMode("solo");
       } catch (err) {

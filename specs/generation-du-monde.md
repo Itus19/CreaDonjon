@@ -2,7 +2,7 @@
 
 *Spécification de la V4 « Simulation » : la carte, les villes, l'histoire d'un monde généré, et la façon dont ses détails apparaissent quand on les découvre. Les principes viennent de l'[ADR 0104](../docs/adr/0104-le-cap-du-mode-solo.md) ; les choix qui engagent le schéma, de l'[ADR 0109](../docs/adr/0109-la-generation-du-monde-demarre.md).*
 
-**État au 26 novembre 2026** : spécifiée. Existent dans `src/core/worldgen/` : la ville en agrégat (G-2), le monde abstrait et l'histoire couche 1 (G-6), la lecture d'une carte Azgaar (G-7a), la création d'un monde depuis une carte, avec sa chronique (G-7b).
+**État au 26 novembre 2026** : spécifiée. Existent dans `src/core/worldgen/` : la ville en agrégat (G-2), le monde abstrait et l'histoire couche 1 (G-6), la lecture d'une carte Azgaar (G-7a), la création d'un monde depuis une carte, avec sa chronique, et la révélation des villes à la découverte (G-7b).
 
 ---
 
@@ -135,13 +135,15 @@ L'image SVG de la même carte (900 ko) se pose telle quelle dans le bloc carte :
 
 ### 8.2 Créer un monde depuis une carte (G-7b)
 
-Sur l'accueil, le bouton **Importer** reconnaît une carte d'Azgaar (export JSON « Complet ») et la convertit **dans le navigateur** (`azgaarFileToWorldExport`, `src/core/worldgen/azgaar/toWorldExport.ts`) : lecture (§8.0), histoire sur 300 ans ou assez pour couvrir la plus vieille guerre de la carte, puis le format d'export de monde (`worldToExport`, `src/core/worldgen/toWorldExport.ts`). La route d'import existante crée ensuite le monde ; aucune route nouvelle.
+Sur l'accueil, le bouton **Importer** reconnaît une carte d'Azgaar (export JSON « Complet ») et la convertit **dans le navigateur** (`azgaarFileToWorldExport`, `src/core/worldgen/azgaar/toWorldExport.ts`) : lecture (§8.0), histoire sur 300 ans ou assez pour couvrir la plus vieille guerre de la carte, puis le format d'export de monde (`worldToExport`, `src/core/worldgen/toWorldExport.ts`). La route d'import existante crée ensuite un **nouveau** monde ; elle ne touche jamais une partie en cours.
 
-- une **faction** par État, une page de **lieu** par ville (toutes, pour ne rien perdre de la carte), avec son bloc Ville, rangée sous son État par une relation `part_of` ;
-- la **chronique** dans la frise du monde, chaque entrée réservée au MJ ;
-- blocs, relations et frise en visibilité MJ : tout se découvre (ADR 0104 §3).
+Les villes naissent **à la découverte** (choix de l'auteur, 26 novembre 2026) :
 
-L'import crée les fiches **par paquets** (`createImportedEntities`) : une fiche à la fois coûtait six allers-retours, plus d'une minute pour Anteau. Pour Anteau : 691 fiches, 682 blocs, 681 relations, 500 entrées de frise, un envoi de 450 ko.
+- à l'import : une **faction** par État, une page de **lieu** par ville **notable** (chez Azgaar, les capitales et les cités), avec son bloc Ville et son rattachement `part_of` à son État, et la **chronique** dans la frise du monde ;
+- **toute la carte** est gardée sur la fiche de la frise (réservée au MJ), dans un bloc `generated_world` réservé au MJ : villes, routes, distances, et quelles villes ont déjà leur page. Elle ne quitte jamais le serveur par un lien de partage ;
+- sur la fiche d'une ville née de la carte (son bloc Ville porte `siteId`), le MJ **révèle les lieux alentour** : les villes sans page à 25, 50 ou 100 km **par la route** (`sitesToReveal`, `src/core/worldgen/reveal.ts`), trente au plus par geste (`revealPlacesAround`, `src/server/services/worldReveal.ts`). Même graine, donc même ville qu'à l'import. Le tour solo le fera seul quand la personne qui joue arrive quelque part (G-4).
+
+Tout ce qui vient de la génération est en visibilité MJ (ADR 0104 §3). L'import crée les fiches **par paquets** (`createImportedEntities`) : une fiche à la fois coûtait six allers-retours. Pour Anteau : 9 États, 74 villes notables, la carte (environ 200 ko) et 500 entrées de frise.
 
 ## 9. L'histoire du monde
 
@@ -202,5 +204,5 @@ Le simulateur est **pur** (`src/core/worldgen/history/`), donc il tourne n'impor
 | G-6 | Le monde abstrait et l'histoire, couche 1 : format calqué sur l'export d'Azgaar (§8.1), monde de test écrit à la main, chronique convertie en entrées de frise, aperçu par `npm run apercu:histoire` | Opus | fait |
 | G-6b | Figer la chronique dans la frise d'un monde : écriture en une fois sur la fiche `world_timeline` | Opus | fait par G-7b pour un monde créé depuis une carte ; ajouter une chronique à un monde existant attend un besoin |
 | G-7a | La lecture d'un export Azgaar en monde abstrait, aperçu par `npm run apercu:azgaar` | Opus | fait |
-| G-7b | Créer un monde depuis une carte Azgaar : entités des villes avec leur bloc `settlement`, factions des États, chronique figée (G-6b) | Opus | fait |
+| G-7b | Créer un monde depuis une carte Azgaar : villes notables avec leur bloc `settlement`, factions des États, carte gardée, chronique figée (G-6b), révélation des lieux alentour par le MJ | Opus | fait |
 | G-7c | Poser l'image SVG de la carte dans un bloc carte et une punaise par ville | Opus | à faire |

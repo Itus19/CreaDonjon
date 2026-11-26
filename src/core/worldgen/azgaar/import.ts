@@ -142,6 +142,7 @@ export function azgaarToAbstractWorld(map: AzgaarExport): AbstractWorld {
       name: b.name,
       stateId: stateId(b.state),
       cultureId: cultureId(b.culture),
+      notable: b.capital === 1 || b.group === "city",
       settlement: {
         __v: 1,
         seed: deriveSeed(seed, "burg", b.i),

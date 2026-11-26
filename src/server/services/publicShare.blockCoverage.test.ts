@@ -60,6 +60,9 @@ const NEEDS_SERVER_RESOLUTION: readonly BlockType[] = [
   "worldview",
   "map",
   "image",
+  // generated_world (G-7b) : toute la carte d'un monde généré et les fiches
+  // qu'elle a déjà créées. Écarté de la réponse publique avant tout filtrage.
+  "generated_world",
 ];
 
 /**

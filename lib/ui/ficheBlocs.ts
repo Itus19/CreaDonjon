@@ -24,9 +24,10 @@ export const FAMILLES_PALETTE: readonly FamillePalette[] = [
 /**
  * Types qui existent mais ne se posent jamais à la main depuis la palette :
  * le générateur vit dans la barre MJ, `note_tree` dans le Bloc-notes, et
- * `session_journal_meta` est posé par le Livre de sessions.
+ * `session_journal_meta` est posé par le Livre de sessions, `generated_world`
+ * par l'import d'une carte (G-7b).
  */
-export const TYPES_HORS_PALETTE: readonly string[] = ["generator", "note_tree", "session_journal_meta"];
+export const TYPES_HORS_PALETTE: readonly string[] = ["generator", "note_tree", "session_journal_meta", "generated_world"];
 
 /**
  * AG-9 — sur une fiche du Livre de sessions, le bloc « Séance » ne se

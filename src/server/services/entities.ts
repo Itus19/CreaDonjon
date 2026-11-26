@@ -251,12 +251,13 @@ const REVISION_CONCURRENCY = 8;
  *
  * Mêmes garanties que `createEntity` : fiche masquée (`isPublic: false`),
  * slug numérique suivant, rang sous la dernière fiche de son type, révision
- * initiale. Dans un monde neuf aucune fiche supprimée ne garde de slug ; si
- * c'était le cas, l'index unique refuserait l'insertion plutôt que de doubler.
+ * initiale. Dans un monde neuf (`freshWorld`) aucune fiche supprimée ne garde
+ * de slug ; ailleurs (villes révélées à la découverte), chaque slug est vérifié
+ * par `worldHasSlug`, qui voit aussi ceux des fiches supprimées.
  */
 export async function createImportedEntities(
   supabase: TypedClient,
-  params: { worldId: string; createdBy: string; items: { name: string; entityKind: string; aliases: string[] }[] }
+  params: { worldId: string; createdBy: string; items: { name: string; entityKind: string; aliases: string[] }[]; freshWorld?: boolean }
 ): Promise<EntitySummary[]> {
   if (params.items.length === 0) return [];
   const kinds = [...new Set(params.items.map((i) => i.entityKind))];
@@ -266,11 +267,18 @@ export async function createImportedEntities(
   ]);
   const nextOrder = new Map(kinds.map((k, i) => [k, maxOrders[i] ?? 0]));
   let nextSlug = Number(nextNumericSlug(slugs));
-  const rows = params.items.map((item) => {
+  const freeSlug = async (): Promise<string> => {
+    if (params.freshWorld === false) {
+      while (await worldHasSlug(supabase, params.worldId, String(nextSlug))) nextSlug++;
+    }
+    return String(nextSlug++);
+  };
+  const rows = [];
+  for (const item of params.items) {
     const order = (nextOrder.get(item.entityKind) ?? 0) + 1000;
     nextOrder.set(item.entityKind, order);
-    return { ...item, worldId: params.worldId, createdBy: params.createdBy, slug: String(nextSlug++), displayOrder: order, isPublic: false };
-  });
+    rows.push({ ...item, worldId: params.worldId, createdBy: params.createdBy, slug: await freeSlug(), displayOrder: order, isPublic: false });
+  }
 
   const created: EntitySummary[] = [];
   for (let i = 0; i < rows.length; i += IMPORT_CHUNK) {

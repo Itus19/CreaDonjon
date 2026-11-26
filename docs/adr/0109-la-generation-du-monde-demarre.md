@@ -37,3 +37,4 @@ Et deux arbitrages entre documents :
 - Le catalogue (G5) demandera une migration et une mise à jour de `docs/SCHEMA.md` à son ticket. Le bloc `settlement` n'en demande pas : `blocks.block_type` n'a pas de contrainte, c'est le registre Zod qui fait foi.
 - Le bloc `settlement` est dans le registre des blocs depuis le ticket G-3 : il se pose et s'édite sur une fiche (famille Outils).
 - **L'histoire passe avant la carte** (décidé avec l'auteur le 26 novembre) : le simulateur travaille sur un monde abstrait calqué sur l'export d'Azgaar, testé sur un monde écrit à la main ; l'import Azgaar vient ensuite le remplir. La simulation doit aboutir au présent que montre la carte.
+- **Les villes naissent à la découverte** (décidé avec l'auteur le 26 novembre) : un monde créé depuis une carte n'a d'abord que ses villes notables ; la carte entière est gardée (bloc `generated_world`, réservé au MJ) et le MJ révèle les lieux alentour, en attendant que le tour solo le fasse (G-4).
