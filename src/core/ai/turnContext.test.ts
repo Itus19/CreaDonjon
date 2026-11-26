@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MONEY_INSTRUCTION, buildTurnContext, type TurnContextInput } from "./turnContext";
+import { MONEY_INSTRUCTION, MONEY_INSTRUCTION_NO_PRICE_LIST, NPC_ROLE_INSTRUCTION, SECRETS_INSTRUCTION, WEATHER_INSTRUCTION, buildTurnContext, type TurnContextInput } from "./turnContext";
 
 function input(partial: Partial<TurnContextInput> = {}): TurnContextInput {
   return {
@@ -154,13 +154,47 @@ describe("V3.1-193 — les pronoms d'un PNJ présent", () => {
     expect(text).toContain("Bourse du personnage joué : 3 pa");
     expect(text).not.toMatch(/<donnee[^>]*>[^<]*Bourse du personnage/);
     expect(text).toMatch(/carte-du-lieu[\s\S]*Bière : 4 pc/);
-    expect(text).toMatch(/ardoise[\s\S]*due à Mabelle/);
+    expect(text).toMatch(/dettes-du-personnage[\s\S]*due à Mabelle/);
     expect(text).toContain(MONEY_INSTRUCTION);
     expect(text.indexOf(MONEY_INSTRUCTION)).toBeGreaterThan(text.indexOf("due à Mabelle"));
   });
 
   it("V3.2-11 — sans bourse, carte ni ardoise, aucune consigne sur l'argent", () => {
     expect(buildTurnContext(input())).not.toContain(MONEY_INSTRUCTION);
+    expect(buildTurnContext(input())).not.toContain(MONEY_INSTRUCTION_NO_PRICE_LIST);
+  });
+
+  it("une bourse sans carte : le PNJ ne cite aucun prix et ne renvoie à aucune ardoise", () => {
+    const text = buildTurnContext(input({ purse: "3 pa", priceList: [] }));
+    expect(text).toContain(MONEY_INSTRUCTION_NO_PRICE_LIST);
+    expect(text).not.toContain(MONEY_INSTRUCTION);
+  });
+
+  it("avec une carte, le PNJ dit le prix à voix haute, jamais « l'ardoise dit le prix »", () => {
+    expect(MONEY_INSTRUCTION).toMatch(/dit le prix à voix haute/);
+    expect(MONEY_INSTRUCTION).toMatch(/sans renvoyer à un tableau ou à une ardoise/);
+  });
+
+  it("ADR 0117 — les secrets du MJ voyagent à part, encadrés, suivis de la consigne de ne jamais les dire", () => {
+    const text = buildTurnContext(input({ secrets: [{ name: "Mabelle", text: "Elle cache son frère." }] }));
+    expect(text).toMatch(/<donnee source="secrets-du-mj">[\s\S]*Mabelle : Elle cache son frère\./);
+    expect(text).not.toMatch(/<donnee source="pnjs-presents">[^<]*Elle cache/);
+    expect(text.indexOf(SECRETS_INSTRUCTION)).toBeGreaterThan(text.indexOf("Elle cache son frère"));
+    expect(buildTurnContext(input())).not.toContain(SECRETS_INSTRUCTION);
+  });
+
+  it("la météo est celle du dehors, avec la consigne qui le dit ; sans météo, pas de consigne", () => {
+    const text = buildTurnContext(input({ weather: "pluie fine" }));
+    expect(text).toContain("dehors : pluie fine");
+    expect(text).toContain(WEATHER_INSTRUCTION);
+    expect(buildTurnContext(input())).not.toContain(WEATHER_INSTRUCTION);
+  });
+
+  it("ce que la page du PNJ dit de lui voyage dans sa balise, avec la consigne de rester dans son rôle", () => {
+    const text = buildTurnContext(input({ npcs: [{ id: "npc-1", name: "Mabelle", attitudeLabel: null, zone: "near", description: "Aubergiste du Fanal." }] }));
+    expect(text).toMatch(/<donnee source="pnjs-presents">[\s\S]*Mabelle[^\n]*— Aubergiste du Fanal\./);
+    expect(text).toContain(NPC_ROLE_INSTRUCTION);
+    expect(buildTurnContext(input({ npcs: [] }))).not.toContain(NPC_ROLE_INSTRUCTION);
   });
 
   it("une question directe exige la réplique ; une parole sans question la laisse au jugement du narrateur", () => {
