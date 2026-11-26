@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayPeriod, materializeOccupants } from "./occupants";
+import { ATTACHED_MAX, attachedPeople, materializeOccupants, type OccupantPlaceType, type WikiWorker } from "./occupants";
 import { zSettlementBlockData, type SettlementBlockData } from "../schemas/blocks/settlement";
 
 const ville: SettlementBlockData = {
@@ -23,44 +23,33 @@ const ville: SettlementBlockData = {
 const auberge = { key: "entite-auberge-1", type: "inn" as const };
 const soir = { day: 3, hour: 20 };
 
-describe("dayPeriod", () => {
-  it("découpe la journée en quatre moments", () => {
-    expect(dayPeriod(0)).toBe("night");
-    expect(dayPeriod(5)).toBe("night");
-    expect(dayPeriod(6)).toBe("morning");
-    expect(dayPeriod(12)).toBe("afternoon");
-    expect(dayPeriod(18)).toBe("evening");
-    expect(dayPeriod(23)).toBe("evening");
+const LIEUX: OccupantPlaceType[] = ["inn", "tavern", "temple", "market", "barracks", "workshop", "hermitage"];
+const attaches = (s: SettlementBlockData, place: { key: string; type: OccupantPlaceType }, day: number, workers?: WikiWorker[]) =>
+  attachedPeople(s, place, day, workers);
+const presents = (s: SettlementBlockData, day: number, hour: number) => materializeOccupants(s, auberge, { day, hour });
+
+describe("attachedPeople — les gens attachés à un lieu (V3.2-30)", () => {
+  it("rend exactement les mêmes gens pour la même ville, le même lieu et le même jour", () => {
+    expect(attaches(ville, auberge, 3)).toEqual(attaches(ville, auberge, 3));
   });
 
-  it("refuse une heure hors de 0 à 23", () => {
-    expect(() => dayPeriod(24)).toThrow(RangeError);
-    expect(() => dayPeriod(-1)).toThrow(RangeError);
-  });
-});
-
-describe("materializeOccupants — auberge", () => {
-  it("rend exactement le même résultat pour la même ville, le même lieu et le même moment", () => {
-    expect(materializeOccupants(ville, auberge, soir)).toEqual(materializeOccupants(ville, auberge, soir));
+  it("garde le même personnel et les mêmes habitués d'un jour à l'autre", () => {
+    const fixes = (day: number) => attaches(ville, auberge, day).filter((o) => ["head", "staff", "regular"].includes(o.role));
+    expect(fixes(1)).toEqual(fixes(40));
+    expect(fixes(1).some((o) => o.role === "regular")).toBe(true);
   });
 
-  it("place toujours un seul aubergiste, en tête, avec son métier", () => {
-    const occupants = materializeOccupants(ville, auberge, soir);
-    const aubergistes = occupants.filter((o) => o.role === "innkeeper");
-    expect(aubergistes).toHaveLength(1);
-    expect(occupants[0]).toMatchObject({ role: "innkeeper", rank: 0, trade: "innkeeper" });
+  it("place un seul responsable, en tête, avec son métier et son archétype", () => {
+    const gens = attaches(ville, auberge, 3);
+    expect(gens.filter((o) => o.role === "head")).toHaveLength(1);
+    expect(gens[0]).toMatchObject({ role: "head", rank: 0, trade: "innkeeper", archetype: "personnel_de_lieu" });
+    expect(gens[0].places).toMatchObject({ home: auberge.key, work: auberge.key });
   });
 
-  it("garde le même aubergiste et le même personnel à toute heure et tout jour", () => {
-    const fixes = (day: number, hour: number) =>
-      materializeOccupants(ville, auberge, { day, hour }).filter((o) => o.role !== "patron");
-    expect(fixes(1, 8)).toEqual(fixes(9, 21));
-  });
-
-  it("compte entre 1 et 3 membres du personnel, borné par la richesse", () => {
+  it("borne le personnel par la richesse", () => {
     for (let seed = 0; seed < 50; seed++) {
-      const modeste = materializeOccupants({ ...ville, seed, wealth: "modeste" }, auberge, soir);
-      const reputee = materializeOccupants({ ...ville, seed, wealth: "reputee" }, auberge, soir);
+      const modeste = attaches({ ...ville, seed, wealth: "modeste" }, auberge, 3);
+      const reputee = attaches({ ...ville, seed, wealth: "reputee" }, auberge, 3);
       expect(modeste.filter((o) => o.role === "staff")).toHaveLength(1);
       const staff = reputee.filter((o) => o.role === "staff").length;
       expect(staff).toBeGreaterThanOrEqual(1);
@@ -68,43 +57,69 @@ describe("materializeOccupants — auberge", () => {
     }
   });
 
-  it("numérote les rangs de chaque rôle à partir de 0, sans trou", () => {
-    const occupants = materializeOccupants({ ...ville, wealth: "reputee", zone: "capitale" }, auberge, soir);
-    for (const role of ["staff", "patron"] as const) {
-      const ranks = occupants.filter((o) => o.role === role).map((o) => o.rank);
-      expect(ranks).toEqual(ranks.map((_, i) => i));
+  it("une cabane d'ermite n'a qu'une personne, une taverne de capitale au plus douze", () => {
+    for (let day = 0; day < 30; day++) {
+      expect(attaches(ville, { key: "cabane", type: "hermitage" }, day)).toHaveLength(1);
+      for (const type of LIEUX) {
+        expect(attaches({ ...ville, zone: "capitale", wealth: "reputee" }, { key: `l-${type}`, type }, day).length).toBeLessThanOrEqual(ATTACHED_MAX);
+      }
     }
   });
 
-  it("fait varier les clients avec le jour, mais les redonne pour le même soir", () => {
-    const clients = (day: number) =>
-      materializeOccupants(ville, auberge, { day, hour: 20 }).filter((o) => o.role === "patron");
-    expect(clients(3)).toEqual(clients(3));
-    const seeds = new Set([1, 2, 3, 4, 5].map((day) => JSON.stringify(clients(day).map((c) => c.seed))));
-    expect(seeds.size).toBeGreaterThan(1);
+  it("une auberge de bourg compte quatre à six personnes attachées, une taverne de capitale bien plus", () => {
+    const bourg = attaches({ ...ville, zone: "bourg", wealth: "modeste" }, auberge, 3).length;
+    expect(bourg).toBeGreaterThanOrEqual(4);
+    expect(bourg).toBeLessThanOrEqual(6);
+    expect(attaches({ ...ville, zone: "capitale", wealth: "reputee" }, { key: "t", type: "tavern" }, 3).length).toBeGreaterThan(bourg + 3);
   });
 
-  it("a plus de clients le soir que la nuit, et plus dans une capitale que dans un bourg", () => {
-    let soirTotal = 0;
-    let nuitTotal = 0;
-    let capitaleTotal = 0;
-    let bourgTotal = 0;
-    for (let day = 0; day < 40; day++) {
-      const compte = (s: SettlementBlockData, hour: number) =>
-        materializeOccupants(s, auberge, { day, hour }).filter((o) => o.role === "patron").length;
-      soirTotal += compte(ville, 20);
-      nuitTotal += compte(ville, 3);
-      capitaleTotal += compte({ ...ville, zone: "capitale" }, 20);
-      bourgTotal += compte({ ...ville, zone: "bourg" }, 20);
+  it("une personne de passage arrive, reste son séjour, et repart", () => {
+    const capitale = { ...ville, zone: "capitale" as const };
+    const passants = Array.from({ length: 28 }, (_, d) => attaches(capitale, auberge, d))
+      .flat()
+      .filter((o) => o.role === "passing" || o.role === "lodger");
+    expect(passants.length).toBeGreaterThan(0);
+    for (const p of passants) {
+      expect(p.stay).toBeDefined();
+      const { fromDay, toDay } = p.stay!;
+      expect(attaches(capitale, auberge, fromDay).some((o) => o.seed === p.seed)).toBe(true);
+      expect(attaches(capitale, auberge, toDay).some((o) => o.seed === p.seed)).toBe(false);
+      expect(attaches(capitale, auberge, fromDay - 1).some((o) => o.seed === p.seed)).toBe(false);
     }
-    expect(soirTotal).toBeGreaterThan(nuitTotal);
-    expect(capitaleTotal).toBeGreaterThan(bourgTotal);
+  });
+
+  it("d'une semaine à l'autre, ce ne sont pas les mêmes gens de passage", () => {
+    const capitale = { ...ville, zone: "capitale" as const };
+    const graines = (day: number) => attaches(capitale, auberge, day).filter((o) => o.stay).map((o) => o.seed);
+    const semaine1 = new Set(Array.from({ length: 7 }, (_, d) => graines(d)).flat());
+    const semaine2 = Array.from({ length: 7 }, (_, d) => graines(d + 7)).flat();
+    expect(semaine2.some((g) => semaine1.has(g))).toBe(false);
+  });
+
+  it("un PNJ du wiki relié par works_at prend la place de l'occupant tiré de même rang", () => {
+    const sans = attaches(ville, auberge, 3);
+    const avec = attaches(ville, auberge, 3, [{ entityId: "mabelle" }, { entityId: "garcon" }]);
+    expect(avec[0]).toMatchObject({ role: "head", entityId: "mabelle", archetype: "personnel_de_lieu" });
+    expect(avec.find((o) => o.role === "staff" && o.rank === 0)?.entityId).toBe("garcon");
+    expect(avec.filter((o) => o.role === "head" || o.role === "staff").length).toBe(sans.filter((o) => o.role === "head" || o.role === "staff").length);
+  });
+
+  it("un PNJ du wiki en surnombre s'ajoute au personnel, le wiki l'emporte sur le plafond", () => {
+    const workers = Array.from({ length: 15 }, (_, i) => ({ entityId: `pnj-${i}` }));
+    const gens = attaches({ ...ville, wealth: "modeste" }, auberge, 3, workers);
+    expect(gens.filter((o) => o.entityId).length).toBe(15);
+    expect(gens.filter((o) => !o.entityId)).toHaveLength(0);
+  });
+
+  it("un PNJ du wiki garde l'archétype écrit sur sa fiche", () => {
+    const gens = attaches(ville, auberge, 3, [{ entityId: "mabelle", archetype: "noble" }]);
+    expect(gens[0].archetype).toBe("noble");
   });
 
   it("tire le peuple selon les proportions de la ville", () => {
     const compte: Record<string, number> = {};
     for (let seed = 0; seed < 300; seed++) {
-      for (const o of materializeOccupants({ ...ville, seed }, auberge, soir)) {
+      for (const o of attaches({ ...ville, seed }, auberge, 3)) {
         if (o.people) compte[o.people] = (compte[o.people] ?? 0) + 1;
       }
     }
@@ -113,28 +128,82 @@ describe("materializeOccupants — auberge", () => {
     expect(compte.dwarf).toBeGreaterThan(compte.halfling);
   });
 
-  it("donne aux clients un métier de la ville, et laisse peuple et métier vides quand la ville n'en dit rien", () => {
-    const clients = materializeOccupants(ville, auberge, soir).filter((o) => o.role === "patron");
-    for (const c of clients) expect(["farmer", "smith", "merchant"]).toContain(c.trade);
-
-    const muette = materializeOccupants({ ...ville, peoples: [], trades: [] }, auberge, soir);
+  it("laisse peuple et métier vides quand la ville n'en dit rien", () => {
+    const muette = attaches({ ...ville, peoples: [], trades: [] }, auberge, 3);
     for (const o of muette) expect(o.people).toBeNull();
-    for (const o of muette.filter((x) => x.role === "patron")) expect(o.trade).toBeNull();
+    for (const o of muette.filter((x) => x.role === "regular")) expect(o.trade).toBeNull();
   });
 
-  it("donne à chaque occupant une graine propre et distincte", () => {
-    const occupants = materializeOccupants({ ...ville, zone: "capitale", wealth: "reputee" }, auberge, soir);
-    expect(new Set(occupants.map((o) => o.seed)).size).toBe(occupants.length);
+  it("donne à chaque personne une graine propre, et d'autres gens à une autre auberge", () => {
+    const gens = attaches({ ...ville, zone: "capitale", wealth: "reputee" }, auberge, 3);
+    expect(new Set(gens.map((o) => o.seed)).size).toBe(gens.length);
+    expect(attaches(ville, { key: "entite-auberge-2", type: "inn" }, 3)[0].seed).not.toBe(gens[0].seed);
   });
 
   it("ne peuple pas un lieu d'une ville sans habitants", () => {
+    expect(attaches({ ...ville, population: 0 }, auberge, 3)).toEqual([]);
     expect(materializeOccupants({ ...ville, population: 0 }, auberge, soir)).toEqual([]);
   });
+});
 
-  it("donne d'autres gens à une autre auberge de la même ville", () => {
-    const ici = materializeOccupants(ville, auberge, soir);
-    const ailleurs = materializeOccupants(ville, { key: "entite-auberge-2", type: "inn" }, soir);
-    expect(ailleurs[0].seed).not.toBe(ici[0].seed);
+describe("materializeOccupants — qui est là, à l'heure (V3.2-30)", () => {
+  it("rend exactement le même résultat pour la même heure", () => {
+    expect(presents(ville, 3, 20)).toEqual(presents(ville, 3, 20));
+  });
+
+  it("le hall du soir n'a pas les mêmes gens que celui du matin", () => {
+    const graines = (hour: number) => presents(ville, 3, hour).map((o) => o.seed).sort().join();
+    expect(graines(20)).not.toEqual(graines(8));
+  });
+
+  it("ne garde que les attachés dont la position est ce lieu, et chacun de ces attachés en est", () => {
+    const seeds = new Set(attaches(ville, auberge, 3).map((o) => o.seed));
+    for (const hour of [2, 9, 14, 20]) {
+      for (const o of presents(ville, 3, hour).filter((x) => x.role !== "patron")) expect(seeds.has(o.seed)).toBe(true);
+    }
+  });
+
+  it("l'aubergiste est là en journée, chez lui la nuit, c'est-à-dire à l'auberge", () => {
+    let jours = 0;
+    for (let day = 0; day < 30; day++) if (presents(ville, day, 14).some((o) => o.role === "head")) jours++;
+    expect(jours).toBeGreaterThan(25);
+  });
+
+  it("a plus de clients d'un soir le soir que la nuit, et plus dans une capitale que dans un bourg", () => {
+    let soir = 0;
+    let nuit = 0;
+    let capitale = 0;
+    let bourg = 0;
+    for (let day = 0; day < 40; day++) {
+      const compte = (s: SettlementBlockData, hour: number) => presents(s, day, hour).filter((o) => o.role === "patron").length;
+      soir += compte(ville, 20);
+      nuit += compte(ville, 3);
+      capitale += compte({ ...ville, zone: "capitale" }, 20);
+      bourg += compte({ ...ville, zone: "bourg" }, 20);
+    }
+    expect(soir).toBeGreaterThan(nuit);
+    expect(capitale).toBeGreaterThan(bourg);
+  });
+
+  it("un client d'un soir reste quelques heures d'affilée, puis s'en va", () => {
+    const capitale = { ...ville, zone: "capitale" as const };
+    const heures = new Map<number, number[]>();
+    for (let hour = 0; hour < 24; hour++) {
+      for (const o of presents(capitale, 5, hour).filter((x) => x.role === "patron")) heures.set(o.seed, [...(heures.get(o.seed) ?? []), hour]);
+    }
+    expect(heures.size).toBeGreaterThan(0);
+    for (const h of heures.values()) {
+      expect(h.length).toBeLessThanOrEqual(3);
+      expect(h[h.length - 1] - h[0]).toBe(h.length - 1);
+    }
+  });
+
+  it("donne aux clients d'un soir un métier de la ville", () => {
+    for (const c of presents({ ...ville, zone: "capitale" }, 3, 20).filter((o) => o.role === "patron")) expect(["farmer", "smith", "merchant"]).toContain(c.trade);
+  });
+
+  it("refuse une heure hors de 0 à 23", () => {
+    expect(() => presents(ville, 0, 24)).toThrow(RangeError);
   });
 });
 

@@ -766,6 +766,8 @@ export const RELATION_LABELS_FR: Record<string, string> = {
   has_member: "a pour membre",
   leads: "dirige",
   led_by: "dirigé(e) par",
+  works_at: "travaille à",
+  employs: "emploie",
   part_of: "fait partie de",
   located_in: "situé(e) dans",
   contains: "contient",

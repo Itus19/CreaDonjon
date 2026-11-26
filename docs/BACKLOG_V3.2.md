@@ -78,7 +78,7 @@ Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été
 | V3.2-27 | ☑ | sans | La ligne du tour, les notes du monde d'office, le temps du combat | [`05-narration.md`](backlog-v3.2/05-narration.md) |
 | V3.2-28 | ☑ | sans | Les présents suivent la pièce | [`05-narration.md`](backlog-v3.2/05-narration.md) |
 | V3.2-29 | ☑ | sans | Archétypes de vie et `position()` | [`07-vie-du-monde.md`](backlog-v3.2/07-vie-du-monde.md) |
-| V3.2-30 | ☐ | sans | Les gens attachés à un lieu | [`07-vie-du-monde.md`](backlog-v3.2/07-vie-du-monde.md) |
+| V3.2-30 | ☑ | sans | Les gens attachés à un lieu | [`07-vie-du-monde.md`](backlog-v3.2/07-vie-du-monde.md) |
 | V3.2-31 | ☐ | sans | La présence calculée dans le solo | [`07-vie-du-monde.md`](backlog-v3.2/07-vie-du-monde.md) |
 | V3.2-32 | ☐ | avec | L'agenda : exceptions datées | [`07-vie-du-monde.md`](backlog-v3.2/07-vie-du-monde.md) |
 | V3.2-33 | ☐ | sans | Le régime d'une ville | [`07-vie-du-monde.md`](backlog-v3.2/07-vie-du-monde.md) |
