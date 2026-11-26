@@ -2,7 +2,7 @@
 
 *Spécification de la V4 « Simulation » : la carte, les villes, l'histoire d'un monde généré, et la façon dont ses détails apparaissent quand on les découvre. Les principes viennent de l'[ADR 0104](../docs/adr/0104-le-cap-du-mode-solo.md) ; les choix qui engagent le schéma, de l'[ADR 0109](../docs/adr/0109-la-generation-du-monde-demarre.md).*
 
-**État au 26 novembre 2026** : spécifiée. Existent dans `src/core/worldgen/` : la ville en agrégat (G-2), le monde abstrait et l'histoire couche 1 (G-6), la lecture d'une carte Azgaar (G-7a).
+**État au 26 novembre 2026** : spécifiée. Existent dans `src/core/worldgen/` : la ville en agrégat (G-2), le monde abstrait et l'histoire couche 1 (G-6), la lecture d'une carte Azgaar (G-7a), la création d'un monde depuis une carte, avec sa chronique (G-7b).
 
 ---
 
@@ -133,6 +133,16 @@ Lu sur l'export « Complet » de la carte *Anteau* de l'auteur (Azgaar 1.159.0, 
 
 L'image SVG de la même carte (900 ko) se pose telle quelle dans le bloc carte : les `x`/`y` des villes s'y placent sans conversion.
 
+### 8.2 Créer un monde depuis une carte (G-7b)
+
+Sur l'accueil, le bouton **Importer** reconnaît une carte d'Azgaar (export JSON « Complet ») et la convertit **dans le navigateur** (`azgaarFileToWorldExport`, `src/core/worldgen/azgaar/toWorldExport.ts`) : lecture (§8.0), histoire sur 300 ans ou assez pour couvrir la plus vieille guerre de la carte, puis le format d'export de monde (`worldToExport`, `src/core/worldgen/toWorldExport.ts`). La route d'import existante crée ensuite le monde ; aucune route nouvelle.
+
+- une **faction** par État, une page de **lieu** par ville (toutes, pour ne rien perdre de la carte), avec son bloc Ville, rangée sous son État par une relation `part_of` ;
+- la **chronique** dans la frise du monde, chaque entrée réservée au MJ ;
+- blocs, relations et frise en visibilité MJ : tout se découvre (ADR 0104 §3).
+
+L'import crée les fiches **par paquets** (`createImportedEntities`) : une fiche à la fois coûtait six allers-retours, plus d'une minute pour Anteau. Pour Anteau : 691 fiches, 682 blocs, 681 relations, 500 entrées de frise, un envoi de 450 ko.
+
 ## 9. L'histoire du monde
 
 ### 9.1 La méthode
@@ -190,6 +200,7 @@ Le simulateur est **pur** (`src/core/worldgen/history/`), donc il tourne n'impor
 | G-4 | La tranche ville + auberge du solo : tables de départ du biome tempéré (noms, PNJ, taverne), peuplement à l'entrée d'un lieu, l'entité existante remplace l'occupant, même tirage depuis la fenêtre du MJ | Opus | à faire, après les étapes 1 et 2 du Backlog solo |
 | G-5 | Le catalogue : type de fiche, bloc « élément du monde », import Wikidata limité au biome tempéré | Opus | à faire |
 | G-6 | Le monde abstrait et l'histoire, couche 1 : format calqué sur l'export d'Azgaar (§8.1), monde de test écrit à la main, chronique convertie en entrées de frise, aperçu par `npm run apercu:histoire` | Opus | fait |
-| G-6b | Figer la chronique dans la frise d'un monde : action serveur validée par Zod, écriture en une fois sur la fiche `world_timeline`, refusée quand une chronique y est déjà | Opus | à faire |
+| G-6b | Figer la chronique dans la frise d'un monde : écriture en une fois sur la fiche `world_timeline` | Opus | fait par G-7b pour un monde créé depuis une carte ; ajouter une chronique à un monde existant attend un besoin |
 | G-7a | La lecture d'un export Azgaar en monde abstrait, aperçu par `npm run apercu:azgaar` | Opus | fait |
-| G-7b | Créer un monde depuis une carte Azgaar : entités des villes avec leur bloc `settlement`, factions des États, image SVG et punaises, puis chronique figée (G-6b) | Opus | à faire |
+| G-7b | Créer un monde depuis une carte Azgaar : entités des villes avec leur bloc `settlement`, factions des États, chronique figée (G-6b) | Opus | fait |
+| G-7c | Poser l'image SVG de la carte dans un bloc carte et une punaise par ville | Opus | à faire |

@@ -13,6 +13,7 @@ import {
   findEntityByKind,
   getEntityById,
   insertEntity,
+  insertEntities,
   listDeletedEntities,
   listEntitiesByIds,
   listEntitiesForWorld,
@@ -234,6 +235,53 @@ export async function createEntity(
   const entity = await insertEntity(supabase, { ...params, slug, displayOrder, isPublic: false });
   await recordEntityRevision(supabase, { entity, changeSource: "user", changedBy: params.createdBy });
   return entity;
+}
+
+/** Fiches insérées par paquet : assez pour une carte Azgaar, sans dépasser la taille d'une requête. */
+const IMPORT_CHUNK = 500;
+/** Révisions initiales écrites en parallèle, par vagues bornées. */
+const REVISION_CONCURRENCY = 8;
+
+/**
+ * G-7b : la version groupée de `createEntity`, pour l'import d'un monde
+ * **neuf**. Une fiche à la fois coûtait six allers-retours (dont la liste de
+ * tous les slugs, relue à chaque fiche) : une carte de 700 villes dépassait
+ * la minute. Ici, une lecture des slugs, une par type pour le rang, une
+ * insertion par paquet de 500, puis les révisions initiales par vagues.
+ *
+ * Mêmes garanties que `createEntity` : fiche masquée (`isPublic: false`),
+ * slug numérique suivant, rang sous la dernière fiche de son type, révision
+ * initiale. Dans un monde neuf aucune fiche supprimée ne garde de slug ; si
+ * c'était le cas, l'index unique refuserait l'insertion plutôt que de doubler.
+ */
+export async function createImportedEntities(
+  supabase: TypedClient,
+  params: { worldId: string; createdBy: string; items: { name: string; entityKind: string; aliases: string[] }[] }
+): Promise<EntitySummary[]> {
+  if (params.items.length === 0) return [];
+  const kinds = [...new Set(params.items.map((i) => i.entityKind))];
+  const [slugs, maxOrders] = await Promise.all([
+    listEntitySlugsForWorld(supabase, params.worldId),
+    Promise.all(kinds.map((k) => maxEntityDisplayOrderForKind(supabase, params.worldId, k))),
+  ]);
+  const nextOrder = new Map(kinds.map((k, i) => [k, maxOrders[i] ?? 0]));
+  let nextSlug = Number(nextNumericSlug(slugs));
+  const rows = params.items.map((item) => {
+    const order = (nextOrder.get(item.entityKind) ?? 0) + 1000;
+    nextOrder.set(item.entityKind, order);
+    return { ...item, worldId: params.worldId, createdBy: params.createdBy, slug: String(nextSlug++), displayOrder: order, isPublic: false };
+  });
+
+  const created: EntitySummary[] = [];
+  for (let i = 0; i < rows.length; i += IMPORT_CHUNK) {
+    created.push(...(await insertEntities(supabase, rows.slice(i, i + IMPORT_CHUNK))));
+  }
+  for (let i = 0; i < created.length; i += REVISION_CONCURRENCY) {
+    await Promise.all(
+      created.slice(i, i + REVISION_CONCURRENCY).map((entity) => recordEntityRevision(supabase, { entity, changeSource: "import", changedBy: params.createdBy }))
+    );
+  }
+  return created;
 }
 
 export type UpdateEntityResult =
