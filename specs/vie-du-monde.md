@@ -280,6 +280,22 @@ Les aspirations disent ce qu'une personne **veut obtenir** (un but, avec un hori
 
 Le questionnaire finit par quelques questions sur les intérêts (« qu'est-ce qui te fait perdre la notion du temps ? », « qu'est-ce que tu ne supportes pas ? »). Les PNJ de fond tirent les leurs selon leur archétype et leur culture : la plupart des entrées restent à zéro, quelques-unes marquées.
 
+### 10.3 Ce qu'on vit et ce qu'on montre
+
+Un PNJ peut être en contradiction avec ce qu'il montre (décision de l'auteur, 26 novembre). Dans un pays très pieux qui condamne la sexualité, une personne qui la désire fort peut tenir en public le discours de l'État et fréquenter en secret un lieu caché ; ou bien l'assumer et militer.
+
+Même mécanique que l'attitude perçue (ADR 0111) : chaque centre d'intérêt a sa **valeur vécue** et, quand elle diffère, une **valeur montrée** (`shown`). Le joueur ne voit que la valeur montrée ; la vraie reste côté serveur et se découvre (règle absolue 5).
+
+**La norme.** Chaque ville (ou culture, ou religion dominante) porte une norme par centre d'intérêt, de −100 (condamné) à +100 (valorisé). Elle vient de la faction au pouvoir et de ses convictions (`worldview`, décision 9), et l'emprise dit à quel point on la fait respecter.
+
+**Le choix d'une personne** quand son goût s'écarte de la norme se calcule, à graine fixe, depuis l'écart, l'emprise et sa psyché (indépendance ↔ autorité, prudence ↔ impulsivité, ses convictions) :
+- **se conformer** : le goût baisse lentement (amortissement) ;
+- **cacher** : la valeur montrée s'aligne sur la norme ; la routine gagne des **créneaux clandestins** vers des **lieux cachés** (une pièce secrète du bloc « Pièces », un cercle discret) ; ces rassemblements sont des événements cachés (§7.3) ;
+- **assumer** : il le montre, au risque des événements de répression (arrestation, opprobre) ;
+- **militer** : il rejoint ou fonde un groupe d'intérêt ou une faction contre la norme ; une emprise forte en fait des révolutionnaires, une emprise faible des réformateurs.
+
+**Les secrets ont un usage.** Inspiré des secrets de Crusader Kings 3 : un goût caché découvert devient un **secret** connu de quelqu'un, qui peut servir de levier (chantage, faveur, dénonciation) ; dénoncé, il devient un événement visible. Les lieux cachés laissent des traces (§7.3, Shadows of Doubt), et un informateur peut en parler, vrai ou faux (§3.1).
+
 ## 11. Ce qui est stocké, et ce qui ne l'est jamais
 
 | Stocké | Où (à préciser dans `docs/SCHEMA.md`) |
