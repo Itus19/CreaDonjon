@@ -186,10 +186,10 @@ Le simulateur est **pur** (`src/core/worldgen/history/`), donc il tourne n'impor
 |---|---|---|---|
 | G-1 | Cette spec et l'ADR 0109 | Opus | fait |
 | G-2 | Le noyau de la ville en agrégat : schéma du bloc, `deriveSeed`, `materializeOccupants` pour l'auberge, tests | Opus | fait |
-| G-3 | Le bloc `settlement` enregistré : registre des blocs, éditeur, vue publique, planche du catalogue, libellés | Sonnet | à faire |
+| G-3 | Le bloc `settlement` enregistré : registre des blocs, éditeur, vue publique, planche du catalogue, libellés | Sonnet | fait |
 | G-4 | La tranche ville + auberge du solo : tables de départ du biome tempéré (noms, PNJ, taverne), peuplement à l'entrée d'un lieu, l'entité existante remplace l'occupant, même tirage depuis la fenêtre du MJ | Opus | à faire, après les étapes 1 et 2 du Backlog solo |
 | G-5 | Le catalogue : type de fiche, bloc « élément du monde », import Wikidata limité au biome tempéré | Opus | à faire |
 | G-6 | Le monde abstrait et l'histoire, couche 1 : format calqué sur l'export d'Azgaar (§8.1), monde de test écrit à la main, chronique convertie en entrées de frise, aperçu par `npm run apercu:histoire` | Opus | fait |
 | G-6b | Figer la chronique dans la frise d'un monde : action serveur validée par Zod, écriture en une fois sur la fiche `world_timeline`, refusée quand une chronique y est déjà | Opus | à faire |
 | G-7a | La lecture d'un export Azgaar en monde abstrait, aperçu par `npm run apercu:azgaar` | Opus | fait |
-| G-7b | Créer un monde depuis une carte Azgaar : entités des villes avec leur bloc `settlement`, factions des États, image SVG et punaises, puis chronique figée (G-6b) | Opus | à faire, après G-3 |
+| G-7b | Créer un monde depuis une carte Azgaar : entités des villes avec leur bloc `settlement`, factions des États, image SVG et punaises, puis chronique figée (G-6b) | Opus | à faire |

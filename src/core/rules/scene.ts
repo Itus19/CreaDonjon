@@ -398,11 +398,18 @@ export function dropSketchesOutsideLocation(scene: SceneState, locationId: strin
  * apparait comme un mot ENTIER dans le texte, jamais une sous-chaine
  * (« Bram » ne doit pas matcher dans « Brame », ni dans une phrase qui ne le
  * cite pas) — deterministe, jamais un jugement du modele.
+ *
+ * V3.2-44 — la tête du nom, avant la virgule, suffit : « Mabelle, du Fanal »
+ * se nomme « Mabelle ». Un nom sans virgule (« Petit Wil ») reste entier,
+ * sinon « un petit pain » l'ancrerait.
  */
 export function textNamesSketch(text: string, sketchName: string): boolean {
-  const escaped = sketchName.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  if (escaped === "") return false;
-  return new RegExp(`(?<!\\p{L})${escaped}(?!\\p{L})`, "iu").test(text);
+  const entier = sketchName.trim();
+  const tete = entier.split(",")[0]!.trim();
+  return [entier, tete].some((nom) => {
+    const escaped = nom.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return escaped !== "" && new RegExp(`(?<!\\p{L})${escaped}(?!\\p{L})`, "iu").test(text);
+  });
 }
 
 /**

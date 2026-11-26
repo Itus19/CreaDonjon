@@ -6,8 +6,8 @@ import { emptyScene, type SceneState } from "@/src/core/rules/scene";
 /**
  * V3-C6 — Même méthode que `sceneSketches.test.ts` : le vrai moteur de scène
  * tourne réellement, seuls les accès base et le tirage du générateur sont
- * simulés. Ce qui se vérifie ici : la météo ne se tire QUE quand le lieu
- * change vraiment, jamais à chaque « présents » retouché sur la même scène.
+ * simulés. ME-5 : la météo ne se tire plus ici, elle se calcule à la lecture
+ * (`loadSceneView`) ; setScene efface seulement l'ancienne valeur tirée.
  */
 
 let scene: SceneState | null;
@@ -61,35 +61,15 @@ beforeEach(() => {
   generateResult = { sections: [{ key: "meteo-condition", label: "Condition", text: "Pluie battante", slots: [] }] };
 });
 
-describe("setScene — la météo (V3-C6)", () => {
-  it("premiere scene jamais posee : tire une meteo", async () => {
-    const out = await setScene(supabase, { ...base, locationId: "ancre-rouillee", present: [] });
-    expect(out.weather).toBe("Pluie battante");
-  });
-
-  it("meme lieu resauvegarde (presents retouches) : ne retire pas de meteo", async () => {
-    await setScene(supabase, { ...base, locationId: "ancre-rouillee", present: [] });
-    generateResult = { sections: [{ key: "meteo-condition", label: "Condition", text: "Ciel degage", slots: [] }] };
-    const out = await setScene(supabase, { ...base, locationId: "ancre-rouillee", present: ["bram"] });
-    expect(out.weather).toBe("Pluie battante"); // pas "Ciel degage" : aucun second tirage
-  });
-
-  it("changement de lieu : tire une meteo fraiche", async () => {
-    await setScene(supabase, { ...base, locationId: "ancre-rouillee", present: [] });
-    generateResult = { sections: [{ key: "meteo-condition", label: "Condition", text: "Ciel degage", slots: [] }] };
-    const out = await setScene(supabase, { ...base, locationId: "les-quais", present: [] });
-    expect(out.weather).toBe("Ciel degage");
-  });
-
-  it("le tirage voit deja le NOUVEAU lieu, jamais l'ancien (ordre d'ecriture)", async () => {
+describe("setScene — la météo ne se tire plus (ME-5)", () => {
+  it("ne tire rien au generateur, meme au changement de lieu", async () => {
     await setScene(supabase, { ...base, locationId: "ancre-rouillee", present: [] });
     await setScene(supabase, { ...base, locationId: "les-quais", present: [] });
-    // Un seul tirage par appel avec changement de lieu ; le second doit voir "les-quais", jamais "ancre-rouillee".
-    expect(seenLocationIdAtDraw.at(-1)).toBe("les-quais");
+    expect(seenLocationIdAtDraw).toEqual([]);
   });
 
-  it("le tirage echoue (aucun outil MJ) : la meteo reste absente, sans lever", async () => {
-    generateResult = { error: "no_generators" };
+  it("efface une ancienne meteo tiree (V3-C6), pour qu'elle ne ressurgisse jamais", async () => {
+    scene = { ...emptyScene("ancre-rouillee"), weather: "Pluie fine" };
     const out = await setScene(supabase, { ...base, locationId: "ancre-rouillee", present: [] });
     expect(out.weather).toBeNull();
   });

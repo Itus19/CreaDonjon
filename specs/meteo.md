@@ -60,7 +60,7 @@ Un lieu sans bloc `settlement` prend celui de sa ville (`part_of`). Une ville sa
 ## 4. La saison
 
 1. Le **jour de l'année** vient de `sceneCalendarDate` : rang du jour dans l'année, longueur de l'année = somme des mois.
-2. La **position dans le cycle** est une fraction de 0 à 1. Par défaut, le premier jour de l'année est le cœur de l'hiver (comme le 1er janvier). Un réglage du calendrier, `midwinter_day` (jour de l'année), le déplace.
+2. La **position dans le cycle** est une fraction de 0 à 1, 0 au cœur de l'hiver : le milieu du **mois le plus froid**, réglé dans le calendrier (`coldestMonth`, case « Mois le plus froid de l'année » dans le réglage d'un mois). Absent, c'est le premier mois ; le calendrier républicain par défaut met Nivôse.
 3. **L'hémisphère** vient du signe de la latitude : au sud, le cycle est décalé d'une demi-année.
 4. **L'amplitude** saisonnière grandit avec la latitude et loin de la mer, diminue au bord de la mer et sous les tropiques. Près de l'équateur, la saison joue sur la pluie (saison sèche, saison des pluies) plus que sur la température.
 5. Sans date réglée dans le calendrier, pas de saison : la météo utilise les moyennes annuelles, et l'en-tête n'affiche pas de nom de saison (même principe que la date omise, V3-D2).
@@ -105,7 +105,7 @@ La neige et le grésil n'apparaissent que sous 2 °C ; l'orage, que chaud et hum
 C'est le bogue de la taverne. Le calcul est le même ; ce que le personnage **perçoit** dépend de l'endroit où il est.
 
 1. **Exposition** : `outdoor` (une rue, une clairière), `sheltered` (un porche, une tente, une écurie ouverte), `indoor` (une salle fermée).
-2. Elle se porte sur chaque pièce du bloc `rooms` (champ `exposure`), et sur l'espace principal du lieu (champ `main_exposure` du même bloc). Défaut : `indoor` pour une pièce, `outdoor` pour un lieu sans pièce. L'IA qui invente une pièce propose son exposition, le moteur la valide comme le reste de la pièce (V3.2-19).
+2. Elle se porte sur chaque pièce du bloc `rooms` (champ `exposure`), et sur l'espace principal du lieu (champ `main_exposure` du même bloc). Défaut : `indoor` pour une pièce (esquisse comprise) ; pour l'espace principal, `indoor` si le lieu a des pièces ou une carte des prix (`price_list`, donc un bâtiment), `outdoor` sinon. Plus tard : l'IA qui invente une pièce proposera son exposition, validée comme le reste de la pièce (V3.2-19).
 3. `perceivedWeather(météo, exposition)` rend ce qu'on perçoit :
    - dehors : tout ;
    - à l'abri : le vent et la température, la pluie qu'on voit tomber à côté ;
@@ -134,11 +134,11 @@ Le Guide du maître 2024 donne des effets au froid et à la chaleur extrêmes, a
 |---|---|
 | Le climat d'une ville | bloc `settlement`, champ `climate` |
 | Le climat par défaut | réglages de campagne |
-| Le jour du cœur de l'hiver, les noms de saison | `worlds.calendar` (JSON) |
+| Le mois le plus froid (`coldestMonth`) | `worlds.calendar` (JSON) |
 | L'exposition des pièces | bloc `rooms` |
 | Un forçage du MJ | `scene_states`, champ `weather_override` |
 
-**Jamais stocké** : la météo d'un instant. `SceneState.weather` disparaît (version de la scène suivante, lue sans erreur depuis l'ancienne).
+**Jamais stocké** : la météo d'un instant. `SceneState.weather` n'est plus écrit (toujours `null`, l'ancienne valeur tirée est effacée au premier enregistrement de la scène) ; le champ disparaîtra avec ME-5b.
 
 ## 11. Découpage
 
@@ -147,8 +147,9 @@ Le Guide du maître 2024 donne des effets au froid et à la chaleur extrêmes, a
 | ME-1 | Cette spec et l'ADR 0116 | Opus |
 | ME-2 | Noyau : normales des 13 biomes, `climateOf` (bloc, ville, défaut du monde), position dans l'année et saison, tests d'abord | Opus · fait (`src/core/weather/climate.ts`, `season.ts`) |
 | ME-3 | Noyau : `weatherAt` (normale, fronts, journée) et `weatherChanges`, tests d'abord (même graine, même temps ; neige seulement au froid ; continuité d'une heure à l'autre) | Opus · fait (`src/core/weather/weather.ts`) |
-| ME-4 | Exposition dans le bloc `rooms` et `perceivedWeather`, éditeur, libellés | Sonnet |
-| ME-5 | Branchement solo : calcul à chaque tour, en-tête, contexte de l'IA, ligne du tour ; fin de `SceneState.weather` ; climat par défaut dans les réglages | Sonnet, relu par Opus |
+| ME-4 | Exposition dans le bloc `rooms` et `perceivedCues`, éditeur, libellés | Sonnet · fait |
+| ME-5 | Branchement solo : calcul à chaque lecture de la scène et à chaque tour, en-tête, colonne du MJ à distance, contexte de l'IA ; mois le plus froid dans le calendrier ; fin du tirage au changement de lieu | Opus · fait |
+| ME-5b | Reste de ME-5 : changements de météo pendant un tour (ligne du tour et contexte de l'IA), climat par défaut réglable dans la campagne (constante `DEFAULT_WORLD_CLIMATE` en attendant), suppression du champ `SceneState.weather` (aujourd'hui toujours `null`) | Sonnet |
 | ME-6 | Forçage du MJ (`weather_override`), depuis la fenêtre du MJ et la colonne de scène à distance | Sonnet |
 | ME-7 | Import du climat depuis la carte Azgaar **du monde importé** dans ses blocs `settlement` (à faire avec G-7) ; test avec deux cartes différentes qui donnent deux climats différents | Opus |
 | ME-8 | Effets en jeu du Guide du maître 2024 (froid, chaleur, précipitations, vent) | Opus, plus tard |

@@ -93,6 +93,7 @@ Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été
 | V3.2-41 | ☑ | sans | Les PNJ restent dans leur rôle, les prix se disent, la pluie reste dehors | [`05-narration.md`](backlog-v3.2/05-narration.md) |
 | V3.2-42 | ☑ | sans | La carte se tire dès qu'on la demande | [`05-narration.md`](backlog-v3.2/05-narration.md) |
 | V3.2-43 | ☑ | sans | En solo, l'IA sait ce que sait le MJ (ADR 0117) | [`05-narration.md`](backlog-v3.2/05-narration.md) |
+| V3.2-44 | ☑ | sans | Une esquisse servie ou nommée par son prénom devient une fiche | [`05-narration.md`](backlog-v3.2/05-narration.md) |
 
 ---
 

@@ -70,6 +70,7 @@ const SpellcastingBlockEditor = dynamic(
   () => import("./SpellcastingBlockEditor"),
 );
 const ResourcesBlockEditor = dynamic(() => import("./ResourcesBlockEditor"));
+const SettlementBlockEditor = dynamic(() => import("./SettlementBlockEditor"));
 const MusicBlockEditor = dynamic(() => import("./MusicBlockEditor"));
 const EquippableBlockEditor = dynamic(() => import("./EquippableBlockEditor"));
 const GenealogyBlockEditor = dynamic(() => import("./GenealogyBlockEditor"));
@@ -105,6 +106,7 @@ import type { ResourcesBlockData } from "@/src/core/schemas/blocks/resources";
 import type { EquippableBlockData } from "@/src/core/schemas/blocks/equippable";
 import type { PriceListBlockData } from "@/src/core/schemas/blocks/priceList";
 import PriceListBlockEditor from "./PriceListBlockEditor";
+import type { SettlementBlockData } from "@/src/core/schemas/blocks/settlement";
 import type { RoomsBlockData } from "@/src/core/schemas/blocks/rooms";
 import RoomsBlockEditor from "./RoomsBlockEditor";
 import type { MusicBlockData } from "@/src/core/schemas/blocks/music";
@@ -159,6 +161,7 @@ export const BLOCK_TYPE_LABELS: Record<string, string> = {
   equippable: "Objet équipable",
   price_list: "Carte et tarifs",
   rooms: "Pièces",
+  settlement: "Ville",
 };
 
 /** V3.1-189 : les blocs image de la fiche, par identifiant, pour les images posees dans le texte. */
@@ -315,6 +318,8 @@ export function BlockDataEditor({
       );
     case "price_list":
       return <PriceListBlockEditor data={block.data as PriceListBlockData} onChange={(d) => onChange(d)} blockId={block.id} />;
+    case "settlement":
+      return <SettlementBlockEditor data={block.data as SettlementBlockData} onChange={(d) => onChange(d)} />;
     case "rooms":
       return <RoomsBlockEditor data={block.data as RoomsBlockData} onChange={(d) => onChange(d)} />;
     case "equippable":

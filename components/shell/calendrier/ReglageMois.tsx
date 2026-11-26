@@ -115,6 +115,18 @@ export default function ReglageMois({
         </div>
       </div>
 
+      {/* ME-5 : le mois le plus froid règle les saisons de la météo. */}
+      <label className="flex items-center gap-2 text-xs text-ink-soft">
+        <input
+          type="checkbox"
+          checked={(calendrier.coldestMonth ?? 1) === index + 1}
+          disabled={(calendrier.coldestMonth ?? 1) === index + 1}
+          onChange={() => dispatch({ type: "moisLePlusFroid", index })}
+          className="accent-accent"
+        />
+        {t("moisLePlusFroid")}
+      </label>
+
       <div className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-2">
           <button type="button" onClick={() => onChoisir((index - 1 + total) % total)} aria-label={t("moisPrecedent")} className={PETIT}>

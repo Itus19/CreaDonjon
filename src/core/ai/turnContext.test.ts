@@ -185,7 +185,7 @@ describe("V3.1-193 — les pronoms d'un PNJ présent", () => {
 
   it("la météo est celle du dehors, avec la consigne qui le dit ; sans météo, pas de consigne", () => {
     const text = buildTurnContext(input({ weather: "pluie fine" }));
-    expect(text).toContain("dehors : pluie fine");
+    expect(text).toContain("Météo (calculée par le moteur, ne la change pas) :\npluie fine");
     expect(text).toContain(WEATHER_INSTRUCTION);
     expect(buildTurnContext(input())).not.toContain(WEATHER_INSTRUCTION);
   });
@@ -219,10 +219,11 @@ describe("buildTurnContext — ce qui fait vivre la scène (retour de jeu du 25 
     expect(buildTurnContext(input())).not.toContain("description-du-lieu");
   });
 
-  it("la météo tirée voyage avec l'heure, dans la balise du lieu", () => {
-    const out = buildTurnContext(input({ weather: "pluie fine" }));
+  it("la météo calculée est un fait du moteur, hors de la balise du lieu", () => {
+    const out = buildTurnContext(input({ weather: "Le personnage est à l'intérieur. Dehors : pluie." }));
     const lieu = out.slice(out.indexOf('<donnee source="lieu">'), out.indexOf("</donnee>"));
-    expect(lieu).toContain("pluie fine");
+    expect(lieu).not.toContain("pluie");
+    expect(out).toContain("Météo (calculée par le moteur, ne la change pas) :\nLe personnage est à l'intérieur. Dehors : pluie.");
   });
 
   it("les dernières actions du joueur sont listées hors balise : c'est son texte, pas une donnée du monde", () => {

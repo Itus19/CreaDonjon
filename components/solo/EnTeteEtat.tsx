@@ -1,5 +1,6 @@
 import Link from "next/link";
 import HeureScene from "@/components/solo/HeureScene";
+import MeteoScene from "@/components/solo/MeteoScene";
 import type { SceneView } from "@/lib/solo/types";
 
 /**
@@ -61,13 +62,15 @@ export default function EnTeteEtat({
         )}
       </nav>
 
-      {/* V3-C6 — la météo, tirée au générateur (jamais inventée) ; la
-          température n'est pas demandée par le ticket, omise plutôt que
-          devinée. */}
+      {/* ME-5 — la météo calculée par le moteur, avec la température et la saison. */}
       <div className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1">
         {dateLabel && <span className="text-sm text-ink-soft">{dateLabel}</span>}
         <HeureScene initiale={scene.time} />
-        {scene.weather && <span className="text-sm text-ink-soft">· {scene.weather}</span>}
+        {scene.weather && (
+          <span className="text-sm text-ink-soft">
+            · <MeteoScene weather={scene.weather} />
+          </span>
+        )}
       </div>
     </>
   );

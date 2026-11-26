@@ -91,6 +91,9 @@ const SELF_CONTAINED: readonly BlockType[] = [
   // price_list (V3.2-9) : libellés, prix et clés de règles (publiques). Aucun
   // identifiant d'entité : la visibilité du bloc suffit.
   "price_list",
+  // settlement (G-3) : agrégats d'une ville (population, rang, biome, peuples,
+  // métiers) et graine ; aucun identifiant d'entité, la visibilité du bloc suffit.
+  "settlement",
   // rooms (V3.2-19) : noms et descriptions de pièces, prose publique du bloc. Aucun
   // identifiant interne, aucun secret : une pièce secrète vit dans un bloc MJ.
   "rooms",

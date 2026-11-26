@@ -153,3 +153,15 @@ Coût : une lecture groupée de plus par tour narré (les blocs `text` des prés
 - [x] Tests du noyau : différence MJ/joueur, borne, balise à part, consigne après la balise.
 - [ ] Rejoué : un PNJ dont la page porte un paragraphe réservé au MJ agit en conséquence (hésite, ment) sans que la narration le dise.
 
+### ☑ V3.2-44 — Une esquisse servie ou nommée par son prénom devient une fiche · `S` · sans modèle IA — **codé (Opus)**, reste la vérification en jeu
+
+**Retour de jeu du 26 novembre** : après de nombreux échanges avec Mabelle, du Fanal (une esquisse tirée au générateur), sa fiche n'apparaissait toujours pas dans le wiki. Deux causes dans la règle d'ancrage de V3-C2 :
+
+- « Nommée explicitement » exigeait le nom ENTIER : « je demande à Mabelle » ne nommait pas « Mabelle, du Fanal ». Désormais la tête du nom, avant la virgule, suffit (`textNamesSketch`). Un nom sans virgule reste entier : « un petit pain » n'ancre pas « Petit Wil ».
+- « Parlé plus de trois fois » ne comptait que les répliques écrites (`npc_reaction`). Depuis V3.2-17, les PNJ parlent moins, et une tavernière qui sert sans un mot ne comptait jamais. Désormais un tour compte comme un échange avec chaque esquisse qui réplique, ou que la narration fait agir quand le joueur s'adresse à quelqu'un (`esquissesDeLEchange`, `src/core/ai/npcAddressed.ts`). Une esquisse seulement nommée en décor ne compte pas. Le seuil ne change pas (plus de trois échanges).
+
+L'ancrage reste celui de V3-C2 (`promoteSketch`, découverte `known`) : la fiche apparaît dans l'onglet Wiki, et « Annuler ce tour » la défait.
+
+**Critères d'acceptation**
+- [x] Tests du noyau : prénom avant la virgule reconnu, « le fanal » et « un petit pain » ignorés ; échange sans réplique compté, décor seul ignoré, une fois par tour.
+- [ ] Rejoué : au Fanal, « je demande à Mabelle… » fait apparaître sa fiche dans l'onglet Wiki.
