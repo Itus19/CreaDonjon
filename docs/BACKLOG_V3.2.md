@@ -45,6 +45,7 @@ Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été
 | [`04-commerce.md`](backlog-v3.2/04-commerce.md) | Acheter, vendre, échanger : le moteur règle, le PNJ réagit (V3.2-8 à 11) |
 | [`05-narration.md`](backlog-v3.2/05-narration.md) | La narration qui fait avancer l'histoire : consigne, horloge, déplacement, repos long, ligne du tour (V3.2-17 à 19, 26, 27) |
 | [`06-jet-ou-pas.md`](backlog-v3.2/06-jet-ou-pas.md) | Faut-il un jet ? L'IA classe, le moteur fixe le DD (V3.2-22 à 24, ADR 0113) |
+| [`07-vie-du-monde.md`](backlog-v3.2/07-vie-du-monde.md) | La vie du monde : routines, régime, événements, psyché (V3.2-29 à 40, ADR 0115) |
 
 | Ticket | État | Modèle IA | Titre | Fichier |
 |---|---|---|---|---|
