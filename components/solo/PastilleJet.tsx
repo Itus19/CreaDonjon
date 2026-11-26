@@ -3,12 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import DieIcon from "@/components/shared/DieIcon";
+import Dropdown from "@/components/shared/Dropdown";
+import type { IntentAction } from "@/src/core/rules/intent";
 import { CarreDe, useBruit } from "@/components/shared/DeAnime";
 import { DIE_SHAPES, type DieSides } from "@/src/core/dice/dieSides";
-import type { EncashedTurnOutcome, PendingRequest } from "@/lib/solo/types";
+import type { EncashedTurnOutcome, PendingRequest, PendingTurnResponse, TurnOutcome } from "@/lib/solo/types";
 import { attenteMinimale, mouvementReduit } from "@/lib/ui/animationDe";
 import { deDeLaDemande, sortieJetDepuisTour } from "@/lib/ui/solo";
-import { encaisserDepuisFiche } from "@/lib/ui/soloApi";
+import { encaisserDepuisFiche, rejouerDemande } from "@/lib/ui/soloApi";
 
 /**
  * V3.2-20 — le jet demandé, lancé depuis le récit (option C, choisie le
@@ -27,7 +29,17 @@ import { encaisserDepuisFiche } from "@/lib/ui/soloApi";
  *
  * Coût (docs/QUOTAS.md) : un appel par clic, le même que le bouton « Lancer »
  * de l'outil de dés, qu'il remplace. Aucun sondage.
+ *
+ * V3.2-24 (ADR 0113) : sous un test (pas une attaque ni des dégâts), deux
+ * gestes rattrapent un classement du modèle qui se trompe. « Sans jet » joue
+ * la phrase sans dé ; le menu change de test, au même DD. Un appel chacun.
  */
+
+const GROUPES: Partial<Record<IntentAction["kind"], string>> = {
+  skill_check: "Tests de compétence",
+  ability_check: "Tests de caractéristique",
+  saving_throw: "Sauvegardes",
+};
 
 const PAUSE_RESULTAT_MS = 1200;
 
@@ -45,7 +57,9 @@ export default function PastilleJet({
   entityId,
   campaignId,
   worldSlug,
+  actions,
   onEncaisse,
+  onRejoue,
 }: {
   demande: PendingRequest;
   montrerIssue: boolean;
@@ -54,6 +68,10 @@ export default function PastilleJet({
   worldSlug: string;
   /** Le tour est joué : le parent pose la demande chaînée (ou aucune), recharge le fil et demande le récit. */
   onEncaisse: (tour: EncashedTurnOutcome) => void;
+  /** V3.2-24 : les tests de la fiche, pour « Changer ». */
+  actions: IntentAction[];
+  /** V3.2-24 : « Sans jet » a joué le tour, ou « Changer » a posé une autre demande. */
+  onRejoue: (reponse: TurnOutcome | PendingTurnResponse) => void;
 }) {
   const t = useTranslations("solo.jet");
   const [etat, setEtat] = useState<Etat>({ kind: "pret" });
@@ -72,6 +90,31 @@ export default function PastilleJet({
   );
 
   const attaque = demande.kind === "weapon_attack";
+  const test = demande.kind === "skill_check" || demande.kind === "ability_check" || demande.kind === "saving_throw";
+  const [rejoue, setRejoue] = useState(false);
+  const optionsTest = actions
+    .filter((a) => a.kind in GROUPES)
+    .map((a) => ({ value: `${a.kind}:${a.id}`, label: a.label, groupe: GROUPES[a.kind] }));
+
+  async function rejouer(choice: Parameters<typeof rejouerDemande>[0]["choice"]) {
+    if (etat.kind !== "pret" || rejoue) return;
+    setRejoue(true);
+    setErreur(null);
+    try {
+      onRejoue(await rejouerDemande({ entityId, campaignId, worldSlug, text: demande.player_action_text ?? demande.what, choice }));
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : t("echec"));
+    } finally {
+      setRejoue(false);
+    }
+  }
+
+  function changer(valeur: string) {
+    const [kind, id] = valeur.split(":");
+    if ((kind !== "skill_check" && kind !== "ability_check" && kind !== "saving_throw") || !id) return;
+    if (kind === demande.kind && id === demande.action_id) return;
+    void rejouer({ kind, actionId: id, targetId: demande.target_id, advantage: demande.advantage, dc: demande.dc });
+  }
   const seuil = montrerIssue && demande.dc !== null ? ` · ${attaque ? "CA" : "DD"} ${demande.dc}` : "";
 
   async function lancer() {
@@ -119,7 +162,7 @@ export default function PastilleJet({
 
   return (
     <div className="flex flex-col items-start gap-1">
-      <button type="button" onClick={() => void lancer()} disabled={etat.kind !== "pret"} aria-busy={etat.kind === "roule"} className={`${PASTILLE} border-accent transition-colors hover:bg-panel disabled:cursor-default`}>
+      <button type="button" onClick={() => void lancer()} disabled={etat.kind !== "pret" || rejoue} aria-busy={etat.kind === "roule"} className={`${PASTILLE} border-accent transition-colors hover:bg-panel disabled:cursor-default`}>
         {etat.kind === "pret" ? (
           <span className="grid h-7 w-7 place-items-center text-accent">
             <DieIcon sides={forme} className="h-5 w-5" />
@@ -132,6 +175,15 @@ export default function PastilleJet({
           {etat.kind === "pret" && seuil}
         </span>
       </button>
+      {test && etat.kind === "pret" && (
+        <div className="flex flex-wrap items-center gap-2 pl-1 text-xs">
+          <button type="button" onClick={() => void rejouer({ kind: "free", sansJet: true })} disabled={rejoue} className="rounded-full border border-edge px-3 py-1 text-ink transition-colors hover:bg-panel-raised disabled:opacity-50">
+            {t("sansJet")}
+          </button>
+          <Dropdown aria-label={t("changer")} forme="pastille" className="min-w-0 max-w-[14rem]" value={`${demande.kind}:${demande.action_id}`} options={optionsTest} onChange={changer} />
+          {rejoue && <span className="text-ink-muted">{t("rejoue")}</span>}
+        </div>
+      )}
       {erreur && <p className="text-xs text-danger">{erreur}</p>}
     </div>
   );

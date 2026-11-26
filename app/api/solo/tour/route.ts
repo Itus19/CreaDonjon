@@ -4,7 +4,11 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { ABILITIES, SKILLS, type Ability, type Skill } from "@/src/core/rules/sheet";
 import { getWorldBySlug } from "@/src/server/services/worlds";
-import { executeIntent, proposeIntentRequest } from "@/src/server/services/turnIntent";
+import { executeIntent, proposeIntentRequest, readClassifyContext, type IntentChoice } from "@/src/server/services/turnIntent";
+import { applyRuntimeStateChange } from "@/src/server/services/runtimeState";
+import type { CheckDetection } from "@/src/core/ai/checkClassify";
+import { classifySoloAction } from "@/src/server/ai/soloClassify";
+import type { AiProvider } from "@/src/server/ai/provider";
 import { playTurn } from "@/src/server/services/turnLoop";
 import { buildViewerForWorld } from "@/src/server/services/visibility";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
@@ -72,9 +76,30 @@ const bodySchema = z.object({
       // V3.2-11 : « Mettre sur l'ardoise » — un achat consommé sur place, dû plutôt que payé.
       onTab: z.boolean().optional(),
     }),
-    z.object({ kind: z.literal("free") }),
+    // V3.2-24 : « Sans jet » sur la pastille — la demande posée est abandonnée, la phrase se joue sans dé.
+    z.object({ kind: z.literal("free"), sansJet: z.literal(true).optional() }),
   ]),
 });
+
+const isSkill = (id: string): id is Skill => (SKILLS as readonly string[]).includes(id);
+const isAbility = (id: string): id is Ability => (ABILITIES as readonly string[]).includes(id);
+
+/**
+ * V3.2-24 (ADR 0113) — le classement du modèle remplace la lecture du
+ * lexique. Le DD n'en fait pas partie : seul le palier passe, et c'est
+ * `proposeIntentRequest` qui en tire le DD. La cible et l'avantage choisis
+ * dans la barre sont gardés.
+ */
+function choiceFromDetection(choice: IntentChoice, detection: CheckDetection): IntentChoice {
+  if (detection.kind === "none") return { kind: "free" };
+  if (detection.kind === "trivial") return { kind: "free", sansJet: { raison: "evidente" } };
+  const targetId = choice.kind === "free" || choice.kind === "trade" ? null : choice.targetId;
+  const advantage = choice.kind === "free" || choice.kind === "trade" ? "normal" : choice.advantage;
+  const { action, tier } = detection;
+  if (action.kind === "skill_check" && isSkill(action.id)) return { kind: "skill_check", actionId: action.id, targetId, advantage, dc: null, tier };
+  if (action.kind !== "skill_check" && isAbility(action.id)) return { kind: action.kind, actionId: action.id, targetId, advantage, dc: null, tier };
+  return choice;
+}
 
 /**
  * Les raisons viennent des deux resolveurs reutilises (`characterActions`,
@@ -134,6 +159,38 @@ export async function POST(request: NextRequest) {
   }
 
   const locale = (await getLocale()) as Locale;
+  const received = parsed.data.choice;
+  let choice: IntentChoice = received.kind === "free" ? (received.sansJet ? { kind: "free", sansJet: { raison: "joueur" } } : { kind: "free" }) : received;
+
+  // Le fournisseur du compte, résolu une seule fois pour le classement et la narration.
+  let provider: AiProvider | null | undefined;
+  const fournisseur = async () => {
+    if (provider === undefined) provider = await resolveProviderForUser(supabase, user.id);
+    return provider;
+  };
+
+  const campaignId = parsed.data.campaignId;
+  if (campaignId && choice.kind === "free" && choice.sansJet?.raison === "joueur") {
+    // V3.2-24 : « Sans jet » — la demande posée part, tracée au journal comme toute demande abandonnée.
+    const sessionId = await getOrOpenSessionForCampaign(supabase, campaignId);
+    await applyRuntimeStateChange(supabase, { entityId: parsed.data.entityId, campaignId, patch: { pending_request: null }, note: "Demande abandonnée : jouée sans jet", sessionId, actor: "player", actorUserId: user.id });
+  } else if (
+    campaignId &&
+    !parsed.data.corrected &&
+    (choice.kind === "free" || ((choice.kind === "skill_check" || choice.kind === "ability_check" || choice.kind === "saving_throw") && choice.dc === null))
+  ) {
+    // V3.2-24 (ADR 0113) : faut-il un jet ? Le modèle CLASSE la phrase, il ne
+    // raconte ni ne chiffre rien ; sans réponse utilisable, la lecture du
+    // lexique (V3.2-21) reste. Un choix corrigé à la main, une attaque ou un
+    // DD saisi ne lui sont pas soumis : le joueur a déjà décidé.
+    const p = await fournisseur();
+    if (p) {
+      const contexte = await readClassifyContext(supabase, { entityId: parsed.data.entityId, campaignId });
+      const detection = await classifySoloAction(supabase, p, { userId: user.id, campaignId, text: parsed.data.text, ...contexte });
+      if (detection) choice = choiceFromDetection(choice, detection);
+    }
+  }
+
   const common = {
     entityId: parsed.data.entityId,
     callerId: user.id,
@@ -141,7 +198,7 @@ export async function POST(request: NextRequest) {
     locale,
     text: parsed.data.text,
     corrected: parsed.data.corrected,
-    choice: parsed.data.choice,
+    choice,
   };
 
   // V3-B5 — un choix MECANIQUE en campagne ne se joue plus ici : il se
@@ -150,13 +207,17 @@ export async function POST(request: NextRequest) {
   // L'action libre garde son chemin d'avant ce ticket — rien a differer
   // quand aucun jet n'est en jeu.
   // V3.2-10 : un échange non plus — il se règle tout de suite, sans dé.
-  if (parsed.data.choice.kind !== "free" && parsed.data.choice.kind !== "trade" && parsed.data.campaignId) {
-    const outcome = await proposeIntentRequest(supabase, { ...common, campaignId: parsed.data.campaignId, choice: parsed.data.choice });
+  if (choice.kind !== "free" && choice.kind !== "trade" && campaignId) {
+    const outcome = await proposeIntentRequest(supabase, { ...common, campaignId, choice });
     if ("error" in outcome) {
       return NextResponse.json({ error: REASON_MESSAGE[outcome.error] }, { status: REASON_STATUS[outcome.error] });
     }
-    const response: PendingTurnResponse = { pending: outcome.request };
-    return NextResponse.json(response, { status: 200 });
+    if (outcome.kind === "pending") {
+      const response: PendingTurnResponse = { pending: outcome.request };
+      return NextResponse.json(response, { status: 200 });
+    }
+    // V3.2-24 : le pire jet atteint le DD — aucun dé, le tour se joue comme une action réussie.
+    common.choice = { kind: "free", sansJet: { raison: "automatique", what: outcome.what, dc: outcome.dc } };
   }
 
   // Hors campagne, il n'y a ni scene, ni etat de jeu, ni session ou
@@ -203,7 +264,7 @@ export async function POST(request: NextRequest) {
 
     try {
       // V3.1-224 (ADR 0103) : le fournisseur de CE compte ; sans lui, le tour reste joué, muet.
-      const provider = await resolveProviderForUser(supabase, user.id);
+      const provider = await fournisseur();
       if (!provider) return NextResponse.json({ ...result, sansNarration: "aucun_fournisseur" }, { status: 200 });
       const viewer = await buildViewerForWorld(supabase, world.id, user.id);
       const outcome = await narrateSoloTurn(supabase, provider, {

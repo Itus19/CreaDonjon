@@ -22,6 +22,7 @@ import { SKILL_LABELS_FR, INTENT_VERBS_FR, TRADE_VERBS_FR, TRADE_LODGING_TERMS_F
 import { addToTab, clearTabAt, tabAt, tabTotalCp } from "@/src/core/rules/tab";
 import { putSceneState } from "@/src/server/repos/sceneStates";
 import { type IntentAction, type IntentTarget } from "@/src/core/rules/intent";
+import { autoSuccess, dcForTier, type CheckTier } from "@/src/core/rules/checkDifficulty";
 import type { ResolvedEffect, FiredEvent } from "@/src/core/rules/triggers";
 import { resolveCheckRoll, resolveDamageRoll, weaponAttackAbility, type AdvantageState } from "@/src/core/rules/action";
 import { rollDice } from "@/src/core/dice/roll";
@@ -326,6 +327,20 @@ export async function buildIntentBarData(
 }
 
 /**
+ * V3.2-23 — ce que le classement d'un tour reçoit en plus de la phrase : le
+ * nom du personnage et les présents, tels que le joueur les voit (mêmes
+ * cibles que la barre). Trois lectures légères, sans la fiche entière.
+ */
+export async function readClassifyContext(
+  supabase: TypedClient,
+  params: { entityId: string; campaignId: string }
+): Promise<{ actorName: string; presents: string[] }> {
+  const [scene, entities] = await Promise.all([getSceneState(supabase, params.campaignId), listEntitiesByIds(supabase, [params.entityId])]);
+  const targets = await loadTargets(supabase, { campaignId: params.campaignId, actorEntityId: params.entityId, scene });
+  return { actorName: entities[0]?.name ?? "le personnage", presents: targets.map((t) => t.label) };
+}
+
+/**
  * V3.2-21 — « jet de Persuasion », « test d'Histoire » : les formes qui
  * demandent un test de compétence en toutes lettres. L'élision suit la
  * première lettre (voyelle ou h) ; l'apostrophe courbe d'un téléphone vaut
@@ -337,11 +352,24 @@ function explicitCheckTerms(label: string): string[] {
   return ["jet", "test"].flatMap((mot) => liaisons.map((de) => `${mot} ${de}${label}`));
 }
 
+/**
+ * V3.2-24 (ADR 0113) — pourquoi une action se joue sans dé : le modèle l'a
+ * jugée évidente pour ce personnage, le pire jet atteignait le DD fixé par
+ * le moteur, ou le joueur a choisi « Sans jet » sur la pastille. Le fait
+ * correspondant part au narrateur, qui raconte en conséquence.
+ */
+export type SansJet = { raison: "evidente" } | { raison: "automatique"; what: string; dc: number } | { raison: "joueur" };
+
+/**
+ * V3.2-24 : `tier`, le palier rendu par le classement du modèle — posé par la
+ * route, jamais reçu du navigateur. Le DD en est tiré ici, par le moteur
+ * (`dcForTier`), et l'emporte sur `dc`.
+ */
 export type IntentChoice =
   | { kind: "weapon_attack"; actionId: string; targetId: TargetId | null; advantage: AdvantageState }
-  | { kind: "skill_check"; actionId: Skill; targetId: TargetId | null; advantage: AdvantageState; dc: number | null }
-  | { kind: "ability_check"; actionId: Ability; targetId: TargetId | null; advantage: AdvantageState; dc: number | null }
-  | { kind: "saving_throw"; actionId: Ability; targetId: TargetId | null; advantage: AdvantageState; dc: number | null }
+  | { kind: "skill_check"; actionId: Skill; targetId: TargetId | null; advantage: AdvantageState; dc: number | null; tier?: CheckTier }
+  | { kind: "ability_check"; actionId: Ability; targetId: TargetId | null; advantage: AdvantageState; dc: number | null; tier?: CheckTier }
+  | { kind: "saving_throw"; actionId: Ability; targetId: TargetId | null; advantage: AdvantageState; dc: number | null; tier?: CheckTier }
   /** V3.2-10 : un achat (offre de la carte), une vente ou un don (objet du sac). Le prix n'en fait pas partie : le serveur le relit. */
   | {
       kind: "trade";
@@ -351,7 +379,7 @@ export type IntentChoice =
       /** V3.2-11 : un achat consommé sur place, mis sur l'ardoise du lieu plutôt que payé. */
       onTab?: boolean;
     }
-  | { kind: "free" };
+  | { kind: "free"; sansJet?: SansJet };
 
 /**
  * V3.2-10 — les refus propres à un échange : l'offre a quitté la carte, l'objet
@@ -656,7 +684,12 @@ export async function executeIntent(
   // contournement silencieux ». L'evenement le dit donc en toutes lettres.
   if (choice.kind === "free") {
     const facts = [`${data.actor.name} : ${params.text}`];
-    const payload = { intent, facts, resolution: "aucune" };
+    // V3.2-24 : une action jouée sans dé dit pourquoi au narrateur — il raconte l'issue, il ne la juge pas.
+    const sansJet = choice.sansJet;
+    if (sansJet?.raison === "evidente") facts.push(`Réussite sans jet : action évidente pour ${data.actor.name}.`);
+    if (sansJet?.raison === "automatique") facts.push(`${sansJet.what} : réussite automatique contre DD ${sansJet.dc}.`);
+    if (sansJet?.raison === "joueur") facts.push(`Joué sans jet, au choix du joueur.`);
+    const payload = { intent, facts, resolution: sansJet ? `sans_jet_${sansJet.raison}` : "aucune" };
     const eventId = await journalTurn(supabase, {
     campaignId: params.campaignId,
     callerId: params.callerId,
@@ -822,7 +855,8 @@ export async function executeIntent(
  * dés en suivi ».
  */
 
-export type ProposeIntentOutcome = { kind: "pending"; request: PendingRequest } | { error: IntentErrorReason };
+/** V3.2-24 : `auto` — le pire jet atteint le DD tiré du palier ; rien n'est posé, la route joue le tour sans dé. */
+export type ProposeIntentOutcome = { kind: "pending"; request: PendingRequest } | { kind: "auto"; what: string; dc: number } | { error: IntentErrorReason };
 
 interface PendingBasis {
   kind: PendingRequestKind;
@@ -969,9 +1003,15 @@ export async function proposeIntentRequest(
   const basis = buildPendingBasis(ctx, choice);
   if ("error" in basis) return basis;
 
+  // V3.2-24 (ADR 0113) : le palier du classement devient un DD, ici, par le
+  // moteur ; et si le pire jet l'atteint, aucun dé ne se pose.
+  const tier = choice.kind === "weapon_attack" ? undefined : choice.tier;
+  const tierDc = tier ? dcForTier(tier) : null;
+  if (tier && tierDc !== null && autoSuccess({ tier, modifier: basis.modifier })) return { kind: "auto", what: basis.what, dc: tierDc };
+
   const request: PendingRequest = {
     ...basis,
-    dc: basis.kind === "weapon_attack" ? (target?.ac ?? null) : basis.dc,
+    dc: basis.kind === "weapon_attack" ? (target?.ac ?? null) : (tierDc ?? basis.dc),
     target_id: target?.id ?? null,
     target_label: target?.label ?? null,
     advantage: choice.advantage,

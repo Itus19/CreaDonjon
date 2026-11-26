@@ -12,7 +12,7 @@ import Fil from "@/components/solo/Fil";
 import PastilleJet from "@/components/solo/PastilleJet";
 import { raconterTour } from "@/lib/ui/soloApi";
 import OngletChangements from "@/components/solo/OngletChangements";
-import type { EncashedTurnOutcome, FilItem, IntentBarData, RaisonSansNarration, SceneView } from "@/lib/solo/types";
+import type { EncashedTurnOutcome, FilItem, IntentBarData, PendingTurnResponse, RaisonSansNarration, SceneView, TurnOutcome } from "@/lib/solo/types";
 import BulleFlottante from "@/components/shared/BulleFlottante";
 import Dropdown from "@/components/shared/Dropdown";
 import { choixDepuisValeur, optionsChoix, valeurChoix, type FournisseursIaReponse } from "@/lib/ia/fournisseurs";
@@ -226,6 +226,21 @@ export default function SoloScreen({
     await apresGeste();
   }
 
+  /** V3.2-24 : « Changer » a posé une autre demande, ou « Sans jet » a joué le tour (récit compris). */
+  async function apresRejeu(reponse: TurnOutcome | PendingTurnResponse) {
+    if ("pending" in reponse) {
+      setPending(reponse.pending);
+      await apresGeste();
+      return;
+    }
+    setPending(null);
+    setNarrationEtat(reponse.narration !== null ? "repond" : (reponse.sansNarration ?? "echec"));
+    setNarrationDetail(reponse.narration !== null ? undefined : reponse.sansNarrationDetail);
+    if (reponse.time) definirHeure(reponse.time);
+    if (reponse.scene) apresChangementDeScene(reponse.scene);
+    await apresGeste();
+  }
+
   /**
    * V3.2-20 : bascule le réglage « DD et réussites ». L'écran change tout de
    * suite ; un refus du serveur le remet comme avant et le dit. Une écriture
@@ -353,7 +368,9 @@ export default function SoloScreen({
                 entityId={entityId}
                 campaignId={campaignId}
                 worldSlug={worldSlug}
+                actions={data.catalog.actions}
                 onEncaisse={(tour) => void apresJet(tour)}
+                onRejoue={(reponse) => void apresRejeu(reponse)}
               />
             </div>
           )}

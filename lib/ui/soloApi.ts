@@ -1,4 +1,4 @@
-import type { EncashedTurnResponse, NarrationTourResponse } from "@/lib/solo/types";
+import type { EncashedTurnResponse, NarrationTourResponse, PendingTurnResponse, TurnOutcome } from "@/lib/solo/types";
 import { ErreurLancer } from "@/lib/ui/outilDes";
 import { messageErreur, posterJet } from "@/lib/ui/outilDesApi";
 
@@ -42,4 +42,29 @@ export async function raconterTour(eventId: string, corps: { entityId: string; c
     console.error("Récit du jet impossible", erreur);
     return { narration: null, time: null, sansNarration: "echec" };
   }
+}
+
+/**
+ * V3.2-24 — les deux gestes secondaires de la pastille, sur la phrase de la
+ * demande posée : « Sans jet » (le tour se joue sans dé, la demande part) et
+ * « Changer » (un autre test de la fiche, au même DD, que le moteur avait
+ * fixé). Tous deux passent par la route du tour ordinaire, `corrected` vrai :
+ * le joueur a tranché, le modèle n'est pas reconsulté.
+ */
+export async function rejouerDemande(corps: {
+  entityId: string;
+  campaignId: string;
+  worldSlug: string;
+  text: string;
+  choice:
+    | { kind: "free"; sansJet: true }
+    | { kind: "skill_check" | "ability_check" | "saving_throw"; actionId: string; targetId: string | null; advantage: "normal" | "advantage" | "disadvantage"; dc: number | null };
+}): Promise<TurnOutcome | PendingTurnResponse> {
+  const res = await fetch("/api/solo/tour", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...corps, corrected: true }),
+  });
+  if (!res.ok) throw new ErreurLancer(await messageErreur(res, "Le tour n'a pas pu être joué."));
+  return (await res.json()) as TurnOutcome | PendingTurnResponse;
 }
