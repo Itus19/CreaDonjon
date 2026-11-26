@@ -129,3 +129,15 @@ Coût : une lecture groupée de plus par tour narré (les blocs `text` des prés
 - [x] Tests du noyau : description dans la balise, consigne de rôle, deux consignes d'argent, météo du dehors.
 - [ ] Rejoué : au Fanal, Petit Wil ne sert plus ; « c'est combien ? » donne un prix de la carte (ou, sans carte, aucun prix inventé) ; la pluie ne touche plus l'ardoise de la salle.
 
+### ☑ V3.2-42 — La carte se tire dès qu'on la demande · `S` · sans modèle IA — **codé (Opus)**, reste la vérification en jeu
+
+**Décidé par l'auteur le 26 novembre** : quand on demande à manger, à boire, une chambre ou un prix, la carte doit exister, sans passer par le bouton « Tirer la carte du lieu » (V3.2-10).
+
+`demandeLaCarte` (`src/core/rules/demandeCarte.ts`, pur) lit la phrase du joueur (prix, combien, carte, menu, ardoise, manger, boire, repas, chambre, commander). Si elle demande, `narrateSoloTurn` appelle `drawPriceListForScene` avant le contexte : un lieu sans carte la reçoit (Menu de la Taverne, prix selon la richesse), écrite sur sa page ; un lieu qui en a une la garde. Best-effort : sans tables ou sans droit d'écriture, le tour se raconte sans carte, et la consigne de V3.2-41 interdit alors tout prix.
+
+**Suite notée** : des cartes différentes selon le type d'établissement (auberge chic, échoppe, bouge) demandent d'autres tables de générateur, à saisir.
+
+**Critères d'acceptation**
+- [x] Tests du noyau : demandes reconnues (paroles comprises), actions sans rapport ignorées, « la carte du royaume » ignorée.
+- [ ] Rejoué : au Fanal sans carte, « c'est combien ? » tire la carte, et Mabelle cite un prix de la carte.
+
