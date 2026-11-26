@@ -8,9 +8,11 @@ import { DAY_MINUTES, type GameTime } from "./scene";
  * 1. **Le joueur l'écrit** (« je fais ces trois heures de travail ») : un
  *    lexique fermé la lit, et l'horloge avance AVANT la narration. Marche
  *    sans aucune IA.
- * 2. **Sinon, l'IA la propose** dans une liste fermée (`ELAPSED_CHOICES`) ;
- *    le moteur la borne (rien en combat, 8 heures au plus hors « jusqu'au
- *    matin ») et l'applique après la narration.
+ * 2. **Sinon, l'IA propose la durée naturelle du geste** dans une liste
+ *    fermée et courte (`ELAPSED_CHOICES`, une heure au plus) ; le moteur
+ *    l'applique après la narration (rien en combat). Une ellipse (des
+ *    heures, une nuit) est une décision de la personne qui joue, jamais de
+ *    l'IA : décidé par l'auteur le 26 novembre 2026 (ADR 0112, amendement).
  *
  * S'y ajoute le temps de parole : un tour où l'on parle dure au moins deux
  * minutes. Toutes ces fonctions sont pures : aucune ne lit l'heure réelle,
@@ -22,9 +24,6 @@ export type DureeExplicite = { kind: "minutes"; minutes: number } | { kind: "unt
 
 /** Une journée au plus : une faute de frappe (« 300 heures ») ne fait pas vieillir la partie d'un an. */
 export const MAX_EXPLICIT_MINUTES = DAY_MINUTES;
-
-/** Huit heures : une ellipse plus longue proposée par l'IA est presque toujours une nuit, qui a son propre choix. */
-export const MAX_PROPOSED_MINUTES = 8 * 60;
 
 /** L'heure du « matin » : celle où la lumière redevient « plein jour » moins une heure (`lightingAt`). */
 export const MORNING_HOUR = 7;
@@ -106,16 +105,14 @@ export function minutesExplicites(duree: DureeExplicite, time: GameTime): number
 }
 
 /** La liste fermée que l'IA choisit (`elapsed` de l'outil de narration). */
-export const ELAPSED_CHOICES = ["instant", "quelques_minutes", "quart_d_heure", "demi_heure", "une_heure", "plusieurs_heures", "jusqu_au_matin"] as const;
+export const ELAPSED_CHOICES = ["instant", "quelques_minutes", "quart_d_heure", "demi_heure", "une_heure"] as const;
 export type ElapsedChoice = (typeof ELAPSED_CHOICES)[number];
 
 export interface ElapsedProposal {
   kind: ElapsedChoice;
-  /** Seulement pour `plusieurs_heures` : borné à 2-8 par le moteur, quoi que l'IA écrive. */
-  hours?: number;
 }
 
-const MINUTES_PAR_CHOIX: Record<Exclude<ElapsedChoice, "plusieurs_heures" | "jusqu_au_matin">, number> = {
+const MINUTES_PAR_CHOIX: Record<ElapsedChoice, number> = {
   instant: 0,
   quelques_minutes: 5,
   quart_d_heure: 15,
@@ -127,13 +124,8 @@ const MINUTES_PAR_CHOIX: Record<Exclude<ElapsedChoice, "plusieurs_heures" | "jus
  * La durée que le moteur ACCEPTE pour une proposition de l'IA. En combat,
  * zéro : un round dure six secondes et le combat a son propre temps.
  */
-export function minutesProposees(proposal: ElapsedProposal, time: GameTime, inCombat: boolean): number {
+export function minutesProposees(proposal: ElapsedProposal, inCombat: boolean): number {
   if (inCombat) return 0;
-  if (proposal.kind === "jusqu_au_matin") return minutesJusquAuMatin(time);
-  if (proposal.kind === "plusieurs_heures") {
-    const heures = Math.min(Math.max(Math.round(proposal.hours ?? 2), 2), MAX_PROPOSED_MINUTES / 60);
-    return heures * 60;
-  }
   return MINUTES_PAR_CHOIX[proposal.kind];
 }
 
@@ -147,7 +139,8 @@ export function compterMots(texte: string): number {
   return texte.split(/\s+/).filter((m) => /[\p{L}\p{N}]/u.test(m)).length;
 }
 
-function libelleDuree(minutes: number): string {
+/** Une durée lisible : « 8 h », « 3 h 05 », « 12 min ». */
+export function libelleDuree(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   if (h === 0) return `${m} min`;
@@ -157,4 +150,18 @@ function libelleDuree(minutes: number): string {
 /** Le fait que la narration reçoit quand le moteur a fait passer le temps : la durée et l'heure atteinte, jamais à recalculer. */
 export function phraseDuree(minutes: number, apres: GameTime): string {
   return `${libelleDuree(minutes)} passent. Il est maintenant ${String(apres.hour).padStart(2, "0")}h${String(apres.minute).padStart(2, "0")} (jour ${apres.day}).`;
+}
+
+/** La phrase de `phraseDuree`, reconnue : la ligne du tour montre déjà l'heure, elle ne la répète pas. */
+export function estPhraseDuree(ligne: string): boolean {
+  return /^.+ passent\. Il est maintenant \d{2}h\d{2} \(jour \d+\)\.$/.test(ligne);
+}
+
+/** Règles 2024 : un round de combat dure 6 secondes. */
+export const SECONDES_PAR_ROUND = 6;
+
+/** Le temps qu'un combat a pris, en minutes entières (arrondi au-dessus) : dix rounds font une minute. */
+export function minutesDeCombat(rounds: number): number {
+  if (!Number.isFinite(rounds) || rounds <= 0) return 0;
+  return Math.ceil((rounds * SECONDES_PAR_ROUND) / 60);
 }

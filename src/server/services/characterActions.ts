@@ -911,7 +911,8 @@ export async function takeShortRest(
 /** Repos long : PV au maximum, moitie des des de vie recuperee, ressources et emplacements restaures, epuisement -1. */
 export async function takeLongRest(
   supabase: TypedClient,
-  params: { entityId: string; campaignId: string | null; actorUserId: string; locale: Locale }
+  /** `advanceClock: false` : le tour solo a déjà fait passer la nuit (`turnLoop.ts`, sommeil dans le récit). */
+  params: { entityId: string; campaignId: string | null; actorUserId: string; locale: Locale; advanceClock?: boolean }
 ): Promise<{ ok: true } | { error: ActionErrorReason }> {
   const ctx = await resolveCharacterActionContext(supabase, params.entityId, params.campaignId, params.locale);
   if (!ctx) return { error: "not_found" };
@@ -972,7 +973,7 @@ export async function takeLongRest(
     actor: "player",
     actorUserId: params.actorUserId,
   });
-  await advanceSceneClockForRest(supabase, params.campaignId, LONG_REST_MINUTES, params.actorUserId);
+  if (params.advanceClock !== false) await advanceSceneClockForRest(supabase, params.campaignId, LONG_REST_MINUTES, params.actorUserId);
   // V3.1-130 : un repos fait tomber les effets « jusqu'au repos » du personnage et décompte les autres.
   if (params.campaignId) await expireOwnEffectsAtRest(supabase, { entityId: params.entityId, campaignId: params.campaignId, rest: "long", actorUserId: params.actorUserId });
 

@@ -52,6 +52,9 @@ import { getEntityRuntimeState } from "@/src/server/services/runtimeState";
 import { getOrInitializeRuntimeState, resolveCharacterActionContext } from "@/src/server/services/characterActions";
 import type { Locale } from "@/src/i18n/request";
 import { expireFeatureEffects } from "@/src/server/services/effectExpiry";
+import { getSceneState, putSceneState } from "@/src/server/repos/sceneStates";
+import { advanceSceneTime } from "@/src/core/rules/scene";
+import { minutesDeCombat } from "@/src/core/rules/elapsed";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -460,11 +463,35 @@ export async function setCombatStatus(
 export const beginCombat = (supabase: TypedClient, params: { combatId: string; actorUserId: string }) =>
   setCombatStatus(supabase, { ...params, status: "running" });
 
-/** V3.1-144 : un combat qui se termine annule ses sauvegardes encore en attente — elles n'ont plus de cible. */
+/**
+ * V3.1-144 : un combat qui se termine annule ses sauvegardes encore en attente — elles n'ont plus de cible.
+ * V3.2-27 : et l'horloge de la scène avance du temps qu'il a pris (6 s par round, règles 2024).
+ */
 export async function endCombat(supabase: TypedClient, params: { combatId: string; actorUserId: string }): Promise<CombatRow> {
   const combat = await setCombatStatus(supabase, { ...params, status: "ended" });
   await cancelPendingSaveRequestsForCombat(supabase, params.combatId);
+  try {
+    await advanceSceneAfterCombat(supabase, { campaignId: combat.campaign_id, combatId: combat.id, rounds: combat.round, callerId: params.actorUserId });
+  } catch (erreur) {
+    // Le combat est déjà terminé : une horloge qui n'avance pas ne doit pas l'empêcher.
+    console.error("Horloge de la scène non avancée après le combat", params.combatId, erreur);
+  }
   return combat;
+}
+
+/**
+ * V3.2-27 (ADR 0114) — pendant le combat, un tour du solo ne fait pas passer
+ * de minute (`minutesForTurn`, `turnLoop.ts`) : le combat compte en rounds.
+ * À la fin, la scène avance de `minutesDeCombat(rounds)` et oublie ce combat
+ * (`activeCombatId`, relu d'un combat qui ne tourne plus). Rien si la scène
+ * suit un autre combat. Coût (QUOTAS) : une lecture et une écriture de scène.
+ */
+async function advanceSceneAfterCombat(supabase: TypedClient, params: { campaignId: string; combatId: string; rounds: number; callerId: string }): Promise<void> {
+  const scene = await getSceneState(supabase, params.campaignId);
+  if (!scene || (scene.activeCombatId !== null && scene.activeCombatId !== params.combatId)) return;
+  const minutes = minutesDeCombat(params.rounds);
+  if (minutes === 0 && scene.activeCombatId === null) return;
+  await putSceneState(supabase, { campaignId: params.campaignId, state: { ...advanceSceneTime(scene, minutes), activeCombatId: null }, updatedBy: params.callerId });
 }
 
 /**

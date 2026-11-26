@@ -4,7 +4,9 @@ import type { Database } from "@/src/types/database";
 import type { FilItem } from "@/lib/solo/types";
 import type { TraceStep } from "@/src/core/formula/evaluate";
 import { listSessionEvents, type SessionEventRow } from "@/src/server/repos/sessions";
-import { undoneEventIds } from "@/src/core/rules/turnUndo";
+import { undoneEventIds, type JournalEvent } from "@/src/core/rules/turnUndo";
+import { summarizeTurns, timeChipText } from "@/src/core/rules/turnSummary";
+import type { GameTime } from "@/src/core/rules/scene";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -123,9 +125,46 @@ export function mapSessionEventToFilItem(row: SessionEventRow): FilItem {
   }
 }
 
-export async function buildFilForSession(supabase: TypedClient, sessionId: string): Promise<FilItem[]> {
+export async function buildFilForSession(supabase: TypedClient, sessionId: string, maintenant: GameTime | null = null): Promise<FilItem[]> {
   const events = await listSessionEvents(supabase, sessionId);
-  return visibleInFil(events).map(mapSessionEventToFilItem);
+  return withTurnSummaries(visibleInFil(events), maintenant);
+}
+
+const versJournal = (e: SessionEventRow): JournalEvent => ({ id: e.id, seq: e.seq, kind: e.kind, actor: e.actor, payload: (e.payload as Record<string, unknown> | null) ?? {} });
+
+/**
+ * V3.2-27 (ADR 0114) — le fil avec la ligne de chaque tour. Dans un tour, les
+ * changements du moteur et du monde passent dans cette ligne au lieu de
+ * s'afficher chacun à part ; hors tour (une scène posée avant toute action),
+ * ils restent comme avant. `maintenant` : l'heure actuelle de la scène, qui
+ * ferme le dernier tour.
+ */
+export function withTurnSummaries(events: readonly SessionEventRow[], maintenant: GameTime | null): FilItem[] {
+  const resumes = summarizeTurns(events.map(versJournal), maintenant);
+  const parFin = new Map(resumes.map((r) => [r.afterEventId, r]));
+  // Le début du premier tour : avant lui, rien n'est replié.
+  const premierTour = events.find((e) => e.id === resumes[0]?.startEventId)?.seq ?? Infinity;
+  const items: FilItem[] = [];
+  for (const e of [...events].sort((a, b) => a.seq - b.seq)) {
+    const replie = e.seq >= premierTour && (e.kind === "rule_application" || e.kind === "world_update");
+    if (!replie) items.push(mapSessionEventToFilItem(e));
+    const r = parFin.get(e.id);
+    if (r) {
+      items.push({
+        id: `tour-${r.startEventId}`,
+        seq: r.afterSeq,
+        createdAt: e.created_at,
+        kind: "turn_summary",
+        time: r.time ? timeChipText(r.time) : null,
+        changes: r.changes,
+        hints: r.hints,
+        ignored: r.ignored,
+        worldNotes: r.worldNotes,
+        last: r.last,
+      });
+    }
+  }
+  return items;
 }
 
 /**
