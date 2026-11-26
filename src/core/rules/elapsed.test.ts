@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  estPhraseDuree,
+  minutesDeCombat,
   ELAPSED_CHOICES,
   dureeExplicite,
   minutesDeParole,
@@ -83,5 +85,19 @@ describe("phraseDuree — le fait que la narration reçoit", () => {
     expect(phraseDuree(180, { day: 1, hour: 22, minute: 54 })).toBe("3 h passent. Il est maintenant 22h54 (jour 1).");
     expect(phraseDuree(30, { day: 2, hour: 7, minute: 5 })).toBe("30 min passent. Il est maintenant 07h05 (jour 2).");
     expect(phraseDuree(150, { day: 2, hour: 7, minute: 5 })).toBe("2 h 30 passent. Il est maintenant 07h05 (jour 2).");
+  });
+});
+
+describe("estPhraseDuree et minutesDeCombat", () => {
+  it("reconnaît la phrase de durée, et elle seule", () => {
+    expect(estPhraseDuree(phraseDuree(480, { day: 2, hour: 6, minute: 8 }))).toBe(true);
+    expect(estPhraseDuree("Repos long : points de vie au maximum.")).toBe(false);
+  });
+
+  it("un round dure 6 secondes : dix rounds font une minute, arrondie au-dessus", () => {
+    expect(minutesDeCombat(0)).toBe(0);
+    expect(minutesDeCombat(1)).toBe(1);
+    expect(minutesDeCombat(10)).toBe(1);
+    expect(minutesDeCombat(11)).toBe(2);
   });
 });

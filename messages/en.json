@@ -1445,8 +1445,29 @@
       "inutilisable": "AI silent: no usable narration",
       "echec": "AI silent: unreachable"
     },
+    "changements": {
+      "titre": "Changes",
+      "aRelire": "To review",
+      "ajoutes": "Added to the world this session",
+      "vide": "Nothing changed in the world this session.",
+      "chargement": "Loading…",
+      "corriger": "Fix",
+      "retirer": "Remove",
+      "retirerQuestion": "Remove this paragraph from the wiki?",
+      "enregistrer": "Save",
+      "annuler": "Cancel",
+      "accepter": "Accept",
+      "modifier": "Edit",
+      "rejeter": "Reject",
+      "erreur": "The change could not be saved.",
+      "explication": "What the AI adds to the wiki is written right away. If a note is wrong, fix or remove it here.",
+      "ligneAria": "What this turn changed",
+      "details": "details",
+      "nonApplique": "Not applied: {raison}",
+      "voirChangements": "See in the Changes tab"
+    },
     "annulerTour": {
-      "bouton": "Undo last turn",
+      "bouton": "Undo this turn",
       "question": "Undo this turn? What it changed is reverted; the log keeps it.",
       "confirmer": "Yes, undo",
       "garder": "Keep",
@@ -1482,7 +1503,8 @@
       "wiki": "Wiki",
       "quetes": "Quests",
       "presents": "Present",
-      "regles": "Rules"
+      "regles": "Rules",
+      "changements": "Changes"
     },
     "barre": {
       "jeu": "Game",
@@ -1506,7 +1528,7 @@
     "bandeChargeTitreEncombre": "Load: {porte} / {capacite} kg — encumbered",
     "bandeEpuisementTitre": "Exhaustion {niveau} of 6",
     "bandeKg": "{valeur} kg",
-    "consequencesOuvrir": "Changes in the world: {nombre}",
+    "consequencesOuvrir": "Open changes in the world",
     "consequencesTitre": "Changes in the world",
     "presentsTitre": "Present in the scene",
     "wikiTitre": "Wiki",

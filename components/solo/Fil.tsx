@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import EmptyState from "@/components/shell/EmptyState";
 import type { FilItem } from "@/lib/solo/types";
 import { factSansIssue } from "@/src/core/rules/rollFactDisplay";
+import AnnulerTour from "@/components/solo/AnnulerTour";
 
 /**
  * V3-D4 — Le fil : `session_events` rendu, un gabarit par genre.
@@ -161,6 +163,70 @@ function WorldUpdateRow({ item }: { item: Extract<FilItem, { kind: "world_update
   return <p className="text-xs text-ink-muted">{item.note}</p>;
 }
 
+const PUCE = "rounded-full border border-edge bg-panel-sunken px-2 py-0.5 text-xs text-ink-soft";
+
+/**
+ * V3.2-22 (option A, ADR 0113) — la ligne du tour : l'heure, toujours en
+ * tête (« +8 h · 06:08, jour 2 », « Round · 6 s » en combat), puis une puce
+ * par chose que le tour a changé. Les conseils et ce que le moteur n'a pas pu
+ * appliquer restent derrière « détails », jamais tus. Le dernier tour porte
+ * « Annuler ce tour » : on voit ce qu'on annule.
+ */
+function TurnSummaryRow({
+  item,
+  annulation,
+  onAnnule,
+  onVoirChangements,
+}: {
+  item: Extract<FilItem, { kind: "turn_summary" }>;
+  annulation: { campaignId: string } | null;
+  onAnnule: () => void;
+  onVoirChangements: () => void;
+}) {
+  const t = useTranslations("solo.changements");
+  const [details, setDetails] = useState(false);
+  const aDetails = item.hints.length > 0 || item.ignored.length > 0;
+  const annulable = item.last && annulation !== null;
+  if (!item.time && item.changes.length === 0 && !aDetails && !annulable) return null;
+  return (
+    <div className="flex flex-col gap-1.5" aria-label={t("ligneAria")} role="group">
+      <div className="flex flex-wrap items-center gap-1.5">
+        {item.time && <span className={`${PUCE} font-medium tabular-nums text-ink`}>{item.time}</span>}
+        {item.changes.map((change, i) => (
+          <span key={i} className={PUCE}>
+            {change}
+          </span>
+        ))}
+        {item.worldNotes > 0 && (
+          <button type="button" onClick={onVoirChangements} className="rounded-full px-2 py-0.5 text-xs text-accent underline-offset-2 hover:underline">
+            {t("voirChangements")}
+          </button>
+        )}
+        {aDetails && (
+          <button type="button" onClick={() => setDetails((v) => !v)} aria-expanded={details} className="rounded-full px-2 py-0.5 text-xs text-ink-muted hover:text-ink">
+            {details ? "▾" : "▸"} {t("details")}
+          </button>
+        )}
+      </div>
+      {details && (
+        <div className="flex flex-col gap-0.5 pl-1">
+          {item.hints.map((hint, i) => (
+            <p key={i} className="text-xs italic text-ink-soft">
+              {hint}
+            </p>
+          ))}
+          {item.ignored.map((raison, i) => (
+            <p key={i} className="text-xs text-ink-muted">
+              {t("nonApplique", { raison })}
+            </p>
+          ))}
+        </div>
+      )}
+      {annulable && <AnnulerTour campaignId={annulation.campaignId} onDone={onAnnule} />}
+    </div>
+  );
+}
+
 /** V3-D4 — la réponse du MJ à une question posée hors du temps de jeu : un liseré d'accent qui le dit en toutes lettres, jamais confondu avec un fait de tour. */
 function NoteRow({ item }: { item: Extract<FilItem, { kind: "note" }> }) {
   return (
@@ -176,7 +242,22 @@ function filRowKey(item: FilItem): string {
   return item.id;
 }
 
-export default function Fil({ items, montrerIssue }: { items: FilItem[] | null; /** V3.2-20 : réglage de partie, DD et issue des jets visibles. */ montrerIssue: boolean }) {
+export default function Fil({
+  items,
+  montrerIssue,
+  annulation = null,
+  onAnnule = () => {},
+  onVoirChangements = () => {},
+}: {
+  items: FilItem[] | null;
+  /** V3.2-20 : réglage de partie, DD et issue des jets visibles. */
+  montrerIssue: boolean;
+  /** V3.2-22 : la campagne solo, pour « Annuler ce tour » au bout du dernier tour ; `null` : pas de geste. */
+  annulation?: { campaignId: string } | null;
+  onAnnule?: () => void;
+  /** V3.2-22 : ouvre l'onglet « Changements » (colonne Monde, ou feuille du bas sur téléphone). */
+  onVoirChangements?: () => void;
+}) {
   if (items === null) {
     return <p className="text-sm text-ink-muted">Chargement…</p>;
   }
@@ -204,6 +285,8 @@ export default function Fil({ items, montrerIssue }: { items: FilItem[] | null; 
             return <WorldUpdateRow key={filRowKey(item)} item={item} />;
           case "note":
             return <NoteRow key={filRowKey(item)} item={item} />;
+          case "turn_summary":
+            return <TurnSummaryRow key={filRowKey(item)} item={item} annulation={annulation} onAnnule={onAnnule} onVoirChangements={onVoirChangements} />;
           case "other":
             return null;
         }

@@ -14,6 +14,7 @@ import { deleteRuntimeState, putRuntimeState } from "@/src/server/repos/runtimeS
 import { putSceneState } from "@/src/server/repos/sceneStates";
 import { zInventoryBlockData } from "@/src/core/schemas/blocks/inventory";
 import { restoreInventory } from "@/src/server/services/inventoryActions";
+import { removeAppliedNote } from "@/src/server/services/aiProposals";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -32,7 +33,8 @@ export type UndoTurnResult =
  * les événements défaits, jamais une suppression. Ce que le tour avait écrit
  * est retiré ou restauré :
  * - les fiches nées automatiquement (`auto_applied`) passent à la corbeille
- *   (suppression douce), leur proposition à `reverted` ; une proposition en
+ *   (suppression douce), leur proposition à `reverted` ; une note du monde
+ *   ajoutée d'office (V3.2-22) quitte le wiki ; une proposition en
  *   attente aussi. Une proposition acceptée à la main reste : c'était un choix ;
  * - les découvertes posées par le tour sont retirées ;
  * - l'état de jeu du personnage et la scène reviennent à ceux relevés au début
@@ -64,6 +66,13 @@ export async function undoLastSoloTurn(supabase: TypedClient, params: { campaign
   let proposals = 0;
   for (const p of await listAiProposalsBySessionEventIds(supabase, tour.eventIds)) {
     if (p.status === "applied" && p.autoApplied) {
+      // V3.2-22 : une note du monde ajoutée d'office quitte le wiki avec son tour.
+      if (p.kind === "update_block") {
+        const retrait = await removeAppliedNote(supabase, { proposalId: p.id, userId: params.callerId });
+        if (retrait.ok) proposals += 1;
+        else console.error("Note du monde du tour non retirée", p.id, retrait.reason);
+        continue;
+      }
       if (p.kind === "create_entity" && p.targetEntityId) {
         if ((await softDeleteEntity(supabase, p.targetEntityId)).deleted) entities += 1;
       }

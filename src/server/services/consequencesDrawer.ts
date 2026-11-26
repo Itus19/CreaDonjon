@@ -14,6 +14,8 @@ export interface ConsequenceEntry {
   text: string;
   /** `null` : l'entite visee a disparu depuis, ou la proposition n'en vise aucune (rare). */
   targetName: string | null;
+  /** V3.2-22 : une note du monde déjà écrite, que la personne qui joue peut « Corriger » ou « Retirer ». */
+  fixable: boolean;
 }
 
 export interface ConsequencesDrawer {
@@ -48,6 +50,7 @@ export async function buildConsequencesDrawer(supabase: TypedClient, params: { c
     kind: row.kind,
     text: describeConsequence(row.kind, row.payload),
     targetName: row.targetEntityId ? (nameById.get(row.targetEntityId) ?? null) : null,
+    fixable: row.status === "applied" && row.kind === "update_block",
   });
 
   return {

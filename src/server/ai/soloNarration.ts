@@ -301,16 +301,18 @@ export async function narrateSoloTurn(supabase: TypedClient, provider: AiProvide
   }
 
   if (chosen.worldNote) {
-    // V3-C3 — même discipline best-effort : une suggestion rédactionnelle
+    // V3-C3, V3.2-22 — même discipline best-effort : une note du monde
     // n'est jamais essentielle (specs/cible-locale-et-ia.md §4), la
     // narration reste acquise même si `ai_proposals` échoue à l'écrire.
     try {
       await proposeWorldNote(supabase, {
         worldId: params.worldId,
         campaignId: params.campaignId,
+        sessionId: params.sessionId,
         sessionEventId: event.id,
         entityId: chosen.worldNote.entityId,
         text: chosen.worldNote.text,
+        callerId: params.userId,
       });
     } catch (erreur) {
       // Ignoré volontairement : la narration ci-dessus est déjà acquise.

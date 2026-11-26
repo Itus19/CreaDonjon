@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mapSessionEventToFilItem, visibleInFil } from "./turnFil";
+import { mapSessionEventToFilItem, visibleInFil, withTurnSummaries } from "./turnFil";
 import type { SessionEventRow } from "@/src/server/repos/sessions";
 
 /**
@@ -168,3 +168,17 @@ describe("V3-F2 — visibleInFil", () => {
   });
 });
 
+
+describe("V3.2-22 — withTurnSummaries", () => {
+  it("pose la ligne après le dernier événement du tour et y replie les changements ; hors tour, ils restent", () => {
+    const evts = [
+      row({ id: "w0", seq: 1, kind: "world_update", actor: "system", payload: { note: "Scène posée" } }),
+      row({ id: "a", seq: 2, payload: { intent: { text: "je dors" }, undo_before: { entity_id: "pj", runtime: null, scene: { time: { day: 1, hour: 22, minute: 0 }, activeCombatId: null } } } }),
+      row({ id: "r", seq: 3, kind: "rule_application", actor: "system", payload: { changes_text: ["Repos long"] } }),
+      row({ id: "n", seq: 4, kind: "narration", actor: "ai", payload: { text: "Tu dors." } }),
+    ];
+    const items = withTurnSummaries(evts, { day: 2, hour: 6, minute: 0 });
+    expect(items.map((i) => i.kind)).toEqual(["world_update", "player_action", "narration", "turn_summary"]);
+    expect(items[3]).toMatchObject({ id: "tour-a", seq: 4, time: "+8 h · 06:00, jour 2", changes: ["Repos long"], last: true });
+  });
+});

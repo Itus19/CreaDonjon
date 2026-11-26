@@ -139,7 +139,8 @@ export function compterMots(texte: string): number {
   return texte.split(/\s+/).filter((m) => /[\p{L}\p{N}]/u.test(m)).length;
 }
 
-function libelleDuree(minutes: number): string {
+/** Une durée lisible : « 8 h », « 3 h 05 », « 12 min ». */
+export function libelleDuree(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   if (h === 0) return `${m} min`;
@@ -149,4 +150,18 @@ function libelleDuree(minutes: number): string {
 /** Le fait que la narration reçoit quand le moteur a fait passer le temps : la durée et l'heure atteinte, jamais à recalculer. */
 export function phraseDuree(minutes: number, apres: GameTime): string {
   return `${libelleDuree(minutes)} passent. Il est maintenant ${String(apres.hour).padStart(2, "0")}h${String(apres.minute).padStart(2, "0")} (jour ${apres.day}).`;
+}
+
+/** La phrase de `phraseDuree`, reconnue : la ligne du tour montre déjà l'heure, elle ne la répète pas. */
+export function estPhraseDuree(ligne: string): boolean {
+  return /^.+ passent\. Il est maintenant \d{2}h\d{2} \(jour \d+\)\.$/.test(ligne);
+}
+
+/** Règles 2024 : un round de combat dure 6 secondes. */
+export const SECONDES_PAR_ROUND = 6;
+
+/** Le temps qu'un combat a pris, en minutes entières (arrondi au-dessus) : dix rounds font une minute. */
+export function minutesDeCombat(rounds: number): number {
+  if (!Number.isFinite(rounds) || rounds <= 0) return 0;
+  return Math.ceil((rounds * SECONDES_PAR_ROUND) / 60);
 }

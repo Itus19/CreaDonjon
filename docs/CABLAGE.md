@@ -256,6 +256,8 @@ Depuis le 12 octobre, le cliquet ne compte plus les lignes de commentaire : 17 d
 
 **Le 60ᵉ fichier, et pourquoi** (V3.1-32) : `components/blocks/NomDeRegle.tsx`. Sur téléphone, toucher un nom de règle sur la fiche (arme, sort, état…) ouvre la règle dans une feuille du bas ; la règle est demandée **au toucher**, quand la feuille monte — jamais au chargement de la fiche (C1 respectée). Le cliquet compte les fichiers, pas le moment : celui-ci est un vrai cas « à la demande ». `useCachedGet` ne convenait pas : il avale les erreurs, et une clé cassée resterait sur « Chargement… » au lieu de dire « introuvable ».
 
+**Un fichier de plus, et pourquoi** (V3.2-22, 26 novembre) : `components/solo/OngletChangements.tsx`. L'onglet « Changements » du Monde lit `/consequences` **à son ouverture**, puis toutes les 8 s tant qu'il reste ouvert. Avant, `SoloScreen` sondait cette route toutes les 4 s pendant toute la partie, onglet ou pas : le compte de fichiers monte d'un, le nombre de requêtes baisse. Cas « à la demande », comme `NomDeRegle.tsx`.
+
 Le test échoue si un compte augmente. Une correction qui le fait baisser **abaisse le plafond dans le même commit**. Un nouveau cas vraiment nécessaire se justifie dans son commit et ici.
 
 ## 7. Le recâblage (V3.1-62, étape 3)

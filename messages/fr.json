@@ -1446,8 +1446,29 @@
       "inutilisable": "IA muette : réponse sans récit",
       "echec": "IA muette : injoignable"
     },
+    "changements": {
+      "titre": "Changements",
+      "aRelire": "À relire",
+      "ajoutes": "Ajouté au monde pendant cette séance",
+      "vide": "Rien n'a changé dans le monde pendant cette séance.",
+      "chargement": "Chargement…",
+      "corriger": "Corriger",
+      "retirer": "Retirer",
+      "retirerQuestion": "Retirer ce paragraphe du wiki ?",
+      "enregistrer": "Enregistrer",
+      "annuler": "Annuler",
+      "accepter": "Accepter",
+      "modifier": "Modifier",
+      "rejeter": "Rejeter",
+      "erreur": "Le changement n'a pas pu être enregistré.",
+      "explication": "Ce que l'IA ajoute au wiki y est écrit tout de suite. Si une note est fausse, corrige-la ou retire-la ici.",
+      "ligneAria": "Ce que ce tour a changé",
+      "details": "détails",
+      "nonApplique": "Non appliqué : {raison}",
+      "voirChangements": "Voir dans l'onglet Changements"
+    },
     "annulerTour": {
-      "bouton": "Annuler le dernier tour",
+      "bouton": "Annuler ce tour",
       "question": "Annuler ce tour ? Ce qu'il a changé est défait ; le journal le garde.",
       "confirmer": "Oui, annuler",
       "garder": "Garder",
@@ -1483,7 +1504,8 @@
       "wiki": "Wiki",
       "quetes": "Quêtes",
       "presents": "Présents",
-      "regles": "Règles"
+      "regles": "Règles",
+      "changements": "Changements"
     },
     "barre": {
       "jeu": "Jeu",
@@ -1507,7 +1529,7 @@
     "bandeChargeTitreEncombre": "Charge : {porte} / {capacite} kg — encombrement",
     "bandeEpuisementTitre": "Épuisement {niveau} sur 6",
     "bandeKg": "{valeur} kg",
-    "consequencesOuvrir": "Changements dans le monde : {nombre}",
+    "consequencesOuvrir": "Ouvrir les changements dans le monde",
     "consequencesTitre": "Changements dans le monde",
     "presentsTitre": "Présents dans la scène",
     "wikiTitre": "Wiki",

@@ -68,6 +68,7 @@ Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été
 | V3.2-19 | ☐ | **avec** | L'IA t'emmène ailleurs : lieux et pièces | [`05-narration.md`](backlog-v3.2/05-narration.md) |
 | V3.2-20 | ☑ | sans | Le jet demandé se lance depuis le récit, DD et issue masqués au choix | [`01-ecran-du-solo.md`](backlog-v3.2/01-ecran-du-solo.md) |
 | V3.2-21 | ☑ | sans | Dormir dans le récit fait un repos long | [`05-narration.md`](backlog-v3.2/05-narration.md) |
+| V3.2-22 | ☑ | sans | La ligne du tour, les notes du monde d'office, le temps du combat | [`05-narration.md`](backlog-v3.2/05-narration.md) |
 
 ---
 

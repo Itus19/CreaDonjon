@@ -22,9 +22,11 @@ const ICONES: Record<OngletMonde, ReactNode> = {
   presents: <path d="M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm-6 9c0-3 2.7-5 6-5s6 2 6 5m1-9a2.5 2.5 0 1 0-1-4.8M17 15c2.4.3 4 2.1 4 5" />,
   // Une balance.
   regles: <path d="M12 4v16m-6 0h12M5 8h14M5 8l-2.5 6a3 3 0 0 0 5 0L5 8Zm14 0-2.5 6a3 3 0 0 0 5 0L19 8Z" />,
+  // V3.2-22 : une plume sur une ligne (ce qui s'est écrit dans le monde).
+  changements: <path d="M4 20h16M7 16l9.5-9.5a2.1 2.1 0 0 1 3 3L10 19H7v-3Z" />,
 };
 
-const ORDRE: OngletMonde[] = ["wiki", "quetes", "presents", "regles"];
+const ORDRE: OngletMonde[] = ["wiki", "quetes", "presents", "regles", "changements"];
 
 export default function BandeMonde({ children }: { children?: ReactNode }) {
   const t = useTranslations("solo.bandeMonde");
