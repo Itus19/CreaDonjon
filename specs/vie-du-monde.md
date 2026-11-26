@@ -204,7 +204,29 @@ Coût par tour : un calcul pur sur les gens attachés au lieu (quelques dizaines
 
 L'ADR 0104 fige la chronique d'avant la partie (l'histoire générée à la Dwarf Fortress). Cette spec ne la touche pas : elle fait vivre **le présent**, à partir du point où la chronique s'arrête. Les agrégats de départ de chaque ville sortent de la génération de l'histoire ; ensuite, seuls les événements de cette spec les font bouger.
 
-## 13. Découpage
+## 13. Ce qui existe déjà (inventaire du 26 novembre)
+
+| Brique | Où | Sert à |
+|---|---|---|
+| Ville en agrégat, `deriveSeed`, `materializeOccupants` (auberge : aubergiste, personnel, clients par moment) | PR #17, `src/core/worldgen/` (pas encore fusionnée) | Graines (§1), personnel (§3) ; les clients « par moment » deviennent des gens attachés à l'heure |
+| `SeededRng` | `src/core/dice/rng` | Tous les tirages |
+| Tirage `pnj` et esquisses, ancrage à l'interaction, `promoteToEntity` | `sceneSketches.ts`, `promotion.ts` | Nommer un occupant, l'écrire dans le wiki (§3) |
+| Axes `wealth` et `zone` lus sur le lieu et ses parents | `src/core/generators/sceneVariant.ts` | Lire la richesse et la taille de la ville |
+| Bloc `personality` : six pôles, `priority`, aspirations sur trois horizons | `src/core/schemas/blocks/personality.ts` | Psyché (§4.3, §10) ; il manque le champ `routine` |
+| Pôles tirés au hasard bornés à ±60, `priorityFromPoles` | `src/core/psyche/random.ts` | Psyché des PNJ de fond (§10) |
+| Archétype visuel (deux pôles dominants) | `src/core/psyche/archetype.ts` | Affichage seulement ; ce n'est **pas** l'archétype de routine |
+| Amortissement `applyDelta` (rendements décroissants) | `src/core/psyche/apply.ts` | Effets bornés des événements sur les agrégats (§7.4) |
+| Bloc `worldview` et `worldviewTension` (écart PNJ ↔ faction) | `src/core/psyche/tension.ts` | Convictions d'une faction au pouvoir, tensions (§6) |
+| Relations `member_of`, `leads`, `serves`, `located_in`, `part_of` | `src/core/relations/inverses.ts` | Qui gouverne, qui habite où ; pas de « travaille à » (à décider : `serves` ou un type nouveau, par migration) |
+| Horloge, jours de la semaine, ellipses | `scene.ts`, `calendar/weekday.ts`, `elapsed.ts` | Le jour et l'heure de `position()` ; les jours de routine |
+| Pièce par personne | `scenePresence.ts` (V3.2-28) | Où chacun se tient dans le lieu (§5) |
+| Découvertes `mentioned` / `known` / `detailed` | `src/core/rules/discovery.ts` | Événements cachés, rumeurs (§7.3, §9) |
+| Chronologie du monde, genres `war`, `disaster`, `battle`, `betrayal`… | `src/core/timeline/worldTimeline.ts` (ADR 0048) | Garder les événements `week` (§11) |
+| Journal de séance | `session_events` | Garder ce que le personnage a vu (§11) |
+
+Rien n'existe encore pour les archétypes de routine, l'agenda, le régime d'une ville, le catalogue d'événements, le rattrapage ni le questionnaire.
+
+## 14. Découpage
 
 | Ticket | Contenu | Modèle conseillé | Dépend de |
 |---|---|---|---|
@@ -220,7 +242,7 @@ L'ADR 0104 fige la chronique d'avant la partie (l'histoire générée à la Dwar
 
 VM-8 ne dépend de rien et peut se faire à tout moment. VM-1 et VM-2 sont du noyau pur, testables en millisecondes.
 
-## 14. Questions ouvertes
+## 15. Questions ouvertes
 
 | Question | Recommandation |
 |---|---|
