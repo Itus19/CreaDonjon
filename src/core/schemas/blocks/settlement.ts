@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { BIOMES } from "../../worldgen/biomes";
+import { zSettlementClimate } from "../../weather/climate";
 
 /**
  * Bloc `settlement` : une ville décrite par ses agrégats, pas par ses
@@ -40,6 +41,8 @@ export const zSettlementBlockData = z.object({
   zone: z.enum(SETTLEMENT_ZONES),
   wealth: z.enum(SETTLEMENT_WEALTH),
   biome: z.enum(BIOMES),
+  /** ME-2 (specs/meteo.md §3.1) : le climat importé de la carte de CE monde ; ce qui manque vient du biome. Facultatif, donc sans changement de version. */
+  climate: zSettlementClimate.optional(),
   peoples: z.array(zSettlementShare).max(32).refine(uniqueKeys, "Un peuple apparaît deux fois").default([]),
   trades: z.array(zSettlementShare).max(64).refine(uniqueKeys, "Un métier apparaît deux fois").default([]),
 });

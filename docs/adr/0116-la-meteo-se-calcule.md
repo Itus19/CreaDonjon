@@ -23,7 +23,7 @@ La météo du solo est tirée une fois à la table MJ `meteo` quand le personnag
 
 ## Conséquences
 
-- `SceneState.weather` disparaît (valeur dérivée, règle absolue 16) ; le bloc `settlement` passe en version 2, le bloc `rooms` gagne l'exposition ; aucune migration SQL.
+- `SceneState.weather` disparaît (valeur dérivée, règle absolue 16) ; le bloc `settlement` gagne un champ `climate` facultatif, le bloc `rooms` gagne l'exposition ; aucune migration SQL.
 - La météo marche dès ME-5 avec le climat par défaut, avant l'import Azgaar.
 - Les effets en jeu (Guide du maître 2024) attendent un ticket à part, comme l'éclairage attend la vision.
 - Détail : `specs/meteo.md`.

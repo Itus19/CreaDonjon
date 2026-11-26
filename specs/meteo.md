@@ -37,7 +37,7 @@ Rien ne calcule de température, de saison ou de climat. Les tickets G-3 (édite
 
 ### 3.1 Les données d'entrée
 
-Ajoutées au bloc `settlement` (version `__v: 2`, champs facultatifs, aucune migration : le bloc vit en JSON) :
+Ajoutées au bloc `settlement` (champ `climate` facultatif, donc sans changement de version ni migration : le bloc vit en JSON) :
 
 | Champ | Sens | Source |
 |---|---|---|
@@ -145,8 +145,8 @@ Le Guide du maître 2024 donne des effets au froid et à la chaleur extrêmes, a
 | Ticket | Contenu | Modèle conseillé |
 |---|---|---|
 | ME-1 | Cette spec et l'ADR 0116 | Opus |
-| ME-2 | Noyau : normales des 13 biomes, `climateOf` (bloc, ville, défaut du monde), position dans l'année et saison, tests d'abord | Opus |
-| ME-3 | Noyau : `weatherAt` (normale, fronts, journée) et `weatherChanges`, tests d'abord (même graine, même temps ; neige seulement au froid ; continuité d'une heure à l'autre) | Opus |
+| ME-2 | Noyau : normales des 13 biomes, `climateOf` (bloc, ville, défaut du monde), position dans l'année et saison, tests d'abord | Opus · fait (`src/core/weather/climate.ts`, `season.ts`) |
+| ME-3 | Noyau : `weatherAt` (normale, fronts, journée) et `weatherChanges`, tests d'abord (même graine, même temps ; neige seulement au froid ; continuité d'une heure à l'autre) | Opus · fait (`src/core/weather/weather.ts`) |
 | ME-4 | Exposition dans le bloc `rooms` et `perceivedWeather`, éditeur, libellés | Sonnet |
 | ME-5 | Branchement solo : calcul à chaque tour, en-tête, contexte de l'IA, ligne du tour ; fin de `SceneState.weather` ; climat par défaut dans les réglages | Sonnet, relu par Opus |
 | ME-6 | Forçage du MJ (`weather_override`), depuis la fenêtre du MJ et la colonne de scène à distance | Sonnet |
