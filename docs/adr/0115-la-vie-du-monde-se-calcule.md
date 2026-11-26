@@ -30,7 +30,7 @@ En solo, les présents d'un lieu ne bougent pas : le personnage dort dix heures 
 ## Conséquences
 
 - Aucun coût quand personne ne regarde ; un calcul pur et une requête par tour ; un rattrapage borné à l'arrivée.
-- Une nouvelle table pour l'agenda et les états (migration à écrire, ticket VM-4), et des agrégats de plus dans le bloc `settlement`.
+- Une nouvelle table pour l'agenda et les états (migration à écrire, ticket V3.2-32), et des agrégats de plus dans le bloc `settlement`.
 - Les boucles (stabilité basse → émeutes → stabilité plus basse) exigent des effets bornés et un retour à l'équilibre, faute de quoi une ville s'effondre en quelques semaines.
 - La chronique d'avant la partie reste figée (ADR 0104) : cette décision fait vivre le présent, pas le passé.
 - Dépend de la ville en agrégat (PR #17, `deriveSeed`, `materializeOccupants`), dont les clients « par moment de la journée » deviennent des clients à l'heure.

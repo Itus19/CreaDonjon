@@ -35,7 +35,7 @@ Cette spec dit **comment rendre tout cela réel et cohérent sans simuler chaque
 | 16 | Les aspirations | des listes plus un champ libre |
 | 17 | Les personnages existants | bouton « Passer le questionnaire », aperçu avant d'écraser |
 | 18 | Les dilemmes | une trentaine rédigés par Claude, dix tirés par passage, relus par l'auteur |
-| 19 | L'ordre | PR #17, puis VM-1 et VM-2, puis VM-3 ; le questionnaire (VM-8) en parallèle |
+| 19 | L'ordre | PR #17, puis V3.2-29 et V3.2-30, puis V3.2-31 ; le questionnaire (V3.2-36) en parallèle |
 
 ## 1. Principes
 
@@ -340,23 +340,23 @@ Rien n'existe encore pour les archétypes de routine, l'agenda, le régime d'une
 
 ## 14. Découpage
 
-Les tickets détaillés vivent dans [`docs/BACKLOG_VM.md`](../docs/BACKLOG_VM.md) ; le tableau ci-dessous en est le résumé.
+Les tickets détaillés vivent dans [`docs/backlog-v3.2/07-vie-du-monde.md`](../docs/backlog-v3.2/07-vie-du-monde.md) ; le tableau ci-dessous en est le résumé.
 
 | Ticket | Contenu | Modèle conseillé | Dépend de |
 |---|---|---|---|
-| VM-1 | Noyau : format d'archétype, liste de départ, `position()`, gigue, absences, tests | Opus | PR #17 (graines) |
-| VM-2 | Noyau : gens attachés à un lieu (personnel, habitués, logés, de passage), séjours, tests | Opus | VM-1 |
-| VM-3 | La présence calculée remplace la liste manuelle du solo ; arrivées et départs comme faits du tour | Opus | VM-2, G-4 |
-| VM-4 | L'agenda : table, proposition de l'IA validée par le moteur, saisie du MJ | Opus (migration) | VM-3 |
-| VM-5 | Régime : agrégats du bloc `settlement`, retour à l'équilibre | Opus | G-3 |
-| VM-6 | Événements : catalogue, fréquence, visibilité, effets bornés, tirage à l'heure autour du personnage | Opus | VM-4, VM-5 |
-| VM-7 | Rattrapage et nouvelles qui voyagent | Opus | VM-6 |
-| VM-8 | Questionnaire de psyché à la création, banque de dilemmes, aspirations, partie intimité | Sonnet (interface), Opus (banque) | — |
-| VM-10 | Les absents : page née d'un témoignage attribué, personnalités publiques connues d'avance | Opus | VM-3 |
-| VM-11 | Découverte différée d'un événement non remarqué (vol à la tire) | Opus | VM-6 |
-| VM-9 | Archétype déduit du métier, corrigeable dans la fiche ; pôles qui teintent la routine | Sonnet | VM-1 |
+| V3.2-29 | Noyau : format d'archétype, liste de départ, `position()`, gigue, absences, tests | Opus | PR #17 (graines) |
+| V3.2-30 | Noyau : gens attachés à un lieu (personnel, habitués, logés, de passage), séjours, tests | Opus | V3.2-29 |
+| V3.2-31 | La présence calculée remplace la liste manuelle du solo ; arrivées et départs comme faits du tour | Opus | V3.2-30, G-4 |
+| V3.2-32 | L'agenda : table, proposition de l'IA validée par le moteur, saisie du MJ | Opus (migration) | V3.2-31 |
+| V3.2-33 | Régime : agrégats du bloc `settlement`, retour à l'équilibre | Opus | G-3 |
+| V3.2-34 | Événements : catalogue, fréquence, visibilité, effets bornés, tirage à l'heure autour du personnage | Opus | V3.2-32, V3.2-33 |
+| V3.2-35 | Rattrapage et nouvelles qui voyagent | Opus | V3.2-34 |
+| V3.2-36 | Questionnaire de psyché à la création, banque de dilemmes, aspirations, partie intimité | Sonnet (interface), Opus (banque) | — |
+| V3.2-38 | Les absents : page née d'un témoignage attribué, personnalités publiques connues d'avance | Opus | V3.2-31 |
+| V3.2-39 | Découverte différée d'un événement non remarqué (vol à la tire) | Opus | V3.2-34 |
+| V3.2-37 | Archétype déduit du métier, corrigeable dans la fiche ; pôles qui teintent la routine | Sonnet | V3.2-29 |
 
-VM-8 ne dépend de rien et peut se faire à tout moment. VM-1 et VM-2 sont du noyau pur, testables en millisecondes.
+V3.2-36 ne dépend de rien et peut se faire à tout moment. V3.2-29 et V3.2-30 sont du noyau pur, testables en millisecondes.
 
 ## 15. Questions ouvertes
 
