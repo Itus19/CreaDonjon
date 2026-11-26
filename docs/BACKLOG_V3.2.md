@@ -38,7 +38,7 @@ Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été
 
 | Fichier | Contenu |
 |---|---|
-| [`01-ecran-du-solo.md`](backlog-v3.2/01-ecran-du-solo.md) | L'écran central : bulles, contour, chargement, envoi, jet dans le fil (V3.2-1 à 4, 20) |
+| [`01-ecran-du-solo.md`](backlog-v3.2/01-ecran-du-solo.md) | L'écran central : bulles, contour, chargement, envoi, jet dans le fil, faux jets (V3.2-1 à 4, 20, 21) |
 | [`02-recit-et-liens.md`](backlog-v3.2/02-recit-et-liens.md) | Le texte : la personne du récit, les liens vers les fiches (V3.2-5, 6) |
 | [`03-colonnes.md`](backlog-v3.2/03-colonnes.md) | Les colonnes : l'onglet Wiki, les volets, les présents (V3.2-7, 12 à 16, 20) |
 | [`04-commerce.md`](backlog-v3.2/04-commerce.md) | Acheter, vendre, échanger : le moteur règle, le PNJ réagit (V3.2-8 à 11) |
@@ -63,6 +63,7 @@ Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été
 | V3.2-15 | ☐ | **avec** | Écrire la façade d'un PNJ, et la faire jouer au narrateur | [`03-colonnes.md`](backlog-v3.2/03-colonnes.md) |
 | V3.2-16 | ☐ | sans | La fiche repliée montre des jauges circulaires | [`03-colonnes.md`](backlog-v3.2/03-colonnes.md) |
 | V3.2-20 | ☑ | sans | Deux bandes de même largeur | [`03-colonnes.md`](backlog-v3.2/03-colonnes.md) |
+| V3.2-21 | ☑ | sans | Un nom de compétence ou d'arme au milieu d'une phrase ne lance plus de jet | [`01-ecran-du-solo.md`](backlog-v3.2/01-ecran-du-solo.md) |
 | V3.2-17 | ☐ | **avec** | Une consigne de MJ, et le contexte pour la suivre | [`05-narration.md`](backlog-v3.2/05-narration.md) |
 | V3.2-18 | ☐ | sans | L'horloge suit l'histoire | [`05-narration.md`](backlog-v3.2/05-narration.md) |
 | V3.2-19 | ☐ | **avec** | L'IA t'emmène ailleurs : lieux et pièces | [`05-narration.md`](backlog-v3.2/05-narration.md) |

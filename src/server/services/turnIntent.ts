@@ -286,7 +286,9 @@ export async function buildIntentBarData(
     });
   });
   for (const skill of SKILLS) {
-    actions.push({ id: skill, kind: "skill_check", label: SKILL_LABELS_FR[skill], terms: [SKILL_LABELS_FR[skill]] });
+    // V3.2-21 : le nom seul ne lance un jet que s'il est toute la phrase ;
+    // « jet d'Histoire » le lance où qu'il soit (`explicitTerms`).
+    actions.push({ id: skill, kind: "skill_check", label: SKILL_LABELS_FR[skill], terms: [SKILL_LABELS_FR[skill]], explicitTerms: explicitCheckTerms(SKILL_LABELS_FR[skill]) });
   }
   for (const ability of ABILITIES) {
     // « test de Force », jamais « force » tout court : le mot est trop
@@ -296,12 +298,15 @@ export async function buildIntentBarData(
       kind: "ability_check",
       label: `Test de ${ABILITY_LABELS[ability]}`,
       terms: [`test de ${ABILITY_LABELS[ability]}`, `jet de ${ABILITY_LABELS[ability]}`],
+      // Ces termes sont déjà des demandes en toutes lettres.
+      explicitTerms: [`test de ${ABILITY_LABELS[ability]}`, `jet de ${ABILITY_LABELS[ability]}`],
     });
     actions.push({
       id: ability,
       kind: "saving_throw",
       label: `Sauvegarde de ${ABILITY_LABELS[ability]}`,
       terms: [`sauvegarde de ${ABILITY_LABELS[ability]}`, `jet de sauvegarde de ${ABILITY_LABELS[ability]}`],
+      explicitTerms: [`sauvegarde de ${ABILITY_LABELS[ability]}`, `jet de sauvegarde de ${ABILITY_LABELS[ability]}`],
     });
   }
 
@@ -318,6 +323,18 @@ export async function buildIntentBarData(
     targetDetails,
     ruleKeys: ctx.sheet.features.map((f) => f.key).filter((k) => !k.startsWith("choice:")),
   };
+}
+
+/**
+ * V3.2-21 — « jet de Persuasion », « test d'Histoire » : les formes qui
+ * demandent un test de compétence en toutes lettres. L'élision suit la
+ * première lettre (voyelle ou h) ; l'apostrophe courbe d'un téléphone vaut
+ * l'apostrophe droite.
+ */
+function explicitCheckTerms(label: string): string[] {
+  const elision = /^[aeiouyhâàéèêëîïôöûüœ]/i.test(label);
+  const liaisons = elision ? ["d'", "d’"] : ["de "];
+  return ["jet", "test"].flatMap((mot) => liaisons.map((de) => `${mot} ${de}${label}`));
 }
 
 export type IntentChoice =

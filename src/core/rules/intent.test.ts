@@ -11,8 +11,8 @@ const CATALOG: IntentCatalog = {
   actions: [
     { id: "item-epee", kind: "weapon_attack", label: "Épée longue", terms: ["épée longue", "épée"] },
     { id: "item-dague", kind: "weapon_attack", label: "Dague", terms: ["dague"] },
-    { id: "investigation", kind: "skill_check", label: "Investigation", terms: ["investigation"] },
-    { id: "persuasion", kind: "skill_check", label: "Persuasion", terms: ["persuasion"] },
+    { id: "investigation", kind: "skill_check", label: "Investigation", terms: ["investigation"], explicitTerms: ["jet d'investigation"] },
+    { id: "persuasion", kind: "skill_check", label: "Persuasion", terms: ["persuasion"], explicitTerms: ["jet de persuasion", "test de persuasion"] },
     { id: "dex", kind: "saving_throw", label: "Sauvegarde de Dextérité", terms: ["sauvegarde de dextérité"] },
   ],
   targets: [
@@ -69,10 +69,34 @@ describe("ce qui est nomme l'emporte sur ce qui est devine", () => {
     expect(proposal.target).toBeNull();
   });
 
-  it("une action nommee sans verbe suffit", () => {
-    const proposal = interpretIntent("persuasion", CATALOG);
+  it("une action nommee sans verbe suffit quand elle EST la phrase", () => {
+    for (const written of ["persuasion", "  Persuasion ! ", "persuasion ?"]) {
+      const proposal = interpretIntent(written, CATALOG);
+      expect(proposal.kind === "mechanical" && proposal.action.id).toBe("persuasion");
+      expect(proposal.kind === "mechanical" && proposal.matched.verb).toBeNull();
+    }
+  });
+
+  it("V3.2-21 — sans verbe, un nom d'action au milieu d'une phrase ne lance rien", () => {
+    // Le faux jet du 25 novembre : « histoire » dans une phrase sur le coucher
+    // lançait un test d'Histoire. Même chose pour une arme qu'on range.
+    for (const written of ["je me couche en repensant à la persuasion de ma mère", "je range mon épée et je m'assois", "un peu d'investigation plus tard"]) {
+      expect(interpretIntent(written, CATALOG)).toEqual({ kind: "free", text: written, reason: "aucun_verbe_reconnu" });
+    }
+  });
+
+  it("V3.2-21 — sans verbe, la forme explicite « jet de … » lance le jet, où qu'elle soit", () => {
+    const proposal = interpretIntent("je tente un jet de persuasion sur le tavernier", CATALOG);
     expect(proposal.kind === "mechanical" && proposal.action.id).toBe("persuasion");
-    expect(proposal.kind === "mechanical" && proposal.matched.verb).toBeNull();
+    expect(proposal.kind === "mechanical" && proposal.matched.action).toBe("jet de persuasion");
+    expect(proposal.kind === "mechanical" && proposal.target?.id).toBe("grelin");
+    const elide = interpretIntent("je fais un jet d'investigation", CATALOG);
+    expect(elide.kind === "mechanical" && elide.action.id).toBe("investigation");
+  });
+
+  it("V3.2-21 — avec un verbe, nommer l'action la choisit toujours, même hors forme explicite", () => {
+    const proposal = interpretIntent("je frappe le gobelin avec ma dague", CATALOG);
+    expect(proposal.kind === "mechanical" && proposal.action.id).toBe("item-dague");
   });
 
   it("un verbe d'une famille ne va jamais chercher une action d'une autre", () => {
