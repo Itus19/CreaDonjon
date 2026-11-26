@@ -12,6 +12,7 @@ import { npcAddressedBy } from "@/src/core/ai/npcAddressed";
 import { buildGmQuestionContext } from "@/src/core/ai/gmQuestionContext";
 import { relationshipAxisLabel } from "@/src/core/psyche/bands";
 import { zRelationshipBlockData } from "@/src/core/schemas/blocks/relationship";
+import { esquissesAilleurs, esquissesIci, presentsAilleurs, presentsIci } from "@/src/core/rules/scenePresence";
 import { getSceneState } from "@/src/server/repos/sceneStates";
 import { zInventoryBlockData } from "@/src/core/schemas/blocks/inventory";
 import { zPriceListBlockData } from "@/src/core/schemas/blocks/priceList";
@@ -119,6 +120,30 @@ async function resolvePresentNpcs(
  * ainsi la faire parler (`npc_reaction`) sans jamais inventer son nom — le
  * générateur l'a déjà tiré (`sceneSketches.ts`).
  */
+/**
+ * V3.2-28 — Les présents du lieu qui sont dans une autre pièce, nommés comme
+ * le joueur les connaît. Deux lectures (entités, `known_as`), seulement
+ * quand quelqu'un est ailleurs : le cas courant (tout le monde ensemble) ne
+ * coûte rien de plus.
+ */
+async function resolveElsewhere(
+  supabase: TypedClient,
+  params: { playerEntityId: string; scene: SceneState | null }
+): Promise<{ name: string; room: string | null }[]> {
+  if (!params.scene) return [];
+  const reels = presentsAilleurs(params.scene).filter((p) => p.entityId !== params.playerEntityId);
+  const esquisses = esquissesAilleurs(params.scene).map((s) => ({ name: s.name, room: s.room ?? null }));
+  if (reels.length === 0) return esquisses;
+  const [entities, knownAs] = await Promise.all([listEntitiesByIds(supabase, reels.map((p) => p.entityId)), knownAsByTarget(supabase, params.playerEntityId)]);
+  const nameById = new Map(entities.map((e) => [e.id, e.name]));
+  // Une entité que la RLS cache au joueur ne sort pas de son nom (règle 11) : on la tait.
+  const nommes = reels.flatMap((p) => {
+    const name = knownAs.get(p.entityId) ?? nameById.get(p.entityId);
+    return name ? [{ name, room: p.room ?? null }] : [];
+  });
+  return [...nommes, ...esquisses];
+}
+
 function sketchesAsNpcs(sketches: { id: string; name: string; trait: string; zone: TurnContextNpc["zone"] }[]): TurnContextNpc[] {
   return sketches.map((s) => ({ id: s.id, name: s.name, attitudeLabel: null, zone: s.zone, note: s.trait }));
 }
@@ -317,10 +342,11 @@ export async function buildSoloTurnContext(
 ): Promise<SoloTurnContext> {
   const scene = await getSceneState(supabase, params.campaignId);
 
-  const [locationEntity, realNpcs, quests, history, player, money, locationPage, moveTargets] = await Promise.all([
+  // V3.2-28 : l'IA ne voit avec le personnage que ceux de sa pièce ; les autres, à part.
+  const [locationEntity, realNpcs, quests, history, player, money, locationPage, moveTargets, elsewhere] = await Promise.all([
     scene ? listEntitiesByIds(supabase, [scene.locationId]).then((rows) => rows[0] ?? null) : Promise.resolve(null),
     scene
-      ? resolvePresentNpcs(supabase, { worldId: params.worldId, campaignId: params.campaignId, playerEntityId: params.playerEntityId, present: scene.present })
+      ? resolvePresentNpcs(supabase, { worldId: params.worldId, campaignId: params.campaignId, playerEntityId: params.playerEntityId, present: presentsIci(scene) })
       : Promise.resolve([]),
     resolveQuests(supabase, params.worldId, params.viewer),
     resolveRecentHistory(supabase, params.sessionId, params.fromEventId ?? null),
@@ -328,6 +354,7 @@ export async function buildSoloTurnContext(
     resolveMoney(supabase, { playerEntityId: params.playerEntityId, scene }),
     scene ? resolveLocationPage(supabase, scene.locationId, params.viewer) : Promise.resolve({ description: null, rooms: [] as Room[] }),
     scene ? resolveMoveTargets(supabase, params.worldId, scene.locationId, params.viewer) : Promise.resolve([]),
+    resolveElsewhere(supabase, { playerEntityId: params.playerEntityId, scene }),
   ]);
   const recentNarrations = history.narrations;
   const locationDescription = locationPage.description;
@@ -335,7 +362,7 @@ export async function buildSoloTurnContext(
   const roomSketchesHere = (scene?.roomSketches ?? []).filter((r) => r.locationId === scene?.locationId);
   const knownRooms = [...locationPage.rooms.map((r) => ({ name: r.name, description: r.description })), ...roomSketchesHere.map((r) => ({ name: r.name, description: r.description }))];
   const currentRoom = scene?.room && scene.room.locationId === scene.locationId ? { name: scene.room.name, description: scene.room.description } : null;
-  const npcs = [...realNpcs, ...sketchesAsNpcs(scene?.sketches ?? [])];
+  const npcs = [...realNpcs, ...sketchesAsNpcs(scene ? esquissesIci(scene) : [])];
   const addressedNpcId = npcAddressedBy(params.playerAction, npcs);
   const addressedIsQuestion = estQuestionDirecte(params.playerAction);
 
@@ -360,6 +387,7 @@ export async function buildSoloTurnContext(
     moveTargets,
     rooms: knownRooms,
     currentRoom,
+    elsewhere,
   };
 
   const knownEntityIds = [...(locationEntity ? [locationEntity.id] : []), ...realNpcs.map((n) => n.id)];
@@ -390,12 +418,12 @@ export async function buildSoloGmQuestionContext(
   const [locationEntity, realNpcs, quests, recentNarrations] = await Promise.all([
     scene ? listEntitiesByIds(supabase, [scene.locationId]).then((rows) => rows[0] ?? null) : Promise.resolve(null),
     scene
-      ? resolvePresentNpcs(supabase, { worldId: params.worldId, campaignId: params.campaignId, playerEntityId: params.playerEntityId, present: scene.present })
+      ? resolvePresentNpcs(supabase, { worldId: params.worldId, campaignId: params.campaignId, playerEntityId: params.playerEntityId, present: presentsIci(scene) })
       : Promise.resolve([]),
     resolveQuests(supabase, params.worldId, params.viewer),
     resolveRecentHistory(supabase, params.sessionId, null).then((h) => h.narrations),
   ]);
-  const npcs = [...realNpcs, ...sketchesAsNpcs(scene?.sketches ?? [])];
+  const npcs = [...realNpcs, ...sketchesAsNpcs(scene ? esquissesIci(scene) : [])];
 
   return {
     text: buildGmQuestionContext({

@@ -85,6 +85,8 @@ interface NarrationAttempt {
   moveTo?: { locationId: string; with: string[] };
   /** V3.2-19 — une pièce proposée ; `applyRoomAfterNarration` la tranche. */
   enterRoom?: { name: string; description?: string };
+  /** V3.2-28 — ceux qui changent de pièce avec le personnage. */
+  roomWith?: string[];
   leaveRoom?: boolean;
   invalidReason?: string;
   inputTokens: number;
@@ -136,6 +138,7 @@ async function attemptNarration(
     elapsed: parsed.data.elapsed,
     moveTo: parsed.data.move_to ? { locationId: parsed.data.move_to.location_id, with: parsed.data.move_to.with ?? [] } : undefined,
     enterRoom: parsed.data.enter_room,
+    roomWith: parsed.data.room_with ?? [],
     leaveRoom: parsed.data.leave_room ?? false,
     inputTokens: result.inputTokens,
     outputTokens: result.outputTokens,
@@ -370,6 +373,8 @@ export async function narrateSoloTurn(supabase: TypedClient, provider: AiProvide
         playerAction: params.playerAction,
         enter: chosen.enterRoom,
         leave: chosen.leaveRoom ?? false,
+        playerEntityId: params.playerEntityId,
+        followers: chosen.roomWith ?? [],
         wikiRooms: firstContext.wikiRooms,
         locationName: firstContext.locationName,
         neighbourNames: firstContext.moveTargets.map((l) => l.name),

@@ -1,4 +1,5 @@
 import type { DiceRollKind } from "@/src/core/dice/rollAttribution";
+import { presentsIci } from "@/src/core/rules/scenePresence";
 import "server-only";
 import { applyTrade, readInventorySnapshot } from "@/src/server/services/inventoryActions";
 import { readCurrencySystemForEntity } from "@/src/server/services/currencySystem";
@@ -176,7 +177,7 @@ async function loadTargets(
     }
   }
 
-  const scenePresent = (params.scene?.present ?? []).map((p) => p.entityId).filter((id) => !seenEntityIds.has(id));
+  const scenePresent = (params.scene ? presentsIci(params.scene) : []).map((p) => p.entityId).filter((id) => !seenEntityIds.has(id));
   if (scenePresent.length > 0) {
     for (const entity of await listEntitiesByIds(supabase, scenePresent)) {
       details.push({ id: `entity:${entity.id}`, label: entity.name, ac: null, hpCurrent: null, source: "scene" });

@@ -76,7 +76,7 @@ export function soloSystemPrompt(recit: RecitSettings, toolName: string): string
       : ["LES SCÈNES INTIMES", "Elles restent hors champ dans cette partie : suggérées, puis coupées avant tout détail explicite.", LIMITE_INTIME, ""]),
     "CE QUE TU PROPOSES AU MOTEUR (il valide, il peut refuser)",
     "- move_to : si ta narration emmène le personnage, à sa demande, dans un des lieux-accessibles (la cuisine, la rue, sa chambre), propose ce lieu, avec les PNJ présents qui le suivent. Décris le trajet et l'arrivée.",
-    "- enter_room / leave_room : si ta narration fait entrer le personnage dans une pièce de ce lieu (reprends le nom de pieces-du-lieu, ou invente une pièce plausible avec deux phrases de description), ou l'en fait ressortir. Décris la pièce à l'arrivée.",
+    "- enter_room / leave_room : si ta narration fait entrer le personnage dans une pièce de ce lieu (reprends le nom de pieces-du-lieu, ou invente une pièce plausible avec deux phrases de description), ou l'en fait ressortir. Décris la pièce à l'arrivée. Les PNJ présents qui l'accompagnent vont dans room_with ; les autres restent où ils sont, et le personnage ne les voit plus.",
     "- elapsed : la durée naturelle de ce que le personnage vient de faire (une conversation, un trajet court), une heure au plus. Jamais une ellipse. Si les changements disent déjà combien de temps passe, n'en propose pas.",
     "- world_note : un fait qui mériterait d'être ajouté à la fiche d'un lieu ou d'un PNJ RÉELLEMENT présent (un identifiant fourni). Un humain la relira : ne l'écris jamais comme un fait acquis dans ta narration.",
     "Tu n'écris jamais l'heure exacte toi-même : le moteur la calcule. Quand les changements la donnent, tu peux la reprendre telle quelle.",

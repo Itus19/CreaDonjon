@@ -13,6 +13,7 @@ import { discoverEntity } from "@/src/server/services/discoveries";
 import { listAttitudesTowardTarget } from "@/src/server/repos/psyche";
 import { axesDepuisJson, perceptionPercue } from "@/src/core/psyche/perception";
 import { generateForScene } from "@/src/server/services/sceneGeneration";
+import { esquissesIci, oublierLesPieces, presentsIci, ramenerIci } from "@/src/core/rules/scenePresence";
 import type { SceneView } from "@/lib/solo/types";
 
 type TypedClient = SupabaseClient<Database>;
@@ -88,8 +89,10 @@ export async function loadSceneView(
   const edges = await listPartOfRelationsForWorld(supabase, params.worldId);
   const nearestCityId = edges.find((e) => e.source_entity_id === scene.locationId)?.target_entity_id ?? null;
 
-  const ids = [scene.locationId, ...scene.present.map((p) => p.entityId), ...(nearestCityId ? [nearestCityId] : [])];
-  const presentIds = scene.present.map((p) => p.entityId);
+  // V3.2-28 : seulement ceux qui partagent la pièce du personnage.
+  const ici = presentsIci(scene);
+  const ids = [scene.locationId, ...ici.map((p) => p.entityId), ...(nearestCityId ? [nearestCityId] : [])];
+  const presentIds = ici.map((p) => p.entityId);
   const [entities, attitudes] = await Promise.all([
     listEntitiesByIds(supabase, ids),
     params.perceivedBy
@@ -117,14 +120,14 @@ export async function loadSceneView(
     lighting: scene.lighting,
     weather: scene.weather,
     inCombat: scene.activeCombatId !== null,
-    present: scene.present.map((p) => ({
+    present: ici.map((p) => ({
       entityId: p.entityId,
       name: byId.get(p.entityId)?.name ?? p.entityId,
       zone: p.zone,
       disposition: p.disposition,
       perception: perceptionById.get(p.entityId) ?? null,
     })),
-    sketches: scene.sketches.map((s) => ({ id: s.id, name: s.name, trait: s.trait, zone: s.zone, disposition: s.disposition })),
+    sketches: esquissesIci(scene).map((s) => ({ id: s.id, name: s.name, trait: s.trait, zone: s.zone, disposition: s.disposition })),
   };
 }
 
@@ -178,11 +181,17 @@ export async function setScene(
   scene = dropSketchesOutsideLocation(scene, params.locationId);
   // V3.2-19 : la pièce et ses esquisses ne survivent pas non plus au changement de lieu.
   scene = dropRoomsOutsideLocation(scene, params.locationId);
-
+  // V3.2-28 : un autre lieu, pas de pièce ; ceux qui y arrivent avec le personnage sont avec lui.
+  // Ceux qui ne suivent pas restent dans l'ancien lieu, quelle que soit leur pièce.
   const wanted = new Set(params.present);
-  for (const current of scene.present) {
+  if (locationChanged) scene = oublierLesPieces({ ...scene, present: scene.present.filter((p) => wanted.has(p.entityId)) });
+
+  // V3.2-28 : la liste dit « qui est avec moi ». Ceux d'une autre pièce du lieu
+  // n'en sortent pas parce que le panneau ne les montrait pas ; nommés, ils viennent ici.
+  for (const current of presentsIci(scene)) {
     if (!wanted.has(current.entityId)) scene = leaveScene(scene, current.entityId);
   }
+  scene = ramenerIci(scene, params.present.filter((id) => scene.present.some((p) => p.entityId === id)));
   for (const entityId of params.present) {
     scene = enterScene(scene, { entityId, zone: "near" });
   }

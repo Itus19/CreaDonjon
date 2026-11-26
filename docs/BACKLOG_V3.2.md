@@ -74,6 +74,7 @@ Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été
 | V3.2-25 | ☑ | sans | Deux bandes de même largeur | [`03-colonnes.md`](backlog-v3.2/03-colonnes.md) |
 | V3.2-26 | ☑ | sans | Dormir dans le récit fait un repos long | [`05-narration.md`](backlog-v3.2/05-narration.md) |
 | V3.2-27 | ☑ | sans | La ligne du tour, les notes du monde d'office, le temps du combat | [`05-narration.md`](backlog-v3.2/05-narration.md) |
+| V3.2-28 | ☑ | sans | Les présents suivent la pièce | [`05-narration.md`](backlog-v3.2/05-narration.md) |
 
 ---
 

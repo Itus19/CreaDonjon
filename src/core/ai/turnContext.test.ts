@@ -228,5 +228,21 @@ describe("buildTurnContext — ce qui fait vivre la scène (retour de jeu du 25 
     expect(out).not.toContain("piece-actuelle");
     expect(out).not.toContain("pieces-du-lieu");
   });
-});
 
+  it("V3.2-28 — ceux d'une autre pièce sont nommés à part, avec la consigne de ne pas les faire agir ici", () => {
+    const out = buildTurnContext(
+      input({ npcs: [], currentRoom: { name: "La chambre", description: "" }, elsewhere: [{ name: "Mabelle", room: null }, { name: "Le cuisinier", room: "La cuisine" }] })
+    );
+    const ailleurs = out.slice(out.indexOf('<donnee source="ailleurs-dans-le-lieu">'));
+    expect(ailleurs).toContain("- Mabelle (espace principal du lieu)");
+    expect(ailleurs).toContain("- Le cuisinier (La cuisine)");
+    expect(out).toContain("Consigne : les personnes d'ailleurs-dans-le-lieu ne sont pas avec le personnage");
+    expect(out).toContain("Consigne : personne d'autre n'est avec le personnage");
+  });
+
+  it("V3.2-28 — personne ailleurs et des présents : ni balise ni consigne de solitude", () => {
+    const out = buildTurnContext(input({ elsewhere: [] }));
+    expect(out).not.toContain("ailleurs-dans-le-lieu");
+    expect(out).not.toContain("personne d'autre n'est avec le personnage");
+  });
+});

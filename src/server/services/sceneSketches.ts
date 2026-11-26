@@ -111,7 +111,7 @@ export async function promoteSketch(
   if (!promoted.ok) return promoted;
 
   const withoutSketch = removeSketch(scene, sketch.id);
-  const withEntity = enterScene(withoutSketch, { entityId: promoted.entity.id, zone: sketch.zone, disposition: sketch.disposition });
+  const withEntity = enterScene(withoutSketch, { entityId: promoted.entity.id, zone: sketch.zone, disposition: sketch.disposition, ...(sketch.room !== undefined ? { room: sketch.room } : {}) });
   await putSceneState(supabase, { campaignId: params.campaignId, state: withEntity, updatedBy: params.callerId });
   const eventId = await journalSketchNote(supabase, params.sessionId, params.callerId, `${sketch.name} a rejoint le monde`, {
     source: "anchor",
