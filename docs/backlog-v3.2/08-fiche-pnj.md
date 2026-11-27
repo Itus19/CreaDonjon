@@ -30,15 +30,18 @@ Demandé le 26 novembre, après la séance où jauger Mabelle déclenchait une a
 - [x] Rattrapage (retour de l'auteur, 27 novembre) : à chaque tour solo, un présent sans fiche allégée ni fiche de personnage en reçoit une (`ensureNpcSheetsForPresents`, quatre au plus par tour, MJ du monde seulement) — `npcSheet.test.ts`.
 - [ ] En jouant : une personne nouvellement ancrée reçoit une fiche Roturier ajustée, visible du seul MJ ; Mabelle reçoit la sienne au premier tour joué au Fanal.
 
-### ☐ V3.2-48 — Équipement probable et bourse · `M` · sans modèle IA · Modèle conseillé : Sonnet
+### ☐ V3.2-48 — Équipement probable et bourse · `M` · sans modèle IA · Modèle conseillé : Sonnet — **codé le 27 novembre ; reste à vérifier en jouant**
 
 - Bloc `inventory` tiré à graine fixe : objets probables par archétype (un couteau, un tablier, des outils), bourse selon milieu social et `settlement.wealth`, en pièces du SRD.
 - Écrit en même temps que la fiche de V3.2-47, en visibilité `gm`.
 - **Porté ou caché** (retour de l'auteur, 27 novembre) : chaque objet tiré dit s'il se voit (armure, arme à la ceinture, objet en main, tablier) ou non (bourse, couteau sous le tablier). Ce qui se voit est découvert d'office dès que le PNJ est vu (V3.2-53) ; le reste attend un indice (V3.2-50).
 
+**Fait.** `src/core/rules/npcGear.ts` (objets par archétype, porté ou caché, bourse en cuivre × richesse de la ville) ; champ facultatif `concealed` des objets d'inventaire ; `giveNpcGear` (bloc « Équipement », `gm`) à l'ancrage et au rattrapage des présents.
+
 **Critères d'acceptation**
-- [ ] Une aubergiste d'un bourg pauvre porte quelques pièces de cuivre et un couteau ; un noble d'une ville riche, une bourse d'or.
-- [ ] Le garde qu'on croise montre d'emblée sa lance et sa cotte de mailles dans sa fiche ; sa bourse reste cachée.
+- [x] Une aubergiste d'un bourg modeste porte quelques pièces et parfois un couteau caché ; un noble d'une ville réputée, une bourse d'or (`npcGear.test.ts`).
+- [x] Un garde porte sa lance et sa chemise de mailles, visibles (`npcGear.test.ts`).
+- [ ] Dans la fiche, la part visible apparaît dès que le PNJ est vu ; la bourse reste cachée (dépend de V3.2-49).
 
 ### ☐ V3.2-49 — La table des indices découverts et la vue joueur · `M` · sans modèle IA · Modèle conseillé : Opus
 

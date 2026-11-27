@@ -60,18 +60,18 @@ describe("ensureNpcSheetsForPresents", () => {
   it("donne une fiche Roturier, réservée au MJ, à chaque présent qui n'en a pas — jamais au personnage joué", async () => {
     const { given } = await ensureNpcSheetsForPresents(supabase, params);
     expect(given).toEqual(["mabelle", "ourse"]);
-    expect(created.map((c) => c.entityId)).toEqual(["mabelle", "ourse"]);
-    expect(created.every((c) => c.blockType === "statblock" && c.visibilityLevel === "gm")).toBe(true);
+    expect(created.map((c) => `${c.entityId}:${c.blockType}`)).toEqual(["mabelle:statblock", "mabelle:inventory", "ourse:statblock", "ourse:inventory"]);
+    expect(created.every((c) => c.visibilityLevel === "gm")).toBe(true);
     expect(created[0].data.based_on).toEqual({ source: "srd-2024", key: "commoner" });
   });
 
-  it("ne touche ni à une fiche allégée existante, ni à une fiche de personnage", async () => {
+  it("ne touche ni à une fiche de personnage, ni à ce qu'un PNJ a déjà ; complète ce qui manque", async () => {
     existingSheets = [
       { entity_id: "mabelle", block_type: "statblock" },
       { entity_id: "ourse", block_type: "character" },
     ];
-    expect((await ensureNpcSheetsForPresents(supabase, params)).given).toEqual([]);
-    expect(created).toEqual([]);
+    expect((await ensureNpcSheetsForPresents(supabase, params)).given).toEqual(["mabelle"]);
+    expect(created.map((c) => `${c.entityId}:${c.blockType}`)).toEqual(["mabelle:inventory"]);
   });
 
   it("sans droit de MJ, ne fait rien", async () => {
