@@ -5,6 +5,8 @@ import { listBlocksForEntity } from "@/src/server/repos/blocks";
 import { insertAiProposal, type AiProposalRow } from "@/src/server/repos/aiProposals";
 import { insertSessionEvent, nextEventSeq } from "@/src/server/repos/sessions";
 import { appendNoteSegment } from "@/src/server/services/aiProposals";
+import { createBlock } from "@/src/server/services/blocks";
+import { APPEARANCE_LABEL, HIDDEN_LABEL, blockLabel, worldNoteBlockLabel, type WorldNoteAspect } from "@/src/core/ai/npcPortrait";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -29,15 +31,35 @@ function extrait(texte: string): string {
  * d'écriture, conflit de version), la note reste en attente de relecture,
  * comme avant. Une ligne `world_update` la cite dans la ligne du tour.
  *
- * **Un seul bloc `text` ciblé, jamais créé ici.** Une entité qui n'en a aucun
- * voit sa note journalisée `rejected`.
+ * **Un seul bloc `text` ciblé.** V3.2-54 : selon l'`aspect` de la note, le
+ * bloc « Apparence », le bloc « Ce qui ne se voit pas » (réservé au MJ, créé
+ * ici s'il manque : un détail caché n'atterrit jamais dans un bloc lisible),
+ * ou le premier autre bloc texte. Une entité sans bloc texte voit sa note
+ * journalisée `rejected`.
  */
 export async function proposeWorldNote(
   supabase: TypedClient,
-  params: { worldId: string; campaignId: string; sessionId: string; sessionEventId: string; entityId: string; text: string; callerId: string }
+  params: { worldId: string; campaignId: string; sessionId: string; sessionEventId: string; entityId: string; text: string; aspect?: WorldNoteAspect; callerId: string }
 ): Promise<ProposeWorldNoteOutcome> {
   const blocks = await listBlocksForEntity(supabase, params.entityId);
-  const textBlock = blocks.find((b) => b.block_type === "text");
+  const texts = blocks.filter((b) => b.block_type === "text");
+  const wanted = worldNoteBlockLabel(params.aspect);
+  const general = texts.find((b) => blockLabel(b) !== APPEARANCE_LABEL && blockLabel(b) !== HIDDEN_LABEL);
+  // V3.2-54 : l'apparence va au bloc « Apparence », un détail caché au bloc réservé au MJ.
+  // Sans bloc « Apparence » (le portrait n'est pas encore fait) : au bloc général, comme avant.
+  let textBlock = (wanted ? texts.find((b) => blockLabel(b) === wanted) : undefined) ?? general;
+  if (wanted === HIDDEN_LABEL && !texts.some((b) => blockLabel(b) === HIDDEN_LABEL)) {
+    // Un détail caché ne va JAMAIS dans un bloc lisible : on crée le bloc réservé au MJ.
+    const created = await createBlock(supabase, {
+      entityId: params.entityId,
+      blockType: "text",
+      label: HIDDEN_LABEL,
+      visibilityLevel: "gm",
+      visibilityScopeId: null,
+      createdBy: params.callerId,
+    });
+    textBlock = created.ok ? (await listBlocksForEntity(supabase, params.entityId)).find((b) => b.id === created.block.id) : undefined;
+  }
 
   if (!textBlock) {
     await insertAiProposal(supabase, {

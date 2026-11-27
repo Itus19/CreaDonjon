@@ -29,3 +29,11 @@ L'auteur veut aussi que le wiki d'une partie reflète **ce que le personnage a d
 - Une migration (table, RLS : lecture par les membres de la partie, écriture par le moteur signé ou le MJ ; refus par défaut).
 - Rien de dérivé n'est stocké : `statblock` garde des valeurs plates par conception (SCHEMA §7), la vue joueur se recalcule à chaque lecture.
 - **Hors périmètre** : un monde propre à chaque partie. Aujourd'hui une partie solo et une partie à table peuvent partager un monde, donc ses fiches ; les indices, eux, restent séparés par partie. Créer ou copier un monde par partie est un chantier à part, lié à la carte Azgaar propre à chaque partie.
+
+## Amendement du 27 novembre 2026 : l'apparence à part (V3.2-54)
+
+Retour de l'auteur : la description mêlait l'apparence et ce que le PNJ cache. Décision :
+- Un premier bloc texte **« Apparence »**, en tête de fiche, lisible : un portrait de 90 à 160 mots (âge, taille, corpulence, cheveux, visage, vêtements, équipement porté, allure), assez précis pour servir de consigne à un générateur d'images. L'IA le rédige une fois par PNJ, après la narration du tour où il est vu, d'après le libellé, la description visible, les objets portés tirés par le moteur et ce que la narration vient de montrer. Elle n'ajoute aucune arme ni armure : l'équipement reste celui du moteur.
+- Un détail physique caché proposé par l'IA (un tatouage sous la manche) va dans un bloc **« Ce qui ne se voit pas »**, réservé au MJ, à découvrir.
+- Une note du récit (`world_note`) porte un `aspect` (`apparence`, `cache`, `recit`) qui choisit son bloc ; un détail caché n'atterrit jamais dans un bloc lisible.
+- Trace : `ai_proposals` `create_block`, appliquée d'office comme les notes du monde (ADR 0114). Coût : un appel d'IA par PNJ, au plus un par tour.

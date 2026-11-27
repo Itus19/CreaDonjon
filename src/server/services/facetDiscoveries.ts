@@ -10,6 +10,7 @@ import { resolveBlockReferences } from "@/src/server/services/referenceChips";
 import { getWorldDefaultRulesetId } from "@/src/server/repos/worlds";
 import { formatCpFr } from "@/src/i18n/fr";
 import type { Locale } from "@/src/i18n/request";
+import type { BlockReference } from "@/src/core/schemas/blocks/reference";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -91,6 +92,25 @@ export interface NpcDisplayView {
 }
 
 /**
+ * Le nom français de chaque objet d'un inventaire : son libellé, ou le nom
+ * de sa fiche de règle (résolution groupée, une seule lecture). Partagé par
+ * la page du wiki (V3.2-51) et le portrait du PNJ (V3.2-54).
+ */
+export async function nameInventoryItems(
+  supabase: TypedClient,
+  params: { world: { id: string; slug: string }; locale: Locale; items: readonly { id: string; qty: number; label?: string; ref?: BlockReference }[] }
+): Promise<{ id: string; name: string; qty: number }[]> {
+  const refs = params.items.flatMap((i) => (i.ref ? [i.ref] : []));
+  const chips = refs.length > 0 ? await resolveBlockReferences(supabase, params.world, await getWorldDefaultRulesetId(supabase, params.world.id), params.locale, refs) : [];
+  let chipIndex = 0;
+  return params.items.map((i) => {
+    if (!i.ref) return { id: i.id, name: i.label ?? "objet", qty: i.qty };
+    const chip = chips[chipIndex++];
+    return { id: i.id, name: chip?.name ?? (i.ref.kind === "rule" ? i.ref.key : "objet"), qty: i.qty };
+  });
+}
+
+/**
  * V3.2-51 — La vue d'UN PNJ pour la page du wiki solo, avec le nom français
  * des objets de règle. `null` quand le PNJ n'a ni fiche allégée ni équipement.
  *
@@ -104,15 +124,7 @@ export async function readNpcDisplayView(
   const view = (await readNpcPlayerViews(supabase, { campaignId: params.campaignId, entityIds: [params.entityId], userId: params.userId })).get(params.entityId);
   if (!view || (!view.sheet && !view.gear)) return null;
 
-  const items = view.gear?.items ?? [];
-  const refs = items.flatMap((i) => ("ref" in i ? [i.ref] : []));
-  const chips = refs.length > 0 ? await resolveBlockReferences(supabase, params.world, await getWorldDefaultRulesetId(supabase, params.world.id), params.locale, refs) : [];
-  let chipIndex = 0;
-  const named = items.map((i) => {
-    if (!("ref" in i)) return { id: i.id, name: i.label, qty: i.qty };
-    const chip = chips[chipIndex++];
-    return { id: i.id, name: chip?.name ?? (i.ref.kind === "rule" ? i.ref.key : "objet"), qty: i.qty };
-  });
+  const named = await nameInventoryItems(supabase, { world: params.world, locale: params.locale, items: view.gear?.items ?? [] });
 
   const currency = view.gear?.currency;
   return {

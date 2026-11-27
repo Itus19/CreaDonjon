@@ -78,7 +78,7 @@ Demandé le 26 novembre, après la séance où jauger Mabelle déclenchait une a
 **Critères d'acceptation**
 - [ ] Un PNJ qui tente de soulever un tonneau : jet d'Athlétisme du moteur avec sa Force, issue racontée sans être jugée par l'IA.
 
-### ☐ V3.2-54 — Le récit nourrit la fiche du PNJ · `M` · **avec modèle IA** · Modèle conseillé : Opus
+### ☐ V3.2-54 — Le récit nourrit la fiche du PNJ · `M` · **avec modèle IA** · Modèle conseillé : Opus — **portrait et rangement des notes codés le 27 novembre**
 
 Retour de l'auteur, 27 novembre : « en créant la fiche wiki, le moteur doit aussi prendre en considération les récits de l'IA ».
 
@@ -86,6 +86,10 @@ Retour de l'auteur, 27 novembre : « en créant la fiche wiki, le moteur doit au
 - À l'ancrage, puis à chaque tour où le PNJ est décrit, ce que la narration a dit de lui (« elle essuie une chope », « un tablier taché ») arrive comme proposition structurée (`ai_proposals`, règle 9). Le moteur la valide contre la fiche (ADR 0104 : le wiki l'emporte), puis l'ajoute à « Ce qu'on voit ». Un objet nommé par le récit et absent de l'inventaire y entre, avec ses chiffres tirés des règles.
 - Les détails cachés (un tatouage sous la manche, une lettre dans la poche) vont dans un paragraphe `gm` de la description ou dans l'inventaire caché, à découvrir par indice (V3.2-50).
 
+Second retour, 27 novembre : un premier bloc d'apparence seule, riche, utilisable comme consigne Midjourney ; les secrets à part (ADR 0118, amendement).
+
+**Fait.** `src/core/ai/npcPortrait.ts` (schéma fermé, consigne, rangement des notes) ; `draftNpcPortrait` (`src/server/ai/npcPortrait.ts`, `generate_npc`) ; `ensureNpcAppearance` et `ensureNpcAppearancesForPresents` (`src/server/services/npcAppearance.ts`), appelés après la narration du tour solo : bloc « Apparence » en tête, détail caché dans « Ce qui ne se voit pas » (`gm`). `world_note` porte un `aspect` ; `proposeWorldNote` range la note dans le bon bloc. Reste : un objet nommé par le récit et absent de l'inventaire n'y entre pas encore.
+
 **Critères d'acceptation**
-- [ ] Après deux tours au Fanal, la fiche de Mabelle décrit ce que le récit a montré d'elle, sans rien contredire de sa fiche.
-- [ ] Un détail que le récit présente comme caché n'apparaît pas dans la vue joueur.
+- [ ] Après deux tours au Fanal, la fiche de Mabelle décrit ce que le récit a montré d'elle, sans rien contredire de sa fiche (à vérifier en jouant).
+- [x] Un détail que le récit présente comme caché n'apparaît pas dans la vue joueur (`soloWorldNotes.test.ts`, `npcAppearance.test.ts` : bloc `gm`).

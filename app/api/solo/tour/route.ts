@@ -20,6 +20,7 @@ import { resolveProviderForUser } from "@/src/server/ai/resolveProvider";
 import { narrateSoloTurn, raisonSansNarration, detailSansNarration } from "@/src/server/ai/soloNarration";
 import { anchorSketchesNamedInText } from "@/src/server/services/sceneSketches";
 import { ensureNpcSheetsForPresents } from "@/src/server/services/npcSheet";
+import { ensureNpcAppearancesForPresents } from "@/src/server/services/npcAppearance";
 import { discoverWhoIsHere, loadSceneView } from "@/src/server/services/soloScene";
 import type { PendingTurnResponse, TurnOutcome } from "@/lib/solo/types";
 
@@ -315,6 +316,22 @@ export async function POST(request: NextRequest) {
         // V3.2-18 : l'heure atteinte après la narration, pour l'en-tête.
         if (outcome.time) result.time = outcome.time;
         if (outcome.scene) result.scene = outcome.scene;
+        // V3.2-54 — un PNJ de la pièce sans portrait reçoit son bloc « Apparence »,
+        // nourri de ce que la narration vient de montrer. Best-effort, un par tour.
+        try {
+          await ensureNpcAppearancesForPresents(supabase, provider, {
+            world: { id: world.id, slug: world.slug },
+            campaignId: parsed.data.campaignId,
+            sessionEventId: result.record.eventId,
+            actorEntityId: parsed.data.entityId,
+            callerId: user.id,
+            locale,
+            narration: outcome.narration!,
+          });
+        } catch (erreur) {
+          // Ignoré volontairement : la narration est acquise ; retenté au tour suivant.
+          console.error("Portrait d'un PNJ impossible", erreur);
+        }
       } else {
         result.sansNarration = "inutilisable";
       }
