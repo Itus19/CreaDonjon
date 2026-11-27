@@ -133,16 +133,16 @@ Demandé le 26 novembre après la partie test avec Mabelle ; maquettes validées
 
 ## Lot 4 — Le combat
 
-### ☐ V3.2-66 — ADR : le moteur ouvre un combat en solo · `M` · sans modèle IA · Modèle conseillé : Opus — **ADR 0121 écrit le 27 novembre, proposé**
+### ☐ V3.2-66 — ADR : le moteur ouvre un combat en solo · `M` · sans modèle IA · Modèle conseillé : Opus — **ADR 0121 accepté le 27 novembre ; `campsDuCombat` codé**
 
 - Qui entre, de quel côté, contre qui : décidé par le moteur d'après les relations, le rôle et le courage ; l'IA raconte. Initiative par `rollInitiativeCheck` (cible de modificateur `initiative`, fil « Rendre jouables les 7 règles partielles »).
 
 **Vu à la partie test du 27 novembre** : trois attaques contre Mabelle, aucune n'a touché ni raté. Hors combat, `loadTargets` donne `ac: null` à un présent ; sans CA, pas de verdict ni de dégâts.
 
-**ADR 0121.** Une attaque contre un présent ouvre le combat d'office (choix de l'auteur attendu). Un PNJ n'en ouvre un que par une proposition validée. Les camps sortent d'une fonction pure `campsDuCombat` (amitié et dette à la bande « fort », garde contre l'agresseur, courage et archétype pour qui reste hors du combat), recalculée à chaque fin de round. Participants par `addEntityParticipant`, surprise au désavantage.
+**ADR 0121.** Une attaque contre un présent ouvre le combat d'office (choix de l'auteur) ; une attaque surprise suit la règle 2024 (désavantage à l'initiative de qui est surpris). Un PNJ n'en ouvre un que par une proposition validée. Les camps sortent d'une fonction pure `campsDuCombat` (amitié et dette à la bande « fort », garde contre l'agresseur, courage et archétype pour qui reste hors du combat), recalculée à chaque fin de round. Participants par `addEntityParticipant`, surprise au désavantage.
 
 **Critères d'acceptation**
-- [ ] Tests du noyau : `campsDuCombat` range la cible et ses proches d'un côté, l'agresseur et les siens de l'autre ; un garde rejoint le défenseur ; un enfant reste hors du combat ; un présent loin n'entre pas au premier round.
+- [x] Tests du noyau (`src/core/rules/combatCamps.test.ts`) : `campsDuCombat` range la cible et ses proches d'un côté, l'agresseur et les siens de l'autre ; un garde rejoint le défenseur ; un enfant reste hors du combat ; un présent loin n'entre pas au premier round.
 - [ ] Une attaque contre un présent crée le combat, ses participants avec CA et PV, et pose `activeCombatId` ; l'attaque touche ou rate contre la CA de la fiche allégée.
 
 ### ☐ V3.2-67 — Le combat dans le rail · `M` · sans modèle IA · Modèle conseillé : Opus — **après V3.2-66**
