@@ -47,7 +47,7 @@ Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été
 | [`05-narration.md`](backlog-v3.2/05-narration.md) | La narration qui fait avancer l'histoire : consigne, horloge, déplacement, repos long, ligne du tour (V3.2-17 à 19, 26, 27) |
 | [`06-jet-ou-pas.md`](backlog-v3.2/06-jet-ou-pas.md) | Faut-il un jet ? L'IA classe, le moteur fixe le DD (V3.2-22 à 24, ADR 0113) |
 | [`07-vie-du-monde.md`](backlog-v3.2/07-vie-du-monde.md) | La vie du monde : routines, régime, événements, psyché (V3.2-29 à 40, ADR 0115) |
-| [`08-fiche-pnj.md`](backlog-v3.2/08-fiche-pnj.md) | La fiche allégée des PNJ, les indices, les jets des PNJ (V3.2-46 à 52, ADR 0118) |
+| [`08-fiche-pnj.md`](backlog-v3.2/08-fiche-pnj.md) | La fiche allégée des PNJ, les indices, les jets des PNJ (V3.2-46 à 52, 54, ADR 0118) |
 
 | Ticket | État | Modèle IA | Titre | Fichier |
 |---|---|---|---|---|
@@ -104,6 +104,7 @@ Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été
 | V3.2-50 | ☐ | sans | Un jet réussi révèle des indices | [`08-fiche-pnj.md`](backlog-v3.2/08-fiche-pnj.md) |
 | V3.2-51 | ☐ | sans | En solo, le wiki se lit en vue joueur | [`08-fiche-pnj.md`](backlog-v3.2/08-fiche-pnj.md) |
 | V3.2-52 | ☐ | **avec** | Le moteur fait les jets des PNJ | [`08-fiche-pnj.md`](backlog-v3.2/08-fiche-pnj.md) |
+| V3.2-54 | ☐ | **avec** | Le récit nourrit la fiche du PNJ | [`08-fiche-pnj.md`](backlog-v3.2/08-fiche-pnj.md) |
 
 ---
 

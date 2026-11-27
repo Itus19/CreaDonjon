@@ -4,7 +4,7 @@
 
 Demandé le 26 novembre, après la séance où jauger Mabelle déclenchait une attaque. Chaque PNJ reçoit une fiche tirée d'un PNJ du SRD, son équipement et sa bourse ; la personne qui joue la découvre indice par indice ; le moteur fait les jets du PNJ.
 
-**Ordre :** V3.2-46 ; puis V3.2-47 et 48 (aucune migration) ; puis V3.2-49 (la migration), 50 et 51 ; enfin V3.2-52.
+**Ordre :** V3.2-46 ; puis V3.2-47 et 48 (aucune migration) ; puis V3.2-49 (la migration), 50 et 51 ; puis V3.2-54 (le récit nourrit la fiche) ; enfin V3.2-52.
 
 ### ☐ V3.2-46 — Jauger quelqu'un n'est pas l'attaquer · `S` · sans modèle IA · Modèle conseillé : Opus — **codé le 26 novembre ; reste à vérifier en jouant**
 
@@ -27,15 +27,18 @@ Demandé le 26 novembre, après la séance où jauger Mabelle déclenchait une a
 **Critères d'acceptation**
 - [x] Tests du noyau d'abord : même PNJ, même graine, même fiche ; chaque archétype de départ a sa fiche (`npcSheet.test.ts`).
 - [x] L'ancrage appelle la fiche avec l'archétype et la graine de la personne calculée, ou un Roturier pour une esquisse tirée à la main (`sceneSketches.test.ts`).
-- [ ] En jouant : une personne nouvellement ancrée reçoit une fiche Roturier ajustée, visible du seul MJ. Mabelle, déjà ancrée, n'en a pas : il faudra la lui donner à la main ou attendre un rattrapage.
+- [x] Rattrapage (retour de l'auteur, 27 novembre) : à chaque tour solo, un présent sans fiche allégée ni fiche de personnage en reçoit une (`ensureNpcSheetsForPresents`, quatre au plus par tour, MJ du monde seulement) — `npcSheet.test.ts`.
+- [ ] En jouant : une personne nouvellement ancrée reçoit une fiche Roturier ajustée, visible du seul MJ ; Mabelle reçoit la sienne au premier tour joué au Fanal.
 
 ### ☐ V3.2-48 — Équipement probable et bourse · `M` · sans modèle IA · Modèle conseillé : Sonnet
 
 - Bloc `inventory` tiré à graine fixe : objets probables par archétype (un couteau, un tablier, des outils), bourse selon milieu social et `settlement.wealth`, en pièces du SRD.
 - Écrit en même temps que la fiche de V3.2-47, en visibilité `gm`.
+- **Porté ou caché** (retour de l'auteur, 27 novembre) : chaque objet tiré dit s'il se voit (armure, arme à la ceinture, objet en main, tablier) ou non (bourse, couteau sous le tablier). Ce qui se voit est découvert d'office dès que le PNJ est vu (V3.2-53) ; le reste attend un indice (V3.2-50).
 
 **Critères d'acceptation**
 - [ ] Une aubergiste d'un bourg pauvre porte quelques pièces de cuivre et un couteau ; un noble d'une ville riche, une bourse d'or.
+- [ ] Le garde qu'on croise montre d'emblée sa lance et sa cotte de mailles dans sa fiche ; sa bourse reste cachée.
 
 ### ☐ V3.2-49 — La table des indices découverts et la vue joueur · `M` · sans modèle IA · Modèle conseillé : Opus
 
@@ -67,3 +70,15 @@ Demandé le 26 novembre, après la séance où jauger Mabelle déclenchait une a
 
 **Critères d'acceptation**
 - [ ] Un PNJ qui tente de soulever un tonneau : jet d'Athlétisme du moteur avec sa Force, issue racontée sans être jugée par l'IA.
+
+### ☐ V3.2-54 — Le récit nourrit la fiche du PNJ · `M` · **avec modèle IA** · Modèle conseillé : Opus
+
+Retour de l'auteur, 27 novembre : « en créant la fiche wiki, le moteur doit aussi prendre en considération les récits de l'IA ».
+
+- Toute fiche de PNJ a au moins un bloc texte « Ce qu'on voit » : apparence et équipement porté. Il est lisible par la personne qui joue dès que le PNJ est vu.
+- À l'ancrage, puis à chaque tour où le PNJ est décrit, ce que la narration a dit de lui (« elle essuie une chope », « un tablier taché ») arrive comme proposition structurée (`ai_proposals`, règle 9). Le moteur la valide contre la fiche (ADR 0104 : le wiki l'emporte), puis l'ajoute à « Ce qu'on voit ». Un objet nommé par le récit et absent de l'inventaire y entre, avec ses chiffres tirés des règles.
+- Les détails cachés (un tatouage sous la manche, une lettre dans la poche) vont dans un paragraphe `gm` de la description ou dans l'inventaire caché, à découvrir par indice (V3.2-50).
+
+**Critères d'acceptation**
+- [ ] Après deux tours au Fanal, la fiche de Mabelle décrit ce que le récit a montré d'elle, sans rien contredire de sa fiche.
+- [ ] Un détail que le récit présente comme caché n'apparaît pas dans la vue joueur.

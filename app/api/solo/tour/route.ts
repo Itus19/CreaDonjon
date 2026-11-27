@@ -19,6 +19,7 @@ import type { Locale } from "@/src/i18n/request";
 import { resolveProviderForUser } from "@/src/server/ai/resolveProvider";
 import { narrateSoloTurn, raisonSansNarration, detailSansNarration } from "@/src/server/ai/soloNarration";
 import { anchorSketchesNamedInText } from "@/src/server/services/sceneSketches";
+import { ensureNpcSheetsForPresents } from "@/src/server/services/npcSheet";
 import { discoverWhoIsHere } from "@/src/server/services/soloScene";
 import type { PendingTurnResponse, TurnOutcome } from "@/lib/solo/types";
 
@@ -261,6 +262,20 @@ export async function POST(request: NextRequest) {
     } catch (erreur) {
       // Ignoré volontairement : le tour ci-dessus est déjà acquis.
       console.error("Mémorisation de l'esquisse du tour impossible", erreur);
+    }
+
+    // V3.2-47 — rattrapage : les présents sans fiche allégée en reçoivent une
+    // (Mabelle, ancrée avant que la fiche existe). Même discipline : best-effort.
+    try {
+      await ensureNpcSheetsForPresents(supabase, {
+        campaignId: parsed.data.campaignId,
+        worldId: world.id,
+        actorEntityId: parsed.data.entityId,
+        callerId: user.id,
+      });
+    } catch (erreur) {
+      // Ignoré volontairement : le tour ci-dessus est déjà acquis ; retenté au tour suivant.
+      console.error("Rattrapage des fiches allégées impossible", erreur);
     }
 
     // V3.2-53 — ceux qui partagent la pièce sont vus : leur fiche entre au Wiki.
