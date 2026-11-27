@@ -150,7 +150,7 @@ describe("V3.2-53 — discoverWhoIsHere", () => {
   it("découvre ceux de la pièce que le joueur ne connaît pas encore, et eux seuls", async () => {
     scene = enterScene(enterScene(emptyScene("gue"), { entityId: "mabelle", zone: "near" }), { entityId: "ourse", zone: "near" });
     alreadyKnown = new Set(["ourse"]);
-    await discoverWhoIsHere(supabase, { campaignId: "c", callerId: "u" });
+    expect(await discoverWhoIsHere(supabase, { campaignId: "c", callerId: "u" })).toBe(1);
     expect(discoverCalls).toEqual([{ entityId: "mabelle", level: "known" }]);
   });
 
