@@ -48,12 +48,14 @@ Demandé le 26 novembre après la partie test avec Mabelle ; maquettes validées
 
 **Fait.** `SoloShell` capture les clics sur les liens de l'écran de jeu (`cibleDepuisAdresse`, testé : fiche ou règle de CE monde, sans requête ni sous-chemin ; Ctrl, Maj et la molette gardent leur sens) et ouvre `VoletLecture`. Fiche : nouvelle route `app/api/worlds/[worldSlug]/joueur/entities/[entitySlug]` (paramètres validés par Zod, session exigée, `getPlayerEntityDetail` pour CE compte, découverte « detailed » comme la page), rendue par `PublicEntityBody`. Règle : la route `/window` existante, rendue par `RuleEntryView`. Les liens de la fiche lue s'ouvrent à leur tour dans le volet. **Test à l'écran du 27 novembre** (Testeuse A, en local) : rail, volet, fiche et règle lues en entier, second clic qui ferme : bons. Corrigé ensuite : les liens de règle sans « joueur » (`/m/<monde>/regles/<clé>`, actions de la fiche, équipement d'une classe) faisaient quitter la partie ; la liste des règles disait « Aucune règle trouvée » pendant le chargement ; une recherche laissait les catégories repliées. Pas encore vus : la date dans le bandeau et les visages (le Banc d'essai n'a pas de scène). **Manque** : le test d'intégration RLS de la nouvelle route (elle ne fait que réutiliser la lecture de la page du wiki, déjà couverte).
 
-### ☐ V3.2-58 — Les notes dans le volet · `S` · sans modèle IA · Modèle conseillé : Sonnet
+### ☐ V3.2-58 — Les notes dans le volet · `S` · sans modèle IA · Modèle conseillé : Sonnet — **codé le 27 novembre ; reste à vérifier à l'écran**
 
 - L'entrée Notes ouvre dans le volet une prise de notes simple de la partie, au lieu de la page Notes.
 
 **Critères d'acceptation**
 - [ ] Écrire une note pendant la partie sans quitter l'écran de jeu.
+
+**Fait** (retour de l'auteur, 27 novembre : l'entrée Notes menait à la page Notes, avec l'ancien rail). L'entrée Notes ouvre le volet sur le cahier complet (`VoletNotes.tsx`, éditeur chargé à l'ouverture), lu par `/api/worlds/[worldSlug]/joueur/notes` (Zod, session exigée, `loadNotebookWorkspace` de CE compte).
 
 ---
 
@@ -75,13 +77,15 @@ Demandé le 26 novembre après la partie test avec Mabelle ; maquettes validées
 
 ## Lot 2 — Le volet d'une personne
 
-### ☐ V3.2-60 — Le volet d'une personne : portrait, état, humeur · `M` · sans modèle IA · Modèle conseillé : Opus
+### ☐ V3.2-60 — Le volet d'une personne : portrait, état, humeur · `M` · sans modèle IA · Modèle conseillé : Opus — **première étape codée le 27 novembre**
 
 - Clic sur un visage du rail : le volet montre cette personne. En tête, l'anneau-jauge de 116 px avec le portrait du wiki dedans (initiales sinon), le nom pour la table, puis l'état physique (indemne vert, blessé jaune, en sang rouge, à terre gris, jamais les PV), les conditions visibles et l'humeur visible.
 - Lien vers sa page du wiki (dans le volet, V3.2-57).
 
 **Critères d'acceptation**
 - [ ] Mabelle indemne : pastille verte, aucun chiffre de PV dans la réponse du serveur.
+
+**Première étape** (retour de l'auteur, 27 novembre : un clic sur un visage ouvrait la liste Présents). Un visage du rail, ou une carte de Présents, ouvre `VoletPersonne.tsx` : anneau d'attitude perçue de 116 px avec les initiales, nom, distance, humeur de scène, « Envers toi » en mots, puis la page du wiki en entier (vue joueur). Second clic sur le même visage : le volet se ferme. La scène porte désormais le slug de chaque présent (`loadSceneView`). **Reste** : portrait dans l'anneau, état physique et conditions, barres continues (V3.2-61), fiche et psyché découvertes (V3.2-62, 63).
 
 ### ☐ V3.2-61 — « Envers toi » : barres continues avec zone floue · `M` · sans modèle IA · Modèle conseillé : Opus
 

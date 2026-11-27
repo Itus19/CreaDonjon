@@ -47,13 +47,11 @@ function IconeTrait({ children }: { children: ReactNode }) {
  * présents. Un clic sur l'entrée ouverte referme le volet (`basculerVolet`).
  */
 function ContenuRailJeu({
-  worldSlug,
   present,
   sketches,
   voletOuvert,
   basculerVolet,
 }: {
-  worldSlug: string;
   present: SceneView["present"];
   sketches: SceneView["sketches"];
   voletOuvert: boolean;
@@ -61,7 +59,7 @@ function ContenuRailJeu({
 }) {
   const t = useTranslations("solo");
   const { replie } = useRailReplie();
-  const { ongletMonde, interlocuteur } = useSoloContexte();
+  const { ongletMonde, interlocuteur, ouvrirPersonne } = useSoloContexte();
   const { visibles, autres } = rondsDuRail(present, sketches);
 
   return (
@@ -76,16 +74,12 @@ function ContenuRailJeu({
             onClick={() => basculerVolet(onglet)}
           />
         ))}
-        {/* V3.2-58 : la prise de notes dans le volet viendra ; d'ici là, la page Notes. */}
+        {/* V3.2-58 : le cahier s'ouvre dans le volet ; la page Notes faisait quitter la partie. */}
         <RailRow
-          href={`/m/${worldSlug}/joueur/notes`}
-          icone={
-            <IconeTrait>
-              <rect x="4" y="3" width="16" height="18" rx="2" />
-              <path d="M8 8h8M8 12h8M8 16h5" />
-            </IconeTrait>
-          }
+          icone={<IconeTrait>{ICONES_MONDE.notes}</IconeTrait>}
           libelle={t("railJeu.notes")}
+          actif={voletOuvert && ongletMonde === "notes"}
+          onClick={() => basculerVolet("notes")}
         />
       </div>
 
@@ -102,7 +96,7 @@ function ContenuRailJeu({
                 <li key={r.id} className={nouvelleZone ? "mt-1 border-t border-edge pt-1" : ""}>
                   <button
                     type="button"
-                    onClick={() => basculerVolet("presents")}
+                    onClick={() => ouvrirPersonne(r.id)}
                     aria-label={libelle}
                     title={replie ? libelle : undefined}
                     className={`flex w-full items-center gap-2.5 rounded-xl px-1.5 py-1 text-left transition-colors hover:bg-panel-raised motion-reduce:transition-none ${
@@ -141,7 +135,6 @@ function ContenuRailJeu({
 /** Rend le contenu du rail de jeu dans l'emplacement que `PlayerShell` a laissé. */
 export default function RailJeu(props: {
   emplacement: HTMLElement;
-  worldSlug: string;
   present: SceneView["present"];
   sketches: SceneView["sketches"];
   voletOuvert: boolean;

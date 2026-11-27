@@ -7,6 +7,7 @@ import Tabs from "@/components/shared/Tabs";
 import { SoloContexteProvider, type OngletMonde } from "@/components/solo/SoloContexte";
 import RailJeu, { useEmplacementRailJeu } from "@/components/solo/RailJeu";
 import VoletLecture from "@/components/solo/VoletLecture";
+import VoletPersonne from "@/components/solo/VoletPersonne";
 import { cibleDepuisAdresse, type CibleLecture } from "@/lib/ui/railJeu";
 import type { SceneView } from "@/lib/solo/types";
 import type { GameTime } from "@/src/core/rules/scene";
@@ -173,6 +174,11 @@ export default function SoloShell({
   const voletDeJeu = railJeu !== undefined && emplacementRail !== null;
   // V3.2-57 : la fiche ou la règle lue en entier dans le volet ; `null` : le volet montre l'entrée du rail.
   const [lecture, setLecture] = useState<CibleLecture | null>(null);
+  // V3.2-60 : la personne présente ouverte dans le volet (identifiant de fiche ou d'esquisse) ; `null` : aucune.
+  const [personneId, setPersonneId] = useState<string | null>(null);
+  const personne = railJeu?.present.find((p) => p.entityId === personneId);
+  const esquisse = railJeu?.sketches.find((s) => s.id === personneId);
+  const personneOuverte = personne !== undefined || esquisse !== undefined;
   const [interlocuteur, definirInterlocuteur] = useState<string | null>(null);
   const deplierMonde = useCallback(
     (onglet: OngletMonde) => {
@@ -187,11 +193,28 @@ export default function SoloShell({
   const basculerVolet = useCallback(
     (onglet: OngletMonde) => {
       // Une lecture ouverte : l'entrée ramène d'abord à sa liste, sans fermer le volet.
-      if (ordinateur && !gaucheRepliee && ongletMonde === onglet && lecture === null) basculerGauche();
+      if (ordinateur && !gaucheRepliee && ongletMonde === onglet && lecture === null && personneId === null) basculerGauche();
       else deplierMonde(onglet);
       setLecture(null);
+      setPersonneId(null);
     },
-    [ordinateur, gaucheRepliee, ongletMonde, lecture, basculerGauche, deplierMonde]
+    [ordinateur, gaucheRepliee, ongletMonde, lecture, personneId, basculerGauche, deplierMonde]
+  );
+
+  /** V3.2-60 : un visage du rail ouvre le volet sur cette personne ; un second clic sur le même visage le referme. */
+  const ouvrirPersonne = useCallback(
+    (id: string) => {
+      setLecture(null);
+      if (ordinateur && !gaucheRepliee && personneId === id) {
+        basculerGauche();
+        setPersonneId(null);
+        return;
+      }
+      setPersonneId(id);
+      if (gaucheRepliee) basculerGauche();
+      if (!ordinateur) setColonne("monde");
+    },
+    [ordinateur, gaucheRepliee, personneId, basculerGauche]
   );
 
   /**
@@ -223,8 +246,8 @@ export default function SoloShell({
   // V3.2-18 : l'heure rendue par le dernier tour, pour le bandeau (rendu une fois par la page serveur).
   const [heure, definirHeure] = useState<GameTime | null>(null);
   const contexte = useMemo(
-    () => ({ replie: ficheRepliee, jauges, publier, demande, definirDemande, rechargerFiche, inscrireRecharge, ongletMonde, choisirOngletMonde, deplierMonde, interlocuteur, definirInterlocuteur, heure, definirHeure, voletDeJeu }),
-    [ficheRepliee, jauges, publier, demande, definirDemande, rechargerFiche, inscrireRecharge, ongletMonde, deplierMonde, interlocuteur, heure, voletDeJeu]
+    () => ({ replie: ficheRepliee, jauges, publier, demande, definirDemande, rechargerFiche, inscrireRecharge, ongletMonde, choisirOngletMonde, deplierMonde, interlocuteur, definirInterlocuteur, heure, definirHeure, voletDeJeu, ouvrirPersonne }),
+    [ficheRepliee, jauges, publier, demande, definirDemande, rechargerFiche, inscrireRecharge, ongletMonde, deplierMonde, interlocuteur, heure, voletDeJeu, ouvrirPersonne]
   );
 
   /**
@@ -253,7 +276,6 @@ export default function SoloShell({
       {voletDeJeu && emplacementRail && railJeu && (
         <RailJeu
           emplacement={emplacementRail}
-          worldSlug={worldSlug}
           present={railJeu.present}
           sketches={railJeu.sketches}
           voletOuvert={!gaucheRepliee}
@@ -295,8 +317,10 @@ export default function SoloShell({
                 <div className="flex h-10 shrink-0 items-center justify-between gap-2 border-b border-edge pl-4 pr-2">
                   {lecture ? (
                     <button type="button" onClick={() => setLecture(null)} className="min-w-0 truncate py-1 text-xs text-ink-muted hover:text-ink">
-                      ← {t(`bandeMonde.${ongletMonde}`)}
+                      ← {personneOuverte ? (personne?.name ?? esquisse?.name) : t(`bandeMonde.${ongletMonde}`)}
                     </button>
+                  ) : personneOuverte ? (
+                    <span className="min-w-0 truncate font-chrome text-sm font-medium text-ink">{personne?.name ?? esquisse?.name}</span>
                   ) : (
                     <span className="min-w-0 truncate font-chrome text-sm font-medium text-ink">{t(`bandeMonde.${ongletMonde}`)}</span>
                   )}
@@ -315,8 +339,13 @@ export default function SoloShell({
                     <VoletLecture worldSlug={worldSlug} cible={lecture} />
                   </div>
                 )}
+                {!lecture && personneOuverte && (
+                  <div className="min-h-0 flex-1 overflow-y-auto p-4">
+                    <VoletPersonne worldSlug={worldSlug} personne={personne} esquisse={esquisse} />
+                  </div>
+                )}
                 {/* La liste reste montée sous la lecture : sa recherche et son défilement survivent au retour. */}
-                <div className={`flex min-h-0 flex-1 flex-col ${lecture ? "hidden" : ""}`}>{monde}</div>
+                <div className={`flex min-h-0 flex-1 flex-col ${lecture || personneOuverte ? "hidden" : ""}`}>{monde}</div>
               </div>
             ) : (
               <>

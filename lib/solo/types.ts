@@ -99,6 +99,8 @@ export interface SceneView {
   present: {
     entityId: string;
     name: string;
+    /** ADR 0120 (V3.2-60) : pour ouvrir sa page du wiki dans le volet d'une personne. `null` ou absent : pas de lien. */
+    slug?: string | null;
     zone: "engaged" | "near" | "far";
     /** Un mot sur l'attitude ("mefiant"), pose a l'entree en scene — `undefined` : rien n'ecrit ce champ aujourd'hui (V3-D3, colonne Présents). */
     disposition?: string;
