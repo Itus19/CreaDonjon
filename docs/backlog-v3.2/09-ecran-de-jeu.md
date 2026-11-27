@@ -149,9 +149,11 @@ Demandé le 26 novembre après la partie test avec Mabelle ; maquettes validées
 
 ## Petits correctifs vus pendant la partie test
 
-### ☐ V3.2-69 — « Demande honorée » ne sort plus dans Changements · `S` · sans modèle IA · Modèle conseillé : Sonnet
+### ☑ V3.2-69 — « Demande honorée » ne sort plus dans la ligne du tour · `S` · sans modèle IA · Modèle conseillé : Sonnet — **corrigé le 27 novembre**
 
-- La note interne de `turnIntent.ts` (`note: "Demande honorée"`) ne doit pas s'afficher dans l'onglet Changements.
+- La note interne de `turnIntent.ts` (`note: "Demande honorée"`) ne doit pas s'afficher sous le tour.
+
+**Fait.** Elle ne passait pas par l'onglet Changements (qui lit les propositions) mais par la ligne du tour (`summarizeTurns`, ADR 0114). Une mise à jour dont le seul correctif remet `pending_request` à vide est écartée, reconnue à son correctif plutôt qu'à son texte, ce qui couvre aussi les anciennes lignes du journal. « Jet demandé » et « Demande abandonnée » restent : ils disent quelque chose. Testé (`turnSummary.test.ts`).
 
 ### ☐ V3.2-70 — Une attaque demande sa cible ; l'attaque à mains nues existe · `S` · sans modèle IA · Modèle conseillé : Opus
 

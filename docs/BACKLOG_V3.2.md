@@ -121,7 +121,7 @@ Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été
 | V3.2-66 | ☐ | sans | ADR : le moteur ouvre un combat en solo | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
 | V3.2-67 | ☐ | sans | Le combat dans le rail | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
 | V3.2-68 | ☐ | sans | L'initiative dans le fil | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
-| V3.2-69 | ☐ | sans | « Demande honorée » ne sort plus dans Changements | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
+| V3.2-69 | ☑ | sans | « Demande honorée » ne sort plus dans la ligne du tour | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
 | V3.2-70 | ☐ | sans | Une attaque demande sa cible ; l'attaque à mains nues existe | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
 | V3.2-71 | ☑ | sans | L'outil de dés ne s'ouvre plus après le résultat | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
 | V3.2-72 | ☐ | sans | La page wiki d'un PJ montre sa fiche, pas des titres vides | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
