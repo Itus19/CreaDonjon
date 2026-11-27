@@ -155,9 +155,13 @@ Demandé le 26 novembre après la partie test avec Mabelle ; maquettes validées
 
 **Fait.** Elle ne passait pas par l'onglet Changements (qui lit les propositions) mais par la ligne du tour (`summarizeTurns`, ADR 0114). Une mise à jour dont le seul correctif remet `pending_request` à vide est écartée, reconnue à son correctif plutôt qu'à son texte, ce qui couvre aussi les anciennes lignes du journal. « Jet demandé » et « Demande abandonnée » restent : ils disent quelque chose. Testé (`turnSummary.test.ts`).
 
-### ☐ V3.2-70 — Une attaque demande sa cible ; l'attaque à mains nues existe · `S` · sans modèle IA · Modèle conseillé : Opus
+### ☑ V3.2-70 — Une attaque demande sa cible ; l'attaque à mains nues existe · `S` · sans modèle IA · Modèle conseillé : Opus — **codé le 27 novembre ; reste à vérifier à l'écran**
 
 - Une attaque sans cible demande « sur qui ? » parmi les présents. Frappe à mains nues du SRD 5.2 (1 + modificateur de Force, contondant, ou empoigner / pousser).
+
+**Fait.** La pastille de cible d'une attaque sans cible dit « sur qui ? », et Jouer (comme Entrée) attend qu'on choisisse, tant qu'il y a quelqu'un à viser. `unarmedStrike` (`src/core/rules/unarmedStrike.ts`, testé) : attaque Force + maîtrise, dégâts 1 + Force, contondants, jamais négatifs. Le catalogue du tour l'ajoute en partie, après les armes : « j'attaque » sans arme en main prend le poing, « coup de poing » le nomme. Ses dégâts, fixes, s'écrivent avec l'attaque qui touche, sans demander de dé.
+
+**Reste.** Empoigner et pousser viennent avec le combat (V3.2-66). Hors combat, un présent de la scène n'a pas encore de CA pour le moteur (`loadTargets`) : l'attaque n'a donc ni « touché » ni « raté », ni dégâts. C'est l'ouverture du combat (V3.2-66) qui donnera la CA des fiches allégées.
 
 ### ☑ V3.2-71 — L'outil de dés ne s'ouvre plus après le résultat · `S` · sans modèle IA · Modèle conseillé : Sonnet — **corrigé le 27 novembre**
 

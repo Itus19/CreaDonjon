@@ -28,6 +28,7 @@ import { autoSuccess, dcForTier, type CheckTier } from "@/src/core/rules/checkDi
 import type { ResolvedEffect, FiredEvent } from "@/src/core/rules/triggers";
 import { flooredRng, lightExtraDamageMod, resolveCheckRoll, resolveDamageRoll, weaponAttackAbility, type AdvantageState } from "@/src/core/rules/action";
 import { rollDice } from "@/src/core/dice/roll";
+import { UNARMED_ACTION_ID, UNARMED_TERMS_FR, unarmedStrike } from "@/src/core/rules/unarmedStrike";
 import { eventsForCheck, eventsForSave } from "@/src/core/rules/gameEvents";
 import { parseFormula } from "@/src/core/formula/parser";
 import type { TraceStep } from "@/src/core/formula/evaluate";
@@ -297,6 +298,13 @@ export async function buildIntentBarData(
     for (const item of legeres) {
       actions.push({ id: item.id, kind: "weapon_attack", label: `${nameByItemId.get(item.id) || "Arme"} — attaque en plus (action Bonus)`, terms: [], lightExtra: true });
     }
+  }
+  // V3.2-70 : la Frappe à mains nues, toujours possible, après les armes (une
+  // attaque sans arme nommée prend la première du catalogue : l'arme en main
+  // d'abord, le poing faute d'arme). Seulement en partie : c'est le chemin à
+  // demande posée (`proposeIntentRequest`) qui sait la jouer.
+  if (params.campaignId) {
+    actions.push({ id: UNARMED_ACTION_ID, kind: "weapon_attack", label: "Frappe à mains nues", terms: UNARMED_TERMS_FR });
   }
   for (const skill of SKILLS) {
     // V3.2-21 : le nom seul ne lance un jet que s'il est toute la phrase ;
@@ -909,6 +917,21 @@ function buildPendingBasis(
   ctx: CharacterActionContext,
   choice: RollChoice
 ): PendingBasis | { error: IntentErrorReason } {
+  if (choice.kind === "weapon_attack" && choice.actionId === UNARMED_ACTION_ID) {
+    const frappe = unarmedStrike({ strMod: ctx.sheet.abilities.str.mod, proficiencyBonus: ctx.sheet.proficiencyBonus });
+    const what = "Attaque — Frappe à mains nues";
+    return {
+      kind: "weapon_attack",
+      action_id: UNARMED_ACTION_ID,
+      dc: null,
+      die_max: 20,
+      modifier: frappe.attackModifier,
+      chips: [{ label: what, value: frappe.attackModifier }],
+      what,
+      bonus_dice: [],
+    };
+  }
+
   if (choice.kind === "weapon_attack") {
     const item = ctx.inventoryData?.items.find((i) => i.id === choice.actionId);
     if (!item) return { error: "item_not_found" };
@@ -1254,6 +1277,13 @@ async function finishResolution(
         (pending.dc === null ? "" : ` contre CA ${pending.dc} — ${hit ? "touché" : "raté"}`) +
         `${crit}.`,
     ];
+    // V3.2-70 : la frappe à mains nues a des dégâts fixes (1 + Force) : aucun dé à demander, ils s'écrivent avec l'attaque.
+    let damage: { expression: string; total: number; trace: TraceStep[] } | null = null;
+    if (hit === true && pending.action_id === UNARMED_ACTION_ID && ctx) {
+      const degats = unarmedStrike({ strMod: ctx.sheet.abilities.str.mod, proficiencyBonus: ctx.sheet.proficiencyBonus }).damage;
+      facts.push(`Dégâts sur ${pending.target_label ?? "la cible"} : ${degats} (contondants).`);
+      damage = { expression: "1 + Force", total: degats, trace: [{ text: "1 + modificateur de Force", value: degats }] };
+    }
     const intent = {
       text: pending.player_action_text,
       kind: pending.kind,
@@ -1268,14 +1298,14 @@ async function finishResolution(
       attack: { expression, total, critical: isCritical, critical_fail: isCriticalFail, trace },
       ac: pending.dc,
       verdict: hit === null ? null : hit ? "hit" : "miss",
-      damage: null,
+      damage,
       weapon: pending.what,
       origin,
     };
     const eventId = await journalTurn(supabase, { campaignId: params.campaignId, callerId: params.callerId, entityId: params.entityId, kind: "roll", payload });
 
     let chained: PendingRequest | null = null;
-    if (hit === true) {
+    if (hit === true && pending.action_id !== UNARMED_ACTION_ID) {
       const basis = ctx ? buildDamageBasis(ctx, pending.action_id, isCritical, pending.light_extra === true) : { error: "not_found" as const };
       if (!("error" in basis)) {
         chained = {

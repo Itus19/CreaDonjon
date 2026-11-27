@@ -445,7 +445,7 @@ export default function IntentBar({
 
   function submit() {
     if (pending) void encash();
-    else void play();
+    else if (!cibleManquante) void play();
   }
 
   /**
@@ -557,13 +557,15 @@ export default function IntentBar({
         : "Aucune mécanique reconnue : ce tour partira sans jet. Clique pour corriger.";
   const montrerCible = chosenAction !== null && (chosenAction.kind === "weapon_attack" || chosenTarget !== null) && data.targetDetails.length > 0;
   const cibleAChoisir = chosenAction?.kind === "weapon_attack" && chosenTarget === null;
+  // V3.2-70 : une attaque sans cible ne part pas tant qu'on n'a pas dit sur qui, parmi les présents.
+  const cibleManquante = cibleAChoisir && data.targetDetails.length > 0;
   // Triées par famille : `Dropdown` pose un titre à chaque changement de `groupe`.
   const ordreFamilles = Object.keys(KIND_GROUPS);
   const optionsAction = [...data.catalog.actions]
     .sort((a, b) => ordreFamilles.indexOf(a.kind) - ordreFamilles.indexOf(b.kind))
     .map((a) => ({ value: optionKey(a), label: a.label, groupe: KIND_GROUPS[a.kind] }));
   const optionsCible = [
-    { value: "", label: "Aucune cible", labelCourt: cibleAChoisir ? "cible à choisir" : "aucune cible" },
+    { value: "", label: "Aucune cible", labelCourt: cibleAChoisir ? "sur qui ?" : "aucune cible" },
     ...data.targetDetails.map((t) => ({
       value: t.id,
       label: t.ac === null ? t.label : `${t.label} — CA ${t.ac}`,
@@ -809,7 +811,13 @@ export default function IntentBar({
                 Ardoise
               </button>
             )}
-            <button type="button" className={isQuestion ? BTN_SECONDARY : BTN_PRIMARY} onClick={() => void play()} disabled={busy || vide || tradeBlocked}>
+            <button
+              type="button"
+              className={isQuestion ? BTN_SECONDARY : BTN_PRIMARY}
+              onClick={() => void play()}
+              disabled={busy || vide || tradeBlocked || cibleManquante}
+              title={cibleManquante ? "Sur qui ? Choisis la cible de l'attaque parmi les présents." : undefined}
+            >
               {busy && lastAttempt === "submit" ? "…" : trade ? TRADE_LABELS[trade.direction].button : "Jouer"}
             </button>
           </>
