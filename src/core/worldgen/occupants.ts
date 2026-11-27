@@ -76,6 +76,12 @@ export interface PresentOccupant extends Occupant {
 export interface WikiWorker {
   entityId: string;
   archetype?: string;
+  /**
+   * V3.2-45 — la graine de la personne calculée que cette entité est devenue
+   * en s'ancrant : elle reprend exactement sa place (son rôle, sa routine),
+   * au lieu de la première place libre du personnel.
+   */
+  seed?: number;
 }
 
 /** Plafond des gens attachés tirés (décision 6) ; les PNJ du wiki passent au-dessus, le wiki l'emporte. */
@@ -290,12 +296,15 @@ export function attachedPeople(settlement: SettlementBlockData, place: OccupantP
     }
   }
 
-  // Les PNJ du wiki prennent les places du personnel dans l'ordre ; en surnombre, ils s'ajoutent.
-  const staffSlots = people.length;
-  for (const [i, worker] of workers.entries()) {
+  // Les PNJ du wiki sans graine prennent les places du personnel dans l'ordre, sauf celles
+  // qu'une personne ancrée (avec sa graine) tient déjà ; en surnombre, ils s'ajoutent.
+  const seeded = new Map(workers.filter((w) => w.seed !== undefined).map((w) => [w.seed, w]));
+  const freeSlots = people.map((p, i) => (seeded.has(p.seed) ? -1 : i)).filter((i) => i >= 0);
+  for (const [n, worker] of workers.filter((w) => w.seed === undefined).entries()) {
     const archetype = worker.archetype && archetypeParCle(worker.archetype) ? worker.archetype : null;
-    if (i < staffSlots) {
-      people[i] = { ...people[i], entityId: worker.entityId, ...(archetype ? { archetype } : {}) };
+    const slot = freeSlots[n];
+    if (slot !== undefined) {
+      people[slot] = { ...people[slot], entityId: worker.entityId, ...(archetype ? { archetype } : {}) };
     } else {
       const rank = people.filter((p) => p.role === "staff").length;
       const fallback = template.staff?.archetype ?? template.head?.archetype ?? "personnel_de_lieu";
@@ -324,7 +333,13 @@ export function attachedPeople(settlement: SettlementBlockData, place: OccupantP
     }
   }
 
-  return people;
+  // V3.2-45 : une personne calculée ancrée dans le wiki garde sa graine ; là où elle aurait été, c'est elle.
+  return people.map((p) => {
+    const worker = seeded.get(p.seed);
+    if (!worker) return p;
+    const archetype = worker.archetype && archetypeParCle(worker.archetype) ? worker.archetype : null;
+    return { ...p, entityId: worker.entityId, ...(archetype ? { archetype } : {}) };
+  });
 }
 
 /** Les clients d'un soir candidats par jour, selon la taille de la ville. */

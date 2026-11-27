@@ -95,6 +95,13 @@ export const INTENT_VERBS_FR: IntentVerb[] = [
   },
   { kind: "skill_check", actionId: "investigation", terms: ["fouille", "fouiller", "inspecte", "inspecter", "examine", "examiner"] },
   { kind: "skill_check", actionId: "perception", terms: ["guette", "guetter", "scrute", "scruter", "ecoute", "ecouter"] },
+  // V3.2-46 (retour de jeu, Mabelle) : « j'essaie de déterminer si elle semble
+  // apte à se défendre » cherche des indices sur quelqu'un, c'est de la Perception.
+  {
+    kind: "skill_check",
+    actionId: "perception",
+    terms: ["determine", "determiner", "evalue", "evaluer", "observe", "observer", "toise", "toiser", "detaille", "detailler"],
+  },
   { kind: "skill_check", actionId: "athletics", terms: ["escalade", "escalader", "grimpe", "grimper", "saute", "sauter", "nage", "nager"] },
   { kind: "skill_check", actionId: "acrobatics", terms: ["esquive", "esquiver", "roule", "rouler"] },
   { kind: "skill_check", actionId: "persuasion", terms: ["persuade", "persuader", "convaincs", "convaincre", "negocie", "negocier"] },
@@ -108,6 +115,13 @@ export const INTENT_VERBS_FR: IntentVerb[] = [
   { kind: "skill_check", actionId: "animal_handling", terms: ["amadoue", "amadouer", "dresse", "dresser"] },
   { kind: "skill_check", actionId: "performance", terms: ["chante", "chanter", "danse", "danser"] },
 ];
+
+/**
+ * V3.2-46 — ce qui ouvre une hypothèse : un verbe qui suit, dans la même
+ * proposition, n'est pas un geste (« si je venais à l'attaquer »). « si j »
+ * couvre « si j'attaque » : l'apostrophe sépare les mots.
+ */
+export const INTENT_HYPOTHETICAL_MARKERS_FR: string[] = ["si je", "si j", "si on", "si nous", "au cas ou", "et si", "imaginons", "suppose", "supposons"];
 
 /**
  * V3.2-10 (ADR 0110) — les verbes d'un échange, même lexique fermé que

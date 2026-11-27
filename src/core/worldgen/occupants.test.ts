@@ -111,6 +111,23 @@ describe("attachedPeople — les gens attachés à un lieu (V3.2-30)", () => {
     expect(gens.filter((o) => !o.entityId)).toHaveLength(0);
   });
 
+  it("une personne ancrée avec sa graine reprend exactement sa place, même habituée", () => {
+    const sans = attaches(ville, auberge, 3);
+    const habitue = sans.find((o) => o.role === "regular")!;
+    const avec = attaches(ville, auberge, 3, [{ entityId: "bram", seed: habitue.seed }, { entityId: "mabelle" }]);
+    expect(avec.find((o) => o.seed === habitue.seed)).toMatchObject({ role: "regular", entityId: "bram" });
+    expect(avec[0]).toMatchObject({ role: "head", entityId: "mabelle" });
+    expect(avec.length).toBe(sans.length);
+  });
+
+  it("une personne ancrée du personnel ne laisse pas sa place à un PNJ sans graine", () => {
+    const sans = attaches({ ...ville, wealth: "reputee" }, auberge, 3);
+    const tete = sans[0];
+    const avec = attaches({ ...ville, wealth: "reputee" }, auberge, 3, [{ entityId: "mabelle" }, { entityId: "aubergiste-ancre", seed: tete.seed }]);
+    expect(avec[0].entityId).toBe("aubergiste-ancre");
+    expect(avec.find((o) => o.role === "staff" && o.rank === 0)?.entityId).toBe("mabelle");
+  });
+
   it("un PNJ du wiki garde l'archétype écrit sur sa fiche", () => {
     const gens = attaches(ville, auberge, 3, [{ entityId: "mabelle", archetype: "noble" }]);
     expect(gens[0].archetype).toBe("noble");

@@ -32,6 +32,7 @@ Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été
 4. **Ce qui demande de la conception** : V3.2-6 (les liens automatiques), le plus risqué ; V3.2-13 (l'attitude perçue), puis V3.2-14 qui en dépend.
 5. **Ce qui casse le jeu à chaque auberge** : V3.2-8 et 9 (le moteur règle un échange, au prix des règles), puis 10 (l'écran), puis 11 (le PNJ sait ce que tu as et ce que tu dois). Décision : ADR 0110.
 6. **La vie du monde** (`07-vie-du-monde.md`, ADR 0115) : après la fusion de la PR #17, V3.2-29 à 40.
+7. **La fiche allégée des PNJ** (`08-fiche-pnj.md`, ADR 0118) : V3.2-46 à 52.
 
 ---
 
@@ -46,6 +47,7 @@ Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été
 | [`05-narration.md`](backlog-v3.2/05-narration.md) | La narration qui fait avancer l'histoire : consigne, horloge, déplacement, repos long, ligne du tour (V3.2-17 à 19, 26, 27) |
 | [`06-jet-ou-pas.md`](backlog-v3.2/06-jet-ou-pas.md) | Faut-il un jet ? L'IA classe, le moteur fixe le DD (V3.2-22 à 24, ADR 0113) |
 | [`07-vie-du-monde.md`](backlog-v3.2/07-vie-du-monde.md) | La vie du monde : routines, régime, événements, psyché (V3.2-29 à 40, ADR 0115) |
+| [`08-fiche-pnj.md`](backlog-v3.2/08-fiche-pnj.md) | La fiche allégée des PNJ, les indices, les jets des PNJ (V3.2-46 à 52, ADR 0118) |
 
 | Ticket | État | Modèle IA | Titre | Fichier |
 |---|---|---|---|---|
@@ -89,11 +91,18 @@ Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été
 | V3.2-38 | ☐ | avec | Les absents : témoignages et personnalités publiques | [`07-vie-du-monde.md`](backlog-v3.2/07-vie-du-monde.md) |
 | V3.2-39 | ☐ | sans | Un événement non remarqué se découvre plus tard | [`07-vie-du-monde.md`](backlog-v3.2/07-vie-du-monde.md) |
 | V3.2-40 | ☐ | sans | Franchise, centres d'intérêt, normes et façades | [`07-vie-du-monde.md`](backlog-v3.2/07-vie-du-monde.md) |
-| V3.2-41 | ☐ | sans | Le nom d'une personne calculée, au premier contact | [`07-vie-du-monde.md`](backlog-v3.2/07-vie-du-monde.md) |
+| V3.2-45 | ☐ | sans | Le nom d'une personne calculée, au premier contact | [`07-vie-du-monde.md`](backlog-v3.2/07-vie-du-monde.md) |
 | V3.2-41 | ☑ | sans | Les PNJ restent dans leur rôle, les prix se disent, la pluie reste dehors | [`05-narration.md`](backlog-v3.2/05-narration.md) |
 | V3.2-42 | ☑ | sans | La carte se tire dès qu'on la demande | [`05-narration.md`](backlog-v3.2/05-narration.md) |
 | V3.2-43 | ☑ | sans | En solo, l'IA sait ce que sait le MJ (ADR 0117) | [`05-narration.md`](backlog-v3.2/05-narration.md) |
 | V3.2-44 | ☑ | sans | Une esquisse servie ou nommée par son prénom devient une fiche | [`05-narration.md`](backlog-v3.2/05-narration.md) |
+| V3.2-46 | ☐ | sans | Jauger quelqu'un n'est pas l'attaquer | [`08-fiche-pnj.md`](backlog-v3.2/08-fiche-pnj.md) |
+| V3.2-47 | ☐ | sans | La fiche de base d'un PNJ, tirée du SRD | [`08-fiche-pnj.md`](backlog-v3.2/08-fiche-pnj.md) |
+| V3.2-48 | ☐ | sans | Équipement probable et bourse | [`08-fiche-pnj.md`](backlog-v3.2/08-fiche-pnj.md) |
+| V3.2-49 | ☐ | sans | La table des indices découverts et la vue joueur (ADR 0118) | [`08-fiche-pnj.md`](backlog-v3.2/08-fiche-pnj.md) |
+| V3.2-50 | ☐ | sans | Un jet réussi révèle des indices | [`08-fiche-pnj.md`](backlog-v3.2/08-fiche-pnj.md) |
+| V3.2-51 | ☐ | sans | En solo, le wiki se lit en vue joueur | [`08-fiche-pnj.md`](backlog-v3.2/08-fiche-pnj.md) |
+| V3.2-52 | ☐ | **avec** | Le moteur fait les jets des PNJ | [`08-fiche-pnj.md`](backlog-v3.2/08-fiche-pnj.md) |
 
 ---
 

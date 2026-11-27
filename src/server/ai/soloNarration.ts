@@ -13,6 +13,7 @@ import { drawPriceListForScene } from "@/src/server/services/priceListDraw";
 import { demandeLaCarte } from "@/src/core/rules/demandeCarte";
 import { drawSketchForScene, recordSketchSpeechAndMaybeAnchor } from "@/src/server/services/sceneSketches";
 import { proposeWorldNote } from "@/src/server/services/soloWorldNotes";
+import { revelerNomsDits } from "@/src/server/services/nomPourLaTable";
 import { advanceSceneAfterNarration, applyRoomAfterNarration, moveSceneAfterNarration } from "@/src/server/services/narrationScene";
 import type { ElapsedProposal } from "@/src/core/rules/elapsed";
 import type { GameTime } from "@/src/core/rules/scene";
@@ -332,6 +333,17 @@ export async function narrateSoloTurn(supabase: TypedClient, provider: AiProvide
     } catch (erreur) {
       // Journalisé, pas propagé : la narration ci-dessus est déjà acquise.
       console.error("Mémorisation de l'échange avec l'esquisse impossible", erreur);
+    }
+  }
+
+  // V3.2-45 — la narration a dit le vrai nom d'un présent connu par son seul
+  // libellé : le personnage l'apprend. Même discipline best-effort.
+  if (firstContext.trueNames.length > 0) {
+    const texte = [chosen.narration ?? "", chosen.npcReaction?.text ?? ""].join("\n");
+    try {
+      await revelerNomsDits(supabase, { texte, trueNames: firstContext.trueNames, userId: params.userId });
+    } catch (erreur) {
+      console.error("Révélation d'un vrai nom impossible", erreur);
     }
   }
 

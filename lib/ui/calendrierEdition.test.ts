@@ -190,3 +190,30 @@ describe("mois le plus froid (ME-5)", () => {
     expect(reduireCalendrier(calendrier(), { type: "moisSupprimer", index: 2 }).coldestMonth).toBeUndefined();
   });
 });
+
+describe("modèle de calendrier", () => {
+  it("applique le calendrier grégorien : douze mois, semaine de sept jours, janvier le plus froid", () => {
+    const c = reduireCalendrier(calendrier(), { type: "modele", cle: "gregorian" });
+    expect(c.months.map((m) => m.name)).toEqual(["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"]);
+    expect(c.months.reduce((s, m) => s + m.days, 0)).toBe(365);
+    expect(c.weekdays.map((w) => w.name)).toEqual(["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"]);
+    expect(c.coldestMonth).toBe(1);
+  });
+
+  it("garde les ères et le jour actuel (même mois, même jour)", () => {
+    const c = reduireCalendrier(calendrier(), { type: "modele", cle: "gregorian" });
+    expect(c.eras).toEqual([{ name: "Premier Âge", startYear: 0 }]);
+    expect(c.currentDate).toMatchObject({ year: 1492, month: 2, day: 14 });
+  });
+
+  it("recale un jour qui n'existe plus (le 30 du deuxième mois tombe le 28 février)", () => {
+    const base = calendrier({ currentDate: { year: 1492, month: 2, day: 30, precision: "day", end: null, label: null } });
+    expect(reduireCalendrier(base, { type: "modele", cle: "gregorian" }).currentDate).toMatchObject({ month: 2, day: 28 });
+  });
+
+  it("revient au républicain", () => {
+    const c = reduireCalendrier(reduireCalendrier(calendrier(), { type: "modele", cle: "gregorian" }), { type: "modele", cle: "republican" });
+    expect(c.months[0].name).toBe("Vendémiaire");
+    expect(c.coldestMonth).toBe(4);
+  });
+});

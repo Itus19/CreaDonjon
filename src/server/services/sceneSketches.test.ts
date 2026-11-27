@@ -60,6 +60,29 @@ vi.mock("@/src/server/services/promotion", () => ({
   },
 }));
 
+const trueNames: { entityId: string; trueName: string }[] = [];
+const relationsInserted: { relationType: string; targetEntityId: string; metadata?: unknown }[] = [];
+let isAdmin = true;
+vi.mock("@/src/server/repos/entityTrueNames", () => ({
+  upsertTrueName: async (_s: unknown, params: { entityId: string; secret: { trueName: string } }) => {
+    trueNames.push({ entityId: params.entityId, trueName: params.secret.trueName });
+  },
+}));
+vi.mock("@/src/server/repos/relations", () => ({
+  insertRelation: async (_s: unknown, params: { relationType: string; targetEntityId: string; metadata?: unknown }) => {
+    relationsInserted.push(params);
+    return { ok: true };
+  },
+}));
+vi.mock("@/src/server/services/permissions", () => ({ isWorldAdmin: async () => isAdmin }));
+const npcSheets: { entityId: string; archetype?: string; seed: number }[] = [];
+vi.mock("@/src/server/services/npcSheet", () => ({
+  giveNpcSheet: async (_s: unknown, params: { entityId: string; archetype?: string; seed: number }) => {
+    npcSheets.push({ entityId: params.entityId, ...(params.archetype !== undefined ? { archetype: params.archetype } : {}), seed: params.seed });
+    return { ok: true, templateKey: "commoner", fallback: params.archetype === undefined };
+  },
+}));
+
 const { drawSketchForScene, promoteSketch, recordSketchSpeechAndMaybeAnchor, anchorSketchesNamedInText } = await import("./sceneSketches");
 const supabase = {} as SupabaseClient<Database>;
 const base = { campaignId: "c", worldId: "w", sessionId: "s", callerId: "u" };
@@ -183,5 +206,56 @@ describe("anchorSketchesNamedInText — nomme explicitement", () => {
     scene = addSketch(scene!, { id: "sk-1", name: "Grelin", trait: "cicatrice", zone: "near", timesSpoken: 0, locationId: "ancre-rouillee" });
     await anchorSketchesNamedInText(supabase, { ...base, text: "je regarde autour de moi" });
     expect(promoteCalls).toHaveLength(0);
+  });
+});
+
+describe("ancrer une personne calculée (V3.2-45)", () => {
+  async function aubergeAvecVie() {
+    const { poserLaVie } = await import("@/src/core/rules/sceneLife");
+    const settlement = { __v: 1 as const, seed: 3, population: 8000, zone: "ville" as const, wealth: "correcte" as const, biome: "temperate_deciduous_forest" as const, peoples: [], trades: [] };
+    scene = poserLaVie({ ...emptyScene("chaudron"), time: { day: 4, hour: 14, minute: 0 } }, { placeType: "inn", settlement, workers: [] });
+    return scene.sketches.find((s) => s.name.startsWith("aubergiste"))!;
+  }
+
+  beforeEach(() => {
+    trueNames.length = 0;
+    relationsInserted.length = 0;
+    isAdmin = true;
+    promoted = { ok: true, entity: { id: "e-aubergiste", slug: "1" } };
+    generateResult = { sections: [{ key: "pnj-nom", label: "Nom", text: "Mabelle Roux", slots: [] }] };
+  });
+
+  it("la fiche garde le libellé, le vrai nom tiré part en secret, et un lien works_at garde sa graine", async () => {
+    const aubergiste = await aubergeAvecVie();
+    await promoteSketch(supabase, { ...base, sketchId: aubergiste.id });
+    expect(promoteCalls.at(-1)?.name).toBe(aubergiste.name);
+    expect(trueNames).toEqual([{ entityId: "e-aubergiste", trueName: "Mabelle Roux" }]);
+    expect(relationsInserted).toMatchObject([{ relationType: "works_at", targetEntityId: "chaudron", metadata: { seed: Number(aubergiste.id.slice(5)) } }]);
+    expect(scene?.life?.workers).toContainEqual({ entityId: "e-aubergiste", seed: Number(aubergiste.id.slice(5)) });
+  });
+
+  it("V3.2-47 — la personne ancrée reçoit sa fiche allégée, d'après son archétype et sa graine", async () => {
+    const aubergiste = await aubergeAvecVie();
+    await promoteSketch(supabase, { ...base, sketchId: aubergiste.id });
+    const fiche = npcSheets.at(-1);
+    expect(fiche).toMatchObject({ entityId: "e-aubergiste", seed: Number(aubergiste.id.slice(5)) });
+    expect(fiche?.archetype).toBeDefined();
+  });
+
+  it("sans droit de MJ, pas de vrai nom : la fiche garde son libellé", async () => {
+    isAdmin = false;
+    const aubergiste = await aubergeAvecVie();
+    await promoteSketch(supabase, { ...base, sketchId: aubergiste.id });
+    expect(trueNames).toEqual([]);
+  });
+
+  it("une esquisse tirée à la main ne reçoit ni vrai nom ni lien", async () => {
+    scene = addSketch(emptyScene("ancre-rouillee"), { id: "sk-1", name: "Wil", trait: "roux", zone: "near", timesSpoken: 0, locationId: "ancre-rouillee" });
+    await promoteSketch(supabase, { ...base, sketchId: "sk-1" });
+    expect(trueNames).toEqual([]);
+    expect(relationsInserted).toEqual([]);
+    // V3.2-47 : une fiche quand même, de Roturier (pas d'archétype), à graine dérivée de l'esquisse.
+    expect(npcSheets.at(-1)).toMatchObject({ seed: expect.any(Number) });
+    expect(npcSheets.at(-1)?.archetype).toBeUndefined();
   });
 });

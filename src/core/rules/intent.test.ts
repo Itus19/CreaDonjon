@@ -183,6 +183,44 @@ describe("le premier verbe du texte decide", () => {
   });
 });
 
+describe("V3.2-46 — un verbe sous une hypothèse ne lance rien", () => {
+  // Retour de jeu (Mabelle) : « … si je venais à l'attaquer » lançait une
+  // attaque. Une hypothèse n'est pas un geste : le verbe qui la suit est
+  // ignoré, et la phrase est lue comme si ce verbe n'y était pas.
+  const AVEC_HYPOTHESES: IntentCatalog = { ...CATALOG, hypotheticalMarkers: ["si je", "si j", "au cas ou"] };
+
+  it("« si je venais à l'attaquer » ne propose pas d'attaque", () => {
+    const proposal = interpretIntent("elle semble prête à se défendre si je venais à l'attaquer ?", AVEC_HYPOTHESES);
+    expect(proposal).toMatchObject({ kind: "free", reason: "aucun_verbe_reconnu" });
+  });
+
+  it("« si j'attaque » non plus, l'apostrophe comprise", () => {
+    expect(interpretIntent("si j'attaque le gobelin, il fuit ?", AVEC_HYPOTHESES).kind).toBe("free");
+  });
+
+  it("un verbe hors de l'hypothèse garde sa lecture", () => {
+    const proposal = interpretIntent("si je rate, tant pis : je frappe le gobelin", AVEC_HYPOTHESES);
+    // « rate » n'est pas un verbe du lexique ; « frappe » est après la fin de la proposition (« : »).
+    expect(proposal.kind === "mechanical" && proposal.actionKind).toBe("weapon_attack");
+  });
+
+  it("l'hypothèse ne s'étend pas au-delà de la phrase", () => {
+    const proposal = interpretIntent("Et si je partais. Je frappe le gobelin", AVEC_HYPOTHESES);
+    expect(proposal.kind === "mechanical" && proposal.actionKind).toBe("weapon_attack");
+  });
+
+  it("le verbe suivant, hors hypothèse, décide à sa place", () => {
+    // La virgule ne clôt pas l'hypothèse (« si je l'attaque, je fouille » reste
+    // conditionnel) : seule une fin de proposition le fait.
+    const proposal = interpretIntent("si je l'attaque ? Non, je fouille d'abord la pièce", AVEC_HYPOTHESES);
+    expect(proposal.kind === "mechanical" && proposal.action.id).toBe("investigation");
+  });
+
+  it("sans liste de marqueurs, rien ne change", () => {
+    expect(interpretIntent("si je l'attaque", CATALOG).kind).toBe("mechanical");
+  });
+});
+
 describe("le module ne resout rien", () => {
   it("ne rend aucun nombre : ni jet, ni total, ni degats", () => {
     const proposal = interpretIntent("je frappe le gobelin avec mon épée", CATALOG);

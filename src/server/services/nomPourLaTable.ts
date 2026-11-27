@@ -8,6 +8,7 @@ import { recordEntityRevision } from "@/src/server/services/entityHistory";
 import { updateBlockContent } from "@/src/server/services/blocks";
 import { planNomTable } from "@/src/core/entities/nomPourLaTable";
 import { renommerRefs } from "@/src/core/linker/renommerRefs";
+import { nomsDitsDans } from "@/src/core/ai/nomRevele";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -103,4 +104,26 @@ async function renommerLiens(
     }
   }
   return { renommes, echecs };
+}
+
+/**
+ * V3.2-45 — Une narration a écrit le vrai nom d'un présent que le personnage
+ * ne connaissait que par son libellé : il l'a appris, la fiche quitte son nom
+ * pour la table (même chemin que le MJ qui vide le champ, liens renommés
+ * compris). Une lecture par nom dit, puis `setTableName`. Rend les fiches
+ * révélées.
+ */
+export async function revelerNomsDits(
+  supabase: TypedClient,
+  params: { texte: string; trueNames: readonly { entityId: string; trueName: string }[]; userId: string }
+): Promise<string[]> {
+  const reveles: string[] = [];
+  for (const entityId of nomsDitsDans(params.texte, params.trueNames)) {
+    const entity = await getEntityById(supabase, entityId);
+    if (!entity) continue;
+    const r = await setTableName(supabase, { entityId, userId: params.userId, expectedVersion: entity.version, tableName: null });
+    if (r.ok) reveles.push(entityId);
+    else console.warn(`Vrai nom non révélé (${r.reason}) pour ${entityId}`);
+  }
+  return reveles;
 }
