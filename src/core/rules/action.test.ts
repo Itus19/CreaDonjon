@@ -116,11 +116,11 @@ describe("resolveCheckRoll", () => {
 });
 
 describe("weaponDiceForRoll (le naturel des dégâts du solo)", () => {
-  it("1d8 : un dé, deux au critique (borne haute doublée) ; une formule composée ou illisible : rien", () => {
+  it("1d8 : un dé, deux au critique (borne haute doublée) ; une formule composée : rien ; illisible : une erreur", () => {
     expect(weaponDiceForRoll("1d8", 8, 5)).toEqual({ count: 1, faces: 8, sum: 5 });
     expect(weaponDiceForRoll("1d8", 16, 11)).toEqual({ count: 2, faces: 8, sum: 11 });
     expect(weaponDiceForRoll("1d6+1d4", 10, 6)).toBeNull();
-    expect(weaponDiceForRoll("n'importe quoi", 10, 6)).toBeNull();
+    expect(() => weaponDiceForRoll("n'importe quoi", 10, 6)).toThrow();
   });
 });
 

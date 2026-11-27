@@ -161,13 +161,8 @@ function simpleDiceOf(node: FormulaNode): { count: number; faces: number } | nul
  * borne haute (`die_max`, doublée au critique). Une formule composée : `null`.
  */
 export function weaponDiceForRoll(formula: string, dieMax: number, sum: number): { count: number; faces: number; sum: number } | null {
-  let simple: { count: number; faces: number } | null;
-  try {
-    simple = simpleDiceOf(parseFormula(formula));
-  } catch {
-    // Une formule illisible n'a pas de dés à relancer : la règle ne s'applique pas, le jet reste tel quel.
-    return null;
-  }
+  // La formule de l'arme a déjà été lue pour poser la demande (`die_max`) : une formule illisible lève ici aussi.
+  const simple = simpleDiceOf(parseFormula(formula));
   if (!simple) return null;
   const critique = dieMax === simple.count * simple.faces * 2;
   return { count: simple.count * (critique ? 2 : 1), faces: simple.faces, sum };
