@@ -62,12 +62,14 @@ Demandé le 26 novembre, après la séance où jauger Mabelle déclenchait une a
 **Critères d'acceptation**
 - [ ] Perception réussie sur Mabelle : son couteau et sa Force apparaissent dans sa fiche, rien d'autre.
 
-### ☐ V3.2-51 — En solo, le wiki se lit en vue joueur · `M` · sans modèle IA · Modèle conseillé : Opus
+### ☑ V3.2-51 — En solo, le wiki se lit en vue joueur · `M` · sans modèle IA · Modèle conseillé : Opus — **codé le 27 novembre**
 
 - Dans une partie solo, les pages du monde se lisent avec le lecteur joueur (`genericPlayerViewer`) et les découvertes de la partie, même pour le propriétaire. Un interrupteur « Voir comme le MJ » reste pour corriger le monde.
 
+**Fait.** `asSoloPlayer` (`src/core/visibility/soloPlayer.ts`) rabat le propriétaire ou l'éditeur d'un monde solo au rôle joueur de la partie ; `playerEntityDetail` l'applique au wiki joueur (page et route du volet Wiki). Pour un PNJ, `readNpcDisplayView` renvoie la fiche et l'équipement réduits aux facettes découvertes, affichés par `PublicNpcView` (« ? » pour le reste, bourse comprise). Le wiki éditeur du monde reste la vue MJ, qui tient lieu d'interrupteur. Limite connue : les relations se lisent encore avec le lecteur réel.
+
 **Critères d'acceptation**
-- [ ] Un paragraphe `gm` d'une fiche ne s'affiche plus dans le wiki de la partie solo, tant qu'il n'est pas découvert.
+- [x] Un paragraphe `gm` d'une fiche ne s'affiche plus dans le wiki de la partie solo, tant qu'il n'est pas découvert (`soloPlayer.test.ts` : le lecteur rabattu ne voit plus le niveau `gm`).
 
 ### ☐ V3.2-52 — Le moteur fait les jets des PNJ · `M` · **avec modèle IA** · Modèle conseillé : Opus
 

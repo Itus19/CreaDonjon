@@ -37,7 +37,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   // La RLS de `worlds` ne rend le monde qu'à ses membres : un monde étranger et un monde absent répondent pareil.
   if (!world) return NextResponse.json({ error: "Fiche introuvable." }, { status: 404 });
 
-  const detail = await getPlayerEntityDetail(supabase, { worldId: world.id, entitySlug, userId: user.id, locale: (await getLocale()) as Locale });
+  const detail = await getPlayerEntityDetail(supabase, { worldId: world.id, worldSlug, entitySlug, userId: user.id, locale: (await getLocale()) as Locale });
   if (!detail) return NextResponse.json({ error: "Fiche introuvable." }, { status: 404 });
 
   const campaigns = await listCampaigns(supabase, world.id);
@@ -50,5 +50,5 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   }
 
   // Le fond du wiki ne sert pas dans le volet : on ne l'envoie pas.
-  return NextResponse.json({ entity: detail.entity, blocks: detail.blocks, relations: detail.relations, portraitLayout: detail.portraitLayout }, { status: 200 });
+  return NextResponse.json({ entity: detail.entity, blocks: detail.blocks, relations: detail.relations, portraitLayout: detail.portraitLayout, npcView: detail.npcView }, { status: 200 });
 }

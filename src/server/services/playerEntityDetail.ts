@@ -33,7 +33,9 @@ import { zMapBlockData } from "@/src/core/schemas/blocks/map";
 import { resolveMapSource } from "@/src/server/services/mapSource";
 import { listVisibleMapPins } from "@/src/server/services/mapPins";
 import { listVisibleMapRegions } from "@/src/server/services/mapRegions";
-import { resolveCampaignId } from "@/src/server/services/campaigns";
+import { listCampaigns, resolveCampaignId } from "@/src/server/services/campaigns";
+import { asSoloPlayer } from "@/src/core/visibility/soloPlayer";
+import { readNpcDisplayView, type NpcDisplayView } from "@/src/server/services/facetDiscoveries";
 import { zQuestBlockData } from "@/src/core/schemas/blocks/quest";
 import { zTimelineBlockData } from "@/src/core/schemas/blocks/timeline";
 import { zPersonalityBlockData } from "@/src/core/schemas/blocks/personality";
@@ -139,8 +141,18 @@ async function listPlayerRelations(supabase: TypedClient, worldId: string, entit
  * `buildViewerForWorld` : ces dépôts sont appelés depuis des chemins
  * d'ÉCRITURE, où une valeur figée par un appel antérieur serait un bug.
  */
-const viewerFor = cache(function viewerFor(supabase: TypedClient, worldId: string, userId: string) {
-  return buildViewerForWorld(supabase, worldId, userId);
+const viewerFor = cache(async function viewerFor(supabase: TypedClient, worldId: string, userId: string) {
+  const [viewer, solo] = await Promise.all([buildViewerForWorld(supabase, worldId, userId), soloCampaignFor(supabase, worldId)]);
+  // V3.2-51 (ADR 0118 §7) : dans le monde d'une partie solo, le wiki se lit
+  // en vue joueur, même pour la personne propriétaire — c'est ce que son
+  // personnage sait. Les écrans du MJ gardent le lecteur réel.
+  return solo ? asSoloPlayer(viewer, solo) : viewer;
+});
+
+/** La partie solo du monde, s'il en a une (« un monde = une campagne »). Même lecture mémoïsée que `resolveCampaignId`. */
+const soloCampaignFor = cache(async function soloCampaignFor(supabase: TypedClient, worldId: string): Promise<string | null> {
+  const campaigns = await listCampaigns(supabase, worldId);
+  return campaigns.find((c) => c.mode === "solo")?.id ?? null;
 });
 
 const entityFor = cache(function entityFor(supabase: TypedClient, worldId: string, entitySlug: string) {
@@ -265,13 +277,15 @@ export const getPlayerWikiBackground = cache(async function getPlayerWikiBackgro
 export async function getPlayerEntityDetail(
   supabase: TypedClient,
   /** `locale` (V2.1-18 lot 2) : sert uniquement a choisir la traduction d'une fiche de REGLE citee, comme pour `getPublicEntityDetail`. */
-  params: { worldId: string; entitySlug: string; userId: string; locale?: Locale }
+  params: { worldId: string; entitySlug: string; userId: string; locale?: Locale; /** V3.2-51 : nomme les objets découverts d'un PNJ. */ worldSlug?: string }
 ): Promise<{
   entity: EntitySummary;
   blocks: PublicBlock[];
   relations: PublicRelation[];
   portraitLayout: EntityPortraitLayout;
   wikiBackground: WikiBackground | null;
+  /** V3.2-51 : en partie solo, ce que le personnage a découvert de ce PNJ (fiche allégée, équipement). */
+  npcView: NpcDisplayView | null;
 } | null> {
   const { worldId, entitySlug, userId, locale = "fr" } = params;
   const entity = await entityFor(supabase, worldId, entitySlug);
@@ -505,7 +519,15 @@ export async function getPlayerEntityDetail(
   );
 
 
-  return { entity, blocks: blocksWithMapSource, relations, portraitLayout, wikiBackground };
+  // V3.2-51 : la fiche allégée et l'équipement d'un PNJ ne partent jamais en
+  // blocs (ils sont réservés au MJ) ; seule leur vue découverte est envoyée.
+  const solo = params.worldSlug && entity.entity_kind === "character" ? await soloCampaignFor(supabase, worldId) : null;
+  const npcView =
+    solo && params.worldSlug
+      ? await readNpcDisplayView(supabase, { campaignId: solo, entityId: entity.id, userId, world: { id: worldId, slug: params.worldSlug }, locale })
+      : null;
+
+  return { entity, blocks: blocksWithMapSource, relations, portraitLayout, wikiBackground, npcView };
 }
 
 /** Les fiches citées par les blocs de la page, et les clés de règle citées par ses textes. */
