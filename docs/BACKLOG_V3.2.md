@@ -96,6 +96,7 @@ Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été
 | V3.2-42 | ☑ | sans | La carte se tire dès qu'on la demande | [`05-narration.md`](backlog-v3.2/05-narration.md) |
 | V3.2-43 | ☑ | sans | En solo, l'IA sait ce que sait le MJ (ADR 0117) | [`05-narration.md`](backlog-v3.2/05-narration.md) |
 | V3.2-44 | ☑ | sans | Une esquisse servie ou nommée par son prénom devient une fiche | [`05-narration.md`](backlog-v3.2/05-narration.md) |
+| V3.2-53 | ☑ | sans | Ceux qui partagent la pièce entrent au Wiki | [`05-narration.md`](backlog-v3.2/05-narration.md) |
 | V3.2-46 | ☐ | sans | Jauger quelqu'un n'est pas l'attaquer | [`08-fiche-pnj.md`](backlog-v3.2/08-fiche-pnj.md) |
 | V3.2-47 | ☐ | sans | La fiche de base d'un PNJ, tirée du SRD | [`08-fiche-pnj.md`](backlog-v3.2/08-fiche-pnj.md) |
 | V3.2-48 | ☐ | sans | Équipement probable et bourse | [`08-fiche-pnj.md`](backlog-v3.2/08-fiche-pnj.md) |

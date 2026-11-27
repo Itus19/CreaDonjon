@@ -263,7 +263,7 @@ export async function POST(request: NextRequest) {
       console.error("Mémorisation de l'esquisse du tour impossible", erreur);
     }
 
-    // V3.2-45 — ceux qui partagent la pièce sont vus : leur fiche entre au Wiki.
+    // V3.2-53 — ceux qui partagent la pièce sont vus : leur fiche entre au Wiki.
     try {
       await discoverWhoIsHere(supabase, { campaignId: parsed.data.campaignId, callerId: user.id });
     } catch (erreur) {

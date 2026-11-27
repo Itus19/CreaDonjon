@@ -211,7 +211,7 @@ export async function setScene(
 }
 
 /**
- * V3.2-45 — Qui partage la pièce du personnage, il le voit : chaque tour,
+ * V3.2-53 — Qui partage la pièce du personnage, il le voit : chaque tour,
  * le moteur marque `known` ceux du volet Présents que le joueur n'a pas
  * encore découverts, pour que leur fiche entre dans l'onglet Wiki.
  * `setScene` le faisait seulement pour la liste qu'on lui passe : un PNJ

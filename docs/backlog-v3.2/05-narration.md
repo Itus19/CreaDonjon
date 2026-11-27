@@ -165,3 +165,13 @@ L'ancrage reste celui de V3-C2 (`promoteSketch`, découverte `known`) : la fiche
 **Critères d'acceptation**
 - [x] Tests du noyau : prénom avant la virgule reconnu, « le fanal » et « un petit pain » ignorés ; échange sans réplique compté, décor seul ignoré, une fois par tour.
 - [ ] Rejoué : au Fanal, « je demande à Mabelle… » fait apparaître sa fiche dans l'onglet Wiki.
+
+### ☑ V3.2-53 — Ceux qui partagent la pièce entrent au Wiki · `XS` · sans modèle IA — **codé (Opus)**, reste la vérification en jeu
+
+**Retour de jeu du 27 novembre** : Mabelle, le sergent Ourse et Petit Wil sont au volet Présents, avec leur attitude, mais aucun n'apparaît dans l'onglet Wiki. Ce ne sont pas des esquisses (V3.2-44 ne s'applique pas) : ce sont des fiches, jamais découvertes. `setScene` ne découvrait que la liste qu'on lui passe ; un PNJ arrivé par un autre chemin (présence calculée à l'heure, V3.2-31) restait inconnu.
+
+Désormais, à chaque tour, `discoverWhoIsHere` (`src/server/services/soloScene.ts`) marque `known` ceux de la pièce du personnage pas encore découverts. Une lecture des découvertes, puis une écriture par personne nouvelle, une seule fois. Sans événement source : annuler un tour ne fait pas oublier un visage vu.
+
+**Critères d'acceptation**
+- [x] Test : seuls les présents de la pièce encore inconnus sont découverts ; rien sans scène ni présent.
+- [ ] Rejoué : au Gué-aux-Corbeaux, après un tour, Mabelle apparaît dans l'onglet Wiki.
