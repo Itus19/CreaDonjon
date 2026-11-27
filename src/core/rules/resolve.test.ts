@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyOverrides, jsonMergePatch, mergeHomebrewEntries } from "./resolve";
+import { applyOverrides, assignBlockIds, jsonMergePatch, mergeHomebrewEntries } from "./resolve";
 
 describe("jsonMergePatch", () => {
   it("fusionne un patch objet dans la cible, champ par champ", () => {
@@ -164,5 +164,32 @@ describe("mergeHomebrewEntries", () => {
     const homemade = { key: "sword-of-gabriel", entryType: "weapon", name: "Épée de Gabriel" };
     const resolved = mergeHomebrewEntries(base, [homemade], new Set(["shortsword", "sword-of-gabriel"]));
     expect(resolved).toEqual([longsword]);
+  });
+});
+
+describe("assignBlockIds", () => {
+  const bloc = (block_type: string, display_order: number) => ({ block_type, display: {}, data: {}, display_order });
+
+  it("donne a deux blocs du meme type l'id de leur propre ligne (standard-exchange-rates : deux custom_table)", () => {
+    const rows = [
+      { id: "desc", block_type: "description", display_order: 100 },
+      { id: "taux", block_type: "custom_table", display_order: 200 },
+      { id: "brut", block_type: "custom_table", display_order: 900 },
+    ];
+    const ids = assignBlockIds([bloc("description", 100), bloc("custom_table", 200), bloc("custom_table", 900)], rows);
+    expect(ids).toEqual(["desc", "taux", "brut"]);
+  });
+
+  it("donne un id synthetique a un bloc sans ligne source, distinct par ordre d'affichage", () => {
+    const ids = assignBlockIds([bloc("custom_table", 200), bloc("custom_table", 300)], []);
+    expect(ids).toEqual(["override:custom_table:200", "override:custom_table:300"]);
+  });
+
+  it("ne rend jamais deux fois le meme id, meme quand une surcharge duplique un bloc", () => {
+    // replace_block remplace tous les blocs d'un type par la meme charge utile.
+    const rows = [{ id: "a", block_type: "custom_table", display_order: 200 }];
+    const ids = assignBlockIds([bloc("custom_table", 200), bloc("custom_table", 200)], rows);
+    expect(new Set(ids).size).toBe(2);
+    expect(ids[0]).toBe("a");
   });
 });

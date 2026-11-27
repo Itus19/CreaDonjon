@@ -43,6 +43,7 @@ import { isWorldAdmin } from "@/src/server/services/permissions";
 import { houseVersionChangedBlocks, isEditableHomebrewType, zHouseVersionPayload, type HouseVersionPayload } from "@/src/core/rules/houseVersion";
 import {
   applyOverrides,
+  assignBlockIds,
   mergeHomebrewEntries,
   MAX_RULESET_CHAIN_DEPTH,
   RulesetChainCycleError,
@@ -988,10 +989,6 @@ export async function getRuleEntryForWorld(
       ? { ...appliquee, modifiedBlockTypes: [...new Set([...appliquee.modifiedBlockTypes, ...houseVersionChangedBlocks(baseEntry.blocks, appliquee.blocks)])] }
       : appliquee;
 
-  // id stable pour l'affichage (cle React) : celui de la ligne d'origine
-  // quand elle existe encore, sinon un id synthetique (bloc introduit par
-  // une surcharge add_block/replace_block sans ligne source).
-  const originalIdByBlockType = new Map(blockRows.map((row) => [row.block_type, row.id]));
   // Donnee avant surcharge de variante, pour le badge "modifiee" + comparaison
   // (V1-A4) — depuis baseEntry (deja traduite si une traduction existe,
   // V1-A5), pas les lignes brutes anglaises : la comparaison doit rester
@@ -1002,13 +999,17 @@ export async function getRuleEntryForWorld(
 
   // Un bloc fautif ne s'affiche pas, plutot que de faire tomber la fiche
   // entiere — meme arbitrage que `resolveOneEntryBlocks`, meme fonction.
+  // id stable pour l'affichage (cle React) : celui de la ligne d'origine,
+  // retrouvee par (type, ordre) et non par le seul type — une fiche peut
+  // porter deux blocs du meme type (assignBlockIds).
+  const blockIds = assignBlockIds(resolved.blocks, blockRows);
   const validated = resolved.blocks
-    .flatMap((block) => {
+    .flatMap((block, index) => {
       const parsed = parseBlockData(block.block_type, block.data);
-      return parsed.ok ? [{ block, data: parsed.data }] : [];
+      return parsed.ok ? [{ block, data: parsed.data, id: blockIds[index] }] : [];
     })
-    .map(({ block, data }) => ({
-    id: originalIdByBlockType.get(block.block_type) ?? `override:${block.block_type}`,
+    .map(({ block, data, id }) => ({
+    id,
     blockType: block.block_type as BlockType,
     data,
     displayOrder: block.display_order,
