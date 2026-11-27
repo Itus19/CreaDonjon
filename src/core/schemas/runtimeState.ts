@@ -56,6 +56,8 @@ export const zPendingRequest = z.object({
    * (l'arme au clic de fiche, les dés de bonus) ; aux vrais dés, `what` le dit.
    */
   die_min: z.number().int().min(2).max(20).optional(),
+  /** Combat à deux armes : l'attaque en plus d'une arme Légère, et ses dégâts chaînés (le modificateur ne s'ajoute pas, sauf don ou négatif). */
+  light_extra: z.boolean().optional(),
 });
 export type PendingRequest = z.infer<typeof zPendingRequest>;
 

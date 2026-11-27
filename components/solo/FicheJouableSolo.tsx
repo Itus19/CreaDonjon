@@ -109,6 +109,8 @@ export default function FicheJouableSolo({
   const [tab, setTab] = useState<"actions" | "inventaire" | "magie" | "traits" | "maitrise">("actions");
   const [advantage, setAdvantage] = useState<AdvantageState>("normal");
   const [pendingCrit, setPendingCrit] = useState<Record<string, boolean>>({});
+  /** Combat à deux armes : la dernière attaque de cette arme était l'attaque en plus d'une arme Légère ; ses dégâts le savent. */
+  const [pendingEnPlus, setPendingEnPlus] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(false);
 
   const worldCalendar = useWorldCalendarContext();
@@ -349,7 +351,7 @@ export default function FicheJouableSolo({
     }
   }
 
-  async function attack(item: InventoryItem) {
+  async function attack(item: InventoryItem, enPlus = false) {
     if (pending?.kind === "weapon_attack" && pending.action_id === item.id) {
       await resolveFromFiche();
       return;
@@ -357,6 +359,7 @@ export default function FicheJouableSolo({
     const result = await postAction<{ attack?: { isCritical: boolean } }>("attack", { campaignId, itemId: item.id, advantage });
     if (!result?.attack) return;
     setPendingCrit((prev) => ({ ...prev, [item.id]: result.attack!.isCritical }));
+    setPendingEnPlus((prev) => ({ ...prev, [item.id]: enPlus }));
   }
 
   async function damage(item: InventoryItem, versatile: boolean) {
@@ -365,7 +368,7 @@ export default function FicheJouableSolo({
       return;
     }
     const critical = pendingCrit[item.id] ?? false;
-    await postAction("damage", { campaignId, itemId: item.id, critical, versatile });
+    await postAction("damage", { campaignId, itemId: item.id, critical, versatile, lightExtra: pendingEnPlus[item.id] ?? false });
   }
 
   function spellCritKey(spellKey: string): string {
@@ -524,8 +527,9 @@ export default function FicheJouableSolo({
               dexMod={sheet.abilities.dex.mod}
               proficiencyBonus={sheet.proficiencyBonus}
               isMonk={isMonk}
-              onAttack={attack}
+              onAttack={(item) => attack(item)}
               onDamage={damage}
+              onExtraAttack={(item) => attack(item, true)}
               spellcasting={spellcasting}
               preparedSpells={preparedSpells}
               spellSlots={sheet.spellcasting?.slots ?? {}}

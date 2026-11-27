@@ -203,6 +203,15 @@ export function resolveDamageRoll(input: DamageRollInput, rng: Rng): DamageRollR
 }
 
 /**
+ * L'attaque en plus d'une arme Légère : le modificateur de caractéristique ne
+ * s'ajoute pas à ses dégâts, sauf s'il est négatif — ou si Combat à deux armes
+ * l'y ajoute (`addsAbility`).
+ */
+export function lightExtraDamageMod(abilityMod: number, addsAbility: boolean): number {
+  return addsAbility ? abilityMod : Math.min(0, abilityMod);
+}
+
+/**
  * Caracteristique utilisee pour une attaque d'arme (regle standard) : Dex
  * pour une arme a distance, le meilleur de Force/Dex si `finesse`, Force
  * sinon.

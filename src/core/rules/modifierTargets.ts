@@ -39,7 +39,9 @@ export type ModifierTargetCategory =
   /** L'initiative, un test de Dextérité : bonus (Vigilant), avantage (Athlète accompli). */
   | "initiative"
   /** ADR 0118 : le plancher de chaque dé de dégâts (Armes à deux mains). */
-  | "die_min";
+  | "die_min"
+  /** Combat à deux armes : le modificateur aux dégâts de l'attaque en plus d'une arme Légère. */
+  | "light_extra";
 
 export interface ModifierTargetOption {
   target: string;
@@ -95,6 +97,7 @@ export const MODIFIER_TARGET_OPTIONS: readonly ModifierTargetOption[] = [
   { target: "untargetable.divination", category: "untargetable" },
   { target: "initiative", category: "initiative" },
   { target: "die_min.weapon", category: "die_min", kind: "weapon" },
+  { target: "light_extra.ability_damage", category: "light_extra", kind: "weapon" },
 ];
 
 /** Effets valides pour une categorie de cible — ex. la maitrise/l'expertise n'ont de sens que sur une sauvegarde ou une competence, jamais sur la CA. */
@@ -121,6 +124,7 @@ export const OPS_BY_TARGET_CATEGORY: Record<ModifierTargetCategory, readonly Mod
   untargetable: ["set"],
   initiative: ["add", "advantage", "disadvantage"],
   die_min: ["set"],
+  light_extra: ["set"],
 };
 
 /** `add`/`set`/`min`/`max` portent un montant ; les quatre autres (avantage, desavantage, maitrise, expertise) sont des drapeaux, jamais de valeur associee (meme distinction que `Modifier.value` dans sheet.ts, optionnel). */

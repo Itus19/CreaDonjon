@@ -17,9 +17,11 @@ En solo, le bandeau « 7 règles de ton personnage ne sont pas entièrement joua
 6. **Le coup critique est un moment de réaction.** `when: "critical"` (attaque seulement) se lit sur la plage de critique du personnage, en combat comme en solo (le solo ignorait jusqu'ici le Critique amélioré). `grant_budget` accorde du mouvement (`extraMovement`, pour ce tour). Athlète accompli : la moitié de la Vitesse aussitôt après un critique. Les attaques d'opportunité ne sont pas jouées par le moteur : rien à empêcher.
 7. **Un plancher par dé de dégâts.** Une cible `die_min.weapon` (op `set`) : chaque dé du jet de dégâts, dés de bonus compris, compte au moins cette valeur, et la relance de Sauvagerie martiale garde le plancher. « Tenue à deux mains » est une propriété de jet, `melee-two-handed` : une arme de corps à corps Deux mains, ou Polyvalente lancée à deux mains. Armes à deux mains la pose (3). Aux vrais dés du solo, la demande le dit à la personne qui joue.
 
-## Ce qui reste, en lacunes honnêtes
+8. **L'attaque en plus d'une arme Légère est une attaque du moteur.** Une attaque d'arme `extra: "light"` (jet ciblé, tour solo, fiche) : une action Bonus, ouverte par une attaque de l'action Attaque faite avec une arme Légère (`lightAttack` dans le budget du tour), une fois par tour, jamais bloquante (ADR 0029). Ses dégâts n'ajoutent le modificateur de caractéristique que s'il est négatif ; Combat à deux armes l'ajoute (`light_extra.ability_damage`). Le bouton n'apparaît qu'avec deux armes Légères en main. La botte Coup double (l'attaque en plus dans l'action Attaque) reste une aide affichée.
 
-- Combat à deux armes : l'attaque supplémentaire d'une arme Légère n'est pas une attaque du moteur.
+## Ce qui reste
+
+Plus aucune lacune pour un Guerrier Champion de niveau 3. Le jet ciblé ne connaît toujours pas la prise à deux mains d'une arme Polyvalente (le bouton « Dégâts (2 mains) » de la fiche reste un simple jet) : Armes à deux mains y vaut pour les armes Deux mains.
 
 ## Conséquences
 

@@ -298,6 +298,16 @@
       }
     ]
   },
+  "two-weapon-fighting": {
+    "_regle": "Combat a deux armes (don de Style de combat) : le modificateur de caracteristique s'ajoute aux degats de l'attaque en plus d'une arme Legere (`light_extra.ability_damage`). L'attaque en plus elle-meme (propriete Legere : action Bonus apres une attaque Legere, une fois par tour) est jouee par le moteur.",
+    "modifiers": [
+      {
+        "target": "light_extra.ability_damage",
+        "op": "set",
+        "value": 1
+      }
+    ]
+  },
   "defense": {
     "_regle": "Defense (don de Style de combat) : +1 a la CA tant qu'on porte une armure legere, intermediaire ou lourde (`when.armor`).",
     "modifiers": [

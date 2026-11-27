@@ -764,6 +764,11 @@ export function rollBonus(sheet: Pick<DerivedSheet, "rollModifiers">, q: RollQue
   };
 }
 
+/** Combat à deux armes : le modificateur de caractéristique s'ajoute-t-il aux dégâts de l'attaque en plus d'une arme Légère ? */
+export function lightExtraAddsAbility(sheet: Pick<DerivedSheet, "rollModifiers">): boolean {
+  return sheet.rollModifiers.some((m) => m.target === "light_extra.ability_damage" && m.op === "set" && (m.value ?? 0) > 0);
+}
+
 /** Le plancher des dés de dégâts : le plus haut `die_min.<genre>` posé, si l'arme du jet satisfait sa condition. */
 function damageDieMin(modifiers: readonly Modifier[], q: RollQuery): number | null {
   if (q.roll !== "damage") return null;
@@ -997,7 +1002,7 @@ export function characterSheet(
     }
   }
   // V3.1-168 : un modificateur conditionné par l'arme tenue ne vaut que pour les jets (lu par `rollBonus`).
-  const rollModifiers = allModifiers.filter((m) => /^(attack|damage|crit_range|die_min)(\.|$)/.test(m.target));
+  const rollModifiers = allModifiers.filter((m) => /^(attack|damage|crit_range|die_min|light_extra)(\.|$)/.test(m.target));
   // V3.1-168 (ADR 0077) : résistances, vulnérabilités, immunités aux types de dégâts (la Rage en pose pendant qu'elle dure).
   const defensesDe = (prefixe: string) => [...new Set(allModifiers.filter((m) => m.target.startsWith(prefixe) && (m.value ?? 1) > 0).map((m) => m.target.slice(prefixe.length)))].sort();
   // `immune.spell.<clé>` est une immunité à un SORT (M15, plus bas), pas à un type de dégâts.

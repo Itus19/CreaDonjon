@@ -96,7 +96,7 @@ export function useJetsDeLaFiche(params: {
 
   // ---- armes ---------------------------------------------------------------------
 
-  function degatsArmeSimple(arme: ArmeFiche, options: { critique: boolean; deuxMains: boolean }): PreReglage {
+  function degatsArmeSimple(arme: ArmeFiche, options: { critique: boolean; deuxMains: boolean; enPlus?: boolean }): PreReglage {
     const titre = t("titreDegats", { nom: arme.nom });
     const formule = options.deuxMains && arme.formuleDeuxMains ? arme.formuleDeuxMains : arme.formuleDegats;
     const grille = desDeLaFormule(formule);
@@ -108,7 +108,7 @@ export function useJetsDeLaFiche(params: {
         const r = await posterActionFiche<{ weaponLabel: string; damage: DamageRollResult }>(
           entityId,
           "damage",
-          { campaignId, itemId: arme.itemId, critical: options.critique, versatile: options.deuxMains },
+          { campaignId, itemId: arme.itemId, critical: options.critique, versatile: options.deuxMains, lightExtra: options.enPlus === true },
           t("erreurJet")
         );
         return sortieDegats(r.damage, { who: r.weaponLabel, what: titre });
@@ -116,7 +116,7 @@ export function useJetsDeLaFiche(params: {
     };
   }
 
-  function attaqueArmeSimple(arme: ArmeFiche, advantage: AdvantageState): PreReglage {
+  function attaqueArmeSimple(arme: ArmeFiche, advantage: AdvantageState, enPlus: boolean): PreReglage {
     const titre = t("titreAttaque", { nom: arme.nom });
     return {
       label: titre,
@@ -134,7 +134,7 @@ export function useJetsDeLaFiche(params: {
         const sortie = sortieAttaque(r.attack, { who: r.weaponLabel, what: titre });
         if (!degatsProposes(r.attack)) return sortie;
         // Le critique double les dés : la suite le porte (l'état « critique en attente » n'existe plus).
-        const degats = degatsArmeSimple(arme, { critique: r.attack.isCritical, deuxMains: false });
+        const degats = degatsArmeSimple(arme, { critique: r.attack.isCritical, deuxMains: false, enPlus });
         return {
           ...sortie,
           suite: { libelle: textes.lancerDegats(arme.formuleDegats), lancer: async () => (await degats.lancer?.(null, { avantage: "normal" })) ?? null, preReglage: degats },
@@ -143,16 +143,19 @@ export function useJetsDeLaFiche(params: {
     };
   }
 
-  function attaquerArme(arme: ArmeFiche, advantage: AdvantageState) {
+  /** `enPlus` : l'attaque en plus d'une arme Légère (action Bonus) ; ses dégâts n'ajoutent le modificateur que s'il est négatif, ou avec Combat à deux armes. */
+  function attaquerArme(arme: ArmeFiche, advantage: AdvantageState, options: { enPlus?: boolean } = {}) {
+    const enPlus = options.enPlus === true;
     const titre = t("titreAttaque", { nom: arme.nom });
+    const action = { kind: "weapon" as const, itemId: arme.itemId, ...(enPlus ? { extra: "light" as const } : {}) };
     void ouvrir(
-      () => attaqueArmeSimple(arme, advantage),
+      () => attaqueArmeSimple(arme, advantage, enPlus),
       (combat, campagne) =>
         ciblee(combat, campagne, arme.nom, {
           titre,
           titreDegats: t("titreDegats", { nom: arme.nom }),
           kind: "attack",
-          action: { kind: "weapon", itemId: arme.itemId },
+          action,
           formule: arme.formuleDegats,
           touche: true,
           modifier: arme.modificateurAttaque,
@@ -163,7 +166,7 @@ export function useJetsDeLaFiche(params: {
           titre,
           titreDegats: t("titreDegats", { nom: arme.nom }),
           kind: "attack",
-          action: { kind: "weapon", itemId: arme.itemId },
+          action,
           formule: arme.formuleDegats,
           touche: true,
           modifier: arme.modificateurAttaque,

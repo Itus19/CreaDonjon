@@ -80,6 +80,8 @@ export const weaponDamageSchema = z.object({
   itemId: z.string().min(1),
   critical: z.boolean(),
   versatile: z.boolean(),
+  /** Combat à deux armes : l'attaque en plus d'une arme Légère (le modificateur ne s'ajoute pas, sauf don ou négatif). */
+  lightExtra: z.boolean().default(false),
 });
 
 export const castSpellSchema = z.object({

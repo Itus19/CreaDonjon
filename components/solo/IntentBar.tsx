@@ -264,7 +264,7 @@ export default function IntentBar({
   // `actions` melange plusieurs familles sous le meme identifiant (« dex »
   // est a la fois un test et une sauvegarde) : la cle d'option porte donc
   // la famille, jamais l'identifiant seul.
-  const optionKey = (action: IntentAction) => `${action.kind}:${action.id}`;
+  const optionKey = (action: IntentAction) => `${action.kind}:${action.id}${action.lightExtra ? ":en-plus" : ""}`;
   const chosenAction: IntentAction | null =
     (overrideActionId ? (data.catalog.actions.find((a) => optionKey(a) === overrideActionId) ?? null) : null) ??
     (proposal.kind === "mechanical" ? proposal.action : null);
@@ -346,7 +346,7 @@ export default function IntentBar({
         ? { kind: "trade" as const, direction: trade.direction, entryId: trade.entryId, targetId: trade.target?.id ?? null, ...(onTab ? { onTab: true } : {}) }
         : chosenAction
         ? chosenAction.kind === "weapon_attack"
-          ? { kind: "weapon_attack" as const, actionId: chosenAction.id, targetId: chosenTargetId, advantage }
+          ? { kind: "weapon_attack" as const, actionId: chosenAction.id, targetId: chosenTargetId, advantage, ...(chosenAction.lightExtra ? { extra: "light" as const } : {}) }
           : {
               kind: chosenAction.kind,
               actionId: chosenAction.id,

@@ -243,6 +243,7 @@ export default function ActionsTab({
   isMonk,
   onAttack,
   onDamage,
+  onExtraAttack,
   spellcasting,
   preparedSpells,
   spellSlots,
@@ -280,6 +281,8 @@ export default function ActionsTab({
   /** `arme` : la description pour l'outil de dés (V3.1-106) ; l'écran du solo, qui a son propre circuit, l'ignore. */
   onAttack: (item: InventoryItem, arme: ArmeFiche) => void;
   onDamage: (item: InventoryItem, versatile: boolean, arme: ArmeFiche) => void;
+  /** Propriété Légère : l'attaque en plus (action Bonus) avec une arme Légère, quand deux sont en main. Absent : pas de bouton. */
+  onExtraAttack?: (item: InventoryItem, arme: ArmeFiche) => void;
   spellcasting: SpellcastingBlockData | undefined;
   preparedSpells: PreparedSpellView[];
   spellSlots: Record<string, number>;
@@ -324,6 +327,11 @@ export default function ActionsTab({
     classKeys,
   });
 
+  const legeres = equippedWeapons.filter((item) => {
+    const ref = itemRef(item);
+    return ref?.kind === "rule" && weaponByKey[ref.key]?.properties.includes("light") === true;
+  }).length;
+
   function geste(g: GesteColonne, delta: number) {
     if ("tracker" in g) onChangeResource(g.tracker, delta);
     else onGesteEmplacement(g, delta);
@@ -350,6 +358,7 @@ export default function ActionsTab({
       <Egaliseur groupes={groupes} onGeste={geste} desactive={busy} emplacementsDesactives={emplacementsDesactives} />
 
       {equippedWeapons.length === 0 && <p className="text-sm text-ink-muted">Aucune arme équipée.</p>}
+      {/* L'attaque en plus de la propriété Légère se fait avec une AUTRE arme Légère : il en faut deux en main. */}
       {equippedWeapons.map((item) => {
         const ref = itemRef(item);
         const weapon = ref?.kind === "rule" ? weaponByKey[ref.key] : null;
@@ -386,6 +395,7 @@ export default function ActionsTab({
               busy={busy}
               onAttack={() => arme && onAttack(item, arme)}
               onDamage={(versatile) => arme && onDamage(item, versatile, arme)}
+              onExtraAttack={onExtraAttack && arme && weapon?.properties.includes("light") && legeres >= 2 ? () => onExtraAttack(item, arme) : undefined}
             />
           </div>
         );

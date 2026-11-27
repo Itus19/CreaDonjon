@@ -45,6 +45,7 @@ const bodySchema = z.object({
       actionId: z.string().min(1),
       targetId: targetField,
       advantage: advantageField,
+      extra: z.literal("light").optional(),
     }),
     z.object({
       kind: z.literal("skill_check"),

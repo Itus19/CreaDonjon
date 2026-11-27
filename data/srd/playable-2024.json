@@ -4084,18 +4084,6 @@
       ]
     }
   },
-  "two-weapon-fighting": {
-    "_regle": "Combat a deux armes (don de Style de combat) : le modificateur de caracteristique s'ajoute aux degats de l'attaque supplementaire d'une arme Legere. Le moteur n'a pas encore cette attaque supplementaire (action bonus de l'arme Legere) : lacune honnete.",
-    "coverage": {
-      "gaps": [
-        {
-          "text": "vous pouvez ajouter votre modificateur de caractéristique aux dégâts de cette attaque si vous ne l’ajoutiez pas déjà",
-          "missing": "L'attaque supplémentaire d'une arme Légère (action Bonus, ou Coup double) n'est pas encore une attaque du moteur : rien à quoi ajouter le modificateur.",
-          "brick": "other"
-        }
-      ]
-    }
-  },
   "savage-attacker": {
     "_regle": "Sauvagerie martiale (don d'origine) : une fois par tour, en touchant avec une arme, lancer deux fois les des de degats de l'arme et garder l'un ou l'autre. Reaction automatique sur son propre jet de degats : le moteur relance les des de l'arme et garde le meilleur (`reroll_weapon_dice`) ; sans des d'arme connus (un sort), rien.",
     "activation": {

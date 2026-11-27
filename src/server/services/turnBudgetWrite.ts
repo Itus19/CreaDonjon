@@ -2,7 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
 import { EMPTY_TURN_USAGE, limitAllows, turnStamp, zTurnUsage, type TurnUsage } from "@/src/core/rules/rollWindow";
-import { budgetForTurn, grantTurnBudget, ownTurnStamp, spendMovement, spendTurnBudget, type TurnBudget, type TurnSpend } from "@/src/core/rules/turnBudget";
+import { budgetForTurn, grantTurnBudget, ownTurnStamp, spendLightExtraAttack, spendMovement, spendTurnBudget, type TurnBudget, type TurnSpend } from "@/src/core/rules/turnBudget";
 import { getActiveCombatForCampaign, listCombatParticipants, updateCombatParticipant } from "@/src/server/repos/combats";
 import { orderParticipants } from "@/src/server/services/combats";
 import { applySignedEngineChange, readCombatParticipantsSigned } from "@/src/server/services/engineSigning";
@@ -26,6 +26,8 @@ export async function spendTurnBudgetFor(
     grants?: readonly { kind: "action" | "bonus" | "movement"; amount: number; notMagic?: boolean }[];
     /** Une activation limitée (« une fois par tour ») : son usage est daté du tour en cours, dans la même écriture. */
     limitKey?: string;
+    /** Propriété Légère : `weapon`, une attaque faite avec une arme Légère (elle ouvre l'attaque en plus) ; `extra`, cette attaque en plus (une action Bonus, `kind` ignoré). */
+    light?: "weapon" | "extra";
     callerIsGm: boolean;
   },
 ): Promise<{ over: boolean; budget: TurnBudget } | null> {
@@ -35,7 +37,8 @@ export async function spendTurnBudgetFor(
     (initial) => {
       let budget = initial;
       for (const g of params.grants ?? []) budget = grantTurnBudget(budget, g);
-      return spendTurnBudget(budget, params.kind, params.attacksPerAction);
+      if (params.light === "extra") return spendLightExtraAttack(budget);
+      return spendTurnBudget(budget, params.kind, params.attacksPerAction, { lightWeapon: params.light === "weapon" });
     },
     params.limitKey,
   );
