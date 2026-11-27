@@ -222,6 +222,7 @@ export const MODIFIER_TARGET_CATEGORY_LABELS_FR: Record<ModifierTargetCategory, 
   defense: "Défense aux dégâts",
   light: "Lumière émise",
   untargetable: "Hors d'atteinte",
+  initiative: "Initiative",
 };
 
 /** V3.1-155 : libellés des cibles nouvelles, quand la catégorie ne suffit pas. */

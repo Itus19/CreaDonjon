@@ -81,7 +81,7 @@
     }
   },
   "fighter-action-surge": {
-    "_regle": "Fougue : a votre tour, une action supplementaire, hormis l'action Magie ; une utilisation (deux au niveau 17, une seule par tour) ; tout au repos court ou long. V3.1-167 : l'action accordée ne paie pas l'action Magie (not_magic).",
+    "_regle": "Fougue : a votre tour, une action supplementaire, hormis l'action Magie ; une utilisation (deux au niveau 17, une seule par tour) ; tout au repos court ou long. V3.1-167 : l'action accordee ne paie pas l'action Magie (not_magic). « Une fois par tour » : `limit`, compte au clic comme pour une reaction.",
     "resources": {
       "resources": [
         {
@@ -167,26 +167,15 @@
             }
           ],
           "variants": null,
+          "limit": {
+            "per": "turn"
+          },
           "passages": {
             "effects.0": "À votre tour, vous pouvez entreprendre une action supplémentaire"
           }
         }
       ],
       "durable_effects": []
-    },
-    "coverage": {
-      "gaps": [
-        {
-          "text": "hormis l’action Magie",
-          "missing": "Une action accordée réservée à un usage (pas l'action Magie) — chantier des actions modifiées (V3.1-136).",
-          "brick": "turn_restriction"
-        },
-        {
-          "text": "mais seulement une fois par tour",
-          "missing": "Une limite d'usage par tour — chantier « Intervenir sur un jet » (V3.1-135).",
-          "brick": "timing"
-        }
-      ]
     }
   },
   "paladin-channel-divinity": {
@@ -4091,6 +4080,18 @@
           "text": "votre Rage est si féroce qu’elle persiste désormais 10 minutes",
           "missing": "La durée de la Rage n'est pas allongée par cette aptitude : la Rage garde sa propre durée.",
           "brick": "duration"
+        }
+      ]
+    }
+  },
+  "two-weapon-fighting": {
+    "_regle": "Combat a deux armes (don de Style de combat) : le modificateur de caracteristique s'ajoute aux degats de l'attaque supplementaire d'une arme Legere. Le moteur n'a pas encore cette attaque supplementaire (action bonus de l'arme Legere) : lacune honnete.",
+    "coverage": {
+      "gaps": [
+        {
+          "text": "vous pouvez ajouter votre modificateur de caractéristique aux dégâts de cette attaque si vous ne l’ajoutiez pas déjà",
+          "missing": "L'attaque supplémentaire d'une arme Légère (action Bonus, ou Coup double) n'est pas encore une attaque du moteur : rien à quoi ajouter le modificateur.",
+          "brick": "other"
         }
       ]
     }

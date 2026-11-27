@@ -112,6 +112,18 @@ describe("rollInitiative", () => {
     expect(a).toBeGreaterThanOrEqual(1 + 3);
     expect(a).toBeLessThanOrEqual(20 + 3);
   });
+
+  it("avec l'avantage (Athlète accompli) : deux d20, le meilleur ; avec le désavantage, le pire", () => {
+    const suite = (valeurs: number[]) => {
+      let i = 0;
+      return { nextInt: () => valeurs[i++]! };
+    };
+    // nextInt(20) rend 0..19 : 4 et 15 donnent 5 et 16.
+    expect(rollInitiative(2, suite([4, 15]), "advantage")).toBe(18);
+    expect(rollInitiative(2, suite([4, 15]), "disadvantage")).toBe(7);
+    // Sans avantage, un seul dé est tiré : la suite des jets à graine fixe ne change pas.
+    expect(rollInitiative(2, suite([4, 15]))).toBe(7);
+  });
 });
 
 describe("initiative annoncée par un joueur (V3.1-103, ADR 0040)", () => {

@@ -88,8 +88,8 @@ export function limitKey(ruleKey: string, activationId: string): string {
   return `${ruleKey}:${activationId}`;
 }
 
-/** La limite tient-elle encore ? `stamp` null : hors combat, rien n'est compté. */
-function limitAllows(usage: TurnUsage, key: string, per: "turn" | "round", stamp: string | null): boolean {
+/** La limite tient-elle encore ? `stamp` null : hors combat, rien n'est compté. Partagée par les réactions et, depuis Fougue, par les activations au clic. */
+export function limitAllows(usage: TurnUsage, key: string, per: "turn" | "round", stamp: string | null): boolean {
   if (stamp === null) return true;
   const last = usage.once[key];
   if (last === undefined) return true;

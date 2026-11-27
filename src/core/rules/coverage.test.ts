@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { COVERAGE_BRICKS, coverageCategoryOf, coverageOf, coverageTally, type CoverageResult } from "./coverage";
+import { COVERAGE_BRICKS, coverageCategoryOf, coverageOf, coverageTally, playedByEngineCode, type CoverageResult } from "./coverage";
 import { zCoverageBlockData } from "../schemas/rule-blocks/playable";
 
 /**
@@ -13,6 +13,14 @@ describe("coverageCategoryOf", () => {
     expect(coverageCategoryOf("monster")).toBe("monster");
     expect(coverageCategoryOf("condition")).toBe("condition");
     for (const t of ["background", "mount", "rule", "item", "inconnu"]) expect(coverageCategoryOf(t)).toBe("out_of_scope");
+  });
+});
+
+describe("playedByEngineCode : les aptitudes que le moteur joue sans brique", () => {
+  it("la maîtrise des armes de chaque classe et le choix de la sous-classe, rien d'autre", () => {
+    for (const k of ["barbarian-weapon-mastery", "fighter-weapon-mastery", "paladin-weapon-mastery", "ranger-weapon-mastery", "rogue-weapon-mastery"]) expect(playedByEngineCode(k)).toBe(true);
+    for (const k of ["barbarian-subclass", "fighter-subclass", "warlock-subclass", "wizard-subclass"]) expect(playedByEngineCode(k)).toBe(true);
+    for (const k of ["fighter-tactical-mind", "weapon-mastery", "fighter-subclass-x", "my-subclass", "martial-archetype"]) expect(playedByEngineCode(k)).toBe(false);
   });
 });
 

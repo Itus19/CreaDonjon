@@ -390,6 +390,8 @@ export interface DerivedSheet {
   skills: Record<Skill, SkillResult>;
   /** V3.1-178 : Perception, Intuition et Investigation passives. */
   passives: Record<PassiveSkill, PassiveResult>;
+  /** L'initiative : un test de Dextérité, plus ce qu'une règle pose sur `initiative` (Athlète accompli : l'avantage). */
+  initiative: AbilityCheckResult;
   hitPoints: { max: number; hitDice: string; sources: Source[] };
   speed: { value: number; sources: Source[] };
   features: ResolvedFeature[];
@@ -946,6 +948,18 @@ export function characterSheet(
     passives[skill] = { value, rollState, sources };
   }
 
+  // L'initiative est un test de Dextérité (règles 2024) : il part de ce test (Touche-à-tout compris),
+  // puis prend les bonus posés sur `initiative` ; l'avantage de l'un ou de l'autre compte.
+  const testDex = abilityChecks.dex;
+  const { value: initiativeMod, sources: initiativeSources } = stackOnto("initiative", allModifiers, testDex.mod, testDex.sources);
+  const initiative: AbilityCheckResult = {
+    mod: initiativeMod,
+    halfProficiency: testDex.halfProficiency,
+    rollState: resolveRollState(["initiative", "check.dex"], allModifiers),
+    sources: initiativeSources,
+    dice: collectDice(["initiative", "check.dex", "check"], allModifiers),
+  };
+
   const hitPoints = computeHitPoints(build, ruleset, abilities.con.mod, allModifiers);
   const speed = resolveTargetStack("speed", allModifiers, 30, "Vitesse de base");
 
@@ -1034,7 +1048,7 @@ export function characterSheet(
   const resources = computeResources({ build, ruleset, features, equipment, abilities, proficiencyBonus, totalLevel, spellSaveDc: spellcasting?.saveDc, warnings });
 
   return {
-    abilities, proficiencyBonus, ac, savingThrows, abilityChecks, skills, passives, hitPoints, speed, features, spellcasting, grantedSpells, resources, warnings, encumbrance,
+    abilities, proficiencyBonus, ac, savingThrows, abilityChecks, skills, passives, initiative, hitPoints, speed, features, spellcasting, grantedSpells, resources, warnings, encumbrance,
     senses, speeds, grantedProficiencies, rollModifiers, attacksPerAction, bonusActionOptions, damageDefenses, light, untargetable, immuneSpells,
   };
 }

@@ -62,4 +62,9 @@ describe("les effets passifs SRD écrits à la main", () => {
   it("le Touche-à-tout du barde : la moitié de la maîtrise sur tout jet de caractéristique (V3.1-46)", () => {
     expect(RAW["bard-jack-of-all-trades"].modifiers).toEqual([{ target: "check", op: "half_proficiency" }]);
   });
+
+  it("les dons de Style de combat : Archerie (+2 à distance, selon l'arme du jet) et Défense (+1 CA, en armure)", () => {
+    expect(RAW.archery.modifiers).toEqual([{ target: "attack.weapon", op: "add", value: 2, when: { wielding: "ranged" } }]);
+    expect(RAW.defense.modifiers).toEqual([{ target: "ac", op: "add", value: 1, when: { armor: ["light", "medium", "heavy"] } }]);
+  });
 });

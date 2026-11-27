@@ -121,11 +121,14 @@ describe("les règles jouables du SRD écrites à la main", () => {
     expect(evaluate(effet.dc, { "ability.dex": 4, proficiency: 3 }, { nextInt: () => 0 }, "average").value).toBe(15);
   });
 
-  it("couverture : Second souffle est jouable ; Fougue et Abjuration le sont en partie, et le disent", () => {
+  it("couverture : Second souffle et Fougue sont jouables ; Abjuration l'est en partie, et le dit", () => {
     const etat = (k: string) =>
       coverageSummary(TYPES.filter((t) => RAW[k][t] !== undefined).map((t) => ({ blockType: t, data: validateBlockData(t, RAW[k][t]) }))).state;
     expect(etat("fighter-second-wind")).toBe("playable");
-    expect(etat("fighter-action-surge")).toBe("partial");
+    // Fougue : l'action accordée ne paie pas la Magie (not_magic), et « une fois par tour » est une limite comptée au clic.
+    expect(etat("fighter-action-surge")).toBe("playable");
+    const fougue = zActivationBlockData.parse(RAW["fighter-action-surge"].activation).activations[0];
+    expect(fougue?.limit).toEqual({ per: "turn" });
     expect(etat("paladin-abjure-foes")).toBe("partial");
   });
 });

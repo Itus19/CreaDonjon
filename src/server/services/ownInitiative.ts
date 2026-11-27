@@ -63,7 +63,7 @@ export async function setMyInitiative(
   } else {
     const ctx = await resolveCharacterActionContext(supabase, entityId, params.campaignId, params.locale);
     if (!ctx) return { ok: false, reason: "no_character" };
-    value = ownInitiativeFromDie(params.input, ctx.sheet.abilities.dex.mod);
+    value = ownInitiativeFromDie(params.input, ctx.sheet.initiative.mod);
     natural = params.input.modifierIncluded ? null : params.input.natural;
   }
   if (!isOwnInitiativeInRange(value)) return { ok: false, reason: "out_of_range" };

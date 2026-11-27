@@ -35,7 +35,9 @@ export type ModifierTargetCategory =
   | "defense"
   /** V3.1-180 (ADR 0078) : lumière émise (mètres) ; étiquettes qui ne peuvent pas viser (M15). */
   | "light"
-  | "untargetable";
+  | "untargetable"
+  /** L'initiative, un test de Dextérité : bonus (Vigilant), avantage (Athlète accompli). */
+  | "initiative";
 
 export interface ModifierTargetOption {
   target: string;
@@ -89,6 +91,7 @@ export const MODIFIER_TARGET_OPTIONS: readonly ModifierTargetOption[] = [
   { target: "light.dim", category: "light" },
   // `immune.spell.<clé>` vise un sort précis : il se saisit en données, pas dans cette liste fermée.
   { target: "untargetable.divination", category: "untargetable" },
+  { target: "initiative", category: "initiative" },
 ];
 
 /** Effets valides pour une categorie de cible — ex. la maitrise/l'expertise n'ont de sens que sur une sauvegarde ou une competence, jamais sur la CA. */
@@ -113,6 +116,7 @@ export const OPS_BY_TARGET_CATEGORY: Record<ModifierTargetCategory, readonly Mod
   defense: ["set"],
   light: ["set", "max"],
   untargetable: ["set"],
+  initiative: ["add", "advantage", "disadvantage"],
 };
 
 /** `add`/`set`/`min`/`max` portent un montant ; les quatre autres (avantage, desavantage, maitrise, expertise) sont des drapeaux, jamais de valeur associee (meme distinction que `Modifier.value` dans sheet.ts, optionnel). */

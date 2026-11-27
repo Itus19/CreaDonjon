@@ -271,5 +271,35 @@
         "value": 9
       }
     ]
+  },
+  "archery": {
+    "_regle": "Archerie (don de Style de combat) : +2 aux jets d'attaque effectues avec des armes a distance (`when.wielding` : l'arme du jet).",
+    "modifiers": [
+      {
+        "target": "attack.weapon",
+        "op": "add",
+        "value": 2,
+        "when": {
+          "wielding": "ranged"
+        }
+      }
+    ]
+  },
+  "defense": {
+    "_regle": "Defense (don de Style de combat) : +1 a la CA tant qu'on porte une armure legere, intermediaire ou lourde (`when.armor`).",
+    "modifiers": [
+      {
+        "target": "ac",
+        "op": "add",
+        "value": 1,
+        "when": {
+          "armor": [
+            "light",
+            "medium",
+            "heavy"
+          ]
+        }
+      }
+    ]
   }
 }

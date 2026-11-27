@@ -58,6 +58,24 @@ export type CoverageFacts =
  */
 export const ENGINE_CONDITIONS: readonly string[] = ["blinded", "invisible"];
 
+const CLASSES_SRD = ["barbarian", "bard", "cleric", "druid", "fighter", "monk", "paladin", "ranger", "rogue", "sorcerer", "warlock", "wizard"] as const;
+const JOUEES_EN_CODE = new RegExp(`^(${CLASSES_SRD.join("|")})-(weapon-mastery|subclass)$`);
+
+/**
+ * Les aptitudes du SRD 2024 que le moteur joue en code, sans brique sur leur
+ * fiche : comme `ENGINE_CONDITIONS`, une liste fermée et testée.
+ * - **Maîtrise des armes** : le choix des armes est proposé d'après la colonne
+ *   de la classe (`resolvedRuleset.ts`), et la botte de l'arme maîtrisée
+ *   s'applique à chaque attaque (`weaponMastery.ts`, V3.1-148).
+ * - **Sous-classe de <classe>** : le choix de la sous-classe (création et
+ *   montée de niveau) ; ce qu'elle apporte se joue par ses propres aptitudes,
+ *   qui ont chacune leur état.
+ * Une lacune déclarée sur la fiche l'emporte toujours (la règle reste partielle).
+ */
+export function playedByEngineCode(key: string): boolean {
+  return JOUEES_EN_CODE.test(key);
+}
+
 const PAR_TYPE: Record<string, CoverageCategory> = {
   feature: "feature",
   feat: "feature",

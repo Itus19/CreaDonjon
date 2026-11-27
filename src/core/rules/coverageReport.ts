@@ -3,6 +3,7 @@ import {
   coverageCategoryOf,
   coverageOf,
   coverageTally,
+  playedByEngineCode,
   type CoverageCategory,
   type CoverageFacts,
   type CoverageResult,
@@ -114,8 +115,13 @@ function faitsSimples(e: ReportEntry, category: CoverageCategory, declaree = fal
     case "weapon":
     case "armor":
     case "class":
-      // Une aptitude jouée par le bloc de sa sous-classe compte comme portant des modificateurs.
-      return { category, blockTypes: [...e.blocks.map((b) => b.block_type), ...(declaree ? ["modifiers"] : [])], gaps: lacunesDe(blocDe(e, "coverage")) };
+      // Une aptitude jouée par le bloc de sa sous-classe compte comme portant des modificateurs ;
+      // une aptitude jouée par le moteur en code (maîtrise des armes, choix de la sous-classe), comme portant sa progression.
+      return {
+        category,
+        blockTypes: [...e.blocks.map((b) => b.block_type), ...(declaree ? ["modifiers"] : []), ...(category === "feature" && playedByEngineCode(e.key) ? ["class_progression"] : [])],
+        gaps: lacunesDe(blocDe(e, "coverage")),
+      };
     default:
       return { category: "out_of_scope" };
   }

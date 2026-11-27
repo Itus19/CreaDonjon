@@ -384,7 +384,7 @@
     }
   },
   "champion": {
-    "_regle": "Critique ameliore : critique sur 19 ou 20 aux attaques d'arme et a mains nues (V3.1-158, ADR 0074).",
+    "_regle": "Critique ameliore : critique sur 19 ou 20 aux attaques d'arme et a mains nues (V3.1-158, ADR 0074). Athlete accompli : avantage a l'initiative et aux tests de Force (Athletisme) ; le deplacement apres un critique attend sa brique (coverage dans playable-2024.json).",
     "features": {
       "Improved Critical": {
         "modifiers": [
@@ -392,6 +392,18 @@
             "target": "crit_range.weapon",
             "op": "set",
             "value": 19
+          }
+        ]
+      },
+      "Remarkable Athlete": {
+        "modifiers": [
+          {
+            "target": "initiative",
+            "op": "advantage"
+          },
+          {
+            "target": "skill.athletics",
+            "op": "advantage"
           }
         ]
       }
