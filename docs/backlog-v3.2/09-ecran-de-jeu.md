@@ -133,9 +133,17 @@ Demandé le 26 novembre après la partie test avec Mabelle ; maquettes validées
 
 ## Lot 4 — Le combat
 
-### ☐ V3.2-66 — ADR : le moteur ouvre un combat en solo · `M` · sans modèle IA · Modèle conseillé : Opus
+### ☐ V3.2-66 — ADR : le moteur ouvre un combat en solo · `M` · sans modèle IA · Modèle conseillé : Opus — **ADR 0121 écrit le 27 novembre, proposé**
 
 - Qui entre, de quel côté, contre qui : décidé par le moteur d'après les relations, le rôle et le courage ; l'IA raconte. Initiative par `rollInitiativeCheck` (cible de modificateur `initiative`, fil « Rendre jouables les 7 règles partielles »).
+
+**Vu à la partie test du 27 novembre** : trois attaques contre Mabelle, aucune n'a touché ni raté. Hors combat, `loadTargets` donne `ac: null` à un présent ; sans CA, pas de verdict ni de dégâts.
+
+**ADR 0121.** Une attaque contre un présent ouvre le combat d'office (choix de l'auteur attendu). Un PNJ n'en ouvre un que par une proposition validée. Les camps sortent d'une fonction pure `campsDuCombat` (amitié et dette à la bande « fort », garde contre l'agresseur, courage et archétype pour qui reste hors du combat), recalculée à chaque fin de round. Participants par `addEntityParticipant`, surprise au désavantage.
+
+**Critères d'acceptation**
+- [ ] Tests du noyau : `campsDuCombat` range la cible et ses proches d'un côté, l'agresseur et les siens de l'autre ; un garde rejoint le défenseur ; un enfant reste hors du combat ; un présent loin n'entre pas au premier round.
+- [ ] Une attaque contre un présent crée le combat, ses participants avec CA et PV, et pose `activeCombatId` ; l'attaque touche ou rate contre la CA de la fiche allégée.
 
 ### ☐ V3.2-67 — Le combat dans le rail · `M` · sans modèle IA · Modèle conseillé : Opus — **après V3.2-66**
 
@@ -144,6 +152,21 @@ Demandé le 26 novembre après la partie test avec Mabelle ; maquettes validées
 ### ☐ V3.2-68 — L'initiative dans le fil · `M` · sans modèle IA · Modèle conseillé : Opus — **après V3.2-66**
 
 - Pastille de jet d'initiative dans le fil (rangs des PNJ cachés tant qu'on n'a pas lancé), puis la carte « Ordre d'initiative ». Rounds de 6 s, économie d'action en pastilles.
+
+### ☐ V3.2-73 — Le tour d'un PNJ en combat · `M` · **avec** modèle IA · Modèle conseillé : Opus — **après V3.2-66**
+
+- ADR 0121, point 5. Le moteur construit la liste fermée des options du PNJ (attaquer telle cible avec telle action, se désengager, fuir, se rendre, esquiver, aider) ; l'IA en choisit une sous contrainte de schéma, avec une phrase de raison ; le moteur lance et applique ; l'IA raconte le round. Tactique fixe en secours (frapper qui l'a le plus blessé, sinon le plus proche).
+
+**Critères d'acceptation**
+- [ ] Tests du noyau : la liste des options suit la fiche et la zone ; un choix hors liste est refusé et la tactique fixe joue.
+- [ ] `ai_usage_log` écrit à chaque choix, même en échec.
+
+### ☐ V3.2-74 — Moral et fin du combat · `S` · sans modèle IA · Modèle conseillé : Opus — **après V3.2-66**
+
+- ADR 0121, point 7. Test de moral à la moitié des PV ou quand un allié tombe (assurance, prudence, archétype) : fuite ou reddition. Le combat finit quand un camp n'a plus personne qui veut ou peut se battre ; `endCombat` le clôt.
+
+**Critères d'acceptation**
+- [ ] Tests du noyau : un PNJ prudent fuit à la moitié de ses PV ; un camp vide termine le combat.
 
 ---
 
