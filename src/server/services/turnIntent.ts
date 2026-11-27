@@ -67,6 +67,7 @@ import { insertDiceRoll } from "@/src/server/repos/diceRolls";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
 import { serverRng } from "@/src/server/services/rng";
 import { soloCritRange, soloRollWindow } from "@/src/server/services/soloRollWindow";
+import { ouvrirCombatSolo } from "@/src/server/services/soloCombatOpening";
 import { applyRuntimeStateChange, getEntityRuntimeState } from "@/src/server/services/runtimeState";
 import { getRuntimeState } from "@/src/server/repos/runtimeState";
 import type { TargetId, IntentTargetDetail, IntentBarData, TurnRecord } from "@/lib/solo/types";
@@ -1064,9 +1065,23 @@ export async function proposeIntentRequest(
   const tierDc = tier ? dcForTier(tier) : null;
   if (tier && tierDc !== null && autoSuccess({ tier, modifier: basis.modifier })) return { kind: "auto", what: basis.what, dc: tierDc };
 
+  // ADR 0121 : attaquer un présent de la scène ouvre le combat d'office ; la CA vient alors de sa fiche.
+  const ouverture =
+    basis.kind === "weapon_attack" && target?.source === "scene" && target.id.startsWith("entity:")
+      ? await ouvrirCombatSolo(supabase, {
+          campaignId: params.campaignId,
+          worldId: params.world.id,
+          actorEntityId: params.entityId,
+          targetEntityId: target.id.slice("entity:".length),
+          callerId: params.callerId,
+          locale: params.locale,
+        })
+      : null;
+
   const request: PendingRequest = {
     ...basis,
-    dc: basis.kind === "weapon_attack" ? (target?.ac ?? null) : (tierDc ?? basis.dc),
+    dc: basis.kind === "weapon_attack" ? (ouverture ? ouverture.cibleAc : (target?.ac ?? null)) : (tierDc ?? basis.dc),
+    ...(ouverture ? { combat_opened: ouverture.fait, combat_opened_id: ouverture.combatId } : {}),
     target_id: target?.id ?? null,
     target_label: target?.label ?? null,
     advantage: choice.advantage,
@@ -1272,6 +1287,7 @@ async function finishResolution(
 
     const crit = isCritical ? " — critique" : isCriticalFail ? " — échec critique" : "";
     const facts = [
+      ...(pending.combat_opened ? [pending.combat_opened] : []),
       `${pending.actor_name} attaque ${pending.target_label ?? "sans cible désignée"} avec ${pending.what.replace("Attaque — ", "")}` +
         ` : ${total} (dé : ${natural})` +
         (pending.dc === null ? "" : ` contre CA ${pending.dc} — ${hit ? "touché" : "raté"}`) +
@@ -1301,6 +1317,8 @@ async function finishResolution(
       damage,
       weapon: pending.what,
       origin,
+      // ADR 0121 : « Annuler ce tour » retire le combat que l'attaque a ouvert (`turnUndo.ts`).
+      ...(pending.combat_opened_id ? { combat_opened_id: pending.combat_opened_id } : {}),
     };
     const eventId = await journalTurn(supabase, { campaignId: params.campaignId, callerId: params.callerId, entityId: params.entityId, kind: "roll", payload });
 

@@ -15,6 +15,7 @@ import { putSceneState } from "@/src/server/repos/sceneStates";
 import { zInventoryBlockData } from "@/src/core/schemas/blocks/inventory";
 import { restoreInventory } from "@/src/server/services/inventoryActions";
 import { removeAppliedNote } from "@/src/server/services/aiProposals";
+import { deleteCombatById } from "@/src/server/services/combats";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -117,6 +118,20 @@ export async function undoLastSoloTurn(supabase: TypedClient, params: { campaign
       } else {
         console.error("Inventaire relevé illisible, non restauré", tour.before.entity_id, avant.error.issues);
       }
+    }
+  }
+
+  // 3 bis. ADR 0121 : le combat que l'attaque du tour a ouvert s'en va avec elle. La scène relevée au début du
+  // tour le citait déjà (il s'ouvre avant le jet) : elle repart sans combat en cours.
+  const combatsOuverts = lignes
+    .filter((l) => tour.eventIds.includes(l.id))
+    .map((l) => (l.payload as Record<string, unknown> | null)?.combat_opened_id)
+    .filter((id): id is string => typeof id === "string");
+  for (const combatId of combatsOuverts) await deleteCombatById(supabase, combatId);
+  if (combatsOuverts.length > 0 && scene) {
+    const sceneAvant = zSceneState.safeParse(tour.before?.scene);
+    if (sceneAvant.success && sceneAvant.data.activeCombatId !== null && combatsOuverts.includes(sceneAvant.data.activeCombatId)) {
+      await putSceneState(supabase, { campaignId: params.campaignId, state: { ...sceneAvant.data, activeCombatId: null }, updatedBy: params.callerId });
     }
   }
 

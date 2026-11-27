@@ -84,7 +84,7 @@ async function getMonsterCombatStats(
   return { ac: data.armor_class, hpMax: data.hit_points, dexMod: abilityModifier(data.abilities.dex) };
 }
 
-async function initiativeForParticipant(
+export async function initiativeForParticipant(
   supabase: TypedClient,
   participant: CombatParticipantRow,
   campaignId: string,
@@ -93,7 +93,12 @@ async function initiativeForParticipant(
   if (participant.source_kind === "entity" && participant.entity_id) {
     const ctx = await resolveCharacterActionContext(supabase, participant.entity_id, campaignId, locale);
     // L'initiative de la fiche : la Dextérité, plus ce que ses règles posent sur `initiative` (Athlète accompli : l'avantage).
-    return ctx ? { mod: ctx.sheet.initiative.mod, advantage: ctx.sheet.initiative.rollState } : { mod: 0, advantage: "normal" };
+    if (ctx) return { mod: ctx.sheet.initiative.mod, advantage: ctx.sheet.initiative.rollState };
+    // ADR 0121 : un PNJ à fiche allégée (bloc `statblock`, sans fiche de personnage) lance avec sa Dextérité, plus avec 0.
+    const statblock = (await listBlocksByTypeForEntities(supabase, [participant.entity_id], "statblock"))
+      .map((b) => zStatblockBlockData.safeParse(b.data))
+      .find((r) => r.success);
+    return { mod: statblock?.success ? abilityModifier(statblock.data.abilities.dex) : 0, advantage: "normal" };
   }
   if (participant.source_kind === "statblock" && participant.rule_key) {
     const campaign = await getCampaign(supabase, campaignId);

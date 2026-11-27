@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { campsDuCombat, type PresentAuCombat } from "./combatCamps";
+import { campsDuCombat, surprisDuCombat, type PresentAuCombat } from "./combatCamps";
 
 const pj = "pj";
 const mabelle = "mabelle";
@@ -107,5 +107,22 @@ describe("campsDuCombat (ADR 0121, point 2)", () => {
     const une = campsDuCombat(params);
     expect(campsDuCombat(params)).toEqual(une);
     for (const h of une.horsCombat) expect(["fuit", "se_cache", "appelle_a_l_aide"]).toContain(h.reaction);
+  });
+});
+
+describe("surprisDuCombat (ADR 0121, point 4 ; surprise des règles 2024)", () => {
+  const presents = [present(mabelle, { envers: { [pj]: { amitie: 10 } } }), present("ourse", { archetype: "garde", envers: { [pj]: { amitie: -50 } } })];
+  const camps = campsDuCombat({ agresseurId: pj, cibleId: mabelle, presents, juridictionGarde: true, graine: "t" });
+
+  it("un défenseur qui n'était pas hostile est surpris ; un hostile s'y attendait", () => {
+    expect(surprisDuCombat({ camps, agresseurId: pj, presents, agresseurCache: false })).toEqual([mabelle]);
+  });
+
+  it("un agresseur caché surprend tous les défenseurs", () => {
+    expect(surprisDuCombat({ camps, agresseurId: pj, presents, agresseurCache: true })).toEqual([mabelle, "ourse"]);
+  });
+
+  it("l'agresseur et les siens ne sont jamais surpris", () => {
+    expect(surprisDuCombat({ camps, agresseurId: pj, presents, agresseurCache: true })).not.toContain(pj);
   });
 });

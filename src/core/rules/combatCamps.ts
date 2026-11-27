@@ -107,3 +107,26 @@ export function campsDuCombat(params: {
 
   return camps;
 }
+
+/**
+ * ADR 0121, point 4 — Qui est surpris, règle de D&D 2024 : une créature
+ * surprise au début du combat lance son initiative avec désavantage, rien de
+ * plus (ni tour perdu, ni attaque gratuite). Est surpris un défenseur qui ne
+ * s'attendait à rien : il n'était pas hostile envers l'agresseur (bande
+ * « hostile » ou pire). Un agresseur caché surprend tous les défenseurs.
+ * La cible absente des présents (la personne qui joue, attaquée par un PNJ)
+ * n'a pas de liens connus ici : elle est surprise, sauf hostilité déclarée.
+ */
+export function surprisDuCombat(params: {
+  camps: CampsDuCombat;
+  agresseurId: string;
+  presents: readonly PresentAuCombat[];
+  agresseurCache: boolean;
+}): string[] {
+  const parId = new Map(params.presents.map((p) => [p.id, p]));
+  return params.camps.defenseurs.filter((id) => {
+    if (params.agresseurCache) return true;
+    const amitie = parId.get(id)?.envers[params.agresseurId]?.amitie ?? 0;
+    return amitie > -SEUIL_LIEN_FORT;
+  });
+}

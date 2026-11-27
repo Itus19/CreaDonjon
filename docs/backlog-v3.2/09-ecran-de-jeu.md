@@ -133,7 +133,7 @@ Demandé le 26 novembre après la partie test avec Mabelle ; maquettes validées
 
 ## Lot 4 — Le combat
 
-### ☐ V3.2-66 — ADR : le moteur ouvre un combat en solo · `M` · sans modèle IA · Modèle conseillé : Opus — **ADR 0121 accepté le 27 novembre ; `campsDuCombat` codé**
+### ☐ V3.2-66 — ADR : le moteur ouvre un combat en solo · `M` · sans modèle IA · Modèle conseillé : Opus — **ADR 0121 accepté le 27 novembre ; ouverture codée, reste à vérifier à l'écran**
 
 - Qui entre, de quel côté, contre qui : décidé par le moteur d'après les relations, le rôle et le courage ; l'IA raconte. Initiative par `rollInitiativeCheck` (cible de modificateur `initiative`, fil « Rendre jouables les 7 règles partielles »).
 
@@ -143,7 +143,11 @@ Demandé le 26 novembre après la partie test avec Mabelle ; maquettes validées
 
 **Critères d'acceptation**
 - [x] Tests du noyau (`src/core/rules/combatCamps.test.ts`) : `campsDuCombat` range la cible et ses proches d'un côté, l'agresseur et les siens de l'autre ; un garde rejoint le défenseur ; un enfant reste hors du combat ; un présent loin n'entre pas au premier round.
-- [ ] Une attaque contre un présent crée le combat, ses participants avec CA et PV, et pose `activeCombatId` ; l'attaque touche ou rate contre la CA de la fiche allégée.
+- [ ] Une attaque contre un présent crée le combat, ses participants avec CA et PV, et pose `activeCombatId` ; l'attaque touche ou rate contre la CA de la fiche allégée. *(codé, reste à vérifier à l'écran)*
+
+**Fait.** `ouvrirCombatSolo` (`src/server/services/soloCombatOpening.ts`) : appelé par `proposeIntentRequest` quand l'attaque vise un présent de la scène, hors combat, par un administrateur du monde (la personne qui joue en solo). Trois lectures groupées (attitudes envers l'agresseur et la cible, tempéraments), les camps, la surprise (`surprisDuCombat`, désavantage à l'initiative), les participants (`addEntityParticipant`), toutes les initiatives lancées par le serveur, le combat en cours et `activeCombatId`. La CA de la cible devient le DD de l'attaque ; le fait « Le combat commence : … Pris par surprise : … » passe en tête des faits du jet, pour le récit. `initiativeForParticipant` lit désormais la Dextérité du `statblock` d'un PNJ sans fiche de personnage (avant : 0, à la table du MJ aussi). « Annuler ce tour » retire le combat ouvert par l'attaque (`combat_opened_id`, `turnUndo.ts`).
+
+**Reste.** L'initiative du personnage est lancée par le serveur en attendant sa pastille (V3.2-68) ; une demande d'attaque abandonnée avant le jet laisse le combat ouvert ; un agresseur caché n'est pas encore lu (surprise « tous ») ; les PNJ n'agissent pas encore à leur tour (V3.2-73), et rien ne clôt le combat seul (V3.2-74 ; l'outil du MJ peut le terminer).
 
 ### ☐ V3.2-67 — Le combat dans le rail · `M` · sans modèle IA · Modèle conseillé : Opus — **après V3.2-66**
 
