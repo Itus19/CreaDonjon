@@ -457,7 +457,7 @@ export interface WeaponData {
  */
 export function weaponRollProperties(weapon: Pick<WeaponData, "properties" | "isRanged">, grip: { twoHanded?: boolean } = {}): string[] {
   const out = weapon.isRanged ? [...weapon.properties, "ranged"] : [...weapon.properties];
-  // ADR 0118 — « tenue à deux mains » (Armes à deux mains) : une arme de
+  // ADR 0119 — « tenue à deux mains » (Armes à deux mains) : une arme de
   // corps à corps Deux mains, ou Polyvalente quand on la prend à deux mains.
   const deuxMains = weapon.properties.includes("two-handed") || (grip.twoHanded === true && weapon.properties.includes("versatile"));
   if (!weapon.isRanged && deuxMains) out.push("melee-two-handed");
