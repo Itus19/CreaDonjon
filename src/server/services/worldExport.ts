@@ -32,7 +32,7 @@ import {
   setEntityCurrentRevision,
 } from "@/src/server/repos/worldExport";
 import { createCampaign, type CampaignSummary } from "@/src/server/services/campaigns";
-import { createEntity } from "@/src/server/services/entities";
+import { createImportedEntities } from "@/src/server/services/entities";
 import { generateUniqueSlug } from "@/src/server/services/worlds";
 import { getWorldById, type WorldSummary } from "@/src/server/repos/worlds";
 import { copyAssetToWorld } from "@/src/server/services/storage";
@@ -214,6 +214,10 @@ interface MondeImporte extends ImportWorldResult {
 async function importerMonde(supabase: TypedClient, params: ImportWorldParams & OptionsDeCopie): Promise<MondeImporte> {
   const { ownerId, data } = params;
 
+  if (new Set(data.entities.map((e) => e.ref)).size !== data.entities.length) {
+    throw new Error("Deux fiches du fichier portent la même référence : fichier corrompu.");
+  }
+
   const rulesetId = params.rulesetId ?? (await resolveImportedRuleset(supabase, ownerId, data.ruleset));
 
   const slug = await generateUniqueSlug(supabase, ownerId, data.world.name);
@@ -237,17 +241,13 @@ async function importerMonde(supabase: TypedClient, params: ImportWorldParams & 
 
   const assetIdMap = params.copierImages ? await params.copierImages(insertedWorld.id) : new Map<string, string>();
 
-  const idMap = new Map<string, string>();
-  for (const entity of data.entities) {
-    const inserted = await createEntity(supabase, {
-      worldId: insertedWorld.id,
-      createdBy: ownerId,
-      entityKind: entity.entityKind,
-      name: entity.name,
-      aliases: entity.aliases,
-    });
-    idMap.set(entity.ref, inserted.id);
-  }
+  // G-7b : en une fois, plus fiche par fiche (une carte Azgaar en compte des centaines).
+  const insertedEntities = await createImportedEntities(supabase, {
+    worldId: insertedWorld.id,
+    createdBy: ownerId,
+    items: data.entities.map((e) => ({ entityKind: e.entityKind, name: e.name, aliases: e.aliases })),
+  });
+  const idMap = new Map(data.entities.map((e, k) => [e.ref, insertedEntities[k].id] as const));
 
   // V3.1-189 : un nouvel id par bloc qui porte son id d'origine, choisi avant
   // l'insertion — les references entre blocs se recalent ainsi en une passe.

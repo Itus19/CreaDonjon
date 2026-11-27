@@ -71,6 +71,7 @@ const SpellcastingBlockEditor = dynamic(
 );
 const ResourcesBlockEditor = dynamic(() => import("./ResourcesBlockEditor"));
 const SettlementBlockEditor = dynamic(() => import("./SettlementBlockEditor"));
+const RevelerLieuxAlentour = dynamic(() => import("./RevelerLieuxAlentour"));
 const MusicBlockEditor = dynamic(() => import("./MusicBlockEditor"));
 const EquippableBlockEditor = dynamic(() => import("./EquippableBlockEditor"));
 const GenealogyBlockEditor = dynamic(() => import("./GenealogyBlockEditor"));
@@ -107,6 +108,7 @@ import type { EquippableBlockData } from "@/src/core/schemas/blocks/equippable";
 import type { PriceListBlockData } from "@/src/core/schemas/blocks/priceList";
 import PriceListBlockEditor from "./PriceListBlockEditor";
 import type { SettlementBlockData } from "@/src/core/schemas/blocks/settlement";
+import type { GeneratedWorldBlockData } from "@/src/core/schemas/blocks/generatedWorld";
 import type { RoomsBlockData } from "@/src/core/schemas/blocks/rooms";
 import RoomsBlockEditor from "./RoomsBlockEditor";
 import type { MusicBlockData } from "@/src/core/schemas/blocks/music";
@@ -162,6 +164,7 @@ export const BLOCK_TYPE_LABELS: Record<string, string> = {
   price_list: "Carte et tarifs",
   rooms: "Pièces",
   settlement: "Ville",
+  generated_world: "Monde généré",
 };
 
 /** V3.1-189 : les blocs image de la fiche, par identifiant, pour les images posees dans le texte. */
@@ -318,8 +321,25 @@ export function BlockDataEditor({
       );
     case "price_list":
       return <PriceListBlockEditor data={block.data as PriceListBlockData} onChange={(d) => onChange(d)} blockId={block.id} />;
-    case "settlement":
-      return <SettlementBlockEditor data={block.data as SettlementBlockData} onChange={(d) => onChange(d)} />;
+    case "settlement": {
+      const ville = block.data as SettlementBlockData;
+      return (
+        <div className="flex flex-col gap-3">
+          <SettlementBlockEditor data={ville} onChange={(d) => onChange(d)} />
+          {/* G-7b : seulement pour une ville née d'une carte. */}
+          {ville.siteId && <RevelerLieuxAlentour worldSlug={worldSlug} entityId={block.entityId} />}
+        </div>
+      );
+    }
+    case "generated_world": {
+      // G-7b : la carte se lit, elle ne s'édite pas ici ; ses villes naissent à la découverte.
+      const monde = block.data as GeneratedWorldBlockData;
+      return (
+        <p className="text-sm text-ink-soft">
+          {monde.world.sites.length} villes sur la carte, dont {monde.places.length} avec leur page ; {monde.world.states.length} États.
+        </p>
+      );
+    }
     case "rooms":
       return <RoomsBlockEditor data={block.data as RoomsBlockData} onChange={(d) => onChange(d)} />;
     case "equippable":
@@ -540,6 +560,8 @@ export function BarreAjoutBloc({
           .filter(
             ([type]) =>
               type !== "generator" &&
+              // G-7b : seul l'import d'une carte pose la carte d'un monde généré.
+              type !== "generated_world" &&
               (!restrictAddableTypes || restrictAddableTypes.includes(type)) &&
               !(
                 (type === "personality" || type === "worldview") &&

@@ -22,6 +22,12 @@ export const zWorldSite = z.object({
   stateId: zId.nullable(),
   cultureId: zId.nullable(),
   settlement: zSettlementBlockData,
+  /**
+   * Une ville notable a sa page dès la création du monde ; les autres naissent
+   * à la découverte (choix de l'auteur, 26 novembre 2026). Chez Azgaar : les
+   * capitales et les cités.
+   */
+  notable: z.boolean().default(false),
 });
 export type WorldSite = z.infer<typeof zWorldSite>;
 

@@ -27,6 +27,7 @@ export const MONDE_ESSAI: AbstractWorld = {
       name: "Hornver",
       stateId: "s-grania",
       cultureId: "c-grane",
+      notable: true,
       settlement: { __v: 1, seed: 1, population: 48_739, zone: "capitale", wealth: "reputee", biome: temperate, peoples: [], trades: [] },
     },
     {
@@ -34,6 +35,7 @@ export const MONDE_ESSAI: AbstractWorld = {
       name: "Berton",
       stateId: "s-grania",
       cultureId: "c-grane",
+      notable: true,
       settlement: { __v: 1, seed: 2, population: 6_200, zone: "ville", wealth: "correcte", biome: temperate, peoples: [], trades: [] },
     },
     {
@@ -41,6 +43,7 @@ export const MONDE_ESSAI: AbstractWorld = {
       name: "Ostral",
       stateId: "s-vriia",
       cultureId: "c-vrie",
+      notable: true,
       settlement: { __v: 1, seed: 3, population: 21_400, zone: "capitale", wealth: "correcte", biome: "grassland", peoples: [], trades: [] },
     },
     {
@@ -48,6 +51,7 @@ export const MONDE_ESSAI: AbstractWorld = {
       name: "Pellemont",
       stateId: "s-vriia",
       cultureId: "c-vrie",
+      notable: false,
       settlement: { __v: 1, seed: 4, population: 900, zone: "bourg", wealth: "modeste", biome: "grassland", peoples: [], trades: [] },
     },
     {
@@ -55,6 +59,7 @@ export const MONDE_ESSAI: AbstractWorld = {
       name: "Gué-Salé",
       stateId: null,
       cultureId: null,
+      notable: false,
       settlement: { __v: 1, seed: 5, population: 450, zone: "bourg", wealth: "modeste", biome: "wetland", peoples: [], trades: [] },
     },
   ],

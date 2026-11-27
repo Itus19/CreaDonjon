@@ -9,6 +9,11 @@ import Dropdown from "@/components/shared/Dropdown";
  * lu et parse cote client uniquement pour prerempler le mode suggere par le
  * fichier (`suggestedMode`) — la validation qui compte se fait cote serveur
  * (`importWorldSchema`, zod), ce parsing client n'est qu'un confort d'UI.
+ *
+ * G-7b : une carte d'Azgaar (export JSON « Complet ») est reconnue et
+ * convertie ici, dans le navigateur (ADR 0109, G3) : ses villes, ses États et
+ * leur histoire simulée deviennent un fichier d'export de monde ordinaire,
+ * que la même route importe.
  */
 export default function ImportWorldForm({ canUseSoloMode }: { canUseSoloMode: boolean }) {
   const router = useRouter();
@@ -17,6 +22,7 @@ export default function ImportWorldForm({ canUseSoloMode }: { canUseSoloMode: bo
   const [parsedData, setParsedData] = useState<unknown | null>(null);
   const [mode, setMode] = useState<"campaign" | "solo">("campaign");
   const [error, setError] = useState<string | null>(null);
+  const [azgaarSummary, setAzgaarSummary] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const modeOptions = canUseSoloMode
     ? [
@@ -29,26 +35,48 @@ export default function ImportWorldForm({ canUseSoloMode }: { canUseSoloMode: bo
     const file = e.target.files?.[0];
     setError(null);
     setParsedData(null);
+    setAzgaarSummary(null);
     if (!file) {
       setFileName(null);
       return;
     }
     setFileName(file.name);
+    let json: unknown;
     try {
-      const text = await file.text();
-      const json = JSON.parse(text);
-      setParsedData(json);
-      if (json?.suggestedMode === "campaign" || (json?.suggestedMode === "solo" && canUseSoloMode)) {
-        setMode(json.suggestedMode);
-      }
+      json = JSON.parse(await file.text());
     } catch {
       setError("Fichier illisible : ce n'est pas un JSON valide.");
+      return;
+    }
+    if (estUneCarteAzgaar(json)) {
+      setPending(true);
+      try {
+        // Chargé à la demande : le simulateur n'alourdit pas l'accueil.
+        const { azgaarFileToWorldExport } = await import("@/src/core/worldgen/azgaar/toWorldExport");
+        const { data, summary } = azgaarFileToWorldExport(json);
+        setParsedData(data);
+        setAzgaarSummary(
+          `Carte Azgaar « ${summary.name} » : ${summary.states} États, ${summary.notables} villes notables créées tout de suite, ${summary.sites - summary.notables} autres gardées pour la découverte, ${summary.events} événements d'histoire jusqu'en ${summary.presentYear}.`
+        );
+        if (canUseSoloMode) setMode("solo");
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Carte Azgaar illisible.");
+      } finally {
+        setPending(false);
+      }
+      return;
+    }
+    setParsedData(json);
+    const suggested = typeof json === "object" && json !== null && "suggestedMode" in json ? json.suggestedMode : null;
+    if (suggested === "campaign" || (suggested === "solo" && canUseSoloMode)) {
+      setMode(suggested);
     }
   }
 
   function handleCancel() {
     setFileName(null);
     setParsedData(null);
+    setAzgaarSummary(null);
     setError(null);
     setMode("campaign");
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -111,7 +139,15 @@ export default function ImportWorldForm({ canUseSoloMode }: { canUseSoloMode: bo
           </button>
         </>
       )}
+      {azgaarSummary && <p className="w-full text-sm text-ink-muted">{azgaarSummary}</p>}
       {error && <p className="w-full text-sm text-danger">{error}</p>}
     </>
   );
+}
+
+/** Une carte d'Azgaar se reconnaît à sa version et à ses villes ; un export de monde, lui, a `formatVersion`. */
+function estUneCarteAzgaar(json: unknown): boolean {
+  if (typeof json !== "object" || json === null || !("info" in json) || !("pack" in json)) return false;
+  const pack = json.pack;
+  return typeof pack === "object" && pack !== null && "burgs" in pack;
 }

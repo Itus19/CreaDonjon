@@ -45,5 +45,10 @@ export const zSettlementBlockData = z.object({
   climate: zSettlementClimate.optional(),
   peoples: z.array(zSettlementShare).max(32).refine(uniqueKeys, "Un peuple apparaît deux fois").default([]),
   trades: z.array(zSettlementShare).max(64).refine(uniqueKeys, "Un métier apparaît deux fois").default([]),
+  /**
+   * G-7b : la ville de la carte dont cette page est née, pour un monde créé
+   * depuis Azgaar (bloc `generated_world`). Absent pour une ville écrite à la main.
+   */
+  siteId: z.string().trim().min(1).max(64).optional(),
 });
 export type SettlementBlockData = z.infer<typeof zSettlementBlockData>;

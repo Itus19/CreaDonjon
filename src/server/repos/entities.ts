@@ -213,6 +213,48 @@ export async function insertEntity(
   return data as EntitySummary;
 }
 
+/**
+ * G-7b : plusieurs fiches d'un coup, pour l'import d'un monde (une carte
+ * Azgaar en compte des centaines). Rend les lignes dans l'ordre d'entrée,
+ * ou lève une erreur si la base les rend dans un autre ordre.
+ */
+export async function insertEntities(
+  supabase: TypedClient,
+  rows: {
+    worldId: string;
+    createdBy: string;
+    slug: string;
+    name: string;
+    entityKind: string;
+    aliases: string[];
+    displayOrder: number;
+    isPublic: boolean;
+  }[]
+): Promise<EntitySummary[]> {
+  if (rows.length === 0) return [];
+  const { data, error } = await supabase
+    .from("entities")
+    .insert(
+      rows.map((r) => ({
+        world_id: r.worldId,
+        created_by: r.createdBy,
+        slug: r.slug,
+        name: r.name,
+        entity_kind: r.entityKind,
+        aliases: r.aliases,
+        display_order: r.displayOrder,
+        is_public: r.isPublic,
+      }))
+    )
+    .select(ENTITY_COLUMNS);
+  if (error) throw new Error(error.message);
+  const inserted = (data ?? []) as EntitySummary[];
+  if (inserted.length !== rows.length || inserted.some((e, k) => e.slug !== rows[k].slug)) {
+    throw new Error("Fiches importées rendues dans un autre ordre que celui de l'insertion : import interrompu.");
+  }
+  return inserted;
+}
+
 export async function getEntityById(
   supabase: TypedClient,
   id: string
