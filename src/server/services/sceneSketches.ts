@@ -209,7 +209,8 @@ export async function recordSketchSpeechAndMaybeAnchor(
 
   const sketch = updated.sketches.find((s) => s.id === params.sketchId);
   if (sketch && sketchShouldAnchorForSpeaking(sketch)) {
-    await promoteSketch(supabase, { ...params });
+    const promoted = await promoteSketch(supabase, { ...params });
+    if (!promoted.ok) console.error(`Ancrage de l'esquisse « ${sketch.name} » refusé : ${promoted.reason}`);
   }
 }
 
@@ -227,7 +228,9 @@ export async function anchorSketchesNamedInText(
 
   for (const sketch of scene.sketches) {
     if (textNamesSketch(params.text, sketch.name)) {
-      await promoteSketch(supabase, { campaignId: params.campaignId, worldId: params.worldId, sessionId: params.sessionId, sketchId: sketch.id, callerId: params.callerId });
+      const promoted = await promoteSketch(supabase, { campaignId: params.campaignId, worldId: params.worldId, sessionId: params.sessionId, sketchId: sketch.id, callerId: params.callerId });
+      // Un refus ne casse pas le tour, mais ne se tait pas non plus.
+      if (!promoted.ok) console.error(`Ancrage de l'esquisse « ${sketch.name} » refusé : ${promoted.reason}`);
     }
   }
 }
