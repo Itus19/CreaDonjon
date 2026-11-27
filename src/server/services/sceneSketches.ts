@@ -12,7 +12,7 @@ import type { EntitySummary } from "@/src/server/repos/entities";
 import type { SceneState } from "@/src/core/rules/scene";
 import { ancrerPersonneCalculee, archetypeCalcule, graineCalculee, roleCalcule } from "@/src/core/rules/sceneLife";
 import { deriveSeed } from "@/src/core/worldgen/seed";
-import { giveNpcSheet } from "@/src/server/services/npcSheet";
+import { DEFAULT_NPC_WEALTH, giveNpcGear, giveNpcSheet } from "@/src/server/services/npcSheet";
 import { insertRelation } from "@/src/server/repos/relations";
 import { upsertTrueName } from "@/src/server/repos/entityTrueNames";
 import { isWorldAdmin } from "@/src/server/services/permissions";
@@ -136,6 +136,15 @@ export async function promoteSketch(
     callerId: params.callerId,
   });
   if (!sheet.ok) console.warn(`Pas de fiche allégée pour une personne ancrée (${sheet.reason})`);
+  // V3.2-48 : son équipement et sa bourse, selon la richesse de la ville.
+  const gear = await giveNpcGear(supabase, {
+    entityId: promoted.entity.id,
+    ...(archetype !== undefined ? { archetype } : {}),
+    seed: seed ?? deriveSeed(0, sketch.id),
+    wealth: scene.life?.settlement.wealth ?? DEFAULT_NPC_WEALTH,
+    callerId: params.callerId,
+  });
+  if (!gear.ok) console.warn("Pas d'équipement pour une personne ancrée");
   await putSceneState(supabase, { campaignId: params.campaignId, state: withEntity, updatedBy: params.callerId });
   const eventId = await journalSketchNote(supabase, params.sessionId, params.callerId, `${sketch.name} a rejoint le monde`, {
     source: "anchor",

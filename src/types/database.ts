@@ -1532,6 +1532,58 @@ export type Database = {
           },
         ]
       }
+      entity_facet_discoveries: {
+        Row: {
+          campaign_id: string
+          discovered_at: string
+          entity_id: string
+          facet: string
+          id: string
+          source_event_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          campaign_id: string
+          discovered_at?: string
+          entity_id: string
+          facet: string
+          id?: string
+          source_event_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          discovered_at?: string
+          entity_id?: string
+          facet?: string
+          id?: string
+          source_event_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_facet_discoveries_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_facet_discoveries_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_facet_discoveries_source_event_id_fkey"
+            columns: ["source_event_id"]
+            isOneToOne: false
+            referencedRelation: "session_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       entity_discoveries: {
         Row: {
           campaign_id: string

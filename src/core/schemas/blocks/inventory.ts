@@ -9,6 +9,9 @@ const zItemCommon = z.object({
   slot: z.string().optional(),
   weight: z.object({ value: z.number(), unit: z.string() }).optional(),
   notes: z.string().optional(),
+  // V3.2-48 (ADR 0118) : porté mais caché (un couteau sous le tablier). Ne se
+  // voit pas sans indice ; absent : visible s'il est porté.
+  concealed: z.boolean().optional(),
 });
 
 /**

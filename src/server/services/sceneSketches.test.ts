@@ -81,7 +81,13 @@ vi.mock("@/src/server/services/npcSheet", () => ({
     npcSheets.push({ entityId: params.entityId, ...(params.archetype !== undefined ? { archetype: params.archetype } : {}), seed: params.seed });
     return { ok: true, templateKey: "commoner", fallback: params.archetype === undefined };
   },
+  giveNpcGear: async (_s: unknown, params: { entityId: string; wealth: string }) => {
+    npcGears.push({ entityId: params.entityId, wealth: params.wealth });
+    return { ok: true };
+  },
+  DEFAULT_NPC_WEALTH: "correcte",
 }));
+const npcGears: { entityId: string; wealth: string }[] = [];
 
 const { drawSketchForScene, promoteSketch, recordSketchSpeechAndMaybeAnchor, anchorSketchesNamedInText } = await import("./sceneSketches");
 const supabase = {} as SupabaseClient<Database>;
@@ -240,6 +246,8 @@ describe("ancrer une personne calculée (V3.2-45)", () => {
     const fiche = npcSheets.at(-1);
     expect(fiche).toMatchObject({ entityId: "e-aubergiste", seed: Number(aubergiste.id.slice(5)) });
     expect(fiche?.archetype).toBeDefined();
+    // V3.2-48 : son équipement aussi, à la richesse de la ville du lieu.
+    expect(npcGears.at(-1)?.entityId).toBe("e-aubergiste");
   });
 
   it("sans droit de MJ, pas de vrai nom : la fiche garde son libellé", async () => {

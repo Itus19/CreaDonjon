@@ -5,8 +5,15 @@ import { getRuleEntryForWorld } from "@/src/server/services/rules";
 import { createBlockWithData } from "@/src/server/services/blocks";
 import { statblockFromMonsterBlocks } from "@/src/core/rules/srdMapping";
 import { npcSheetFrom, npcSheetKey } from "@/src/core/rules/npcSheet";
+import { npcGear } from "@/src/core/rules/npcGear";
+import type { SettlementWealth } from "@/src/core/schemas/blocks/settlement";
+import { zInventoryBlockData, type InventoryBlockData } from "@/src/core/schemas/blocks/inventory";
+import { seenAtAGlance } from "@/src/core/rules/facets";
+import { presentsIci } from "@/src/core/rules/scenePresence";
+import { insertFacetDiscoveries, listFacetDiscoveries } from "@/src/server/repos/entityFacetDiscoveries";
 import { listBlocksByTypesForEntities } from "@/src/server/repos/blocks";
 import { getSceneState } from "@/src/server/repos/sceneStates";
+import type { SceneState } from "@/src/core/rules/scene";
 import { archetypeCalcule } from "@/src/core/rules/sceneLife";
 import { deriveSeed } from "@/src/core/worldgen/seed";
 import { isWorldAdmin } from "@/src/server/services/permissions";
@@ -57,13 +64,41 @@ export async function giveNpcSheet(
   return created.ok ? { ok: true, templateKey: key, fallback } : { ok: false, reason: "forbidden" };
 }
 
+/**
+ * V3.2-48 (ADR 0118) — L'équipement probable et la bourse d'un PNJ, dans un
+ * bloc `inventory` réservé au MJ (`npcGear`). Les objets portés et visibles se
+ * découvriront dès que le PNJ est vu ; les objets cachés, par indice.
+ *
+ * Coût : une création de bloc, une fois par PNJ.
+ */
+export async function giveNpcGear(
+  supabase: TypedClient,
+  params: { entityId: string; archetype?: string; seed: number; wealth: SettlementWealth; callerId: string }
+): Promise<{ ok: true; gear: InventoryBlockData } | { ok: false }> {
+  const gear = npcGear({ ...(params.archetype !== undefined ? { archetype: params.archetype } : {}), seed: params.seed, wealth: params.wealth });
+  const created = await createBlockWithData(supabase, {
+    entityId: params.entityId,
+    blockType: "inventory",
+    label: "Équipement",
+    visibilityLevel: "gm",
+    visibilityScopeId: null,
+    createdBy: params.callerId,
+    data: gear,
+  });
+  return created.ok ? { ok: true, gear } : { ok: false };
+}
+
+/** Sans ville en agrégat connue : une richesse moyenne. */
+export const DEFAULT_NPC_WEALTH: SettlementWealth = "correcte";
+
 /** Au plus tant de fiches rattrapées par tour : un lieu bondé se remplit en quelques tours, jamais d'un coup. */
 const CATCH_UP_PER_TURN = 4;
 
 /**
  * V3.2-47 (retour de l'auteur, 27 novembre) — Le rattrapage : un PNJ présent
- * dans la scène solo qui n'a encore ni fiche allégée (`statblock`) ni fiche
- * de personnage (`character`, un PJ ou un PNJ bâti à la main) en reçoit une.
+ * dans la scène solo sans fiche de personnage (`character`, un PJ ou un PNJ
+ * bâti à la main) reçoit ce qui lui manque : fiche allégée (`statblock`) et
+ * équipement (`inventory`, V3.2-48).
  * C'est ce qui donne sa fiche à Mabelle, ancrée avant V3.2-47, et à tout PNJ
  * créé à la main sans fiche.
  *
@@ -88,23 +123,70 @@ export async function ensureNpcSheetsForPresents(
   const ids = [...new Set(scene.present.map((p) => p.entityId))].filter((id) => id !== params.actorEntityId);
   if (ids.length === 0) return { given: [] };
 
-  const sheets = await listBlocksByTypesForEntities(supabase, ids, ["statblock", "character"]);
-  const withSheet = new Set(sheets.map((b) => b.entity_id));
-  const missing = ids.filter((id) => !withSheet.has(id)).slice(0, CATCH_UP_PER_TURN);
+  const blocks = await listBlocksByTypesForEntities(supabase, ids, ["statblock", "inventory", "character"]);
+  const has = (id: string, type: string) => blocks.some((b) => b.entity_id === id && b.block_type === type);
+  // Une fiche de personnage (un PJ, un PNJ bâti à la main) n'est jamais complétée d'office.
+  const missing = ids
+    .filter((id) => !has(id, "character"))
+    .map((id) => ({ id, sheet: !has(id, "statblock"), gear: !has(id, "inventory") }))
+    .filter((m) => m.sheet || m.gear)
+    .slice(0, CATCH_UP_PER_TURN);
+  const wealth = scene.life?.settlement.wealth ?? DEFAULT_NPC_WEALTH;
+  // L'équipement de chaque PNJ, déjà là ou tiré ce tour-ci : de quoi voir ce qu'il porte.
+  const gearById = new Map<string, InventoryBlockData>();
+  for (const b of blocks) {
+    if (b.block_type !== "inventory" || has(b.entity_id, "character")) continue;
+    const parsed = zInventoryBlockData.safeParse(b.data);
+    if (parsed.success) gearById.set(b.entity_id, parsed.data);
+  }
 
   const given: string[] = [];
-  for (const entityId of missing) {
-    const seed = scene.life?.workers.find((w) => w.entityId === entityId)?.seed;
+  for (const m of missing) {
+    const seed = scene.life?.workers.find((w) => w.entityId === m.id)?.seed;
     const archetype = seed !== undefined ? (archetypeCalcule(scene, seed) ?? undefined) : undefined;
-    const outcome = await giveNpcSheet(supabase, {
-      worldId: params.worldId,
-      entityId,
-      ...(archetype !== undefined ? { archetype } : {}),
-      seed: seed ?? deriveSeed(0, entityId),
-      callerId: params.callerId,
-    });
-    if (outcome.ok) given.push(entityId);
-    else console.warn(`Pas de fiche allégée rattrapée pour ${entityId} (${outcome.reason})`);
+    const who = { entityId: m.id, ...(archetype !== undefined ? { archetype } : {}), seed: seed ?? deriveSeed(0, m.id), callerId: params.callerId };
+    let ok = true;
+    if (m.sheet) {
+      const outcome = await giveNpcSheet(supabase, { worldId: params.worldId, ...who });
+      if (!outcome.ok) {
+        ok = false;
+        console.warn(`Pas de fiche allégée rattrapée pour ${m.id} (${outcome.reason})`);
+      }
+    }
+    if (m.gear) {
+      const outcome = await giveNpcGear(supabase, { ...who, wealth });
+      if (outcome.ok) gearById.set(m.id, outcome.gear);
+      else {
+        ok = false;
+        console.warn(`Pas d'équipement rattrapé pour ${m.id}`);
+      }
+    }
+    if (ok) given.push(m.id);
   }
+
+  await revealWhatIsWorn(supabase, { campaignId: params.campaignId, scene, gearById, actorEntityId: params.actorEntityId });
   return { given };
+}
+
+/**
+ * V3.2-48 (retour de l'auteur, 27 novembre) — Ce qu'un PNJ de la pièce porte
+ * sans le cacher (une lance, un tablier) se voit : ces objets sont découverts
+ * pour toute la table dès qu'on partage sa pièce. Le reste attend un indice.
+ *
+ * Coût : une lecture groupée des facettes des présents de la pièce ; une
+ * écriture groupée seulement quand quelque chose de nouveau se voit.
+ */
+async function revealWhatIsWorn(
+  supabase: TypedClient,
+  params: { campaignId: string; scene: SceneState; gearById: Map<string, InventoryBlockData>; actorEntityId: string }
+): Promise<void> {
+  const here = presentsIci(params.scene).map((p) => p.entityId).filter((id) => id !== params.actorEntityId && params.gearById.has(id));
+  if (here.length === 0) return;
+  const known = await listFacetDiscoveries(supabase, { campaignId: params.campaignId, entityIds: here, userId: null });
+  const rows = here.flatMap((entityId) =>
+    seenAtAGlance(params.gearById.get(entityId)!)
+      .filter((facet) => !known.get(entityId)?.has(facet))
+      .map((facet) => ({ campaignId: params.campaignId, entityId, facet, userId: null, sourceEventId: null }))
+  );
+  await insertFacetDiscoveries(supabase, rows);
 }
