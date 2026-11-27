@@ -51,7 +51,7 @@ export const zPendingRequest = z.object({
    */
   bonus_dice: z.array(z.object({ count: z.number().int().min(1), faces: z.number().int().min(1), label: z.string() })).optional(),
   /**
-   * ADR 0118 — une demande de dégâts dont chaque dé compte au moins cette
+   * ADR 0119 — une demande de dégâts dont chaque dé compte au moins cette
    * valeur (Armes à deux mains : 3). Le serveur l'applique aux dés qu'il lance
    * (l'arme au clic de fiche, les dés de bonus) ; aux vrais dés, `what` le dit.
    */

@@ -8,7 +8,7 @@ Quatre défauts, trois tickets : la consigne (V3.2-17), l'horloge (V3.2-18), le 
 
 ---
 
-### ☐ V3.2-17 — Une consigne de MJ, et le contexte pour la suivre · `M` · **avec modèle IA** — **en cours (Opus)**
+### ☐ V3.2-17 — Une consigne de MJ, et le contexte pour la suivre · `M` · **avec modèle IA** — **codé (Opus)**, reste la vérification en jeu
 
 **Pourquoi c'était plat.** La consigne demandait « deux à quatre phrases qui intègrent les faits ». Pour une action libre, le seul fait est le texte du joueur : le modèle le reformulait. Trois endroits poussaient le PNJ à répondre à chaque tour (consigne, description du champ `npc_reaction`, second essai dès qu'un PNJ était nommé). Les présents étaient listés sans rien dire de quand les citer. Et le contexte ne donnait que le **nom** du lieu.
 
@@ -26,7 +26,7 @@ Quatre défauts, trois tickets : la consigne (V3.2-17), l'horloge (V3.2-18), le 
 
 ---
 
-### ☐ V3.2-18 — L'horloge suit l'histoire · `M` · sans modèle IA pour le cœur — **en cours (Opus, [ADR 0112](../adr/0112-l-horloge-suit-l-histoire.md))**
+### ☐ V3.2-18 — L'horloge suit l'histoire · `M` · sans modèle IA pour le cœur — **codé (Opus, [ADR 0112](../adr/0112-l-horloge-suit-l-histoire.md))**, reste la vérification en jeu
 
 **Constat.** Une action libre vaut une minute, codée en dur (`minutesForTurn`, `turnLoop.ts`) ; l'IA n'a aucun moyen d'annoncer une ellipse ; et l'en-tête de l'écran solo, rendu par la page serveur, ne se recharge pas après un tour.
 

@@ -729,7 +729,7 @@ export interface RollBonusResult {
   rollState: RollState;
   /** Le plus petit d20 naturel qui fait un critique (20 par défaut, 19 pour le Critique amélioré). */
   critRange: number;
-  /** ADR 0118 — chaque dé de dégâts compte au moins cette valeur (Armes à deux mains : 3), `null` sans plancher. */
+  /** ADR 0119 — chaque dé de dégâts compte au moins cette valeur (Armes à deux mains : 3), `null` sans plancher. */
   dieMin: number | null;
 }
 

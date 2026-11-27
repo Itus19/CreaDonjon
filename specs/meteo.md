@@ -153,6 +153,7 @@ Le Guide du maître 2024 donne des effets au froid et à la chaleur extrêmes, a
 | ME-6 | Forçage du MJ (`weather_override`), depuis la fenêtre du MJ et la colonne de scène à distance | Sonnet |
 | ME-7 | Import du climat depuis la carte Azgaar **du monde importé** dans ses blocs `settlement` (à faire avec G-7) ; test avec deux cartes différentes qui donnent deux climats différents | Opus |
 | ME-8 | Effets en jeu du Guide du maître 2024 (froid, chaleur, précipitations, vent) | Opus, plus tard |
+| ME-9 | Modèles de calendrier : « Normal » (janvier à décembre, semaine de 7 jours, janvier le plus froid) et « Républicain » faits (PR #40, bouton « Appliquer ce modèle » de l'outil Calendrier) ; reste un modèle D&D, avec des noms maison (ceux des Royaumes oubliés ne sont pas dans le SRD) | Sonnet · en partie fait |
 
 Ordre : ME-2, ME-3, ME-4, ME-5 donnent une météo vivante dès maintenant, avec le climat par défaut. ME-7 la rend géographique quand l'import Azgaar existe.
 

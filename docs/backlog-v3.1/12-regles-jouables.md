@@ -597,7 +597,7 @@ Mesurer la couverture de tout ce qui entre en jeu (sorts, aptitudes, espèces, d
 
 L'opération existe déjà (`set_natural`, que Coup de chance emploie pour 20) ; c'est le **déclencheur** qui manque : `zRollTrigger` n'accepte qu'un naturel **exact** (`when: "natural"` + `natural: 1`, pour Chance), jamais un seuil. Deux règles officielles attendent exactement ça, dans les mêmes termes (« un d20 de 9 ou moins compte comme un 10 ») :
 
-- ~~**Athlète accompli** (`champion-remarkable-athlete`, Champion 3)~~ — *corrigé le 27 novembre ([ADR 0118](../adr/0118-les-regles-du-guerrier-jouables.md)) : le texte 2024 donne l'avantage à l'initiative et en Athlétisme, pas un plancher du d20. Fait par la cible `initiative` ; il ne reste que le déplacement après un critique, en lacune ;*
+- ~~**Athlète accompli** (`champion-remarkable-athlete`, Champion 3)~~ — *corrigé le 27 novembre ([ADR 0119](../adr/0119-les-regles-du-guerrier-jouables.md)) : le texte 2024 donne l'avantage à l'initiative et en Athlétisme, pas un plancher du d20. Fait par la cible `initiative`, et le déplacement après un critique par `grant_budget` (`when: "critical"`) : l'aptitude est entièrement jouable ;*
 - **Savoir-faire** (`rogue-reliable-talent`, Roublard 7).
 
 **À faire**

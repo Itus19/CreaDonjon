@@ -38,7 +38,7 @@ export type ModifierTargetCategory =
   | "untargetable"
   /** L'initiative, un test de Dextérité : bonus (Vigilant), avantage (Athlète accompli). */
   | "initiative"
-  /** ADR 0118 : le plancher de chaque dé de dégâts (Armes à deux mains). */
+  /** ADR 0119 : le plancher de chaque dé de dégâts (Armes à deux mains). */
   | "die_min"
   /** Combat à deux armes : le modificateur aux dégâts de l'attaque en plus d'une arme Légère. */
   | "light_extra";

@@ -1,6 +1,8 @@
-# ADR 0118 — Les règles d'un guerrier de niveau 3 rendues jouables
+# ADR 0119 — Les règles d'un guerrier de niveau 3 rendues jouables
 
 Date : 2026-11-27 · Statut : accepté · Fil « Rendre jouables les 7 règles partielles »
+
+*Numéroté 0118 à sa fusion (PR #46), le même jour que l'ADR 0118 de la fiche allégée des PNJ ; renuméroté 0119 le 27 novembre pour lever le doublon.*
 
 ## Contexte
 

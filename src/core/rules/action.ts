@@ -117,7 +117,7 @@ export interface DamageRollInput {
   critical: boolean;
   /** V3.1-156 : dés de bonus de la fiche ; doublés au critique comme les autres dés. */
   bonusDice?: readonly BonusDie[];
-  /** ADR 0118 — chaque dé compte au moins cette valeur (Armes à deux mains : les 1 et 2 comptent 3). */
+  /** ADR 0119 — chaque dé compte au moins cette valeur (Armes à deux mains : les 1 et 2 comptent 3). */
   dieMin?: number | null;
 }
 
@@ -131,7 +131,7 @@ export interface DamageRollResult {
 }
 
 /**
- * ADR 0118 — un Rng dont chaque dé vaut au moins `min` (« considérer les 1 et
+ * ADR 0119 — un Rng dont chaque dé vaut au moins `min` (« considérer les 1 et
  * 2 comme des 3 »). Sans plancher, le Rng tel quel. Les dés se lancent tous
  * par `nextInt(faces)` puis `+ 1` (`src/core/formula`).
  */

@@ -882,7 +882,7 @@ interface PendingBasis {
   what: string;
   /** V3.1-156 : dés de bonus de la fiche, lancés par le serveur à la résolution. */
   bonus_dice: { count: number; faces: number; label: string }[];
-  /** ADR 0118 : le plancher de chaque dé de dégâts (Armes à deux mains). */
+  /** ADR 0119 : le plancher de chaque dé de dégâts (Armes à deux mains). */
   die_min?: number;
   /** Combat à deux armes : l'attaque en plus d'une arme Légère, transmise aux dégâts chaînés. */
   light_extra?: boolean;
@@ -994,7 +994,7 @@ function buildDamageBasis(ctx: CharacterActionContext, itemId: string, critical:
   // Combat à deux armes : l'attaque en plus d'une arme Légère n'ajoute le modificateur que s'il est négatif, ou avec le don.
   const modCarac = ctx.sheet.abilities[ability].mod;
   const modifier = (lightExtra ? lightExtraDamageMod(modCarac, lightExtraAddsAbility(ctx.sheet)) : modCarac) + extra.value;
-  // ADR 0118 : avec de vrais dés, la personne qui joue applique le plancher elle-même ; le libellé le lui dit.
+  // ADR 0119 : avec de vrais dés, la personne qui joue applique le plancher elle-même ; le libellé le lui dit.
   const plancher = extra.dieMin !== null && extra.dieMin > 1 ? extra.dieMin : null;
   const libelle = `Dégâts — ${itemLabel(item)}${lightExtra ? " (attaque en plus)" : ""}`;
   const what = plancher ? `${libelle} (chaque dé sous ${plancher} compte ${plancher})` : libelle;
@@ -1186,7 +1186,7 @@ async function finishResolution(
   let bonusDice = 0;
   if (!preset) {
     for (const d of pending.bonus_dice ?? []) {
-      // ADR 0118 : le plancher des dés de dégâts vaut aussi pour les dés de bonus de l'attaque.
+      // ADR 0119 : le plancher des dés de dégâts vaut aussi pour les dés de bonus de l'attaque.
       const r = rollDice(d.count, d.faces, flooredRng(serverRng, pending.die_min));
       bonusDice += r.total;
       trace.push({ text: `${d.count}d${d.faces} ${d.label} (${r.rolls.join(", ")})`, value: r.total });

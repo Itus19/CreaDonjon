@@ -526,7 +526,7 @@ export async function rollWeaponDamage(
   const modCarac = ctx.sheet.abilities[ability].mod;
   const abilityMod = params.lightExtra ? lightExtraDamageMod(modCarac, lightExtraAddsAbility(ctx.sheet)) : modCarac;
   // V3.1-156 (ADR 0074) : la Rage (`damage.weapon.str`), un bonus de dégâts d'arme, des dés de bonus.
-  // ADR 0118 : une arme Polyvalente lancée à deux mains est « tenue à deux mains » (Armes à deux mains).
+  // ADR 0119 : une arme Polyvalente lancée à deux mains est « tenue à deux mains » (Armes à deux mains).
   const properties = weaponRollProperties(weapon, { twoHanded: params.versatile && weapon.versatileDamageDice !== null });
   const extra = rollBonus(ctx.sheet, { roll: "damage", kind: "weapon", ability, properties, ...(weapon.damageType ? { damageType: weapon.damageType } : {}) });
 
