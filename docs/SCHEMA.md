@@ -1058,6 +1058,10 @@ create unique index entity_discoveries_uniq on entity_discoveries
 
 `detail_level` distingue « le joueur a entendu ce nom » de « le joueur a lu la fiche ». C'est ce qui permet à l'IA de dire « un nom qui ne vous dit rien » plutôt que de tout révéler.
 
+### 13.1 Les facettes découvertes (V3.2-49, ADR 0118)
+
+`entity_facet_discoveries (id, campaign_id, entity_id, user_id null, facet, source_event_id, discovered_at)`, migration `20261127150000_indices_decouverts`. Une ligne par détail d'un PNJ qu'une partie a découvert : `ability:<clé>`, `ac`, `hp`, `speed`, `action:<rang>`, `trait:<rang>`, `item:<id d'objet>`, `purse` (`check` sur la forme ; `src/core/rules/facets.ts`). `user_id` nul : toute la table le sait. Index unique (partie, entité, facette, personne). RLS : lecture par le MJ du monde, ou par un membre de la partie pour les lignes de toute la table et les siennes ; ajout et retrait par le MJ du monde ou le MJ de la partie ; aucune mise à jour. La vue joueur des blocs `statblock` et `inventory` se construit côté serveur à partir de ces facettes (`readNpcPlayerViews`) ; les objets portés et non cachés (`concealed`) sont découverts dès qu'on partage la pièce du PNJ.
+
 ---
 
 ## 14. Jets de dés

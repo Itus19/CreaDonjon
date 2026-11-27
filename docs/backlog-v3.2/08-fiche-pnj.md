@@ -43,14 +43,16 @@ Demandé le 26 novembre, après la séance où jauger Mabelle déclenchait une a
 - [x] Un garde porte sa lance et sa chemise de mailles, visibles (`npcGear.test.ts`).
 - [ ] Dans la fiche, la part visible apparaît dès que le PNJ est vu ; la bourse reste cachée (dépend de V3.2-49).
 
-### ☐ V3.2-49 — La table des indices découverts et la vue joueur · `M` · sans modèle IA · Modèle conseillé : Opus
+### ☐ V3.2-49 — La table des indices découverts et la vue joueur · `M` · sans modèle IA · Modèle conseillé : Opus — **codé le 27 novembre ; migration à appliquer, affichage dans V3.2-51**
 
 - Migration `entity_facet_discoveries` (ADR 0118 §4), RLS refus par défaut, écriture par le moteur signé ou le MJ. `docs/SCHEMA.md` mis à jour.
 - Fonction pure : bloc `statblock` ou `inventory` + facettes découvertes → vue joueur ne contenant que celles-ci. Branchée dans la lecture des blocs pour un lecteur joueur.
 
+**Fait.** Migration `20261127150000_indices_decouverts.sql` ; `src/core/rules/facets.ts` (forme des facettes, vues joueur construites champ par champ, `seenAtAGlance`) ; repo `entityFacetDiscoveries.ts` ; `revealFacets` et `readNpcPlayerViews` (`src/server/services/facetDiscoveries.ts`). Au tour solo, ce que les PNJ de la pièce portent sans le cacher est découvert d'office (`ensureNpcSheetsForPresents`). Limite : la vue se lit avec les droits de la personne qui joue, donc seulement en solo (propriétaire) ; en partie à table il faudra une fonction `security definer`.
+
 **Critères d'acceptation**
-- [ ] Tests du noyau : aucune facette non découverte ne figure dans la vue, même dans un champ vide.
-- [ ] Test d'intégration : un joueur ne lit ni la ligne d'une autre partie, ni le bloc entier.
+- [x] Tests du noyau : aucune facette non découverte ne figure dans la vue, même dans un champ vide (`facets.test.ts`).
+- [ ] Test d'intégration contre la vraie base, une fois la migration appliquée : un joueur ne lit ni la ligne d'une autre partie, ni celle qu'une autre personne a découverte seule.
 
 ### ☐ V3.2-50 — Un jet réussi révèle des indices · `M` · sans modèle IA · Modèle conseillé : Opus
 

@@ -7,8 +7,13 @@ import { statblockFromMonsterBlocks } from "@/src/core/rules/srdMapping";
 import { npcSheetFrom, npcSheetKey } from "@/src/core/rules/npcSheet";
 import { npcGear } from "@/src/core/rules/npcGear";
 import type { SettlementWealth } from "@/src/core/schemas/blocks/settlement";
+import { zInventoryBlockData, type InventoryBlockData } from "@/src/core/schemas/blocks/inventory";
+import { seenAtAGlance } from "@/src/core/rules/facets";
+import { presentsIci } from "@/src/core/rules/scenePresence";
+import { insertFacetDiscoveries, listFacetDiscoveries } from "@/src/server/repos/entityFacetDiscoveries";
 import { listBlocksByTypesForEntities } from "@/src/server/repos/blocks";
 import { getSceneState } from "@/src/server/repos/sceneStates";
+import type { SceneState } from "@/src/core/rules/scene";
 import { archetypeCalcule } from "@/src/core/rules/sceneLife";
 import { deriveSeed } from "@/src/core/worldgen/seed";
 import { isWorldAdmin } from "@/src/server/services/permissions";
@@ -69,9 +74,9 @@ export async function giveNpcSheet(
 export async function giveNpcGear(
   supabase: TypedClient,
   params: { entityId: string; archetype?: string; seed: number; wealth: SettlementWealth; callerId: string }
-): Promise<{ ok: boolean }> {
+): Promise<{ ok: true; gear: InventoryBlockData } | { ok: false }> {
   const gear = npcGear({ ...(params.archetype !== undefined ? { archetype: params.archetype } : {}), seed: params.seed, wealth: params.wealth });
-  return createBlockWithData(supabase, {
+  const created = await createBlockWithData(supabase, {
     entityId: params.entityId,
     blockType: "inventory",
     label: "Équipement",
@@ -80,6 +85,7 @@ export async function giveNpcGear(
     createdBy: params.callerId,
     data: gear,
   });
+  return created.ok ? { ok: true, gear } : { ok: false };
 }
 
 /** Sans ville en agrégat connue : une richesse moyenne. */
@@ -126,6 +132,13 @@ export async function ensureNpcSheetsForPresents(
     .filter((m) => m.sheet || m.gear)
     .slice(0, CATCH_UP_PER_TURN);
   const wealth = scene.life?.settlement.wealth ?? DEFAULT_NPC_WEALTH;
+  // L'équipement de chaque PNJ, déjà là ou tiré ce tour-ci : de quoi voir ce qu'il porte.
+  const gearById = new Map<string, InventoryBlockData>();
+  for (const b of blocks) {
+    if (b.block_type !== "inventory" || has(b.entity_id, "character")) continue;
+    const parsed = zInventoryBlockData.safeParse(b.data);
+    if (parsed.success) gearById.set(b.entity_id, parsed.data);
+  }
 
   const given: string[] = [];
   for (const m of missing) {
@@ -142,12 +155,38 @@ export async function ensureNpcSheetsForPresents(
     }
     if (m.gear) {
       const outcome = await giveNpcGear(supabase, { ...who, wealth });
-      if (!outcome.ok) {
+      if (outcome.ok) gearById.set(m.id, outcome.gear);
+      else {
         ok = false;
         console.warn(`Pas d'équipement rattrapé pour ${m.id}`);
       }
     }
     if (ok) given.push(m.id);
   }
+
+  await revealWhatIsWorn(supabase, { campaignId: params.campaignId, scene, gearById, actorEntityId: params.actorEntityId });
   return { given };
+}
+
+/**
+ * V3.2-48 (retour de l'auteur, 27 novembre) — Ce qu'un PNJ de la pièce porte
+ * sans le cacher (une lance, un tablier) se voit : ces objets sont découverts
+ * pour toute la table dès qu'on partage sa pièce. Le reste attend un indice.
+ *
+ * Coût : une lecture groupée des facettes des présents de la pièce ; une
+ * écriture groupée seulement quand quelque chose de nouveau se voit.
+ */
+async function revealWhatIsWorn(
+  supabase: TypedClient,
+  params: { campaignId: string; scene: SceneState; gearById: Map<string, InventoryBlockData>; actorEntityId: string }
+): Promise<void> {
+  const here = presentsIci(params.scene).map((p) => p.entityId).filter((id) => id !== params.actorEntityId && params.gearById.has(id));
+  if (here.length === 0) return;
+  const known = await listFacetDiscoveries(supabase, { campaignId: params.campaignId, entityIds: here, userId: null });
+  const rows = here.flatMap((entityId) =>
+    seenAtAGlance(params.gearById.get(entityId)!)
+      .filter((facet) => !known.get(entityId)?.has(facet))
+      .map((facet) => ({ campaignId: params.campaignId, entityId, facet, userId: null, sourceEventId: null }))
+  );
+  await insertFacetDiscoveries(supabase, rows);
 }

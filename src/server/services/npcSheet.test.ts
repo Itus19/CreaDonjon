@@ -11,12 +11,20 @@ import { emptyScene, enterScene, type SceneState } from "@/src/core/rules/scene"
 
 let scene: SceneState | null;
 let isAdmin = true;
-let existingSheets: { entity_id: string; block_type: string }[] = [];
+let existingSheets: { entity_id: string; block_type: string; data?: unknown }[] = [];
 const created: { entityId: string; blockType: string; visibilityLevel: string; data: { based_on?: unknown } }[] = [];
 
 vi.mock("@/src/server/repos/sceneStates", () => ({ getSceneState: async () => scene }));
 vi.mock("@/src/server/services/permissions", () => ({ isWorldAdmin: async () => isAdmin }));
 vi.mock("@/src/server/repos/blocks", () => ({ listBlocksByTypesForEntities: async () => existingSheets }));
+let knownFacets = new Map<string, Set<string>>();
+const facetRows: { entityId: string; facet: string; userId: string | null }[] = [];
+vi.mock("@/src/server/repos/entityFacetDiscoveries", () => ({
+  listFacetDiscoveries: async () => knownFacets,
+  insertFacetDiscoveries: async (_s: unknown, rows: typeof facetRows) => {
+    facetRows.push(...rows);
+  },
+}));
 vi.mock("@/src/server/services/blocks", () => ({
   createBlockWithData: async (_s: unknown, params: (typeof created)[number]) => {
     created.push(params);
@@ -54,6 +62,8 @@ beforeEach(() => {
   isAdmin = true;
   existingSheets = [];
   created.length = 0;
+  knownFacets = new Map();
+  facetRows.length = 0;
 });
 
 describe("ensureNpcSheetsForPresents", () => {
@@ -86,5 +96,35 @@ describe("ensureNpcSheetsForPresents", () => {
     created.length = 0;
     await ensureNpcSheetsForPresents(supabase, params);
     expect(created[0].data).toEqual(first);
+  });
+
+  it("V3.2-48 — ce que portent sans le cacher les PNJ de la pièce se voit : découvert pour toute la table", async () => {
+    await ensureNpcSheetsForPresents(supabase, params);
+    // Un Roturier porte toujours ses vêtements, visibles (pnj-0).
+    expect(facetRows).toContainEqual(expect.objectContaining({ entityId: "mabelle", facet: "item:pnj-0", userId: null }));
+    expect(facetRows.every((r) => r.facet.startsWith("item:"))).toBe(true);
+  });
+
+  it("un objet caché ne se voit pas, et ce qui est déjà su ne se réécrit pas", async () => {
+    existingSheets = [
+      { entity_id: "mabelle", block_type: "statblock" },
+      {
+        entity_id: "mabelle",
+        block_type: "inventory",
+        data: {
+          __v: 1,
+          items: [
+            { id: "a", qty: 1, equipped: true, label: "Tablier" },
+            { id: "b", qty: 1, equipped: true, concealed: true, ref: { kind: "rule", key: "dagger" } },
+          ],
+          containers: [],
+          currency: { pp: 0, gp: 0, ep: 0, sp: 0, cp: 5 },
+        },
+      },
+      { entity_id: "ourse", block_type: "character" },
+    ];
+    knownFacets = new Map([["mabelle", new Set(["item:a"])]]);
+    await ensureNpcSheetsForPresents(supabase, params);
+    expect(facetRows).toEqual([]);
   });
 });
