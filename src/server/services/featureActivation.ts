@@ -523,11 +523,16 @@ export async function activateFeature(
   }
 
   // V3.1-165 (ADR 0076) : le budget du tour, en combat — le coût de l'activation, et ce qu'elle accorde (Sursaut d'action).
+  // Athlète accompli : du mouvement accordé (mètres), même par une réaction dont le coût se compte ailleurs.
   const accorde = plan.plan.effects.flatMap((e) =>
-    e.action === "grant_budget" && e.who === params.entityId && (e.kind === "action" || e.kind === "bonus") ? [{ kind: e.kind, amount: e.amount, ...(e.not_magic ? { notMagic: true } : {}) }] : []
+    e.action === "grant_budget" && e.who === params.entityId && (e.kind === "action" || e.kind === "bonus" || e.kind === "movement")
+      ? [{ kind: e.kind, amount: e.amount, ...(e.not_magic ? { notMagic: true } : {}) }]
+      : []
   );
   const budget = params.skipBudget
-    ? null
+    ? accorde.length > 0
+      ? await spendTurnBudgetFor(supabase, { campaignId: params.campaignId, actor: { entityId: params.entityId }, kind: "none", attacksPerAction: sheet.attacksPerAction, grants: accorde, callerIsGm: params.callerIsGm })
+      : null
     : await spendTurnBudgetFor(supabase, { campaignId: params.campaignId, actor: { entityId: params.entityId }, kind: activation.cost.action, attacksPerAction: sheet.attacksPerAction, grants: accorde, ...(cleLimite ? { limitKey: cleLimite } : {}), callerIsGm: params.callerIsGm });
 
   // V3.1-163 (ADR 0101) : l'activation accordée a été jouée ; son jeton perd un usage, le dernier retire l'effet.

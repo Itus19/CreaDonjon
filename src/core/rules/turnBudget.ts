@@ -20,6 +20,8 @@ export const zTurnBudget = z.object({
   extraNotMagic: z.number().int(),
   /** V3.1-169 (ADR 0077) : mètres parcourus pendant le tour (absent : rien encore). */
   moved: z.number().min(0).optional(),
+  /** Mètres accordés en plus de la vitesse pendant ce tour (Athlète accompli : la moitié de la Vitesse après un critique). */
+  extraMovement: z.number().min(0).optional(),
 });
 export type TurnBudget = z.infer<typeof zTurnBudget>;
 
@@ -76,9 +78,11 @@ function payAction(budget: TurnBudget): { budget: TurnBudget; over: boolean } {
   return { budget: { ...budget, action: budget.action - 1 }, over: true };
 }
 
-/** Accorder (Sursaut d'action : une action, pas pour la Magie). */
-export function grantTurnBudget(budget: TurnBudget, p: { kind: "action" | "bonus"; amount: number; notMagic?: boolean }): TurnBudget {
+/** Accorder (Sursaut d'action : une action, pas pour la Magie ; Athlète accompli : du mouvement). */
+export function grantTurnBudget(budget: TurnBudget, p: { kind: "action" | "bonus" | "movement"; amount: number; notMagic?: boolean }): TurnBudget {
   if (p.kind === "bonus") return { ...budget, bonus: budget.bonus + p.amount };
+  // Du mouvement en plus (mètres), pour ce tour seulement : le budget repart neuf au tour suivant.
+  if (p.kind === "movement") return { ...budget, extraMovement: Math.max(0, (budget.extraMovement ?? 0) + p.amount) };
   return p.notMagic ? { ...budget, extraNotMagic: budget.extraNotMagic + p.amount } : { ...budget, action: budget.action + p.amount };
 }
 
@@ -99,5 +103,5 @@ export function applyCastOption(cost: ActivationCost, option: CastOption): Activ
  */
 export function spendMovement(budget: TurnBudget, metres: number, speedMetres: number): { budget: TurnBudget; over: boolean; moved: number } {
   const moved = Math.round(((budget.moved ?? 0) + Math.max(0, metres)) * 100) / 100;
-  return { budget: { ...budget, moved }, over: moved > speedMetres + 1e-9, moved };
+  return { budget: { ...budget, moved }, over: moved > speedMetres + (budget.extraMovement ?? 0) + 1e-9, moved };
 }

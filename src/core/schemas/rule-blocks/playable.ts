@@ -99,7 +99,7 @@ export const REACTION_ROLLS = ["attack", "save", "check", "d20", "damage"] as co
 /** Qui a lancé le jet, vu de celui qui réagit. `attack_against_self` : une attaque (ou ses dégâts) qui le vise. */
 export const REACTION_SUBJECTS = ["self", "attack_against_self", "ally", "enemy", "any"] as const;
 /** `rolled` : le dé est connu, l'issue pas encore. `hit`, `failed` : l'issue est connue, rien n'est appliqué. */
-export const REACTION_MOMENTS = ["rolled", "hit", "failed", "natural"] as const;
+export const REACTION_MOMENTS = ["rolled", "hit", "failed", "natural", "critical"] as const;
 
 export const zRollTrigger = z
   .object({
@@ -116,6 +116,7 @@ export const zRollTrigger = z
   .superRefine((t, ctx) => {
     if ((t.when === "natural") !== (t.natural !== undefined)) ctx.addIssue({ code: "custom", message: "« natural » va avec le moment « natural », et seulement avec lui." });
     if (t.when === "hit" && t.roll !== "attack") ctx.addIssue({ code: "custom", message: "« touché » ne se dit que d'une attaque." });
+    if (t.when === "critical" && t.roll !== "attack") ctx.addIssue({ code: "custom", message: "« coup critique » ne se dit que d'une attaque." });
     if (t.roll === "damage" && t.when !== "rolled") ctx.addIssue({ code: "custom", message: "Un jet de dégâts n'a qu'un moment : quand il est lancé." });
   });
 export type RollTrigger = z.infer<typeof zRollTrigger>;

@@ -316,7 +316,7 @@
         "quand": "When",
         "jets": { "attack": "An attack", "save": "A saving throw", "check": "An ability check", "d20": "A d20 (attack, save or check)", "damage": "Damage" },
         "sujets": { "self": "Me", "attack_against_self": "An attack against me", "ally": "An ally", "enemy": "An enemy", "any": "Anyone" },
-        "moments": { "rolled": "The die is rolled", "hit": "The attack hits", "failed": "The roll fails", "natural": "The d20 shows a given value" },
+        "moments": { "rolled": "The die is rolled", "hit": "The attack hits", "failed": "The roll fails", "natural": "The d20 shows a given value", "critical": "The attack is a critical hit" },
         "valeurDuD20": "d20 value (1 to 20)",
         "automatique": "Applies by itself, no window",
         "rembourseSiRate": "If the roll still fails, the cost isn't spent",

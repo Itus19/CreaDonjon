@@ -425,6 +425,8 @@ describe("réactions à un jet (V3.1-161)", () => {
     expect(momentsPermis("damage")).toEqual(["rolled"]);
     expect(momentsPermis("save")).not.toContain("hit");
     expect(momentsPermis("attack")).toContain("hit");
+    expect(momentsPermis("attack")).toContain("critical");
+    expect(momentsPermis("check")).not.toContain("critical");
   });
 
   it("changer de jet retire les opérations devenues absurdes et remet le moment d'équerre", () => {

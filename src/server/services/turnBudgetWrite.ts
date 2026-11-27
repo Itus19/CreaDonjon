@@ -23,7 +23,7 @@ export async function spendTurnBudgetFor(
     actor: { entityId: string } | { participantId: string };
     kind: TurnSpend;
     attacksPerAction: number;
-    grants?: readonly { kind: "action" | "bonus"; amount: number; notMagic?: boolean }[];
+    grants?: readonly { kind: "action" | "bonus" | "movement"; amount: number; notMagic?: boolean }[];
     /** Une activation limitée (« une fois par tour ») : son usage est daté du tour en cours, dans la même écriture. */
     limitKey?: string;
     callerIsGm: boolean;

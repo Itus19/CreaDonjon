@@ -1,12 +1,13 @@
 import "server-only";
 import { grantingClassLevel } from "@/src/core/rules/sheet";
 import { ABILITIES } from "@/src/core/rules/abilities";
+import { feetToPlanMetres } from "@/src/core/rules/geometry";
 import type { CharacterActionContext } from "@/src/server/services/characterActions";
 
 /**
  * V3.1-160 — les nombres que lisent les formules d'une règle jouée par un
  * personnage : niveau, `class.level` (le niveau dans la classe qui accorde la
- * règle, V3.1-133), maîtrise, DD de sorts, modificateurs et sauvegardes.
+ * règle, V3.1-133), maîtrise, Vitesse (mètres), DD de sorts, modificateurs et sauvegardes.
  * Partagé par l'activation au clic et par les réactions.
  */
 export function actorNumbersFor(ctx: Pick<CharacterActionContext, "characterData" | "sheet">, ruleKey: string): Record<string, number> {
@@ -17,6 +18,8 @@ export function actorNumbersFor(ctx: Pick<CharacterActionContext, "characterData
     level: ctx.characterData.classes.reduce((s, c) => s + c.level, 0),
     "class.level": grantingClassLevel(source, classesDuPerso),
     proficiency: sheet.proficiencyBonus,
+    // La Vitesse en mètres, celle du plan (Athlète accompli : la moitié après un critique).
+    speed: feetToPlanMetres(sheet.speed.value),
     ...(sheet.spellcasting ? { spell_save_dc: sheet.spellcasting.saveDc } : {}),
   };
   for (const a of ABILITIES) {

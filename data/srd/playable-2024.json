@@ -4204,15 +4204,55 @@
     }
   },
   "champion-remarkable-athlete": {
-    "_regle": "Athlete accompli (Champion 3) : l'avantage a l'initiative et en Athletisme est joue par le bloc de la sous-classe (subclasses-2024.json). Le deplacement apres un Coup critique attend sa brique : lacune honnete.",
-    "coverage": {
-      "gaps": [
+    "_regle": "Athlete accompli (Champion 3) : l'avantage a l'initiative et en Athletisme est joue par le bloc de la sous-classe (subclasses-2024.json). Aussitot apres un Coup critique (plage du personnage), une reaction sans cout accorde la moitie de la Vitesse en mouvement pour ce tour. Les attaques d'opportunite ne sont pas jouees par le moteur : rien a empecher.",
+    "activation": {
+      "activations": [
         {
-          "text": "aussitôt après avoir obtenu un Coup critique, vous pouvez vous déplacer à concurrence de la moitié de votre Vitesse sans provoquer d’attaques d’Opportunité",
-          "missing": "Un moment « coup critique » pour une réaction, et un effet qui accorde du mouvement (la moitié de la Vitesse) ; les attaques d'opportunité ne sont pas encore jouées par le moteur.",
-          "brick": "timing"
+          "id": "remarkable-athlete-move",
+          "label": {
+            "fr": "Athlète accompli : se déplacer",
+            "en": "Remarkable Athlete: move"
+          },
+          "cost": {
+            "action": "none",
+            "resources": []
+          },
+          "targets": {
+            "kind": "self"
+          },
+          "effects": [
+            {
+              "action": "grant_budget",
+              "who": "self",
+              "kind": "movement",
+              "amount": {
+                "op": "div",
+                "args": [
+                  {
+                    "op": "ref",
+                    "name": "speed"
+                  },
+                  {
+                    "op": "num",
+                    "value": 2
+                  }
+                ]
+              }
+            }
+          ],
+          "variants": null,
+          "trigger": {
+            "on": "roll",
+            "roll": "attack",
+            "subject": "self",
+            "when": "critical"
+          },
+          "passages": {
+            "effects.0": "vous pouvez vous déplacer à concurrence de la moitié de votre Vitesse sans provoquer d’attaques d’Opportunité"
+          }
         }
-      ]
+      ],
+      "durable_effects": []
     }
   }
 }

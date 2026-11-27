@@ -64,7 +64,7 @@ import { insertSessionEvent, nextEventSeq } from "@/src/server/repos/sessions";
 import { insertDiceRoll } from "@/src/server/repos/diceRolls";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
 import { serverRng } from "@/src/server/services/rng";
-import { soloRollWindow } from "@/src/server/services/soloRollWindow";
+import { soloCritRange, soloRollWindow } from "@/src/server/services/soloRollWindow";
 import { applyRuntimeStateChange, getEntityRuntimeState } from "@/src/server/services/runtimeState";
 import { getRuntimeState } from "@/src/server/repos/runtimeState";
 import type { TargetId, IntentTargetDetail, IntentBarData, TurnRecord } from "@/lib/solo/types";
@@ -1207,7 +1207,8 @@ async function finishResolution(
   }
 
   if (pending.kind === "weapon_attack") {
-    const isCritical = natural === 20;
+    // Critique amélioré (Champion) : le critique suit la plage des règles du personnage, plus seulement le 20.
+    const isCritical = natural >= (ctx ? soloCritRange(ctx, pending) : 20);
     const isCriticalFail = natural === 1;
     // Regles 2024 (`attackVerdict`) : le naturel decide avant le total.
     const verdictAttack = attackVerdict({ total, isCritical, isCriticalFail }, pending.dc);

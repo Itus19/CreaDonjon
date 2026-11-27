@@ -194,6 +194,9 @@ function momentMatches(trigger: RollTrigger, roll: PendingRoll): boolean {
       return outcome === "miss" || outcome === "failure";
     case "natural":
       return roll.natural !== null && roll.natural === trigger.natural;
+    // Athlète accompli : un critique selon la plage de l'attaquant (19 au Champion) ; une attaque ratée d'office n'en est pas un.
+    case "critical":
+      return roll.kind === "attack" && roll.natural !== null && roll.natural >= roll.critRange && roll.forcedMiss !== true;
   }
 }
 

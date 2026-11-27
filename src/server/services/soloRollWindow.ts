@@ -5,6 +5,8 @@ import type { Locale } from "@/src/i18n/request";
 import type { PendingRequest } from "@/src/core/schemas/runtimeState";
 import type { PendingRoll, PendingRollKind } from "@/src/core/rules/rollWindow";
 import { weaponDiceForRoll } from "@/src/core/rules/action";
+import { rollBonus } from "@/src/core/rules/sheet";
+import { weaponRollProperties } from "@/src/core/rules/srdMapping";
 import type { TriggerZone } from "@/src/core/rules/triggers";
 import { getSceneState } from "@/src/server/repos/sceneStates";
 import { isWorldAdmin } from "@/src/server/services/permissions";
@@ -74,6 +76,19 @@ function weaponDiceOf(ctx: CharacterActionContext, pending: PendingRequest, natu
   return des ? { weaponDice: des } : {};
 }
 
+/**
+ * La plage de critique d'une attaque d'arme du tour solo : celle des règles du
+ * personnage (Critique amélioré : 19), lue comme la fiche la lit (`rollBonus`).
+ * Hors attaque d'arme : 20.
+ */
+export function soloCritRange(ctx: CharacterActionContext, pending: PendingRequest): number {
+  if (pending.kind !== "weapon_attack") return 20;
+  const item = ctx.inventoryData?.items.find((i) => i.id === pending.action_id);
+  const ref = item && "ref" in item ? item.ref : null;
+  const weapon = ref?.kind === "rule" ? ctx.weaponByKey[ref.key] : null;
+  return rollBonus(ctx.sheet, { roll: "attack", kind: "weapon", ...(weapon ? { properties: weaponRollProperties(weapon) } : {}) }).critRange;
+}
+
 export async function soloRollWindow(
   supabase: TypedClient,
   params: {
@@ -113,8 +128,8 @@ export async function soloRollWindow(
     target: reactorKey(params.pending.target_id),
     natural: kind === "damage" ? null : params.natural,
     total: params.total,
-    // Le tour solo lit le critique sur le naturel seul (`finishResolution`) : pas de plage élargie ici.
-    critRange: 20,
+    // La même plage que `finishResolution` : celle des règles du personnage (Critique amélioré).
+    critRange: soloCritRange(params.ctx, params.pending),
     ac: kind === "attack" ? params.pending.dc : null,
     dc: kind === "attack" ? null : params.pending.dc,
     acBonus: 0,

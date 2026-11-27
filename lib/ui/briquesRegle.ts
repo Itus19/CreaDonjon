@@ -633,7 +633,7 @@ export function operationsPermises(jet: JetReaction): GenreOperation[] {
 /** Les moments qui ont un sens sur le jet visé : « touché » ne se dit que d'une attaque, un jet de dégâts n'a que « quand il est lancé ». */
 export function momentsPermis(jet: JetReaction): MomentReaction[] {
   if (jet === "damage") return ["rolled"];
-  return REACTION_MOMENTS.filter((m) => m !== "hit" || jet === "attack");
+  return REACTION_MOMENTS.filter((m) => (m !== "hit" && m !== "critical") || jet === "attack");
 }
 
 export function nouveauDeclencheur(): BrouillonDeclencheur {
