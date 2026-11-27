@@ -190,5 +190,7 @@ function ChampsOperation({ operation: o, onChange }: { operation: BrouillonOpera
       );
     case "redirect":
       return <p className="text-xs text-ink-muted">{t("interposeAide")}</p>;
+    case "reroll_weapon_dice":
+      return <p className="text-xs text-ink-muted">{t("relancerDesArmeAide")}</p>;
   }
 }

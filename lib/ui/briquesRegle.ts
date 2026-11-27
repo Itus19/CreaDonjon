@@ -305,6 +305,8 @@ export type BrouillonOperation = { uid: string } & (
   | { op: "attacker_save"; carac: "str" | "dex" | "con" | "int" | "wis" | "cha"; dd: string }
   /** V3.1-182 (ADR 0078) : l'attaque vise désormais celui qui réagit. */
   | { op: "redirect" }
+  /** Sauvagerie martiale : les dés de l'arme relancés, le meilleur gardé. */
+  | { op: "reroll_weapon_dice" }
 );
 export type GenreOperation = RollOperation["op"];
 
@@ -617,6 +619,7 @@ const MODELES_OPERATIONS: readonly RollOperation[] = [
   { op: "add_damage", formula: { op: "num", value: 1 } },
   { op: "attacker_save", ability: "cha", dc: { op: "num", value: 10 } },
   { op: "redirect" },
+  { op: "reroll_weapon_dice" },
 ];
 
 /** Les opérations qui ont un sens sur le jet visé (le noyau en décide : `rollOperationProblems`). */
@@ -652,6 +655,7 @@ export function nouvelleOperation(op: GenreOperation): BrouillonOperation {
     case "attacker_save":
       return { ...base, op, carac: "cha", dd: "{spell_save_dc}" };
     case "redirect":
+    case "reroll_weapon_dice":
       return { ...base, op };
   }
 }
@@ -911,6 +915,8 @@ function operationVersBrouillon(o: RollOperation): BrouillonOperation {
       return { ...base, op: "attacker_save", carac: o.ability, dd: formatFormulaNode(o.dc) };
     case "redirect":
       return { ...base, op: "redirect" };
+    case "reroll_weapon_dice":
+      return { ...base, op: "reroll_weapon_dice" };
   }
 }
 
@@ -1310,6 +1316,8 @@ function operationEcrite(o: BrouillonOperation, contexte: string, ctx: CtxEcritu
       return { op: "attacker_save", ability: o.carac, dc: formule(o.dd, `${contexte}, DD`, ctx) };
     case "redirect":
       return { op: "redirect" };
+    case "reroll_weapon_dice":
+      return { op: "reroll_weapon_dice" };
   }
 }
 

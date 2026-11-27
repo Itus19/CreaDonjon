@@ -239,6 +239,7 @@ async function recordAndBuildOutcome(
       locale: params.react.locale,
     });
     const r = await interveneOnRoll(supabase, {
+        callerIsGm: params.isAdmin,
       campaignId: params.campaignId,
       combat,
       roll: { kind: params.kind === "save" ? "save" : "check", roller: params.entityId, target: null, natural, total, critRange: 20, ac: null, dc: params.dc, acBonus: 0, damage: null },

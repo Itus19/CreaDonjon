@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { Rng } from "../dice/rng";
 import type { Activation } from "../schemas/rule-blocks/playable";
-import { zActivationBlockData } from "../schemas/rule-blocks/playable";
+import { rollOperationProblems, zActivationBlockData } from "../schemas/rule-blocks/playable";
 import type { TriggerActorState, TriggerContext, TriggerZone } from "./triggers";
 import { distance } from "./geometry";
 import {
   applyRollOperations,
   eligibleReactions,
+  limitKey,
   outcomeOf,
   reactionAvailable,
   recordUse,
@@ -358,5 +359,46 @@ describe("V3.1-216 — la portée faute de plan : les trois zones abstraites", (
     expect(avec("near", "near").choices).toHaveLength(1);
     expect(avec("engaged", "near").choices).toHaveLength(1);
     expect(avec("engaged", "far").choices).toHaveLength(0);
+  });
+});
+
+describe("Sauvagerie martiale — relancer les dés de dégâts de l'arme et garder le meilleur", () => {
+  const SAUVAGERIE = activation({
+    id: "savage-attacker",
+    cost: { action: "none", resources: [] },
+    trigger: { on: "roll", roll: "damage", subject: "self", when: "rolled", automatic: true },
+    roll_operations: [{ op: "reroll_weapon_dice" }],
+    limit: { per: "turn" },
+  });
+  // Épée longue 1d8 + 3 : le d8 a donné 2, total 5.
+  const degats = (p: Partial<PendingRoll> = {}): PendingRoll =>
+    attaque({ kind: "damage", roller: "lia", target: "gobelin", natural: null, total: 5, ac: null, damage: { base: 5, multiplier: 1, weaponDice: { count: 1, faces: 8, sum: 2 } }, ...p });
+
+  it("un meilleur second jet remplace le premier ; un moins bon est ignoré", () => {
+    const mieux = applyRollOperations(degats(), [{ actorId: "lia", operations: SAUVAGERIE.roll_operations!, numbers: {} }], des(6));
+    expect(mieux.roll.total).toBe(10); // 7 au lieu de 2 : +5
+    expect(mieux.roll.damage?.weaponDice?.sum).toBe(7);
+    expect(mieux.steps).toEqual([{ actorId: "lia", op: "reroll_weapon_dice", value: 7, dice: [7] }]);
+    const pire = applyRollOperations(degats(), [{ actorId: "lia", operations: SAUVAGERIE.roll_operations!, numbers: {} }], des(0));
+    expect(pire.roll.total).toBe(5);
+    expect(pire.roll.damage?.weaponDice?.sum).toBe(2);
+  });
+
+  it("au critique, tous les dés de l'arme sont relancés (2d8)", () => {
+    const crit = degats({ total: 9, damage: { base: 9, multiplier: 1, weaponDice: { count: 2, faces: 8, sum: 6 } } });
+    const r = applyRollOperations(crit, [{ actorId: "lia", operations: SAUVAGERIE.roll_operations!, numbers: {} }], des(7, 7));
+    expect(r.roll.total).toBe(19); // 16 au lieu de 6
+  });
+
+  it("automatique, une fois par tour ; sans dés d'arme connus (un sort), rien n'est proposé ni compté", () => {
+    expect(eligibles(degats(), [candidat("lia", SAUVAGERIE)]).automatic).toHaveLength(1);
+    const usage = recordUse(EMPTY_TURN_USAGE, { key: limitKey("savage-attacker", "savage-attacker"), reaction: false, stamp: "1:0" });
+    expect(eligibles(degats(), [{ ...candidat("lia", SAUVAGERIE), usage }], "1:0").automatic).toEqual([]);
+    expect(eligibles(degats({ damage: { base: 5, multiplier: 1 } }), [candidat("lia", SAUVAGERIE)]).automatic).toEqual([]);
+  });
+
+  it("le schéma : l'opération ne se pose que sur un jet de dégâts", () => {
+    expect(rollOperationProblems({ on: "roll", roll: "damage", subject: "self", when: "rolled" }, [{ op: "reroll_weapon_dice" }])).toEqual([]);
+    expect(rollOperationProblems({ on: "roll", roll: "attack", subject: "self", when: "rolled" }, [{ op: "reroll_weapon_dice" }])).toHaveLength(1);
   });
 });

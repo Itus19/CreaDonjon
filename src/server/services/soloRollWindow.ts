@@ -4,6 +4,7 @@ import type { Database } from "@/src/types/database";
 import type { Locale } from "@/src/i18n/request";
 import type { PendingRequest } from "@/src/core/schemas/runtimeState";
 import type { PendingRoll, PendingRollKind } from "@/src/core/rules/rollWindow";
+import { weaponDiceForRoll } from "@/src/core/rules/action";
 import type { TriggerZone } from "@/src/core/rules/triggers";
 import { getSceneState } from "@/src/server/repos/sceneStates";
 import { isWorldAdmin } from "@/src/server/services/permissions";
@@ -58,6 +59,21 @@ function reactorKey(targetId: string | null): string | null {
   return targetId.startsWith("entity:") ? targetId.slice("entity:".length) : targetId;
 }
 
+/**
+ * Sauvagerie martiale : les dés de l'arme d'une demande de dégâts. En solo, le
+ * naturel des dégâts est la somme des seuls dés de l'arme (les dés de bonus se
+ * lancent à part, `finishResolution`) ; le critique se lit sur la borne haute.
+ */
+function weaponDiceOf(ctx: CharacterActionContext, pending: PendingRequest, natural: number): { weaponDice?: { count: number; faces: number; sum: number } } {
+  if (pending.kind !== "weapon_damage") return {};
+  const item = ctx.inventoryData?.items.find((i) => i.id === pending.action_id);
+  const ref = item && "ref" in item ? item.ref : null;
+  const weapon = ref?.kind === "rule" ? ctx.weaponByKey[ref.key] : null;
+  if (!weapon) return {};
+  const des = weaponDiceForRoll(weapon.damageDice, pending.die_max, natural);
+  return des ? { weaponDice: des } : {};
+}
+
 export async function soloRollWindow(
   supabase: TypedClient,
   params: {
@@ -102,10 +118,11 @@ export async function soloRollWindow(
     ac: kind === "attack" ? params.pending.dc : null,
     dc: kind === "attack" ? null : params.pending.dc,
     acBonus: 0,
-    damage: kind === "damage" ? { base: params.total, multiplier: 1 } : null,
+    damage: kind === "damage" ? { base: params.total, multiplier: 1, ...weaponDiceOf(params.ctx, params.pending, params.natural) } : null,
   };
 
   const result = await interveneOnRoll(supabase, {
+        callerIsGm,
     campaignId: params.campaignId,
     combat,
     roll,

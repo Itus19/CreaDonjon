@@ -41,8 +41,12 @@ export interface PendingRoll {
   dc: number | null;
   /** Bonus de CA contre ce jet seulement (Bouclier). */
   acBonus: number;
-  /** Dégâts : la somme lancée, puis le facteur (Esquive instinctive : ½), arrondi à l'inférieur. */
-  damage: { base: number; multiplier: number } | null;
+  /**
+   * Dégâts : la somme lancée, puis le facteur (Esquive instinctive : ½), arrondi à l'inférieur.
+   * `weaponDice` : les dés de l'arme seuls (doublés au critique) et leur somme, quand le jet vient d'une arme
+   * à formule simple (`1d8`) ; Sauvagerie martiale les relance. Absent : un sort, une formule composée, un monstre.
+   */
+  damage: { base: number; multiplier: number; weaponDice?: { count: number; faces: number; sum: number } } | null;
   /** V3.1-207 : les bonus de sauvegarde de l'auteur du jet, quand une réaction lui en impose une (`attacker_save`). Absent : +0. */
   rollerSaves?: Partial<Record<"str" | "dex" | "con" | "int" | "wis" | "cha", number>>;
   /** V3.1-207 : l'attaque rate quoi qu'en dise le dé (sauvegarde de l'assaillant ratée). */
@@ -261,6 +265,8 @@ export function eligibleReactions(p: {
     if (seen.has(id)) continue;
     if (!rollMatches(t, p.roll.kind) || !subjectMatches(t, p.roll, c.actorId, p.teams) || !momentMatches(t, p.roll)) continue;
     if (c.activation.when?.wielding !== undefined && !wieldingAllows(c.activation.when.wielding, p.roll.weaponProperties)) continue;
+    // Relancer les dés de l'arme n'a de sens que si le jet les connaît : sinon, ni proposée ni comptée (Sauvagerie martiale sur un sort).
+    if ((c.activation.roll_operations ?? []).some((o) => o.op === "reroll_weapon_dice") && !p.roll.damage?.weaponDice) continue;
     if (t.range && !withinRange(p.positions?.[c.actorId], p.positions?.[p.roll.roller], t.range.value)) continue;
     const numbers = p.ctx.actors[c.actorId]?.numbers ?? {};
     if (!requirementMet(c.activation, p.ctx, c.actorId, p.rng)) continue;
@@ -361,6 +367,16 @@ export function applyRollOperations(start: PendingRoll, applications: readonly R
           steps.push({ actorId: a.actorId, op: op.op, value: r.value, dice: [] });
           break;
         }
+        case "reroll_weapon_dice": {
+          const armes = roll.damage?.weaponDice;
+          if (!roll.damage || !armes) break;
+          const dice = Array.from({ length: armes.count }, () => rollDie(armes.faces, rng));
+          const sum = dice.reduce((x, y) => x + y, 0);
+          // « Utiliser l'un ou l'autre résultat » : le moteur garde le meilleur, il n'y a rien à préférer au moins bon.
+          if (sum > armes.sum) roll = withDamageTotal({ ...roll, damage: { ...roll.damage, base: roll.damage.base + sum - armes.sum, weaponDice: { ...armes, sum } } });
+          steps.push({ actorId: a.actorId, op: op.op, value: sum, dice });
+          break;
+        }
         case "redirect": {
           // V3.1-182 : celui qui réagit prend l'attaque pour lui (la CA reste celle que le service relira à la reprise).
           roll = { ...roll, target: a.actorId };
@@ -390,7 +406,7 @@ function attempt<T>(f: () => T): T | Error {
   }
 }
 
-const RANDOM_OPS: ReadonlySet<RollOperation["op"]> = new Set(["add_die", "reroll", "add_damage", "attacker_save"]);
+const RANDOM_OPS: ReadonlySet<RollOperation["op"]> = new Set(["add_die", "reroll", "add_damage", "attacker_save", "reroll_weapon_dice"]);
 
 /**
  * La réaction changerait-elle l'issue ? Seulement quand rien n'est laissé au

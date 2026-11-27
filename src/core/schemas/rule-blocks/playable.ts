@@ -149,6 +149,8 @@ export const zRollOperation = z.discriminatedUnion("op", [
   z.object({ op: z.literal("attacker_save"), ability: z.enum(["str", "dex", "con", "int", "wis", "cha"]), dc: zFormulaNode }),
   /** V3.1-182 (ADR 0078) : l'attaque vise désormais celui qui réagit (s'interposer). */
   z.object({ op: z.literal("redirect") }),
+  /** Sauvagerie martiale : les dés de dégâts de l'arme sont relancés, le meilleur des deux jets est gardé. */
+  z.object({ op: z.literal("reroll_weapon_dice") }),
 ]);
 export type RollOperation = z.infer<typeof zRollOperation>;
 
@@ -162,6 +164,7 @@ const OPERATION_ROLLS: Record<RollOperation["op"], readonly (typeof REACTION_ROL
   add_damage: ["damage"],
   attacker_save: ["attack"],
   redirect: ["attack"],
+  reroll_weapon_dice: ["damage"],
 };
 
 /** V3.1-159 : le refus d'une opération qui n'a pas de sens sur le jet visé (`ac_bonus` sur une sauvegarde). */

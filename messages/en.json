@@ -330,9 +330,11 @@
           "damage_multiplier": "Multiply the damage",
           "add_damage": "Add damage",
           "attacker_save": "Attacker's save, or the attack misses",
-          "redirect": "Interpose (the attack targets the reactor)"
+          "redirect": "Interpose (the attack targets the reactor)",
+          "reroll_weapon_dice": "Reroll the weapon dice, keep the best"
         },
         "interposeAide": "The attack now targets whoever reacts. Nothing to set.",
+        "relancerDesArmeAide": "The weapon's damage dice are rolled again; the engine keeps the better of the two rolls. Nothing to set.",
         "signe": "Direction",
         "ajoute": "Adds",
         "retranche": "Subtracts",

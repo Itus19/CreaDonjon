@@ -331,9 +331,11 @@
           "damage_multiplier": "Multiplier les dégâts",
           "add_damage": "Ajouter des dégâts",
           "attacker_save": "Sauvegarde de l'assaillant, sinon l'attaque rate",
-          "redirect": "S'interposer (l'attaque vise celui qui réagit)"
+          "redirect": "S'interposer (l'attaque vise celui qui réagit)",
+          "reroll_weapon_dice": "Relancer les dés de l'arme, garder le meilleur"
         },
         "interposeAide": "L'attaque vise désormais celui qui réagit. Rien à régler.",
+        "relancerDesArmeAide": "Les dés de dégâts de l'arme sont relancés ; le moteur garde le meilleur des deux jets. Rien à régler.",
         "signe": "Sens",
         "ajoute": "Ajoute",
         "retranche": "Retranche",

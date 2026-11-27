@@ -861,6 +861,7 @@ export async function resolveTargetedRoll(
         roll.rollerSaves = bonus;
       }
       const r = await interveneOnRoll(supabase, {
+        callerIsGm: params.callerIsGm ?? true,
         campaignId: params.campaignId,
         combat,
         roll,
@@ -945,6 +946,8 @@ export async function resolveTargetedRoll(
   } else if (input.kind === "damage") {
     let total: number;
     let damageType: string | undefined;
+    // Sauvagerie martiale : les dés de l'arme seuls, quand le serveur vient de les lancer.
+    let weaponDice: { count: number; faces: number; sum: number } | undefined;
     if (params.preset?.damage) {
       total = params.preset.damage.total;
       damageType = params.preset.damage.type;
@@ -953,6 +956,7 @@ export async function resolveTargetedRoll(
       if ("error" in rolled) return { ok: false, reason: rolled.error };
       if (!rolled.damage) return { ok: false, reason: "not_a_weapon" };
       total = rolled.damage.total;
+      weaponDice = rolled.damage.weaponDice;
       shown.push(rolled.damage);
     } else if (action.kind === "monster_action" && monsterAction?.damage && monsterAction.damage.length > 0) {
       total = 0;
@@ -978,11 +982,12 @@ export async function resolveTargetedRoll(
         ac: null,
         dc: null,
         acBonus: 0,
-        damage: { base: total, multiplier: 1 },
+        damage: { base: total, multiplier: 1, ...(weaponDice ? { weaponDice } : {}) },
         ...(armeDuJet ? { weaponProperties: armeDuJet.properties } : {}),
       };
       const pool = await reactorPool();
       const r = await interveneOnRoll(supabase, {
+        callerIsGm: params.callerIsGm ?? true,
         campaignId: params.campaignId,
         combat,
         roll,

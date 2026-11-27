@@ -1,7 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/src/types/database";
+import type { Database, Json } from "@/src/types/database";
 import type { Locale } from "@/src/i18n/request";
 import { zActivationBlockData, zRollOperation, type Activation } from "@/src/core/schemas/rule-blocks/playable";
 import { loadSpellActivations } from "@/src/server/services/spellActivations";
@@ -9,6 +9,7 @@ import {
   applyRollOperations,
   eligibleReactions,
   outcomeOf,
+  recordUse,
   turnStamp,
   zTurnUsage,
   EMPTY_TURN_USAGE,
@@ -19,11 +20,11 @@ import {
   type RollOutcome,
 } from "@/src/core/rules/rollWindow";
 import type { TriggerActorState, TriggerContext, TriggerZone } from "@/src/core/rules/triggers";
-import { getActiveCombatForCampaign, listCombatParticipants, type CombatParticipantRow, type CombatRow } from "@/src/server/repos/combats";
+import { getActiveCombatForCampaign, listCombatParticipants, updateCombatParticipant, type CombatParticipantRow, type CombatRow } from "@/src/server/repos/combats";
 import { resolveCharacterActionContext, type CharacterActionContext } from "@/src/server/services/characterActions";
 import { getEntityRuntimeState } from "@/src/server/services/runtimeState";
 import { orderParticipants } from "@/src/server/services/combats";
-import { openRollWindow, readCombatParticipantsSigned } from "@/src/server/services/engineSigning";
+import { applySignedEngineChange, openRollWindow, readCombatParticipantsSigned } from "@/src/server/services/engineSigning";
 import { actorNumbersFor } from "@/src/server/services/actorNumbers";
 import { serverRng } from "@/src/server/services/rng";
 import { activationUnlocked, effectFromRow, grantedActivations, localized, withTokenValues, type ActiveDurableEffect } from "@/src/core/rules/durableEffects";
@@ -59,7 +60,13 @@ const zPendingRoll = z.object({
   ac: z.number().int().nullable(),
   dc: z.number().int().nullable(),
   acBonus: z.number(),
-  damage: z.object({ base: z.number(), multiplier: z.number() }).nullable(),
+  damage: z
+    .object({
+      base: z.number(),
+      multiplier: z.number(),
+      weaponDice: z.object({ count: z.number().int().min(1), faces: z.number().int().min(1), sum: z.number().int().min(0) }).optional(),
+    })
+    .nullable(),
   // V3.1-207 : sauvegardes de l'assaillant (Majesté souveraine) et l'attaque ratée qui en résulte.
   rollerSaves: z.partialRecord(z.enum(["str", "dex", "con", "int", "wis", "cha"]), z.number()).optional(),
   forcedMiss: z.boolean().optional(),
@@ -293,6 +300,8 @@ export async function interveneOnRoll(
     /** V3.1-163 : par défaut un jet ciblé. */
     origin?: RollWindowState["origin"];
     locale: Locale;
+    /** Qui écrit le compte d'une réaction automatique limitée (Sauvagerie martiale) : le MJ directement, une joueuse par changement signé. */
+    callerIsGm: boolean;
   },
 ): Promise<InterveneResult> {
   const stamp = params.combat ? turnStamp(params.combat.round, params.combat.turn_index) : null;
@@ -302,6 +311,7 @@ export async function interveneOnRoll(
   const opsOf = (e: EligibleReaction) => params.pool.candidates.find((c) => c.actorId === e.actorId && c.ruleKey === e.ruleKey && c.activation.id === e.activationId)?.activation.roll_operations ?? [];
   const numbersOf = (e: EligibleReaction) => params.pool.meta[e.actorId]?.numbers[e.ruleKey] ?? {};
   const roll = automatic.length === 0 ? params.roll : applyRollOperations(params.roll, automatic.map((e) => ({ actorId: e.actorId, operations: opsOf(e), numbers: numbersOf(e) })), serverRng).roll;
+  await recordAutomaticLimits(supabase, { campaignId: params.campaignId, pool: params.pool, automatic, stamp, callerIsGm: params.callerIsGm });
   if (choices.length === 0) return { kind: "continue", roll, automatic };
 
   // Après l'automatique, l'éligibilité peut avoir changé (Chance a relancé un 1) : on la refait.
@@ -446,5 +456,28 @@ export async function automaticSelfReactions(
   if (automatic.length === 0) return { roll: params.roll, names: null };
   const opsOf = (e: EligibleReaction) => pool.candidates.find((c) => c.actorId === e.actorId && c.ruleKey === e.ruleKey && c.activation.id === e.activationId)?.activation.roll_operations ?? [];
   const roll = applyRollOperations(params.roll, automatic.map((e) => ({ actorId: e.actorId, operations: opsOf(e), numbers: pool.meta[e.actorId]?.numbers[e.ruleKey] ?? {} })), serverRng).roll;
+  await recordAutomaticLimits(supabase, { campaignId: params.campaignId, pool, automatic, stamp, callerIsGm });
   return { roll, names: nomsDesReactions(pool, automatic) };
+}
+
+/**
+ * Une réaction automatique limitée (Sauvagerie martiale : une fois par tour)
+ * se compte comme une réaction choisie (`rollWindowResume`) : son usage est
+ * daté du tour en cours sur la ligne de combat de celui qui réagit. Hors
+ * combat, ou sans limite (Chance), rien n'est écrit.
+ */
+async function recordAutomaticLimits(
+  supabase: TypedClient,
+  params: { campaignId: string; pool: ReactorPool; automatic: readonly EligibleReaction[]; stamp: string | null; callerIsGm: boolean },
+): Promise<void> {
+  if (params.stamp === null) return;
+  for (const e of params.automatic) {
+    if (!e.limitKey) continue;
+    const participantId = params.pool.meta[e.actorId]?.participantId;
+    if (!participantId) continue;
+    const c = params.pool.candidates.find((x) => x.actorId === e.actorId && x.ruleKey === e.ruleKey && x.activation.id === e.activationId);
+    const usage = recordUse(c?.usage ?? EMPTY_TURN_USAGE, { key: e.limitKey, reaction: e.reaction, stamp: params.stamp });
+    if (params.callerIsGm) await updateCombatParticipant(supabase, participantId, { turnUsage: usage as unknown as Json });
+    else await applySignedEngineChange(supabase, { campaignId: params.campaignId, changes: [{ kind: "turn_usage", id: participantId, turn_usage: usage }] });
+  }
 }

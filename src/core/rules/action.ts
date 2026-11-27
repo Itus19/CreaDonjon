@@ -124,6 +124,8 @@ export interface DamageRollResult {
   trace: TraceStep[];
   ast: FormulaNode;
   expression: string;
+  /** Les dés de l'arme seuls (doublés au critique) et leur somme, pour une formule simple (`1d8`) : Sauvagerie martiale les relance. */
+  weaponDice?: { count: number; faces: number; sum: number };
 }
 
 function doubleDiceCounts(node: FormulaNode): FormulaNode {
@@ -149,19 +151,46 @@ function doubleDiceCounts(node: FormulaNode): FormulaNode {
   }
 }
 
+function simpleDiceOf(node: FormulaNode): { count: number; faces: number } | null {
+  return node.op === "dice" && typeof node.count === "number" && typeof node.faces === "number" && !node.keep ? { count: node.count, faces: node.faces } : null;
+}
+
+/**
+ * Sauvagerie martiale — les dés d'une arme à formule simple (`1d8`), pour un
+ * jet de dégâts dont on connaît la somme des dés (le naturel du solo) et la
+ * borne haute (`die_max`, doublée au critique). Une formule composée : `null`.
+ */
+export function weaponDiceForRoll(formula: string, dieMax: number, sum: number): { count: number; faces: number; sum: number } | null {
+  let simple: { count: number; faces: number } | null;
+  try {
+    simple = simpleDiceOf(parseFormula(formula));
+  } catch {
+    // Une formule illisible n'a pas de dés à relancer : la règle ne s'applique pas, le jet reste tel quel.
+    return null;
+  }
+  if (!simple) return null;
+  const critique = dieMax === simple.count * simple.faces * 2;
+  return { count: simple.count * (critique ? 2 : 1), faces: simple.faces, sum };
+}
+
 /** Jet de degats : la formule fournie (double sur critique), plus un modificateur fixe hors des des. */
 export function resolveDamageRoll(input: DamageRollInput, rng: Rng): DamageRollResult {
-  let ast = withBonusDice(parseFormula(input.formula), input.bonusDice);
+  const arme = parseFormula(input.formula);
+  let ast = withBonusDice(arme, input.bonusDice);
   if (input.critical) ast = doubleDiceCounts(ast);
+  // Une formule d'arme simple (`1d8`) : ses dés sont le terme le plus à gauche, évalué en premier — la première ligne de la trace.
+  const base = simpleDiceOf(arme);
+  const simple = base ? { count: base.count * (input.critical ? 2 : 1), faces: base.faces } : null;
+  const avecArme = (r: { value: number; trace: TraceStep[] }) => (simple && r.trace[0] ? { weaponDice: { ...simple, sum: r.trace[0].value } } : {});
 
   const flatBonus = (input.abilityMod ?? 0) + (input.bonus ?? 0);
   if (flatBonus === 0) {
-    const { value, trace } = evaluate(ast, {}, rng, "roll");
-    return { total: value, trace, ast, expression: formatFormulaNode(ast) };
+    const r = evaluate(ast, {}, rng, "roll");
+    return { total: r.value, trace: r.trace, ast, expression: formatFormulaNode(ast), ...avecArme(r) };
   }
   const withBonus: FormulaNode = { op: "add", args: [ast, { op: "ref", name: "mod" }] };
-  const { value, trace } = evaluate(withBonus, { mod: flatBonus }, rng, "roll");
-  return { total: value, trace, ast: withBonus, expression: formatFormulaNode(withBonus) };
+  const r = evaluate(withBonus, { mod: flatBonus }, rng, "roll");
+  return { total: r.value, trace: r.trace, ast: withBonus, expression: formatFormulaNode(withBonus), ...avecArme(r) };
 }
 
 /**

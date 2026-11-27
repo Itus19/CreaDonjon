@@ -4095,5 +4095,44 @@
         }
       ]
     }
+  },
+  "savage-attacker": {
+    "_regle": "Sauvagerie martiale (don d'origine) : une fois par tour, en touchant avec une arme, lancer deux fois les des de degats de l'arme et garder l'un ou l'autre. Reaction automatique sur son propre jet de degats : le moteur relance les des de l'arme et garde le meilleur (`reroll_weapon_dice`) ; sans des d'arme connus (un sort), rien.",
+    "activation": {
+      "activations": [
+        {
+          "id": "savage-attacker",
+          "label": {
+            "fr": "Sauvagerie martiale",
+            "en": "Savage Attacker"
+          },
+          "cost": {
+            "action": "none",
+            "resources": []
+          },
+          "targets": {
+            "kind": "self"
+          },
+          "effects": [],
+          "variants": null,
+          "trigger": {
+            "on": "roll",
+            "roll": "damage",
+            "subject": "self",
+            "when": "rolled",
+            "automatic": true
+          },
+          "roll_operations": [
+            {
+              "op": "reroll_weapon_dice"
+            }
+          ],
+          "limit": {
+            "per": "turn"
+          }
+        }
+      ],
+      "durable_effects": []
+    }
   }
 }
