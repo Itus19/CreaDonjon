@@ -8,6 +8,7 @@ import type { EntitySummary } from "@/src/server/repos/entities";
 import type { EntityPortraitLayout } from "@/src/server/repos/entityPortraits";
 import type { PublicBlock, PublicRelation } from "@/src/server/services/publicShare";
 import type { CibleLecture } from "@/lib/ui/railJeu";
+import type { NpcDisplayView } from "@/src/server/services/facetDiscoveries";
 
 const RuleEntryView = dynamic(() => import("@/components/rules/RuleEntryView"), {
   ssr: false,
@@ -19,6 +20,8 @@ interface FicheJoueur {
   blocks: PublicBlock[];
   relations: PublicRelation[];
   portraitLayout: EntityPortraitLayout;
+  /** V3.2-51 : ce que le personnage a découvert d'un PNJ. */
+  npcView?: NpcDisplayView | null;
 }
 
 type Etat = { cle: string; statut: "pret"; fiche?: FicheJoueur; regle?: RuleEntryDetail } | { cle: string; statut: "erreur" };

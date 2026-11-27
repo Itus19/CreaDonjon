@@ -53,7 +53,7 @@ export default async function JoueurWikiEntityPage({
     }
   }
 
-  const detail = await getPlayerEntityDetail(supabase, { worldId: world.id, entitySlug, userId: user.id, locale: (await getLocale()) as Locale });
+  const detail = await getPlayerEntityDetail(supabase, { worldId: world.id, worldSlug, entitySlug, userId: user.id, locale: (await getLocale()) as Locale });
   if (!detail) notFound();
 
   return (

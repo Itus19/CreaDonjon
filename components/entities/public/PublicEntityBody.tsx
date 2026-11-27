@@ -9,6 +9,8 @@ import PublicPortrait from "./PublicPortrait";
 import PublicRelations from "./PublicRelations";
 import PublicMusicToggle from "./PublicMusicToggle";
 import RefPreviewLayer from "./RefPreviewLayer";
+import PublicNpcView from "./PublicNpcView";
+import type { NpcDisplayView } from "@/src/server/services/facetDiscoveries";
 import type { EntityRefPreview, RuleRefPreview } from "@/src/server/services/refPreview";
 
 /**
@@ -31,6 +33,7 @@ export default function PublicEntityBody({
   portraitLayout,
   hrefBase,
   ruleHrefBase,
+  npcView,
 }: {
   entity: EntitySummary;
   blocks: PublicBlock[];
@@ -39,6 +42,8 @@ export default function PublicEntityBody({
   hrefBase: string;
   /** V2.1-1 : voir `PublicBlockView` — absent sur le partage anonyme. */
   ruleHrefBase?: string;
+  /** V3.2-51 : en partie solo, ce que le personnage a découvert d'un PNJ. Absent ailleurs. */
+  npcView?: NpcDisplayView | null;
 }) {
   // V2.1-14 : plus aucune branche propre a `session_journal` ici. Le bloc
   // Seance revient dans le fil comme tout autre bloc (il est desormais
@@ -121,7 +126,7 @@ export default function PublicEntityBody({
         )}
       </div>
 
-      {contentBlocks.length === 0 && <p className="mt-4 text-sm text-ink-muted">Aucun contenu public pour cette fiche.</p>}
+      {contentBlocks.length === 0 && !npcView && <p className="mt-4 text-sm text-ink-muted">Aucun contenu public pour cette fiche.</p>}
       {restBlocks.length > 0 && (
         <div className="mt-4 flex flex-col">
           {/* V2.1-17 : `suppressBottomRule` se decide en regardant le bloc
@@ -142,6 +147,11 @@ export default function PublicEntityBody({
               suppressBottomRule={hasLeadRule(restBlocks[i + 1])}
             />
           ))}
+        </div>
+      )}
+      {npcView && (
+        <div className="mt-4 flex flex-col">
+          <PublicNpcView view={npcView} />
         </div>
       )}
       {/* V2.1-18 lot 3 : une seule instance, montee seulement si la fiche
