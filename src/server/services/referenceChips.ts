@@ -149,6 +149,17 @@ async function resolveEntityChips(
  * §4.3). Une reference introuvable reste dans le resultat (`found: false`)
  * plutot que d'etre retiree silencieusement.
  */
+/**
+ * Le nom affiché (français si traduit) de fiches de règle, par clé. Même
+ * résolution que les puces, sans lien : pour les libellés de jet (« Attaque —
+ * Épée longue », jamais la clé SRD « longsword »). Une clé introuvable n'a
+ * pas d'entrée : l'appelant garde son repli.
+ */
+export async function resolveRuleNames(supabase: TypedClient, rulesetId: string, locale: Locale, keys: string[]): Promise<Map<string, string>> {
+  const chips = await resolveRuleChips(supabase, "", rulesetId, locale, [...new Set(keys)]);
+  return new Map([...chips].map(([key, chip]) => [key, chip.name]));
+}
+
 export async function resolveBlockReferences(
   supabase: TypedClient,
   world: { id: string; slug: string },

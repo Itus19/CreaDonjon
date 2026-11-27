@@ -114,11 +114,12 @@ function itemRef(item: InventoryItem): BlockReference | null {
 }
 
 /** Meme motif que `itemRef` — recopie plutot qu'importee (`characterActions.ts` ne l'exporte pas), meme profil que `itemRef`/`itemLabel` deja dupliques ailleurs (inventoryItem.ts, cote client). */
-function itemLabel(item: InventoryItem): string {
+function itemLabel(item: InventoryItem, ruleNameByKey?: Record<string, string>): string {
   const label = (item as { label?: string }).label;
   if (label) return label;
   const ref = itemRef(item);
-  if (ref) return ref.kind === "rule" ? ref.key : ref.id;
+  // Le nom français de la fiche de règle quand il est connu ; la clé SRD seulement en dernier repli.
+  if (ref) return ref.kind === "rule" ? (ruleNameByKey?.[ref.key] ?? ref.key) : ref.id;
   return "";
 }
 
@@ -919,7 +920,7 @@ function buildPendingBasis(
     // V3.1-156 (ADR 0074) : les bonus des règles du personnage, comme `rollWeaponAttack`.
     const extra = rollBonus(ctx.sheet, { roll: "attack", kind: "weapon", properties: weaponRollProperties(weapon) });
     const modifier = ctx.sheet.abilities[ability].mod + ctx.sheet.proficiencyBonus + extra.value;
-    const what = `Attaque — ${itemLabel(item)}${choice.extra === "light" ? " (attaque en plus)" : ""}`;
+    const what = `Attaque — ${itemLabel(item, ctx.ruleNameByKey)}${choice.extra === "light" ? " (attaque en plus)" : ""}`;
     return {
       kind: "weapon_attack",
       action_id: choice.actionId,
@@ -996,7 +997,7 @@ function buildDamageBasis(ctx: CharacterActionContext, itemId: string, critical:
   const modifier = (lightExtra ? lightExtraDamageMod(modCarac, lightExtraAddsAbility(ctx.sheet)) : modCarac) + extra.value;
   // ADR 0119 : avec de vrais dés, la personne qui joue applique le plancher elle-même ; le libellé le lui dit.
   const plancher = extra.dieMin !== null && extra.dieMin > 1 ? extra.dieMin : null;
-  const libelle = `Dégâts — ${itemLabel(item)}${lightExtra ? " (attaque en plus)" : ""}`;
+  const libelle = `Dégâts — ${itemLabel(item, ctx.ruleNameByKey)}${lightExtra ? " (attaque en plus)" : ""}`;
   const what = plancher ? `${libelle} (chaque dé sous ${plancher} compte ${plancher})` : libelle;
   const dieMax = diceFormulaMax(weapon.damageDice) * (critical ? 2 : 1);
   // Les dés de bonus doublent au critique, comme les dés de l'arme.
