@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
-import { filterBlocks, type VisibilityLevel } from "@/src/core/visibility";
+import { filterBlocks, type Viewer, type VisibilityLevel } from "@/src/core/visibility";
 import { relationLabel, type RelationType } from "@/src/core/relations/inverses";
 import {
   deleteRelation as repoDeleteRelation,
@@ -27,11 +27,13 @@ export async function listVisibleRelations(
   supabase: TypedClient,
   worldId: string,
   entityId: string,
-  userId: string
+  userId: string,
+  /** V3.2-51 : un lecteur déjà construit (le wiki d'une partie solo se lit en vue joueur, `asSoloPlayer`). Absent : le lecteur réel. */
+  viewerOverride?: Viewer
 ): Promise<VisibleRelation[]> {
   const [rows, viewer] = await Promise.all([
     listRelationsForEntity(supabase, entityId),
-    buildViewerForWorld(supabase, worldId, userId),
+    viewerOverride ?? buildViewerForWorld(supabase, worldId, userId),
   ]);
 
   const visible = filterBlocks(

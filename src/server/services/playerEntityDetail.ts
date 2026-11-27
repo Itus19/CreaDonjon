@@ -116,7 +116,8 @@ function filterPersonalityAspirationsForViewer(blockType: string, data: Json, vi
  * `toPublicRelations` cote public.
  */
 async function listPlayerRelations(supabase: TypedClient, worldId: string, entityId: string, userId: string): Promise<PublicRelation[]> {
-  const rows = await listVisibleRelations(supabase, worldId, entityId, userId);
+  // V3.2-51 : le même lecteur que les blocs ; en solo, la vue joueur.
+  const rows = await listVisibleRelations(supabase, worldId, entityId, userId, await viewerFor(supabase, worldId, userId));
   return rows.map((r) => ({
     id: r.id,
     relationType: r.relationType,

@@ -88,13 +88,15 @@ export function purseInCp(params: NpcGearParams): number {
 export function npcGear(params: NpcGearParams): InventoryBlockData {
   const entries = (params.archetype !== undefined ? NPC_GEAR_BY_ARCHETYPE[params.archetype] : undefined) ?? ROTURIER;
   const rng = new SeededRng(deriveSeed(params.seed, "equipement"));
+  // Un tirage à part pour l'effort de dissimulation : il ne décale pas celui des objets.
+  const hiding = new SeededRng(deriveSeed(params.seed, "dissimulation"));
 
   const items: InventoryItem[] = [];
   entries.forEach((entry, index) => {
     // Un tirage par ligne, même pour une ligne certaine : ajouter une ligne ne décale pas les suivantes.
     const roll = rng.nextInt(1000) / 1000;
     if (roll >= entry.chance) return;
-    const common = { id: `pnj-${index}`, qty: 1, equipped: true, ...(entry.concealed ? { concealed: true } : {}) };
+    const common = { id: `pnj-${index}`, qty: 1, equipped: true, ...(entry.concealed ? { concealed: true, conceal_dc: 12 + hiding.nextInt(6) } : {}) };
     items.push("rule" in entry.item ? { ...common, ref: { kind: "rule", key: entry.item.rule } } : { ...common, label: entry.item.label });
   });
 

@@ -33,6 +33,9 @@ describe("npcGear — l'équipement probable d'un PNJ, à graine fixe", () => {
       if (couteau) {
         vu = true;
         expect(couteau.concealed).toBe(true);
+        // L'effort pour le cacher : un DD secret, tiré une fois.
+        expect(couteau.conceal_dc).toBeGreaterThanOrEqual(12);
+        expect(couteau.conceal_dc).toBeLessThanOrEqual(17);
       }
     }
     expect(vu).toBe(true);

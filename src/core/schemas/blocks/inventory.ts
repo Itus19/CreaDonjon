@@ -12,6 +12,9 @@ const zItemCommon = z.object({
   // V3.2-48 (ADR 0118) : porté mais caché (un couteau sous le tablier). Ne se
   // voit pas sans indice ; absent : visible s'il est porté.
   concealed: z.boolean().optional(),
+  // V3.2-50 (retour de l'auteur, 27 novembre) : l'effort fait pour le cacher, un DD secret
+  // propre à l'objet. Un jet qui réussit le DD affiché peut ne pas le trouver. Absent : 15.
+  conceal_dc: z.number().int().min(5).max(30).optional(),
 });
 
 /**

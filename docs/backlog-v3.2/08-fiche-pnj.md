@@ -54,19 +54,21 @@ Demandé le 26 novembre, après la séance où jauger Mabelle déclenchait une a
 - [x] Tests du noyau : aucune facette non découverte ne figure dans la vue, même dans un champ vide (`facets.test.ts`).
 - [ ] Test d'intégration contre la vraie base, une fois la migration appliquée : un joueur ne lit ni la ligne d'une autre partie, ni celle qu'une autre personne a découverte seule.
 
-### ☐ V3.2-50 — Un jet réussi révèle des indices · `M` · sans modèle IA · Modèle conseillé : Opus
+### ☑ V3.2-50 — Un jet réussi révèle des indices · `M` · sans modèle IA · Modèle conseillé : Opus — **codé le 27 novembre**
 
 - Sur un jet réussi visant un présent, le moteur choisit les facettes révélées selon la compétence et la marge (ADR 0118 §5), les écrit, et les donne au récit comme fait établi.
 - Le volet Wiki de l'écran solo les affiche sans recharger toute la fiche (`docs/CABLAGE.md`).
 
+**Fait.** `facetsRevealedByCheck` (`src/core/rules/facetReveal.ts`) : Perception (Force, objets cachés ; à 5 de marge CA et Dextérité ; à 10 les actions), Perspicacité (Sagesse, Charisme ; puis Intelligence), Investigation (bourse, objets cachés ; puis Intelligence), Médecine (PV, Constitution), Athlétisme, et les jets de caractéristique. `revealCluesFromCheck` (`src/server/services/checkClues.ts`), appelé au tour solo après le jet : cible du jet, ou le seul PNJ de la pièce ; facettes écrites pour qui a lancé, liées au tour ; une phrase « Indices découverts sur … » ajoutée aux faits de la narration ; la scène revient dans la réponse pour que le volet Wiki se relise (C5). Retour de l'auteur : un jet raté et une fouille vide disent la même chose (« Rien trouvé », sans dire s'il y avait quelque chose, sans rien inventer) ; un objet caché porte un DD secret, l'effort fait pour le cacher (`conceal_dc`, tiré à la création, 12 à 17 ; 15 par défaut), que le total doit atteindre en plus du DD affiché. Reste : une cible de combat (`participant:`), avec le combat solo (ADR 0121).
+
 **Critères d'acceptation**
-- [ ] Perception réussie sur Mabelle : son couteau et sa Force apparaissent dans sa fiche, rien d'autre.
+- [x] Perception réussie sur Mabelle : son couteau et sa Force apparaissent dans sa fiche, rien d'autre (`facetReveal.test.ts`, `checkClues.test.ts`).
 
 ### ☑ V3.2-51 — En solo, le wiki se lit en vue joueur · `M` · sans modèle IA · Modèle conseillé : Opus — **codé le 27 novembre**
 
 - Dans une partie solo, les pages du monde se lisent avec le lecteur joueur (`genericPlayerViewer`) et les découvertes de la partie, même pour le propriétaire. Un interrupteur « Voir comme le MJ » reste pour corriger le monde.
 
-**Fait.** `asSoloPlayer` (`src/core/visibility/soloPlayer.ts`) rabat le propriétaire ou l'éditeur d'un monde solo au rôle joueur de la partie ; `playerEntityDetail` l'applique au wiki joueur (page et route du volet Wiki). Pour un PNJ, `readNpcDisplayView` renvoie la fiche et l'équipement réduits aux facettes découvertes, affichés par `PublicNpcView` (« ? » pour le reste, bourse comprise). Le wiki éditeur du monde reste la vue MJ, qui tient lieu d'interrupteur. Limite connue : les relations se lisent encore avec le lecteur réel.
+**Fait.** `asSoloPlayer` (`src/core/visibility/soloPlayer.ts`) rabat le propriétaire ou l'éditeur d'un monde solo au rôle joueur de la partie ; `playerEntityDetail` l'applique au wiki joueur (page et route du volet Wiki). Pour un PNJ, `readNpcDisplayView` renvoie la fiche et l'équipement réduits aux facettes découvertes, affichés par `PublicNpcView` (« ? » pour le reste, bourse comprise). Le wiki éditeur du monde reste la vue MJ, qui tient lieu d'interrupteur. Les relations de la fiche se lisent avec le même lecteur (`listVisibleRelations`, lecteur passé par l'appelant).
 
 **Critères d'acceptation**
 - [x] Un paragraphe `gm` d'une fiche ne s'affiche plus dans le wiki de la partie solo, tant qu'il n'est pas découvert (`soloPlayer.test.ts` : le lecteur rabattu ne voit plus le niveau `gm`).
@@ -88,8 +90,22 @@ Retour de l'auteur, 27 novembre : « en créant la fiche wiki, le moteur doit au
 
 Second retour, 27 novembre : un premier bloc d'apparence seule, riche, utilisable comme consigne Midjourney ; les secrets à part (ADR 0118, amendement).
 
-**Fait.** `src/core/ai/npcPortrait.ts` (schéma fermé, consigne, rangement des notes) ; `draftNpcPortrait` (`src/server/ai/npcPortrait.ts`, `generate_npc`) ; `ensureNpcAppearance` et `ensureNpcAppearancesForPresents` (`src/server/services/npcAppearance.ts`), appelés après la narration du tour solo : bloc « Apparence » en tête, détail caché dans « Ce qui ne se voit pas » (`gm`). `world_note` porte un `aspect` ; `proposeWorldNote` range la note dans le bon bloc. Reste : un objet nommé par le récit et absent de l'inventaire n'y entre pas encore.
+**Fait.** `src/core/ai/npcPortrait.ts` (schéma fermé, consigne, rangement des notes) ; `draftNpcPortrait` (`src/server/ai/npcPortrait.ts`, `generate_npc`) ; `ensureNpcAppearance` et `ensureNpcAppearancesForPresents` (`src/server/services/npcAppearance.ts`), appelés après la narration du tour solo : bloc « Apparence » en tête, détail caché dans « Ce qui ne se voit pas » (`gm`). `world_note` porte un `aspect` ; `proposeWorldNote` range la note dans le bon bloc. Un objet ordinaire que la narration montre chez un PNJ présent (`npc_item`) entre dans son inventaire, visible (`itemFromNarration` : pas de doublon ; jamais une arme, une armure ni un objet caché, car la fiche et l'inventaire sont tirés une fois à la création, retour de l'auteur du 27 novembre), via `addNarratedItem` (`src/server/services/narratedItems.ts`).
 
 **Critères d'acceptation**
 - [ ] Après deux tours au Fanal, la fiche de Mabelle décrit ce que le récit a montré d'elle, sans rien contredire de sa fiche (à vérifier en jouant).
 - [x] Un détail que le récit présente comme caché n'apparaît pas dans la vue joueur (`soloWorldNotes.test.ts`, `npcAppearance.test.ts` : bloc `gm`).
+
+### ☐ V3.2-80 — Ce que les PNJ savent du personnage · `L` · **avec modèle IA** · Modèle conseillé : Opus
+
+Demande de l'auteur, 27 novembre : « les PNJ ne connaissent pas non plus mon équipement ou mes stats et peuvent de leur côté faire des jets pour découvrir les différentes choses de mon personnage… gérer, de manière invisible, ce que savent les PNJ de moi… un PNJ peut partager des infos sur moi à d'autres ou faire courir des rumeurs fausses. »
+
+- Le miroir de V3.2-50 : une table (ou une extension de `entity_facet_discoveries`) des facettes du personnage joué connues de chaque PNJ, invisible à la personne qui joue. Les PNJ font leurs jets d'observation (moteur, V3.2-52) quand l'occasion se présente.
+- La narration reçoit, dans la partie réservée au MJ (ADR 0117), ce que chaque PNJ présent sait du personnage, et le fait agir en conséquence.
+- Transmission : un PNJ peut raconter ce qu'il sait à un autre (proposition structurée, validée par le moteur) ; une rumeur peut être fausse, et garde sa source et sa véracité.
+- Le personnage aussi peut cacher (second retour de l'auteur, même jour) : un bandage sur un tatouage, une arme sous la cape. Le moteur en tire un DD de dissimulation, et seule une approche précise (fouiller, défaire le bandage) peut le découvrir. Même règle que pour les PNJ : un échec et une absence se disent pareil.
+- Migration à prévoir : à concevoir dans un ADR avant de coder.
+
+**Critères d'acceptation**
+- [ ] Un PNJ qui a réussi un jet de Perception sur le personnage sait qu'il porte une épée ; un autre ne le sait pas, tant que le premier ne le lui a pas dit.
+- [ ] Une rumeur fausse circule et se distingue, côté MJ, d'un fait vrai.
