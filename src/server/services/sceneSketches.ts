@@ -10,7 +10,9 @@ import { promoteToEntity, type PromoteToEntityResult } from "@/src/server/servic
 import { discoverEntity } from "@/src/server/services/discoveries";
 import type { EntitySummary } from "@/src/server/repos/entities";
 import type { SceneState } from "@/src/core/rules/scene";
-import { ancrerPersonneCalculee, graineCalculee, roleCalcule } from "@/src/core/rules/sceneLife";
+import { ancrerPersonneCalculee, archetypeCalcule, graineCalculee, roleCalcule } from "@/src/core/rules/sceneLife";
+import { deriveSeed } from "@/src/core/worldgen/seed";
+import { giveNpcSheet } from "@/src/server/services/npcSheet";
 import { insertRelation } from "@/src/server/repos/relations";
 import { upsertTrueName } from "@/src/server/repos/entityTrueNames";
 import { isWorldAdmin } from "@/src/server/services/permissions";
@@ -123,6 +125,17 @@ export async function promoteSketch(
     await nommerPersonneCalculee(supabase, { ...params, scene, entityId: promoted.entity.id, seed });
     withEntity = ancrerPersonneCalculee(withEntity, { sketchId: sketch.id, entityId: promoted.entity.id });
   }
+  // V3.2-47 : la fiche allégée, d'après l'archétype de vie (personne calculée) ou, à défaut, un Roturier.
+  // Une esquisse du générateur n'a pas de graine de ville : la sienne se dérive de son identifiant.
+  const archetype = seed !== null ? (archetypeCalcule(scene, seed) ?? undefined) : undefined;
+  const sheet = await giveNpcSheet(supabase, {
+    worldId: params.worldId,
+    entityId: promoted.entity.id,
+    ...(archetype !== undefined ? { archetype } : {}),
+    seed: seed ?? deriveSeed(0, sketch.id),
+    callerId: params.callerId,
+  });
+  if (!sheet.ok) console.warn(`Pas de fiche allégée pour une personne ancrée (${sheet.reason})`);
   await putSceneState(supabase, { campaignId: params.campaignId, state: withEntity, updatedBy: params.callerId });
   const eventId = await journalSketchNote(supabase, params.sessionId, params.callerId, `${sketch.name} a rejoint le monde`, {
     source: "anchor",

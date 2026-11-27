@@ -75,6 +75,13 @@ vi.mock("@/src/server/repos/relations", () => ({
   },
 }));
 vi.mock("@/src/server/services/permissions", () => ({ isWorldAdmin: async () => isAdmin }));
+const npcSheets: { entityId: string; archetype?: string; seed: number }[] = [];
+vi.mock("@/src/server/services/npcSheet", () => ({
+  giveNpcSheet: async (_s: unknown, params: { entityId: string; archetype?: string; seed: number }) => {
+    npcSheets.push({ entityId: params.entityId, ...(params.archetype !== undefined ? { archetype: params.archetype } : {}), seed: params.seed });
+    return { ok: true, templateKey: "commoner", fallback: params.archetype === undefined };
+  },
+}));
 
 const { drawSketchForScene, promoteSketch, recordSketchSpeechAndMaybeAnchor, anchorSketchesNamedInText } = await import("./sceneSketches");
 const supabase = {} as SupabaseClient<Database>;
@@ -227,6 +234,14 @@ describe("ancrer une personne calculée (V3.2-45)", () => {
     expect(scene?.life?.workers).toContainEqual({ entityId: "e-aubergiste", seed: Number(aubergiste.id.slice(5)) });
   });
 
+  it("V3.2-47 — la personne ancrée reçoit sa fiche allégée, d'après son archétype et sa graine", async () => {
+    const aubergiste = await aubergeAvecVie();
+    await promoteSketch(supabase, { ...base, sketchId: aubergiste.id });
+    const fiche = npcSheets.at(-1);
+    expect(fiche).toMatchObject({ entityId: "e-aubergiste", seed: Number(aubergiste.id.slice(5)) });
+    expect(fiche?.archetype).toBeDefined();
+  });
+
   it("sans droit de MJ, pas de vrai nom : la fiche garde son libellé", async () => {
     isAdmin = false;
     const aubergiste = await aubergeAvecVie();
@@ -239,5 +254,8 @@ describe("ancrer une personne calculée (V3.2-45)", () => {
     await promoteSketch(supabase, { ...base, sketchId: "sk-1" });
     expect(trueNames).toEqual([]);
     expect(relationsInserted).toEqual([]);
+    // V3.2-47 : une fiche quand même, de Roturier (pas d'archétype), à graine dérivée de l'esquisse.
+    expect(npcSheets.at(-1)).toMatchObject({ seed: expect.any(Number) });
+    expect(npcSheets.at(-1)?.archetype).toBeUndefined();
   });
 });

@@ -71,6 +71,13 @@ export interface IntentCatalog {
   /** Les presents de la scene, l'acteur exclu — on ne se prend jamais soi-meme pour cible. */
   targets: IntentTarget[];
   verbs: IntentVerb[];
+  /**
+   * V3.2-46 — ce qui ouvre une hypothèse (« si je », « au cas où »). Un
+   * verbe placé après l'un d'eux, dans la même proposition, est ignoré :
+   * « si je venais à l'attaquer » n'est pas une attaque. Termes normalisés
+   * comme les verbes, en français dans `src/i18n/fr.ts`. Absent : aucun.
+   */
+  hypotheticalMarkers?: string[];
 }
 
 /**
@@ -122,7 +129,7 @@ export function firstMatch<T extends { id: string; terms: string[] }>(
   text: string,
   items: readonly T[],
   predicate: (item: T) => boolean = () => true
-): { item: T; matchedText: string } | null {
+): { item: T; matchedText: string; start: number } | null {
   if (!items.some(predicate)) return null;
 
   // La detection porte sur TOUS les items, pas seulement les eligibles :
@@ -132,7 +139,7 @@ export function firstMatch<T extends { id: string; terms: string[] }>(
   for (const reference of detectEntityReferences(text, linkable(items))) {
     for (const candidate of reference.candidates) {
       const item = byId.get(candidate.entityId);
-      if (item && predicate(item)) return { item, matchedText: reference.matchedText };
+      if (item && predicate(item)) return { item, matchedText: reference.matchedText, start: reference.start };
     }
   }
   return null;
@@ -141,6 +148,33 @@ export function firstMatch<T extends { id: string; terms: string[] }>(
 /** Les verbes n'ont pas d'identifiant propre : leur rang dans le lexique en tient lieu. */
 function indexedVerbs(verbs: readonly IntentVerb[]): (IntentVerb & { id: string })[] {
   return verbs.map((verb, index) => ({ ...verb, id: String(index) }));
+}
+
+/** Ce qui clôt une proposition : au-delà, une hypothèse ne porte plus. */
+const CLAUSE_END = /[.!?;:…]/u;
+
+/**
+ * V3.2-46 — le premier verbe du texte qui n'est pas sous une hypothèse. Un
+ * verbe est « sous hypothèse » quand un marqueur le précède sans fin de
+ * proposition entre les deux. Le verbe ignoré est retiré, la phrase est
+ * relue : le verbe suivant, s'il y en a un, décide à sa place.
+ */
+function firstVerbOutsideHypothesis(text: string, catalog: IntentCatalog) {
+  const verbs = indexedVerbs(catalog.verbs);
+  const markers = (catalog.hypotheticalMarkers ?? []).map((term, index) => ({ id: String(index), terms: [term] }));
+  const markerStarts =
+    markers.length === 0 ? [] : detectEntityReferences(text, linkable(markers)).map((reference) => reference.start);
+
+  let searchFrom = 0;
+  while (searchFrom < text.length) {
+    const hit = firstMatch(text.slice(searchFrom), verbs);
+    if (!hit) return null;
+    const start = searchFrom + hit.start;
+    const underHypothesis = markerStarts.some((m) => m < start && !CLAUSE_END.test(text.slice(m, start)));
+    if (!underHypothesis) return { ...hit, start };
+    searchFrom = start + hit.matchedText.length;
+  }
+  return null;
 }
 
 /** « Persuasion ! » ou « Histoire ? » se lisent comme « Persuasion », « Histoire ». */
@@ -155,7 +189,7 @@ export function interpretIntent(rawText: string, catalog: IntentCatalog): Intent
 
   if (text.length === 0) return free("aucun_verbe_reconnu");
 
-  const verbHit = firstMatch(text, indexedVerbs(catalog.verbs));
+  const verbHit = firstVerbOutsideHypothesis(text, catalog);
   const targetHit = firstMatch(text, catalog.targets);
   const target = targetHit ? { target: targetHit.item, matchedText: targetHit.matchedText } : null;
 

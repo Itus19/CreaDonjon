@@ -182,6 +182,13 @@ export function roleCalcule(scene: SceneState, seed: number): Occupant["role"] |
   return attachedPeople(life.settlement, { key: life.locationId, type: life.placeType }, scene.time.day, life.workers).find((o) => o.seed === seed)?.role ?? null;
 }
 
+/** V3.2-47 — l'archétype de vie de la personne calculée de cette graine dans le lieu, `null` si elle n'en est pas. */
+export function archetypeCalcule(scene: SceneState, seed: number): string | null {
+  const life = scene.life;
+  if (!life || life.locationId !== scene.locationId) return null;
+  return attachedPeople(life.settlement, { key: life.locationId, type: life.placeType }, scene.time.day, life.workers).find((o) => o.seed === seed)?.archetype ?? null;
+}
+
 /**
  * V3.2-45 — Une personne calculée s'est ancrée dans le wiki : elle devient
  * un PNJ qui travaille ou passe là avec sa graine (`workers`), pour que le

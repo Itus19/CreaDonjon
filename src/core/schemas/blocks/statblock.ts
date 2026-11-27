@@ -40,6 +40,9 @@ export const zStatblockBlockData = z.object({
   // V3.1-147 : le repaire est une fiche du wiki (un lieu), jamais une règle.
   // Optionnel, comme les défenses : un bloc écrit avant reste valide.
   lair: z.object({ kind: z.literal("entity"), id: z.string().min(1) }).optional(),
+  // V3.2-47 (ADR 0118) : la fiche du SRD dont part la fiche allégée d'un PNJ.
+  // Optionnel, sans changer `__v` : un bloc écrit avant reste valide.
+  based_on: z.object({ source: z.literal("srd-2024"), key: z.string().min(1).max(60) }).optional(),
   defenses: z
     .object({
       damage_immunities: zDefenseList.optional(),
