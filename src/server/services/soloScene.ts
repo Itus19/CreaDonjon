@@ -9,7 +9,7 @@ import { getSceneState, putSceneState } from "@/src/server/repos/sceneStates";
 import { listCombatsForCampaign } from "@/src/server/repos/combats";
 import { listEntitiesByIds, listEntitiesByKinds } from "@/src/server/repos/entities";
 import { listPartOfRelationsForWorld } from "@/src/server/repos/relations";
-import { discoverEntity } from "@/src/server/services/discoveries";
+import { discoverEntity, listDiscoveredEntityIds } from "@/src/server/services/discoveries";
 import { listAttitudesTowardTarget } from "@/src/server/repos/psyche";
 import { axesDepuisJson, perceptionPercue } from "@/src/core/psyche/perception";
 import { loadWeatherContext } from "@/src/server/services/sceneWeather";
@@ -208,4 +208,27 @@ export async function setScene(
   }
 
   return scene;
+}
+
+/**
+ * V3.2-53 — Qui partage la pièce du personnage, il le voit : chaque tour,
+ * le moteur marque `known` ceux du volet Présents que le joueur n'a pas
+ * encore découverts, pour que leur fiche entre dans l'onglet Wiki.
+ * `setScene` le faisait seulement pour la liste qu'on lui passe : un PNJ
+ * arrivé par un autre chemin restait présent, nommé, interpellé, et absent
+ * du Wiki (retour de jeu du 27 novembre, Mabelle au Gué-aux-Corbeaux).
+ *
+ * Une lecture des découvertes, puis une écriture par personne nouvelle,
+ * une seule fois (`docs/QUOTAS.md`). Sans événement source : comme poser
+ * une scène, annuler un tour ne fait pas oublier un visage vu.
+ */
+export async function discoverWhoIsHere(supabase: TypedClient, params: { campaignId: string; callerId: string }): Promise<void> {
+  const scene = await getSceneState(supabase, params.campaignId);
+  if (!scene) return;
+  const ici = presentsIci(scene).map((p) => p.entityId);
+  if (ici.length === 0) return;
+  const connus = await listDiscoveredEntityIds(supabase, params.campaignId, params.callerId);
+  for (const entityId of ici.filter((id) => !connus.has(id))) {
+    await discoverEntity(supabase, { campaignId: params.campaignId, userId: params.callerId, entityId, level: "known" });
+  }
 }

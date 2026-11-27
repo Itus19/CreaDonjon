@@ -19,6 +19,7 @@ import type { Locale } from "@/src/i18n/request";
 import { resolveProviderForUser } from "@/src/server/ai/resolveProvider";
 import { narrateSoloTurn, raisonSansNarration, detailSansNarration } from "@/src/server/ai/soloNarration";
 import { anchorSketchesNamedInText } from "@/src/server/services/sceneSketches";
+import { discoverWhoIsHere } from "@/src/server/services/soloScene";
 import type { PendingTurnResponse, TurnOutcome } from "@/lib/solo/types";
 
 const advantageField = z.enum(["normal", "advantage", "disadvantage"]);
@@ -260,6 +261,13 @@ export async function POST(request: NextRequest) {
     } catch (erreur) {
       // Ignoré volontairement : le tour ci-dessus est déjà acquis.
       console.error("Mémorisation de l'esquisse du tour impossible", erreur);
+    }
+
+    // V3.2-53 — ceux qui partagent la pièce sont vus : leur fiche entre au Wiki.
+    try {
+      await discoverWhoIsHere(supabase, { campaignId: parsed.data.campaignId, callerId: user.id });
+    } catch (erreur) {
+      console.error("Découverte des présents du tour impossible", erreur);
     }
 
     try {

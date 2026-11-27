@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
-import { emptyScene, type SceneState } from "@/src/core/rules/scene";
+import { emptyScene, enterScene, type SceneState } from "@/src/core/rules/scene";
 
 /**
  * V3-C6 — Même méthode que `sceneSketches.test.ts` : le vrai moteur de scène
@@ -13,6 +13,7 @@ import { emptyScene, type SceneState } from "@/src/core/rules/scene";
 let scene: SceneState | null;
 let generateResult: { sections: { key: string; label: string; text: string; slots: [] }[] } | { error: string };
 const discoverCalls: { entityId: string; level: string }[] = [];
+let alreadyKnown = new Set<string>();
 
 vi.mock("@/src/server/repos/sceneStates", () => ({
   getSceneState: async () => scene,
@@ -27,6 +28,7 @@ vi.mock("@/src/server/services/discoveries", () => ({
   discoverEntity: async (_s: unknown, params: { entityId: string; level: string }) => {
     discoverCalls.push({ entityId: params.entityId, level: params.level });
   },
+  listDiscoveredEntityIds: async () => alreadyKnown,
 }));
 const seenLocationIdAtDraw: (string | undefined)[] = [];
 vi.mock("@/src/server/services/sceneGeneration", () => ({
@@ -48,13 +50,14 @@ vi.mock("@/src/server/services/sceneLife", () => ({
   },
 }));
 
-const { setScene } = await import("./soloScene");
+const { setScene, discoverWhoIsHere } = await import("./soloScene");
 const supabase = {} as SupabaseClient<Database>;
 const base = { campaignId: "c", worldId: "w", callerId: "u" };
 
 beforeEach(() => {
   scene = null;
   discoverCalls.length = 0;
+  alreadyKnown = new Set<string>();
   seenLocationIdAtDraw.length = 0;
   lifeInputs = null;
   lifeReads.length = 0;
@@ -140,5 +143,21 @@ describe("setScene — la vie du lieu (V3.2-31)", () => {
     expect(out.life).toBeUndefined();
     expect(out.sketches).toEqual([]);
     expect(out.present.map((p) => p.entityId)).toEqual(["bram"]);
+  });
+});
+
+describe("V3.2-53 — discoverWhoIsHere", () => {
+  it("découvre ceux de la pièce que le joueur ne connaît pas encore, et eux seuls", async () => {
+    scene = enterScene(enterScene(emptyScene("gue"), { entityId: "mabelle", zone: "near" }), { entityId: "ourse", zone: "near" });
+    alreadyKnown = new Set(["ourse"]);
+    await discoverWhoIsHere(supabase, { campaignId: "c", callerId: "u" });
+    expect(discoverCalls).toEqual([{ entityId: "mabelle", level: "known" }]);
+  });
+
+  it("sans scène ni présent, ne fait rien", async () => {
+    await discoverWhoIsHere(supabase, { campaignId: "c", callerId: "u" });
+    scene = emptyScene("gue");
+    await discoverWhoIsHere(supabase, { campaignId: "c", callerId: "u" });
+    expect(discoverCalls).toEqual([]);
   });
 });
