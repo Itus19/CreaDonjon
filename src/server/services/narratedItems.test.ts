@@ -56,32 +56,31 @@ beforeEach(() => {
 
 describe("addNarratedItem — V3.2-54", () => {
   it("une chope montrée par le récit entre dans l'inventaire, se voit, et laisse sa trace", async () => {
-    expect(await addNarratedItem(supabase, { ...base, name: "une chope d'étain", hidden: false })).toEqual({ ok: true, itemId: "recit-0" });
+    expect(await addNarratedItem(supabase, { ...base, name: "une chope d'étain" })).toEqual({ ok: true, itemId: "recit-0" });
     expect(ecritures[0]!.expectedVersion).toBe(3);
     expect(ecritures[0]!.data.items).toHaveLength(2);
     expect(propositions).toEqual([{ kind: "update_block", status: "applied" }]);
     expect(facettes).toEqual([{ facets: ["item:recit-0"], userId: null }]);
   });
 
-  it("un objet caché entre sans être découvert", async () => {
-    await addNarratedItem(supabase, { ...base, name: "Lettre pliée", hidden: true });
-    expect(ecritures).toHaveLength(1);
-    expect(facettes).toHaveLength(0);
+  it("une dague absente de la fiche ne s'invente pas", async () => {
+    expect(await addNarratedItem(supabase, { ...base, name: "une dague" })).toEqual({ ok: false, reason: "refused" });
+    expect(ecritures).toHaveLength(0);
   });
 
   it("un objet déjà là ne réécrit rien", async () => {
-    expect(await addNarratedItem(supabase, { ...base, name: "tablier", hidden: false })).toEqual({ ok: false, reason: "duplicate" });
+    expect(await addNarratedItem(supabase, { ...base, name: "tablier" })).toEqual({ ok: false, reason: "refused" });
     expect(ecritures).toHaveLength(0);
   });
 
   it("une esquisse sans fiche, ou un PNJ sans inventaire : rien", async () => {
-    expect(await addNarratedItem(supabase, { ...base, entityId: "calc:aubergiste", name: "Chope", hidden: false })).toEqual({ ok: false, reason: "no_inventory" });
+    expect(await addNarratedItem(supabase, { ...base, entityId: "calc:aubergiste", name: "Chope" })).toEqual({ ok: false, reason: "no_inventory" });
     blocs = [];
-    expect(await addNarratedItem(supabase, { ...base, name: "Chope", hidden: false })).toEqual({ ok: false, reason: "no_inventory" });
+    expect(await addNarratedItem(supabase, { ...base, name: "Chope" })).toEqual({ ok: false, reason: "no_inventory" });
   });
 
   it("réservé au MJ du monde", async () => {
     admin = false;
-    expect(await addNarratedItem(supabase, { ...base, name: "Chope", hidden: false })).toEqual({ ok: false, reason: "forbidden" });
+    expect(await addNarratedItem(supabase, { ...base, name: "Chope" })).toEqual({ ok: false, reason: "forbidden" });
   });
 });

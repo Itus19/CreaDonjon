@@ -13,14 +13,14 @@ type TypedClient = SupabaseClient<Database>;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export type AddNarratedItemOutcome = { ok: true; itemId: string } | { ok: false; reason: "forbidden" | "no_inventory" | "duplicate" | "conflict" };
+export type AddNarratedItemOutcome = { ok: true; itemId: string } | { ok: false; reason: "forbidden" | "no_inventory" | "refused" | "conflict" };
 
 /**
- * V3.2-54 — Un objet que la narration a montré chez un PNJ (`npc_item`)
- * entre dans son inventaire, si le moteur l'accepte (`itemFromNarration` :
- * pas de doublon ; une arme connue devient une référence de règle).
- * Visible : il est découvert pour toute la table, comme ce que le PNJ porte
- * (V3.2-48). Caché : il attend un indice (V3.2-50).
+ * V3.2-54 — Un objet ordinaire que la narration a montré chez un PNJ
+ * (`npc_item`) entre dans son inventaire, si le moteur l'accepte
+ * (`itemFromNarration` : pas de doublon, jamais une arme, une armure ni un
+ * objet caché). Il est découvert pour toute la table, comme ce que le PNJ
+ * porte (V3.2-48).
  *
  * Règle 9 : une ligne `ai_proposals` `update_block`, appliquée d'office
  * (ADR 0114). Réservé au MJ du monde, seul à écrire le bloc `gm`. Une
@@ -30,7 +30,7 @@ export type AddNarratedItemOutcome = { ok: true; itemId: string } | { ok: false;
  */
 export async function addNarratedItem(
   supabase: TypedClient,
-  params: { worldId: string; campaignId: string; sessionEventId: string; entityId: string; name: string; hidden: boolean; callerId: string }
+  params: { worldId: string; campaignId: string; sessionEventId: string; entityId: string; name: string; callerId: string }
 ): Promise<AddNarratedItemOutcome> {
   // Une esquisse ou une personne calculée n'a pas encore de fiche : son identifiant n'est pas celui d'une entité.
   if (!UUID.test(params.entityId)) return { ok: false, reason: "no_inventory" };
@@ -39,8 +39,8 @@ export async function addNarratedItem(
   const parsed = block ? zInventoryBlockData.safeParse(block.data) : null;
   if (!block || !parsed?.success) return { ok: false, reason: "no_inventory" };
 
-  const item = itemFromNarration({ name: params.name, hidden: params.hidden }, parsed.data);
-  if (!item) return { ok: false, reason: "duplicate" };
+  const item = itemFromNarration({ name: params.name }, parsed.data);
+  if (!item) return { ok: false, reason: "refused" };
 
   const saved = await updateBlockContent(supabase, {
     id: block.id,
@@ -60,11 +60,12 @@ export async function addNarratedItem(
     sessionEventId: params.sessionEventId,
     kind: "update_block",
     targetEntityId: params.entityId,
-    payload: { blockId: block.id, npc_item: { name: params.name, hidden: params.hidden }, item } as unknown as Json,
+    payload: { blockId: block.id, npc_item: { name: params.name }, item } as unknown as Json,
     status: "applied",
     autoApplied: true,
     appliedAt: new Date().toISOString(),
   });
-  if (!params.hidden) await revealFacets(supabase, { campaignId: params.campaignId, entityId: params.entityId, facets: [`item:${item.id}`], userId: null, sourceEventId: params.sessionEventId });
+  // Le personnage vient de le voir : découvert pour toute la table.
+  await revealFacets(supabase, { campaignId: params.campaignId, entityId: params.entityId, facets: [`item:${item.id}`], userId: null, sourceEventId: params.sessionEventId });
   return { ok: true, itemId: item.id };
 }

@@ -49,7 +49,7 @@ export function soloNarrationSchema(npcIds: string[], knownEntityIds: string[] =
         .object({ entity_id: z.string().min(1), text: z.string().min(1).max(400), aspect: z.enum(WORLD_NOTE_ASPECTS).optional().catch(undefined) })
         .optional(),
       /** V3.2-54 — un objet que la narration met dans les mains d'un PNJ présent ; le moteur décide s'il entre dans son inventaire (`itemFromNarration`). */
-      npc_item: z.object({ npc_id: z.string().min(1), name: z.string().trim().min(1).max(80), hidden: z.boolean().optional() }).optional(),
+      npc_item: z.object({ npc_id: z.string().min(1), name: z.string().trim().min(1).max(80) }).optional(),
       /** V3.2-18 — une durée PROPOSÉE dans une liste fermée ; le moteur la borne (`minutesProposees`) et peut la refuser. */
       // ADR 0112, amendement du 26 novembre : une durée hors liste (une ellipse que l'IA tenterait
       // encore, « jusqu_au_matin ») est ignorée, pas fatale : la narration reste bonne, seul le temps ne passe pas.
@@ -124,11 +124,10 @@ export function soloNarrationToolSchema(npcIds: string[], knownEntityIds: string
             npc_item: {
               type: "object",
               description:
-                "Optionnel : ta narration montre un objet porte ou tenu par un PNJ present (une chope, une dague a la ceinture, une lettre qu'il cache). Le moteur l'ajoute a son inventaire s'il n'y est pas.",
+                "Optionnel : ta narration montre un objet ordinaire tenu par un PNJ present (une chope, un torchon, une pipe). Jamais une arme, une armure ni un objet cache : le moteur les refuse.",
               properties: {
                 npc_id: { type: "string", enum: npcIds, description: "Identifiant EXACT du PNJ, jamais invente" },
                 name: { type: "string", description: "Le nom de l'objet, court, en francais (ex: \"dague\", \"chope d'etain\")" },
-                hidden: { type: "boolean", description: "Vrai si le personnage joue ne le voit pas (cache sous un vetement)" },
               },
               required: ["npc_id", "name"],
             },

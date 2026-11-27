@@ -31,7 +31,7 @@ const inventaire = {
   __v: 1,
   items: [
     { id: "pnj-0", qty: 1, equipped: true, label: "Tablier" },
-    { id: "pnj-1", qty: 1, equipped: true, concealed: true, label: "Couteau" },
+    { id: "pnj-1", qty: 1, equipped: true, concealed: true, conceal_dc: 13, label: "Couteau" },
   ],
   containers: [],
   currency: { pp: 0, gp: 0, ep: 0, sp: 3, cp: 4 },
@@ -78,9 +78,13 @@ describe("revealCluesFromCheck — V3.2-50", () => {
     expect(out).toEqual({ facts: ["Indices découverts sur Mabelle : Force 14 (+2), Couteau (caché)."], revealed: 2 });
   });
 
-  it("un jet raté ne révèle rien", async () => {
-    expect(await revealCluesFromCheck(supabase, { ...base, detail: perception(8, "entity:mabelle", "fail") })).toEqual({ facts: [], revealed: 0 });
+  it("un jet raté ne révèle rien, et se dit comme une fouille vide", async () => {
+    const rate = await revealCluesFromCheck(supabase, { ...base, detail: perception(8, "entity:mabelle", "fail") });
     expect(ecrites).toHaveLength(0);
+    connues = new Set(["ability:str", "item:pnj-1"]);
+    const vide = await revealCluesFromCheck(supabase, { ...base, detail: perception(13) });
+    expect(rate).toEqual(vide);
+    expect(rate.facts[0]).toContain("Rien trouvé sur Mabelle");
   });
 
   it("sans cible, le seul PNJ de la pièce est visé ; à plusieurs, personne", async () => {
@@ -96,9 +100,10 @@ describe("revealCluesFromCheck — V3.2-50", () => {
     expect(out.facts[0]).toContain("bourse : ");
   });
 
-  it("ce qui est déjà connu ne se redit pas", async () => {
-    connues = new Set(["ability:str", "item:pnj-1"]);
-    expect(await revealCluesFromCheck(supabase, { ...base, detail: perception(13) })).toEqual({ facts: [], revealed: 0 });
+  it("un couteau mieux caché que le jet ne se trouve pas, même jet réussi", async () => {
+    const out = await revealCluesFromCheck(supabase, { ...base, detail: { intent: { kind: "skill_check", action_id: "investigation", target_id: "entity:mabelle" }, check: { total: 12, dc: 10, verdict: "success" } } });
+    expect(ecrites[0]!.facets).toEqual(["purse"]);
+    expect(out.facts[0]).not.toContain("Couteau");
   });
 
   it("une action libre ou une attaque n'est pas un jet d'observation", async () => {

@@ -85,7 +85,7 @@ interface NarrationAttempt {
   newCharacterRequest?: { role: string };
   /** V3-C3 — une suggestion redactionnelle, jamais ecrite directement (`proposeWorldNote`). */
   worldNote?: { entityId: string; text: string; aspect?: WorldNoteAspect };
-  npcItem?: { npcId: string; name: string; hidden: boolean };
+  npcItem?: { npcId: string; name: string };
   /** V3.2-18 — une durée proposée, jamais appliquée telle quelle : `advanceSceneAfterNarration` la borne. */
   elapsed?: ElapsedProposal;
   /** V3.2-19 — un déplacement proposé vers un lieu voisin fourni ; `moveSceneAfterNarration` l'applique. */
@@ -144,7 +144,7 @@ async function attemptNarration(
     worldNote: parsed.data.world_note
       ? { entityId: parsed.data.world_note.entity_id, text: parsed.data.world_note.text, ...(parsed.data.world_note.aspect ? { aspect: parsed.data.world_note.aspect } : {}) }
       : undefined,
-    npcItem: parsed.data.npc_item ? { npcId: parsed.data.npc_item.npc_id, name: parsed.data.npc_item.name, hidden: parsed.data.npc_item.hidden ?? false } : undefined,
+    npcItem: parsed.data.npc_item ? { npcId: parsed.data.npc_item.npc_id, name: parsed.data.npc_item.name } : undefined,
     elapsed: parsed.data.elapsed,
     moveTo: parsed.data.move_to ? { locationId: parsed.data.move_to.location_id, with: parsed.data.move_to.with ?? [] } : undefined,
     enterRoom: parsed.data.enter_room,
@@ -383,10 +383,9 @@ export async function narrateSoloTurn(supabase: TypedClient, provider: AiProvide
         sessionEventId: event.id,
         entityId: chosen.npcItem.npcId,
         name: chosen.npcItem.name,
-        hidden: chosen.npcItem.hidden,
         callerId: params.userId,
       });
-      if (!added.ok && added.reason !== "duplicate" && added.reason !== "no_inventory") console.warn(`Objet du récit non ajouté (${added.reason})`);
+      if (!added.ok && added.reason !== "refused" && added.reason !== "no_inventory") console.warn(`Objet du récit non ajouté (${added.reason})`);
     } catch (erreur) {
       // Ignoré volontairement : la narration ci-dessus est déjà acquise.
       console.error("Objet du récit impossible à ajouter", erreur);

@@ -1,14 +1,18 @@
 import type { InventoryBlockData, InventoryItem } from "../schemas/blocks/inventory";
 
 /**
- * V3.2-54 (retour de l'auteur, 27 novembre) — Un objet que la narration met
- * dans les mains d'un PNJ (« elle essuie une chope », « une dague à la
- * ceinture ») entre dans son inventaire. Le moteur décide : un objet connu des
- * règles devient une référence de règle (ses chiffres viennent des règles,
- * jamais de l'IA) ; un autre reste un objet en ligne, sans chiffre.
+ * V3.2-54 (retour de l'auteur, 27 novembre) — Un objet ordinaire que la
+ * narration montre dans les mains d'un PNJ (« elle essuie une chope ») entre
+ * dans son inventaire, visible, puisque le personnage vient de le voir.
+ *
+ * Second retour, même jour : la fiche et l'inventaire sont tirés UNE fois, à
+ * la création de la page ; ensuite rien d'important ne s'invente. Le moteur
+ * refuse donc une arme ou une armure absente de la fiche (la fiche
+ * l'emporte, ADR 0104), et n'accepte jamais d'objet caché du récit : une
+ * fouille ne doit trouver que ce que le tirage a mis.
  */
 
-/** Noms français courants → clé de règle du SRD (les objets que portent les PNJ, `npcGear.ts`). */
+/** Noms français des armes et armures courantes (clés du SRD) : jamais ajoutées par le récit. */
 const RULE_BY_NAME: Record<string, string> = {
   dague: "dagger",
   couteau: "dagger",
@@ -50,20 +54,19 @@ function normalize(name: string): string {
     .trim();
 }
 
-export function itemFromNarration(narrated: { name: string; hidden: boolean }, inventory: InventoryBlockData): InventoryItem | null {
+export function itemFromNarration(narrated: { name: string }, inventory: InventoryBlockData): InventoryItem | null {
   const label = narrated.name.trim().replace(/\s+/g, " ");
   if (label === "" || label.length > 80) return null;
   const key = normalize(label);
-  const ruleKey = RULE_BY_NAME[key];
+  // Une arme ou une armure : seule la fiche tirée à la création en donne.
+  if (RULE_BY_NAME[key]) return null;
 
-  const already = inventory.items.some((item) => ("ref" in item ? item.ref.kind === "rule" && item.ref.key === ruleKey : normalize(item.label) === key));
+  const already = inventory.items.some((item) => !("ref" in item) && normalize(item.label) === key);
   if (already) return null;
 
   const used = new Set(inventory.items.map((i) => i.id));
   let n = 0;
   while (used.has(`recit-${n}`)) n++;
-  const common = { id: `recit-${n}`, qty: 1, equipped: true, ...(narrated.hidden ? { concealed: true } : {}) };
-  if (ruleKey) return { ...common, ref: { kind: "rule", key: ruleKey } };
   const display = label.replace(ARTICLES, "");
-  return { ...common, label: display.charAt(0).toUpperCase() + display.slice(1) };
+  return { id: `recit-${n}`, qty: 1, equipped: true, label: display.charAt(0).toUpperCase() + display.slice(1) };
 }

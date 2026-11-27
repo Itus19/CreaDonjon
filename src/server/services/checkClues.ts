@@ -43,6 +43,10 @@ const signed = (n: number) => (n >= 0 ? `+${n}` : `−${Math.abs(n)}`);
  * et rend une phrase de fait établi pour la narration : l'IA raconte la
  * découverte, elle ne la choisit pas.
  *
+ * Un jet raté, ou réussi sans rien de neuf (un objet caché a son propre DD
+ * secret, `conceal_dc`), donnent la même phrase « Rien trouvé » : on ne sait
+ * jamais s'il n'y avait rien.
+ *
  * La cible : celle du jet (`entity:<id>`) ; sans cible, le seul PNJ de la
  * pièce s'il n'y en a qu'un. Une cible de combat (`participant:`) attend le
  * combat solo (ADR 0121).
@@ -60,7 +64,7 @@ export async function revealCluesFromCheck(
   const parsed = zCheckTurn.safeParse(params.detail);
   if (!parsed.success) return none;
   const { intent, check } = parsed.data;
-  if (check.verdict !== "success" || check.dc === null) return none;
+  if (check.verdict === null || check.dc === null) return none;
   const kind = checkOf(intent.kind, intent.action_id);
   if (!kind) return none;
   if (!(await isWorldAdmin(supabase, { worldId: params.world.id, userId: params.callerId }))) return none;
@@ -85,15 +89,25 @@ export async function revealCluesFromCheck(
   const gearData = gear?.success ? gear.data : null;
   if (!sheetData && !gearData) return none;
 
+  const nameOf = async () => (await listEntitiesByIds(supabase, [entityId]))[0]?.name ?? "ce personnage";
+  // Retour de l'auteur (27 novembre) : un jet raté et une fouille vide disent la même chose,
+  // pour que la personne qui joue ne sache pas s'il n'y avait rien ou si son jet était trop faible.
+  const nothingFound = async () => ({
+    facts: [`Rien trouvé sur ${await nameOf()} : ne dis pas s'il y avait quelque chose à trouver, et n'invente aucun détail.`],
+    revealed: 0,
+  });
+  if (check.verdict === "fail") return nothingFound();
+
   const facets = facetsRevealedByCheck({
     check: kind,
-    margin: check.total - check.dc,
+    total: check.total,
+    dc: check.dc,
     npc: { sheet: sheetData ? { actions: sheetData.actions.length, traits: sheetData.traits.length } : null, gear: gearData },
     known: knownByEntity.get(entityId) ?? new Set<string>(),
   });
-  if (facets.length === 0) return none;
+  if (facets.length === 0) return nothingFound();
   const { revealed } = await revealFacets(supabase, { campaignId: params.campaignId, entityId, facets, userId: params.callerId, sourceEventId: params.eventId });
-  if (revealed.length === 0) return none;
+  if (revealed.length === 0) return nothingFound();
 
   // La phrase dit seulement ce qui vient d'être découvert, construite comme la vue joueur.
   const fresh = new Set(revealed);
@@ -121,6 +135,5 @@ export async function revealCluesFromCheck(
     }
   }
   if (parts.length === 0) return { facts: [], revealed: revealed.length };
-  const [entity] = await listEntitiesByIds(supabase, [entityId]);
-  return { facts: [`Indices découverts sur ${entity?.name ?? "ce personnage"} : ${parts.join(", ")}.`], revealed: revealed.length };
+  return { facts: [`Indices découverts sur ${await nameOf()} : ${parts.join(", ")}.`], revealed: revealed.length };
 }
