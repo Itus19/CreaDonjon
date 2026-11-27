@@ -947,7 +947,7 @@ export async function resolveTargetedRoll(
     let total: number;
     let damageType: string | undefined;
     // Sauvagerie martiale : les dés de l'arme seuls, quand le serveur vient de les lancer.
-    let weaponDice: { count: number; faces: number; sum: number } | undefined;
+    let weaponDice: { count: number; faces: number; sum: number; min?: number } | undefined;
     if (params.preset?.damage) {
       total = params.preset.damage.total;
       damageType = params.preset.damage.type;

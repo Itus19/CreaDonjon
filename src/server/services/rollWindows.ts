@@ -64,7 +64,7 @@ const zPendingRoll = z.object({
     .object({
       base: z.number(),
       multiplier: z.number(),
-      weaponDice: z.object({ count: z.number().int().min(1), faces: z.number().int().min(1), sum: z.number().int().min(0) }).optional(),
+      weaponDice: z.object({ count: z.number().int().min(1), faces: z.number().int().min(1), sum: z.number().int().min(0), min: z.number().int().min(1).max(100).optional() }).optional(),
     })
     .nullable(),
   // V3.1-207 : sauvegardes de l'assaillant (Majesté souveraine) et l'attaque ratée qui en résulte.

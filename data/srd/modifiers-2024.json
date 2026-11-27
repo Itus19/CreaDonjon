@@ -285,6 +285,19 @@
       }
     ]
   },
+  "great-weapon-fighting": {
+    "_regle": "Armes a deux mains (don de Style de combat) : aux degats d'une arme de corps a corps tenue a deux mains (Deux mains, ou Polyvalente prise a deux mains), chaque de de degats compte au moins 3 (`die_min.weapon`, `when.wielding` : `melee-two-handed`). Les des de bonus de l'attaque aussi.",
+    "modifiers": [
+      {
+        "target": "die_min.weapon",
+        "op": "set",
+        "value": 3,
+        "when": {
+          "wielding": "melee-two-handed"
+        }
+      }
+    ]
+  },
   "defense": {
     "_regle": "Defense (don de Style de combat) : +1 a la CA tant qu'on porte une armure legere, intermediaire ou lourde (`when.armor`).",
     "modifiers": [

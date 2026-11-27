@@ -514,9 +514,11 @@ export async function rollWeaponDamage(
   const ability = weaponAttackAbility(weapon.properties, weapon.isRanged, ctx.sheet.abilities.str.mod, ctx.sheet.abilities.dex.mod);
   const abilityMod = ctx.sheet.abilities[ability].mod;
   // V3.1-156 (ADR 0074) : la Rage (`damage.weapon.str`), un bonus de dégâts d'arme, des dés de bonus.
-  const extra = rollBonus(ctx.sheet, { roll: "damage", kind: "weapon", ability, properties: weaponRollProperties(weapon), ...(weapon.damageType ? { damageType: weapon.damageType } : {}) });
+  // ADR 0118 : une arme Polyvalente lancée à deux mains est « tenue à deux mains » (Armes à deux mains).
+  const properties = weaponRollProperties(weapon, { twoHanded: params.versatile && weapon.versatileDamageDice !== null });
+  const extra = rollBonus(ctx.sheet, { roll: "damage", kind: "weapon", ability, properties, ...(weapon.damageType ? { damageType: weapon.damageType } : {}) });
 
-  const damage = resolveDamageRoll({ formula, abilityMod, bonus: extra.value, bonusDice: extra.dice, critical: params.critical }, serverRng);
+  const damage = resolveDamageRoll({ formula, abilityMod, bonus: extra.value, bonusDice: extra.dice, critical: params.critical, dieMin: extra.dieMin }, serverRng);
 
   await recordRoll(supabase, params.campaignId, {
     expression: damage.expression,

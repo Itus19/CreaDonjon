@@ -66,14 +66,14 @@ function reactorKey(targetId: string | null): string | null {
  * naturel des dégâts est la somme des seuls dés de l'arme (les dés de bonus se
  * lancent à part, `finishResolution`) ; le critique se lit sur la borne haute.
  */
-function weaponDiceOf(ctx: CharacterActionContext, pending: PendingRequest, natural: number): { weaponDice?: { count: number; faces: number; sum: number } } {
+function weaponDiceOf(ctx: CharacterActionContext, pending: PendingRequest, natural: number): { weaponDice?: { count: number; faces: number; sum: number; min?: number } } {
   if (pending.kind !== "weapon_damage") return {};
   const item = ctx.inventoryData?.items.find((i) => i.id === pending.action_id);
   const ref = item && "ref" in item ? item.ref : null;
   const weapon = ref?.kind === "rule" ? ctx.weaponByKey[ref.key] : null;
   if (!weapon) return {};
   const des = weaponDiceForRoll(weapon.damageDice, pending.die_max, natural);
-  return des ? { weaponDice: des } : {};
+  return des ? { weaponDice: { ...des, ...(pending.die_min ? { min: pending.die_min } : {}) } } : {};
 }
 
 /**

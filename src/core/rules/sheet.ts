@@ -729,6 +729,8 @@ export interface RollBonusResult {
   rollState: RollState;
   /** Le plus petit d20 naturel qui fait un critique (20 par défaut, 19 pour le Critique amélioré). */
   critRange: number;
+  /** ADR 0118 — chaque dé de dégâts compte au moins cette valeur (Armes à deux mains : 3), `null` sans plancher. */
+  dieMin: number | null;
 }
 
 /**
@@ -758,7 +760,18 @@ export function rollBonus(sheet: Pick<DerivedSheet, "rollModifiers">, q: RollQue
     sources,
     rollState: q.roll === "attack" ? resolveRollState("roll", matched) : "normal",
     critRange: Math.min(20, ...crits),
+    dieMin: damageDieMin(sheet.rollModifiers, q),
   };
+}
+
+/** Le plancher des dés de dégâts : le plus haut `die_min.<genre>` posé, si l'arme du jet satisfait sa condition. */
+function damageDieMin(modifiers: readonly Modifier[], q: RollQuery): number | null {
+  if (q.roll !== "damage") return null;
+  const planchers = modifiers
+    .filter((m) => (m.target === "die_min" || m.target === `die_min.${q.kind}`) && m.op === "set" && m.value !== undefined)
+    .filter((m) => !m.when?.wielding || wieldingAllows(m.when.wielding, q.properties ?? []))
+    .map((m) => m.value!);
+  return planchers.length > 0 ? Math.max(...planchers) : null;
 }
 
 export function characterSheet(
@@ -984,7 +997,7 @@ export function characterSheet(
     }
   }
   // V3.1-168 : un modificateur conditionné par l'arme tenue ne vaut que pour les jets (lu par `rollBonus`).
-  const rollModifiers = allModifiers.filter((m) => /^(attack|damage|crit_range)(\.|$)/.test(m.target));
+  const rollModifiers = allModifiers.filter((m) => /^(attack|damage|crit_range|die_min)(\.|$)/.test(m.target));
   // V3.1-168 (ADR 0077) : résistances, vulnérabilités, immunités aux types de dégâts (la Rage en pose pendant qu'elle dure).
   const defensesDe = (prefixe: string) => [...new Set(allModifiers.filter((m) => m.target.startsWith(prefixe) && (m.value ?? 1) > 0).map((m) => m.target.slice(prefixe.length)))].sort();
   // `immune.spell.<clé>` est une immunité à un SORT (M15, plus bas), pas à un type de dégâts.

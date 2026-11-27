@@ -25,7 +25,7 @@ import { putSceneState } from "@/src/server/repos/sceneStates";
 import { type IntentAction, type IntentTarget } from "@/src/core/rules/intent";
 import { autoSuccess, dcForTier, type CheckTier } from "@/src/core/rules/checkDifficulty";
 import type { ResolvedEffect, FiredEvent } from "@/src/core/rules/triggers";
-import { resolveCheckRoll, resolveDamageRoll, weaponAttackAbility, type AdvantageState } from "@/src/core/rules/action";
+import { flooredRng, resolveCheckRoll, resolveDamageRoll, weaponAttackAbility, type AdvantageState } from "@/src/core/rules/action";
 import { rollDice } from "@/src/core/dice/roll";
 import { eventsForCheck, eventsForSave } from "@/src/core/rules/gameEvents";
 import { parseFormula } from "@/src/core/formula/parser";
@@ -870,6 +870,8 @@ interface PendingBasis {
   what: string;
   /** V3.1-156 : dés de bonus de la fiche, lancés par le serveur à la résolution. */
   bonus_dice: { count: number; faces: number; label: string }[];
+  /** ADR 0118 : le plancher de chaque dé de dégâts (Armes à deux mains). */
+  die_min?: number;
 }
 
 const desDeBonus = (dice: readonly BonusDie[]) => dice.map((d) => ({ count: d.count, faces: d.faces, label: d.label }));
@@ -966,11 +968,14 @@ function buildDamageBasis(ctx: CharacterActionContext, itemId: string, critical:
   // V3.1-156 (ADR 0074) : la Rage et les bonus de dégâts d'arme, comme `rollWeaponDamage`.
   const extra = rollBonus(ctx.sheet, { roll: "damage", kind: "weapon", ability, properties: weaponRollProperties(weapon), ...(weapon.damageType ? { damageType: weapon.damageType } : {}) });
   const modifier = ctx.sheet.abilities[ability].mod + extra.value;
-  const what = `Dégâts — ${itemLabel(item)}`;
+  // ADR 0118 : avec de vrais dés, la personne qui joue applique le plancher elle-même ; le libellé le lui dit.
+  const plancher = extra.dieMin !== null && extra.dieMin > 1 ? extra.dieMin : null;
+  const libelle = `Dégâts — ${itemLabel(item)}`;
+  const what = plancher ? `${libelle} (chaque dé sous ${plancher} compte ${plancher})` : libelle;
   const dieMax = diceFormulaMax(weapon.damageDice) * (critical ? 2 : 1);
   // Les dés de bonus doublent au critique, comme les dés de l'arme.
   const bonus = desDeBonus(extra.dice).map((d) => ({ ...d, count: d.count * (critical ? 2 : 1) }));
-  return { kind: "weapon_damage", action_id: itemId, dc: null, die_max: dieMax, modifier, chips: [{ label: what, value: modifier }], what, bonus_dice: bonus };
+  return { kind: "weapon_damage", action_id: itemId, dc: null, die_max: dieMax, modifier, chips: [{ label: libelle, value: modifier }], what, bonus_dice: bonus, ...(plancher ? { die_min: plancher } : {}) };
 }
 
 /**
@@ -1114,7 +1119,7 @@ export async function resolveIntentRequestFromRoll(
     const ref = itemRef(item);
     const weapon = ref?.kind === "rule" ? ctx.weaponByKey[ref.key] : null;
     if (!weapon) return { error: "not_a_weapon" };
-    natural = resolveDamageRoll({ formula: weapon.damageDice, critical: pending.critical }, serverRng).total;
+    natural = resolveDamageRoll({ formula: weapon.damageDice, critical: pending.critical, dieMin: pending.die_min ?? null }, serverRng).total;
   } else {
     natural = resolveCheckRoll({ modifier: 0, advantage: pending.advantage }, serverRng).total;
   }
@@ -1155,7 +1160,8 @@ async function finishResolution(
   let bonusDice = 0;
   if (!preset) {
     for (const d of pending.bonus_dice ?? []) {
-      const r = rollDice(d.count, d.faces, serverRng);
+      // ADR 0118 : le plancher des dés de dégâts vaut aussi pour les dés de bonus de l'attaque.
+      const r = rollDice(d.count, d.faces, flooredRng(serverRng, pending.die_min));
       bonusDice += r.total;
       trace.push({ text: `${d.count}d${d.faces} ${d.label} (${r.rolls.join(", ")})`, value: r.total });
     }

@@ -46,7 +46,7 @@ export interface PendingRoll {
    * `weaponDice` : les dés de l'arme seuls (doublés au critique) et leur somme, quand le jet vient d'une arme
    * à formule simple (`1d8`) ; Sauvagerie martiale les relance. Absent : un sort, une formule composée, un monstre.
    */
-  damage: { base: number; multiplier: number; weaponDice?: { count: number; faces: number; sum: number } } | null;
+  damage: { base: number; multiplier: number; weaponDice?: { count: number; faces: number; sum: number; min?: number } } | null;
   /** V3.1-207 : les bonus de sauvegarde de l'auteur du jet, quand une réaction lui en impose une (`attacker_save`). Absent : +0. */
   rollerSaves?: Partial<Record<"str" | "dex" | "con" | "int" | "wis" | "cha", number>>;
   /** V3.1-207 : l'attaque rate quoi qu'en dise le dé (sauvegarde de l'assaillant ratée). */
@@ -373,7 +373,8 @@ export function applyRollOperations(start: PendingRoll, applications: readonly R
         case "reroll_weapon_dice": {
           const armes = roll.damage?.weaponDice;
           if (!roll.damage || !armes) break;
-          const dice = Array.from({ length: armes.count }, () => rollDie(armes.faces, rng));
+          // Le plancher du premier jet vaut aussi pour la relance (Armes à deux mains : les 1 et 2 comptent 3).
+          const dice = Array.from({ length: armes.count }, () => Math.max(rollDie(armes.faces, rng), armes.min ?? 1));
           const sum = dice.reduce((x, y) => x + y, 0);
           // « Utiliser l'un ou l'autre résultat » : le moteur garde le meilleur, il n'y a rien à préférer au moins bon.
           if (sum > armes.sum) roll = withDamageTotal({ ...roll, damage: { ...roll.damage, base: roll.damage.base + sum - armes.sum, weaponDice: { ...armes, sum } } });

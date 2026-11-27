@@ -117,6 +117,8 @@ export interface DamageRollInput {
   critical: boolean;
   /** V3.1-156 : dés de bonus de la fiche ; doublés au critique comme les autres dés. */
   bonusDice?: readonly BonusDie[];
+  /** ADR 0118 — chaque dé compte au moins cette valeur (Armes à deux mains : les 1 et 2 comptent 3). */
+  dieMin?: number | null;
 }
 
 export interface DamageRollResult {
@@ -125,7 +127,17 @@ export interface DamageRollResult {
   ast: FormulaNode;
   expression: string;
   /** Les dés de l'arme seuls (doublés au critique) et leur somme, pour une formule simple (`1d8`) : Sauvagerie martiale les relance. */
-  weaponDice?: { count: number; faces: number; sum: number };
+  weaponDice?: { count: number; faces: number; sum: number; min?: number };
+}
+
+/**
+ * ADR 0118 — un Rng dont chaque dé vaut au moins `min` (« considérer les 1 et
+ * 2 comme des 3 »). Sans plancher, le Rng tel quel. Les dés se lancent tous
+ * par `nextInt(faces)` puis `+ 1` (`src/core/formula`).
+ */
+export function flooredRng(rng: Rng, min: number | null | undefined): Rng {
+  if (!min || min <= 1) return rng;
+  return { nextInt: (n) => Math.max(rng.nextInt(n), min - 1) };
 }
 
 function doubleDiceCounts(node: FormulaNode): FormulaNode {
@@ -176,15 +188,17 @@ export function resolveDamageRoll(input: DamageRollInput, rng: Rng): DamageRollR
   // Une formule d'arme simple (`1d8`) : ses dés sont le terme le plus à gauche, évalué en premier — la première ligne de la trace.
   const base = simpleDiceOf(arme);
   const simple = base ? { count: base.count * (input.critical ? 2 : 1), faces: base.faces } : null;
-  const avecArme = (r: { value: number; trace: TraceStep[] }) => (simple && r.trace[0] ? { weaponDice: { ...simple, sum: r.trace[0].value } } : {});
+  const min = input.dieMin && input.dieMin > 1 ? input.dieMin : null;
+  const avecArme = (r: { value: number; trace: TraceStep[] }) => (simple && r.trace[0] ? { weaponDice: { ...simple, sum: r.trace[0].value, ...(min ? { min } : {}) } } : {});
+  const des = flooredRng(rng, min);
 
   const flatBonus = (input.abilityMod ?? 0) + (input.bonus ?? 0);
   if (flatBonus === 0) {
-    const r = evaluate(ast, {}, rng, "roll");
+    const r = evaluate(ast, {}, des, "roll");
     return { total: r.value, trace: r.trace, ast, expression: formatFormulaNode(ast), ...avecArme(r) };
   }
   const withBonus: FormulaNode = { op: "add", args: [ast, { op: "ref", name: "mod" }] };
-  const r = evaluate(withBonus, { mod: flatBonus }, rng, "roll");
+  const r = evaluate(withBonus, { mod: flatBonus }, des, "roll");
   return { total: r.value, trace: r.trace, ast: withBonus, expression: formatFormulaNode(withBonus), ...avecArme(r) };
 }
 

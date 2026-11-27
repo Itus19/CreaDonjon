@@ -4191,18 +4191,6 @@
       "durable_effects": []
     }
   },
-  "great-weapon-fighting": {
-    "_regle": "Armes a deux mains (don de Style de combat) : aux degats d'une arme de corps a corps tenue a deux mains (Deux mains ou Polyvalente), les 1 et 2 des des de degats comptent comme des 3. Lacune honnete : le moteur ne sait ni planchonner chaque de de degats, ni dire qu'une arme Polyvalente est tenue a deux mains.",
-    "coverage": {
-      "gaps": [
-        {
-          "text": "vous pouvez considérer tous les 1 et 2 obtenus aux dés de dégâts comme des 3",
-          "missing": "Un plancher par dé de dégâts (chaque 1 ou 2 compte comme 3), et la prise à deux mains d'une arme Polyvalente : ni l'un ni l'autre n'existe encore dans le moteur.",
-          "brick": "other"
-        }
-      ]
-    }
-  },
   "champion-remarkable-athlete": {
     "_regle": "Athlete accompli (Champion 3) : l'avantage a l'initiative et en Athletisme est joue par le bloc de la sous-classe (subclasses-2024.json). Aussitot apres un Coup critique (plage du personnage), une reaction sans cout accorde la moitie de la Vitesse en mouvement pour ce tour. Les attaques d'opportunite ne sont pas jouees par le moteur : rien a empecher.",
     "activation": {
