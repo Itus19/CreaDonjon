@@ -103,10 +103,11 @@ Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été
 | V3.2-47 | ☐ | sans | La fiche de base d'un PNJ, tirée du SRD | [`08-fiche-pnj.md`](backlog-v3.2/08-fiche-pnj.md) |
 | V3.2-48 | ☐ | sans | Équipement probable et bourse | [`08-fiche-pnj.md`](backlog-v3.2/08-fiche-pnj.md) |
 | V3.2-49 | ☐ | sans | La table des indices découverts et la vue joueur (ADR 0118) | [`08-fiche-pnj.md`](backlog-v3.2/08-fiche-pnj.md) |
-| V3.2-50 | ☐ | sans | Un jet réussi révèle des indices | [`08-fiche-pnj.md`](backlog-v3.2/08-fiche-pnj.md) |
+| V3.2-50 | ☑ | sans | Un jet réussi révèle des indices | [`08-fiche-pnj.md`](backlog-v3.2/08-fiche-pnj.md) |
 | V3.2-51 | ☐ | sans | En solo, le wiki se lit en vue joueur | [`08-fiche-pnj.md`](backlog-v3.2/08-fiche-pnj.md) |
 | V3.2-52 | ☐ | **avec** | Le moteur fait les jets des PNJ | [`08-fiche-pnj.md`](backlog-v3.2/08-fiche-pnj.md) |
 | V3.2-54 | ☐ | **avec** | Le récit nourrit la fiche du PNJ | [`08-fiche-pnj.md`](backlog-v3.2/08-fiche-pnj.md) |
+| V3.2-80 | ☐ | **avec** | Ce que les PNJ savent du personnage | [`08-fiche-pnj.md`](backlog-v3.2/08-fiche-pnj.md) |
 | V3.2-55 | ☐ | sans | En jeu, le rail devient le rail de jeu | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
 | V3.2-56 | ☐ | sans | Le volet de consultation | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
 | V3.2-57 | ☐ | sans | Les fiches et les règles se lisent en entier dans le volet | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |

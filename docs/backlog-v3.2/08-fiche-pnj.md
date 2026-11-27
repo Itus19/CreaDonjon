@@ -54,13 +54,15 @@ Demandé le 26 novembre, après la séance où jauger Mabelle déclenchait une a
 - [x] Tests du noyau : aucune facette non découverte ne figure dans la vue, même dans un champ vide (`facets.test.ts`).
 - [ ] Test d'intégration contre la vraie base, une fois la migration appliquée : un joueur ne lit ni la ligne d'une autre partie, ni celle qu'une autre personne a découverte seule.
 
-### ☐ V3.2-50 — Un jet réussi révèle des indices · `M` · sans modèle IA · Modèle conseillé : Opus
+### ☑ V3.2-50 — Un jet réussi révèle des indices · `M` · sans modèle IA · Modèle conseillé : Opus — **codé le 27 novembre**
 
 - Sur un jet réussi visant un présent, le moteur choisit les facettes révélées selon la compétence et la marge (ADR 0118 §5), les écrit, et les donne au récit comme fait établi.
 - Le volet Wiki de l'écran solo les affiche sans recharger toute la fiche (`docs/CABLAGE.md`).
 
+**Fait.** `facetsRevealedByCheck` (`src/core/rules/facetReveal.ts`) : Perception (Force, objets cachés ; à 5 de marge CA et Dextérité ; à 10 les actions), Perspicacité (Sagesse, Charisme ; puis Intelligence), Investigation (bourse, objets cachés ; puis Intelligence), Médecine (PV, Constitution), Athlétisme, et les jets de caractéristique. `revealCluesFromCheck` (`src/server/services/checkClues.ts`), appelé au tour solo après le jet : cible du jet, ou le seul PNJ de la pièce ; facettes écrites pour qui a lancé, liées au tour ; une phrase « Indices découverts sur … » ajoutée aux faits de la narration ; la scène revient dans la réponse pour que le volet Wiki se relise (C5). Reste : une cible de combat (`participant:`), avec le combat solo (ADR 0121).
+
 **Critères d'acceptation**
-- [ ] Perception réussie sur Mabelle : son couteau et sa Force apparaissent dans sa fiche, rien d'autre.
+- [x] Perception réussie sur Mabelle : son couteau et sa Force apparaissent dans sa fiche, rien d'autre (`facetReveal.test.ts`, `checkClues.test.ts`).
 
 ### ☑ V3.2-51 — En solo, le wiki se lit en vue joueur · `M` · sans modèle IA · Modèle conseillé : Opus — **codé le 27 novembre**
 
@@ -93,3 +95,16 @@ Second retour, 27 novembre : un premier bloc d'apparence seule, riche, utilisabl
 **Critères d'acceptation**
 - [ ] Après deux tours au Fanal, la fiche de Mabelle décrit ce que le récit a montré d'elle, sans rien contredire de sa fiche (à vérifier en jouant).
 - [x] Un détail que le récit présente comme caché n'apparaît pas dans la vue joueur (`soloWorldNotes.test.ts`, `npcAppearance.test.ts` : bloc `gm`).
+
+### ☐ V3.2-80 — Ce que les PNJ savent du personnage · `L` · **avec modèle IA** · Modèle conseillé : Opus
+
+Demande de l'auteur, 27 novembre : « les PNJ ne connaissent pas non plus mon équipement ou mes stats et peuvent de leur côté faire des jets pour découvrir les différentes choses de mon personnage… gérer, de manière invisible, ce que savent les PNJ de moi… un PNJ peut partager des infos sur moi à d'autres ou faire courir des rumeurs fausses. »
+
+- Le miroir de V3.2-50 : une table (ou une extension de `entity_facet_discoveries`) des facettes du personnage joué connues de chaque PNJ, invisible à la personne qui joue. Les PNJ font leurs jets d'observation (moteur, V3.2-52) quand l'occasion se présente.
+- La narration reçoit, dans la partie réservée au MJ (ADR 0117), ce que chaque PNJ présent sait du personnage, et le fait agir en conséquence.
+- Transmission : un PNJ peut raconter ce qu'il sait à un autre (proposition structurée, validée par le moteur) ; une rumeur peut être fausse, et garde sa source et sa véracité.
+- Migration à prévoir : à concevoir dans un ADR avant de coder.
+
+**Critères d'acceptation**
+- [ ] Un PNJ qui a réussi un jet de Perception sur le personnage sait qu'il porte une épée ; un autre ne le sait pas, tant que le premier ne le lui a pas dit.
+- [ ] Une rumeur fausse circule et se distingue, côté MJ, d'un fait vrai.

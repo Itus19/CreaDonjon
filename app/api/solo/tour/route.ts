@@ -21,6 +21,7 @@ import { narrateSoloTurn, raisonSansNarration, detailSansNarration } from "@/src
 import { anchorSketchesNamedInText } from "@/src/server/services/sceneSketches";
 import { ensureNpcSheetsForPresents } from "@/src/server/services/npcSheet";
 import { ensureNpcAppearancesForPresents } from "@/src/server/services/npcAppearance";
+import { revealCluesFromCheck } from "@/src/server/services/checkClues";
 import { discoverWhoIsHere, loadSceneView } from "@/src/server/services/soloScene";
 import type { PendingTurnResponse, TurnOutcome } from "@/lib/solo/types";
 
@@ -280,9 +281,27 @@ export async function POST(request: NextRequest) {
       console.error("Rattrapage des fiches allégées impossible", erreur);
     }
 
+    // V3.2-50 — un jet réussi sur un PNJ fait découvrir des indices ; la narration les reçoit comme faits établis.
+    let indices = 0;
+    try {
+      const clues = await revealCluesFromCheck(supabase, {
+        campaignId: parsed.data.campaignId,
+        world: { id: world.id, slug: world.slug },
+        locale,
+        actorEntityId: parsed.data.entityId,
+        callerId: user.id,
+        eventId: result.record.eventId,
+        detail: result.record.detail,
+      });
+      indices = clues.revealed;
+      result.record.facts.push(...clues.facts);
+    } catch (erreur) {
+      console.error("Indices du jet impossibles à révéler", erreur);
+    }
+
     // V3.2-53 — ceux qui partagent la pièce sont vus : leur fiche entre au Wiki.
     try {
-      const decouverts = await discoverWhoIsHere(supabase, { campaignId: parsed.data.campaignId, callerId: user.id });
+      const decouverts = (await discoverWhoIsHere(supabase, { campaignId: parsed.data.campaignId, callerId: user.id })) + indices;
       // L'écran ne relit le Wiki qu'avec une scène dans la réponse (`router.refresh`, docs/CABLAGE.md C5) :
       // sans elle, la fiche découverte n'apparaissait qu'au rechargement de la page.
       if (decouverts > 0) {
