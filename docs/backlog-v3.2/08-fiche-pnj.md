@@ -68,7 +68,7 @@ Demandé le 26 novembre, après la séance où jauger Mabelle déclenchait une a
 
 - Dans une partie solo, les pages du monde se lisent avec le lecteur joueur (`genericPlayerViewer`) et les découvertes de la partie, même pour le propriétaire. Un interrupteur « Voir comme le MJ » reste pour corriger le monde.
 
-**Fait.** `asSoloPlayer` (`src/core/visibility/soloPlayer.ts`) rabat le propriétaire ou l'éditeur d'un monde solo au rôle joueur de la partie ; `playerEntityDetail` l'applique au wiki joueur (page et route du volet Wiki). Pour un PNJ, `readNpcDisplayView` renvoie la fiche et l'équipement réduits aux facettes découvertes, affichés par `PublicNpcView` (« ? » pour le reste, bourse comprise). Le wiki éditeur du monde reste la vue MJ, qui tient lieu d'interrupteur. Limite connue : les relations se lisent encore avec le lecteur réel.
+**Fait.** `asSoloPlayer` (`src/core/visibility/soloPlayer.ts`) rabat le propriétaire ou l'éditeur d'un monde solo au rôle joueur de la partie ; `playerEntityDetail` l'applique au wiki joueur (page et route du volet Wiki). Pour un PNJ, `readNpcDisplayView` renvoie la fiche et l'équipement réduits aux facettes découvertes, affichés par `PublicNpcView` (« ? » pour le reste, bourse comprise). Le wiki éditeur du monde reste la vue MJ, qui tient lieu d'interrupteur. Les relations de la fiche se lisent avec le même lecteur (`listVisibleRelations`, lecteur passé par l'appelant).
 
 **Critères d'acceptation**
 - [x] Un paragraphe `gm` d'une fiche ne s'affiche plus dans le wiki de la partie solo, tant qu'il n'est pas découvert (`soloPlayer.test.ts` : le lecteur rabattu ne voit plus le niveau `gm`).
@@ -90,7 +90,7 @@ Retour de l'auteur, 27 novembre : « en créant la fiche wiki, le moteur doit au
 
 Second retour, 27 novembre : un premier bloc d'apparence seule, riche, utilisable comme consigne Midjourney ; les secrets à part (ADR 0118, amendement).
 
-**Fait.** `src/core/ai/npcPortrait.ts` (schéma fermé, consigne, rangement des notes) ; `draftNpcPortrait` (`src/server/ai/npcPortrait.ts`, `generate_npc`) ; `ensureNpcAppearance` et `ensureNpcAppearancesForPresents` (`src/server/services/npcAppearance.ts`), appelés après la narration du tour solo : bloc « Apparence » en tête, détail caché dans « Ce qui ne se voit pas » (`gm`). `world_note` porte un `aspect` ; `proposeWorldNote` range la note dans le bon bloc. Reste : un objet nommé par le récit et absent de l'inventaire n'y entre pas encore.
+**Fait.** `src/core/ai/npcPortrait.ts` (schéma fermé, consigne, rangement des notes) ; `draftNpcPortrait` (`src/server/ai/npcPortrait.ts`, `generate_npc`) ; `ensureNpcAppearance` et `ensureNpcAppearancesForPresents` (`src/server/services/npcAppearance.ts`), appelés après la narration du tour solo : bloc « Apparence » en tête, détail caché dans « Ce qui ne se voit pas » (`gm`). `world_note` porte un `aspect` ; `proposeWorldNote` range la note dans le bon bloc. Un objet que la narration montre chez un PNJ présent (`npc_item`) entre dans son inventaire (`itemFromNarration` : pas de doublon ; une arme connue devient une référence de règle, ses chiffres viennent des règles ; un objet caché attend un indice), via `addNarratedItem` (`src/server/services/narratedItems.ts`).
 
 **Critères d'acceptation**
 - [ ] Après deux tours au Fanal, la fiche de Mabelle décrit ce que le récit a montré d'elle, sans rien contredire de sa fiche (à vérifier en jouant).

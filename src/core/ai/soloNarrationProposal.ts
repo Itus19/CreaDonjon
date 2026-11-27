@@ -48,6 +48,8 @@ export function soloNarrationSchema(npcIds: string[], knownEntityIds: string[] =
       world_note: z
         .object({ entity_id: z.string().min(1), text: z.string().min(1).max(400), aspect: z.enum(WORLD_NOTE_ASPECTS).optional().catch(undefined) })
         .optional(),
+      /** V3.2-54 — un objet que la narration met dans les mains d'un PNJ présent ; le moteur décide s'il entre dans son inventaire (`itemFromNarration`). */
+      npc_item: z.object({ npc_id: z.string().min(1), name: z.string().trim().min(1).max(80), hidden: z.boolean().optional() }).optional(),
       /** V3.2-18 — une durée PROPOSÉE dans une liste fermée ; le moteur la borne (`minutesProposees`) et peut la refuser. */
       // ADR 0112, amendement du 26 novembre : une durée hors liste (une ellipse que l'IA tenterait
       // encore, « jusqu_au_matin ») est ignorée, pas fatale : la narration reste bonne, seul le temps ne passe pas.
@@ -69,6 +71,9 @@ export function soloNarrationSchema(npcIds: string[], knownEntityIds: string[] =
         } else if (!npcIdSet.has(value.npc_reaction.npc_id)) {
           ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["npc_reaction", "npc_id"], message: "identifiant de PNJ inconnu — jamais invente" });
         }
+      }
+      if (value.npc_item && !npcIdSet.has(value.npc_item.npc_id)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["npc_item", "npc_id"], message: "identifiant de PNJ inconnu — jamais invente" });
       }
       for (const id of value.room_with ?? []) {
         if (!npcIdSet.has(id)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["room_with"], message: "PNJ absent de la piece — jamais invente" });
@@ -111,6 +116,21 @@ export function soloNarrationToolSchema(npcIds: string[], knownEntityIds: string
                 text: { type: "string", description: "Ce que dit le PNJ, au discours direct, avec ses propres mots (une a deux phrases, sans guillemets)" },
               },
               required: ["npc_id", "text"],
+            },
+          }
+        : {}),
+      ...(npcIds.length > 0
+        ? {
+            npc_item: {
+              type: "object",
+              description:
+                "Optionnel : ta narration montre un objet porte ou tenu par un PNJ present (une chope, une dague a la ceinture, une lettre qu'il cache). Le moteur l'ajoute a son inventaire s'il n'y est pas.",
+              properties: {
+                npc_id: { type: "string", enum: npcIds, description: "Identifiant EXACT du PNJ, jamais invente" },
+                name: { type: "string", description: "Le nom de l'objet, court, en francais (ex: \"dague\", \"chope d'etain\")" },
+                hidden: { type: "boolean", description: "Vrai si le personnage joue ne le voit pas (cache sous un vetement)" },
+              },
+              required: ["npc_id", "name"],
             },
           }
         : {}),

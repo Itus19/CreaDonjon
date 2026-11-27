@@ -27,6 +27,7 @@ import type { RaisonSansNarration } from "@/src/core/ai/providerError";
 import { AiProviderError, type AiProvider } from "./provider";
 import { AiRateLimitError, runAiCompletion } from "./callAi";
 import type { WorldNoteAspect } from "@/src/core/ai/npcPortrait";
+import { addNarratedItem } from "@/src/server/services/narratedItems";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -84,6 +85,7 @@ interface NarrationAttempt {
   newCharacterRequest?: { role: string };
   /** V3-C3 — une suggestion redactionnelle, jamais ecrite directement (`proposeWorldNote`). */
   worldNote?: { entityId: string; text: string; aspect?: WorldNoteAspect };
+  npcItem?: { npcId: string; name: string; hidden: boolean };
   /** V3.2-18 — une durée proposée, jamais appliquée telle quelle : `advanceSceneAfterNarration` la borne. */
   elapsed?: ElapsedProposal;
   /** V3.2-19 — un déplacement proposé vers un lieu voisin fourni ; `moveSceneAfterNarration` l'applique. */
@@ -142,6 +144,7 @@ async function attemptNarration(
     worldNote: parsed.data.world_note
       ? { entityId: parsed.data.world_note.entity_id, text: parsed.data.world_note.text, ...(parsed.data.world_note.aspect ? { aspect: parsed.data.world_note.aspect } : {}) }
       : undefined,
+    npcItem: parsed.data.npc_item ? { npcId: parsed.data.npc_item.npc_id, name: parsed.data.npc_item.name, hidden: parsed.data.npc_item.hidden ?? false } : undefined,
     elapsed: parsed.data.elapsed,
     moveTo: parsed.data.move_to ? { locationId: parsed.data.move_to.location_id, with: parsed.data.move_to.with ?? [] } : undefined,
     enterRoom: parsed.data.enter_room,
@@ -368,6 +371,25 @@ export async function narrateSoloTurn(supabase: TypedClient, provider: AiProvide
     } catch (erreur) {
       // Ignoré volontairement : la narration ci-dessus est déjà acquise.
       console.error("Proposition de note de monde impossible", erreur);
+    }
+  }
+
+  if (chosen.npcItem) {
+    // V3.2-54 — un objet montré par la narration entre dans l'inventaire du PNJ ; même discipline best-effort.
+    try {
+      const added = await addNarratedItem(supabase, {
+        worldId: params.worldId,
+        campaignId: params.campaignId,
+        sessionEventId: event.id,
+        entityId: chosen.npcItem.npcId,
+        name: chosen.npcItem.name,
+        hidden: chosen.npcItem.hidden,
+        callerId: params.userId,
+      });
+      if (!added.ok && added.reason !== "duplicate" && added.reason !== "no_inventory") console.warn(`Objet du récit non ajouté (${added.reason})`);
+    } catch (erreur) {
+      // Ignoré volontairement : la narration ci-dessus est déjà acquise.
+      console.error("Objet du récit impossible à ajouter", erreur);
     }
   }
 
