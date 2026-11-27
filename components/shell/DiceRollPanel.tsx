@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { useTranslations } from "next-intl";
+import { usePathname } from "next/navigation";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import FeuilleDuBas from "@/components/shared/FeuilleDuBas";
@@ -104,6 +105,12 @@ export default function DiceRollProvider({
   const t = useTranslations("outilDes");
   const supabase = useMemo(() => createClient(), []);
   const estTelephone = useMatchMedia(WINDOWS_MOBILE_QUERY);
+  /**
+   * V3.2-71 — En partie solo, chaque jet en direct est celui de la personne
+   * qui joue, déjà montré par la pastille du fil (`PastilleJet`) : ouvrir
+   * l'outil par-dessus, après le résultat, faisait un second affichage.
+   */
+  const enSolo = /\/joueur\/solo(\/|$)/.test(usePathname());
   const [open, setOpen] = useState(false);
   /** Le préréglage de l'ouverture en cours ; `cle` change à chaque ouverture, pour repartir d'un outil neuf. */
   const [preset, setPreset] = useState<PreReglage | null>(null);
@@ -164,7 +171,7 @@ export default function DiceRollProvider({
   /** Un vrai jet EN DIRECT (Realtime) — jamais le chargement initial de l'historique, qui ne doit ni ouvrir l'outil ni notifier. */
   const surJetEnDirect = useCallback(
     (jet: JetAffiche) => {
-      if (openRef.current) return;
+      if (openRef.current || enSolo) return;
       if (estTelephone) {
         setToast(jet);
         setTimeout(() => setToast(null), 4500);
@@ -172,7 +179,7 @@ export default function DiceRollProvider({
         ouvrir(null);
       }
     },
-    [estTelephone, ouvrir]
+    [estTelephone, enSolo, ouvrir]
   );
 
   // V3.1-62 (docs/CABLAGE.md, docs/QUOTAS.md Q1) : l'historique ne s'affiche

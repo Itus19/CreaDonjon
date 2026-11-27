@@ -157,9 +157,13 @@ Demandé le 26 novembre après la partie test avec Mabelle ; maquettes validées
 
 - Une attaque sans cible demande « sur qui ? » parmi les présents. Frappe à mains nues du SRD 5.2 (1 + modificateur de Force, contondant, ou empoigner / pousser).
 
-### ☐ V3.2-71 — L'outil de dés s'ouvre avant le résultat · `S` · sans modèle IA · Modèle conseillé : Sonnet
+### ☑ V3.2-71 — L'outil de dés ne s'ouvre plus après le résultat · `S` · sans modèle IA · Modèle conseillé : Sonnet — **corrigé le 27 novembre**
 
-- Le panneau de dés s'ouvrait après l'affichage du résultat : il doit s'ouvrir au moment du lancer.
+- Le panneau de dés s'ouvrait après l'affichage du résultat.
+
+**Cause.** `DiceRollProvider` ouvre l'outil à chaque jet reçu en direct (Realtime), pour qu'à une table on voie le jet des autres. En solo, le jet reçu est celui qu'on vient de lancer depuis la pastille du fil : l'outil s'ouvrait donc par-dessus, une seconde après.
+
+**Fait.** Sur `/joueur/solo`, un jet en direct n'ouvre plus l'outil (la pastille et la carte du fil le montrent déjà). Le bouton dé de la barre l'ouvre toujours. Les jets restent tirés par le serveur avec `crypto.randomInt` (`src/server/services/rng.ts`) : rien n'est rejoué d'une partie à l'autre.
 
 ### ☐ V3.2-72 — La page wiki d'un PJ montre sa fiche, pas des titres vides · `S` · sans modèle IA · Modèle conseillé : Opus — **codé le 27 novembre ; reste à vérifier à l'écran**
 
