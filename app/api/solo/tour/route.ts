@@ -20,7 +20,7 @@ import { resolveProviderForUser } from "@/src/server/ai/resolveProvider";
 import { narrateSoloTurn, raisonSansNarration, detailSansNarration } from "@/src/server/ai/soloNarration";
 import { anchorSketchesNamedInText } from "@/src/server/services/sceneSketches";
 import { ensureNpcSheetsForPresents } from "@/src/server/services/npcSheet";
-import { discoverWhoIsHere } from "@/src/server/services/soloScene";
+import { discoverWhoIsHere, loadSceneView } from "@/src/server/services/soloScene";
 import type { PendingTurnResponse, TurnOutcome } from "@/lib/solo/types";
 
 const advantageField = z.enum(["normal", "advantage", "disadvantage"]);
@@ -281,7 +281,13 @@ export async function POST(request: NextRequest) {
 
     // V3.2-53 — ceux qui partagent la pièce sont vus : leur fiche entre au Wiki.
     try {
-      await discoverWhoIsHere(supabase, { campaignId: parsed.data.campaignId, callerId: user.id });
+      const decouverts = await discoverWhoIsHere(supabase, { campaignId: parsed.data.campaignId, callerId: user.id });
+      // L'écran ne relit le Wiki qu'avec une scène dans la réponse (`router.refresh`, docs/CABLAGE.md C5) :
+      // sans elle, la fiche découverte n'apparaissait qu'au rechargement de la page.
+      if (decouverts > 0) {
+        const view = await loadSceneView(supabase, { campaignId: parsed.data.campaignId, worldId: world.id });
+        if (view) result.scene = view;
+      }
     } catch (erreur) {
       console.error("Découverte des présents du tour impossible", erreur);
     }

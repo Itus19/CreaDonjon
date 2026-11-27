@@ -220,15 +220,18 @@ export async function setScene(
  *
  * Une lecture des découvertes, puis une écriture par personne nouvelle,
  * une seule fois (`docs/QUOTAS.md`). Sans événement source : comme poser
- * une scène, annuler un tour ne fait pas oublier un visage vu.
+ * une scène, annuler un tour ne fait pas oublier un visage vu. Rend le
+ * nombre de personnes découvertes, pour que l'écran relise son Wiki.
  */
-export async function discoverWhoIsHere(supabase: TypedClient, params: { campaignId: string; callerId: string }): Promise<void> {
+export async function discoverWhoIsHere(supabase: TypedClient, params: { campaignId: string; callerId: string }): Promise<number> {
   const scene = await getSceneState(supabase, params.campaignId);
-  if (!scene) return;
+  if (!scene) return 0;
   const ici = presentsIci(scene).map((p) => p.entityId);
-  if (ici.length === 0) return;
+  if (ici.length === 0) return 0;
   const connus = await listDiscoveredEntityIds(supabase, params.campaignId, params.callerId);
-  for (const entityId of ici.filter((id) => !connus.has(id))) {
+  const nouveaux = ici.filter((id) => !connus.has(id));
+  for (const entityId of nouveaux) {
     await discoverEntity(supabase, { campaignId: params.campaignId, userId: params.callerId, entityId, level: "known" });
   }
+  return nouveaux.length;
 }
