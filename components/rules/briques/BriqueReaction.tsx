@@ -92,6 +92,7 @@ export default function ReactionEditeur({ activation: a, onChange }: { activatio
           </div>
           {d.moment === "natural" && <ChampTexte libelle={t("valeurDuD20")} valeur={d.naturel} onChange={(naturel) => onChange(avecDeclencheur(a, { naturel }))} mecanique />}
           <Checkbox checked={d.automatique} onChange={() => onChange(avecDeclencheur(a, { automatique: !d.automatique }))} label={t("automatique")} />
+          {d.moment === "failed" && <Checkbox checked={a.rembourseSiRate} onChange={() => onChange({ ...a, rembourseSiRate: !a.rembourseSiRate })} label={t("rembourseSiRate")} />}
         </CarteBrique>
       )}
 

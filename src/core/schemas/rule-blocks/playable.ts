@@ -200,6 +200,8 @@ export const zActivation = z.object({
   roll_operations: z.array(zRollOperation).optional(),
   /** V3.1-159 : une fois par tour ou par round (compté en combat seulement). */
   limit: zActivationLimit.optional(),
+  /** Sens tactique : réaction à un jet raté ; si le jet rate malgré tout, son coût en ressources n'est pas dépensé. */
+  refund_if_failed: z.boolean().optional(),
   /** V3.1-164 : les options que cette aptitude offre au lancer d'un sort (Métamagie). */
   cast_options: z.array(zCastOption).optional(),
   /** V3.1-182 (ADR 0078) : une quantité choisie à l'activation (Imposition des mains) — `amount` dans les formules, de 1 à `max`. */
@@ -295,6 +297,9 @@ export const zActivationBlockData = z
     const effets = new Set(d.durable_effects.map((e) => e.id));
     const activations = new Set(d.activations.map((a) => a.id));
     for (const a of d.activations) {
+      if (a.refund_if_failed && (a.trigger?.on !== "roll" || a.trigger.when !== "failed")) {
+        ctx.addIssue({ code: "custom", message: `« ${a.id} » : « coût rendu si le jet rate encore » ne va qu'avec une réaction à un jet raté.` });
+      }
       for (const ops of [a.roll_operations ?? [], ...(a.variants ?? []).map((v) => v.roll_operations ?? [])]) {
         for (const message of rollOperationProblems(a.trigger, ops)) ctx.addIssue({ code: "custom", message: `« ${a.id} » : ${message}` });
       }

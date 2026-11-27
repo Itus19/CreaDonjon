@@ -4134,5 +4134,61 @@
       ],
       "durable_effects": []
     }
+  },
+  "fighter-tactical-mind": {
+    "_regle": "Sens tactique (Guerrier 2) : sur un test de caracteristique rate, depenser une utilisation de Second souffle pour ajouter 1d10 au test ; si le test rate malgre tout, l'utilisation n'est pas depensee (`refund_if_failed`).",
+    "activation": {
+      "activations": [
+        {
+          "id": "tactical-mind",
+          "label": {
+            "fr": "Sens tactique",
+            "en": "Tactical Mind"
+          },
+          "cost": {
+            "action": "none",
+            "resources": [
+              {
+                "key": "second-wind",
+                "amount": {
+                  "op": "num",
+                  "value": 1
+                }
+              }
+            ]
+          },
+          "targets": {
+            "kind": "self"
+          },
+          "effects": [],
+          "variants": null,
+          "trigger": {
+            "on": "roll",
+            "roll": "check",
+            "subject": "self",
+            "when": "failed"
+          },
+          "roll_operations": [
+            {
+              "op": "add_die",
+              "count": {
+                "op": "num",
+                "value": 1
+              },
+              "faces": {
+                "op": "num",
+                "value": 10
+              },
+              "sign": 1
+            }
+          ],
+          "refund_if_failed": true,
+          "passages": {
+            "cost": "vous pouvez dépenser une utilisation de Second souffle pour forcer le destin"
+          }
+        }
+      ],
+      "durable_effects": []
+    }
   }
 }

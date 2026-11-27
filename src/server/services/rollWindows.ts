@@ -87,6 +87,8 @@ const zWindowChoice = z.object({
   usage: zTurnUsage,
   /** V3.1-165 (ADR 0076) : une réaction qui est un sort (Bouclier) : l'emplacement qu'elle dépensera. */
   spellSlot: z.number().int().min(1).max(9).optional(),
+  /** Sens tactique : si le jet rate malgré la réaction, ses ressources sont rendues. */
+  refundIfFailed: z.boolean().optional(),
 });
 export type WindowChoice = z.infer<typeof zWindowChoice>;
 
@@ -308,7 +310,8 @@ export async function interveneOnRoll(
   const { automatic, choices } = eligibleReactions({ roll: params.roll, candidates: params.pool.candidates, ctx: params.pool.ctx, teams: params.pool.teams, stamp, rng: serverRng, positions: params.pool.positions });
 
   // Les réactions automatiques (Chance) s'appliquent d'office, avant la fenêtre.
-  const opsOf = (e: EligibleReaction) => params.pool.candidates.find((c) => c.actorId === e.actorId && c.ruleKey === e.ruleKey && c.activation.id === e.activationId)?.activation.roll_operations ?? [];
+  const activationOf = (e: EligibleReaction) => params.pool.candidates.find((c) => c.actorId === e.actorId && c.ruleKey === e.ruleKey && c.activation.id === e.activationId)?.activation;
+  const opsOf = (e: EligibleReaction) => activationOf(e)?.roll_operations ?? [];
   const numbersOf = (e: EligibleReaction) => params.pool.meta[e.actorId]?.numbers[e.ruleKey] ?? {};
   const roll = automatic.length === 0 ? params.roll : applyRollOperations(params.roll, automatic.map((e) => ({ actorId: e.actorId, operations: opsOf(e), numbers: numbersOf(e) })), serverRng).roll;
   await recordAutomaticLimits(supabase, { campaignId: params.campaignId, pool: params.pool, automatic, stamp, callerIsGm: params.callerIsGm });
@@ -332,6 +335,7 @@ export async function interveneOnRoll(
     operations: [...opsOf(e)],
     usage: usageOf(e),
     ...(params.pool.spellSlots[`${e.actorId}|${e.ruleKey}`] ? { spellSlot: params.pool.spellSlots[`${e.actorId}|${e.ruleKey}`] } : {}),
+    ...(activationOf(e)?.refund_if_failed ? { refundIfFailed: true } : {}),
   }));
   const activationLabel = (e: EligibleReaction) => {
     const a = params.pool.candidates.find((c) => c.actorId === e.actorId && c.ruleKey === e.ruleKey && c.activation.id === e.activationId)?.activation;

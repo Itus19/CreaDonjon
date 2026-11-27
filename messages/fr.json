@@ -320,6 +320,7 @@
         "moments": { "rolled": "Le dé est lancé", "hit": "L'attaque touche", "failed": "Le jet est raté", "natural": "Le d20 donne une valeur précise" },
         "valeurDuD20": "Valeur du d20 (1 à 20)",
         "automatique": "S'applique d'office, sans fenêtre",
+        "rembourseSiRate": "Si le jet rate malgré tout, le coût n'est pas dépensé",
         "operations": "Opérations sur le jet",
         "ajouterOperation": "Ajouter une opération",
         "retirer": "Retirer",

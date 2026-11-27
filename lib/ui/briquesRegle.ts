@@ -353,6 +353,8 @@ export interface BrouillonActivation {
   quand: BrouillonCondition;
   /** « Une fois par tour / par round » ; `null` : sans limite. */
   limite: LimiteReaction | null;
+  /** Sens tactique : sur un jet raté, le coût est rendu si le jet rate encore (écrit seulement avec le moment « raté »). */
+  rembourseSiRate: boolean;
   /** V3.1-166 : les options que cette aptitude offre au lancer d'un sort. */
   optionsLancement: BrouillonOptionLancement[];
   /** V3.1-184 : « Quantité choisie » à l'activation (`amount` dans les formules) ; `max` est une formule en texte ; `null` : aucune. */
@@ -588,6 +590,7 @@ export function nouvelleActivation(b: Brouillon): BrouillonActivation {
     operations: [],
     quand: conditionVide(),
     limite: null,
+    rembourseSiRate: false,
     optionsLancement: [],
     quantite: null,
   };
@@ -1124,6 +1127,7 @@ export function blocsVersBrouillon(blocs: readonly { blockType: string; data: un
         operations: (a.roll_operations ?? []).map(operationVersBrouillon),
         quand: conditionVersBrouillon(a.when),
         limite: a.limit?.per ?? null,
+        rembourseSiRate: a.refund_if_failed === true,
         optionsLancement: (a.cast_options ?? []).map((o) => ({
           uid: nouvelUid(),
           id: o.id,
@@ -1538,6 +1542,7 @@ export function brouillonVersBlocs(b: Brouillon, nomsEtats: Readonly<Record<stri
       ...(a.declencheur && a.operations.length > 0 ? { roll_operations: a.operations.map((o, k) => operationEcrite(o, `${nomAct}, opération ${k + 1}`, ctx)) } : {}),
       ...(conditionEcrite(a.quand) ? { when: conditionEcrite(a.quand) } : {}),
       ...(a.limite ? { limit: { per: a.limite } } : {}),
+      ...(a.declencheur?.moment === "failed" && a.rembourseSiRate ? { refund_if_failed: true } : {}),
       ...(a.quantite ? { amount: { max: formule(a.quantite.max, `${nomAct}, quantité maximale`, ctx), ...(a.quantite.label.trim() !== "" ? { label: localise(a.quantite.labelOrig, a.quantite.label.trim()) } : {}) } } : {}),
       ...(a.optionsLancement.length > 0
         ? { cast_options: a.optionsLancement.map((o, k) => optionLancementEcrite(o, `${nomAct}, option de lancement ${o.label.trim() || k + 1}`, ctx)) }

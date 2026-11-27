@@ -319,6 +319,7 @@
         "moments": { "rolled": "The die is rolled", "hit": "The attack hits", "failed": "The roll fails", "natural": "The d20 shows a given value" },
         "valeurDuD20": "d20 value (1 to 20)",
         "automatique": "Applies by itself, no window",
+        "rembourseSiRate": "If the roll still fails, the cost isn't spent",
         "operations": "Operations on the roll",
         "ajouterOperation": "Add an operation",
         "retirer": "Remove",

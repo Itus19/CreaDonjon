@@ -11,6 +11,7 @@ import {
   outcomeOf,
   reactionAvailable,
   recordUse,
+  stillFailed,
   turnStamp,
   wouldChangeOutcome,
   zonePoint,
@@ -400,5 +401,39 @@ describe("Sauvagerie martiale — relancer les dés de dégâts de l'arme et gar
   it("le schéma : l'opération ne se pose que sur un jet de dégâts", () => {
     expect(rollOperationProblems({ on: "roll", roll: "damage", subject: "self", when: "rolled" }, [{ op: "reroll_weapon_dice" }])).toEqual([]);
     expect(rollOperationProblems({ on: "roll", roll: "attack", subject: "self", when: "rolled" }, [{ op: "reroll_weapon_dice" }])).toHaveLength(1);
+  });
+});
+
+describe("Sens tactique — ajouter 1d10 à un test raté, la ressource rendue s'il rate encore", () => {
+  const SENS = activation({
+    id: "tactical-mind",
+    cost: { action: "none", resources: [{ key: "second-wind", amount: n(1) }] },
+    trigger: { on: "roll", roll: "check", subject: "self", when: "failed" },
+    roll_operations: [{ op: "add_die", count: n(1), faces: n(10), sign: 1 }],
+    refund_if_failed: true,
+  });
+  const test = (p: Partial<PendingRoll> = {}): PendingRoll => attaque({ kind: "check", roller: "lia", target: null, natural: 8, total: 10, ac: null, dc: 15, ...p });
+
+  it("proposé sur son propre test raté, s'il reste un Second souffle ; pas sur un test réussi", () => {
+    expect(eligibles(test(), [candidat("lia", SENS, [{ key: "second-wind", max: 2 }])]).choices).toHaveLength(1);
+    expect(eligibles(test(), [candidat("lia", SENS, [{ key: "second-wind", max: 2 }], { "second-wind": 2 })]).choices).toEqual([]);
+    expect(eligibles(test({ total: 16 }), [candidat("lia", SENS, [{ key: "second-wind", max: 2 }])]).choices).toEqual([]);
+  });
+
+  it("le d10 peut le convertir en réussite ; sinon, il rate encore et la ressource est rendue", () => {
+    const reussi = applyRollOperations(test(), [{ actorId: "lia", operations: SENS.roll_operations!, numbers: {} }], des(6)).roll;
+    expect(reussi.total).toBe(17);
+    expect(stillFailed(reussi)).toBe(false);
+    const rate = applyRollOperations(test(), [{ actorId: "lia", operations: SENS.roll_operations!, numbers: {} }], des(1)).roll;
+    expect(rate.total).toBe(12);
+    expect(stillFailed(rate)).toBe(true);
+    // Sans DD, l'issue ne se sait pas : rien n'est rendu.
+    expect(stillFailed(test({ dc: null }))).toBe(false);
+  });
+
+  it("le schéma : « rendu s'il rate encore » ne va qu'avec une réaction à un jet raté", () => {
+    expect(zActivationBlockData.safeParse({ activations: [SENS] }).success).toBe(true);
+    const auClic = { ...SENS, trigger: undefined, roll_operations: undefined };
+    expect(zActivationBlockData.safeParse({ activations: [auClic] }).success).toBe(false);
   });
 });

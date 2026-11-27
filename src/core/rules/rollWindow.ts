@@ -398,6 +398,16 @@ export function applyRollOperations(start: PendingRoll, applications: readonly R
   return { roll, steps };
 }
 
+/**
+ * Sens tactique — après les réactions, le jet rate-t-il encore ? Une attaque
+ * ratée, un test ou une sauvegarde échoués ; une issue inconnue (pas de DD) :
+ * non, rien n'est rendu.
+ */
+export function stillFailed(roll: PendingRoll): boolean {
+  const outcome = outcomeOf(roll);
+  return outcome === "miss" || outcome === "failure";
+}
+
 function attempt<T>(f: () => T): T | Error {
   try {
     return f();
