@@ -9,7 +9,8 @@ import type { Database } from "@/src/types/database";
  * elle-même (`aiProposals.integration.test.ts`).
  */
 
-let blocks: { id: string; block_type: string }[] = [];
+let blocks: { id: string; block_type: string; display?: { label: string } }[] = [];
+const blocsCrees: { label: string; visibilityLevel: string }[] = [];
 const proposalsInserted: { id?: string; kind: string; targetEntityId: string | null; status: string; sessionEventId: string | null; payload: unknown; autoApplied?: boolean }[] = [];
 const notes: unknown[] = [];
 let ajoutReussi = true;
@@ -40,9 +41,19 @@ vi.mock("@/src/server/repos/sessions", () => ({
     return { id: "ev-note" };
   },
 }));
+vi.mock("@/src/server/services/blocks", () => ({
+  createBlock: async (_s: unknown, params: { label: string; visibilityLevel: string }) => {
+    blocsCrees.push({ label: params.label, visibilityLevel: params.visibilityLevel });
+    const block = { id: `cree-${blocsCrees.length}`, block_type: "text", display: { label: params.label } };
+    blocks = [...blocks, block];
+    return { ok: true, block: { id: block.id } };
+  },
+}));
+const segmentsParBloc: { blockId: string; text: string }[] = [];
 vi.mock("@/src/server/services/aiProposals", () => ({
-  appendNoteSegment: async (_s: unknown, params: { segmentId: string; text: string }) => {
+  appendNoteSegment: async (_s: unknown, params: { blockId: string; segmentId: string; text: string }) => {
     if (!ajoutReussi) return { ok: false, reason: "conflict" };
+    segmentsParBloc.push({ blockId: params.blockId, text: params.text });
     segmentsAjoutes.push({ segmentId: params.segmentId, text: params.text });
     return { ok: true };
   },
@@ -57,7 +68,39 @@ beforeEach(() => {
   proposalsInserted.length = 0;
   notes.length = 0;
   segmentsAjoutes.length = 0;
+  segmentsParBloc.length = 0;
+  blocsCrees.length = 0;
   ajoutReussi = true;
+});
+
+describe("proposeWorldNote — V3.2-54, chaque note dans son bloc", () => {
+  const description = { id: "desc", block_type: "text", display: { label: "Description" } };
+  const apparence = { id: "app", block_type: "text", display: { label: "Apparence" } };
+
+  it("l'apparence va au bloc Apparence, même s'il n'est pas le premier", async () => {
+    blocks = [description, apparence];
+    await proposeWorldNote(supabase, { ...base, text: "Un tablier taché de vin.", aspect: "apparence" });
+    expect(segmentsParBloc).toEqual([{ blockId: "app", text: "Un tablier taché de vin." }]);
+  });
+
+  it("sans bloc Apparence encore, la note d'apparence va au bloc général", async () => {
+    blocks = [description];
+    await proposeWorldNote(supabase, { ...base, text: "Un tablier taché de vin.", aspect: "apparence" });
+    expect(segmentsParBloc).toEqual([{ blockId: "desc", text: "Un tablier taché de vin." }]);
+  });
+
+  it("un détail caché crée le bloc réservé au MJ plutôt que d'aller dans un bloc lisible", async () => {
+    blocks = [apparence, description];
+    await proposeWorldNote(supabase, { ...base, text: "Un serpent tatoué sous la manche.", aspect: "cache" });
+    expect(blocsCrees).toEqual([{ label: "Ce qui ne se voit pas", visibilityLevel: "gm" }]);
+    expect(segmentsParBloc).toEqual([{ blockId: "cree-1", text: "Un serpent tatoué sous la manche." }]);
+  });
+
+  it("une note de récit ne va jamais dans Apparence, même placé en tête", async () => {
+    blocks = [apparence, description];
+    await proposeWorldNote(supabase, { ...base, text: "Elle sert ici depuis vingt ans.", aspect: "recit" });
+    expect(segmentsParBloc).toEqual([{ blockId: "desc", text: "Elle sert ici depuis vingt ans." }]);
+  });
 });
 
 describe("proposeWorldNote", () => {

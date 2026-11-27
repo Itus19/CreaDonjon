@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ELAPSED_CHOICES } from "../rules/elapsed";
+import { WORLD_NOTE_ASPECTS } from "./npcPortrait";
 
 /**
  * V3-B2 (câblage de la narration) — Généralise `spikeSoloProposal.ts` (S2,
@@ -43,7 +44,10 @@ export function soloNarrationSchema(npcIds: string[], knownEntityIds: string[] =
       /** V3-C2 — jamais un nom : un ROLE seulement, le generateur tire l'identite. */
       new_character: z.object({ role: z.string().min(1).max(200) }).optional(),
       /** V3-C3 — une suggestion redactionnelle, jamais ecrite directement : elle passe par `ai_proposals`, en attente d'une relecture humaine. */
-      world_note: z.object({ entity_id: z.string().min(1), text: z.string().min(1).max(400) }).optional(),
+      // V3.2-54 : `aspect` range la note dans le bon bloc (apparence, détail caché, récit) ; une valeur hors liste vaut « récit ».
+      world_note: z
+        .object({ entity_id: z.string().min(1), text: z.string().min(1).max(400), aspect: z.enum(WORLD_NOTE_ASPECTS).optional().catch(undefined) })
+        .optional(),
       /** V3.2-18 — une durée PROPOSÉE dans une liste fermée ; le moteur la borne (`minutesProposees`) et peut la refuser. */
       // ADR 0112, amendement du 26 novembre : une durée hors liste (une ellipse que l'IA tenterait
       // encore, « jusqu_au_matin ») est ignorée, pas fatale : la narration reste bonne, seul le temps ne passe pas.
@@ -128,6 +132,12 @@ export function soloNarrationToolSchema(npcIds: string[], knownEntityIds: string
               properties: {
                 entity_id: { type: "string", enum: knownEntityIds, description: "Identifiant EXACT d'une entite de ce tour, jamais invente" },
                 text: { type: "string", description: "La phrase suggeree, un seul fait" },
+                aspect: {
+                  type: "string",
+                  enum: ["apparence", "cache", "recit"],
+                  description:
+                    "apparence : ce qu'on voit du PNJ (physique, vetements, objet porte) ; cache : un detail physique ou un objet que le personnage ne voit pas encore ; recit : tout le reste (habitude, fait, lieu)",
+                },
               },
               required: ["entity_id", "text"],
             },

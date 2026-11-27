@@ -26,6 +26,7 @@ import { resolveProviderForUser } from "./resolveProvider";
 import type { RaisonSansNarration } from "@/src/core/ai/providerError";
 import { AiProviderError, type AiProvider } from "./provider";
 import { AiRateLimitError, runAiCompletion } from "./callAi";
+import type { WorldNoteAspect } from "@/src/core/ai/npcPortrait";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -82,7 +83,7 @@ interface NarrationAttempt {
   /** V3-C2 — un role demande, jamais un nom : `narrateSoloTurn` seul decide d'en tirer une esquisse. */
   newCharacterRequest?: { role: string };
   /** V3-C3 — une suggestion redactionnelle, jamais ecrite directement (`proposeWorldNote`). */
-  worldNote?: { entityId: string; text: string };
+  worldNote?: { entityId: string; text: string; aspect?: WorldNoteAspect };
   /** V3.2-18 — une durée proposée, jamais appliquée telle quelle : `advanceSceneAfterNarration` la borne. */
   elapsed?: ElapsedProposal;
   /** V3.2-19 — un déplacement proposé vers un lieu voisin fourni ; `moveSceneAfterNarration` l'applique. */
@@ -138,7 +139,9 @@ async function attemptNarration(
     narration: parsed.data.narration,
     npcReaction: parsed.data.npc_reaction ? { npcId: parsed.data.npc_reaction.npc_id, text: parsed.data.npc_reaction.text } : undefined,
     newCharacterRequest: parsed.data.new_character ? { role: parsed.data.new_character.role } : undefined,
-    worldNote: parsed.data.world_note ? { entityId: parsed.data.world_note.entity_id, text: parsed.data.world_note.text } : undefined,
+    worldNote: parsed.data.world_note
+      ? { entityId: parsed.data.world_note.entity_id, text: parsed.data.world_note.text, ...(parsed.data.world_note.aspect ? { aspect: parsed.data.world_note.aspect } : {}) }
+      : undefined,
     elapsed: parsed.data.elapsed,
     moveTo: parsed.data.move_to ? { locationId: parsed.data.move_to.location_id, with: parsed.data.move_to.with ?? [] } : undefined,
     enterRoom: parsed.data.enter_room,
@@ -359,6 +362,7 @@ export async function narrateSoloTurn(supabase: TypedClient, provider: AiProvide
         sessionEventId: event.id,
         entityId: chosen.worldNote.entityId,
         text: chosen.worldNote.text,
+        ...(chosen.worldNote.aspect ? { aspect: chosen.worldNote.aspect } : {}),
         callerId: params.userId,
       });
     } catch (erreur) {
