@@ -82,6 +82,8 @@ export interface TurnContextInput {
   /** L'id du PNJ à qui le joueur parle dans ce tour (`npcAddressedBy`), `null` si personne n'est clairement désigné. */
   addressedNpcId: string | null;
   time: { day: number; hour: number; minute: number };
+  /** V3.2-59 : la date du monde (« jeudi 14 brumaire 1247 »), quand le calendrier en a une ; `null` : « jour N », comme avant. */
+  dateLabel?: string | null;
   lighting: "bright" | "dim" | "dark";
   npcs: TurnContextNpc[];
   quests: TurnContextQuest[];
@@ -227,7 +229,8 @@ export function questLine(quest: TurnContextQuest): string {
  * derrière `AiProvider` (`src/server/ai/soloNarration.ts`, V3-B2).
  */
 export function buildTurnContext(input: TurnContextInput): string {
-  const locationText = `${input.locationName} — jour ${input.time.day}, ${String(input.time.hour).padStart(2, "0")}h${String(input.time.minute).padStart(2, "0")} — ${LIGHTING_LABELS[input.lighting]}`;
+  const jour = input.dateLabel ?? `jour ${input.time.day}`;
+  const locationText = `${input.locationName} — ${jour}, ${String(input.time.hour).padStart(2, "0")}h${String(input.time.minute).padStart(2, "0")} — ${LIGHTING_LABELS[input.lighting]}`;
   const addressed = input.addressedNpcId && input.npcs.some((n) => n.id === input.addressedNpcId) ? input.addressedNpcId : null;
 
   const parts: (string | null)[] = [

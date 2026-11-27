@@ -1,6 +1,6 @@
 import type { Exposure, WeatherCue } from "../weather/perceived";
 import type { Precipitation, Sky, Weather, WeatherChange, Wind } from "../weather/weather";
-import type { Season } from "../weather/season";
+import { SEASON_LABELS_FR, type Season } from "../weather/season";
 
 /**
  * ME-5 (specs/meteo.md §6.4) — la météo telle que le modèle la reçoit : un
@@ -33,7 +33,8 @@ const PRECIPITATION_LA: Record<Precipitation, string> = {
   hail: "la grêle",
 };
 const WIND: Record<Wind, string> = { calm: "pas de vent", breeze: "vent léger", wind: "vent soutenu", gale: "vent de tempête" };
-const SEASON: Record<Season, string> = { winter: "hiver", spring: "printemps", summer: "été", autumn: "automne" };
+// Les mêmes mots que le bandeau (V3.2-59).
+const SEASON: Record<Season, string> = SEASON_LABELS_FR;
 
 const CUES: Record<WeatherCue, string> = {
   rain_on_roof: "la pluie qui tambourine sur le toit et les volets",

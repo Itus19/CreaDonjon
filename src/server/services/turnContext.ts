@@ -34,6 +34,7 @@ import { zRoomsBlockData, type Room } from "@/src/core/schemas/blocks/rooms";
 import { loadWeatherContext } from "@/src/server/services/sceneWeather";
 import { weatherForScene } from "@/src/core/weather/sceneWeather";
 import { describeWeatherForAi } from "@/src/core/ai/weatherText";
+import { sceneDateLabel } from "@/src/server/services/soloScene";
 import { estQuestionDirecte } from "@/src/core/ai/npcAddressed";
 import { undoneEventIds } from "@/src/core/rules/turnUndo";
 import { getCurrentAttitude } from "@/src/server/services/psyche";
@@ -509,6 +510,8 @@ export async function buildSoloTurnContext(
     recentNarrations,
     ...money,
     locationDescription,
+    // V3.2-59 : la date du monde, lue sur le calendrier déjà chargé pour la météo (aucune lecture de plus). La saison est dans la ligne météo.
+    dateLabel: scene && weatherCtx ? sceneDateLabel(scene.time.day, weatherCtx.calendar) : null,
     weather: scene && weatherCtx ? describeWeatherForAi(weatherForScene(weatherCtx, scene.time, pieceCourante(scene))) : null,
     recentPlayerActions: history.playerActions,
     addressedIsQuestion,
