@@ -1,4 +1,5 @@
 import "server-only";
+import { referencesDeFiche } from "@/src/core/entities/referencesDeFiche";
 import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
@@ -446,6 +447,21 @@ export async function getPlayerEntityDetail(
       }
       return { ...block, timelineRefs };
     }
+    // V3.2-72 : les noms des règles et des fiches visibles que citent les blocs de fiche ; une fiche cachée reste absente.
+    if (BLOCS_DE_FICHE.has(block.blockType)) {
+      const refs = referencesDeFiche(block.blockType, block.data);
+      const textRefs: Record<string, EntityRefPreview> = {};
+      for (const id of refs.entityIds) {
+        const found = entityLookup.get(id);
+        if (found) textRefs[id] = { ...found, excerpt: null };
+      }
+      const ruleRefs: Record<string, RuleRefPreview> = {};
+      for (const key of refs.ruleKeys) {
+        const found = ruleRefsByKey[key];
+        if (found) ruleRefs[key] = found;
+      }
+      return { ...block, textRefs, ruleRefs };
+    }
     if (block.blockType !== "quest") return block;
     const quest = zQuestBlockData.safeParse(block.data);
     if (!quest.success) return block;
@@ -493,6 +509,9 @@ export async function getPlayerEntityDetail(
 }
 
 /** Les fiches citées par les blocs de la page, et les clés de règle citées par ses textes. */
+/** V3.2-72 : les blocs de fiche d'un personnage, rendus en lecture par `PublicFicheBlocks`. */
+const BLOCS_DE_FICHE = new Set(["character", "inventory", "spellcasting"]);
+
 function citedTargets(blocks: readonly PublicBlock[]): { entityIds: Set<string>; ruleKeys: Set<string> } {
   const entityIds = new Set<string>(lairEntityIds(blocks));
   const ruleKeys = new Set<string>();
@@ -516,6 +535,11 @@ function citedTargets(blocks: readonly PublicBlock[]): { entityIds: Set<string>;
       for (const list of [quest.data.objectives, quest.data.rewards, quest.data.prerequisites]) {
         for (const item of list) if (item.ref?.kind === "entity") entityIds.add(item.ref.id);
       }
+    } else if (BLOCS_DE_FICHE.has(block.blockType)) {
+      // V3.2-72 : espèce, classes, objets, sorts, cités par clé ou par identifiant.
+      const refs = referencesDeFiche(block.blockType, block.data);
+      for (const id of refs.entityIds) entityIds.add(id);
+      for (const key of refs.ruleKeys) ruleKeys.add(key);
     }
   }
   return { entityIds, ruleKeys };
