@@ -111,7 +111,7 @@ Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été
 | V3.2-56 | ☐ | sans | Le volet de consultation | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
 | V3.2-57 | ☐ | sans | Les fiches et les règles se lisent en entier dans le volet | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
 | V3.2-58 | ☐ | sans | Les notes dans le volet | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
-| V3.2-59 | ☐ | sans | La date et la saison, dans le bandeau et pour l'IA | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
+| V3.2-59 | ☑ | sans | La date et la saison, dans le bandeau et pour l'IA | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
 | V3.2-60 | ☐ | sans | Le volet d'une personne : portrait, état, humeur | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
 | V3.2-61 | ☐ | sans | « Envers toi » : barres continues avec zone floue | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
 | V3.2-62 | ☐ | sans | Fiche, inventaire et magie découverts | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |

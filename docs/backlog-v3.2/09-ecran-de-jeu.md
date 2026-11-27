@@ -10,7 +10,7 @@ Demandé le 26 novembre après la partie test avec Mabelle ; maquettes validées
 
 ## Lot 1 — Le rail de jeu et le volet de consultation
 
-### ☐ V3.2-55 — En jeu, le rail devient le rail de jeu · `M` · sans modèle IA · Modèle conseillé : Opus
+### ☐ V3.2-55 — En jeu, le rail devient le rail de jeu · `M` · sans modèle IA · Modèle conseillé : Opus — **codé le 27 novembre ; reste à vérifier à l'écran**
 
 - Sur `/joueur/solo` (ordinateur), `PlayerShell` remplace ses destinations par : Quitter (vers Personnage), puis un emplacement que la page remplit par un portail (Quêtes, Changements, Wiki, Règles, Notes, puis les présents), puis Réglages (apparence), l'atelier pour qui administre, et la dalle du dé. Chat et Prochaine session disparaissent en jeu.
 - Les présents : six visages au plus, rangés par distance (au contact, proche, loin), esquisses en pointillés, puis « +x » qui ouvre la liste groupée dans le volet. Rail déplié : nom et attitude perçue à côté de chaque visage.
@@ -22,7 +22,9 @@ Demandé le 26 novembre après la partie test avec Mabelle ; maquettes validées
 - [ ] Huit présents : six visages puis « +2 ».
 - [ ] Une page solo sans personnage garde un rail avec Quitter.
 
-### ☐ V3.2-56 — Le volet de consultation · `M` · sans modèle IA · Modèle conseillé : Opus
+**Fait.** `PlayerShell` laisse, sur `/joueur/solo`, une ligne Quitter et un emplacement ; `RailJeu.tsx` le remplit par un portail (`FournisseurRail` repose l'état replié, qu'un portail ne traverse pas). `rondsDuRail` (`lib/ui/railJeu.ts`, testé) range et coupe les visages. Les entrées et les visages ouvrent le volet par `basculerVolet` de `SoloShell`. Huit présents : six visages et « +2 » (test).
+
+### ☐ V3.2-56 — Le volet de consultation · `M` · sans modèle IA · Modèle conseillé : Opus — **codé le 27 novembre ; reste à vérifier à l'écran**
 
 - La colonne gauche de `SoloShell` devient un volet de 380 px, fermé à 0 px, animé en 320 ms (deux bornes `minmax()` de même forme, piège noté dans le code). Fermé, le fil prend toute la largeur.
 - Le volet montre l'entrée choisie dans le rail, sans onglets : un titre, un bouton de fermeture. Un second clic sur l'entrée active le ferme. Il reste ouvert pendant les tours.
@@ -30,9 +32,11 @@ Demandé le 26 novembre après la partie test avec Mabelle ; maquettes validées
 
 **Critères d'acceptation**
 - [ ] Clic sur Quêtes : le volet s'ouvre sur les quêtes ; second clic : il se ferme et le fil s'élargit.
-- [ ] Le choix ouvert/fermé et l'entrée survivent à un rechargement (confort de navigateur, `localStorage`).
+- [ ] Le choix ouvert/fermé survit à un rechargement (même clé `localStorage` que l'ancien pli du Monde) ; l'entrée, elle, repart sur Wiki.
 
-### ☐ V3.2-57 — Les fiches et les règles se lisent en entier dans le volet · `M` · sans modèle IA · Modèle conseillé : Opus
+**Fait.** `SoloShell` : quand la page passe `railJeu` et que l'emplacement existe, colonne gauche `minmax(380px,380px)` ↔ `minmax(0px,0px)` en 320 ms, contenu à largeur fixe (`inert` une fois fermé), barre de titre et ×. `ColonneMonde` perd ses onglets (`voletDeJeu` dans le contexte). Le MJ à distance, sans emplacement, ne change pas.
+
+### ☐ V3.2-57 — Les fiches et les règles se lisent en entier dans le volet · `M` · sans modèle IA · Modèle conseillé : Opus — **codé le 27 novembre ; reste à vérifier à l'écran**
 
 - Une fiche du wiki choisie dans le volet s'affiche en entier dans le volet, avec le même corps de fiche que `/joueur/wiki/[slug]` (lecture seule, vue joueur), au lieu de l'extrait et du lien qui faisait quitter la partie.
 - Une règle (onglet Règles, ou renvoi cliqué dans le fil) s'affiche dans le volet par la route `/window` des règles, comme `PanneauRenvoi`.
@@ -41,6 +45,8 @@ Demandé le 26 novembre après la partie test avec Mabelle ; maquettes validées
 **Critères d'acceptation**
 - [ ] Ouvrir Mabelle depuis le Wiki du volet n'ouvre aucune autre page.
 - [ ] Un renvoi de règle dans le récit s'ouvre dans le volet.
+
+**Fait.** `SoloShell` capture les clics sur les liens de l'écran de jeu (`cibleDepuisAdresse`, testé : fiche ou règle de CE monde, sans requête ni sous-chemin ; Ctrl, Maj et la molette gardent leur sens) et ouvre `VoletLecture`. Fiche : nouvelle route `app/api/worlds/[worldSlug]/joueur/entities/[entitySlug]` (paramètres validés par Zod, session exigée, `getPlayerEntityDetail` pour CE compte, découverte « detailed » comme la page), rendue par `PublicEntityBody`. Règle : la route `/window` existante, rendue par `RuleEntryView`. Les liens de la fiche lue s'ouvrent à leur tour dans le volet. **Manque** : le test d'intégration RLS de la nouvelle route (elle ne fait que réutiliser la lecture de la page du wiki, déjà couverte).
 
 ### ☐ V3.2-58 — Les notes dans le volet · `S` · sans modèle IA · Modèle conseillé : Sonnet
 
@@ -53,15 +59,17 @@ Demandé le 26 novembre après la partie test avec Mabelle ; maquettes validées
 
 ## Lot 3 — La date
 
-### ☐ V3.2-59 — La date et la saison, dans le bandeau et pour l'IA · `S` · sans modèle IA · Modèle conseillé : Opus
+### ☑ V3.2-59 — La date et la saison, dans le bandeau et pour l'IA · `S` · sans modèle IA · Modèle conseillé : Opus — **codé le 27 novembre**
 
 - Le bandeau affiche jour de la semaine, jour, mois, année et saison avant l'heure, quand le calendrier du monde a une date du jour à la précision du jour (`calendar.currentDate`) ; sinon rien (comportement actuel de `sceneDateLabel`).
 - `formatDate` gagne un vocabulaire de saison (d'après le mois et l'hémisphère du calendrier, ou la saison de la météo).
 - La même date entre dans le contexte du tour de l'IA, à côté de la météo (`describeWeatherForAi`).
 
 **Critères d'acceptation**
-- [ ] Tests du noyau : « jeudi 14 brumaire 1247, automne ».
-- [ ] Le contexte du tour porte la date ; sans date du jour, il n'en invente pas.
+- [x] Tests du noyau : « jeudi 14 brumaire 1247, automne » (`season.test.ts`).
+- [x] Le contexte du tour porte la date ; sans date du jour, il n'en invente pas (`turnContext.test.ts`).
+
+**Fait.** La date du bandeau existait déjà (`sceneDateLabel`) ; `dateWithSeason` (`src/core/weather/season.ts`, testé) y ajoute la saison que la météo de la scène connaît déjà. Le contexte du tour remplace « jour N » par la date du calendrier quand il en a une (`dateLabel`, lue sur le calendrier déjà chargé pour la météo) ; la saison y est déjà, dans la ligne météo. Aucune lecture de plus. `formatDate` n'a pas eu besoin d'un vocabulaire de saison.
 
 ---
 
