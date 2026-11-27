@@ -12,6 +12,7 @@ import { ZONE_LABELS } from "@/components/solo/ScenePanel";
 import { useSoloContexte } from "@/components/solo/SoloContexte";
 import { AvatarPresent, libellePerception } from "@/components/solo/RondsPresents";
 import OngletChangements from "@/components/solo/OngletChangements";
+import VoletNotes from "@/components/solo/VoletNotes";
 import type { QuestColumnEntry, SceneView, WikiColumnGroup } from "@/lib/solo/types";
 
 /**
@@ -131,6 +132,9 @@ function OngletPresents({
 }) {
   const router = useRouter();
   const [ancrageEnCours, setAncrageEnCours] = useState<string | null>(null);
+  // V3.2-60 : dans le volet de jeu, une carte ouvre le volet de cette personne.
+  const { voletDeJeu, ouvrirPersonne } = useSoloContexte();
+  const Carte = voletDeJeu ? "button" : "div";
 
   // `ColonneMonde` reçoit sa scène du composant serveur (`page.tsx`), pas
   // d'un état local partagé avec `SoloScreen` (une colonne voisine, un arbre
@@ -157,7 +161,11 @@ function OngletPresents({
     <div className="flex flex-col gap-2">
       {present.map((p) => (
         // V3.2-14 : le même rond que dans la bande du Monde replié — ouvert ou fermé, une personne a la même tête.
-        <div key={p.entityId} className="flex items-center gap-2 rounded-md border border-edge p-2">
+        <Carte
+          key={p.entityId}
+          {...(voletDeJeu ? { type: "button" as const, onClick: () => ouvrirPersonne(p.entityId) } : {})}
+          className={`flex w-full items-center gap-2 rounded-md border border-edge p-2 text-left ${voletDeJeu ? "transition-colors hover:bg-panel-sunken" : ""}`}
+        >
           <AvatarPresent nom={p.name} perception={p.perception ?? null} esquisse={false} />
           <div className="flex min-w-0 flex-col gap-0.5">
             <span className="text-sm text-ink">{p.name}</span>
@@ -167,7 +175,7 @@ function OngletPresents({
               {ZONE_LABELS[p.zone]}
             </span>
           </div>
-        </div>
+        </Carte>
       ))}
       {sketches.map((s) => (
         <div key={s.id} className="flex flex-col gap-1 rounded-md border border-dashed border-edge p-2">
@@ -217,6 +225,8 @@ export default function ColonneMonde({
       {onglet === "presents" && <OngletPresents present={present} sketches={sketches} worldSlug={worldSlug} campaignId={campaignId} />}
       {onglet === "regles" && <PlayerRulesSidebar worldSlug={worldSlug} />}
       {onglet === "changements" && <OngletChangements campaignId={campaignId} />}
+      {/* V3.2-58 : le cahier, seulement dans le volet de jeu (le rail y mène). */}
+      {onglet === "notes" && voletDeJeu && <VoletNotes worldSlug={worldSlug} />}
     </>
   );
 

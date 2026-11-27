@@ -24,6 +24,7 @@ export const ICONES_MONDE: Record<OngletMonde, ReactNode> = {
   regles: <path d="M12 4v16m-6 0h12M5 8h14M5 8l-2.5 6a3 3 0 0 0 5 0L5 8Zm14 0-2.5 6a3 3 0 0 0 5 0L19 8Z" />,
   // V3.2-27 : une plume sur une ligne (ce qui s'est écrit dans le monde).
   changements: <path d="M4 20h16M7 16l9.5-9.5a2.1 2.1 0 0 1 3 3L10 19H7v-3Z" />,
+  notes: <path d="M6 3h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm2 5h8M8 12h8M8 16h5" />,
 };
 
 const ORDRE: OngletMonde[] = ["wiki", "quetes", "presents", "regles", "changements"];

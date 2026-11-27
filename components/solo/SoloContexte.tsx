@@ -35,7 +35,7 @@ import type { JaugesBande } from "@/lib/ui/solo";
  *   (`HeureScene`). `null` : aucun tour depuis l'ouverture, l'heure de la
  *   page fait foi.
  */
-export type OngletMonde = "wiki" | "quetes" | "presents" | "regles" | "changements";
+export type OngletMonde = "wiki" | "quetes" | "presents" | "regles" | "changements" | "notes";
 
 interface SoloContexteValeur {
   replie: boolean;
@@ -54,6 +54,8 @@ interface SoloContexteValeur {
   heure: GameTime | null;
   definirHeure: (heure: GameTime) => void;
   voletDeJeu: boolean;
+  /** ADR 0120 (V3.2-60) : ouvre le volet sur une personne présente (identifiant de fiche ou d'esquisse). */
+  ouvrirPersonne: (id: string) => void;
 }
 
 const SoloContexte = createContext<SoloContexteValeur>({
@@ -72,6 +74,7 @@ const SoloContexte = createContext<SoloContexteValeur>({
   heure: null,
   definirHeure: () => {},
   voletDeJeu: false,
+  ouvrirPersonne: () => {},
 });
 
 export const SoloContexteProvider = SoloContexte.Provider;

@@ -115,6 +115,7 @@ export async function loadSceneView(
     present: ici.map((p) => ({
       entityId: p.entityId,
       name: byId.get(p.entityId)?.name ?? p.entityId,
+      slug: byId.get(p.entityId)?.slug ?? null,
       zone: p.zone,
       disposition: p.disposition,
       perception: perceptionById.get(p.entityId) ?? null,
