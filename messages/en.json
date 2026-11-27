@@ -757,6 +757,7 @@
       }
     },
     "rechercherRegle": "Search a rule…",
+    "chargement": "Loading…",
     "aucuneRegleTrouvee": "No rule found.",
     "sommaireRegles": "Rules contents",
     "regleDeLaTable": "Table rule",
@@ -1404,6 +1405,16 @@
     "echec": "error — {message}"
   },
   "solo": {
+    "railJeu": {
+      "aria": "Game rail",
+      "quitter": "Leave the game",
+      "notes": "Notes",
+      "presentsAria": "People present",
+      "autres": "+{n}",
+      "autresAria": "See the {n} other people present",
+      "fermerVolet": "Close the panel",
+      "voletAria": "Consultation panel"
+    },
     "meteo": {
       "dehors": "Outside: {condition}",
       "abri": "Sheltered: {condition}",

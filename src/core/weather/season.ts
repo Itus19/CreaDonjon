@@ -24,3 +24,17 @@ export function seasonOf(phase: number): Season {
   if (p < 0.625) return "summer";
   return "autumn";
 }
+
+/** Les saisons en mots, pour l'écran comme pour le modèle. */
+export const SEASON_LABELS_FR: Record<Season, string> = { winter: "hiver", spring: "printemps", summer: "été", autumn: "automne" };
+
+/**
+ * V3.2-59 (ADR 0120) — La date du bandeau suivie de la saison :
+ * « jeudi 14 brumaire 1247, automne ». Sans date du jour, la saison seule (la
+ * météo la connaît par la phase de l'année) ; sans l'une ni l'autre, rien.
+ */
+export function dateWithSeason(dateLabel: string | null, season: Season | null): string | null {
+  const saison = season ? SEASON_LABELS_FR[season] : null;
+  if (dateLabel && saison) return `${dateLabel}, ${saison}`;
+  return dateLabel ?? saison;
+}

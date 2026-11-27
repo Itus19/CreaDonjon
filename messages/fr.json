@@ -758,6 +758,7 @@
       }
     },
     "rechercherRegle": "Rechercher une règle…",
+    "chargement": "Chargement…",
     "aucuneRegleTrouvee": "Aucune règle trouvée.",
     "sommaireRegles": "Sommaire des règles",
     "regleDeLaTable": "Règle de la table",
@@ -1405,6 +1406,16 @@
     "echec": "erreur — {message}"
   },
   "solo": {
+    "railJeu": {
+      "aria": "Rail de jeu",
+      "quitter": "Quitter la partie",
+      "notes": "Notes",
+      "presentsAria": "Les personnes présentes",
+      "autres": "+{n}",
+      "autresAria": "Voir les {n} autres personnes présentes",
+      "fermerVolet": "Fermer le volet",
+      "voletAria": "Volet de consultation"
+    },
     "meteo": {
       "dehors": "Dehors : {condition}",
       "abri": "À l'abri : {condition}",

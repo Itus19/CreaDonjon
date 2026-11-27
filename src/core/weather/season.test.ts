@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { seasonOf, yearPhase } from "./season";
+import { dateWithSeason, seasonOf, yearPhase } from "./season";
 
 describe("yearPhase", () => {
   it("met le cœur de l'hiver au premier jour par défaut, l'été à mi-année", () => {
@@ -28,5 +28,16 @@ describe("seasonOf", () => {
     expect(seasonOf(0.25)).toBe("spring");
     expect(seasonOf(0.5)).toBe("summer");
     expect(seasonOf(0.75)).toBe("autumn");
+  });
+});
+
+describe("dateWithSeason (V3.2-59)", () => {
+  it("la date puis la saison", () => {
+    expect(dateWithSeason("jeudi 14 brumaire 1247", "autumn")).toBe("jeudi 14 brumaire 1247, automne");
+  });
+  it("une seule des deux, ou rien", () => {
+    expect(dateWithSeason(null, "winter")).toBe("hiver");
+    expect(dateWithSeason("14 brumaire 1247", null)).toBe("14 brumaire 1247");
+    expect(dateWithSeason(null, null)).toBeNull();
   });
 });

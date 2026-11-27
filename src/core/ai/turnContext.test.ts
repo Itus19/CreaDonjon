@@ -281,3 +281,15 @@ describe("buildTurnContext — ce qui fait vivre la scène (retour de jeu du 25 
     expect(out).not.toContain("personne d'autre n'est avec le personnage");
   });
 });
+
+describe("buildTurnContext — la date du monde (V3.2-59)", () => {
+  it("donne la date du calendrier quand il en a une", () => {
+    const out = buildTurnContext(input({ dateLabel: "jeudi 14 brumaire 1247" }));
+    expect(out).toContain("L'Ancre Rouillée — jeudi 14 brumaire 1247, 22h15");
+    expect(out).not.toContain("jour 3");
+  });
+
+  it("garde « jour N » sans date du jour, sans en inventer", () => {
+    expect(buildTurnContext(input())).toContain("L'Ancre Rouillée — jour 3, 22h15");
+  });
+});

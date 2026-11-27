@@ -21,6 +21,7 @@ import SoloShell from "@/components/solo/SoloShell";
 import BandeMonde from "@/components/solo/BandeMonde";
 import RondsPresents from "@/components/solo/RondsPresents";
 import type { Locale } from "@/src/i18n/request";
+import { dateWithSeason } from "@/src/core/weather/season";
 
 /**
  * L'ecran solo — **V3-D1 : la coquille a trois colonnes**, qui remplace le
@@ -94,7 +95,8 @@ export default async function JoueurSoloPage({ params }: { params: Promise<{ wor
     // V3.2-20 : les réglages de la partie (DD et issue des jets), une lecture légère dans la même vague.
     getCampaignTableSettingsRaw(supabase, campaign.id),
   ]);
-  const dateLabel = scene ? sceneDateLabel(scene.time.day, calendar) : null;
+  // V3.2-59 : la date du jour du monde, puis la saison que la météo connaît déjà (aucune lecture de plus).
+  const dateLabel = scene ? dateWithSeason(sceneDateLabel(scene.time.day, calendar), scene.weather?.season ?? null) : null;
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -126,6 +128,8 @@ export default async function JoueurSoloPage({ params }: { params: Promise<{ wor
             <RondsPresents present={scene?.present ?? []} sketches={scene?.sketches ?? []} />
           </BandeMonde>
         }
+        // ADR 0120 (V3.2-55) : le rail de jeu porte les présents ; la scène est déjà chargée, aucune requête de plus.
+        railJeu={{ present: scene?.present ?? [], sketches: scene?.sketches ?? [] }}
         quetes={<QuetesTelephone quests={quests} />}
         jeu={
           <SoloScreen

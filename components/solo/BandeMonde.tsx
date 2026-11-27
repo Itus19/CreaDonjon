@@ -13,7 +13,7 @@ import { useSoloContexte, type OngletMonde } from "@/components/solo/SoloContext
  *
  * Icônes au trait, jamais d'émoji (docs/CHARTE-UI.md §10).
  */
-const ICONES: Record<OngletMonde, ReactNode> = {
+export const ICONES_MONDE: Record<OngletMonde, ReactNode> = {
   // Un livre ouvert.
   wiki: <path d="M12 6c-2-1.5-5-2-8-1.5V19c3-.5 6 0 8 1.5m0-14.5c2-1.5 5-2 8-1.5V19c-3-.5-6 0-8 1.5m0-14.5v14.5" />,
   // Un parchemin.
@@ -49,7 +49,7 @@ export default function BandeMonde({ children }: { children?: ReactNode }) {
               }`}
             >
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                {ICONES[onglet]}
+                {ICONES_MONDE[onglet]}
               </svg>
             </button>
           );

@@ -27,6 +27,8 @@ import type { JaugesBande } from "@/lib/ui/solo";
  *   onglet (`deplierMonde`) alors qu'elle est un arbre voisin de la colonne.
  * - V3.2-14 — `interlocuteur` : le nom du PNJ qui a parlé au dernier tour,
  *   publié par le Jeu (il lit le fil), relu par la bande du Monde (halo).
+ * - ADR 0120 (V3.2-56) — `voletDeJeu` : la colonne gauche est le volet de
+ *   consultation, commandé par le rail de jeu ; le Monde y perd ses onglets.
  * - `heure` : l'heure de jeu rendue par le dernier tour (V3.2-18). Le bandeau
  *   est rendu par la page serveur et ne se recharge pas après un tour ; la
  *   barre d'intention pose l'heure ici (`definirHeure`), le bandeau la relit
@@ -51,6 +53,7 @@ interface SoloContexteValeur {
   definirInterlocuteur: (nom: string | null) => void;
   heure: GameTime | null;
   definirHeure: (heure: GameTime) => void;
+  voletDeJeu: boolean;
 }
 
 const SoloContexte = createContext<SoloContexteValeur>({
@@ -68,6 +71,7 @@ const SoloContexte = createContext<SoloContexteValeur>({
   definirInterlocuteur: () => {},
   heure: null,
   definirHeure: () => {},
+  voletDeJeu: false,
 });
 
 export const SoloContexteProvider = SoloContexte.Provider;
