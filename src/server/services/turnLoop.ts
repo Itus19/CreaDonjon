@@ -23,7 +23,8 @@ import {
   type ResolveIntentErrorReason,
 } from "@/src/server/services/turnIntent";
 import type { PendingRequest, PendingRequestKind } from "@/src/core/schemas/runtimeState";
-import { listCombatsForCampaign } from "@/src/server/repos/combats";
+import { listCombatParticipants, listCombatsForCampaign } from "@/src/server/repos/combats";
+import { jouerTourDesPnj } from "@/src/server/services/soloNpcTurns";
 import { getSceneState, putSceneState } from "@/src/server/repos/sceneStates";
 import type { TurnOutcome } from "@/lib/solo/types";
 import { applyResolvedEffects, fireActorTriggers } from "@/src/server/services/targetedRoll";
@@ -92,11 +93,14 @@ export async function playTurn(
   const record = await executeIntent(supabase, params);
   if ("error" in record) return record;
 
-  return applyResolvedTurn(
+  const turn = await applyResolvedTurn(
     supabase,
     { entityId: params.entityId, campaignId: params.campaignId, callerId: params.callerId, locale: params.locale, text: params.text, choiceKind: params.choice.kind },
     record
   );
+  // ADR 0121 (V3.2-73) : en combat, une action sans jet (« je recule ») est aussi un tour ; les PNJ jouent ensuite.
+  const pnj = await jouerTourDesPnj(supabase, { campaignId: params.campaignId, callerId: params.callerId, pcEntityId: params.entityId });
+  return pnj.length > 0 ? { ...turn, changes: [...turn.changes, ...pnj] } : turn;
 }
 
 /**
@@ -188,7 +192,9 @@ async function finishEncashedTurn(
     { entityId: params.entityId, campaignId: params.campaignId, callerId: params.callerId, locale: params.locale, text: intent.text, choiceKind, reactors },
     outcome.record
   );
-  return { ...turn, chained: outcome.chained };
+  // ADR 0121 (V3.2-73) : le tour du personnage fini (aucun dégât encore à lancer), les PNJ du combat jouent le leur.
+  const pnj = outcome.chained === null ? await jouerTourDesPnj(supabase, { campaignId: params.campaignId, callerId: params.callerId, pcEntityId: params.entityId }) : [];
+  return { ...turn, changes: [...turn.changes, ...pnj], chained: outcome.chained };
 }
 
 async function applyResolvedTurn(
@@ -238,8 +244,16 @@ async function applyResolvedTurn(
   // simple : ils ne viennent d'aucun declencheur, ils viennent du coup.
   // C'est precisement ce que B1 avait laisse de cote (« appliquer est
   // V3-B2 ») et l'exemple que le ticket dessine — « Gobelin 2 : 7 → −1 PV ».
-  if (damage && targetId) {
-    effects.push({ action: "deal_damage", who: targetId, amount: damage.total });
+  // ADR 0121 : en combat, une cible visée comme présent de la scène (`entity:<id>`, l'attaque qui a ouvert le
+  // combat) est désormais un participant ; ses PV vivent sur sa ligne, sous la clé `participant:<id>`.
+  let cleCible = targetId;
+  if (targetId?.startsWith("entity:") && sceneBefore?.activeCombatId) {
+    const entite = targetId.slice("entity:".length);
+    const ligne = (await listCombatParticipants(supabase, sceneBefore.activeCombatId)).find((p) => p.entity_id === entite);
+    if (ligne) cleCible = `participant:${ligne.id}`;
+  }
+  if (damage && cleCible) {
+    effects.push({ action: "deal_damage", who: cleCible, amount: damage.total });
   }
   effects.push(...record.effects);
 

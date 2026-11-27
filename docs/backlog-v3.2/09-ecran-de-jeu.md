@@ -147,7 +147,7 @@ Demandé le 26 novembre après la partie test avec Mabelle ; maquettes validées
 
 **Fait.** `ouvrirCombatSolo` (`src/server/services/soloCombatOpening.ts`) : appelé par `proposeIntentRequest` quand l'attaque vise un présent de la scène, hors combat, par un administrateur du monde (la personne qui joue en solo). Trois lectures groupées (attitudes envers l'agresseur et la cible, tempéraments), les camps, la surprise (`surprisDuCombat`, désavantage à l'initiative), les participants (`addEntityParticipant`), toutes les initiatives lancées par le serveur, le combat en cours et `activeCombatId`. La CA de la cible devient le DD de l'attaque ; le fait « Le combat commence : … Pris par surprise : … » passe en tête des faits du jet, pour le récit. `initiativeForParticipant` lit désormais la Dextérité du `statblock` d'un PNJ sans fiche de personnage (avant : 0, à la table du MJ aussi). « Annuler ce tour » retire le combat ouvert par l'attaque (`combat_opened_id`, `turnUndo.ts`).
 
-**Reste.** L'initiative du personnage est lancée par le serveur en attendant sa pastille (V3.2-68) ; une demande d'attaque abandonnée avant le jet laisse le combat ouvert ; un agresseur caché n'est pas encore lu (surprise « tous ») ; les PNJ n'agissent pas encore à leur tour (V3.2-73), et rien ne clôt le combat seul (V3.2-74 ; l'outil du MJ peut le terminer).
+**Reste.** L'initiative du personnage est lancée par le serveur en attendant sa pastille (V3.2-68) ; une demande d'attaque abandonnée avant le jet laisse le combat ouvert ; un agresseur caché n'est pas encore lu (surprise « tous ») ; les PNJ jouent leur tour avec la tactique fixe (V3.2-73, le choix par l'IA reste à venir), et rien ne clôt le combat seul (V3.2-74 ; l'outil du MJ peut le terminer).
 
 ### ☐ V3.2-67 — Le combat dans le rail · `M` · sans modèle IA · Modèle conseillé : Opus — **après V3.2-66**
 
@@ -157,13 +157,17 @@ Demandé le 26 novembre après la partie test avec Mabelle ; maquettes validées
 
 - Pastille de jet d'initiative dans le fil (rangs des PNJ cachés tant qu'on n'a pas lancé), puis la carte « Ordre d'initiative ». Rounds de 6 s, économie d'action en pastilles.
 
-### ☐ V3.2-73 — Le tour d'un PNJ en combat · `M` · **avec** modèle IA · Modèle conseillé : Opus — **après V3.2-66**
+### ☐ V3.2-73 — Le tour d'un PNJ en combat · `M` · **avec** modèle IA · Modèle conseillé : Opus — **tactique fixe codée le 27 novembre**
 
 - ADR 0121, point 5. Le moteur construit la liste fermée des options du PNJ (attaquer telle cible avec telle action, se désengager, fuir, se rendre, esquiver, aider) ; l'IA en choisit une sous contrainte de schéma, avec une phrase de raison ; le moteur lance et applique ; l'IA raconte le round. Tactique fixe en secours (frapper qui l'a le plus blessé, sinon le plus proche).
 
 **Critères d'acceptation**
 - [ ] Tests du noyau : la liste des options suit la fiche et la zone ; un choix hors liste est refusé et la tactique fixe joue.
 - [ ] `ai_usage_log` écrit à chaque choix, même en échec.
+
+**Fait (sans modèle d'IA).** Les PNJ jouent comme la personne qui joue : jet d'attaque au d20 avec le bonus de leur fiche allégée, contre la CA de la cible, puis jet de dégâts s'ils touchent (critique sur 20 : dés doublés ; 1 naturel : raté). `src/core/rules/npcRolls.ts` (testé) lit les actions de la fiche (« Melee Attack Roll: +3 … (1d4 + 1) Bludgeoning damage ») et choisit la tactique fixe : viser le personnage d'abord, frapper au contact, s'approcher et frapper depuis « près », tirer de loin, sinon s'approcher, sinon esquiver. `src/server/services/soloNpcTurns.ts` (`jouerTourDesPnj`) les fait jouer après chaque tour du personnage en combat, dans l'ordre d'initiative, applique les PV par le même cœur que la table, avance le round et écrit les faits au journal (ligne du tour, récit). Vérifié à l'écran sur une copie locale : Mabelle s'approche, frappe Bram, rate ou touche, ses PV et ceux de Bram baissent, le round avance.
+
+**Reste.** Le choix par l'IA dans la liste fermée (cases ci-dessus) ; se désengager, fuir, se rendre, aider ; un compagnon sans fiche allégée ne joue pas encore ; la zone affichée dans le rail ne suit le déplacement du PNJ qu'au rechargement.
 
 ### ☐ V3.2-74 — Moral et fin du combat · `S` · sans modèle IA · Modèle conseillé : Opus — **après V3.2-66**
 
