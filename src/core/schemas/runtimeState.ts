@@ -50,6 +50,14 @@ export const zPendingRequest = z.object({
    * soit l'origine du naturel (règle 8). Absent des demandes d'avant : aucun.
    */
   bonus_dice: z.array(z.object({ count: z.number().int().min(1), faces: z.number().int().min(1), label: z.string() })).optional(),
+  /**
+   * ADR 0118 — une demande de dégâts dont chaque dé compte au moins cette
+   * valeur (Armes à deux mains : 3). Le serveur l'applique aux dés qu'il lance
+   * (l'arme au clic de fiche, les dés de bonus) ; aux vrais dés, `what` le dit.
+   */
+  die_min: z.number().int().min(2).max(20).optional(),
+  /** Combat à deux armes : l'attaque en plus d'une arme Légère, et ses dégâts chaînés (le modificateur ne s'ajoute pas, sauf don ou négatif). */
+  light_extra: z.boolean().optional(),
 });
 export type PendingRequest = z.infer<typeof zPendingRequest>;
 

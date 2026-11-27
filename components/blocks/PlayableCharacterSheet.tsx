@@ -837,6 +837,7 @@ export default function PlayableCharacterSheet({
                 isMonk={isMonk}
                 onAttack={(_item, arme) => jets.attaquerArme(arme, advantage)}
                 onDamage={(_item, versatile, arme) => jets.degatsArme(arme, versatile)}
+                onExtraAttack={(_item, arme) => jets.attaquerArme(arme, advantage, { enPlus: true })}
                 spellcasting={spellcasting}
                 preparedSpells={preparedSpells}
                 spellSlots={sheet.spellcasting?.slots ?? {}}

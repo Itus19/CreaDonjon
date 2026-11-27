@@ -305,6 +305,8 @@ export type BrouillonOperation = { uid: string } & (
   | { op: "attacker_save"; carac: "str" | "dex" | "con" | "int" | "wis" | "cha"; dd: string }
   /** V3.1-182 (ADR 0078) : l'attaque vise désormais celui qui réagit. */
   | { op: "redirect" }
+  /** Sauvagerie martiale : les dés de l'arme relancés, le meilleur gardé. */
+  | { op: "reroll_weapon_dice" }
 );
 export type GenreOperation = RollOperation["op"];
 
@@ -351,6 +353,8 @@ export interface BrouillonActivation {
   quand: BrouillonCondition;
   /** « Une fois par tour / par round » ; `null` : sans limite. */
   limite: LimiteReaction | null;
+  /** Sens tactique : sur un jet raté, le coût est rendu si le jet rate encore (écrit seulement avec le moment « raté »). */
+  rembourseSiRate: boolean;
   /** V3.1-166 : les options que cette aptitude offre au lancer d'un sort. */
   optionsLancement: BrouillonOptionLancement[];
   /** V3.1-184 : « Quantité choisie » à l'activation (`amount` dans les formules) ; `max` est une formule en texte ; `null` : aucune. */
@@ -586,6 +590,7 @@ export function nouvelleActivation(b: Brouillon): BrouillonActivation {
     operations: [],
     quand: conditionVide(),
     limite: null,
+    rembourseSiRate: false,
     optionsLancement: [],
     quantite: null,
   };
@@ -617,6 +622,7 @@ const MODELES_OPERATIONS: readonly RollOperation[] = [
   { op: "add_damage", formula: { op: "num", value: 1 } },
   { op: "attacker_save", ability: "cha", dc: { op: "num", value: 10 } },
   { op: "redirect" },
+  { op: "reroll_weapon_dice" },
 ];
 
 /** Les opérations qui ont un sens sur le jet visé (le noyau en décide : `rollOperationProblems`). */
@@ -627,7 +633,7 @@ export function operationsPermises(jet: JetReaction): GenreOperation[] {
 /** Les moments qui ont un sens sur le jet visé : « touché » ne se dit que d'une attaque, un jet de dégâts n'a que « quand il est lancé ». */
 export function momentsPermis(jet: JetReaction): MomentReaction[] {
   if (jet === "damage") return ["rolled"];
-  return REACTION_MOMENTS.filter((m) => m !== "hit" || jet === "attack");
+  return REACTION_MOMENTS.filter((m) => (m !== "hit" && m !== "critical") || jet === "attack");
 }
 
 export function nouveauDeclencheur(): BrouillonDeclencheur {
@@ -652,6 +658,7 @@ export function nouvelleOperation(op: GenreOperation): BrouillonOperation {
     case "attacker_save":
       return { ...base, op, carac: "cha", dd: "{spell_save_dc}" };
     case "redirect":
+    case "reroll_weapon_dice":
       return { ...base, op };
   }
 }
@@ -911,6 +918,8 @@ function operationVersBrouillon(o: RollOperation): BrouillonOperation {
       return { ...base, op: "attacker_save", carac: o.ability, dd: formatFormulaNode(o.dc) };
     case "redirect":
       return { ...base, op: "redirect" };
+    case "reroll_weapon_dice":
+      return { ...base, op: "reroll_weapon_dice" };
   }
 }
 
@@ -1118,6 +1127,7 @@ export function blocsVersBrouillon(blocs: readonly { blockType: string; data: un
         operations: (a.roll_operations ?? []).map(operationVersBrouillon),
         quand: conditionVersBrouillon(a.when),
         limite: a.limit?.per ?? null,
+        rembourseSiRate: a.refund_if_failed === true,
         optionsLancement: (a.cast_options ?? []).map((o) => ({
           uid: nouvelUid(),
           id: o.id,
@@ -1310,6 +1320,8 @@ function operationEcrite(o: BrouillonOperation, contexte: string, ctx: CtxEcritu
       return { op: "attacker_save", ability: o.carac, dc: formule(o.dd, `${contexte}, DD`, ctx) };
     case "redirect":
       return { op: "redirect" };
+    case "reroll_weapon_dice":
+      return { op: "reroll_weapon_dice" };
   }
 }
 
@@ -1530,6 +1542,7 @@ export function brouillonVersBlocs(b: Brouillon, nomsEtats: Readonly<Record<stri
       ...(a.declencheur && a.operations.length > 0 ? { roll_operations: a.operations.map((o, k) => operationEcrite(o, `${nomAct}, opération ${k + 1}`, ctx)) } : {}),
       ...(conditionEcrite(a.quand) ? { when: conditionEcrite(a.quand) } : {}),
       ...(a.limite ? { limit: { per: a.limite } } : {}),
+      ...(a.declencheur?.moment === "failed" && a.rembourseSiRate ? { refund_if_failed: true } : {}),
       ...(a.quantite ? { amount: { max: formule(a.quantite.max, `${nomAct}, quantité maximale`, ctx), ...(a.quantite.label.trim() !== "" ? { label: localise(a.quantite.labelOrig, a.quantite.label.trim()) } : {}) } } : {}),
       ...(a.optionsLancement.length > 0
         ? { cast_options: a.optionsLancement.map((o, k) => optionLancementEcrite(o, `${nomAct}, option de lancement ${o.label.trim() || k + 1}`, ctx)) }

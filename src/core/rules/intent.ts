@@ -46,6 +46,8 @@ export interface IntentAction {
    * s'il est toute la phrase. Absent : aucune forme explicite.
    */
   explicitTerms?: string[];
+  /** Combat à deux armes : l'attaque en plus d'une arme Légère (action Bonus), proposée à part, jamais devinée d'une phrase. */
+  lightExtra?: true;
 }
 
 export interface IntentTarget {

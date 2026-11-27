@@ -20,6 +20,10 @@ export const zTurnBudget = z.object({
   extraNotMagic: z.number().int(),
   /** V3.1-169 (ADR 0077) : mètres parcourus pendant le tour (absent : rien encore). */
   moved: z.number().min(0).optional(),
+  /** Mètres accordés en plus de la vitesse pendant ce tour (Athlète accompli : la moitié de la Vitesse après un critique). */
+  extraMovement: z.number().min(0).optional(),
+  /** Une attaque de l'action Attaque faite avec une arme Légère ce tour : l'attaque en plus de la propriété Légère est ouverte (vrai), ou déjà faite (faux). */
+  lightAttack: z.boolean().optional(),
 });
 export type TurnBudget = z.infer<typeof zTurnBudget>;
 
@@ -45,7 +49,7 @@ export type TurnSpend = ActivationCost["action"];
  * Une action accordée « pas pour la Magie » paie une action ou une attaque,
  * jamais l'action Magie.
  */
-export function spendTurnBudget(budget: TurnBudget, kind: TurnSpend, attacksPerAction: number): { budget: TurnBudget; over: boolean } {
+export function spendTurnBudget(budget: TurnBudget, kind: TurnSpend, attacksPerAction: number, opts: { lightWeapon?: boolean } = {}): { budget: TurnBudget; over: boolean } {
   switch (kind) {
     case "none":
     case "free":
@@ -62,12 +66,25 @@ export function spendTurnBudget(budget: TurnBudget, kind: TurnSpend, attacksPerA
     case "action":
       return payAction(budget);
     case "attack": {
-      if (budget.attacks > 0) return { budget: { ...budget, attacks: budget.attacks - 1 }, over: false };
+      // Une attaque avec une arme Légère ouvre l'attaque en plus (propriété Légère), une seule fois par tour.
+      const legere = (b: TurnBudget): TurnBudget => (opts.lightWeapon && b.lightAttack === undefined ? { ...b, lightAttack: true } : b);
+      if (budget.attacks > 0) return { budget: legere({ ...budget, attacks: budget.attacks - 1 }), over: false };
       const r = payAction(budget);
       // En dépassement, aucune action Attaque ne s'ouvre : chaque attaque de plus reste signalée.
-      return { budget: { ...r.budget, attacks: r.over ? 0 : Math.max(0, attacksPerAction - 1) }, over: r.over };
+      if (r.over) return { budget: { ...r.budget, attacks: 0 }, over: true };
+      return { budget: legere({ ...r.budget, attacks: Math.max(0, attacksPerAction - 1) }), over: false };
     }
   }
+}
+
+/**
+ * Combat à deux armes — l'attaque en plus de la propriété Légère : une action
+ * Bonus, après une attaque de l'action Attaque faite avec une arme Légère, une
+ * fois par tour. Jamais bloquant : sans attaque Légère avant, `over` le dit.
+ */
+export function spendLightExtraAttack(budget: TurnBudget): { budget: TurnBudget; over: boolean } {
+  const bonus = budget.bonus - 1;
+  return { budget: { ...budget, bonus, lightAttack: false }, over: bonus < 0 || budget.lightAttack !== true };
 }
 
 function payAction(budget: TurnBudget): { budget: TurnBudget; over: boolean } {
@@ -76,9 +93,11 @@ function payAction(budget: TurnBudget): { budget: TurnBudget; over: boolean } {
   return { budget: { ...budget, action: budget.action - 1 }, over: true };
 }
 
-/** Accorder (Sursaut d'action : une action, pas pour la Magie). */
-export function grantTurnBudget(budget: TurnBudget, p: { kind: "action" | "bonus"; amount: number; notMagic?: boolean }): TurnBudget {
+/** Accorder (Sursaut d'action : une action, pas pour la Magie ; Athlète accompli : du mouvement). */
+export function grantTurnBudget(budget: TurnBudget, p: { kind: "action" | "bonus" | "movement"; amount: number; notMagic?: boolean }): TurnBudget {
   if (p.kind === "bonus") return { ...budget, bonus: budget.bonus + p.amount };
+  // Du mouvement en plus (mètres), pour ce tour seulement : le budget repart neuf au tour suivant.
+  if (p.kind === "movement") return { ...budget, extraMovement: Math.max(0, (budget.extraMovement ?? 0) + p.amount) };
   return p.notMagic ? { ...budget, extraNotMagic: budget.extraNotMagic + p.amount } : { ...budget, action: budget.action + p.amount };
 }
 
@@ -99,5 +118,5 @@ export function applyCastOption(cost: ActivationCost, option: CastOption): Activ
  */
 export function spendMovement(budget: TurnBudget, metres: number, speedMetres: number): { budget: TurnBudget; over: boolean; moved: number } {
   const moved = Math.round(((budget.moved ?? 0) + Math.max(0, metres)) * 100) / 100;
-  return { budget: { ...budget, moved }, over: moved > speedMetres + 1e-9, moved };
+  return { budget: { ...budget, moved }, over: moved > speedMetres + (budget.extraMovement ?? 0) + 1e-9, moved };
 }

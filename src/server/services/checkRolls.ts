@@ -5,7 +5,7 @@ import type { Database, Json } from "@/src/types/database";
 import type { Locale } from "@/src/i18n/request";
 import { ABILITY_LABELS, SKILL_ABILITIES, type Ability, type BonusDie, type Skill, type Source } from "@/src/core/rules/sheet";
 import { SKILL_LABELS_FR } from "@/src/i18n/fr";
-import { resolveCheckRoll, type AdvantageState } from "@/src/core/rules/action";
+import { combineAdvantage, resolveCheckRoll, type AdvantageState } from "@/src/core/rules/action";
 import type { TraceStep } from "@/src/core/formula/evaluate";
 import type { DieType } from "@/src/core/dice/roll";
 import { advantagePairFromTrace, buildToolFormula, toolVerdict, type AdvantagePair } from "@/src/core/dice/diceTool";
@@ -239,6 +239,7 @@ async function recordAndBuildOutcome(
       locale: params.react.locale,
     });
     const r = await interveneOnRoll(supabase, {
+        callerIsGm: params.isAdmin,
       campaignId: params.campaignId,
       combat,
       roll: { kind: params.kind === "save" ? "save" : "check", roller: params.entityId, target: null, natural, total, critRange: 20, ac: null, dc: params.dc, acBonus: 0, damage: null },
@@ -431,15 +432,18 @@ export async function rollInitiativeCheck(supabase: TypedClient, params: RollPar
   const ctx = await resolveCharacterActionContext(supabase, params.entityId, params.campaignId, params.locale);
   if (!ctx) return { ok: false, reason: "not_found" };
 
-  const chips: Source[] = [{ label: ABILITY_LABELS.dex, value: ctx.sheet.abilities.dex.mod }];
+  // Un test de Dextérité, plus ce que les règles posent sur `initiative` (Athlète accompli : l'avantage, Vigilant : un bonus).
+  // L'avantage de la fiche se combine à celui demandé : ils s'annulent s'ils s'opposent, jamais ne s'empilent.
+  const initiative = ctx.sheet.initiative;
   const roll = await recordAndBuildOutcome(supabase, {
     campaignId: params.campaignId,
     entityId: check.entity.id,
     kind: "check",
     who: check.entity.name,
     what: "Initiative",
-    chips,
-    advantage: params.advantage,
+    chips: initiative.sources,
+    dice: initiative.dice,
+    advantage: combineAdvantage(params.advantage, initiative.rollState),
     dc: params.dc,
     hidden: params.hidden,
     isAdmin,

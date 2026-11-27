@@ -452,10 +452,16 @@ export interface WeaponData {
 /**
  * V3.1-169 (ADR 0077) — les propriétés d'une arme telles que les lisent
  * `when.wielding` et les étiquettes `property:` : ses propriétés, plus
- * `ranged` pour une arme à distance.
+ * `ranged` pour une arme à distance, et `melee-two-handed` pour une arme de
+ * corps à corps tenue à deux mains.
  */
-export function weaponRollProperties(weapon: Pick<WeaponData, "properties" | "isRanged">): string[] {
-  return weapon.isRanged ? [...weapon.properties, "ranged"] : [...weapon.properties];
+export function weaponRollProperties(weapon: Pick<WeaponData, "properties" | "isRanged">, grip: { twoHanded?: boolean } = {}): string[] {
+  const out = weapon.isRanged ? [...weapon.properties, "ranged"] : [...weapon.properties];
+  // ADR 0118 — « tenue à deux mains » (Armes à deux mains) : une arme de
+  // corps à corps Deux mains, ou Polyvalente quand on la prend à deux mains.
+  const deuxMains = weapon.properties.includes("two-handed") || (grip.twoHanded === true && weapon.properties.includes("versatile"));
+  if (!weapon.isRanged && deuxMains) out.push("melee-two-handed");
+  return out;
 }
 
 /**

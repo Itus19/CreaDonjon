@@ -94,6 +94,24 @@ describe("assembleCoverage", () => {
     expect(etat("draconic-sorcery-dragon-wings")).toBe("unevaluated");
     expect(etat("draconic-sorcery")).toBe("partial");
   });
+  it("une aptitude que le moteur joue en code (maîtrise des armes, choix de la sous-classe) est jouable sans bloc ; une voisine reste non évaluée", () => {
+    const lignes = assembleCoverage([
+      fiche({ key: "fighter-weapon-mastery", type: "feature" }),
+      fiche({ key: "rogue-weapon-mastery", type: "feature" }),
+      fiche({ key: "fighter-subclass", type: "feature" }),
+      fiche({ key: "wizard-subclass", type: "feature" }),
+      fiche({ key: "fighter-tactical-mind", type: "feature" }),
+      // Une lacune déclarée l'emporte : la règle reste partielle.
+      fiche({ key: "paladin-weapon-mastery", type: "feature", blocks: [{ block_type: "coverage", data: { gaps: [{ text: "x", missing: "y", brick: "other" }] } }] }),
+    ]);
+    const etat = (k: string) => lignes.find((r) => r.key === k)?.result.state;
+    expect(etat("fighter-weapon-mastery")).toBe("playable");
+    expect(etat("rogue-weapon-mastery")).toBe("playable");
+    expect(etat("fighter-subclass")).toBe("playable");
+    expect(etat("wizard-subclass")).toBe("playable");
+    expect(etat("fighter-tactical-mind")).toBe("unevaluated");
+    expect(etat("paladin-weapon-mastery")).toBe("partial");
+  });
   it("un état du moteur est jouable ; un historique est hors du compte", () => {
     expect(de("blinded").result.state).toBe("playable");
     expect(de("lore").result.state).toBe("out_of_scope");

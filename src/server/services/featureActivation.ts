@@ -28,7 +28,8 @@ import { applySignedEngineChange, readCombatParticipantsSigned, type EngineChang
 import { applyResolvedEffects, resolveTargetedRoll, targetSaveBonus } from "@/src/server/services/targetedRoll";
 import { serverRng } from "@/src/server/services/rng";
 import { actorNumbersFor } from "@/src/server/services/actorNumbers";
-import { spendTurnBudgetFor } from "@/src/server/services/turnBudgetWrite";
+import { activationLimitAllows, spendTurnBudgetFor } from "@/src/server/services/turnBudgetWrite";
+import { limitKey } from "@/src/core/rules/rollWindow";
 import { applyCastOption } from "@/src/core/rules/turnBudget";
 
 type TypedClient = SupabaseClient<Database>;
@@ -70,7 +71,9 @@ export type ActivateFeatureFailure =
   /** V3.1-181 (ADR 0078) : « une créature que vous voyez », et le lanceur ne la voit pas. */
   | "target_unseen"
   /** V3.1-183 : le consommable demandé n'est pas dans l'inventaire. */
-  | "item_not_held";
+  | "item_not_held"
+  /** Fougue : une activation « une fois par tour » déjà jouée ce tour-ci (compté en combat seulement). */
+  | "limit_reached";
 
 export interface ActivateFeatureSuccess {
   ok: true;
@@ -189,6 +192,12 @@ export async function activateFeature(
     if (!option) return { ok: false, reason: "unknown_cast_option" };
     activation = { ...found, cost: applyCastOption(found.cost, option) };
     block = { ...block, activations: block.activations.map((a) => (a.id === found.id ? activation : a)) };
+  }
+  // Fougue : « une fois par tour » au clic. Une réaction jouée par sa fenêtre (`skipBudget`) a déjà été comptée par elle.
+  const cleLimite = activation.limit && !params.skipBudget ? limitKey(params.ruleKey, activation.id) : undefined;
+  if (cleLimite && activation.limit) {
+    const permis = await activationLimitAllows(supabase, { campaignId: params.campaignId, actor: { entityId: params.entityId }, key: cleLimite, per: activation.limit.per, callerIsGm: params.callerIsGm });
+    if (!permis) return { ok: false, reason: "limit_reached" };
   }
   const variant = params.variantId ? activation.variants?.find((v) => v.id === params.variantId) : undefined;
   const effectNodes = variant ? variant.effects : activation.effects;
@@ -514,12 +523,17 @@ export async function activateFeature(
   }
 
   // V3.1-165 (ADR 0076) : le budget du tour, en combat — le coût de l'activation, et ce qu'elle accorde (Sursaut d'action).
+  // Athlète accompli : du mouvement accordé (mètres), même par une réaction dont le coût se compte ailleurs.
   const accorde = plan.plan.effects.flatMap((e) =>
-    e.action === "grant_budget" && e.who === params.entityId && (e.kind === "action" || e.kind === "bonus") ? [{ kind: e.kind, amount: e.amount, ...(e.not_magic ? { notMagic: true } : {}) }] : []
+    e.action === "grant_budget" && e.who === params.entityId && (e.kind === "action" || e.kind === "bonus" || e.kind === "movement")
+      ? [{ kind: e.kind, amount: e.amount, ...(e.not_magic ? { notMagic: true } : {}) }]
+      : []
   );
   const budget = params.skipBudget
-    ? null
-    : await spendTurnBudgetFor(supabase, { campaignId: params.campaignId, actor: { entityId: params.entityId }, kind: activation.cost.action, attacksPerAction: sheet.attacksPerAction, grants: accorde, callerIsGm: params.callerIsGm });
+    ? accorde.length > 0
+      ? await spendTurnBudgetFor(supabase, { campaignId: params.campaignId, actor: { entityId: params.entityId }, kind: "none", attacksPerAction: sheet.attacksPerAction, grants: accorde, callerIsGm: params.callerIsGm })
+      : null
+    : await spendTurnBudgetFor(supabase, { campaignId: params.campaignId, actor: { entityId: params.entityId }, kind: activation.cost.action, attacksPerAction: sheet.attacksPerAction, grants: accorde, ...(cleLimite ? { limitKey: cleLimite } : {}), callerIsGm: params.callerIsGm });
 
   // V3.1-163 (ADR 0101) : l'activation accordée a été jouée ; son jeton perd un usage, le dernier retire l'effet.
   if (jeton) await consumeGrantedToken(supabase, effetsDuPorteur, { instanceId: jeton.instanceId, bearer: params.entityId });

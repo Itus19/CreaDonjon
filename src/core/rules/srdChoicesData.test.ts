@@ -94,5 +94,9 @@ describe("les choix SRD écrits à la main", () => {
       ["gaming-set", 1, { kind: "tool", options: ["tool-dice", "tool-dragonchess", "tool-playing-cards", "tool-three-dragon-ante"] }],
     ]);
   });
-});
 
+  it("Style de combat (Guerrier 1) : un don de la catégorie Style de combat", () => {
+    const grants = RAW["fighter-fighting-style"].grants as ChoiceGrant[];
+    expect(grants.map((g) => [g.id, g.count ?? 1, g.from])).toEqual([["feat", 1, { kind: "feat", category: "fighting-style" }]]);
+  });
+});

@@ -81,7 +81,7 @@
     }
   },
   "fighter-action-surge": {
-    "_regle": "Fougue : a votre tour, une action supplementaire, hormis l'action Magie ; une utilisation (deux au niveau 17, une seule par tour) ; tout au repos court ou long. V3.1-167 : l'action accordée ne paie pas l'action Magie (not_magic).",
+    "_regle": "Fougue : a votre tour, une action supplementaire, hormis l'action Magie ; une utilisation (deux au niveau 17, une seule par tour) ; tout au repos court ou long. V3.1-167 : l'action accordee ne paie pas l'action Magie (not_magic). « Une fois par tour » : `limit`, compte au clic comme pour une reaction.",
     "resources": {
       "resources": [
         {
@@ -167,26 +167,15 @@
             }
           ],
           "variants": null,
+          "limit": {
+            "per": "turn"
+          },
           "passages": {
             "effects.0": "À votre tour, vous pouvez entreprendre une action supplémentaire"
           }
         }
       ],
       "durable_effects": []
-    },
-    "coverage": {
-      "gaps": [
-        {
-          "text": "hormis l’action Magie",
-          "missing": "Une action accordée réservée à un usage (pas l'action Magie) — chantier des actions modifiées (V3.1-136).",
-          "brick": "turn_restriction"
-        },
-        {
-          "text": "mais seulement une fois par tour",
-          "missing": "Une limite d'usage par tour — chantier « Intervenir sur un jet » (V3.1-135).",
-          "brick": "timing"
-        }
-      ]
     }
   },
   "paladin-channel-divinity": {
@@ -4093,6 +4082,153 @@
           "brick": "duration"
         }
       ]
+    }
+  },
+  "savage-attacker": {
+    "_regle": "Sauvagerie martiale (don d'origine) : une fois par tour, en touchant avec une arme, lancer deux fois les des de degats de l'arme et garder l'un ou l'autre. Reaction automatique sur son propre jet de degats : le moteur relance les des de l'arme et garde le meilleur (`reroll_weapon_dice`) ; sans des d'arme connus (un sort), rien.",
+    "activation": {
+      "activations": [
+        {
+          "id": "savage-attacker",
+          "label": {
+            "fr": "Sauvagerie martiale",
+            "en": "Savage Attacker"
+          },
+          "cost": {
+            "action": "none",
+            "resources": []
+          },
+          "targets": {
+            "kind": "self"
+          },
+          "effects": [],
+          "variants": null,
+          "trigger": {
+            "on": "roll",
+            "roll": "damage",
+            "subject": "self",
+            "when": "rolled",
+            "automatic": true
+          },
+          "roll_operations": [
+            {
+              "op": "reroll_weapon_dice"
+            }
+          ],
+          "limit": {
+            "per": "turn"
+          }
+        }
+      ],
+      "durable_effects": []
+    }
+  },
+  "fighter-tactical-mind": {
+    "_regle": "Sens tactique (Guerrier 2) : sur un test de caracteristique rate, depenser une utilisation de Second souffle pour ajouter 1d10 au test ; si le test rate malgre tout, l'utilisation n'est pas depensee (`refund_if_failed`).",
+    "activation": {
+      "activations": [
+        {
+          "id": "tactical-mind",
+          "label": {
+            "fr": "Sens tactique",
+            "en": "Tactical Mind"
+          },
+          "cost": {
+            "action": "none",
+            "resources": [
+              {
+                "key": "second-wind",
+                "amount": {
+                  "op": "num",
+                  "value": 1
+                }
+              }
+            ]
+          },
+          "targets": {
+            "kind": "self"
+          },
+          "effects": [],
+          "variants": null,
+          "trigger": {
+            "on": "roll",
+            "roll": "check",
+            "subject": "self",
+            "when": "failed"
+          },
+          "roll_operations": [
+            {
+              "op": "add_die",
+              "count": {
+                "op": "num",
+                "value": 1
+              },
+              "faces": {
+                "op": "num",
+                "value": 10
+              },
+              "sign": 1
+            }
+          ],
+          "refund_if_failed": true,
+          "passages": {
+            "cost": "vous pouvez dépenser une utilisation de Second souffle pour forcer le destin"
+          }
+        }
+      ],
+      "durable_effects": []
+    }
+  },
+  "champion-remarkable-athlete": {
+    "_regle": "Athlete accompli (Champion 3) : l'avantage a l'initiative et en Athletisme est joue par le bloc de la sous-classe (subclasses-2024.json). Aussitot apres un Coup critique (plage du personnage), une reaction sans cout accorde la moitie de la Vitesse en mouvement pour ce tour. Les attaques d'opportunite ne sont pas jouees par le moteur : rien a empecher.",
+    "activation": {
+      "activations": [
+        {
+          "id": "remarkable-athlete-move",
+          "label": {
+            "fr": "Athlète accompli : se déplacer",
+            "en": "Remarkable Athlete: move"
+          },
+          "cost": {
+            "action": "none",
+            "resources": []
+          },
+          "targets": {
+            "kind": "self"
+          },
+          "effects": [
+            {
+              "action": "grant_budget",
+              "who": "self",
+              "kind": "movement",
+              "amount": {
+                "op": "div",
+                "args": [
+                  {
+                    "op": "ref",
+                    "name": "speed"
+                  },
+                  {
+                    "op": "num",
+                    "value": 2
+                  }
+                ]
+              }
+            }
+          ],
+          "variants": null,
+          "trigger": {
+            "on": "roll",
+            "roll": "attack",
+            "subject": "self",
+            "when": "critical"
+          },
+          "passages": {
+            "effects.0": "vous pouvez vous déplacer à concurrence de la moitié de votre Vitesse sans provoquer d’attaques d’Opportunité"
+          }
+        }
+      ],
+      "durable_effects": []
     }
   }
 }

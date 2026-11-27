@@ -13,6 +13,7 @@ import {
   ABILITY_LABELS,
   SKILLS,
   SKILL_ABILITIES,
+  lightExtraAddsAbility,
   rollBonus,
   type Ability,
   type BonusDie,
@@ -25,7 +26,7 @@ import { putSceneState } from "@/src/server/repos/sceneStates";
 import { type IntentAction, type IntentTarget } from "@/src/core/rules/intent";
 import { autoSuccess, dcForTier, type CheckTier } from "@/src/core/rules/checkDifficulty";
 import type { ResolvedEffect, FiredEvent } from "@/src/core/rules/triggers";
-import { resolveCheckRoll, resolveDamageRoll, weaponAttackAbility, type AdvantageState } from "@/src/core/rules/action";
+import { flooredRng, lightExtraDamageMod, resolveCheckRoll, resolveDamageRoll, weaponAttackAbility, type AdvantageState } from "@/src/core/rules/action";
 import { rollDice } from "@/src/core/dice/roll";
 import { eventsForCheck, eventsForSave } from "@/src/core/rules/gameEvents";
 import { parseFormula } from "@/src/core/formula/parser";
@@ -64,7 +65,7 @@ import { insertSessionEvent, nextEventSeq } from "@/src/server/repos/sessions";
 import { insertDiceRoll } from "@/src/server/repos/diceRolls";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
 import { serverRng } from "@/src/server/services/rng";
-import { soloRollWindow } from "@/src/server/services/soloRollWindow";
+import { soloCritRange, soloRollWindow } from "@/src/server/services/soloRollWindow";
 import { applyRuntimeStateChange, getEntityRuntimeState } from "@/src/server/services/runtimeState";
 import { getRuntimeState } from "@/src/server/repos/runtimeState";
 import type { TargetId, IntentTargetDetail, IntentBarData, TurnRecord } from "@/lib/solo/types";
@@ -287,6 +288,16 @@ export async function buildIntentBarData(
       terms: name ? [name] : [],
     });
   });
+  // Propriété Légère : avec deux armes Légères en main, l'attaque en plus (action Bonus) avec chacune.
+  const legeres = equippedWeapons.filter((item) => {
+    const ref = itemRef(item);
+    return ref?.kind === "rule" && ctx.weaponByKey[ref.key]?.properties.includes("light") === true;
+  });
+  if (legeres.length >= 2) {
+    for (const item of legeres) {
+      actions.push({ id: item.id, kind: "weapon_attack", label: `${nameByItemId.get(item.id) || "Arme"} — attaque en plus (action Bonus)`, terms: [], lightExtra: true });
+    }
+  }
   for (const skill of SKILLS) {
     // V3.2-21 : le nom seul ne lance un jet que s'il est toute la phrase ;
     // « jet d'Histoire » le lance où qu'il soit (`explicitTerms`).
@@ -367,7 +378,7 @@ export type SansJet = { raison: "evidente" } | { raison: "automatique"; what: st
  * (`dcForTier`), et l'emporte sur `dc`.
  */
 export type IntentChoice =
-  | { kind: "weapon_attack"; actionId: string; targetId: TargetId | null; advantage: AdvantageState }
+  | { kind: "weapon_attack"; actionId: string; targetId: TargetId | null; advantage: AdvantageState; /** Combat à deux armes : l'attaque en plus d'une arme Légère. */ extra?: "light" }
   | { kind: "skill_check"; actionId: Skill; targetId: TargetId | null; advantage: AdvantageState; dc: number | null; tier?: CheckTier }
   | { kind: "ability_check"; actionId: Ability; targetId: TargetId | null; advantage: AdvantageState; dc: number | null; tier?: CheckTier }
   | { kind: "saving_throw"; actionId: Ability; targetId: TargetId | null; advantage: AdvantageState; dc: number | null; tier?: CheckTier }
@@ -743,6 +754,7 @@ export async function executeIntent(
         itemId: choice.actionId,
         critical: attack.isCritical,
         versatile: false,
+        lightExtra: choice.extra === "light",
         locale: params.locale,
       });
       if ("error" in damageRoll) return { error: damageRoll.error };
@@ -870,6 +882,10 @@ interface PendingBasis {
   what: string;
   /** V3.1-156 : dés de bonus de la fiche, lancés par le serveur à la résolution. */
   bonus_dice: { count: number; faces: number; label: string }[];
+  /** ADR 0118 : le plancher de chaque dé de dégâts (Armes à deux mains). */
+  die_min?: number;
+  /** Combat à deux armes : l'attaque en plus d'une arme Légère, transmise aux dégâts chaînés. */
+  light_extra?: boolean;
 }
 
 const desDeBonus = (dice: readonly BonusDie[]) => dice.map((d) => ({ count: d.count, faces: d.faces, label: d.label }));
@@ -903,8 +919,18 @@ function buildPendingBasis(
     // V3.1-156 (ADR 0074) : les bonus des règles du personnage, comme `rollWeaponAttack`.
     const extra = rollBonus(ctx.sheet, { roll: "attack", kind: "weapon", properties: weaponRollProperties(weapon) });
     const modifier = ctx.sheet.abilities[ability].mod + ctx.sheet.proficiencyBonus + extra.value;
-    const what = `Attaque — ${itemLabel(item)}`;
-    return { kind: "weapon_attack", action_id: choice.actionId, dc: null, die_max: 20, modifier, chips: [{ label: what, value: modifier }], what, bonus_dice: desDeBonus(extra.dice) };
+    const what = `Attaque — ${itemLabel(item)}${choice.extra === "light" ? " (attaque en plus)" : ""}`;
+    return {
+      kind: "weapon_attack",
+      action_id: choice.actionId,
+      dc: null,
+      die_max: 20,
+      modifier,
+      chips: [{ label: what, value: modifier }],
+      what,
+      bonus_dice: desDeBonus(extra.dice),
+      ...(choice.extra === "light" ? { light_extra: true } : {}),
+    };
   }
 
   if (choice.kind === "skill_check") {
@@ -956,7 +982,7 @@ function buildPendingBasis(
  * déjà fixée par l'attaque). `critical` double `die_max`, jamais le
  * modificateur (même règle que `doubleDiceCounts`, action.ts).
  */
-function buildDamageBasis(ctx: CharacterActionContext, itemId: string, critical: boolean): PendingBasis | { error: IntentErrorReason } {
+function buildDamageBasis(ctx: CharacterActionContext, itemId: string, critical: boolean, lightExtra = false): PendingBasis | { error: IntentErrorReason } {
   const item = ctx.inventoryData?.items.find((i) => i.id === itemId);
   if (!item) return { error: "item_not_found" };
   const ref = itemRef(item);
@@ -965,12 +991,17 @@ function buildDamageBasis(ctx: CharacterActionContext, itemId: string, critical:
   const ability = weaponAttackAbility(weapon.properties, weapon.isRanged, ctx.sheet.abilities.str.mod, ctx.sheet.abilities.dex.mod);
   // V3.1-156 (ADR 0074) : la Rage et les bonus de dégâts d'arme, comme `rollWeaponDamage`.
   const extra = rollBonus(ctx.sheet, { roll: "damage", kind: "weapon", ability, properties: weaponRollProperties(weapon), ...(weapon.damageType ? { damageType: weapon.damageType } : {}) });
-  const modifier = ctx.sheet.abilities[ability].mod + extra.value;
-  const what = `Dégâts — ${itemLabel(item)}`;
+  // Combat à deux armes : l'attaque en plus d'une arme Légère n'ajoute le modificateur que s'il est négatif, ou avec le don.
+  const modCarac = ctx.sheet.abilities[ability].mod;
+  const modifier = (lightExtra ? lightExtraDamageMod(modCarac, lightExtraAddsAbility(ctx.sheet)) : modCarac) + extra.value;
+  // ADR 0118 : avec de vrais dés, la personne qui joue applique le plancher elle-même ; le libellé le lui dit.
+  const plancher = extra.dieMin !== null && extra.dieMin > 1 ? extra.dieMin : null;
+  const libelle = `Dégâts — ${itemLabel(item)}${lightExtra ? " (attaque en plus)" : ""}`;
+  const what = plancher ? `${libelle} (chaque dé sous ${plancher} compte ${plancher})` : libelle;
   const dieMax = diceFormulaMax(weapon.damageDice) * (critical ? 2 : 1);
   // Les dés de bonus doublent au critique, comme les dés de l'arme.
   const bonus = desDeBonus(extra.dice).map((d) => ({ ...d, count: d.count * (critical ? 2 : 1) }));
-  return { kind: "weapon_damage", action_id: itemId, dc: null, die_max: dieMax, modifier, chips: [{ label: what, value: modifier }], what, bonus_dice: bonus };
+  return { kind: "weapon_damage", action_id: itemId, dc: null, die_max: dieMax, modifier, chips: [{ label: libelle, value: modifier }], what, bonus_dice: bonus, ...(plancher ? { die_min: plancher } : {}), ...(lightExtra ? { light_extra: true } : {}) };
 }
 
 /**
@@ -1114,7 +1145,7 @@ export async function resolveIntentRequestFromRoll(
     const ref = itemRef(item);
     const weapon = ref?.kind === "rule" ? ctx.weaponByKey[ref.key] : null;
     if (!weapon) return { error: "not_a_weapon" };
-    natural = resolveDamageRoll({ formula: weapon.damageDice, critical: pending.critical }, serverRng).total;
+    natural = resolveDamageRoll({ formula: weapon.damageDice, critical: pending.critical, dieMin: pending.die_min ?? null }, serverRng).total;
   } else {
     natural = resolveCheckRoll({ modifier: 0, advantage: pending.advantage }, serverRng).total;
   }
@@ -1155,7 +1186,8 @@ async function finishResolution(
   let bonusDice = 0;
   if (!preset) {
     for (const d of pending.bonus_dice ?? []) {
-      const r = rollDice(d.count, d.faces, serverRng);
+      // ADR 0118 : le plancher des dés de dégâts vaut aussi pour les dés de bonus de l'attaque.
+      const r = rollDice(d.count, d.faces, flooredRng(serverRng, pending.die_min));
       bonusDice += r.total;
       trace.push({ text: `${d.count}d${d.faces} ${d.label} (${r.rolls.join(", ")})`, value: r.total });
     }
@@ -1207,7 +1239,8 @@ async function finishResolution(
   }
 
   if (pending.kind === "weapon_attack") {
-    const isCritical = natural === 20;
+    // Critique amélioré (Champion) : le critique suit la plage des règles du personnage, plus seulement le 20.
+    const isCritical = natural >= (ctx ? soloCritRange(ctx, pending) : 20);
     const isCriticalFail = natural === 1;
     // Regles 2024 (`attackVerdict`) : le naturel decide avant le total.
     const verdictAttack = attackVerdict({ total, isCritical, isCriticalFail }, pending.dc);
@@ -1243,7 +1276,7 @@ async function finishResolution(
 
     let chained: PendingRequest | null = null;
     if (hit === true) {
-      const basis = ctx ? buildDamageBasis(ctx, pending.action_id, isCritical) : { error: "not_found" as const };
+      const basis = ctx ? buildDamageBasis(ctx, pending.action_id, isCritical, pending.light_extra === true) : { error: "not_found" as const };
       if (!("error" in basis)) {
         chained = {
           ...basis,

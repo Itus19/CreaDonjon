@@ -236,6 +236,9 @@ export const MODIFIER_TARGET_CATEGORY_LABELS_FR: Record<ModifierTargetCategory, 
   defense: "Défense aux dégâts",
   light: "Lumière émise",
   untargetable: "Hors d'atteinte",
+  initiative: "Initiative",
+  die_min: "Plancher des dés de dégâts",
+  light_extra: "Attaque en plus d'une arme Légère",
 };
 
 /** V3.1-155 : libellés des cibles nouvelles, quand la catégorie ne suffit pas. */
@@ -249,6 +252,8 @@ const MODIFIER_TARGET_DETAIL_FR: Record<string, string> = {
   "damage.spell": "Dégâts — sort",
   crit_range: "Critique à partir de — toute attaque",
   "crit_range.weapon": "Critique à partir de — arme",
+  "die_min.weapon": "Chaque dé de dégâts compte au moins — arme",
+  "light_extra.ability_damage": "Modificateur aux dégâts de l'attaque en plus (arme Légère)",
   attacks_per_action: "Attaques par action Attaque",
   "action_as_bonus.dash": "Foncer en action bonus",
   "action_as_bonus.disengage": "Se désengager en action bonus",

@@ -59,4 +59,11 @@ describe("la mécanique des sous-classes SRD écrite à la main", () => {
     expect(arid?.spells?.find((s) => s.key === "fireball")?.at_level).toBe(5);
     expect(land.refresh).toBe("long_rest");
   });
+
+  it("Champion, Athlète accompli : l'avantage à l'initiative et aux tests de Force (Athlétisme)", () => {
+    expect(RAW.champion.features!["Remarkable Athlete"].modifiers).toEqual([
+      { target: "initiative", op: "advantage" },
+      { target: "skill.athletics", op: "advantage" },
+    ]);
+  });
 });

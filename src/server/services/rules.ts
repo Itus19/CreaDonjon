@@ -38,6 +38,7 @@ import { blockTypesToRemove } from "@/src/core/rules/homebrewEdit";
 import { ruleEntryForPlayer } from "@/src/core/rules/ruleForReader";
 import { COVERAGE_ENTRY_TYPES, coverageSummary, type CoverageSummary } from "@/src/core/rules/activationEditor";
 import { featureDeclaredBySubclass, subclassIndexOf } from "@/src/core/rules/coverageReport";
+import { playedByEngineCode } from "@/src/core/rules/coverage";
 import { isWorldAdmin } from "@/src/server/services/permissions";
 import { houseVersionChangedBlocks, isEditableHomebrewType, zHouseVersionPayload, type HouseVersionPayload } from "@/src/core/rules/houseVersion";
 import {
@@ -1227,6 +1228,8 @@ export async function getRuleEntryForWorld(
   let coverage = (COVERAGE_ENTRY_TYPES as readonly string[]).includes(resolved.entry_type)
     ? coverageSummary(blocks.map((b) => ({ blockType: b.blockType, data: b.data })))
     : null;
+  // Une aptitude que le moteur joue en code (maîtrise des armes, choix de la sous-classe) : même verdict que le rapport.
+  if (coverage?.state === "unevaluated" && resolved.entry_type === "feature" && playedByEngineCode(entryKey)) coverage = { ...coverage, state: "playable" };
   // V3.1-139 : une aptitude de sous-classe jouée par le bloc de sa sous-classe (Affinité élémentaire) n'est pas
   // « non évaluée ». Une résolution de plus, seulement pour une aptitude de sous-classe sans brique ni lacune.
   const sousClasse = coverage?.state === "unevaluated" && resolved.entry_type === "feature" ? subclassIndexOf(entry?.source_raw) : undefined;

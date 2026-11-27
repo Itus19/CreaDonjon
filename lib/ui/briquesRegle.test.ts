@@ -419,12 +419,14 @@ describe("réactions à un jet (V3.1-161)", () => {
   });
 
   it("ne propose que les opérations et les moments qui ont un sens sur le jet visé", () => {
-    expect(operationsPermises("damage").sort()).toEqual(["add_damage", "add_die", "damage_multiplier"]);
+    expect(operationsPermises("damage").sort()).toEqual(["add_damage", "add_die", "damage_multiplier", "reroll_weapon_dice"]);
     expect(operationsPermises("save")).not.toContain("ac_bonus");
     expect(operationsPermises("attack")).toContain("ac_bonus");
     expect(momentsPermis("damage")).toEqual(["rolled"]);
     expect(momentsPermis("save")).not.toContain("hit");
     expect(momentsPermis("attack")).toContain("hit");
+    expect(momentsPermis("attack")).toContain("critical");
+    expect(momentsPermis("check")).not.toContain("critical");
   });
 
   it("changer de jet retire les opérations devenues absurdes et remet le moment d'équerre", () => {
@@ -932,6 +934,37 @@ describe("V3.1-184 : formes, invocations, regain, quantité choisie, objet conso
     expect(r.activation.activations[0].roll_operations).toEqual([{ op: "redirect" }]);
     const relu = blocsVersBrouillon([{ blockType: "activation", data: r.activation }]);
     expect(relu.activations[0].operations.map((o) => o.op)).toEqual(["redirect"]);
+  });
+
+  it("« Coût rendu si le jet rate encore » fait l'aller-retour, et ne s'écrit qu'avec le moment « raté » (Sens tactique)", () => {
+    const b = brouillonVide();
+    const a = nouvelleActivation(b);
+    a.label = "Sens tactique";
+    const rate = { ...avecDeclencheur(a, { jet: "check", sujet: "self", moment: "failed" }), rembourseSiRate: true };
+    b.activations = [rate];
+    const r = brouillonVersBlocs(b, {});
+    if (!r.ok || !r.activation) throw new Error("écriture refusée");
+    expect(r.activation.activations[0].refund_if_failed).toBe(true);
+    expect(blocsVersBrouillon([{ blockType: "activation", data: r.activation }]).activations[0].rembourseSiRate).toBe(true);
+    b.activations = [{ ...avecDeclencheur(rate, { moment: "rolled" }), rembourseSiRate: true }];
+    const r2 = brouillonVersBlocs(b, {});
+    if (!r2.ok || !r2.activation) throw new Error("écriture refusée");
+    expect(r2.activation.activations[0].refund_if_failed).toBeUndefined();
+  });
+
+  it("Relancer les dés de l'arme s'ajoute à une réaction sur des dégâts et fait l'aller-retour (Sauvagerie martiale)", () => {
+    const b = brouillonVide();
+    const a = nouvelleActivation(b);
+    a.label = "Sauvagerie martiale";
+    const avec = avecDeclencheur(a, { jet: "damage", sujet: "self", moment: "rolled" });
+    expect(operationsPermises("attack")).not.toContain("reroll_weapon_dice");
+    avec.operations = [nouvelleOperation("reroll_weapon_dice")];
+    b.activations = [avec];
+    const r = brouillonVersBlocs(b, {});
+    if (!r.ok || !r.activation) throw new Error("écriture refusée");
+    expect(r.activation.activations[0].roll_operations).toEqual([{ op: "reroll_weapon_dice" }]);
+    const relu = blocsVersBrouillon([{ blockType: "activation", data: r.activation }]);
+    expect(relu.activations[0].operations.map((o) => o.op)).toEqual(["reroll_weapon_dice"]);
   });
 });
 

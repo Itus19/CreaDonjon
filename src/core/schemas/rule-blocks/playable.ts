@@ -99,7 +99,7 @@ export const REACTION_ROLLS = ["attack", "save", "check", "d20", "damage"] as co
 /** Qui a lancé le jet, vu de celui qui réagit. `attack_against_self` : une attaque (ou ses dégâts) qui le vise. */
 export const REACTION_SUBJECTS = ["self", "attack_against_self", "ally", "enemy", "any"] as const;
 /** `rolled` : le dé est connu, l'issue pas encore. `hit`, `failed` : l'issue est connue, rien n'est appliqué. */
-export const REACTION_MOMENTS = ["rolled", "hit", "failed", "natural"] as const;
+export const REACTION_MOMENTS = ["rolled", "hit", "failed", "natural", "critical"] as const;
 
 export const zRollTrigger = z
   .object({
@@ -116,6 +116,7 @@ export const zRollTrigger = z
   .superRefine((t, ctx) => {
     if ((t.when === "natural") !== (t.natural !== undefined)) ctx.addIssue({ code: "custom", message: "« natural » va avec le moment « natural », et seulement avec lui." });
     if (t.when === "hit" && t.roll !== "attack") ctx.addIssue({ code: "custom", message: "« touché » ne se dit que d'une attaque." });
+    if (t.when === "critical" && t.roll !== "attack") ctx.addIssue({ code: "custom", message: "« coup critique » ne se dit que d'une attaque." });
     if (t.roll === "damage" && t.when !== "rolled") ctx.addIssue({ code: "custom", message: "Un jet de dégâts n'a qu'un moment : quand il est lancé." });
   });
 export type RollTrigger = z.infer<typeof zRollTrigger>;
@@ -149,6 +150,8 @@ export const zRollOperation = z.discriminatedUnion("op", [
   z.object({ op: z.literal("attacker_save"), ability: z.enum(["str", "dex", "con", "int", "wis", "cha"]), dc: zFormulaNode }),
   /** V3.1-182 (ADR 0078) : l'attaque vise désormais celui qui réagit (s'interposer). */
   z.object({ op: z.literal("redirect") }),
+  /** Sauvagerie martiale : les dés de dégâts de l'arme sont relancés, le meilleur des deux jets est gardé. */
+  z.object({ op: z.literal("reroll_weapon_dice") }),
 ]);
 export type RollOperation = z.infer<typeof zRollOperation>;
 
@@ -162,6 +165,7 @@ const OPERATION_ROLLS: Record<RollOperation["op"], readonly (typeof REACTION_ROL
   add_damage: ["damage"],
   attacker_save: ["attack"],
   redirect: ["attack"],
+  reroll_weapon_dice: ["damage"],
 };
 
 /** V3.1-159 : le refus d'une opération qui n'a pas de sens sur le jet visé (`ac_bonus` sur une sauvegarde). */
@@ -197,6 +201,8 @@ export const zActivation = z.object({
   roll_operations: z.array(zRollOperation).optional(),
   /** V3.1-159 : une fois par tour ou par round (compté en combat seulement). */
   limit: zActivationLimit.optional(),
+  /** Sens tactique : réaction à un jet raté ; si le jet rate malgré tout, son coût en ressources n'est pas dépensé. */
+  refund_if_failed: z.boolean().optional(),
   /** V3.1-164 : les options que cette aptitude offre au lancer d'un sort (Métamagie). */
   cast_options: z.array(zCastOption).optional(),
   /** V3.1-182 (ADR 0078) : une quantité choisie à l'activation (Imposition des mains) — `amount` dans les formules, de 1 à `max`. */
@@ -292,6 +298,9 @@ export const zActivationBlockData = z
     const effets = new Set(d.durable_effects.map((e) => e.id));
     const activations = new Set(d.activations.map((a) => a.id));
     for (const a of d.activations) {
+      if (a.refund_if_failed && (a.trigger?.on !== "roll" || a.trigger.when !== "failed")) {
+        ctx.addIssue({ code: "custom", message: `« ${a.id} » : « coût rendu si le jet rate encore » ne va qu'avec une réaction à un jet raté.` });
+      }
       for (const ops of [a.roll_operations ?? [], ...(a.variants ?? []).map((v) => v.roll_operations ?? [])]) {
         for (const message of rollOperationProblems(a.trigger, ops)) ctx.addIssue({ code: "custom", message: `« ${a.id} » : ${message}` });
       }

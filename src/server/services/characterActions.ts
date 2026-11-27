@@ -10,6 +10,7 @@ import type { Locale } from "@/src/i18n/request";
 import {
   ABILITIES,
   characterSheet,
+  lightExtraAddsAbility,
   resolveHpGain,
   rollBonus,
   type Ability,
@@ -30,6 +31,7 @@ import {
   resolveCheckRoll,
   resolveDamageRoll,
   combineAdvantage,
+  lightExtraDamageMod,
   weaponAttackAbility,
   type AdvantageState,
   type AttackRollResult,
@@ -499,7 +501,16 @@ export async function rollWeaponAttack(
 /** Jet de degats d'une arme equipee — `critical` vient du jet d'attaque precedent (l'appelant le sait deja). */
 export async function rollWeaponDamage(
   supabase: TypedClient,
-  params: { entityId: string; campaignId: string | null; itemId: string; critical: boolean; versatile: boolean; locale: Locale }
+  params: {
+    entityId: string;
+    campaignId: string | null;
+    itemId: string;
+    critical: boolean;
+    versatile: boolean;
+    locale: Locale;
+    /** L'attaque en plus d'une arme Légère : le modificateur ne s'ajoute que s'il est négatif, ou avec Combat à deux armes. */
+    lightExtra?: boolean;
+  }
 ): Promise<WeaponRollOutcome | { error: ActionErrorReason }> {
   const ctx = await resolveCharacterActionContext(supabase, params.entityId, params.campaignId, params.locale);
   if (!ctx) return { error: "not_found" };
@@ -512,11 +523,14 @@ export async function rollWeaponDamage(
 
   const formula = (params.versatile && weapon.versatileDamageDice) || weapon.damageDice;
   const ability = weaponAttackAbility(weapon.properties, weapon.isRanged, ctx.sheet.abilities.str.mod, ctx.sheet.abilities.dex.mod);
-  const abilityMod = ctx.sheet.abilities[ability].mod;
+  const modCarac = ctx.sheet.abilities[ability].mod;
+  const abilityMod = params.lightExtra ? lightExtraDamageMod(modCarac, lightExtraAddsAbility(ctx.sheet)) : modCarac;
   // V3.1-156 (ADR 0074) : la Rage (`damage.weapon.str`), un bonus de dégâts d'arme, des dés de bonus.
-  const extra = rollBonus(ctx.sheet, { roll: "damage", kind: "weapon", ability, properties: weaponRollProperties(weapon), ...(weapon.damageType ? { damageType: weapon.damageType } : {}) });
+  // ADR 0118 : une arme Polyvalente lancée à deux mains est « tenue à deux mains » (Armes à deux mains).
+  const properties = weaponRollProperties(weapon, { twoHanded: params.versatile && weapon.versatileDamageDice !== null });
+  const extra = rollBonus(ctx.sheet, { roll: "damage", kind: "weapon", ability, properties, ...(weapon.damageType ? { damageType: weapon.damageType } : {}) });
 
-  const damage = resolveDamageRoll({ formula, abilityMod, bonus: extra.value, bonusDice: extra.dice, critical: params.critical }, serverRng);
+  const damage = resolveDamageRoll({ formula, abilityMod, bonus: extra.value, bonusDice: extra.dice, critical: params.critical, dieMin: extra.dieMin }, serverRng);
 
   await recordRoll(supabase, params.campaignId, {
     expression: damage.expression,
@@ -526,7 +540,7 @@ export async function rollWeaponDamage(
     attribution: { entityId: ctx.entityId, kind: "damage" },
     detail: {
       who: ctx.entityName,
-      what: `Degats — ${itemLabel(item)}`,
+      what: `Degats — ${itemLabel(item)}${params.lightExtra ? " (attaque en plus)" : ""}`,
       trace: damage.trace,
       damageType: weapon.damageType,
       critical: params.critical,

@@ -729,5 +729,21 @@
         }
       }
     ]
+  },
+  "fighter-fighting-style": {
+    "_regle": "Style de combat (Guerrier 1) : un don de Style de combat au choix. Le changer en gagnant un niveau de Guerrier : en reprenant le choix sur la fiche.",
+    "grants": [
+      {
+        "id": "feat",
+        "label": {
+          "fr": "Don de Style de combat",
+          "en": "Fighting Style feat"
+        },
+        "from": {
+          "kind": "feat",
+          "category": "fighting-style"
+        }
+      }
+    ]
   }
 }

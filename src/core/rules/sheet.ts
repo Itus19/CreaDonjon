@@ -390,6 +390,8 @@ export interface DerivedSheet {
   skills: Record<Skill, SkillResult>;
   /** V3.1-178 : Perception, Intuition et Investigation passives. */
   passives: Record<PassiveSkill, PassiveResult>;
+  /** L'initiative : un test de Dextérité, plus ce qu'une règle pose sur `initiative` (Athlète accompli : l'avantage). */
+  initiative: AbilityCheckResult;
   hitPoints: { max: number; hitDice: string; sources: Source[] };
   speed: { value: number; sources: Source[] };
   features: ResolvedFeature[];
@@ -727,6 +729,8 @@ export interface RollBonusResult {
   rollState: RollState;
   /** Le plus petit d20 naturel qui fait un critique (20 par défaut, 19 pour le Critique amélioré). */
   critRange: number;
+  /** ADR 0118 — chaque dé de dégâts compte au moins cette valeur (Armes à deux mains : 3), `null` sans plancher. */
+  dieMin: number | null;
 }
 
 /**
@@ -756,7 +760,23 @@ export function rollBonus(sheet: Pick<DerivedSheet, "rollModifiers">, q: RollQue
     sources,
     rollState: q.roll === "attack" ? resolveRollState("roll", matched) : "normal",
     critRange: Math.min(20, ...crits),
+    dieMin: damageDieMin(sheet.rollModifiers, q),
   };
+}
+
+/** Combat à deux armes : le modificateur de caractéristique s'ajoute-t-il aux dégâts de l'attaque en plus d'une arme Légère ? */
+export function lightExtraAddsAbility(sheet: Pick<DerivedSheet, "rollModifiers">): boolean {
+  return sheet.rollModifiers.some((m) => m.target === "light_extra.ability_damage" && m.op === "set" && (m.value ?? 0) > 0);
+}
+
+/** Le plancher des dés de dégâts : le plus haut `die_min.<genre>` posé, si l'arme du jet satisfait sa condition. */
+function damageDieMin(modifiers: readonly Modifier[], q: RollQuery): number | null {
+  if (q.roll !== "damage") return null;
+  const planchers = modifiers
+    .filter((m) => (m.target === "die_min" || m.target === `die_min.${q.kind}`) && m.op === "set" && m.value !== undefined)
+    .filter((m) => !m.when?.wielding || wieldingAllows(m.when.wielding, q.properties ?? []))
+    .map((m) => m.value!);
+  return planchers.length > 0 ? Math.max(...planchers) : null;
 }
 
 export function characterSheet(
@@ -946,6 +966,18 @@ export function characterSheet(
     passives[skill] = { value, rollState, sources };
   }
 
+  // L'initiative est un test de Dextérité (règles 2024) : il part de ce test (Touche-à-tout compris),
+  // puis prend les bonus posés sur `initiative` ; l'avantage de l'un ou de l'autre compte.
+  const testDex = abilityChecks.dex;
+  const { value: initiativeMod, sources: initiativeSources } = stackOnto("initiative", allModifiers, testDex.mod, testDex.sources);
+  const initiative: AbilityCheckResult = {
+    mod: initiativeMod,
+    halfProficiency: testDex.halfProficiency,
+    rollState: resolveRollState(["initiative", "check.dex"], allModifiers),
+    sources: initiativeSources,
+    dice: collectDice(["initiative", "check.dex", "check"], allModifiers),
+  };
+
   const hitPoints = computeHitPoints(build, ruleset, abilities.con.mod, allModifiers);
   const speed = resolveTargetStack("speed", allModifiers, 30, "Vitesse de base");
 
@@ -970,7 +1002,7 @@ export function characterSheet(
     }
   }
   // V3.1-168 : un modificateur conditionné par l'arme tenue ne vaut que pour les jets (lu par `rollBonus`).
-  const rollModifiers = allModifiers.filter((m) => /^(attack|damage|crit_range)(\.|$)/.test(m.target));
+  const rollModifiers = allModifiers.filter((m) => /^(attack|damage|crit_range|die_min|light_extra)(\.|$)/.test(m.target));
   // V3.1-168 (ADR 0077) : résistances, vulnérabilités, immunités aux types de dégâts (la Rage en pose pendant qu'elle dure).
   const defensesDe = (prefixe: string) => [...new Set(allModifiers.filter((m) => m.target.startsWith(prefixe) && (m.value ?? 1) > 0).map((m) => m.target.slice(prefixe.length)))].sort();
   // `immune.spell.<clé>` est une immunité à un SORT (M15, plus bas), pas à un type de dégâts.
@@ -1034,7 +1066,7 @@ export function characterSheet(
   const resources = computeResources({ build, ruleset, features, equipment, abilities, proficiencyBonus, totalLevel, spellSaveDc: spellcasting?.saveDc, warnings });
 
   return {
-    abilities, proficiencyBonus, ac, savingThrows, abilityChecks, skills, passives, hitPoints, speed, features, spellcasting, grantedSpells, resources, warnings, encumbrance,
+    abilities, proficiencyBonus, ac, savingThrows, abilityChecks, skills, passives, initiative, hitPoints, speed, features, spellcasting, grantedSpells, resources, warnings, encumbrance,
     senses, speeds, grantedProficiencies, rollModifiers, attacksPerAction, bonusActionOptions, damageDefenses, light, untargetable, immuneSpells,
   };
 }

@@ -194,6 +194,7 @@ export async function answerSaveRequest(
       locale: params.locale,
     });
     const r = await interveneOnRoll(supabase, {
+        callerIsGm: false,
       campaignId: request.campaign_id,
       combat,
       roll: { kind: "save", roller: request.target_entity_id, target: null, natural, total, critRange: 20, ac: null, dc: request.dc, acBonus: 0, damage: null },

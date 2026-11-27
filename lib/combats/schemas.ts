@@ -116,7 +116,8 @@ export const targetedRollSchema = z.object({
     z.object({ kind: z.literal("participant"), participantId: z.string().uuid() }),
   ]),
   action: z.discriminatedUnion("kind", [
-    z.object({ kind: z.literal("weapon"), itemId: z.string().min(1).max(200) }),
+    // Combat à deux armes : `extra: "light"`, l'attaque en plus d'une arme Légère (action Bonus).
+    z.object({ kind: z.literal("weapon"), itemId: z.string().min(1).max(200), extra: z.literal("light").optional() }),
     z.object({ kind: z.literal("spell"), spellKey: z.string().min(1).max(200), slotLevel: z.number().int().min(0).max(9) }),
     z.object({ kind: z.literal("monster_action"), name: z.string().min(1).max(200) }),
   ]),
@@ -145,7 +146,7 @@ export const playerTargetedRollSchema = z
       z.object({ kind: z.literal("participant"), participantId: z.string().uuid() }).strict(),
     ]),
     action: z.discriminatedUnion("kind", [
-      z.object({ kind: z.literal("weapon"), itemId: z.string().min(1).max(200) }).strict(),
+      z.object({ kind: z.literal("weapon"), itemId: z.string().min(1).max(200), extra: z.literal("light").optional() }).strict(),
       z.object({ kind: z.literal("spell"), spellKey: z.string().min(1).max(200), slotLevel: z.number().int().min(0).max(9) }).strict(),
       z.object({ kind: z.literal("monster_action"), name: z.string().min(1).max(200) }).strict(),
     ]),

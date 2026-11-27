@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveAttackRoll, resolveCheckRoll, resolveDamageRoll, weaponAttackAbilityMod } from "./action";
+import { resolveAttackRoll, resolveCheckRoll, resolveDamageRoll, weaponAttackAbilityMod, weaponDiceForRoll } from "./action";
 
 // Meme convention que src/core/formula/evaluate.test.ts : un RNG factice a
 // sequence fixe. nextInt(20) renvoie une valeur 0-indexee, +1 donne la face
@@ -115,7 +115,28 @@ describe("resolveCheckRoll", () => {
   });
 });
 
+describe("weaponDiceForRoll (le naturel des dégâts du solo)", () => {
+  it("1d8 : un dé, deux au critique (borne haute doublée) ; une formule composée : rien ; illisible : une erreur", () => {
+    expect(weaponDiceForRoll("1d8", 8, 5)).toEqual({ count: 1, faces: 8, sum: 5 });
+    expect(weaponDiceForRoll("1d8", 16, 11)).toEqual({ count: 2, faces: 8, sum: 11 });
+    expect(weaponDiceForRoll("1d6+1d4", 10, 6)).toBeNull();
+    expect(() => weaponDiceForRoll("n'importe quoi", 10, 6)).toThrow();
+  });
+});
+
 describe("resolveDamageRoll", () => {
+  it("les dés de l'arme seuls, pour Sauvagerie martiale : nombre, faces et somme, hors dés de bonus et modificateur", () => {
+    const rng = sequenceRng([4, 2]); // 1d6 -> 5, puis le d4 de bonus -> 3
+    const result = resolveDamageRoll({ formula: "1d6", abilityMod: 1, bonusDice: [{ count: 1, faces: 4, label: "Bénédiction", source: "test:benediction" }], critical: false }, rng);
+    expect(result.total).toBe(9);
+    expect(result.weaponDice).toEqual({ count: 1, faces: 6, sum: 5 });
+  });
+
+  it("au critique, les dés de l'arme doublés ; une formule composée n'en donne pas", () => {
+    expect(resolveDamageRoll({ formula: "1d8", abilityMod: 3, critical: true }, sequenceRng([0, 7])).weaponDice).toEqual({ count: 2, faces: 8, sum: 9 });
+    expect(resolveDamageRoll({ formula: "1d6+1d4", critical: false }, sequenceRng([0, 0])).weaponDice).toBeUndefined();
+  });
+
   it("formule simple + modificateur de caracteristique", () => {
     const rng = sequenceRng([4]); // 1d6 -> 5
     const result = resolveDamageRoll({ formula: "1d6", abilityMod: 1, critical: false }, rng);

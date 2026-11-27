@@ -39,6 +39,7 @@ const MESSAGES: Record<ActivateFeatureFailure, string> = {
   target_unseen: "Le lanceur ne voit pas cette cible.",
   amount_out_of_range: "Choisis une quantité entre 1 et le maximum permis.",
   item_not_held: "L'objet à consommer n'est pas dans l'inventaire.",
+  limit_reached: "Déjà utilisée ce tour-ci : une seule fois par tour.",
 };
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {

@@ -271,5 +271,58 @@
         "value": 9
       }
     ]
+  },
+  "archery": {
+    "_regle": "Archerie (don de Style de combat) : +2 aux jets d'attaque effectues avec des armes a distance (`when.wielding` : l'arme du jet).",
+    "modifiers": [
+      {
+        "target": "attack.weapon",
+        "op": "add",
+        "value": 2,
+        "when": {
+          "wielding": "ranged"
+        }
+      }
+    ]
+  },
+  "great-weapon-fighting": {
+    "_regle": "Armes a deux mains (don de Style de combat) : aux degats d'une arme de corps a corps tenue a deux mains (Deux mains, ou Polyvalente prise a deux mains), chaque de de degats compte au moins 3 (`die_min.weapon`, `when.wielding` : `melee-two-handed`). Les des de bonus de l'attaque aussi.",
+    "modifiers": [
+      {
+        "target": "die_min.weapon",
+        "op": "set",
+        "value": 3,
+        "when": {
+          "wielding": "melee-two-handed"
+        }
+      }
+    ]
+  },
+  "two-weapon-fighting": {
+    "_regle": "Combat a deux armes (don de Style de combat) : le modificateur de caracteristique s'ajoute aux degats de l'attaque en plus d'une arme Legere (`light_extra.ability_damage`). L'attaque en plus elle-meme (propriete Legere : action Bonus apres une attaque Legere, une fois par tour) est jouee par le moteur.",
+    "modifiers": [
+      {
+        "target": "light_extra.ability_damage",
+        "op": "set",
+        "value": 1
+      }
+    ]
+  },
+  "defense": {
+    "_regle": "Defense (don de Style de combat) : +1 a la CA tant qu'on porte une armure legere, intermediaire ou lourde (`when.armor`).",
+    "modifiers": [
+      {
+        "target": "ac",
+        "op": "add",
+        "value": 1,
+        "when": {
+          "armor": [
+            "light",
+            "medium",
+            "heavy"
+          ]
+        }
+      }
+    ]
   }
 }

@@ -84,23 +84,24 @@ async function getMonsterCombatStats(
   return { ac: data.armor_class, hpMax: data.hit_points, dexMod: abilityModifier(data.abilities.dex) };
 }
 
-async function dexModifierForParticipant(
+async function initiativeForParticipant(
   supabase: TypedClient,
   participant: CombatParticipantRow,
   campaignId: string,
   locale: Locale
-): Promise<number> {
+): Promise<{ mod: number; advantage: "normal" | "advantage" | "disadvantage" }> {
   if (participant.source_kind === "entity" && participant.entity_id) {
     const ctx = await resolveCharacterActionContext(supabase, participant.entity_id, campaignId, locale);
-    return ctx?.sheet.abilities.dex.mod ?? 0;
+    // L'initiative de la fiche : la Dextérité, plus ce que ses règles posent sur `initiative` (Athlète accompli : l'avantage).
+    return ctx ? { mod: ctx.sheet.initiative.mod, advantage: ctx.sheet.initiative.rollState } : { mod: 0, advantage: "normal" };
   }
   if (participant.source_kind === "statblock" && participant.rule_key) {
     const campaign = await getCampaign(supabase, campaignId);
-    if (!campaign) return 0;
+    if (!campaign) return { mod: 0, advantage: "normal" };
     const stats = await getMonsterCombatStats(supabase, campaign.rulesetId, participant.rule_key);
-    return stats?.dexMod ?? 0;
+    return { mod: stats?.dexMod ?? 0, advantage: "normal" };
   }
-  return 0; // saisie libre (piege...) : le MJ fixe l'initiative a la main.
+  return { mod: 0, advantage: "normal" }; // saisie libre (piege...) : le MJ fixe l'initiative a la main.
 }
 
 export type ParticipantCharacteristics =
@@ -375,8 +376,8 @@ export async function rollParticipantInitiative(
 ): Promise<CombatParticipantRow | null> {
   const participant = await getCombatParticipantById(supabase, params.participantId);
   if (!participant) return null;
-  const dexMod = await dexModifierForParticipant(supabase, participant, params.campaignId, params.locale);
-  return updateCombatParticipant(supabase, participant.id, { initiative: rollInitiative(dexMod, params.rng) });
+  const init = await initiativeForParticipant(supabase, participant, params.campaignId, params.locale);
+  return updateCombatParticipant(supabase, participant.id, { initiative: rollInitiative(init.mod, params.rng, init.advantage) });
 }
 
 /**
@@ -402,10 +403,10 @@ export async function rollAllInitiatives(
 ): Promise<CombatParticipantRow[]> {
   const participants = await listCombatParticipants(supabase, params.combatId);
 
-  const dexMods = await Promise.all(
-    participants.map((p) => dexModifierForParticipant(supabase, p, params.campaignId, params.locale))
+  const inits = await Promise.all(
+    participants.map((p) => initiativeForParticipant(supabase, p, params.campaignId, params.locale))
   );
-  const initiatives = participants.map((_, i) => rollInitiative(dexMods[i], params.rng));
+  const initiatives = participants.map((_, i) => rollInitiative(inits[i]!.mod, params.rng, inits[i]!.advantage));
 
   return Promise.all(
     participants.map((p, i) => updateCombatParticipant(supabase, p.id, { initiative: initiatives[i] }))

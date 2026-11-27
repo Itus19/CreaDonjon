@@ -3,7 +3,9 @@ import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
 import type { Locale } from "@/src/i18n/request";
-import { applyRollOperations, recordUse } from "@/src/core/rules/rollWindow";
+import { applyRollOperations, recordUse, stillFailed } from "@/src/core/rules/rollWindow";
+import { applyRuntimeStateChange, getEntityRuntimeState } from "@/src/server/services/runtimeState";
+import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
 import { targetedRollSchema } from "@/lib/combats/schemas";
 import { answerRollWindowRow, closeRollWindowRow, getRollWindow, type RollWindowRow } from "@/src/server/repos/rollWindows";
 import { updateCombatParticipant } from "@/src/server/repos/combats";
@@ -110,8 +112,11 @@ export async function resumeRollWindow(supabase: TypedClient, params: { windowId
 
   // Les réactions utilisées, dans l'ordre de la fenêtre (auteur, cible, autres).
   const used = [];
+  // Sens tactique : les usages d'avant la réaction, pour les rendre si le jet rate encore.
+  const avantRemboursable = new Map<string, Record<string, number>>();
   for (const [i, c] of state.choices.entries()) {
     if (answers[String(i)]?.use !== true) continue;
+    if (c.refundIfFailed && !avantRemboursable.has(c.actorId)) avantRemboursable.set(c.actorId, { ...(await getEntityRuntimeState(supabase, c.actorId, params.campaignId)).resources });
     // Jouée comme une activation : coûts, ressources, effets, journal. Un refus (ressource épuisée entre-temps) l'écarte.
     const played = await activateFeature(supabase, {
       entityId: c.actorId,
@@ -139,6 +144,24 @@ export async function resumeRollWindow(supabase: TypedClient, params: { windowId
 
   const { roll } = applyRollOperations(state.roll, used.map((c) => ({ actorId: c.actorId, operations: c.operations, numbers: c.numbers })), serverRng);
   const preset = { natural: roll.natural, total: roll.total };
+
+  // Sens tactique : « si le test rate malgré tout, cette utilisation n'est pas dépensée ».
+  if (stillFailed(roll)) {
+    for (const c of used) {
+      const avant = c.refundIfFailed ? avantRemboursable.get(c.actorId) : undefined;
+      if (!avant) continue;
+      await applyRuntimeStateChange(supabase, {
+        entityId: c.actorId,
+        campaignId: params.campaignId,
+        patch: { resources: avant },
+        note: `Réaction sans effet (${c.ruleKey}) : le jet rate encore, l'utilisation est rendue`,
+        sessionId: await getOrOpenSessionForCampaign(supabase, params.campaignId),
+        actor: "player",
+        actorUserId: params.callerId,
+      });
+      avantRemboursable.delete(c.actorId);
+    }
+  }
 
   if (state.origin === "save_request") {
     const r = zResumeSave.parse(state.resume);

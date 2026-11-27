@@ -1,8 +1,8 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
-import { EMPTY_TURN_USAGE, zTurnUsage } from "@/src/core/rules/rollWindow";
-import { budgetForTurn, grantTurnBudget, ownTurnStamp, spendMovement, spendTurnBudget, type TurnBudget, type TurnSpend } from "@/src/core/rules/turnBudget";
+import { EMPTY_TURN_USAGE, limitAllows, turnStamp, zTurnUsage, type TurnUsage } from "@/src/core/rules/rollWindow";
+import { budgetForTurn, grantTurnBudget, ownTurnStamp, spendLightExtraAttack, spendMovement, spendTurnBudget, type TurnBudget, type TurnSpend } from "@/src/core/rules/turnBudget";
 import { getActiveCombatForCampaign, listCombatParticipants, updateCombatParticipant } from "@/src/server/repos/combats";
 import { orderParticipants } from "@/src/server/services/combats";
 import { applySignedEngineChange, readCombatParticipantsSigned } from "@/src/server/services/engineSigning";
@@ -23,15 +23,54 @@ export async function spendTurnBudgetFor(
     actor: { entityId: string } | { participantId: string };
     kind: TurnSpend;
     attacksPerAction: number;
-    grants?: readonly { kind: "action" | "bonus"; amount: number; notMagic?: boolean }[];
+    grants?: readonly { kind: "action" | "bonus" | "movement"; amount: number; notMagic?: boolean }[];
+    /** Une activation limitée (« une fois par tour ») : son usage est daté du tour en cours, dans la même écriture. */
+    limitKey?: string;
+    /** Propriété Légère : `weapon`, une attaque faite avec une arme Légère (elle ouvre l'attaque en plus) ; `extra`, cette attaque en plus (une action Bonus, `kind` ignoré). */
+    light?: "weapon" | "extra";
     callerIsGm: boolean;
   },
 ): Promise<{ over: boolean; budget: TurnBudget } | null> {
-  return updateTurnBudgetFor(supabase, params, (initial) => {
-    let budget = initial;
-    for (const g of params.grants ?? []) budget = grantTurnBudget(budget, g);
-    return spendTurnBudget(budget, params.kind, params.attacksPerAction);
-  });
+  return updateTurnBudgetFor(
+    supabase,
+    params,
+    (initial) => {
+      let budget = initial;
+      for (const g of params.grants ?? []) budget = grantTurnBudget(budget, g);
+      if (params.light === "extra") return spendLightExtraAttack(budget);
+      return spendTurnBudget(budget, params.kind, params.attacksPerAction, { lightWeapon: params.light === "weapon" });
+    },
+    params.limitKey,
+  );
+}
+
+/**
+ * Fougue (« une fois par tour ») — une activation au clic limitée par tour ou
+ * par round : la limite tient-elle encore ? Hors combat, ou si l'acteur n'y est
+ * pas, rien n'est compté : `true`. Même compte que les réactions (`turn_usage.once`).
+ */
+export async function activationLimitAllows(
+  supabase: TypedClient,
+  params: { campaignId: string; actor: { entityId: string }; key: string; per: "turn" | "round"; callerIsGm: boolean },
+): Promise<boolean> {
+  const lu = await readTurnUsage(supabase, params);
+  if (!lu) return true;
+  return limitAllows(lu.usage, params.key, params.per, lu.stamp);
+}
+
+async function readTurnUsage(
+  supabase: TypedClient,
+  params: { campaignId: string; actor: { entityId: string } | { participantId: string }; callerIsGm: boolean },
+): Promise<{ usage: TurnUsage; stamp: string } | null> {
+  const combat = await getActiveCombatForCampaign(supabase, params.campaignId);
+  if (!combat || combat.status !== "running") return null;
+  const participants = params.callerIsGm
+    ? await listCombatParticipants(supabase, combat.id)
+    : await readCombatParticipantsSigned(supabase, { campaignId: params.campaignId, combatId: combat.id });
+  const row = participants.find((p) => ("entityId" in params.actor ? p.entity_id === params.actor.entityId : p.id === params.actor.participantId));
+  if (!row) return null;
+  const lu = zTurnUsage.safeParse(row.turn_usage);
+  return { usage: lu.success ? lu.data : EMPTY_TURN_USAGE, stamp: turnStamp(combat.round, combat.turn_index) };
 }
 
 /**
@@ -58,6 +97,7 @@ async function updateTurnBudgetFor(
   supabase: TypedClient,
   params: { campaignId: string; actor: { entityId: string } | { participantId: string }; callerIsGm: boolean },
   transform: (budget: TurnBudget, ctx: { ownTurn: boolean }) => { budget: TurnBudget; over: boolean } | null,
+  limitKey?: string,
 ): Promise<{ over: boolean; budget: TurnBudget } | null> {
   const combat = await getActiveCombatForCampaign(supabase, params.campaignId);
   if (!combat || combat.status !== "running") return null;
@@ -73,7 +113,7 @@ async function updateTurnBudgetFor(
   const budget = budgetForTurn(usage.budget, ownTurnStamp({ round: combat.round, turnIndex: combat.turn_index }, ownIndex));
   const spent = transform(budget, { ownTurn: combat.turn_index === ownIndex });
   if (!spent) return null;
-  const next = { ...usage, budget: spent.budget };
+  const next = { ...usage, budget: spent.budget, ...(limitKey ? { once: { ...usage.once, [limitKey]: turnStamp(combat.round, combat.turn_index) } } : {}) };
   if (params.callerIsGm) await updateCombatParticipant(supabase, row.id, { turnUsage: next as unknown as Json });
   else await applySignedEngineChange(supabase, { campaignId: params.campaignId, changes: [{ kind: "turn_usage", id: row.id, turn_usage: next }] });
   return spent;

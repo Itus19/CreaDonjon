@@ -23,6 +23,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     itemId: body.itemId,
     critical: body.critical,
     versatile: body.versatile,
+    lightExtra: body.lightExtra,
     locale,
   });
 

@@ -13,9 +13,15 @@ export function abilityModifier(score: number): number {
   return Math.floor((score - 10) / 2);
 }
 
-/** d20 + modificateur de Dexterite — jamais Math.random() (CLAUDE.md regle 6), le RNG est fourni par l'appelant (serverRng cote route). */
-export function rollInitiative(dexModifier: number, rng: Rng): number {
-  return rng.nextInt(20) + 1 + dexModifier;
+/**
+ * d20 + modificateur d'initiative — jamais Math.random() (CLAUDE.md regle 6), le RNG est fourni par l'appelant (serverRng cote route).
+ * Avec l'avantage ou le désavantage (Athlète accompli), deux d20 : le meilleur ou le pire. Sans, un seul dé est tiré.
+ */
+export function rollInitiative(modifier: number, rng: Rng, advantage: "normal" | "advantage" | "disadvantage" = "normal"): number {
+  const premier = rng.nextInt(20) + 1;
+  if (advantage === "normal") return premier + modifier;
+  const second = rng.nextInt(20) + 1;
+  return (advantage === "advantage" ? Math.max(premier, second) : Math.min(premier, second)) + modifier;
 }
 
 /** Bornes d'une initiative écrite par un joueur (V3.1-103) — les mêmes que `public.set_own_initiative`, qui les revérifie. */

@@ -822,14 +822,25 @@ export async function resolveTargetedRoll(
     // V3.1-165 (ADR 0076) : une attaque d'arme ou de monstre se paie sur l'action Attaque (la première l'ouvre,
     // Attaque supplémentaire en donne d'autres) ; jamais à la reprise d'une fenêtre, déjà payée au premier passage.
     if (!params.preset) {
+      // Combat à deux armes : l'attaque en plus d'une arme Légère se paie en action Bonus, après une attaque Légère.
+      const enPlus = action.kind === "weapon" && action.extra === "light";
+      const legere = armeDuJet?.properties.includes("light") === true;
       const budget = await spendTurnBudgetFor(supabase, {
         campaignId: params.campaignId,
         actor: ctx ? { entityId: ctx.entityId } : { participantId: actorParticipant?.id ?? "" },
         kind: "attack",
         attacksPerAction: ctx?.sheet.attacksPerAction ?? 1,
+        ...(enPlus ? { light: "extra" as const } : legere ? { light: "weapon" as const } : {}),
         callerIsGm: !joueur,
       });
-      if (budget?.over) hintsBefore.push(`${actorName} n'a plus d'attaque ce tour : le MJ tranche.`);
+      if (budget?.over) {
+        hintsBefore.push(
+          enPlus
+            ? `${actorName} : l'attaque en plus suit une attaque avec une arme Légère, une fois par tour, en action Bonus. Le MJ tranche.`
+            : `${actorName} n'a plus d'attaque ce tour : le MJ tranche.`
+        );
+      }
+      if (enPlus && !legere) hintsBefore.push(`${actorName} : l'attaque en plus se fait avec une arme Légère. Le MJ tranche.`);
     }
     // V3.1-160 (ADR 0075) : le d20 est connu, rien n'est appliqué — quelqu'un peut-il réagir ?
     if (!params.preset && target.ac !== null) {
@@ -861,6 +872,7 @@ export async function resolveTargetedRoll(
         roll.rollerSaves = bonus;
       }
       const r = await interveneOnRoll(supabase, {
+        callerIsGm: params.callerIsGm ?? true,
         campaignId: params.campaignId,
         combat,
         roll,
@@ -945,14 +957,17 @@ export async function resolveTargetedRoll(
   } else if (input.kind === "damage") {
     let total: number;
     let damageType: string | undefined;
+    // Sauvagerie martiale : les dés de l'arme seuls, quand le serveur vient de les lancer.
+    let weaponDice: { count: number; faces: number; sum: number; min?: number } | undefined;
     if (params.preset?.damage) {
       total = params.preset.damage.total;
       damageType = params.preset.damage.type;
     } else if (action.kind === "weapon" && ctx) {
-      const rolled = await rollWeaponDamage(supabase, { entityId: ctx.entityId, campaignId: params.campaignId, itemId: action.itemId, critical: critique, versatile: false, locale: params.locale });
+      const rolled = await rollWeaponDamage(supabase, { entityId: ctx.entityId, campaignId: params.campaignId, itemId: action.itemId, critical: critique, versatile: false, lightExtra: action.extra === "light", locale: params.locale });
       if ("error" in rolled) return { ok: false, reason: rolled.error };
       if (!rolled.damage) return { ok: false, reason: "not_a_weapon" };
       total = rolled.damage.total;
+      weaponDice = rolled.damage.weaponDice;
       shown.push(rolled.damage);
     } else if (action.kind === "monster_action" && monsterAction?.damage && monsterAction.damage.length > 0) {
       total = 0;
@@ -978,11 +993,12 @@ export async function resolveTargetedRoll(
         ac: null,
         dc: null,
         acBonus: 0,
-        damage: { base: total, multiplier: 1 },
+        damage: { base: total, multiplier: 1, ...(weaponDice ? { weaponDice } : {}) },
         ...(armeDuJet ? { weaponProperties: armeDuJet.properties } : {}),
       };
       const pool = await reactorPool();
       const r = await interveneOnRoll(supabase, {
+        callerIsGm: params.callerIsGm ?? true,
         campaignId: params.campaignId,
         combat,
         roll,

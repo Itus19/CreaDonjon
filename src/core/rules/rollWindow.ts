@@ -41,8 +41,12 @@ export interface PendingRoll {
   dc: number | null;
   /** Bonus de CA contre ce jet seulement (Bouclier). */
   acBonus: number;
-  /** Dégâts : la somme lancée, puis le facteur (Esquive instinctive : ½), arrondi à l'inférieur. */
-  damage: { base: number; multiplier: number } | null;
+  /**
+   * Dégâts : la somme lancée, puis le facteur (Esquive instinctive : ½), arrondi à l'inférieur.
+   * `weaponDice` : les dés de l'arme seuls (doublés au critique) et leur somme, quand le jet vient d'une arme
+   * à formule simple (`1d8`) ; Sauvagerie martiale les relance. Absent : un sort, une formule composée, un monstre.
+   */
+  damage: { base: number; multiplier: number; weaponDice?: { count: number; faces: number; sum: number; min?: number } } | null;
   /** V3.1-207 : les bonus de sauvegarde de l'auteur du jet, quand une réaction lui en impose une (`attacker_save`). Absent : +0. */
   rollerSaves?: Partial<Record<"str" | "dex" | "con" | "int" | "wis" | "cha", number>>;
   /** V3.1-207 : l'attaque rate quoi qu'en dise le dé (sauvegarde de l'assaillant ratée). */
@@ -88,8 +92,8 @@ export function limitKey(ruleKey: string, activationId: string): string {
   return `${ruleKey}:${activationId}`;
 }
 
-/** La limite tient-elle encore ? `stamp` null : hors combat, rien n'est compté. */
-function limitAllows(usage: TurnUsage, key: string, per: "turn" | "round", stamp: string | null): boolean {
+/** La limite tient-elle encore ? `stamp` null : hors combat, rien n'est compté. Partagée par les réactions et, depuis Fougue, par les activations au clic. */
+export function limitAllows(usage: TurnUsage, key: string, per: "turn" | "round", stamp: string | null): boolean {
   if (stamp === null) return true;
   const last = usage.once[key];
   if (last === undefined) return true;
@@ -190,6 +194,9 @@ function momentMatches(trigger: RollTrigger, roll: PendingRoll): boolean {
       return outcome === "miss" || outcome === "failure";
     case "natural":
       return roll.natural !== null && roll.natural === trigger.natural;
+    // Athlète accompli : un critique selon la plage de l'attaquant (19 au Champion) ; une attaque ratée d'office n'en est pas un.
+    case "critical":
+      return roll.kind === "attack" && roll.natural !== null && roll.natural >= roll.critRange && roll.forcedMiss !== true;
   }
 }
 
@@ -261,6 +268,8 @@ export function eligibleReactions(p: {
     if (seen.has(id)) continue;
     if (!rollMatches(t, p.roll.kind) || !subjectMatches(t, p.roll, c.actorId, p.teams) || !momentMatches(t, p.roll)) continue;
     if (c.activation.when?.wielding !== undefined && !wieldingAllows(c.activation.when.wielding, p.roll.weaponProperties)) continue;
+    // Relancer les dés de l'arme n'a de sens que si le jet les connaît : sinon, ni proposée ni comptée (Sauvagerie martiale sur un sort).
+    if ((c.activation.roll_operations ?? []).some((o) => o.op === "reroll_weapon_dice") && !p.roll.damage?.weaponDice) continue;
     if (t.range && !withinRange(p.positions?.[c.actorId], p.positions?.[p.roll.roller], t.range.value)) continue;
     const numbers = p.ctx.actors[c.actorId]?.numbers ?? {};
     if (!requirementMet(c.activation, p.ctx, c.actorId, p.rng)) continue;
@@ -361,6 +370,17 @@ export function applyRollOperations(start: PendingRoll, applications: readonly R
           steps.push({ actorId: a.actorId, op: op.op, value: r.value, dice: [] });
           break;
         }
+        case "reroll_weapon_dice": {
+          const armes = roll.damage?.weaponDice;
+          if (!roll.damage || !armes) break;
+          // Le plancher du premier jet vaut aussi pour la relance (Armes à deux mains : les 1 et 2 comptent 3).
+          const dice = Array.from({ length: armes.count }, () => Math.max(rollDie(armes.faces, rng), armes.min ?? 1));
+          const sum = dice.reduce((x, y) => x + y, 0);
+          // « Utiliser l'un ou l'autre résultat » : le moteur garde le meilleur, il n'y a rien à préférer au moins bon.
+          if (sum > armes.sum) roll = withDamageTotal({ ...roll, damage: { ...roll.damage, base: roll.damage.base + sum - armes.sum, weaponDice: { ...armes, sum } } });
+          steps.push({ actorId: a.actorId, op: op.op, value: sum, dice });
+          break;
+        }
         case "redirect": {
           // V3.1-182 : celui qui réagit prend l'attaque pour lui (la CA reste celle que le service relira à la reprise).
           roll = { ...roll, target: a.actorId };
@@ -382,6 +402,16 @@ export function applyRollOperations(start: PendingRoll, applications: readonly R
   return { roll, steps };
 }
 
+/**
+ * Sens tactique — après les réactions, le jet rate-t-il encore ? Une attaque
+ * ratée, un test ou une sauvegarde échoués ; une issue inconnue (pas de DD) :
+ * non, rien n'est rendu.
+ */
+export function stillFailed(roll: PendingRoll): boolean {
+  const outcome = outcomeOf(roll);
+  return outcome === "miss" || outcome === "failure";
+}
+
 function attempt<T>(f: () => T): T | Error {
   try {
     return f();
@@ -390,7 +420,7 @@ function attempt<T>(f: () => T): T | Error {
   }
 }
 
-const RANDOM_OPS: ReadonlySet<RollOperation["op"]> = new Set(["add_die", "reroll", "add_damage", "attacker_save"]);
+const RANDOM_OPS: ReadonlySet<RollOperation["op"]> = new Set(["add_die", "reroll", "add_damage", "attacker_save", "reroll_weapon_dice"]);
 
 /**
  * La réaction changerait-elle l'issue ? Seulement quand rien n'est laissé au

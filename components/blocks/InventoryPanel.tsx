@@ -5,8 +5,8 @@ import Link from "next/link";
 import NomDeRegle from "./NomDeRegle";
 import type { InventoryBlockData, InventoryItem } from "@/src/core/schemas/blocks/inventory";
 import type { BlockReference } from "@/src/core/schemas/blocks/reference";
-import { weaponAttackAbility, weaponAttackAbilityMod } from "@/src/core/rules/action";
-import { rollBonus, type Modifier } from "@/src/core/rules/sheet";
+import { lightExtraDamageMod, weaponAttackAbility, weaponAttackAbilityMod } from "@/src/core/rules/action";
+import { lightExtraAddsAbility, rollBonus, type Modifier } from "@/src/core/rules/sheet";
 import { complementDes, plageCritique, sourcesDesTexte } from "@/lib/ui/valeursCalculees";
 import { useLocale, useTranslations } from "next-intl";
 import type { ArmorData, ItemCost, WeaponData } from "@/src/core/rules/srdMapping";
@@ -155,6 +155,7 @@ export function ItemCard({
   busy,
   onAttack,
   onDamage,
+  onExtraAttack,
   onToggleEquipped,
   onToggleAttuned,
   onChangeQty,
@@ -181,6 +182,8 @@ export function ItemCard({
   busy: boolean;
   onAttack?: () => void;
   onDamage?: (versatile: boolean) => void;
+  /** Propriété Légère : l'attaque en plus (action Bonus), quand une autre arme Légère est en main. Absent sinon. */
+  onExtraAttack?: () => void;
   onToggleEquipped?: () => void;
   /** AG-19 : lier ou délier un artéfact qui demande une harmonisation ; absent pour tout autre objet. */
   onToggleAttuned?: () => void;
@@ -283,6 +286,8 @@ export function ItemCard({
   const damageDes = complementDes(bonusDegats.dice);
   const damageResolved = (dice: string) => withModifier(dice, abilityMod + bonusDegats.value);
   const damageDetail = (dice: string) => (abilityMod !== 0 ? `${dice}+${abilityLabel}` : dice);
+  // L'attaque en plus d'une arme Légère : le modificateur ne s'ajoute aux dégâts que s'il est négatif, ou avec Combat à deux armes (même calcul que le serveur).
+  const modEnPlus = lightExtraDamageMod(abilityMod, lightExtraAddsAbility(sheetRolls));
 
   // Independant des handlers (V1-C14) : le texte informatif de l'onglet
   // Inventaire s'affiche meme sur une arme non equipee (onAttack/onDamage
@@ -439,6 +444,17 @@ export function ItemCard({
                     detailFormula={damageDetail(weapon.damageDice)}
                     busy={busy}
                     onClick={() => onDamage(false)}
+                  />
+                )}
+                {onExtraAttack && (
+                  <ActionButton
+                    label="Attaque en plus (action Bonus)"
+                    resolvedFormula={attackResolved}
+                    complement={attackDes}
+                    titre={sourcesDesTexte(bonusAttaque.dice) || undefined}
+                    detailFormula={rollModifiers ? `${attackDetail} · dégâts ${withModifier(weapon.damageDice, modEnPlus + bonusDegats.value)}` : attackDetail}
+                    busy={busy}
+                    onClick={onExtraAttack}
                   />
                 )}
                 {onDamage && weapon.versatileDamageDice && (

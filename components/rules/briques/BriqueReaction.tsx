@@ -92,6 +92,7 @@ export default function ReactionEditeur({ activation: a, onChange }: { activatio
           </div>
           {d.moment === "natural" && <ChampTexte libelle={t("valeurDuD20")} valeur={d.naturel} onChange={(naturel) => onChange(avecDeclencheur(a, { naturel }))} mecanique />}
           <Checkbox checked={d.automatique} onChange={() => onChange(avecDeclencheur(a, { automatique: !d.automatique }))} label={t("automatique")} />
+          {d.moment === "failed" && <Checkbox checked={a.rembourseSiRate} onChange={() => onChange({ ...a, rembourseSiRate: !a.rembourseSiRate })} label={t("rembourseSiRate")} />}
         </CarteBrique>
       )}
 
@@ -190,5 +191,7 @@ function ChampsOperation({ operation: o, onChange }: { operation: BrouillonOpera
       );
     case "redirect":
       return <p className="text-xs text-ink-muted">{t("interposeAide")}</p>;
+    case "reroll_weapon_dice":
+      return <p className="text-xs text-ink-muted">{t("relancerDesArmeAide")}</p>;
   }
 }
