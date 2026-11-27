@@ -156,3 +156,16 @@ Demandé le 26 novembre après la partie test avec Mabelle ; maquettes validées
 ### ☐ V3.2-71 — L'outil de dés s'ouvre avant le résultat · `S` · sans modèle IA · Modèle conseillé : Sonnet
 
 - Le panneau de dés s'ouvrait après l'affichage du résultat : il doit s'ouvrir au moment du lancer.
+
+### ☐ V3.2-72 — La page wiki d'un PJ montre sa fiche, pas des titres vides · `S` · sans modèle IA · Modèle conseillé : Opus — **codé le 27 novembre ; reste à vérifier à l'écran**
+
+**Vu au test de l'écran de jeu, 27 novembre** : la page wiki du PJ de Testeur B (`/joueur/wiki/3`) n'affichait que les titres Personnage, Inventaire, Incantation. `PublicBlockView` n'avait aucun rendu pour les blocs `character`, `inventory` et `spellcasting` ; le défaut existait avant l'écran de jeu, et touche aussi le volet de consultation (même corps de fiche).
+
+**Fait.** `referencesDeFiche` (`src/core/entities/referencesDeFiche.ts`, testé) liste les règles et fiches citées par ces blocs ; `getPlayerEntityDetail` résout leurs noms dans la même vague que les autres renvois (aucune lecture de plus quand la page n'a pas de bloc de fiche) et n'en donne que pour les fiches que ce lecteur voit. `PublicFicheBlocks.tsx` les rend : build (espèce, classes et niveaux, historique, genre, pronoms, âge, caractéristiques de base), inventaire par contenant avec la bourse, sorts connus. Aucune valeur dérivée (règle 16).
+
+**Reste** : l'aperçu du MJ et le partage anonyme (`getPublicEntityDetail`) ne résolvent pas encore ces noms : ils montrent la clé (« fighter »). Un objet d'inventaire qui cite une fiche cachée garde son identifiant dans la donnée envoyée (`retirerCiblesCachees` ne couvre pas l'inventaire), sans nom ni lien.
+
+**Critères d'acceptation**
+- [x] Tests du noyau : un personnage cite espèce, historique, classes et sous-classes ; un inventaire ses objets de règle et ses objets-fiches ; une donnée illisible ne cite rien.
+- [ ] À l'écran : la page wiki du PJ de Testeur B montre « Nain », « Clerc 1 », « Acolyte », son équipement et ses sorts.
+

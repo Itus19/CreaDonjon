@@ -27,6 +27,7 @@ import PublicRelationshipBlock from "./PublicRelationshipBlock";
 import PublicTimelineBlock from "./PublicTimelineBlock";
 import PublicMapBlock from "./PublicMapBlock";
 import PublicEquippableBlock from "./PublicEquippableBlock";
+import { PublicCharacterBlock, PublicInventoryBlock, PublicSpellcastingBlock } from "./PublicFicheBlocks";
 import type { EquippableBlockData } from "@/src/core/schemas/blocks/equippable";
 import type { PriceListBlockData } from "@/src/core/schemas/blocks/priceList";
 import PriceListView from "@/components/blocks/PriceListView";
@@ -655,6 +656,10 @@ export default function PublicBlockView({
       {block.blockType === "price_list" && <PriceListView data={block.data as unknown as PriceListBlockData} />}
       {block.blockType === "settlement" && <SettlementView data={block.data as unknown as SettlementBlockData} />}
       {block.blockType === "rooms" && <RoomsView data={block.data as unknown as RoomsBlockData} />}
+      {/* V3.2-72 : les blocs de fiche d'un personnage, avec les noms résolus côté serveur. */}
+      {block.blockType === "character" && <PublicCharacterBlock data={block.data} ruleRefs={block.ruleRefs} textRefs={block.textRefs} hrefBase={hrefBase} ruleHrefBase={ruleHrefBase} />}
+      {block.blockType === "inventory" && <PublicInventoryBlock data={block.data} ruleRefs={block.ruleRefs} textRefs={block.textRefs} hrefBase={hrefBase} ruleHrefBase={ruleHrefBase} />}
+      {block.blockType === "spellcasting" && <PublicSpellcastingBlock data={block.data} ruleRefs={block.ruleRefs} textRefs={block.textRefs} hrefBase={hrefBase} ruleHrefBase={ruleHrefBase} />}
       {block.blockType === "map" && (
         <PublicMapBlock
           data={block.data as unknown as MapBlockData}

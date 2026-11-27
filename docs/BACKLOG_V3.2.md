@@ -49,7 +49,7 @@ Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été
 | [`06-jet-ou-pas.md`](backlog-v3.2/06-jet-ou-pas.md) | Faut-il un jet ? L'IA classe, le moteur fixe le DD (V3.2-22 à 24, ADR 0113) |
 | [`07-vie-du-monde.md`](backlog-v3.2/07-vie-du-monde.md) | La vie du monde : routines, régime, événements, psyché (V3.2-29 à 40, ADR 0115) |
 | [`08-fiche-pnj.md`](backlog-v3.2/08-fiche-pnj.md) | La fiche allégée des PNJ, les indices, les jets des PNJ (V3.2-46 à 52, 54, ADR 0118) |
-| [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) | L'écran de jeu : rail de jeu, volet de consultation, volet d'une personne, date, combat, petits correctifs (V3.2-55 à 71, ADR 0120) |
+| [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) | L'écran de jeu : rail de jeu, volet de consultation, volet d'une personne, date, combat, petits correctifs (V3.2-55 à 72, ADR 0120) |
 
 | Ticket | État | Modèle IA | Titre | Fichier |
 |---|---|---|---|---|
@@ -124,6 +124,7 @@ Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été
 | V3.2-69 | ☐ | sans | « Demande honorée » ne sort plus dans Changements | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
 | V3.2-70 | ☐ | sans | Une attaque demande sa cible ; l'attaque à mains nues existe | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
 | V3.2-71 | ☐ | sans | L'outil de dés s'ouvre avant le résultat | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
+| V3.2-72 | ☐ | sans | La page wiki d'un PJ montre sa fiche, pas des titres vides | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
 
 ---
 
