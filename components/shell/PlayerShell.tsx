@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -9,6 +10,7 @@ import { useChatUnread } from "./useChatUnread";
 import NextSessionBadge, { type ProchaineSession } from "./scheduling/NextSessionBadge";
 import { adresseVue, vueDepuisAdresse, type VueSolo } from "@/lib/ui/solo";
 import SousEntreeDevoir, { type DevoirRail } from "./sessionJournal/SousEntreeDevoir";
+import { FournisseurEmplacementRailJeu } from "@/components/solo/RailJeu";
 
 interface Destination {
   href: string;
@@ -89,6 +91,9 @@ export default function PlayerShell({
   const { replie, basculer } = useRailReplie();
   // Un devoir à rendre se signale sur « Édition » même rail replié ou au téléphone.
   const badgeEdition = devoir?.mention === "a_rendre" ? 1 : undefined;
+  // ADR 0120 (V3.2-55) : sur la page solo, le rail devient le rail de jeu ; la page remplit cet emplacement par un portail (`RailJeu`).
+  const [emplacementJeu, setEmplacementJeu] = useState<HTMLElement | null>(null);
+  const railDeJeu = pathname.startsWith(`${base}/solo`);
 
   const destinations: Destination[] = [
     { href: base, label: "Personnage", icon: "user", match: (p) => p === base },
@@ -211,26 +216,46 @@ export default function PlayerShell({
               qu'un enfant `flex-1` accepte de descendre sous sa taille de
               contenu (memes causes que le commentaire de hauteur plus haut). */}
           <div className="flex flex-1 justify-around md:min-h-0 md:flex-col md:items-center md:justify-start md:gap-0.5 md:overflow-y-auto md:overflow-x-hidden md:p-2">
-            <div className="hidden w-full flex-col gap-0.5 md:flex">
-              {destinations.map((d) => (
-                <div key={d.href} className="flex flex-col gap-0.5">
-                  <RailRow
-                    href={d.href}
-                    icone={<Icon name={d.icon} />}
-                    libelle={d.label}
-                    actif={d.match(pathname)}
-                    badge={d.icon === "chat" ? unreadCount : d.icon === "card" && replie ? badgeEdition : undefined}
-                  />
-                  {/* V3.1-150, piste A : le devoir de journal, sous « Édition ». Replié, la pastille suffit. */}
-                  {d.icon === "card" && devoir && !replie && <SousEntreeDevoir devoir={devoir} href={`${base}/fiche/${devoir.slug}`} actif={pathname === `${base}/fiche/${devoir.slug}`} />}
+            {railDeJeu ? (
+              <div className="hidden w-full flex-col gap-0.5 md:flex">
+                {/* En jeu : Quitter ramène à Personnage ; Chat et Prochaine session n'ont rien à faire ici. */}
+                <RailRow
+                  href={base}
+                  icone={
+                    <TraitSvg>
+                      <path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4" />
+                      <path d="M10 8l-4 4 4 4" />
+                      <path d="M6 12h10" />
+                    </TraitSvg>
+                  }
+                  libelle={tSolo("railJeu.quitter")}
+                />
+                <div ref={setEmplacementJeu} aria-label={tSolo("railJeu.aria")} role="group" className="flex w-full flex-col gap-0.5" />
+              </div>
+            ) : (
+              <>
+                <div className="hidden w-full flex-col gap-0.5 md:flex">
+                  {destinations.map((d) => (
+                    <div key={d.href} className="flex flex-col gap-0.5">
+                      <RailRow
+                        href={d.href}
+                        icone={<Icon name={d.icon} />}
+                        libelle={d.label}
+                        actif={d.match(pathname)}
+                        badge={d.icon === "chat" ? unreadCount : d.icon === "card" && replie ? badgeEdition : undefined}
+                      />
+                      {/* V3.1-150, piste A : le devoir de journal, sous « Édition ». Replié, la pastille suffit. */}
+                      {d.icon === "card" && devoir && !replie && <SousEntreeDevoir devoir={devoir} href={`${base}/fiche/${devoir.slug}`} actif={pathname === `${base}/fiche/${devoir.slug}`} />}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-            {/* Rail seulement : sous 768 px le badge vit en tete de la page Perso
-                (plus bas). V3.1-153 : replie, il reste, debout (`replie`). */}
-            <div className="hidden w-full md:mt-2 md:block md:border-t md:border-edge md:pt-2">
-              <NextSessionBadge worldSlug={worldSlug} prochaineSession={prochaineSession} replie={replie} />
-            </div>
+                {/* Rail seulement : sous 768 px le badge vit en tete de la page Perso
+                    (plus bas). V3.1-153 : replie, il reste, debout (`replie`). */}
+                <div className="hidden w-full md:mt-2 md:block md:border-t md:border-edge md:pt-2">
+                  <NextSessionBadge worldSlug={worldSlug} prochaineSession={prochaineSession} replie={replie} />
+                </div>
+              </>
+            )}
           </div>
 
           <div className="hidden shrink-0 border-t border-edge p-2 md:block">
@@ -261,17 +286,19 @@ export default function PlayerShell({
                 libelle={t("atelier")}
               />
             )}
-            <RailRow
-              href="/"
-              icone={
-                <TraitSvg>
-                  <path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4" />
-                  <path d="M10 8l-4 4 4 4" />
-                  <path d="M6 12h10" />
-                </TraitSvg>
-              }
-              libelle={t("mesMondes")}
-            />
+            {!railDeJeu && (
+              <RailRow
+                href="/"
+                icone={
+                  <TraitSvg>
+                    <path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4" />
+                    <path d="M10 8l-4 4 4 4" />
+                    <path d="M6 12h10" />
+                  </TraitSvg>
+                }
+                libelle={t("mesMondes")}
+              />
+            )}
           </div>
         </RailPart>
         <OutilsDalle worldSlug={worldSlug} />
@@ -290,7 +317,7 @@ export default function PlayerShell({
             <NextSessionBadge worldSlug={worldSlug} prochaineSession={prochaineSession} />
           </div>
         )}
-        {children}
+        <FournisseurEmplacementRailJeu value={railDeJeu ? emplacementJeu : null}>{children}</FournisseurEmplacementRailJeu>
       </div>
       <BarreFlottante entrees={surSolo ? entreesSolo : entreesBarre} libelle={t("barreJoueur")} />
     </div>

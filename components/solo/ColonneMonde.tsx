@@ -41,6 +41,8 @@ const LIGNE_CLIQUABLE =
 
 function OngletWiki({ worldSlug, groups }: { worldSlug: string; groups: WikiColumnGroup[] }) {
   const [ouverteId, setOuverteId] = useState<string | null>(null);
+  // ADR 0120 (V3.2-57) : dans le volet de jeu, une entrée est un lien vers la fiche, que la coquille ouvre en entier dans le volet.
+  const { voletDeJeu } = useSoloContexte();
   const ouverte = groups.flatMap((g) => g.entries.map((e) => ({ ...e, groupLabel: g.label }))).find((e) => e.id === ouverteId);
 
   if (groups.length === 0) {
@@ -67,11 +69,17 @@ function OngletWiki({ worldSlug, groups }: { worldSlug: string; groups: WikiColu
       {groups.map((group) => (
         <div key={group.kind} className="flex flex-col gap-0.5">
           <span className="text-xs font-semibold uppercase tracking-wide text-ink-muted">{group.label}</span>
-          {group.entries.map((entry) => (
-            <button key={entry.id} type="button" onClick={() => setOuverteId(entry.id)} className={LIGNE_CLIQUABLE}>
-              <span className="truncate text-sm text-ink">{entry.name}</span>
-            </button>
-          ))}
+          {group.entries.map((entry) =>
+            voletDeJeu ? (
+              <Link key={entry.id} href={`/m/${worldSlug}/joueur/wiki/${entry.slug}`} prefetch={false} className={LIGNE_CLIQUABLE}>
+                <span className="truncate text-sm text-ink">{entry.name}</span>
+              </Link>
+            ) : (
+              <button key={entry.id} type="button" onClick={() => setOuverteId(entry.id)} className={LIGNE_CLIQUABLE}>
+                <span className="truncate text-sm text-ink">{entry.name}</span>
+              </button>
+            )
+          )}
         </div>
       ))}
     </div>
@@ -200,7 +208,20 @@ export default function ColonneMonde({
   sketches: SceneView["sketches"];
 }) {
   // V3.2-12 : l'onglet vit dans le contexte de la coquille, pour que la bande du Monde replié puisse rouvrir le volet sur un onglet.
-  const { ongletMonde: onglet, choisirOngletMonde: setOnglet } = useSoloContexte();
+  const { ongletMonde: onglet, choisirOngletMonde: setOnglet, voletDeJeu } = useSoloContexte();
+
+  const contenu = (
+    <>
+      {onglet === "wiki" && <OngletWiki worldSlug={worldSlug} groups={wiki} />}
+      {onglet === "quetes" && <OngletQuetes quests={quests} />}
+      {onglet === "presents" && <OngletPresents present={present} sketches={sketches} worldSlug={worldSlug} campaignId={campaignId} />}
+      {onglet === "regles" && <PlayerRulesSidebar worldSlug={worldSlug} />}
+      {onglet === "changements" && <OngletChangements campaignId={campaignId} />}
+    </>
+  );
+
+  // ADR 0120 (V3.2-56) : dans le volet de consultation, le rail de jeu choisit l'onglet ; plus de barre d'onglets.
+  if (voletDeJeu) return <div className="min-h-0 flex-1 overflow-y-auto p-3">{contenu}</div>;
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -218,11 +239,7 @@ export default function ColonneMonde({
         ]}
       />
       <TabPanel idPrefix="colonne-monde" value={onglet} className={`${PANNEAU} min-h-0 flex-1 overflow-y-auto`}>
-        {onglet === "wiki" && <OngletWiki worldSlug={worldSlug} groups={wiki} />}
-        {onglet === "quetes" && <OngletQuetes quests={quests} />}
-        {onglet === "presents" && <OngletPresents present={present} sketches={sketches} worldSlug={worldSlug} campaignId={campaignId} />}
-        {onglet === "regles" && <PlayerRulesSidebar worldSlug={worldSlug} />}
-        {onglet === "changements" && <OngletChangements campaignId={campaignId} />}
+        {contenu}
       </TabPanel>
     </div>
   );

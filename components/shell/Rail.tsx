@@ -95,6 +95,16 @@ export function useRailReplie(): { replie: boolean; basculer: () => void } {
 
 const RailContext = createContext<{ replie: boolean }>({ replie: false });
 
+/**
+ * ADR 0120 — Le rail de jeu est rempli par la page solo au travers d'un portail
+ * (`components/solo/RailJeu.tsx`). Un portail suit l'arbre React, pas le DOM :
+ * ses lignes ne voient donc pas le contexte posé par `Rail`. La page le repose
+ * avec ce fournisseur, à partir du même magasin (`useRailReplie`).
+ */
+export function FournisseurRail({ replie, children }: { replie: boolean; children: React.ReactNode }) {
+  return <RailContext.Provider value={{ replie }}>{children}</RailContext.Provider>;
+}
+
 /** Etat replie effectif, pour les lignes et la dalle. */
 export function useRail(): { replie: boolean } {
   return useContext(RailContext);
