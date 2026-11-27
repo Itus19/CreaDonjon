@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useWorldRuleEntries } from "@/components/blocks/useWorldRuleEntries";
+import { useWorldRuleEntriesEtat } from "@/components/blocks/useWorldRuleEntries";
 import { useMatchMedia, WINDOWS_MOBILE_QUERY } from "@/components/shell/useMatchMedia";
 import SommaireRegles from "@/components/rules/SommaireRegles";
 
@@ -79,7 +79,8 @@ export default function PlayerRulesSidebar({ worldSlug, sommaire = false }: { wo
 }
 
 function ListeReglesJoueur({ worldSlug }: { worldSlug: string }) {
-  const entries = useWorldRuleEntries(worldSlug);
+  // `chargee` : une liste vide pendant le chargement ne dit pas « aucune règle » (vu au test de l'écran de jeu, 27 novembre).
+  const { entries, chargee } = useWorldRuleEntriesEtat(worldSlug);
   const tRegles = useTranslations("regles");
   const entryTypeLabels = tRegles.raw("entryTypes") as Record<string, string>;
   const [query, setQuery] = useState("");
@@ -111,9 +112,11 @@ function ListeReglesJoueur({ worldSlug }: { worldSlug: string }) {
         placeholder={tRegles("rechercherRegle")}
         className="w-full rounded-md border border-edge bg-transparent px-2.5 py-1.5 text-sm text-ink outline-none placeholder:text-ink-muted"
       />
-      {groups.length === 0 && <p className="text-sm text-ink-muted">{tRegles("aucuneRegleTrouvee")}</p>}
+      {!chargee && <p className="text-sm text-ink-muted">{tRegles("chargement")}</p>}
+      {chargee && groups.length === 0 && <p className="text-sm text-ink-muted">{tRegles("aucuneRegleTrouvee")}</p>}
       {groups.map(([entryType, items]) => {
-        const expanded = isExpanded(entryType);
+        // Une recherche en cours déplie les catégories qui ont un résultat, sans toucher au pli mémorisé.
+        const expanded = query.trim() !== "" || isExpanded(entryType);
         return (
           <div key={entryType}>
             <button

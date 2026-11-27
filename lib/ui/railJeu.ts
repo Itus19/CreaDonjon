@@ -43,20 +43,39 @@ export interface CibleLecture {
   cle: string;
 }
 
+/** Pages de l'atelier des règles qui ne sont pas une fiche (`app/m/[worldSlug]/regles/`). */
+const PAGES_ATELIER_REGLES = new Set([
+  "bac-a-sable",
+  "bac-a-sable-declencheurs",
+  "non-jouables",
+  "nouveau-don",
+  "nouveau-sort",
+  "nouvel-historique",
+  "nouvelle-arme",
+  "nouvelle-sous-classe",
+]);
+
 /**
  * Reconnaît, dans l'adresse d'un lien cliqué dans l'écran de jeu, une fiche du
  * wiki ou une règle de CE monde, pour l'ouvrir dans le volet au lieu de quitter
  * la partie. Une adresse avec requête ou fragment, ou d'un autre monde, n'est
  * pas reconnue : le lien suit son cours.
+ *
+ * Deux formes de règle : `/joueur/regles/<clé>` (aptitudes) et
+ * `/regles/<clé>` sans « joueur », que posent encore les actions de la fiche
+ * et l'équipement d'une classe (vu au test du 27 novembre : « Épée à deux
+ * mains » faisait quitter la partie). Les pages de l'atelier ne sont pas des
+ * fiches et suivent leur cours.
  */
 export function cibleDepuisAdresse(href: string, worldSlug: string): CibleLecture | null {
   // `href` est l'attribut tel qu'écrit par l'app : un chemin absolu du site (« /m/… »).
   if (href.includes("?") || href.includes("#")) return null;
-  const base = `/m/${worldSlug}/joueur/`;
-  if (!href.startsWith(base)) return null;
-  const [section, cle, ...reste] = href.slice(base.length).split("/");
+  const monde = `/m/${worldSlug}/`;
+  if (!href.startsWith(monde)) return null;
+  const morceaux = href.slice(monde.length).split("/");
+  const [section, cle, ...reste] = morceaux[0] === "joueur" ? morceaux.slice(1) : morceaux;
   if (!cle || reste.length > 0) return null;
-  if (section === "wiki") return { type: "fiche", cle: decodeURIComponent(cle) };
-  if (section === "regles") return { type: "regle", cle: decodeURIComponent(cle) };
+  if (section === "wiki" && morceaux[0] === "joueur") return { type: "fiche", cle: decodeURIComponent(cle) };
+  if (section === "regles" && !PAGES_ATELIER_REGLES.has(cle)) return { type: "regle", cle: decodeURIComponent(cle) };
   return null;
 }

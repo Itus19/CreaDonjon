@@ -754,6 +754,7 @@
       }
     },
     "rechercherRegle": "Search a rule…",
+    "chargement": "Loading…",
     "aucuneRegleTrouvee": "No rule found.",
     "sommaireRegles": "Rules contents",
     "regleDeLaTable": "Table rule",

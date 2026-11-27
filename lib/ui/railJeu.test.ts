@@ -39,3 +39,14 @@ describe("cibleDepuisAdresse (V3.2-57)", () => {
     expect(cibleDepuisAdresse("/m/valdoria/joueur/wiki", "valdoria")).toBeNull();
   });
 });
+
+describe("cibleDepuisAdresse — règles sans « joueur » (test du 27 novembre)", () => {
+  it("reconnaît /m/<monde>/regles/<clé>, que posent les actions de la fiche", () => {
+    expect(cibleDepuisAdresse("/m/banc-d-essai/regles/greatsword", "banc-d-essai")).toEqual({ type: "regle", cle: "greatsword" });
+  });
+  it("laisse passer les pages de l'atelier et un wiki hors coquille joueur", () => {
+    expect(cibleDepuisAdresse("/m/banc-d-essai/regles/nouveau-sort", "banc-d-essai")).toBeNull();
+    expect(cibleDepuisAdresse("/m/banc-d-essai/joueur/regles/non-jouables", "banc-d-essai")).toBeNull();
+    expect(cibleDepuisAdresse("/m/banc-d-essai/wiki/mabelle", "banc-d-essai")).toBeNull();
+  });
+});
