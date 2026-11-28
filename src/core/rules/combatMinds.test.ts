@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aSecourir, butDeCombat, declencheursDeMoral, espritDeCombat, jetDeSecours, modificateurDeMoral, testDeMoral, type PsycheAuCombat } from "./combatMinds";
+import { sortDuVaincu, aSecourir, butDeCombat, declencheursDeMoral, espritDeCombat, jetDeSecours, modificateurDeMoral, testDeMoral, type PsycheAuCombat } from "./combatMinds";
 
 const base = (p: Partial<PsycheAuCombat> & { id: string }): PsycheAuCombat => ({
   archetype: null,
@@ -74,6 +74,12 @@ describe("espritDeCombat", () => {
   it("rassemble but, protégé et modificateur, prêt à se battre", () => {
     expect(espritDeCombat(base({ id: "g", archetype: "garde" }))).toEqual({ but: "arreter", protege: null, mod: 4, etat: "combat", testes: [] });
   });
+
+  it("impitoyable : très dur, ou haineux envers son adversaire", () => {
+    expect(espritDeCombat(base({ id: "x", poles: { empathy_hardness: -70 } })).impitoyable).toBe(true);
+    expect(espritDeCombat(base({ id: "x", envers: { pj: { amitie: -80 } } })).impitoyable).toBe(true);
+    expect(espritDeCombat(base({ id: "x", poles: { empathy_hardness: -50 } })).impitoyable).toBeUndefined();
+  });
 });
 
 describe("declencheursDeMoral (ADR 0122, point 3)", () => {
@@ -142,5 +148,21 @@ describe("aSecourir et jetDeSecours (le personnage à terre)", () => {
   it("Sagesse (Médecine) DD 10", () => {
     expect(jetDeSecours(2, des(8))).toEqual({ naturel: 8, total: 10, reussi: true });
     expect(jetDeSecours(0, des(9))).toEqual({ naturel: 9, total: 9, reussi: false });
+  });
+});
+
+describe("sortDuVaincu (ADR 0123)", () => {
+  it("la garde arrête, avant tout le reste", () => {
+    expect(sortDuVaincu([{ but: "piller" }, { but: "arreter" }])).toEqual({ sort: "capture", par: 1 });
+  });
+
+  it("sinon le pillard détrousse, sinon l'impitoyable achève", () => {
+    expect(sortDuVaincu([{ but: "vaincre", impitoyable: true }, { but: "piller" }])).toEqual({ sort: "detrousse", par: 1 });
+    expect(sortDuVaincu([{ but: "vaincre" }, { but: "vaincre", impitoyable: true }])).toEqual({ sort: "acheve", par: 1 });
+  });
+
+  it("qui défend ou veut survivre n'achève pas ; sinon on laisse", () => {
+    expect(sortDuVaincu([{ but: "survivre", impitoyable: true }, { but: "defendre", impitoyable: true }])).toEqual({ sort: "laisse", par: 0 });
+    expect(sortDuVaincu([])).toEqual({ sort: "laisse", par: null });
   });
 });

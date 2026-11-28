@@ -59,6 +59,8 @@ export interface JaugesBande {
   pctXp: number;
   /** À 0 PV, ni stabilisé ni mort : la barre du tour propose le jet contre la mort. */
   aTerre: boolean;
+  /** Mort (trois échecs aux jets contre la mort) : en solo, la partie est terminée. */
+  mort: boolean;
 }
 
 export function jaugesBande(entree: {
@@ -88,6 +90,7 @@ export function jaugesBande(entree: {
     pctCharge: entree.capacityLb > 0 ? Math.min(100, Math.round((entree.carriedLb / entree.capacityLb) * 100)) : 0,
     encombre: entree.encumbered,
     aTerre: entree.deathSaves !== undefined && isDying({ hp: { current: entree.hpCurrent }, deathSaves: entree.deathSaves }),
+    mort: entree.deathSaves !== undefined && entree.deathSaves.fail >= 3,
     xpDansNiveau: xp.dansNiveau,
     xpVersSuivant: xp.versSuivant,
     pctXp: Math.round(xp.pourcentage),
@@ -96,7 +99,7 @@ export function jaugesBande(entree: {
 
 const CLES_JAUGES: (keyof JaugesBande)[] = [
   "ac", "hpCurrent", "hpMax", "pctPv", "level", "exhaustion", "pctEpuisement",
-  "chargeKg", "capaciteKg", "pctCharge", "encombre", "xpDansNiveau", "xpVersSuivant", "pctXp", "aTerre",
+  "chargeKg", "capaciteKg", "pctCharge", "encombre", "xpDansNiveau", "xpVersSuivant", "pctXp", "aTerre", "mort",
 ];
 
 export function jaugesEgales(a: JaugesBande | null, b: JaugesBande | null): boolean {

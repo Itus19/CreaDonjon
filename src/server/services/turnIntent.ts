@@ -349,6 +349,7 @@ export async function buildIntentBarData(
     targetDetails,
     ruleKeys: ctx.sheet.features.map((f) => f.key).filter((k) => !k.startsWith("choice:")),
     aTerre: etat !== null && isDying({ hp: etat.hp, deathSaves: etat.death_saves }),
+    mort: etat !== null && etat.death_saves.fail >= 3,
   };
 }
 

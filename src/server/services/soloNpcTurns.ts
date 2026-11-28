@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
 import { DAMAGE_TYPE_LABELS_FR, npcAttacks, resoudreAttaquePnj, tactiqueDuPnj, type ZoneCombat } from "@/src/core/rules/npcRolls";
 import type { ResolvedEffect } from "@/src/core/rules/triggers";
-import { aSecourir, declencheursDeMoral, jetDeSecours, testDeMoral, type EtatDeCombat, type EspritDeCombat } from "@/src/core/rules/combatMinds";
+import { sortDuVaincu, aSecourir, declencheursDeMoral, jetDeSecours, testDeMoral, type EtatDeCombat, type EspritDeCombat } from "@/src/core/rules/combatMinds";
 import { abilityModifier } from "@/src/core/rules/combat";
 import { isDying } from "@/src/core/rules/deathSaves";
 import { applyRuntimeStateChange, getEntityRuntimeState } from "@/src/server/services/runtimeState";
@@ -15,6 +15,7 @@ import { insertSessionEvent, nextEventSeq } from "@/src/server/repos/sessions";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
 import { endCombat, orderParticipants } from "@/src/server/services/combats";
 import { applyResolvedEffects } from "@/src/server/services/targetedRoll";
+import { sortDuPersonnageVaincu } from "@/src/server/services/soloDowned";
 import { serverRng } from "@/src/server/services/rng";
 
 type TypedClient = SupabaseClient<Database>;
@@ -207,6 +208,17 @@ export async function jouerTourDesPnj(
       })
     : { changes: [] as string[] };
 
+  // ADR 0123, après les dégâts (un achevé ne doit pas les annuler) : ce que les vainqueurs font de lui, selon leur but.
+  // Un personnage déjà mort n'a plus rien à craindre.
+  if (perdu && pj.entity_id && !(etatPj && etatPj.death_saves.fail >= 3)) {
+    const vainqueurs = lignes.filter((p) => p.is_ally !== pj.is_ally && auCombat(p) && p.entity_id && esprits.has(p.entity_id));
+    const { sort, par } = sortDuVaincu(vainqueurs.map((p) => esprits.get(p.entity_id!)!));
+    if (par !== null) {
+      const auteur = vainqueurs[par]!;
+      faits.push(await sortDuPersonnageVaincu(supabase, { campaignId: params.campaignId, callerId: params.callerId, pjEntityId: pj.entity_id, pjLabel: pj.label, vainqueur: auteur.label, sort }));
+      if (sort === "detrousse") present = present.filter((p) => p.entityId !== auteur.entity_id);
+    }
+  }
   await updateCombat(supabase, combat.id, { round: combat.round + 1 });
   if (present !== scene.present || espritsChanges || fini) {
     const apres = await getSceneState(supabase, params.campaignId);

@@ -191,7 +191,19 @@ Demandé le 26 novembre après la partie test avec Mabelle ; maquettes validées
 
 **Fait.** Les règles existaient (`deathSaves.ts`, `rollDeathSaveForCharacter`) ; le tour solo ne s'en servait pas. `isDying` (testé) ; `jetContreLaMortDuTour` (`src/server/services/soloDowned.ts`) remplace le tour d'un personnage mourant par son jet (historique des dés, état de jeu journalisé), et sur un 20 sa ligne de combat repasse à 1 PV ; les PNJ jouent ensuite. La barre « Que fais-tu ? » le dit (« Tu es à terre : ton tour est un jet contre la mort ») et son bouton devient « Jet contre la mort », d'après la fiche qui sonde déjà l'état de jeu (`jaugesBande`, champ `aTerre`). Les alliés : `aSecourir` et `jetDeSecours` (`combatMinds.ts`, testés) ; un PNJ au but « défendre » dont le protégé est le personnage mourant accourt et le stabilise au lieu de frapper. `jouerTourDesPnj` clôt le combat quand le personnage est à terre sans allié debout. Vérifié à l'écran sur une copie locale : Bram tombe sous le gourdin de Mabelle, le combat se termine, trois jets contre la mort le stabilisent.
 
-**Reste.** Ce que font les vainqueurs d'un personnage à terre (la garde l'arrête, le malfrat le détrousse : ADR 0122, but) ; la mort du personnage et la fin de la partie ; un PNJ ennemi qui achève un personnage à terre (aujourd'hui personne ne frappe quelqu'un à 0 PV) ; un compagnon à fiche de personnage complète ne joue pas encore ; le stabilisé qui reprend 1 PV au bout de 1d4 heures.
+**Reste.** (Les vainqueurs, la mort du personnage et le réveil du stabilisé : V3.2-76.) Un PNJ ennemi qui achève un personnage à terre (aujourd'hui personne ne frappe quelqu'un à 0 PV) ; un compagnon à fiche de personnage complète ne joue pas encore.
+
+### ☑ V3.2-76 — Le sort de qui tombe, et la fin de la partie solo · `S` · sans modèle IA · Modèle conseillé : Opus — **codé le 28 novembre (ADR 0123)**
+
+- Choix de l'auteur : le moteur décide selon le but ; mort, en solo, la partie se termine.
+
+**Critères d'acceptation**
+- [x] Tests du noyau : la garde capture, le pillard détrousse, l'impitoyable achève, sinon on laisse ; qui défend ou veut survivre n'achève pas.
+- [x] Mort (trois échecs), la barre du tour se ferme et le serveur refuse tout tour.
+
+**Fait.** `sortDuVaincu` et le champ `impitoyable` de l'esprit (`combatMinds.ts`, testés). `sortDuPersonnageVaincu` (`soloDowned.ts`) l'applique au personnage quand le combat est perdu, après les dégâts : Entravé et stabilisé, bourse prise (le pillard quitte la pièce), trois échecs, ou laissé. Mort : `jetContreLaMortDuTour` rend « mort », la route refuse le tour (409), la barre dit « Ton personnage est mort : la partie est terminée » (`jaugesBande`, champ `mort`). Stabilisé : en combat son tour passe, hors combat il reprend 1 PV au bout de 1d4 heures. Vérifié à l'écran sur une copie locale : Mabelle pillarde détrousse Bram (14 po 6 pa), Mabelle impitoyable l'achève et la partie se ferme.
+
+**Reste.** La captivité comme lieu ; la bourse volée dans l'inventaire du pillard, les objets visibles ; un PNJ à terre vaincu par un autre PNJ ; l'impitoyable qui achève pendant le combat ; la barre d'un personnage stabilisé (elle propose « Jouer » ; le tour passe ou le réveille).
 
 ---
 
