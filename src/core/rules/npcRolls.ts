@@ -252,3 +252,31 @@ export function resoudreJetPnj(mod: number, dc: number, rng: { nextInt(max: numb
   const total = naturel + mod;
   return { naturel, total, reussi: total >= dc };
 }
+
+/**
+ * V3.2-82 — Les jets opposés (règles 2024) : quand le personnage ment à un
+ * PNJ, se cache de lui ou lui fait les poches, la cible lance son propre jet
+ * et son total devient le DD. Les autres compétences gardent le palier du
+ * classement : ici, seulement les oppositions que les règles nomment.
+ */
+const OPPOSITIONS: Partial<Record<Skill, JetPnj>> = {
+  deception: { kind: "skill", key: "insight", label: "Perspicacité" },
+  stealth: { kind: "skill", key: "perception", label: "Perception" },
+  sleight_of_hand: { kind: "skill", key: "perception", label: "Perception" },
+};
+
+/** Le jet que la cible oppose à cette compétence du personnage, ou `null`. */
+export function jetOppose(skill: Skill): JetPnj | null {
+  return OPPOSITIONS[skill] ?? null;
+}
+
+/** Le DD d'un jet opposé : le total du PNJ (dé du serveur + modificateur de sa fiche), ou `null` sans opposition. */
+export function ddOppose(
+  fiche: Parameters<typeof modificateurJetPnj>[0],
+  skill: Skill,
+  rng: { nextInt(max: number): number }
+): number | null {
+  const jet = jetOppose(skill);
+  if (!jet) return null;
+  return rng.nextInt(20) + 1 + modificateurJetPnj(fiche, jet);
+}

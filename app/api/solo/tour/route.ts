@@ -318,6 +318,7 @@ export async function POST(request: NextRequest) {
         callerId: user.id,
         text: parsed.data.text,
         detail: result.record.detail,
+        sessionId,
       });
       if (cache) result.record.facts.push(cache);
     } catch (erreur) {

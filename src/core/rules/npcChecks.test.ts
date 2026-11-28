@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { NPC_CHECK_ACTIONS, modificateurJetPnj, resoudreJetPnj } from "./npcRolls";
+import { NPC_CHECK_ACTIONS, ddOppose, jetOppose, modificateurJetPnj, resoudreJetPnj } from "./npcRolls";
 
 /** Une roturière costaude : Force 14, rien d'autre. Un garde qui a l'œil : Perception +4, sauvegarde de Constitution +3. */
 const mabelle = { abilities: { str: 14, dex: 10, con: 12, int: 10, wis: 11, cha: 10 } };
@@ -39,5 +39,33 @@ describe("V3.2-52 — les jets de caractéristique et de compétence des PNJ", (
       expect(["skill", "save"]).toContain(action.kind);
       expect(action.label.length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("V3.2-82 — les jets opposés", () => {
+  const gardien = { abilities: { str: 10, dex: 10, con: 10, int: 10, wis: 14, cha: 10 }, skills: { "Skill: Perception": 6 } };
+  const de = (n: number) => ({ nextInt: () => n - 1 });
+
+  it("mentir se heurte à la Perspicacité ; se cacher et escamoter, à la Perception", () => {
+    expect(jetOppose("deception")).toEqual({ kind: "skill", key: "insight", label: "Perspicacité" });
+    expect(jetOppose("stealth")?.key).toBe("perception");
+    expect(jetOppose("sleight_of_hand")?.key).toBe("perception");
+  });
+
+  it("les autres compétences n'ont pas de jet opposé : le palier habituel s'applique", () => {
+    expect(jetOppose("athletics")).toBeNull();
+    expect(jetOppose("persuasion")).toBeNull();
+  });
+
+  it("le total du PNJ devient le DD : Sagesse 14 sans maîtrise, 1d20 + 2", () => {
+    expect(ddOppose(gardien, "deception", de(11))).toBe(13);
+  });
+
+  it("la Perception portée par la fiche l'emporte sur la caractéristique", () => {
+    expect(ddOppose(gardien, "stealth", de(11))).toBe(17);
+  });
+
+  it("une compétence sans opposition ne donne aucun DD", () => {
+    expect(ddOppose(gardien, "athletics", de(11))).toBeNull();
   });
 });

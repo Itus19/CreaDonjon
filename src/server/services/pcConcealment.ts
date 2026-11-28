@@ -5,7 +5,10 @@ import type { Database } from "@/src/types/database";
 import { gesteDeDissimulation } from "@/src/core/rules/pcConcealment";
 import { segmentPlainText } from "@/src/core/rules/concealedMarks";
 import { zTextBlockData } from "@/src/core/schemas/blocks/text";
-import { listBlocksByTypesForEntities } from "@/src/server/repos/blocks";
+import type { Json } from "@/src/types/database";
+import { getBlockById, listBlocksByTypesForEntities } from "@/src/server/repos/blocks";
+import { insertSessionEvent, nextEventSeq } from "@/src/server/repos/sessions";
+import type { Segment } from "@/src/core/schemas/entities/segments";
 import { updateBlockContent } from "@/src/server/services/blocks";
 import { nameInventoryItems } from "@/src/server/services/facetDiscoveries";
 import { readInventorySnapshot, setItemConcealment } from "@/src/server/services/inventoryActions";
@@ -19,8 +22,22 @@ const zTurn = z.object({
   check: z.object({ total: z.number(), verdict: z.enum(["success", "fail"]).nullable() }).nullable().optional(),
 });
 
+/** La source du journal d'un paragraphe caché ou révélé (V3.2-83). */
+export const PC_CONCEALMENT_SOURCE = "pc_concealment";
+
+/** Ce paragraphe, dissimulé avec cette difficulté, ou en vue (`null`) ; les autres inchangés. */
+function avecDissimulation(segments: readonly Segment[], segmentId: string, concealed: { dc: number } | null): Segment[] {
+  return segments.map((seg) => {
+    if (seg.id !== segmentId) return seg;
+    const reste = { ...seg };
+    delete reste.concealed;
+    return concealed ? { ...reste, concealed } : reste;
+  });
+}
+
 /** Les mots qui peuvent annoncer un geste de dissimulation : sans eux, aucune lecture de plus. */
-const INDICE = /cach|dissimul|escamot|sors|sort|montr|devoil|dévoil|degain|dégain|brandi|exhib|enlev|enlèv|retir|decouvr|découvr/i;
+const INDICE =
+  /cach|dissimul|escamot|couvr|camoufl|planqu|enfoui|rabat|bandage|bandeau|pansement|foulard|[ée]charpe|capuch|voile|masque|gant|manche|gliss|sors|sort|montr|d[ée]voil|d[ée]gain|brandi|exhib|enl[eè]v|retir|d[ée]couvr|[oô]te|[oô]ter|d[ée]fai|rel[eè]v/i;
 
 /**
  * V3.2-80 (ADR 0122, point 3) — Après le tour du personnage : un jet de
@@ -37,7 +54,16 @@ const INDICE = /cach|dissimul|escamot|sors|sort|montr|devoil|dévoil|degain|dég
  */
 export async function applyPcConcealment(
   supabase: TypedClient,
-  params: { world: { id: string; slug: string }; locale: Locale; pcEntityId: string; callerId: string; text: string; detail: unknown }
+  params: {
+    world: { id: string; slug: string };
+    locale: Locale;
+    pcEntityId: string;
+    callerId: string;
+    text: string;
+    detail: unknown;
+    /** V3.2-83 : la séance du tour, pour journaliser un paragraphe caché ou révélé, que « Annuler ce tour » remettra. */
+    sessionId: string | null;
+  }
 ): Promise<string | null> {
   if (!INDICE.test(params.text)) return null;
   const tour = zTurn.safeParse(params.detail);
@@ -75,12 +101,8 @@ export async function applyPcConcealment(
   if ("markId" in geste) {
     const bloc = blocsTexte.find(({ data }) => data.segments.some((seg) => seg.id === geste.markId));
     if (!bloc) return null;
-    const segments = bloc.data.segments.map((seg) => {
-      if (seg.id !== geste.markId) return seg;
-      const reste = { ...seg };
-      delete reste.concealed;
-      return geste.concealed ? { ...reste, concealed: { dc: geste.concealDc } } : reste;
-    });
+    const avant = bloc.data.segments.find((seg) => seg.id === geste.markId)?.concealed ?? null;
+    const segments = avecDissimulation(bloc.data.segments, geste.markId, geste.concealed ? { dc: geste.concealDc } : null);
     const saved = await updateBlockContent(supabase, {
       id: bloc.row.id,
       expectedVersion: bloc.row.version,
@@ -95,6 +117,27 @@ export async function applyPcConcealment(
       return null;
     }
     const texte = signes.find((m) => m.id === geste.markId)?.text ?? "ce signe";
+    if (params.sessionId) {
+      // V3.2-83 : l'annulation du tour relit cet événement pour remettre le paragraphe comme il était.
+      await insertSessionEvent(supabase, {
+        sessionId: params.sessionId,
+        seq: await nextEventSeq(supabase, params.sessionId),
+        kind: "rule_application",
+        actor: "system",
+        actorUserId: null,
+        payload: {
+          __v: 1,
+          source: PC_CONCEALMENT_SOURCE,
+          entity_id: params.pcEntityId,
+          block_id: bloc.row.id,
+          segment_id: geste.markId,
+          before: avant,
+          changes_text: [geste.concealed ? "Signe distinctif dissimulé" : "Signe distinctif de nouveau visible"],
+          hints_text: [],
+          ignored_text: [],
+        } as unknown as Json,
+      });
+    }
     return geste.concealed
       ? `Le personnage a dissimulé ce signe distinctif : « ${texte} ». Seul un regard attentif ou une fouille pourra le trouver.`
       : `Ce signe distinctif est de nouveau visible : « ${texte} ».`;
@@ -115,4 +158,42 @@ export async function applyPcConcealment(
   return geste.concealed
     ? `Le personnage a caché ${nom} : seule une fouille ou un regard attentif pourra le trouver.`
     : `${nom} n'est plus caché : on peut le voir.`;
+}
+
+const zConcealmentEvent = z.object({
+  source: z.literal(PC_CONCEALMENT_SOURCE),
+  block_id: z.string().uuid(),
+  segment_id: z.string().min(1),
+  before: z.object({ dc: z.number().int() }).nullable(),
+});
+
+/**
+ * V3.2-83 — « Annuler ce tour » : le paragraphe que le tour a caché ou révélé
+ * revient comme il était. Lit les événements du tour, du dernier au premier.
+ * Rend le nombre de paragraphes remis.
+ *
+ * Coût (docs/QUOTAS.md) : rien sans geste dans le tour ; sinon une lecture et
+ * une écriture par paragraphe.
+ */
+export async function restorePcConcealments(supabase: TypedClient, params: { payloads: readonly unknown[]; callerId: string }): Promise<number> {
+  let remis = 0;
+  for (const payload of [...params.payloads].reverse()) {
+    const lu = zConcealmentEvent.safeParse(payload);
+    if (!lu.success) continue;
+    const row = await getBlockById(supabase, lu.data.block_id);
+    const data = row ? zTextBlockData.safeParse(row.data) : null;
+    if (!row || !data?.success) continue;
+    const saved = await updateBlockContent(supabase, {
+      id: row.id,
+      expectedVersion: row.version,
+      display: row.display,
+      data: { ...data.data, segments: avecDissimulation(data.data.segments, lu.data.segment_id, lu.data.before) },
+      visibilityLevel: row.visibility_level,
+      visibilityScopeId: row.visibility_scope_id,
+      changedBy: params.callerId,
+    });
+    if (saved.ok) remis += 1;
+    else console.error("Signe distinctif non remis", lu.data.segment_id, saved.reason);
+  }
+  return remis;
 }

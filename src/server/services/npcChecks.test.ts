@@ -45,7 +45,7 @@ vi.mock("@/src/server/services/npcKnowledge", () => ({
   },
 }));
 
-const { jouerJetDePnj, NPC_CHECK_SOURCE } = await import("./npcChecks");
+const { jouerJetDePnj, ddOpposeDuPnj, NPC_CHECK_SOURCE } = await import("./npcChecks");
 const supabase = {} as SupabaseClient<Database>;
 const tonneau = { worldId: "w", sessionId: "s", npcId: "mabelle", action: "soulever" as const, tier: "moyen" as const, callerId: "u" };
 
@@ -99,5 +99,19 @@ describe("jouerJetDePnj — V3.2-52", () => {
     de = 13;
     expect(await jouerJetDePnj(supabase, { ...tonneau, onPc: { campaignId: "c", pcEntityId: "pj", pcName: "Aldric" } })).toContain("réussite");
     expect(appris).toHaveLength(0);
+  });
+});
+
+describe("ddOpposeDuPnj — V3.2-82", () => {
+  it("mentir à Mabelle (Sagesse 14, sans maîtrise) : le DD vaut le dé du serveur + 2", async () => {
+    fiche = { ...statblock, abilities: { ...statblock.abilities, wis: 14 } };
+    de = 11;
+    expect(await ddOpposeDuPnj(supabase, { npcId: "mabelle", skill: "deception" })).toEqual({ dc: 13, label: "Perspicacité" });
+  });
+
+  it("sans fiche allégée, ou pour une compétence sans opposition : le palier habituel", async () => {
+    expect(await ddOpposeDuPnj(supabase, { npcId: "mabelle", skill: "athletics" })).toBeNull();
+    fiche = null;
+    expect(await ddOpposeDuPnj(supabase, { npcId: "mabelle", skill: "stealth" })).toBeNull();
   });
 });

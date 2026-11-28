@@ -554,10 +554,18 @@ export async function getPlayerEntityDetail(
 
   // V3.2-51 : la fiche allégée et l'équipement d'un PNJ ne partent jamais en
   // blocs (ils sont réservés au MJ) ; seule leur vue découverte est envoyée.
+  // V3.2-87 : à une table, une joueuse qui ne voit pas la fiche reçoit la vue
+  // construite en base (`npc_player_view`) ; qui voit déjà la fiche (le MJ)
+  // n'en a pas besoin.
   const solo = params.worldSlug && entity.entity_kind === "character" ? await soloCampaignFor(supabase, worldId) : null;
+  const table =
+    !solo && params.worldSlug && entity.entity_kind === "character" && !blocksWithMapSource.some((b) => b.blockType === "statblock")
+      ? await resolveCampaignId(supabase, worldId)
+      : null;
+  const npcCampaign = solo ?? table;
   const npcView =
-    solo && params.worldSlug
-      ? await readNpcDisplayView(supabase, { campaignId: solo, entityId: entity.id, userId, world: { id: worldId, slug: params.worldSlug }, locale })
+    npcCampaign && params.worldSlug
+      ? await readNpcDisplayView(supabase, { campaignId: npcCampaign, entityId: entity.id, userId, world: { id: worldId, slug: params.worldSlug }, locale, atTable: !solo })
       : null;
 
   return { entity, blocks: blocksWithMapSource, relations, portraitLayout, wikiBackground, npcView };

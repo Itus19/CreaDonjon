@@ -1,7 +1,8 @@
 import type { StatblockBlockData } from "../schemas/blocks/statblock";
 import type { InventoryBlockData } from "../schemas/blocks/inventory";
 import type { BlockAbility } from "../schemas/blocks/abilities";
-import type { BlockReference } from "../schemas/blocks/reference";
+import { z } from "zod";
+import { zBlockReference, type BlockReference } from "../schemas/blocks/reference";
 
 /**
  * V3.2-49 (ADR 0118) — Les facettes d'un PNJ et la vue joueur.
@@ -68,4 +69,41 @@ export function playerViewOfInventory(data: InventoryBlockData, known: ReadonlyS
 /** Les facettes qu'on découvre en voyant le PNJ : ce qu'il porte sans le cacher. */
 export function seenAtAGlance(data: InventoryBlockData): string[] {
   return data.items.filter((item) => item.equipped === true && item.concealed !== true).map((item) => `item:${item.id}`);
+}
+
+/**
+ * V3.2-87 — La vue joueur d'un PNJ telle que la base la rend
+ * (`npc_player_view`, jeu à table) : même forme que `playerViewOfStatblock` et
+ * `playerViewOfInventory`. Un objet Zod non strict retire tout champ inconnu :
+ * même si la fonction SQL dérivait, rien d'autre ne partirait vers l'écran.
+ * `null` : un refus de la base, ou une forme inattendue.
+ */
+const zNamedText = z.object({ name: z.string(), text: z.string() });
+const zPlayerNpcView = z.object({
+  sheet: z
+    .object({
+      abilities: z.object({ str: z.number(), dex: z.number(), con: z.number(), int: z.number(), wis: z.number(), cha: z.number() }).partial(),
+      ac: z.number().optional(),
+      hp: z.number().optional(),
+      speed: z.string().optional(),
+      actions: z.array(zNamedText),
+      traits: z.array(zNamedText),
+    })
+    .nullable(),
+  gear: z
+    .object({
+      items: z.array(
+        z.union([
+          z.object({ id: z.string(), qty: z.number(), equipped: z.boolean(), ref: zBlockReference }),
+          z.object({ id: z.string(), qty: z.number(), equipped: z.boolean(), label: z.string() }),
+        ])
+      ),
+      currency: z.object({ pp: z.number(), gp: z.number(), ep: z.number(), sp: z.number(), cp: z.number() }).optional(),
+    })
+    .nullable(),
+});
+
+export function parseNpcPlayerView(raw: unknown): { sheet: PlayerStatblockView | null; gear: PlayerInventoryView | null } | null {
+  const lu = zPlayerNpcView.safeParse(raw);
+  return lu.success ? lu.data : null;
 }

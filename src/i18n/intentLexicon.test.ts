@@ -33,3 +33,32 @@ describe("le lexique français sur des phrases jouées", () => {
     expect(proposal.kind === "mechanical" && proposal.actionKind).toBe("weapon_attack");
   });
 });
+
+describe("V3.2-84 — cacher sur soi", () => {
+  const catalogue: IntentCatalog = {
+    ...CATALOG,
+    actions: [
+      ...CATALOG.actions,
+      { id: "stealth", kind: "skill_check", label: "Discrétion", terms: ["Discrétion"] },
+      { id: "sleight_of_hand", kind: "skill_check", label: "Escamotage", terms: ["Escamotage"] },
+    ],
+  };
+  const lu = (texte: string) => {
+    const p = interpretIntent(texte, catalogue);
+    return p.kind === "mechanical" ? p.action.id : null;
+  };
+
+  it("mettre un bandage, rabattre sa capuche : un jet de Discrétion", () => {
+    expect(lu("je mets un bandage sur mon tatouage")).toBe("stealth");
+    expect(lu("je rabats ma capuche sur ma cicatrice")).toBe("stealth");
+  });
+
+  it("glisser un objet dans sa botte : un jet d'Escamotage", () => {
+    expect(lu("je glisse la dague dans ma botte")).toBe("sleight_of_hand");
+  });
+
+  it("glisser sur la glace, mettre son manteau : aucun jet", () => {
+    expect(lu("je glisse sur la glace")).toBeNull();
+    expect(lu("je mets mon manteau")).toBeNull();
+  });
+});

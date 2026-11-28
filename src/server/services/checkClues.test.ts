@@ -48,6 +48,15 @@ vi.mock("@/src/server/repos/blocks", () => ({
   ],
 }));
 vi.mock("@/src/server/repos/entityFacetDiscoveries", () => ({ listFacetDiscoveries: async () => new Map([["mabelle", connues]]) }));
+const participants: Record<string, { id: string; combat_id: string; entity_id: string | null }> = {
+  bandit: { id: "bandit", combat_id: "combat-1", entity_id: "mabelle" },
+  loup: { id: "loup", combat_id: "combat-1", entity_id: null },
+  ailleurs: { id: "ailleurs", combat_id: "combat-2", entity_id: "mabelle" },
+};
+vi.mock("@/src/server/repos/combats", () => ({
+  getCombatParticipantById: async (_s: unknown, id: string) => participants[id] ?? null,
+  getCombatById: async (_s: unknown, id: string) => ({ id, campaign_id: id === "combat-1" ? "c" : "autre" }),
+}));
 vi.mock("@/src/server/repos/entities", () => ({ listEntitiesByIds: async () => [{ id: "mabelle", name: "Mabelle" }] }));
 vi.mock("@/src/server/services/facetDiscoveries", () => ({
   revealFacets: async (_s: unknown, p: { entityId: string; facets: string[]; userId?: string | null; sourceEventId?: string | null }) => {
@@ -124,5 +133,22 @@ describe("revealCluesFromCheck — V3.2-50", () => {
     const out = await revealCluesFromCheck(supabase, { ...base, detail: fouille(15) });
     expect(ecrites[0]!.facets).toContain("mark:s2");
     expect(out.facts[0]).toContain("signe distinctif : Un serpent tatoué sur l'avant-bras.");
+  });
+});
+
+describe("revealCluesFromCheck — V3.2-86, en combat", () => {
+  it("une Perception réussie sur le participant « Bandit » révèle les facettes de sa fiche", async () => {
+    const out = await revealCluesFromCheck(supabase, { ...base, detail: perception(13, "participant:bandit") });
+    expect(ecrites).toEqual([{ entityId: "mabelle", facets: ["ability:str", "item:pnj-1"], userId: "u", sourceEventId: "ev-7" }]);
+    expect(out.revealed).toBe(2);
+  });
+
+  it("un participant sans fiche (une créature anonyme) ne révèle rien, sans erreur", async () => {
+    expect(await revealCluesFromCheck(supabase, { ...base, detail: perception(13, "participant:loup") })).toEqual({ facts: [], revealed: 0 });
+  });
+
+  it("un participant d'un combat d'une autre partie ne révèle rien", async () => {
+    expect(await revealCluesFromCheck(supabase, { ...base, detail: perception(13, "participant:ailleurs") })).toEqual({ facts: [], revealed: 0 });
+    expect(ecrites).toHaveLength(0);
   });
 });

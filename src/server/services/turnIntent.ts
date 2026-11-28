@@ -66,6 +66,7 @@ import { insertSessionEvent, nextEventSeq } from "@/src/server/repos/sessions";
 import { insertDiceRoll } from "@/src/server/repos/diceRolls";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
 import { serverRng } from "@/src/server/services/rng";
+import { ddOpposeDuPnj } from "@/src/server/services/npcChecks";
 import { soloCritRange, soloRollWindow } from "@/src/server/services/soloRollWindow";
 import { ouvrirCombatSolo } from "@/src/server/services/soloCombatOpening";
 import { applyRuntimeStateChange, getEntityRuntimeState } from "@/src/server/services/runtimeState";
@@ -1068,8 +1069,21 @@ export async function proposeIntentRequest(
   // V3.2-24 (ADR 0113) : le palier du classement devient un DD, ici, par le
   // moteur ; et si le pire jet l'atteint, aucun dé ne se pose.
   const tier = choice.kind === "weapon_attack" ? undefined : choice.tier;
-  const tierDc = tier ? dcForTier(tier) : null;
-  if (tier && tierDc !== null && autoSuccess({ tier, modifier: basis.modifier })) return { kind: "auto", what: basis.what, dc: tierDc };
+
+  // V3.2-82 : mentir à un présent, se cacher de lui, lui faire les poches — son jet devient le DD, à la place
+  // du palier. Un DD saisi à la main l'emporte. Réussite automatique seulement si le pire jet atteint son total.
+  const oppose =
+    choice.kind === "skill_check" && choice.dc === null && target?.source === "scene" && target.id.startsWith("entity:")
+      ? await ddOpposeDuPnj(supabase, { npcId: target.id.slice("entity:".length), skill: choice.actionId })
+      : null;
+  if (oppose) {
+    const what = `${basis.what}, contre la ${oppose.label} de ${target?.label ?? "la cible"}`;
+    if (1 + basis.modifier >= oppose.dc) return { kind: "auto", what, dc: oppose.dc };
+    basis.what = what;
+  }
+
+  const tierDc = oppose ? oppose.dc : tier ? dcForTier(tier) : null;
+  if (!oppose && tier && tierDc !== null && autoSuccess({ tier, modifier: basis.modifier })) return { kind: "auto", what: basis.what, dc: tierDc };
 
   // ADR 0121 : attaquer un présent de la scène ouvre le combat d'office ; la CA vient alors de sa fiche.
   const ouverture =

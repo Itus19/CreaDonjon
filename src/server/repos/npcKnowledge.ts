@@ -54,3 +54,16 @@ export async function insertNpcKnowledge(
   );
   if (error) throw new Error(error.message);
 }
+
+/** V3.2-83 — « Annuler ce tour » : ce que les PNJ ont appris pendant ces événements s'oublie. Rend le nombre de lignes retirées. */
+export async function deleteNpcKnowledgeBySourceEvents(supabase: TypedClient, params: { campaignId: string; eventIds: readonly string[] }): Promise<number> {
+  if (params.eventIds.length === 0) return 0;
+  const { data, error } = await supabase
+    .from("npc_knowledge")
+    .delete()
+    .eq("campaign_id", params.campaignId)
+    .in("source_event_id", [...params.eventIds])
+    .select("id");
+  if (error) throw new Error(error.message);
+  return (data ?? []).length;
+}

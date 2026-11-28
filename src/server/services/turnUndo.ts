@@ -9,6 +9,9 @@ import { getOpenSessionForCampaign, insertSessionEvent, listSessionEvents, nextE
 import { listAiProposalsBySessionEventIds, updateAiProposalStatus } from "@/src/server/repos/aiProposals";
 import { softDeleteEntity } from "@/src/server/repos/entities";
 import { deleteDiscoveriesBySourceEvents } from "@/src/server/repos/entityDiscoveries";
+import { deleteFacetDiscoveriesBySourceEvents } from "@/src/server/repos/entityFacetDiscoveries";
+import { deleteNpcKnowledgeBySourceEvents } from "@/src/server/repos/npcKnowledge";
+import { restorePcConcealments } from "@/src/server/services/pcConcealment";
 import { deleteFeatureEffectsCreatedSince } from "@/src/server/repos/activeEffects";
 import { deleteRuntimeState, putRuntimeState } from "@/src/server/repos/runtimeState";
 import { putSceneState } from "@/src/server/repos/sceneStates";
@@ -24,7 +27,7 @@ export type UndoTurnResult =
       ok: true;
       /** Les événements du tour défait (le fil les cache désormais). */
       undoneEventIds: string[];
-      reverted: { entities: number; proposals: number; discoveries: number; effects: number; state: boolean; scene: boolean; inventory: boolean };
+      reverted: { entities: number; proposals: number; discoveries: number; facets: number; knowledge: number; marks: number; effects: number; state: boolean; scene: boolean; inventory: boolean };
     }
   | { ok: false; reason: "not_found" | "not_solo" | "forbidden" | "nothing_to_undo" };
 
@@ -37,7 +40,9 @@ export type UndoTurnResult =
  *   (suppression douce), leur proposition à `reverted` ; une note du monde
  *   ajoutée d'office (V3.2-27) quitte le wiki ; une proposition en
  *   attente aussi. Une proposition acceptée à la main reste : c'était un choix ;
- * - les découvertes posées par le tour sont retirées ;
+ * - les découvertes posées par le tour sont retirées, avec les indices
+ *   (facettes) révélés et ce que les PNJ ont appris du personnage (V3.2-83) ;
+ *   un paragraphe de description caché ou révélé revient comme il était ;
  * - l'état de jeu du personnage et la scène reviennent à ceux relevés au début
  *   du tour (`undo_before`), et les effets posés depuis sont retirés ;
  * - l'inventaire revient à celui du début du tour (V3.2-8 : un échange l'a
@@ -46,7 +51,8 @@ export type UndoTurnResult =
  *
  * Droit : le MJ de la campagne solo (la joueuse elle-même), vérifié ici.
  * Coût (QUOTAS) : la campagne, la séance et son journal, les propositions du
- * tour ; une écriture par chose défaite ; un événement de journal.
+ * tour ; une écriture par chose défaite (deux suppressions de plus depuis
+ * V3.2-83, indices et savoir des PNJ) ; un événement de journal.
  */
 export async function undoLastSoloTurn(supabase: TypedClient, params: { campaignId: string; callerId: string }): Promise<UndoTurnResult> {
   const campaign = await getCampaignById(supabase, params.campaignId);
@@ -87,6 +93,15 @@ export async function undoLastSoloTurn(supabase: TypedClient, params: { campaign
 
   // 2. Les découvertes du tour.
   const discoveries = await deleteDiscoveriesBySourceEvents(supabase, { campaignId: params.campaignId, eventIds: tour.eventIds });
+  // V3.2-83 : les indices révélés et ce que les PNJ ont appris, nés des événements du tour ; un signe caché revient.
+  const [facets, knowledge] = await Promise.all([
+    deleteFacetDiscoveriesBySourceEvents(supabase, { campaignId: params.campaignId, eventIds: tour.eventIds }),
+    deleteNpcKnowledgeBySourceEvents(supabase, { campaignId: params.campaignId, eventIds: tour.eventIds }),
+  ]);
+  const marks = await restorePcConcealments(supabase, {
+    payloads: lignes.filter((l) => tour.eventIds.includes(l.id) && l.kind === "rule_application").map((l) => l.payload),
+    callerId: params.callerId,
+  });
 
   // 3. L'état d'avant le tour (absent d'un tour journalisé avant V3-F2 : rien n'est restauré).
   let effects = 0;
@@ -146,7 +161,7 @@ export async function undoLastSoloTurn(supabase: TypedClient, params: { campaign
   }
 
   // 4. Le journal : une annulation s'ajoute, rien ne s'efface.
-  const reverted = { entities, proposals, discoveries, effects, state, scene, inventory };
+  const reverted = { entities, proposals, discoveries, facets, knowledge, marks, effects, state, scene, inventory };
   await insertSessionEvent(supabase, {
     sessionId: session.id,
     seq: await nextEventSeq(supabase, session.id),

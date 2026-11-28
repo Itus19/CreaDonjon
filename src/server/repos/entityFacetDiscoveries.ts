@@ -46,3 +46,28 @@ export async function insertFacetDiscoveries(
   );
   if (error) throw new Error(error.message);
 }
+
+/** V3.2-83 — « Annuler ce tour » : les indices que ces événements ont révélés s'en vont. Rend le nombre de lignes retirées. */
+export async function deleteFacetDiscoveriesBySourceEvents(supabase: TypedClient, params: { campaignId: string; eventIds: readonly string[] }): Promise<number> {
+  if (params.eventIds.length === 0) return 0;
+  const { data, error } = await supabase
+    .from("entity_facet_discoveries")
+    .delete()
+    .eq("campaign_id", params.campaignId)
+    .in("source_event_id", [...params.eventIds])
+    .select("id");
+  if (error) throw new Error(error.message);
+  return (data ?? []).length;
+}
+
+/**
+ * V3.2-87 — La vue joueur d'un PNJ construite EN BASE (`npc_player_view`,
+ * security definer) : seulement les facettes découvertes, pour une joueuse
+ * d'une table qui ne lit pas les blocs du MJ. `null` : pas membre de la
+ * partie, ou PNJ d'un autre monde. Une lecture.
+ */
+export async function rpcNpcPlayerView(supabase: TypedClient, params: { campaignId: string; entityId: string }): Promise<unknown> {
+  const { data, error } = await supabase.rpc("npc_player_view", { p_campaign: params.campaignId, p_entity: params.entityId });
+  if (error) throw new Error(error.message);
+  return data;
+}
