@@ -4,6 +4,7 @@ import { budgetForTurn, zActionBudget, type ActionBudget } from "./actionBudget"
 import { computeSortKey, dateFromSortKey } from "../calendar/sortKey";
 import type { CalendarConfig, GameDate } from "../calendar/types";
 import { rafraichirLaVie, zSceneLife, type SceneLife } from "./sceneLife";
+import type { EspritDeCombat } from "./combatMinds";
 
 /**
  * V3-A4 — L'etat de scene (specs/moteur-de-jeu.md §6).
@@ -137,6 +138,20 @@ export interface SceneState {
    * nouvelles à raconter. Facultative et sans changer `__v`.
    */
   life?: SceneLife;
+  /**
+   * ADR 0122 — le but et le moral de chaque PNJ du combat en cours, par
+   * entité, fixés à l'ouverture (`espritDeCombat`). Dans la scène pour
+   * qu'« Annuler ce tour » les restaure avec le reste. Facultatif et sans
+   * changer `__v`.
+   */
+  combatMinds?: SceneCombatMinds;
+}
+
+export interface SceneCombatMinds {
+  combatId: string;
+  agresseurId: string;
+  cibleId: string;
+  esprits: Record<string, EspritDeCombat>;
 }
 
 export interface SceneRoom {
@@ -211,6 +226,23 @@ export const zSceneState = z.object({
     .optional(),
   lastLongRestEnd: z.record(z.string(), zGameTime).optional(),
   life: zSceneLife.optional(),
+  combatMinds: z
+    .object({
+      combatId: z.string().min(1),
+      agresseurId: z.string().min(1),
+      cibleId: z.string().min(1),
+      esprits: z.record(
+        z.string(),
+        z.object({
+          but: z.enum(["arreter", "piller", "defendre", "survivre", "vaincre"]),
+          protege: z.string().min(1).nullable(),
+          mod: z.number().int().min(-6).max(6),
+          etat: z.enum(["combat", "fuite", "rendu"]),
+          testes: z.array(z.string().min(1)).max(40),
+        })
+      ),
+    })
+    .optional(),
 });
 
 export function emptyScene(locationId: string, time: GameTime = { day: 1, hour: 8, minute: 0 }): SceneState {

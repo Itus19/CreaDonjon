@@ -169,12 +169,16 @@ Demandé le 26 novembre après la partie test avec Mabelle ; maquettes validées
 
 **Reste.** Le choix par l'IA dans la liste fermée (cases ci-dessus) ; se désengager, fuir, se rendre, aider ; un compagnon sans fiche allégée ne joue pas encore ; la zone affichée dans le rail ne suit le déplacement du PNJ qu'au rechargement.
 
-### ☐ V3.2-74 — Moral et fin du combat · `S` · sans modèle IA · Modèle conseillé : Opus — **après V3.2-66**
+### ☑ V3.2-74 — Moral et fin du combat · `S` · sans modèle IA · Modèle conseillé : Opus — **codé le 28 novembre (ADR 0122)**
 
-- ADR 0121, point 7. Test de moral à la moitié des PV ou quand un allié tombe (assurance, prudence, archétype) : fuite ou reddition. Le combat finit quand un camp n'a plus personne qui veut ou peut se battre ; `endCombat` le clôt.
+- ADR 0121, point 7, précisé par l'ADR 0122 (choix de l'auteur : option B, moral et but dans le combat). Test de moral à la moitié des PV ou quand un allié tombe (assurance, prudence, archétype) : fuite ou reddition. Le combat finit quand un camp n'a plus personne qui veut ou peut se battre ; `endCombat` le clôt.
 
 **Critères d'acceptation**
-- [ ] Tests du noyau : un PNJ prudent fuit à la moitié de ses PV ; un camp vide termine le combat.
+- [x] Tests du noyau : un PNJ prudent fuit à la moitié de ses PV ; un camp vide termine le combat.
+
+**Fait.** `src/core/rules/combatMinds.ts` (testé) : `butDeCombat` donne à chaque PNJ un but tiré de sa psyché (arrêter pour la garde, piller pour le malfrat ou l'égoïste, défendre un ami, survivre pour une cible qui a peur ou tient à la paix, sinon vaincre) ; `modificateurDeMoral` (peur de l'adversaire, impulsivité, aspirations d'une vie, archétype, but, ± 6) ; `declencheursDeMoral` (moitié des PV DD 10, allié tombé DD 10, seul contre plusieurs DD 12) ; `testDeMoral` (d20 + mod du serveur ; raté : fuite, ou reddition au contact à un quart des PV). `tactiqueDuPnj` vise selon le but. L'esprit de chaque PNJ est fixé à l'ouverture (`ouvrirCombatSolo`) et vit dans la scène (`combatMinds`), donc « Annuler ce tour » le restaure. `jouerTourDesPnj` teste le moral au début du tour, fait fuir (le PNJ quitte la pièce) ou rendre, et clôt le combat (`endCombat`, l'heure avance) quand plus aucun ennemi du personnage ne veut ou ne peut se battre. Vérifié à l'écran sur une copie locale : « Mabelle tient bon (moral : 13 (dé : 19) contre DD 10) », puis « Le combat est terminé. » quand elle tombe.
+
+**Reste.** Les renforts et le recalcul des camps à chaque round ; le personnage à 0 PV (jets contre la mort, le combat ne s'arrête pas) ; la reddition du personnage ; épargner ou achever un PNJ rendu ; poursuivre un fuyard ; le coup qui assomme.
 
 ---
 
