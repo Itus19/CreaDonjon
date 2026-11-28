@@ -179,7 +179,10 @@ export async function POST(request: NextRequest) {
 
   const campaignId = parsed.data.campaignId;
   // À 0 PV, ni stabilisé ni mort : le tour est un jet contre la mort, quoi que dise la phrase (règles 2024).
-  const aTerre = campaignId ? await jetContreLaMortDuTour(supabase, { campaignId, entityId: parsed.data.entityId, callerId: user.id, locale }) : null;
+  const tourATerre = campaignId ? await jetContreLaMortDuTour(supabase, { campaignId, entityId: parsed.data.entityId, callerId: user.id, locale }) : null;
+  // Mort, en solo : la partie est terminée (choix de l'auteur). Plus aucun tour ne se joue.
+  if (tourATerre?.kind === "mort") return NextResponse.json({ error: "Ton personnage est mort : la partie est terminée." }, { status: 409 });
+  const aTerre = tourATerre?.phrase ?? null;
   if (aTerre) {
     choice = { kind: "free" };
   } else if (campaignId && choice.kind === "free" && choice.sansJet?.raison === "joueur") {

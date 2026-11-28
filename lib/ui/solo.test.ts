@@ -65,6 +65,7 @@ describe("jaugesBande", () => {
       xpVersSuivant: 1800,
       pctXp: 33,
       aTerre: false,
+      mort: false,
     });
   });
 
@@ -72,6 +73,7 @@ describe("jaugesBande", () => {
     expect(jaugesBande({ ...base, hpCurrent: 0, deathSaves: { success: 1, fail: 1 } }).aTerre).toBe(true);
     expect(jaugesBande({ ...base, hpCurrent: 0, deathSaves: { success: 3, fail: 1 } }).aTerre).toBe(false);
     expect(jaugesBande({ ...base, hpCurrent: 0 }).aTerre).toBe(false);
+    expect(jaugesBande({ ...base, hpCurrent: 0, deathSaves: { success: 1, fail: 3 } })).toMatchObject({ aTerre: false, mort: true });
   });
 
   it("ne divise pas par zero quand un maximum est nul", () => {

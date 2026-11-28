@@ -239,6 +239,7 @@ export const zSceneState = z.object({
           mod: z.number().int().min(-6).max(6),
           etat: z.enum(["combat", "fuite", "rendu"]),
           testes: z.array(z.string().min(1)).max(40),
+          impitoyable: z.boolean().optional(),
         })
       ),
     })

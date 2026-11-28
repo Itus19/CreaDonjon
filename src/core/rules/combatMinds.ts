@@ -27,6 +27,8 @@ export interface EspritDeCombat {
   etat: EtatDeCombat;
   /** Les déclencheurs déjà testés : on ne teste pas deux fois la même chose. */
   testes: string[];
+  /** Très dur (dureté forte) ou haineux envers l'adversaire : il achève qui est à terre. Absent : non. */
+  impitoyable?: boolean;
 }
 
 export interface PsycheAuCombat {
@@ -76,9 +78,14 @@ export function modificateurDeMoral(p: PsycheAuCombat, but: ButDeCombat): number
   return Math.max(-MOD_MAX, Math.min(MOD_MAX, mod)) || 0;
 }
 
+/** La bande « extrême » (`bands.ts`) : au-delà, on achève. */
+const SEUIL_EXTREME = 67;
+
 export function espritDeCombat(p: PsycheAuCombat): EspritDeCombat {
   const { but, protege } = butDeCombat(p);
-  return { but, protege, mod: modificateurDeMoral(p, but), etat: "combat", testes: [] };
+  const adversaire = p.camp === "defenseur" ? p.agresseurId : p.cibleId;
+  const impitoyable = (p.poles.empathy_hardness ?? 0) <= -SEUIL_EXTREME || (p.envers[adversaire]?.amitie ?? 0) <= -SEUIL_EXTREME;
+  return { but, protege, mod: modificateurDeMoral(p, but), etat: "combat", testes: [], ...(impitoyable ? { impitoyable } : {}) };
 }
 
 export interface DeclencheurDeMoral {
@@ -147,4 +154,23 @@ export function jetDeSecours(modificateur: number, rng: { nextInt(max: number): 
   const naturel = rng.nextInt(20) + 1;
   const total = naturel + modificateur;
   return { naturel, total, reussi: total >= 10 };
+}
+
+export type SortDuVaincu = "capture" | "detrousse" | "acheve" | "laisse";
+
+/**
+ * ADR 0123 — Ce que les vainqueurs font de qui est à terre, selon leur but
+ * (choix de l'auteur : le moteur décide). La garde l'arrête ; sinon un
+ * pillard le détrousse ; sinon un impitoyable l'achève ; sinon on le laisse.
+ * Rend l'issue et l'indice du vainqueur qui la porte (`null` sans vainqueur).
+ */
+export function sortDuVaincu(vainqueurs: readonly Pick<EspritDeCombat, "but" | "impitoyable">[]): { sort: SortDuVaincu; par: number | null } {
+  const premier = (test: (e: Pick<EspritDeCombat, "but" | "impitoyable">) => boolean) => vainqueurs.findIndex(test);
+  const garde = premier((e) => e.but === "arreter");
+  if (garde >= 0) return { sort: "capture", par: garde };
+  const pillard = premier((e) => e.but === "piller");
+  if (pillard >= 0) return { sort: "detrousse", par: pillard };
+  const bourreau = premier((e) => e.impitoyable === true && e.but !== "survivre" && e.but !== "defendre");
+  if (bourreau >= 0) return { sort: "acheve", par: bourreau };
+  return { sort: "laisse", par: vainqueurs.length > 0 ? 0 : null };
 }

@@ -451,6 +451,7 @@ export default function IntentBar({
 
   function submit() {
     if (pending) void encash();
+    else if (data.mort) return;
     else if (data.aTerre || !cibleManquante) void play();
   }
 
@@ -545,7 +546,9 @@ export default function IntentBar({
   const label = pending ? "Jet demandé" : "Que fais-tu ?";
   // Le texte temporaire du jet tient sur une ligne, même sur téléphone : lancer
   // depuis la fiche ou avec le dé voisin se voit déjà, il ne reste qu'à dire quoi écrire.
-  const placeholder = pending
+  const placeholder = data.mort
+    ? "Ton personnage est mort : la partie est terminée"
+    : pending
     ? `Résultat du dé (1-${pending.die_max})`
     : data.aTerre
     ? "Tu es à terre : ton tour est un jet contre la mort"
@@ -773,6 +776,7 @@ export default function IntentBar({
       <div className="flex min-w-0 items-end gap-1.5">
         <textarea
           ref={textareaRef}
+          disabled={data.mort === true}
           aria-label={label}
           value={text}
           onChange={(e) => handleChange(e.target.value)}
@@ -811,7 +815,7 @@ export default function IntentBar({
               type="button"
               className={isQuestion ? BTN_PRIMARY : BTN_SECONDARY}
               onClick={() => void askMj()}
-              disabled={busy || vide || !canAskMj}
+              disabled={busy || vide || !canAskMj || data.mort === true}
               title={canAskMj ? "Poser la phrase au MJ, hors du temps de jeu" : "Sans campagne, il n'y a pas de MJ à qui demander."}
             >
               {busy && lastAttempt === "mj" ? "…" : "MJ"}
@@ -825,7 +829,7 @@ export default function IntentBar({
               type="button"
               className={isQuestion ? BTN_SECONDARY : BTN_PRIMARY}
               onClick={() => void play()}
-              disabled={busy || (!data.aTerre && (vide || tradeBlocked || cibleManquante))}
+              disabled={busy || data.mort === true || (!data.aTerre && (vide || tradeBlocked || cibleManquante))}
               title={data.aTerre ? "À 0 PV, ton tour est un jet contre la mort : le serveur lance le d20." : cibleManquante ? "Sur qui ? Choisis la cible de l'attaque parmi les présents." : undefined}
             >
               {busy && lastAttempt === "submit" ? "…" : data.aTerre ? JET_CONTRE_LA_MORT : trade ? TRADE_LABELS[trade.direction].button : "Jouer"}

@@ -41,6 +41,8 @@ export interface IntentBarData {
   ruleKeys: string[];
   /** À 0 PV, ni stabilisé ni mort : le tour est un jet contre la mort. */
   aTerre?: boolean;
+  /** Mort (trois échecs) : en solo, la partie est terminée. */
+  mort?: boolean;
 }
 
 export interface TurnRecord {
