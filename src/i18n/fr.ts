@@ -108,7 +108,7 @@ export const INTENT_VERBS_FR: IntentVerb[] = [
   { kind: "skill_check", actionId: "intimidation", terms: ["intimide", "intimider", "menace", "menacer"] },
   { kind: "skill_check", actionId: "deception", terms: ["mens", "mentir", "bluffe", "bluffer"] },
   { kind: "skill_check", actionId: "stealth", terms: ["cache", "cacher", "faufile", "faufiler"] },
-  { kind: "skill_check", actionId: "sleight_of_hand", terms: ["crochete", "crocheter", "subtilise", "subtiliser", "escamote", "escamoter"] },
+  { kind: "skill_check", actionId: "sleight_of_hand", terms: ["crochete", "crocheter", "subtilise", "subtiliser", "escamote", "escamoter", "dissimule", "dissimuler"] },
   { kind: "skill_check", actionId: "medicine", terms: ["soigne", "soigner", "stabilise", "stabiliser"] },
   { kind: "skill_check", actionId: "survival", terms: ["piste", "pister", "traque", "traquer"] },
   { kind: "skill_check", actionId: "insight", terms: ["jauge", "jauger", "sonde", "sonder"] },
