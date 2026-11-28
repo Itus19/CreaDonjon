@@ -1,4 +1,5 @@
-import type { SceneRoom, SceneRoomSketch, SceneState } from "./scene";
+import { pieceCourante, type SceneRoom, type SceneRoomSketch, type SceneState } from "./scene";
+import { changerDePiece } from "./scenePresence";
 import type { Room, RoomsBlockData } from "../schemas/blocks/rooms";
 
 /**
@@ -161,4 +162,27 @@ export function deciderPiece(
 export function pieceAncree(scene: SceneState, name: string): SceneState {
   const room = scene.room && scene.room.name === name ? { ...scene.room, anchored: true } : (scene.room ?? null);
   return { ...scene, room, roomSketches: (scene.roomSketches ?? []).filter((s) => !(s.locationId === scene.locationId && s.name === name)) };
+}
+
+const MOTS_DE_CELLULE = /\b(?:cellule|cachot|geole|prison|oubliette|cage)s?\b/;
+
+/**
+ * ADR 0123 — Le personnage capturé est enfermé : dans une cellule du wiki si
+ * le lieu en a une, sinon une cellule esquissée (au poste du garde) ou une
+ * pièce fermée à clé (le garde n'a pas de poste connu). Le personnage y
+ * est seul : le garde ferme la porte et reste dehors, avec les autres. Pure.
+ */
+export function pieceDeCaptivite(
+  scene: SceneState,
+  params: { wikiRooms: readonly Room[]; pjId: string; lieuDeGarde: boolean }
+): SceneState {
+  const cellule = params.wikiRooms.find((r) => MOTS_DE_CELLULE.test(normaliserNomPiece(r.name)));
+  const enter = cellule
+    ? { name: cellule.name }
+    : params.lieuDeGarde
+      ? { name: "Une cellule", description: "Des murs de pierre, une porte bardée de fer, une paillasse." }
+      : { name: "Une pièce fermée à clé", description: "Une pièce close, la porte verrouillée de l'extérieur." };
+  const decision = deciderPiece(scene, { enter, leave: false }, { wikiRooms: params.wikiRooms, locationName: "", neighbourNames: [], playerAction: "" });
+  if (!decision.changed) return decision.scene;
+  return changerDePiece(decision.scene, { avant: pieceCourante(scene), apres: pieceCourante(decision.scene), suivent: [params.pjId] });
 }

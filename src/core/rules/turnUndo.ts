@@ -30,6 +30,8 @@ export interface UndoableTurn {
   eventIds: string[];
   /** `null` : un tour journalisé avant V3-F2, sans état relevé. */
   before: TurnBefore | null;
+  /** ADR 0123 : les sacs d'autres fiches que le tour a remplis (un voleur), tels qu'avant le tour. Absent : aucun. */
+  othersInventoryBefore?: { entity_id: string; inventory: unknown }[];
 }
 
 const estObjet = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -68,5 +70,20 @@ export function lastUndoableTurn(events: readonly JournalEvent[]): UndoableTurn 
   if (debut < 0) return null;
   const tour = vivants.slice(debut);
   const premier = tour[0]!;
-  return { startId: premier.id, startSeq: premier.seq, eventIds: tour.map((e) => e.id), before: avantDe(premier) };
+  const autres = autresSacsAvant(tour);
+  return { startId: premier.id, startSeq: premier.seq, eventIds: tour.map((e) => e.id), before: avantDe(premier), ...(autres.length > 0 ? { othersInventoryBefore: autres } : {}) };
+}
+
+/** Les relevés `others_inventory_before` du tour ; pour une fiche relevée deux fois, le premier (l'état d'avant le tour). */
+function autresSacsAvant(tour: readonly JournalEvent[]): { entity_id: string; inventory: unknown }[] {
+  const vus = new Map<string, unknown>();
+  for (const e of tour) {
+    const lot = e.payload.others_inventory_before;
+    if (!Array.isArray(lot)) continue;
+    for (const r of lot) {
+      if (!estObjet(r) || typeof r.entity_id !== "string" || vus.has(r.entity_id)) continue;
+      vus.set(r.entity_id, r.inventory ?? null);
+    }
+  }
+  return [...vus].map(([entity_id, inventory]) => ({ entity_id, inventory }));
 }

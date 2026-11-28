@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { emptyScene } from "./scene";
-import { ajouterPiece, deciderPiece, idDePiece, pieceDoitEtreAncree, trouverPiece, validerNouvellePiece } from "./rooms";
+import { ajouterPiece, deciderPiece, idDePiece, pieceDeCaptivite, pieceDoitEtreAncree, trouverPiece, validerNouvellePiece } from "./rooms";
 
 const rooms = [
   { id: "cuisine", name: "La cuisine", description: "Basse et enfumée." },
@@ -108,5 +108,22 @@ describe("deciderPiece — le moteur tranche ce que la narration propose", () =>
   it("déjà dans la pièce : rien ne change", () => {
     const dans = deciderPiece(base, { enter: { name: "la cuisine" }, leave: false }, ctx).scene;
     expect(deciderPiece(dans, { enter: { name: "Cuisine" }, leave: false }, ctx).changed).toBe(false);
+  });
+});
+
+describe("pieceDeCaptivite (ADR 0123) — le personnage capturé est enfermé", () => {
+  const base = { ...emptyScene("poste"), present: [{ entityId: "garde", zone: "near" as const }, { entityId: "pj", zone: "near" as const }, { entityId: "badaud", zone: "far" as const }] };
+
+  it("une cellule du wiki, s'il y en a une ; le personnage y est seul, le garde reste dehors", () => {
+    const out = pieceDeCaptivite(base, { wikiRooms: [{ id: "c", name: "Le cachot", description: "Humide." }], pjId: "pj", lieuDeGarde: true });
+    expect(out.room).toEqual({ locationId: "poste", name: "Le cachot", description: "Humide.", anchored: true });
+    expect(out.present.map((p) => [p.entityId, p.room])).toEqual([["garde", null], ["pj", "Le cachot"], ["badaud", null]]);
+  });
+
+  it("sinon une cellule esquissée au poste du garde, ou une pièce fermée à clé ailleurs", () => {
+    expect(pieceDeCaptivite(base, { wikiRooms: rooms, pjId: "pj", lieuDeGarde: true }).room?.name).toBe("Une cellule");
+    const ailleurs = pieceDeCaptivite(base, { wikiRooms: [], pjId: "pj", lieuDeGarde: false });
+    expect(ailleurs.room).toMatchObject({ name: "Une pièce fermée à clé", anchored: false });
+    expect(ailleurs.roomSketches).toHaveLength(1);
   });
 });

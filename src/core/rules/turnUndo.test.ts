@@ -35,6 +35,17 @@ describe("lastUndoableTurn", () => {
     expect(lastUndoableTurn([ev("a", 1, "player_action", "player", { undo_before: { entity_id: "pj", runtime: null, scene: null } })])?.before?.inventory).toBeUndefined();
   });
 
+  it("ADR 0123 : rend les sacs d'autres fiches remplis pendant le tour (un voleur), le plus ancien relevé par fiche", () => {
+    const sac = { __v: 1, items: [], containers: [], currency: { pp: 0, gp: 2, ep: 0, sp: 0, cp: 0 } };
+    const tour = lastUndoableTurn([
+      ev("a", 1, "player_action", "player", { undo_before: { entity_id: "pj", runtime: null, scene: null } }),
+      ev("p", 2, "rule_application", "system", { others_inventory_before: [{ entity_id: "voleur", inventory: sac }, { entity_id: "x", inventory: null }] }),
+      ev("q", 3, "rule_application", "system", { others_inventory_before: [{ entity_id: "voleur", inventory: { autre: 1 } }, { pas: "valide" }] }),
+    ]);
+    expect(tour?.othersInventoryBefore).toEqual([{ entity_id: "voleur", inventory: sac }, { entity_id: "x", inventory: null }]);
+    expect(lastUndoableTurn(journal)?.othersInventoryBefore).toBeUndefined();
+  });
+
   it("un tour sans état relevé (journal d'avant V3-F2) se défait sans restaurer d'état", () => {
     expect(lastUndoableTurn([ev("a", 1, "player_action", "player"), ev("n", 2, "narration", "ai")])).toMatchObject({ startId: "a", before: null });
   });

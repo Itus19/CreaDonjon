@@ -15,7 +15,7 @@ import { insertSessionEvent, nextEventSeq } from "@/src/server/repos/sessions";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
 import { endCombat, orderParticipants } from "@/src/server/services/combats";
 import { applyResolvedEffects } from "@/src/server/services/targetedRoll";
-import { sortDuPersonnageVaincu } from "@/src/server/services/soloDowned";
+import { emmenerEnCaptivite, sortDuPersonnageVaincu } from "@/src/server/services/soloDowned";
 import { serverRng } from "@/src/server/services/rng";
 
 type TypedClient = SupabaseClient<Database>;
@@ -208,6 +208,8 @@ export async function jouerTourDesPnj(
       })
     : { changes: [] as string[] };
 
+  const inventairesAvant: { entity_id: string; inventory: unknown }[] = [];
+  let capture: { gardeEntityId: string; gardeLabel: string; pjEntityId: string; pjLabel: string } | null = null;
   // ADR 0123, après les dégâts (un achevé ne doit pas les annuler) : ce que les vainqueurs font de lui, selon leur but.
   // Un personnage déjà mort n'a plus rien à craindre.
   if (perdu && pj.entity_id && !(etatPj && etatPj.death_saves.fail >= 3)) {
@@ -215,8 +217,11 @@ export async function jouerTourDesPnj(
     const { sort, par } = sortDuVaincu(vainqueurs.map((p) => esprits.get(p.entity_id!)!));
     if (par !== null) {
       const auteur = vainqueurs[par]!;
-      faits.push(await sortDuPersonnageVaincu(supabase, { campaignId: params.campaignId, callerId: params.callerId, pjEntityId: pj.entity_id, pjLabel: pj.label, vainqueur: auteur.label, sort }));
+      const issue = await sortDuPersonnageVaincu(supabase, { campaignId: params.campaignId, callerId: params.callerId, pjEntityId: pj.entity_id, pjLabel: pj.label, vainqueur: auteur.label, vainqueurEntityId: auteur.entity_id, sort });
+      faits.push(issue.fait);
+      if (issue.inventaireAvant) inventairesAvant.push(issue.inventaireAvant);
       if (sort === "detrousse") present = present.filter((p) => p.entityId !== auteur.entity_id);
+      if (sort === "capture" && auteur.entity_id) capture = { gardeEntityId: auteur.entity_id, gardeLabel: auteur.label, pjEntityId: pj.entity_id, pjLabel: pj.label };
     }
   }
   await updateCombat(supabase, combat.id, { round: combat.round + 1 });
@@ -231,6 +236,8 @@ export async function jouerTourDesPnj(
   }
   // Après l'écriture de la scène : `endCombat` la relit pour avancer l'heure et oublier le combat.
   if (fini) await endCombat(supabase, { combatId: combat.id, actorUserId: params.callerId });
+  // ADR 0123 : le capturé est emmené une fois le combat clos (la scène ne bouge pas pendant un combat).
+  if (fini && capture) faits.push(await emmenerEnCaptivite(supabase, { campaignId: params.campaignId, callerId: params.callerId, ...capture }));
 
   const sessionId = await getOrOpenSessionForCampaign(supabase, params.campaignId);
   await insertSessionEvent(supabase, {
@@ -239,7 +246,15 @@ export async function jouerTourDesPnj(
     kind: "rule_application",
     actor: "system",
     actorUserId: null,
-    payload: { __v: 1, source: "npc_turns", changes_text: [...faits, ...changes], hints_text: [], ignored_text: [] } as unknown as Json,
+    payload: {
+      __v: 1,
+      source: "npc_turns",
+      changes_text: [...faits, ...changes],
+      hints_text: [],
+      ignored_text: [],
+      // Les sacs d'autres fiches que le tour a remplis (un voleur), pour « Annuler ce tour ».
+      ...(inventairesAvant.length > 0 ? { others_inventory_before: inventairesAvant } : {}),
+    } as unknown as Json,
   });
   return [...faits, ...changes];
 }

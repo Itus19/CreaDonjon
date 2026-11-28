@@ -22,4 +22,10 @@ Les PNJ ont un but et un moral en combat (ADR 0122), le personnage à terre lanc
 ## Conséquences
 
 - Aucune migration. Coût : une fois par combat perdu, une lecture de l'état de jeu, et pour un détroussage la bourse et le système monétaire.
-- **Reste** : la captivité comme lieu (cellule, poste de garde) ; la bourse volée qui entre dans l'inventaire du pillard ; les objets visibles détroussés ; un PNJ à terre vaincu par un autre PNJ ; l'ennemi impitoyable qui achève pendant le combat (aujourd'hui seulement à la fin).
+- **Reste** : ~~la captivité comme lieu ; la bourse volée dans l'inventaire du pillard ; les objets détroussés~~ (addendum ci-dessous) ; un PNJ à terre vaincu par un autre PNJ ; l'ennemi impitoyable qui achève pendant le combat (aujourd'hui seulement à la fin).
+
+## Addendum du 28 novembre 2026 (V3.2-77, demande de l'auteur)
+
+- **Le butin passe chez le voleur.** Le pillard prend toute la bourse et ce que le personnage tient en main (`butinVisible`, `loot.ts`) ; jamais un objet caché, ni ce qu'il porte sur lui (ôter une armure prend des minutes, et le pillard lâche vite), ni le fond du sac. Le transfert passe par le règlement des échanges (`applyTrade`) : ce qui sort d'un sac entre tel quel dans l'autre. Le sac du voleur d'avant le tour est relevé dans le journal (`others_inventory_before`) et « Annuler ce tour » le remet.
+- **La captivité a un lieu.** Une fois le combat clos, la scène part au lieu où travaille le garde (`works_at`), et le personnage y est enfermé seul, le garde dehors : une cellule de la page du lieu si elle en a une (cellule, cachot, geôle…), sinon une cellule esquissée, ou une pièce fermée à clé si le garde n'a pas de poste connu (`pieceDeCaptivite`). Une pièce réservée au MJ ne sert pas de cellule.
+- **Reste** : s'évader, être jugé, être libéré ; ce que le personnage sait de son voleur.
