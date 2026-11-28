@@ -218,12 +218,12 @@ Demandé le 26 novembre après la partie test avec Mabelle ; maquettes validées
 
 **Reste.** S'évader, être jugé ou libéré : la captivité n'a pas encore de suite. Un voleur qui prend les bijoux ou l'armure. Ce que le personnage sait de qui l'a volé (pour le retrouver).
 
-### ☐ V3.2-78 — Fin de partie, et continuer dans le même monde · `M` · **avec modèle IA** (l'épilogue) · Modèle conseillé : Opus — **à concevoir (ADR à écrire)**
+### ☐ V3.2-78 — Fin de partie, et continuer dans le même monde · `M` · **avec modèle IA** (l'épilogue) · Modèle conseillé : Opus — **ADR 0124, croquis à valider**
 
 - Retour de l'auteur (28 novembre) : « un écran de game over, de fin de jeu », « garder le monde dans lequel ils ont évolué, puis jouer un autre personnage, un descendant, par exemple s'ils avaient un enfant ».
 - Aujourd'hui, à la mort (ADR 0123), la barre du tour se ferme sur une phrase et c'est tout.
 
-**Ce que l'écran de fin propose (à trancher par l'auteur)**
+**Ce que l'écran de fin propose** (l'auteur les veut toutes, 28 novembre ; ordre en trois étapes, ADR 0124 : 1-3 d'abord, puis 4-6 après la copie du monde par partie, puis 7 après la simulation d'histoire)
 1. **L'épilogue** : l'IA raconte la fin d'après le journal (la mort, ce que le personnage laisse), le moteur fournit les faits (règle 8).
 2. **La chronique** : une page relisible de la vie du personnage (lieux vus, personnes rencontrées, quêtes, la cause de la mort), tirée du journal, sans IA.
 3. **Annuler la mort** : « Annuler ce tour » existe déjà ; l'écran le propose franchement (« revenir avant le coup fatal »), pour qui ne veut pas d'une mort définitive.
