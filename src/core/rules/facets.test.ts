@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { StatblockBlockData } from "../schemas/blocks/statblock";
 import type { InventoryBlockData } from "../schemas/blocks/inventory";
-import { isFacetKey, playerViewOfInventory, playerViewOfStatblock, seenAtAGlance } from "./facets";
+import { isFacetKey, parseNpcPlayerView, playerViewOfInventory, playerViewOfStatblock, seenAtAGlance } from "./facets";
 
 const FICHE: StatblockBlockData = {
   __v: 1,
@@ -84,5 +84,28 @@ describe("playerViewOfInventory", () => {
 describe("seenAtAGlance — ce qui se voit dès qu'on voit le PNJ", () => {
   it("les objets portés et non cachés", () => {
     expect(seenAtAGlance(SAC)).toEqual(["item:pnj-0"]);
+  });
+});
+
+describe("parseNpcPlayerView — V3.2-87, la vue rendue par la base", () => {
+  const connues = new Set(["ability:str", "ac", "action:0", "item:pnj-1", "purse"]);
+  const attendue = { sheet: playerViewOfStatblock(FICHE, connues), gear: playerViewOfInventory(SAC, connues) };
+
+  it("relit la vue telle que `npc_player_view` la construit (même forme que le noyau)", () => {
+    expect(parseNpcPlayerView(JSON.parse(JSON.stringify(attendue)))).toEqual(attendue);
+  });
+
+  it("un PNJ sans fiche ni équipement : deux vides", () => {
+    expect(parseNpcPlayerView({ sheet: null, gear: null })).toEqual({ sheet: null, gear: null });
+  });
+
+  it("un refus de la base (null) ou une forme inattendue : rien", () => {
+    expect(parseNpcPlayerView(null)).toBeNull();
+    expect(parseNpcPlayerView({ sheet: { abilities: "tout" }, gear: null })).toBeNull();
+  });
+
+  it("un champ en trop est retiré : la vue ne laisse passer que ce qu'elle connaît", () => {
+    const brute = { sheet: { ...attendue.sheet, notes_mj: "secret" }, gear: null };
+    expect(parseNpcPlayerView(brute)?.sheet).not.toHaveProperty("notes_mj");
   });
 });

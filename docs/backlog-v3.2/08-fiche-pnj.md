@@ -204,11 +204,13 @@ En combat, la cible d'un jet est un participant (`participant:<id>`), pas une en
 - [x] Un participant sans entité (créature anonyme) ne révèle rien, sans erreur.
 - [ ] En jouant.
 
-### ☐ V3.2-87 — Les indices dans le jeu à table · `M` · sans modèle IA · Modèle conseillé : Opus — **migration à valider par l'auteur**
+### ☐ V3.2-87 — Les indices dans le jeu à table · `M` · sans modèle IA · Modèle conseillé : Opus — **codé le 28 novembre (accord de l'auteur) ; migration à appliquer**
 
 En solo, la personne qui joue est propriétaire du monde : le serveur lit la fiche du PNJ et ne lui envoie que les facettes découvertes. À une table, une joueuse ne peut pas lire le bloc `statblock` d'un PNJ (visibilité MJ, RLS) : le serveur, qui agit en son nom, ne peut donc pas construire sa vue des indices. Il faut une fonction SQL `security definer` qui rend, pour un membre de la partie, seulement les facettes découvertes (par la table ou par elle) d'une fiche, et rien d'autre. Elle se teste comme une route (liste de contrôle de `docs/SECURITE.md`).
 
+**Fait, 28 novembre.** Migration `20261128120000_indices_a_table` : `public.npc_player_view`, qui reproduit `playerViewOfStatblock` et `playerViewOfInventory` en SQL. Le serveur relit sa sortie avec `parseNpcPlayerView` (Zod, champs inconnus retirés) et l'affiche dans la page du wiki quand la lectrice ne voit pas la fiche (`playerEntityDetail.ts`, `readNpcDisplayView` avec `atTable`). Une erreur de la base, la migration pas encore appliquée par exemple, laisse la page s'afficher sans indices. Coût : une lecture de plus par page d'un personnage à table.
+
 **Critères d'acceptation**
-- [ ] Une joueuse à table voit la CA d'un PNJ que la table a découverte, et rien d'autre de sa fiche.
-- [ ] Une personne hors de la partie n'obtient rien.
-- [ ] Migration appliquée par l'auteur ; vérifié à table.
+- [x] Une joueuse à table voit la CA d'un PNJ que la table a découverte, et rien d'autre de sa fiche (`facetDiscoveries.test.ts` ; en base, `indicesEtSavoirRls.integration.test.ts`).
+- [x] Une personne hors de la partie n'obtient rien (mêmes tests).
+- [ ] Migration appliquée par l'auteur ; test d'intégration passé ; vérifié à table.

@@ -1,9 +1,9 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/src/types/database";
-import { insertFacetDiscoveries, listFacetDiscoveries } from "@/src/server/repos/entityFacetDiscoveries";
+import { insertFacetDiscoveries, listFacetDiscoveries, rpcNpcPlayerView } from "@/src/server/repos/entityFacetDiscoveries";
 import { listBlocksByTypesForEntities } from "@/src/server/repos/blocks";
-import { isFacetKey, playerViewOfInventory, playerViewOfStatblock, type PlayerInventoryView, type PlayerStatblockView } from "@/src/core/rules/facets";
+import { isFacetKey, parseNpcPlayerView, playerViewOfInventory, playerViewOfStatblock, type PlayerInventoryView, type PlayerStatblockView } from "@/src/core/rules/facets";
 import { zStatblockBlockData } from "@/src/core/schemas/blocks/statblock";
 import { zInventoryBlockData } from "@/src/core/schemas/blocks/inventory";
 import { resolveBlockReferences } from "@/src/server/services/referenceChips";
@@ -48,8 +48,8 @@ export interface NpcPlayerView {
  *
  * Le client doit pouvoir lire les blocs `gm` : c'est le cas en solo (la
  * personne qui joue est propriétaire du monde). En partie à table, une
- * joueuse ne les lit pas ; il faudra une fonction `security definer` qui
- * rende la vue filtrée (chantier du jeu à distance, ADR 0118).
+ * joueuse ne les lit pas : `readNpcDisplayView` passe alors par la fonction
+ * `npc_player_view` (V3.2-87), qui rend la vue filtrée en base.
  *
  * Coût : deux lectures groupées (blocs, facettes), quel que soit le nombre de PNJ.
  */
@@ -111,17 +111,36 @@ export async function nameInventoryItems(
 }
 
 /**
+ * V3.2-87 — La vue rendue par la base. Une erreur (la migration pas encore
+ * appliquée, la base injoignable) ne casse pas la page : elle est journalisée
+ * et la page s'affiche sans indices.
+ */
+async function vueDeLaTable(supabase: TypedClient, params: { campaignId: string; entityId: string }): Promise<NpcPlayerView | null> {
+  try {
+    return parseNpcPlayerView(await rpcNpcPlayerView(supabase, params));
+  } catch (erreur) {
+    console.error("Vue des indices à table indisponible", erreur);
+    return null;
+  }
+}
+
+/**
  * V3.2-51 — La vue d'UN PNJ pour la page du wiki solo, avec le nom français
  * des objets de règle. `null` quand le PNJ n'a ni fiche allégée ni équipement.
  *
- * Coût : les deux lectures de `readNpcPlayerViews`, et une résolution groupée
- * des noms d'objets seulement s'il y a des objets découverts.
+ * V3.2-87 : `atTable` — une joueuse d'une partie à table ne lit pas les blocs
+ * du MJ ; la vue vient alors de la base (`npc_player_view`), déjà filtrée.
+ *
+ * Coût : les deux lectures de `readNpcPlayerViews` (une seule à table), et une
+ * résolution groupée des noms d'objets seulement s'il y a des objets découverts.
  */
 export async function readNpcDisplayView(
   supabase: TypedClient,
-  params: { campaignId: string; entityId: string; userId: string; world: { id: string; slug: string }; locale: Locale }
+  params: { campaignId: string; entityId: string; userId: string; world: { id: string; slug: string }; locale: Locale; atTable?: boolean }
 ): Promise<NpcDisplayView | null> {
-  const view = (await readNpcPlayerViews(supabase, { campaignId: params.campaignId, entityIds: [params.entityId], userId: params.userId })).get(params.entityId);
+  const view = params.atTable
+    ? await vueDeLaTable(supabase, params)
+    : (await readNpcPlayerViews(supabase, { campaignId: params.campaignId, entityIds: [params.entityId], userId: params.userId })).get(params.entityId);
   if (!view || (!view.sheet && !view.gear)) return null;
 
   const named = await nameInventoryItems(supabase, { world: params.world, locale: params.locale, items: view.gear?.items ?? [] });

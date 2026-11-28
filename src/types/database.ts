@@ -3503,6 +3503,10 @@ export type Database = {
         Args: { p_payload: string; p_signature: string }
         Returns: Json
       }
+      npc_player_view: {
+        Args: { p_campaign: string; p_entity: string }
+        Returns: Json
+      }
       next_session_event_seq: {
         Args: { p_session: string }
         Returns: number

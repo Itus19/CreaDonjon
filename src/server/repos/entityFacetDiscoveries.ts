@@ -59,3 +59,15 @@ export async function deleteFacetDiscoveriesBySourceEvents(supabase: TypedClient
   if (error) throw new Error(error.message);
   return (data ?? []).length;
 }
+
+/**
+ * V3.2-87 — La vue joueur d'un PNJ construite EN BASE (`npc_player_view`,
+ * security definer) : seulement les facettes découvertes, pour une joueuse
+ * d'une table qui ne lit pas les blocs du MJ. `null` : pas membre de la
+ * partie, ou PNJ d'un autre monde. Une lecture.
+ */
+export async function rpcNpcPlayerView(supabase: TypedClient, params: { campaignId: string; entityId: string }): Promise<unknown> {
+  const { data, error } = await supabase.rpc("npc_player_view", { p_campaign: params.campaignId, p_entity: params.entityId });
+  if (error) throw new Error(error.message);
+  return data;
+}

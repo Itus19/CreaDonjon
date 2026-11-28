@@ -37,3 +37,7 @@ Retour de l'auteur : la description mêlait l'apparence et ce que le PNJ cache. 
 - Un détail physique caché proposé par l'IA (un tatouage sous la manche) va dans un bloc **« Ce qui ne se voit pas »**, réservé au MJ, à découvrir.
 - Une note du récit (`world_note`) porte un `aspect` (`apparence`, `cache`, `recit`) qui choisit son bloc ; un détail caché n'atterrit jamais dans un bloc lisible.
 - Trace : `ai_proposals` `create_block`, appliquée d'office comme les notes du monde (ADR 0114). Coût : un appel d'IA par PNJ, au plus un par tour.
+
+## Amendement du 28 novembre — les indices à table (V3.2-87)
+
+À une table, une joueuse ne lit pas les blocs `statblock` et `inventory` du MJ : le serveur, qui agit en son nom, ne peut pas construire sa vue. Une fonction `security definer` qui rendrait le bloc entier serait appelable directement par n'importe quel compte connecté. **Décision :** `public.npc_player_view` construit la vue en base, champ par champ, avec les seules facettes de la table et de l'appelant (migration `20261128120000_indices_a_table`, accord de l'auteur le 28 novembre). Elle reproduit `playerViewOfStatblock` et `playerViewOfInventory` : deux copies d'une même règle, gardées d'accord par `facets.test.ts` (forme) et le test d'intégration (contenu). Le serveur relit la sortie avec un schéma Zod qui retire tout champ inconnu.

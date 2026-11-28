@@ -93,6 +93,26 @@ describe.skipIf(!hasCreds)("RLS des indices et du savoir des PNJ (intégration, 
     ]);
     if (e6) throw new Error(e6.message);
 
+    // V3.2-87 : la fiche et l'équipement du PNJ, réservés au MJ.
+    const { error: e8 } = await admin.from("blocks").insert([
+      {
+        entity_id: npcId,
+        block_type: "statblock",
+        visibility_level: "gm",
+        data: {
+          __v: 1, size: "medium", creature_type: "humanoïde", alignment: "neutre", ac: { value: 11 }, hp: { value: 9, hit_dice: "2d8" }, speed: "9 m",
+          abilities: { str: 14, dex: 12, con: 11, int: 10, wis: 13, cha: 10 }, traits: [], actions: [{ name: "Gourdin", text: "+4" }], reactions: [], legendary_actions: [],
+        },
+      },
+      {
+        entity_id: npcId,
+        block_type: "inventory",
+        visibility_level: "gm",
+        data: { __v: 1, items: [{ id: "pnj-1", qty: 1, equipped: true, concealed: true, conceal_dc: 13, label: "Couteau" }], containers: [], currency: { pp: 0, gp: 0, ep: 0, sp: 3, cp: 4 } },
+      },
+    ]);
+    if (e8) throw new Error(e8.message);
+
     const { error: e7 } = await admin.from("npc_knowledge").insert({
       campaign_id: campaignId,
       knower_entity_id: npcId,
@@ -128,7 +148,8 @@ describe.skipIf(!hasCreds)("RLS des indices et du savoir des PNJ (intégration, 
     it("une joueuse ne s'accorde pas un indice ; le MJ de la partie, si", async () => {
       const refus = await player.from("entity_facet_discoveries").insert({ campaign_id: campaignId, entity_id: npcId, facet: "hp", user_id: ids.player });
       expect(refus.error).not.toBeNull();
-      const accord = await gm.from("entity_facet_discoveries").insert({ campaign_id: campaignId, entity_id: npcId, facet: "hp", user_id: null });
+      // `trait:5` : un rang que la fiche n'a pas, pour ne rien changer à la vue testée plus bas.
+      const accord = await gm.from("entity_facet_discoveries").insert({ campaign_id: campaignId, entity_id: npcId, facet: "trait:5", user_id: null });
       expect(accord.error).toBeNull();
     });
   });
@@ -158,6 +179,30 @@ describe.skipIf(!hasCreds)("RLS des indices et du savoir des PNJ (intégration, 
         .from("npc_knowledge")
         .insert({ campaign_id: campaignId, knower_entity_id: npcId, subject_entity_id: pcId, claim: "Perrin a tué un garde", is_true: false, source: "rumour" });
       expect(ecrit.error).toBeNull();
+    });
+  });
+
+  describe("npc_player_view (V3.2-87)", () => {
+    const vue = async (client: SupabaseClient) => {
+      const { data, error } = await client.rpc("npc_player_view", { p_campaign: campaignId, p_entity: npcId });
+      if (error) throw new Error(error.message);
+      return data as { sheet: Record<string, unknown> | null; gear: { items: { id: string }[]; currency?: unknown } | null } | null;
+    };
+
+    it("une joueuse reçoit ce que la table sait et ce qu'elle sait seule, rien d'autre de la fiche", async () => {
+      const v = await vue(player);
+      expect(v?.sheet).toEqual({ abilities: { str: 14 }, ac: 11, actions: [], traits: [] });
+      expect(v?.gear).toEqual({ items: [] });
+    });
+
+    it("une autre joueuse voit le couteau qu'elle a trouvé, sans son DD ni son drapeau caché", async () => {
+      const v = await vue(playerB);
+      expect(v?.gear?.items).toEqual([{ id: "pnj-1", qty: 1, equipped: true, label: "Couteau" }]);
+      expect(v?.sheet).not.toHaveProperty("hp");
+    });
+
+    it("une personne hors de la partie n'obtient rien", async () => {
+      expect(await vue(outsider)).toBeNull();
     });
   });
 });
