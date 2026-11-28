@@ -33,7 +33,7 @@ Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été
 5. **Ce qui casse le jeu à chaque auberge** : V3.2-8 et 9 (le moteur règle un échange, au prix des règles), puis 10 (l'écran), puis 11 (le PNJ sait ce que tu as et ce que tu dois). Décision : ADR 0110.
 6. **La vie du monde** (`07-vie-du-monde.md`, ADR 0115) : après la fusion de la PR #17, V3.2-29 à 40.
 7. **La fiche allégée des PNJ** (`08-fiche-pnj.md`, ADR 0118) : V3.2-46 à 52.
-8. **L'écran de jeu** (`09-ecran-de-jeu.md`, ADR 0120) : lot 1 (V3.2-55 à 58) et la date (V3.2-59), les petits correctifs (69 à 71), puis le volet d'une personne (60 à 65) et le combat (66 à 68).
+8. **L'écran de jeu** (`09-ecran-de-jeu.md`, ADR 0120) : lot 1 (V3.2-55 à 58) et la date (V3.2-59), les petits correctifs (69 à 71), puis le volet d'une personne (60 à 65) et le combat (66 à 68, 73, 74 ; ADR 0121).
 
 ---
 
@@ -122,10 +122,12 @@ Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été
 | V3.2-66 | ☐ | sans | ADR : le moteur ouvre un combat en solo | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
 | V3.2-67 | ☐ | sans | Le combat dans le rail | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
 | V3.2-68 | ☐ | sans | L'initiative dans le fil | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
-| V3.2-69 | ☐ | sans | « Demande honorée » ne sort plus dans Changements | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
-| V3.2-70 | ☐ | sans | Une attaque demande sa cible ; l'attaque à mains nues existe | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
+| V3.2-69 | ☑ | sans | « Demande honorée » ne sort plus dans la ligne du tour | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
+| V3.2-70 | ☑ | sans | Une attaque demande sa cible ; l'attaque à mains nues existe | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
 | V3.2-71 | ☑ | sans | L'outil de dés ne s'ouvre plus après le résultat | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
 | V3.2-72 | ☐ | sans | La page wiki d'un PJ montre sa fiche, pas des titres vides | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
+| V3.2-73 | ☐ | **avec** | Le tour d'un PNJ en combat | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
+| V3.2-74 | ☐ | sans | Moral et fin du combat | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
 
 ---
 

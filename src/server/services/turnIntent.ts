@@ -28,6 +28,7 @@ import { autoSuccess, dcForTier, type CheckTier } from "@/src/core/rules/checkDi
 import type { ResolvedEffect, FiredEvent } from "@/src/core/rules/triggers";
 import { flooredRng, lightExtraDamageMod, resolveCheckRoll, resolveDamageRoll, weaponAttackAbility, type AdvantageState } from "@/src/core/rules/action";
 import { rollDice } from "@/src/core/dice/roll";
+import { UNARMED_ACTION_ID, UNARMED_TERMS_FR, unarmedStrike } from "@/src/core/rules/unarmedStrike";
 import { eventsForCheck, eventsForSave } from "@/src/core/rules/gameEvents";
 import { parseFormula } from "@/src/core/formula/parser";
 import type { TraceStep } from "@/src/core/formula/evaluate";
@@ -66,6 +67,7 @@ import { insertDiceRoll } from "@/src/server/repos/diceRolls";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
 import { serverRng } from "@/src/server/services/rng";
 import { soloCritRange, soloRollWindow } from "@/src/server/services/soloRollWindow";
+import { ouvrirCombatSolo } from "@/src/server/services/soloCombatOpening";
 import { applyRuntimeStateChange, getEntityRuntimeState } from "@/src/server/services/runtimeState";
 import { getRuntimeState } from "@/src/server/repos/runtimeState";
 import type { TargetId, IntentTargetDetail, IntentBarData, TurnRecord } from "@/lib/solo/types";
@@ -297,6 +299,13 @@ export async function buildIntentBarData(
     for (const item of legeres) {
       actions.push({ id: item.id, kind: "weapon_attack", label: `${nameByItemId.get(item.id) || "Arme"} — attaque en plus (action Bonus)`, terms: [], lightExtra: true });
     }
+  }
+  // V3.2-70 : la Frappe à mains nues, toujours possible, après les armes (une
+  // attaque sans arme nommée prend la première du catalogue : l'arme en main
+  // d'abord, le poing faute d'arme). Seulement en partie : c'est le chemin à
+  // demande posée (`proposeIntentRequest`) qui sait la jouer.
+  if (params.campaignId) {
+    actions.push({ id: UNARMED_ACTION_ID, kind: "weapon_attack", label: "Frappe à mains nues", terms: UNARMED_TERMS_FR });
   }
   for (const skill of SKILLS) {
     // V3.2-21 : le nom seul ne lance un jet que s'il est toute la phrase ;
@@ -909,6 +918,21 @@ function buildPendingBasis(
   ctx: CharacterActionContext,
   choice: RollChoice
 ): PendingBasis | { error: IntentErrorReason } {
+  if (choice.kind === "weapon_attack" && choice.actionId === UNARMED_ACTION_ID) {
+    const frappe = unarmedStrike({ strMod: ctx.sheet.abilities.str.mod, proficiencyBonus: ctx.sheet.proficiencyBonus });
+    const what = "Attaque — Frappe à mains nues";
+    return {
+      kind: "weapon_attack",
+      action_id: UNARMED_ACTION_ID,
+      dc: null,
+      die_max: 20,
+      modifier: frappe.attackModifier,
+      chips: [{ label: what, value: frappe.attackModifier }],
+      what,
+      bonus_dice: [],
+    };
+  }
+
   if (choice.kind === "weapon_attack") {
     const item = ctx.inventoryData?.items.find((i) => i.id === choice.actionId);
     if (!item) return { error: "item_not_found" };
@@ -1041,9 +1065,23 @@ export async function proposeIntentRequest(
   const tierDc = tier ? dcForTier(tier) : null;
   if (tier && tierDc !== null && autoSuccess({ tier, modifier: basis.modifier })) return { kind: "auto", what: basis.what, dc: tierDc };
 
+  // ADR 0121 : attaquer un présent de la scène ouvre le combat d'office ; la CA vient alors de sa fiche.
+  const ouverture =
+    basis.kind === "weapon_attack" && target?.source === "scene" && target.id.startsWith("entity:")
+      ? await ouvrirCombatSolo(supabase, {
+          campaignId: params.campaignId,
+          worldId: params.world.id,
+          actorEntityId: params.entityId,
+          targetEntityId: target.id.slice("entity:".length),
+          callerId: params.callerId,
+          locale: params.locale,
+        })
+      : null;
+
   const request: PendingRequest = {
     ...basis,
-    dc: basis.kind === "weapon_attack" ? (target?.ac ?? null) : (tierDc ?? basis.dc),
+    dc: basis.kind === "weapon_attack" ? (ouverture ? ouverture.cibleAc : (target?.ac ?? null)) : (tierDc ?? basis.dc),
+    ...(ouverture ? { combat_opened: ouverture.fait, combat_opened_id: ouverture.combatId } : {}),
     target_id: target?.id ?? null,
     target_label: target?.label ?? null,
     advantage: choice.advantage,
@@ -1249,11 +1287,19 @@ async function finishResolution(
 
     const crit = isCritical ? " — critique" : isCriticalFail ? " — échec critique" : "";
     const facts = [
+      ...(pending.combat_opened ? [pending.combat_opened] : []),
       `${pending.actor_name} attaque ${pending.target_label ?? "sans cible désignée"} avec ${pending.what.replace("Attaque — ", "")}` +
         ` : ${total} (dé : ${natural})` +
         (pending.dc === null ? "" : ` contre CA ${pending.dc} — ${hit ? "touché" : "raté"}`) +
         `${crit}.`,
     ];
+    // V3.2-70 : la frappe à mains nues a des dégâts fixes (1 + Force) : aucun dé à demander, ils s'écrivent avec l'attaque.
+    let damage: { expression: string; total: number; trace: TraceStep[] } | null = null;
+    if (hit === true && pending.action_id === UNARMED_ACTION_ID && ctx) {
+      const degats = unarmedStrike({ strMod: ctx.sheet.abilities.str.mod, proficiencyBonus: ctx.sheet.proficiencyBonus }).damage;
+      facts.push(`Dégâts sur ${pending.target_label ?? "la cible"} : ${degats} (contondants).`);
+      damage = { expression: "1 + Force", total: degats, trace: [{ text: "1 + modificateur de Force", value: degats }] };
+    }
     const intent = {
       text: pending.player_action_text,
       kind: pending.kind,
@@ -1268,14 +1314,16 @@ async function finishResolution(
       attack: { expression, total, critical: isCritical, critical_fail: isCriticalFail, trace },
       ac: pending.dc,
       verdict: hit === null ? null : hit ? "hit" : "miss",
-      damage: null,
+      damage,
       weapon: pending.what,
       origin,
+      // ADR 0121 : « Annuler ce tour » retire le combat que l'attaque a ouvert (`turnUndo.ts`).
+      ...(pending.combat_opened_id ? { combat_opened_id: pending.combat_opened_id } : {}),
     };
     const eventId = await journalTurn(supabase, { campaignId: params.campaignId, callerId: params.callerId, entityId: params.entityId, kind: "roll", payload });
 
     let chained: PendingRequest | null = null;
-    if (hit === true) {
+    if (hit === true && pending.action_id !== UNARMED_ACTION_ID) {
       const basis = ctx ? buildDamageBasis(ctx, pending.action_id, isCritical, pending.light_extra === true) : { error: "not_found" as const };
       if (!("error" in basis)) {
         chained = {

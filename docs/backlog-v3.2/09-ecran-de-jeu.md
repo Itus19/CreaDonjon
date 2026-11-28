@@ -133,9 +133,21 @@ Demandé le 26 novembre après la partie test avec Mabelle ; maquettes validées
 
 ## Lot 4 — Le combat
 
-### ☐ V3.2-66 — ADR : le moteur ouvre un combat en solo · `M` · sans modèle IA · Modèle conseillé : Opus
+### ☐ V3.2-66 — ADR : le moteur ouvre un combat en solo · `M` · sans modèle IA · Modèle conseillé : Opus — **ADR 0121 accepté le 27 novembre ; ouverture codée, reste à vérifier à l'écran**
 
 - Qui entre, de quel côté, contre qui : décidé par le moteur d'après les relations, le rôle et le courage ; l'IA raconte. Initiative par `rollInitiativeCheck` (cible de modificateur `initiative`, fil « Rendre jouables les 7 règles partielles »).
+
+**Vu à la partie test du 27 novembre** : trois attaques contre Mabelle, aucune n'a touché ni raté. Hors combat, `loadTargets` donne `ac: null` à un présent ; sans CA, pas de verdict ni de dégâts.
+
+**ADR 0121.** Une attaque contre un présent ouvre le combat d'office (choix de l'auteur) ; une attaque surprise suit la règle 2024 (désavantage à l'initiative de qui est surpris). Un PNJ n'en ouvre un que par une proposition validée. Les camps sortent d'une fonction pure `campsDuCombat` (amitié et dette à la bande « fort », garde contre l'agresseur, courage et archétype pour qui reste hors du combat), recalculée à chaque fin de round. Participants par `addEntityParticipant`, surprise au désavantage.
+
+**Critères d'acceptation**
+- [x] Tests du noyau (`src/core/rules/combatCamps.test.ts`) : `campsDuCombat` range la cible et ses proches d'un côté, l'agresseur et les siens de l'autre ; un garde rejoint le défenseur ; un enfant reste hors du combat ; un présent loin n'entre pas au premier round.
+- [ ] Une attaque contre un présent crée le combat, ses participants avec CA et PV, et pose `activeCombatId` ; l'attaque touche ou rate contre la CA de la fiche allégée. *(codé, reste à vérifier à l'écran)*
+
+**Fait.** `ouvrirCombatSolo` (`src/server/services/soloCombatOpening.ts`) : appelé par `proposeIntentRequest` quand l'attaque vise un présent de la scène, hors combat, par un administrateur du monde (la personne qui joue en solo). Trois lectures groupées (attitudes envers l'agresseur et la cible, tempéraments), les camps, la surprise (`surprisDuCombat`, désavantage à l'initiative), les participants (`addEntityParticipant`), toutes les initiatives lancées par le serveur, le combat en cours et `activeCombatId`. La CA de la cible devient le DD de l'attaque ; le fait « Le combat commence : … Pris par surprise : … » passe en tête des faits du jet, pour le récit. `initiativeForParticipant` lit désormais la Dextérité du `statblock` d'un PNJ sans fiche de personnage (avant : 0, à la table du MJ aussi). « Annuler ce tour » retire le combat ouvert par l'attaque (`combat_opened_id`, `turnUndo.ts`).
+
+**Reste.** L'initiative du personnage est lancée par le serveur en attendant sa pastille (V3.2-68) ; une demande d'attaque abandonnée avant le jet laisse le combat ouvert ; un agresseur caché n'est pas encore lu (surprise « tous ») ; les PNJ jouent leur tour avec la tactique fixe (V3.2-73, le choix par l'IA reste à venir), et rien ne clôt le combat seul (V3.2-74 ; l'outil du MJ peut le terminer).
 
 ### ☐ V3.2-67 — Le combat dans le rail · `M` · sans modèle IA · Modèle conseillé : Opus — **après V3.2-66**
 
@@ -145,17 +157,42 @@ Demandé le 26 novembre après la partie test avec Mabelle ; maquettes validées
 
 - Pastille de jet d'initiative dans le fil (rangs des PNJ cachés tant qu'on n'a pas lancé), puis la carte « Ordre d'initiative ». Rounds de 6 s, économie d'action en pastilles.
 
+### ☐ V3.2-73 — Le tour d'un PNJ en combat · `M` · **avec** modèle IA · Modèle conseillé : Opus — **tactique fixe codée le 27 novembre**
+
+- ADR 0121, point 5. Le moteur construit la liste fermée des options du PNJ (attaquer telle cible avec telle action, se désengager, fuir, se rendre, esquiver, aider) ; l'IA en choisit une sous contrainte de schéma, avec une phrase de raison ; le moteur lance et applique ; l'IA raconte le round. Tactique fixe en secours (frapper qui l'a le plus blessé, sinon le plus proche).
+
+**Critères d'acceptation**
+- [ ] Tests du noyau : la liste des options suit la fiche et la zone ; un choix hors liste est refusé et la tactique fixe joue.
+- [ ] `ai_usage_log` écrit à chaque choix, même en échec.
+
+**Fait (sans modèle d'IA).** Les PNJ jouent comme la personne qui joue : jet d'attaque au d20 avec le bonus de leur fiche allégée, contre la CA de la cible, puis jet de dégâts s'ils touchent (critique sur 20 : dés doublés ; 1 naturel : raté). `src/core/rules/npcRolls.ts` (testé) lit les actions de la fiche (« Melee Attack Roll: +3 … (1d4 + 1) Bludgeoning damage ») et choisit la tactique fixe : viser le personnage d'abord, frapper au contact, s'approcher et frapper depuis « près », tirer de loin, sinon s'approcher, sinon esquiver. `src/server/services/soloNpcTurns.ts` (`jouerTourDesPnj`) les fait jouer après chaque tour du personnage en combat, dans l'ordre d'initiative, applique les PV par le même cœur que la table, avance le round et écrit les faits au journal (ligne du tour, récit). Vérifié à l'écran sur une copie locale : Mabelle s'approche, frappe Bram, rate ou touche, ses PV et ceux de Bram baissent, le round avance.
+
+**Reste.** Le choix par l'IA dans la liste fermée (cases ci-dessus) ; se désengager, fuir, se rendre, aider ; un compagnon sans fiche allégée ne joue pas encore ; la zone affichée dans le rail ne suit le déplacement du PNJ qu'au rechargement.
+
+### ☐ V3.2-74 — Moral et fin du combat · `S` · sans modèle IA · Modèle conseillé : Opus — **après V3.2-66**
+
+- ADR 0121, point 7. Test de moral à la moitié des PV ou quand un allié tombe (assurance, prudence, archétype) : fuite ou reddition. Le combat finit quand un camp n'a plus personne qui veut ou peut se battre ; `endCombat` le clôt.
+
+**Critères d'acceptation**
+- [ ] Tests du noyau : un PNJ prudent fuit à la moitié de ses PV ; un camp vide termine le combat.
+
 ---
 
 ## Petits correctifs vus pendant la partie test
 
-### ☐ V3.2-69 — « Demande honorée » ne sort plus dans Changements · `S` · sans modèle IA · Modèle conseillé : Sonnet
+### ☑ V3.2-69 — « Demande honorée » ne sort plus dans la ligne du tour · `S` · sans modèle IA · Modèle conseillé : Sonnet — **corrigé le 27 novembre**
 
-- La note interne de `turnIntent.ts` (`note: "Demande honorée"`) ne doit pas s'afficher dans l'onglet Changements.
+- La note interne de `turnIntent.ts` (`note: "Demande honorée"`) ne doit pas s'afficher sous le tour.
 
-### ☐ V3.2-70 — Une attaque demande sa cible ; l'attaque à mains nues existe · `S` · sans modèle IA · Modèle conseillé : Opus
+**Fait.** Elle ne passait pas par l'onglet Changements (qui lit les propositions) mais par la ligne du tour (`summarizeTurns`, ADR 0114). Une mise à jour dont le seul correctif remet `pending_request` à vide est écartée, reconnue à son correctif plutôt qu'à son texte, ce qui couvre aussi les anciennes lignes du journal. « Jet demandé » et « Demande abandonnée » restent : ils disent quelque chose. Testé (`turnSummary.test.ts`).
+
+### ☑ V3.2-70 — Une attaque demande sa cible ; l'attaque à mains nues existe · `S` · sans modèle IA · Modèle conseillé : Opus — **codé le 27 novembre ; reste à vérifier à l'écran**
 
 - Une attaque sans cible demande « sur qui ? » parmi les présents. Frappe à mains nues du SRD 5.2 (1 + modificateur de Force, contondant, ou empoigner / pousser).
+
+**Fait.** La pastille de cible d'une attaque sans cible dit « sur qui ? », et Jouer (comme Entrée) attend qu'on choisisse, tant qu'il y a quelqu'un à viser. `unarmedStrike` (`src/core/rules/unarmedStrike.ts`, testé) : attaque Force + maîtrise, dégâts 1 + Force, contondants, jamais négatifs. Le catalogue du tour l'ajoute en partie, après les armes : « j'attaque » sans arme en main prend le poing, « coup de poing » le nomme. Ses dégâts, fixes, s'écrivent avec l'attaque qui touche, sans demander de dé.
+
+**Reste.** Empoigner et pousser viennent avec le combat (V3.2-66). Hors combat, un présent de la scène n'a pas encore de CA pour le moteur (`loadTargets`) : l'attaque n'a donc ni « touché » ni « raté », ni dégâts. C'est l'ouverture du combat (V3.2-66) qui donnera la CA des fiches allégées.
 
 ### ☑ V3.2-71 — L'outil de dés ne s'ouvre plus après le résultat · `S` · sans modèle IA · Modèle conseillé : Sonnet — **corrigé le 27 novembre**
 

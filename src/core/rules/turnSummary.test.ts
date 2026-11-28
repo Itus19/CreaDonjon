@@ -33,6 +33,17 @@ describe("summarizeTurns — la ligne de chaque tour", () => {
     expect(t).toMatchObject({ changes: ["PV 20 → 25", "Pièce « une chambre » ajoutée", "Ajouté au wiki : « Les chambres sentent le bois. »"], hints: ["Un conseil"], ignored: ["Effet inconnu"], worldNotes: 1, afterEventId: "w2", time: null });
   });
 
+  it("V3.2-69 : la demande honorée est de la tenue de compte, pas un changement ; la demande posée ou abandonnée reste", () => {
+    const events = [
+      action("a1", 1, scene(1, 22, 0)),
+      ev("w1", 2, "world_update", { note: "Jet demandé : Attaque — épée longue", patch: { pending_request: { what: "Attaque — épée longue" } } }),
+      ev("w2", 3, "world_update", { note: "Demande honorée", patch: { pending_request: null } }),
+    ];
+    const [t] = summarizeTurns(events, null);
+    expect(t!.changes).toEqual(["Jet demandé : Attaque — épée longue"]);
+    expect(t!.afterEventId).toBe("w2");
+  });
+
   it("ce qui précède la première action n'appartient à aucun tour ; un tour sans relevé n'a pas d'heure", () => {
     const events = [ev("w0", 1, "world_update", { note: "Scène posée" }), { ...action("a1", 2, null), payload: {} }];
     const tours = summarizeTurns(events, { day: 1, hour: 8, minute: 0 });

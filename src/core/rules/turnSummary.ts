@@ -62,6 +62,18 @@ function sceneAvant(e: JournalEvent): { time: GameTime | null; combat: boolean }
 
 const commenceUnTour = (e: JournalEvent): boolean => e.actor === "player" && (e.kind === "player_action" || e.kind === "roll");
 
+/**
+ * V3.2-69 — La demande de jet effacée une fois le jet joué (`clearPendingRequest`,
+ * note « Demande honorée ») : de la tenue de compte du moteur. Le jet lui-même a
+ * déjà sa carte dans le fil ; la pastille ne disait rien de plus. Reconnue à son
+ * correctif (seule la demande, remise à vide), pas à son texte : les anciennes
+ * lignes du journal sont couvertes aussi.
+ */
+function demandeHonoree(e: JournalEvent): boolean {
+  const patch = e.payload.patch;
+  return estObjet(patch) && Object.keys(patch).length === 1 && "pending_request" in patch && patch.pending_request === null;
+}
+
 const textes = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && x !== "") : []);
 
 /**
@@ -98,7 +110,7 @@ export function summarizeTurns(events: readonly JournalEvent[], maintenant: Game
         changes.push(...textes(e.payload.changes_text).filter((l) => !estPhraseDuree(l)));
         hints.push(...textes(e.payload.hints_text));
         ignored.push(...textes(e.payload.ignored_text));
-      } else if (e.kind === "world_update" && typeof e.payload.note === "string" && e.payload.note !== "") {
+      } else if (e.kind === "world_update" && typeof e.payload.note === "string" && e.payload.note !== "" && !demandeHonoree(e)) {
         changes.push(e.payload.note);
         if (e.payload.source === "world_note") worldNotes += 1;
       }

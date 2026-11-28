@@ -58,6 +58,10 @@ export const zPendingRequest = z.object({
   die_min: z.number().int().min(2).max(20).optional(),
   /** Combat à deux armes : l'attaque en plus d'une arme Légère, et ses dégâts chaînés (le modificateur ne s'ajoute pas, sauf don ou négatif). */
   light_extra: z.boolean().optional(),
+  /** ADR 0121 : l'attaque qui a ouvert le combat en solo porte son fait (qui contre qui, qui est surpris), rejoué en tête des faits du jet. */
+  combat_opened: z.string().optional(),
+  /** ADR 0121 : le combat que cette attaque a ouvert — « Annuler ce tour » le retire avec elle. */
+  combat_opened_id: z.string().uuid().optional(),
 });
 export type PendingRequest = z.infer<typeof zPendingRequest>;
 
