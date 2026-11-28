@@ -65,6 +65,7 @@ import { canCastSpell } from "@/src/core/rules/castableSpells";
 import { naturalD20FromTrace } from "@/src/core/dice/rollAttribution";
 import { parseFormula } from "@/src/core/formula";
 import { assembleResolvedRuleset, resolveCharacterChoices, resolveEquipmentData, type RemainingChoice } from "@/src/server/services/resolvedRuleset";
+import { resolveRuleNames } from "@/src/server/services/referenceChips";
 import { applyRuntimeStateChange, getEntityRuntimeState } from "@/src/server/services/runtimeState";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
 import { serverRng } from "@/src/server/services/rng";
@@ -85,11 +86,12 @@ type TypedClient = SupabaseClient<Database>;
 function itemRef(item: InventoryItem): BlockReference | null {
   return (item as { ref?: BlockReference }).ref ?? null;
 }
-function itemLabel(item: InventoryItem): string {
+function itemLabel(item: InventoryItem, ruleNameByKey?: Record<string, string>): string {
   const label = (item as { label?: string }).label;
   if (label) return label;
   const ref = itemRef(item);
-  if (ref) return ref.kind === "rule" ? ref.key : ref.id;
+  // Le nom français de la fiche de règle quand il est connu ; la clé SRD seulement en dernier repli.
+  if (ref) return ref.kind === "rule" ? (ruleNameByKey?.[ref.key] ?? ref.key) : ref.id;
   return "";
 }
 
@@ -147,6 +149,8 @@ export interface CharacterActionContext {
   rulesetId: string;
   sheet: DerivedSheet;
   weaponByKey: Record<string, WeaponData | null>;
+  /** Le nom français des objets de règle du sac, par clé (lu avec l'équipement) : les libellés de jet ne montrent jamais la clé SRD. */
+  ruleNameByKey: Record<string, string>;
   /** V3.2-10 : le prix unitaire des objets de règle du sac, déjà lu avec l'équipement (aucune lecture de plus) — pour la revente. */
   costByKey: Record<string, ItemCost | null>;
   /** Total de des de vie par de ("d10" -> 5), pour l'initialisation et les repos longs. */
@@ -223,7 +227,7 @@ export async function resolveCharacterActionContext(
     .filter((r): r is { kind: "entity"; id: string } => r?.kind === "entity")
     .map((r) => r.id);
   // Le ruleset assemble et l'equipement ne dependent pas l'un de l'autre (V3.1-62, C3).
-  const [assembled, { armor: armorByKey, weapon: weaponByKey, weight: weightByKey, cost: costByKey }, artefacts] = await Promise.all([
+  const [assembled, { armor: armorByKey, weapon: weaponByKey, weight: weightByKey, cost: costByKey }, artefacts, ruleNames] = await Promise.all([
     assembleResolvedRuleset(
       supabase,
       rulesetId,
@@ -232,7 +236,10 @@ export async function resolveCharacterActionContext(
     ),
     resolveEquipmentData(supabase, rulesetId, equipmentKeys),
     artefactIds.length > 0 ? chargerArtefacts(supabase, artefactIds) : Promise.resolve({} as ArtefactsEquipables),
+    // « Attaque — Épée longue », jamais « Attaque — longsword » : une lecture groupée de plus, en parallèle.
+    equipmentKeys.length > 0 ? resolveRuleNames(supabase, rulesetId, locale, equipmentKeys) : Promise.resolve(new Map<string, string>()),
   ]);
+  const ruleNameByKey: Record<string, string> = Object.fromEntries(ruleNames);
   const carriedWeight = totalCarriedWeight(inventoryData?.items ?? [], weightByKey);
 
   const dexScore = characterData.abilities.base.dex;
@@ -244,9 +251,9 @@ export async function resolveCharacterActionContext(
     const armor = ref?.kind === "rule" ? armorByKey[ref.key] : null;
     return {
       key: item.id,
-      label: itemLabel(item),
+      label: itemLabel(item, ruleNameByKey),
       equipped: item.equipped ?? false,
-      modifiers: armor ? [armorAcModifier(armor, dexMod, `item:${item.id}`, itemLabel(item))] : [],
+      modifiers: armor ? [armorAcModifier(armor, dexMod, `item:${item.id}`, itemLabel(item, ruleNameByKey))] : [],
       // V3.1-155 : la CA sans armure (Barbare, Moine) dépend de ce que le personnage porte.
       ...(armor ? { armorCategory: armor.category } : {}),
     };
@@ -344,6 +351,7 @@ export async function resolveCharacterActionContext(
     rulesetId,
     sheet,
     weaponByKey,
+    ruleNameByKey,
     costByKey,
     hitDiceTotals,
     openChoices: grantedChoices.open,
@@ -487,7 +495,7 @@ export async function rollWeaponAttack(
     attribution: { entityId: ctx.entityId, kind: "attack", naturalD20: naturalD20FromTrace(attack.trace) },
     detail: {
       who: ctx.entityName,
-      what: `Attaque — ${itemLabel(item)}`,
+      what: `Attaque — ${itemLabel(item, ctx.ruleNameByKey)}`,
       trace: attack.trace,
       isCritical: attack.isCritical,
       isCriticalFail: attack.isCriticalFail,
@@ -495,7 +503,7 @@ export async function rollWeaponAttack(
     },
   });
 
-  return { weaponLabel: itemLabel(item), attack, recorded: params.campaignId !== null };
+  return { weaponLabel: itemLabel(item, ctx.ruleNameByKey), attack, recorded: params.campaignId !== null };
 }
 
 /** Jet de degats d'une arme equipee — `critical` vient du jet d'attaque precedent (l'appelant le sait deja). */
@@ -540,14 +548,14 @@ export async function rollWeaponDamage(
     attribution: { entityId: ctx.entityId, kind: "damage" },
     detail: {
       who: ctx.entityName,
-      what: `Degats — ${itemLabel(item)}${params.lightExtra ? " (attaque en plus)" : ""}`,
+      what: `Degats — ${itemLabel(item, ctx.ruleNameByKey)}${params.lightExtra ? " (attaque en plus)" : ""}`,
       trace: damage.trace,
       damageType: weapon.damageType,
       critical: params.critical,
     },
   });
 
-  return { weaponLabel: itemLabel(item), damage, recorded: params.campaignId !== null };
+  return { weaponLabel: itemLabel(item, ctx.ruleNameByKey), damage, recorded: params.campaignId !== null };
 }
 
 export interface CastSpellOutcome {
