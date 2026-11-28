@@ -2,7 +2,8 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
 import { dcForTier, type CheckTier } from "@/src/core/rules/checkDifficulty";
-import { NPC_CHECK_ACTIONS, modificateurJetPnj, resoudreJetPnj, type NpcCheckAction } from "@/src/core/rules/npcRolls";
+import { NPC_CHECK_ACTIONS, ddOppose, jetOppose, modificateurJetPnj, resoudreJetPnj, type NpcCheckAction } from "@/src/core/rules/npcRolls";
+import type { Skill } from "@/src/core/rules/abilities";
 import { zStatblockBlockData } from "@/src/core/schemas/blocks/statblock";
 import { listBlocksByTypeForEntities } from "@/src/server/repos/blocks";
 import { listEntitiesByIds } from "@/src/server/repos/entities";
@@ -81,4 +82,27 @@ export async function jouerJetDePnj(
     });
   }
   return fait;
+}
+
+/**
+ * V3.2-82 — Le DD d'un jet opposé : le personnage ment à un PNJ de la scène,
+ * se cache de lui ou lui fait les poches ; le PNJ lance sa Perspicacité ou sa
+ * Perception (dé du serveur, règle 8) et son total devient le DD. Le dé et le
+ * modificateur ne quittent jamais le serveur : seul le DD part, comme tout DD.
+ *
+ * `null` (le palier habituel s'applique) : une compétence sans opposition, ou
+ * un PNJ sans fiche allégée. La fiche se lit avec le client de l'appelant :
+ * à une table, une joueuse ne la lit pas (RLS) et garde le palier.
+ *
+ * Coût (docs/QUOTAS.md) : une lecture, seulement pour ces trois compétences
+ * quand la cible est un présent de la scène.
+ */
+export async function ddOpposeDuPnj(supabase: TypedClient, params: { npcId: string; skill: Skill }): Promise<{ dc: number; label: string } | null> {
+  const jet = jetOppose(params.skill);
+  if (!jet) return null;
+  const blocs = await listBlocksByTypeForEntities(supabase, [params.npcId], "statblock");
+  const fiche = blocs.map((b) => zStatblockBlockData.safeParse(b.data)).find((p) => p.success)?.data;
+  if (!fiche) return null;
+  const dc = ddOppose(fiche, params.skill, serverRng);
+  return dc === null ? null : { dc, label: jet.label };
 }

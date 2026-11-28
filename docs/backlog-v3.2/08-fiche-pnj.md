@@ -145,3 +145,61 @@ Deux sortes de « caché » à ne pas confondre : la visibilité d'un paragraphe
 - [x] « je cache mon tatouage sous un bandage », Discrétion 13 : un PNJ qui regarde le personnage ne le voit pas ; une Perception à 13 sur lui le lui apprend (`pcConcealment.test.ts`, `npcKnowledge.test.ts`).
 - [ ] En jouant, et dans l'éditeur.
 
+
+### ☐ V3.2-82 — Les jets opposés · `M` · sans modèle IA · Modèle conseillé : Opus — **codé le 28 novembre ; reste à vérifier en jouant**
+
+Suite de V3.2-80. Quand le personnage ment à un PNJ, se cache de lui ou lui fait les poches, la difficulté n'est pas un palier fixe : c'est le jet du PNJ (règles 2024 : la cible lance, son total devient le DD).
+
+- Correspondance, dans le noyau : Tromperie → Perspicacité ; Discrétion et Escamotage → Perception. Persuasion et Intimidation gardent le palier : les règles 2024 les règlent par l'attitude du PNJ, pas par un jet opposé.
+- Seulement si la cible du jet est un PNJ de la scène qui a une fiche (`statblock`), et qu'aucun DD n'a été saisi à la main. Sinon, le palier habituel.
+- Le moteur lance le dé du PNJ (`serverRng`, `modificateurJetPnj`) ; le total devient le DD de la demande de jet. Réussite automatique seulement si le pire jet du personnage atteint ce total.
+- Le dé et le modificateur du PNJ ne quittent jamais le serveur ; le DD s'affiche ou non selon le réglage habituel. La demande dit « contre la Perspicacité de X », et la narration le reçoit ainsi.
+
+**Fait, 28 novembre.** `jetOppose` et `ddOppose` (`src/core/rules/npcRolls.ts`), `ddOpposeDuPnj` (`src/server/services/npcChecks.ts`), branché dans `proposeIntentRequest` (`turnIntent.ts`). La fiche se lit avec le client de l'appelant : à une table, une joueuse ne la lit pas (RLS) et garde le palier.
+
+**Critères d'acceptation**
+- [x] Mentir à un PNJ de Sagesse 14, sans maîtrise : le DD vaut 1d20 + 2, tiré par le serveur (`npcChecks.test.ts`, noyau et service).
+- [x] Mentir à quelqu'un qui n'a pas de fiche : le palier habituel (même test).
+- [ ] En jouant.
+
+### ☐ V3.2-83 — « Annuler ce tour » efface aussi ce que le tour a appris · `S` · sans modèle IA · Modèle conseillé : Opus
+
+Aujourd'hui l'annulation retire les découvertes d'entités, mais pas les indices (`entity_facet_discoveries`) ni ce que les PNJ ont appris du personnage (`npc_knowledge`). Les deux tables portent `source_event_id` et une RLS de suppression pour le MJ : l'annulation supprime les lignes nées des événements du tour. Un paragraphe caché pendant le tour revient tel qu'il était.
+
+**Critères d'acceptation**
+- [ ] Un tour où une fouille révèle l'épée d'un PNJ, puis annulé : l'épée n'est plus connue (`turnUndo.test.ts` du service).
+- [ ] Un tour où un PNJ apprend la CA du personnage, puis annulé : il ne la sait plus (même test).
+- [ ] En jouant.
+
+### ☐ V3.2-84 — Plus de verbes pour cacher · `S` · sans modèle IA · Modèle conseillé : Opus
+
+« je mets un bandage sur mon tatouage », « je glisse la dague dans ma botte », « je rabats ma capuche sur ma cicatrice » ne déclenchent aujourd'hui aucun jet : seuls « cache », « dissimule », « escamote » le font. Élargir le lexique du geste (`gesteDeDissimulation` et le filtre de `applyPcConcealment`) : couvrir, recouvrir, bander, glisser dans, rabattre, enfouir, planquer, camoufler, emmailloter ; et pour révéler, ôter, défaire, relever. L'intention du tour doit aussi proposer un jet de Discrétion ou d'Escamotage pour ces verbes.
+
+**Critères d'acceptation**
+- [ ] Chacune des trois phrases ci-dessus, avec un jet réussi, cache l'objet ou le paragraphe nommé (`pcConcealment.test.ts`).
+- [ ] « je glisse une pièce au marchand » ne cache rien (même test).
+
+### ☐ V3.2-85 — Test d'intégration de la RLS des indices et du savoir des PNJ · `S` · sans modèle IA · Modèle conseillé : Opus
+
+Vérifier contre une vraie base, avec les comptes de test (`docs/TESTS.md`), que : un membre d'une partie à table lit les indices de toute la table et les siens, jamais ceux d'une autre personne ; il ne lit, n'écrit ni ne supprime aucune ligne de `npc_knowledge` ; le MJ du monde fait tout. Le test s'écrit maintenant ; il s'exécute là où les clés Supabase existent (il se saute sans elles, comme les autres tests d'intégration).
+
+**Critères d'acceptation**
+- [ ] Le test existe et se saute proprement sans clés.
+- [ ] Il passe sur la base de l'auteur.
+
+### ☐ V3.2-86 — Les indices en combat · `S` · sans modèle IA · Modèle conseillé : Opus
+
+En combat, la cible d'un jet est un participant (`participant:<id>`), pas une entité : `checkClues` l'ignore, et jauger un ennemi pendant un combat ne révèle rien. Résoudre le participant vers son entité (fiche du PNJ) et appliquer la même règle que hors combat.
+
+**Critères d'acceptation**
+- [ ] Une Perspicacité réussie sur le participant « Bandit » révèle les facettes de sa fiche (`checkClues.test.ts`).
+- [ ] Un participant sans entité (créature anonyme) ne révèle rien, sans erreur.
+
+### ☐ V3.2-87 — Les indices dans le jeu à table · `M` · sans modèle IA · Modèle conseillé : Opus — **migration à valider par l'auteur**
+
+En solo, la personne qui joue est propriétaire du monde : le serveur lit la fiche du PNJ et ne lui envoie que les facettes découvertes. À une table, une joueuse ne peut pas lire le bloc `statblock` d'un PNJ (visibilité MJ, RLS) : le serveur, qui agit en son nom, ne peut donc pas construire sa vue des indices. Il faut une fonction SQL `security definer` qui rend, pour un membre de la partie, seulement les facettes découvertes (par la table ou par elle) d'une fiche, et rien d'autre. Elle se teste comme une route (liste de contrôle de `docs/SECURITE.md`).
+
+**Critères d'acceptation**
+- [ ] Une joueuse à table voit la CA d'un PNJ que la table a découverte, et rien d'autre de sa fiche.
+- [ ] Une personne hors de la partie n'obtient rien.
+- [ ] Migration appliquée par l'auteur ; vérifié à table.

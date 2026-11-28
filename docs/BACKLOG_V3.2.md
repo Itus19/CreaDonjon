@@ -109,6 +109,12 @@ Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été
 | V3.2-54 | ☐ | **avec** | Le récit nourrit la fiche du PNJ | [`08-fiche-pnj.md`](backlog-v3.2/08-fiche-pnj.md) |
 | V3.2-80 | ☐ | **avec** | Ce que les PNJ savent du personnage | [`08-fiche-pnj.md`](backlog-v3.2/08-fiche-pnj.md) |
 | V3.2-81 | ☐ | sans | Les signes distinctifs dissimulés (paragraphes de description) | [`08-fiche-pnj.md`](backlog-v3.2/08-fiche-pnj.md) |
+| V3.2-82 | ☐ | sans | Les jets opposés (mensonge contre Perspicacité, Discrétion contre Perception) | [`08-fiche-pnj.md`](backlog-v3.2/08-fiche-pnj.md) |
+| V3.2-83 | ☐ | sans | « Annuler ce tour » efface aussi ce que le tour a appris | [`08-fiche-pnj.md`](backlog-v3.2/08-fiche-pnj.md) |
+| V3.2-84 | ☐ | sans | Plus de verbes pour cacher | [`08-fiche-pnj.md`](backlog-v3.2/08-fiche-pnj.md) |
+| V3.2-85 | ☐ | sans | Test d'intégration de la RLS des indices et du savoir des PNJ | [`08-fiche-pnj.md`](backlog-v3.2/08-fiche-pnj.md) |
+| V3.2-86 | ☐ | sans | Les indices en combat | [`08-fiche-pnj.md`](backlog-v3.2/08-fiche-pnj.md) |
+| V3.2-87 | ☐ | sans | Les indices dans le jeu à table | [`08-fiche-pnj.md`](backlog-v3.2/08-fiche-pnj.md) |
 | V3.2-55 | ☐ | sans | En jeu, le rail devient le rail de jeu | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
 | V3.2-56 | ☐ | sans | Le volet de consultation | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
 | V3.2-57 | ☐ | sans | Les fiches et les règles se lisent en entier dans le volet | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
