@@ -53,7 +53,13 @@ export function soloNarrationSchema(npcIds: string[], knownEntityIds: string[] =
       /** V3.2-54 — un objet que la narration met dans les mains d'un PNJ présent ; le moteur décide s'il entre dans son inventaire (`itemFromNarration`). */
       npc_item: z.object({ npc_id: z.string().min(1), name: z.string().trim().min(1).max(80) }).optional(),
       /** V3.2-52 — un PNJ présent tente une action incertaine, choisie dans une liste fermée avec son palier ; le moteur lance le dé (`jouerJetDePnj`). */
-      npc_check: z.object({ npc_id: z.string().min(1), action: z.enum(NPC_CHECK_ACTION_KEYS), tier: z.enum(CHECK_TIERS) }).optional(),
+      npc_check: z
+        .object({ npc_id: z.string().min(1), action: z.enum(NPC_CHECK_ACTION_KEYS), tier: z.enum(CHECK_TIERS), target: z.enum(["pc"]).optional().catch(undefined) })
+        .optional(),
+      /** V3.2-80 — un PNJ présent raconte à un autre ce qu'il sait du personnage ; le moteur copie ce savoir (`shareNpcKnowledge`). */
+      npc_share: z.object({ from_npc: z.string().min(1), to_npc: z.string().min(1) }).optional(),
+      /** V3.2-80 — un PNJ présent répand une rumeur sur le personnage ; le moteur la retient comme fausse (`spreadRumour`). */
+      npc_rumour: z.object({ npc_id: z.string().min(1), claim: z.string().trim().min(1).max(300) }).optional(),
       /** V3.2-18 — une durée PROPOSÉE dans une liste fermée ; le moteur la borne (`minutesProposees`) et peut la refuser. */
       // ADR 0112, amendement du 26 novembre : une durée hors liste (une ellipse que l'IA tenterait
       // encore, « jusqu_au_matin ») est ignorée, pas fatale : la narration reste bonne, seul le temps ne passe pas.
@@ -78,6 +84,14 @@ export function soloNarrationSchema(npcIds: string[], knownEntityIds: string[] =
       }
       if (value.npc_item && !npcIdSet.has(value.npc_item.npc_id)) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["npc_item", "npc_id"], message: "identifiant de PNJ inconnu — jamais invente" });
+      }
+      if (value.npc_share) {
+        for (const key of ["from_npc", "to_npc"] as const) {
+          if (!npcIdSet.has(value.npc_share[key])) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["npc_share", key], message: "identifiant de PNJ inconnu — jamais invente" });
+        }
+      }
+      if (value.npc_rumour && !npcIdSet.has(value.npc_rumour.npc_id)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["npc_rumour", "npc_id"], message: "identifiant de PNJ inconnu — jamais invente" });
       }
       if (value.npc_check && !npcIdSet.has(value.npc_check.npc_id)) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["npc_check", "npc_id"], message: "identifiant de PNJ inconnu — jamais invente" });
@@ -150,8 +164,27 @@ export function soloNarrationToolSchema(npcIds: string[], knownEntityIds: string
                 npc_id: { type: "string", enum: npcIds, description: "Identifiant EXACT du PNJ, jamais invente" },
                 action: { type: "string", enum: [...NPC_CHECK_ACTION_KEYS], description: "Ce qu'il tente, dans la liste" },
                 tier: { type: "string", enum: [...CHECK_TIERS], description: "La difficulte de la tache" },
+                target: { type: "string", enum: ["pc"], description: "Optionnel : pc quand il jauge, observe ou fouille du regard le personnage joue (reperer, fouiller, jauger, soigner)" },
               },
               required: ["npc_id", "action", "tier"],
+            },
+            npc_share: {
+              type: "object",
+              description: "Optionnel : un PNJ present raconte a un autre PNJ present ce qu'il sait du personnage joue (secrets-du-mj). Le moteur transmet ce savoir, vrai ou faux.",
+              properties: {
+                from_npc: { type: "string", enum: npcIds, description: "Celui qui parle" },
+                to_npc: { type: "string", enum: npcIds, description: "Celui qui ecoute" },
+              },
+              required: ["from_npc", "to_npc"],
+            },
+            npc_rumour: {
+              type: "object",
+              description: "Optionnel : un PNJ present repand une rumeur FAUSSE sur le personnage joue (une phrase). Le moteur la retient comme fausse.",
+              properties: {
+                npc_id: { type: "string", enum: npcIds, description: "Celui qui la repand" },
+                claim: { type: "string", description: "La rumeur, une phrase courte en francais" },
+              },
+              required: ["npc_id", "claim"],
             },
           }
         : {}),

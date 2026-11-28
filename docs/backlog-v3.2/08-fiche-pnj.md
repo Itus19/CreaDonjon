@@ -101,7 +101,7 @@ Second retour, 27 novembre : un premier bloc d'apparence seule, riche, utilisabl
 - [ ] Après deux tours au Fanal, la fiche de Mabelle décrit ce que le récit a montré d'elle, sans rien contredire de sa fiche (à vérifier en jouant).
 - [x] Un détail que le récit présente comme caché n'apparaît pas dans la vue joueur (`soloWorldNotes.test.ts`, `npcAppearance.test.ts` : bloc `gm`).
 
-### ☐ V3.2-80 — Ce que les PNJ savent du personnage · `L` · **avec modèle IA** · Modèle conseillé : Opus
+### ☐ V3.2-80 — Ce que les PNJ savent du personnage · `L` · **avec modèle IA** · Modèle conseillé : Opus — **codé le 28 novembre ; migration à appliquer, geste de cacher à faire**
 
 Demande de l'auteur, 27 novembre : « les PNJ ne connaissent pas non plus mon équipement ou mes stats et peuvent de leur côté faire des jets pour découvrir les différentes choses de mon personnage… gérer, de manière invisible, ce que savent les PNJ de moi… un PNJ peut partager des infos sur moi à d'autres ou faire courir des rumeurs fausses. »
 
@@ -111,6 +111,15 @@ Demande de l'auteur, 27 novembre : « les PNJ ne connaissent pas non plus mon é
 - Le personnage aussi peut cacher (second retour de l'auteur, même jour) : un bandage sur un tatouage, une arme sous la cape. Le moteur en tire un DD de dissimulation, et seule une approche précise (fouiller, défaire le bandage) peut le découvrir. Même règle que pour les PNJ : un échec et une absence se disent pareil.
 - Migration à prévoir : à concevoir dans un ADR avant de coder.
 
+**Fait, 28 novembre (ADR 0122).** Table `npc_knowledge` (migration `20261128100000_savoir_des_pnj`, **à appliquer**), réservée au MJ. Noyau : `src/core/rules/npcKnowledge.ts` (ce qui se voit, partage, rumeur, ligne pour la narration). Service : `src/server/services/npcKnowledge.ts`.
+- `observePcAtSight`, à chaque tour : les PNJ à fiche de la pièce retiennent ce que le personnage porte à découvert.
+- `npc_check` avec `target: pc` (repérer, fouiller, jauger, soigner) : jet secret, sans verdict pour la personne qui joue ; sur une réussite, `learnFromNpcCheckOnPc` choisit ce que le PNJ apprend par `facetsRevealedByCheck` (le DD secret d'un objet caché vaut aussi pour le personnage).
+- `npc_share` et `npc_rumour`, proposés par la narration : `shareNpcKnowledge`, `spreadRumour` (toujours fausse).
+- `knowledgeSecrets` : la narration reçoit, dans `secrets-du-mj`, ce que chaque présent sait du personnage.
+
+**Reste :** le geste de cacher (« je mets un bandage sur mon tatouage ») : le moteur ne tire pas encore de `conceal_dc` d'un jet du personnage, et un détail du corps n'est pas encore une facette (`mark:<id>`). « Annuler ce tour » ne retire pas ce qu'un PNJ a appris, comme pour les indices.
+
 **Critères d'acceptation**
-- [ ] Un PNJ qui a réussi un jet de Perception sur le personnage sait qu'il porte une épée ; un autre ne le sait pas, tant que le premier ne le lui a pas dit.
-- [ ] Une rumeur fausse circule et se distingue, côté MJ, d'un fait vrai.
+- [x] Un PNJ qui a réussi un jet de Perception sur le personnage sait qu'il porte une épée ; un autre ne le sait pas, tant que le premier ne le lui a pas dit (`src/server/services/npcKnowledge.test.ts`).
+- [x] Une rumeur fausse circule et se distingue, côté MJ, d'un fait vrai (même fichier).
+- [ ] En jouant, après application de la migration.

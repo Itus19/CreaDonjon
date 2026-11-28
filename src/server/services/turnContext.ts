@@ -40,6 +40,7 @@ import { undoneEventIds } from "@/src/core/rules/turnUndo";
 import { getCurrentAttitude } from "@/src/server/services/psyche";
 import { listActiveQuestsForWorld } from "@/src/server/services/quests";
 import { NPC_CHECK_SOURCE } from "@/src/server/services/npcChecks";
+import { knowledgeSecrets } from "@/src/server/services/npcKnowledge";
 
 /** V3-B4 — « les *n* dernières narrations » : même n que `RECENT_EVENTS_KEPT` (`src/core/rules/scene.ts`), pas de raison d'en choisir un autre. */
 export const RECENT_NARRATIONS_KEPT = 5;
@@ -409,6 +410,8 @@ export interface SoloTurnContext {
   locationName: string | null;
   /** V3.2-19 — vrai si l'on est dans une esquisse de pièce : le joueur qui la nomme la fait entrer dans le wiki. */
   inSketchRoom: boolean;
+  /** V3.2-80 — le nom du personnage joué, pour les faits sur ce que les PNJ savent de lui. */
+  playerName: string | null;
   /** Vrai si le joueur pose une question : `narrateSoloTurn` n'exige la réplique du PNJ désigné (et ne réessaie) que dans ce cas. */
   addressedIsQuestion: boolean;
   /** Les présents tels que le modèle les a vus (nom déjà résolu par `known_as`, bande d'attitude) : la réplique retenue garde le nom et l'attitude de son PNJ pour le fil. */
@@ -503,8 +506,9 @@ export async function buildSoloTurnContext(
   const knownRooms = [...locationPage.rooms.map((r) => ({ name: r.name, description: r.description })), ...roomSketchesHere.map((r) => ({ name: r.name, description: r.description }))];
   const currentRoom = scene?.room && scene.room.locationId === scene.locationId ? { name: scene.room.name, description: scene.room.description } : null;
   const realNpcs = presents.npcs;
-  // ADR 0117 : ce que seul le MJ sait du lieu et des présents, à part.
-  const secrets = [...(locationPage.secret && locationEntity ? [{ name: locationEntity.name, text: locationPage.secret }] : []), ...presents.secrets];
+  // ADR 0117 : ce que seul le MJ sait du lieu et des présents, à part. V3.2-80 : et ce que chaque présent sait du personnage.
+  const savoirs = player ? await knowledgeSecrets(supabase, { campaignId: params.campaignId, pcEntityId: params.playerEntityId, pcName: player.name, npcs: presents.npcs.map((n) => ({ id: n.id, name: n.name })) }) : [];
+  const secrets = [...(locationPage.secret && locationEntity ? [{ name: locationEntity.name, text: locationPage.secret }] : []), ...presents.secrets, ...savoirs];
   const npcs = [...realNpcs, ...sketchesAsNpcs(scene ? esquissesIci(scene) : [])];
   const addressedNpcId = npcAddressedBy(params.playerAction, npcs);
   const addressedIsQuestion = estQuestionDirecte(params.playerAction);
@@ -538,7 +542,7 @@ export async function buildSoloTurnContext(
   };
 
   const knownEntityIds = [...(locationEntity ? [locationEntity.id] : []), ...realNpcs.map((n) => n.id)];
-  return { text: buildTurnContext(input), npcIds: npcs.map((n) => n.id), knownEntityIds, recentNarrations, addressedNpcId, addressedIsQuestion, npcs, trueNames: presents.trueNames, moveTargetIds: moveTargets.map((l) => l.id), moveTargets, wikiRooms: locationPage.rooms, locationName: locationEntity?.name ?? null, inSketchRoom: scene?.room?.anchored === false };
+  return { text: buildTurnContext(input), npcIds: npcs.map((n) => n.id), knownEntityIds, recentNarrations, addressedNpcId, addressedIsQuestion, npcs, trueNames: presents.trueNames, moveTargetIds: moveTargets.map((l) => l.id), moveTargets, wikiRooms: locationPage.rooms, locationName: locationEntity?.name ?? null, inSketchRoom: scene?.room?.anchored === false, playerName: player?.name ?? null };
 }
 
 /**

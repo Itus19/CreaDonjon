@@ -148,4 +148,13 @@ describe("V3.2-19 — enter_room et leave_room", () => {
     expect(schema.safeParse({ narration: "x", npc_check: { npc_id: "mabelle", action: "soulever", tier: "moyen", dc: 12 } }).data?.npc_check).toEqual({ npc_id: "mabelle", action: "soulever", tier: "moyen" });
     expect(soloNarrationToolSchema([]).properties).not.toHaveProperty("npc_check");
   });
+
+  it("V3.2-80 — partage et rumeur : seulement entre PNJ présents, une rumeur d'une phrase", () => {
+    const schema = soloNarrationSchema(["mabelle", "bram"]);
+    expect(schema.safeParse({ narration: "x", npc_share: { from_npc: "mabelle", to_npc: "bram" } }).success).toBe(true);
+    expect(schema.safeParse({ narration: "x", npc_share: { from_npc: "mabelle", to_npc: "invente" } }).success).toBe(false);
+    expect(schema.safeParse({ narration: "x", npc_rumour: { npc_id: "bram", claim: "il est recherché à Port-Brume" } }).success).toBe(true);
+    expect(schema.safeParse({ narration: "x", npc_rumour: { npc_id: "bram", claim: "x".repeat(301) } }).success).toBe(false);
+    expect(schema.safeParse({ narration: "x", npc_check: { npc_id: "bram", action: "reperer", tier: "facile", target: "pc" } }).data?.npc_check?.target).toBe("pc");
+  });
 });
