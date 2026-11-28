@@ -121,6 +121,16 @@ export async function undoLastSoloTurn(supabase: TypedClient, params: { campaign
     }
   }
 
+  // 3 ter. ADR 0123 : les sacs d'autres fiches que le tour a remplis (le butin d'un voleur) reviennent comme avant.
+  for (const autre of tour.othersInventoryBefore ?? []) {
+    const avant = autre.inventory === null ? null : zInventoryBlockData.safeParse(autre.inventory);
+    if (avant !== null && !avant.success) {
+      console.error("Inventaire relevé d'une autre fiche illisible, non restauré", autre.entity_id, avant.error.issues);
+      continue;
+    }
+    if (await restoreInventory(supabase, { entityId: autre.entity_id, before: avant === null ? null : avant.data, actorUserId: params.callerId })) inventory = true;
+  }
+
   // 3 bis. ADR 0121 : le combat que l'attaque du tour a ouvert s'en va avec elle. La scène relevée au début du
   // tour le citait déjà (il s'ouvre avant le jet) : elle repart sans combat en cours.
   const combatsOuverts = lignes

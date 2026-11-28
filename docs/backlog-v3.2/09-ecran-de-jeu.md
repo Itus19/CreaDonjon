@@ -205,6 +205,38 @@ Demandé le 26 novembre après la partie test avec Mabelle ; maquettes validées
 
 **Reste.** La captivité comme lieu ; la bourse volée dans l'inventaire du pillard, les objets visibles ; un PNJ à terre vaincu par un autre PNJ ; l'impitoyable qui achève pendant le combat ; la barre d'un personnage stabilisé (elle propose « Jouer » ; le tour passe ou le réveille).
 
+### ☑ V3.2-77 — Le butin passe chez le voleur, le capturé est enfermé · `S` · sans modèle IA · Modèle conseillé : Opus — **codé le 28 novembre (ADR 0123, addendum)**
+
+- Retour de l'auteur : « faire passer la bourse volée ou les objets volés dans l'inventaire de l'autre », « donner un lieu à la captivité ».
+
+**Critères d'acceptation**
+- [x] Tests du noyau : le butin est toute la bourse et ce que la victime tient en main, jamais un objet caché, ce qu'elle porte sur elle ni le fond du sac ; ce qui sort d'un sac entre tel quel dans l'autre.
+- [x] « Annuler ce tour » remet aussi le sac du voleur.
+- [x] Tests du noyau : le capturé est enfermé dans une cellule du wiki si le lieu en a une, sinon une cellule esquissée ou une pièce fermée à clé ; le garde l'y mène, les autres restent.
+
+**Fait.** `butinVisible` (`src/core/rules/loot.ts`) rend les deux moitiés d'un même transfert ; `sortDuPersonnageVaincu` les règle par `applyTrade`, comme une vente : le personnage donne, le voleur reçoit. Le sac du voleur d'avant le tour va dans le journal (`others_inventory_before`), que l'annulation relit (`lastUndoableTurn`, testé). `pieceDeCaptivite` (`rooms.ts`) et `emmenerEnCaptivite` (`soloDowned.ts`) : une fois le combat clos, la scène part au lieu où travaille le garde (lien `works_at`), puis le garde y enferme le personnage. Vérifié sur une copie locale : Mabelle détrousse Bram (12 po 4 pa et sa dague passent dans son sac) ; l'annulation rend tout à Bram.
+
+**Reste.** S'évader, être jugé ou libéré : la captivité n'a pas encore de suite. Un voleur qui prend les bijoux ou l'armure. Ce que le personnage sait de qui l'a volé (pour le retrouver).
+
+### ☐ V3.2-78 — Fin de partie, et continuer dans le même monde · `M` · **avec modèle IA** (l'épilogue) · Modèle conseillé : Opus — **à concevoir (ADR à écrire)**
+
+- Retour de l'auteur (28 novembre) : « un écran de game over, de fin de jeu », « garder le monde dans lequel ils ont évolué, puis jouer un autre personnage, un descendant, par exemple s'ils avaient un enfant ».
+- Aujourd'hui, à la mort (ADR 0123), la barre du tour se ferme sur une phrase et c'est tout.
+
+**Ce que l'écran de fin propose (à trancher par l'auteur)**
+1. **L'épilogue** : l'IA raconte la fin d'après le journal (la mort, ce que le personnage laisse), le moteur fournit les faits (règle 8).
+2. **La chronique** : une page relisible de la vie du personnage (lieux vus, personnes rencontrées, quêtes, la cause de la mort), tirée du journal, sans IA.
+3. **Annuler la mort** : « Annuler ce tour » existe déjà ; l'écran le propose franchement (« revenir avant le coup fatal »), pour qui ne veut pas d'une mort définitive.
+4. **Un nouveau personnage, même monde** : le monde garde la trace du mort (sa page devient celle d'un défunt, une tombe, les PNJ s'en souviennent par leurs liens).
+5. **Un héritier ou une héritière** : enfant, frère ou sœur, apprenti·e. Hérite d'une part des biens (maison, objets laissés), et de relations amorties (les liens envers le défunt passent, atténués, au parent).
+6. **Reprendre un compagnon** : un PNJ allié (but « défendre ») devient le personnage joué, avec une fiche complète tirée de sa fiche allégée.
+7. **Le temps qui passe** : avant de reprendre, sauter des mois ou des années ; le monde vit sans le personnage (la simulation d'histoire, V4, ADR 0109), et le nouveau personnage arrive dans un monde changé.
+8. **Recommencer à neuf** : un monde neuf, quand chaque partie aura le sien (projet à part).
+
+**Dépend de.** La copie du monde par partie (projet à part) pour 4 à 7 sans toucher au monde d'une autre partie ; la généalogie (`src/core/genealogy`) pour l'héritier ; la création de personnage solo pour 4 à 6.
+
+**Hors périmètre.** La mort d'un compagnon ; la mort en partie à MJ humain (c'est le MJ qui décide).
+
 ---
 
 ## Petits correctifs vus pendant la partie test
