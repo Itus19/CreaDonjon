@@ -16,12 +16,13 @@ Huit propositions, toutes retenues par l'auteur. Elles ne dépendent pas des mê
 1. **Étape 1, codable maintenant.** Un écran de fin remplace la partie quand le personnage est mort. Il montre :
    - **L'épilogue**, raconté par l'IA. Le moteur lui fournit les faits tirés du journal : la cause de la mort, les témoins, ce que le personnage laisse. L'IA ne décide rien (règle 8). Un appel par fin, journalisé (règle 13).
    - **La chronique**, tirée du journal sans IA : jours vécus, lieux vus, personnes connues, et les moments marquants par jour.
+   - **Sa vie en chiffres** (demande de l'auteur) : le volet « Tes dés et tes titres » de l'accueil (`getPlayerStats`, `src/core/stats`), limité à ce personnage : histogramme du d20, nombre de 1 et de 20, moyenne, titres. S'y ajoutent les pièces gagnées et dépensées, les combats gagnés sur les combats livrés, les secrets découverts (facettes découvertes) et les tests réussis.
    - **« Revenir avant le coup fatal »**, qui est l'annulation de tour existante, proposée franchement.
 2. **Étape 2, après la copie du monde par partie** (projet à part). Ces options écrivent dans le monde (la page du défunt, une tombe, les souvenirs des PNJ). Tant que des parties partagent un monde, elles toucheraient aussi l'autre partie :
    - **Un nouveau personnage**, sans lien avec le défunt.
    - **Un héritier ou une héritière** : un parent tiré de la généalogie, ou créé. Hérite d'une part des biens. Les liens envers le défunt passent au parent, atténués.
    - **Reprendre un compagnon** : un PNJ allié (but `defendre`) devient le personnage joué. Sa fiche allégée devient une fiche complète.
-3. **Étape 3, après la simulation d'histoire** (V4, ADR 0109) : **laisser passer le temps** (un an, dix ans, une génération) avant de reprendre. Cette option s'ajoute à celles de l'étape 2.
+3. **Étape 3, après la simulation d'histoire** (V4, ADR 0109) : **laisser passer le temps** (un an, dix ans, une génération). C'est un réglage qui s'ajoute aux choix de l'étape 2 : le monde avance d'abord, puis on choisit qui reprend. Un nouveau personnage passe par la création, dans le monde vieilli ; l'héritier et le compagnon vieillissent d'autant (un enfant de 8 ans peut devenir jouable à 18).
 4. **Recommencer à neuf** dans un monde neuf viendra avec le projet « chaque partie a son monde ».
 
 ## Conséquences
