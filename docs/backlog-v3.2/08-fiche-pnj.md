@@ -185,13 +185,13 @@ Aujourd'hui l'annulation retire les découvertes d'entités, mais pas les indice
 - [x] « je glisse une dague au marchand » ne cache rien (même test).
 - [ ] En jouant.
 
-### ☐ V3.2-85 — Test d'intégration de la RLS des indices et du savoir des PNJ · `S` · sans modèle IA · Modèle conseillé : Opus
+### ☐ V3.2-85 — Test d'intégration de la RLS des indices et du savoir des PNJ · `S` · sans modèle IA · Modèle conseillé : Opus — **écrit le 28 novembre ; reste à le lancer avec les clés**
 
 Vérifier contre une vraie base, avec les comptes de test (`docs/TESTS.md`), que : un membre d'une partie à table lit les indices de toute la table et les siens, jamais ceux d'une autre personne ; il ne lit, n'écrit ni ne supprime aucune ligne de `npc_knowledge` ; le MJ du monde fait tout. Le test s'écrit maintenant ; il s'exécute là où les clés Supabase existent (il se saute sans elles, comme les autres tests d'intégration).
 
 **Critères d'acceptation**
-- [ ] Le test existe et se saute proprement sans clés.
-- [ ] Il passe sur la base de l'auteur.
+- [x] Le test existe et se saute proprement sans clés (`src/server/repos/indicesEtSavoirRls.integration.test.ts`, 6 cas).
+- [ ] Il passe sur la base de l'auteur : `npx vitest run src/server/repos/indicesEtSavoirRls.integration.test.ts`.
 
 ### ☐ V3.2-86 — Les indices en combat · `S` · sans modèle IA · Modèle conseillé : Opus — **codé le 28 novembre ; reste à vérifier en jouant**
 
