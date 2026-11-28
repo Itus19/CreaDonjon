@@ -30,6 +30,32 @@ vi.mock("@/src/server/services/facetDiscoveries", () => ({
   nameInventoryItems: async (_s: unknown, p: { items: { id: string; label?: string; qty: number }[] }) => p.items.map((i) => ({ id: i.id, name: i.label ?? "objet", qty: i.qty })),
 }));
 
+const blocsEcrits: { data: { segments: { id: string; concealed?: unknown }[] } }[] = [];
+vi.mock("@/src/server/repos/blocks", () => ({
+  listBlocksByTypesForEntities: async () => [
+    {
+      id: "b1",
+      version: 3,
+      display: {},
+      visibility_level: "public",
+      visibility_scope_id: null,
+      data: {
+        __v: 1,
+        segments: [
+          { id: "s1", blockType: "paragraph", visibility: { level: "public", scopeId: null }, content: [{ t: "text", v: "Grand, les cheveux gris." }], align: "left" },
+          { id: "s2", blockType: "paragraph", visibility: { level: "public", scopeId: null }, content: [{ t: "text", v: "Un corbeau tatoué dans le cou." }], align: "left" },
+        ],
+      },
+    },
+  ],
+}));
+vi.mock("@/src/server/services/blocks", () => ({
+  updateBlockContent: async (_s: unknown, p: { data: { segments: { id: string; concealed?: unknown }[] } }) => {
+    blocsEcrits.push(p);
+    return { ok: true };
+  },
+}));
+
 const { applyPcConcealment } = await import("./pcConcealment");
 const supabase = {} as SupabaseClient<Database>;
 const base = { world: { id: "w", slug: "m" }, locale: "fr" as const, pcEntityId: "pj", callerId: "u" };
@@ -60,5 +86,11 @@ describe("applyPcConcealment — V3.2-80", () => {
   it("une phrase sans mot de dissimulation ne lit même pas l'inventaire", async () => {
     expect(await applyPcConcealment(supabase, { ...base, text: "je commande une bière", detail: { intent: { kind: "free" }, check: null } })).toBeNull();
     expect(lectures).toBe(0);
+  });
+
+  it("V3.2-81 — « je cache mon tatouage sous un bandage », Discrétion 13 : le paragraphe est dissimulé, DD 13", async () => {
+    const fait = await applyPcConcealment(supabase, { ...base, text: "je cache mon tatouage sous un bandage", detail: discretion(13, "success") });
+    expect(blocsEcrits.at(-1)!.data.segments.find((x) => x.id === "s2")!.concealed).toEqual({ dc: 13 });
+    expect(fait).toContain("Un corbeau tatoué dans le cou.");
   });
 });

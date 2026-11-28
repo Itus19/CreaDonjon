@@ -9,7 +9,8 @@ import type { BlockReference } from "../schemas/blocks/reference";
  * Une facette est un détail qu'on découvre séparément : une caractéristique
  * (`ability:str`), la CA (`ac`), les PV (`hp`), la vitesse (`speed`), une
  * action ou un trait par son rang (`action:0`, `trait:1`), un objet par son
- * identifiant (`item:pnj-1`), la bourse (`purse`).
+ * identifiant (`item:pnj-1`), la bourse (`purse`), un signe distinctif
+ * dissimulé par son paragraphe (`mark:<id>`, V3.2-81).
  *
  * La vue joueur se CONSTRUIT à partir des facettes découvertes, champ par
  * champ, plutôt que de retirer ce qui est caché : un champ ajouté plus tard
@@ -17,7 +18,7 @@ import type { BlockReference } from "../schemas/blocks/reference";
  */
 
 const ABILITY_KEYS: readonly BlockAbility[] = ["str", "dex", "con", "int", "wis", "cha"];
-const FACET_PATTERN = /^(?:ac|hp|speed|purse|ability:(?:str|dex|con|int|wis|cha)|(?:action|trait):\d{1,3}|item:[A-Za-z0-9_-]{1,64})$/;
+const FACET_PATTERN = /^(?:ac|hp|speed|purse|ability:(?:str|dex|con|int|wis|cha)|(?:action|trait):\d{1,3}|(?:item|mark):[A-Za-z0-9_-]{1,64})$/;
 
 export function isFacetKey(value: string): boolean {
   return FACET_PATTERN.test(value);

@@ -32,6 +32,8 @@ export type RevealCheck = { kind: "skill"; key: Skill } | { kind: "ability"; key
 export interface RevealNpc {
   sheet: { actions: number; traits: number } | null;
   gear: { items: readonly { id: string; equipped?: boolean; concealed?: boolean; conceal_dc?: number }[] } | null;
+  /** V3.2-81 — ses signes distinctifs dissimulés (paragraphes de description), avec leur difficulté. */
+  marks?: readonly { id: string; dc: number }[];
 }
 
 type Facet = "ability:str" | "ability:dex" | "ability:con" | "ability:int" | "ability:wis" | "ability:cha" | "ac" | "hp" | "purse" | "concealed" | "actions";
@@ -67,7 +69,11 @@ export function facetsRevealedByCheck(params: { check: RevealCheck; total: numbe
 
   const keys = facets.flatMap((facet): string[] => {
     const { sheet, gear } = params.npc;
-    if (facet === "concealed") return gear ? gear.items.filter((i) => i.concealed === true && params.total >= (i.conceal_dc ?? DEFAULT_CONCEAL_DC)).map((i) => `item:${i.id}`) : [];
+    if (facet === "concealed") {
+      const objets = gear ? gear.items.filter((i) => i.concealed === true && params.total >= (i.conceal_dc ?? DEFAULT_CONCEAL_DC)).map((i) => `item:${i.id}`) : [];
+      const signes = (params.npc.marks ?? []).filter((m) => params.total >= m.dc).map((m) => `mark:${m.id}`);
+      return [...objets, ...signes];
+    }
     if (facet === "purse") return gear ? ["purse"] : [];
     if (facet === "actions") return sheet ? Array.from({ length: sheet.actions }, (_, i) => `action:${i}`) : [];
     return sheet ? [facet] : [];

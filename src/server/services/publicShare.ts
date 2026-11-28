@@ -380,7 +380,8 @@ function filterTextBlockSegments(blockType: string, data: Json): Json {
     ...segment,
     visibility: { ...segment.visibility, createdBy: null },
   }));
-  const segments = filterSegments(aware, { kind: "anonymous" }).map(({ visibility, ...rest }) => ({
+  // V3.2-81 : un lecteur anonyme n'a rien découvert : aucun signe dissimulé.
+  const segments = filterSegments(aware.filter((segment) => !segment.concealed), { kind: "anonymous" }).map(({ visibility, ...rest }) => ({
     ...rest,
     visibility: { level: visibility.level, scopeId: visibility.scopeId },
   }));
