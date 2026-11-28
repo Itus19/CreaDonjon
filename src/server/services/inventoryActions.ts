@@ -193,3 +193,24 @@ export async function setItemEquipped(
   const items = current.data.items.map((item) => (item.id === params.itemId ? { ...item, ...changement } : item));
   return writeInventory(supabase, current, { ...current.data, items }, params.actorUserId);
 }
+
+/**
+ * V3.2-80 — Cache un objet porté, avec le DD secret pour le trouver, ou le
+ * remet en vue. `concealDc` est retiré quand l'objet redevient visible.
+ */
+export async function setItemConcealment(
+  supabase: TypedClient,
+  params: { entityId: string; itemId: string; concealed: boolean; concealDc?: number; actorUserId: string }
+): Promise<InventoryActionOutcome | { error: InventoryActionError }> {
+  const current = await loadInventory(supabase, params.entityId);
+  if (!current) return { error: "item_not_found" };
+  if (!current.data.items.some((item) => item.id === params.itemId)) return { error: "item_not_found" };
+  const items = current.data.items.map((item) => {
+    if (item.id !== params.itemId) return item;
+    const reste = { ...item };
+    delete reste.conceal_dc;
+    return params.concealed ? { ...reste, concealed: true, ...(params.concealDc !== undefined ? { conceal_dc: params.concealDc } : {}) } : { ...reste, concealed: false };
+  });
+  return writeInventory(supabase, current, { ...current.data, items }, params.actorUserId);
+}
+

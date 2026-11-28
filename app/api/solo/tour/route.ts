@@ -23,6 +23,7 @@ import { ensureNpcSheetsForPresents } from "@/src/server/services/npcSheet";
 import { ensureNpcAppearancesForPresents } from "@/src/server/services/npcAppearance";
 import { revealCluesFromCheck } from "@/src/server/services/checkClues";
 import { observePcAtSight } from "@/src/server/services/npcKnowledge";
+import { applyPcConcealment } from "@/src/server/services/pcConcealment";
 import { discoverWhoIsHere, loadSceneView } from "@/src/server/services/soloScene";
 import type { PendingTurnResponse, TurnOutcome } from "@/lib/solo/types";
 
@@ -298,6 +299,21 @@ export async function POST(request: NextRequest) {
       result.record.facts.push(...clues.facts);
     } catch (erreur) {
       console.error("Indices du jet impossibles à révéler", erreur);
+    }
+
+    // V3.2-80 — « je cache ma dague sous ma cape » : un jet réussi la cache, avec son total pour DD secret. Avant que les PNJ regardent.
+    try {
+      const cache = await applyPcConcealment(supabase, {
+        world: { id: world.id, slug: world.slug },
+        locale,
+        pcEntityId: parsed.data.entityId,
+        callerId: user.id,
+        text: parsed.data.text,
+        detail: result.record.detail,
+      });
+      if (cache) result.record.facts.push(cache);
+    } catch (erreur) {
+      console.error("Geste de dissimulation impossible", erreur);
     }
 
     // V3.2-80 — dans l'autre sens, les PNJ de la pièce voient ce que le personnage porte à découvert. Secret du MJ, best-effort.

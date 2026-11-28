@@ -101,7 +101,7 @@ Second retour, 27 novembre : un premier bloc d'apparence seule, riche, utilisabl
 - [ ] Après deux tours au Fanal, la fiche de Mabelle décrit ce que le récit a montré d'elle, sans rien contredire de sa fiche (à vérifier en jouant).
 - [x] Un détail que le récit présente comme caché n'apparaît pas dans la vue joueur (`soloWorldNotes.test.ts`, `npcAppearance.test.ts` : bloc `gm`).
 
-### ☐ V3.2-80 — Ce que les PNJ savent du personnage · `L` · **avec modèle IA** · Modèle conseillé : Opus — **codé le 28 novembre ; migration à appliquer, geste de cacher à faire**
+### ☐ V3.2-80 — Ce que les PNJ savent du personnage · `L` · **avec modèle IA** · Modèle conseillé : Opus — **codé le 28 novembre ; reste les détails du corps (tatouage)**
 
 Demande de l'auteur, 27 novembre : « les PNJ ne connaissent pas non plus mon équipement ou mes stats et peuvent de leur côté faire des jets pour découvrir les différentes choses de mon personnage… gérer, de manière invisible, ce que savent les PNJ de moi… un PNJ peut partager des infos sur moi à d'autres ou faire courir des rumeurs fausses. »
 
@@ -117,7 +117,9 @@ Demande de l'auteur, 27 novembre : « les PNJ ne connaissent pas non plus mon é
 - `npc_share` et `npc_rumour`, proposés par la narration : `shareNpcKnowledge`, `spreadRumour` (toujours fausse).
 - `knowledgeSecrets` : la narration reçoit, dans `secrets-du-mj`, ce que chaque présent sait du personnage.
 
-**Reste :** le geste de cacher (« je mets un bandage sur mon tatouage ») : le moteur ne tire pas encore de `conceal_dc` d'un jet du personnage, et un détail du corps n'est pas encore une facette (`mark:<id>`). « Annuler ce tour » ne retire pas ce qu'un PNJ a appris, comme pour les indices.
+**Le geste de cacher, 28 novembre.** « je cache ma dague sous ma cape » : le jet de Discrétion ou d'Escamotage que le moteur lance déjà, réussi, cache l'objet nommé du sac ; son total devient le DD secret pour le trouver, comme l'action Se cacher de 2024 (`gesteDeDissimulation`, `src/core/rules/pcConcealment.ts` ; `applyPcConcealment`, `src/server/services/pcConcealment.ts`, avant que les PNJ regardent). « je sors la lettre » la remet en vue, sans jet. « dissimuler » propose un jet d'Escamotage.
+
+**Reste :** un détail du corps (un tatouage sous un bandage) n'est pas un objet du sac : il demande une facette `mark:<id>` et un endroit où la noter sur la fiche du personnage, à décider avec l'auteur. « Annuler ce tour » ne retire pas ce qu'un PNJ a appris, comme pour les indices.
 
 **Critères d'acceptation**
 - [x] Un PNJ qui a réussi un jet de Perception sur le personnage sait qu'il porte une épée ; un autre ne le sait pas, tant que le premier ne le lui a pas dit (`src/server/services/npcKnowledge.test.ts`).
