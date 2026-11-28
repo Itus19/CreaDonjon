@@ -193,13 +193,16 @@ Vérifier contre une vraie base, avec les comptes de test (`docs/TESTS.md`), que
 - [ ] Le test existe et se saute proprement sans clés.
 - [ ] Il passe sur la base de l'auteur.
 
-### ☐ V3.2-86 — Les indices en combat · `S` · sans modèle IA · Modèle conseillé : Opus
+### ☐ V3.2-86 — Les indices en combat · `S` · sans modèle IA · Modèle conseillé : Opus — **codé le 28 novembre ; reste à vérifier en jouant**
 
 En combat, la cible d'un jet est un participant (`participant:<id>`), pas une entité : `checkClues` l'ignore, et jauger un ennemi pendant un combat ne révèle rien. Résoudre le participant vers son entité (fiche du PNJ) et appliquer la même règle que hors combat.
 
+**Fait, 28 novembre.** `entityOfParticipant` dans `checkClues.ts` : deux lectures (le participant, son combat), seulement pour une cible de combat ; un participant d'un combat d'une autre partie ne révèle rien.
+
 **Critères d'acceptation**
-- [ ] Une Perspicacité réussie sur le participant « Bandit » révèle les facettes de sa fiche (`checkClues.test.ts`).
-- [ ] Un participant sans entité (créature anonyme) ne révèle rien, sans erreur.
+- [x] Une Perception réussie sur le participant « Bandit » révèle les facettes de sa fiche (`checkClues.test.ts`).
+- [x] Un participant sans entité (créature anonyme) ne révèle rien, sans erreur.
+- [ ] En jouant.
 
 ### ☐ V3.2-87 — Les indices dans le jeu à table · `M` · sans modèle IA · Modèle conseillé : Opus — **migration à valider par l'auteur**
 

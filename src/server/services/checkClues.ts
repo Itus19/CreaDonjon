@@ -14,6 +14,7 @@ import { listBlocksByTypesForEntities } from "@/src/server/repos/blocks";
 import { listFacetDiscoveries } from "@/src/server/repos/entityFacetDiscoveries";
 import { getSceneState } from "@/src/server/repos/sceneStates";
 import { listEntitiesByIds } from "@/src/server/repos/entities";
+import { getCombatById, getCombatParticipantById } from "@/src/server/repos/combats";
 import { nameInventoryItems, revealFacets } from "@/src/server/services/facetDiscoveries";
 import { isWorldAdmin } from "@/src/server/services/permissions";
 import { formatCpFr } from "@/src/i18n/fr";
@@ -36,6 +37,14 @@ function checkOf(kind: "skill_check" | "ability_check", actionId: string): Revea
   return (["str", "dex", "con", "int", "wis", "cha"] as const).includes(actionId as Ability) ? { kind: "ability", key: actionId as Ability } : null;
 }
 
+/** V3.2-86 — L'entité d'un participant de combat de cette partie, ou `null` (créature anonyme, autre partie). Deux lectures. */
+async function entityOfParticipant(supabase: TypedClient, participantId: string, campaignId: string): Promise<string | null> {
+  const participant = await getCombatParticipantById(supabase, participantId);
+  if (!participant?.entity_id) return null;
+  const combat = await getCombatById(supabase, participant.combat_id);
+  return combat?.campaign_id === campaignId ? participant.entity_id : null;
+}
+
 const signed = (n: number) => (n >= 0 ? `+${n}` : `−${Math.abs(n)}`);
 
 /**
@@ -50,8 +59,9 @@ const signed = (n: number) => (n >= 0 ? `+${n}` : `−${Math.abs(n)}`);
  * jamais s'il n'y avait rien.
  *
  * La cible : celle du jet (`entity:<id>`) ; sans cible, le seul PNJ de la
- * pièce s'il n'y en a qu'un. Une cible de combat (`participant:`) attend le
- * combat solo (ADR 0121).
+ * pièce s'il n'y en a qu'un. En combat (V3.2-86), une cible `participant:<id>`
+ * se lit comme l'entité de ce participant, s'il en a une et si son combat est
+ * celui de cette partie ; une créature anonyme ne révèle rien.
  *
  * Réservé au MJ du monde (en solo : la personne qui joue), seul à lire les
  * blocs `gm` de la fiche. Coût : rien si le tour n'est pas un jet réussi ;
@@ -71,7 +81,11 @@ export async function revealCluesFromCheck(
   if (!kind) return none;
   if (!(await isWorldAdmin(supabase, { worldId: params.world.id, userId: params.callerId }))) return none;
 
-  let entityId: string | null = intent.target_id?.startsWith("entity:") ? intent.target_id.slice("entity:".length) : null;
+  let entityId: string | null = intent.target_id?.startsWith("entity:")
+    ? intent.target_id.slice("entity:".length)
+    : intent.target_id?.startsWith("participant:")
+      ? await entityOfParticipant(supabase, intent.target_id.slice("participant:".length), params.campaignId)
+      : null;
   if (!entityId && !intent.target_id) {
     const scene = await getSceneState(supabase, params.campaignId);
     const here = scene ? [...new Set(presentsIci(scene).map((p) => p.entityId))].filter((id) => id !== params.actorEntityId) : [];
