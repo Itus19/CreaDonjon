@@ -1,3 +1,4 @@
+import type { ButDeCombat } from "./combatMinds";
 /**
  * ADR 0121, V3.2-73 — Les attaques d'un PNJ à fiche allégée (bloc `statblock`,
  * ADR 0118), lues dans le texte de ses actions tel que le SRD 2024 l'écrit :
@@ -100,14 +101,28 @@ export function moyenneDegats(attack: NpcAttack): number {
 export function tactiqueDuPnj(params: {
   zone: ZoneCombat;
   attaques: readonly NpcAttack[];
-  /** Les ennemis encore debout ; `joueur` : la personne qui joue. */
-  ennemis: readonly { id: string; joueur: boolean }[];
+  /**
+   * Les ennemis encore au combat ; `joueur` : la personne qui joue ; `pv` :
+   * ses PV ; `menace` : celui qui menace ce que le PNJ défend (l'agresseur
+   * pour la défense, la cible pour l'attaque).
+   */
+  ennemis: readonly { id: string; joueur: boolean; pv?: number; menace?: boolean }[];
+  /** ADR 0122 : son but oriente la cible ; sans but, il veut vaincre. */
+  but?: ButDeCombat;
 }): ActionPnj {
   if (params.ennemis.length === 0) return { kind: "dodge" };
-  const cible = (params.ennemis.find((e) => e.joueur) ?? params.ennemis[0]!).id;
+  const but = params.but ?? "vaincre";
+  const joueur = params.ennemis.find((e) => e.joueur);
+  const menace = params.ennemis.find((e) => e.menace);
+  const plusFaible = [...params.ennemis].sort((a, b) => (a.pv ?? Infinity) - (b.pv ?? Infinity))[0];
+  const choisi =
+    but === "piller" ? plusFaible : but === "arreter" || but === "defendre" || but === "survivre" ? (menace ?? joueur) : joueur;
+  const cible = (choisi ?? params.ennemis[0]!).id;
   const meilleure = (lot: NpcAttack[]) => [...lot].sort((a, b) => moyenneDegats(b) - moyenneDegats(a))[0];
   const melee = meilleure(params.attaques.filter((a) => a.melee));
   const distance = meilleure(params.attaques.filter((a) => a.ranged));
+  // Qui veut survivre ne va pas au-devant des coups : il se défend au contact, sinon il esquive.
+  if (but === "survivre") return params.zone === "engaged" && melee ? { kind: "attack", attack: melee, targetId: cible, approche: false } : { kind: "dodge" };
   if (params.zone !== "far" && melee) return { kind: "attack", attack: melee, targetId: cible, approche: params.zone === "near" };
   if (distance) return { kind: "attack", attack: distance, targetId: cible, approche: false };
   if (melee) return { kind: "approach" };

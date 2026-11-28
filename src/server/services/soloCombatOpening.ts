@@ -9,6 +9,8 @@ import { presentsIci } from "@/src/core/rules/scenePresence";
 import { archetypeCalcule } from "@/src/core/rules/sceneLife";
 import { axesDepuisJson } from "@/src/core/psyche/perception";
 import { zPersonalityBlockData } from "@/src/core/schemas/blocks/personality";
+import { zWorldviewBlockData } from "@/src/core/schemas/blocks/worldview";
+import { espritDeCombat, type EspritDeCombat } from "@/src/core/rules/combatMinds";
 import { getSceneState, putSceneState } from "@/src/server/repos/sceneStates";
 import { listAttitudesTowardTarget } from "@/src/server/repos/psyche";
 import { listBlocksByTypeForEntities } from "@/src/server/repos/blocks";
@@ -40,8 +42,9 @@ export interface CombatOuvert {
  * un combat, migration 20261010120000), quand un combat tourne déjà, ou
  * quand la cible n'est pas un présent de la scène.
  *
- * Coût (docs/QUOTAS.md) : une fois par combat, trois lectures groupées
- * (attitudes envers l'agresseur, envers la cible, tempéraments), puis une
+ * Coût (docs/QUOTAS.md) : une fois par combat, quatre lectures groupées
+ * (attitudes envers l'agresseur, envers la cible, tempéraments, visions du
+ * monde pour le but et le moral de l'ADR 0122), puis une
  * écriture par participant. Rien à chaque tour.
  */
 export async function ouvrirCombatSolo(
@@ -58,10 +61,11 @@ export async function ouvrirCombatSolo(
   if (!ici.some((p) => p.entityId === params.targetEntityId)) return null;
 
   const ids = ici.map((p) => p.entityId);
-  const [versAgresseur, versCible, temperaments, entites] = await Promise.all([
+  const [versAgresseur, versCible, temperaments, visions, entites] = await Promise.all([
     listAttitudesTowardTarget(supabase, { campaignId: params.campaignId, sourceEntityIds: ids, targetEntityId: params.actorEntityId }),
     listAttitudesTowardTarget(supabase, { campaignId: params.campaignId, sourceEntityIds: ids, targetEntityId: params.targetEntityId }),
     listBlocksByTypeForEntities(supabase, ids, "personality"),
+    listBlocksByTypeForEntities(supabase, ids, "worldview"),
     listEntitiesByIds(supabase, [params.actorEntityId, ...ids]),
   ]);
 
@@ -70,10 +74,16 @@ export async function ouvrirCombatSolo(
     if (!axes) return undefined;
     return { amitie: axes.friendship_hostility, dette: axes.debt_independence, peur: axes.fear_assurance };
   };
-  const impulsivite = (id: string): number | undefined => {
+  const temperament = (id: string) => {
     const bloc = temperaments.find((b) => b.entity_id === id);
     const parsed = bloc ? zPersonalityBlockData.safeParse(bloc.data) : null;
-    return parsed?.success ? parsed.data.poles.find((p) => p.key === "impulse_prudence")?.value : undefined;
+    return parsed?.success ? parsed.data : null;
+  };
+  const impulsivite = (id: string): number | undefined => temperament(id)?.poles.find((p) => p.key === "impulse_prudence")?.value;
+  const convictions = (id: string) => {
+    const bloc = visions.find((b) => b.entity_id === id);
+    const parsed = bloc ? zWorldviewBlockData.safeParse(bloc.data) : null;
+    return parsed?.success ? Object.fromEntries(parsed.data.poles.map((p) => [p.key, p.value])) : {};
   };
   const archetype = (id: string): string | null => {
     const seed = scene.life?.workers.find((w) => w.entityId === id)?.seed;
@@ -117,8 +127,31 @@ export async function ouvrirCombatSolo(
     await updateCombatParticipant(supabase, ligne.id, { initiative: rollInitiative(init.mod, serverRng, avantage) });
   }
 
+  // ADR 0122 : le but et le moral de chaque PNJ entré, fixés une fois pour tout le combat.
+  const esprits: Record<string, EspritDeCombat> = {};
+  for (const e of entres) {
+    if (e.id === params.actorEntityId) continue;
+    const present = presents.find((p) => p.id === e.id);
+    const t = temperament(e.id);
+    esprits[e.id] = espritDeCombat({
+      id: e.id,
+      archetype: present?.archetype ?? null,
+      camp: camps.agresseurs.includes(e.id) ? "agresseur" : "defenseur",
+      agresseurId: params.actorEntityId,
+      cibleId: params.targetEntityId,
+      envers: present?.envers ?? {},
+      poles: Object.fromEntries((t?.poles ?? []).map((p) => [p.key, p.value])),
+      convictions: convictions(e.id),
+      aspirationsDeVie: (t?.aspirations ?? []).filter((a) => a.horizon === "life").reduce((s, a) => s + a.intensity, 0),
+    });
+  }
+
   await setCombatStatus(supabase, { combatId: combat.id, status: "running", actorUserId: params.callerId });
-  await putSceneState(supabase, { campaignId: params.campaignId, state: { ...scene, activeCombatId: combat.id }, updatedBy: params.callerId });
+  await putSceneState(supabase, {
+    campaignId: params.campaignId,
+    state: { ...scene, activeCombatId: combat.id, combatMinds: { combatId: combat.id, agresseurId: params.actorEntityId, cibleId: params.targetEntityId, esprits } },
+    updatedBy: params.callerId,
+  });
 
   const nom = new Map(entites.map((e) => [e.id, e.name]));
   const liste = (lot: string[]) => lot.map((id) => nom.get(id) ?? "quelqu'un").join(", ");

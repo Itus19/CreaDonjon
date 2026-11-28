@@ -68,6 +68,32 @@ describe("tactiqueDuPnj (ADR 0121, tactique fixe)", () => {
     expect(tactiqueDuPnj({ zone: "engaged", attaques: [], ennemis })).toEqual({ kind: "dodge" });
     expect(tactiqueDuPnj({ zone: "engaged", attaques: [masse], ennemis: [] })).toEqual({ kind: "dodge" });
   });
+
+  describe("selon son but (ADR 0122)", () => {
+    const trois = [
+      { id: "pj", joueur: true, pv: 11 },
+      { id: "ami", joueur: false, pv: 3 },
+      { id: "chef", joueur: false, pv: 8, menace: true },
+    ];
+
+    it("arrêter ou défendre : il vise celui qui menace", () => {
+      expect(tactiqueDuPnj({ zone: "engaged", attaques: [masse], ennemis: trois, but: "arreter" })).toMatchObject({ targetId: "chef" });
+      expect(tactiqueDuPnj({ zone: "engaged", attaques: [masse], ennemis: trois, but: "defendre" })).toMatchObject({ targetId: "chef" });
+    });
+
+    it("piller : il vise le plus faible", () => {
+      expect(tactiqueDuPnj({ zone: "engaged", attaques: [masse], ennemis: trois, but: "piller" })).toMatchObject({ targetId: "ami" });
+    });
+
+    it("vaincre : le personnage d'abord", () => {
+      expect(tactiqueDuPnj({ zone: "engaged", attaques: [masse], ennemis: trois, but: "vaincre" })).toMatchObject({ targetId: "pj" });
+    });
+
+    it("survivre : il frappe au contact, sinon il esquive sans s'approcher", () => {
+      expect(tactiqueDuPnj({ zone: "engaged", attaques: [masse], ennemis: trois, but: "survivre" })).toMatchObject({ kind: "attack", targetId: "chef", approche: false });
+      expect(tactiqueDuPnj({ zone: "near", attaques: [masse, arbalete], ennemis: trois, but: "survivre" })).toEqual({ kind: "dodge" });
+    });
+  });
 });
 
 describe("resoudreAttaquePnj (règles 2024)", () => {
