@@ -162,13 +162,16 @@ Suite de V3.2-80. Quand le personnage ment à un PNJ, se cache de lui ou lui fai
 - [x] Mentir à quelqu'un qui n'a pas de fiche : le palier habituel (même test).
 - [ ] En jouant.
 
-### ☐ V3.2-83 — « Annuler ce tour » efface aussi ce que le tour a appris · `S` · sans modèle IA · Modèle conseillé : Opus
+### ☐ V3.2-83 — « Annuler ce tour » efface aussi ce que le tour a appris · `S` · sans modèle IA · Modèle conseillé : Opus — **codé le 28 novembre ; reste à vérifier en jouant**
 
 Aujourd'hui l'annulation retire les découvertes d'entités, mais pas les indices (`entity_facet_discoveries`) ni ce que les PNJ ont appris du personnage (`npc_knowledge`). Les deux tables portent `source_event_id` et une RLS de suppression pour le MJ : l'annulation supprime les lignes nées des événements du tour. Un paragraphe caché pendant le tour revient tel qu'il était.
 
+**Fait, 28 novembre.** Deux suppressions par événement source (`deleteFacetDiscoveriesBySourceEvents`, `deleteNpcKnowledgeBySourceEvents`) dans `undoLastSoloTurn`. Le geste qui cache ou révèle un paragraphe écrit désormais une ligne de journal (`rule_application`, source `pc_concealment`, avec l'état d'avant) ; l'annulation la relit et remet le paragraphe (`restorePcConcealments`). Un objet caché revenait déjà avec l'inventaire du début du tour.
+
 **Critères d'acceptation**
-- [ ] Un tour où une fouille révèle l'épée d'un PNJ, puis annulé : l'épée n'est plus connue (`turnUndo.test.ts` du service).
-- [ ] Un tour où un PNJ apprend la CA du personnage, puis annulé : il ne la sait plus (même test).
+- [x] Un tour où une fouille révèle l'épée d'un PNJ, puis annulé : l'épée n'est plus connue (`src/server/services/turnUndo.test.ts`).
+- [x] Un tour où un PNJ apprend la CA du personnage, puis annulé : il ne la sait plus (même test).
+- [x] Un tatouage caché pendant le tour revient en vue (`pcConcealment.test.ts`).
 - [ ] En jouant.
 
 ### ☐ V3.2-84 — Plus de verbes pour cacher · `S` · sans modèle IA · Modèle conseillé : Opus

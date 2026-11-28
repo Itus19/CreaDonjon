@@ -31,23 +31,32 @@ vi.mock("@/src/server/services/facetDiscoveries", () => ({
 }));
 
 const blocsEcrits: { data: { segments: { id: string; concealed?: unknown }[] } }[] = [];
+const journal: { payload: Record<string, unknown> }[] = [];
+vi.mock("@/src/server/repos/sessions", () => ({
+  nextEventSeq: async () => 9,
+  insertSessionEvent: async (_s: unknown, e: { payload: Record<string, unknown> }) => {
+    journal.push(e);
+    return { id: "ev" };
+  },
+}));
+const BLOC_ID = "00000000-0000-4000-8000-0000000000b1";
+const bloc = (s2: Record<string, unknown> = {}) => ({
+  id: BLOC_ID,
+  version: 3,
+  display: {},
+  visibility_level: "public",
+  visibility_scope_id: null,
+  data: {
+    __v: 1,
+    segments: [
+      { id: "s1", blockType: "paragraph", visibility: { level: "public", scopeId: null }, content: [{ t: "text", v: "Grand, les cheveux gris." }], align: "left" },
+      { id: "s2", blockType: "paragraph", visibility: { level: "public", scopeId: null }, content: [{ t: "text", v: "Un corbeau tatoué dans le cou." }], align: "left", ...s2 },
+    ],
+  },
+});
 vi.mock("@/src/server/repos/blocks", () => ({
-  listBlocksByTypesForEntities: async () => [
-    {
-      id: "b1",
-      version: 3,
-      display: {},
-      visibility_level: "public",
-      visibility_scope_id: null,
-      data: {
-        __v: 1,
-        segments: [
-          { id: "s1", blockType: "paragraph", visibility: { level: "public", scopeId: null }, content: [{ t: "text", v: "Grand, les cheveux gris." }], align: "left" },
-          { id: "s2", blockType: "paragraph", visibility: { level: "public", scopeId: null }, content: [{ t: "text", v: "Un corbeau tatoué dans le cou." }], align: "left" },
-        ],
-      },
-    },
-  ],
+  getBlockById: async () => bloc({ concealed: { dc: 13 } }),
+  listBlocksByTypesForEntities: async () => [bloc()],
 }));
 vi.mock("@/src/server/services/blocks", () => ({
   updateBlockContent: async (_s: unknown, p: { data: { segments: { id: string; concealed?: unknown }[] } }) => {
@@ -56,9 +65,9 @@ vi.mock("@/src/server/services/blocks", () => ({
   },
 }));
 
-const { applyPcConcealment } = await import("./pcConcealment");
+const { applyPcConcealment, restorePcConcealments } = await import("./pcConcealment");
 const supabase = {} as SupabaseClient<Database>;
-const base = { world: { id: "w", slug: "m" }, locale: "fr" as const, pcEntityId: "pj", callerId: "u" };
+const base = { world: { id: "w", slug: "m" }, locale: "fr" as const, pcEntityId: "pj", callerId: "u", sessionId: "sess" };
 const discretion = (total: number, verdict: "success" | "fail") => ({ intent: { kind: "skill_check", action_id: "stealth" }, check: { total, dc: 10, verdict } });
 
 beforeEach(() => {
@@ -92,5 +101,14 @@ describe("applyPcConcealment — V3.2-80", () => {
     const fait = await applyPcConcealment(supabase, { ...base, text: "je cache mon tatouage sous un bandage", detail: discretion(13, "success") });
     expect(blocsEcrits.at(-1)!.data.segments.find((x) => x.id === "s2")!.concealed).toEqual({ dc: 13 });
     expect(fait).toContain("Un corbeau tatoué dans le cou.");
+  });
+
+  it("V3.2-83 — le geste est journalisé, et « Annuler ce tour » remet le paragraphe en vue", async () => {
+    journal.length = 0;
+    await applyPcConcealment(supabase, { ...base, text: "je cache mon tatouage sous un bandage", detail: discretion(13, "success") });
+    expect(journal).toHaveLength(1);
+    expect(journal[0]!.payload).toMatchObject({ source: "pc_concealment", block_id: BLOC_ID, segment_id: "s2", before: null, changes_text: ["Signe distinctif dissimulé"] });
+    expect(await restorePcConcealments(supabase, { payloads: [{ source: "autre" }, journal[0]!.payload], callerId: "u" })).toBe(1);
+    expect(blocsEcrits.at(-1)!.data.segments.find((x) => x.id === "s2")!.concealed).toBeUndefined();
   });
 });
