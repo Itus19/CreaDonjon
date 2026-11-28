@@ -28,3 +28,13 @@ Le miroir existe déjà dans l'autre sens : `entity_facet_discoveries` (ce que l
 - Une migration : la table, ses index et sa RLS. Coût (docs/QUOTAS.md) : une lecture de plus par tour narré (ce que savent les présents), une écriture par jet réussi ou par partage.
 - Le récit gagne des PNJ qui réagissent à ce qu'ils savent vraiment, sans que la personne qui joue puisse le lire.
 - Ordre de livraison : la table et l'observation, puis le partage et les rumeurs, puis le geste de cacher.
+
+## Amendement du 28 novembre — les signes distinctifs dissimulés (V3.2-81)
+
+Proposition de l'auteur : des passages cachés dans la description d'un personnage, qu'on cache et révèle. La visibilité d'un paragraphe dit qui le **lit** ; elle ne peut pas dire qui le **voit** dans l'histoire (la personne qui joue doit lire le tatouage de son propre personnage). D'où un champ à part sur le paragraphe, `concealed: { dc }`, sans migration (données du bloc texte), et une facette `mark:<id du paragraphe>`.
+
+- Un paragraphe dissimulé se lit selon ce qu'on a découvert, pas selon sa visibilité (`readSegmentsWithMarks`) ; la difficulté ne part jamais vers qui n'est pas le personnage.
+- `facetsRevealedByCheck` le trouve comme un objet caché : Perception ou Investigation dont le total atteint `dc`.
+- Le geste de cacher (point 3) retrouve aussi un paragraphe par ses mots ; le total du jet devient sa difficulté.
+- La narration ne le compte pas dans ce que sait le personnage : il reste dans ce que sait le MJ.
+

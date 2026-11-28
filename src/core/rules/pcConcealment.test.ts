@@ -36,4 +36,14 @@ describe("V3.2-80 — le personnage cache un objet", () => {
     expect(gesteDeDissimulation({ intent: { kind: "free", actionId: null }, check: null, text: "je sors la lettre scellée", items: sac })).toEqual({ itemId: "pj-3", concealed: false });
     expect(gesteDeDissimulation({ intent: { kind: "free", actionId: null }, check: null, text: "je sors ma dague", items: sac })).toBeNull();
   });
+
+  it("V3.2-81 — « je cache mon tatouage sous un bandage » : le paragraphe du tatouage est dissimulé, avec le total pour difficulté", () => {
+    const signes = [
+      { id: "s1", text: "Grand, les cheveux gris.", concealed: false },
+      { id: "s2", text: "Un corbeau tatoué dans le cou.", concealed: false },
+    ];
+    expect(gesteDeDissimulation({ intent: { kind: "skill_check", actionId: "stealth" }, check: { total: 13, verdict: "success" }, text: "je cache mon tatouage sous un bandage", items: sac, signes })).toEqual({ markId: "s2", concealed: true, concealDc: 13 });
+    const cache = signes.map((m) => (m.id === "s2" ? { ...m, concealed: true } : m));
+    expect(gesteDeDissimulation({ intent: { kind: "free", actionId: null }, check: null, text: "j'enlève le bandage de mon tatouage", items: sac, signes: cache })).toEqual({ markId: "s2", concealed: false });
+  });
 });

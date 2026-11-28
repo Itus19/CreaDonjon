@@ -96,7 +96,7 @@ async function cartesPourFiches(
     const parsed = zTextBlockData.safeParse(bloc.data);
     if (!parsed.success) continue;
     const aware = parsed.data.segments.map((segment) => ({ ...segment, visibility: { ...segment.visibility, createdBy: null } }));
-    const phrase = premierePhrase(filterSegments(aware, viewer));
+    const phrase = premierePhrase(filterSegments(aware.filter((segment) => !segment.concealed), viewer));
     if (phrase) phraseParFiche.set(bloc.entity_id, phrase);
   }
 

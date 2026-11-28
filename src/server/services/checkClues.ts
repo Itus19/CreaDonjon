@@ -8,6 +8,8 @@ import { playerViewOfInventory, playerViewOfStatblock } from "@/src/core/rules/f
 import { presentsIci } from "@/src/core/rules/scenePresence";
 import { zStatblockBlockData } from "@/src/core/schemas/blocks/statblock";
 import { zInventoryBlockData } from "@/src/core/schemas/blocks/inventory";
+import { zTextBlockData } from "@/src/core/schemas/blocks/text";
+import { concealedMarks, markFacet } from "@/src/core/rules/concealedMarks";
 import { listBlocksByTypesForEntities } from "@/src/server/repos/blocks";
 import { listFacetDiscoveries } from "@/src/server/repos/entityFacetDiscoveries";
 import { getSceneState } from "@/src/server/repos/sceneStates";
@@ -78,7 +80,7 @@ export async function revealCluesFromCheck(
   if (!entityId || entityId === params.actorEntityId) return none;
 
   const [blocks, knownByEntity] = await Promise.all([
-    listBlocksByTypesForEntities(supabase, [entityId], ["statblock", "inventory"]),
+    listBlocksByTypesForEntities(supabase, [entityId], ["statblock", "inventory", "text"]),
     listFacetDiscoveries(supabase, { campaignId: params.campaignId, entityIds: [entityId], userId: params.callerId }),
   ]);
   const sheetRow = blocks.find((b) => b.block_type === "statblock");
@@ -87,7 +89,12 @@ export async function revealCluesFromCheck(
   const gear = gearRow ? zInventoryBlockData.safeParse(gearRow.data) : null;
   const sheetData = sheet?.success ? sheet.data : null;
   const gearData = gear?.success ? gear.data : null;
-  if (!sheetData && !gearData) return none;
+  // V3.2-81 : ses signes distinctifs dissimulés (un tatouage sous la manche), dans ses blocs texte.
+  const marks = blocks.filter((b) => b.block_type === "text").flatMap((b) => {
+    const lu = zTextBlockData.safeParse(b.data);
+    return lu.success ? concealedMarks(lu.data.segments) : [];
+  });
+  if (!sheetData && !gearData && marks.length === 0) return none;
 
   const nameOf = async () => (await listEntitiesByIds(supabase, [entityId]))[0]?.name ?? "ce personnage";
   // Retour de l'auteur (27 novembre) : un jet raté et une fouille vide disent la même chose,
@@ -102,7 +109,7 @@ export async function revealCluesFromCheck(
     check: kind,
     total: check.total,
     dc: check.dc,
-    npc: { sheet: sheetData ? { actions: sheetData.actions.length, traits: sheetData.traits.length } : null, gear: gearData },
+    npc: { sheet: sheetData ? { actions: sheetData.actions.length, traits: sheetData.traits.length } : null, gear: gearData, marks },
     known: knownByEntity.get(entityId) ?? new Set<string>(),
   });
   if (facets.length === 0) return nothingFound();
@@ -134,6 +141,7 @@ export async function revealCluesFromCheck(
       parts.push(`bourse : ${formatCpFr(c.pp * 1000 + c.gp * 100 + c.ep * 50 + c.sp * 10 + c.cp)}`);
     }
   }
+  for (const mark of marks) if (fresh.has(markFacet(mark.id))) parts.push(`signe distinctif : ${mark.text}`);
   if (parts.length === 0) return { facts: [], revealed: revealed.length };
   return { facts: [`Indices découverts sur ${await nameOf()} : ${parts.join(", ")}.`], revealed: revealed.length };
 }

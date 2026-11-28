@@ -85,6 +85,15 @@ async function knownAsByTarget(supabase: TypedClient, playerEntityId: string): P
 const NPC_DESCRIPTION_MAX = 240;
 
 /**
+ * V3.2-81 — Pour ce que sait le personnage, un signe distinctif dissimulé
+ * (tatouage sous la manche) n'est pas vu : il reste dans ce que sait le MJ
+ * (`secretsByEntity`), que la narration ne dit pas. Le MJ, lui, le lit.
+ */
+function sansSignesCaches<T extends { concealed?: unknown }>(segments: readonly T[], viewer: Viewer): T[] {
+  return isAdminViewer(viewer) ? [...segments] : segments.filter((segment) => !segment.concealed);
+}
+
+/**
  * Le premier paragraphe que CE viewer peut lire, par entité (premier bloc
  * `text` dans l'ordre d'affichage) : la même lecture que la description du
  * lieu (`resolveLocationPage`). Un secret de MJ n'y entre jamais (règle 11).
@@ -95,7 +104,7 @@ function firstParagraphByEntity(blocks: Awaited<ReturnType<typeof listBlocksByTy
     if (out.has(bloc.entity_id)) continue;
     const parsed = zTextBlockData.safeParse(bloc.data);
     if (!parsed.success) continue;
-    const aware = parsed.data.segments.map((segment) => ({ ...segment, visibility: { ...segment.visibility, createdBy: null } }));
+    const aware = sansSignesCaches(parsed.data.segments, viewer).map((segment) => ({ ...segment, visibility: { ...segment.visibility, createdBy: null } }));
     const paragraphe = premierParagraphe(filterSegments(aware, viewer));
     if (!paragraphe) continue;
     out.set(bloc.entity_id, paragraphe.length <= NPC_DESCRIPTION_MAX ? paragraphe : `${paragraphe.slice(0, NPC_DESCRIPTION_MAX - 1).trimEnd()}…`);
@@ -109,7 +118,7 @@ function paragraphsByEntity(blocks: Awaited<ReturnType<typeof listBlocksByTypesF
   for (const bloc of filtrerBlocsVisibles(blocks, viewer).sort((a, b) => a.display_order - b.display_order)) {
     const parsed = zTextBlockData.safeParse(bloc.data);
     if (!parsed.success) continue;
-    const aware = parsed.data.segments.map((segment) => ({ ...segment, visibility: { ...segment.visibility, createdBy: null } }));
+    const aware = sansSignesCaches(parsed.data.segments, viewer).map((segment) => ({ ...segment, visibility: { ...segment.visibility, createdBy: null } }));
     out.set(bloc.entity_id, [...(out.get(bloc.entity_id) ?? []), ...paragraphesDe(filterSegments(aware, viewer))]);
   }
   return out;

@@ -44,6 +44,7 @@ vi.mock("@/src/server/repos/blocks", () => ({
   listBlocksByTypesForEntities: async () => [
     { entity_id: "mabelle", block_type: "statblock", data: statblock },
     { entity_id: "mabelle", block_type: "inventory", data: inventaire },
+    { entity_id: "mabelle", block_type: "text", data: { __v: 1, segments: [{ id: "s2", blockType: "paragraph", visibility: { level: "gm", scopeId: null }, content: [{ t: "text", v: "Un serpent tatoué sur l'avant-bras." }], align: "left", concealed: { dc: 15 } }] } },
   ],
 }));
 vi.mock("@/src/server/repos/entityFacetDiscoveries", () => ({ listFacetDiscoveries: async () => new Map([["mabelle", connues]]) }));
@@ -113,5 +114,15 @@ describe("revealCluesFromCheck — V3.2-50", () => {
   it("réservé au MJ du monde, seul à lire la fiche", async () => {
     admin = false;
     expect((await revealCluesFromCheck(supabase, { ...base, detail: perception(13) })).revealed).toBe(0);
+  });
+
+  it("V3.2-81 — une fouille qui atteint la difficulté d'un signe dissimulé le révèle, avec son texte", async () => {
+    const fouille = (total: number) => ({ intent: { kind: "skill_check", action_id: "investigation", target_id: "entity:mabelle" }, check: { total, dc: 10, verdict: "success" as const } });
+    await revealCluesFromCheck(supabase, { ...base, detail: fouille(14) });
+    expect(ecrites[0]!.facets).not.toContain("mark:s2");
+    ecrites.length = 0;
+    const out = await revealCluesFromCheck(supabase, { ...base, detail: fouille(15) });
+    expect(ecrites[0]!.facets).toContain("mark:s2");
+    expect(out.facts[0]).toContain("signe distinctif : Un serpent tatoué sur l'avant-bras.");
   });
 });

@@ -100,6 +100,12 @@ export const zSegment = z
     visibility: zSegmentVisibility,
     content: z.array(zSegmentContentNode),
     align: z.enum(SEGMENT_ALIGNS).default("left"),
+    /**
+     * V3.2-81 (ADR 0122, amendement) — un signe distinctif dissimulé dans
+     * l'histoire (un tatouage sous un bandage) : qui le VOIT, pas qui le lit
+     * (`visibility`). `dc` : ce qu'il faut atteindre pour le trouver.
+     */
+    concealed: z.object({ dc: z.number().int().min(5).max(30) }).optional(),
   })
   // Le contenu vide est reserve au `divider`, et lui est impose : un trait ne
   // se redige pas, et un paragraphe vide reste une erreur de saisie a

@@ -1,4 +1,5 @@
 import { normalizeForMatching } from "../linker/normalize";
+import { paragrapheNomme } from "./concealedMarks";
 
 /**
  * V3.2-80 (ADR 0122, point 3) — Le personnage cache un objet qu'il porte
@@ -36,25 +37,44 @@ export function objetNomme(text: string, items: readonly ObjetDuSac[]): string |
   return parTete.length === 1 ? parTete[0]!.id : null;
 }
 
-const MONTRER = /\b(sors|sort|sortir|montre|montrer|devoile|devoiler|degaine|degainer|brandis|brandir|exhibe|exhiber)\b/;
+const MONTRER = /\b(sors|sort|sortir|montre|montrer|devoile|devoiler|degaine|degainer|brandis|brandir|exhibe|exhiber|enleve|enlever|retire|retirer|decouvre|decouvrir)\b/;
 const DD_MIN = 5;
 const DD_MAX = 30;
 
-export type GesteDeDissimulation = { itemId: string; concealed: true; concealDc: number } | { itemId: string; concealed: false };
+/** V3.2-81 : un signe distinctif de la description (un paragraphe), caché ou montré comme un objet. */
+export interface SigneDistinctif {
+  id: string;
+  text: string;
+  concealed: boolean;
+}
+
+export type GesteDeDissimulation =
+  | { itemId: string; concealed: true; concealDc: number }
+  | { itemId: string; concealed: false }
+  | { markId: string; concealed: true; concealDc: number }
+  | { markId: string; concealed: false };
 
 export function gesteDeDissimulation(params: {
   intent: { kind: string; actionId: string | null };
   check: { total: number; verdict: "success" | "fail" | null } | null;
   text: string;
   items: readonly ObjetDuSac[];
+  /** V3.2-81 — les paragraphes de sa description, pour « je cache mon tatouage sous un bandage ». Un objet nommé passe avant. */
+  signes?: readonly SigneDistinctif[];
 }): GesteDeDissimulation | null {
+  const signes = params.signes ?? [];
   const cacher = params.intent.kind === "skill_check" && (params.intent.actionId === "stealth" || params.intent.actionId === "sleight_of_hand");
   if (cacher) {
     if (params.check?.verdict !== "success") return null;
+    const concealDc = Math.min(DD_MAX, Math.max(DD_MIN, params.check.total));
     const id = objetNomme(params.text, params.items.filter((i) => !i.concealed));
-    return id ? { itemId: id, concealed: true, concealDc: Math.min(DD_MAX, Math.max(DD_MIN, params.check.total)) } : null;
+    if (id) return { itemId: id, concealed: true, concealDc };
+    const markId = paragrapheNomme(params.text, signes.filter((m) => !m.concealed));
+    return markId ? { markId, concealed: true, concealDc } : null;
   }
   if (!MONTRER.test(normalizeForMatching(params.text))) return null;
   const id = objetNomme(params.text, params.items.filter((i) => i.concealed));
-  return id ? { itemId: id, concealed: false } : null;
+  if (id) return { itemId: id, concealed: false };
+  const markId = paragrapheNomme(params.text, signes.filter((m) => m.concealed));
+  return markId ? { markId, concealed: false } : null;
 }

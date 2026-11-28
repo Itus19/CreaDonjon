@@ -31,7 +31,12 @@ vi.mock("@/src/core/rules/scenePresence", () => ({ presentsIci: (scene: { presen
 vi.mock("@/src/server/repos/blocks", () => ({
   listBlocksByTypesForEntities: async (_s: unknown, ids: string[]) => [
     ...ids.filter((id) => id === "mabelle" || id === "bram").map((id) => ({ ...statblock, entity_id: id })),
-    ...(ids.includes("pj") ? [{ entity_id: "pj", block_type: "inventory", data: sacDuPj }] : []),
+    ...(ids.includes("pj")
+      ? [
+          { entity_id: "pj", block_type: "inventory", data: sacDuPj },
+          { entity_id: "pj", block_type: "text", data: { __v: 1, segments: [{ id: "t1", blockType: "paragraph", visibility: { level: "public", scopeId: null }, content: [{ t: "text", v: "Un corbeau tatoué dans le cou." }], align: "left", concealed: { dc: 13 } }] } },
+        ]
+      : []),
   ],
 }));
 vi.mock("@/src/server/repos/npcKnowledge", () => ({
@@ -74,8 +79,8 @@ describe("ce que les PNJ savent du personnage — V3.2-80", () => {
   });
 
   it("une Perception réussie de peu sur le personnage : sa Force, mais pas la lettre (DD 14) avec un total de 13", async () => {
-    expect(await learnFromNpcCheckOnPc(supabase, { ...base, npcId: "mabelle", skill: "perception", total: 13, dc: 12 })).toEqual(["Force 16 (+3)"]);
-    expect(await learnFromNpcCheckOnPc(supabase, { ...base, npcId: "bram", skill: "perception", total: 14, dc: 12 })).toEqual(["Force 16 (+3)", "Lettre scellée (caché)"]);
+    expect(await learnFromNpcCheckOnPc(supabase, { ...base, npcId: "mabelle", skill: "perception", total: 13, dc: 12 })).not.toContain("Lettre scellée (caché)");
+    expect(await learnFromNpcCheckOnPc(supabase, { ...base, npcId: "bram", skill: "perception", total: 14, dc: 12 })).toEqual(["Force 16 (+3)", "Lettre scellée (caché)", "signe distinctif : Un corbeau tatoué dans le cou."]);
   });
 
   it("critère : Mabelle sait qu'il porte une épée, Bram non, tant qu'elle ne le lui a pas dit", async () => {
@@ -101,5 +106,10 @@ describe("ce que les PNJ savent du personnage — V3.2-80", () => {
     expect(await spreadRumour(supabase, { ...base, worldId: "w", npcId: "bram", claim: "x" })).toBe(false);
     admin = true;
     expect(await shareNpcKnowledge(supabase, { ...base, worldId: "w", fromId: "bram", toId: "bram" })).toBe(0);
+  });
+
+  it("V3.2-81 — critère : le tatouage sous le bandage (DD 13) échappe à une Perception de 12, pas à une de 13", async () => {
+    expect(await learnFromNpcCheckOnPc(supabase, { ...base, npcId: "mabelle", skill: "perception", total: 12, dc: 10 })).not.toContain("signe distinctif : Un corbeau tatoué dans le cou.");
+    expect(await learnFromNpcCheckOnPc(supabase, { ...base, npcId: "bram", skill: "perception", total: 13, dc: 10 })).toContain("signe distinctif : Un corbeau tatoué dans le cou.");
   });
 });
