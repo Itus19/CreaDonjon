@@ -39,6 +39,15 @@ const segmentAttributes = {
     parseHTML: (element: HTMLElement) => element.getAttribute("data-align") ?? "left",
     renderHTML: (attrs: { align?: string }) => ({ "data-align": attrs.align ?? "left" }),
   },
+  // V3.2-81 : un signe distinctif dissimulé dans l'histoire, et la difficulté pour le trouver.
+  concealDc: {
+    default: null as number | null,
+    parseHTML: (element: HTMLElement) => {
+      const brut = element.getAttribute("data-conceal-dc");
+      return brut ? Number(brut) : null;
+    },
+    renderHTML: (attrs: { concealDc?: number | null }) => (attrs.concealDc ? { "data-conceal-dc": String(attrs.concealDc) } : {}),
+  },
 };
 
 export const SegmentParagraph = Paragraph.extend({

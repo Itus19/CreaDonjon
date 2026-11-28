@@ -7,6 +7,8 @@ import { describeKnowledge, factsToShare, rumourClaim, visibleFacetsAtSight, typ
 import type { NpcCheckAction } from "@/src/core/rules/npcRolls";
 import { presentsIci } from "@/src/core/rules/scenePresence";
 import { zInventoryBlockData, type InventoryBlockData } from "@/src/core/schemas/blocks/inventory";
+import { zTextBlockData } from "@/src/core/schemas/blocks/text";
+import { concealedMarks, markFacet } from "@/src/core/rules/concealedMarks";
 import { listBlocksByTypesForEntities } from "@/src/server/repos/blocks";
 import { insertNpcKnowledge, listNpcKnowledge } from "@/src/server/repos/npcKnowledge";
 import { getSceneState } from "@/src/server/repos/sceneStates";
@@ -104,16 +106,21 @@ export async function learnFromNpcCheckOnPc(
 ): Promise<string[]> {
   const [ctx, blocs, connus] = await Promise.all([
     resolveCharacterActionContext(supabase, params.pcEntityId, params.campaignId, "fr"),
-    listBlocksByTypesForEntities(supabase, [params.pcEntityId], ["inventory"]),
+    listBlocksByTypesForEntities(supabase, [params.pcEntityId], ["inventory", "text"]),
     listNpcKnowledge(supabase, { campaignId: params.campaignId, subjectId: params.pcEntityId, knowerIds: [params.npcId] }),
   ]);
   if (!ctx) return [];
   const sac = inventaireDe(blocs, params.pcEntityId);
+  // V3.2-81 : ses signes distinctifs dissimulés (un tatouage sous un bandage), dans ses blocs texte.
+  const marks = blocs.filter((b) => b.block_type === "text").flatMap((b) => {
+    const lu = zTextBlockData.safeParse(b.data);
+    return lu.success ? concealedMarks(lu.data.segments) : [];
+  });
   const facettes = facetsRevealedByCheck({
     check: { kind: "skill", key: params.skill },
     total: params.total,
     dc: params.dc,
-    npc: { sheet: { actions: 0, traits: 0 }, gear: sac },
+    npc: { sheet: { actions: 0, traits: 0 }, gear: sac, marks },
     known: new Set(connus.flatMap((k) => (k.facet ? [k.facet] : []))),
   });
 
@@ -131,6 +138,9 @@ export async function learnFromNpcCheckOnPc(
     } else if (facet.startsWith("item:") && sac) {
       const item = sac.items.find((i) => i.id === facet.slice("item:".length));
       if (item) claim = `${itemLabel(item, ctx.ruleNameByKey)}${item.concealed ? " (caché)" : ""}`;
+    } else if (facet.startsWith("mark:")) {
+      const mark = marks.find((m) => markFacet(m.id) === facet);
+      if (mark) claim = `signe distinctif : ${mark.text.slice(0, 280)}`;
     }
     if (claim) faits.push({ knowerId: params.npcId, facet, claim, isTrue: true, source: "observation", toldById: null });
   }

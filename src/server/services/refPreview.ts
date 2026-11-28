@@ -113,7 +113,8 @@ function filterSegmentsOf(data: Json, viewer: Viewer): Json {
   const parsed = zTextBlockData.safeParse(data);
   if (!parsed.success) return data;
   const aware = parsed.data.segments.map((segment) => ({ ...segment, visibility: { ...segment.visibility, createdBy: null } }));
-  const segments = filterSegments(aware, viewer).map(({ visibility, ...rest }) => ({
+  // V3.2-81 : un aperçu ne lit pas les indices ; aucun signe dissimulé.
+  const segments = filterSegments(aware.filter((segment) => !segment.concealed), viewer).map(({ visibility, ...rest }) => ({
     ...rest,
     visibility: { level: visibility.level, scopeId: visibility.scopeId },
   }));

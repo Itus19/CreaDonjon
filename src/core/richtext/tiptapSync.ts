@@ -38,6 +38,8 @@ export interface BlockNodeJSON {
     visibilityLevel?: string;
     visibilityScopeId?: string | null;
     align?: string;
+    /** V3.2-81 : la difficulté d'un paragraphe dissimulé, absente sinon. */
+    concealDc?: number | null;
   };
   content?: InlineNodeJSON[];
 }
@@ -123,10 +125,14 @@ export function docToSegments(doc: DocJSON): Segment[] {
       })
       .filter((n): n is SegmentContentNode => n !== null);
 
+    const rawDc = node.attrs?.concealDc;
+    const concealDc = typeof rawDc === "number" && Number.isInteger(rawDc) && rawDc >= 5 && rawDc <= 30 && blockType !== "divider" ? rawDc : null;
+
     return {
       id,
       blockType,
       visibility: { level, scopeId },
+      ...(concealDc !== null ? { concealed: { dc: concealDc } } : {}),
       // Un paragraphe vide garde un noeud texte vide (l'editeur en cree
       // legitimement en cours de frappe) ; un `divider` n'en veut aucun — le
       // schema refuse l'un comme l'autre dans le sens inverse.
@@ -145,6 +151,7 @@ export function segmentsToDoc(segments: Segment[]): DocJSON {
         visibilityLevel: segment.visibility.level,
         visibilityScopeId: segment.visibility.scopeId,
         align: segment.align,
+        ...(segment.concealed ? { concealDc: segment.concealed.dc } : {}),
       };
       // Le trait est un noeud vide : jamais de cle `content`, meme a [] —
       // ProseMirror refuse un contenu sur un noeud atomique.

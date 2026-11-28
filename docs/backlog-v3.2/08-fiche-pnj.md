@@ -119,9 +119,29 @@ Demande de l'auteur, 27 novembre : « les PNJ ne connaissent pas non plus mon é
 
 **Le geste de cacher, 28 novembre.** « je cache ma dague sous ma cape » : le jet de Discrétion ou d'Escamotage que le moteur lance déjà, réussi, cache l'objet nommé du sac ; son total devient le DD secret pour le trouver, comme l'action Se cacher de 2024 (`gesteDeDissimulation`, `src/core/rules/pcConcealment.ts` ; `applyPcConcealment`, `src/server/services/pcConcealment.ts`, avant que les PNJ regardent). « je sors la lettre » la remet en vue, sans jet. « dissimuler » propose un jet d'Escamotage.
 
-**Reste :** un détail du corps (un tatouage sous un bandage) n'est pas un objet du sac : il demande une facette `mark:<id>` et un endroit où la noter sur la fiche du personnage, à décider avec l'auteur. « Annuler ce tour » ne retire pas ce qu'un PNJ a appris, comme pour les indices.
+**Reste :** les détails du corps sont traités par V3.2-81. « Annuler ce tour » ne retire pas ce qu'un PNJ a appris, comme pour les indices.
 
 **Critères d'acceptation**
 - [x] Un PNJ qui a réussi un jet de Perception sur le personnage sait qu'il porte une épée ; un autre ne le sait pas, tant que le premier ne le lui a pas dit (`src/server/services/npcKnowledge.test.ts`).
 - [x] Une rumeur fausse circule et se distingue, côté MJ, d'un fait vrai (même fichier).
 - [ ] En jouant, après application de la migration.
+
+### ☐ V3.2-81 — Les signes distinctifs dissimulés · `M` · sans modèle IA · Modèle conseillé : Opus — **codé le 28 novembre ; reste à vérifier en jouant**
+
+Proposition de l'auteur, 28 novembre : dans la description d'un personnage, PNJ comme personnage joué, des passages cachés qu'on peut cacher et révéler (un tatouage sous un bandage).
+
+Deux sortes de « caché » à ne pas confondre : la visibilité d'un paragraphe dit **qui lit** le texte (MJ, joueurs) ; la marque nouvelle dit **qui le voit dans l'histoire**. La personne qui joue lit toujours le tatouage de son propre personnage ; ce sont les PNJ qui ne le voient pas.
+
+- Un paragraphe de bloc texte peut porter `concealed: { dc }` (champ optionnel du segment, données du bloc : aucune migration SQL). Facette `mark:<id du segment>`.
+- Sur un PNJ : un paragraphe dissimulé n'apparaît pas dans la vue joueur (filtré côté serveur, règle 5) tant que la facette n'est pas découverte ; `facetsRevealedByCheck` le révèle à une fouille ou une Perception dont le total atteint `dc`.
+- Sur le personnage joué : toujours lisible par la personne qui joue ; absent de ce qu'un PNJ voit au premier regard ; un jet réussi sur le personnage (V3.2-80) le fait retenir au PNJ, avec son texte.
+- Cacher et révéler : le geste de V3.2-80 (`gesteDeDissimulation`) retrouve aussi un paragraphe par ses mots (« je mets un bandage sur mon tatouage ») ; « j'enlève le bandage » le révèle.
+- Éditeur : un interrupteur « Dissimulé » et sa difficulté sur le paragraphe.
+
+**Fait, 28 novembre.** `src/core/rules/concealedMarks.ts` (lecture selon la marque, texte d'un signe, paragraphe nommé par une phrase) ; facette `mark:` (`facets.ts`, `facetReveal.ts`) ; vue joueur (`playerEntityDetail.ts`, deux lectures seulement si la fiche a un signe dissimulé), partage public, aperçu et choix de personnage sans signes ; indices (`checkClues.ts`) et savoir des PNJ (`learnFromNpcCheckOnPc`) ; geste de cacher (`gesteDeDissimulation`, `applyPcConcealment`) ; éditeur : sélecteur « Dissimulé · DD » dans la bulle du paragraphe. « je cache mon tatouage sous un bandage » passe par « cache » (Discrétion) ; « je mets un bandage » seul ne lance pas de jet.
+
+**Critères d'acceptation**
+- [x] Le tatouage de Mabelle, dissimulé DD 15 : absent de la vue joueur ; une fouille à 15 le révèle, une à 14 dit « rien trouvé » (`concealedMarks.test.ts`, `checkClues.test.ts`).
+- [x] « je cache mon tatouage sous un bandage », Discrétion 13 : un PNJ qui regarde le personnage ne le voit pas ; une Perception à 13 sur lui le lui apprend (`pcConcealment.test.ts`, `npcKnowledge.test.ts`).
+- [ ] En jouant, et dans l'éditeur.
+

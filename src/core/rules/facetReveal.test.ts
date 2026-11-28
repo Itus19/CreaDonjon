@@ -71,4 +71,11 @@ describe("facetsRevealedByCheck — V3.2-50 (ADR 0118 §5)", () => {
   it("un objet visible (déjà vu d'un coup d'œil) n'est pas un indice", () => {
     expect(facetsRevealedByCheck({ check: { kind: "skill", key: "investigation" }, total: 12, dc: 12, npc: mabelle, known: rien })).not.toContain("item:pnj-0");
   });
+
+  it("V3.2-81 — un signe distinctif dissimulé se trouve comme un objet caché : seulement si le total atteint sa difficulté", () => {
+    const tatouee = { ...mabelle, marks: [{ id: "s2", dc: 15 }] };
+    expect(facetsRevealedByCheck({ check: { kind: "skill", key: "investigation" }, total: 14, dc: 10, npc: tatouee, known: rien })).not.toContain("mark:s2");
+    expect(facetsRevealedByCheck({ check: { kind: "skill", key: "investigation" }, total: 15, dc: 10, npc: tatouee, known: rien })).toContain("mark:s2");
+    expect(facetsRevealedByCheck({ check: { kind: "skill", key: "perception" }, total: 15, dc: 10, npc: tatouee, known: rien })).toContain("mark:s2");
+  });
 });

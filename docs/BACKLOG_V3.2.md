@@ -108,6 +108,7 @@ Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été
 | V3.2-52 | ☐ | **avec** | Le moteur fait les jets des PNJ | [`08-fiche-pnj.md`](backlog-v3.2/08-fiche-pnj.md) |
 | V3.2-54 | ☐ | **avec** | Le récit nourrit la fiche du PNJ | [`08-fiche-pnj.md`](backlog-v3.2/08-fiche-pnj.md) |
 | V3.2-80 | ☐ | **avec** | Ce que les PNJ savent du personnage | [`08-fiche-pnj.md`](backlog-v3.2/08-fiche-pnj.md) |
+| V3.2-81 | ☐ | sans | Les signes distinctifs dissimulés (paragraphes de description) | [`08-fiche-pnj.md`](backlog-v3.2/08-fiche-pnj.md) |
 | V3.2-55 | ☐ | sans | En jeu, le rail devient le rail de jeu | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
 | V3.2-56 | ☐ | sans | Le volet de consultation | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
 | V3.2-57 | ☐ | sans | Les fiches et les règles se lisent en entier dans le volet | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |

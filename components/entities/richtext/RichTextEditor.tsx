@@ -44,6 +44,12 @@ const BLOCK_TYPE_OPTIONS = [
   { value: "h4", label: "Titre 4" },
 ];
 
+/** V3.2-81 : un signe distinctif dissimulé dans l'histoire (qui le voit), à côté de la visibilité (qui le lit). */
+const CONCEAL_OPTIONS: { value: string; label: string }[] = [
+  { value: "", label: "En vue" },
+  ...[10, 12, 15, 18, 20, 25].map((dc) => ({ value: String(dc), label: `Dissimulé · DD ${dc}` })),
+];
+
 const ALIGN_OPTIONS: { value: string; label: string }[] = [
   { value: "left", label: "Aligner à gauche" },
   { value: "center", label: "Centrer" },
@@ -205,6 +211,23 @@ export default function RichTextEditor({
           if (node.type.name === "paragraph" || node.type.name === "heading") {
             tr.setNodeMarkup(pos, undefined, { ...node.attrs, visibilityLevel: level, visibilityScopeId: null });
           }
+        });
+        return true;
+      })
+      .run();
+  }
+
+  const currentConceal = String((editor.getAttributes("paragraph").concealDc as number | null | undefined) ?? "");
+
+  /** V3.2-81 — même patron que la visibilité : un attribut du paragraphe, jamais une marque. */
+  function setConcealForSelection(value: string) {
+    const { from, to } = editor!.state.selection;
+    editor!
+      .chain()
+      .focus()
+      .command(({ tr, state }) => {
+        state.doc.nodesBetween(from, to, (node, pos) => {
+          if (node.type.name === "paragraph") tr.setNodeMarkup(pos, undefined, { ...node.attrs, concealDc: value ? Number(value) : null });
         });
         return true;
       })
@@ -655,6 +678,7 @@ export default function RichTextEditor({
           onChange={setVisibilityForSelection}
           aria-label="Visibilité du passage"
         />
+        <BubbleSelect value={currentConceal} options={CONCEAL_OPTIONS} onChange={setConcealForSelection} aria-label="Signe distinctif dissimulé dans l'histoire" />
         </>
         )}
       </BubbleMenu>

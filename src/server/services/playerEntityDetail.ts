@@ -34,6 +34,9 @@ import { resolveMapSource } from "@/src/server/services/mapSource";
 import { listVisibleMapPins } from "@/src/server/services/mapPins";
 import { listVisibleMapRegions } from "@/src/server/services/mapRegions";
 import { listCampaigns, resolveCampaignId } from "@/src/server/services/campaigns";
+import { readSegmentsWithMarks, type MarkReader } from "@/src/core/rules/concealedMarks";
+import { listFacetDiscoveries } from "@/src/server/repos/entityFacetDiscoveries";
+import { listCampaignCharacters } from "@/src/server/repos/campaigns";
 import { asSoloPlayer } from "@/src/core/visibility/soloPlayer";
 import { readNpcDisplayView, type NpcDisplayView } from "@/src/server/services/facetDiscoveries";
 import { zQuestBlockData } from "@/src/core/schemas/blocks/quest";
@@ -72,12 +75,13 @@ function toVisibilityAware(row: BlockRow) {
  * pour personne, meme motif et meme comportement que la version publique,
  * jamais une regression introduite ici.
  */
-function filterTextBlockSegmentsForViewer(blockType: string, data: Json, viewer: Awaited<ReturnType<typeof buildViewerForWorld>>): Json {
+function filterTextBlockSegmentsForViewer(blockType: string, data: Json, viewer: Awaited<ReturnType<typeof buildViewerForWorld>>, marks: MarkReader | null): Json {
   if (blockType !== "text") return data;
   const parsed = zTextBlockData.safeParse(data);
   if (!parsed.success) return data;
   const aware = parsed.data.segments.map((segment) => ({ ...segment, visibility: { ...segment.visibility, createdBy: null } }));
-  const segments = filterSegments(aware, viewer).map(({ visibility, ...rest }) => ({
+  // V3.2-81 : un signe dissimulé se lit selon ce qu'on a découvert, pas selon sa visibilité.
+  const segments = readSegmentsWithMarks(aware, (segment) => filterSegments([segment], viewer).length > 0, marks).map(({ visibility, ...rest }) => ({
     ...rest,
     visibility: { level: visibility.level, scopeId: visibility.scopeId },
   }));
@@ -160,6 +164,33 @@ const entityFor = cache(function entityFor(supabase: TypedClient, worldId: strin
   return getEntityBySlug(supabase, worldId, entitySlug);
 });
 
+/**
+ * V3.2-81 — Ce que CE lecteur a découvert des signes dissimulés de la fiche,
+ * et s'il en est le personnage. Deux lectures (la partie, ses facettes et ses
+ * personnages), seulement quand un texte de la fiche porte un signe dissimulé.
+ */
+async function markReaderFor(
+  supabase: TypedClient,
+  params: { worldId: string; entityId: string; userId: string; rows: readonly { block_type: string; data: Json }[] }
+): Promise<MarkReader | null> {
+  const aDesSignes = params.rows.some((row) => {
+    if (row.block_type !== "text") return false;
+    const lu = zTextBlockData.safeParse(row.data);
+    return lu.success && lu.data.segments.some((segment) => segment.concealed);
+  });
+  if (!aDesSignes) return null;
+  const campaignId = await resolveCampaignId(supabase, params.worldId);
+  if (!campaignId) return null;
+  const [connus, personnages] = await Promise.all([
+    listFacetDiscoveries(supabase, { campaignId, entityIds: [params.entityId], userId: params.userId }),
+    listCampaignCharacters(supabase, campaignId),
+  ]);
+  return {
+    owner: personnages.some((p) => p.entity_id === params.entityId && p.user_id === params.userId && p.is_pc),
+    known: connus.get(params.entityId) ?? new Set<string>(),
+  };
+}
+
 /** Les blocs d'une fiche, filtrés pour CE viewer — bloc puis segment, comme partout ailleurs. */
 const getPlayerVisibleBlocks = cache(async function getPlayerVisibleBlocks(
   supabase: TypedClient,
@@ -178,6 +209,7 @@ const getPlayerVisibleBlocks = cache(async function getPlayerVisibleBlocks(
   // V3.1-189 : meme ordre que `getPublicVisibleBlocks` (publicShare.ts) — les
   // images du texte se lisent sur les blocs BRUTS, avant le filtrage.
   const rawInlineIds = inlineImageIdsIn(rows.map((row) => ({ id: row.id, blockType: row.block_type, data: row.data })));
+  const marks = await markReaderFor(supabase, { worldId, entityId: entity.id, userId, rows });
   const visible = filterBlocks(rows.map(toVisibilityAware), viewer)
     .map((row) => ({
       id: row.id,
@@ -185,7 +217,7 @@ const getPlayerVisibleBlocks = cache(async function getPlayerVisibleBlocks(
       display: row.display as unknown as BlockDisplay,
       data: filterPersonalityAspirationsForViewer(
         row.block_type,
-        filterTimelineEntriesForViewer(row.block_type, filterTextBlockSegmentsForViewer(row.block_type, row.data, viewer), viewer),
+        filterTimelineEntriesForViewer(row.block_type, filterTextBlockSegmentsForViewer(row.block_type, row.data, viewer, marks), viewer),
         viewer
       ),
       displayOrder: row.display_order,
