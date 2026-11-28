@@ -131,3 +131,20 @@ export function testDeMoral(
   const etat: EtatDeCombat = tient ? "combat" : s.engage && s.pv <= s.pvMax / 4 ? "rendu" : "fuite";
   return { esprit: { ...esprit, etat, testes }, jet: { naturel, total, dd, tient } };
 }
+
+/**
+ * Un allié à terre qui meurt (0 PV, ni stabilisé ni mort) : celui qui le
+ * défend vient le stabiliser plutôt que frapper, s'il n'est pas loin. Rend
+ * l'identifiant de l'allié à secourir, ou `null`.
+ */
+export function aSecourir(esprit: Pick<EspritDeCombat, "but" | "protege"> | undefined, mourants: readonly string[], zone: "engaged" | "near" | "far"): string | null {
+  if (!esprit || esprit.but !== "defendre" || esprit.protege === null || zone === "far") return null;
+  return mourants.includes(esprit.protege) ? esprit.protege : null;
+}
+
+/** Stabiliser une créature mourante : Sagesse (Médecine) DD 10, règles 2024. Les dés viennent du serveur. */
+export function jetDeSecours(modificateur: number, rng: { nextInt(max: number): number }): { naturel: number; total: number; reussi: boolean } {
+  const naturel = rng.nextInt(20) + 1;
+  const total = naturel + modificateur;
+  return { naturel, total, reussi: total >= 10 };
+}

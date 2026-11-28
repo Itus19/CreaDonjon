@@ -128,6 +128,7 @@ Trois défauts de la même séance vivent dans la V3.1, parce qu'ils y ont été
 | V3.2-72 | ☐ | sans | La page wiki d'un PJ montre sa fiche, pas des titres vides | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
 | V3.2-73 | ☐ | **avec** | Le tour d'un PNJ en combat | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
 | V3.2-74 | ☑ | sans | Moral et fin du combat | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
+| V3.2-75 | ☑ | sans | Le personnage à terre : jets contre la mort, un allié qui stabilise | [`09-ecran-de-jeu.md`](backlog-v3.2/09-ecran-de-jeu.md) |
 
 ---
 

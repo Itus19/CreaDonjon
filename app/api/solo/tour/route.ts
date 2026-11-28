@@ -10,6 +10,7 @@ import type { CheckDetection } from "@/src/core/ai/checkClassify";
 import { classifySoloAction } from "@/src/server/ai/soloClassify";
 import type { AiProvider } from "@/src/server/ai/provider";
 import { playTurn } from "@/src/server/services/turnLoop";
+import { jetContreLaMortDuTour } from "@/src/server/services/soloDowned";
 import { buildViewerForWorld } from "@/src/server/services/visibility";
 import { getOrOpenSessionForCampaign } from "@/src/server/services/sessions";
 import type { Locale } from "@/src/i18n/request";
@@ -175,7 +176,11 @@ export async function POST(request: NextRequest) {
   };
 
   const campaignId = parsed.data.campaignId;
-  if (campaignId && choice.kind === "free" && choice.sansJet?.raison === "joueur") {
+  // À 0 PV, ni stabilisé ni mort : le tour est un jet contre la mort, quoi que dise la phrase (règles 2024).
+  const aTerre = campaignId ? await jetContreLaMortDuTour(supabase, { campaignId, entityId: parsed.data.entityId, callerId: user.id, locale }) : null;
+  if (aTerre) {
+    choice = { kind: "free" };
+  } else if (campaignId && choice.kind === "free" && choice.sansJet?.raison === "joueur") {
     // V3.2-24 : « Sans jet » — la demande posée part, tracée au journal comme toute demande abandonnée.
     const sessionId = await getOrOpenSessionForCampaign(supabase, campaignId);
     await applyRuntimeStateChange(supabase, { entityId: parsed.data.entityId, campaignId, patch: { pending_request: null }, note: "Demande abandonnée : jouée sans jet", sessionId, actor: "player", actorUserId: user.id });
@@ -201,7 +206,7 @@ export async function POST(request: NextRequest) {
     callerId: user.id,
     world: { id: world.id, slug: world.slug },
     locale,
-    text: parsed.data.text,
+    text: aTerre ?? parsed.data.text,
     corrected: parsed.data.corrected,
     choice,
   };

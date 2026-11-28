@@ -69,6 +69,7 @@ import { serverRng } from "@/src/server/services/rng";
 import { soloCritRange, soloRollWindow } from "@/src/server/services/soloRollWindow";
 import { ouvrirCombatSolo } from "@/src/server/services/soloCombatOpening";
 import { applyRuntimeStateChange, getEntityRuntimeState } from "@/src/server/services/runtimeState";
+import { isDying } from "@/src/core/rules/deathSaves";
 import { getRuntimeState } from "@/src/server/repos/runtimeState";
 import type { TargetId, IntentTargetDetail, IntentBarData, TurnRecord } from "@/lib/solo/types";
 
@@ -274,9 +275,11 @@ export async function buildIntentBarData(
   // armes (on vend aussi une corde) — toujours une seule résolution groupée.
   // La scène et la carte du lieu partent dans la même vague (docs/CABLAGE.md, C3).
   const refItems = items.filter((item) => itemRef(item) !== null);
-  const [chips, scene] = await Promise.all([
+  const [chips, scene, etat] = await Promise.all([
     resolveBlockReferences(supabase, params.world, ctx.rulesetId, params.locale, refItems.map((item) => itemRef(item)!)),
     params.campaignId ? getSceneState(supabase, params.campaignId) : Promise.resolve(null),
+    // À terre, la barre propose le jet contre la mort (`soloDowned.ts`).
+    params.campaignId ? getEntityRuntimeState(supabase, params.entityId, params.campaignId) : Promise.resolve(null),
   ]);
   const nameByItemId = new Map<string, string>(refItems.map((item, index) => [item.id, chips[index]?.found ? chips[index].name : itemLabel(item)]));
   const nameOf = (item: InventoryItem) => nameByItemId.get(item.id) ?? itemLabel(item);
@@ -345,6 +348,7 @@ export async function buildIntentBarData(
     trade: buildTradeCatalog(ctx, nameOf, priceList, scene),
     targetDetails,
     ruleKeys: ctx.sheet.features.map((f) => f.key).filter((k) => !k.startsWith("choice:")),
+    aTerre: etat !== null && isDying({ hp: etat.hp, deathSaves: etat.death_saves }),
   };
 }
 

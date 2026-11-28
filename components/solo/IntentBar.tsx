@@ -15,6 +15,8 @@ import { useDiceRoll } from "@/components/shell/DiceRollPanel";
 import { ErreurLancer, type SortieJet } from "@/lib/ui/outilDes";
 import { preReglageDepuisDemande, sortieAttenteReactions, sortieJetDepuisTour } from "@/lib/ui/solo";
 import { encaisserDepuisFiche, raconterTour } from "@/lib/ui/soloApi";
+
+const JET_CONTRE_LA_MORT = "Jet contre la mort";
 import { useSoloContexte } from "@/components/solo/SoloContexte";
 
 /**
@@ -336,13 +338,17 @@ export default function IntentBar({
   }
 
   async function play(onTab = false) {
-    if (text.trim().length === 0) return;
+    // À terre, le tour est un jet contre la mort : la phrase est facultative, le serveur l'ignore.
+    const phrase = text.trim() || (data.aTerre ? JET_CONTRE_LA_MORT : "");
+    if (phrase.length === 0) return;
     setLastAttempt("submit");
     setBusy(true);
     setError(null);
-    const verifier = suivreEnvoi?.(text.trim(), "tour");
+    const verifier = suivreEnvoi?.(phrase, "tour");
     try {
-      const choice = trade
+      const choice = data.aTerre
+        ? { kind: "free" as const }
+        : trade
         ? { kind: "trade" as const, direction: trade.direction, entryId: trade.entryId, targetId: trade.target?.id ?? null, ...(onTab ? { onTab: true } : {}) }
         : chosenAction
         ? chosenAction.kind === "weapon_attack"
@@ -359,7 +365,7 @@ export default function IntentBar({
       const res = await fetch("/api/solo/tour", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ entityId, campaignId, worldSlug, text: text.trim(), corrected, choice }),
+        body: JSON.stringify({ entityId, campaignId, worldSlug, text: phrase, corrected, choice }),
       });
       // Un `fetch` dont on ne teste pas `res.ok` est un bug
       // (docs/CHARTE-UI.md §5) : un echec silencieux laisserait l'ecran en
@@ -445,7 +451,7 @@ export default function IntentBar({
 
   function submit() {
     if (pending) void encash();
-    else if (!cibleManquante) void play();
+    else if (data.aTerre || !cibleManquante) void play();
   }
 
   /**
@@ -539,7 +545,11 @@ export default function IntentBar({
   const label = pending ? "Jet demandé" : "Que fais-tu ?";
   // Le texte temporaire du jet tient sur une ligne, même sur téléphone : lancer
   // depuis la fiche ou avec le dé voisin se voit déjà, il ne reste qu'à dire quoi écrire.
-  const placeholder = pending ? `Résultat du dé (1-${pending.die_max})` : "je frappe le gobelin avec mon épée";
+  const placeholder = pending
+    ? `Résultat du dé (1-${pending.die_max})`
+    : data.aTerre
+    ? "Tu es à terre : ton tour est un jet contre la mort"
+    : "je frappe le gobelin avec mon épée";
   const vide = text.trim().length === 0;
 
   // L'en-tête : ce que le moteur a compris, en pastilles. Le type ouvre la
@@ -815,10 +825,10 @@ export default function IntentBar({
               type="button"
               className={isQuestion ? BTN_SECONDARY : BTN_PRIMARY}
               onClick={() => void play()}
-              disabled={busy || vide || tradeBlocked || cibleManquante}
-              title={cibleManquante ? "Sur qui ? Choisis la cible de l'attaque parmi les présents." : undefined}
+              disabled={busy || (!data.aTerre && (vide || tradeBlocked || cibleManquante))}
+              title={data.aTerre ? "À 0 PV, ton tour est un jet contre la mort : le serveur lance le d20." : cibleManquante ? "Sur qui ? Choisis la cible de l'attaque parmi les présents." : undefined}
             >
-              {busy && lastAttempt === "submit" ? "…" : trade ? TRADE_LABELS[trade.direction].button : "Jouer"}
+              {busy && lastAttempt === "submit" ? "…" : data.aTerre ? JET_CONTRE_LA_MORT : trade ? TRADE_LABELS[trade.direction].button : "Jouer"}
             </button>
           </>
         )}

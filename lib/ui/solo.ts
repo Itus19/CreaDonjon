@@ -2,6 +2,7 @@ import { DIE_TYPES, type DieType } from "@/src/core/dice/roll";
 import { lbToKg } from "@/src/core/rules/encumbrance";
 import { jaugeXp } from "@/src/core/rules/experience";
 import type { EncashedTurnOutcome, PendingRequest, QuestColumnEntry, WikiColumnGroup } from "@/lib/solo/types";
+import { isDying } from "@/src/core/rules/deathSaves";
 import type { PreReglage, SortieJet } from "@/lib/ui/outilDes";
 
 /**
@@ -56,6 +57,8 @@ export interface JaugesBande {
   xpDansNiveau: number;
   xpVersSuivant: number;
   pctXp: number;
+  /** À 0 PV, ni stabilisé ni mort : la barre du tour propose le jet contre la mort. */
+  aTerre: boolean;
 }
 
 export function jaugesBande(entree: {
@@ -68,6 +71,8 @@ export function jaugesBande(entree: {
   capacityLb: number;
   encumbered: boolean;
   xp: number;
+  /** Les jets contre la mort de l'état de jeu ; absents, on ne le dit pas à terre. */
+  deathSaves?: { success: number; fail: number };
 }): JaugesBande {
   const xp = jaugeXp(entree.level, entree.xp);
   return {
@@ -82,6 +87,7 @@ export function jaugesBande(entree: {
     capaciteKg: lbToKg(entree.capacityLb),
     pctCharge: entree.capacityLb > 0 ? Math.min(100, Math.round((entree.carriedLb / entree.capacityLb) * 100)) : 0,
     encombre: entree.encumbered,
+    aTerre: entree.deathSaves !== undefined && isDying({ hp: { current: entree.hpCurrent }, deathSaves: entree.deathSaves }),
     xpDansNiveau: xp.dansNiveau,
     xpVersSuivant: xp.versSuivant,
     pctXp: Math.round(xp.pourcentage),
@@ -90,7 +96,7 @@ export function jaugesBande(entree: {
 
 const CLES_JAUGES: (keyof JaugesBande)[] = [
   "ac", "hpCurrent", "hpMax", "pctPv", "level", "exhaustion", "pctEpuisement",
-  "chargeKg", "capaciteKg", "pctCharge", "encombre", "xpDansNiveau", "xpVersSuivant", "pctXp",
+  "chargeKg", "capaciteKg", "pctCharge", "encombre", "xpDansNiveau", "xpVersSuivant", "pctXp", "aTerre",
 ];
 
 export function jaugesEgales(a: JaugesBande | null, b: JaugesBande | null): boolean {

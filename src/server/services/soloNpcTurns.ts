@@ -3,7 +3,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "@/src/types/database";
 import { DAMAGE_TYPE_LABELS_FR, npcAttacks, resoudreAttaquePnj, tactiqueDuPnj, type ZoneCombat } from "@/src/core/rules/npcRolls";
 import type { ResolvedEffect } from "@/src/core/rules/triggers";
-import { declencheursDeMoral, testDeMoral, type EtatDeCombat, type EspritDeCombat } from "@/src/core/rules/combatMinds";
+import { aSecourir, declencheursDeMoral, jetDeSecours, testDeMoral, type EtatDeCombat, type EspritDeCombat } from "@/src/core/rules/combatMinds";
+import { abilityModifier } from "@/src/core/rules/combat";
+import { isDying } from "@/src/core/rules/deathSaves";
+import { applyRuntimeStateChange, getEntityRuntimeState } from "@/src/server/services/runtimeState";
 import { zStatblockBlockData } from "@/src/core/schemas/blocks/statblock";
 import { getSceneState, putSceneState } from "@/src/server/repos/sceneStates";
 import { listBlocksByTypeForEntities } from "@/src/server/repos/blocks";
@@ -56,10 +59,19 @@ export async function jouerTourDesPnj(
 
   const entites = suite.map((p) => p.entity_id).filter((id): id is string => id !== null);
   const fiches = new Map<string, ReturnType<typeof npcAttacks>>();
+  /** Le modificateur de Sagesse (Médecine) de chaque fiche allégée, pour stabiliser un allié. */
+  const medecine = new Map<string, number>();
   for (const b of await listBlocksByTypeForEntities(supabase, entites, "statblock")) {
     const parsed = zStatblockBlockData.safeParse(b.data);
-    if (parsed.success) fiches.set(b.entity_id, npcAttacks(parsed.data.actions));
+    if (!parsed.success) continue;
+    fiches.set(b.entity_id, npcAttacks(parsed.data.actions));
+    const competence = Object.entries(parsed.data.skills ?? {}).find(([cle]) => /^m[eé]dec?ine$/i.test(cle))?.[1];
+    medecine.set(b.entity_id, competence ?? abilityModifier(parsed.data.abilities.wis));
   }
+
+  // Le personnage à terre : mourant (un allié peut le stabiliser), stabilisé ou mort. Lu seulement s'il est à 0 PV.
+  const etatPj = (pj.hp_current ?? 0) <= 0 && pj.entity_id ? await getEntityRuntimeState(supabase, pj.entity_id, params.campaignId) : null;
+  let pjMourant = etatPj !== null && isDying({ hp: etatPj.hp, deathSaves: etatPj.death_saves });
 
   const pv = new Map(lignes.map((p) => [p.id, p.hp_current ?? 0]));
   const zones = new Map(scene.present.map((p) => [p.entityId, p.zone as ZoneCombat]));
@@ -113,6 +125,31 @@ export async function jouerTourDesPnj(
       }
     }
 
+    // Son protégé meurt à terre : il vient le stabiliser plutôt que frapper.
+    const secouru = pjMourant && pj.entity_id ? aSecourir(esprit, [pj.entity_id], zone) : null;
+    if (secouru && etatPj && pj.entity_id) {
+      const soin = jetDeSecours(medecine.get(pnj.entity_id) ?? 0, serverRng);
+      const lu = `Médecine : ${soin.total} (dé : ${soin.naturel}) contre DD 10`;
+      if (zone === "near") present = present.map((p) => (p.entityId === pnj.entity_id ? { ...p, zone: "engaged" } : p));
+      if (soin.reussi) {
+        faits.push(`${pnj.label}${zone === "near" ? " accourt et" : ""} stabilise ${pj.label} (${lu}).`);
+        const sessionId = await getOrOpenSessionForCampaign(supabase, params.campaignId);
+        await applyRuntimeStateChange(supabase, {
+          entityId: pj.entity_id,
+          campaignId: params.campaignId,
+          patch: { death_saves: { success: 3, fail: etatPj.death_saves.fail } },
+          note: `Stabilisé par ${pnj.label}`,
+          sessionId,
+          actor: "system",
+          actorUserId: null,
+        });
+        pjMourant = false;
+      } else {
+        faits.push(`${pnj.label}${zone === "near" ? " accourt et" : ""} tente de stabiliser ${pj.label} (${lu}) — raté.`);
+      }
+      continue;
+    }
+
     // Celui qui menace ce qu'il défend : l'agresseur pour la défense, la cible pour l'attaque.
     const menace = pnj.is_ally === campAgresseur ? minds?.cibleId : minds?.agresseurId;
     const ennemis = adversaires
@@ -147,8 +184,12 @@ export async function jouerTourDesPnj(
   }
 
   // ADR 0122, point 5 : plus aucun ennemi du personnage ne veut ou ne peut se battre.
-  const fini = lignes.some((p) => p.is_ally !== pj.is_ally) && lignes.filter((p) => p.is_ally !== pj.is_ally).every((p) => !auCombat(p));
-  if (fini) faits.push("Le combat est terminé.");
+  const gagne = lignes.some((p) => p.is_ally !== pj.is_ally) && lignes.filter((p) => p.is_ally !== pj.is_ally).every((p) => !auCombat(p));
+  // Ou bien le personnage est à terre et personne ne se bat plus de son côté.
+  const perdu = !gagne && (pv.get(pj.id) ?? 0) <= 0 && lignes.filter((p) => p.is_ally === pj.is_ally && p.id !== pj.id).every((p) => !auCombat(p));
+  const fini = gagne || perdu;
+  if (gagne) faits.push("Le combat est terminé.");
+  if (perdu) faits.push(`Le combat est terminé : ${pj.label} est à terre, et personne ne se bat plus de son côté.`);
   if (faits.length === 0) return [];
 
   // Les PV : le même cœur que la table, qui écrit la ligne du participant et l'état de jeu du personnage.

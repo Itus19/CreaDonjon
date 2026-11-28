@@ -28,6 +28,11 @@ export function isDead(state: DeathState): boolean {
   return state.deathSaves.fail >= THRESHOLD;
 }
 
+/** Mourant : a 0 PV, ni stabilise ni mort — son tour est un jet contre la mort. */
+export function isDying(state: { hp: { current: number }; deathSaves: DeathSaves }): boolean {
+  return state.hp.current === 0 && state.deathSaves.fail < THRESHOLD && state.deathSaves.success < THRESHOLD;
+}
+
 /** Stabilise : trois reussites, a 0 PV, sans etre mort. */
 export function isStabilized(state: DeathState): boolean {
   return state.deathSaves.success >= THRESHOLD && !isDead(state);

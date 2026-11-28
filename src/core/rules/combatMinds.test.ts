@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { butDeCombat, declencheursDeMoral, espritDeCombat, modificateurDeMoral, testDeMoral, type PsycheAuCombat } from "./combatMinds";
+import { aSecourir, butDeCombat, declencheursDeMoral, espritDeCombat, jetDeSecours, modificateurDeMoral, testDeMoral, type PsycheAuCombat } from "./combatMinds";
 
 const base = (p: Partial<PsycheAuCombat> & { id: string }): PsycheAuCombat => ({
   archetype: null,
@@ -127,5 +127,20 @@ describe("testDeMoral (ADR 0122, point 3)", () => {
     expect(testDeMoral(brave, [{ cle: "seul", dd: 12 }], sit, des(6)).jet?.tient).toBe(true);
     expect(testDeMoral(lache, [{ cle: "moitie", dd: 10 }], sit, des(20)).jet?.tient).toBe(true);
     expect(testDeMoral(brave, [{ cle: "moitie", dd: 10 }], sit, des(1)).jet?.tient).toBe(false);
+  });
+});
+
+describe("aSecourir et jetDeSecours (le personnage à terre)", () => {
+  it("celui qui défend un allié mourant vient le stabiliser, s'il n'est pas loin", () => {
+    expect(aSecourir({ but: "defendre", protege: "pj" }, ["pj"], "near")).toBe("pj");
+    expect(aSecourir({ but: "defendre", protege: "pj" }, ["pj"], "far")).toBeNull();
+    expect(aSecourir({ but: "defendre", protege: "pj" }, [], "engaged")).toBeNull();
+    expect(aSecourir({ but: "vaincre", protege: null }, ["pj"], "engaged")).toBeNull();
+    expect(aSecourir(undefined, ["pj"], "engaged")).toBeNull();
+  });
+
+  it("Sagesse (Médecine) DD 10", () => {
+    expect(jetDeSecours(2, des(8))).toEqual({ naturel: 8, total: 10, reussi: true });
+    expect(jetDeSecours(0, des(9))).toEqual({ naturel: 9, total: 9, reussi: false });
   });
 });

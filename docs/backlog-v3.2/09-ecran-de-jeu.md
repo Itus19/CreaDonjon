@@ -180,6 +180,19 @@ Demandé le 26 novembre après la partie test avec Mabelle ; maquettes validées
 
 **Reste.** Les renforts et le recalcul des camps à chaque round ; le personnage à 0 PV (jets contre la mort, le combat ne s'arrête pas) ; la reddition du personnage ; épargner ou achever un PNJ rendu ; poursuivre un fuyard ; le coup qui assomme.
 
+### ☑ V3.2-75 — Le personnage à terre : jets contre la mort, un allié qui stabilise · `S` · sans modèle IA · Modèle conseillé : Opus — **codé le 28 novembre**
+
+- Retour de l'auteur : « il peut y avoir des alliés PNJ du joueur », « le volet lancé contre la mort pour le PJ ». Partie test : à 0 PV, rien ne proposait le jet, les PNJ cessaient de frapper et le combat restait bloqué.
+
+**Critères d'acceptation**
+- [x] À 0 PV, ni stabilisé ni mort, le tour du personnage est un jet contre la mort, lancé par le serveur, quoi que dise la phrase.
+- [x] Un PNJ allié qui défend le personnage vient le stabiliser (Sagesse (Médecine) DD 10).
+- [x] Le combat se termine quand le personnage est à terre et que personne ne se bat plus de son côté.
+
+**Fait.** Les règles existaient (`deathSaves.ts`, `rollDeathSaveForCharacter`) ; le tour solo ne s'en servait pas. `isDying` (testé) ; `jetContreLaMortDuTour` (`src/server/services/soloDowned.ts`) remplace le tour d'un personnage mourant par son jet (historique des dés, état de jeu journalisé), et sur un 20 sa ligne de combat repasse à 1 PV ; les PNJ jouent ensuite. La barre « Que fais-tu ? » le dit (« Tu es à terre : ton tour est un jet contre la mort ») et son bouton devient « Jet contre la mort », d'après la fiche qui sonde déjà l'état de jeu (`jaugesBande`, champ `aTerre`). Les alliés : `aSecourir` et `jetDeSecours` (`combatMinds.ts`, testés) ; un PNJ au but « défendre » dont le protégé est le personnage mourant accourt et le stabilise au lieu de frapper. `jouerTourDesPnj` clôt le combat quand le personnage est à terre sans allié debout. Vérifié à l'écran sur une copie locale : Bram tombe sous le gourdin de Mabelle, le combat se termine, trois jets contre la mort le stabilisent.
+
+**Reste.** Ce que font les vainqueurs d'un personnage à terre (la garde l'arrête, le malfrat le détrousse : ADR 0122, but) ; la mort du personnage et la fin de la partie ; un PNJ ennemi qui achève un personnage à terre (aujourd'hui personne ne frappe quelqu'un à 0 PV) ; un compagnon à fiche de personnage complète ne joue pas encore ; le stabilisé qui reprend 1 PV au bout de 1d4 heures.
+
 ---
 
 ## Petits correctifs vus pendant la partie test

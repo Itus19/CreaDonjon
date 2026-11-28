@@ -264,6 +264,10 @@ export default function SoloScreen({
     }
   }
 
+  // À terre ou non, relu de la fiche qui sonde déjà l'état de jeu : la barre suit sans recharger la page.
+  const aTerre = jauges ? jauges.aTerre : data.aTerre;
+  const donneesBarre = useMemo(() => (aTerre === data.aTerre ? data : { ...data, aTerre }), [data, aTerre]);
+
   /** Après un geste de cette colonne : le fil, les conséquences, ET la fiche (PV, demande) sans attendre son prochain tick. */
   function apresGeste() {
     rechargerFiche();
@@ -400,7 +404,7 @@ export default function SoloScreen({
           worldSlug={worldSlug}
           campaignId={campaignId}
           entityId={entityId}
-          data={data}
+          data={donneesBarre}
           pending={pending}
           onPendingChange={setPending}
           onActed={apresGeste}
