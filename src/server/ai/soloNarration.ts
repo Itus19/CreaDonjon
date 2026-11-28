@@ -28,6 +28,9 @@ import { AiProviderError, type AiProvider } from "./provider";
 import { AiRateLimitError, runAiCompletion } from "./callAi";
 import type { WorldNoteAspect } from "@/src/core/ai/npcPortrait";
 import { addNarratedItem } from "@/src/server/services/narratedItems";
+import { jouerJetDePnj } from "@/src/server/services/npcChecks";
+import type { CheckTier } from "@/src/core/rules/checkDifficulty";
+import type { NpcCheckAction } from "@/src/core/rules/npcRolls";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -61,6 +64,8 @@ export interface SoloNarrationParams {
   facts: string[];
   changes: string[];
   hints: string[];
+  /** V3.2-52 — faux pour « raconter autrement » : un tour déjà joué ne relance jamais le dé d'un PNJ. */
+  npcCheckAllowed?: boolean;
 }
 
 export interface SoloNarrationOutcome {
@@ -86,6 +91,8 @@ interface NarrationAttempt {
   /** V3-C3 — une suggestion redactionnelle, jamais ecrite directement (`proposeWorldNote`). */
   worldNote?: { entityId: string; text: string; aspect?: WorldNoteAspect };
   npcItem?: { npcId: string; name: string };
+  /** V3.2-52 — une tentative de PNJ dans la liste fermée ; `jouerJetDePnj` lance le dé. */
+  npcCheck?: { npcId: string; action: NpcCheckAction; tier: CheckTier };
   /** V3.2-18 — une durée proposée, jamais appliquée telle quelle : `advanceSceneAfterNarration` la borne. */
   elapsed?: ElapsedProposal;
   /** V3.2-19 — un déplacement proposé vers un lieu voisin fourni ; `moveSceneAfterNarration` l'applique. */
@@ -145,6 +152,7 @@ async function attemptNarration(
       ? { entityId: parsed.data.world_note.entity_id, text: parsed.data.world_note.text, ...(parsed.data.world_note.aspect ? { aspect: parsed.data.world_note.aspect } : {}) }
       : undefined,
     npcItem: parsed.data.npc_item ? { npcId: parsed.data.npc_item.npc_id, name: parsed.data.npc_item.name } : undefined,
+    npcCheck: parsed.data.npc_check ? { npcId: parsed.data.npc_check.npc_id, action: parsed.data.npc_check.action, tier: parsed.data.npc_check.tier } : undefined,
     elapsed: parsed.data.elapsed,
     moveTo: parsed.data.move_to ? { locationId: parsed.data.move_to.location_id, with: parsed.data.move_to.with ?? [] } : undefined,
     enterRoom: parsed.data.enter_room,
@@ -389,6 +397,23 @@ export async function narrateSoloTurn(supabase: TypedClient, provider: AiProvide
     } catch (erreur) {
       // Ignoré volontairement : la narration ci-dessus est déjà acquise.
       console.error("Objet du récit impossible à ajouter", erreur);
+    }
+  }
+
+  if (chosen.npcCheck && params.npcCheckAllowed !== false) {
+    // V3.2-52 — le PNJ a tenté quelque chose : le moteur lance son dé, la narration suivante racontera l'issue. Best-effort.
+    try {
+      await jouerJetDePnj(supabase, {
+        worldId: params.worldId,
+        sessionId: params.sessionId,
+        npcId: chosen.npcCheck.npcId,
+        action: chosen.npcCheck.action,
+        tier: chosen.npcCheck.tier,
+        callerId: params.userId,
+      });
+    } catch (erreur) {
+      // Ignoré volontairement : la narration ci-dessus est déjà acquise.
+      console.error("Jet du PNJ impossible", erreur);
     }
   }
 
