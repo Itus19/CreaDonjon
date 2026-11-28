@@ -29,6 +29,7 @@ import { AiRateLimitError, runAiCompletion } from "./callAi";
 import type { WorldNoteAspect } from "@/src/core/ai/npcPortrait";
 import { addNarratedItem } from "@/src/server/services/narratedItems";
 import { jouerJetDePnj } from "@/src/server/services/npcChecks";
+import { shareNpcKnowledge, spreadRumour } from "@/src/server/services/npcKnowledge";
 import type { CheckTier } from "@/src/core/rules/checkDifficulty";
 import type { NpcCheckAction } from "@/src/core/rules/npcRolls";
 
@@ -92,7 +93,10 @@ interface NarrationAttempt {
   worldNote?: { entityId: string; text: string; aspect?: WorldNoteAspect };
   npcItem?: { npcId: string; name: string };
   /** V3.2-52 — une tentative de PNJ dans la liste fermée ; `jouerJetDePnj` lance le dé. */
-  npcCheck?: { npcId: string; action: NpcCheckAction; tier: CheckTier };
+  npcCheck?: { npcId: string; action: NpcCheckAction; tier: CheckTier; onPc: boolean };
+  /** V3.2-80 — un PNJ dit à un autre ce qu'il sait du personnage ; une rumeur fausse. */
+  npcShare?: { fromId: string; toId: string };
+  npcRumour?: { npcId: string; claim: string };
   /** V3.2-18 — une durée proposée, jamais appliquée telle quelle : `advanceSceneAfterNarration` la borne. */
   elapsed?: ElapsedProposal;
   /** V3.2-19 — un déplacement proposé vers un lieu voisin fourni ; `moveSceneAfterNarration` l'applique. */
@@ -152,7 +156,11 @@ async function attemptNarration(
       ? { entityId: parsed.data.world_note.entity_id, text: parsed.data.world_note.text, ...(parsed.data.world_note.aspect ? { aspect: parsed.data.world_note.aspect } : {}) }
       : undefined,
     npcItem: parsed.data.npc_item ? { npcId: parsed.data.npc_item.npc_id, name: parsed.data.npc_item.name } : undefined,
-    npcCheck: parsed.data.npc_check ? { npcId: parsed.data.npc_check.npc_id, action: parsed.data.npc_check.action, tier: parsed.data.npc_check.tier } : undefined,
+    npcCheck: parsed.data.npc_check
+      ? { npcId: parsed.data.npc_check.npc_id, action: parsed.data.npc_check.action, tier: parsed.data.npc_check.tier, onPc: parsed.data.npc_check.target === "pc" }
+      : undefined,
+    npcShare: parsed.data.npc_share ? { fromId: parsed.data.npc_share.from_npc, toId: parsed.data.npc_share.to_npc } : undefined,
+    npcRumour: parsed.data.npc_rumour ? { npcId: parsed.data.npc_rumour.npc_id, claim: parsed.data.npc_rumour.claim } : undefined,
     elapsed: parsed.data.elapsed,
     moveTo: parsed.data.move_to ? { locationId: parsed.data.move_to.location_id, with: parsed.data.move_to.with ?? [] } : undefined,
     enterRoom: parsed.data.enter_room,
@@ -410,10 +418,23 @@ export async function narrateSoloTurn(supabase: TypedClient, provider: AiProvide
         action: chosen.npcCheck.action,
         tier: chosen.npcCheck.tier,
         callerId: params.userId,
+        ...(chosen.npcCheck.onPc ? { onPc: { campaignId: params.campaignId, pcEntityId: params.playerEntityId, pcName: firstContext.playerName ?? "le personnage" } } : {}),
       });
     } catch (erreur) {
       // Ignoré volontairement : la narration ci-dessus est déjà acquise.
       console.error("Jet du PNJ impossible", erreur);
+    }
+  }
+
+  // V3.2-80 — ce que les PNJ se disent du personnage. Un tour déjà joué (« raconter autrement ») ne le refait pas. Best-effort.
+  if (params.npcCheckAllowed !== false && (chosen.npcShare || chosen.npcRumour)) {
+    const commun = { worldId: params.worldId, campaignId: params.campaignId, pcEntityId: params.playerEntityId, callerId: params.userId, sourceEventId: event.id };
+    try {
+      if (chosen.npcShare) await shareNpcKnowledge(supabase, { ...commun, fromId: chosen.npcShare.fromId, toId: chosen.npcShare.toId });
+      if (chosen.npcRumour) await spreadRumour(supabase, { ...commun, npcId: chosen.npcRumour.npcId, claim: chosen.npcRumour.claim });
+    } catch (erreur) {
+      // Ignoré volontairement : la narration ci-dessus est déjà acquise.
+      console.error("Savoir des PNJ impossible à transmettre", erreur);
     }
   }
 

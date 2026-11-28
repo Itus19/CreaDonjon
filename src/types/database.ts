@@ -2082,6 +2082,84 @@ export type Database = {
           },
         ]
       }
+      npc_knowledge: {
+        Row: {
+          campaign_id: string
+          claim: string | null
+          facet: string | null
+          id: string
+          is_true: boolean
+          knower_entity_id: string
+          learned_at: string
+          source: string
+          source_event_id: string | null
+          subject_entity_id: string
+          told_by_entity_id: string | null
+        }
+        Insert: {
+          campaign_id: string
+          claim?: string | null
+          facet?: string | null
+          id?: string
+          is_true?: boolean
+          knower_entity_id: string
+          learned_at?: string
+          source: string
+          source_event_id?: string | null
+          subject_entity_id: string
+          told_by_entity_id?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          claim?: string | null
+          facet?: string | null
+          id?: string
+          is_true?: boolean
+          knower_entity_id?: string
+          learned_at?: string
+          source?: string
+          source_event_id?: string | null
+          subject_entity_id?: string
+          told_by_entity_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "npc_knowledge_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "npc_knowledge_knower_entity_id_fkey"
+            columns: ["knower_entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "npc_knowledge_source_event_id_fkey"
+            columns: ["source_event_id"]
+            isOneToOne: false
+            referencedRelation: "session_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "npc_knowledge_subject_entity_id_fkey"
+            columns: ["subject_entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "npc_knowledge_told_by_entity_id_fkey"
+            columns: ["told_by_entity_id"]
+            isOneToOne: false
+            referencedRelation: "entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       personality_events: {
         Row: {
           created_at: string

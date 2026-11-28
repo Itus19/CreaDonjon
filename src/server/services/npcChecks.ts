@@ -9,6 +9,7 @@ import { listEntitiesByIds } from "@/src/server/repos/entities";
 import { insertSessionEvent, nextEventSeq } from "@/src/server/repos/sessions";
 import { isWorldAdmin } from "@/src/server/services/permissions";
 import { serverRng } from "@/src/server/services/rng";
+import { PC_OBSERVATION_CHECKS, learnFromNpcCheckOnPc } from "@/src/server/services/npcKnowledge";
 
 type TypedClient = SupabaseClient<Database>;
 
@@ -29,7 +30,16 @@ export const NPC_CHECK_SOURCE = "npc_check";
  */
 export async function jouerJetDePnj(
   supabase: TypedClient,
-  params: { worldId: string; sessionId: string; npcId: string; action: NpcCheckAction; tier: CheckTier; callerId: string }
+  params: {
+    worldId: string;
+    sessionId: string;
+    npcId: string;
+    action: NpcCheckAction;
+    tier: CheckTier;
+    callerId: string;
+    /** V3.2-80 — le jet jauge le personnage joué (repérer, fouiller, jauger, soigner) : ce que le PNJ apprend reste secret. */
+    onPc?: { campaignId: string; pcEntityId: string; pcName: string };
+  }
 ): Promise<string | null> {
   // La fiche est un secret de MJ : en solo, la personne qui joue est MJ de son monde.
   if (!(await isWorldAdmin(supabase, { worldId: params.worldId, userId: params.callerId }))) return null;
@@ -45,9 +55,13 @@ export async function jouerJetDePnj(
   const dc = dcForTier(params.tier);
   const issue = resoudreJetPnj(modificateurJetPnj(fiche, jet), dc, serverRng);
   const nom = entites[0]?.name ?? "Le PNJ";
-  const fait = `Issue décidée par le moteur : ${nom} tente de ${jet.label} (DD ${dc}) — ${issue.reussi ? "réussite" : "échec"}.`;
+  const skillSurPj = params.onPc ? PC_OBSERVATION_CHECKS[params.action] : undefined;
+  // V3.2-80 — un jet sur le personnage se lance en secret, comme le MJ le ferait : ni verdict ni DD pour la personne qui joue.
+  const fait = params.onPc && skillSurPj
+    ? `Issue décidée par le moteur : ${nom} tente de ${jet.label} ${params.onPc.pcName} ; ce qu'il ou elle en retient reste secret.`
+    : `Issue décidée par le moteur : ${nom} tente de ${jet.label} (DD ${dc}) — ${issue.reussi ? "réussite" : "échec"}.`;
 
-  await insertSessionEvent(supabase, {
+  const event = await insertSessionEvent(supabase, {
     sessionId: params.sessionId,
     seq: await nextEventSeq(supabase, params.sessionId),
     kind: "rule_application",
@@ -55,5 +69,16 @@ export async function jouerJetDePnj(
     actorUserId: null,
     payload: { __v: 1, source: NPC_CHECK_SOURCE, entity_id: params.npcId, changes_text: [fait], hints_text: [], ignored_text: [] } as unknown as Json,
   });
+  if (params.onPc && skillSurPj && issue.reussi) {
+    await learnFromNpcCheckOnPc(supabase, {
+      campaignId: params.onPc.campaignId,
+      npcId: params.npcId,
+      pcEntityId: params.onPc.pcEntityId,
+      skill: skillSurPj,
+      total: issue.total,
+      dc,
+      sourceEventId: event.id,
+    });
+  }
   return fait;
 }

@@ -22,6 +22,7 @@ import { anchorSketchesNamedInText } from "@/src/server/services/sceneSketches";
 import { ensureNpcSheetsForPresents } from "@/src/server/services/npcSheet";
 import { ensureNpcAppearancesForPresents } from "@/src/server/services/npcAppearance";
 import { revealCluesFromCheck } from "@/src/server/services/checkClues";
+import { observePcAtSight } from "@/src/server/services/npcKnowledge";
 import { discoverWhoIsHere, loadSceneView } from "@/src/server/services/soloScene";
 import type { PendingTurnResponse, TurnOutcome } from "@/lib/solo/types";
 
@@ -297,6 +298,20 @@ export async function POST(request: NextRequest) {
       result.record.facts.push(...clues.facts);
     } catch (erreur) {
       console.error("Indices du jet impossibles à révéler", erreur);
+    }
+
+    // V3.2-80 — dans l'autre sens, les PNJ de la pièce voient ce que le personnage porte à découvert. Secret du MJ, best-effort.
+    try {
+      await observePcAtSight(supabase, {
+        campaignId: parsed.data.campaignId,
+        world: { id: world.id, slug: world.slug },
+        locale,
+        pcEntityId: parsed.data.entityId,
+        callerId: user.id,
+        sessionEventId: result.record.eventId,
+      });
+    } catch (erreur) {
+      console.error("Observation du personnage par les PNJ impossible", erreur);
     }
 
     // V3.2-53 — ceux qui partagent la pièce sont vus : leur fiche entre au Wiki.

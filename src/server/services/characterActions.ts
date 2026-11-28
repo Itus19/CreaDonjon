@@ -86,7 +86,7 @@ type TypedClient = SupabaseClient<Database>;
 function itemRef(item: InventoryItem): BlockReference | null {
   return (item as { ref?: BlockReference }).ref ?? null;
 }
-function itemLabel(item: InventoryItem, ruleNameByKey?: Record<string, string>): string {
+export function itemLabel(item: InventoryItem, ruleNameByKey?: Record<string, string>): string {
   const label = (item as { label?: string }).label;
   if (label) return label;
   const ref = itemRef(item);

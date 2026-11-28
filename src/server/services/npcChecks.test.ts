@@ -32,9 +32,18 @@ vi.mock("@/src/server/repos/sessions", () => ({
   nextEventSeq: async () => 7,
   insertSessionEvent: async (_s: unknown, e: { kind: string; payload: unknown }) => {
     journal.push(e);
+    return { id: `ev-${journal.length}` };
   },
 }));
 vi.mock("@/src/server/services/rng", () => ({ serverRng: { nextInt: () => de - 1 } }));
+const appris: unknown[] = [];
+vi.mock("@/src/server/services/npcKnowledge", () => ({
+  PC_OBSERVATION_CHECKS: { reperer: "perception" },
+  learnFromNpcCheckOnPc: async (_s: unknown, p: unknown) => {
+    appris.push(p);
+    return ["Épée longue"];
+  },
+}));
 
 const { jouerJetDePnj, NPC_CHECK_SOURCE } = await import("./npcChecks");
 const supabase = {} as SupabaseClient<Database>;
@@ -44,6 +53,7 @@ beforeEach(() => {
   admin = true;
   fiche = statblock;
   journal.length = 0;
+  appris.length = 0;
 });
 
 describe("jouerJetDePnj — V3.2-52", () => {
@@ -72,5 +82,22 @@ describe("jouerJetDePnj — V3.2-52", () => {
   it("réservé au MJ du monde, seul à lire la fiche", async () => {
     admin = false;
     expect(await jouerJetDePnj(supabase, tonneau)).toBeNull();
+  });
+
+  it("V3.2-80 — un jet qui jauge le personnage reste secret : ni verdict ni DD, et le PNJ retient ce qu'il a vu", async () => {
+    de = 15;
+    const surPj = { ...tonneau, action: "reperer" as const, onPc: { campaignId: "c", pcEntityId: "pj", pcName: "Aldric" } };
+    const fait = await jouerJetDePnj(supabase, surPj);
+    expect(fait).toBe("Issue décidée par le moteur : Mabelle tente de repérer Aldric ; ce qu'il ou elle en retient reste secret.");
+    expect(appris).toEqual([{ campaignId: "c", npcId: "mabelle", pcEntityId: "pj", skill: "perception", total: 15, dc: 15, sourceEventId: "ev-1" }]);
+    de = 2;
+    expect(await jouerJetDePnj(supabase, surPj)).toBe(fait);
+    expect(appris).toHaveLength(1);
+  });
+
+  it("soulever « sur » le personnage n'est pas un jet d'observation : l'issue se dit comme d'habitude", async () => {
+    de = 13;
+    expect(await jouerJetDePnj(supabase, { ...tonneau, onPc: { campaignId: "c", pcEntityId: "pj", pcName: "Aldric" } })).toContain("réussite");
+    expect(appris).toHaveLength(0);
   });
 });
