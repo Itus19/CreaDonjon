@@ -284,6 +284,7 @@ export default function FicheJouableSolo({
       capacityLb: sheet.encumbrance.capacity,
       encumbered: sheet.encumbrance.tier !== "none",
       xp: remote?.runtimeState.state.xp ?? 0,
+      ...(remote ? { deathSaves: remote.runtimeState.state.death_saves } : {}),
     });
   }, [character, sheet, remote]);
 

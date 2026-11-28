@@ -3,6 +3,7 @@ import {
   applyDamageWithDeath,
   applyHealing,
   isDead,
+  isDying,
   isStabilized,
   rollDeathSave,
   UNCONSCIOUS,
@@ -176,5 +177,15 @@ describe("stabilise frappe", () => {
     const out = applyDamageWithDeath(down({ success: 3, fail: 0 }), 2);
     expect(out.deathSaves).toEqual({ success: 0, fail: 1 });
     expect(isStabilized(out)).toBe(false);
+  });
+});
+
+describe("isDying", () => {
+  it("à 0 PV, ni stabilisé ni mort", () => {
+    expect(isDying(down())).toBe(true);
+    expect(isDying(down({ success: 2, fail: 2 }))).toBe(true);
+    expect(isDying(down({ success: 3, fail: 0 }))).toBe(false);
+    expect(isDying(down({ success: 0, fail: 3 }))).toBe(false);
+    expect(isDying(alive(1))).toBe(false);
   });
 });

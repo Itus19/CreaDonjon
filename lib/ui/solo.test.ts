@@ -64,7 +64,14 @@ describe("jaugesBande", () => {
       xpDansNiveau: 600,
       xpVersSuivant: 1800,
       pctXp: 33,
+      aTerre: false,
     });
+  });
+
+  it("à terre : 0 PV, ni stabilisé ni mort, seulement si les jets contre la mort sont connus", () => {
+    expect(jaugesBande({ ...base, hpCurrent: 0, deathSaves: { success: 1, fail: 1 } }).aTerre).toBe(true);
+    expect(jaugesBande({ ...base, hpCurrent: 0, deathSaves: { success: 3, fail: 1 } }).aTerre).toBe(false);
+    expect(jaugesBande({ ...base, hpCurrent: 0 }).aTerre).toBe(false);
   });
 
   it("ne divise pas par zero quand un maximum est nul", () => {

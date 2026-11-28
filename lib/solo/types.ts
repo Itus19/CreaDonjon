@@ -39,6 +39,8 @@ export interface IntentBarData {
   targetDetails: IntentTargetDetail[];
   /** V3.1-132 : les clés des règles du personnage (aptitudes de classe, d'espèce, dons), pour l'avertissement « règle non jouable » du mode solo. */
   ruleKeys: string[];
+  /** À 0 PV, ni stabilisé ni mort : le tour est un jet contre la mort. */
+  aTerre?: boolean;
 }
 
 export interface TurnRecord {
