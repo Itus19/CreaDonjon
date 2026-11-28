@@ -36,7 +36,8 @@ function avecDissimulation(segments: readonly Segment[], segmentId: string, conc
 }
 
 /** Les mots qui peuvent annoncer un geste de dissimulation : sans eux, aucune lecture de plus. */
-const INDICE = /cach|dissimul|escamot|sors|sort|montr|devoil|dévoil|degain|dégain|brandi|exhib|enlev|enlèv|retir|decouvr|découvr/i;
+const INDICE =
+  /cach|dissimul|escamot|couvr|camoufl|planqu|enfoui|rabat|bandage|bandeau|pansement|foulard|[ée]charpe|capuch|voile|masque|gant|manche|gliss|sors|sort|montr|d[ée]voil|d[ée]gain|brandi|exhib|enl[eè]v|retir|d[ée]couvr|[oô]te|[oô]ter|d[ée]fai|rel[eè]v/i;
 
 /**
  * V3.2-80 (ADR 0122, point 3) — Après le tour du personnage : un jet de

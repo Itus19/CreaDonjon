@@ -46,4 +46,41 @@ describe("V3.2-80 — le personnage cache un objet", () => {
     const cache = signes.map((m) => (m.id === "s2" ? { ...m, concealed: true } : m));
     expect(gesteDeDissimulation({ intent: { kind: "free", actionId: null }, check: null, text: "j'enlève le bandage de mon tatouage", items: sac, signes: cache })).toEqual({ markId: "s2", concealed: false });
   });
+
+  describe("V3.2-84 — plus de verbes pour cacher", () => {
+    const signes = [
+      { id: "s1", text: "Un corbeau tatoué dans le cou.", concealed: false },
+      { id: "s2", text: "Une cicatrice barre sa joue gauche.", concealed: false },
+    ];
+    const geste = (text: string, actionId = "stealth", liste = signes) =>
+      gesteDeDissimulation({ intent: { kind: "skill_check", actionId }, check: { total: 15, verdict: "success" }, text, items: sac, signes: liste });
+
+    it("« je mets un bandage sur mon tatouage » dissimule le tatouage", () => {
+      expect(geste("je mets un bandage sur mon tatouage")).toEqual({ markId: "s1", concealed: true, concealDc: 15 });
+    });
+
+    it("« je glisse la dague dans ma botte » cache la dague", () => {
+      expect(geste("je glisse la dague dans ma botte", "sleight_of_hand")).toEqual({ itemId: "pj-1", concealed: true, concealDc: 15 });
+    });
+
+    it("« je rabats ma capuche sur ma cicatrice » dissimule la cicatrice", () => {
+      expect(geste("je rabats ma capuche sur ma cicatrice")).toEqual({ markId: "s2", concealed: true, concealDc: 15 });
+    });
+
+    it("« je glisse une dague au marchand » ne cache rien : donner n'est pas cacher", () => {
+      expect(geste("je glisse une dague au marchand", "sleight_of_hand")).toBeNull();
+    });
+
+    it("se faufiler avec un objet ne le cache pas", () => {
+      expect(geste("je me faufile derrière le garde, la dague à la main")).toBeNull();
+    });
+
+    it("« j'ôte ma capuche » ou « je relève ma manche » remettent le signe en vue", () => {
+      const caches = signes.map((m) => ({ ...m, concealed: true }));
+      const libre = (text: string) => gesteDeDissimulation({ intent: { kind: "free", actionId: null }, check: null, text, items: sac, signes: caches });
+      expect(libre("j'ôte ma capuche et montre ma cicatrice")).toEqual({ markId: "s2", concealed: false });
+      expect(libre("je relève ma manche sur mon tatouage")).toEqual({ markId: "s1", concealed: false });
+      expect(libre("je défais le bandage du tatouage")).toEqual({ markId: "s1", concealed: false });
+    });
+  });
 });

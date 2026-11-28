@@ -174,13 +174,16 @@ Aujourd'hui l'annulation retire les découvertes d'entités, mais pas les indice
 - [x] Un tatouage caché pendant le tour revient en vue (`pcConcealment.test.ts`).
 - [ ] En jouant.
 
-### ☐ V3.2-84 — Plus de verbes pour cacher · `S` · sans modèle IA · Modèle conseillé : Opus
+### ☐ V3.2-84 — Plus de verbes pour cacher · `S` · sans modèle IA · Modèle conseillé : Opus — **codé le 28 novembre ; reste à vérifier en jouant**
 
 « je mets un bandage sur mon tatouage », « je glisse la dague dans ma botte », « je rabats ma capuche sur ma cicatrice » ne déclenchent aujourd'hui aucun jet : seuls « cache », « dissimule », « escamote » le font. Élargir le lexique du geste (`gesteDeDissimulation` et le filtre de `applyPcConcealment`) : couvrir, recouvrir, bander, glisser dans, rabattre, enfouir, planquer, camoufler, emmailloter ; et pour révéler, ôter, défaire, relever. L'intention du tour doit aussi proposer un jet de Discrétion ou d'Escamotage pour ces verbes.
 
+**Fait, 28 novembre.** Lexique (`src/i18n/fr.ts`) : couvrir, recouvrir, camoufler, planquer, enfouir, rabattre (Discrétion) ; « mettre, nouer, enrouler, enfiler » suivis d'un bandage, d'une capuche, d'un foulard… (Discrétion) ; « glisser » suivi d'un article (Escamotage). « mets » et « glisse » seuls restent libres (« je glisse sur la glace »). Le geste (`gesteDeDissimulation`) ne cache plus rien sans un mot qui dit qu'on cache : un verbe de dissimulation, une chose qui couvre, ou glisser DANS ou SOUS. Révéler : ôter, défaire, relever en plus.
+
 **Critères d'acceptation**
-- [ ] Chacune des trois phrases ci-dessus, avec un jet réussi, cache l'objet ou le paragraphe nommé (`pcConcealment.test.ts`).
-- [ ] « je glisse une pièce au marchand » ne cache rien (même test).
+- [x] Chacune des trois phrases ci-dessus, avec un jet réussi, cache l'objet ou le paragraphe nommé (`pcConcealment.test.ts`, `intentLexicon.test.ts`).
+- [x] « je glisse une dague au marchand » ne cache rien (même test).
+- [ ] En jouant.
 
 ### ☐ V3.2-85 — Test d'intégration de la RLS des indices et du savoir des PNJ · `S` · sans modèle IA · Modèle conseillé : Opus
 

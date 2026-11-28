@@ -37,7 +37,17 @@ export function objetNomme(text: string, items: readonly ObjetDuSac[]): string |
   return parTete.length === 1 ? parTete[0]!.id : null;
 }
 
-const MONTRER = /\b(sors|sort|sortir|montre|montrer|devoile|devoiler|degaine|degainer|brandis|brandir|exhibe|exhiber|enleve|enlever|retire|retirer|decouvre|decouvrir)\b/;
+const MONTRER =
+  /\b(sors|sort|sortir|montre|montrer|devoile|devoiler|degaine|degainer|brandis|brandir|exhibe|exhiber|enleve|enlever|retire|retirer|decouvre|decouvrir|ote|otes|oter|defais|defait|defaire|releve|relever)\b/;
+
+/**
+ * V3.2-84 — Ce qui dit qu'on cache quelque chose, et pas seulement qu'on se
+ * cache : un verbe de dissimulation, une chose qui couvre (un bandage, une
+ * capuche), ou glisser un objet DANS ou SOUS quelque chose. « Je glisse une
+ * pièce au marchand » ou « je me faufile, la dague à la main » ne cachent rien.
+ */
+const CACHER =
+  /\b(cache|caches|cacher|dissimule|dissimules|dissimuler|escamote|escamoter|couvre|couvres|couvrir|recouvre|recouvrir|camoufle|camoufler|planque|planquer|enfouis|enfouit|enfouir|rabats|rabat|rabattre|bandage|bandeau|pansement|foulard|echarpe|capuche|capuchon|voile|masque|gant|gants|manche|col)\b|\bgliss\w*\b.*\b(dans|sous)\b/;
 const DD_MIN = 5;
 const DD_MAX = 30;
 
@@ -65,7 +75,7 @@ export function gesteDeDissimulation(params: {
   const signes = params.signes ?? [];
   const cacher = params.intent.kind === "skill_check" && (params.intent.actionId === "stealth" || params.intent.actionId === "sleight_of_hand");
   if (cacher) {
-    if (params.check?.verdict !== "success") return null;
+    if (params.check?.verdict !== "success" || !CACHER.test(normalizeForMatching(params.text))) return null;
     const concealDc = Math.min(DD_MAX, Math.max(DD_MIN, params.check.total));
     const id = objetNomme(params.text, params.items.filter((i) => !i.concealed));
     if (id) return { itemId: id, concealed: true, concealDc };

@@ -39,6 +39,20 @@ import type { PersonalityPoleKey, RelationshipAxisKey, WorldviewPoleKey } from "
 import type { PoleEnds } from "@/src/core/psyche/poles";
 
 /**
+ * V3.2-84 — cacher sur soi : couvrir un signe (« je rabats ma capuche sur ma
+ * cicatrice »), mettre quelque chose qui couvre (« je mets un bandage sur mon
+ * tatouage »), glisser un objet (« je glisse la dague dans ma botte »). Le
+ * moteur ne cache rien sans un mot qui dit qu'on cache (`gesteDeDissimulation`).
+ * « mets » ou « glisse » seuls restent libres : « je glisse sur la glace ».
+ */
+const VERBES_COUVRIR_FR = ["couvre", "couvrir", "recouvre", "recouvrir", "camoufle", "camoufler", "planque", "planquer", "enfouis", "enfouir", "rabats", "rabattre"];
+const CACHES_FR = ["bandage", "bandeau", "pansement", "foulard", "echarpe", "capuche", "voile", "masque", "gant", "gants"];
+const METTRE_UN_CACHE_FR = ["mets", "met", "mettre", "noue", "nouer", "enroule", "enrouler", "enfile", "enfiler"].flatMap((verbe) =>
+  ["un", "une", "mon", "ma", "mes", "le", "la", "les"].flatMap((article) => CACHES_FR.map((cache) => `${verbe} ${article} ${cache}`))
+);
+const GLISSER_UN_OBJET_FR = ["glisse", "glisser"].flatMap((verbe) => ["le", "la", "les", "l", "mon", "ma", "mes", "un", "une"].map((article) => `${verbe} ${article}`));
+
+/**
  * V3-B1 — Les verbes que la barre d'intention reconnait.
  *
  * C'est du francais, donc c'est ici : le noyau (`src/core/rules/intent.ts`)
@@ -107,8 +121,8 @@ export const INTENT_VERBS_FR: IntentVerb[] = [
   { kind: "skill_check", actionId: "persuasion", terms: ["persuade", "persuader", "convaincs", "convaincre", "negocie", "negocier"] },
   { kind: "skill_check", actionId: "intimidation", terms: ["intimide", "intimider", "menace", "menacer"] },
   { kind: "skill_check", actionId: "deception", terms: ["mens", "mentir", "bluffe", "bluffer"] },
-  { kind: "skill_check", actionId: "stealth", terms: ["cache", "cacher", "faufile", "faufiler"] },
-  { kind: "skill_check", actionId: "sleight_of_hand", terms: ["crochete", "crocheter", "subtilise", "subtiliser", "escamote", "escamoter", "dissimule", "dissimuler"] },
+  { kind: "skill_check", actionId: "stealth", terms: ["cache", "cacher", "faufile", "faufiler", ...VERBES_COUVRIR_FR, ...METTRE_UN_CACHE_FR] },
+  { kind: "skill_check", actionId: "sleight_of_hand", terms: ["crochete", "crocheter", "subtilise", "subtiliser", "escamote", "escamoter", "dissimule", "dissimuler", ...GLISSER_UN_OBJET_FR] },
   { kind: "skill_check", actionId: "medicine", terms: ["soigne", "soigner", "stabilise", "stabiliser"] },
   { kind: "skill_check", actionId: "survival", terms: ["piste", "pister", "traque", "traquer"] },
   { kind: "skill_check", actionId: "insight", terms: ["jauge", "jauger", "sonde", "sonder"] },
