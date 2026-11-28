@@ -9,9 +9,11 @@ import type { ButDeCombat } from "./combatMinds";
  * Une action qui n'est pas un jet d'attaque (Attaques multiples, une
  * sauvegarde) ne donne rien : le tour du PNJ ne la propose pas encore.
  *
- * Les jets de caractéristique et de compétence des PNJ (V3.2-52) viendront
- * à côté, dans ce même fichier.
+ * Les jets de compétence et de sauvegarde des PNJ (V3.2-52) sont en fin de
+ * fichier.
  */
+
+import { SKILL_ABILITIES, type Ability, type Skill } from "./abilities";
 
 export interface NpcDamage {
   /** 0 avec `faces` 0 : des dégâts fixes (« Hit: 1 Bludgeoning damage »). */
@@ -162,4 +164,91 @@ export function resoudreAttaquePnj(attack: NpcAttack, ac: number | null, rng: { 
     }
   }
   return { naturel, total, touche, critique, degats: Math.max(0, degats), detail: morceaux.join(" + ") };
+}
+
+/**
+ * V3.2-52 — Les actions qu'un PNJ peut tenter hors attaque, en liste fermée :
+ * la narration en choisit une (et un palier de difficulté), jamais un nombre
+ * (règle 8) ; le moteur lance le dé avec la fiche du PNJ. Une action absente
+ * de la liste ne se joue pas : on l'ajoute ici, pas dans le prompt.
+ */
+export type JetPnj = { kind: "skill"; key: Skill; label: string } | { kind: "save"; key: Ability; label: string };
+
+export const NPC_CHECK_ACTIONS = {
+  soulever: { kind: "skill", key: "athletics", label: "soulever" },
+  pousser: { kind: "skill", key: "athletics", label: "pousser" },
+  grimper: { kind: "skill", key: "athletics", label: "grimper" },
+  courir: { kind: "skill", key: "athletics", label: "courir" },
+  nager: { kind: "skill", key: "athletics", label: "nager" },
+  sauter: { kind: "skill", key: "athletics", label: "sauter" },
+  esquiver: { kind: "skill", key: "acrobatics", label: "esquiver" },
+  garder_equilibre: { kind: "skill", key: "acrobatics", label: "garder l'équilibre" },
+  se_cacher: { kind: "skill", key: "stealth", label: "se cacher" },
+  escamoter: { kind: "skill", key: "sleight_of_hand", label: "escamoter" },
+  reperer: { kind: "skill", key: "perception", label: "repérer" },
+  jauger: { kind: "skill", key: "insight", label: "jauger quelqu'un" },
+  fouiller: { kind: "skill", key: "investigation", label: "fouiller" },
+  mentir: { kind: "skill", key: "deception", label: "mentir" },
+  convaincre: { kind: "skill", key: "persuasion", label: "convaincre" },
+  intimider: { kind: "skill", key: "intimidation", label: "intimider" },
+  calmer_animal: { kind: "skill", key: "animal_handling", label: "calmer un animal" },
+  soigner: { kind: "skill", key: "medicine", label: "soigner" },
+  pister: { kind: "skill", key: "survival", label: "pister" },
+  se_souvenir: { kind: "skill", key: "history", label: "se souvenir" },
+  resister_poison: { kind: "save", key: "con", label: "résister (Constitution)" },
+  resister_esprit: { kind: "save", key: "wis", label: "résister (Sagesse)" },
+  echapper: { kind: "save", key: "dex", label: "échapper (Dextérité)" },
+} as const satisfies Record<string, JetPnj>;
+export type NpcCheckAction = keyof typeof NPC_CHECK_ACTIONS;
+export const NPC_CHECK_ACTION_KEYS = Object.keys(NPC_CHECK_ACTIONS) as [NpcCheckAction, ...NpcCheckAction[]];
+
+/** Les noms de compétence d'une fiche (« Skill: Perception », « Discrétion »), en anglais ou en français, vers la clé `Skill`. */
+const NOMS_DE_COMPETENCE: Readonly<Record<string, Skill>> = {
+  acrobaties: "acrobatics",
+  dressage: "animal_handling",
+  arcanes: "arcana",
+  athletisme: "athletics",
+  tromperie: "deception",
+  histoire: "history",
+  perspicacite: "insight",
+  medecine: "medicine",
+  representation: "performance",
+  escamotage: "sleight_of_hand",
+  discretion: "stealth",
+  survie: "survival",
+};
+
+function cleDeCompetence(nom: string): Skill | null {
+  const net = nom
+    .replace(/^skill:\s*/i, "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
+  if (net in SKILL_ABILITIES) return net as Skill;
+  return NOMS_DE_COMPETENCE[net] ?? null;
+}
+
+const modificateur = (valeur: number): number => Math.floor((valeur - 10) / 2);
+
+/**
+ * Le modificateur du jet, lu sur la fiche allégée : le bonus de compétence ou
+ * de sauvegarde quand la fiche le porte (il est déjà total dans le SRD),
+ * sinon le modificateur de la caractéristique.
+ */
+export function modificateurJetPnj(
+  fiche: { abilities: Record<Ability, number>; skills?: Record<string, number>; saving_throws?: Partial<Record<Ability, number>> },
+  jet: JetPnj
+): number {
+  if (jet.kind === "save") return fiche.saving_throws?.[jet.key] ?? modificateur(fiche.abilities[jet.key]);
+  for (const [nom, bonus] of Object.entries(fiche.skills ?? {})) if (cleDeCompetence(nom) === jet.key) return bonus;
+  return modificateur(fiche.abilities[SKILL_ABILITIES[jet.key]]);
+}
+
+/** Un test de PNJ, règles 2024 : d20 + modificateur contre le DD ; ni le 20 ni le 1 ne décident seuls. */
+export function resoudreJetPnj(mod: number, dc: number, rng: { nextInt(max: number): number }): { naturel: number; total: number; reussi: boolean } {
+  const naturel = rng.nextInt(20) + 1;
+  const total = naturel + mod;
+  return { naturel, total, reussi: total >= dc };
 }

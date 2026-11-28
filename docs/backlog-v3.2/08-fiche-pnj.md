@@ -73,12 +73,17 @@ Demandé le 26 novembre, après la séance où jauger Mabelle déclenchait une a
 **Critères d'acceptation**
 - [x] Un paragraphe `gm` d'une fiche ne s'affiche plus dans le wiki de la partie solo, tant qu'il n'est pas découvert (`soloPlayer.test.ts` : le lecteur rabattu ne voit plus le niveau `gm`).
 
-### ☐ V3.2-52 — Le moteur fait les jets des PNJ · `M` · **avec modèle IA** · Modèle conseillé : Opus
+### ☐ V3.2-52 — Le moteur fait les jets des PNJ · `M` · **avec modèle IA** · Modèle conseillé : Opus — **codé le 28 novembre ; reste à vérifier en jouant**
 
 - La narration peut proposer une action de PNJ dans une liste fermée (soulever, courir, résister, esquiver…), validée par Zod ; le moteur lance le dé avec la fiche du PNJ et un DD de règle, l'IA raconte l'issue.
+- Les attaques et les dégâts des PNJ sont venus avec le combat solo (ADR 0121, `resoudreAttaquePnj`) ; ce ticket ajoute les tests de compétence et les sauvegardes, dans le même `src/core/rules/npcRolls.ts` : `NPC_CHECK_ACTIONS` (23 actions), `modificateurJetPnj` (bonus de la fiche s'il y est, sinon la caractéristique), `resoudreJetPnj` (d20, ni le 20 ni le 1 ne décident seuls, règles 2024).
+- Le trajet : la narration propose `npc_check` (PNJ présent, action, palier) et s'arrête sur la tentative ; `jouerJetDePnj` (`src/server/services/npcChecks.ts`) lance le dé du serveur et journalise l'issue (`rule_application`, source `npc_check`) ; la narration suivante la reçoit en tête des faits établis et la raconte. « Raconter autrement » ne relance jamais ce dé.
+- Le fait ne dit que l'action, le DD et le verdict : ni le dé ni le total, qui trahiraient la fiche (ADR 0118 §5).
+- Limites : une esquisse sans fiche ne fait pas de jet ; le bonus de compétence est celui du SRD, sans suivre l'ajustement de caractéristique de la fiche (V3.2-47) ; les tests opposés (le mensonge du personnage contre la Perspicacité du PNJ) restent à faire, avec V3.2-80.
 
 **Critères d'acceptation**
-- [ ] Un PNJ qui tente de soulever un tonneau : jet d'Athlétisme du moteur avec sa Force, issue racontée sans être jugée par l'IA.
+- [x] Un PNJ qui tente de soulever un tonneau : jet d'Athlétisme du moteur avec sa Force (`npcChecks.test.ts`, `src/server/services/npcChecks.test.ts`).
+- [ ] En jouant : l'issue est racontée au tour suivant sans être jugée par l'IA.
 
 ### ☐ V3.2-54 — Le récit nourrit la fiche du PNJ · `M` · **avec modèle IA** · Modèle conseillé : Opus — **portrait et rangement des notes codés le 27 novembre**
 

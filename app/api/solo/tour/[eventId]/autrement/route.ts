@@ -71,6 +71,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       facts: reconstructed.facts,
       changes: reconstructed.changes,
       hints: reconstructed.hints,
+      npcCheckAllowed: false,
     });
     if (!outcome.ok) {
       return NextResponse.json({ error: outcome.invalidReason ?? "La narration n'a pas abouti." }, { status: 502 });

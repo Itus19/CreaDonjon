@@ -39,6 +39,7 @@ import { estQuestionDirecte } from "@/src/core/ai/npcAddressed";
 import { undoneEventIds } from "@/src/core/rules/turnUndo";
 import { getCurrentAttitude } from "@/src/server/services/psyche";
 import { listActiveQuestsForWorld } from "@/src/server/services/quests";
+import { NPC_CHECK_SOURCE } from "@/src/server/services/npcChecks";
 
 /** V3-B4 — « les *n* dernières narrations » : même n que `RECENT_EVENTS_KEPT` (`src/core/rules/scene.ts`), pas de raison d'en choisir un autre. */
 export const RECENT_NARRATIONS_KEPT = 5;
@@ -284,6 +285,9 @@ async function resolveQuests(supabase: TypedClient, worldId: string, viewer: Vie
   }));
 }
 
+/** Les derniers `rule_application` relus pour y trouver les jets de PNJ à raconter : un tour en écrit un ou deux. */
+const NPC_OUTCOME_EVENTS_READ = 8;
+
 /** Combien d'actions passées du joueur la narration reçoit : assez pour suivre le fil d'une scène, peu pour ne pas noyer le tour présent. */
 export const RECENT_PLAYER_ACTIONS_KEPT = 3;
 
@@ -293,16 +297,18 @@ export const RECENT_PLAYER_ACTIONS_KEPT = 3;
  * seule lecture de plus que l'existant : les deux sortes viennent de la même
  * requête, les annulations (V3-F2) de la seconde. Le tour en cours est déjà
  * journalisé quand la narration part : `fromEventId` l'écarte, et tout ce
- * qui le suit.
+ * qui le suit. V3.2-52 : une troisième lecture, les derniers
+ * `rule_application`, pour les issues des jets de PNJ (`npcOutcomes`).
  */
 async function resolveRecentHistory(
   supabase: TypedClient,
   sessionId: string,
   fromEventId: string | null
-): Promise<{ narrations: string[]; playerActions: string[] }> {
-  const [events, annulations] = await Promise.all([
+): Promise<{ narrations: string[]; playerActions: string[]; npcOutcomes: string[] }> {
+  const [events, annulations, regles] = await Promise.all([
     listRecentEventsByKinds(supabase, sessionId, ["narration", "player_action", "roll"], RECENT_NARRATIONS_KEPT * 3 + RECENT_PLAYER_ACTIONS_KEPT * 3),
     listRecentEventsByKind(supabase, sessionId, "system", 50),
+    listRecentEventsByKind(supabase, sessionId, "rule_application", NPC_OUTCOME_EVENTS_READ),
   ]);
   const defaits = undoneEventIds(annulations.map((e) => ({ id: e.id, seq: e.seq, kind: e.kind, actor: e.actor, payload: (e.payload as Record<string, unknown> | null) ?? {} })));
   const vivants = events.filter((e) => !defaits.has(e.id));
@@ -318,7 +324,16 @@ async function resolveRecentHistory(
     .map((e) => (e.payload as { intent?: { text?: unknown } } | null)?.intent?.text)
     .filter((text): text is string => typeof text === "string" && text.trim() !== "")
     .reverse();
-  return { narrations, playerActions };
+  // V3.2-52 — les jets de PNJ lancés depuis la dernière narration AVANT ce tour : la narration en raconte l'issue.
+  const avant = (e: { seq: number }) => courant === undefined || e.seq < courant.seq;
+  const derniereNarration = vivants.find((e) => e.kind === "narration" && avant(e));
+  const npcOutcomes = regles
+    .filter((e) => !defaits.has(e.id) && avant(e) && (derniereNarration === undefined || e.seq > derniereNarration.seq))
+    .map((e) => e.payload as { source?: unknown; changes_text?: unknown } | null)
+    .filter((p) => p?.source === NPC_CHECK_SOURCE && Array.isArray(p.changes_text))
+    .flatMap((p) => (p!.changes_text as unknown[]).filter((t): t is string => typeof t === "string"))
+    .reverse();
+  return { narrations, playerActions, npcOutcomes };
 }
 
 /**
@@ -503,7 +518,7 @@ export async function buildSoloTurnContext(
     lighting: scene?.lighting ?? "bright",
     npcs,
     quests,
-    facts: [...params.facts, ...lifeFacts],
+    facts: [...history.npcOutcomes, ...params.facts, ...lifeFacts],
     changes: params.changes,
     hints: params.hints,
     playerAction: params.playerAction,

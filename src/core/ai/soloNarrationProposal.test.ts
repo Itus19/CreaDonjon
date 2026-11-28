@@ -138,5 +138,14 @@ describe("V3.2-19 — enter_room et leave_room", () => {
     expect(soloNarrationSchema([]).safeParse({ narration: "x", enter_room: { name: "" } }).success).toBe(false);
     expect(soloNarrationSchema([]).safeParse({ narration: "x", enter_room: { name: "x".repeat(81) } }).success).toBe(false);
   });
-});
 
+  it("V3.2-52 — une tentative de PNJ : une action de la liste fermée et un palier, jamais un nombre", () => {
+    const schema = soloNarrationSchema(["mabelle"]);
+    expect(schema.safeParse({ narration: "Mabelle s'arc-boute sous le tonneau.", npc_check: { npc_id: "mabelle", action: "soulever", tier: "moyen" } }).success).toBe(true);
+    expect(schema.safeParse({ narration: "x", npc_check: { npc_id: "invente", action: "soulever", tier: "moyen" } }).success).toBe(false);
+    expect(schema.safeParse({ narration: "x", npc_check: { npc_id: "mabelle", action: "voler", tier: "moyen" } }).success).toBe(false);
+    // Un DD chiffré glissé par le modèle est retiré par Zod : il n'atteint jamais le moteur.
+    expect(schema.safeParse({ narration: "x", npc_check: { npc_id: "mabelle", action: "soulever", tier: "moyen", dc: 12 } }).data?.npc_check).toEqual({ npc_id: "mabelle", action: "soulever", tier: "moyen" });
+    expect(soloNarrationToolSchema([]).properties).not.toHaveProperty("npc_check");
+  });
+});
